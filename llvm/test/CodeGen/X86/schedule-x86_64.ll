@@ -2541,7 +2541,7 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 define i32 @test_bswap32(i32 %a0) optsize {
 ; GENERIC-LABEL: test_bswap32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    bswapl %edi # sched: [2:1.00]
+; GENERIC-NEXT:    bswapl %edi # sched: [1:1.00]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2559,31 +2559,31 @@ define i32 @test_bswap32(i32 %a0) optsize {
 ;
 ; SANDY-LABEL: test_bswap32:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    bswapl %edi # sched: [2:1.00]
+; SANDY-NEXT:    bswapl %edi # sched: [1:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_bswap32:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    bswapl %edi # sched: [2:0.50]
+; HASWELL-NEXT:    bswapl %edi # sched: [1:0.50]
 ; HASWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_bswap32:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    bswapl %edi # sched: [2:0.50]
+; BROADWELL-NEXT:    bswapl %edi # sched: [1:0.50]
 ; BROADWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_bswap32:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    bswapl %edi # sched: [2:0.50]
+; SKYLAKE-NEXT:    bswapl %edi # sched: [1:0.50]
 ; SKYLAKE-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_bswap32:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    bswapl %edi # sched: [2:0.50]
+; SKX-NEXT:    bswapl %edi # sched: [1:0.50]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

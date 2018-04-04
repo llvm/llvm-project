@@ -87,6 +87,7 @@ if( NOT PURE_WINDOWS )
   endif()
   check_library_exists(dl dlopen "" HAVE_LIBDL)
   check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+  check_library_exists(pfm pfm_initialize "" HAVE_LIBPFM)
 endif()
 
 if(HAVE_LIBPTHREAD)

@@ -6,6 +6,7 @@ declare half @llvm.aarch64.neon.fmin.f16(half, half)
 declare half @llvm.aarch64.neon.frsqrts.f16(half, half)
 declare half @llvm.aarch64.neon.frecps.f16(half, half)
 declare half @llvm.aarch64.neon.fmulx.f16(half, half)
+declare half @llvm.fabs.f16(half)
 
 define dso_local half @t_vabdh_f16(half %a, half %b) {
 ; CHECK-LABEL: t_vabdh_f16:
@@ -14,6 +15,16 @@ define dso_local half @t_vabdh_f16(half %a, half %b) {
 entry:
   %vabdh_f16 = tail call half @llvm.aarch64.sisd.fabd.f16(half %a, half %b)
   ret half %vabdh_f16
+}
+
+define dso_local half @t_vabdh_f16_from_fsub_fabs(half %a, half %b) {
+; CHECK-LABEL: t_vabdh_f16_from_fsub_fabs:
+; CHECK:         fabd h0, h0, h1
+; CHECK-NEXT:    ret
+entry:
+  %sub = fsub half %a, %b
+  %abs = tail call half @llvm.fabs.f16(half %sub)
+  ret half %abs
 }
 
 define dso_local i16 @t_vceqh_f16(half %a, half %b) {

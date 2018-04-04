@@ -286,24 +286,26 @@ class RealFSDirIter : public clang::vfs::detail::DirIterImpl {
 
 public:
   RealFSDirIter(const Twine &Path, std::error_code &EC) : Iter(Path, EC) {
-    if (!EC && Iter != llvm::sys::fs::directory_iterator()) {
+    if (Iter != llvm::sys::fs::directory_iterator()) {
       llvm::sys::fs::file_status S;
-      EC = llvm::sys::fs::status(Iter->path(), S, true);
+      std::error_code ErrorCode = llvm::sys::fs::status(Iter->path(), S, true);
       CurrentEntry = Status::copyWithNewName(S, Iter->path());
+      if (!EC)
+        EC = ErrorCode;
     }
   }
 
   std::error_code increment() override {
     std::error_code EC;
     Iter.increment(EC);
-    if (EC) {
-      return EC;
-    } else if (Iter == llvm::sys::fs::directory_iterator()) {
+    if (Iter == llvm::sys::fs::directory_iterator()) {
       CurrentEntry = Status();
     } else {
       llvm::sys::fs::file_status S;
-      EC = llvm::sys::fs::status(Iter->path(), S, true);
+      std::error_code ErrorCode = llvm::sys::fs::status(Iter->path(), S, true);
       CurrentEntry = Status::copyWithNewName(S, Iter->path());
+      if (!EC)
+        EC = ErrorCode;
     }
     return EC;
   }

@@ -190,6 +190,7 @@ std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
   return llvm::make_unique<UnexploredFirstStack>();
 }
 
+namespace {
 class UnexploredFirstPriorityQueue : public WorkList {
   using BlockID = unsigned;
   using LocIdentifier = std::pair<BlockID, const StackFrameContext *>;
@@ -246,6 +247,7 @@ public:
     return U.first;
   }
 };
+} // namespace
 
 std::unique_ptr<WorkList> WorkList::makeUnexploredFirstPriorityQueue() {
   return llvm::make_unique<UnexploredFirstPriorityQueue>();

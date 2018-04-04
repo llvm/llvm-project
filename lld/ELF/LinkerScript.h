@@ -112,11 +112,11 @@ struct SymbolAssignment : BaseCommand {
   // A string representation of this command. We use this for -Map.
   std::string CommandString;
 
-  // This is just an offset of this assignment command in the output section.
-  unsigned Offset;
+  // Address of this assignment command.
+  unsigned Addr;
 
-  // Size of this assignment command. This is usually 0, but if you move '.'
-  // or use a BYTE()-family command, this may be greater than 0."
+  // Size of this assignment command. This is usually 0, but if
+  // you move '.' this may be greater than 0.
   unsigned Size;
 };
 
@@ -200,7 +200,11 @@ struct ByteCommand : BaseCommand {
   std::string CommandString;
 
   Expr Expression;
+
+  // This is just an offset of this assignment command in the output section.
   unsigned Offset;
+
+  // Size of this data command.
   unsigned Size;
 };
 

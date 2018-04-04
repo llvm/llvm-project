@@ -104,6 +104,14 @@ main_body:
   ret float %r
 }
 
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.image.atomic.add.2d.i32.i32(
+define float @image_atomic_add_2d(<8 x i32> inreg %rsrc, i32 inreg %s, i32 inreg %t, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.image.atomic.add.2d.i32.i32(i32 %data, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
 declare i32 @llvm.amdgcn.image.atomic.swap.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
 declare i32 @llvm.amdgcn.image.atomic.add.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
 declare i32 @llvm.amdgcn.image.atomic.sub.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
@@ -117,5 +125,7 @@ declare i32 @llvm.amdgcn.image.atomic.xor.i32(i32, i32, <8 x i32>, i1, i1, i1) #
 declare i32 @llvm.amdgcn.image.atomic.inc.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
 declare i32 @llvm.amdgcn.image.atomic.dec.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
 declare i32 @llvm.amdgcn.image.atomic.cmpswap.i32(i32, i32, i32, <8 x i32>,i1, i1, i1) #0
+
+declare i32 @llvm.amdgcn.image.atomic.add.2d.i32.i32(i32, i32, i32, <8 x i32>, i32, i32) #0
 
 attributes #0 = { nounwind }

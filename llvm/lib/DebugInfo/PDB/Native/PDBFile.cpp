@@ -289,8 +289,8 @@ Expected<DbiStream &> PDBFile::getPDBDbiStream() {
     auto DbiS = safelyCreateIndexedStream(ContainerLayout, *Buffer, StreamDBI);
     if (!DbiS)
       return DbiS.takeError();
-    auto TempDbi = llvm::make_unique<DbiStream>(*this, std::move(*DbiS));
-    if (auto EC = TempDbi->reload())
+    auto TempDbi = llvm::make_unique<DbiStream>(std::move(*DbiS));
+    if (auto EC = TempDbi->reload(this))
       return std::move(EC);
     Dbi = std::move(TempDbi);
   }

@@ -309,6 +309,7 @@ static void dump(StringRef Title, SpillInfo const &Spills) {
 }
 #endif
 
+namespace {
 // We cannot rely solely on natural alignment of a type when building a
 // coroutine frame and if the alignment specified on the Alloca instruction
 // differs from the natural alignment of the alloca type we will need to insert
@@ -357,6 +358,7 @@ struct PaddingCalculator {
     return nullptr;
   }
 };
+} // namespace
 
 // Build a struct that will keep state for an active coroutine.
 //   struct f.frame {

@@ -3,8 +3,12 @@
 #include "xray_defs.h"
 #include "xray_interface_internal.h"
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD
 #include <sys/types.h>
+#if SANITIZER_OPENBSD
+#include <sys/time.h>
+#include <machine/cpu.h>
+#endif
 #include <sys/sysctl.h>
 #endif
 
@@ -77,13 +81,18 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
   }
   return TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
 }
-#elif SANITIZER_FREEBSD || SANITIZER_NETBSD
+#elif SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD
 uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     long long TSCFrequency = -1;
     size_t tscfreqsz = sizeof(TSCFrequency);
+#if SANITIZER_OPENBSD
+    int Mib[2] = { CTL_MACHDEP, CPU_TSCFREQ };
+    if (sysctl(Mib, 2, &TSCFrequency, &tscfreqsz, NULL, 0) != -1) {
 
+#else
     if (sysctlbyname("machdep.tsc_freq", &TSCFrequency, &tscfreqsz,
         NULL, 0) != -1) {
+#endif
         return static_cast<uint64_t>(TSCFrequency);
     } else {
       Report("Unable to determine CPU frequency for TSC accounting.\n");

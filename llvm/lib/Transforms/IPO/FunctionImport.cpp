@@ -450,7 +450,8 @@ getGUID(const std::pair<const GlobalValue::GUID, unsigned> &P) {
 }
 
 template <class T>
-unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index, T &Cont) {
+static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
+                                      T &Cont) {
   unsigned NumGVS = 0;
   for (auto &V : Cont)
     if (isGlobalVarSummary(Index, getGUID(V)))

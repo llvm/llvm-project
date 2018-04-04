@@ -506,6 +506,384 @@ def int_amdgcn_image_atomic_cmpswap : Intrinsic <
 
 } // defset AMDGPUImageIntrinsics
 
+} // TargetPrefix = "amdgcn"
+
+// New-style image intrinsics
+
+//////////////////////////////////////////////////////////////////////////
+// Dimension-aware image intrinsics framework
+//////////////////////////////////////////////////////////////////////////
+
+// Helper class to represent (type, name) combinations of arguments. The
+// argument names are explanatory and used as DAG operand names for codegen
+// pattern matching.
+class AMDGPUArg<LLVMType ty, string name> {
+  LLVMType Type = ty;
+  string Name = name;
+}
+
+// Return [AMDGPUArg<basety, names[0]>, AMDGPUArg<LLVMMatchType<0>, names[1]>, ...]
+class makeArgList<list<string> names, LLVMType basety> {
+  list<AMDGPUArg> ret =
+    !listconcat([AMDGPUArg<basety, names[0]>],
+                !foreach(name, !tail(names), AMDGPUArg<LLVMMatchType<0>, name>));
+}
+
+// Return arglist, with LLVMMatchType's references shifted by 'shift'.
+class arglistmatchshift<list<AMDGPUArg> arglist, int shift> {
+  list<AMDGPUArg> ret =
+    !foreach(arg, arglist,
+             !if(!isa<LLVMMatchType>(arg.Type),
+                 AMDGPUArg<LLVMMatchType<!add(!cast<LLVMMatchType>(arg.Type).Number, shift)>,
+                           arg.Name>,
+                 arg));
+}
+
+// Return the concatenation of the given arglists. LLVMMatchType's are adjusted
+// accordingly, and shifted by an additional 'shift'.
+class arglistconcat<list<list<AMDGPUArg>> arglists, int shift = 0> {
+  list<AMDGPUArg> ret =
+    !foldl([]<AMDGPUArg>, arglists, lhs, rhs,
+           !listconcat(
+             lhs,
+             arglistmatchshift<rhs,
+                               !add(shift, !foldl(0, lhs, a, b,
+                                                  !add(a, b.Type.isAny)))>.ret));
+}
+
+// Represent texture/image types / dimensionality.
+class AMDGPUDimProps<string name, list<string> coord_names, list<string> slice_names> {
+  string Name = name; // e.g. "2darraymsaa"
+  bit DA = 0; // DA bit in MIMG encoding
+
+  list<AMDGPUArg> CoordSliceArgs =
+    makeArgList<!listconcat(coord_names, slice_names), llvm_anyfloat_ty>.ret;
+  list<AMDGPUArg> CoordSliceIntArgs =
+    makeArgList<!listconcat(coord_names, slice_names), llvm_anyint_ty>.ret;
+  list<AMDGPUArg> GradientArgs =
+    makeArgList<!listconcat(!foreach(name, coord_names, "d" # name # "dh"),
+                            !foreach(name, coord_names, "d" # name # "dv")),
+                llvm_anyfloat_ty>.ret;
+}
+
+def AMDGPUDim1D : AMDGPUDimProps<"1d", ["s"], []>;
+def AMDGPUDim2D : AMDGPUDimProps<"2d", ["s", "t"], []>;
+def AMDGPUDim3D : AMDGPUDimProps<"3d", ["s", "t", "r"], []>;
+let DA = 1 in {
+  def AMDGPUDimCube : AMDGPUDimProps<"cube", ["s", "t"], ["face"]>;
+  def AMDGPUDim1DArray : AMDGPUDimProps<"1darray", ["s"], ["slice"]>;
+  def AMDGPUDim2DArray : AMDGPUDimProps<"2darray", ["s", "t"], ["slice"]>;
+}
+def AMDGPUDim2DMsaa : AMDGPUDimProps<"2dmsaa", ["s", "t"], ["fragid"]>;
+let DA = 1 in {
+  def AMDGPUDim2DArrayMsaa : AMDGPUDimProps<"2darraymsaa", ["s", "t"], ["slice", "fragid"]>;
+}
+
+def AMDGPUDims {
+  list<AMDGPUDimProps> NoMsaa = [AMDGPUDim1D, AMDGPUDim2D, AMDGPUDim3D,
+                                 AMDGPUDimCube, AMDGPUDim1DArray,
+                                 AMDGPUDim2DArray];
+  list<AMDGPUDimProps> Msaa = [AMDGPUDim2DMsaa, AMDGPUDim2DArrayMsaa];
+  list<AMDGPUDimProps> All = !listconcat(NoMsaa, Msaa);
+}
+
+// Represent sample variants, i.e. _C, _O, _B, ... and combinations thereof.
+class AMDGPUSampleVariant<string ucmod, string lcmod, list<AMDGPUArg> extra_addr> {
+  string UpperCaseMod = ucmod;
+  string LowerCaseMod = lcmod;
+
+  // {offset} {bias} {z-compare}
+  list<AMDGPUArg> ExtraAddrArgs = extra_addr;
+  bit Gradients = 0;
+
+  // Name of the {lod} or {clamp} argument that is appended to the coordinates,
+  // if any.
+  string LodOrClamp = "";
+}
+
+// AMDGPUSampleVariants: all variants supported by IMAGE_SAMPLE
+// AMDGPUSampleVariantsNoGradients: variants supported by IMAGE_GATHER4
+defset list<AMDGPUSampleVariant> AMDGPUSampleVariants = {
+  multiclass AMDGPUSampleHelper_Offset<string ucmod, string lcmod,
+                                       list<AMDGPUArg> extra_addr> {
+    def NAME#lcmod : AMDGPUSampleVariant<ucmod, lcmod, extra_addr>;
+    def NAME#lcmod#_o : AMDGPUSampleVariant<
+        ucmod#"_O", lcmod#"_o", !listconcat([AMDGPUArg<llvm_i32_ty, "offset">], extra_addr)>;
+  }
+
+  multiclass AMDGPUSampleHelper_Compare<string ucmod, string lcmod,
+                                        list<AMDGPUArg> extra_addr> {
+    defm NAME : AMDGPUSampleHelper_Offset<ucmod, lcmod, extra_addr>;
+    defm NAME : AMDGPUSampleHelper_Offset<
+        "_C"#ucmod, "_c"#lcmod, !listconcat(extra_addr, [AMDGPUArg<llvm_float_ty, "zcompare">])>;
+  }
+
+  multiclass AMDGPUSampleHelper_Clamp<string ucmod, string lcmod,
+                                      list<AMDGPUArg> extra_addr> {
+    defm NAME : AMDGPUSampleHelper_Compare<ucmod, lcmod, extra_addr>;
+    let LodOrClamp = "clamp" in
+    defm NAME : AMDGPUSampleHelper_Compare<ucmod#"_CL", lcmod#"_cl", extra_addr>;
+  }
+
+  defset list<AMDGPUSampleVariant> AMDGPUSampleVariantsNoGradients = {
+    defm AMDGPUSample : AMDGPUSampleHelper_Clamp<"", "", []>;
+    defm AMDGPUSample : AMDGPUSampleHelper_Clamp<
+        "_B", "_b", [AMDGPUArg<llvm_anyfloat_ty, "bias">]>;
+    let LodOrClamp = "lod" in
+    defm AMDGPUSample : AMDGPUSampleHelper_Compare<"_L", "_l", []>;
+    defm AMDGPUSample : AMDGPUSampleHelper_Compare<"_LZ", "_lz", []>;
+  }
+
+  let Gradients = 1 in {
+    defm AMDGPUSample : AMDGPUSampleHelper_Clamp<"_D", "_d", []>;
+    defm AMDGPUSample : AMDGPUSampleHelper_Clamp<"_CD", "_cd", []>;
+  }
+}
+
+// Helper class to capture the profile of a dimension-aware image intrinsic.
+// This information is used to generate the intrinsic's type and to inform
+// codegen pattern matching.
+class AMDGPUDimProfile<string opmod,
+                       AMDGPUDimProps dim> {
+  AMDGPUDimProps Dim = dim;
+  string OpMod = opmod; // the corresponding instruction is named IMAGE_OpMod
+
+  // These are entended to be overwritten by subclasses
+  bit IsSample = 0;
+  bit IsAtomic = 0;
+  list<LLVMType> RetTypes = [];
+  list<AMDGPUArg> DataArgs = [];
+  list<AMDGPUArg> ExtraAddrArgs = [];
+  bit Gradients = 0;
+  string LodClampMip = "";
+
+  int NumRetAndDataAnyTypes =
+    !foldl(0, !listconcat(RetTypes, !foreach(arg, DataArgs, arg.Type)), a, b,
+           !add(a, b.isAny));
+
+  list<AMDGPUArg> AddrArgs =
+    arglistconcat<[ExtraAddrArgs,
+                   !if(Gradients, dim.GradientArgs, []),
+                   !listconcat(!if(IsSample, dim.CoordSliceArgs, dim.CoordSliceIntArgs),
+                               !if(!eq(LodClampMip, ""),
+                                   []<AMDGPUArg>,
+                                   [AMDGPUArg<LLVMMatchType<0>, LodClampMip>]))],
+                  NumRetAndDataAnyTypes>.ret;
+  list<LLVMType> AddrTypes = !foreach(arg, AddrArgs, arg.Type);
+  list<AMDGPUArg> AddrDefaultArgs =
+    !foreach(arg, AddrArgs,
+             AMDGPUArg<!if(!or(arg.Type.isAny, !isa<LLVMMatchType>(arg.Type)),
+                           !if(IsSample, llvm_float_ty, llvm_i32_ty), arg.Type),
+                       arg.Name>);
+  list<AMDGPUArg> AddrA16Args =
+    !foreach(arg, AddrArgs,
+             AMDGPUArg<!if(!or(arg.Type.isAny, !isa<LLVMMatchType>(arg.Type)),
+                           !if(IsSample, llvm_half_ty, llvm_i16_ty), arg.Type),
+                       arg.Name>);
+}
+
+class AMDGPUDimProfileCopy<AMDGPUDimProfile base> : AMDGPUDimProfile<base.OpMod, base.Dim> {
+  let IsSample = base.IsSample;
+  let IsAtomic = base.IsAtomic;
+  let RetTypes = base.RetTypes;
+  let DataArgs = base.DataArgs;
+  let ExtraAddrArgs = base.ExtraAddrArgs;
+  let Gradients = base.Gradients;
+  let LodClampMip = base.LodClampMip;
+}
+
+class AMDGPUDimSampleProfile<string opmod,
+                             AMDGPUDimProps dim,
+                             AMDGPUSampleVariant sample> : AMDGPUDimProfile<opmod, dim> {
+  let IsSample = 1;
+  let RetTypes = [llvm_anyfloat_ty];
+  let ExtraAddrArgs = sample.ExtraAddrArgs;
+  let Gradients = sample.Gradients;
+  let LodClampMip = sample.LodOrClamp;
+}
+
+class AMDGPUDimNoSampleProfile<string opmod,
+                               AMDGPUDimProps dim,
+                               list<LLVMType> retty,
+                               list<AMDGPUArg> dataargs,
+                               bit Mip = 0> : AMDGPUDimProfile<opmod, dim> {
+  let RetTypes = retty;
+  let DataArgs = dataargs;
+  let LodClampMip = !if(Mip, "mip", "");
+}
+
+class AMDGPUDimAtomicProfile<string opmod,
+                             AMDGPUDimProps dim,
+                             list<AMDGPUArg> dataargs> : AMDGPUDimProfile<opmod, dim> {
+  let RetTypes = [llvm_anyint_ty];
+  let DataArgs = dataargs;
+  let IsAtomic = 1;
+}
+
+class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim> : AMDGPUDimProfile<"GET_RESINFO", dim> {
+  let RetTypes = [llvm_anyfloat_ty];
+  let DataArgs = [];
+  let AddrArgs = [AMDGPUArg<llvm_anyint_ty, "mip">];
+  let LodClampMip = "mip";
+}
+
+// All dimension-aware intrinsics are derived from this class.
+class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
+                              list<IntrinsicProperty> props,
+                              list<SDNodeProperty> sdnodeprops> : Intrinsic<
+    P_.RetTypes,        // vdata(VGPR) -- for load/atomic-with-return
+    !listconcat(
+      !foreach(arg, P_.DataArgs, arg.Type),      // vdata(VGPR) -- for store/atomic
+      !if(P_.IsAtomic, [], [llvm_i32_ty]),       // dmask(imm)
+      P_.AddrTypes,                              // vaddr(VGPR)
+      [llvm_v8i32_ty],                           // rsrc(SGPR)
+      !if(P_.IsSample, [llvm_v4i32_ty,           // samp(SGPR)
+                        llvm_i1_ty], []),        // unorm(imm)
+      [llvm_i32_ty,                              // texfailctrl(imm; bit 0 = tfe, bit 1 = lwe)
+       llvm_i32_ty]),                            // cachepolicy(imm; bit 0 = glc, bit 1 = slc)
+      props, "", sdnodeprops>,
+  AMDGPURsrcIntrinsic<!add(!size(P_.DataArgs), !size(P_.AddrTypes),
+                           !if(P_.IsAtomic, 0, 1)), 1> {
+  AMDGPUDimProfile P = P_;
+
+  let TargetPrefix = "amdgcn";
+}
+
+defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
+
+  //////////////////////////////////////////////////////////////////////////
+  // Load and store intrinsics
+  //////////////////////////////////////////////////////////////////////////
+  multiclass AMDGPUImageDimIntrinsicsNoMsaa<string opmod,
+                                            list<LLVMType> retty,
+                                            list<AMDGPUArg> dataargs,
+                                            list<IntrinsicProperty> props,
+                                            list<SDNodeProperty> sdnodeprops,
+                                            bit Mip = 0> {
+    foreach dim = AMDGPUDims.NoMsaa in {
+      def !strconcat(NAME, "_", dim.Name)
+        : AMDGPUImageDimIntrinsic<
+            AMDGPUDimNoSampleProfile<opmod, dim, retty, dataargs, Mip>,
+            props, sdnodeprops>;
+    }
+  }
+
+  multiclass AMDGPUImageDimIntrinsicsAll<string opmod,
+                                         list<LLVMType> retty,
+                                         list<AMDGPUArg> dataargs,
+                                         list<IntrinsicProperty> props,
+                                         list<SDNodeProperty> sdnodeprops,
+                                         bit Mip = 0> {
+    foreach dim = AMDGPUDims.All in {
+      def !strconcat(NAME, "_", dim.Name)
+        : AMDGPUImageDimIntrinsic<
+            AMDGPUDimNoSampleProfile<opmod, dim, retty, dataargs, Mip>,
+            props, sdnodeprops>;
+    }
+  }
+
+  defm int_amdgcn_image_load : AMDGPUImageDimIntrinsicsAll<
+              "LOAD", [llvm_anyfloat_ty], [], [IntrReadMem], [SDNPMemOperand]>;
+  defm int_amdgcn_image_load_mip : AMDGPUImageDimIntrinsicsNoMsaa<
+              "LOAD_MIP", [llvm_anyfloat_ty], [], [IntrReadMem], [SDNPMemOperand], 1>;
+
+  defm int_amdgcn_image_store : AMDGPUImageDimIntrinsicsAll<
+              "STORE", [], [AMDGPUArg<llvm_anyfloat_ty, "vdata">],
+              [IntrWriteMem], [SDNPMemOperand]>;
+  defm int_amdgcn_image_store_mip : AMDGPUImageDimIntrinsicsNoMsaa<
+              "STORE_MIP", [], [AMDGPUArg<llvm_anyfloat_ty, "vdata">],
+              [IntrWriteMem], [SDNPMemOperand], 1>;
+
+  //////////////////////////////////////////////////////////////////////////
+  // sample and getlod intrinsics
+  //////////////////////////////////////////////////////////////////////////
+  multiclass AMDGPUImageDimSampleDims<string opmod,
+                                      AMDGPUSampleVariant sample,
+                                      bit NoMem = 0> {
+    foreach dim = AMDGPUDims.NoMsaa in {
+      def !strconcat(NAME, "_", dim.Name) : AMDGPUImageDimIntrinsic<
+          AMDGPUDimSampleProfile<opmod, dim, sample>,
+          !if(NoMem, [IntrNoMem], [IntrReadMem]),
+          !if(NoMem, [], [SDNPMemOperand])>;
+    }
+  }
+
+  foreach sample = AMDGPUSampleVariants in {
+    defm int_amdgcn_image_sample # sample.LowerCaseMod :
+        AMDGPUImageDimSampleDims<"SAMPLE" # sample.UpperCaseMod, sample>;
+  }
+
+  defm int_amdgcn_image_getlod : AMDGPUImageDimSampleDims<"GET_LOD", AMDGPUSample, 1>;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// getresinfo intrinsics (separate due to D16)
+//////////////////////////////////////////////////////////////////////////
+defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimGetResInfoIntrinsics = {
+  foreach dim = AMDGPUDims.All in {
+    def !strconcat("int_amdgcn_image_getresinfo_", dim.Name)
+      : AMDGPUImageDimIntrinsic<AMDGPUDimGetResInfoProfile<dim>, [IntrNoMem], []>;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// gather4 intrinsics
+//////////////////////////////////////////////////////////////////////////
+defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimGatherIntrinsics = {
+  foreach sample = AMDGPUSampleVariantsNoGradients in {
+    foreach dim = [AMDGPUDim2D, AMDGPUDimCube, AMDGPUDim2DArray] in {
+      def int_amdgcn_image_gather4 # sample.LowerCaseMod # _ # dim.Name:
+          AMDGPUImageDimIntrinsic<
+              AMDGPUDimSampleProfile<"GATHER4" # sample.UpperCaseMod, dim, sample>,
+              [IntrReadMem], [SDNPMemOperand]>;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// atomic intrinsics
+//////////////////////////////////////////////////////////////////////////
+defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
+  multiclass AMDGPUImageDimAtomicX<string opmod, list<AMDGPUArg> dataargs> {
+    foreach dim = AMDGPUDims.All in {
+      def !strconcat(NAME, "_", dim.Name)
+        : AMDGPUImageDimIntrinsic<
+            AMDGPUDimAtomicProfile<opmod, dim, dataargs>,
+            [], [SDNPMemOperand]>;
+    }
+  }
+
+  multiclass AMDGPUImageDimAtomic<string opmod> {
+    defm "" : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">]>;
+  }
+
+  defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAtomic<"ATOMIC_SWAP">;
+  defm int_amdgcn_image_atomic_add : AMDGPUImageDimAtomic<"ATOMIC_ADD">;
+  defm int_amdgcn_image_atomic_sub : AMDGPUImageDimAtomic<"ATOMIC_SUB">;
+  defm int_amdgcn_image_atomic_smin : AMDGPUImageDimAtomic<"ATOMIC_SMIN">;
+  defm int_amdgcn_image_atomic_umin : AMDGPUImageDimAtomic<"ATOMIC_UMIN">;
+  defm int_amdgcn_image_atomic_smax : AMDGPUImageDimAtomic<"ATOMIC_SMAX">;
+  defm int_amdgcn_image_atomic_umax : AMDGPUImageDimAtomic<"ATOMIC_UMAX">;
+  defm int_amdgcn_image_atomic_and : AMDGPUImageDimAtomic<"ATOMIC_AND">;
+  defm int_amdgcn_image_atomic_or : AMDGPUImageDimAtomic<"ATOMIC_OR">;
+  defm int_amdgcn_image_atomic_xor : AMDGPUImageDimAtomic<"ATOMIC_XOR">;
+
+  // TODO: INC/DEC are weird: they seem to have a vdata argument in hardware,
+  //       even though it clearly shouldn't be needed
+  defm int_amdgcn_image_atomic_inc : AMDGPUImageDimAtomic<"ATOMIC_INC">;
+  defm int_amdgcn_image_atomic_dec : AMDGPUImageDimAtomic<"ATOMIC_DEC">;
+
+  defm int_amdgcn_image_atomic_cmpswap :
+      AMDGPUImageDimAtomicX<"ATOMIC_CMPSWAP", [AMDGPUArg<LLVMMatchType<0>, "src">,
+                                               AMDGPUArg<LLVMMatchType<0>, "cmp">]>;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Buffer intrinsics
+//////////////////////////////////////////////////////////////////////////
+
+let TargetPrefix = "amdgcn" in {
+
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
 class AMDGPUBufferLoad : Intrinsic <

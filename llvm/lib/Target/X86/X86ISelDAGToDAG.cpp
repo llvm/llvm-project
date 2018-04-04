@@ -2901,27 +2901,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
     }
 
-    // Prevent use of AH in a REX instruction by referencing AX instead.
-    if (HiReg == X86::AH && Subtarget->is64Bit() &&
-        !SDValue(Node, 1).use_empty()) {
-      SDValue Result = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), dl,
-                                              X86::AX, MVT::i16, InFlag);
-      InFlag = Result.getValue(2);
-      // Get the low part if needed. Don't use getCopyFromReg for aliasing
-      // registers.
-      if (!SDValue(Node, 0).use_empty())
-        ReplaceUses(SDValue(Node, 0),
-          CurDAG->getTargetExtractSubreg(X86::sub_8bit, dl, MVT::i8, Result));
-
-      // Shift AX down 8 bits.
-      Result = SDValue(CurDAG->getMachineNode(X86::SHR16ri, dl, MVT::i16,
-                                              Result,
-                                     CurDAG->getTargetConstant(8, dl, MVT::i8)),
-                       0);
-      // Then truncate it down to i8.
-      ReplaceUses(SDValue(Node, 1),
-        CurDAG->getTargetExtractSubreg(X86::sub_8bit, dl, MVT::i8, Result));
-    }
     // Copy the low half of the result, if it is needed.
     if (!SDValue(Node, 0).use_empty()) {
       if (!ResLo.getNode()) {

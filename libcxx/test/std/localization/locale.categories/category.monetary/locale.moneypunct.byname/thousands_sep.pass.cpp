@@ -101,6 +101,9 @@ int main()
         assert(f.thousands_sep() == ' ');
     }
 // The below tests work around GLIBC's use of U202F as mon_thousands_sep.
+#ifndef TEST_GLIBC_PREREQ
+#define TEST_GLIBC_PREREQ(x, y) 0
+#endif
 #if defined(TEST_HAS_GLIBC) && TEST_GLIBC_PREREQ(2, 27)
     const wchar_t fr_sep = L'\u202F';
 #else

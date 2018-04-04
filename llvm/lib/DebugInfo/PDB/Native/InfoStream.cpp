@@ -20,7 +20,7 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-InfoStream::InfoStream(std::unique_ptr<MappedBlockStream> Stream)
+InfoStream::InfoStream(std::unique_ptr<BinaryStream> Stream)
     : Stream(std::move(Stream)), Header(nullptr) {}
 
 Error InfoStream::reload() {

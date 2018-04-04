@@ -20,41 +20,46 @@ namespace llvm {
 namespace pdb {
 
 class DbiStream;
-class PDBFile;
+class InfoStream;
+class InputFile;
 
 class ExplainOutputStyle : public OutputStyle {
 
 public:
-  ExplainOutputStyle(PDBFile &File, uint64_t FileOffset);
+  ExplainOutputStyle(InputFile &File, uint64_t FileOffset);
 
   Error dump() override;
 
 private:
-  bool explainBlockStatus();
+  Error explainPdbFile();
+  Error explainBinaryFile();
 
-  bool isFpm1() const;
-  bool isFpm2() const;
+  bool explainPdbBlockStatus();
 
-  bool isSuperBlock() const;
-  bool isFpmBlock() const;
-  bool isBlockMapBlock() const;
-  bool isStreamDirectoryBlock() const;
-  Optional<uint32_t> getBlockStreamIndex() const;
+  bool isPdbFpm1() const;
+  bool isPdbFpm2() const;
 
-  void explainSuperBlockOffset();
-  void explainFpmBlockOffset();
-  void explainBlockMapOffset();
-  void explainStreamDirectoryOffset();
-  void explainStreamOffset(uint32_t Stream);
-  void explainUnknownBlock();
+  bool isPdbSuperBlock() const;
+  bool isPdbFpmBlock() const;
+  bool isPdbBlockMapBlock() const;
+  bool isPdbStreamDirectoryBlock() const;
+  Optional<uint32_t> getPdbBlockStreamIndex() const;
 
-  void explainDbiStream(uint32_t StreamIdx, uint32_t OffsetInStream);
-  void explainPdbStream(uint32_t StreamIdx, uint32_t OffsetInStream);
+  void explainPdbSuperBlockOffset();
+  void explainPdbFpmBlockOffset();
+  void explainPdbBlockMapOffset();
+  void explainPdbStreamDirectoryOffset();
+  void explainPdbStreamOffset(uint32_t Stream);
+  void explainPdbUnknownBlock();
 
-  PDBFile &File;
+  void explainStreamOffset(DbiStream &Stream, uint32_t OffsetInStream);
+  void explainStreamOffset(InfoStream &Stream, uint32_t OffsetInStream);
+
+  uint32_t pdbBlockIndex() const;
+  uint32_t pdbBlockOffset() const;
+
+  InputFile &File;
   const uint64_t FileOffset;
-  const uint64_t BlockIndex;
-  const uint64_t OffsetInBlock;
   LinePrinter P;
 };
 } // namespace pdb
