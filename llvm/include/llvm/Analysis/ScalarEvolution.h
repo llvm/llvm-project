@@ -1142,6 +1142,9 @@ private:
   /// Mark SCEVUnknown Phis currently being processed by getRangeRef.
   SmallPtrSet<const PHINode *, 6> PendingPhiRanges;
 
+  // Mark SCEVUnknown Phis currently being processed by isImpliedViaMerge.
+  SmallPtrSet<const PHINode *, 6> PendingMerges;
+
   /// Set to true by isLoopBackedgeGuardedByCond when we're walking the set of
   /// conditions dominating the backedge of a loop.
   bool WalkingBEDominatingConds = false;
@@ -1666,6 +1669,18 @@ private:
                                           const SCEV *LHS, const SCEV *RHS,
                                           const SCEV *FoundLHS,
                                           const SCEV *FoundRHS);
+
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
+  /// true.
+  ///
+  /// This routine tries to figure out predicate for Phis which are SCEVUnknown
+  /// if it is true for every possible incoming value from their respective
+  /// basic blocks.
+  bool isImpliedViaMerge(ICmpInst::Predicate Pred,
+                         const SCEV *LHS, const SCEV *RHS,
+                         const SCEV *FoundLHS, const SCEV *FoundRHS,
+                         unsigned Depth);
 
   /// If we know that the specified Phi is in the header of its containing
   /// loop, we know the loop executes a constant number of times, and the PHI

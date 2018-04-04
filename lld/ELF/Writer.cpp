@@ -62,7 +62,7 @@ private:
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
-  void checkSectionOverlap();
+  void checkSections();
   void fixSectionAlignments();
   void openFile();
   void writeTrapInstr();
@@ -458,7 +458,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 
   if (Config->CheckSections)
-    checkSectionOverlap();
+    checkSections();
 
   // It does not make sense try to open the file if we have error already.
   if (errorCount())
@@ -2071,7 +2071,7 @@ static void checkOverlap(StringRef Name, std::vector<SectionOffset> &Sections) {
 // In this function we check that none of the output sections have overlapping
 // file offsets. For SHF_ALLOC sections we also check that the load address
 // ranges and the virtual address ranges don't overlap
-template <class ELFT> void Writer<ELFT>::checkSectionOverlap() {
+template <class ELFT> void Writer<ELFT>::checkSections() {
   // First, check that section's VAs fit in available address space for target.
   for (OutputSection *OS : OutputSections)
     if ((OS->Addr + OS->Size < OS->Addr) ||

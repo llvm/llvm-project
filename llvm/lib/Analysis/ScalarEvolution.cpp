@@ -9518,6 +9518,115 @@ bool ScalarEvolution::isImpliedCondOperandsViaNoOverflow(
                                   getConstant(FoundRHSLimit));
 }
 
+bool ScalarEvolution::isImpliedViaMerge(ICmpInst::Predicate Pred,
+                                        const SCEV *LHS, const SCEV *RHS,
+                                        const SCEV *FoundLHS,
+                                        const SCEV *FoundRHS, unsigned Depth) {
+  const PHINode *LPhi = nullptr, *RPhi = nullptr;
+
+  auto ClearOnExit = make_scope_exit([&]() {
+    if (LPhi) {
+      bool Erased = PendingMerges.erase(LPhi);
+      assert(Erased && "Failed to erase LPhi!");
+      (void)Erased;
+    }
+    if (RPhi) {
+      bool Erased = PendingMerges.erase(RPhi);
+      assert(Erased && "Failed to erase RPhi!");
+      (void)Erased;
+    }
+  });
+
+  // Find respective Phis and check that they are not being pending.
+  if (const SCEVUnknown *LU = dyn_cast<SCEVUnknown>(LHS))
+    if (auto *Phi = dyn_cast<PHINode>(LU->getValue())) {
+      if (!PendingMerges.insert(Phi).second)
+        return false;
+      LPhi = Phi;
+    }
+  if (const SCEVUnknown *RU = dyn_cast<SCEVUnknown>(RHS))
+    if (auto *Phi = dyn_cast<PHINode>(RU->getValue())) {
+      // If we detect a loop of Phi nodes being processed by this method, for
+      // example:
+      //
+      //   %a = phi i32 [ %some1, %preheader ], [ %b, %latch ]
+      //   %b = phi i32 [ %some2, %preheader ], [ %a, %latch ]
+      //
+      // we don't want to deal with a case that complex, so return conservative
+      // answer false.
+      if (!PendingMerges.insert(Phi).second)
+        return false;
+      RPhi = Phi;
+    }
+
+  // If none of LHS, RHS is a Phi, nothing to do here.
+  if (!LPhi && !RPhi)
+    return false;
+
+  // If there is a SCEVUnknown Phi we are interested in, make it left.
+  if (!LPhi) {
+    std::swap(LHS, RHS);
+    std::swap(FoundLHS, FoundRHS);
+    std::swap(LPhi, RPhi);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  assert(LPhi && "LPhi should definitely be a SCEVUnknown Phi!");
+  const BasicBlock *LBB = LPhi->getParent();
+  const SCEVAddRecExpr *RAR = dyn_cast<SCEVAddRecExpr>(RHS);
+
+  auto ProvedEasily = [&](const SCEV *S1, const SCEV *S2) {
+    return isKnownViaNonRecursiveReasoning(Pred, S1, S2) ||
+           isImpliedCondOperandsViaRanges(Pred, S1, S2, FoundLHS, FoundRHS) ||
+           isImpliedViaOperations(Pred, S1, S2, FoundLHS, FoundRHS, Depth);
+  };
+
+  if (RPhi && RPhi->getParent() == LBB) {
+    // Case one: RHS is also a SCEVUnknown Phi from the same basic block.
+    // If we compare two Phis from the same block, and for each entry block
+    // the predicate is true for incoming values from this block, then the
+    // predicate is also true for the Phis.
+    for (const BasicBlock *IncBB : predecessors(LBB)) {
+      const SCEV *L = getSCEV(LPhi->getIncomingValueForBlock(IncBB));
+      const SCEV *R = getSCEV(RPhi->getIncomingValueForBlock(IncBB));
+      if (!ProvedEasily(L, R))
+        return false;
+    }
+  } else if (RAR && RAR->getLoop()->getHeader() == LBB) {
+    // Case two: RHS is also a Phi from the same basic block, and it is an
+    // AddRec. It means that there is a loop which has both AddRec and Unknown
+    // PHIs, for it we can compare incoming values of AddRec from preheader and
+    // latch with their respective incoming values of LPhi.
+    assert(LPhi->getNumIncomingValues() == 2 &&
+           "Phi node standing in loop header does not have exactly 2 inputs?");
+    auto *RLoop = RAR->getLoop();
+    auto *Preheader = RLoop->getLoopPreheader();
+    assert(Preheader && "Loop with AddRec with no preheader?");
+    const SCEV *L1 = getSCEV(LPhi->getIncomingValueForBlock(Preheader));
+    if (!ProvedEasily(L1, RAR->getStart()))
+      return false;
+    auto *Latch = RLoop->getLoopLatch();
+    assert(Latch && "Loop with AddRec with no latch?");
+    const SCEV *L2 = getSCEV(LPhi->getIncomingValueForBlock(Latch));
+    if (!ProvedEasily(L2, RAR->getPostIncExpr(*this)))
+      return false;
+  } else {
+    // In all other cases go over inputs of LHS and compare each of them to RHS,
+    // the predicate is true for (LHS, RHS) if it is true for all such pairs.
+    // At this point RHS is either a non-Phi, or it is a Phi from some block
+    // different from LBB.
+    for (const BasicBlock *IncBB : predecessors(LBB)) {
+      // Check that RHS is available in this block.
+      if (!dominates(RHS, IncBB))
+        return false;
+      const SCEV *L = getSCEV(LPhi->getIncomingValueForBlock(IncBB));
+      if (!ProvedEasily(L, RHS))
+        return false;
+    }
+  }
+  return true;
+}
+
 bool ScalarEvolution::isImpliedCondOperands(ICmpInst::Predicate Pred,
                                             const SCEV *LHS, const SCEV *RHS,
                                             const SCEV *FoundLHS,
@@ -9671,6 +9780,7 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
   };
 
   // Acquire values from extensions.
+  auto *OrigLHS = LHS;
   auto *OrigFoundLHS = FoundLHS;
   LHS = GetOpFromSExt(LHS);
   FoundLHS = GetOpFromSExt(FoundLHS);
@@ -9777,6 +9887,12 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
         return true;
     }
   }
+
+  // If our expression contained SCEVUnknown Phis, and we split it down and now
+  // need to prove something for them, try to prove the predicate for every
+  // possible incoming values of those Phis.
+  if (isImpliedViaMerge(Pred, OrigLHS, RHS, OrigFoundLHS, FoundRHS, Depth + 1))
+    return true;
 
   return false;
 }
@@ -10863,6 +10979,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       ValueExprMap(std::move(Arg.ValueExprMap)),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
       PendingPhiRanges(std::move(Arg.PendingPhiRanges)),
+      PendingMerges(std::move(Arg.PendingMerges)),
       MinTrailingZerosCache(std::move(Arg.MinTrailingZerosCache)),
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
@@ -10907,6 +11024,7 @@ ScalarEvolution::~ScalarEvolution() {
 
   assert(PendingLoopPredicates.empty() && "isImpliedCond garbage");
   assert(PendingPhiRanges.empty() && "getRangeRef garbage");
+  assert(PendingMerges.empty() && "isImpliedViaMerge garbage");
   assert(!WalkingBEDominatingConds && "isLoopBackedgeGuardedByCond garbage!");
   assert(!ProvingSplitPredicate && "ProvingSplitPredicate garbage!");
 }

@@ -1868,8 +1868,7 @@ public:
            ((Value & 0xffffffffff00ffff) == 0xffff);
   }
 
-  bool isNEONReplicate(unsigned Width, unsigned NumElems, bool Inv,
-                       bool AllowMinusOne) const {
+  bool isNEONReplicate(unsigned Width, unsigned NumElems, bool Inv) const {
     assert((Width == 8 || Width == 16 || Width == 32) &&
            "Invalid element width");
     assert(NumElems * Width <= 64 && "Invalid result width");
@@ -1888,8 +1887,6 @@ public:
 
     uint64_t Mask = (1ull << Width) - 1;
     uint64_t Elem = Value & Mask;
-    if (!AllowMinusOne && Elem == Mask)
-      return false;
     if (Width == 16 && (Elem & 0x00ff) != 0 && (Elem & 0xff00) != 0)
       return false;
     if (Width == 32 && !isValidNEONi32vmovImm(Elem))
@@ -1904,7 +1901,7 @@ public:
   }
 
   bool isNEONByteReplicate(unsigned NumBytes) const {
-    return isNEONReplicate(8, NumBytes, false, true);
+    return isNEONReplicate(8, NumBytes, false);
   }
 
   static void checkNeonReplicateArgs(unsigned FromW, unsigned ToW) {
@@ -1918,14 +1915,15 @@ public:
   template<unsigned FromW, unsigned ToW>
   bool isNEONmovReplicate() const {
     checkNeonReplicateArgs(FromW, ToW);
-    bool AllowMinusOne = ToW != 64;
-    return isNEONReplicate(FromW, ToW / FromW, false, AllowMinusOne);
+    if (ToW == 64 && isNEONi64splat())
+      return false;
+    return isNEONReplicate(FromW, ToW / FromW, false);
   }
 
   template<unsigned FromW, unsigned ToW>
   bool isNEONinvReplicate() const {
     checkNeonReplicateArgs(FromW, ToW);
-    return isNEONReplicate(FromW, ToW / FromW, true, true);
+    return isNEONReplicate(FromW, ToW / FromW, true);
   }
 
   bool isNEONi32vmov() const {

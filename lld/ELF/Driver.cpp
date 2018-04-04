@@ -879,8 +879,7 @@ static bool getBinaryOption(StringRef S) {
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
   for (auto *Arg : Args) {
-    unsigned ID = Arg->getOption().getUnaliasedOption().getID();
-    switch (ID) {
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
     case OPT_library:
       addLibrary(Arg->getValue());
       break;
@@ -903,19 +902,25 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       error(Twine("cannot find linker script ") + Arg->getValue());
       break;
     case OPT_as_needed:
-    case OPT_no_as_needed:
-      Config->AsNeeded = (ID == OPT_as_needed);
+      Config->AsNeeded = true;
       break;
     case OPT_format:
       InBinary = getBinaryOption(Arg->getValue());
       break;
+    case OPT_no_as_needed:
+      Config->AsNeeded = false;
+      break;
     case OPT_Bstatic:
+      Config->Static = true;
+      break;
     case OPT_Bdynamic:
-      Config->Static = (ID == OPT_Bstatic);
+      Config->Static = false;
       break;
     case OPT_whole_archive:
+      InWholeArchive = true;
+      break;
     case OPT_no_whole_archive:
-      InWholeArchive = (ID == OPT_whole_archive);
+      InWholeArchive = false;
       break;
     case OPT_just_symbols:
       if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue())) {
@@ -924,8 +929,10 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       }
       break;
     case OPT_start_lib:
+      InLib = true;
+      break;
     case OPT_end_lib:
-      InLib = (ID == OPT_start_lib);
+      InLib = false;
       break;
     }
   }
