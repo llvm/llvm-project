@@ -531,9 +531,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       return;
     // REDZONE: If the stack size is less than 128 bytes, we don't need
     // to actually allocate.
-    if (canUseRedZone(MF))
+    if (canUseRedZone(MF)) {
+      AFI->setHasRedZone(true);
       ++NumRedZoneFunctions;
-    else {
+    } else {
+      AFI->setHasRedZone(false);
       emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP, -NumBytes, TII,
                       MachineInstr::FrameSetup);
 

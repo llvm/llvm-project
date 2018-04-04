@@ -1,0 +1,204 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass shadow-call-stack -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+
+  define void @no_return() #0 { ret void }
+  define void @normal_return() #0 { ret void }
+  define void @normal_return_leaf_func() #0 { ret void }
+  define void @short_leaf_func() #0 { ret void }
+  define void @normal_tail_call() #0 { ret void }
+  define void @r11_tail_call() #0 { ret void }
+  define void @conditional_tail_call() #0 { ret void }
+  define void @r10_live_in() #0 { ret void }
+
+  attributes #0 = { shadowcallstack }
+
+...
+---
+# CHECK-LABEL: name: no_return
+name: no_return
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true # not a leaf function
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+    ; CHECK-NEXT: $eax = MOV32ri 13
+    $eax = MOV32ri 13
+...
+---
+# CHECK-LABEL: name: normal_return
+name: normal_return
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true # not a leaf function
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+    ; CHECK: $r10 = MOV64rm $rsp, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: $r11 = XOR64rr undef $r11, undef $r11, implicit-def $eflags
+    ; CHECK-NEXT: ADD64mi8 $r11, 1, $noreg, 0, $gs, 8, implicit-def $eflags
+    ; CHECK-NEXT: $r11 = MOV64rm $r11, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: MOV64mr $r11, 1, $noreg, 0, $gs, $r10
+    ; CHECK-NEXT: $eax = MOV32ri 13
+    $eax = MOV32ri 13
+
+    ; CHECK-NEXT: $r11 = XOR64rr undef $r11, undef $r11, implicit-def $eflags
+    ; CHECK-NEXT: $r10 = MOV64rm $r11, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: $r10 = MOV64rm $r10, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: SUB64mi8 $r11, 1, $noreg, 0, $gs, 8, implicit-def $eflags
+    ; CHECK-NEXT: CMP64mr $rsp, 1, $noreg, 0, $noreg, $r10, implicit-def $eflags
+    ; CHECK-NEXT: JNE_1 %bb.1, implicit $eflags
+    ; CHECK-NEXT: RETQ $eax
+    RETQ $eax
+
+    ; CHECK: bb.1:
+    ; CHECK-NEXT; TRAP
+...
+---
+# CHECK-LABEL: name: normal_return_leaf_func
+name: normal_return_leaf_func
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: false # leaf function
+body: |
+  ; CHECK: bb.0:
+  ; CHECK: liveins: $rcx
+  bb.0:
+    liveins: $rcx
+
+    ; CHECK: $rdx = MOV64rm $rsp, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: $eax = MOV32ri 0
+    $eax = MOV32ri 0
+    ; CHECK-NEXT: CMP64ri8 $rcx, 5, implicit-def $eflags
+    CMP64ri8 $rcx, 5, implicit-def $eflags
+    ; CHECK-NEXT: JA_1 %bb.1, implicit $eflags
+    JA_1 %bb.1, implicit $eflags
+    ; CHECK-NEXT: JMP_1 %bb.2
+    JMP_1 %bb.2
+
+  ; CHECK: bb.1
+  ; CHECK: liveins: $eax, $rdx
+  bb.1:
+    liveins: $eax
+
+    ; CHECKT: $eax = MOV32ri 1
+    $eax = MOV32ri 1
+
+  ; CHECK: bb.2
+  ; CHECK: liveins: $eax, $rdx
+  bb.2:
+    liveins: $eax
+
+    ; CHECK: CMP64mr $rsp, 1, $noreg, 0, $noreg, $rdx, implicit-def $eflags
+    ; CHECK-NEXT: JNE_1 %bb.3, implicit $eflags
+    ; CHECK-NEXT: RETQ $eax
+    RETQ $eax
+
+    ; CHECK: bb.3:
+    ; CHECK-NEXT; TRAP
+...
+---
+# CHECK-LABEL: name: short_leaf_func
+name: short_leaf_func
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: false # leaf function
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+    ; CHECK: $eax = MOV32ri 13
+    $eax = MOV32ri 13
+
+    ; CHECK-NEXT: RETQ $eax
+    RETQ $eax
+...
+---
+# CHECK-LABEL: name: normal_tail_call
+name: normal_tail_call
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true # not a leaf function
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+    ; CHECK: $r10 = MOV64rm $rsp, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: $r11 = XOR64rr undef $r11, undef $r11, implicit-def $eflags
+    ; CHECK-NEXT: ADD64mi8 $r11, 1, $noreg, 0, $gs, 8, implicit-def $eflags
+    ; CHECK-NEXT: $r11 = MOV64rm $r11, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: MOV64mr $r11, 1, $noreg, 0, $gs, $r10
+    ; CHECK-NEXT: $eax = MOV32ri 13
+    $eax = MOV32ri 13
+
+    ; CHECK-NEXT: $r11 = XOR64rr undef $r11, undef $r11, implicit-def $eflags
+    ; CHECK-NEXT: $r10 = MOV64rm $r11, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: $r10 = MOV64rm $r10, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: SUB64mi8 $r11, 1, $noreg, 0, $gs, 8, implicit-def $eflags
+    ; CHECK-NEXT: CMP64mr $rsp, 1, $noreg, 0, $noreg, $r10, implicit-def $eflags
+    ; CHECK-NEXT: JNE_1 %bb.1, implicit $eflags
+    ; CHECK-NEXT: TAILJMPr64 $rax
+    TAILJMPr64 $rax
+
+    ; CHECK: bb.1:
+    ; CHECK-NEXT; TRAP
+...
+---
+# CHECK-LABEL: name: r11_tail_call
+name: r11_tail_call
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true # not a leaf function
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+    ; CHECK: $r10 = MOV64rm $rsp, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: $r11 = XOR64rr undef $r11, undef $r11, implicit-def $eflags
+    ; CHECK-NEXT: ADD64mi8 $r11, 1, $noreg, 0, $gs, 8, implicit-def $eflags
+    ; CHECK-NEXT: $r11 = MOV64rm $r11, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: MOV64mr $r11, 1, $noreg, 0, $gs, $r10
+    ; CHECK-NEXT: $eax = MOV32ri 13
+    $eax = MOV32ri 13
+
+    ; CHECK-NEXT: $r10 = XOR64rr undef $r10, undef $r10, implicit-def $eflags
+    ; CHECK-NEXT: $r10 = MOV64rm $r10, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: $r10 = MOV64rm $r10, 1, $noreg, 0, $gs
+    ; CHECK-NEXT: SUB64mi8 $noreg, 1, $noreg, 0, $gs, 8, implicit-def $eflags
+    ; CHECK-NEXT: CMP64mr $rsp, 1, $noreg, 0, $noreg, $r10, implicit-def $eflags
+    ; CHECK-NEXT: JNE_1 %bb.1, implicit $eflags
+    ; CHECK-NEXT: TAILJMPr64 undef $r11
+    TAILJMPr64 undef $r11
+
+    ; CHECK: bb.1:
+    ; CHECK-NEXT; TRAP
+...
+---
+# CHECK-LABEL: name: conditional_tail_call
+name: conditional_tail_call
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true # not a leaf function
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+    ; CHECK: $eax = MOV32ri 13
+    $eax = MOV32ri 13
+
+    ; CHECK-NEXT: TAILJMPd64_CC @conditional_tail_call, undef $eflags
+    TAILJMPd64_CC @conditional_tail_call, undef $eflags
+...
+---
+# CHECK-LABEL: name: r10_live_in
+name: r10_live_in
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true # not a leaf function
+body: |
+  ; CHECK: bb.0:
+  ; CHECK: liveins: $r10
+  bb.0:
+    liveins: $r10
+
+    ; CHECK: $eax = MOV32ri 13
+    $eax = MOV32ri 13
+    ; CHECK-NEXT: RETQ $eax
+    RETQ $eax
+...
