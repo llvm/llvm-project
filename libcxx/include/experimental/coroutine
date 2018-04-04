@@ -93,28 +93,28 @@ class _LIBCPP_TEMPLATE_VIS coroutine_handle;
 template <>
 class _LIBCPP_TEMPLATE_VIS coroutine_handle<void> {
 public:
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR coroutine_handle() _NOEXCEPT : __handle_(nullptr) {}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR coroutine_handle(nullptr_t) _NOEXCEPT : __handle_(nullptr) {}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     coroutine_handle& operator=(nullptr_t) _NOEXCEPT {
         __handle_ = nullptr;
         return *this;
     }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR void* address() const _NOEXCEPT { return __handle_; }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR explicit operator bool() const _NOEXCEPT { return __handle_; }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void operator()() { resume(); }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void resume() {
       _LIBCPP_ASSERT(__is_suspended(),
                      "resume() can only be called on suspended coroutines");
@@ -123,14 +123,14 @@ public:
       __builtin_coro_resume(__handle_);
     }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void destroy() {
       _LIBCPP_ASSERT(__is_suspended(),
                      "destroy() can only be called on suspended coroutines");
       __builtin_coro_destroy(__handle_);
     }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     bool done() const {
       _LIBCPP_ASSERT(__is_suspended(),
                      "done() can only be called on suspended coroutines");
@@ -138,7 +138,7 @@ public:
     }
 
 public:
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     static coroutine_handle from_address(void* __addr) _NOEXCEPT {
         coroutine_handle __tmp;
         __tmp.__handle_ = __addr;
@@ -146,7 +146,7 @@ public:
     }
 
     // FIXME: Should from_address(nullptr) be allowed?
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     static coroutine_handle from_address(nullptr_t) _NOEXCEPT {
       return coroutine_handle(nullptr);
     }
@@ -169,27 +169,27 @@ private:
 };
 
 // 18.11.2.7 comparison operators:
-inline _LIBCPP_ALWAYS_INLINE
+inline _LIBCPP_INLINE_VISIBILITY
 bool operator==(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return __x.address() == __y.address();
 }
-inline _LIBCPP_ALWAYS_INLINE
+inline _LIBCPP_INLINE_VISIBILITY
 bool operator!=(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return !(__x == __y);
 }
-inline _LIBCPP_ALWAYS_INLINE
+inline _LIBCPP_INLINE_VISIBILITY
 bool operator<(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return less<void*>()(__x.address(), __y.address());
 }
-inline _LIBCPP_ALWAYS_INLINE
+inline _LIBCPP_INLINE_VISIBILITY
 bool operator>(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return __y < __x;
 }
-inline _LIBCPP_ALWAYS_INLINE
+inline _LIBCPP_INLINE_VISIBILITY
 bool operator<=(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return !(__x > __y);
 }
-inline _LIBCPP_ALWAYS_INLINE
+inline _LIBCPP_INLINE_VISIBILITY
 bool operator>=(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return !(__x < __y);
 }
@@ -202,8 +202,8 @@ public:
     // 18.11.2.1 construct/reset
     using coroutine_handle<>::coroutine_handle;
 #else
-    _LIBCPP_ALWAYS_INLINE coroutine_handle() _NOEXCEPT : _Base() {}
-    _LIBCPP_ALWAYS_INLINE coroutine_handle(nullptr_t) _NOEXCEPT : _Base(nullptr) {}
+    _LIBCPP_INLINE_VISIBILITY coroutine_handle() _NOEXCEPT : _Base() {}
+    _LIBCPP_INLINE_VISIBILITY coroutine_handle(nullptr_t) _NOEXCEPT : _Base(nullptr) {}
 #endif
     _LIBCPP_INLINE_VISIBILITY
     coroutine_handle& operator=(nullptr_t) _NOEXCEPT {
@@ -213,12 +213,12 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     _Promise& promise() const {
-        return *reinterpret_cast<_Promise*>(
+        return *static_cast<_Promise*>(
             __builtin_coro_promise(this->__handle_, __alignof(_Promise), false));
     }
 
 public:
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     static coroutine_handle from_address(void* __addr) _NOEXCEPT {
         coroutine_handle __tmp;
         __tmp.__handle_ = __addr;
@@ -229,7 +229,7 @@ public:
     // the deleted _Promise* overload doesn't make from_address(nullptr)
     // ambiguous.
     // FIXME: should from_address work with nullptr?
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     static coroutine_handle from_address(nullptr_t) _NOEXCEPT {
       return coroutine_handle(nullptr);
     }
@@ -248,7 +248,7 @@ public:
         "pointers to the coroutine's promise type; use 'from_promise' instead");
     }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     static coroutine_handle from_promise(_Promise& __promise) _NOEXCEPT {
         typedef typename remove_cv<_Promise>::type _RawPromise;
         coroutine_handle __tmp;
@@ -259,21 +259,60 @@ public:
     }
 };
 
+#if __has_builtin(__builtin_coro_noop)
+struct noop_coroutine_promise {};
+
+template <>
+class _LIBCPP_TEMPLATE_VIS coroutine_handle<noop_coroutine_promise>
+    : public coroutine_handle<> {
+  using _Base = coroutine_handle<>;
+  using _Promise = noop_coroutine_promise;
+public:
+
+  _LIBCPP_INLINE_VISIBILITY
+  _Promise& promise() const {
+    return *static_cast<_Promise*>(
+      __builtin_coro_promise(this->__handle_, __alignof(_Promise), false));
+  }
+
+  _LIBCPP_CONSTEXPR explicit operator bool() const _NOEXCEPT { return true; }
+  _LIBCPP_CONSTEXPR bool done() const _NOEXCEPT { return false; }
+
+  _LIBCPP_CONSTEXPR void operator()() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR void resume() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR void destroy() const _NOEXCEPT {}
+
+private:
+  friend coroutine_handle<noop_coroutine_promise> noop_coroutine() _NOEXCEPT;
+
+  _LIBCPP_INLINE_VISIBILITY coroutine_handle() _NOEXCEPT {
+    this->__handle_ = __builtin_coro_noop();
+  }
+};
+
+using noop_coroutine_handle = coroutine_handle<noop_coroutine_promise>;
+
+inline _LIBCPP_INLINE_VISIBILITY
+noop_coroutine_handle noop_coroutine() _NOEXCEPT {
+  return {};
+}
+#endif // __has_builtin(__builtin_coro_noop)
+
 struct _LIBCPP_TYPE_VIS suspend_never {
-  _LIBCPP_ALWAYS_INLINE
+  _LIBCPP_INLINE_VISIBILITY
   bool await_ready() const _NOEXCEPT { return true; }
-  _LIBCPP_ALWAYS_INLINE
+  _LIBCPP_INLINE_VISIBILITY
   void await_suspend(coroutine_handle<>) const _NOEXCEPT {}
-  _LIBCPP_ALWAYS_INLINE
+  _LIBCPP_INLINE_VISIBILITY
   void await_resume() const _NOEXCEPT {}
 };
 
 struct _LIBCPP_TYPE_VIS suspend_always {
-  _LIBCPP_ALWAYS_INLINE
+  _LIBCPP_INLINE_VISIBILITY
   bool await_ready() const _NOEXCEPT { return false; }
-  _LIBCPP_ALWAYS_INLINE
+  _LIBCPP_INLINE_VISIBILITY
   void await_suspend(coroutine_handle<>) const _NOEXCEPT {}
-  _LIBCPP_ALWAYS_INLINE
+  _LIBCPP_INLINE_VISIBILITY
   void await_resume() const _NOEXCEPT {}
 };
 

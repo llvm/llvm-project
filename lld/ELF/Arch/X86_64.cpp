@@ -156,9 +156,8 @@ void X86_64<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 }
 
 template <class ELFT> bool X86_64<ELFT>::isPicRel(RelType Type) const {
-  return Type != R_X86_64_8 && Type != R_X86_64_PC8 && Type != R_X86_64_16 &&
-         Type != R_X86_64_PC16 && Type != R_X86_64_32 &&
-         Type != R_X86_64_PC32 && Type != R_X86_64_TPOFF32;
+  return Type == R_X86_64_64 || Type == R_X86_64_PC64 ||
+         Type == R_X86_64_SIZE32 || Type == R_X86_64_SIZE64;
 }
 
 template <class ELFT>

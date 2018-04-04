@@ -12,11 +12,11 @@
 # CHECK-NOGC:     Type: HIGHLOW
 # CHECK-NOGC: LoadConfig [
 # CHECK-NOGC:   Size: 0x48
-# CHECK-NOGC:   SEHandlerTable: 0x401048
+# CHECK-NOGC:   SEHandlerTable: 0x402048
 # CHECK-NOGC:   SEHandlerCount: 1
 # CHECK-NOGC: ]
 # CHECK-NOGC: SEHTable [
-# CHECK-NOGC-NEXT:   0x402006
+# CHECK-NOGC-NEXT:   0x401006
 # CHECK-NOGC-NEXT: ]
 
 # Without the SEH table, the address is absolute, so check that we do

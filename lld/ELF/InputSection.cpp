@@ -978,9 +978,6 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
   // In that case we need to search from the original section piece vector.
   const SectionPiece &Piece =
       *findSectionPiece(const_cast<MergeInputSection *>(this), Offset);
-  if (!Piece.Live)
-    return 0;
-
   uint64_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;
 }
