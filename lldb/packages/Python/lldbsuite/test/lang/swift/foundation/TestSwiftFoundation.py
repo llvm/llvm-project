@@ -12,5 +12,4 @@
 import lldbsuite.test.lldbinline as lldbinline
 import lldbsuite.test.decorators as decorators
 
-# Swift-4.1-branch doesn't have the necessary build-script changes.
-lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators.skipUnlessDarwin)
+lldbinline.MakeInlineTest(__file__, globals())
