@@ -80,7 +80,7 @@ NOT-FOUND-NEXT: triple: 'x86_64-apple-darwin'
 NOT-FOUND-NEXT: binary-path:{{.*}}/Inputs/basic.macho.x86_64
 NOT-FOUND-NEXT: ...
 
-Check that we correctly error out on invalid executatble.
+Check that we correctly error out on invalid executable.
 
 NO-EXECUTABLE: cannot parse{{.*}}/inexistant': {{[Nn]o}} such file
 NO-EXECUTABLE-NOT: ---

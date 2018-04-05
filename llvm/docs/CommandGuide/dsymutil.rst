@@ -70,6 +70,13 @@ OPTIONS
 
  Specifies a ``path`` to prepend to all debug symbol object file paths.
 
+.. option:: --papertrail
+
+ When running dsymutil as part of your build system, it can be desirable for
+ warnings to be part of the end product, rather than just being emitted to the
+ output stream. When enabled warnings are embedded in the linked DWARF debug
+ information.
+
 .. option:: -s, --symtab
 
  Dumps the symbol table found in *executable* or object file(s) and exits.
