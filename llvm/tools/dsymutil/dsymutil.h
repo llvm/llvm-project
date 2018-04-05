@@ -48,6 +48,9 @@ struct LinkOptions {
   /// Do not check swiftmodule timestamp
   bool NoTimestamp = false;
 
+  /// Number of threads.
+  unsigned Threads = 1;
+
   /// -oso-prepend-path
   std::string PrependPath;
 
