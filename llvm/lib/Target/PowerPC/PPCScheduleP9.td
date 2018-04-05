@@ -33,7 +33,7 @@ def P9Model : SchedMachineModel {
   // A dispatch group is 6 instructions.
   let LoopMicroOpBufferSize = 60;
 
-  let CompleteModel = 1;
+  let CompleteModel = 0;
 
   // Do not support QPX (Quad Processing eXtension) on Power 9.
   let UnsupportedFeatures = [HasQPX];

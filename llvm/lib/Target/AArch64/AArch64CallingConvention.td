@@ -349,3 +349,18 @@ def CSR_AArch64_StackProbe_Windows
     : CalleeSavedRegs<(add (sequence "X%u", 0, 15),
                            (sequence "X%u", 18, 28), FP, SP,
                            (sequence "Q%u", 0, 31))>;
+
+// Variants of the standard calling conventions for shadow call stack.
+// These all preserve x18 in addition to any other registers.
+def CSR_AArch64_NoRegs_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_NoRegs, X18)>;
+def CSR_AArch64_AllRegs_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_AllRegs, X18)>;
+def CSR_AArch64_CXX_TLS_Darwin_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_CXX_TLS_Darwin, X18)>;
+def CSR_AArch64_AAPCS_SwiftError_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_AAPCS_SwiftError, X18)>;
+def CSR_AArch64_RT_MostRegs_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_RT_MostRegs, X18)>;
+def CSR_AArch64_AAPCS_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;

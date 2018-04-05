@@ -62,15 +62,15 @@ public:
   Backend(const llvm::MCSubtargetInfo &Subtarget,
           const llvm::MCRegisterInfo &MRI, InstrBuilder &B, SourceMgr &Source,
           unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
-          unsigned MaxRetirePerCycle = 0, unsigned LoadQueueSize = 0,
-          unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
+          unsigned LoadQueueSize = 0, unsigned StoreQueueSize = 0,
+          bool AssumeNoAlias = false)
       : STI(Subtarget), IB(B),
         HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(),
                                          LoadQueueSize, StoreQueueSize,
                                          AssumeNoAlias)),
         DU(llvm::make_unique<DispatchUnit>(
             this, STI, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
-            RegisterFileSize, MaxRetirePerCycle, DispatchWidth, HWS.get())),
+            RegisterFileSize, DispatchWidth, HWS.get())),
         SM(Source), Cycles(0) {
     HWS->setDispatchUnit(DU.get());
   }

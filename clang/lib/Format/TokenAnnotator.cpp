@@ -2518,6 +2518,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // A percent is probably part of a formatting specification, such as %lld.
     if (Left.is(tok::percent))
       return false;
+    // Preserve the existence of a space before a percent for cases like 0x%04x
+    // and "%d %d"
+    if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
+      return Right.WhitespaceRange.getEnd() != Right.WhitespaceRange.getBegin();
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;

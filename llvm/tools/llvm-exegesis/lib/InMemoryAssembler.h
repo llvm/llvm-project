@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/MC/MCInst.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -67,7 +68,7 @@ public:
   // Retrieves the callable function.
   void operator()() const {
     char* const FnData = const_cast<char*>(FunctionBytes.data());
-    ((void (*)())FnData)();
+    ((void (*)())(intptr_t)FnData)();
   }
 
 private:

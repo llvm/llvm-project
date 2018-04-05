@@ -36,6 +36,7 @@ protected:
   }
 
   static void verifyFormat(llvm::StringRef Code, const FormatStyle &Style) {
+    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
   }
 
@@ -418,8 +419,10 @@ TEST_F(FormatTestTextProto, FormatsExtensions) {
       "}");
 }
 
-TEST_F(FormatTestTextProto, NoSpaceAfterPercent) {
+TEST_F(FormatTestTextProto, SpacesAroundPercents) {
   verifyFormat("key: %d");
+  verifyFormat("key: 0x%04x");
+  verifyFormat("key: \"%d %d\"");
 }
 
 TEST_F(FormatTestTextProto, FormatsRepeatedListInitializers) {

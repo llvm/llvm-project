@@ -808,8 +808,8 @@ As a rule of thumb, use ``auto &`` unless you need to copy the result, and use
   for (auto Val : Container) { Val.change(); saveSomewhere(Val); }
 
   // Copy pointers, but make it clear that they're pointers.
-  for (const auto \*Ptr : Container) { observe(\*Ptr); }
-  for (auto \*Ptr : Container) { Ptr->change(); }
+  for (const auto *Ptr : Container) { observe(*Ptr); }
+  for (auto *Ptr : Container) { Ptr->change(); }
 
 Beware of non-determinism due to ordering of pointers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

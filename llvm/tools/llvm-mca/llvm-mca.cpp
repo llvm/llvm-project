@@ -81,11 +81,6 @@ static cl::opt<unsigned> DispatchWidth(
     cl::desc("Dispatch Width. By default it is set equal to IssueWidth"),
     cl::init(0));
 
-static cl::opt<unsigned> MaxRetirePerCycle(
-    "max-retire-per-cycle",
-    cl::desc("Maximum number of instructions that can be retired in one cycle"),
-    cl::init(0));
-
 static cl::opt<unsigned>
     RegisterFileSize("register-file-size",
                      cl::desc("Maximum number of temporary registers which can "
@@ -361,8 +356,8 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<mca::Backend> B = llvm::make_unique<mca::Backend>(
-      *STI, *MRI, *IB, *S, Width, RegisterFileSize, MaxRetirePerCycle,
-      LoadQueueSize, StoreQueueSize, AssumeNoAlias);
+      *STI, *MRI, *IB, *S, Width, RegisterFileSize, LoadQueueSize,
+      StoreQueueSize, AssumeNoAlias);
 
   std::unique_ptr<mca::BackendPrinter> Printer =
       llvm::make_unique<mca::BackendPrinter>(*B);

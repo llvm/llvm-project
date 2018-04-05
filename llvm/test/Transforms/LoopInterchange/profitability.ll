@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-interchange -pass-remarks-output=%t \
+; RUN: opt < %s -loop-interchange -pass-remarks-output=%t -verify-dom-info -verify-loop-info \
 ; RUN:     -pass-remarks=loop-interchange -pass-remarks-missed=loop-interchange
 ; RUN: FileCheck -input-file %t %s
 

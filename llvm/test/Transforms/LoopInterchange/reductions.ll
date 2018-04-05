@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -S -debug 2>&1 | FileCheck %s
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -verify-loop-info -S -debug 2>&1 | FileCheck %s
 
 @A = common global [500 x [500 x i32]] zeroinitializer
 @X = common global i32 0
