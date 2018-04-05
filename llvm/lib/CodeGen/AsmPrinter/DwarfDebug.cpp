@@ -107,13 +107,14 @@ static cl::opt<DefaultOnOff> UnknownLocations(
                clEnumVal(Enable, "In all cases"), clEnumVal(Disable, "Never")),
     cl::init(Default));
 
-static cl::opt<DefaultOnOff>
-DwarfAccelTables("dwarf-accel-tables", cl::Hidden,
-                 cl::desc("Output prototype dwarf accelerator tables."),
-                 cl::values(clEnumVal(Default, "Default for platform"),
-                            clEnumVal(Enable, "Enabled"),
-                            clEnumVal(Disable, "Disabled")),
-                 cl::init(Default));
+static cl::opt<AccelTableKind> AccelTables(
+    "accel-tables", cl::Hidden, cl::desc("Output dwarf accelerator tables."),
+    cl::values(clEnumValN(AccelTableKind::Default, "Default",
+                          "Default for platform"),
+               clEnumValN(AccelTableKind::None, "Disable", "Disabled."),
+               clEnumValN(AccelTableKind::Apple, "Apple", "Apple"),
+               clEnumValN(AccelTableKind::Dwarf, "Dwarf", "DWARF")),
+    cl::init(AccelTableKind::Default));
 
 static cl::opt<DefaultOnOff>
 DwarfInlinedStrings("dwarf-inlined-strings", cl::Hidden,
@@ -303,11 +304,13 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
 
   // Turn on accelerator tables by default, if tuning for LLDB and the target is
   // supported.
-  if (DwarfAccelTables == Default)
-    HasDwarfAccelTables =
-        tuneForLLDB() && A->TM.getTargetTriple().isOSBinFormatMachO();
-  else
-    HasDwarfAccelTables = DwarfAccelTables == Enable;
+  if (AccelTables == AccelTableKind::Default) {
+    if (tuneForLLDB() && A->TM.getTargetTriple().isOSBinFormatMachO())
+      TheAccelTableKind = AccelTableKind::Apple;
+    else
+      TheAccelTableKind = AccelTableKind::None;
+  } else
+    TheAccelTableKind = AccelTables;
 
   UseInlineStrings = DwarfInlinedStrings == Enable;
   HasAppleExtensionAttributes = tuneForLLDB();
@@ -839,11 +842,20 @@ void DwarfDebug::endModule() {
   }
 
   // Emit info into the dwarf accelerator table sections.
-  if (useDwarfAccelTables()) {
+  switch (getAccelTableKind()) {
+  case AccelTableKind::Apple:
     emitAccelNames();
     emitAccelObjC();
     emitAccelNamespaces();
     emitAccelTypes();
+    break;
+  case AccelTableKind::Dwarf:
+    emitAccelDebugNames();
+    break;
+  case AccelTableKind::None:
+    break;
+  case AccelTableKind::Default:
+    llvm_unreachable("Default should have already been resolved.");
   }
 
   // Emit the pubnames and pubtypes sections if requested.
@@ -1453,6 +1465,12 @@ void DwarfDebug::emitAccel(AccelTableT &Accel, MCSection *Section,
 
   // Emit the full data.
   emitAppleAccelTable(Asm, Accel, TableName, Section->getBeginSymbol());
+}
+
+void DwarfDebug::emitAccelDebugNames() {
+  Asm->OutStreamer->SwitchSection(
+      Asm->getObjFileLowering().getDwarfDebugNamesSection());
+  emitDWARF5AccelTable(Asm, AccelDebugNames, *this, getUnits());
 }
 
 // Emit visible names into a hashed accelerator table section.
@@ -2250,27 +2268,58 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 // to reference is in the string table. We do this since the names we
 // add may not only be identical to the names in the DIE.
 void DwarfDebug::addAccelName(StringRef Name, const DIE &Die) {
-  if (!useDwarfAccelTables())
+  switch (getAccelTableKind()) {
+  case AccelTableKind::Apple:
+    AccelNames.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+    break;
+  case AccelTableKind::Dwarf:
+    AccelDebugNames.addName(InfoHolder.getStringPool().getEntry(*Asm, Name),
+                            Die);
+    break;
+  case AccelTableKind::None:
     return;
-  AccelNames.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  case AccelTableKind::Default:
+    llvm_unreachable("Default should have already been resolved.");
+  }
 }
 
 void DwarfDebug::addAccelObjC(StringRef Name, const DIE &Die) {
-  if (!useDwarfAccelTables())
+  if (getAccelTableKind() != AccelTableKind::Apple)
     return;
   AccelObjC.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
 }
 
 void DwarfDebug::addAccelNamespace(StringRef Name, const DIE &Die) {
-  if (!useDwarfAccelTables())
+  switch (getAccelTableKind()) {
+  case AccelTableKind::Apple:
+    AccelNamespace.addName(InfoHolder.getStringPool().getEntry(*Asm, Name),
+                           &Die);
+    break;
+  case AccelTableKind::Dwarf:
+    AccelDebugNames.addName(InfoHolder.getStringPool().getEntry(*Asm, Name),
+                            Die);
+    break;
+  case AccelTableKind::None:
     return;
-  AccelNamespace.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  case AccelTableKind::Default:
+    llvm_unreachable("Default should have already been resolved.");
+  }
 }
 
 void DwarfDebug::addAccelType(StringRef Name, const DIE &Die, char Flags) {
-  if (!useDwarfAccelTables())
+  switch (getAccelTableKind()) {
+  case AccelTableKind::Apple:
+    AccelTypes.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+    break;
+  case AccelTableKind::Dwarf:
+    AccelDebugNames.addName(InfoHolder.getStringPool().getEntry(*Asm, Name),
+                            Die);
+    break;
+  case AccelTableKind::None:
     return;
-  AccelTypes.addName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+  case AccelTableKind::Default:
+    llvm_unreachable("Default should have already been resolved.");
+  }
 }
 
 uint16_t DwarfDebug::getDwarfVersion() const {

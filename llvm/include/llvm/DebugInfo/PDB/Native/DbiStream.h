@@ -38,9 +38,9 @@ class DbiStream {
   friend class DbiStreamBuilder;
 
 public:
-  DbiStream(PDBFile &File, std::unique_ptr<msf::MappedBlockStream> Stream);
+  explicit DbiStream(std::unique_ptr<BinaryStream> Stream);
   ~DbiStream();
-  Error reload();
+  Error reload(PDBFile *Pdb);
 
   PdbRaw_DbiVer getDbiVersion() const;
   uint32_t getAge() const;
@@ -89,12 +89,11 @@ public:
 
 private:
   Error initializeSectionContributionData();
-  Error initializeSectionHeadersData();
+  Error initializeSectionHeadersData(PDBFile *Pdb);
   Error initializeSectionMapData();
-  Error initializeFpoRecords();
+  Error initializeFpoRecords(PDBFile *Pdb);
 
-  PDBFile &Pdb;
-  std::unique_ptr<msf::MappedBlockStream> Stream;
+  std::unique_ptr<BinaryStream> Stream;
 
   PDBStringTable ECNames;
 

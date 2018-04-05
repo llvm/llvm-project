@@ -402,7 +402,9 @@ public:
 
   /// Interchange OuterLoop and InnerLoop.
   bool transform();
-  void restructureLoops(Loop *InnerLoop, Loop *OuterLoop);
+  void restructureLoops(Loop *NewInner, Loop *NewOuter,
+                        BasicBlock *OrigInnerPreHeader,
+                        BasicBlock *OrigOuterPreHeader);
   void removeChildLoop(Loop *OuterLoop, Loop *InnerLoop);
 
 private:
@@ -453,6 +455,7 @@ struct LoopInterchange : public FunctionPass {
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override {
@@ -1153,23 +1156,77 @@ void LoopInterchangeTransform::removeChildLoop(Loop *OuterLoop,
   llvm_unreachable("Couldn't find loop");
 }
 
-void LoopInterchangeTransform::restructureLoops(Loop *InnerLoop,
-                                                Loop *OuterLoop) {
+/// Update LoopInfo, after interchanging. NewInner and NewOuter refer to the
+/// new inner and outer loop after interchanging: NewInner is the original
+/// outer loop and NewOuter is the original inner loop.
+///
+/// Before interchanging, we have the following structure
+/// Outer preheader
+//  Outer header
+//    Inner preheader
+//    Inner header
+//      Inner body
+//      Inner latch
+//   outer bbs
+//   Outer latch
+//
+// After interchanging:
+// Inner preheader
+// Inner header
+//   Outer preheader
+//   Outer header
+//     Inner body
+//     outer bbs
+//     Outer latch
+//   Inner latch
+void LoopInterchangeTransform::restructureLoops(
+    Loop *NewInner, Loop *NewOuter, BasicBlock *OrigInnerPreHeader,
+    BasicBlock *OrigOuterPreHeader) {
   Loop *OuterLoopParent = OuterLoop->getParentLoop();
+  // The original inner loop preheader moves from the new inner loop to
+  // the parent loop, if there is one.
+  NewInner->removeBlockFromLoop(OrigInnerPreHeader);
+  LI->changeLoopFor(OrigInnerPreHeader, OuterLoopParent);
+
+  // Switch the loop levels.
   if (OuterLoopParent) {
     // Remove the loop from its parent loop.
-    removeChildLoop(OuterLoopParent, OuterLoop);
-    removeChildLoop(OuterLoop, InnerLoop);
-    OuterLoopParent->addChildLoop(InnerLoop);
+    removeChildLoop(OuterLoopParent, NewInner);
+    removeChildLoop(NewInner, NewOuter);
+    OuterLoopParent->addChildLoop(NewOuter);
   } else {
-    removeChildLoop(OuterLoop, InnerLoop);
-    LI->changeTopLevelLoop(OuterLoop, InnerLoop);
+    removeChildLoop(NewInner, NewOuter);
+    LI->changeTopLevelLoop(NewInner, NewOuter);
+  }
+  while (!NewOuter->empty())
+    NewInner->addChildLoop(NewOuter->removeChildLoop(NewOuter->begin()));
+  NewOuter->addChildLoop(NewInner);
+
+  // BBs from the original inner loop.
+  SmallVector<BasicBlock *, 8> OrigInnerBBs(NewOuter->blocks());
+
+  // Add BBs from the original outer loop to the original inner loop (excluding
+  // BBs already in inner loop)
+  for (BasicBlock *BB : NewInner->blocks())
+    if (LI->getLoopFor(BB) == NewInner)
+      NewOuter->addBlockEntry(BB);
+
+  // Now remove inner loop header and latch from the new inner loop and move
+  // other BBs (the loop body) to the new inner loop.
+  BasicBlock *OuterHeader = NewOuter->getHeader();
+  BasicBlock *OuterLatch = NewOuter->getLoopLatch();
+  for (BasicBlock *BB : OrigInnerBBs) {
+    // Remove the new outer loop header and latch from the new inner loop.
+    if (BB == OuterHeader || BB == OuterLatch)
+      NewInner->removeBlockFromLoop(BB);
+    else
+      LI->changeLoopFor(BB, NewInner);
   }
 
-  while (!InnerLoop->empty())
-    OuterLoop->addChildLoop(InnerLoop->removeChildLoop(InnerLoop->begin()));
-
-  InnerLoop->addChildLoop(OuterLoop);
+  // The preheader of the original outer loop becomes part of the new
+  // outer loop.
+  NewOuter->addBlockEntry(OrigOuterPreHeader);
+  LI->changeLoopFor(OrigOuterPreHeader, NewOuter);
 }
 
 bool LoopInterchangeTransform::transform() {
@@ -1212,7 +1269,6 @@ bool LoopInterchangeTransform::transform() {
     return false;
   }
 
-  restructureLoops(InnerLoop, OuterLoop);
   return true;
 }
 
@@ -1382,6 +1438,9 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   updateIncomingBlock(OuterLoopLatchSuccessor, OuterLoopLatch, InnerLoopLatch);
 
   DT->applyUpdates(DTUpdates);
+  restructureLoops(OuterLoop, InnerLoop, InnerLoopPreHeader,
+                   OuterLoopPreHeader);
+
   return true;
 }
 

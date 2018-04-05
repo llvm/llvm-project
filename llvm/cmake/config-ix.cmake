@@ -89,6 +89,17 @@ if( NOT PURE_WINDOWS )
   check_library_exists(rt clock_gettime "" HAVE_LIBRT)
 endif()
 
+# Check for libpfm.
+check_library_exists(pfm pfm_initialize "" HAVE_LIBPFM_INITIALIZE)
+if(HAVE_LIBPFM_INITIALIZE)
+  check_include_file(perfmon/perf_event.h HAVE_PERFMON_PERF_EVENT_H)
+  check_include_file(perfmon/pfmlib.h HAVE_PERFMON_PFMLIB_H)
+  check_include_file(perfmon/pfmlib_perf_event.h HAVE_PERFMON_PFMLIB_PERF_EVENT_H)
+  if(HAVE_PERFMON_PERF_EVENT_H AND HAVE_PERFMON_PFMLIB_H AND HAVE_PERFMON_PFMLIB_PERF_EVENT_H)
+    set(HAVE_LIBPFM 1)
+  endif()
+endif()
+
 if(HAVE_LIBPTHREAD)
   # We want to find pthreads library and at the moment we do want to
   # have it reported as '-l<lib>' instead of '-pthread'.

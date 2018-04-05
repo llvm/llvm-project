@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t
+; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -verify-loop-info -verify-dom-info
 ; RUN: FileCheck --input-file=%t %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

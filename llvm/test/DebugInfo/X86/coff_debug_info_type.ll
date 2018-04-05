@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=i686-pc-mingw32 -dwarf-accel-tables=Enable -filetype=asm -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=i686-pc-cygwin -dwarf-accel-tables=Enable -filetype=asm -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=i686-w64-mingw32 -dwarf-accel-tables=Enable -filetype=asm -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-pc-mingw32 -accel-tables=Apple -filetype=asm -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-pc-cygwin -accel-tables=Apple -filetype=asm -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-w64-mingw32 -accel-tables=Apple -filetype=asm -O0 < %s | FileCheck %s
 ; CHECK:    .section  .debug_info
 ; CHECK:    .section  .apple_names
 ; CHECK:    .section  .apple_types

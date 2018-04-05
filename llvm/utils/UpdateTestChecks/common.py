@@ -213,4 +213,3 @@ def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict, func_nam
       # line of code in the test function.
       output_lines.append(comment_marker)
       break
-  return output_lines

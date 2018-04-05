@@ -112,6 +112,8 @@ struct DbiBuildNo {
 
   static const uint16_t BuildMajorMask = 0x7F00;
   static const uint16_t BuildMajorShift = 8;
+
+  static const uint16_t NewVersionFormatMask = 0x8000;
 };
 
 /// The fixed size header that appears at the beginning of the DBI Stream.

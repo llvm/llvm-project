@@ -92,11 +92,11 @@ protected:
   // can be enabled by a compiler flag.
   MCSection *DwarfPubNamesSection;
 
-  /// DWARF5 Experimental Debug Info Sections
-  /// DwarfAccelNamesSection, DwarfAccelObjCSection,
-  /// DwarfAccelNamespaceSection, DwarfAccelTypesSection -
-  /// If we use the DWARF accelerated hash tables then we want to emit these
-  /// sections.
+  /// Accelerator table sections. DwarfDebugNamesSection is the DWARF v5
+  /// accelerator table, while DwarfAccelNamesSection, DwarfAccelObjCSection,
+  /// DwarfAccelNamespaceSection, DwarfAccelTypesSection are pre-DWARF v5
+  /// extensions.
+  MCSection *DwarfDebugNamesSection;
   MCSection *DwarfAccelNamesSection;
   MCSection *DwarfAccelObjCSection;
   MCSection *DwarfAccelNamespaceSection;
@@ -254,7 +254,9 @@ public:
   MCSection *getDwarfRangesSection() const { return DwarfRangesSection; }
   MCSection *getDwarfMacinfoSection() const { return DwarfMacinfoSection; }
 
-  // DWARF5 Experimental Debug Info Sections
+  MCSection *getDwarfDebugNamesSection() const {
+    return DwarfDebugNamesSection;
+  }
   MCSection *getDwarfAccelNamesSection() const {
     return DwarfAccelNamesSection;
   }

@@ -215,9 +215,12 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
 
 ##### Generator of assembly CHECK lines
 
-def add_asm_checks(output_lines, comment_marker, run_list, func_dict, func_name):
+def add_asm_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
+  # Label format is based on ASM string.
+  check_label_format = '{} %s-LABEL: %s:'.format(comment_marker)
+
   printed_prefixes = []
-  for p in run_list:
+  for p in prefix_list:
     checkprefixes = p[0]
     for checkprefix in checkprefixes:
       if checkprefix in printed_prefixes:
@@ -230,11 +233,11 @@ def add_asm_checks(output_lines, comment_marker, run_list, func_dict, func_name)
       if len(printed_prefixes) != 0:
         output_lines.append(comment_marker)
       printed_prefixes.append(checkprefix)
-      output_lines.append('%s %s-LABEL: %s:' % (comment_marker, checkprefix, func_name))
+      output_lines.append(check_label_format % (checkprefix, func_name))
       func_body = func_dict[checkprefix][func_name].splitlines()
+
       output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
       for func_line in func_body[1:]:
         output_lines.append('%s %s-NEXT:  %s' % (comment_marker, checkprefix, func_line))
-      # Add space between different check prefixes and the first line of code.
-      # output_lines.append(';')
+
       break

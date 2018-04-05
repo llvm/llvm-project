@@ -1790,7 +1790,7 @@ multiclass MTBUF_Real_AllAddr_si<bits<3> op> {
 
 defm TBUFFER_LOAD_FORMAT_X     : MTBUF_Real_AllAddr_si <0>;
 defm TBUFFER_LOAD_FORMAT_XY    : MTBUF_Real_AllAddr_si <1>;
-//defm TBUFFER_LOAD_FORMAT_XYZ   : MTBUF_Real_AllAddr_si <2>;
+defm TBUFFER_LOAD_FORMAT_XYZ   : MTBUF_Real_AllAddr_si <2>;
 defm TBUFFER_LOAD_FORMAT_XYZW  : MTBUF_Real_AllAddr_si <3>;
 defm TBUFFER_STORE_FORMAT_X    : MTBUF_Real_AllAddr_si <4>;
 defm TBUFFER_STORE_FORMAT_XY   : MTBUF_Real_AllAddr_si <5>;

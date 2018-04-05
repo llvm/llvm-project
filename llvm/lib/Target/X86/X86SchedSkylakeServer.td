@@ -1603,7 +1603,14 @@ def SKXWriteResGroup22 : SchedWriteRes<[SKXPort06,SKXPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup22], (instregex "BSWAP(16|32|64)r")>;
+def: InstRW<[SKXWriteResGroup22], (instrs BSWAP64r)>;
+
+def SKXWriteResGroup22_1 : SchedWriteRes<[SKXPort15]> {
+  let Latency = 1;
+  let NumMicroOps = 1;
+  let ResourceCycles = [1];
+}
+def: InstRW<[SKXWriteResGroup22_1], (instrs BSWAP32r)>;
 
 def SKXWriteResGroup23 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let Latency = 2;

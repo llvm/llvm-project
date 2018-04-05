@@ -23,7 +23,11 @@ class RsrcIntrinsic<AMDGPURsrcIntrinsic intr> : SearchableTable {
 }
 
 foreach intr = !listconcat(AMDGPUBufferIntrinsics,
-                           AMDGPUImageIntrinsics) in {
+                           AMDGPUImageIntrinsics,
+                           AMDGPUImageDimIntrinsics,
+                           AMDGPUImageDimGatherIntrinsics,
+                           AMDGPUImageDimGetResInfoIntrinsics,
+                           AMDGPUImageDimAtomicIntrinsics) in {
   def : RsrcIntrinsic<!cast<AMDGPURsrcIntrinsic>(intr)>;
 }
 
@@ -76,3 +80,20 @@ def : SourceOfDivergence<int_amdgcn_buffer_atomic_xor>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_cmpswap>;
 def : SourceOfDivergence<int_amdgcn_ps_live>;
 def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
+
+foreach intr = AMDGPUImageDimAtomicIntrinsics in
+def : SourceOfDivergence<intr>;
+
+class D16ImageDimIntrinsic<AMDGPUImageDimIntrinsic intr> : SearchableTable {
+  let SearchableFields = ["Intr"];
+  let EnumNameField = ?;
+
+  Intrinsic Intr = intr;
+  code D16HelperIntr =
+      !cast<code>("AMDGPUIntrinsic::SI_image_d16helper_" # intr.P.OpMod # intr.P.Dim.Name);
+}
+
+foreach intr = !listconcat(AMDGPUImageDimIntrinsics,
+                           AMDGPUImageDimGatherIntrinsics) in {
+  def : D16ImageDimIntrinsic<intr>;
+}

@@ -7934,9 +7934,9 @@ static SDValue materializeVectorConstant(SDValue Op, SelectionDAG &DAG,
 /// Look for opportunities to create a VPERMV/VPERMILPV/PSHUFB variable permute
 /// from a vector of source values and a vector of extraction indices.
 /// The vectors might be manipulated to match the type of the permute op.
-SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
-                              SDLoc &DL, SelectionDAG &DAG,
-                              const X86Subtarget &Subtarget) {
+static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
+                                     SDLoc &DL, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   MVT ShuffleVT = VT;
   EVT IndicesVT = EVT(VT).changeVectorElementTypeToInteger();
   unsigned NumElts = VT.getVectorNumElements();

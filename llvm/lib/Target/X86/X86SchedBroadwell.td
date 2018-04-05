@@ -786,7 +786,14 @@ def BWWriteResGroup19 : SchedWriteRes<[BWPort06,BWPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[BWWriteResGroup19], (instregex "BSWAP(16|32|64)r")>;
+def: InstRW<[BWWriteResGroup19], (instrs BSWAP64r)>;
+
+def BWWriteResGroup19_1 : SchedWriteRes<[BWPort15]> {
+  let Latency = 1;
+  let NumMicroOps = 1;
+  let ResourceCycles = [1];
+}
+def: InstRW<[BWWriteResGroup19_1], (instrs BSWAP32r)>;
 
 def BWWriteResGroup20 : SchedWriteRes<[BWPort06,BWPort0156]> {
   let Latency = 2;
