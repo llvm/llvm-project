@@ -642,7 +642,7 @@ define i32 @test_movd(x86_mmx %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-NEXT:    paddd %mm2, %mm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    movd %mm2, %ecx # sched: [1:0.33]
 ; GENERIC-NEXT:    movd %mm0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    movl %ecx, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movd:
@@ -675,7 +675,7 @@ define i32 @test_movd(x86_mmx %a0, i32 %a1, i32 *%a2) {
 ; SANDY-NEXT:    paddd %mm2, %mm0 # sched: [3:1.00]
 ; SANDY-NEXT:    movd %mm2, %ecx # sched: [1:0.33]
 ; SANDY-NEXT:    movd %mm0, %eax # sched: [1:0.33]
-; SANDY-NEXT:    movl %ecx, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movd:

@@ -129,6 +129,9 @@ def availability(issue):
   elif status == 'na lib':
     avail = 'N/A (Library DR)'
     avail_style = ' class="na"'
+  elif status == 'na abi':
+    avail = 'N/A (ABI constraint)'
+    avail_style = ' class="na"'
   elif status.startswith('sup '):
     dup = status.split(' ', 1)[1]
     avail = 'Superseded by <a href="#%s">%s</a>' % (dup, dup)

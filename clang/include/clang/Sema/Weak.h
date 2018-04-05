@@ -1,4 +1,4 @@
-//===-- UnresolvedSet.h - Unresolved sets of declarations  ------*- C++ -*-===//
+//===- UnresolvedSet.h - Unresolved sets of declarations --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,24 +23,32 @@ class IdentifierInfo;
 
 /// \brief Captures information about a \#pragma weak directive.
 class WeakInfo {
-  IdentifierInfo *alias;  // alias (optional)
-  SourceLocation loc;     // for diagnostics
-  bool used;              // identifier later declared?
+  // alias (optional)
+  IdentifierInfo *alias = nullptr;
+
+  // for diagnostics
+  SourceLocation loc;
+
+  // identifier later declared?
+  bool used = false;
+
 public:
-  WeakInfo()
-    : alias(nullptr), loc(SourceLocation()), used(false) {}
+  WeakInfo() = default;
   WeakInfo(IdentifierInfo *Alias, SourceLocation Loc)
-    : alias(Alias), loc(Loc), used(false) {}
-  inline IdentifierInfo * getAlias() const { return alias; }
-  inline SourceLocation getLocation() const { return loc; }
+      : alias(Alias), loc(Loc) {}
+
+  IdentifierInfo *getAlias() const { return alias; }
+  SourceLocation getLocation() const { return loc; }
   void setUsed(bool Used=true) { used = Used; }
-  inline bool getUsed() { return used; }
+  bool getUsed() { return used; }
+
   bool operator==(WeakInfo RHS) const {
     return alias == RHS.getAlias() && loc == RHS.getLocation();
   }
+
   bool operator!=(WeakInfo RHS) const { return !(*this == RHS); }
 };
 
-} // end namespace clang
+} // namespace clang
 
 #endif // LLVM_CLANG_SEMA_WEAK_H

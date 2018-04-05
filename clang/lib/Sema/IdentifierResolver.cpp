@@ -147,7 +147,7 @@ void IdentifierResolver::AddDecl(NamedDecl *D) {
   if (IdentifierInfo *II = Name.getAsIdentifierInfo())
     updatingIdentifier(*II);
 
-  void *Ptr = Name.getFETokenInfo<void>();
+  auto *Ptr = Name.getFETokenInfo<void>();
 
   if (!Ptr) {
     Name.setFETokenInfo(D);
@@ -159,7 +159,7 @@ void IdentifierResolver::AddDecl(NamedDecl *D) {
   if (isDeclPtr(Ptr)) {
     Name.setFETokenInfo(nullptr);
     IDI = &(*IdDeclInfos)[Name];
-    NamedDecl *PrevD = static_cast<NamedDecl*>(Ptr);
+    auto *PrevD = static_cast<NamedDecl *>(Ptr);
     IDI->AddDecl(PrevD);
   } else
     IDI = toIdDeclInfo(Ptr);
@@ -172,7 +172,7 @@ void IdentifierResolver::InsertDeclAfter(iterator Pos, NamedDecl *D) {
   if (IdentifierInfo *II = Name.getAsIdentifierInfo())
     updatingIdentifier(*II);
   
-  void *Ptr = Name.getFETokenInfo<void>();
+  auto *Ptr = Name.getFETokenInfo<void>();
   
   if (!Ptr) {
     AddDecl(D);
@@ -184,7 +184,7 @@ void IdentifierResolver::InsertDeclAfter(iterator Pos, NamedDecl *D) {
     // as appropriate.
     if (Pos == iterator()) {
       // Add the new declaration before the existing declaration.
-      NamedDecl *PrevD = static_cast<NamedDecl*>(Ptr);
+      auto *PrevD = static_cast<NamedDecl *>(Ptr);
       RemoveDecl(PrevD);
       AddDecl(D);
       AddDecl(PrevD);
@@ -213,7 +213,7 @@ void IdentifierResolver::RemoveDecl(NamedDecl *D) {
   if (IdentifierInfo *II = Name.getAsIdentifierInfo())
     updatingIdentifier(*II);
 
-  void *Ptr = Name.getFETokenInfo<void>();
+  auto *Ptr = Name.getFETokenInfo<void>();
 
   assert(Ptr && "Didn't find this decl on its identifier's chain!");
 
@@ -232,11 +232,11 @@ IdentifierResolver::begin(DeclarationName Name) {
   if (IdentifierInfo *II = Name.getAsIdentifierInfo())
     readingIdentifier(*II);
     
-  void *Ptr = Name.getFETokenInfo<void>();
+  auto *Ptr = Name.getFETokenInfo<void>();
   if (!Ptr) return end();
 
   if (isDeclPtr(Ptr))
-    return iterator(static_cast<NamedDecl*>(Ptr));
+    return iterator(static_cast<NamedDecl *>(Ptr));
 
   IdDeclInfo *IDI = toIdDeclInfo(Ptr);
 
@@ -304,7 +304,7 @@ bool IdentifierResolver::tryAddTopLevelDecl(NamedDecl *D, DeclarationName Name){
   if (IdentifierInfo *II = Name.getAsIdentifierInfo())
     readingIdentifier(*II);
   
-  void *Ptr = Name.getFETokenInfo<void>();
+  auto *Ptr = Name.getFETokenInfo<void>();
     
   if (!Ptr) {
     Name.setFETokenInfo(D);
@@ -314,7 +314,7 @@ bool IdentifierResolver::tryAddTopLevelDecl(NamedDecl *D, DeclarationName Name){
   IdDeclInfo *IDI;
   
   if (isDeclPtr(Ptr)) {
-    NamedDecl *PrevD = static_cast<NamedDecl*>(Ptr);
+    auto *PrevD = static_cast<NamedDecl *>(Ptr);
     
     switch (compareDeclarations(PrevD, D)) {
     case DMK_Different:
@@ -397,7 +397,7 @@ void IdentifierResolver::updatingIdentifier(IdentifierInfo &II) {
 /// It creates a new IdDeclInfo if one was not created before for this id.
 IdentifierResolver::IdDeclInfo &
 IdentifierResolver::IdDeclInfoMap::operator[](DeclarationName Name) {
-  void *Ptr = Name.getFETokenInfo<void>();
+  auto *Ptr = Name.getFETokenInfo<void>();
 
   if (Ptr) return *toIdDeclInfo(Ptr);
 
@@ -415,7 +415,7 @@ IdentifierResolver::IdDeclInfoMap::operator[](DeclarationName Name) {
 
 void IdentifierResolver::iterator::incrementSlowCase() {
   NamedDecl *D = **this;
-  void *InfoPtr = D->getDeclName().getFETokenInfo<void>();
+  auto *InfoPtr = D->getDeclName().getFETokenInfo<void>();
   assert(!isDeclPtr(InfoPtr) && "Decl with wrong id ?");
   IdDeclInfo *Info = toIdDeclInfo(InfoPtr);
 

@@ -285,11 +285,11 @@ CodeCompletionString::CodeCompletionString(const Chunk *Chunks,
   assert(NumChunks <= 0xffff);
   assert(NumAnnotations <= 0xffff);
 
-  Chunk *StoredChunks = reinterpret_cast<Chunk *>(this + 1);
+  auto *StoredChunks = reinterpret_cast<Chunk *>(this + 1);
   for (unsigned I = 0; I != NumChunks; ++I)
     StoredChunks[I] = Chunks[I];
 
-  const char **StoredAnnotations = reinterpret_cast<const char **>(StoredChunks + NumChunks);
+  const auto **StoredAnnotations = reinterpret_cast<const char **>(StoredChunks + NumChunks);
   for (unsigned I = 0; I != NumAnnotations; ++I)
     StoredAnnotations[I] = Annotations[I];
 }
@@ -340,14 +340,14 @@ const char *CodeCompletionAllocator::CopyString(const Twine &String) {
   // FIXME: It would be more efficient to teach Twine to tell us its size and
   // then add a routine there to fill in an allocated char* with the contents
   // of the string.
-  char *Mem = (char *)Allocate(Ref.size() + 1, 1);
+  auto *Mem = (char *)Allocate(Ref.size() + 1, 1);
   std::copy(Ref.begin(), Ref.end(), Mem);
   Mem[Ref.size()] = 0;
   return Mem;
 }
 
 StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
-  const NamedDecl *ND = dyn_cast<NamedDecl>(DC);
+  const auto *ND = dyn_cast<NamedDecl>(DC);
   if (!ND)
     return {};
   
@@ -364,7 +364,7 @@ StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
   // Find the interesting names.
   SmallVector<const DeclContext *, 2> Contexts;
   while (DC && !DC->isFunctionOrMethod()) {
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(DC)) {
+    if (const auto *ND = dyn_cast<NamedDecl>(DC)) {
       if (ND->getIdentifier())
         Contexts.push_back(DC);
     }
@@ -384,10 +384,10 @@ StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
       }
       
       const DeclContext *CurDC = Contexts[I-1];
-      if (const ObjCCategoryImplDecl *CatImpl = dyn_cast<ObjCCategoryImplDecl>(CurDC))
+      if (const auto *CatImpl = dyn_cast<ObjCCategoryImplDecl>(CurDC))
         CurDC = CatImpl->getCategoryDecl();
       
-      if (const ObjCCategoryDecl *Cat = dyn_cast<ObjCCategoryDecl>(CurDC)) {
+      if (const auto *Cat = dyn_cast<ObjCCategoryDecl>(CurDC)) {
         const ObjCInterfaceDecl *Interface = Cat->getClassInterface();
         if (!Interface) {
           // Assign an empty StringRef but with non-null data to distinguish
@@ -413,7 +413,7 @@ CodeCompletionString *CodeCompletionBuilder::TakeString() {
       sizeof(CodeCompletionString) + sizeof(Chunk) * Chunks.size() +
           sizeof(const char *) * Annotations.size(),
       alignof(CodeCompletionString));
-  CodeCompletionString *Result 
+  auto *Result 
     = new (Mem) CodeCompletionString(Chunks.data(), Chunks.size(),
                                      Priority, Availability,
                                      Annotations.data(), Annotations.size(),
@@ -463,7 +463,7 @@ void CodeCompletionBuilder::addParentContext(const DeclContext *DC) {
   if (DC->isFunctionOrMethod())
     return;
   
-  const NamedDecl *ND = dyn_cast<NamedDecl>(DC);
+  const auto *ND = dyn_cast<NamedDecl>(DC);
   if (!ND)
     return;
   
@@ -655,7 +655,7 @@ void CodeCompletionResult::computeCursorKindAndAvailability(bool Accessible) {
       break;
     }
 
-    if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(Declaration))
+    if (const auto *Function = dyn_cast<FunctionDecl>(Declaration))
       if (Function->isDeleted())
         Availability = CXAvailability_NotAvailable;
       

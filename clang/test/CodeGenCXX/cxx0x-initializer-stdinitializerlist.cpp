@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-none-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefixes=X86,CHECK %s
-// RUN: %clang_cc1 -std=c++11 -triple amdgcn-amd-amdhsa -DNO_TLS -emit-llvm -o - %s | FileCheck -check-prefixes=AMDGCN,CHECK %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-none-linux-gnu -fmerge-all-constants -emit-llvm -o - %s | FileCheck -check-prefixes=X86,CHECK %s
+// RUN: %clang_cc1 -std=c++11 -triple amdgcn-amd-amdhsa -DNO_TLS -fmerge-all-constants -emit-llvm -o - %s | FileCheck -check-prefixes=AMDGCN,CHECK %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;

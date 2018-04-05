@@ -4521,6 +4521,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     // does not correctly compute triviality in the presence of multiple special
     // members of the same kind. Revisit this once the g++ bug is fixed.
   case UTT_HasTrivialDefaultConstructor:
+    if (T.isNonTrivialToPrimitiveDefaultInitialize())
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
     //   If __is_pod (type) is true then the trait is true, else if type is
     //   a cv class or union type (or array thereof) with a trivial default
@@ -4531,7 +4533,11 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return RD->hasTrivialDefaultConstructor() &&
              !RD->hasNonTrivialDefaultConstructor();
     return false;
-  case UTT_HasTrivialMoveConstructor:
+  case UTT_HasTrivialMoveConstructor: {
+    QualType::PrimitiveCopyKind PCK =
+        T.isNonTrivialToPrimitiveDestructiveMove();
+    if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
+      return false;
     //  This trait is implemented by MSVC 2012 and needed to parse the
     //  standard library headers. Specifically this is used as the logic
     //  behind std::is_trivially_move_constructible (20.9.4.3).
@@ -4540,7 +4546,11 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (CXXRecordDecl *RD = C.getBaseElementType(T)->getAsCXXRecordDecl())
       return RD->hasTrivialMoveConstructor() && !RD->hasNonTrivialMoveConstructor();
     return false;
-  case UTT_HasTrivialCopy:
+  }
+  case UTT_HasTrivialCopy: {
+    QualType::PrimitiveCopyKind PCK = T.isNonTrivialToPrimitiveCopy();
+    if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
     //   If __is_pod (type) is true or type is a reference type then
     //   the trait is true, else if type is a cv class or union type
@@ -4552,7 +4562,12 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return RD->hasTrivialCopyConstructor() &&
              !RD->hasNonTrivialCopyConstructor();
     return false;
-  case UTT_HasTrivialMoveAssign:
+  }
+  case UTT_HasTrivialMoveAssign: {
+    QualType::PrimitiveCopyKind PCK =
+        T.isNonTrivialToPrimitiveDestructiveMove();
+    if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
+      return false;
     //  This trait is implemented by MSVC 2012 and needed to parse the
     //  standard library headers. Specifically it is used as the logic
     //  behind std::is_trivially_move_assignable (20.9.4.3)
@@ -4561,7 +4576,11 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (CXXRecordDecl *RD = C.getBaseElementType(T)->getAsCXXRecordDecl())
       return RD->hasTrivialMoveAssignment() && !RD->hasNonTrivialMoveAssignment();
     return false;
-  case UTT_HasTrivialAssign:
+  }
+  case UTT_HasTrivialAssign: {
+    QualType::PrimitiveCopyKind PCK = T.isNonTrivialToPrimitiveCopy();
+    if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
     //   If type is const qualified or is a reference type then the
     //   trait is false. Otherwise if __is_pod (type) is true then the
@@ -4582,6 +4601,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return RD->hasTrivialCopyAssignment() &&
              !RD->hasNonTrivialCopyAssignment();
     return false;
+  }
   case UTT_IsDestructible:
   case UTT_IsTriviallyDestructible:
   case UTT_IsNothrowDestructible:
@@ -4632,6 +4652,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return true;
 
   case UTT_HasTrivialDestructor:
+    if (T.isDestructedType() == QualType::DK_nontrivial_c_struct)
+      return false;
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html
     //   If __is_pod (type) is true or type is a reference type
     //   then the trait is true, else if type is a cv class or union

@@ -214,7 +214,8 @@ void CodeGenFunction::EmitAnyExprToMem(const Expr *E,
     EmitAggExpr(E, AggValueSlot::forAddr(Location, Quals,
                                          AggValueSlot::IsDestructed_t(IsInit),
                                          AggValueSlot::DoesNotNeedGCBarriers,
-                                         AggValueSlot::IsAliased_t(!IsInit)));
+                                         AggValueSlot::IsAliased_t(!IsInit),
+                                         AggValueSlot::MayOverlap));
     return;
   }
 
@@ -432,7 +433,8 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
                                            E->getType().getQualifiers(),
                                            AggValueSlot::IsDestructed,
                                            AggValueSlot::DoesNotNeedGCBarriers,
-                                           AggValueSlot::IsNotAliased));
+                                           AggValueSlot::IsNotAliased,
+                                           AggValueSlot::DoesNotOverlap));
       break;
     }
     }

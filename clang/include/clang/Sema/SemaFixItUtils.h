@@ -1,4 +1,4 @@
-//===--- SemaFixItUtils.h - Sema FixIts -----------------------------------===//
+//===- SemaFixItUtils.h - Sema FixIts ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,12 +10,21 @@
 //  This file defines helper classes for generation of Sema FixItHints.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_SEMA_SEMAFIXITUTILS_H
 #define LLVM_CLANG_SEMA_SEMAFIXITUTILS_H
 
-#include "clang/AST/Expr.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
+#include <vector>
 
 namespace clang {
+
+class Expr;
+class Sema;
 
 enum OverloadFixItKind {
   OFIK_Undefined = 0,
@@ -24,8 +33,6 @@ enum OverloadFixItKind {
   OFIK_RemoveDereference,
   OFIK_RemoveTakeAddress
 };
-
-class Sema;
 
 /// The class facilities generation and storage of conversion FixIts. Hints for
 /// new conversions are added using TryToFixConversion method. The default type
@@ -43,29 +50,25 @@ struct ConversionFixItGenerator {
 
   /// The number of Conversions fixed. This can be different from the size
   /// of the Hints vector since we allow multiple FixIts per conversion.
-  unsigned NumConversionsFixed;
+  unsigned NumConversionsFixed = 0;
 
   /// The type of fix applied. If multiple conversions are fixed, corresponds
   /// to the kid of the very first conversion.
-  OverloadFixItKind Kind;
+  OverloadFixItKind Kind = OFIK_Undefined;
 
-  typedef bool (*TypeComparisonFuncTy) (const CanQualType FromTy,
-                                        const CanQualType ToTy,
-                                        Sema &S,
-                                        SourceLocation Loc,
-                                        ExprValueKind FromVK);
+  using TypeComparisonFuncTy = bool (*) (const CanQualType FromTy,
+                                         const CanQualType ToTy,
+                                         Sema &S,
+                                         SourceLocation Loc,
+                                         ExprValueKind FromVK);
+
   /// The type comparison function used to decide if expression FromExpr of
   /// type FromTy can be converted to ToTy. For example, one could check if
   /// an implicit conversion exists. Returns true if comparison exists.
-  TypeComparisonFuncTy CompareTypes;
+  TypeComparisonFuncTy CompareTypes = compareTypesSimple;
 
-  ConversionFixItGenerator(TypeComparisonFuncTy Foo): NumConversionsFixed(0),
-                                                      Kind(OFIK_Undefined),
-                                                      CompareTypes(Foo) {}
-
-  ConversionFixItGenerator(): NumConversionsFixed(0),
-                              Kind(OFIK_Undefined),
-                              CompareTypes(compareTypesSimple) {}
+  ConversionFixItGenerator() = default;
+  ConversionFixItGenerator(TypeComparisonFuncTy Foo) : CompareTypes(Foo) {}
 
   /// Resets the default conversion checker method.
   void setConversionChecker(TypeComparisonFuncTy Foo) {
@@ -87,5 +90,6 @@ struct ConversionFixItGenerator {
   }
 };
 
-} // endof namespace clang
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_SEMA_SEMAFIXITUTILS_H

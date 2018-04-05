@@ -1,4 +1,4 @@
-//===--- DeclSpec.cpp - Declaration Specifier Semantic Analysis -----------===//
+//===- DeclSpec.cpp - Declaration Specifier Semantic Analysis -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,20 +13,35 @@
 
 #include "clang/Sema/DeclSpec.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/LocInfoType.h"
+#include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/ExceptionSpecificationType.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OpenCLOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/AttributeList.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 #include <cstring>
-using namespace clang;
+#include <utility>
 
+using namespace clang;
 
 void UnqualifiedId::setTemplateId(TemplateIdAnnotation *TemplateId) {
   assert(TemplateId && "NULL template-id annotation?");
@@ -135,14 +150,14 @@ void CXXScopeSpec::Adopt(NestedNameSpecifierLoc Other) {
 
 SourceLocation CXXScopeSpec::getLastQualifierNameLoc() const {
   if (!Builder.getRepresentation())
-    return SourceLocation();
+    return {};
   return Builder.getTemporary().getLocalBeginLoc();
 }
 
 NestedNameSpecifierLoc 
 CXXScopeSpec::getWithLocInContext(ASTContext &Context) const {
   if (!Builder.getRepresentation())
-    return NestedNameSpecifierLoc();
+    return {};
   
   return Builder.getWithLocInContext(Context);
 }
@@ -289,7 +304,7 @@ void Declarator::setDecompositionBindings(
   Name.EndLocation = RSquareLoc;
 
   // Allocate storage for bindings and stash them away.
-  if (Bindings.size()) {
+  if (!Bindings.empty()) {
     if (!InlineStorageUsed &&
         Bindings.size() <= llvm::array_lengthof(InlineBindings)) {
       BindingGroup.Bindings = InlineBindings;
@@ -306,8 +321,8 @@ void Declarator::setDecompositionBindings(
 }
 
 bool Declarator::isDeclarationOfFunction() const {
-  for (unsigned i = 0, i_end = DeclTypeInfo.size(); i < i_end; ++i) {
-    switch (DeclTypeInfo[i].Kind) {
+  for (const auto &i : DeclTypeInfo) {
+    switch (i.Kind) {
     case DeclaratorChunk::Function:
       return true;
     case DeclaratorChunk::Paren:
@@ -373,7 +388,7 @@ bool Declarator::isDeclarationOfFunction() const {
       if (QT.isNull())
         return false;
       
-      if (const LocInfoType *LIT = dyn_cast<LocInfoType>(QT))
+      if (const auto *LIT = dyn_cast<LocInfoType>(QT))
         QT = LIT->getType();
 
       if (QT.isNull())
@@ -407,7 +422,6 @@ bool DeclSpec::hasTagDefinition() const {
 
 /// getParsedSpecifiers - Return a bitmask of which flavors of specifiers this
 /// declaration specifier includes.
-///
 unsigned DeclSpec::getParsedSpecifiers() const {
   unsigned Res = 0;
   if (StorageClassSpec != SCS_unspecified ||
@@ -481,7 +495,6 @@ const char *DeclSpec::getSpecifierName(TSC C) {
   }
   llvm_unreachable("Unknown typespec!");
 }
-
 
 const char *DeclSpec::getSpecifierName(TSS S) {
   switch (S) {
@@ -777,16 +790,14 @@ bool DeclSpec::SetTypeAltiVecVector(bool isAltiVecVector, SourceLocation Loc,
 bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
                            const char *&PrevSpec, unsigned &DiagID,
                            const PrintingPolicy &Policy) {
-
   if (TypeSpecType != TST_unspecified) {
     PrevSpec = DeclSpec::getSpecifierName((TST)TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
   }
 
-  if (isPipe) {
+  if (isPipe)
     TypeSpecPipe = TSP_pipe;
-  }
   return false;
 }
 
@@ -975,7 +986,7 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
   writtenBS.Type = getTypeSpecType();
   // Search the list of attributes for the presence of a mode attribute.
   writtenBS.ModeAttr = false;
-  AttributeList* attrs = getAttributes().getList();
+  AttributeList *attrs = getAttributes().getList();
   while (attrs) {
     if (attrs->getKind() == AttributeList::AT_Mode) {
       writtenBS.ModeAttr = true;

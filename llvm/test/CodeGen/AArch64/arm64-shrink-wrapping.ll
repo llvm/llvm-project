@@ -281,7 +281,7 @@ declare void @somethingElse(...)
 ; Shift second argument by one and store into returned register.
 ; ENABLE: lsl w0, w1, #1
 ; ENABLE: ret
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
@@ -355,7 +355,7 @@ entry:
 ; CHECK-NEXT: lsl w0, w1, #1
 ; DISABLE-NEXT: add sp, sp, #16
 ; CHECK-NEXT: ret
-define i32 @variadicFunc(i32 %cond, i32 %count, ...) #0 {
+define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind {
 entry:
   %ap = alloca i8*, align 8
   %tobool = icmp eq i32 %cond, 0

@@ -74,7 +74,8 @@ void LazyASTUnresolvedSet::getFromExternalSource(ASTContext &C) const {
 CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
     : UserDeclaredConstructor(false), UserDeclaredSpecialMembers(0),
       Aggregate(true), PlainOldData(true), Empty(true), Polymorphic(false),
-      Abstract(false), IsStandardLayout(true), HasNoNonEmptyBases(true),
+      Abstract(false), IsStandardLayout(true), IsCXX11StandardLayout(true),
+      HasBasesWithFields(false), HasBasesWithNonStaticDataMembers(false),
       HasPrivateFields(false), HasProtectedFields(false),
       HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
       HasOnlyCMembers(true), HasInClassInitializer(false),
@@ -161,6 +162,25 @@ CXXRecordDecl::CreateDeserialized(const ASTContext &C, unsigned ID) {
   return R;
 }
 
+/// Determine whether a class has a repeated base class. This is intended for
+/// use when determining if a class is standard-layout, so makes no attempt to
+/// handle virtual bases.
+static bool hasRepeatedBaseClass(const CXXRecordDecl *StartRD) {
+  llvm::SmallPtrSet<const CXXRecordDecl*, 8> SeenBaseTypes;
+  SmallVector<const CXXRecordDecl*, 8> WorkList = {StartRD};
+  while (!WorkList.empty()) {
+    const CXXRecordDecl *RD = WorkList.pop_back_val();
+    for (const CXXBaseSpecifier &BaseSpec : RD->bases()) {
+      if (const CXXRecordDecl *B = BaseSpec.getType()->getAsCXXRecordDecl()) {
+        if (!SeenBaseTypes.insert(B).second)
+          return true;
+        WorkList.push_back(B);
+      }
+    }
+  }
+  return false;
+}
+
 void
 CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
                         unsigned NumBases) {
@@ -200,26 +220,37 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     auto *BaseClassDecl =
         cast<CXXRecordDecl>(BaseType->getAs<RecordType>()->getDecl());
 
-    if (!BaseClassDecl->isEmpty()) {
-      if (!data().Empty) {
-        // C++0x [class]p7:
-        //   A standard-layout class is a class that:
-        //    [...]
-        //    -- either has no non-static data members in the most derived
-        //       class and at most one base class with non-static data members,
-        //       or has no base classes with non-static data members, and
-        // If this is the second non-empty base, then neither of these two
-        // clauses can be true.
+    // C++2a [class]p7:
+    //   A standard-layout class is a class that:
+    //    [...]
+    //    -- has all non-static data members and bit-fields in the class and
+    //       its base classes first declared in the same class
+    if (BaseClassDecl->data().HasBasesWithFields ||
+        !BaseClassDecl->field_empty()) {
+      if (data().HasBasesWithFields)
+        // Two bases have members or bit-fields: not standard-layout.
         data().IsStandardLayout = false;
-      }
+      data().HasBasesWithFields = true;
+    }
 
+    // C++11 [class]p7:
+    //   A standard-layout class is a class that:
+    //     -- [...] has [...] at most one base class with non-static data
+    //        members
+    if (BaseClassDecl->data().HasBasesWithNonStaticDataMembers ||
+        BaseClassDecl->hasDirectFields()) {
+      if (data().HasBasesWithNonStaticDataMembers)
+        data().IsCXX11StandardLayout = false;
+      data().HasBasesWithNonStaticDataMembers = true;
+    }
+
+    if (!BaseClassDecl->isEmpty()) {
       // C++14 [meta.unary.prop]p4:
       //   T is a class type [...] with [...] no base class B for which
       //   is_empty<B>::value is false.
       data().Empty = false;
-      data().HasNoNonEmptyBases = false;
     }
-    
+
     // C++1z [dcl.init.agg]p1:
     //   An aggregate is a class with [...] no private or protected base classes
     if (Base->getAccessSpecifier() != AS_public)
@@ -236,6 +267,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     //    -- has no non-standard-layout base classes
     if (!BaseClassDecl->isStandardLayout())
       data().IsStandardLayout = false;
+    if (!BaseClassDecl->isCXX11StandardLayout())
+      data().IsCXX11StandardLayout = false;
 
     // Record if this base is the first non-literal field or base.
     if (!hasNonLiteralTypeFieldsOrBases() && !BaseType->isLiteralType(C))
@@ -287,6 +320,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   A standard-layout class is a class that: [...]
       //    -- has [...] no virtual base classes
       data().IsStandardLayout = false;
+      data().IsCXX11StandardLayout = false;
 
       // C++11 [dcl.constexpr]p4:
       //   In the definition of a constexpr constructor [...]
@@ -401,6 +435,16 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
     addedClassSubobject(BaseClassDecl);
   }
+
+  // C++2a [class]p7:
+  //   A class S is a standard-layout class if it:
+  //     -- has at most one base class subobject of any given type
+  //
+  // Note that we only need to check this for classes with more than one base
+  // class. If there's only one base class, and it's standard layout, then
+  // we know there are no repeated base classes.
+  if (data().IsStandardLayout && NumBases > 1 && hasRepeatedBaseClass(this))
+    data().IsStandardLayout = false;
   
   if (VBases.empty()) {
     data().IsParsingBaseSpecifiers = false;
@@ -501,6 +545,81 @@ void CXXRecordDecl::markedVirtualFunctionPure() {
   data().Abstract = true;
 }
 
+bool CXXRecordDecl::hasSubobjectAtOffsetZeroOfEmptyBaseType(
+    ASTContext &Ctx, const CXXRecordDecl *XFirst) {
+  if (!getNumBases())
+    return false;
+
+  llvm::SmallPtrSet<const CXXRecordDecl*, 8> Bases;
+  llvm::SmallPtrSet<const CXXRecordDecl*, 8> M;
+  SmallVector<const CXXRecordDecl*, 8> WorkList;
+
+  // Visit a type that we have determined is an element of M(S).
+  auto Visit = [&](const CXXRecordDecl *RD) -> bool {
+    RD = RD->getCanonicalDecl();
+
+    // C++2a [class]p8:
+    //   A class S is a standard-layout class if it [...] has no element of the
+    //   set M(S) of types as a base class.
+    //
+    // If we find a subobject of an empty type, it might also be a base class,
+    // so we'll need to walk the base classes to check.
+    if (!RD->data().HasBasesWithFields) {
+      // Walk the bases the first time, stopping if we find the type. Build a
+      // set of them so we don't need to walk them again.
+      if (Bases.empty()) {
+        bool RDIsBase = !forallBases([&](const CXXRecordDecl *Base) -> bool {
+          Base = Base->getCanonicalDecl();
+          if (RD == Base)
+            return false;
+          Bases.insert(Base);
+          return true;
+        });
+        if (RDIsBase)
+          return true;
+      } else {
+        if (Bases.count(RD))
+          return true;
+      }
+    }
+
+    if (M.insert(RD).second)
+      WorkList.push_back(RD);
+    return false;
+  };
+
+  if (Visit(XFirst))
+    return true;
+
+  while (!WorkList.empty()) {
+    const CXXRecordDecl *X = WorkList.pop_back_val();
+
+    // FIXME: We don't check the bases of X. That matches the standard, but
+    // that sure looks like a wording bug.
+
+    //   -- If X is a non-union class type with a non-static data member
+    //      [recurse to] the first non-static data member of X
+    //   -- If X is a union type, [recurse to union members]
+    for (auto *FD : X->fields()) {
+      // FIXME: Should we really care about the type of the first non-static
+      // data member of a non-union if there are preceding unnamed bit-fields?
+      if (FD->isUnnamedBitfield())
+        continue;
+
+      //   -- If X is n array type, [visit the element type]
+      QualType T = Ctx.getBaseElementType(FD->getType());
+      if (auto *RD = T->getAsCXXRecordDecl())
+        if (Visit(RD))
+          return true;
+
+      if (!X->isUnion())
+        break;
+    }
+  }
+
+  return false;
+}
+
 void CXXRecordDecl::addedMember(Decl *D) {
   if (!D->isImplicit() &&
       !isa<FieldDecl>(D) &&
@@ -555,6 +674,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   A standard-layout class is a class that: [...]
       //    -- has no virtual functions
       data().IsStandardLayout = false;
+      data().IsCXX11StandardLayout = false;
     }
   }
 
@@ -732,8 +852,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
     return;
   }
 
+  ASTContext &Context = getASTContext();
+
   // Handle non-static data members.
   if (const auto *Field = dyn_cast<FieldDecl>(D)) {
+    // C++2a [class]p7:
+    //   A standard-layout class is a class that:
+    //    [...]
+    //    -- has all non-static data members and bit-fields in the class and
+    //       its base classes first declared in the same class
+    if (data().HasBasesWithFields)
+      data().IsStandardLayout = false;
+
     // C++ [class.bit]p2:
     //   A declaration for a bit-field that omits the identifier declares an 
     //   unnamed bit-field. Unnamed bit-fields are not members and cannot be 
@@ -741,6 +871,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (Field->isUnnamedBitfield())
       return;
     
+    // C++11 [class]p7:
+    //   A standard-layout class is a class that:
+    //    -- either has no non-static data members in the most derived class
+    //       [...] or has no base classes with non-static data members
+    if (data().HasBasesWithNonStaticDataMembers)
+      data().IsCXX11StandardLayout = false;
+
     // C++ [dcl.init.aggr]p1:
     //   An aggregate is an array or a class (clause 9) with [...] no
     //   private or protected non-static data members (clause 11).
@@ -750,6 +887,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
       data().Aggregate = false;
       data().PlainOldData = false;
     }
+
+    // Track whether this is the first field. We use this when checking
+    // whether the class is standard-layout below.
+    bool IsFirstField = !data().HasPrivateFields &&
+                        !data().HasProtectedFields && !data().HasPublicFields;
 
     // C++0x [class]p7:
     //   A standard-layout class is a class that:
@@ -762,8 +904,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
     case AS_none:       llvm_unreachable("Invalid access specifier");
     };
     if ((data().HasPrivateFields + data().HasProtectedFields +
-         data().HasPublicFields) > 1)
+         data().HasPublicFields) > 1) {
       data().IsStandardLayout = false;
+      data().IsCXX11StandardLayout = false;
+    }
 
     // Keep track of the presence of mutable fields.
     if (Field->isMutable()) {
@@ -784,7 +928,6 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //
     // Automatic Reference Counting: the presence of a member of Objective-C pointer type
     // that does not explicitly have no lifetime makes the class a non-POD.
-    ASTContext &Context = getASTContext();
     QualType T = Context.getBaseElementType(Field->getType());
     if (T->isObjCRetainableType() || T.isObjCGCStrong()) {
       if (T.hasNonTrivialObjCLifetime()) {
@@ -824,6 +967,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   A standard-layout class is a class that:
       //    -- has no non-static data members of type [...] reference,
       data().IsStandardLayout = false;
+      data().IsCXX11StandardLayout = false;
 
       // C++1z [class.copy.ctor]p10:
       //   A defaulted copy constructor for a class X is defined as deleted if X has:
@@ -980,31 +1124,32 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //       class (or array of such types) [...]
         if (!FieldRec->isStandardLayout())
           data().IsStandardLayout = false;
+        if (!FieldRec->isCXX11StandardLayout())
+          data().IsCXX11StandardLayout = false;
 
-        // C++0x [class]p7:
+        // C++2a [class]p7:
         //   A standard-layout class is a class that:
         //    [...]
+        //    -- has no element of the set M(S) of types as a base class.
+        if (data().IsStandardLayout && (isUnion() || IsFirstField) &&
+            hasSubobjectAtOffsetZeroOfEmptyBaseType(Context, FieldRec))
+          data().IsStandardLayout = false;
+
+        // C++11 [class]p7:
+        //   A standard-layout class is a class that:
         //    -- has no base classes of the same type as the first non-static
-        //       data member.
-        // We don't want to expend bits in the state of the record decl
-        // tracking whether this is the first non-static data member so we
-        // cheat a bit and use some of the existing state: the empty bit.
-        // Virtual bases and virtual methods make a class non-empty, but they
-        // also make it non-standard-layout so we needn't check here.
-        // A non-empty base class may leave the class standard-layout, but not
-        // if we have arrived here, and have at least one non-static data
-        // member. If IsStandardLayout remains true, then the first non-static
-        // data member must come through here with Empty still true, and Empty
-        // will subsequently be set to false below.
-        if (data().IsStandardLayout && data().Empty) {
+        //       data member
+        if (data().IsCXX11StandardLayout && IsFirstField) {
+          // FIXME: We should check all base classes here, not just direct
+          // base classes.
           for (const auto &BI : bases()) {
             if (Context.hasSameUnqualifiedType(BI.getType(), T)) {
-              data().IsStandardLayout = false;
+              data().IsCXX11StandardLayout = false;
               break;
             }
           }
         }
-        
+
         // Keep track of the presence of mutable fields.
         if (FieldRec->hasMutableFields()) {
           data().HasMutableFields = true;
@@ -1066,17 +1211,6 @@ void CXXRecordDecl::addedMember(Decl *D) {
       if (T.isConstQualified())
         data().DefaultedMoveAssignmentIsDeleted = true;
     }
-
-    // C++0x [class]p7:
-    //   A standard-layout class is a class that:
-    //    [...]
-    //    -- either has no non-static data members in the most derived
-    //       class and at most one base class with non-static data members,
-    //       or has no base classes with non-static data members, and
-    // At this point we know that we have a non-static data member, so the last
-    // clause holds.
-    if (!data().HasNoNonEmptyBases)
-      data().IsStandardLayout = false;
 
     // C++14 [meta.unary.prop]p4:
     //   T is a class type [...] with [...] no non-static data members other

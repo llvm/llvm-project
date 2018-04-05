@@ -1,4 +1,4 @@
-//===--- SemaFixItUtils.cpp - Sema FixIts ---------------------------------===//
+//===- SemaFixItUtils.cpp - Sema FixIts -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,12 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Sema/SemaFixItUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaFixItUtils.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
+#include <string>
 
 using namespace clang;
 
@@ -91,7 +103,7 @@ bool ConversionFixItGenerator::tryToFixConversion(const Expr *FullExpr,
 
   // Check if the argument needs to be dereferenced:
   //   (type * -> type) or (type * -> type &).
-  if (const PointerType *FromPtrTy = dyn_cast<PointerType>(FromQTy)) {
+  if (const auto *FromPtrTy = dyn_cast<PointerType>(FromQTy)) {
     OverloadFixItKind FixKind = OFIK_Dereference;
 
     bool CanConvert = CompareTypes(
@@ -103,7 +115,7 @@ bool ConversionFixItGenerator::tryToFixConversion(const Expr *FullExpr,
           isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNotNull))
         return false;
 
-      if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(Expr)) {
+      if (const auto *UO = dyn_cast<UnaryOperator>(Expr)) {
         if (UO->getOpcode() == UO_AddrOf) {
           FixKind = OFIK_RemoveTakeAddress;
           Hints.push_back(FixItHint::CreateRemoval(
@@ -136,8 +148,7 @@ bool ConversionFixItGenerator::tryToFixConversion(const Expr *FullExpr,
     CanConvert = CompareTypes(S.Context.getPointerType(FromQTy), ToQTy,
                               S, Begin, VK_RValue);
     if (CanConvert) {
-
-      if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(Expr)) {
+      if (const auto *UO = dyn_cast<UnaryOperator>(Expr)) {
         if (UO->getOpcode() == UO_Deref) {
           FixKind = OFIK_RemoveDereference;
           Hints.push_back(FixItHint::CreateRemoval(
@@ -171,7 +182,7 @@ static std::string getScalarZeroExpressionForType(
   // Suggest "0" for non-enumeration scalar types, unless we can find a
   // better initializer.
   if (T.isEnumeralType())
-    return std::string();
+    return {};
   if ((T.isObjCObjectPointerType() || T.isBlockPointerType()) &&
       isMacroDefined(S, Loc, "nil"))
     return "nil";
@@ -208,12 +219,12 @@ Sema::getFixItZeroInitializerForType(QualType T, SourceLocation Loc) const {
 
   const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
   if (!RD || !RD->hasDefinition())
-    return std::string();
+    return {};
   if (LangOpts.CPlusPlus11 && !RD->hasUserProvidedDefaultConstructor())
     return "{}";
   if (RD->isAggregate())
     return " = {}";
-  return std::string();
+  return {};
 }
 
 std::string

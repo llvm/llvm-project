@@ -1,4 +1,4 @@
-//===--- SemaInternal.h - Internal Sema Interfaces --------------*- C++ -*-===//
+//===- SemaInternal.h - Internal Sema Interfaces ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,11 +16,40 @@
 #define LLVM_CLANG_SEMA_SEMAINTERNAL_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/TypoCorrection.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <limits>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace clang {
+
+class IdentifierInfo;
+class NestedNameSpecifier;
+class Scope;
 
 inline PartialDiagnostic Sema::PDiag(unsigned DiagID) {
   return PartialDiagnostic(DiagID, Context.getDiagAllocator());
@@ -102,9 +131,9 @@ inline InheritableAttr *getDLLAttr(Decl *D) {
 }
 
 class TypoCorrectionConsumer : public VisibleDeclConsumer {
-  typedef SmallVector<TypoCorrection, 1> TypoResultList;
-  typedef llvm::StringMap<TypoResultList> TypoResultsMap;
-  typedef std::map<unsigned, TypoResultsMap> TypoEditDistanceMap;
+  using TypoResultList = SmallVector<TypoCorrection, 1>;
+  using TypoResultsMap = llvm::StringMap<TypoResultList>;
+  using TypoEditDistanceMap = std::map<unsigned, TypoResultsMap>;
 
 public:
   TypoCorrectionConsumer(Sema &SemaRef,
@@ -114,13 +143,12 @@ public:
                          std::unique_ptr<CorrectionCandidateCallback> CCC,
                          DeclContext *MemberContext,
                          bool EnteringContext)
-      : Typo(TypoName.getName().getAsIdentifierInfo()), CurrentTCIndex(0),
-        SavedTCIndex(0), SemaRef(SemaRef), S(S),
+      : Typo(TypoName.getName().getAsIdentifierInfo()), SemaRef(SemaRef), S(S),
         SS(SS ? llvm::make_unique<CXXScopeSpec>(*SS) : nullptr),
         CorrectionValidator(std::move(CCC)), MemberContext(MemberContext),
         Result(SemaRef, TypoName, LookupKind),
         Namespaces(SemaRef.Context, SemaRef.CurContext, SS),
-        EnteringContext(EnteringContext), SearchNamespaces(false) {
+        EnteringContext(EnteringContext) {
     Result.suppressDiagnostics();
     // Arrange for ValidatedCorrections[0] to always be an empty correction.
     ValidatedCorrections.push_back(TypoCorrection());
@@ -129,6 +157,7 @@ public:
   bool includeHiddenDecls() const override { return true; }
 
   // Methods for adding potential corrections to the consumer.
+
   void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                  bool InBaseClass) override;
   void FoundName(StringRef Name);
@@ -149,7 +178,7 @@ public:
   /// closest/best edit distance from the original typop.
   unsigned getBestEditDistance(bool Normalized) {
     if (CorrectionResults.empty())
-      return (std::numeric_limits<unsigned>::max)();
+      return std::numeric_limits<unsigned>::max();
 
     unsigned BestED = CorrectionResults.begin()->first;
     return Normalized ? TypoCorrection::NormalizeEditDistance(BestED) : BestED;
@@ -218,6 +247,7 @@ public:
   bool isAddressOfOperand() const { return CorrectionValidator->IsAddressOfOperand; }
   const CXXScopeSpec *getSS() const { return SS.get(); }
   Scope *getScope() const { return S; }
+
   CorrectionCandidateCallback *getCorrectionValidator() const {
     return CorrectionValidator.get();
   }
@@ -226,18 +256,18 @@ private:
   class NamespaceSpecifierSet {
     struct SpecifierInfo {
       DeclContext* DeclCtx;
-      NestedNameSpecifier* NameSpecifier;
+      NestedNameSpecifier *NameSpecifier;
       unsigned EditDistance;
     };
 
-    typedef SmallVector<DeclContext*, 4> DeclContextList;
-    typedef SmallVector<SpecifierInfo, 16> SpecifierInfoList;
+    using DeclContextList = SmallVector<DeclContext *, 4>;
+    using SpecifierInfoList = SmallVector<SpecifierInfo, 16>;
 
     ASTContext &Context;
     DeclContextList CurContextChain;
     std::string CurNameSpecifier;
-    SmallVector<const IdentifierInfo*, 4> CurContextIdentifiers;
-    SmallVector<const IdentifierInfo*, 4> CurNameSpecifierIdentifiers;
+    SmallVector<const IdentifierInfo *, 4> CurContextIdentifiers;
+    SmallVector<const IdentifierInfo *, 4> CurNameSpecifierIdentifiers;
 
     std::map<unsigned, SpecifierInfoList> DistanceMap;
 
@@ -248,7 +278,7 @@ private:
     unsigned buildNestedNameSpecifier(DeclContextList &DeclChain,
                                       NestedNameSpecifier *&NNS);
 
-   public:
+  public:
     NamespaceSpecifierSet(ASTContext &Context, DeclContext *CurContext,
                           CXXScopeSpec *CurScopeSpec);
 
@@ -262,8 +292,10 @@ private:
                                             SpecifierInfo> {
       /// Always points to the last element in the distance map.
       const std::map<unsigned, SpecifierInfoList>::iterator OuterBack;
+
       /// Iterator on the distance map.
       std::map<unsigned, SpecifierInfoList>::iterator Outer;
+
       /// Iterator on an element in the distance map.
       SpecifierInfoList::iterator Inner;
 
@@ -317,8 +349,8 @@ private:
   TypoEditDistanceMap CorrectionResults;
 
   SmallVector<TypoCorrection, 4> ValidatedCorrections;
-  size_t CurrentTCIndex;
-  size_t SavedTCIndex;
+  size_t CurrentTCIndex = 0;
+  size_t SavedTCIndex = 0;
 
   Sema &SemaRef;
   Scope *S;
@@ -329,10 +361,10 @@ private:
   NamespaceSpecifierSet Namespaces;
   SmallVector<TypoCorrection, 2> QualifiedResults;
   bool EnteringContext;
-  bool SearchNamespaces;
+  bool SearchNamespaces = false;
 };
 
-inline Sema::TypoExprState::TypoExprState() {}
+inline Sema::TypoExprState::TypoExprState() = default;
 
 inline Sema::TypoExprState::TypoExprState(TypoExprState &&other) noexcept {
   *this = std::move(other);
@@ -346,6 +378,6 @@ operator=(Sema::TypoExprState &&other) noexcept {
   return *this;
 }
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_SEMAINTERNAL_H

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -w -fmerge-all-constants -emit-llvm < %s | FileCheck %s
 
 // CHECK: @test1.x = internal constant [12 x i32] [i32 1
 // CHECK: @test2.x = private unnamed_addr constant [13 x i32] [i32 1,

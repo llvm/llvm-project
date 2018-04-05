@@ -314,7 +314,7 @@ if.end:                                           ; preds = %if.else, %for.end
 ; ENABLE: addl %esi, %esi
 ; ENABLE-NEXT: movl %esi, %eax
 ; ENABLE-NEXT: retq
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then

@@ -5995,7 +5995,9 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(Data.Polymorphic);
   Record->push_back(Data.Abstract);
   Record->push_back(Data.IsStandardLayout);
-  Record->push_back(Data.HasNoNonEmptyBases);
+  Record->push_back(Data.IsCXX11StandardLayout);
+  Record->push_back(Data.HasBasesWithFields);
+  Record->push_back(Data.HasBasesWithNonStaticDataMembers);
   Record->push_back(Data.HasPrivateFields);
   Record->push_back(Data.HasProtectedFields);
   Record->push_back(Data.HasPublicFields);

@@ -1058,8 +1058,15 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     if (auto EC = S.getName(SectionName))
       return errorCodeToError(EC);
 
-    if (SectionName != ".debug$T")
+    // .debug$T is a standard CodeView type section, while .debug$P is the same
+    // format but used for MSVC precompiled header object files.
+    if (SectionName == ".debug$T")
+      printHeader(P, "Types (.debug$T)");
+    else if (SectionName == ".debug$P")
+      printHeader(P, "Precompiled Types (.debug$P)");
+    else
       continue;
+
     StringRef Contents;
     if (auto EC = S.getContents(Contents))
       return errorCodeToError(EC);

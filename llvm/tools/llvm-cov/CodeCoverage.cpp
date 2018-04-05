@@ -199,7 +199,7 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
     if (PathRemapping)
       addCollectedPath(Path);
     else
-      error("Missing source file", Path);
+      warning("Source file doesn't exist, proceeded by ignoring it.", Path);
     return;
   }
 
@@ -211,12 +211,16 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
   if (llvm::sys::fs::is_directory(Status)) {
     std::error_code EC;
     for (llvm::sys::fs::recursive_directory_iterator F(Path, EC), E;
-         F != E && !EC; F.increment(EC)) {
+         F != E; F.increment(EC)) {
+
+      if (EC) {
+        warning(EC.message(), F->path());
+        continue;
+      }
+
       if (llvm::sys::fs::is_regular_file(F->path()))
         addCollectedPath(F->path());
     }
-    if (EC)
-      warning(EC.message(), Path);
   }
 }
 

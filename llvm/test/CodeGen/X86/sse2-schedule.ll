@@ -4104,7 +4104,7 @@ define void @test_movapd(<2 x double> *%a0, <2 x double> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movapd (%rdi), %xmm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    addpd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    movapd %xmm0, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movapd %xmm0, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movapd:
@@ -4125,14 +4125,14 @@ define void @test_movapd(<2 x double> *%a0, <2 x double> *%a1) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movapd (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-SSE-NEXT:    addpd %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movapd %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movapd %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movapd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovapd (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-NEXT:    vaddpd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vmovapd %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovapd %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movapd:
@@ -4229,7 +4229,7 @@ define void @test_movdqa(<2 x i64> *%a0, <2 x i64> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movdqa (%rdi), %xmm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    paddq %xmm0, %xmm0 # sched: [1:0.50]
-; GENERIC-NEXT:    movdqa %xmm0, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movdqa %xmm0, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movdqa:
@@ -4250,14 +4250,14 @@ define void @test_movdqa(<2 x i64> *%a0, <2 x i64> *%a1) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movdqa (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-SSE-NEXT:    paddq %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-SSE-NEXT:    movdqa %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movdqa %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movdqa:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovdqa (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-NEXT:    vpaddq %xmm0, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vmovdqa %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovdqa %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movdqa:
@@ -4354,7 +4354,7 @@ define void @test_movdqu(<2 x i64> *%a0, <2 x i64> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movdqu (%rdi), %xmm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    paddq %xmm0, %xmm0 # sched: [1:0.50]
-; GENERIC-NEXT:    movdqu %xmm0, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movdqu %xmm0, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movdqu:
@@ -4375,14 +4375,14 @@ define void @test_movdqu(<2 x i64> *%a0, <2 x i64> *%a1) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movdqu (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-SSE-NEXT:    paddq %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-SSE-NEXT:    movdqu %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movdqu %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movdqu:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovdqu (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-NEXT:    vpaddq %xmm0, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vmovdqu %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovdqu %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movdqu:
@@ -4482,7 +4482,7 @@ define i32 @test_movd(<4 x i32> %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-NEXT:    paddd %xmm0, %xmm1 # sched: [1:0.50]
 ; GENERIC-NEXT:    paddd %xmm0, %xmm2 # sched: [1:0.50]
 ; GENERIC-NEXT:    movd %xmm2, %eax # sched: [2:1.00]
-; GENERIC-NEXT:    movd %xmm1, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movd %xmm1, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movd:
@@ -4512,7 +4512,7 @@ define i32 @test_movd(<4 x i32> %a0, i32 %a1, i32 *%a2) {
 ; SANDY-SSE-NEXT:    paddd %xmm0, %xmm1 # sched: [1:0.50]
 ; SANDY-SSE-NEXT:    paddd %xmm0, %xmm2 # sched: [1:0.50]
 ; SANDY-SSE-NEXT:    movd %xmm2, %eax # sched: [2:1.00]
-; SANDY-SSE-NEXT:    movd %xmm1, (%rsi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movd %xmm1, (%rsi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movd:
@@ -4522,7 +4522,7 @@ define i32 @test_movd(<4 x i32> %a0, i32 %a1, i32 *%a2) {
 ; SANDY-NEXT:    vpaddd %xmm1, %xmm0, %xmm1 # sched: [1:0.50]
 ; SANDY-NEXT:    vpaddd %xmm2, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    vmovd %xmm0, %eax # sched: [2:1.00]
-; SANDY-NEXT:    vmovd %xmm1, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovd %xmm1, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movd:
@@ -4663,7 +4663,7 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-NEXT:    paddq %xmm0, %xmm1 # sched: [1:0.50]
 ; GENERIC-NEXT:    paddq %xmm0, %xmm2 # sched: [1:0.50]
 ; GENERIC-NEXT:    movq %xmm2, %rax # sched: [2:1.00]
-; GENERIC-NEXT:    movq %xmm1, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movq %xmm1, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movd_64:
@@ -4693,7 +4693,7 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; SANDY-SSE-NEXT:    paddq %xmm0, %xmm1 # sched: [1:0.50]
 ; SANDY-SSE-NEXT:    paddq %xmm0, %xmm2 # sched: [1:0.50]
 ; SANDY-SSE-NEXT:    movq %xmm2, %rax # sched: [2:1.00]
-; SANDY-SSE-NEXT:    movq %xmm1, (%rsi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movq %xmm1, (%rsi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movd_64:
@@ -4703,7 +4703,7 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; SANDY-NEXT:    vpaddq %xmm1, %xmm0, %xmm1 # sched: [1:0.50]
 ; SANDY-NEXT:    vpaddq %xmm2, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    vmovq %xmm0, %rax # sched: [2:1.00]
-; SANDY-NEXT:    vmovq %xmm1, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovq %xmm1, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movd_64:
@@ -4841,7 +4841,7 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
 ; GENERIC-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; GENERIC-NEXT:    movhpd %xmm1, (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movhpd:
@@ -4862,14 +4862,14 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
 ; SANDY-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movhpd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
 ; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movhpd:
@@ -4969,7 +4969,7 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [7:1.00]
 ; GENERIC-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; GENERIC-NEXT:    movlpd %xmm1, (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movlpd:
@@ -4990,14 +4990,14 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [7:1.00]
 ; SANDY-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movlpd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [7:1.00]
 ; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movlpd:
@@ -5188,7 +5188,7 @@ define void @test_movntdqa(<2 x i64> %a0, <2 x i64> *%a1) {
 ; GENERIC-LABEL: test_movntdqa:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    paddq %xmm0, %xmm0 # sched: [1:0.50]
-; GENERIC-NEXT:    movntdq %xmm0, (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    movntdq %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movntdqa:
@@ -5208,13 +5208,13 @@ define void @test_movntdqa(<2 x i64> %a0, <2 x i64> *%a1) {
 ; SANDY-SSE-LABEL: test_movntdqa:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    paddq %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-SSE-NEXT:    movntdq %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movntdq %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movntdqa:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpaddq %xmm0, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vmovntdq %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovntdq %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movntdqa:
@@ -5297,7 +5297,7 @@ define void @test_movntpd(<2 x double> %a0, <2 x double> *%a1) {
 ; GENERIC-LABEL: test_movntpd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    addpd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    movntpd %xmm0, (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    movntpd %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movntpd:
@@ -5315,13 +5315,13 @@ define void @test_movntpd(<2 x double> %a0, <2 x double> *%a1) {
 ; SANDY-SSE-LABEL: test_movntpd:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    addpd %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movntpd %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movntpd %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movntpd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vaddpd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vmovntpd %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovntpd %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movntpd:
@@ -5405,7 +5405,7 @@ define <2 x i64> @test_movq_mem(<2 x i64> %a0, i64 *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    paddq %xmm1, %xmm0 # sched: [1:0.50]
-; GENERIC-NEXT:    movq %xmm0, (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    movq %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movq_mem:
@@ -5426,14 +5426,14 @@ define <2 x i64> @test_movq_mem(<2 x i64> %a0, i64 *%a1) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero sched: [6:0.50]
 ; SANDY-SSE-NEXT:    paddq %xmm1, %xmm0 # sched: [1:0.50]
-; SANDY-SSE-NEXT:    movq %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movq %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movq_mem:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero sched: [6:0.50]
 ; SANDY-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vmovq %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovq %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movq_mem:
@@ -5641,7 +5641,7 @@ define void @test_movsd_mem(double* %a0, double* %a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    addsd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    movsd %xmm0, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movsd %xmm0, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movsd_mem:
@@ -5662,14 +5662,14 @@ define void @test_movsd_mem(double* %a0, double* %a1) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; SANDY-SSE-NEXT:    addsd %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movsd %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movsd %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movsd_mem:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; SANDY-NEXT:    vaddsd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vmovsd %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovsd %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movsd_mem:
@@ -5869,7 +5869,7 @@ define void @test_movupd(<2 x double> *%a0, <2 x double> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movupd (%rdi), %xmm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    addpd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    movupd %xmm0, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movupd %xmm0, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movupd:
@@ -5890,14 +5890,14 @@ define void @test_movupd(<2 x double> *%a0, <2 x double> *%a1) {
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movupd (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-SSE-NEXT:    addpd %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movupd %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-SSE-NEXT:    movupd %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movupd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovupd (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-NEXT:    vaddpd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vmovupd %xmm0, (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovupd %xmm0, (%rsi) # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movupd:
