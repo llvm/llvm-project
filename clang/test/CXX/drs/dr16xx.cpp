@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
+#if __cplusplus < 201103L
+// expected-error@+1 {{variadic macro}}
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+#endif
+
 namespace dr1611 { // dr1611: dup 1658
   struct A { A(int); };
   struct B : virtual A { virtual void f() = 0; };
@@ -218,4 +223,29 @@ namespace dr1658 { // dr1658: 5
   }
 
   // assignment case is superseded by dr2180
+}
+
+namespace dr1672 { // dr1672: 7
+  struct Empty {};
+  struct A : Empty {};
+  struct B { Empty e; };
+  struct C : A { B b; int n; };
+  struct D : A { int n; B b; };
+
+  static_assert(!__is_standard_layout(C), "");
+  static_assert(__is_standard_layout(D), "");
+
+  struct E { B b; int n; };
+  struct F { int n; B b; };
+  union G { B b; int n; };
+  union H { int n; B b; };
+
+  struct X {};
+  template<typename T> struct Y : X, A { T t; };
+
+  static_assert(!__is_standard_layout(Y<E>), "");
+  static_assert(__is_standard_layout(Y<F>), "");
+  static_assert(!__is_standard_layout(Y<G>), "");
+  static_assert(!__is_standard_layout(Y<H>), "");
+  static_assert(!__is_standard_layout(Y<X>), "");
 }

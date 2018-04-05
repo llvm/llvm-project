@@ -14,6 +14,7 @@
 // C Includes
 // C++ Includes
 #include <chrono>
+#include <csignal>
 #include <cstring>
 #include <mutex>
 #include <sstream>

@@ -89,7 +89,7 @@
 //  S:N: -> similar to the s:N: attribute, but the function is like vscanf
 //          in that it accepts its arguments as a va_list rather than
 //          through an ellipsis
-//  e -> const, but only when -fmath-errno=0
+//  e -> const, but only when -fno-math-errno
 //  j -> returns_twice (like setjmp)
 //  u -> arguments are not evaluated for their side-effects
 //  FIXME: gcc has nonnull

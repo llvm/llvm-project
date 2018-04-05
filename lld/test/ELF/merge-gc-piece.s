@@ -3,6 +3,15 @@
 # RUN: ld.lld %t.o -o %t.so -shared --gc-sections
 # RUN: llvm-readobj -s -section-data %t.so | FileCheck %s
 
+
+# CHECK:      Name: .foo
+# CHECK-NEXT: Type: SHT_PROGBITS
+# CHECK-NEXT: Flags [
+# CHECK-NEXT:   SHF_ALLOC
+# CHECK-NEXT:   SHF_MERGE
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address: 0x190
+
 # CHECK:      Name: .bar
 # CHECK-NEXT: Type: SHT_PROGBITS
 # CHECK-NEXT: Flags [
@@ -15,7 +24,7 @@
 # CHECK-NEXT: AddressAlignment:
 # CHECK-NEXT: EntrySize:
 # CHECK-NEXT: SectionData (
-# CHECK-NEXT:   0000: 90010000 00000000 91010000 00000000
+# CHECK-NEXT:   0000: 91010000 00000000 92010000 00000000
 # CHECK-NEXT: )
 
         .section .foo,"aM",@progbits,8

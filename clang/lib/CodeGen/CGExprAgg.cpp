@@ -337,7 +337,8 @@ void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
 
   AggValueSlot srcAgg =
     AggValueSlot::forLValue(src, AggValueSlot::IsDestructed,
-                            needsGC(type), AggValueSlot::IsAliased);
+                            needsGC(type), AggValueSlot::IsAliased,
+                            AggValueSlot::MayOverlap);
   EmitCopy(type, Dest, srcAgg);
 }
 
@@ -348,7 +349,7 @@ void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
 void AggExprEmitter::EmitCopy(QualType type, const AggValueSlot &dest,
                               const AggValueSlot &src) {
   if (dest.requiresGCollection()) {
-    CharUnits sz = CGF.getContext().getTypeSizeInChars(type);
+    CharUnits sz = dest.getPreferredSize(CGF.getContext(), type);
     llvm::Value *size = llvm::ConstantInt::get(CGF.SizeTy, sz.getQuantity());
     CGF.CGM.getObjCRuntime().EmitGCMemmoveCollectable(CGF,
                                                       dest.getAddress(),
@@ -362,7 +363,7 @@ void AggExprEmitter::EmitCopy(QualType type, const AggValueSlot &dest,
   // the two sides.
   LValue DestLV = CGF.MakeAddrLValue(dest.getAddress(), type);
   LValue SrcLV = CGF.MakeAddrLValue(src.getAddress(), type);
-  CGF.EmitAggregateCopy(DestLV, SrcLV, type,
+  CGF.EmitAggregateCopy(DestLV, SrcLV, type, dest.mayOverlap(),
                         dest.isVolatile() || src.isVolatile());
 }
 
@@ -759,6 +760,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
                                           valueDest.isExternallyDestructed(),
                                           valueDest.requiresGCollection(),
                                           valueDest.isPotentiallyAliased(),
+                                          AggValueSlot::DoesNotOverlap,
                                           AggValueSlot::IsZeroed);
       }
       
@@ -986,7 +988,8 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     EmitCopy(E->getLHS()->getType(),
              AggValueSlot::forLValue(LHS, AggValueSlot::IsDestructed,
                                      needsGC(E->getLHS()->getType()),
-                                     AggValueSlot::IsAliased),
+                                     AggValueSlot::IsAliased,
+                                     AggValueSlot::MayOverlap),
              Dest);
     return;
   }
@@ -1007,7 +1010,8 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   AggValueSlot LHSSlot =
     AggValueSlot::forLValue(LHS, AggValueSlot::IsDestructed, 
                             needsGC(E->getLHS()->getType()),
-                            AggValueSlot::IsAliased);
+                            AggValueSlot::IsAliased,
+                            AggValueSlot::MayOverlap);
   // A non-volatile aggregate destination might have volatile member.
   if (!LHSSlot.isVolatile() &&
       CGF.hasVolatileMember(E->getLHS()->getType()))
@@ -1185,6 +1189,7 @@ AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
                                                AggValueSlot::IsDestructed,
                                       AggValueSlot::DoesNotNeedGCBarriers,
                                                AggValueSlot::IsNotAliased,
+                                               AggValueSlot::MayOverlap,
                                                Dest.isZeroed()));
     return;
   case TEK_Scalar:
@@ -1283,11 +1288,12 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
       Address V = CGF.GetAddressOfDirectBaseInCompleteClass(
           Dest.getAddress(), CXXRD, BaseRD,
           /*isBaseVirtual*/ false);
-      AggValueSlot AggSlot =
-        AggValueSlot::forAddr(V, Qualifiers(),
-                              AggValueSlot::IsDestructed,
-                              AggValueSlot::DoesNotNeedGCBarriers,
-                              AggValueSlot::IsNotAliased);
+      AggValueSlot AggSlot = AggValueSlot::forAddr(
+          V, Qualifiers(),
+          AggValueSlot::IsDestructed,
+          AggValueSlot::DoesNotNeedGCBarriers,
+          AggValueSlot::IsNotAliased,
+          CGF.overlapForBaseInit(CXXRD, BaseRD, Base.isVirtual()));
       CGF.EmitAggExpr(E->getInit(curInitIndex++), AggSlot);
 
       if (QualType::DestructionKind dtorKind =
@@ -1468,7 +1474,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
       // If the subexpression is an ArrayInitLoopExpr, share its cleanup.
       auto elementSlot = AggValueSlot::forLValue(
           elementLV, AggValueSlot::IsDestructed,
-          AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased);
+          AggValueSlot::DoesNotNeedGCBarriers,
+          AggValueSlot::IsNotAliased,
+          AggValueSlot::DoesNotOverlap);
       AggExprEmitter(CGF, elementSlot, false)
           .VisitArrayInitLoopExpr(InnerLoop, outerBegin);
     } else
@@ -1584,7 +1592,7 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
     }
 
   // If the type is 16-bytes or smaller, prefer individual stores over memset.
-  CharUnits Size = CGF.getContext().getTypeSizeInChars(E->getType());
+  CharUnits Size = Slot.getPreferredSize(CGF.getContext(), E->getType());
   if (Size <= CharUnits::fromQuantity(16))
     return;
 
@@ -1630,13 +1638,37 @@ LValue CodeGenFunction::EmitAggExprToLValue(const Expr *E) {
   LValue LV = MakeAddrLValue(Temp, E->getType());
   EmitAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsNotDestructed,
                                          AggValueSlot::DoesNotNeedGCBarriers,
-                                         AggValueSlot::IsNotAliased));
+                                         AggValueSlot::IsNotAliased,
+                                         AggValueSlot::DoesNotOverlap));
   return LV;
 }
 
-void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src,
-                                        QualType Ty, bool isVolatile,
-                                        bool isAssignment) {
+AggValueSlot::Overlap_t CodeGenFunction::overlapForBaseInit(
+    const CXXRecordDecl *RD, const CXXRecordDecl *BaseRD, bool IsVirtual) {
+  // Virtual bases are initialized first, in address order, so there's never
+  // any overlap during their initialization.
+  //
+  // FIXME: Under P0840, this is no longer true: the tail padding of a vbase
+  // of a field could be reused by a vbase of a containing class.
+  if (IsVirtual)
+    return AggValueSlot::DoesNotOverlap;
+
+  // If the base class is laid out entirely within the nvsize of the derived
+  // class, its tail padding cannot yet be initialized, so we can issue
+  // stores at the full width of the base class.
+  const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
+  if (Layout.getBaseClassOffset(BaseRD) +
+          getContext().getASTRecordLayout(BaseRD).getSize() <=
+      Layout.getNonVirtualSize())
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
+}
+
+void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
+                                        AggValueSlot::Overlap_t MayOverlap,
+                                        bool isVolatile) {
   assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
 
   Address DestPtr = Dest.getAddress();
@@ -1669,12 +1701,11 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src,
   // implementation handles this case safely.  If there is a libc that does not
   // safely handle this, we can add a target hook.
 
-  // Get data size info for this aggregate. If this is an assignment,
-  // don't copy the tail padding, because we might be assigning into a
-  // base subobject where the tail padding is claimed.  Otherwise,
-  // copying it is fine.
+  // Get data size info for this aggregate. Don't copy the tail padding if this
+  // might be a potentially-overlapping subobject, since the tail padding might
+  // be occupied by a different object. Otherwise, copying it is fine.
   std::pair<CharUnits, CharUnits> TypeInfo;
-  if (isAssignment)
+  if (MayOverlap)
     TypeInfo = getContext().getTypeInfoDataSizeInChars(Ty);
   else
     TypeInfo = getContext().getTypeInfoInChars(Ty);
@@ -1686,22 +1717,11 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src,
             getContext().getAsArrayType(Ty))) {
       QualType BaseEltTy;
       SizeVal = emitArrayLength(VAT, BaseEltTy, DestPtr);
-      TypeInfo = getContext().getTypeInfoDataSizeInChars(BaseEltTy);
-      std::pair<CharUnits, CharUnits> LastElementTypeInfo;
-      if (!isAssignment)
-        LastElementTypeInfo = getContext().getTypeInfoInChars(BaseEltTy);
+      TypeInfo = getContext().getTypeInfoInChars(BaseEltTy);
       assert(!TypeInfo.first.isZero());
       SizeVal = Builder.CreateNUWMul(
           SizeVal,
           llvm::ConstantInt::get(SizeTy, TypeInfo.first.getQuantity()));
-      if (!isAssignment) {
-        SizeVal = Builder.CreateNUWSub(
-            SizeVal,
-            llvm::ConstantInt::get(SizeTy, TypeInfo.first.getQuantity()));
-        SizeVal = Builder.CreateNUWAdd(
-            SizeVal, llvm::ConstantInt::get(
-                         SizeTy, LastElementTypeInfo.first.getQuantity()));
-      }
     }
   }
   if (!SizeVal) {

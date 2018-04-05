@@ -140,12 +140,13 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
     writeUleb128(OS, WASM_OPCODE_END, "opcode:end");
     writeUleb128(OS, Segment->Size, "segment size");
     OS.flush();
-    Segment->setSectionOffset(BodySize);
+
+    Segment->SectionOffset = BodySize;
     BodySize += Segment->Header.size() + Segment->Size;
     log("Data segment: size=" + Twine(Segment->Size));
+
     for (InputSegment *InputSeg : Segment->InputSegments)
-      InputSeg->OutputOffset = Segment->getSectionOffset() +
-                               Segment->Header.size() +
+      InputSeg->OutputOffset = Segment->SectionOffset + Segment->Header.size() +
                                InputSeg->OutputSegmentOffset;
   }
 
@@ -166,7 +167,7 @@ void DataSection::writeTo(uint8_t *Buf) {
 
   parallelForEach(Segments, [&](const OutputSegment *Segment) {
     // Write data segment header
-    uint8_t *SegStart = Buf + Segment->getSectionOffset();
+    uint8_t *SegStart = Buf + Segment->SectionOffset;
     memcpy(SegStart, Segment->Header.data(), Segment->Header.size());
 
     // Write segment data payload

@@ -391,6 +391,7 @@ private:
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
                          tok::kw_return, tok::kw_throw) ||
          Parent->isUnaryOperator() ||
+         // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
          Parent->isOneOf(TT_ObjCForIn, TT_CastRParen) ||
          getBinOpPrecedence(Parent->Tok.getKind(), true, true) > prec::Unknown);
     bool ColonFound = false;
@@ -524,6 +525,7 @@ private:
           Left->ParameterCount = 0;
           Contexts.back().ColonIsObjCMethodExpr = true;
           if (Parent && Parent->is(tok::r_paren))
+            // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
             Parent->Type = TT_CastRParen;
         }
         ColonFound = true;
@@ -676,6 +678,7 @@ private:
         Tok->Type = TT_ObjCMethodExpr;
         const FormatToken *BeforePrevious = Tok->Previous->Previous;
         if (!BeforePrevious ||
+            // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
             !(BeforePrevious->is(TT_CastRParen) ||
               (BeforePrevious->is(TT_ObjCMethodExpr) &&
                BeforePrevious->is(tok::colon))) ||
@@ -1343,6 +1346,17 @@ private:
                                          TT_LeadingJavaAnnotation)) {
         Current.Type = Current.Previous->Type;
       }
+    } else if (Current.isOneOf(tok::identifier, tok::kw_new) &&
+               // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
+               Current.Previous && Current.Previous->is(TT_CastRParen) &&
+               Current.Previous->MatchingParen &&
+               Current.Previous->MatchingParen->Previous &&
+               Current.Previous->MatchingParen->Previous->is(
+                   TT_ObjCMethodSpecifier)) {
+      // This is the first part of an Objective-C selector name. (If there's no
+      // colon after this, this is the only place which annotates the identifier
+      // as a selector.)
+      Current.Type = TT_SelectorName;
     } else if (Current.isOneOf(tok::identifier, tok::kw_const) &&
                Current.Previous &&
                !Current.Previous->isOneOf(tok::equal, tok::at) &&

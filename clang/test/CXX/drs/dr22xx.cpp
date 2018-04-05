@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr2229 { // dr2229: yes
+namespace dr2229 { // dr2229: 7
 struct AnonBitfieldQualifiers {
   const unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
   volatile unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
