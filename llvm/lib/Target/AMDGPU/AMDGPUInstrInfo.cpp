@@ -29,6 +29,9 @@ namespace llvm {
 namespace AMDGPU {
 #define GET_RSRCINTRINSIC_IMPL
 #include "AMDGPUGenSearchableTables.inc"
+
+#define GET_D16IMAGEDIMINTRINSIC_IMPL
+#include "AMDGPUGenSearchableTables.inc"
 }
 }
 

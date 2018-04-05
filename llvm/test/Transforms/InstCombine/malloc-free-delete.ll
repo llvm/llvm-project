@@ -173,9 +173,33 @@ define linkonce void @_ZdaPvj(i8* %p, i32) nobuiltin {
   ret void
 }
 
+
+; new(size_t, align_val_t)
+declare i8* @_ZnwmSt11align_val_t(i64, i64) nobuiltin
+declare i8* @_ZnwjSt11align_val_t(i32, i32) nobuiltin
+; new[](size_t, align_val_t)
+declare i8* @_ZnamSt11align_val_t(i64, i64) nobuiltin
+declare i8* @_ZnajSt11align_val_t(i32, i32) nobuiltin
+; new(size_t, align_val_t, nothrow)
+declare i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, i8*) nobuiltin
+declare i8* @_ZnwjSt11align_val_tRKSt9nothrow_t(i32, i32, i8*) nobuiltin
+; new[](size_t, align_val_t, nothrow)
+declare i8* @_ZnamSt11align_val_tRKSt9nothrow_t(i64, i64, i8*) nobuiltin
+declare i8* @_ZnajSt11align_val_tRKSt9nothrow_t(i32, i32, i8*) nobuiltin
+; delete(void*, align_val_t)
+declare void @_ZdlPvSt11align_val_t(i8*, i64) nobuiltin
+; delete[](void*, align_val_t)
+declare void @_ZdaPvSt11align_val_t(i8*, i64) nobuiltin
+; delete(void*, align_val_t, nothrow)
+declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8*, i64, i8*) nobuiltin
+; delete[](void*, align_val_t, nothrow)
+declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8*, i64, i8*) nobuiltin
+
+
 ; CHECK-LABEL: @test8(
 define void @test8() {
   ; CHECK-NOT: call
+  %nt = alloca i8
   %nw = call i8* @_Znwm(i64 32) builtin
   call void @_ZdlPv(i8* %nw) builtin
   %na = call i8* @_Znam(i64 32) builtin
@@ -188,6 +212,22 @@ define void @test8() {
   call void @_ZdaPvm(i8* %nam, i64 32) builtin
   %naj = call i8* @_Znaj(i32 32) builtin
   call void @_ZdaPvj(i8* %naj, i32 32) builtin
+  %nwa = call i8* @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdlPvSt11align_val_t(i8* %nwa, i64 8) builtin
+  %naa = call i8* @_ZnamSt11align_val_t(i64 32, i64 8) builtin
+  call void @_ZdaPvSt11align_val_t(i8* %naa, i64 8) builtin
+  %nwja = call i8* @_ZnwjSt11align_val_t(i32 32, i32 8) builtin
+  call void @_ZdlPvSt11align_val_t(i8* %nwja, i64 8) builtin
+  %naja = call i8* @_ZnajSt11align_val_t(i32 32, i32 8) builtin
+  call void @_ZdaPvSt11align_val_t(i8* %naja, i64 8) builtin
+  %nwat = call i8* @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, i8* %nt) builtin
+  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8* %nwat, i64 8, i8* %nt) builtin
+  %naat = call i8* @_ZnamSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, i8* %nt) builtin
+  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8* %naat, i64 8, i8* %nt) builtin
+  %nwjat = call i8* @_ZnwjSt11align_val_tRKSt9nothrow_t(i32 32, i32 8, i8* %nt) builtin
+  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8* %nwjat, i64 8, i8* %nt) builtin
+  %najat = call i8* @_ZnajSt11align_val_tRKSt9nothrow_t(i32 32, i32 8, i8* %nt) builtin
+  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8* %najat, i64 8, i8* %nt) builtin
   ret void
 }
 

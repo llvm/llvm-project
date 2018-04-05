@@ -29,7 +29,6 @@ public:
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
-  bool isPicRel(RelType Type) const override;
   RelType getDynRel(RelType Type) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
@@ -162,18 +161,10 @@ RelExpr ARM::getRelExpr(RelType Type, const Symbol &S,
   }
 }
 
-bool ARM::isPicRel(RelType Type) const {
-  return (Type == R_ARM_TARGET1 && !Config->Target1Rel) ||
-         (Type == R_ARM_ABS32);
-}
-
 RelType ARM::getDynRel(RelType Type) const {
-  if (Type == R_ARM_TARGET1 && !Config->Target1Rel)
+  if ((Type == R_ARM_ABS32) || (Type == R_ARM_TARGET1 && !Config->Target1Rel))
     return R_ARM_ABS32;
-  if (Type == R_ARM_ABS32)
-    return Type;
-  // Keep it going with a dummy value so that we can find more reloc errors.
-  return R_ARM_ABS32;
+  return R_ARM_NONE;
 }
 
 void ARM::writeGotPlt(uint8_t *Buf, const Symbol &) const {

@@ -49,6 +49,8 @@ protected:
   static void verifyFormat(
       llvm::StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
+    EXPECT_EQ(Code.str(), format(Code, Style))
+        << "Expected code is not stable";
     std::string Result = format(test::messUp(Code), Style);
     EXPECT_EQ(Code.str(), Result) << "Formatted:\n" << Result;
   }
@@ -57,6 +59,8 @@ protected:
       llvm::StringRef Expected,
       llvm::StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
+    EXPECT_EQ(Expected.str(), format(Expected, Style))
+        << "Expected code is not stable";
     std::string Result = format(Code, Style);
     EXPECT_EQ(Expected.str(), Result) << "Formatted:\n" << Result;
   }

@@ -180,21 +180,21 @@ def IMUL16rm : I<0xAF, MRMSrcMem, (outs GR16:$dst),
                                   (ins GR16:$src1, i16mem:$src2),
                  "imul{w}\t{$src2, $dst|$dst, $src2}",
                  [(set GR16:$dst, EFLAGS,
-                       (X86smul_flag GR16:$src1, (load addr:$src2)))],
+                       (X86smul_flag GR16:$src1, (loadi16 addr:$src2)))],
                        IIC_IMUL16_RM>,
                TB, OpSize16;
 def IMUL32rm : I<0xAF, MRMSrcMem, (outs GR32:$dst),
                  (ins GR32:$src1, i32mem:$src2),
                  "imul{l}\t{$src2, $dst|$dst, $src2}",
                  [(set GR32:$dst, EFLAGS,
-                       (X86smul_flag GR32:$src1, (load addr:$src2)))],
+                       (X86smul_flag GR32:$src1, (loadi32 addr:$src2)))],
                        IIC_IMUL32_RM>,
                TB, OpSize32;
 def IMUL64rm : RI<0xAF, MRMSrcMem, (outs GR64:$dst),
                                    (ins GR64:$src1, i64mem:$src2),
                   "imul{q}\t{$src2, $dst|$dst, $src2}",
                   [(set GR64:$dst, EFLAGS,
-                        (X86smul_flag GR64:$src1, (load addr:$src2)))],
+                        (X86smul_flag GR64:$src1, (loadi64 addr:$src2)))],
                         IIC_IMUL64_RM>,
                TB;
 } // SchedRW
@@ -250,41 +250,41 @@ def IMUL16rmi  : Ii16<0x69, MRMSrcMem,                     // GR16 = [mem16]*I16
                       (outs GR16:$dst), (ins i16mem:$src1, i16imm:$src2),
                       "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR16:$dst, EFLAGS,
-                            (X86smul_flag (load addr:$src1), imm:$src2))],
+                            (X86smul_flag (loadi16 addr:$src1), imm:$src2))],
                             IIC_IMUL16_RMI>,
                  OpSize16;
 def IMUL16rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR16 = [mem16]*I8
                      (outs GR16:$dst), (ins i16mem:$src1, i16i8imm :$src2),
                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR16:$dst, EFLAGS,
-                           (X86smul_flag (load addr:$src1),
+                           (X86smul_flag (loadi16 addr:$src1),
                                          i16immSExt8:$src2))], IIC_IMUL16_RMI>,
                                          OpSize16;
 def IMUL32rmi  : Ii32<0x69, MRMSrcMem,                     // GR32 = [mem32]*I32
                       (outs GR32:$dst), (ins i32mem:$src1, i32imm:$src2),
                       "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR32:$dst, EFLAGS,
-                            (X86smul_flag (load addr:$src1), imm:$src2))],
+                            (X86smul_flag (loadi32 addr:$src1), imm:$src2))],
                             IIC_IMUL32_RMI>, OpSize32;
 def IMUL32rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR32 = [mem32]*I8
                      (outs GR32:$dst), (ins i32mem:$src1, i32i8imm: $src2),
                      "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR32:$dst, EFLAGS,
-                           (X86smul_flag (load addr:$src1),
+                           (X86smul_flag (loadi32 addr:$src1),
                                          i32immSExt8:$src2))],
                                          IIC_IMUL32_RMI>, OpSize32;
 def IMUL64rmi32 : RIi32S<0x69, MRMSrcMem,                   // GR64 = [mem64]*I32
                          (outs GR64:$dst), (ins i64mem:$src1, i64i32imm:$src2),
                          "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set GR64:$dst, EFLAGS,
-                              (X86smul_flag (load addr:$src1),
+                              (X86smul_flag (loadi64 addr:$src1),
                                             i64immSExt32:$src2))],
                                             IIC_IMUL64_RMI>;
 def IMUL64rmi8 : RIi8<0x6B, MRMSrcMem,                      // GR64 = [mem64]*I8
                       (outs GR64:$dst), (ins i64mem:$src1, i64i8imm: $src2),
                       "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR64:$dst, EFLAGS,
-                            (X86smul_flag (load addr:$src1),
+                            (X86smul_flag (loadi64 addr:$src1),
                                           i64immSExt8:$src2))],
                                           IIC_IMUL64_RMI>;
 } // SchedRW

@@ -3677,8 +3677,22 @@ SDValue SITargetLowering::lowerIntrinsicWChain_IllegalReturnType(SDValue Op,
     Chain = Res.getValue(1);
     return adjustLoadValueType(Res, LoadVT, DL, DAG, Unpacked);
   }
-  default:
+  default: {
+    const AMDGPU::D16ImageDimIntrinsic *D16ImageDimIntr =
+        AMDGPU::lookupD16ImageDimIntrinsicByIntr(IID);
+    if (D16ImageDimIntr) {
+      SmallVector<SDValue, 20> Ops;
+      for (auto Value : Op.getNode()->op_values())
+        Ops.push_back(Value);
+      Ops[1] = DAG.getConstant(D16ImageDimIntr->D16HelperIntr, DL, MVT::i32);
+      Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTList, Ops,
+                                    M->getMemoryVT(), M->getMemOperand());
+      Chain = Res.getValue(1);
+      return adjustLoadValueType(Res, LoadVT, DL, DAG, Unpacked);
+    }
+
     return SDValue();
+  }
   }
 }
 
@@ -5151,8 +5165,31 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                    M->getMemoryVT(), M->getMemOperand());
   }
 
-  default:
+  default: {
+    const AMDGPU::D16ImageDimIntrinsic *D16ImageDimIntr =
+        AMDGPU::lookupD16ImageDimIntrinsicByIntr(IntrinsicID);
+    if (D16ImageDimIntr) {
+      SDValue VData = Op.getOperand(2);
+      EVT StoreVT = VData.getValueType();
+      if ((StoreVT == MVT::v2f16 && !isTypeLegal(StoreVT)) ||
+          StoreVT == MVT::v4f16) {
+        VData = handleD16VData(VData, DAG);
+
+        SmallVector<SDValue, 12> Ops;
+        for (auto Value : Op.getNode()->op_values())
+          Ops.push_back(Value);
+        Ops[1] = DAG.getConstant(D16ImageDimIntr->D16HelperIntr, DL, MVT::i32);
+        Ops[2] = VData;
+
+        MemSDNode *M = cast<MemSDNode>(Op);
+        return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL, Op->getVTList(),
+                                       Ops, M->getMemoryVT(),
+                                       M->getMemOperand());
+      }
+    }
+
     return Op;
+  }
   }
 }
 

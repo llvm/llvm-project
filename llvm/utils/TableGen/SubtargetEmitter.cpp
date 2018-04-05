@@ -90,7 +90,10 @@ class SubtargetEmitter {
   void EmitItineraries(raw_ostream &OS,
                        std::vector<std::vector<InstrItinerary>>
                          &ProcItinLists);
-  void EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel, raw_ostream &OS);
+  unsigned EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
+                                  raw_ostream &OS);
+  void EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
+                              raw_ostream &OS);
   void EmitProcessorProp(raw_ostream &OS, const Record *R, StringRef Name,
                          char Separator);
   void EmitProcessorResourceSubUnits(const CodeGenProcModel &ProcModel,
@@ -605,12 +608,29 @@ void SubtargetEmitter::EmitProcessorResourceSubUnits(
   OS << "};\n";
 }
 
-void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
-                                              raw_ostream &OS) {
+static void EmitRegisterFileInfo(const CodeGenProcModel &ProcModel,
+                                 unsigned NumRegisterFiles,
+                                 unsigned NumCostEntries, raw_ostream &OS) {
+  if (NumRegisterFiles)
+    OS << ProcModel.ModelName << "RegisterFiles,\n  " << (1 + NumRegisterFiles);
+  else
+    OS << "nullptr,\n  0,\n  ";
+
+  OS << ", // Number of register files.\n  ";
+  if (NumCostEntries)
+    OS << ProcModel.ModelName << "RegisterCosts,\n  ";
+  else
+    OS << "nullptr, \n";
+  OS << NumCostEntries << " // Number of register cost entries.\n";
+}
+
+unsigned
+SubtargetEmitter::EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
+                                         raw_ostream &OS) {
   if (llvm::all_of(ProcModel.RegisterFiles, [](const CodeGenRegisterFile &RF) {
         return RF.hasDefaultCosts();
       }))
-    return;
+    return 0;
 
   // Print the RegisterCost table first.
   OS << "\n// {RegisterClassID, Register Cost}\n";
@@ -650,14 +670,25 @@ void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
   }
   OS << "};\n";
 
+  return CostTblIndex;
+}
+
+void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
+                                              raw_ostream &OS) {
+  // Generate a table of register file descriptors (one entry per each user
+  // defined register file), and a table of register costs.
+  unsigned NumCostEntries = EmitRegisterFileTables(ProcModel, OS);
+
   // Now generate a table for the extra processor info.
   OS << "\nstatic const llvm::MCExtraProcessorInfo " << ProcModel.ModelName
-     << "ExtraInfo = {\n  " << ProcModel.ModelName << "RegisterFiles,\n  "
-     << (1 + ProcModel.RegisterFiles.size())
-     << ", // Number of register files.\n  "
-     << ProcModel.ModelName << "RegisterCosts,\n  " << CostTblIndex
-     << " // Number of register cost entries.\n"
-     << "};\n";
+     << "ExtraInfo = {\n  ";
+
+  // Add information related to the register files (i.e. where to find register
+  // file descriptors and register costs).
+  EmitRegisterFileInfo(ProcModel, ProcModel.RegisterFiles.size(),
+                       NumCostEntries, OS);
+
+  OS << "};\n";
 }
 
 void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,

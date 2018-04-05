@@ -65,7 +65,8 @@ add_pdb_impl_folder(Native
   Native/SymbolStream.cpp
   Native/TpiHashing.cpp
   Native/TpiStream.cpp
-  Native/TpiStreamBuilder.cpp)
+  Native/TpiStreamBuilder.cpp
+  )
 
 list(APPEND LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB/Native")
 list(APPEND LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB")

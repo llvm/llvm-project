@@ -19,6 +19,15 @@
 image_load    v[4:6], v[237:240], s[28:35] dmask:0x7 unorm
 // GCN:  image_load v[4:6], v[237:240], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x00,0xf0,0xed,0x04,0x07,0x00]
 
+image_load    v4, v237, s[28:35]
+// GCN:  image_load v4, v237, s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
+
+image_load    v4, v[237:238], s[28:35]
+// GCN:  image_load v4, v[237:238], s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
+
+image_load    v4, v[237:239], s[28:35]
+// GCN:  image_load v4, v[237:239], s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
+
 image_load    v4, v[237:240], s[28:35]
 // GCN:  image_load v4, v[237:240], s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
 
@@ -42,6 +51,15 @@ image_load v5, v[1:4], s[8:15] r128
 
 image_store   v[193:195], v[237:240], s[28:35] dmask:0x7 unorm
 // GCN: image_store v[193:195], v[237:240], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x20,0xf0,0xed,0xc1,0x07,0x00]
+
+image_store   v193, v237, s[28:35]
+// GCN: image_store v193, v237, s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
+
+image_store   v193, v[237:238], s[28:35]
+// GCN: image_store v193, v[237:238], s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
+
+image_store   v193, v[237:239], s[28:35]
+// GCN: image_store v193, v[237:239], s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
 
 image_store   v193, v[237:240], s[28:35]
 // GCN: image_store v193, v[237:240], s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
@@ -143,6 +161,15 @@ image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16
 // Image Load/Store: PCK variants
 //===----------------------------------------------------------------------===//
 
+image_load_mip_pck v5, v1, s[8:15] dmask:0x1
+// GCN: image_load_mip_pck v5, v1, s[8:15] dmask:0x1 ; encoding: [0x00,0x01,0x10,0xf0,0x01,0x05,0x02,0x00]
+
+image_load_mip_pck v5, v[1:2], s[8:15] dmask:0x1
+// GCN: image_load_mip_pck v5, v[1:2], s[8:15] dmask:0x1 ; encoding: [0x00,0x01,0x10,0xf0,0x01,0x05,0x02,0x00]
+
+image_load_mip_pck v5, v[1:3], s[8:15] dmask:0x1
+// GCN: image_load_mip_pck v5, v[1:3], s[8:15] dmask:0x1 ; encoding: [0x00,0x01,0x10,0xf0,0x01,0x05,0x02,0x00]
+
 image_load_mip_pck v5, v[1:4], s[8:15] dmask:0x1
 // GCN: image_load_mip_pck v5, v[1:4], s[8:15] dmask:0x1 ; encoding: [0x00,0x01,0x10,0xf0,0x01,0x05,0x02,0x00]
 
@@ -166,6 +193,15 @@ image_load_mip_pck v5, v[1:4], s[8:15] dmask:0x1 d16
 // NOVI:   error: invalid operand for instruction
 // NOGFX9: error: invalid operand for instruction
 
+image_store_mip_pck v252, v2, s[12:19] dmask:0x1 unorm
+// GCN: image_store_mip_pck v252, v2, s[12:19] dmask:0x1 unorm ; encoding: [0x00,0x11,0x2c,0xf0,0x02,0xfc,0x03,0x00]
+
+image_store_mip_pck v252, v[2:3], s[12:19] dmask:0x1 unorm
+// GCN: image_store_mip_pck v252, v[2:3], s[12:19] dmask:0x1 unorm ; encoding: [0x00,0x11,0x2c,0xf0,0x02,0xfc,0x03,0x00]
+
+image_store_mip_pck v252, v[2:4], s[12:19] dmask:0x1 unorm
+// GCN: image_store_mip_pck v252, v[2:4], s[12:19] dmask:0x1 unorm ; encoding: [0x00,0x11,0x2c,0xf0,0x02,0xfc,0x03,0x00]
+
 image_store_mip_pck v252, v[2:5], s[12:19] dmask:0x1 unorm
 // GCN: image_store_mip_pck v252, v[2:5], s[12:19] dmask:0x1 unorm ; encoding: [0x00,0x11,0x2c,0xf0,0x02,0xfc,0x03,0x00]
 
@@ -186,6 +222,15 @@ image_store_mip_pck v252, v[2:5], s[12:19] dmask:0x1 d16
 
 image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 unorm
 // GCN: image_sample v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 unorm ; encoding: [0x00,0x17,0x80,0xf0,0xed,0xc1,0x27,0x00]
+
+image_sample  v193, v237, s[28:35], s[4:7]
+// GCN: image_sample v193, v237, s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
+
+image_sample  v193, v[237:238], s[28:35], s[4:7]
+// GCN: image_sample v193, v[237:238], s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
+
+image_sample  v193, v[237:239], s[28:35], s[4:7]
+// GCN: image_sample v193, v[237:239], s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
 
 image_sample  v193, v[237:240], s[28:35], s[4:7]
 // GCN: image_sample v193, v[237:240], s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
@@ -225,6 +270,18 @@ image_sample  v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
 //===----------------------------------------------------------------------===//
 // Image Atomics
 //===----------------------------------------------------------------------===//
+
+image_atomic_add v4, v192, s[28:35] dmask:0x1 unorm glc
+// SICI:  image_atomic_add v4, v192, s[28:35] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x44,0xf0,0xc0,0x04,0x07,0x00]
+// GFX89: image_atomic_add v4, v192, s[28:35] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x48,0xf0,0xc0,0x04,0x07,0x00]
+
+image_atomic_add v4, v[192:193], s[28:35] dmask:0x1 unorm glc
+// SICI:  image_atomic_add v4, v[192:193], s[28:35] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x44,0xf0,0xc0,0x04,0x07,0x00]
+// GFX89: image_atomic_add v4, v[192:193], s[28:35] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x48,0xf0,0xc0,0x04,0x07,0x00]
+
+image_atomic_add v4, v[192:194], s[28:35] dmask:0x1 unorm glc
+// SICI:  image_atomic_add v4, v[192:194], s[28:35] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x44,0xf0,0xc0,0x04,0x07,0x00]
+// GFX89: image_atomic_add v4, v[192:194], s[28:35] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x48,0xf0,0xc0,0x04,0x07,0x00]
 
 image_atomic_add v4, v[192:195], s[28:35] dmask:0x1 unorm glc
 // SICI:  image_atomic_add v4, v[192:195], s[28:35] dmask:0x1 unorm glc ; encoding: [0x00,0x31,0x44,0xf0,0xc0,0x04,0x07,0x00]
@@ -282,6 +339,12 @@ image_atomic_add v10, v6, s[8:15] dmask:0x1 r128
 
 image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1
 // GCN: image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x00]
+
+image_gather4 v[5:8], v[1:2], s[8:15], s[12:15] dmask:0x1
+// GCN: image_gather4 v[5:8], v[1:2], s[8:15], s[12:15] dmask:0x1 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x00]
+
+image_gather4 v[5:8], v[1:3], s[8:15], s[12:15] dmask:0x1
+// GCN: image_gather4 v[5:8], v[1:3], s[8:15], s[12:15] dmask:0x1 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x00]
 
 image_gather4 v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x2
 // GCN: image_gather4 v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x2 ; encoding: [0x00,0x02,0x00,0xf1,0x01,0x05,0x62,0x00]

@@ -1611,7 +1611,14 @@ def HWWriteResGroup34 : SchedWriteRes<[HWPort06,HWPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup34], (instregex "BSWAP(16|32|64)r")>;
+def: InstRW<[HWWriteResGroup34], (instrs BSWAP64r)>;
+
+def HWWriteResGroup34_1 : SchedWriteRes<[HWPort15]> {
+  let Latency = 1;
+  let NumMicroOps = 1;
+  let ResourceCycles = [1];
+}
+def: InstRW<[HWWriteResGroup34_1], (instrs BSWAP32r)>;
 
 def HWWriteResGroup35 : SchedWriteRes<[HWPort06,HWPort0156]> {
   let Latency = 2;

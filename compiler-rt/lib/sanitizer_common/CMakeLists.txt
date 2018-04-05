@@ -71,7 +71,8 @@ set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_stoptheworld_linux_libcdep.cc
   sanitizer_symbolizer_libcdep.cc
   sanitizer_symbolizer_posix_libcdep.cc
-  sanitizer_unwind_linux_libcdep.cc)
+  sanitizer_unwind_linux_libcdep.cc
+  sanitizer_unwind_win.cc)
 
 set(SANITIZER_COVERAGE_SOURCES
   sancov_flags.cc

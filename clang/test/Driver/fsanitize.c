@@ -308,9 +308,6 @@
 // CHECK-DIAG1: unsupported argument 'zzz' to option 'fsanitize='
 // CHECK-DIAG1-NOT: unsupported argument 'zzz' to option 'fsanitize='
 
-// RUN: %clang -target i686-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-X86
-// CHECK-MSAN-X86: error: unsupported option '-fsanitize=memory' for target 'i686--linux-gnu'
-
 // RUN: %clang -target x86_64-apple-darwin10 -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-DARWIN
 // CHECK-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 

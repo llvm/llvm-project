@@ -621,6 +621,20 @@ cl::list<std::string> InputFilename(cl::Positional,
 
 cl::list<uint64_t> Offsets("offset", cl::desc("The file offset to explain"),
                            cl::sub(ExplainSubcommand), cl::OneOrMore);
+
+cl::opt<InputFileType> InputType(
+    "input-type", cl::desc("Specify how to interpret the input file"),
+    cl::init(InputFileType::PDBFile), cl::Optional, cl::sub(ExplainSubcommand),
+    cl::values(clEnumValN(InputFileType::PDBFile, "pdb-file",
+                          "Treat input as a PDB file (default)"),
+               clEnumValN(InputFileType::PDBStream, "pdb-stream",
+                          "Treat input as raw contents of PDB stream"),
+               clEnumValN(InputFileType::DBIStream, "dbi-stream",
+                          "Treat input as raw contents of DBI stream"),
+               clEnumValN(InputFileType::Names, "names-stream",
+                          "Treat input as raw contents of /names named stream"),
+               clEnumValN(InputFileType::ModuleStream, "mod-stream",
+                          "Treat input as raw contents of a module stream")));
 } // namespace explain
 
 namespace exportstream {
@@ -772,7 +786,6 @@ static void pdb2Yaml(StringRef Path) {
 }
 
 static void dumpRaw(StringRef Path) {
-
   InputFile IF = ExitOnErr(InputFile::open(Path));
 
   auto O = llvm::make_unique<DumpOutputStyle>(IF);
@@ -1111,10 +1124,11 @@ static void mergePdbs() {
 
 static void explain() {
   std::unique_ptr<IPDBSession> Session;
-  PDBFile &File = loadPDB(opts::explain::InputFilename.front(), Session);
+  InputFile IF =
+      ExitOnErr(InputFile::open(opts::explain::InputFilename.front(), true));
 
   for (uint64_t Off : opts::explain::Offsets) {
-    auto O = llvm::make_unique<ExplainOutputStyle>(File, Off);
+    auto O = llvm::make_unique<ExplainOutputStyle>(IF, Off);
 
     ExitOnErr(O->dump());
   }
