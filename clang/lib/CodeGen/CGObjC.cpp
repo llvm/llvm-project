@@ -4102,9 +4102,9 @@ CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version,
     IsNativeCheck = Builder.CreateICmpNE(IsNativeCheck,
                                          llvm::Constant::getNullValue(Int32Ty));
     if (!Check)
-      Check = llvm::Constant::getNullValue(Int32Ty);
+      Check = llvm::ConstantInt::get(Int32Ty, 1);
     if (!VariantCheck)
-      VariantCheck = llvm::Constant::getNullValue(Int32Ty);
+      VariantCheck = llvm::ConstantInt::get(Int32Ty, 1);
     Check = Builder.CreateSelect(IsNativeCheck, Check, VariantCheck);
   }
 
