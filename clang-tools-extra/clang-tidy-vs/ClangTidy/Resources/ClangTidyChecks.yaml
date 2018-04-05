@@ -115,10 +115,6 @@ Checks:
     Description: 
     Name:        google-runtime-int
   - Category:    Google Style Guide
-    Label:       Find const string references
-    Description: 
-    Name:        google-runtime-member-string-references
-  - Category:    Google Style Guide
     Label:       Find zero-length memsets
     Description: 
     Name:        google-runtime-memset

@@ -34,7 +34,7 @@ public:
   AArch64();
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
-  bool isPicRel(RelType Type) const override;
+  RelType getDynRel(RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
@@ -144,8 +144,10 @@ bool AArch64::usesOnlyLowPageBits(RelType Type) const {
   }
 }
 
-bool AArch64::isPicRel(RelType Type) const {
-  return Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64;
+RelType AArch64::getDynRel(RelType Type) const {
+  if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
+    return Type;
+  return R_AARCH64_NONE;
 }
 
 void AArch64::writeGotPlt(uint8_t *Buf, const Symbol &) const {

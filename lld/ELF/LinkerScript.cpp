@@ -1049,7 +1049,9 @@ void LinkerScript::assignAddresses() {
 
   for (BaseCommand *Base : SectionCommands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
+      Cmd->Addr = Dot;
       assignSymbol(Cmd, false);
+      Cmd->Size = Dot - Cmd->Addr;
       continue;
     }
 

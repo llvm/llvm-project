@@ -86,10 +86,8 @@ struct BaseCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, Expr E, std::string Loc,
-                   std::string CommandString)
-      : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc),
-        CommandString(CommandString) {}
+  SymbolAssignment(StringRef Name, Expr E, std::string Loc)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc) {}
 
   static bool classof(const BaseCommand *C) {
     return C->Kind == AssignmentKind;
