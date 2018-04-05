@@ -43,44 +43,44 @@
 # BEFORE:       88:       00 00 40 f9     ldr     x0, [x0]
 
 # AFTER: Disassembly of section .text:
-# AFTER:  140002000:      fe 0f 1f f8     str     x30, [sp, #-16]!
-# AFTER:  140002004:      e0 ff ff f0     adrp    x0, #-4096
-# AFTER:  140002008:      00 18 00 91     add     x0, x0, #6
-# AFTER:  14000200c:      20 00 00 94     bl      #128
-# AFTER:  140002010:      00 21 40 39     ldrb    w0, [x8, #8]
-# AFTER:  140002014:      00 11 40 79     ldrh    w0, [x8, #8]
-# AFTER:  140002018:      00 09 40 b9     ldr     w0, [x8, #8]
-# AFTER:  14000201c:      00 05 40 f9     ldr     x0, [x8, #8]
-# AFTER:  140002020:      00 21 00 39     strb    w0, [x8, #8]
-# AFTER:  140002024:      00 11 00 79     strh    w0, [x8, #8]
-# AFTER:  140002028:      00 09 00 b9     str     w0, [x8, #8]
-# AFTER:  14000202c:      00 05 00 f9     str     x0, [x8, #8]
-# AFTER:  140002030:      00 41 40 3d     ldr     b0, [x8, #16]
-# AFTER:  140002034:      00 21 40 7d     ldr     h0, [x8, #16]
-# AFTER:  140002038:      00 11 40 bd     ldr     s0, [x8, #16]
-# AFTER:  14000203c:      00 09 40 fd     ldr     d0, [x8, #16]
-# AFTER:  140002040:      00 05 c0 3d     ldr     q0, [x8, #16]
-# AFTER:  140002044:      00 41 00 3d     str     b0, [x8, #16]
-# AFTER:  140002048:      00 21 00 7d     str     h0, [x8, #16]
-# AFTER:  14000204c:      00 11 00 bd     str     s0, [x8, #16]
-# AFTER:  140002050:      00 09 00 fd     str     d0, [x8, #16]
-# AFTER:  140002054:      00 05 80 3d     str     q0, [x8, #16]
-# AFTER:  140002058:      00 09 40 f9     ldr     x0, [x8, #16]
-# AFTER:  14000205c:      00 00 00 b0     adrp    x0, #4096
-# AFTER:  140002060:      00 fc 47 f9     ldr     x0, [x0, #4088]
-# AFTER:  140002064:      e0 03 1f 2a     mov      w0, wzr
-# AFTER:  140002068:      fe 07 41 f8     ldr     x30, [sp], #16
-# AFTER:  14000206c:      c0 03 5f d6     ret
-# AFTER:  140002070:      10 10 00 40     <unknown>
-# AFTER:  140002074:      01 00 00 00     <unknown>
-# AFTER:  140002078:      09 10 00 00     <unknown>
-# AFTER:  14000207c:      09 00 00 00     <unknown>
-# AFTER:  140002080:      00 20 0e 91     add     x0, x0, #904
-# AFTER:  140002084:      00 04 40 91     add     x0, x0, #1, lsl #12
-# AFTER:  140002088:      00 c4 41 f9     ldr     x0, [x0, #904]
-# AFTER:  14000208c:      10 00 00 b0     adrp    x16, #4096
-# AFTER:  140002090:      10 1e 40 f9     ldr     x16, [x16, #56]
-# AFTER:  140002094:      00 02 1f d6     br      x16
+# AFTER:  140001000:      fe 0f 1f f8     str     x30, [sp, #-16]!
+# AFTER:  140001004:      00 00 00 b0     adrp    x0, #4096
+# AFTER:  140001008:      00 18 00 91     add     x0, x0, #6
+# AFTER:  14000100c:      20 00 00 94     bl      #128
+# AFTER:  140001010:      00 21 40 39     ldrb    w0, [x8, #8]
+# AFTER:  140001014:      00 11 40 79     ldrh    w0, [x8, #8]
+# AFTER:  140001018:      00 09 40 b9     ldr     w0, [x8, #8]
+# AFTER:  14000101c:      00 05 40 f9     ldr     x0, [x8, #8]
+# AFTER:  140001020:      00 21 00 39     strb    w0, [x8, #8]
+# AFTER:  140001024:      00 11 00 79     strh    w0, [x8, #8]
+# AFTER:  140001028:      00 09 00 b9     str     w0, [x8, #8]
+# AFTER:  14000102c:      00 05 00 f9     str     x0, [x8, #8]
+# AFTER:  140001030:      00 41 40 3d     ldr     b0, [x8, #16]
+# AFTER:  140001034:      00 21 40 7d     ldr     h0, [x8, #16]
+# AFTER:  140001038:      00 11 40 bd     ldr     s0, [x8, #16]
+# AFTER:  14000103c:      00 09 40 fd     ldr     d0, [x8, #16]
+# AFTER:  140001040:      00 05 c0 3d     ldr     q0, [x8, #16]
+# AFTER:  140001044:      00 41 00 3d     str     b0, [x8, #16]
+# AFTER:  140001048:      00 21 00 7d     str     h0, [x8, #16]
+# AFTER:  14000104c:      00 11 00 bd     str     s0, [x8, #16]
+# AFTER:  140001050:      00 09 00 fd     str     d0, [x8, #16]
+# AFTER:  140001054:      00 05 80 3d     str     q0, [x8, #16]
+# AFTER:  140001058:      00 09 40 f9     ldr     x0, [x8, #16]
+# AFTER:  14000105c:      00 00 00 f0     adrp    x0, #12288
+# AFTER:  140001060:      00 fc 47 f9     ldr     x0, [x0, #4088]
+# AFTER:  140001064:      e0 03 1f 2a     mov      w0, wzr
+# AFTER:  140001068:      fe 07 41 f8     ldr     x30, [sp], #16
+# AFTER:  14000106c:      c0 03 5f d6     ret
+# AFTER:  140001070:      10 20 00 40     <unknown>
+# AFTER:  140001074:      01 00 00 00     <unknown>
+# AFTER:  140001078:      09 20 00 00     <unknown>
+# AFTER:  14000107c:      09 00 00 00     <unknown>
+# AFTER:  140001080:      00 20 0e 91     add     x0, x0, #904
+# AFTER:  140001084:      00 04 40 91     add     x0, x0, #1, lsl #12
+# AFTER:  140001088:      00 c4 41 f9     ldr     x0, [x0, #904]
+# AFTER:  14000108c:      10 00 00 d0     adrp    x16, #8192
+# AFTER:  140001090:      10 1e 40 f9     ldr     x16, [x16, #56]
+# AFTER:  140001094:      00 02 1f d6     br      x16
 
 --- !COFF
 header:

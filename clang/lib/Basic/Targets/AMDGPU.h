@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_AMDGPU_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_AMDGPU_H
 
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/StringSet.h"
@@ -174,6 +175,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   static bool isAMDGCN(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::amdgcn;
   }
+  CudaArch GCN_Subarch;
 
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
@@ -330,6 +332,7 @@ public:
     else
       GPU = parseR600Name(Name);
 
+    GCN_Subarch = StringToCudaArch(Name);
     return GK_NONE != GPU.Kind;
   }
 

@@ -1,14 +1,14 @@
 set(LLVM_TARGET_DEFINITIONS RISCV.td)
 
-tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM RISCVGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM RISCVGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM RISCVGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM RISCVGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM RISCVGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM RISCVGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM RISCVGenMCCodeEmitter.inc -gen-emitter)
+tablegen(LLVM RISCVGenMCPseudoLowering.inc -gen-pseudo-lowering)
+tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM RISCVGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(RISCVCommonTableGen)
 

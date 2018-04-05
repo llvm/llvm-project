@@ -1520,24 +1520,26 @@ static bool sortMipsSymbols(const SymbolTableEntry &L,
 void SymbolTableBaseSection::finalizeContents() {
   getParent()->Link = StrTabSec.getParent()->SectionIndex;
 
+  if (this->Type != SHT_DYNSYM)
+    return;
+
   // If it is a .dynsym, there should be no local symbols, but we need
   // to do a few things for the dynamic linker.
-  if (this->Type == SHT_DYNSYM) {
-    // Section's Info field has the index of the first non-local symbol.
-    // Because the first symbol entry is a null entry, 1 is the first.
-    getParent()->Info = 1;
 
-    if (InX::GnuHashTab) {
-      // NB: It also sorts Symbols to meet the GNU hash table requirements.
-      InX::GnuHashTab->addSymbols(Symbols);
-    } else if (Config->EMachine == EM_MIPS) {
-      std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
-    }
+  // Section's Info field has the index of the first non-local symbol.
+  // Because the first symbol entry is a null entry, 1 is the first.
+  getParent()->Info = 1;
 
-    size_t I = 0;
-    for (const SymbolTableEntry &S : Symbols) S.Sym->DynsymIndex = ++I;
-    return;
+  if (InX::GnuHashTab) {
+    // NB: It also sorts Symbols to meet the GNU hash table requirements.
+    InX::GnuHashTab->addSymbols(Symbols);
+  } else if (Config->EMachine == EM_MIPS) {
+    std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
   }
+
+  size_t I = 0;
+  for (const SymbolTableEntry &S : Symbols)
+    S.Sym->DynsymIndex = ++I;
 }
 
 // The ELF spec requires that all local symbols precede global symbols, so we
@@ -2438,15 +2440,10 @@ void MergeTailSection::finalizeContents() {
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding StringPiece for easy access.
-  for (MergeInputSection *Sec : Sections) {
-    Sec->OffsetMap.reserve(Sec->Pieces.size());
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
-      SectionPiece &P = Sec->Pieces[I];
-      Sec->OffsetMap[P.InputOff] = I;
-      if (P.Live)
-        P.OutputOff = Builder.getOffset(Sec->getData(I));
-    }
-  }
+  for (MergeInputSection *Sec : Sections)
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
 }
 
 void MergeNoTailSection::writeTo(uint8_t *Buf) {
@@ -2499,13 +2496,10 @@ void MergeNoTailSection::finalizeContents() {
   // So far, section pieces have offsets from beginning of shards, but
   // we want offsets from beginning of the whole section. Fix them.
   parallelForEach(Sections, [&](MergeInputSection *Sec) {
-    Sec->OffsetMap.reserve(Sec->Pieces.size());
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
-      SectionPiece &P = Sec->Pieces[I];
-      Sec->OffsetMap[P.InputOff] = I;
-      if (P.Live)
-        P.OutputOff += ShardOffsets[getShardId(P.Hash)];
-    }
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Sec->Pieces[I].OutputOff +=
+            ShardOffsets[getShardId(Sec->Pieces[I].Hash)];
   });
 }
 

@@ -917,3 +917,7 @@ ARM::ProfileKind AArch64::parseArchProfile(StringRef Arch) {
 unsigned llvm::AArch64::parseArchVersion(StringRef Arch) {
   return ARM::parseArchVersion(Arch);
 }
+
+bool llvm::AArch64::isX18ReservedByDefault(const Triple &TT) {
+  return TT.isOSDarwin() || TT.isOSFuchsia() || TT.isOSWindows();
+}

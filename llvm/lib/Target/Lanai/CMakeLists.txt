@@ -9,6 +9,7 @@ tablegen(LLVM LanaiGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM LanaiGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM LanaiGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM LanaiGenSubtargetInfo.inc -gen-subtarget)
+
 add_public_tablegen_target(LanaiCommonTableGen)
 
 add_llvm_target(LanaiCodeGen

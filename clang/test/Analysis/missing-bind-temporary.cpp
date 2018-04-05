@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=debug.DumpCFG %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=debug.DumpCFG -std=c++14 %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 // RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=core,debug.ExprInspection -std=c++14 -verify %s
 

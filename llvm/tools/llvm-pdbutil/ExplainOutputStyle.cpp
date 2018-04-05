@@ -10,6 +10,7 @@
 #include "ExplainOutputStyle.h"
 
 #include "FormatUtil.h"
+#include "InputFile.h"
 #include "StreamUtil.h"
 #include "llvm-pdbutil.h"
 
@@ -19,6 +20,7 @@
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/Error.h"
 
@@ -27,114 +29,157 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-ExplainOutputStyle::ExplainOutputStyle(PDBFile &File, uint64_t FileOffset)
-    : File(File), FileOffset(FileOffset),
-      BlockIndex(FileOffset / File.getBlockSize()),
-      OffsetInBlock(FileOffset - BlockIndex * File.getBlockSize()),
-      P(2, false, outs()) {}
+ExplainOutputStyle::ExplainOutputStyle(InputFile &File, uint64_t FileOffset)
+    : File(File), FileOffset(FileOffset), P(2, false, outs()) {}
 
 Error ExplainOutputStyle::dump() {
   P.formatLine("Explaining file offset {0} of file '{1}'.", FileOffset,
                File.getFilePath());
 
-  bool IsAllocated = explainBlockStatus();
+  if (File.isPdb())
+    return explainPdbFile();
+
+  return explainBinaryFile();
+}
+
+Error ExplainOutputStyle::explainPdbFile() {
+  bool IsAllocated = explainPdbBlockStatus();
   if (!IsAllocated)
     return Error::success();
 
   AutoIndent Indent(P);
-  if (isSuperBlock())
-    explainSuperBlockOffset();
-  else if (isFpmBlock())
-    explainFpmBlockOffset();
-  else if (isBlockMapBlock())
-    explainBlockMapOffset();
-  else if (isStreamDirectoryBlock())
-    explainStreamDirectoryOffset();
-  else if (auto Index = getBlockStreamIndex())
-    explainStreamOffset(*Index);
+  if (isPdbSuperBlock())
+    explainPdbSuperBlockOffset();
+  else if (isPdbFpmBlock())
+    explainPdbFpmBlockOffset();
+  else if (isPdbBlockMapBlock())
+    explainPdbBlockMapOffset();
+  else if (isPdbStreamDirectoryBlock())
+    explainPdbStreamDirectoryOffset();
+  else if (auto Index = getPdbBlockStreamIndex())
+    explainPdbStreamOffset(*Index);
   else
-    explainUnknownBlock();
+    explainPdbUnknownBlock();
   return Error::success();
 }
 
-bool ExplainOutputStyle::isSuperBlock() const { return BlockIndex == 0; }
-
-bool ExplainOutputStyle::isFpm1() const {
-  return ((BlockIndex - 1) % File.getBlockSize() == 0);
+Error ExplainOutputStyle::explainBinaryFile() {
+  std::unique_ptr<BinaryByteStream> Stream =
+      llvm::make_unique<BinaryByteStream>(File.unknown().getBuffer(),
+                                          llvm::support::little);
+  switch (opts::explain::InputType) {
+  case opts::explain::InputFileType::DBIStream: {
+    DbiStream Dbi(std::move(Stream));
+    if (auto EC = Dbi.reload(nullptr))
+      return EC;
+    explainStreamOffset(Dbi, FileOffset);
+    break;
+  }
+  case opts::explain::InputFileType::PDBStream: {
+    InfoStream Info(std::move(Stream));
+    if (auto EC = Info.reload())
+      return EC;
+    explainStreamOffset(Info, FileOffset);
+    break;
+  }
+  default:
+    llvm_unreachable("Invalid input file type!");
+  }
+  return Error::success();
 }
-bool ExplainOutputStyle::isFpm2() const {
-  return ((BlockIndex - 2) % File.getBlockSize() == 0);
+
+uint32_t ExplainOutputStyle::pdbBlockIndex() const {
+  return FileOffset / File.pdb().getBlockSize();
 }
 
-bool ExplainOutputStyle::isFpmBlock() const { return isFpm1() || isFpm2(); }
-
-bool ExplainOutputStyle::isBlockMapBlock() const {
-  return BlockIndex == File.getBlockMapIndex();
+uint32_t ExplainOutputStyle::pdbBlockOffset() const {
+  uint64_t BlockStart = pdbBlockIndex() * File.pdb().getBlockSize();
+  assert(FileOffset >= BlockStart);
+  return FileOffset - BlockStart;
 }
 
-bool ExplainOutputStyle::isStreamDirectoryBlock() const {
-  const auto &Layout = File.getMsfLayout();
-  return llvm::is_contained(Layout.DirectoryBlocks, BlockIndex);
+bool ExplainOutputStyle::isPdbSuperBlock() const {
+  return pdbBlockIndex() == 0;
 }
 
-Optional<uint32_t> ExplainOutputStyle::getBlockStreamIndex() const {
-  const auto &Layout = File.getMsfLayout();
+bool ExplainOutputStyle::isPdbFpm1() const {
+  return ((pdbBlockIndex() - 1) % File.pdb().getBlockSize() == 0);
+}
+bool ExplainOutputStyle::isPdbFpm2() const {
+  return ((pdbBlockIndex() - 2) % File.pdb().getBlockSize() == 0);
+}
+
+bool ExplainOutputStyle::isPdbFpmBlock() const {
+  return isPdbFpm1() || isPdbFpm2();
+}
+
+bool ExplainOutputStyle::isPdbBlockMapBlock() const {
+  return pdbBlockIndex() == File.pdb().getBlockMapIndex();
+}
+
+bool ExplainOutputStyle::isPdbStreamDirectoryBlock() const {
+  const auto &Layout = File.pdb().getMsfLayout();
+  return llvm::is_contained(Layout.DirectoryBlocks, pdbBlockIndex());
+}
+
+Optional<uint32_t> ExplainOutputStyle::getPdbBlockStreamIndex() const {
+  const auto &Layout = File.pdb().getMsfLayout();
   for (const auto &Entry : enumerate(Layout.StreamMap)) {
-    if (!llvm::is_contained(Entry.value(), BlockIndex))
+    if (!llvm::is_contained(Entry.value(), pdbBlockIndex()))
       continue;
     return Entry.index();
   }
   return None;
 }
 
-bool ExplainOutputStyle::explainBlockStatus() {
-  if (FileOffset >= File.getFileSize()) {
+bool ExplainOutputStyle::explainPdbBlockStatus() {
+  if (FileOffset >= File.pdb().getFileSize()) {
     P.formatLine("Address {0} is not in the file (file size = {1}).",
-                 FileOffset, File.getFileSize());
+                 FileOffset, File.pdb().getFileSize());
     return false;
   }
-  P.formatLine("Block:Offset = {2:X-}:{1:X-4}.", FileOffset, OffsetInBlock,
-               BlockIndex);
+  P.formatLine("Block:Offset = {2:X-}:{1:X-4}.", FileOffset, pdbBlockOffset(),
+               pdbBlockIndex());
 
-  bool IsFree = File.getMsfLayout().FreePageMap[BlockIndex];
-  P.formatLine("Address is in block {0} ({1}allocated).", BlockIndex,
+  bool IsFree = File.pdb().getMsfLayout().FreePageMap[pdbBlockIndex()];
+  P.formatLine("Address is in block {0} ({1}allocated).", pdbBlockIndex(),
                IsFree ? "un" : "");
   return !IsFree;
 }
 
 #define endof(Class, Field) (offsetof(Class, Field) + sizeof(Class::Field))
 
-void ExplainOutputStyle::explainSuperBlockOffset() {
+void ExplainOutputStyle::explainPdbSuperBlockOffset() {
   P.formatLine("This corresponds to offset {0} of the MSF super block, ",
-               OffsetInBlock);
-  if (OffsetInBlock < endof(SuperBlock, MagicBytes))
+               pdbBlockOffset());
+  if (pdbBlockOffset() < endof(SuperBlock, MagicBytes))
     P.printLine("which is part of the MSF file magic.");
-  else if (OffsetInBlock < endof(SuperBlock, BlockSize)) {
+  else if (pdbBlockOffset() < endof(SuperBlock, BlockSize)) {
     P.printLine("which contains the block size of the file.");
     P.formatLine("The current value is {0}.",
-                 uint32_t(File.getMsfLayout().SB->BlockSize));
-  } else if (OffsetInBlock < endof(SuperBlock, FreeBlockMapBlock)) {
+                 uint32_t(File.pdb().getMsfLayout().SB->BlockSize));
+  } else if (pdbBlockOffset() < endof(SuperBlock, FreeBlockMapBlock)) {
     P.printLine("which contains the index of the FPM block (e.g. 1 or 2).");
     P.formatLine("The current value is {0}.",
-                 uint32_t(File.getMsfLayout().SB->FreeBlockMapBlock));
-  } else if (OffsetInBlock < endof(SuperBlock, NumBlocks)) {
+                 uint32_t(File.pdb().getMsfLayout().SB->FreeBlockMapBlock));
+  } else if (pdbBlockOffset() < endof(SuperBlock, NumBlocks)) {
     P.printLine("which contains the number of blocks in the file.");
     P.formatLine("The current value is {0}.",
-                 uint32_t(File.getMsfLayout().SB->NumBlocks));
-  } else if (OffsetInBlock < endof(SuperBlock, NumDirectoryBytes)) {
+                 uint32_t(File.pdb().getMsfLayout().SB->NumBlocks));
+  } else if (pdbBlockOffset() < endof(SuperBlock, NumDirectoryBytes)) {
     P.printLine("which contains the number of bytes in the stream directory.");
     P.formatLine("The current value is {0}.",
-                 uint32_t(File.getMsfLayout().SB->NumDirectoryBytes));
-  } else if (OffsetInBlock < endof(SuperBlock, Unknown1)) {
+                 uint32_t(File.pdb().getMsfLayout().SB->NumDirectoryBytes));
+  } else if (pdbBlockOffset() < endof(SuperBlock, Unknown1)) {
     P.printLine("whose purpose is unknown.");
     P.formatLine("The current value is {0}.",
-                 uint32_t(File.getMsfLayout().SB->Unknown1));
-  } else if (OffsetInBlock < endof(SuperBlock, BlockMapAddr)) {
+                 uint32_t(File.pdb().getMsfLayout().SB->Unknown1));
+  } else if (pdbBlockOffset() < endof(SuperBlock, BlockMapAddr)) {
     P.printLine("which contains the file offset of the block map.");
     P.formatLine("The current value is {0}.",
-                 uint32_t(File.getMsfLayout().SB->BlockMapAddr));
+                 uint32_t(File.pdb().getMsfLayout().SB->BlockMapAddr));
   } else {
-    assert(OffsetInBlock > sizeof(SuperBlock));
+    assert(pdbBlockOffset() > sizeof(SuperBlock));
     P.printLine(
         "which is outside the range of valid data for the super block.");
   }
@@ -150,21 +195,21 @@ static std::string toBinaryString(uint8_t Byte) {
   return std::string(Result);
 }
 
-void ExplainOutputStyle::explainFpmBlockOffset() {
-  const MSFLayout &Layout = File.getMsfLayout();
+void ExplainOutputStyle::explainPdbFpmBlockOffset() {
+  const MSFLayout &Layout = File.pdb().getMsfLayout();
   uint32_t MainFpm = Layout.mainFpmBlock();
   uint32_t AltFpm = Layout.alternateFpmBlock();
 
-  assert(isFpmBlock());
-  uint32_t Fpm = isFpm1() ? 1 : 2;
-  uint32_t FpmChunk = BlockIndex / File.getBlockSize();
+  assert(isPdbFpmBlock());
+  uint32_t Fpm = isPdbFpm1() ? 1 : 2;
+  uint32_t FpmChunk = pdbBlockIndex() / File.pdb().getBlockSize();
   assert((Fpm == MainFpm) || (Fpm == AltFpm));
   (void)AltFpm;
   bool IsMain = (Fpm == MainFpm);
   P.formatLine("Address is in FPM{0} ({1} FPM)", Fpm, IsMain ? "Main" : "Alt");
   uint32_t DescribedBlockStart =
-      8 * (FpmChunk * File.getBlockSize() + OffsetInBlock);
-  if (DescribedBlockStart > File.getBlockCount()) {
+      8 * (FpmChunk * File.pdb().getBlockSize() + pdbBlockOffset());
+  if (DescribedBlockStart > File.pdb().getBlockCount()) {
     P.printLine("Address is in extraneous FPM space.");
     return;
   }
@@ -172,13 +217,13 @@ void ExplainOutputStyle::explainFpmBlockOffset() {
   P.formatLine("Address describes the allocation status of blocks [{0},{1})",
                DescribedBlockStart, DescribedBlockStart + 8);
   ArrayRef<uint8_t> Bytes;
-  cantFail(File.getMsfBuffer().readBytes(FileOffset, 1, Bytes));
+  cantFail(File.pdb().getMsfBuffer().readBytes(FileOffset, 1, Bytes));
   P.formatLine("Status = {0} (Note: 0 = allocated, 1 = free)",
                toBinaryString(Bytes[0]));
 }
 
-void ExplainOutputStyle::explainBlockMapOffset() {
-  uint64_t BlockMapOffset = File.getBlockMapOffset();
+void ExplainOutputStyle::explainPdbBlockMapOffset() {
+  uint64_t BlockMapOffset = File.pdb().getBlockMapOffset();
   uint32_t OffsetInBlock = FileOffset - BlockMapOffset;
   P.formatLine("Address is at offset {0} of the directory block list",
                OffsetInBlock);
@@ -195,25 +240,29 @@ static uint32_t getOffsetInStream(ArrayRef<support::ulittle32_t> StreamBlocks,
   return StreamBlockIndex * BlockSize + OffsetInBlock;
 }
 
-void ExplainOutputStyle::explainStreamOffset(uint32_t Stream) {
+void ExplainOutputStyle::explainPdbStreamOffset(uint32_t Stream) {
   SmallVector<StreamInfo, 12> Streams;
-  discoverStreamPurposes(File, Streams);
+  discoverStreamPurposes(File.pdb(), Streams);
 
   assert(Stream <= Streams.size());
   const StreamInfo &S = Streams[Stream];
-  const auto &Layout = File.getStreamLayout(Stream);
+  const auto &Layout = File.pdb().getStreamLayout(Stream);
   uint32_t StreamOff =
-      getOffsetInStream(Layout.Blocks, FileOffset, File.getBlockSize());
+      getOffsetInStream(Layout.Blocks, FileOffset, File.pdb().getBlockSize());
   P.formatLine("Address is at offset {0}/{1} of Stream {2} ({3}){4}.",
                StreamOff, Layout.Length, Stream, S.getLongName(),
                (StreamOff > Layout.Length) ? " in unused space" : "");
   switch (S.getPurpose()) {
-  case StreamPurpose::DBI:
-    explainDbiStream(Stream, StreamOff);
+  case StreamPurpose::DBI: {
+    DbiStream &Dbi = cantFail(File.pdb().getPDBDbiStream());
+    explainStreamOffset(Dbi, StreamOff);
     break;
-  case StreamPurpose::PDB:
-    explainPdbStream(Stream, StreamOff);
+  }
+  case StreamPurpose::PDB: {
+    InfoStream &Info = cantFail(File.pdb().getPDBInfoStream());
+    explainStreamOffset(Info, StreamOff);
     break;
+  }
   case StreamPurpose::IPI:
   case StreamPurpose::TPI:
   case StreamPurpose::ModuleStream:
@@ -223,11 +272,11 @@ void ExplainOutputStyle::explainStreamOffset(uint32_t Stream) {
   }
 }
 
-void ExplainOutputStyle::explainStreamDirectoryOffset() {
-  auto DirectoryBlocks = File.getDirectoryBlockArray();
-  const auto &Layout = File.getMsfLayout();
+void ExplainOutputStyle::explainPdbStreamDirectoryOffset() {
+  auto DirectoryBlocks = File.pdb().getDirectoryBlockArray();
+  const auto &Layout = File.pdb().getMsfLayout();
   uint32_t StreamOff =
-      getOffsetInStream(DirectoryBlocks, FileOffset, File.getBlockSize());
+      getOffsetInStream(DirectoryBlocks, FileOffset, File.pdb().getBlockSize());
   P.formatLine("Address is at offset {0}/{1} of Stream Directory{2}.",
                StreamOff, uint32_t(Layout.SB->NumDirectoryBytes),
                uint32_t(StreamOff > Layout.SB->NumDirectoryBytes)
@@ -235,7 +284,7 @@ void ExplainOutputStyle::explainStreamDirectoryOffset() {
                    : "");
 }
 
-void ExplainOutputStyle::explainUnknownBlock() {
+void ExplainOutputStyle::explainPdbUnknownBlock() {
   P.formatLine("Address has unknown purpose.");
 }
 
@@ -352,10 +401,9 @@ static void explainSubstreamOffset(LinePrinter &P, uint32_t OffsetInStream,
   }
 }
 
-void ExplainOutputStyle::explainDbiStream(uint32_t StreamIdx,
-                                          uint32_t OffsetInStream) {
+void ExplainOutputStyle::explainStreamOffset(DbiStream &Dbi,
+                                             uint32_t OffsetInStream) {
   P.printLine("Within the DBI stream:");
-  DbiStream &Dbi = cantFail(File.getPDBDbiStream());
   AutoIndent Indent(P);
   const DbiStreamHeader *Header = Dbi.getHeader();
   assert(Header != nullptr);
@@ -401,10 +449,9 @@ static void explainPdbStreamHeaderOffset(LinePrinter &P, InfoStream &Info,
     printStructField(P, "the guid of the PDB", fmt_guid(Header->Guid.Guid));
 }
 
-void ExplainOutputStyle::explainPdbStream(uint32_t StreamIdx,
-                                          uint32_t OffsetInStream) {
+void ExplainOutputStyle::explainStreamOffset(InfoStream &Info,
+                                             uint32_t OffsetInStream) {
   P.printLine("Within the PDB stream:");
-  InfoStream &Info = cantFail(File.getPDBInfoStream());
   AutoIndent Indent(P);
 
   struct SubstreamInfo {

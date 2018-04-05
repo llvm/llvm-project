@@ -501,7 +501,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::UnaryTransform:
     if (!IsStructurallyEquivalent(
             Context, cast<UnaryTransformType>(T1)->getUnderlyingType(),
-            cast<UnaryTransformType>(T1)->getUnderlyingType()))
+            cast<UnaryTransformType>(T2)->getUnderlyingType()))
       return false;
     break;
 

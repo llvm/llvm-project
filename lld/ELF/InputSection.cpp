@@ -920,6 +920,10 @@ void MergeInputSection::splitIntoPieces() {
   else
     splitNonStrings(Data, Entsize);
 
+  OffsetMap.reserve(Pieces.size());
+  for (size_t I = 0, E = Pieces.size(); I != E; ++I)
+    OffsetMap[Pieces[I].InputOff] = I;
+
   if (Config->GcSections && (Flags & SHF_ALLOC))
     for (uint32_t Off : LiveOffsets)
       getSectionPiece(Off)->Live = true;
@@ -978,9 +982,6 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
   // In that case we need to search from the original section piece vector.
   const SectionPiece &Piece =
       *findSectionPiece(const_cast<MergeInputSection *>(this), Offset);
-  if (!Piece.Live)
-    return 0;
-
   uint64_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;
 }

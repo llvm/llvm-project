@@ -32,7 +32,6 @@ public:
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
-  bool isPicRel(RelType Type) const override;
   RelType getDynRel(RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
@@ -184,12 +183,10 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   }
 }
 
-template <class ELFT> bool MIPS<ELFT>::isPicRel(RelType Type) const {
-  return Type == R_MIPS_32 || Type == R_MIPS_64;
-}
-
 template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType Type) const {
-  return RelativeRel;
+  if (Type == R_MIPS_32 || Type == R_MIPS_64)
+    return RelativeRel;
+  return R_MIPS_NONE;
 }
 
 template <class ELFT>

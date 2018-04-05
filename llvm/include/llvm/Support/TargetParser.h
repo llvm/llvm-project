@@ -212,6 +212,8 @@ ARM::EndianKind parseArchEndian(StringRef Arch);
 ARM::ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
 
+bool isX18ReservedByDefault(const Triple &TT);
+
 } // namespace AArch64
 
 namespace X86 {

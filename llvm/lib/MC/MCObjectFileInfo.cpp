@@ -201,6 +201,9 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   }
 
   // Debug Information.
+  DwarfDebugNamesSection =
+      Ctx->getMachOSection("__DWARF", "__debug_names", MachO::S_ATTR_DEBUG,
+                           SectionKind::getMetadata(), "debug_names_begin");
   DwarfAccelNamesSection =
       Ctx->getMachOSection("__DWARF", "__apple_names", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "names_begin");
@@ -558,6 +561,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   // DWARF5 Experimental Debug Info
 
   // Accelerator Tables
+  DwarfDebugNamesSection =
+      Ctx->getELFSection(".debug_names", ELF::SHT_PROGBITS, 0);
   DwarfAccelNamesSection =
       Ctx->getELFSection(".apple_names", ELF::SHT_PROGBITS, 0);
   DwarfAccelObjCSection =
@@ -795,6 +800,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getMetadata());
+  DwarfDebugNamesSection = Ctx->getCOFFSection(
+      ".debug_names",
+      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+          COFF::IMAGE_SCN_MEM_READ,
+      SectionKind::getMetadata(), "debug_names_begin");
   DwarfAccelNamesSection = Ctx->getCOFFSection(
       ".apple_names",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |

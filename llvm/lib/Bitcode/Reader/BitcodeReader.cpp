@@ -4788,6 +4788,9 @@ Error BitcodeReader::materializeModule() {
   UpgradeDebugInfo(*TheModule);
 
   UpgradeModuleFlags(*TheModule);
+
+  UpgradeRetainReleaseMarker(*TheModule);
+
   return Error::success();
 }
 

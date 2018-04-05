@@ -2685,6 +2685,30 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return Modified;
 }
 
+bool llvm::UpgradeRetainReleaseMarker(Module &M) {
+  bool Changed = false;
+  NamedMDNode *ModRetainReleaseMarker =
+      M.getNamedMetadata("clang.arc.retainAutoreleasedReturnValueMarker");
+  if (ModRetainReleaseMarker) {
+    MDNode *Op = ModRetainReleaseMarker->getOperand(0);
+    if (Op) {
+      MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(0));
+      if (ID) {
+        SmallVector<StringRef, 4> ValueComp;
+        ID->getString().split(ValueComp, "#");
+        if (ValueComp.size() == 2) {
+          std::string NewValue = ValueComp[0].str() + ";" + ValueComp[1].str();
+          Metadata *Ops[1] = {MDString::get(M.getContext(), NewValue)};
+          ModRetainReleaseMarker->setOperand(0,
+                                             MDNode::get(M.getContext(), Ops));
+          Changed = true;
+        }
+      }
+    }
+  }
+  return Changed;
+}
+
 bool llvm::UpgradeModuleFlags(Module &M) {
   NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)

@@ -188,5 +188,43 @@ loop:
   br i1 %loopcond, label %loopexit, label %loop
 }
 
+define void @promote_latch_condition_decrementing_loop_04(i32* %p, i32* %a, i1 %cond) {
+
+; CHECK-LABEL: @promote_latch_condition_decrementing_loop_04(
+; CHECK-NOT:     trunc
+
+entry:
+  %len = load i32, i32* %p, align 4, !range !0
+  %len.minus.1 = add nsw i32 %len, -1
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %iv_start = phi i32 [ %len, %if.true ], [%len.minus.1, %if.false ]
+  %zero_check = icmp eq i32 %len, 0
+  br i1 %zero_check, label %loopexit, label %preheader
+
+preheader:
+  br label %loop
+
+loopexit:
+  ret void
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ %iv_start, %preheader ]
+  ; CHECK: %indvars.iv = phi i64
+  %iv.wide = zext i32 %iv to i64
+  %el = getelementptr inbounds i32, i32* %a, i64 %iv.wide
+  store atomic i32 0, i32* %el unordered, align 4
+  %iv.next = add nsw i32 %iv, -1
+  ; CHECK: %loopcond = icmp slt i64 %indvars.iv, 1
+  %loopcond = icmp slt i32 %iv, 1
+  br i1 %loopcond, label %loopexit, label %loop
+}
 
 !0 = !{i32 0, i32 2147483647}

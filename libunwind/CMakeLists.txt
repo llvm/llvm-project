@@ -332,6 +332,7 @@ find_path(
   __libcpp_version
   PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxx/include
         ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx/include
+        ${LLVM_MAIN_SRC_DIR}/../libcxx/include
   NO_DEFAULT_PATH
   NO_CMAKE_FIND_ROOT_PATH
   )

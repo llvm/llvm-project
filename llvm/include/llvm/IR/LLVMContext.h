@@ -315,9 +315,16 @@ public:
     return OptionRegistry::instance().template get<ValT, Base, Mem>();
   }
 
-  /// \brief Access the object which manages optimization bisection for failure
-  /// analysis.
-  OptPassGate &getOptPassGate();
+  /// \brief Access the object which can disable optional passes and individual
+  /// optimizations at compile time.
+  OptPassGate &getOptPassGate() const;
+
+  /// \brief Set the object which can disable optional passes and individual
+  /// optimizations at compile time.
+  ///
+  /// The lifetime of the object must be guaranteed to extend as long as the
+  /// LLVMContext is used by compilation.
+  void setOptPassGate(OptPassGate&);
 
 private:
   // Module needs access to the add/removeModule methods.

@@ -21,7 +21,6 @@
 #include <locale>
 #include <limits>
 #include <cassert>
-#include <iostream> // FIXME: for debugging purposes only
 
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
@@ -111,7 +110,11 @@ int main()
         assert(f.decimal_point() == L',');
     }
 // GLIBC 2.23 uses '.' as the decimal point while other C libraries use ','
-#ifndef TEST_HAS_GLIBC
+// GLIBC 2.27 corrects this
+#ifndef TEST_GLIBC_PREREQ
+#define TEST_GLIBC_PREREQ(x, y) 0
+#endif
+#if !defined(TEST_HAS_GLIBC) || TEST_GLIBC_PREREQ(2, 27)
     const char sep = ',';
     const wchar_t wsep = L',';
 #else
@@ -120,11 +123,6 @@ int main()
 #endif
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
-        if (f.decimal_point() != sep) {
-            std::cout << "f.decimal_point() = '" << f.decimal_point() << "'\n";
-            std::cout << "sep = '" << sep << "'\n";
-            std::cout << std::endl;
-        }
         assert(f.decimal_point() == sep);
     }
     {

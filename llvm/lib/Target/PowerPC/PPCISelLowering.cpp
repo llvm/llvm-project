@@ -798,6 +798,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::FMUL, MVT::f128, Legal);
         setOperationAction(ISD::FP_EXTEND, MVT::f128, Legal);
         setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f64, Expand);
+        setOperationAction(ISD::FMA, MVT::f128, Legal);
       }
 
     }
@@ -13752,6 +13753,8 @@ bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   case MVT::f32:
   case MVT::f64:
     return true;
+  case MVT::f128:
+    return (EnableQuadPrecision && Subtarget.hasP9Vector());
   default:
     break;
   }

@@ -181,9 +181,9 @@ RAW-NEXT:   GSI Header
 RAW-NEXT:     sig = 0xFFFFFFFF, hdr = 0xF12F091A, hr size = 16, num buckets = 524
 RAW-NEXT:   Records
 RAW-NEXT:       20 | S_PUB32 [size = 20] `main`
-RAW-NEXT:            flags = function, addr = 0002:0000
+RAW-NEXT:            flags = function, addr = 0001:0000
 RAW-NEXT:        0 | S_PUB32 [size = 20] `foo`
-RAW-NEXT:            flags = function, addr = 0002:0016
+RAW-NEXT:            flags = function, addr = 0001:0016
 RAW-NOT:             S_PUB32
 RAW-NEXT:   Hash Entries
 RAW-NEXT:     off = 21, refcnt = 1
@@ -196,87 +196,90 @@ RAW-NEXT:     off = 20
 RAW-NEXT:     off = 0
 RAW:                            Section Headers
 RAW-NEXT: ============================================================
+
 RAW:        SECTION HEADER #1
-RAW-NEXT:     .pdata name
-RAW-NEXT:            virtual size
-RAW-NEXT:       1000 virtual address
-RAW-NEXT:        200 size of raw data
-RAW-NEXT:        400 file pointer to raw data
-RAW-NEXT:          0 file pointer to relocation table
-RAW-NEXT:          0 file pointer to line numbers
-RAW-NEXT:          0 number of relocations
-RAW-NEXT:          0 number of line numbers
-RAW-NEXT:   40000040 flags
-RAW-NEXT:            IMAGE_SCN_CNT_INITIALIZED_DATA
-RAW-NEXT:            IMAGE_SCN_MEM_READ
+RAW-NEXT:     .text name
+RAW-NEXT:        16 virtual size
+RAW-NEXT:      1000 virtual address
+RAW-NEXT:       200 size of raw data
+RAW-NEXT:       400 file pointer to raw data
+RAW-NEXT:         0 file pointer to relocation table
+RAW-NEXT:         0 file pointer to line numbers
+RAW-NEXT:         0 number of relocations
+RAW-NEXT:         0 number of line numbers
+RAW-NEXT:  60000020 flags
+RAW-NEXT:           IMAGE_SCN_CNT_CODE
+RAW-NEXT:           IMAGE_SCN_MEM_EXECUTE
+RAW-NEXT:           IMAGE_SCN_MEM_READ
 RAW:        SECTION HEADER #2
-RAW-NEXT:      .text name
-RAW-NEXT:            virtual size
-RAW-NEXT:       2000 virtual address
-RAW-NEXT:        200 size of raw data
-RAW-NEXT:        600 file pointer to raw data
-RAW-NEXT:          0 file pointer to relocation table
-RAW-NEXT:          0 file pointer to line numbers
-RAW-NEXT:          0 number of relocations
-RAW-NEXT:          0 number of line numbers
-RAW-NEXT:   60000020 flags
-RAW-NEXT:            IMAGE_SCN_CNT_CODE
-RAW-NEXT:            IMAGE_SCN_MEM_EXECUTE
-RAW-NEXT:            IMAGE_SCN_MEM_READ
+RAW-NEXT:    .rdata name
+RAW-NEXT:           virtual size
+RAW-NEXT:      2000 virtual address
+RAW-NEXT:       200 size of raw data
+RAW-NEXT:       600 file pointer to raw data
+RAW-NEXT:         0 file pointer to relocation table
+RAW-NEXT:         0 file pointer to line numbers
+RAW-NEXT:         0 number of relocations
+RAW-NEXT:         0 number of line numbers
+RAW-NEXT:  40000040 flags
+RAW-NEXT:           IMAGE_SCN_CNT_INITIALIZED_DATA
+RAW-NEXT:           IMAGE_SCN_MEM_READ
 RAW:        SECTION HEADER #3
-RAW-NEXT:     .xdata name
-RAW-NEXT:            virtual size
-RAW-NEXT:       3000 virtual address
-RAW-NEXT:        200 size of raw data
-RAW-NEXT:        800 file pointer to raw data
-RAW-NEXT:          0 file pointer to relocation table
-RAW-NEXT:          0 file pointer to line numbers
-RAW-NEXT:          0 number of relocations
-RAW-NEXT:          0 number of line numbers
-RAW-NEXT:   40000040 flags
-RAW-NEXT:            IMAGE_SCN_CNT_INITIALIZED_DATA
-RAW-NEXT:            IMAGE_SCN_MEM_READ
+RAW-NEXT:    .pdata name
+RAW-NEXT:         C virtual size
+RAW-NEXT:      3000 virtual address
+RAW-NEXT:       200 size of raw data
+RAW-NEXT:       800 file pointer to raw data
+RAW-NEXT:         0 file pointer to relocation table
+RAW-NEXT:         0 file pointer to line numbers
+RAW-NEXT:         0 number of relocations
+RAW-NEXT:         0 number of line numbers
+RAW-NEXT:  40000040 flags
+RAW-NEXT:           IMAGE_SCN_CNT_INITIALIZED_DATA
+RAW-NEXT:           IMAGE_SCN_MEM_READ
 RAW:        SECTION HEADER #4
-RAW-NEXT:     .rdata name
-RAW-NEXT:            virtual size
-RAW-NEXT:       4000 virtual address
-RAW-NEXT:        200 size of raw data
-RAW-NEXT:        A00 file pointer to raw data
-RAW-NEXT:          0 file pointer to relocation table
-RAW-NEXT:          0 file pointer to line numbers
-RAW-NEXT:          0 number of relocations
-RAW-NEXT:          0 number of line numbers
-RAW-NEXT:   40000040 flags
-RAW-NEXT:            IMAGE_SCN_CNT_INITIALIZED_DATA
-RAW-NEXT:            IMAGE_SCN_MEM_READ
+RAW-NEXT:    .xdata name
+RAW-NEXT:         8 virtual size
+RAW-NEXT:      4000 virtual address
+RAW-NEXT:       200 size of raw data
+RAW-NEXT:       A00 file pointer to raw data
+RAW-NEXT:         0 file pointer to relocation table
+RAW-NEXT:         0 file pointer to line numbers
+RAW-NEXT:         0 number of relocations
+RAW-NEXT:         0 number of line numbers
+RAW-NEXT:  40000040 flags
+RAW-NEXT:           IMAGE_SCN_CNT_INITIALIZED_DATA
+RAW-NEXT:           IMAGE_SCN_MEM_READ
 RAW:                        Original Section Headers
 RAW-NEXT: ============================================================
 RAW-NEXT:   PDB does not contain the requested image section header type
 RAW:                        Section Contributions
 RAW-NEXT: ============================================================
-RAW-NEXT:   SC[.pdata]  | mod = 0, 0001:0000, size = 12, data crc = 361370162, reloc crc = 0
-RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC[.text]   | mod = 0, 0002:0000, size = 14, data crc = 1682752513, reloc crc = 0
+
+RAW-NEXT:   SC[.text]   | mod = 0, 0001:0000, size = 14, data crc = 1682752513, reloc crc = 0
 RAW-NEXT:                 IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
 RAW-NEXT:                 IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC[.text]   | mod = 1, 0002:0016, size = 6, data crc = 2139436471, reloc crc = 0
+RAW-NEXT:   SC[.text]   | mod = 1, 0001:0016, size = 6, data crc = 2139436471, reloc crc = 0
 RAW-NEXT:                 IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
 RAW-NEXT:                 IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC[.xdata]  | mod = 0, 0003:0000, size = 8, data crc = 264583633, reloc crc = 0
+RAW-NEXT:   SC[.rdata]  | mod = 2, 0002:0000, size = {{[0-9]+}}, data crc = 0, reloc crc = 0
+RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
+RAW-NEXT:   SC[.rdata]  | mod = 2, 0002:0028, size = {{[0-9]+}}, data crc = 0, reloc crc = 0
+RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
+RAW-NEXT:   SC[.pdata]  | mod = 0, 0003:0000, size = 12, data crc = 361370162, reloc crc = 0
 RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC[???]     | mod = 2, 0004:0000, size = {{[0-9]+}}, data crc = 0, reloc crc = 0
-RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC[???]     | mod = 2, 0004:0028, size = {{[0-9]+}}, data crc = 0, reloc crc = 0
-RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
+RAW-NEXT:   SC[???]     | mod = 0, 0004:0000, size = {{[0-9]+}}, data crc = 264583633, reloc crc = 0
+RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
 RAW-NOT: SC[
 RAW:                             Section Map
 RAW-NEXT: ============================================================
+
 RAW-NEXT:   Section 0000 | ovl = 0, group = 0, frame = 1, name = 65535
 RAW-NEXT:                  class = 65535, offset = 0, size =
-RAW-NEXT:                  flags = read | 32 bit addr | selector
+RAW-NEXT:                  flags = read | execute | 32 bit addr | selector
 RAW-NEXT:   Section 0001 | ovl = 0, group = 0, frame = 2, name = 65535
 RAW-NEXT:                  class = 65535, offset = 0, size =
-RAW-NEXT:                  flags = read | execute | 32 bit addr | selector
+RAW-NEXT:                  flags = read | 32 bit addr | selector
 RAW-NEXT:   Section 0002 | ovl = 0, group = 0, frame = 3, name = 65535
 RAW-NEXT:                  class = 65535, offset = 0, size =
 RAW-NEXT:                  flags = read | 32 bit addr | selector
@@ -284,5 +287,5 @@ RAW-NEXT:   Section 0003 | ovl = 0, group = 0, frame = 4, name = 65535
 RAW-NEXT:                  class = 65535, offset = 0, size =
 RAW-NEXT:                  flags = read | 32 bit addr | selector
 RAW-NEXT:   Section 0004 | ovl = 0, group = 0, frame = 5, name = 65535
-RAW-NEXT:                  class = 65535, offset = 0, size =
+RAW-NEXT:                  class = 65535, offset = 0, size = 4294967295
 RAW-NEXT:                  flags = 32 bit addr | absolute addr

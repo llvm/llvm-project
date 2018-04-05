@@ -119,5 +119,148 @@ define void @test_02(i32* %a, i32* %b, i32* %a_len_ptr, i32* %b_len_ptr) {
   ret void
 }
 
+; Check that we can figure out that IV is non-negative via implication through
+; Phi node.
+define void @test_03(i32* %a, i32* %a_len_ptr, i1 %cond) {
+
+; CHECK-LABEL: test_03
+; CHECK:       mainloop:
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK:         br i1 true, label %in.bounds, label %out.of.bounds
+; CHECK:       loop.preloop:
+
+ entry:
+  %len.a = load i32, i32* %a_len_ptr, !range !0
+  %len.minus.one = sub nsw i32 %len.a, 1
+  %len.minus.two = sub nsw i32 %len.a, 2
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %starting.value = phi i32 [ %len.minus.two, %if.true ], [ %len.minus.one, %if.false ]
+  %first.itr.check = icmp sgt i32 %len.a, 3
+  br i1 %first.itr.check, label %loop, label %exit
+
+loop:
+  %idx = phi i32 [ %starting.value, %merge ] , [ %idx.next, %in.bounds ]
+  %idx.next = sub i32 %idx, 1
+  %rc = icmp ult i32 %idx.next, %len.a
+  br i1 %rc, label %in.bounds, label %out.of.bounds, !prof !1
+
+in.bounds:
+  %el.a = getelementptr i32, i32* %a, i32 %idx.next
+  %v = load i32, i32* %el.a
+  %loop.cond = icmp slt i32 %idx, 2
+  br i1 %loop.cond, label %exit, label %loop
+
+out.of.bounds:
+  ret void
+
+exit:
+  ret void
+}
+
+; Check that we can figure out that IV is non-negative via implication through
+; two Phi nodes.
+define void @test_04(i32* %a, i32* %a_len_ptr, i1 %cond) {
+
+; CHECK-LABEL: test_04
+; CHECK:       mainloop:
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK:         br i1 true, label %in.bounds, label %out.of.bounds
+; CHECK:       loop.preloop:
+
+ entry:
+  %len.a = load i32, i32* %a_len_ptr, !range !0
+  %len.minus.one = sub nsw i32 %len.a, 1
+  %len.plus.one = add nsw i32 %len.a, 1
+  %len.minus.two = sub nsw i32 %len.a, 2
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %starting.value = phi i32 [ %len.minus.two, %if.true ], [ %len.minus.one, %if.false ]
+  %len.phi = phi i32 [ %len.a, %if.true ], [ %len.plus.one, %if.false ]
+  %first.itr.check = icmp sgt i32 %len.a, 3
+  br i1 %first.itr.check, label %loop, label %exit
+
+loop:
+  %idx = phi i32 [ %starting.value, %merge ] , [ %idx.next, %in.bounds ]
+  %idx.next = sub i32 %idx, 1
+  %rc = icmp ult i32 %idx.next, %len.phi
+  br i1 %rc, label %in.bounds, label %out.of.bounds, !prof !1
+
+in.bounds:
+  %el.a = getelementptr i32, i32* %a, i32 %idx.next
+  %v = load i32, i32* %el.a
+  %loop.cond = icmp slt i32 %idx, 2
+  br i1 %loop.cond, label %exit, label %loop
+
+out.of.bounds:
+  ret void
+
+exit:
+  ret void
+}
+
+; Check that we can figure out that IV is non-negative via implication through
+; two Phi nodes, one being AddRec.
+define void @test_05(i32* %a, i32* %a_len_ptr, i1 %cond) {
+
+; CHECK-LABEL: test_05
+; CHECK:       mainloop:
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK:         br i1 true, label %in.bounds, label %out.of.bounds
+; CHECK:       loop.preloop:
+
+ entry:
+  %len.a = load i32, i32* %a_len_ptr, !range !0
+  %len.minus.one = sub nsw i32 %len.a, 1
+  %len.plus.one = add nsw i32 %len.a, 1
+  %len.minus.two = sub nsw i32 %len.a, 2
+  br label %merge
+
+merge:
+  %starting.value = phi i32 [ %len.minus.two, %entry ], [ %len.minus.one, %merge ]
+  %len.phi = phi i32 [ %len.a, %entry ], [ %len.phi.next, %merge ]
+  %len.phi.next = add nsw i32 %len.phi, 1
+  br i1 true, label %first.iter.check, label %merge
+
+first.iter.check:
+  %first.itr.check = icmp sgt i32 %len.a, 3
+  br i1 %first.itr.check, label %loop, label %exit
+
+loop:
+  %idx = phi i32 [ %starting.value, %first.iter.check ] , [ %idx.next, %in.bounds ]
+  %idx.next = sub i32 %idx, 1
+  %rc = icmp ult i32 %idx.next, %len.phi
+  br i1 %rc, label %in.bounds, label %out.of.bounds, !prof !1
+
+in.bounds:
+  %el.a = getelementptr i32, i32* %a, i32 %idx.next
+  %v = load i32, i32* %el.a
+  %loop.cond = icmp slt i32 %idx, 2
+  br i1 %loop.cond, label %exit, label %loop
+
+out.of.bounds:
+  ret void
+
+exit:
+  ret void
+}
+
 !0 = !{i32 0, i32 2147483647}
 !1 = !{!"branch_weights", i32 64, i32 4}

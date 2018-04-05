@@ -4,11 +4,11 @@
 # RUN: llvm-readobj -file-headers %t.exe | FileCheck -check-prefix=HEADER %s
 # RUN: llvm-objdump -unwind-info %t.exe | FileCheck -check-prefix=UNWIND %s
 #
-# HEADER: ExceptionTableRVA: 0x1000
+# HEADER: ExceptionTableRVA: 0x2000
 #
 # UNWIND: Function Table:
-# UNWIND:   Start Address: 0x2000
-# UNWIND:   End Address: 0x201b
+# UNWIND:   Start Address: 0x1000
+# UNWIND:   End Address: 0x101b
 # UNWIND:   Unwind Info Address: 0x3000
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 1 UNW_ExceptionHandler
@@ -24,8 +24,8 @@
 # UNWIND:       0x04: UOP_AllocSmall 24
 # UNWIND:       0x00: UOP_PushMachFrame w/o error code
 # UNWIND: Function Table:
-# UNWIND:   Start Address: 0x2012
-# UNWIND:   End Address: 0x2012
+# UNWIND:   Start Address: 0x1012
+# UNWIND:   End Address: 0x1012
 # UNWIND:   Unwind Info Address: 0x301c
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 4 UNW_ChainInfo
@@ -33,8 +33,8 @@
 # UNWIND:     Number of Codes: 0
 # UNWIND:     No frame pointer used
 # UNWIND: Function Table:
-# UNWIND:   Start Address: 0x201b
-# UNWIND:   End Address: 0x201c
+# UNWIND:   Start Address: 0x101b
+# UNWIND:   End Address: 0x101c
 # UNWIND:   Unwind Info Address: 0x302c
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 0
@@ -42,8 +42,8 @@
 # UNWIND:     Number of Codes: 0
 # UNWIND:     No frame pointer used
 # UNWIND: Function Table:
-# UNWIND:   Start Address: 0x201c
-# UNWIND:   End Address: 0x2039
+# UNWIND:   Start Address: 0x101c
+# UNWIND:   End Address: 0x1039
 # UNWIND:   Unwind Info Address: 0x3034
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 0

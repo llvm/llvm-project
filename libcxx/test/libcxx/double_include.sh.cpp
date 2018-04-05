@@ -129,6 +129,7 @@
 #include <valarray>
 #include <variant>
 #include <vector>
+#include <version>
 #include <wchar.h>
 #include <wctype.h>
 

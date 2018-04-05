@@ -146,7 +146,7 @@ def main():
             continue
 
         # Print out the various check lines here.
-        output_lines = common.add_ir_checks(output_lines, ';', prefix_list, func_dict, func_name)
+        common.add_ir_checks(output_lines, ';', prefix_list, func_dict, func_name)
         is_in_function_start = False
 
       if is_in_function:
