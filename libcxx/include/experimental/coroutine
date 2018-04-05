@@ -278,9 +278,9 @@ public:
   _LIBCPP_CONSTEXPR explicit operator bool() const _NOEXCEPT { return true; }
   _LIBCPP_CONSTEXPR bool done() const _NOEXCEPT { return false; }
 
-  _LIBCPP_CONSTEXPR void operator()() const _NOEXCEPT {}
-  _LIBCPP_CONSTEXPR void resume() const _NOEXCEPT {}
-  _LIBCPP_CONSTEXPR void destroy() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_AFTER_CXX17 void operator()() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_AFTER_CXX17 void resume() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_AFTER_CXX17 void destroy() const _NOEXCEPT {}
 
 private:
   friend coroutine_handle<noop_coroutine_promise> noop_coroutine() _NOEXCEPT;

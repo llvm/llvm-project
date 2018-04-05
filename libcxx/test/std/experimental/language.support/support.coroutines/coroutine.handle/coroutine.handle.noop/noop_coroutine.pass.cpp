@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: clang-5, clang-6
 // UNSUPPORTED: ubsan
 
 // <experimental/coroutine>
