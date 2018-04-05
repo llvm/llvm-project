@@ -157,7 +157,8 @@ void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,
         // We don't need to check for this because we clear shadow memory;
         // non-shared stack can't race because earlier one would've been cleared
 
-        auto alloc_access = my_alloc_dict->find(shifted_addr)->getLoc();
+        auto alloc_find = my_alloc_dict->find(shifted_addr);
+        AccessLoc_t alloc_access = (alloc_find == nullptr) ? AccessLoc_t() : alloc_find->getLoc();
         if (prev_read) // checking the current access with previous reads
           report_race(access->getLoc(),
                       AccessLoc_t(acc_id, call_stack),
@@ -278,7 +279,8 @@ void CompressedDictShadowMem::check_and_update_write(
 
       // SPBagInterface *cur_node = func->get_node();
       if (lca->is_PBag()) {
-        auto alloc_access = my_alloc_dict->find(shifted_addr)->getLoc();
+        auto alloc_find = my_alloc_dict->find(shifted_addr);
+        AccessLoc_t alloc_access = (alloc_find == nullptr) ? AccessLoc_t() : alloc_find->getLoc();
         // check the current access with previous writes
         report_race(access->getLoc(),
                     AccessLoc_t(acc_id, call_stack),
