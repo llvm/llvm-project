@@ -9,11 +9,11 @@ Introduction
 ============
 
 ShadowCallStack is an **experimental** instrumentation pass, currently only
-implemented for x86_64, that protects programs against return address
-overwrites (e.g. stack buffer overflows.) It works by saving a function's return
-address to a separately allocated 'shadow call stack' in the function prolog and
-checking the return address on the stack against the shadow call stack in the
-function epilog.
+implemented for x86_64 and aarch64, that protects programs against return
+address overwrites (e.g. stack buffer overflows.) It works by saving a
+function's return address to a separately allocated 'shadow call stack'
+in the function prolog and checking the return address on the stack against
+the shadow call stack in the function epilog.
 
 Comparison
 ----------
@@ -37,8 +37,16 @@ support.
 Compatibility
 -------------
 
-ShadowCallStack currently only supports x86_64. A runtime is not currently
-provided in compiler-rt so one must be provided by the compiled application.
+ShadowCallStack currently only supports x86_64 and aarch64. A runtime is not
+currently provided in compiler-rt so one must be provided by the compiled
+application.
+
+On aarch64, the instrumentation makes use of the platform register ``x18``.
+On some platforms, ``x18`` is reserved, and on others, it is designated as
+a scratch register.  This generally means that any code that may run on the
+same thread as code compiled with ShadowCallStack must either target one
+of the platforms whose ABI reserves ``x18`` (currently Darwin, Fuchsia and
+Windows) or be compiled with the flag ``-ffixed-x18``.
 
 Security
 ========
@@ -56,28 +64,37 @@ has been checked and before it has been returned to. Modifying the call-return
 semantics to fix this on x86_64 would incur an unacceptable performance overhead
 due to return branch prediction.
 
-The instrumentation makes use of the ``gs`` segment register to reference the
-shadow call stack meaning that references to the shadow call stack do not have
-to be stored in memory. This makes it possible to implement a runtime that
-avoids exposing the address of the shadow call stack to attackers that can read
-arbitrary memory. However, attackers could still try to exploit side channels
-exposed by the operating system `[1]`_ `[2]`_ or processor `[3]`_ to discover
-the address of the shadow call stack.
+The instrumentation makes use of the ``gs`` segment register on x86_64,
+or the ``x18`` register on aarch64, to reference the shadow call stack
+meaning that references to the shadow call stack do not have to be stored in
+memory. This makes it possible to implement a runtime that avoids exposing
+the address of the shadow call stack to attackers that can read arbitrary
+memory. However, attackers could still try to exploit side channels exposed
+by the operating system `[1]`_ `[2]`_ or processor `[3]`_ to discover the
+address of the shadow call stack.
 
 .. _`[1]`: https://eyalitkin.wordpress.com/2017/09/01/cartography-lighting-up-the-shadows/
 .. _`[2]`: https://www.blackhat.com/docs/eu-16/materials/eu-16-Goktas-Bypassing-Clangs-SafeStack.pdf
 .. _`[3]`: https://www.vusec.net/projects/anc/
 
-Leaf functions are optimized to store the return address in a free register
-and avoid writing to the shadow call stack if a register is available. Very
-short leaf functions are uninstrumented if their execution is judged to be
-shorter than the race condition window intrinsic to the instrumentation.
+On x86_64, leaf functions are optimized to store the return address in a
+free register and avoid writing to the shadow call stack if a register is
+available. Very short leaf functions are uninstrumented if their execution
+is judged to be shorter than the race condition window intrinsic to the
+instrumentation.
+
+On aarch64, the architecture's call and return instructions (``bl`` and
+``ret``) operate on a register rather than the stack, which means that
+leaf functions are generally protected from return address overwrites even
+without ShadowCallStack. It also means that ShadowCallStack on aarch64 is not
+vulnerable to the same types of time-of-check-to-time-of-use races as x86_64.
 
 Usage
 =====
 
-To enable ShadowCallStack, just pass the ``-fsanitize=shadow-call-stack`` flag
-to both compile and link command lines.
+To enable ShadowCallStack, just pass the ``-fsanitize=shadow-call-stack``
+flag to both compile and link command lines. On aarch64, you also need to pass
+``-ffixed-x18`` unless your target already reserves ``x18``.
 
 Low-level API
 -------------
@@ -125,7 +142,20 @@ Generates the following x86_64 assembly when compiled with ``-O2``:
     pop    %rcx
     retq
 
-Adding ``-fsanitize=shadow-call-stack`` would output the following:
+or the following aarch64 assembly:
+
+.. code-block:: none
+
+    stp     x29, x30, [sp, #-16]!
+    mov     x29, sp
+    bl      bar
+    add     w0, w0, #1
+    ldp     x29, x30, [sp], #16
+    ret
+
+
+Adding ``-fsanitize=shadow-call-stack`` would output the following x86_64
+assembly:
 
 .. code-block:: gas
 
@@ -148,3 +178,16 @@ Adding ``-fsanitize=shadow-call-stack`` would output the following:
 
     trap:
     ud2
+
+or the following aarch64 assembly:
+
+.. code-block:: none
+
+    str     x30, [x18], #8
+    stp     x29, x30, [sp, #-16]!
+    mov     x29, sp
+    bl      bar
+    add     w0, w0, #1
+    ldp     x29, x30, [sp], #16
+    ldr     x30, [x18, #-8]!
+    ret

@@ -914,11 +914,8 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
 }
 
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
-void showBRDiagnostics(const char *action,
-    llvm::raw_svector_ostream& os,
-    const MemRegion *R,
-    SVal V,
-    const DeclStmt *DS) {
+static void showBRDiagnostics(const char *action, llvm::raw_svector_ostream &os,
+                              const MemRegion *R, SVal V, const DeclStmt *DS) {
   if (R->canPrintPretty()) {
     R->printPretty(os);
     os << " ";

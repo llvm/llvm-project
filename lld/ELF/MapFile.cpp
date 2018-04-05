@@ -102,7 +102,7 @@ getSymbolStrings(ArrayRef<Symbol *> Syms) {
   std::vector<std::string> Str(Syms.size());
   parallelForEachN(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
-    writeHeader(OS, Syms[I]->getVA(), Syms[I]->getSize(), 0);
+    writeHeader(OS, Syms[I]->getVA(), Syms[I]->getSize(), 1);
     OS << Indent16 << toString(*Syms[I]);
   });
 
@@ -143,7 +143,7 @@ static void printEhFrame(raw_ostream &OS, OutputSection *OSec) {
 
   // Print out section pieces.
   for (EhSectionPiece &P : Pieces) {
-    writeHeader(OS, OSec->Addr + P.OutputOff, P.Size, 0);
+    writeHeader(OS, OSec->Addr + P.OutputOff, P.Size, 1);
     OS << Indent8 << toString(P.Sec->File) << ":(" << P.Sec->Name << "+0x"
        << Twine::utohexstr(P.InputOff) + ")\n";
   }

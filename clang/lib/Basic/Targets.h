@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_H
 
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetInfo.h"
@@ -46,6 +47,9 @@ void addMinGWDefines(const llvm::Triple &Triple, const clang::LangOptions &Opts,
 LLVM_LIBRARY_VISIBILITY
 void addCygMingDefines(const clang::LangOptions &Opts,
                        clang::MacroBuilder &Builder);
+
+LLVM_LIBRARY_VISIBILITY
+void defineCudaArchMacro(CudaArch GPU, clang::MacroBuilder &Builder);
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_H
