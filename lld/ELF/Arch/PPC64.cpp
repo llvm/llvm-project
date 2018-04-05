@@ -63,7 +63,7 @@ static uint16_t applyPPCHighest(uint64_t V) { return V >> 48; }
 static uint16_t applyPPCHighesta(uint64_t V) { return (V + 0x8000) >> 48; }
 
 PPC64::PPC64() {
-  PltRel = GotRel = R_PPC64_GLOB_DAT;
+  GotRel = R_PPC64_GLOB_DAT;
   RelativeRel = R_PPC64_RELATIVE;
   GotEntrySize = 8;
   GotPltEntrySize = 8;
@@ -71,8 +71,14 @@ PPC64::PPC64() {
   PltHeaderSize = 0;
   GotBaseSymInGotPlt = false;
   GotBaseSymOff = 0x8000;
-  if (Config->EKind == ELF64LEKind)
+
+  if (Config->EKind == ELF64LEKind) {
     GotHeaderEntriesNum = 1;
+    GotPltHeaderEntriesNum = 2;
+    PltRel = R_PPC64_JMP_SLOT;
+  } else {
+    PltRel = R_PPC64_GLOB_DAT;
+  }
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
@@ -87,6 +93,8 @@ PPC64::PPC64() {
   // And because the lowest non-zero 256M boundary is 0x10000000, PPC64 linkers
   // use 0x10000000 as the starting address.
   DefaultImageBase = 0x10000000;
+
+  TrapInstr = 0x7fe00008;
 }
 
 static uint32_t getEFlags(InputFile *File) {
@@ -157,20 +165,37 @@ void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                      unsigned RelOff) const {
   uint64_t Off = GotPltEntryAddr - getPPC64TocBase();
 
-  // FIXME: What we should do, in theory, is get the offset of the function
-  // descriptor in the .opd section, and use that as the offset from %r2 (the
-  // TOC-base pointer). Instead, we have the GOT-entry offset, and that will
-  // be a pointer to the function descriptor in the .opd section. Using
-  // this scheme is simpler, but requires an extra indirection per PLT dispatch.
-
-  write32(Buf, 0xf8410028);                       // std %r2, 40(%r1)
-  write32(Buf + 4, 0x3d620000 | applyPPCHa(Off)); // addis %r11, %r2, X@ha
-  write32(Buf + 8, 0xe98b0000 | applyPPCLo(Off)); // ld %r12, X@l(%r11)
-  write32(Buf + 12, 0xe96c0000);                  // ld %r11,0(%r12)
-  write32(Buf + 16, 0x7d6903a6);                  // mtctr %r11
-  write32(Buf + 20, 0xe84c0008);                  // ld %r2,8(%r12)
-  write32(Buf + 24, 0xe96c0010);                  // ld %r11,16(%r12)
-  write32(Buf + 28, 0x4e800420);                  // bctr
+  if (Config->EKind == ELF64LEKind) {
+    // The most-common form of the plt stub. This assumes that the toc-pointer
+    // register is properly initalized, and that the stub must save the toc
+    // pointer value to the stack-save slot reserved for it (sp + 24).
+    // There are 2 other variants but we don't have to emit those until we add
+    // support for R_PPC64_REL24_NOTOC and R_PPC64_TOCSAVE relocations.
+    // We are missing a super simple optimization, where if the upper 16 bits of
+    // the offset are zero, then we can omit the addis instruction, and load
+    // r2 + lo-offset directly into r12. I decided to leave this out in the
+    // spirit of keeping it simple until we can link actual non-trivial
+    // programs.
+    write32(Buf +  0, 0xf8410018);                    // std     r2,24(r1)
+    write32(Buf +  4, 0x3d820000 | applyPPCHa(Off));  // addis   r12,r2, X@plt@to@ha
+    write32(Buf +  8, 0xe98c0000 | applyPPCLo(Off));  // ld      r12,X@plt@toc@l(r12)
+    write32(Buf + 12, 0x7d8903a6);                    // mtctr    r12
+    write32(Buf + 16, 0x4e800420);                    // bctr
+  } else {
+    // FIXME: What we should do, in theory, is get the offset of the function
+    // descriptor in the .opd section, and use that as the offset from %r2 (the
+    // TOC-base pointer). Instead, we have the GOT-entry offset, and that will
+    // be a pointer to the function descriptor in the .opd section. Using
+    // this scheme is simpler, but requires an extra indirection per PLT dispatch.
+    write32(Buf, 0xf8410028);                       // std %r2, 40(%r1)
+    write32(Buf + 4, 0x3d620000 | applyPPCHa(Off)); // addis %r11, %r2, X@ha
+    write32(Buf + 8, 0xe98b0000 | applyPPCLo(Off)); // ld %r12, X@l(%r11)
+    write32(Buf + 12, 0xe96c0000);                  // ld %r11,0(%r12)
+    write32(Buf + 16, 0x7d6903a6);                  // mtctr %r11
+    write32(Buf + 20, 0xe84c0008);                  // ld %r2,8(%r12)
+    write32(Buf + 24, 0xe96c0010);                  // ld %r11,16(%r12)
+    write32(Buf + 28, 0x4e800420);                  // bctr
+  }
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {

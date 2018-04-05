@@ -46,7 +46,6 @@ namespace elf {
 
 using llvm::object::Archive;
 
-class Lazy;
 class Symbol;
 
 // If -reproduce option is given, all input files are written
@@ -267,11 +266,11 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   template <class ELFT> void parse();
 
-  // Returns a memory buffer for a given symbol and the offset in the archive
-  // for the member. An empty memory buffer and an offset of zero
-  // is returned if we have already returned the same memory buffer.
-  // (So that we don't instantiate same members more than once.)
-  std::pair<MemoryBufferRef, uint64_t> getMember(const Archive::Symbol *Sym);
+  // Pulls out an object file that contains a definition for Sym and
+  // returns it. If the same file was instantiated before, this
+  // function returns a nullptr (so we don't instantiate the same file
+  // more than once.)
+  InputFile *fetch(const Archive::Symbol &Sym);
 
 private:
   std::unique_ptr<Archive> File;

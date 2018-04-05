@@ -778,9 +778,8 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
       InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, &Sym, Addend,
                              Expr, Type);
       return Expr;
-    } else if (Target->isPicRel(Type)) {
-      InX::RelaDyn->addReloc(Target->getDynRel(Type), &Sec, Offset, &Sym,
-                             Addend, R_ADDEND, Type);
+    } else if (RelType Rel = Target->getDynRel(Type)) {
+      InX::RelaDyn->addReloc(Rel, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
