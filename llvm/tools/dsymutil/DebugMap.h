@@ -178,6 +178,11 @@ public:
     return make_range(Symbols.begin(), Symbols.end());
   }
 
+  bool empty() const { return Symbols.empty(); }
+
+  void addWarning(StringRef Warning) { Warnings.push_back(Warning); }
+  const std::vector<std::string> &getWarnings() const { return Warnings; }
+
   void print(raw_ostream &OS) const;
 #ifndef NDEBUG
   void dump() const;
@@ -195,6 +200,8 @@ private:
   StringMap<SymbolMapping> Symbols;
   DenseMap<uint64_t, DebugMapEntry *> AddressToMapping;
   uint8_t Type;
+
+  std::vector<std::string> Warnings;
 
   /// For YAMLIO support.
   ///@{

@@ -24,10 +24,12 @@ using namespace llvm::object;
 class MachODebugMapParser {
 public:
   MachODebugMapParser(StringRef BinaryPath, ArrayRef<std::string> Archs,
-                      StringRef PathPrefix = "", bool Verbose = false)
+                      StringRef PathPrefix = "",
+                      bool PaperTrailWarnings = false, bool Verbose = false)
       : BinaryPath(BinaryPath), Archs(Archs.begin(), Archs.end()),
-        PathPrefix(PathPrefix), MainBinaryHolder(Verbose),
-        CurrentObjectHolder(Verbose), CurrentDebugMapObject(nullptr) {}
+        PathPrefix(PathPrefix), PaperTrailWarnings(PaperTrailWarnings),
+        MainBinaryHolder(Verbose), CurrentObjectHolder(Verbose),
+        CurrentDebugMapObject(nullptr) {}
 
   /// \brief Parses and returns the DebugMaps of the input binary.
   /// The binary contains multiple maps in case it is a universal
@@ -43,6 +45,7 @@ private:
   std::string BinaryPath;
   SmallVector<StringRef, 1> Archs;
   std::string PathPrefix;
+  bool PaperTrailWarnings;
 
   /// Owns the MemoryBuffer for the main binary.
   BinaryHolder MainBinaryHolder;
@@ -103,6 +106,13 @@ private:
     warn_ostream() << "("
                    << MachOUtils::getArchName(Result->getTriple().getArchName())
                    << ") " << File << " " << Msg << "\n";
+
+    if (PaperTrailWarnings) {
+      if (!File.empty())
+        Result->addDebugMapObject(File, sys::TimePoint<std::chrono::seconds>());
+      if (Result->end() != Result->begin())
+        (*--Result->end())->addWarning(Msg.str());
+    }
   }
 };
 
@@ -523,13 +533,14 @@ namespace llvm {
 namespace dsymutil {
 llvm::ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 parseDebugMap(StringRef InputFile, ArrayRef<std::string> Archs,
-              StringRef PrependPath, bool Verbose, bool InputIsYAML) {
-  if (!InputIsYAML) {
-    MachODebugMapParser Parser(InputFile, Archs, PrependPath, Verbose);
-    return Parser.parse();
-  } else {
+              StringRef PrependPath, bool PaperTrailWarnings, bool Verbose,
+              bool InputIsYAML) {
+  if (InputIsYAML)
     return DebugMap::parseYAMLDebugMap(InputFile, PrependPath, Verbose);
-  }
+
+  MachODebugMapParser Parser(InputFile, Archs, PrependPath, PaperTrailWarnings,
+                             Verbose);
+  return Parser.parse();
 }
 
 bool dumpStab(StringRef InputFile, ArrayRef<std::string> Archs,

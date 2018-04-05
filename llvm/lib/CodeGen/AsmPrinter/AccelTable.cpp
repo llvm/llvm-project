@@ -187,7 +187,7 @@ void AccelTableEmitter::emitHashes() const {
       if (SkipIdenticalHashes && PrevHash == HashValue)
         continue;
       Asm->OutStreamer->AddComment("Hash in Bucket " + Twine(BucketIdx));
-      Asm->EmitInt32(HashValue);
+      Asm->emitInt32(HashValue);
       PrevHash = HashValue;
     }
     BucketIdx++;
@@ -211,30 +211,30 @@ void AccelTableEmitter::emitOffsets(const MCSymbol *Base) const {
 
 void AppleAccelTableEmitter::Header::emit(AsmPrinter *Asm) const {
   Asm->OutStreamer->AddComment("Header Magic");
-  Asm->EmitInt32(Magic);
+  Asm->emitInt32(Magic);
   Asm->OutStreamer->AddComment("Header Version");
-  Asm->EmitInt16(Version);
+  Asm->emitInt16(Version);
   Asm->OutStreamer->AddComment("Header Hash Function");
-  Asm->EmitInt16(HashFunction);
+  Asm->emitInt16(HashFunction);
   Asm->OutStreamer->AddComment("Header Bucket Count");
-  Asm->EmitInt32(BucketCount);
+  Asm->emitInt32(BucketCount);
   Asm->OutStreamer->AddComment("Header Hash Count");
-  Asm->EmitInt32(HashCount);
+  Asm->emitInt32(HashCount);
   Asm->OutStreamer->AddComment("Header Data Length");
-  Asm->EmitInt32(HeaderDataLength);
+  Asm->emitInt32(HeaderDataLength);
 }
 
 void AppleAccelTableEmitter::HeaderData::emit(AsmPrinter *Asm) const {
   Asm->OutStreamer->AddComment("HeaderData Die Offset Base");
-  Asm->EmitInt32(DieOffsetBase);
+  Asm->emitInt32(DieOffsetBase);
   Asm->OutStreamer->AddComment("HeaderData Atom Count");
-  Asm->EmitInt32(Atoms.size());
+  Asm->emitInt32(Atoms.size());
 
   for (const Atom &A : Atoms) {
     Asm->OutStreamer->AddComment(dwarf::AtomTypeString(A.Type));
-    Asm->EmitInt16(A.Type);
+    Asm->emitInt16(A.Type);
     Asm->OutStreamer->AddComment(dwarf::FormEncodingString(A.Form));
-    Asm->EmitInt16(A.Form);
+    Asm->emitInt16(A.Form);
   }
 }
 
@@ -244,9 +244,9 @@ void AppleAccelTableEmitter::emitBuckets() const {
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
     Asm->OutStreamer->AddComment("Bucket " + Twine(i));
     if (!Buckets[i].empty())
-      Asm->EmitInt32(index);
+      Asm->emitInt32(index);
     else
-      Asm->EmitInt32(std::numeric_limits<uint32_t>::max());
+      Asm->emitInt32(std::numeric_limits<uint32_t>::max());
     // Buckets point in the list of hashes, not to the data. Do not increment
     // the index multiple times in case of hash collisions.
     uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
@@ -268,20 +268,20 @@ void AppleAccelTableEmitter::emitData() const {
       // current one.
       if (PrevHash != std::numeric_limits<uint64_t>::max() &&
           PrevHash != Hash->HashValue)
-        Asm->EmitInt32(0);
+        Asm->emitInt32(0);
       // Remember to emit the label for our offset.
       Asm->OutStreamer->EmitLabel(Hash->Sym);
       Asm->OutStreamer->AddComment(Hash->Name.getString());
       Asm->emitDwarfStringOffset(Hash->Name);
       Asm->OutStreamer->AddComment("Num DIEs");
-      Asm->EmitInt32(Hash->Values.size());
+      Asm->emitInt32(Hash->Values.size());
       for (const auto *V : Hash->Values)
         static_cast<const AppleAccelTableData *>(V)->emit(Asm);
       PrevHash = Hash->HashValue;
     }
     // Emit the final end marker for the bucket.
     if (!Buckets[i].empty())
-      Asm->EmitInt32(0);
+      Asm->emitInt32(0);
   }
 }
 
@@ -302,25 +302,25 @@ void llvm::emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
 }
 
 void AppleAccelTableOffsetData::emit(AsmPrinter *Asm) const {
-  Asm->EmitInt32(Die->getDebugSectionOffset());
+  Asm->emitInt32(Die->getDebugSectionOffset());
 }
 
 void AppleAccelTableTypeData::emit(AsmPrinter *Asm) const {
-  Asm->EmitInt32(Die->getDebugSectionOffset());
-  Asm->EmitInt16(Die->getTag());
-  Asm->EmitInt8(0);
+  Asm->emitInt32(Die->getDebugSectionOffset());
+  Asm->emitInt16(Die->getTag());
+  Asm->emitInt8(0);
 }
 
 void AppleAccelTableStaticOffsetData::emit(AsmPrinter *Asm) const {
-  Asm->EmitInt32(Offset);
+  Asm->emitInt32(Offset);
 }
 
 void AppleAccelTableStaticTypeData::emit(AsmPrinter *Asm) const {
-  Asm->EmitInt32(Offset);
-  Asm->EmitInt16(Tag);
-  Asm->EmitInt8(ObjCClassIsImplementation ? dwarf::DW_FLAG_type_implementation
+  Asm->emitInt32(Offset);
+  Asm->emitInt16(Tag);
+  Asm->emitInt8(ObjCClassIsImplementation ? dwarf::DW_FLAG_type_implementation
                                           : 0);
-  Asm->EmitInt32(QualifiedNameHash);
+  Asm->emitInt32(QualifiedNameHash);
 }
 
 #ifndef _MSC_VER

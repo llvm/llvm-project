@@ -147,6 +147,11 @@ static opt<std::string>
     Toolchain("toolchain", desc("Embed toolchain information in dSYM bundle."),
               cat(DsymCategory));
 
+static opt<bool>
+    PaperTrailWarnings("papertrail",
+                       desc("Embed warnings in the linked DWARF debug info."),
+                       cat(DsymCategory));
+
 static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (NoOutput)
     return true;
@@ -319,6 +324,11 @@ static Expected<LinkOptions> getOptions() {
         inconvertibleErrorCode());
   }
 
+  if (NumThreads == 0)
+    Options.Threads = llvm::thread::hardware_concurrency();
+  if (DumpDebugMap || Verbose)
+    Options.Threads = 1;
+
   return Options;
 }
 
@@ -430,6 +440,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (getenv("RC_DEBUG_OPTIONS"))
+    PaperTrailWarnings = true;
+
+  if (PaperTrailWarnings && InputIsYAMLDebugMap)
+    warn_ostream() << "Paper trail warnings are not supported for YAML input";
+
   for (const auto &Arch : ArchFlags)
     if (Arch != "*" && Arch != "all" &&
         !llvm::object::MachOObjectFile::isValidArch(Arch)) {
@@ -445,8 +461,9 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    auto DebugMapPtrsOrErr = parseDebugMap(InputFile, ArchFlags, OsoPrependPath,
-                                           Verbose, InputIsYAMLDebugMap);
+    auto DebugMapPtrsOrErr =
+        parseDebugMap(InputFile, ArchFlags, OsoPrependPath, PaperTrailWarnings,
+                      Verbose, InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       error_ostream() << "cannot parse the debug map for '" << InputFile
@@ -468,12 +485,8 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    if (NumThreads == 0)
-      NumThreads = llvm::thread::hardware_concurrency();
-    if (DumpDebugMap || Verbose)
-      NumThreads = 1;
-    NumThreads = std::min<unsigned>(NumThreads, DebugMapPtrsOrErr->size());
-
+    NumThreads =
+        std::min<unsigned>(OptionsOrErr->Threads, DebugMapPtrsOrErr->size());
     llvm::ThreadPool Threads(NumThreads);
 
     // If there is more than one link to execute, we need to generate
