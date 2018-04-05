@@ -6,7 +6,7 @@ void use_at_available() {
   // CHECK: call i32 @__isOSVersionAtLeast(i32 10, i32 15, i32 0)
   // CHECK-NEXT: call i32 @__isTargetPlatformNative()
   // CHECK-NEXT: icmp ne
-  // CHECK-NEXT: select
+  // CHECK-NEXT: select i1 %{{[0-9]+}}, i32 %{{[0-9]+}}, i32 1
   // CHECK-NEXT: icmp ne
   if (@available(macos 10.15, *))
     ;
@@ -15,7 +15,7 @@ void use_at_available() {
   // CHECK-NEXT: call i32 @__isTargetVariantOSVersionAtLeast(i32 13, i32 0, i32 0)
   // CHECK-NEXT: call i32 @__isTargetPlatformNative()
   // CHECK-NEXT: icmp ne
-  // CHECK-NEXT: select
+  // CHECK-NEXT: select i1 %{{[0-9]+}}, i32 %{{[0-9]+}}, i32 %{{[0-9]+}}
   // CHECK-NEXT: icmp ne
   if (@available(macos 10.15, iosmac 13, *))
    ;
@@ -23,7 +23,7 @@ void use_at_available() {
   // CHECK: call i32 @__isTargetVariantOSVersionAtLeast(i32 13, i32 0, i32 0)
   // CHECK-NEXT: call i32 @__isTargetPlatformNative()
   // CHECK-NEXT: icmp ne
-  // CHECK-NEXT: select
+  // CHECK-NEXT: select i1 %{{[0-9]+}}, i32 1, i32 %{{[0-9]+}}
   // CHECK-NEXT: icmp ne
   if (@available(ios 13, *))
    ;

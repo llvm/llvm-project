@@ -17,10 +17,14 @@
 void bothPreviouslyAvailable() AVAILABLE_PREV_MAC AVAILABLE_PREV_IOS;
 void bothCurrentlyAvailable() AVAILABLE_CURRENT_MAC AVAILABLE_CURRENT_IOS;
 void bothWillBeAvailable() AVAILABLE_NEXT_MAC AVAILABLE_NEXT_IOS;
-// expected-note@-1 3 {{'bothWillBeAvailable' has been explicitly marked partial here}}
+// expected-note@-1 4 {{'bothWillBeAvailable' has been explicitly marked partial here}}
 
 void macOSCurrentlyAvailable() AVAILABLE_CURRENT_MAC AVAILABLE_NEXT_IOS;
-// expected-note@-1 {{'macOSCurrentlyAvailable' has been explicitly marked partial here}}
+// expected-note@-1 2 {{'macOSCurrentlyAvailable' has been explicitly marked partial here}}
+
+void macOSNextAvailableiOSNotAvailable() AVAILABLE_NEXT_MAC __attribute__((availability(ios, unavailable)));
+// expected-note@-1 2 {{'macOSNextAvailableiOSNotAvailable' has been explicitly marked unavailable here}}
+// expected-note@-2 {{'macOSNextAvailableiOSNotAvailable' has been explicitly marked partial here}}
 
 void test() {
   bothPreviouslyAvailable();
@@ -30,13 +34,30 @@ void test() {
   
   macOSCurrentlyAvailable(); // expected-warning {{'macOSCurrentlyAvailable' is only available on iOS (on macOS) 13 or newer}}
   // expected-note@-1 {{enclose 'macOSCurrentlyAvailable' in an @available check to silence this warning}}
-  
+
   if (@available(ios 13, macos 10.15, *))
     bothWillBeAvailable();
   if (@available(ios 13, *))
     bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on macOS 10.15 or newer}}
   // expected-note@-1 {{enclose}}
+  if (@available(ios 12, *))
+    bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on macOS 10.15 and iOS (on macOS) 13 or newer}}
+  // expected-note@-1 {{enclose}}
   if (@available(macos 10.15, *))
     bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on iOS (on macOS) 13 or newer}}
   // expected-note@-1 {{enclose}}
+
+  if (@available(macos 10.15, *))
+    macOSCurrentlyAvailable(); // expected-warning {{'macOSCurrentlyAvailable' is only available on iOS (on macOS) 13 or newer}}
+  // expected-note@-1 {{enclose}}
+  if (@available(ios 13, *))
+    macOSCurrentlyAvailable();
+
+  macOSNextAvailableiOSNotAvailable();
+  // expected-error@-1 {{'macOSNextAvailableiOSNotAvailable' is unavailable: not available on iOS (on macOS)}}
+  // expected-warning@-2 {{'macOSNextAvailableiOSNotAvailable' is only available on macOS 10.15 or newer}}
+  // expected-note@-3 {{enclose}}
+
+  if (@available(macos 10.15, *))
+    macOSNextAvailableiOSNotAvailable(); // expected-error {{'macOSNextAvailableiOSNotAvailable' is unavailable: not available on iOS (on macOS)}}
 }
