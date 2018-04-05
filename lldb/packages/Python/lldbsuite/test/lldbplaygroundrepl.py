@@ -30,7 +30,7 @@ class PlaygroundREPLTest(TestBase):
         bugnumber="This test only builds one way")
 
     def build_all(self):
-        self.execute_command("make everything")
+        self.build()
 
     def execute_command(self, command):
         (exit_status, output) = commands.getstatusoutput(command)
@@ -47,7 +47,7 @@ class PlaygroundREPLTest(TestBase):
         Playgrounds REPL test specific setup that must happen after class setup
         """
         exe_name = "PlaygroundStub"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -58,7 +58,7 @@ class PlaygroundREPLTest(TestBase):
             'Set breakpoint here', self.PlaygroundStub_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(None, None, os.getcwd())
+        process = target.LaunchSimple(None, None, self.getBuildDir())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(

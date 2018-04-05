@@ -38,7 +38,7 @@ class TestNonREPLPlayground(TestBase):
         bugnumber="This test only builds one way")
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
-        self.buildAll()
+        self.build()
         self.do_test()
 
     def setUp(self):
@@ -47,17 +47,10 @@ class TestNonREPLPlayground(TestBase):
         self.PlaygroundStub_source_spec = lldb.SBFileSpec(
             self.PlaygroundStub_source)
 
-    def buildAll(self):
-        execute_command("make everything")
-
     def do_test(self):
         """Test that playgrounds work"""
         exe_name = "PlaygroundStub"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -68,7 +61,7 @@ class TestNonREPLPlayground(TestBase):
             'Set breakpoint here', self.PlaygroundStub_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(None, None, os.getcwd())
+        process = target.LaunchSimple(None, None, self.getBuildDir())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(
