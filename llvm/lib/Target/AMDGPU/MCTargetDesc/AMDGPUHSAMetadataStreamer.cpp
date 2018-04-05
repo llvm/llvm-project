@@ -268,18 +268,22 @@ void MetadataStreamer::emitKernelArgs(const Function &Func) {
 
   auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
                                       AMDGPUASI.GLOBAL_ADDRESS);
-  auto CallsPrintf = Func.getParent()->getNamedMetadata("llvm.printf.fmts");
-  if (CallsPrintf)
+
+  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
+  // "none" argument.
+  if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
     emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenPrintfBuffer);
+  else
+    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+
+  // Emit "default queue" and "completion action" arguments if enqueue kernel is
+  // used, otherwise emit dummy "none" arguments.
   if (Func.hasFnAttribute("calls-enqueue-kernel")) {
-    if (!CallsPrintf) {
-      // Emit a dummy argument so that the remaining hidden arguments
-      // have a fixed position relative to the first hidden argument.
-      // This is to facilitate library code to access hidden arguments.
-      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
-    }
     emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenDefaultQueue);
     emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenCompletionAction);
+  } else {
+    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
   }
 }
 

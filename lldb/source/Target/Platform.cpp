@@ -10,6 +10,7 @@
 // C Includes
 // C++ Includes
 #include <algorithm>
+#include <csignal>
 #include <fstream>
 #include <vector>
 

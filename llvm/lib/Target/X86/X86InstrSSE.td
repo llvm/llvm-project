@@ -7611,7 +7611,7 @@ let hasSideEffects = 0, ExeDomain = SSEPackedSingle in {
 def VEXTRACTF128rr : AVXAIi8<0x19, MRMDestReg, (outs VR128:$dst),
           (ins VR256:$src1, u8imm:$src2),
           "vextractf128\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-          []>, Sched<[WriteFShuffle]>, VEX, VEX_L;
+          []>, Sched<[WriteFShuffle256]>, VEX, VEX_L;
 let mayStore = 1 in
 def VEXTRACTF128mr : AVXAIi8<0x19, MRMDestMem, (outs),
           (ins f128mem:$dst, VR256:$src1, u8imm:$src2),

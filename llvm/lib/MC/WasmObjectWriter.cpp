@@ -167,6 +167,14 @@ struct WasmRelocationEntry {
 #endif
 };
 
+struct WasmCustomSection {
+  StringRef Name;
+  const SmallVectorImpl<char> &Contents;
+
+  WasmCustomSection(StringRef Name, const SmallVectorImpl<char> &Contents)
+      : Name(Name), Contents(Contents) {}
+};
+
 #if !defined(NDEBUG)
 raw_ostream &operator<<(raw_ostream &OS, const WasmRelocationEntry &Rel) {
   Rel.print(OS);
@@ -202,6 +210,7 @@ class WasmObjectWriter : public MCObjectWriter {
   SmallVector<WasmFunctionType, 4> FunctionTypes;
   SmallVector<WasmGlobal, 4> Globals;
   SmallVector<WasmDataSegment, 4> DataSegments;
+  std::vector<WasmCustomSection> CustomSections;
   unsigned NumFunctionImports = 0;
   unsigned NumGlobalImports = 0;
 
@@ -277,6 +286,7 @@ private:
       ArrayRef<wasm::WasmSymbolInfo> SymbolInfos,
       ArrayRef<std::pair<uint16_t, uint32_t>> InitFuncs,
       const std::map<StringRef, std::vector<WasmComdatEntry>> &Comdats);
+  void writeUserCustomSections(ArrayRef<WasmCustomSection> CustomSections);
 
   uint32_t getProvisionalValue(const WasmRelocationEntry &RelEntry);
   void applyRelocations(ArrayRef<WasmRelocationEntry> Relocations,
@@ -314,7 +324,7 @@ void WasmObjectWriter::startSection(SectionBookkeeping &Section,
   // Custom sections in wasm also have a string identifier.
   if (SectionId == wasm::WASM_SEC_CUSTOM) {
     assert(Name);
-    writeString(StringRef(Name));
+    writeString(Name);
   }
 }
 
@@ -936,6 +946,17 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
   endSection(Section);
 }
 
+void WasmObjectWriter::writeUserCustomSections(
+    ArrayRef<WasmCustomSection> CustomSections) {
+  for (const auto &CustomSection : CustomSections) {
+    SectionBookkeeping Section;
+    startSection(Section, wasm::WASM_SEC_CUSTOM,
+                 CustomSection.Name.str().c_str());
+    writeBytes(CustomSection.Contents);
+    endSection(Section);
+  }
+}
+
 uint32_t WasmObjectWriter::getFunctionType(const MCSymbolWasm& Symbol) {
   assert(Symbol.isFunction());
   assert(TypeIndices.count(&Symbol));
@@ -1041,6 +1062,26 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // Populate DataSegments, which must be done before populating DataLocations.
   for (MCSection &Sec : Asm) {
     auto &Section = static_cast<MCSectionWasm &>(Sec);
+
+    if (cast<MCSectionWasm>(Sec).getSectionName().startswith(
+            ".custom_section.")) {
+      if (Section.getFragmentList().empty())
+        continue;
+      if (Section.getFragmentList().size() != 1)
+        report_fatal_error(
+            "only one .custom_section section fragment supported");
+      const MCFragment &Frag = *Section.begin();
+      if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
+        report_fatal_error("only data supported in .custom_section section");
+      const auto &DataFrag = cast<MCDataFragment>(Frag);
+      if (!DataFrag.getFixups().empty())
+        report_fatal_error("fixups not supported in .custom_section section");
+      StringRef UserName = Section.getSectionName().substr(16);
+      const SmallVectorImpl<char> &Contents = DataFrag.getContents();
+      CustomSections.push_back(WasmCustomSection(UserName, Contents));
+      continue;
+    }
+
     if (!Section.isWasmData())
       continue;
 
@@ -1310,6 +1351,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeElemSection(TableElems);
   writeCodeSection(Asm, Layout, Functions);
   writeDataSection();
+  writeUserCustomSections(CustomSections);
   writeLinkingMetaDataSection(SymbolInfos, InitFuncs, Comdats);
   writeCodeRelocSection();
   writeDataRelocSection();

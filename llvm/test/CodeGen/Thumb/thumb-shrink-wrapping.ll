@@ -374,7 +374,7 @@ declare void @somethingElse(...)
 ;
 ; ENABLE-V5T-NEXT: {{LBB[0-9_]+}}: @ %if.end
 ; ENABLE-NEXT: bx lr
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then

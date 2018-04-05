@@ -251,6 +251,24 @@ void RegisterFile::dump() const {
 }
 #endif
 
+RetireControlUnit::RetireControlUnit(const llvm::MCSchedModel &SM,
+                                     DispatchUnit *DU)
+    : NextAvailableSlotIdx(0), CurrentInstructionSlotIdx(0),
+      AvailableSlots(SM.MicroOpBufferSize), MaxRetirePerCycle(0), Owner(DU) {
+  // Check if the scheduling model provides extra information about the machine
+  // processor. If so, then use that information to set the reorder buffer size
+  // and the maximum number of instructions retired per cycle.
+  if (SM.hasExtraProcessorInfo()) {
+    const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
+    if (EPI.ReorderBufferSize)
+      AvailableSlots = EPI.ReorderBufferSize;
+    MaxRetirePerCycle = EPI.MaxRetirePerCycle;
+  }
+
+  assert(AvailableSlots && "Invalid reorder buffer size!");
+  Queue.resize(AvailableSlots);
+}
+
 // Reserves a number of slots, and returns a new token.
 unsigned RetireControlUnit::reserveSlot(unsigned Index, unsigned NumMicroOps) {
   assert(isAvailable(NumMicroOps));

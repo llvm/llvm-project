@@ -77,3 +77,65 @@ typedef struct {
 } S13;
 
 S13 x13;
+
+// Matches
+struct Unnamed {
+  union {
+    struct {
+      int i;
+    } S;
+    struct {
+      float i;
+    } R;
+  } U;
+} x14;
+
+// Matches
+struct DeepUnnamed {
+  union {
+    union {
+      struct {
+        long i;
+      } S;
+      struct {
+        int i;
+      } R;
+    } U1;
+    union {
+      struct {
+        long i;
+      } S;
+      struct {
+        float i;
+      } T;
+    } U2;
+  } U;
+  struct {
+    long i;
+  } V;
+} x15;
+
+// Mismatch due to unnamed struct used internally
+struct DeepUnnamedError {
+  union {
+    union {
+      struct {
+        long i;
+      } S;
+      struct {
+        int i;
+      } R;
+    } U1;
+    union {
+      struct {
+        long i; // Mismatch here.
+      } S;
+      struct {
+        float i;
+      } T;
+    } U2;
+  } U;
+  struct {
+    long i;
+  } V;
+} x16;

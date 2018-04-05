@@ -65,15 +65,14 @@ option specifies "``-``", then the output will also be sent to standard output.
 .. option:: -dispatch=<width>
 
  Specify a different dispatch width for the processor. The dispatch width
- defaults to the 'IssueWidth' specified by the processor scheduling model.
- If width is zero, then the default dispatch width is used.
+ defaults to field 'IssueWidth' in the processor scheduling model.  If width is
+ zero, then the default dispatch width is used.
 
 .. option:: -register-file-size=<size>
 
- Specify the size of the register file. When specified, this flag limits
- how many temporary registers are available for register renaming purposes. By
- default, the number of temporary registers is unlimited. A value of zero for
- this flag means "unlimited number of temporary registers".
+ Specify the size of the register file. When specified, this flag limits how
+ many temporary registers are available for register renaming purposes. A value
+ of zero for this flag means "unlimited number of temporary registers".
 
 .. option:: -iterations=<number of iterations>
 

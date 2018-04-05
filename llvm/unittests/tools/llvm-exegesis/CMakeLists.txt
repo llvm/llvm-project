@@ -1,7 +1,7 @@
 include_directories(
-  ${CMAKE_SOURCE_DIR}/lib/Target/X86
-  ${CMAKE_BINARY_DIR}/lib/Target/X86
-  ${CMAKE_SOURCE_DIR}/tools/llvm-exegesis/lib
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/X86
+  ${LLVM_BINARY_DIR}/lib/Target/X86
+  ${LLVM_MAIN_SRC_DIR}/tools/llvm-exegesis/lib
   )
 
 set(LLVM_LINK_COMPONENTS

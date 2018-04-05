@@ -1834,7 +1834,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
   auto LessThan = [](const MergeCandidate* M0, const MergeCandidate *M1) {
     return M0->InsertPos < M1->InsertPos;
   };
-  std::sort(Candidates.begin(), Candidates.end(), LessThan);
+  llvm::sort(Candidates.begin(), Candidates.end(), LessThan);
 
   // Go through list of candidates and merge.
   bool Changed = false;
@@ -2172,13 +2172,13 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
   bool RetVal = false;
 
   // Sort by offset (in reverse order).
-  std::sort(Ops.begin(), Ops.end(),
-            [](const MachineInstr *LHS, const MachineInstr *RHS) {
-              int LOffset = getMemoryOpOffset(*LHS);
-              int ROffset = getMemoryOpOffset(*RHS);
-              assert(LHS == RHS || LOffset != ROffset);
-              return LOffset > ROffset;
-            });
+  llvm::sort(Ops.begin(), Ops.end(),
+             [](const MachineInstr *LHS, const MachineInstr *RHS) {
+               int LOffset = getMemoryOpOffset(*LHS);
+               int ROffset = getMemoryOpOffset(*RHS);
+               assert(LHS == RHS || LOffset != ROffset);
+               return LOffset > ROffset;
+             });
 
   // The loads / stores of the same base are in order. Scan them from first to
   // last and check for the following:

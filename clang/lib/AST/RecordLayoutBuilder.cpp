@@ -2134,7 +2134,7 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
     // mode; fortunately, that is true because we want to assign
     // consistently semantics to the type-traits intrinsics (or at
     // least as many of them as possible).
-    return RD->isTrivial() && RD->isStandardLayout();
+    return RD->isTrivial() && RD->isCXX11StandardLayout();
   }
 
   llvm_unreachable("bad tail-padding use kind");

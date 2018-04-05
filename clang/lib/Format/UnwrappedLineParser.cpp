@@ -2122,9 +2122,13 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
 
 void UnwrappedLineParser::parseObjCProtocolList() {
   assert(FormatTok->Tok.is(tok::less) && "'<' expected.");
-  do
+  do {
     nextToken();
-  while (!eof() && FormatTok->Tok.isNot(tok::greater));
+    // Early exit in case someone forgot a close angle.
+    if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
+        FormatTok->Tok.isObjCAtKeyword(tok::objc_end))
+      return;
+  } while (!eof() && FormatTok->Tok.isNot(tok::greater));
   nextToken(); // Skip '>'.
 }
 
@@ -2155,7 +2159,32 @@ void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
   nextToken();
   nextToken(); // interface name
 
-  // @interface can be followed by either a base class, or a category.
+  // @interface can be followed by a lightweight generic
+  // specialization list, then either a base class or a category.
+  if (FormatTok->Tok.is(tok::less)) {
+    // Unlike protocol lists, generic parameterizations support
+    // nested angles:
+    //
+    // @interface Foo<ValueType : id <NSCopying, NSSecureCoding>> :
+    //     NSObject <NSCopying, NSSecureCoding>
+    //
+    // so we need to count how many open angles we have left.
+    unsigned NumOpenAngles = 1;
+    do {
+      nextToken();
+      // Early exit in case someone forgot a close angle.
+      if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
+          FormatTok->Tok.isObjCAtKeyword(tok::objc_end))
+        break;
+      if (FormatTok->Tok.is(tok::less))
+        ++NumOpenAngles;
+      else if (FormatTok->Tok.is(tok::greater)) {
+        assert(NumOpenAngles > 0 && "'>' makes NumOpenAngles negative");
+        --NumOpenAngles;
+      }
+    } while (!eof() && NumOpenAngles != 0);
+    nextToken(); // Skip '>'.
+  }
   if (FormatTok->Tok.is(tok::colon)) {
     nextToken();
     nextToken(); // base class name

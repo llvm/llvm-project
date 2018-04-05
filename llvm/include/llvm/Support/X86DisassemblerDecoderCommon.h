@@ -93,6 +93,10 @@ enum attributeBits {
                                         "operands change width")               \
   ENUM_ENTRY(IC_XS_OPSIZE,          3,  "requires an OPSIZE prefix, so "       \
                                         "operands change width")               \
+  ENUM_ENTRY(IC_XD_ADSIZE,          3,  "requires an ADSIZE prefix, so "       \
+                                        "operands change width")               \
+  ENUM_ENTRY(IC_XS_ADSIZE,          3,  "requires an ADSIZE prefix, so "       \
+                                        "operands change width")               \
   ENUM_ENTRY(IC_64BIT_REXW,         5,  "requires a REX.W prefix, so operands "\
                                         "change width; overrides IC_OPSIZE")   \
   ENUM_ENTRY(IC_64BIT_REXW_ADSIZE,  6,  "requires a REX.W prefix and 0x67 "    \
@@ -106,6 +110,8 @@ enum attributeBits {
   ENUM_ENTRY(IC_64BIT_XS,           6,  "Just as meaningful as IC_64BIT_XD")   \
   ENUM_ENTRY(IC_64BIT_XD_OPSIZE,    3,  "Just as meaningful as IC_XD_OPSIZE")  \
   ENUM_ENTRY(IC_64BIT_XS_OPSIZE,    3,  "Just as meaningful as IC_XS_OPSIZE")  \
+  ENUM_ENTRY(IC_64BIT_XD_ADSIZE,    3,  "Just as meaningful as IC_XD_ADSIZE")  \
+  ENUM_ENTRY(IC_64BIT_XS_ADSIZE,    3,  "Just as meaningful as IC_XS_ADSIZE")  \
   ENUM_ENTRY(IC_64BIT_REXW_XS,      7,  "OPSIZE could mean a different "       \
                                         "opcode")                              \
   ENUM_ENTRY(IC_64BIT_REXW_XD,      7,  "Just as meaningful as "               \

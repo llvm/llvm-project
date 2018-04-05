@@ -75,24 +75,23 @@ vsqrtps     %ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -     42.00   -     2.00    -      -      -      -      -      -      -     	vsqrtps	%ymm0, %ymm2
 
 
+
 # CHECK:      Timeline view:
-# CHECK-NEXT:      	          0123456789          0123456789          0123456789        
-# CHECK-NEXT: Index	0123456789          0123456789          0123456789          01234567
-
-# CHECK:      [0,0]	DeeeeER   .    .    .    .    .    .    .    .    .    .    .    . .	vpmulld	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,1]	.DeE--R   .    .    .    .    .    .    .    .    .    .    .    . .	vpand	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,2]	. DeeeER  .    .    .    .    .    .    .    .    .    .    .    . .	vcvttps2dq	%xmm0, %xmm2
-# CHECK-NEXT: [0,3]	.  DeeE-R .    .    .    .    .    .    .    .    .    .    .    . .	vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,4]	.  DeeeER .    .    .    .    .    .    .    .    .    .    .    . .	vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,5]	.   DeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .    .    .    . .	vsqrtps	%xmm0, %xmm2
-# CHECK-NEXT: [0,6]	.    DeeeE-----------------R  .    .    .    .    .    .    .    . .	vaddps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: [0,7]	.     D===================eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER	vsqrtps	%ymm0, %ymm2
-
-# CHECK:      [1,0]	.    .DeeeeE--------------------------------------------------------R	vpmulld	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [1,1]	.    . DeE----------------------------------------------------------R	vpand	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [1,2]	.    .  DeeeE-------------------------------------------------------R	vcvttps2dq	%xmm0, %xmm2
-# CHECK-NEXT: [1,3]	.    .  DeeE--------------------------------------------------------R	vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [1,4]	.    .   DeeeE------------------------------------------------------R	vaddps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:      	          0123456789          0123456789          0123456789          0
+# CHECK-NEXT: Index	0123456789          0123456789          0123456789          0123456789 
+# CHECK:      [0,0]	DeeeeER   .    .    .    .    .    .    .    .    .    .    .    .    .	vpmulld	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [0,1]	.DeE--R   .    .    .    .    .    .    .    .    .    .    .    .    .	vpand	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [0,2]	. DeeeER  .    .    .    .    .    .    .    .    .    .    .    .    .	vcvttps2dq	%xmm0, %xmm2
+# CHECK-NEXT: [0,3]	. DeeE-R  .    .    .    .    .    .    .    .    .    .    .    .    .	vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [0,4]	.  DeeeER .    .    .    .    .    .    .    .    .    .    .    .    .	vaddps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [0,5]	.  DeeeeeeeeeeeeeeeeeeeeeER   .    .    .    .    .    .    .    .    .	vsqrtps	%xmm0, %xmm2
+# CHECK-NEXT: [0,6]	.   DeeeE-----------------R   .    .    .    .    .    .    .    .    .	vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [0,7]	.    D===================eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER .	vsqrtps	%ymm0, %ymm2
+# CHECK:      [1,0]	.    .DeeeeE--------------------------------------------------------R .	vpmulld	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [1,1]	.    . DeE-----------------------------------------------------------R.	vpand	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [1,2]	.    .  DeeeE--------------------------------------------------------R.	vcvttps2dq	%xmm0, %xmm2
+# CHECK-NEXT: [1,3]	.    .  DeeE----------------------------------------------------------R	vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [1,4]	.    .   DeeeE--------------------------------------------------------R	vaddps	%xmm0, %xmm1, %xmm2
 
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -101,12 +100,12 @@ vsqrtps     %ymm0, %ymm2
 # CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
-# CHECK:            [0]    [1]    [2]    [3]
+# CHECK:       [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    28.0 	vpmulld	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 1.     2     1.0    1.0    30.0 	vpand	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 2.     2     1.0    1.0    27.5 	vcvttps2dq	%xmm0, %xmm2
-# CHECK-NEXT: 3.     2     1.0    1.0    28.5 	vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 4.     2     1.0    1.0    27.0 	vaddps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 1.     2     1.0    1.0    30.5 	vpand	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 2.     2     1.0    1.0    28.0 	vcvttps2dq	%xmm0, %xmm2
+# CHECK-NEXT: 3.     2     1.0    1.0    29.5 	vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 4.     2     1.0    1.0    28.0 	vaddps	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 5.     1     1.0    1.0    0.0  	vsqrtps	%xmm0, %xmm2
 # CHECK-NEXT: 6.     1     1.0    1.0    17.0 	vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 7.     1     20.0   20.0   0.0  	vsqrtps	%ymm0, %ymm2

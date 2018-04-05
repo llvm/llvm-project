@@ -1708,10 +1708,15 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
       if (Instruction *NV = FoldOpIntoSelect(I, SI))
         return NV;
 
-  // If this is a 'B = x-(-A)', change to B = x+A, potentially looking
-  // through FP extensions/truncations along the way.
-  if (Value *V = dyn_castFNegVal(Op1))
-    return BinaryOperator::CreateFAddFMF(Op0, V, &I);
+  // X - C --> X + (-C)
+  Constant *C;
+  if (match(Op1, m_Constant(C)))
+    return BinaryOperator::CreateFAddFMF(Op0, ConstantExpr::getFNeg(C), &I);
+  
+  // X - (-Y) --> X + Y
+  Value *Y;
+  if (match(Op1, m_FNeg(m_Value(Y))))
+    return BinaryOperator::CreateFAddFMF(Op0, Y, &I);
 
   if (FPTruncInst *FPTI = dyn_cast<FPTruncInst>(Op1)) {
     if (Value *V = dyn_castFNegVal(FPTI->getOperand(0))) {

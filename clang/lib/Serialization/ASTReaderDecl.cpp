@@ -1563,7 +1563,9 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.Polymorphic = Record.readInt();
   Data.Abstract = Record.readInt();
   Data.IsStandardLayout = Record.readInt();
-  Data.HasNoNonEmptyBases = Record.readInt();
+  Data.IsCXX11StandardLayout = Record.readInt();
+  Data.HasBasesWithFields = Record.readInt();
+  Data.HasBasesWithNonStaticDataMembers = Record.readInt();
   Data.HasPrivateFields = Record.readInt();
   Data.HasProtectedFields = Record.readInt();
   Data.HasPublicFields = Record.readInt();
@@ -1702,7 +1704,9 @@ void ASTDeclReader::MergeDefinitionData(
   MATCH_FIELD(Polymorphic)
   MATCH_FIELD(Abstract)
   MATCH_FIELD(IsStandardLayout)
-  MATCH_FIELD(HasNoNonEmptyBases)
+  MATCH_FIELD(IsCXX11StandardLayout)
+  MATCH_FIELD(HasBasesWithFields)
+  MATCH_FIELD(HasBasesWithNonStaticDataMembers)
   MATCH_FIELD(HasPrivateFields)
   MATCH_FIELD(HasProtectedFields)
   MATCH_FIELD(HasPublicFields)

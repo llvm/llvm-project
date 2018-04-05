@@ -188,6 +188,8 @@ Improvements to clang-tidy
 - The 'misc-unused-raii' check was renamed to :doc:`bugprone-unused-raii
   <clang-tidy/checks/bugprone-unused-raii>`
 
+- The 'google-runtime-member-string-references' check was removed.
+
 Improvements to include-fixer
 -----------------------------
 

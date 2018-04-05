@@ -112,6 +112,10 @@ static inline bool inheritsFrom(InstructionContext child,
     return inheritsFrom(child, IC_64BIT_XD_OPSIZE);
   case IC_XS_OPSIZE:
     return inheritsFrom(child, IC_64BIT_XS_OPSIZE);
+  case IC_XD_ADSIZE:
+    return inheritsFrom(child, IC_64BIT_XD_ADSIZE);
+  case IC_XS_ADSIZE:
+    return inheritsFrom(child, IC_64BIT_XS_ADSIZE);
   case IC_64BIT_REXW:
     return((noPrefix && inheritsFrom(child, IC_64BIT_REXW_XS, noPrefix)) ||
            (noPrefix && inheritsFrom(child, IC_64BIT_REXW_XD, noPrefix)) ||
@@ -122,11 +126,16 @@ static inline bool inheritsFrom(InstructionContext child,
            (!AdSize64 && inheritsFrom(child, IC_64BIT_OPSIZE_ADSIZE)) ||
            (!AdSize64 && inheritsFrom(child, IC_64BIT_REXW_ADSIZE));
   case IC_64BIT_XD:
-    return(inheritsFrom(child, IC_64BIT_REXW_XD));
+    return(inheritsFrom(child, IC_64BIT_REXW_XD) ||
+           (!AdSize64 && inheritsFrom(child, IC_64BIT_XD_ADSIZE)));
   case IC_64BIT_XS:
-    return(inheritsFrom(child, IC_64BIT_REXW_XS));
+    return(inheritsFrom(child, IC_64BIT_REXW_XS) ||
+           (!AdSize64 && inheritsFrom(child, IC_64BIT_XS_ADSIZE)));
   case IC_64BIT_XD_OPSIZE:
   case IC_64BIT_XS_OPSIZE:
+    return false;
+  case IC_64BIT_XD_ADSIZE:
+  case IC_64BIT_XS_ADSIZE:
     return false;
   case IC_64BIT_REXW_XD:
   case IC_64BIT_REXW_XS:
@@ -953,8 +962,12 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
       o << "IC_64BIT_REXW_ADSIZE";
     else if ((index & ATTR_64BIT) && (index & ATTR_XD) && (index & ATTR_OPSIZE))
       o << "IC_64BIT_XD_OPSIZE";
+    else if ((index & ATTR_64BIT) && (index & ATTR_XD) && (index & ATTR_ADSIZE))
+      o << "IC_64BIT_XD_ADSIZE";
     else if ((index & ATTR_64BIT) && (index & ATTR_XS) && (index & ATTR_OPSIZE))
       o << "IC_64BIT_XS_OPSIZE";
+    else if ((index & ATTR_64BIT) && (index & ATTR_XS) && (index & ATTR_ADSIZE))
+      o << "IC_64BIT_XS_ADSIZE";
     else if ((index & ATTR_64BIT) && (index & ATTR_XS))
       o << "IC_64BIT_XS";
     else if ((index & ATTR_64BIT) && (index & ATTR_XD))
@@ -974,6 +987,10 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
       o << "IC_XS_OPSIZE";
     else if ((index & ATTR_XD) && (index & ATTR_OPSIZE))
       o << "IC_XD_OPSIZE";
+    else if ((index & ATTR_XS) && (index & ATTR_ADSIZE))
+      o << "IC_XS_ADSIZE";
+    else if ((index & ATTR_XD) && (index & ATTR_ADSIZE))
+      o << "IC_XD_ADSIZE";
     else if (index & ATTR_XS)
       o << "IC_XS";
     else if (index & ATTR_XD)

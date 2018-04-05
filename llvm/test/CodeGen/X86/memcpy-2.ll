@@ -27,8 +27,8 @@ entry:
 
 ; SSE1-LABEL: t1:
 ; SSE1: movaps _.str, %xmm0
-; SSE1: movb $0, 24(%esp)
 ; SSE1: movaps %xmm0
+; SSE1: movb $0, 24(%esp)
 ; SSE1: movl $0, 20(%esp)
 ; SSE1: movl $0, 16(%esp)
 
