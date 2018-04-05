@@ -633,9 +633,6 @@ def: InstRW<[HWWriteResGroup1], (instregex "FBSTPm",
                                            "MMX_MOVD64mr",
                                            "MMX_MOVNTQmr",
                                            "MMX_MOVQ64mr",
-                                           "MOV(16|32|64)mr",
-                                           "MOV8mi",
-                                           "MOV8mr",
                                            "MOVNTI_64mr",
                                            "MOVNTImr",
                                            "ST_FP32m",
@@ -816,6 +813,7 @@ def HWWriteResGroup7 : SchedWriteRes<[HWPort06]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
+def: InstRW<[HWWriteResGroup7], (instrs CDQ, CQO)>;
 def: InstRW<[HWWriteResGroup7], (instregex "BT(16|32|64)ri8",
                                            "BT(16|32|64)rr",
                                            "BTC(16|32|64)ri8",
@@ -824,8 +822,6 @@ def: InstRW<[HWWriteResGroup7], (instregex "BT(16|32|64)ri8",
                                            "BTR(16|32|64)rr",
                                            "BTS(16|32|64)ri8",
                                            "BTS(16|32|64)rr",
-                                           "CDQ",
-                                           "CQO",
                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
                                            "JMP_1",
@@ -957,14 +953,13 @@ def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup10], (instrs CWDE)>;
+def: InstRW<[HWWriteResGroup10], (instrs CBW, CWDE, CDQE)>;
 def: InstRW<[HWWriteResGroup10], (instregex "ADD(8|16|32|64)ri",
                                             "ADD(8|16|32|64)rr",
                                             "ADD(8|16|32|64)i",
                                             "AND(8|16|32|64)ri",
                                             "AND(8|16|32|64)rr",
                                             "AND(8|16|32|64)i",
-                                            "CBW",
                                             "CLC",
                                             "CMC",
                                             "CMP(8|16|32|64)ri",
@@ -1678,11 +1673,8 @@ def HWWriteResGroup37 : SchedWriteRes<[HWPort23,HWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[HWWriteResGroup37], (instregex "LEAVE64",
-                                            "SCASB",
-                                            "SCASL",
-                                            "SCASQ",
-                                            "SCASW")>;
+def: InstRW<[HWWriteResGroup37], (instrs LEAVE, LEAVE64,
+                                         SCASB, SCASL, SCASQ, SCASW)>;
 
 def HWWriteResGroup38 : SchedWriteRes<[HWPort0,HWPort5,HWPort23]> {
   let Latency = 8;

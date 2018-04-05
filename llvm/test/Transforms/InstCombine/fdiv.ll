@@ -224,9 +224,7 @@ define <2 x float> @fneg_fneg_vec(<2 x float> %x, <2 x float> %y) {
 
 define <2 x float> @fneg_fneg_vec_undef_elts(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fneg_fneg_vec_undef_elts(
-; CHECK-NEXT:    [[XNEG:%.*]] = fsub <2 x float> <float undef, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[YNEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float undef>, [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[XNEG]], [[YNEG]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %xneg = fsub <2 x float> <float undef, float -0.0>, %x
@@ -267,8 +265,7 @@ define <2 x float> @fneg_dividend_constant_divisor_vec(<2 x float> %x) {
 
 define <2 x float> @fneg_dividend_constant_divisor_vec_undef_elt(<2 x float> %x) {
 ; CHECK-LABEL: @fneg_dividend_constant_divisor_vec_undef_elt(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float undef, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf <2 x float> [[NEG]], <float 3.000000e+00, float -8.000000e+00>
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf <2 x float> [[X:%.*]], <float -3.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
   %neg = fsub <2 x float> <float undef, float -0.0>, %x

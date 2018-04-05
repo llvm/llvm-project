@@ -88,3 +88,100 @@ do.end:                                           ; preds = %do.body, %land.lhs.
   %cont.0 = phi i32 [ 1, %entry ], [ 0, %if.then ], [ 0, %land.lhs.true ], [ 1, %do.body ]
   ret i32 %cont.0
 }
+
+declare void @blackhole(<2 x i8*>)
+
+define void @PR37005(i8* %base, i8** %in) {
+; CHECK-LABEL: @PR37005(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8*, i8** [[IN:%.*]], i64 undef
+; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds i8*, i8** [[E2]], <2 x i64> <i64 0, i64 1>
+; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x i8**> [[E4]] to <2 x i64>
+; CHECK-NEXT:    [[LR1:%.*]] = lshr <2 x i64> [[PI1]], <i64 21, i64 21>
+; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[LR1]], <i64 7, i64 7>
+; CHECK-NEXT:    [[E51:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], i64 80
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, i8* [[E51]], <2 x i64> [[SL1]]
+; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %e1 = getelementptr inbounds i8*, i8** %in, i64 undef
+  %e2 = getelementptr inbounds i8*, i8** %e1, i64 6
+  %bc1 = bitcast i8** %e2 to <2 x i8*>*
+  %e3 = getelementptr inbounds <2 x i8*>, <2 x i8*>* %bc1, i64 0, i64 0
+  %e4 = getelementptr inbounds i8*, i8** %e3, <2 x i64> <i64 0, i64 1>
+  %pi1 = ptrtoint <2 x i8**> %e4 to <2 x i64>
+  %lr1 = lshr <2 x i64> %pi1, <i64 21, i64 21>
+  %sl1 = shl nuw nsw <2 x i64> %lr1, <i64 7, i64 7>
+  %e5 = getelementptr inbounds i8, i8* %base, <2 x i64> %sl1
+  %e6 = getelementptr inbounds i8, <2 x i8*> %e5, i64 80
+  call void @blackhole(<2 x i8*> %e6)
+  br label %loop
+}
+
+define void @PR37005_2(i8* %base, i8** %in) {
+; CHECK-LABEL: @PR37005_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8*, i8** [[IN:%.*]], i64 undef
+; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint i8** [[E2]] to i64
+; CHECK-NEXT:    [[LR1:%.*]] = lshr i64 [[PI1]], 21
+; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw i64 [[LR1]], 7
+; CHECK-NEXT:    [[E51:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], <2 x i64> <i64 80, i64 60>
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x i8*> [[E51]], i64 [[SL1]]
+; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %e1 = getelementptr inbounds i8*, i8** %in, i64 undef
+  %e2 = getelementptr inbounds i8*, i8** %e1, i64 6
+  %pi1 = ptrtoint i8** %e2 to i64
+  %lr1 = lshr i64 %pi1, 21
+  %sl1 = shl nuw nsw i64 %lr1, 7
+  %e5 = getelementptr inbounds i8, i8* %base, i64 %sl1
+  %e6 = getelementptr inbounds i8, i8* %e5, <2 x i64> <i64 80, i64 60>
+  call void @blackhole(<2 x i8*> %e6)
+  br label %loop
+}
+
+define void @PR37005_3(<2 x i8*> %base, i8** %in) {
+; CHECK-LABEL: @PR37005_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8*, i8** [[IN:%.*]], i64 undef
+; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds i8*, i8** [[E2]], <2 x i64> <i64 0, i64 1>
+; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x i8**> [[E4]] to <2 x i64>
+; CHECK-NEXT:    [[LR1:%.*]] = lshr <2 x i64> [[PI1]], <i64 21, i64 21>
+; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[LR1]], <i64 7, i64 7>
+; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, <2 x i8*> [[BASE:%.*]], i64 80
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x i8*> [[E5]], <2 x i64> [[SL1]]
+; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %e1 = getelementptr inbounds i8*, i8** %in, i64 undef
+  %e2 = getelementptr inbounds i8*, i8** %e1, i64 6
+  %bc1 = bitcast i8** %e2 to <2 x i8*>*
+  %e3 = getelementptr inbounds <2 x i8*>, <2 x i8*>* %bc1, i64 0, i64 0
+  %e4 = getelementptr inbounds i8*, i8** %e3, <2 x i64> <i64 0, i64 1>
+  %pi1 = ptrtoint <2 x i8**> %e4 to <2 x i64>
+  %lr1 = lshr <2 x i64> %pi1, <i64 21, i64 21>
+  %sl1 = shl nuw nsw <2 x i64> %lr1, <i64 7, i64 7>
+  %e5 = getelementptr inbounds i8, <2 x i8*> %base, <2 x i64> %sl1
+  %e6 = getelementptr inbounds i8, <2 x i8*> %e5, i64 80
+  call void @blackhole(<2 x i8*> %e6)
+  br label %loop
+}

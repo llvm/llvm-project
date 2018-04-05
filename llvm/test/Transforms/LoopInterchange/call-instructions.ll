@@ -1,4 +1,6 @@
-; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -verify-loop-info -verify-dom-info
+; REQUIRES: asserts
+; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN:     -verify-dom-info -verify-loop-info -stats 2>&1 | FileCheck -check-prefix=STATS %s
 ; RUN: FileCheck --input-file=%t %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -113,3 +115,6 @@ for1.loopexit:
 exit:
   ret void
 }
+
+; Check stats, we interchanged 1 out of 2 loops.
+; STATS: 1 loop-interchange - Number of loops interchanged

@@ -1407,12 +1407,12 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   SmallVector<unsigned, 6> ScratchRegs;
   for(unsigned I = 5; I < MI->getNumOperands(); ++I)
     ScratchRegs.push_back(MI->getOperand(I).getReg());
-  std::sort(ScratchRegs.begin(), ScratchRegs.end(),
-            [&TRI](const unsigned &Reg1,
-                   const unsigned &Reg2) -> bool {
-              return TRI.getEncodingValue(Reg1) <
-                     TRI.getEncodingValue(Reg2);
-            });
+  llvm::sort(ScratchRegs.begin(), ScratchRegs.end(),
+             [&TRI](const unsigned &Reg1,
+                    const unsigned &Reg2) -> bool {
+               return TRI.getEncodingValue(Reg1) <
+                      TRI.getEncodingValue(Reg2);
+             });
 
   for (const auto &Reg : ScratchRegs) {
     LDM.addReg(Reg, RegState::Define);

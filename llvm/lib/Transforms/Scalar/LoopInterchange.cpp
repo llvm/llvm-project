@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -50,6 +51,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-interchange"
+
+STATISTIC(LoopsInterchanged, "Number of loops interchanged");
 
 static cl::opt<int> LoopInterchangeCostThreshold(
     "loop-interchange-threshold", cl::init(0), cl::Hidden,
@@ -616,6 +619,7 @@ struct LoopInterchange : public FunctionPass {
                                  LoopNestExit, LIL.hasInnerLoopReduction());
     LIT.transform();
     DEBUG(dbgs() << "Loops interchanged.\n");
+    LoopsInterchanged++;
     return true;
   }
 };

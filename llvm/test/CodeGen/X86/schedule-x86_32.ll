@@ -1380,35 +1380,35 @@ define void @test_leave() optsize {
 ; SANDY-LABEL: test_leave:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    leave # sched: [1:0.33]
+; SANDY-NEXT:    leave # sched: [7:0.67]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_leave:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    leave # sched: [1:0.25]
+; HASWELL-NEXT:    leave # sched: [7:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_leave:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    leave # sched: [1:0.25]
+; BROADWELL-NEXT:    leave # sched: [7:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKYLAKE-LABEL: test_leave:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    leave # sched: [1:0.25]
+; SKYLAKE-NEXT:    leave # sched: [7:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_leave:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    leave # sched: [1:0.25]
+; SKX-NEXT:    leave # sched: [7:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;

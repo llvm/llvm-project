@@ -337,7 +337,7 @@ def parseOptionsAndInitTestdirs():
         configuration.categoriesList = []
 
     if args.skipCategories:
-        configuration.skipCategories = test_categories.validate(
+        configuration.skipCategories += test_categories.validate(
             args.skipCategories, False)
 
     if args.E:

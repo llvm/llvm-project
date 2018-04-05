@@ -956,14 +956,16 @@ public:
     SmallString<128> path_storage;
     ec = detail::directory_iterator_construct(
         *State, path.toStringRef(path_storage), FollowSymlinks);
+    update_error_code_for_current_entry(ec);
   }
 
   explicit directory_iterator(const directory_entry &de, std::error_code &ec,
                               bool follow_symlinks = true)
       : FollowSymlinks(follow_symlinks) {
     State = std::make_shared<detail::DirIterState>();
-    ec =
-        detail::directory_iterator_construct(*State, de.path(), FollowSymlinks);
+    ec = detail::directory_iterator_construct(
+        *State, de.path(), FollowSymlinks);
+    update_error_code_for_current_entry(ec);
   }
 
   /// Construct end iterator.
@@ -972,6 +974,7 @@ public:
   // No operator++ because we need error_code.
   directory_iterator &increment(std::error_code &ec) {
     ec = directory_iterator_increment(*State);
+    update_error_code_for_current_entry(ec);
     return *this;
   }
 
@@ -993,6 +996,24 @@ public:
   }
   // Other members as required by
   // C++ Std, 24.1.1 Input iterators [input.iterators]
+
+private:
+  // Checks if current entry is valid and populates error code. For example,
+  // current entry may not exist due to broken symbol links.
+  void update_error_code_for_current_entry(std::error_code &ec) {
+    // Bail out if error has already occured earlier to avoid overwriting it.
+    if (ec)
+      return;
+
+    // Empty directory entry is used to mark the end of an interation, it's not
+    // an error.
+    if (State->CurrentEntry == directory_entry())
+      return;
+
+    ErrorOr<basic_file_status> status = State->CurrentEntry.status();
+    if (!status)
+      ec = status.getError();
+  }
 };
 
 namespace detail {
@@ -1030,11 +1051,9 @@ public:
     if (State->HasNoPushRequest)
       State->HasNoPushRequest = false;
     else {
-      ErrorOr<basic_file_status> st = State->Stack.top()->status();
-      if (!st) return *this;
-      if (is_directory(*st)) {
+      ErrorOr<basic_file_status> status = State->Stack.top()->status();
+      if (status && is_directory(*status)) {
         State->Stack.push(directory_iterator(*State->Stack.top(), ec, Follow));
-        if (ec) return *this;
         if (State->Stack.top() != end_itr) {
           ++State->Level;
           return *this;

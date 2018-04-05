@@ -19,6 +19,28 @@ define float @fma_fneg_x_fneg_y(float %x, float %y, float %z) {
   ret float %fma
 }
 
+define <2 x float> @fma_fneg_x_fneg_y_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @fma_fneg_x_fneg_y_vec(
+; CHECK-NEXT:    [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FMA]]
+;
+  %xn = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %yn = fsub <2 x float> <float -0.0, float -0.0>, %y
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %xn, <2 x float> %yn, <2 x float> %z)
+  ret <2 x float> %fma
+}
+
+define <2 x float> @fma_fneg_x_fneg_y_vec_undef(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @fma_fneg_x_fneg_y_vec_undef(
+; CHECK-NEXT:    [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[FMA]]
+;
+  %xn = fsub <2 x float> <float -0.0, float undef>, %x
+  %yn = fsub <2 x float> <float undef, float -0.0>, %y
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %xn, <2 x float> %yn, <2 x float> %z)
+  ret <2 x float> %fma
+}
+
 define float @fma_fneg_x_fneg_y_fast(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fma_fneg_x_fneg_y_fast(
 ; CHECK-NEXT:    [[FMA:%.*]] = call fast float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])

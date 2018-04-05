@@ -233,6 +233,12 @@ void LLVMContextImpl::getSyncScopeNames(
 /// enabled in order to enable a consistent bisect count.
 static ManagedStatic<OptBisect> OptBisector;
 
-OptPassGate &LLVMContextImpl::getOptPassGate() {
-  return *OptBisector;
+OptPassGate &LLVMContextImpl::getOptPassGate() const {
+  if (!OPG)
+    OPG = &(*OptBisector);
+  return *OPG;
+}
+
+void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
+  this->OPG = &OPG;
 }
