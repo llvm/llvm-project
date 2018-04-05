@@ -1,8 +1,8 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2,-ssse3 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=SSE2
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2,+sse3,+ssse3 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=SSSE3
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=SSE41
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=core-avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=AVX2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2 -cost-model -analyze | FileCheck %s -check-prefixes=CHECK,SSE2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+ssse3 -cost-model -analyze | FileCheck %s -check-prefixes=CHECK,SSSE3
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse4.2 -cost-model -analyze | FileCheck %s -check-prefixes=CHECK,SSE41
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx -cost-model -analyze | FileCheck %s -check-prefixes=CHECK,AVX
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 -cost-model -analyze | FileCheck %s -check-prefixes=CHECK,AVX2
 
 
 ; Verify the cost model for alternate shuffles.

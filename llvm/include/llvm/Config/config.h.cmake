@@ -91,6 +91,12 @@
 /* Define to 1 if you have the `edit' library (-ledit). */
 #cmakedefine HAVE_LIBEDIT ${HAVE_LIBEDIT}
 
+/* Define to 1 if you have the `pfm' library (-lpfm). */
+#cmakedefine HAVE_LIBPFM ${HAVE_LIBPFM}
+
+/* Define to 1 if you have the `psapi' library (-lpsapi). */
+#cmakedefine HAVE_LIBPSAPI ${HAVE_LIBPSAPI}
+
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #cmakedefine HAVE_LIBPTHREAD ${HAVE_LIBPTHREAD}
 

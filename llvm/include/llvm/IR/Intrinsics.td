@@ -117,6 +117,7 @@ def IntrHasSideEffects : IntrinsicProperty;
 
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
+  int isAny = 0;
 }
 
 class LLVMQualPointerType<LLVMType elty, int addrspace>
@@ -131,6 +132,8 @@ class LLVMPointerType<LLVMType elty>
 class LLVMAnyPointerType<LLVMType elty>
   : LLVMType<iPTRAny>{
   LLVMType ElTy = elty;
+
+  let isAny = 1;
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -163,10 +166,12 @@ class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;
 class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
-def llvm_any_ty        : LLVMType<Any>;
-def llvm_anyint_ty     : LLVMType<iAny>;
-def llvm_anyfloat_ty   : LLVMType<fAny>;
-def llvm_anyvector_ty  : LLVMType<vAny>;
+let isAny = 1 in {
+  def llvm_any_ty        : LLVMType<Any>;
+  def llvm_anyint_ty     : LLVMType<iAny>;
+  def llvm_anyfloat_ty   : LLVMType<fAny>;
+  def llvm_anyvector_ty  : LLVMType<vAny>;
+}
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;
 def llvm_i16_ty        : LLVMType<i16>;
@@ -248,7 +253,6 @@ def llvm_v4f64_ty      : LLVMType<v4f64>;    //  4 x double
 def llvm_v8f64_ty      : LLVMType<v8f64>;    //  8 x double
 
 def llvm_vararg_ty     : LLVMType<isVoid>;   // this means vararg here
-
 
 //===----------------------------------------------------------------------===//
 // Intrinsic Definitions.

@@ -808,7 +808,14 @@ def SKLWriteResGroup22 : SchedWriteRes<[SKLPort06,SKLPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKLWriteResGroup22], (instregex "BSWAP(16|32|64)r")>;
+def: InstRW<[SKLWriteResGroup22], (instrs BSWAP64r)>;
+
+def SKLWriteResGroup22_1 : SchedWriteRes<[SKLPort15]> {
+  let Latency = 1;
+  let NumMicroOps = 1;
+  let ResourceCycles = [1];
+}
+def: InstRW<[SKLWriteResGroup22_1], (instrs BSWAP32r)>;
 
 def SKLWriteResGroup23 : SchedWriteRes<[SKLPort06,SKLPort0156]> {
   let Latency = 2;

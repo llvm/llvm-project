@@ -2382,6 +2382,18 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                          list<dag> pattern>
     : X_VT5_VA5_VB5<opcode, xo, opc, pattern>, isDOT;
 
+  // [PO VRT VRA VRB XO /]
+  class X_VT5_VA5_VB5_FMA<bits<6> opcode, bits<10> xo, string opc,
+                          list<dag> pattern>
+    : XForm_1<opcode, xo, (outs vrrc:$vT), (ins vrrc:$vTi, vrrc:$vA, vrrc:$vB),
+              !strconcat(opc, " $vT, $vA, $vB"), IIC_VecFP, pattern>,
+              RegConstraint<"$vTi = $vT">, NoEncode<"$vTi">;
+
+  // [PO VRT VRA VRB XO RO], Round to Odd version of [PO VRT VRA VRB XO /]
+  class X_VT5_VA5_VB5_FMA_Ro<bits<6> opcode, bits<10> xo, string opc,
+                          list<dag> pattern>
+    : X_VT5_VA5_VB5_FMA<opcode, xo, opc, pattern>, isDOT;
+
   //===--------------------------------------------------------------------===//
   // Quad-Precision Scalar Move Instructions:
 
@@ -2424,14 +2436,30 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XSSQRTQPO : X_VT5_XO5_VB5_Ro<63, 27, 804, "xssqrtqpo", []>;
 
   // (Negative) Multiply-{Add/Subtract}
-  def XSMADDQP  : X_VT5_VA5_VB5   <63, 388, "xsmaddqp"  , []>;
-  def XSMADDQPO : X_VT5_VA5_VB5_Ro<63, 388, "xsmaddqpo" , []>;
-  def XSMSUBQP  : X_VT5_VA5_VB5   <63, 420, "xsmsubqp"  , []>;
-  def XSMSUBQPO : X_VT5_VA5_VB5_Ro<63, 420, "xsmsubqpo" , []>;
-  def XSNMADDQP : X_VT5_VA5_VB5   <63, 452, "xsnmaddqp" , []>;
-  def XSNMADDQPO: X_VT5_VA5_VB5_Ro<63, 452, "xsnmaddqpo", []>;
-  def XSNMSUBQP : X_VT5_VA5_VB5   <63, 484, "xsnmsubqp" , []>;
-  def XSNMSUBQPO: X_VT5_VA5_VB5_Ro<63, 484, "xsnmsubqpo", []>;
+  def XSMADDQP : X_VT5_VA5_VB5_FMA <63, 388, "xsmaddqp",
+                                    [(set f128:$vT,
+                                          (fma f128:$vA, f128:$vB,
+                                               f128:$vTi))]>;
+  def XSMADDQPO : X_VT5_VA5_VB5_FMA_Ro<63, 388, "xsmaddqpo" , []>;
+  def XSMSUBQP  : X_VT5_VA5_VB5_FMA   <63, 420, "xsmsubqp"  ,
+                                       [(set f128:$vT,
+                                             (fma f128:$vA, f128:$vB,
+                                                  (fneg f128:$vTi)))]>;
+  def XSMSUBQPO : X_VT5_VA5_VB5_FMA_Ro<63, 420, "xsmsubqpo" , []>;
+  def XSNMADDQP : X_VT5_VA5_VB5_FMA <63, 452, "xsnmaddqp",
+                                     [(set f128:$vT,
+                                           (fneg (fma f128:$vA, f128:$vB,
+                                                      f128:$vTi)))]>;
+  def XSNMADDQPO: X_VT5_VA5_VB5_FMA_Ro<63, 452, "xsnmaddqpo", []>;
+  def XSNMSUBQP : X_VT5_VA5_VB5_FMA <63, 484, "xsnmsubqp",
+                                     [(set f128:$vT,
+                                           (fneg (fma f128:$vA, f128:$vB,
+                                                      (fneg f128:$vTi))))]>;
+  def XSNMSUBQPO: X_VT5_VA5_VB5_FMA_Ro<63, 484, "xsnmsubqpo", []>;
+
+  // Additional fnmsub patterns: -a*c + b == -(a*c - b)
+  def : Pat<(fma (fneg f128:$A), f128:$C, f128:$B), (XSNMSUBQP $B, $C, $A)>;
+  def : Pat<(fma f128:$A, (fneg f128:$C), f128:$B), (XSNMSUBQP $B, $C, $A)>;
 
   //===--------------------------------------------------------------------===//
   // Quad/Double-Precision Compare Instructions:

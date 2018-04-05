@@ -192,9 +192,9 @@ private:
   DispatchUnit *Owner;
 
 public:
-  RetireControlUnit(unsigned NumSlots, unsigned RPC, DispatchUnit *DU)
+  RetireControlUnit(unsigned NumSlots, DispatchUnit *DU)
       : NextAvailableSlotIdx(0), CurrentInstructionSlotIdx(0),
-        AvailableSlots(NumSlots), MaxRetirePerCycle(RPC), Owner(DU) {
+        AvailableSlots(NumSlots), MaxRetirePerCycle(0), Owner(DU) {
     assert(NumSlots && "Expected at least one slot!");
     Queue.resize(NumSlots);
   }
@@ -266,14 +266,13 @@ class DispatchUnit {
 public:
   DispatchUnit(Backend *B, const llvm::MCSubtargetInfo &STI,
                const llvm::MCRegisterInfo &MRI, unsigned MicroOpBufferSize,
-               unsigned RegisterFileSize, unsigned MaxRetirePerCycle,
-               unsigned MaxDispatchWidth, Scheduler *Sched)
+               unsigned RegisterFileSize, unsigned MaxDispatchWidth,
+               Scheduler *Sched)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
         CarryOver(0U), SC(Sched),
         RAT(llvm::make_unique<RegisterFile>(STI.getSchedModel(), MRI,
                                             RegisterFileSize)),
-        RCU(llvm::make_unique<RetireControlUnit>(MicroOpBufferSize,
-                                                 MaxRetirePerCycle, this)),
+        RCU(llvm::make_unique<RetireControlUnit>(MicroOpBufferSize, this)),
         Owner(B) {}
 
   unsigned getDispatchWidth() const { return DispatchWidth; }

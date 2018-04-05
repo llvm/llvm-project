@@ -75,21 +75,25 @@ const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(
 const uint32_t *
 AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {
+  bool SCS = MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (CC == CallingConv::GHC)
     // This is academic because all GHC calls are (supposed to be) tail calls
-    return CSR_AArch64_NoRegs_RegMask;
+    return SCS ? CSR_AArch64_NoRegs_SCS_RegMask : CSR_AArch64_NoRegs_RegMask;
   if (CC == CallingConv::AnyReg)
-    return CSR_AArch64_AllRegs_RegMask;
+    return SCS ? CSR_AArch64_AllRegs_SCS_RegMask : CSR_AArch64_AllRegs_RegMask;
   if (CC == CallingConv::CXX_FAST_TLS)
-    return CSR_AArch64_CXX_TLS_Darwin_RegMask;
+    return SCS ? CSR_AArch64_CXX_TLS_Darwin_SCS_RegMask
+               : CSR_AArch64_CXX_TLS_Darwin_RegMask;
   if (MF.getSubtarget<AArch64Subtarget>().getTargetLowering()
           ->supportSwiftError() &&
       MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
-    return CSR_AArch64_AAPCS_SwiftError_RegMask;
+    return SCS ? CSR_AArch64_AAPCS_SwiftError_SCS_RegMask
+               : CSR_AArch64_AAPCS_SwiftError_RegMask;
   if (CC == CallingConv::PreserveMost)
-    return CSR_AArch64_RT_MostRegs_RegMask;
+    return SCS ? CSR_AArch64_RT_MostRegs_SCS_RegMask
+               : CSR_AArch64_RT_MostRegs_RegMask;
   else
-    return CSR_AArch64_AAPCS_RegMask;
+    return SCS ? CSR_AArch64_AAPCS_SCS_RegMask : CSR_AArch64_AAPCS_RegMask;
 }
 
 const uint32_t *AArch64RegisterInfo::getTLSCallPreservedMask() const {

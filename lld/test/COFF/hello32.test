@@ -27,8 +27,8 @@ HEADER-NEXT:   MinorLinkerVersion: 0
 HEADER-NEXT:   SizeOfCode: 512
 HEADER-NEXT:   SizeOfInitializedData: 1536
 HEADER-NEXT:   SizeOfUninitializedData: 0
-HEADER-NEXT:   AddressOfEntryPoint: 0x2000
-HEADER-NEXT:   BaseOfCode: 0x2000
+HEADER-NEXT:   AddressOfEntryPoint: 0x1000
+HEADER-NEXT:   BaseOfCode: 0x1000
 HEADER-NEXT:   BaseOfData: 0x0
 HEADER-NEXT:   ImageBase: 0x400000
 HEADER-NEXT:   SectionAlignment: 4096
@@ -123,10 +123,10 @@ IMPORTS: }
 BASEREL: BaseReloc [
 BASEREL:   Entry {
 BASEREL:     Type: HIGHLOW
-BASEREL:     Address: 0x2005
+BASEREL:     Address: 0x1005
 BASEREL:   }
 BASEREL:   Entry {
 BASEREL:     Type: HIGHLOW
-BASEREL:     Address: 0x200C
+BASEREL:     Address: 0x100C
 BASEREL:   }
 BASEREL: ]

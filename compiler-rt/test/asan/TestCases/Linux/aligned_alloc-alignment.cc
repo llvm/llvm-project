@@ -2,8 +2,7 @@
 // RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
 
-// FIXME(alekseyshl): #0 frame does not look as expected on ppc64be, fix it.
-// UNSUPPORTED: android,powerpc64
+// UNSUPPORTED: android
 
 // REQUIRES: stable-runtime
 
@@ -15,7 +14,7 @@ extern void *aligned_alloc(size_t alignment, size_t size);
 int main() {
   void *p = aligned_alloc(17, 100);
   // CHECK: ERROR: AddressSanitizer: invalid allocation alignment: 17
-  // CHECK: {{#0 0x.* in .*aligned_alloc}}
+  // CHECK: {{#0 0x.* in .*}}{{aligned_alloc|memalign}}
   // CHECK: {{#1 0x.* in main .*aligned_alloc-alignment.cc:}}[[@LINE-3]]
   // CHECK: SUMMARY: AddressSanitizer: invalid-allocation-alignment
 

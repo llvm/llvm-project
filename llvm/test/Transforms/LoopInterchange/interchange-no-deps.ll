@@ -1,4 +1,5 @@
-; RUN: opt < %s -loop-interchange -simplifycfg -S -pass-remarks=loop-interchange 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-interchange -verify-dom-info -verify-loop-info -S \
+; RUN:     -pass-remarks=loop-interchange 2>&1 | FileCheck %s
 ; CHECK: Loop interchanged with enclosing loop.
 
 ; no_deps_interchange just access a single nested array and can be interchange.

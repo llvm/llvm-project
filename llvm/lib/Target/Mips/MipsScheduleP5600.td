@@ -13,7 +13,7 @@ def MipsP5600Model : SchedMachineModel {
   int LoadLatency = 4;
   int MispredictPenalty = 8; // TODO: Estimated
 
-  let CompleteModel = 1;
+  let CompleteModel = 0;
 
   list<Predicate> UnsupportedFeatures = [HasMips32r6, HasMips64r6,
                                          HasMips64, HasMips64r2, HasCnMips,

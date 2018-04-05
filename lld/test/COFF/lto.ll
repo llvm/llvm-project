@@ -52,7 +52,7 @@
 ; TEXT-11-NEXT: movl	$2, %eax
 ; TEXT-11-NEXT: retq
 
-; HEADERS-01: AddressOfEntryPoint: 0x2000
+; HEADERS-01: AddressOfEntryPoint: 0x1000
 ; TEXT-01: Disassembly of section .text:
 ; TEXT-01-NEXT: .text:
 ; TEXT-01-NEXT: subq	$40, %rsp
@@ -78,7 +78,7 @@
 ; TEXT-01-NEXT: int3
 ; TEXT-01-NEXT: retq
 
-; HEADERS-10: AddressOfEntryPoint: 0x2020
+; HEADERS-10: AddressOfEntryPoint: 0x1020
 ; TEXT-10: Disassembly of section .text:
 ; TEXT-10-NEXT: .text:
 ; TEXT-10-NEXT: retq

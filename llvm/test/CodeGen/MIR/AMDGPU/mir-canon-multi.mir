@@ -1,0 +1,32 @@
+# RUN: llc -o -  -march=amdgcn  -run-pass mir-canonicalizer  -x mir %s | FileCheck %s
+
+# CHECK: %namedVReg1352:vgpr_32 = COPY %namedVReg4353
+# CHECK: %namedVReg1357:vgpr_32 = COPY %namedVReg4354
+# CHECK: %namedVReg1358:vgpr_32 = COPY %namedVReg1361
+# CHECK: %namedVReg1359:vgpr_32 = COPY %namedVReg1362
+# CHECK: REG_SEQUENCE %namedVReg1357, %subreg.sub0, %namedVReg1352, %subreg.sub1
+# CHECK: REG_SEQUENCE %namedVReg1357, %subreg.sub0, %namedVReg1352, %subreg.sub1, %namedVReg1358, %subreg.sub2, %namedVReg1359, %subreg.sub3
+
+...
+---
+name: foo
+body:             |
+  bb.0:
+    %10:sreg_32_xm0 = S_MOV_B32 61440
+    %11:sreg_32_xm0 = S_MOV_B32 0
+    %3:vgpr_32 = COPY $vgpr0
+
+    %vreg123_0:vgpr_32 = COPY %3
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %vreg123_1:vgpr_32 = COPY %11
+    %27:vreg_64 = REG_SEQUENCE %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %vreg123_2:vgpr_32 = COPY %4
+    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %vreg123_3:vgpr_32 = COPY %5
+    %16:sgpr_128 = REG_SEQUENCE killed %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1, %vreg123_2, %subreg.sub2, %vreg123_3, %subreg.sub3
+
+    BUFFER_STORE_DWORD_ADDR64 %vreg123_1, %27, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM
+
+...

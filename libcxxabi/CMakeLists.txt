@@ -99,6 +99,7 @@ else()
   set(LIBCXXABI_LIBCXX_SRC_DIRS
     "${LLVM_MAIN_SRC_DIR}/projects/libcxx"
     "${LLVM_MAIN_SRC_DIR}/runtimes/libcxx"
+    "${LLVM_MAIN_SRC_DIR}/../libcxx"
     )
 endif()
 
@@ -426,6 +427,7 @@ if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
           ${CMAKE_BINARY_DIR}/${LIBCXXABI_LIBUNWIND_INCLUDES}
           ${LLVM_MAIN_SRC_DIR}/projects/libunwind/include
           ${LLVM_MAIN_SRC_DIR}/runtimes/libunwind/include
+          ${LLVM_MAIN_SRC_DIR}/../libunwind/include
     NO_DEFAULT_PATH
     NO_CMAKE_FIND_ROOT_PATH
   )

@@ -101,6 +101,11 @@ static cl::opt<unsigned long long> ClMappingOffset(
     cl::desc("offset of hwasan shadow mapping [EXPERIMENTAL]"), cl::Hidden,
     cl::init(0));
 
+static cl::opt<int> ClMatchAllTag(
+    "hwasan-match-all-tag",
+    cl::desc("don't report bad accesses via pointers with this tag"), cl::Hidden,
+    cl::init(-1));
+
 static cl::opt<bool> ClEnableKhwasan(
     "hwasan-kernel", cl::desc("Enable KernelHWAddressSanitizer instrumentation"),
     cl::Hidden, cl::init(false));
@@ -329,6 +334,12 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
   Value *MemTag =
       IRB.CreateLoad(IRB.CreateIntToPtr(ShadowLong, IRB.getInt8PtrTy()));
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
+
+  if (ClMatchAllTag != -1) {
+    Value *TagNotIgnored = IRB.CreateICmpNE(PtrTag,
+        ConstantInt::get(PtrTag->getType(), ClMatchAllTag));
+    TagMismatch = IRB.CreateAnd(TagMismatch, TagNotIgnored);
+  }
 
   TerminatorInst *CheckTerm =
       SplitBlockAndInsertIfThen(TagMismatch, InsertBefore, !Recover,

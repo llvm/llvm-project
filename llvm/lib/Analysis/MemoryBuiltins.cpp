@@ -75,12 +75,24 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_valloc,              {MallocLike,  1, 0,  -1}},
   {LibFunc_Znwj,                {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
   {LibFunc_ZnwjRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
+  {LibFunc_ZnwjSt11align_val_t, {OpNewLike,   2, 0,  -1}}, // new(unsigned int, align_val_t)
+  {LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t, // new(unsigned int, align_val_t, nothrow)
+                                {MallocLike,  3, 0,  -1}},
   {LibFunc_Znwm,                {OpNewLike,   1, 0,  -1}}, // new(unsigned long)
   {LibFunc_ZnwmRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned long, nothrow)
+  {LibFunc_ZnwmSt11align_val_t, {OpNewLike,   2, 0,  -1}}, // new(unsigned long, align_val_t)
+  {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t, // new(unsigned long, align_val_t, nothrow)
+                                {MallocLike,  3, 0,  -1}},
   {LibFunc_Znaj,                {OpNewLike,   1, 0,  -1}}, // new[](unsigned int)
   {LibFunc_ZnajRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new[](unsigned int, nothrow)
+  {LibFunc_ZnajSt11align_val_t, {OpNewLike,   2, 0,  -1}}, // new[](unsigned int, align_val_t)
+  {LibFunc_ZnajSt11align_val_tRKSt9nothrow_t, // new[](unsigned int, align_val_t, nothrow)
+                                {MallocLike,  3, 0,  -1}},
   {LibFunc_Znam,                {OpNewLike,   1, 0,  -1}}, // new[](unsigned long)
   {LibFunc_ZnamRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new[](unsigned long, nothrow)
+  {LibFunc_ZnamSt11align_val_t, {OpNewLike,   2, 0,  -1}}, // new[](unsigned long, align_val_t)
+  {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t, // new[](unsigned long, align_val_t, nothrow)
+                                 {MallocLike,  3, 0,  -1}},
   {LibFunc_msvc_new_int,         {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
   {LibFunc_msvc_new_int_nothrow, {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
   {LibFunc_msvc_new_longlong,         {OpNewLike,   1, 0,  -1}}, // new(unsigned long long)
@@ -372,9 +384,11 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
   else if (TLIFn == LibFunc_ZdlPvj ||              // delete(void*, uint)
            TLIFn == LibFunc_ZdlPvm ||              // delete(void*, ulong)
            TLIFn == LibFunc_ZdlPvRKSt9nothrow_t || // delete(void*, nothrow)
+           TLIFn == LibFunc_ZdlPvSt11align_val_t || // delete(void*, align_val_t)
            TLIFn == LibFunc_ZdaPvj ||              // delete[](void*, uint)
            TLIFn == LibFunc_ZdaPvm ||              // delete[](void*, ulong)
            TLIFn == LibFunc_ZdaPvRKSt9nothrow_t || // delete[](void*, nothrow)
+           TLIFn == LibFunc_ZdaPvSt11align_val_t || // delete[](void*, align_val_t)
            TLIFn == LibFunc_msvc_delete_ptr32_int ||      // delete(void*, uint)
            TLIFn == LibFunc_msvc_delete_ptr64_longlong || // delete(void*, ulonglong)
            TLIFn == LibFunc_msvc_delete_ptr32_nothrow || // delete(void*, nothrow)
@@ -384,6 +398,9 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
            TLIFn == LibFunc_msvc_delete_array_ptr32_nothrow || // delete[](void*, nothrow)
            TLIFn == LibFunc_msvc_delete_array_ptr64_nothrow)   // delete[](void*, nothrow)
     ExpectedNumParams = 2;
+  else if (TLIFn == LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t || // delete(void*, align_val_t, nothrow)
+           TLIFn == LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t) // delete[](void*, align_val_t, nothrow)
+    ExpectedNumParams = 3;
   else
     return nullptr;
 

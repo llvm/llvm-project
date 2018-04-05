@@ -52,9 +52,10 @@ public:
 // this function converts the spaces in string inputs to that character if need
 // be.
 static std::wstring convert_thousands_sep(std::wstring const& in) {
-#if !defined(TEST_HAS_GLIBC) || !TEST_GLIBC_PREREQ(2,27)
-  return in;
-#else
+#ifndef TEST_GLIBC_PREREQ
+#define TEST_GLIBC_PREREQ(x, y) 0
+#endif
+#if TEST_GLIBC_PREREQ(2,27)
   std::wstring out;
   unsigned I = 0;
   bool seen_decimal = false;
@@ -68,6 +69,8 @@ static std::wstring convert_thousands_sep(std::wstring const& in) {
     out.push_back(L'\u202F');
   }
   return out;
+#else
+  return in;
 #endif
 }
 

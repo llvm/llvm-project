@@ -42,6 +42,7 @@ static std::string getMultiarchTriple(const Driver &D,
                                       StringRef SysRoot) {
   llvm::Triple::EnvironmentType TargetEnvironment =
       TargetTriple.getEnvironment();
+  bool IsAndroid = TargetTriple.isAndroid();
 
   // For most architectures, just use whatever we have rather than trying to be
   // clever.
@@ -55,7 +56,9 @@ static std::string getMultiarchTriple(const Driver &D,
   // regardless of what the actual target triple is.
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
-    if (TargetEnvironment == llvm::Triple::GNUEABIHF) {
+    if (IsAndroid) {
+      return "arm-linux-androideabi";
+    } else if (TargetEnvironment == llvm::Triple::GNUEABIHF) {
       if (D.getVFS().exists(SysRoot + "/lib/arm-linux-gnueabihf"))
         return "arm-linux-gnueabihf";
     } else {
@@ -74,16 +77,22 @@ static std::string getMultiarchTriple(const Driver &D,
     }
     break;
   case llvm::Triple::x86:
+    if (IsAndroid)
+      return "i686-linux-android";
     if (D.getVFS().exists(SysRoot + "/lib/i386-linux-gnu"))
       return "i386-linux-gnu";
     break;
   case llvm::Triple::x86_64:
+    if (IsAndroid)
+      return "x86_64-linux-android";
     // We don't want this for x32, otherwise it will match x86_64 libs
     if (TargetEnvironment != llvm::Triple::GNUX32 &&
         D.getVFS().exists(SysRoot + "/lib/x86_64-linux-gnu"))
       return "x86_64-linux-gnu";
     break;
   case llvm::Triple::aarch64:
+    if (IsAndroid)
+      return "aarch64-linux-android";
     if (D.getVFS().exists(SysRoot + "/lib/aarch64-linux-gnu"))
       return "aarch64-linux-gnu";
     break;
@@ -96,6 +105,8 @@ static std::string getMultiarchTriple(const Driver &D,
       return "mips-linux-gnu";
     break;
   case llvm::Triple::mipsel:
+    if (IsAndroid)
+      return "mipsel-linux-android";
     if (D.getVFS().exists(SysRoot + "/lib/mipsel-linux-gnu"))
       return "mipsel-linux-gnu";
     break;
@@ -106,6 +117,8 @@ static std::string getMultiarchTriple(const Driver &D,
       return "mips64-linux-gnuabi64";
     break;
   case llvm::Triple::mips64el:
+    if (IsAndroid)
+      return "mips64el-linux-android";
     if (D.getVFS().exists(SysRoot + "/lib/mips64el-linux-gnu"))
       return "mips64el-linux-gnu";
     if (D.getVFS().exists(SysRoot + "/lib/mips64el-linux-gnuabi64"))
@@ -717,6 +730,14 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   default:
     break;
   }
+
+  const std::string AndroidMultiarchIncludeDir =
+      std::string("/usr/include/") +
+      getMultiarchTriple(D, getTriple(), SysRoot);
+  const StringRef AndroidMultiarchIncludeDirs[] = {AndroidMultiarchIncludeDir};
+  if (getTriple().isAndroid())
+    MultiarchIncludeDirs = AndroidMultiarchIncludeDirs;
+
   for (StringRef Dir : MultiarchIncludeDirs) {
     if (D.getVFS().exists(SysRoot + Dir)) {
       addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + Dir);
@@ -863,6 +884,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::KernelAddress;
+  Res |= SanitizerKind::Memory;
   Res |= SanitizerKind::Vptr;
   Res |= SanitizerKind::SafeStack;
   if (IsX86_64 || IsMIPS64 || IsAArch64)
@@ -871,8 +893,6 @@ SanitizerMask Linux::getSupportedSanitizers() const {
     Res |= SanitizerKind::Leak;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsMIPS64 || IsPowerPC64 || IsAArch64)
-    Res |= SanitizerKind::Memory;
   if (IsX86_64 || IsMIPS64)
     Res |= SanitizerKind::Efficiency;
   if (IsX86 || IsX86_64)

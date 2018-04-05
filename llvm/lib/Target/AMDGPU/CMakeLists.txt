@@ -1,19 +1,20 @@
 set(LLVM_TARGET_DEFINITIONS AMDGPU.td)
 
-tablegen(LLVM AMDGPUGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM AMDGPUGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM AMDGPUGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
+tablegen(LLVM AMDGPUGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM AMDGPUGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM AMDGPUGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM AMDGPUGenDFAPacketizer.inc -gen-dfa-packetizer)
+tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM AMDGPUGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM AMDGPUGenIntrinsics.inc -gen-tgt-intrinsic)
 tablegen(LLVM AMDGPUGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM AMDGPUGenDFAPacketizer.inc -gen-dfa-packetizer)
-tablegen(LLVM AMDGPUGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM AMDGPUGenRegisterBank.inc -gen-register-bank)
+tablegen(LLVM AMDGPUGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM AMDGPUGenSearchableTables.inc -gen-searchable-tables)
+tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
+
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
 add_llvm_target(AMDGPUCodeGen

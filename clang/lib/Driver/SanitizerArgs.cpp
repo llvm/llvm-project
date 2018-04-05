@@ -18,6 +18,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/TargetParser.h"
 #include <memory>
 
 using namespace clang;
@@ -373,6 +374,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   if ((Kinds & NeedsLTO) && !D.isUsingLTO()) {
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & NeedsLTO) << "-flto";
+  }
+
+  if ((Kinds & ShadowCallStack) &&
+      TC.getTriple().getArch() == llvm::Triple::aarch64 &&
+      !llvm::AArch64::isX18ReservedByDefault(TC.getTriple()) &&
+      !Args.hasArg(options::OPT_ffixed_x18)) {
+    D.Diag(diag::err_drv_argument_only_allowed_with)
+        << lastArgumentForMask(D, Args, Kinds & ShadowCallStack)
+        << "-ffixed-x18";
   }
 
   // Report error if there are non-trapping sanitizers that require

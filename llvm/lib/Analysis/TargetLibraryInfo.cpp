@@ -992,7 +992,25 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_msvc_new_array_int_nothrow:
   // new[](unsigned long long, nothrow);
   case LibFunc_msvc_new_array_longlong_nothrow:
+  // new(unsigned int, align_val_t)
+  case LibFunc_ZnwjSt11align_val_t:
+  // new(unsigned long, align_val_t)
+  case LibFunc_ZnwmSt11align_val_t:
+  // new[](unsigned int, align_val_t)
+  case LibFunc_ZnajSt11align_val_t:
+  // new[](unsigned long, align_val_t)
+  case LibFunc_ZnamSt11align_val_t:
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy());
+
+  // new(unsigned int, align_val_t, nothrow)
+  case LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t:
+  // new(unsigned long, align_val_t, nothrow)
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+  // new[](unsigned int, align_val_t, nothrow)
+  case LibFunc_ZnajSt11align_val_tRKSt9nothrow_t:
+  // new[](unsigned long, align_val_t, nothrow)
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+    return (NumParams == 3 && FTy.getReturnType()->isPointerTy());
 
   // void operator delete[](void*);
   case LibFunc_ZdaPv:
@@ -1020,6 +1038,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_ZdlPvj:
   // void operator delete(void*, unsigned long);
   case LibFunc_ZdlPvm:
+  // void operator delete(void*, align_val_t)
+  case LibFunc_ZdlPvSt11align_val_t:
+  // void operator delete[](void*, align_val_t)
+  case LibFunc_ZdaPvSt11align_val_t:
   // void operator delete[](void*, unsigned int);
   case LibFunc_msvc_delete_array_ptr32_int:
   // void operator delete[](void*, nothrow);
@@ -1037,6 +1059,12 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   // void operator delete(void*, nothrow);
   case LibFunc_msvc_delete_ptr64_nothrow:
     return (NumParams == 2 && FTy.getParamType(0)->isPointerTy());
+
+  // void operator delete(void*, align_val_t, nothrow)
+  case LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t:
+  // void operator delete[](void*, align_val_t, nothrow)
+  case LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t:
+    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy());
 
   case LibFunc_memset_pattern16:
     return (!FTy.isVarArg() && NumParams == 3 &&

@@ -206,6 +206,12 @@ static bool canSplitCallSite(CallSite CS, TargetTransformInfo &TTI) {
       isa<IndirectBrInst>(Preds[1]->getTerminator()))
     return false;
 
+  // Do not split a call-site in an exception handling block. This check
+  // prevents triggering an assertion in SplitEdge used via
+  // DuplicateInstructionsInSplitBetween. 
+  if (CallSiteBB->isEHPad())
+    return false;
+
   return CallSiteBB->canSplitPredecessors();
 }
 

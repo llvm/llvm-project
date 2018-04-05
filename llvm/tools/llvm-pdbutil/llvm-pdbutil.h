@@ -190,8 +190,11 @@ extern llvm::cl::opt<bool> DumpModuleSyms;
 } // namespace pdb2yaml
 
 namespace explain {
+enum class InputFileType { PDBFile, PDBStream, DBIStream, Names, ModuleStream };
+
 extern llvm::cl::list<std::string> InputFilename;
 extern llvm::cl::list<uint64_t> Offsets;
+extern llvm::cl::opt<InputFileType> InputType;
 } // namespace explain
 
 namespace exportstream {
