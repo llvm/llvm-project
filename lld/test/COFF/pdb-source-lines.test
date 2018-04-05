@@ -43,7 +43,7 @@ CHECK-NEXT:         - !Lines
 CHECK-NEXT:           CodeSize:        19
 CHECK-NEXT:           Flags:           [  ]
 CHECK-NEXT:           RelocOffset:     0
-CHECK-NEXT:           RelocSegment:    2
+CHECK-NEXT:           RelocSegment:    1
 CHECK-NEXT:           Blocks:
 CHECK-NEXT:             - FileName:        '{{.*}}pdb_lines_1.c'
 CHECK-NEXT:               Lines:
@@ -68,7 +68,7 @@ CHECK-NEXT:         - !Lines
 CHECK-NEXT:           CodeSize:        14
 CHECK-NEXT:           Flags:           [  ]
 CHECK-NEXT:           RelocOffset:     32
-CHECK-NEXT:           RelocSegment:    2
+CHECK-NEXT:           RelocSegment:    1
 CHECK-NEXT:           Blocks:
 CHECK-NEXT:             - FileName:        '{{.*}}foo.h'
 CHECK-NEXT:               Lines:
@@ -103,7 +103,7 @@ CHECK-NEXT:         - !Lines
 CHECK-NEXT:           CodeSize:        1
 CHECK-NEXT:           Flags:           [  ]
 CHECK-NEXT:           RelocOffset:     48
-CHECK-NEXT:           RelocSegment:    2
+CHECK-NEXT:           RelocSegment:    1
 CHECK-NEXT:           Blocks:
 CHECK-NEXT:             - FileName:        '{{.*}}pdb_lines_2.c'
 CHECK-NEXT:               Lines:

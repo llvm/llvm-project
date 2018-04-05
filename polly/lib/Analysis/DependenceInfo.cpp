@@ -646,7 +646,8 @@ void Dependences::calculateDependences(Scop &S) {
 
     // Step 4)
     addPrivatizationDependences();
-  }
+  } else
+    TC_RED = isl_union_map_empty(isl_union_map_get_space(RED));
 
   DEBUG({
     dbgs() << "Final Wrapped Dependences:\n";

@@ -267,8 +267,7 @@ void ScriptParser::readDefsym(StringRef Name) {
   Expr E = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  SymbolAssignment *Cmd = make<SymbolAssignment>(Name, E, getCurrentLocation(),
-                                                 "" /*CommandString*/);
+  SymbolAssignment *Cmd = make<SymbolAssignment>(Name, E, getCurrentLocation());
   Script->SectionCommands.push_back(Cmd);
 }
 
@@ -773,27 +772,31 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {
   Cmd->Provide = Provide;
   Cmd->Hidden = Hidden;
   expect(")");
-  expect(";");
   return Cmd;
 }
 
 SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
+  size_t OldPos = Pos;
   SymbolAssignment *Cmd = nullptr;
-  if (peek() == "=" || peek() == "+=") {
+  if (peek() == "=" || peek() == "+=")
     Cmd = readAssignment(Tok);
-    expect(";");
-  } else if (Tok == "PROVIDE") {
+  else if (Tok == "PROVIDE")
     Cmd = readProvideHidden(true, false);
-  } else if (Tok == "HIDDEN") {
+  else if (Tok == "HIDDEN")
     Cmd = readProvideHidden(false, true);
-  } else if (Tok == "PROVIDE_HIDDEN") {
+  else if (Tok == "PROVIDE_HIDDEN")
     Cmd = readProvideHidden(true, true);
+
+  if (Cmd) {
+    Cmd->CommandString =
+        Tok.str() + " " +
+        llvm::join(Tokens.begin() + OldPos, Tokens.begin() + Pos, " ");
+    expect(";");
   }
   return Cmd;
 }
 
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
-  size_t OldPos = Pos;
   StringRef Op = next();
   assert(Op == "=" || Op == "+=");
   Expr E = readExpr();
@@ -801,11 +804,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
     std::string Loc = getCurrentLocation();
     E = [=] { return add(Script->getSymbolValue(Name, Loc), E()); };
   }
-
-  std::string CommandString =
-      Name.str() + " " +
-      llvm::join(Tokens.begin() + OldPos, Tokens.begin() + Pos, " ");
-  return make<SymbolAssignment>(Name, E, getCurrentLocation(), CommandString);
+  return make<SymbolAssignment>(Name, E, getCurrentLocation());
 }
 
 // This is an operator-precedence parser to parse a linker

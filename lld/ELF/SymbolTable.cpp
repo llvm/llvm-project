@@ -296,26 +296,28 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
   uint8_t Visibility = getVisibility(StOther);
   std::tie(S, WasInserted) =
       insert(Name, Type, Visibility, CanOmitFromDynSym, File);
+
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
   if (WasInserted || (isa<SharedSymbol>(S) && Visibility != STV_DEFAULT)) {
     replaceSymbol<Undefined>(S, File, Name, Binding, StOther, Type);
     return S;
   }
+
   if (S->isShared() || S->isLazy() || (S->isUndefined() && Binding != STB_WEAK))
     S->Binding = Binding;
-  if (Binding != STB_WEAK) {
+
+  if (!Config->GcSections && Binding != STB_WEAK)
     if (auto *SS = dyn_cast<SharedSymbol>(S))
-      if (!Config->GcSections)
-        SS->getFile<ELFT>().IsNeeded = true;
-  }
-  if (auto *L = dyn_cast<Lazy>(S)) {
+      SS->getFile<ELFT>().IsNeeded = true;
+
+  if (S->isLazy()) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
     if (Binding == STB_WEAK)
-      L->Type = Type;
-    else if (InputFile *F = L->fetch())
-      addFile<ELFT>(F);
+      S->Type = Type;
+    else
+      fetchLazy<ELFT>(S);
   }
   return S;
 }
@@ -383,7 +385,11 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N, Type, getVisibility(StOther),
                                     /*CanOmitFromDynSym*/ false, &File);
+
   int Cmp = compareDefined(S, WasInserted, Binding, N);
+  if (Cmp < 0)
+    return S;
+
   if (Cmp > 0) {
     auto *Bss = make<BssSection>("COMMON", Size, Alignment);
     Bss->File = &File;
@@ -391,24 +397,25 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
     InputSections.push_back(Bss);
 
     replaceSymbol<Defined>(S, &File, N, Binding, StOther, Type, 0, Size, Bss);
-  } else if (Cmp == 0) {
-    auto *D = cast<Defined>(S);
-    auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
-    if (!Bss) {
-      // Non-common symbols take precedence over common symbols.
-      if (Config->WarnCommon)
-        warn("common " + S->getName() + " is overridden");
-      return S;
-    }
+    return S;
+  }
 
+  auto *D = cast<Defined>(S);
+  auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
+  if (!Bss) {
+    // Non-common symbols take precedence over common symbols.
     if (Config->WarnCommon)
-      warn("multiple common of " + D->getName());
+      warn("common " + S->getName() + " is overridden");
+    return S;
+  }
 
-    Bss->Alignment = std::max(Bss->Alignment, Alignment);
-    if (Size > Bss->Size) {
-      D->File = Bss->File = &File;
-      D->Size = Bss->Size = Size;
-    }
+  if (Config->WarnCommon)
+    warn("multiple common of " + D->getName());
+
+  Bss->Alignment = std::max(Bss->Alignment, Alignment);
+  if (Size > Bss->Size) {
+    D->File = Bss->File = &File;
+    D->Size = Bss->Size = Size;
   }
   return S;
 }
@@ -548,9 +555,8 @@ void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &F,
     S->Binding = STB_WEAK;
     return;
   }
-  std::pair<MemoryBufferRef, uint64_t> MBInfo = F.getMember(&Sym);
-  if (!MBInfo.first.getBuffer().empty())
-    addFile<ELFT>(createObjectFile(MBInfo.first, F.getName(), MBInfo.second));
+  if (InputFile *File = F.fetch(Sym))
+    addFile<ELFT>(File);
 }
 
 template <class ELFT>
@@ -575,16 +581,16 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
     addFile<ELFT>(F);
 }
 
-// If we already saw this symbol, force loading its file.
-template <class ELFT> void SymbolTable::fetchIfLazy(StringRef Name) {
-  if (Symbol *B = find(Name)) {
-    // Mark the symbol not to be eliminated by LTO
-    // even if it is a bitcode symbol.
-    B->IsUsedInRegularObj = true;
-    if (auto *L = dyn_cast<Lazy>(B))
-      if (InputFile *File = L->fetch())
-        addFile<ELFT>(File);
+template <class ELFT> void SymbolTable::fetchLazy(Symbol *Sym) {
+  if (auto *S = dyn_cast<LazyArchive>(Sym)) {
+    if (InputFile *File = S->fetch())
+      addFile<ELFT>(File);
+    return;
   }
+
+  auto *S = cast<LazyObject>(Sym);
+  if (InputFile *File = cast<LazyObjFile>(S->File)->fetch())
+    addFile<ELFT>(File);
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol
@@ -795,6 +801,11 @@ template void SymbolTable::addLazyObject<ELF32BE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64LE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64BE>(StringRef, LazyObjFile &);
 
+template void SymbolTable::fetchLazy<ELF32LE>(Symbol *);
+template void SymbolTable::fetchLazy<ELF32BE>(Symbol *);
+template void SymbolTable::fetchLazy<ELF64LE>(Symbol *);
+template void SymbolTable::fetchLazy<ELF64BE>(Symbol *);
+
 template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile<ELF32LE> &,
                                               const typename ELF32LE::Sym &,
                                               uint32_t Alignment, uint32_t);
@@ -807,8 +818,3 @@ template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile<ELF64LE> &,
 template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> &,
                                               const typename ELF64BE::Sym &,
                                               uint32_t Alignment, uint32_t);
-
-template void SymbolTable::fetchIfLazy<ELF32LE>(StringRef);
-template void SymbolTable::fetchIfLazy<ELF32BE>(StringRef);
-template void SymbolTable::fetchIfLazy<ELF64LE>(StringRef);
-template void SymbolTable::fetchIfLazy<ELF64BE>(StringRef);

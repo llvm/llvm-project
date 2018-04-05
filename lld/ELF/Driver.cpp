@@ -1024,6 +1024,20 @@ static void excludeLibs(opt::InputArgList &Args) {
             Sym->VersionId = VER_NDX_LOCAL;
 }
 
+// Force Sym to be entered in the output. Used for -u or equivalent.
+template <class ELFT> static void handleUndefined(StringRef Name) {
+  Symbol *Sym = Symtab->find(Name);
+  if (!Sym)
+    return;
+
+  // Since symbol S may not be used inside the program, LTO may
+  // eliminate it. Mark the symbol as "used" to prevent it.
+  Sym->IsUsedInRegularObj = true;
+
+  if (Sym->isLazy())
+    Symtab->fetchLazy<ELFT>(Sym);
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
@@ -1088,12 +1102,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
-    Symtab->fetchIfLazy<ELFT>(S);
+    handleUndefined<ELFT>(S);
 
   // If an entry symbol is in a static archive, pull out that file now
   // to complete the symbol table. After this, no new names except a
   // few linker-synthesized ones will be added to the symbol table.
-  Symtab->fetchIfLazy<ELFT>(Config->Entry);
+  handleUndefined<ELFT>(Config->Entry);
 
   // Return if there were name resolution errors.
   if (errorCount())

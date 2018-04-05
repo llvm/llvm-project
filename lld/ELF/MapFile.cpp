@@ -44,10 +44,12 @@ static const std::string Indent8 = "        ";          // 8 spaces
 static const std::string Indent16 = "                "; // 16 spaces
 
 // Print out the first three columns of a line.
-static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
-                        uint64_t Align) {
-  int W = Config->Is64 ? 16 : 8;
-  OS << format("%0*llx %0*llx %5lld ", W, Addr, W, Size, Align);
+static void writeHeader(raw_ostream &OS, uint64_t VMA, uint64_t LMA,
+                        uint64_t Size, uint64_t Align) {
+  if (Config->Is64)
+    OS << format("%16llx %16llx %8llx %5lld ", VMA, LMA, Size, Align);
+  else
+    OS << format("%8llx %8llx %8llx %5lld ", VMA, LMA, Size, Align);
 }
 
 // Returns a list of all symbols that we want to print out.
@@ -102,7 +104,10 @@ getSymbolStrings(ArrayRef<Symbol *> Syms) {
   std::vector<std::string> Str(Syms.size());
   parallelForEachN(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
-    writeHeader(OS, Syms[I]->getVA(), Syms[I]->getSize(), 0);
+    OutputSection *OSec = Syms[I]->getOutputSection();
+    uint64_t VMA = Syms[I]->getVA();
+    uint64_t LMA = OSec ? OSec->getLMA() + VMA - OSec->getVA(0) : 0;
+    writeHeader(OS, VMA, LMA, Syms[I]->getSize(), 1);
     OS << Indent16 << toString(*Syms[I]);
   });
 
@@ -143,7 +148,8 @@ static void printEhFrame(raw_ostream &OS, OutputSection *OSec) {
 
   // Print out section pieces.
   for (EhSectionPiece &P : Pieces) {
-    writeHeader(OS, OSec->Addr + P.OutputOff, P.Size, 0);
+    writeHeader(OS, OSec->Addr + P.OutputOff, OSec->getLMA() + P.OutputOff,
+                P.Size, 1);
     OS << Indent8 << toString(P.Sec->File) << ":(" << P.Sec->Name << "+0x"
        << Twine::utohexstr(P.InputOff) + ")\n";
   }
@@ -168,12 +174,24 @@ void elf::writeMapFile() {
 
   // Print out the header line.
   int W = Config->Is64 ? 16 : 8;
-  OS << left_justify("Address", W) << ' ' << left_justify("Size", W)
-     << " Align Out     In      Symbol\n";
+  OS << right_justify("VMA", W) << ' ' << right_justify("LMA", W)
+     << "     Size Align Out     In      Symbol\n";
 
-  // Print out file contents.
-  for (OutputSection *OSec : OutputSections) {
-    writeHeader(OS, OSec->Addr, OSec->Size, OSec->Alignment);
+  for (BaseCommand *Base : Script->SectionCommands) {
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
+      if (Cmd->Provide && !Cmd->Sym)
+        continue;
+      //FIXME: calculate and print LMA.
+      writeHeader(OS, Cmd->Addr, 0, Cmd->Size, 1);
+      OS << Cmd->CommandString << '\n';
+      continue;
+    }
+
+    auto *OSec = dyn_cast<OutputSection>(Base);
+    if (!OSec)
+      continue;
+
+    writeHeader(OS, OSec->Addr, OSec->getLMA(), OSec->Size, OSec->Alignment);
     OS << OSec->Name << '\n';
 
     // Dump symbols for each input section.
@@ -185,7 +203,8 @@ void elf::writeMapFile() {
             continue;
           }
 
-          writeHeader(OS, IS->getVA(0), IS->getSize(), IS->Alignment);
+          writeHeader(OS, IS->getVA(0), OSec->getLMA() + IS->getOffset(0),
+                      IS->getSize(), IS->Alignment);
           OS << Indent8 << toString(IS) << '\n';
           for (Symbol *Sym : SectionSyms[IS])
             OS << SymStr[Sym] << '\n';
@@ -194,13 +213,17 @@ void elf::writeMapFile() {
       }
 
       if (auto *Cmd = dyn_cast<ByteCommand>(Base)) {
-        writeHeader(OS, OSec->Addr + Cmd->Offset, Cmd->Size, 1);
+        writeHeader(OS, OSec->Addr + Cmd->Offset, OSec->getLMA() + Cmd->Offset,
+                    Cmd->Size, 1);
         OS << Indent8 << Cmd->CommandString << '\n';
         continue;
       }
 
       if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
-        writeHeader(OS, OSec->Addr + Cmd->Offset, Cmd->Size, 1);
+        if (Cmd->Provide && !Cmd->Sym)
+          continue;
+        writeHeader(OS, Cmd->Addr, OSec->getLMA() + Cmd->Addr - OSec->getVA(0),
+                    Cmd->Size, 1);
         OS << Indent8 << Cmd->CommandString << '\n';
         continue;
       }

@@ -644,6 +644,29 @@ void Writer::createSymbolAndStringTable() {
   FileSize = alignTo(FileOff, SectorSize);
 }
 
+static int sectionIndex(OutputSection *S) {
+  // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
+  // the loader cannot handle holes.
+  if (S->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE)
+    return 101;
+
+  // Try to match the section order used by link.exe. In particular, it's
+  // important that .reloc comes last since it refers to RVA's of data in
+  // the previous sections. .rsrc should come late because its size may
+  // change by the Win32 UpdateResources() function, causing subsequent
+  // sections to move (see https://crbug.com/827082).
+  return StringSwitch<int>(S->Name)
+      .Case(".text", 1)
+      .Case(".bss", 2)
+      .Case(".rdata", 3)
+      .Case(".data", 4)
+      .Case(".pdata", 5)
+      .Case(".idata", 6)
+      .Case(".rsrc", 99)
+      .Case(".reloc", 100)
+      .Default(50); // Default to somewhere in the middle.
+}
+
 // Visits all sections to assign incremental, non-overlapping RVAs and
 // file offsets.
 void Writer::assignAddresses() {
@@ -655,12 +678,13 @@ void Writer::assignAddresses() {
   SizeOfHeaders = alignTo(SizeOfHeaders, SectorSize);
   uint64_t RVA = PageSize; // The first page is kept unmapped.
   FileSize = SizeOfHeaders;
-  // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
-  // the loader cannot handle holes.
-  std::stable_partition(
-      OutputSections.begin(), OutputSections.end(), [](OutputSection *S) {
-        return (S->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0;
-      });
+
+  // Reorder the sections.
+  std::stable_sort(OutputSections.begin(), OutputSections.end(),
+                   [](OutputSection *S, OutputSection *T) {
+                     return sectionIndex(S) < sectionIndex(T);
+                   });
+
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Name == ".reloc")
       addBaserels(Sec);

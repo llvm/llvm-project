@@ -200,7 +200,7 @@ private:
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t Off, uint32_t Hash, bool Live)
-      : InputOff(Off), Hash(Hash), OutputOff(-1),
+      : InputOff(Off), Hash(Hash), OutputOff(0),
         Live(Live || !Config->GcSections) {}
 
   uint32_t InputOff;
@@ -236,6 +236,7 @@ public:
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
   std::vector<SectionPiece> Pieces;
+  llvm::DenseMap<uint32_t, uint32_t> OffsetMap;
 
   // Returns I'th piece's data. This function is very hot when
   // string merging is enabled, so we want to inline.
@@ -254,13 +255,10 @@ public:
   }
 
   SyntheticSection *getParent() const;
-  void initOffsetMap();
 
 private:
   void splitStrings(ArrayRef<uint8_t> A, size_t Size);
   void splitNonStrings(ArrayRef<uint8_t> A, size_t Size);
-
-  llvm::DenseMap<uint32_t, uint32_t> OffsetMap;
 
   llvm::DenseSet<uint32_t> LiveOffsets;
 };

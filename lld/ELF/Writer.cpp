@@ -62,7 +62,7 @@ private:
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
-  void checkSectionOverlap();
+  void checkSections();
   void fixSectionAlignments();
   void openFile();
   void writeTrapInstr();
@@ -458,7 +458,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 
   if (Config->CheckSections)
-    checkSectionOverlap();
+    checkSections();
 
   // It does not make sense try to open the file if we have error already.
   if (errorCount())
@@ -1092,21 +1092,23 @@ static void
 sortISDBySectionOrder(InputSectionDescription *ISD,
                       const DenseMap<const InputSectionBase *, int> &Order) {
   std::vector<InputSection *> UnorderedSections;
-  std::vector<InputSection *> OrderedSections;
+  std::vector<std::pair<InputSection *, int>> OrderedSections;
   uint64_t UnorderedSize = 0;
 
   for (InputSection *IS : ISD->Sections) {
-    if (!Order.count(IS)) {
+    auto I = Order.find(IS);
+    if (I == Order.end()) {
       UnorderedSections.push_back(IS);
       UnorderedSize += IS->getSize();
       continue;
     }
-    OrderedSections.push_back(IS);
+    OrderedSections.push_back({IS, I->second});
   }
-  std::sort(OrderedSections.begin(), OrderedSections.end(),
-            [&](InputSection *A, InputSection *B) {
-              return Order.lookup(A) < Order.lookup(B);
-            });
+  std::sort(
+      OrderedSections.begin(), OrderedSections.end(),
+      [&](std::pair<InputSection *, int> A, std::pair<InputSection *, int> B) {
+        return A.second < B.second;
+      });
 
   // Find an insertion point for the ordered section list in the unordered
   // section list. On targets with limited-range branches, this is the mid-point
@@ -1135,22 +1137,23 @@ sortISDBySectionOrder(InputSectionDescription *ISD,
   // of the second block of cold code can call the hot code without a thunk. So
   // we effectively double the amount of code that could potentially call into
   // the hot code without a thunk.
-  size_t UnorderedInsPt = 0;
+  size_t InsPt = 0;
   if (Target->ThunkSectionSpacing && !OrderedSections.empty()) {
     uint64_t UnorderedPos = 0;
-    for (; UnorderedInsPt != UnorderedSections.size(); ++UnorderedInsPt) {
-      UnorderedPos += UnorderedSections[UnorderedInsPt]->getSize();
+    for (; InsPt != UnorderedSections.size(); ++InsPt) {
+      UnorderedPos += UnorderedSections[InsPt]->getSize();
       if (UnorderedPos > UnorderedSize / 2)
         break;
     }
   }
 
-  std::copy(UnorderedSections.begin(),
-            UnorderedSections.begin() + UnorderedInsPt, ISD->Sections.begin());
-  std::copy(OrderedSections.begin(), OrderedSections.end(),
-            ISD->Sections.begin() + UnorderedInsPt);
-  std::copy(UnorderedSections.begin() + UnorderedInsPt, UnorderedSections.end(),
-            ISD->Sections.begin() + UnorderedInsPt + OrderedSections.size());
+  ISD->Sections.clear();
+  for (InputSection *IS : makeArrayRef(UnorderedSections).slice(0, InsPt))
+    ISD->Sections.push_back(IS);
+  for (std::pair<InputSection *, int> P : OrderedSections)
+    ISD->Sections.push_back(P.first);
+  for (InputSection *IS : makeArrayRef(UnorderedSections).slice(InsPt))
+    ISD->Sections.push_back(IS);
 }
 
 static void sortSection(OutputSection *Sec,
@@ -1703,7 +1706,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *Sec) {
 }
 
 static bool needsPtLoad(OutputSection *Sec) {
-  if (!(Sec->Flags & SHF_ALLOC))
+  if (!(Sec->Flags & SHF_ALLOC) || Sec->Noload)
     return false;
 
   // Don't allocate VA space for TLS NOBITS sections. The PT_TLS PHDR is
@@ -1985,9 +1988,8 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   // not do that. Unfortunately, there are apps in the wild, for example, Linux
   // kernel, which control segment distribution explicitly and move the counter
   // backwards, so we have to allow doing that to support linking them. We
-  // perform non-critical checks for overlaps in checkNoOverlappingSections(),
-  // but here we want to prevent file size overflows because it would crash the
-  // linker.
+  // perform non-critical checks for overlaps in checkSectionOverlap(), but here
+  // we want to prevent file size overflows because it would crash the linker.
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Type == SHT_NOBITS)
       continue;
@@ -2064,17 +2066,25 @@ static void checkOverlap(StringRef Name, std::vector<SectionOffset> &Sections) {
   }
 }
 
-// Check for overlapping sections
+// Check for overlapping sections and address overflows.
 //
 // In this function we check that none of the output sections have overlapping
 // file offsets. For SHF_ALLOC sections we also check that the load address
 // ranges and the virtual address ranges don't overlap
-template <class ELFT> void Writer<ELFT>::checkSectionOverlap() {
-  // First check for overlapping file offsets. In this case we need to skip
-  // any section marked as SHT_NOBITS. These sections don't actually occupy
-  // space in the file so Sec->Offset + Sec->Size can overlap with others.
-  // If --oformat binary is specified only add SHF_ALLOC sections are added to
-  // the output file so we skip any non-allocated sections in that case.
+template <class ELFT> void Writer<ELFT>::checkSections() {
+  // First, check that section's VAs fit in available address space for target.
+  for (OutputSection *OS : OutputSections)
+    if ((OS->Addr + OS->Size < OS->Addr) ||
+        (!ELFT::Is64Bits && OS->Addr + OS->Size > UINT32_MAX))
+      errorOrWarn("section " + OS->Name + " at 0x" + utohexstr(OS->Addr) +
+                  " of size 0x" + utohexstr(OS->Size) +
+                  " exceeds available address space");
+
+  // Check for overlapping file offsets. In this case we need to skip any
+  // section marked as SHT_NOBITS. These sections don't actually occupy space in
+  // the file so Sec->Offset + Sec->Size can overlap with others. If --oformat
+  // binary is specified only add SHF_ALLOC sections are added to the output
+  // file so we skip any non-allocated sections in that case.
   std::vector<SectionOffset> FileOffs;
   for (OutputSection *Sec : OutputSections)
     if (0 < Sec->Size && Sec->Type != SHT_NOBITS &&

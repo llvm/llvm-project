@@ -28,7 +28,7 @@ public:
   X86_64();
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
-  bool isPicRel(RelType Type) const override;
+  RelType getDynRel(RelType Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
@@ -155,9 +155,11 @@ void X86_64<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32le(Buf + 12, -getPltEntryOffset(Index) - 16);
 }
 
-template <class ELFT> bool X86_64<ELFT>::isPicRel(RelType Type) const {
-  return Type != R_X86_64_PC32 && Type != R_X86_64_32 &&
-         Type != R_X86_64_TPOFF32;
+template <class ELFT> RelType X86_64<ELFT>::getDynRel(RelType Type) const {
+  if (Type == R_X86_64_64 || Type == R_X86_64_PC64 || Type == R_X86_64_SIZE32 ||
+      Type == R_X86_64_SIZE64)
+    return Type;
+  return R_X86_64_NONE;
 }
 
 template <class ELFT>

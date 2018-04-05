@@ -148,7 +148,7 @@ This packet can be sent one or more times _prior_ to sending a "A" packet.
 //  are human readable along with an error code.
 //----------------------------------------------------------------------
 
-send packet: $QErrorStringInPacketSupported
+send packet: $QEnableErrorStrings
 read packet: $OK#00
 
 //----------------------------------------------------------------------
