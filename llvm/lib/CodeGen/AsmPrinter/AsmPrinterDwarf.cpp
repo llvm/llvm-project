@@ -175,7 +175,7 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
   }
 
   // Just emit the offset directly; no need for symbol math.
-  EmitInt32(S.Offset);
+  emitInt32(S.Offset);
 }
 
 //===----------------------------------------------------------------------===//
@@ -253,7 +253,7 @@ void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
       emitDwarfDIE(Child);
 
     OutStreamer->AddComment("End Of Children Mark");
-    EmitInt8(0);
+    emitInt8(0);
   }
 }
 
