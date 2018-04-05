@@ -16,7 +16,7 @@ import Foundation
 func main() {
   var point = NSPoint(x: 23, y: 42)
   print(point) //% self.expect("frame variable -- point", substrs=['x', '23', 'y', '42'])
-  //% self.expect("expression -- point", substrs=['x', '23', 'y', '42'])
+               //% self.expect("expression -- point", substrs=['x', '23', 'y', '42'])
 }
 
 main()
