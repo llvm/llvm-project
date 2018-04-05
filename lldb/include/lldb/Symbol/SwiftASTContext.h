@@ -887,6 +887,10 @@ protected:
   SwiftEnumDescriptor *GetCachedEnumInfo(void *type);
 
   friend class CompilerType;
+
+  /// Apply a PathMappingList dictionary on all search paths in the
+  /// ClangImporterOptions.
+  void RemapClangImporterOptions(const PathMappingList &path_map);
 };
 
 class SwiftASTContextForExpressions : public SwiftASTContext {

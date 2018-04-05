@@ -9417,6 +9417,7 @@
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
 					"-DLLDB_USE_BUILTIN_DEMANGLER",
+					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
@@ -13684,6 +13685,7 @@
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
 					"-DLLDB_USE_BUILTIN_DEMANGLER",
+					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
@@ -14284,6 +14286,7 @@
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
 					"-DLLDB_USE_BUILTIN_DEMANGLER",
+					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
