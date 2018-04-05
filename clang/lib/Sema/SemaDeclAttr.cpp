@@ -6828,28 +6828,6 @@ static bool ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
     return false;
   };
 
-  // FIXME: This is a temporary workaround! Some existing Apple headers depends
-  // on nested declarations in an @interface having the availability of the
-  // interface when they really shouldn't: they are members of the enclosing
-  // context, and can referenced from there.
-  if (S.OriginalLexicalContext && cast<Decl>(S.OriginalLexicalContext) != Ctx) {
-    const auto *OrigCtx = cast<Decl>(S.OriginalLexicalContext);
-    if (CheckContext(OrigCtx))
-      return false;
-
-    // An implementation implicitly has the availability of the interface.
-    if (const auto *CatOrImpl = dyn_cast<ObjCImplDecl>(OrigCtx)) {
-      if (const ObjCInterfaceDecl *Interface = CatOrImpl->getClassInterface())
-        if (CheckContext(Interface))
-          return false;
-    }
-    // A category implicitly has the availability of the interface.
-    else if (const auto *CatD = dyn_cast<ObjCCategoryDecl>(OrigCtx))
-      if (const ObjCInterfaceDecl *Interface = CatD->getClassInterface())
-        if (CheckContext(Interface))
-          return false;
-  }
-
   do {
     if (CheckContext(Ctx))
       return false;

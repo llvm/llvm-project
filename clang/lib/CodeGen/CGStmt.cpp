@@ -1007,7 +1007,7 @@ void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {
   } else if (RV.isAggregate()) {
     LValue Dest = MakeAddrLValue(ReturnValue, Ty);
     LValue Src = MakeAddrLValue(RV.getAggregateAddress(), Ty);
-    EmitAggregateCopy(Dest, Src, Ty);
+    EmitAggregateCopy(Dest, Src, Ty, overlapForReturnValue());
   } else {
     EmitStoreOfComplex(RV.getComplexVal(), MakeAddrLValue(ReturnValue, Ty),
                        /*init*/ true);
@@ -1085,11 +1085,12 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
                                 /*isInit*/ true);
       break;
     case TEK_Aggregate:
-      EmitAggExpr(RV, AggValueSlot::forAddr(ReturnValue,
-                                            Qualifiers(),
-                                            AggValueSlot::IsDestructed,
-                                            AggValueSlot::DoesNotNeedGCBarriers,
-                                            AggValueSlot::IsNotAliased));
+      EmitAggExpr(RV, AggValueSlot::forAddr(
+                          ReturnValue, Qualifiers(),
+                          AggValueSlot::IsDestructed,
+                          AggValueSlot::DoesNotNeedGCBarriers,
+                          AggValueSlot::IsNotAliased,
+                          overlapForReturnValue()));
       break;
     }
   }

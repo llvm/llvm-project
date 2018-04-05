@@ -1353,6 +1353,59 @@ void is_standard_layout()
   int t43[F(__is_standard_layout(AnIncompleteType[1]))]; // expected-error {{incomplete type}}
   int t44[F(__is_standard_layout(void))];
   int t45[F(__is_standard_layout(const volatile void))];
+
+  struct HasAnonEmptyBitfield { int : 0; };
+  struct HasAnonBitfield { int : 4; };
+  struct DerivesFromBitfield : HasAnonBitfield {};
+  struct DerivesFromBitfieldWithBitfield : HasAnonBitfield { int : 5; };
+  struct DerivesFromBitfieldTwice : DerivesFromBitfield, HasAnonEmptyBitfield {};
+
+  int t50[T(__is_standard_layout(HasAnonEmptyBitfield))];
+  int t51[T(__is_standard_layout(HasAnonBitfield))];
+  int t52[T(__is_standard_layout(DerivesFromBitfield))];
+  int t53[F(__is_standard_layout(DerivesFromBitfieldWithBitfield))];
+  int t54[F(__is_standard_layout(DerivesFromBitfieldTwice))];
+
+  struct Empty {};
+  struct HasEmptyBase : Empty {};
+  struct HoldsEmptyBase { Empty e; };
+  struct HasRepeatedEmptyBase : Empty, HasEmptyBase {}; // expected-warning {{inaccessible}}
+  struct HasEmptyBaseAsMember : Empty { Empty e; };
+  struct HasEmptyBaseAsSubobjectOfMember1 : Empty { HoldsEmptyBase e; };
+  struct HasEmptyBaseAsSubobjectOfMember2 : Empty { HasEmptyBase e; };
+  struct HasEmptyBaseAsSubobjectOfMember3 : Empty { HoldsEmptyBase e[2]; };
+  struct HasEmptyIndirectBaseAsMember : HasEmptyBase { Empty e; };
+  struct HasEmptyIndirectBaseAsSecondMember : HasEmptyBase { int n; Empty e; };
+  struct HasEmptyIndirectBaseAfterBitfield : HasEmptyBase { int : 4; Empty e; };
+
+  int t60[T(__is_standard_layout(Empty))];
+  int t61[T(__is_standard_layout(HasEmptyBase))];
+  int t62[F(__is_standard_layout(HasRepeatedEmptyBase))];
+  int t63[F(__is_standard_layout(HasEmptyBaseAsMember))];
+  int t64[F(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember1))];
+  int t65[T(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember2))]; // FIXME: standard bug?
+  int t66[F(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember3))];
+  int t67[F(__is_standard_layout(HasEmptyIndirectBaseAsMember))];
+  int t68[T(__is_standard_layout(HasEmptyIndirectBaseAsSecondMember))];
+  int t69[F(__is_standard_layout(HasEmptyIndirectBaseAfterBitfield))]; // FIXME: standard bug?
+
+  struct StructWithEmptyFields {
+    int n;
+    HoldsEmptyBase e[3];
+  };
+  union UnionWithEmptyFields {
+    int n;
+    HoldsEmptyBase e[3];
+  };
+  struct HasEmptyIndirectBaseAsSecondStructMember : HasEmptyBase {
+    StructWithEmptyFields u;
+  };
+  struct HasEmptyIndirectBaseAsSecondUnionMember : HasEmptyBase {
+    UnionWithEmptyFields u;
+  };
+
+  int t70[T(__is_standard_layout(HasEmptyIndirectBaseAsSecondStructMember))];
+  int t71[F(__is_standard_layout(HasEmptyIndirectBaseAsSecondUnionMember))];
 }
 
 void is_signed()

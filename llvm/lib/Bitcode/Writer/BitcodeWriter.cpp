@@ -3484,7 +3484,7 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
     NameVals.push_back(VE.getValueID(RI.getValue()));
   // Sort the refs for determinism output, the vector returned by FS->refs() has
   // been initialized from a DenseSet.
-  std::sort(NameVals.begin() + SizeBeforeRefs, NameVals.end());
+  llvm::sort(NameVals.begin() + SizeBeforeRefs, NameVals.end());
 
   Stream.EmitRecord(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS, NameVals,
                     FSModRefsAbbrev);

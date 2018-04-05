@@ -902,7 +902,9 @@ void COFFDumper::printCodeViewDebugInfo() {
   for (const SectionRef &S : Obj->sections()) {
     StringRef SectionName;
     error(S.getName(SectionName));
-    if (SectionName == ".debug$T")
+    // .debug$T is a standard CodeView type section, while .debug$P is the same
+    // format but used for MSVC precompiled header object files.
+    if (SectionName == ".debug$T" || SectionName == ".debug$P")
       printCodeViewTypeSection(SectionName, S);
   }
   for (const SectionRef &S : Obj->sections()) {

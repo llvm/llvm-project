@@ -163,10 +163,11 @@ struct MCRegisterFileDesc {
 /// normally used by the LLVM machine schedulers, but that can be consumed by
 /// external tools like llvm-mca to improve the quality of the peformance
 /// analysis.
-/// In future, the plan is to extend this struct with extra information (for
-/// example: maximum number of instructions retired per cycle; actual size of
-/// the reorder buffer; etc.).
 struct MCExtraProcessorInfo {
+  // Actual size of the reorder buffer in hardware.
+  unsigned ReorderBufferSize;
+  // Number of instructions retired per cycle.
+  unsigned MaxRetirePerCycle;
   const MCRegisterFileDesc *RegisterFiles;
   unsigned NumRegisterFiles;
   const MCRegisterCostEntry *RegisterCostTable;

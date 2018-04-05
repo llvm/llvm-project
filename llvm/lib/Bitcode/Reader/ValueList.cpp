@@ -144,7 +144,7 @@ Value *BitcodeReaderValueList::getValueFwdRef(unsigned Idx, Type *Ty) {
 void BitcodeReaderValueList::resolveConstantForwardRefs() {
   // Sort the values by-pointer so that they are efficient to look up with a
   // binary search.
-  std::sort(ResolveConstants.begin(), ResolveConstants.end());
+  llvm::sort(ResolveConstants.begin(), ResolveConstants.end());
 
   SmallVector<Constant *, 64> NewOps;
 

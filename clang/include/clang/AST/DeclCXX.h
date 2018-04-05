@@ -348,7 +348,12 @@ class CXXRecordDecl : public RecordDecl {
     /// one pure virtual function, (that can come from a base class).
     unsigned Abstract : 1;
 
-    /// \brief True when this class has standard layout.
+    /// \brief True when this class is standard-layout, per the applicable
+    /// language rules (including DRs).
+    unsigned IsStandardLayout : 1;
+
+    /// \brief True when this class was standard-layout under the C++11
+    /// definition.
     ///
     /// C++11 [class]p7.  A standard-layout class is a class that:
     /// * has no non-static data members of type non-standard-layout class (or
@@ -362,13 +367,19 @@ class CXXRecordDecl : public RecordDecl {
     ///   classes with non-static data members, and
     /// * has no base classes of the same type as the first non-static data
     ///   member.
-    unsigned IsStandardLayout : 1;
+    unsigned IsCXX11StandardLayout : 1;
 
-    /// \brief True when there are no non-empty base classes.
-    ///
+    /// \brief True when any base class has any declared non-static data
+    /// members or bit-fields.
     /// This is a helper bit of state used to implement IsStandardLayout more
     /// efficiently.
-    unsigned HasNoNonEmptyBases : 1;
+    unsigned HasBasesWithFields : 1;
+
+    /// \brief True when any base class has any declared non-static data
+    /// members.
+    /// This is a helper bit of state used to implement IsCXX11StandardLayout
+    /// more efficiently.
+    unsigned HasBasesWithNonStaticDataMembers : 1;
 
     /// \brief True when there are private non-static data members.
     unsigned HasPrivateFields : 1;
@@ -695,6 +706,12 @@ class CXXRecordDecl : public RecordDecl {
   /// \brief Get the head of our list of friend declarations, possibly
   /// deserializing the friends from an external AST source.
   FriendDecl *getFirstFriend() const;
+
+  /// Determine whether this class has an empty base class subobject of type X
+  /// or of one of the types that might be at offset 0 within X (per the C++
+  /// "standard layout" rules).
+  bool hasSubobjectAtOffsetZeroOfEmptyBaseType(ASTContext &Ctx,
+                                               const CXXRecordDecl *X);
 
 protected:
   CXXRecordDecl(Kind K, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -1301,9 +1318,13 @@ public:
   /// not overridden.
   bool isAbstract() const { return data().Abstract; }
 
-  /// \brief Determine whether this class has standard layout per 
-  /// (C++ [class]p7)
+  /// \brief Determine whether this class is standard-layout per 
+  /// C++ [class]p7.
   bool isStandardLayout() const { return data().IsStandardLayout; }
+
+  /// \brief Determine whether this class was standard-layout per 
+  /// C++11 [class]p7, specifically using the C++11 rules without any DRs.
+  bool isCXX11StandardLayout() const { return data().IsCXX11StandardLayout; }
 
   /// \brief Determine whether this class, or any of its class subobjects,
   /// contains a mutable field.

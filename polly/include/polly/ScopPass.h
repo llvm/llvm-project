@@ -261,7 +261,7 @@ public:
 
 private:
   ScopPassT Pass;
-}; // namespace polly
+};
 
 template <typename ScopPassT>
 FunctionToScopPassAdaptor<ScopPassT>

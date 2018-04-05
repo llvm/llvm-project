@@ -66,6 +66,11 @@ Non-comprehensive list of changes in this release
   For example, the ``clang`` binary will be called ``clang-7``
   instead of ``clang-7.0``.
 
+- Clang implements a collection of recent fixes to the C++ standard's definition
+  of "standard-layout". In particular, a class is only considered to be
+  standard-layout if all base classes and the first data member (or bit-field)
+  can be laid out at offset zero.
+
 - ...
 
 New Compiler Flags

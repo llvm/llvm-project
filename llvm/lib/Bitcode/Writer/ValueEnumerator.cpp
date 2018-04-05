@@ -183,7 +183,7 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
     return;
 
   bool IsGlobalValue = OM.isGlobalValue(ID);
-  std::sort(List.begin(), List.end(), [&](const Entry &L, const Entry &R) {
+  llvm::sort(List.begin(), List.end(), [&](const Entry &L, const Entry &R) {
     const Use *LU = L.first;
     const Use *RU = R.first;
     if (LU == RU)
@@ -744,7 +744,7 @@ void ValueEnumerator::organizeMetadata() {
   // and then sort by the original/current ID.  Since the IDs are guaranteed to
   // be unique, the result of std::sort will be deterministic.  There's no need
   // for std::stable_sort.
-  std::sort(Order.begin(), Order.end(), [this](MDIndex LHS, MDIndex RHS) {
+  llvm::sort(Order.begin(), Order.end(), [this](MDIndex LHS, MDIndex RHS) {
     return std::make_tuple(LHS.F, getMetadataTypeOrder(LHS.get(MDs)), LHS.ID) <
            std::make_tuple(RHS.F, getMetadataTypeOrder(RHS.get(MDs)), RHS.ID);
   });

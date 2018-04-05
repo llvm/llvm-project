@@ -71,7 +71,7 @@ public:
   friend class SymbolFileDWARFDwo;
   friend class DebugMapModule;
   friend struct DIERef;
-  friend class DWARFCompileUnit;
+  friend class DWARFUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
   friend class DWARFASTParserGo;

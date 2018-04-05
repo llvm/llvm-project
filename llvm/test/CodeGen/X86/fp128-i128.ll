@@ -50,8 +50,8 @@ define void @TestUnionLD1(fp128 %s, i64 %n) #0 {
 ; CHECK-NEXT:    andq %rdi, %rcx
 ; CHECK-NEXT:    movabsq $-281474976710656, %rdx # imm = 0xFFFF000000000000
 ; CHECK-NEXT:    andq -{{[0-9]+}}(%rsp), %rdx
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    jmp foo # TAILCALL
@@ -105,11 +105,11 @@ define fp128 @TestI128_1(fp128 %x) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    andq {{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, (%rsp)
+; CHECK-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    andq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, (%rsp)
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    callq __lttf2
@@ -336,11 +336,11 @@ define void @TestCopySign({ fp128, fp128 }* noalias nocapture sret %agg.result, 
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq __gttf2
 ; CHECK-NEXT:    movl %eax, %ebp
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    callq __subtf3
 ; CHECK-NEXT:    testl %ebp, %ebp
@@ -355,8 +355,8 @@ define void @TestCopySign({ fp128, fp128 }* noalias nocapture sret %agg.result, 
 ; CHECK-NEXT:    movaps (%rsp), %xmm2 # 16-byte Reload
 ; CHECK-NEXT:  .LBB10_3: # %cleanup
 ; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    andps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    movaps %xmm2, (%rbx)
 ; CHECK-NEXT:    movaps %xmm0, 16(%rbx)

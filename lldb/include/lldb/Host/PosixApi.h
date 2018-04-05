@@ -18,6 +18,7 @@
 #include "lldb/Host/windows/PosixApi.h"
 #else
 #include <unistd.h>
+#include <csignal>
 #endif
 
 #endif

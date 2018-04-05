@@ -2061,7 +2061,8 @@ public:
                                  T.getQualifiers(),
                                  AggValueSlot::IsNotDestructed,
                                  AggValueSlot::DoesNotNeedGCBarriers,
-                                 AggValueSlot::IsNotAliased);
+                                 AggValueSlot::IsNotAliased,
+                                 AggValueSlot::DoesNotOverlap);
   }
 
   /// Emit a cast to void* in the appropriate address space.
@@ -2118,28 +2119,52 @@ public:
     }
     return false;
   }
-  /// EmitAggregateCopy - Emit an aggregate assignment.
-  ///
-  /// The difference to EmitAggregateCopy is that tail padding is not copied.
-  /// This is required for correctness when assigning non-POD structures in C++.
-  void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
-    bool IsVolatile = hasVolatileMember(EltTy);
-    EmitAggregateCopy(Dest, Src, EltTy, IsVolatile, /* isAssignment= */ true);
+
+  /// Determine whether a return value slot may overlap some other object.
+  AggValueSlot::Overlap_t overlapForReturnValue() {
+    // FIXME: Assuming no overlap here breaks guaranteed copy elision for base
+    // class subobjects. These cases may need to be revisited depending on the
+    // resolution of the relevant core issue.
+    return AggValueSlot::DoesNotOverlap;
   }
 
-  void EmitAggregateCopyCtor(LValue Dest, LValue Src) {
-    EmitAggregateCopy(Dest, Src, Src.getType(),
-                      /* IsVolatile= */ false, /* IsAssignment= */ false);
+  /// Determine whether a field initialization may overlap some other object.
+  AggValueSlot::Overlap_t overlapForFieldInit(const FieldDecl *FD) {
+    // FIXME: These cases can result in overlap as a result of P0840R0's
+    // [[no_unique_address]] attribute. We can still infer NoOverlap in the
+    // presence of that attribute if the field is within the nvsize of its
+    // containing class, because non-virtual subobjects are initialized in
+    // address order.
+    return AggValueSlot::DoesNotOverlap;
+  }
+
+  /// Determine whether a base class initialization may overlap some other
+  /// object.
+  AggValueSlot::Overlap_t overlapForBaseInit(const CXXRecordDecl *RD,
+                                             const CXXRecordDecl *BaseRD,
+                                             bool IsVirtual);
+
+  /// Emit an aggregate assignment.
+  void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
+    bool IsVolatile = hasVolatileMember(EltTy);
+    EmitAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
+  }
+
+  void EmitAggregateCopyCtor(LValue Dest, LValue Src,
+                             AggValueSlot::Overlap_t MayOverlap) {
+    EmitAggregateCopy(Dest, Src, Src.getType(), MayOverlap);
   }
 
   /// EmitAggregateCopy - Emit an aggregate copy.
   ///
-  /// \param isVolatile - True iff either the source or the destination is
-  /// volatile.
-  /// \param isAssignment - If false, allow padding to be copied.  This often
-  /// yields more efficient.
+  /// \param isVolatile \c true iff either the source or the destination is
+  ///        volatile.
+  /// \param MayOverlap Whether the tail padding of the destination might be
+  ///        occupied by some other object. More efficient code can often be
+  ///        generated if not.
   void EmitAggregateCopy(LValue Dest, LValue Src, QualType EltTy,
-                         bool isVolatile = false, bool isAssignment = false);
+                         AggValueSlot::Overlap_t MayOverlap,
+                         bool isVolatile = false);
 
   /// GetAddrOfLocalVar - Return the address of a local variable.
   Address GetAddrOfLocalVar(const VarDecl *VD) {
@@ -2303,11 +2328,13 @@ public:
 
   void EmitCXXConstructorCall(const CXXConstructorDecl *D, CXXCtorType Type,
                               bool ForVirtualBase, bool Delegating,
-                              Address This, const CXXConstructExpr *E);
+                              Address This, const CXXConstructExpr *E,
+                              AggValueSlot::Overlap_t Overlap);
 
   void EmitCXXConstructorCall(const CXXConstructorDecl *D, CXXCtorType Type,
                               bool ForVirtualBase, bool Delegating,
-                              Address This, CallArgList &Args);
+                              Address This, CallArgList &Args,
+                              AggValueSlot::Overlap_t Overlap);
 
   /// Emit assumption load for all bases. Requires to be be called only on
   /// most-derived class and not under construction of the object.

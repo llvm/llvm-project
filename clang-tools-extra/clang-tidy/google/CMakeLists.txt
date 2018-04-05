@@ -12,7 +12,6 @@ add_clang_library(clangTidyGoogleModule
   IntegerTypesCheck.cpp
   NonConstReferences.cpp
   OverloadedUnaryAndCheck.cpp
-  StringReferenceMemberCheck.cpp
   TodoCommentCheck.cpp
   UnnamedNamespaceInHeaderCheck.cpp
   UsingNamespaceDirectiveCheck.cpp

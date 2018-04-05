@@ -352,6 +352,7 @@ if (MSVC)
     -wd4200 # nonstandard extension used: zero-sized array in struct/union
     -wd4201 # nonstandard extension used: nameless struct/union
     -wd4334 # 'operator': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
+    -wd4221 # nonstandard extension used : 'identifier' : cannot be initialized using address of automatic variable
   )
   if (POLLY_BUNDLED_ISL)
     target_compile_options(PollyISL PRIVATE ${DISABLE_WARNING_FLAGS})
