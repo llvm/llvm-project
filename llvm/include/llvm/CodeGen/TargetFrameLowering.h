@@ -158,6 +158,10 @@ public:
     return false;
   }
 
+  /// Returns true if the target can safely skip saving callee-saved registers
+  /// for noreturn nounwind functions.
+  virtual bool enableCalleeSaveSkip(const MachineFunction &MF) const;
+
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
   virtual void emitPrologue(MachineFunction &MF,

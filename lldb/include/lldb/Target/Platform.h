@@ -30,10 +30,6 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
-// TODO pull NativeDelegate class out of NativeProcessProtocol so we
-// can just forward ref the NativeDelegate rather than include it here.
-#include "lldb/Host/common/NativeProcessProtocol.h"
-
 namespace lldb_private {
 
 class ModuleCache;

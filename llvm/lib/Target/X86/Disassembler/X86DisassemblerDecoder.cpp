@@ -964,6 +964,9 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
       attrMask |= ATTR_ADSIZE;
       break;
     }
+
+    if (insn->hasAdSize)
+      attrMask |= ATTR_ADSIZE;
   }
 
   if (insn->rexPrefix & 0x08) {

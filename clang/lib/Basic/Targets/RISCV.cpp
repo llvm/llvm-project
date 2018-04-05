@@ -49,4 +49,56 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   // TODO: modify when more code models and ABIs are supported.
   Builder.defineMacro("__riscv_cmodel_medlow");
   Builder.defineMacro("__riscv_float_abi_soft");
+
+  if (HasM) {
+    Builder.defineMacro("__riscv_mul");
+    Builder.defineMacro("__riscv_div");
+    Builder.defineMacro("__riscv_muldiv");
+  }
+
+  if (HasA)
+    Builder.defineMacro("__riscv_atomic");
+
+  if (HasF || HasD) {
+    Builder.defineMacro("__riscv_flen", HasD ? "64" : "32");
+    Builder.defineMacro("__riscv_fdiv");
+    Builder.defineMacro("__riscv_fsqrt");
+  }
+
+  if (HasC)
+    Builder.defineMacro("__riscv_compressed");
+}
+
+/// Return true if has this feature, need to sync with handleTargetFeatures.
+bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
+  bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
+  return llvm::StringSwitch<bool>(Feature)
+      .Case("riscv", true)
+      .Case("riscv32", !Is64Bit)
+      .Case("riscv64", Is64Bit)
+      .Case("m", HasM)
+      .Case("a", HasA)
+      .Case("f", HasF)
+      .Case("d", HasD)
+      .Case("c", HasC)
+      .Default(false);
+}
+
+/// Perform initialization based on the user configured set of features.
+bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
+                                           DiagnosticsEngine &Diags) {
+  for (const auto &Feature : Features) {
+    if (Feature == "+m")
+      HasM = true;
+    else if (Feature == "+a")
+      HasA = true;
+    else if (Feature == "+f")
+      HasF = true;
+    else if (Feature == "+d")
+      HasD = true;
+    else if (Feature == "+c")
+      HasC = true;
+  }
+
+  return true;
 }

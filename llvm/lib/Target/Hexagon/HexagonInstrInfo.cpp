@@ -1016,7 +1016,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   DebugLoc DL = MI.getDebugLoc();
   unsigned Opc = MI.getOpcode();
 
-  auto RealCirc = [&](unsigned Opc, bool HasImm = true, unsigned MxOp = 4) {
+  auto RealCirc = [&](unsigned Opc, bool HasImm, unsigned MxOp) {
     unsigned Mx = MI.getOperand(MxOp).getReg();
     unsigned CSx = (Mx == Hexagon::M0 ? Hexagon::CS0 : Hexagon::CS1);
     BuildMI(MBB, MI, DL, get(Hexagon::A2_tfrrcr), CSx)
@@ -1409,49 +1409,49 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       return true;
 
     case Hexagon::PS_loadrub_pci:
-      return RealCirc(Hexagon::L2_loadrub_pci);
+      return RealCirc(Hexagon::L2_loadrub_pci, /*HasImm*/true,  /*MxOp*/4);
     case Hexagon::PS_loadrb_pci:
-      return RealCirc(Hexagon::L2_loadrb_pci);
+      return RealCirc(Hexagon::L2_loadrb_pci,  /*HasImm*/true,  /*MxOp*/4);
     case Hexagon::PS_loadruh_pci:
-      return RealCirc(Hexagon::L2_loadruh_pci);
+      return RealCirc(Hexagon::L2_loadruh_pci, /*HasImm*/true,  /*MxOp*/4);
     case Hexagon::PS_loadrh_pci:
-      return RealCirc(Hexagon::L2_loadrh_pci);
+      return RealCirc(Hexagon::L2_loadrh_pci,  /*HasImm*/true,  /*MxOp*/4);
     case Hexagon::PS_loadri_pci:
-      return RealCirc(Hexagon::L2_loadri_pci);
+      return RealCirc(Hexagon::L2_loadri_pci,  /*HasImm*/true,  /*MxOp*/4);
     case Hexagon::PS_loadrd_pci:
-      return RealCirc(Hexagon::L2_loadrd_pci);
+      return RealCirc(Hexagon::L2_loadrd_pci,  /*HasImm*/true,  /*MxOp*/4);
     case Hexagon::PS_loadrub_pcr:
-      return RealCirc(Hexagon::L2_loadrub_pcr, /*HasImm=*/false, /*MxOp=*/3);
+      return RealCirc(Hexagon::L2_loadrub_pcr, /*HasImm*/false, /*MxOp*/3);
     case Hexagon::PS_loadrb_pcr:
-      return RealCirc(Hexagon::L2_loadrb_pcr, /*HasImm=*/false, /*MxOp=*/3);
+      return RealCirc(Hexagon::L2_loadrb_pcr,  /*HasImm*/false, /*MxOp*/3);
     case Hexagon::PS_loadruh_pcr:
-      return RealCirc(Hexagon::L2_loadruh_pcr, /*HasImm=*/false, /*MxOp=*/3);
+      return RealCirc(Hexagon::L2_loadruh_pcr, /*HasImm*/false, /*MxOp*/3);
     case Hexagon::PS_loadrh_pcr:
-      return RealCirc(Hexagon::L2_loadrh_pcr, /*HasImm=*/false, /*MxOp=*/3);
+      return RealCirc(Hexagon::L2_loadrh_pcr,  /*HasImm*/false, /*MxOp*/3);
     case Hexagon::PS_loadri_pcr:
-      return RealCirc(Hexagon::L2_loadri_pcr, /*HasImm=*/false, /*MxOp=*/3);
+      return RealCirc(Hexagon::L2_loadri_pcr,  /*HasImm*/false, /*MxOp*/3);
     case Hexagon::PS_loadrd_pcr:
-      return RealCirc(Hexagon::L2_loadrd_pcr, /*HasImm=*/false, /*MxOp=*/3);
+      return RealCirc(Hexagon::L2_loadrd_pcr,  /*HasImm*/false, /*MxOp*/3);
     case Hexagon::PS_storerb_pci:
-      return RealCirc(Hexagon::S2_storerb_pci, /*HasImm=*/true, /*MxOp=*/3);
+      return RealCirc(Hexagon::S2_storerb_pci, /*HasImm*/true,  /*MxOp*/3);
     case Hexagon::PS_storerh_pci:
-      return RealCirc(Hexagon::S2_storerh_pci, /*HasImm=*/true, /*MxOp=*/3);
+      return RealCirc(Hexagon::S2_storerh_pci, /*HasImm*/true,  /*MxOp*/3);
     case Hexagon::PS_storerf_pci:
-      return RealCirc(Hexagon::S2_storerf_pci, /*HasImm=*/true, /*MxOp=*/3);
+      return RealCirc(Hexagon::S2_storerf_pci, /*HasImm*/true,  /*MxOp*/3);
     case Hexagon::PS_storeri_pci:
-      return RealCirc(Hexagon::S2_storeri_pci, /*HasImm=*/true, /*MxOp=*/3);
+      return RealCirc(Hexagon::S2_storeri_pci, /*HasImm*/true,  /*MxOp*/3);
     case Hexagon::PS_storerd_pci:
-      return RealCirc(Hexagon::S2_storerd_pci, /*HasImm=*/true, /*MxOp=*/3);
+      return RealCirc(Hexagon::S2_storerd_pci, /*HasImm*/true,  /*MxOp*/3);
     case Hexagon::PS_storerb_pcr:
-      return RealCirc(Hexagon::S2_storerb_pcr, /*HasImm=*/false, /*MxOp=*/2);
+      return RealCirc(Hexagon::S2_storerb_pcr, /*HasImm*/false, /*MxOp*/2);
     case Hexagon::PS_storerh_pcr:
-      return RealCirc(Hexagon::S2_storerh_pcr, /*HasImm=*/false, /*MxOp=*/2);
+      return RealCirc(Hexagon::S2_storerh_pcr, /*HasImm*/false, /*MxOp*/2);
     case Hexagon::PS_storerf_pcr:
-      return RealCirc(Hexagon::S2_storerf_pcr, /*HasImm=*/false, /*MxOp=*/2);
+      return RealCirc(Hexagon::S2_storerf_pcr, /*HasImm*/false, /*MxOp*/2);
     case Hexagon::PS_storeri_pcr:
-      return RealCirc(Hexagon::S2_storeri_pcr, /*HasImm=*/false, /*MxOp=*/2);
+      return RealCirc(Hexagon::S2_storeri_pcr, /*HasImm*/false, /*MxOp*/2);
     case Hexagon::PS_storerd_pcr:
-      return RealCirc(Hexagon::S2_storerd_pcr, /*HasImm=*/false, /*MxOp=*/2);
+      return RealCirc(Hexagon::S2_storerd_pcr, /*HasImm*/false, /*MxOp*/2);
   }
 
   return false;

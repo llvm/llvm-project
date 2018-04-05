@@ -57,7 +57,6 @@ private:
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
   std::vector<InputFile *> Files;
-  llvm::wasm::WasmGlobal StackPointerGlobal;
 };
 } // anonymous namespace
 
@@ -336,10 +335,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // globals aren't yet supported in the official binary format.
     // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN if/when the
     // "mutable global" proposal is accepted.
-    StackPointerGlobal.Type = {WASM_TYPE_I32, true};
-    StackPointerGlobal.InitExpr.Value.Int32 = 0;
-    StackPointerGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    InputGlobal *StackPointer = make<InputGlobal>(StackPointerGlobal);
+    llvm::wasm::WasmGlobal Global;
+    Global.Type = {WASM_TYPE_I32, true};
+    Global.InitExpr.Value.Int32 = 0;
+    Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    InputGlobal *StackPointer = make<InputGlobal>(Global);
     StackPointer->Live = true;
 
     static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};

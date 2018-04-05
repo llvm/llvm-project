@@ -1256,6 +1256,10 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
     // If the field looks like this:
     // struct { ... } A;
     QualType FieldType = F->getType();
+    // In case of nested structs.
+    while (const auto *ElabType = dyn_cast<ElaboratedType>(FieldType))
+      FieldType = ElabType->getNamedType();
+
     if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
       const RecordDecl *RecDecl = RecType->getDecl();
       if (RecDecl->getDeclContext() == Owner && !RecDecl->getIdentifier()) {

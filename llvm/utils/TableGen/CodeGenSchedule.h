@@ -235,9 +235,13 @@ struct CodeGenProcModel {
   // List of Register Files.
   std::vector<CodeGenRegisterFile> RegisterFiles;
 
+  // Optional Retire Control Unit definition.
+  Record *RetireControlUnit;
+
   CodeGenProcModel(unsigned Idx, std::string Name, Record *MDef,
                    Record *IDef) :
-    Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef) {}
+    Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef),
+    RetireControlUnit(nullptr) {}
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();
@@ -248,7 +252,7 @@ struct CodeGenProcModel {
   }
 
   bool hasExtraProcessorInfo() const {
-    return !RegisterFiles.empty();
+    return RetireControlUnit || !RegisterFiles.empty();
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;
@@ -436,7 +440,11 @@ private:
 
   void collectSchedClasses();
 
+  void collectRetireControlUnits();
+
   void collectRegisterFiles();
+
+  void collectOptionalProcessorInfo();
 
   std::string createSchedClassName(Record *ItinClassDef,
                                    ArrayRef<unsigned> OperWrites,

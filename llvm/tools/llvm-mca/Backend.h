@@ -68,9 +68,9 @@ public:
         HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(),
                                          LoadQueueSize, StoreQueueSize,
                                          AssumeNoAlias)),
-        DU(llvm::make_unique<DispatchUnit>(
-            this, STI, MRI, Subtarget.getSchedModel().MicroOpBufferSize,
-            RegisterFileSize, DispatchWidth, HWS.get())),
+        DU(llvm::make_unique<DispatchUnit>(this, Subtarget.getSchedModel(), MRI,
+                                           RegisterFileSize, DispatchWidth,
+                                           HWS.get())),
         SM(Source), Cycles(0) {
     HWS->setDispatchUnit(DU.get());
   }

@@ -798,7 +798,8 @@ public:
 
   /// Return true if this is a POD type according to the more relaxed rules
   /// of the C++11 standard, regardless of the current compilation's language.
-  /// (C++0x [basic.types]p9)
+  /// (C++0x [basic.types]p9). Note that, unlike
+  /// CXXRecordDecl::isCXX11StandardLayout, this takes DRs into account.
   bool isCXX11PODType(const ASTContext &Context) const;
 
   /// Return true if this is a trivial type per (C++0x [basic.types]p9)

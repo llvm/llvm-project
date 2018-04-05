@@ -621,6 +621,13 @@ inline BinaryOp_match<LHS, RHS, Instruction::FSub> m_FSub(const LHS &L,
   return BinaryOp_match<LHS, RHS, Instruction::FSub>(L, R);
 }
 
+/// Match 'fneg X' as 'fsub -0.0, X'.
+template <typename RHS>
+inline BinaryOp_match<cstfp_pred_ty<is_neg_zero_fp>, RHS, Instruction::FSub>
+m_FNeg(const RHS &X) {
+  return m_FSub(m_NegZeroFP(), X);
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, Instruction::Mul> m_Mul(const LHS &L,
                                                         const RHS &R) {
@@ -1180,31 +1187,6 @@ private:
 
 /// Match an integer negate.
 template <typename LHS> inline neg_match<LHS> m_Neg(const LHS &L) { return L; }
-
-template <typename LHS_t> struct fneg_match {
-  LHS_t L;
-
-  fneg_match(const LHS_t &LHS) : L(LHS) {}
-
-  template <typename OpTy> bool match(OpTy *V) {
-    if (auto *O = dyn_cast<Operator>(V))
-      if (O->getOpcode() == Instruction::FSub)
-        return matchIfFNeg(O->getOperand(0), O->getOperand(1));
-    return false;
-  }
-
-private:
-  bool matchIfFNeg(Value *LHS, Value *RHS) {
-    if (const auto *C = dyn_cast<Constant>(LHS))
-      return C->isNegativeZeroValue() && L.match(RHS);
-    return false;
-  }
-};
-
-/// Match a floating point negate.
-template <typename LHS> inline fneg_match<LHS> m_FNeg(const LHS &L) {
-  return L;
-}
 
 //===----------------------------------------------------------------------===//
 // Matchers for control flow.

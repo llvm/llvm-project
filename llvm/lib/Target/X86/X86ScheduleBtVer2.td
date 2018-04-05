@@ -48,6 +48,11 @@ def IntegerPRF : RegisterFile<64, [GR8, GR16, GR32, GR64, CCR]>;
 // Reference: www.realworldtech.com/jaguar/4/
 def FpuPRF: RegisterFile<72, [VR64, VR128, VR256], [1, 1, 2]>;
 
+// The retire control unit (RCU) can track up to 64 macro-ops in-flight. It can
+// retire up to two macro-ops per cycle.
+// Reference: "Software Optimization Guide for AMD Family 16h Processors"
+def RCU : RetireControlUnit<64, 2>;
+
 // Integer Pipe Scheduler
 def JALU01 : ProcResGroup<[JALU0, JALU1]> {
   let BufferSize=20;

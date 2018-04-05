@@ -26,10 +26,16 @@ namespace targets {
 class RISCVTargetInfo : public TargetInfo {
 protected:
   std::string ABI;
+  bool HasM;
+  bool HasA;
+  bool HasF;
+  bool HasD;
+  bool HasC;
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple) {
+      : TargetInfo(Triple), HasM(false), HasA(false), HasF(false),
+        HasD(false), HasC(false) {
     TLSSupported = false;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
@@ -59,6 +65,11 @@ public:
                              TargetInfo::ConstraintInfo &Info) const override {
     return false;
   }
+
+  bool hasFeature(StringRef Feature) const override;
+
+  bool handleTargetFeatures(std::vector<std::string> &Features,
+                            DiagnosticsEngine &Diags) override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

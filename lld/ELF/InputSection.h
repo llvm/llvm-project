@@ -200,7 +200,7 @@ private:
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t Off, uint32_t Hash, bool Live)
-      : InputOff(Off), Hash(Hash), OutputOff(-1),
+      : InputOff(Off), Hash(Hash), OutputOff(0),
         Live(Live || !Config->GcSections) {}
 
   uint32_t InputOff;

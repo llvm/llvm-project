@@ -1071,7 +1071,10 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
     ToData.Polymorphic = FromData.Polymorphic;
     ToData.Abstract = FromData.Abstract;
     ToData.IsStandardLayout = FromData.IsStandardLayout;
-    ToData.HasNoNonEmptyBases = FromData.HasNoNonEmptyBases;
+    ToData.IsCXX11StandardLayout = FromData.IsCXX11StandardLayout;
+    ToData.HasBasesWithFields = FromData.HasBasesWithFields;
+    ToData.HasBasesWithNonStaticDataMembers =
+        FromData.HasBasesWithNonStaticDataMembers;
     ToData.HasPrivateFields = FromData.HasPrivateFields;
     ToData.HasProtectedFields = FromData.HasProtectedFields;
     ToData.HasPublicFields = FromData.HasPublicFields;
@@ -1923,9 +1926,8 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       }
       
       if (RecordDecl *FoundRecord = dyn_cast<RecordDecl>(Found)) {
-        if (D->isAnonymousStructOrUnion() && 
-            FoundRecord->isAnonymousStructOrUnion()) {
-          // If both anonymous structs/unions are in a record context, make sure
+        if (!SearchName) {
+          // If both unnamed structs/unions are in a record context, make sure
           // they occur in the same location in the context records.
           if (Optional<unsigned> Index1 =
                   StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(
