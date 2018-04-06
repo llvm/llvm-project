@@ -1111,8 +1111,9 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
 // When clang crashes, produce diagnostic information including the fully
 // preprocessed source file(s).  Request that the developer attach the
 // diagnostic information to a bug report.
-void Driver::generateCompilationDiagnostics(Compilation &C,
-                                            const Command &FailingCommand) {
+void Driver::generateCompilationDiagnostics(
+    Compilation &C, const Command &FailingCommand,
+    StringRef AdditionalInformation, CompilationDiagnosticReport *Report) {
   if (C.getArgs().hasArg(options::OPT_fno_crash_diagnostics))
     return;
 
@@ -1238,6 +1239,8 @@ void Driver::generateCompilationDiagnostics(Compilation &C,
   SmallString<128> ReproCrashFilename;
   for (const char *TempFile : TempFiles) {
     Diag(clang::diag::note_drv_command_failed_diag_msg) << TempFile;
+    if (Report)
+      Report->TemporaryFiles.push_back(TempFile);
     if (ReproCrashFilename.empty()) {
       ReproCrashFilename = TempFile;
       llvm::sys::path::replace_extension(ReproCrashFilename, ".crash");
@@ -1268,6 +1271,11 @@ void Driver::generateCompilationDiagnostics(Compilation &C,
     ScriptOS << "# Original command: ";
     Cmd.Print(ScriptOS, "\n", /*Quote=*/true);
     Cmd.Print(ScriptOS, "\n", /*Quote=*/true, &CrashInfo);
+    if (!AdditionalInformation.empty())
+      ScriptOS << "\n# Additional information: " << AdditionalInformation
+               << "\n";
+    if (Report)
+      Report->TemporaryFiles.push_back(Script);
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 
