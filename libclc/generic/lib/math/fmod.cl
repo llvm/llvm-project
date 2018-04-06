@@ -1,12 +1,6 @@
 #include <clc/clc.h>
-#include "../clcmacro.h"
+#include <math/clc_fmod.h>
 
-_CLC_DEFINE_BINARY_BUILTIN(float, fmod, __builtin_fmodf, float, float)
-
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_DEFINE_BINARY_BUILTIN(double, fmod, __builtin_fmod, double, double)
-
-#endif
+#define __CLC_FUNC fmod
+#define __CLC_BODY <clc_sw_binary.inc>
+#include <clc/math/gentype.inc>
