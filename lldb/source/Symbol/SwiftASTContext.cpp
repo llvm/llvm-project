@@ -1382,6 +1382,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     PlatformSP platform_sp(target.GetPlatform());
     uint32_t major, minor, update;
     if (platform_sp &&
+        !target.GetArchitecture().GetTriple().hasEnvironment() &&
         platform_sp->GetOSVersion(major, minor, update,
                                   target.GetProcessSP().get())) {
       StreamString full_triple_name;
