@@ -199,13 +199,48 @@ typedef enum {
 } LLVMDLLStorageClass;
 
 typedef enum {
-  LLVMCCallConv           = 0,
-  LLVMFastCallConv        = 8,
-  LLVMColdCallConv        = 9,
-  LLVMWebKitJSCallConv    = 12,
-  LLVMAnyRegCallConv      = 13,
-  LLVMX86StdcallCallConv  = 64,
-  LLVMX86FastcallCallConv = 65
+  LLVMCCallConv             = 0,
+  LLVMFastCallConv          = 8,
+  LLVMColdCallConv          = 9,
+  LLVMGHCCallConv           = 10,
+  LLVMHiPECallConv          = 11,
+  LLVMWebKitJSCallConv      = 12,
+  LLVMAnyRegCallConv        = 13,
+  LLVMPreserveMostCallConv  = 14,
+  LLVMPreserveAllCallConv   = 15,
+  LLVMSwiftCallConv         = 16,
+  LLVMCXXFASTTLSCallConv    = 17,
+  LLVMX86StdcallCallConv    = 64,
+  LLVMX86FastcallCallConv   = 65,
+  LLVMARMAPCSCallConv       = 66,
+  LLVMARMAAPCSCallConv      = 67,
+  LLVMARMAAPCSVFPCallConv   = 68,
+  LLVMMSP430INTRCallConv    = 69,
+  LLVMX86ThisCallCallConv   = 70,
+  LLVMPTXKernelCallConv     = 71,
+  LLVMPTXDeviceCallConv     = 72,
+  LLVMSPIRFUNCCallConv      = 75,
+  LLVMSPIRKERNELCallConv    = 76,
+  LLVMIntelOCLBICallConv    = 77,
+  LLVMX8664SysVCallConv     = 78,
+  LLVMWin64CallConv         = 79,
+  LLVMX86VectorCallCallConv = 80,
+  LLVMHHVMCallConv          = 81,
+  LLVMHHVMCCallConv         = 82,
+  LLVMX86INTRCallConv       = 83,
+  LLVMAVRINTRCallConv       = 84,
+  LLVMAVRSIGNALCallConv     = 85,
+  LLVMAVRBUILTINCallConv    = 86,
+  LLVMAMDGPUVSCallConv      = 87,
+  LLVMAMDGPUGSCallConv      = 88,
+  LLVMAMDGPUPSCallConv      = 89,
+  LLVMAMDGPUCSCallConv      = 90,
+  LLVMAMDGPUKERNELCallConv  = 91,
+  LLVMX86RegCallCallConv    = 92,
+  LLVMAMDGPUHSCallConv      = 93,
+  LLVMMSP430BUILTINCallConv = 94,
+  LLVMAMDGPULSCallConv      = 95,
+  LLVMAMDGPUESCallConv      = 96
 } LLVMCallConv;
 
 typedef enum {
@@ -340,6 +375,11 @@ typedef enum {
     LLVMDSRemark,
     LLVMDSNote
 } LLVMDiagnosticSeverity;
+
+typedef enum {
+  LLVMInlineAsmDialectATT,
+  LLVMInlineAsmDialectIntel
+} LLVMInlineAsmDialect;
 
 /**
  * Attribute index are either LLVMAttributeReturnIndex,
@@ -650,11 +690,36 @@ LLVMBool LLVMPrintModuleToFile(LLVMModuleRef M, const char *Filename,
 char *LLVMPrintModuleToString(LLVMModuleRef M);
 
 /**
+ * Get inline assembly for a module.
+ *
+ * @see Module::getModuleInlineAsm()
+ */
+const char *LLVMGetModuleInlineAsm(LLVMModuleRef M, size_t *Len);
+
+/**
  * Set inline assembly for a module.
  *
  * @see Module::setModuleInlineAsm()
  */
-void LLVMSetModuleInlineAsm(LLVMModuleRef M, const char *Asm);
+void LLVMSetModuleInlineAsm2(LLVMModuleRef M, const char *Asm, size_t Len);
+
+/**
+ * Append inline assembly to a module.
+ *
+ * @see Module::appendModuleInlineAsm()
+ */
+void LLVMAppendModuleInlineAsm(LLVMModuleRef M, const char *Asm, size_t Len);
+
+/**
+ * Create the specified uniqued inline asm string.
+ *
+ * @see InlineAsm::get()
+ */
+LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty,
+                              char *AsmString, size_t AsmStringSize,
+                              char *Constraints, size_t ConstraintsSize,
+                              LLVMBool HasSideEffects, LLVMBool IsAlignStack,
+                              LLVMInlineAsmDialect Dialect);
 
 /**
  * Obtain the context to which this module is associated.
@@ -744,6 +809,9 @@ LLVMValueRef LLVMGetNextFunction(LLVMValueRef Fn);
  * no previous functions.
  */
 LLVMValueRef LLVMGetPreviousFunction(LLVMValueRef Fn);
+
+/** Deprecated: Use LLVMSetModuleInlineAsm2 instead. */
+void LLVMSetModuleInlineAsm(LLVMModuleRef M, const char *Asm);
 
 /**
  * @}
@@ -1820,10 +1888,12 @@ LLVMValueRef LLVMConstExtractValue(LLVMValueRef AggConstant, unsigned *IdxList,
 LLVMValueRef LLVMConstInsertValue(LLVMValueRef AggConstant,
                                   LLVMValueRef ElementValueConstant,
                                   unsigned *IdxList, unsigned NumIdx);
+LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB);
+
+/** Deprecated: Use LLVMGetInlineAsm instead. */
 LLVMValueRef LLVMConstInlineAsm(LLVMTypeRef Ty,
                                 const char *AsmString, const char *Constraints,
                                 LLVMBool HasSideEffects, LLVMBool IsAlignStack);
-LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB);
 
 /**
  * @}

@@ -526,7 +526,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.ExperimentalNewPassManager = Args.hasFlag(
       OPT_fexperimental_new_pass_manager, OPT_fno_experimental_new_pass_manager,
-      /* Default */ false);
+      /* Default */ ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER);
 
   Opts.DebugPassManager =
       Args.hasFlag(OPT_fdebug_pass_manager, OPT_fno_debug_pass_manager,

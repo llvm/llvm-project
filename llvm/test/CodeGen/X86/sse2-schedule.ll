@@ -5530,7 +5530,7 @@ define <2 x i64> @test_movq_mem(<2 x i64> %a0, i64 *%a1) {
 define <2 x i64> @test_movq_reg(<2 x i64> %a0, <2 x i64> %a1) {
 ; GENERIC-LABEL: test_movq_reg:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero sched: [1:1.00]
+; GENERIC-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero sched: [1:0.33]
 ; GENERIC-NEXT:    paddq %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5550,7 +5550,7 @@ define <2 x i64> @test_movq_reg(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; SANDY-SSE-LABEL: test_movq_reg:
 ; SANDY-SSE:       # %bb.0:
-; SANDY-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero sched: [1:1.00]
+; SANDY-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero sched: [1:0.33]
 ; SANDY-SSE-NEXT:    paddq %xmm1, %xmm0 # sched: [1:0.50]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;

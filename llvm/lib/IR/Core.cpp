@@ -304,8 +304,40 @@ char *LLVMPrintModuleToString(LLVMModuleRef M) {
 }
 
 /*--.. Operations on inline assembler ......................................--*/
+void LLVMSetModuleInlineAsm2(LLVMModuleRef M, const char *Asm, size_t Len) {
+  unwrap(M)->setModuleInlineAsm(StringRef(Asm, Len));
+}
+
 void LLVMSetModuleInlineAsm(LLVMModuleRef M, const char *Asm) {
   unwrap(M)->setModuleInlineAsm(StringRef(Asm));
+}
+
+void LLVMAppendModuleInlineAsm(LLVMModuleRef M, const char *Asm, size_t Len) {
+  unwrap(M)->appendModuleInlineAsm(StringRef(Asm, Len));
+}
+
+const char *LLVMGetModuleInlineAsm(LLVMModuleRef M, size_t *Len) {
+  auto &Str = unwrap(M)->getModuleInlineAsm();
+  *Len = Str.length();
+  return Str.c_str();
+}
+
+LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty,
+                              char *AsmString, size_t AsmStringSize,
+                              char *Constraints, size_t ConstraintsSize,
+                              LLVMBool HasSideEffects, LLVMBool IsAlignStack,
+                              LLVMInlineAsmDialect Dialect) {
+  InlineAsm::AsmDialect AD;
+  switch (Dialect) {
+  case LLVMInlineAsmDialectATT:
+    AD = InlineAsm::AD_ATT;
+  case LLVMInlineAsmDialectIntel:
+    AD = InlineAsm::AD_Intel;
+  }
+  return wrap(InlineAsm::get(unwrap<FunctionType>(Ty),
+                             StringRef(AsmString, AsmStringSize),
+                             StringRef(Constraints, ConstraintsSize),
+                             HasSideEffects, IsAlignStack, AD));
 }
 
 
