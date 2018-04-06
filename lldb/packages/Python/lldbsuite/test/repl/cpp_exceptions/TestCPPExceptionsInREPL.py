@@ -9,7 +9,6 @@ import os
 import time
 import re
 import lldb
-from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
@@ -23,7 +22,6 @@ class TestREPLExceptions(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfLinux # <rdar://problem/39245862>
     def test_repl_exceptions(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")
