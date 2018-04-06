@@ -32,12 +32,9 @@ public:
     Size += InSeg->getSize();
   }
 
-  uint32_t getSectionOffset() const { return SectionOffset; }
-
-  void setSectionOffset(uint32_t Offset) { SectionOffset = Offset; }
-
   StringRef Name;
   const uint32_t Index;
+  uint32_t SectionOffset = 0;
   uint32_t Alignment = 0;
   uint32_t StartVA = 0;
   std::vector<InputSegment *> InputSegments;
@@ -47,9 +44,6 @@ public:
 
   // Segment header
   std::string Header;
-
-private:
-  uint32_t SectionOffset = 0;
 };
 
 } // namespace wasm

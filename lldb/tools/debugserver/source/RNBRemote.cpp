@@ -6091,100 +6091,18 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
       for (uint32_t i = 0; i < mh.ncmds && !os_handled; ++i) {
         const nub_size_t bytes_read =
             DNBProcessMemoryRead(pid, load_command_addr, sizeof(lc), &lc);
-        uint32_t raw_cmd = lc.cmd & ~LC_REQ_DYLD;
-        if (bytes_read != sizeof(lc))
-          break;
-        switch (raw_cmd) {
-        case LC_VERSION_MIN_IPHONEOS:
-          os_handled = true;
-          rep << "ostype:ios;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_IPHONEOS -> 'ostype:ios;'");
-          break;
 
-        case LC_VERSION_MIN_MACOSX:
+        uint32_t major_version, minor_version, patch_version;
+        auto *platform = DNBGetDeploymentInfo(pid, lc, load_command_addr,
+                                              major_version, minor_version,
+                                              patch_version);
+        if (platform) {
           os_handled = true;
-          rep << "ostype:macosx;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_MACOSX -> 'ostype:macosx;'");
-          break;
-
-#if defined(LC_VERSION_MIN_TVOS)
-        case LC_VERSION_MIN_TVOS:
-          os_handled = true;
-          rep << "ostype:tvos;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_TVOS -> 'ostype:tvos;'");
-          break;
-#endif
-
-#if defined(LC_VERSION_MIN_WATCHOS)
-        case LC_VERSION_MIN_WATCHOS:
-          os_handled = true;
-          rep << "ostype:watchos;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_WATCHOS -> 'ostype:watchos;'");
-          break;
-#endif
-
-        default:
+          rep << "ostype:" << platform << ";";
           break;
         }
         load_command_addr = load_command_addr + lc.cmdsize;
       }
-
-// Test that the PLATFORM_* defines are available from mach-o/loader.h
-#if defined (PLATFORM_MACOS)
-      for (uint32_t i = 0; i < mh.ncmds && !os_handled; ++i) 
-      {
-        nub_size_t bytes_read =
-            DNBProcessMemoryRead(pid, load_command_addr, sizeof(lc), &lc);
-        uint32_t raw_cmd = lc.cmd & ~LC_REQ_DYLD;
-        if (bytes_read != sizeof(lc))
-          break;
-
-        if (raw_cmd == LC_BUILD_VERSION)
-        {
-          uint32_t platform; // first field of 'struct build_version_command'
-          bytes_read = DNBProcessMemoryRead(pid, load_command_addr + 8, sizeof(platform), &platform);
-          if (bytes_read != sizeof (platform))
-              break;
-          switch (platform)
-          {
-              case PLATFORM_MACOS:
-                  os_handled = true;
-                  rep << "ostype:macosx;";
-                  DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_BUILD_VERSION PLATFORM_MACOS -> 'ostype:macosx;'");
-                  break;
-              case PLATFORM_IOS:
-                  os_handled = true;
-                  rep << "ostype:ios;";
-                  DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_BUILD_VERSION PLATFORM_IOS -> 'ostype:ios;'");
-                  break;
-              case PLATFORM_TVOS:
-                  os_handled = true;
-                  rep << "ostype:tvos;";
-                  DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_BUILD_VERSION PLATFORM_TVOS -> 'ostype:tvos;'");
-                  break;
-              case PLATFORM_WATCHOS:
-                  os_handled = true;
-                  rep << "ostype:watchos;";
-                  DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_BUILD_VERSION PLATFORM_WATCHOS -> 'ostype:watchos;'");
-                  break;
-              case PLATFORM_BRIDGEOS:
-                  os_handled = true;
-                  rep << "ostype:bridgeos;";
-                  DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_BUILD_VERSION PLATFORM_BRIDGEOS -> 'ostype:bridgeos;'");
-                  break;
-          }
-    }
-      }
-#endif // PLATFORM_MACOS
     }
 #endif // when compiling this on x86 targets
   }

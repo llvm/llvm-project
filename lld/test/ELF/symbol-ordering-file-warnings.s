@@ -97,23 +97,22 @@
 # WARN-NOT:    warning:
 # SAMESYM:     warning: {{.*}}.txt: duplicate ordered symbol: _start
 # WARN-NOT:    warning:
-# ABSOLUTE:    warning: {{.*}}1.o: unable to order absolute symbol: absolute
-# WARN-NOT:    warning:
 # DISCARD:     warning: {{.*}}1.o: unable to order discarded symbol: discard
 # WARN-NOT:    warning:
 # GC:          warning: {{.*}}1.o: unable to order discarded symbol: gc
 # WARN-NOT:    warning:
-# SHARED:      warning: {{.*}}1.o: unable to order shared symbol: shared
+# SHARED:      warning: {{.*}}.so: unable to order shared symbol: shared
 # WARN-NOT:    warning:
 # UNDEFINED:   warning: {{.*}}3.o: unable to order undefined symbol: undefined
+# WARN-NOT:    warning:
+# ABSOLUTE:    warning: {{.*}}1.o: unable to order absolute symbol: absolute
 # WARN-NOT:    warning:
 # MISSING:     warning: symbol ordering file: no such symbol: missing
 # MISSING2:    warning: symbol ordering file: no such symbol: missing_sym
 # ICF:         warning: {{.*}}1.o: unable to order discarded symbol: icf2
 # COMDAT:      warning: {{.*}}1.o: unable to order discarded symbol: comdat
-# COMDAT-NEXT: warning: {{.*}}2.o: unable to order discarded symbol: comdat
-# MULTI:       warning: {{.*}}2.o: unable to order absolute symbol: multi
-# MULTI-NEXT:  warning: {{.*}}3.o: unable to order undefined symbol: multi
+# MULTI:       warning: {{.*}}3.o: unable to order undefined symbol: multi
+# MULTI-NEXT:  warning: {{.*}}2.o: unable to order absolute symbol: multi
 # WARN-NOT:    warning:
 
 absolute = 0x1234

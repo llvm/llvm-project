@@ -24,6 +24,7 @@
 
 // C++ Includes
 #include <algorithm>
+#include <csignal>
 #include <map>
 #include <mutex>
 #include <sstream>
