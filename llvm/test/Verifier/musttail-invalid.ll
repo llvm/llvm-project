@@ -69,7 +69,7 @@ define void @mismatched_alignment(i32* byval align 4 %a) {
 
 declare i32 @not_tail_pos_callee()
 define i32 @not_tail_pos() {
-; CHECK: musttail call must be precede a ret with an optional bitcast
+; CHECK: musttail call must precede a ret with an optional bitcast
   %v = musttail call i32 @not_tail_pos_callee()
   %w = add i32 %v, 1
   ret i32 %w

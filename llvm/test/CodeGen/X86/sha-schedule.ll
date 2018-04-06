@@ -12,7 +12,7 @@ define <4 x i32> @test_sha1msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1msg1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sha1msg1 %xmm1, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    sha1msg1 (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    sha1msg1 (%rdi), %xmm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1msg1:
@@ -43,7 +43,7 @@ define <4 x i32> @test_sha1msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1msg2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sha1msg2 %xmm1, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    sha1msg2 (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    sha1msg2 (%rdi), %xmm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1msg2:
@@ -74,7 +74,7 @@ define <4 x i32> @test_sha1nexte(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1nexte:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sha1nexte %xmm1, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    sha1nexte (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    sha1nexte (%rdi), %xmm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1nexte:
@@ -105,7 +105,7 @@ define <4 x i32> @test_sha1rnds4(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1rnds4:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1rnds4:
@@ -140,7 +140,7 @@ define <4 x i32> @test_sha256msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ; GENERIC-LABEL: test_sha256msg1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sha256msg1 %xmm1, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    sha256msg1 (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    sha256msg1 (%rdi), %xmm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha256msg1:
@@ -171,7 +171,7 @@ define <4 x i32> @test_sha256msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ; GENERIC-LABEL: test_sha256msg2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha256msg2:
@@ -204,7 +204,7 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ; GENERIC-NEXT:    movaps %xmm0, %xmm3 # sched: [1:1.00]
 ; GENERIC-NEXT:    movaps %xmm2, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [5:1.00]
-; GENERIC-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [9:1.00]
+; GENERIC-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [10:1.00]
 ; GENERIC-NEXT:    movaps %xmm3, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

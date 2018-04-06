@@ -41,6 +41,7 @@ multiclass X86SchedWritePair {
 
 // Arithmetic.
 defm WriteALU  : X86SchedWritePair; // Simple integer ALU op.
+def WriteALURMW : WriteSequence<[WriteALULd, WriteRMW]>;
 defm WriteIMul : X86SchedWritePair; // Integer multiplication.
 def  WriteIMulH : SchedWrite;       // Integer multiplication, high part.
 defm WriteIDiv : X86SchedWritePair; // Integer division.
@@ -641,12 +642,10 @@ def IIC_CMPXCHG_8B : InstrItinClass;
 def IIC_CMPXCHG_16B : InstrItinClass;
 def IIC_LODS : InstrItinClass;
 def IIC_OUTS : InstrItinClass;
-def IIC_CLC : InstrItinClass;
+def IIC_CLC_CMC_STC : InstrItinClass;
 def IIC_CLD : InstrItinClass;
 def IIC_CLI : InstrItinClass;
-def IIC_CMC : InstrItinClass;
 def IIC_CLTS : InstrItinClass;
-def IIC_STC : InstrItinClass;
 def IIC_STI : InstrItinClass;
 def IIC_STD : InstrItinClass;
 def IIC_XLAT : InstrItinClass;

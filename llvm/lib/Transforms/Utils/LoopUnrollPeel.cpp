@@ -232,6 +232,19 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (!L->empty())
     return;
 
+  // If the user provided a peel count, use that.
+  bool UserPeelCount = UnrollForcePeelCount.getNumOccurrences() > 0;
+  if (UserPeelCount) {
+    DEBUG(dbgs() << "Force-peeling first " << UnrollForcePeelCount
+                 << " iterations.\n");
+    UP.PeelCount = UnrollForcePeelCount;
+    return;
+  }
+
+  // Skip peeling if it's disabled.
+  if (!UP.AllowPeeling)
+    return;
+
   // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
   // iterations of the loop. For this we compute the number for iterations after
   // which every Phi is guaranteed to become an invariant, and try to peel the
@@ -279,21 +292,12 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (TripCount)
     return;
 
-  // If the user provided a peel count, use that.
-  bool UserPeelCount = UnrollForcePeelCount.getNumOccurrences() > 0;
-  if (UserPeelCount) {
-    DEBUG(dbgs() << "Force-peeling first " << UnrollForcePeelCount
-                 << " iterations.\n");
-    UP.PeelCount = UnrollForcePeelCount;
-    return;
-  }
-
   // If we don't know the trip count, but have reason to believe the average
   // trip count is low, peeling should be beneficial, since we will usually
   // hit the peeled section.
   // We only do this in the presence of profile information, since otherwise
   // our estimates of the trip count are not reliable enough.
-  if (UP.AllowPeeling && L->getHeader()->getParent()->hasProfileData()) {
+  if (L->getHeader()->getParent()->hasProfileData()) {
     Optional<unsigned> PeelCount = getLoopEstimatedTripCount(L);
     if (!PeelCount)
       return;

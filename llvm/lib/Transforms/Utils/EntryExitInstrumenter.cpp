@@ -91,17 +91,27 @@ static bool runOnFunction(Function &F, bool PostInlining) {
 
   if (!ExitFunc.empty()) {
     for (BasicBlock &BB : F) {
-      TerminatorInst *T = BB.getTerminator();
+      Instruction *T = BB.getTerminator();
+      if (!isa<ReturnInst>(T))
+        continue;
+
+      // If T is preceded by a musttail call, that's the real terminator.
+      Instruction *Prev = T->getPrevNode();
+      if (BitCastInst *BCI = dyn_cast_or_null<BitCastInst>(Prev))
+        Prev = BCI->getPrevNode();
+      if (CallInst *CI = dyn_cast_or_null<CallInst>(Prev)) {
+        if (CI->isMustTailCall())
+          T = CI;
+      }
+
       DebugLoc DL;
       if (DebugLoc TerminatorDL = T->getDebugLoc())
         DL = TerminatorDL;
       else if (auto SP = F.getSubprogram())
         DL = DebugLoc::get(0, 0, SP);
 
-      if (isa<ReturnInst>(T)) {
-        insertCall(F, ExitFunc, T, DL);
-        Changed = true;
-      }
+      insertCall(F, ExitFunc, T, DL);
+      Changed = true;
     }
     F.removeAttribute(AttributeList::FunctionIndex, ExitAttr);
   }

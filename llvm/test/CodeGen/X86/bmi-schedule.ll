@@ -73,7 +73,7 @@ define i32 @test_andn_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_andn_i32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    andnl %esi, %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    andnl (%rdx), %edi, %eax # sched: [5:0.50]
+; GENERIC-NEXT:    andnl (%rdx), %edi, %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -123,7 +123,7 @@ define i64 @test_andn_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_andn_i64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    andnq %rsi, %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    andnq (%rdx), %rdi, %rax # sched: [5:0.50]
+; GENERIC-NEXT:    andnq (%rdx), %rdi, %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -172,7 +172,7 @@ define i64 @test_andn_i64(i64 %a0, i64 %a1, i64 *%a2) {
 define i32 @test_bextr_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_bextr_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    bextrl %edi, (%rdx), %ecx # sched: [6:1.00]
+; GENERIC-NEXT:    bextrl %edi, (%rdx), %ecx # sched: [7:1.00]
 ; GENERIC-NEXT:    bextrl %edi, %esi, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -222,7 +222,7 @@ declare i32 @llvm.x86.bmi.bextr.32(i32, i32)
 define i64 @test_bextr_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_bextr_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    bextrq %rdi, (%rdx), %rcx # sched: [6:1.00]
+; GENERIC-NEXT:    bextrq %rdi, (%rdx), %rcx # sched: [7:1.00]
 ; GENERIC-NEXT:    bextrq %rdi, %rsi, %rax # sched: [2:1.00]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -272,7 +272,7 @@ declare i64 @llvm.x86.bmi.bextr.64(i64, i64)
 define i32 @test_blsi_i32(i32 %a0, i32 *%a1) {
 ; GENERIC-LABEL: test_blsi_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsil (%rsi), %ecx # sched: [5:0.50]
+; GENERIC-NEXT:    blsil (%rsi), %ecx # sched: [6:0.50]
 ; GENERIC-NEXT:    blsil %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -323,7 +323,7 @@ define i32 @test_blsi_i32(i32 %a0, i32 *%a1) {
 define i64 @test_blsi_i64(i64 %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_blsi_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsiq (%rsi), %rcx # sched: [5:0.50]
+; GENERIC-NEXT:    blsiq (%rsi), %rcx # sched: [6:0.50]
 ; GENERIC-NEXT:    blsiq %rdi, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -374,7 +374,7 @@ define i64 @test_blsi_i64(i64 %a0, i64 *%a1) {
 define i32 @test_blsmsk_i32(i32 %a0, i32 *%a1) {
 ; GENERIC-LABEL: test_blsmsk_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsmskl (%rsi), %ecx # sched: [5:0.50]
+; GENERIC-NEXT:    blsmskl (%rsi), %ecx # sched: [6:0.50]
 ; GENERIC-NEXT:    blsmskl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -425,7 +425,7 @@ define i32 @test_blsmsk_i32(i32 %a0, i32 *%a1) {
 define i64 @test_blsmsk_i64(i64 %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_blsmsk_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsmskq (%rsi), %rcx # sched: [5:0.50]
+; GENERIC-NEXT:    blsmskq (%rsi), %rcx # sched: [6:0.50]
 ; GENERIC-NEXT:    blsmskq %rdi, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -476,7 +476,7 @@ define i64 @test_blsmsk_i64(i64 %a0, i64 *%a1) {
 define i32 @test_blsr_i32(i32 %a0, i32 *%a1) {
 ; GENERIC-LABEL: test_blsr_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsrl (%rsi), %ecx # sched: [5:0.50]
+; GENERIC-NEXT:    blsrl (%rsi), %ecx # sched: [6:0.50]
 ; GENERIC-NEXT:    blsrl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -527,7 +527,7 @@ define i32 @test_blsr_i32(i32 %a0, i32 *%a1) {
 define i64 @test_blsr_i64(i64 %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_blsr_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsrq (%rsi), %rcx # sched: [5:0.50]
+; GENERIC-NEXT:    blsrq (%rsi), %rcx # sched: [6:0.50]
 ; GENERIC-NEXT:    blsrq %rdi, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]

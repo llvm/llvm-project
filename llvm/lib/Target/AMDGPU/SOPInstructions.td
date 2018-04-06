@@ -255,6 +255,17 @@ def S_SET_GPR_IDX_IDX : SOP1_0_32<"s_set_gpr_idx_idx"> {
 }
 }
 
+let SubtargetPredicate = isGFX9 in {
+  let hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC] in {
+    def S_ANDN1_SAVEEXEC_B64 : SOP1_64<"s_andn1_saveexec_b64">;
+    def S_ORN1_SAVEEXEC_B64  : SOP1_64<"s_orn1_saveexec_b64">;
+    def S_ANDN1_WREXEC_B64   : SOP1_64<"s_andn1_wrexec_b64">;
+    def S_ANDN2_WREXEC_B64   : SOP1_64<"s_andn2_wrexec_b64">;
+  } // End hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC]
+
+  def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32">;
+} // End SubtargetPredicate = isGFX9
+
 //===----------------------------------------------------------------------===//
 // SOP2 Instructions
 //===----------------------------------------------------------------------===//
@@ -1314,3 +1325,13 @@ def S_SETREG_B32_vi        : SOPK_Real_vi <0x12, S_SETREG_B32>;
 //def S_GETREG_REGRD_B32_vi  : SOPK_Real_vi <0x13, S_GETREG_REGRD_B32>; // see pseudo for comments
 def S_SETREG_IMM32_B32_vi  : SOPK_Real64<0x14, S_SETREG_IMM32_B32>,
                              Select_vi<S_SETREG_IMM32_B32.Mnemonic>;
+
+//===----------------------------------------------------------------------===//
+// SOP1 - GFX9.
+//===----------------------------------------------------------------------===//
+
+def S_ANDN1_SAVEEXEC_B64_vi   : SOP1_Real_vi<0x33, S_ANDN1_SAVEEXEC_B64>;
+def S_ORN1_SAVEEXEC_B64_vi    : SOP1_Real_vi<0x34, S_ORN1_SAVEEXEC_B64>;
+def S_ANDN1_WREXEC_B64_vi     : SOP1_Real_vi<0x35, S_ANDN1_WREXEC_B64>;
+def S_ANDN2_WREXEC_B64_vi     : SOP1_Real_vi<0x36, S_ANDN2_WREXEC_B64>;
+def S_BITREPLICATE_B64_B32_vi : SOP1_Real_vi<0x37, S_BITREPLICATE_B64_B32>;

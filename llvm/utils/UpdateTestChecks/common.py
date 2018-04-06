@@ -53,6 +53,11 @@ OPT_FUNCTION_RE = re.compile(
     r'(\s+)?[^)]*[^{]*\{\n(?P<body>.*?)^\}$',
     flags=(re.M | re.S))
 
+ANALYZE_FUNCTION_RE = re.compile(
+    r'^\s*\'(?P<analysis>[\w\s-]+?)\'\s+for\s+function\s+\'(?P<func>[\w-]+?)\':'
+    r'\s*\n(?P<body>.*)$',
+    flags=(re.X | re.S))
+
 IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
@@ -82,6 +87,10 @@ def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_too
       continue
     func = m.group('func')
     scrubbed_body = scrubber(m.group('body'), *scrubber_args)
+    if m.groupdict().has_key('analysis'):
+      analysis = m.group('analysis')
+      if analysis.lower() != 'cost model analysis':
+        print('WARNING: Unsupported analysis mode: %r!' % (analysis,), file=sys.stderr)
     if func.startswith('stress'):
       # We only use the last line of the function body for stress tests.
       scrubbed_body = '\n'.join(scrubbed_body.splitlines()[-1:])
@@ -127,7 +136,7 @@ def get_value_use(var):
   return '[[' + get_value_name(var) + ']]'
 
 # Replace IR value defs and uses with FileCheck variables.
-def genericize_check_lines(lines):
+def genericize_check_lines(lines, is_analyze):
   # This gets called for each match that occurs in
   # a line. We transform variables we haven't seen
   # into defs, and variables we have seen into uses.
@@ -152,11 +161,14 @@ def genericize_check_lines(lines):
     line = line.replace('%.', '%dot')
     # Ignore any comments, since the check lines will too.
     scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r'', line)
-    lines[i] =  IR_VALUE_RE.sub(transform_line_vars, scrubbed_line)
+    if is_analyze == False:
+      lines[i] =  IR_VALUE_RE.sub(transform_line_vars, scrubbed_line)
+    else:
+      lines[i] =  scrubbed_line
   return lines
 
 
-def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_asm):
+def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_asm, is_analyze):
   printed_prefixes = []
   for p in prefix_list:
     checkprefixes = p[0]
@@ -187,7 +199,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 
       # For IR output, change all defs to FileCheck variables, so we're immune
       # to variable naming fashions.
-      func_body = genericize_check_lines(func_body)
+      func_body = genericize_check_lines(func_body, is_analyze)
 
       # This could be selectively enabled with an optional invocation argument.
       # Disabled for now: better to check everything. Be safe rather than sorry.
@@ -226,4 +238,8 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
   # Label format is based on IR string.
   check_label_format = '{} %s-LABEL: @%s('.format(comment_marker)
-  add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, False)
+  add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, False, False)
+
+def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
+  check_label_format = '{} %s-LABEL: \'%s\''.format(comment_marker)
+  add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, False, True)

@@ -101,9 +101,9 @@ multiclass HWWriteResPair<X86FoldableSchedWrite SchedRW,
   }
 }
 
-// A folded store needs a cycle on port 4 for the store data, but it does not
-// need an extra port 2/3 cycle to recompute the address.
-def : WriteRes<WriteRMW, [HWPort4]>;
+// A folded store needs a cycle on port 4 for the store data, and an extra port
+// 2/3/7 cycle to recompute the address.
+def : WriteRes<WriteRMW, [HWPort237,HWPort4]>;
 
 // Store_addr on 237.
 // Store_data on 4.
@@ -954,33 +954,10 @@ def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[HWWriteResGroup10], (instrs CBW, CWDE, CDQE)>;
-def: InstRW<[HWWriteResGroup10], (instregex "ADD(8|16|32|64)ri",
-                                            "ADD(8|16|32|64)rr",
-                                            "ADD(8|16|32|64)i",
-                                            "AND(8|16|32|64)ri",
-                                            "AND(8|16|32|64)rr",
-                                            "AND(8|16|32|64)i",
-                                            "CLC",
+def: InstRW<[HWWriteResGroup10], (instregex "CLC",
                                             "CMC",
-                                            "CMP(8|16|32|64)ri",
-                                            "CMP(8|16|32|64)rr",
-                                            "CMP(8|16|32|64)i",
-                                            "DEC(8|16|32|64)r",
-                                            "INC(8|16|32|64)r",
                                             "LAHF",
-                                            "MOV(8|16|32|64)rr",
-                                            "MOV(8|16|32|64)ri",
-                                            "MOVSX(16|32|64)rr16",
-                                            "MOVSX(16|32|64)rr32",
-                                            "MOVSX(16|32|64)rr8",
-                                            "MOVZX(16|32|64)rr16",
-                                            "MOVZX(16|32|64)rr8",
-                                            "NEG(8|16|32|64)r",
                                             "NOOP",
-                                            "NOT(8|16|32|64)r",
-                                            "OR(8|16|32|64)ri",
-                                            "OR(8|16|32|64)rr",
-                                            "OR(8|16|32|64)i",
                                             "SAHF",
                                             "SGDT64m",
                                             "SIDT64m",
@@ -988,17 +965,8 @@ def: InstRW<[HWWriteResGroup10], (instregex "ADD(8|16|32|64)ri",
                                             "SMSW16m",
                                             "STC",
                                             "STRm",
-                                            "SUB(8|16|32|64)ri",
-                                            "SUB(8|16|32|64)rr",
-                                            "SUB(8|16|32|64)i",
                                             "SYSCALL",
-                                            "TEST(8|16|32|64)rr",
-                                            "TEST(8|16|32|64)i",
-                                            "TEST(8|16|32|64)ri",
-                                            "XCHG(16|32|64)rr",
-                                            "XOR(8|16|32|64)ri",
-                                            "XOR(8|16|32|64)rr",
-                                            "XOR(8|16|32|64)i")>;
+                                            "XCHG(16|32|64)rr")>;
 
 def HWWriteResGroup11 : SchedWriteRes<[HWPort0,HWPort23]> {
   let Latency = 6;
@@ -1409,17 +1377,7 @@ def HWWriteResGroup18 : SchedWriteRes<[HWPort23,HWPort0156]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup18], (instrs POP16r, POP32r, POP64r)>;
-def: InstRW<[HWWriteResGroup18], (instregex "ADD(8|16|32|64)rm",
-                                            "AND(8|16|32|64)rm",
-                                            "CMP(8|16|32|64)mi",
-                                            "CMP(8|16|32|64)mr",
-                                            "CMP(8|16|32|64)rm",
-                                            "OR(8|16|32|64)rm",
-                                            "POP(16|32|64)rmr",
-                                            "SUB(8|16|32|64)rm",
-                                            "TEST(8|16|32|64)mr",
-                                            "TEST(8|16|32|64)mi",
-                                            "XOR(8|16|32|64)rm")>;
+def: InstRW<[HWWriteResGroup18], (instregex "POP(16|32|64)rmr")>;
 
 def HWWriteResGroup19 : SchedWriteRes<[HWPort237,HWPort0156]> {
   let Latency = 2;
@@ -1501,22 +1459,8 @@ def HWWriteResGroup26 : SchedWriteRes<[HWPort4,HWPort23,HWPort237,HWPort0156]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,1,1];
 }
-def: InstRW<[HWWriteResGroup26], (instregex "ADD(8|16|32|64)mi",
-                                            "ADD(8|16|32|64)mr",
-                                            "AND(8|16|32|64)mi",
-                                            "AND(8|16|32|64)mr",
-                                            "DEC(8|16|32|64)m",
-                                            "INC(8|16|32|64)m",
-                                            "NEG(8|16|32|64)m",
-                                            "NOT(8|16|32|64)m",
-                                            "OR(8|16|32|64)mi",
-                                            "OR(8|16|32|64)mr",
-                                            "POP(16|32|64)rmm",
-                                            "PUSH(16|32|64)rmm",
-                                            "SUB(8|16|32|64)mi",
-                                            "SUB(8|16|32|64)mr",
-                                            "XOR(8|16|32|64)mi",
-                                            "XOR(8|16|32|64)mr")>;
+def: InstRW<[HWWriteResGroup26], (instregex "POP(16|32|64)rmm",
+                                            "PUSH(16|32|64)rmm")>;
 
 def HWWriteResGroup27 : SchedWriteRes<[HWPort5]> {
   let Latency = 2;
@@ -1719,9 +1663,9 @@ def HWWriteResGroup43 : SchedWriteRes<[HWPort23,HWPort06,HWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[HWWriteResGroup43], (instregex "ADC(8|16|32|64)rm")>;
 def: InstRW<[HWWriteResGroup43], (instregex "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rm")>;
-def: InstRW<[HWWriteResGroup43], (instregex "SBB(8|16|32|64)rm")>;
+def: InstRW<[HWWriteResGroup43, ReadAfterLd], (instrs ADC8rm, ADC16rm, ADC32rm, ADC64rm,
+                                                      SBB8rm, SBB16rm, SBB32rm, SBB64rm)>;
 
 def HWWriteResGroup44 : SchedWriteRes<[HWPort4,HWPort6,HWPort237,HWPort0156]> {
   let Latency = 3;
@@ -2119,14 +2063,14 @@ def HWWriteResGroup69 : SchedWriteRes<[HWPort4,HWPort23,HWPort237,HWPort06,HWPor
   let ResourceCycles = [1,1,1,2,1];
 }
 def: InstRW<[HWWriteResGroup69], (instregex "ADC(8|16|32|64)mi",
-                                            "ADC(8|16|32|64)mr",
                                             "CMPXCHG(8|16|32|64)rm",
                                             "ROL(8|16|32|64)mCL",
                                             "SAR(8|16|32|64)mCL",
                                             "SBB(8|16|32|64)mi",
-                                            "SBB(8|16|32|64)mr",
                                             "SHL(8|16|32|64)mCL",
                                             "SHR(8|16|32|64)mCL")>;
+def: InstRW<[HWWriteResGroup69, ReadAfterLd], (instrs ADC8mr, ADC16mr, ADC32mr, ADC64mr,
+                                                      SBB8mr, SBB16mr, SBB32mr, SBB64mr)>;
 
 def HWWriteResGroup70 : SchedWriteRes<[HWPort0,HWPort1]> {
   let Latency = 4;

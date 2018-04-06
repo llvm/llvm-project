@@ -110,6 +110,17 @@ entry:
   ret float %r
 }
 
+define float @fadd_f32_strict_accum(float %accum, <4 x float> %vec) {
+; CHECK-LABEL: @fadd_f32_strict_accum(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.vector.reduce.fadd.f32.f32.v4f32(float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+entry:
+  %r = call float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float %accum, <4 x float> %vec)
+  ret float %r
+}
+
 define float @fmul_f32(<4 x float> %vec) {
 ; CHECK-LABEL: @fmul_f32(
 ; CHECK-NEXT:  entry:
@@ -122,6 +133,28 @@ define float @fmul_f32(<4 x float> %vec) {
 ;
 entry:
   %r = call fast float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float undef, <4 x float> %vec)
+  ret float %r
+}
+
+define float @fmul_f32_strict(<4 x float> %vec) {
+; CHECK-LABEL: @fmul_f32_strict(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.vector.reduce.fmul.f32.f32.v4f32(float undef, <4 x float> [[VEC:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+entry:
+  %r = call float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float undef, <4 x float> %vec)
+  ret float %r
+}
+
+define float @fmul_f32_strict_accum(float %accum, <4 x float> %vec) {
+; CHECK-LABEL: @fmul_f32_strict_accum(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.vector.reduce.fmul.f32.f32.v4f32(float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+entry:
+  %r = call float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float %accum, <4 x float> %vec)
   ret float %r
 }
 

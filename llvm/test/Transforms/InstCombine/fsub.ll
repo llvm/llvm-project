@@ -27,6 +27,21 @@ define float @neg_sub_nsz(float %x, float %y) {
   ret float %t2
 }
 
+declare void @use(float)
+
+define float @neg_sub_nsz_extra_use(float %x, float %y) {
+; CHECK-LABEL: @neg_sub_nsz_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float [[Y]], [[X]]
+; CHECK-NEXT:    call void @use(float [[T1]])
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub float %x, %y
+  %t2 = fsub nsz float -0.0, %t1
+  call void @use(float %t1)
+  ret float %t2
+}
+
 ; With nsz: Z - (X - Y) --> Z + (Y - X)
 
 define float @sub_sub_nsz(float %x, float %y, float %z) {

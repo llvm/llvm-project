@@ -394,7 +394,7 @@ def NEG64r : RI<0xF7, MRM3r, (outs GR64:$dst), (ins GR64:$src1), "neg{q}\t$dst",
 } // Constraints = "$src1 = $dst", SchedRW
 
 // Read-modify-write negate.
-let SchedRW = [WriteALULd, WriteRMW] in {
+let SchedRW = [WriteALURMW] in {
 def NEG8m  : I<0xF6, MRM3m, (outs), (ins i8mem :$dst),
                "neg{b}\t$dst",
                [(store (ineg (loadi8 addr:$dst)), addr:$dst),
@@ -434,7 +434,7 @@ def NOT64r : RI<0xF7, MRM2r, (outs GR64:$dst), (ins GR64:$src1), "not{q}\t$dst",
 }
 } // Constraints = "$src1 = $dst", SchedRW
 
-let SchedRW = [WriteALULd, WriteRMW] in {
+let SchedRW = [WriteALURMW] in {
 def NOT8m  : I<0xF6, MRM2m, (outs), (ins i8mem :$dst),
                "not{b}\t$dst",
                [(store (not (loadi8 addr:$dst)), addr:$dst)], IIC_UNARY_MEM>;
@@ -485,7 +485,7 @@ def INC32r_alt : I<0x40, AddRegFrm, (outs GR32:$dst), (ins GR32:$src1),
 } // CodeSize = 1, hasSideEffects = 0
 } // Constraints = "$src1 = $dst", SchedRW
 
-let CodeSize = 2, SchedRW = [WriteALULd, WriteRMW] in {
+let CodeSize = 2, SchedRW = [WriteALURMW] in {
 let Predicates = [UseIncDec] in {
   def INC8m  : I<0xFE, MRM0m, (outs), (ins i8mem :$dst), "inc{b}\t$dst",
                [(store (add (loadi8 addr:$dst), 1), addr:$dst),
@@ -536,7 +536,7 @@ def DEC32r_alt : I<0x48, AddRegFrm, (outs GR32:$dst), (ins GR32:$src1),
 } // Constraints = "$src1 = $dst", SchedRW
 
 
-let CodeSize = 2, SchedRW = [WriteALULd, WriteRMW] in {
+let CodeSize = 2, SchedRW = [WriteALURMW] in {
 let Predicates = [UseIncDec] in {
   def DEC8m  : I<0xFE, MRM1m, (outs), (ins i8mem :$dst), "dec{b}\t$dst",
                [(store (add (loadi8 addr:$dst), -1), addr:$dst),
@@ -835,7 +835,7 @@ class BinOpMR_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                   SDNode opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
           [(store (opnode (load addr:$dst), typeinfo.RegClass:$src), addr:$dst),
-           (implicit EFLAGS)]>, Sched<[WriteALULd, WriteRMW]>;
+           (implicit EFLAGS)]>, Sched<[WriteALURMW]>;
 
 // BinOpMR_RMW_FF - Instructions like "adc [mem], reg".
 class BinOpMR_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -844,7 +844,7 @@ class BinOpMR_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
             [(store (opnode (load addr:$dst), typeinfo.RegClass:$src, EFLAGS),
                     addr:$dst),
              (implicit EFLAGS)], IIC_BIN_CARRY_MEM>,
-            Sched<[WriteALULd, WriteRMW]>;
+            Sched<[WriteALURMW]>;
 
 // BinOpMR_F - Instructions like "cmp [mem], reg".
 class BinOpMR_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -852,7 +852,8 @@ class BinOpMR_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMR<opcode, mnemonic, typeinfo,
             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
                                    typeinfo.RegClass:$src))]>,
-            Sched<[WriteALULd, ReadAfterLd]>;
+            Sched<[WriteALULd, ReadDefault, ReadDefault, ReadDefault,
+                   ReadDefault, ReadDefault, ReadAfterLd]>;
 
 // BinOpMI - Instructions like "add [mem], imm".
 class BinOpMI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -870,7 +871,7 @@ class BinOpMI_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(store (opnode (typeinfo.VT (load addr:$dst)),
                             typeinfo.ImmOperator:$src), addr:$dst),
-             (implicit EFLAGS)]>, Sched<[WriteALULd, WriteRMW]>;
+             (implicit EFLAGS)]>, Sched<[WriteALURMW]>;
 // BinOpMI_RMW_FF - Instructions like "adc [mem], imm".
 class BinOpMI_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                      SDNode opnode, Format f>
@@ -878,7 +879,7 @@ class BinOpMI_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
             [(store (opnode (typeinfo.VT (load addr:$dst)),
                              typeinfo.ImmOperator:$src, EFLAGS), addr:$dst),
              (implicit EFLAGS)], IIC_BIN_CARRY_MEM>,
-            Sched<[WriteALULd, WriteRMW]>;
+            Sched<[WriteALURMW]>;
 
 // BinOpMI_F - Instructions like "cmp [mem], imm".
 class BinOpMI_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -886,7 +887,7 @@ class BinOpMI_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
                                   typeinfo.ImmOperator:$src))]>,
-            Sched<[WriteALULd, ReadAfterLd]>;
+            Sched<[WriteALULd]>;
 
 // BinOpMI8 - Instructions like "add [mem], imm8".
 class BinOpMI8<string mnemonic, X86TypeInfo typeinfo,
@@ -904,7 +905,7 @@ class BinOpMI8_RMW<string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI8<mnemonic, typeinfo, f,
              [(store (opnode (load addr:$dst),
                              typeinfo.Imm8Operator:$src), addr:$dst),
-              (implicit EFLAGS)]>, Sched<[WriteALULd, WriteRMW]>;
+              (implicit EFLAGS)]>, Sched<[WriteALURMW]>;
 
 // BinOpMI8_RMW_FF - Instructions like "adc [mem], imm8".
 class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
@@ -913,7 +914,7 @@ class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
              [(store (opnode (load addr:$dst),
                              typeinfo.Imm8Operator:$src, EFLAGS), addr:$dst),
               (implicit EFLAGS)], IIC_BIN_CARRY_MEM>,
-             Sched<[WriteALULd, WriteRMW]>;
+             Sched<[WriteALURMW]>;
 
 // BinOpMI8_F - Instructions like "cmp [mem], imm8".
 class BinOpMI8_F<string mnemonic, X86TypeInfo typeinfo,
@@ -921,7 +922,7 @@ class BinOpMI8_F<string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI8<mnemonic, typeinfo, f,
              [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
                                     typeinfo.Imm8Operator:$src))]>,
-             Sched<[WriteALULd, ReadAfterLd]>;
+             Sched<[WriteALULd]>;
 
 // BinOpAI - Instructions like "add %eax, %eax, imm", that imp-def EFLAGS.
 class BinOpAI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,

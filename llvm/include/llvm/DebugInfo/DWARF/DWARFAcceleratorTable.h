@@ -283,6 +283,11 @@ public:
 
     Entry(const NameIndex &NameIdx, const Abbrev &Abbr);
 
+  public:
+    Optional<uint64_t> getCUOffset() const override;
+    Optional<uint64_t> getDIESectionOffset() const override;
+    Optional<dwarf::Tag> getTag() const override { return tag(); }
+
     /// Returns the Index into the Compilation Unit list of the owning Name
     /// Index or None if this Accelerator Entry does not have an associated
     /// Compilation Unit. It is up to the user to verify that the returned Index
@@ -292,11 +297,6 @@ public:
     /// so this function will return 0 even without an explicit
     /// DW_IDX_compile_unit attribute.
     Optional<uint64_t> getCUIndex() const;
-
-  public:
-    Optional<uint64_t> getCUOffset() const override;
-    Optional<uint64_t> getDIESectionOffset() const override;
-    Optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// .debug_names-specific getter, which always succeeds (DWARF v5 index
     /// entries always have a tag).
@@ -319,7 +319,6 @@ public:
     friend class ValueIterator;
   };
 
-private:
   /// Error returned by NameIndex::getEntry to report it has reached the end of
   /// the entry list.
   class SentinelError : public ErrorInfo<SentinelError> {
@@ -330,6 +329,7 @@ private:
     std::error_code convertToErrorCode() const override;
   };
 
+private:
   /// DenseMapInfo for struct Abbrev.
   struct AbbrevMapInfo {
     static Abbrev getEmptyKey();
@@ -372,8 +372,6 @@ public:
     uint32_t StringOffsetsBase;
     uint32_t EntryOffsetsBase;
     uint32_t EntriesBase;
-
-    Expected<Entry> getEntry(uint32_t *Offset) const;
 
     void dumpCUs(ScopedPrinter &W) const;
     void dumpLocalTUs(ScopedPrinter &W) const;
@@ -428,6 +426,8 @@ public:
     const DenseSet<Abbrev, AbbrevMapInfo> &getAbbrevs() const {
       return Abbrevs;
     }
+
+    Expected<Entry> getEntry(uint32_t *Offset) const;
 
     llvm::Error extract();
     uint32_t getUnitOffset() const { return Base; }
