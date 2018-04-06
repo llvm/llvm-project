@@ -5164,7 +5164,7 @@ matches 'int x = 0' in
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter0')"><a name="hasAnyParameter0Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyParameter0"><pre>Matches any parameter of a function declaration.
+<tr><td colspan="4" class="doc" id="hasAnyParameter0"><pre>Matches any parameter of a function or ObjC method declaration.
 
 Does not match the 'this' parameter of a method.
 
@@ -5174,6 +5174,13 @@ cxxMethodDecl(hasAnyParameter(hasName("y")))
   matches f(int x, int y, int z) {}
 with hasAnyParameter(...)
   matching int y
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+
+the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
+matches the declaration of method f with hasParameter
+matching y.
 </pre></td></tr>
 
 
@@ -5213,7 +5220,8 @@ with compoundStmt()
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasParameter0')"><a name="hasParameter0Anchor">hasParameter</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasParameter0"><pre>Matches the n'th parameter of a function declaration.
+<tr><td colspan="4" class="doc" id="hasParameter0"><pre>Matches the n'th parameter of a function or an ObjC method
+declaration.
 
 Given
   class X { void f(int x) {} };
@@ -5221,6 +5229,13 @@ cxxMethodDecl(hasParameter(0, hasType(varDecl())))
   matches f(int x) {}
 with hasParameter(...)
   matching int x
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+
+the matcher objcMethodDecl(hasParameter(0, hasName("y")))
+matches the declaration of method f with hasParameter
+matching y.
 </pre></td></tr>
 
 
@@ -5549,6 +5564,47 @@ matches the [webView ...] message invocation.
   NSString *webViewJavaScript = ...
   UIWebView *webView = ...
   [webView stringByEvaluatingJavaScriptFromString:webViewJavascript];
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter1')"><a name="hasAnyParameter1Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyParameter1"><pre>Matches any parameter of a function or ObjC method declaration.
+
+Does not match the 'this' parameter of a method.
+
+Given
+  class X { void f(int x, int y, int z) {} };
+cxxMethodDecl(hasAnyParameter(hasName("y")))
+  matches f(int x, int y, int z) {}
+with hasAnyParameter(...)
+  matching int y
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+
+the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
+matches the declaration of method f with hasParameter
+matching y.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('hasParameter1')"><a name="hasParameter1Anchor">hasParameter</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasParameter1"><pre>Matches the n'th parameter of a function or an ObjC method
+declaration.
+
+Given
+  class X { void f(int x) {} };
+cxxMethodDecl(hasParameter(0, hasType(varDecl())))
+  matches f(int x) {}
+with hasParameter(...)
+  matching int x
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+
+the matcher objcMethodDecl(hasParameter(0, hasName("y")))
+matches the declaration of method f with hasParameter
+matching y.
 </pre></td></tr>
 
 

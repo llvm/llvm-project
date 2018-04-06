@@ -186,8 +186,8 @@ using ast_matchers::internal::Matcher;
 Parser::NamedValueMap getTestNamedValues() {
   Parser::NamedValueMap Values;
   Values["nameX"] = llvm::StringRef("x");
-  Values["hasParamA"] =
-      VariantMatcher::SingleMatcher(hasParameter(0, hasName("a")));
+  Values["hasParamA"] = VariantMatcher::SingleMatcher(
+      functionDecl(hasParameter(0, hasName("a"))));
   return Values;
 }
 
@@ -329,16 +329,17 @@ TEST(ParserTest, CompletionNamedValues) {
   EXPECT_LT(0u, Comps.size());
 
   // Can complete names and registry together.
-  Code = "cxxMethodDecl(hasP";
+  Code = "functionDecl(hasP";
   Comps = Parser::completeExpression(Code, Code.size(), nullptr, &NamedValues);
   ASSERT_EQ(3u, Comps.size());
-  EXPECT_EQ("aramA", Comps[0].TypedText);
-  EXPECT_EQ("Matcher<FunctionDecl> hasParamA", Comps[0].MatcherDecl);
 
-  EXPECT_EQ("arameter(", Comps[1].TypedText);
+  EXPECT_EQ("arameter(", Comps[0].TypedText);
   EXPECT_EQ(
       "Matcher<FunctionDecl> hasParameter(unsigned, Matcher<ParmVarDecl>)",
-      Comps[1].MatcherDecl);
+      Comps[0].MatcherDecl);
+
+  EXPECT_EQ("aramA", Comps[1].TypedText);
+  EXPECT_EQ("Matcher<Decl> hasParamA", Comps[1].MatcherDecl);
 
   EXPECT_EQ("arent(", Comps[2].TypedText);
   EXPECT_EQ(

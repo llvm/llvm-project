@@ -3462,7 +3462,8 @@ AST_MATCHER(CXXConstructExpr, requiresZeroInitialization) {
   return Node.requiresZeroInitialization();
 }
 
-/// \brief Matches the n'th parameter of a function declaration.
+/// \brief Matches the n'th parameter of a function or an ObjC method
+/// declaration.
 ///
 /// Given
 /// \code
@@ -3472,12 +3473,22 @@ AST_MATCHER(CXXConstructExpr, requiresZeroInitialization) {
 ///   matches f(int x) {}
 /// with hasParameter(...)
 ///   matching int x
-AST_MATCHER_P2(FunctionDecl, hasParameter,
-               unsigned, N, internal::Matcher<ParmVarDecl>,
-               InnerMatcher) {
-  return (N < Node.getNumParams() &&
-          InnerMatcher.matches(
-              *Node.getParamDecl(N), Finder, Builder));
+///
+/// For ObjectiveC, given
+/// \code
+///   @interface I - (void) f:(int) y; @end
+/// \endcode
+//
+/// the matcher objcMethodDecl(hasParameter(0, hasName("y")))
+/// matches the declaration of method f with hasParameter
+/// matching y.
+AST_POLYMORPHIC_MATCHER_P2(hasParameter,
+                           AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
+                                                           ObjCMethodDecl),
+                           unsigned, N, internal::Matcher<ParmVarDecl>,
+                           InnerMatcher) {
+  return (N < Node.parameters().size()
+          && InnerMatcher.matches(*Node.parameters()[N], Finder, Builder));
 }
 
 /// \brief Matches all arguments and their respective ParmVarDecl.
@@ -3534,7 +3545,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
   return Matched;
 }
 
-/// \brief Matches any parameter of a function declaration.
+/// \brief Matches any parameter of a function or ObjC method declaration.
 ///
 /// Does not match the 'this' parameter of a method.
 ///
@@ -3546,8 +3557,20 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
 ///   matches f(int x, int y, int z) {}
 /// with hasAnyParameter(...)
 ///   matching int y
-AST_MATCHER_P(FunctionDecl, hasAnyParameter,
-              internal::Matcher<ParmVarDecl>, InnerMatcher) {
+///
+/// For ObjectiveC, given
+/// \code
+///   @interface I - (void) f:(int) y; @end
+/// \endcode
+//
+/// the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
+/// matches the declaration of method f with hasParameter
+/// matching y.
+AST_POLYMORPHIC_MATCHER_P(hasAnyParameter,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
+                                                          ObjCMethodDecl),
+                          internal::Matcher<ParmVarDecl>,
+                          InnerMatcher) {
   return matchesFirstInPointerRange(InnerMatcher, Node.param_begin(),
                                     Node.param_end(), Finder, Builder);
 }
