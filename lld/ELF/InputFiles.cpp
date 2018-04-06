@@ -906,6 +906,11 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   std::vector<uint32_t> Versyms = parseVersyms(); // parse .gnu.version
   ArrayRef<Elf_Shdr> Sections = CHECK(this->getObj().sections(), this);
 
+  // System libraries can have a lot of symbols with versions. Using a
+  // fixed buffer for computing the versions name (foo@ver) can save a
+  // lot of allocations.
+  SmallString<0> VersionedNameBuffer;
+
   // Add symbols to the symbol table.
   ArrayRef<Elf_Sym> Syms = this->getGlobalELFSyms();
   for (size_t I = 0; I < Syms.size(); ++I) {
@@ -956,8 +961,9 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
 
     StringRef VerName =
         this->StringTable.data() + Verdefs[Idx]->getAux()->vda_name;
-    Name = Saver.save(Name + "@" + VerName);
-    Symtab->addShared(Name, *this, Sym, Alignment, Idx);
+    VersionedNameBuffer.clear();
+    Name = (Name + "@" + VerName).toStringRef(VersionedNameBuffer);
+    Symtab->addShared(Saver.save(Name), *this, Sym, Alignment, Idx);
   }
 }
 

@@ -76,8 +76,11 @@ static std::string getNameAsString(const NamedDecl *Decl) {
 static std::string getExprAsString(const clang::Expr &E,
                                    clang::ASTContext &AC) {
   std::string Text = tooling::fixit::getText(E, AC).str();
-  Text.erase(std::remove_if(Text.begin(), Text.end(), std::isspace),
-             Text.end());
+  Text.erase(
+      std::remove_if(
+          Text.begin(), Text.end(),
+          [](char c) { return std::isspace(static_cast<unsigned char>(c)); }),
+      Text.end());
   return Text;
 }
 
