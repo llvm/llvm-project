@@ -1107,6 +1107,12 @@ def fxray_always_emit_customevents : Flag<["-"], "fxray-always-emit-customevents
 def fnoxray_always_emit_customevents : Flag<["-"], "fno-xray-always-emit-customevents">, Group<f_Group>,
   Flags<[CC1Option]>;
 
+def fxray_link_deps : Flag<["-"], "fxray-link-deps">, Group<f_Group>,
+  Flags<[CC1Option]>,
+  HelpText<"Tells clang to add the link dependencies for XRay.">;
+def fnoxray_link_deps : Flag<["-"], "fnoxray-link-deps">, Group<f_Group>,
+  Flags<[CC1Option]>;
+
 def ffine_grained_bitfield_accesses : Flag<["-"],
   "ffine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Use separate accesses for bitfields with legal widths and alignments.">;

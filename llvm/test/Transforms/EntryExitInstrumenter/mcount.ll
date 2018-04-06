@@ -44,7 +44,6 @@ entry:
 ; CHECK-NEXT ret void
 }
 
-attributes #0 = { "instrument-function-entry-inlined"="mcount" "instrument-function-entry"="__cyg_profile_func_enter" "instrument-function-exit"="__cyg_profile_func_exit" }
 
 
 ; The mcount function has many different names.
@@ -78,10 +77,33 @@ define void @f7() #7 { entry: ret void }
 ; CHECK: call void @__cyg_profile_func_enter_bare
 
 
+; Treat musttail calls as terminators; inserting between the musttail call and
+; ret is not allowed.
+declare i32* @tailcallee()
+define i32* @tailcaller() #8 {
+  %1 = musttail call i32* @tailcallee()
+  ret i32* %1
+; CHECK-LABEL: define i32* @tailcaller
+; CHECK: call void @__cyg_profile_func_exit
+; CHECK: musttail call i32* @tailcallee
+; CHECK: ret
+}
+define i8* @tailcaller2() #8 {
+  %1 = musttail call i32* @tailcallee()
+  %2 = bitcast i32* %1 to i8*
+  ret i8* %2
+; CHECK-LABEL: define i8* @tailcaller2
+; CHECK: call void @__cyg_profile_func_exit
+; CHECK: musttail call i32* @tailcallee
+; CHECK: bitcast
+; CHECK: ret
+}
+
 ; The attributes are "consumed" when the instrumentation is inserted.
 ; CHECK: attributes
 ; CHECK-NOT: instrument-function
 
+attributes #0 = { "instrument-function-entry-inlined"="mcount" "instrument-function-entry"="__cyg_profile_func_enter" "instrument-function-exit"="__cyg_profile_func_exit" }
 attributes #1 = { "instrument-function-entry-inlined"=".mcount" }
 attributes #2 = { "instrument-function-entry-inlined"="\01__gnu_mcount_nc" }
 attributes #3 = { "instrument-function-entry-inlined"="\01_mcount" }
@@ -89,3 +111,4 @@ attributes #4 = { "instrument-function-entry-inlined"="\01mcount" }
 attributes #5 = { "instrument-function-entry-inlined"="__mcount" }
 attributes #6 = { "instrument-function-entry-inlined"="_mcount" }
 attributes #7 = { "instrument-function-entry-inlined"="__cyg_profile_func_enter_bare" }
+attributes #8 = { "instrument-function-exit"="__cyg_profile_func_exit" }

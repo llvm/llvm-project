@@ -219,6 +219,8 @@ namespace {
 
 SourceLocation getMacroArgExpandedLocation(const SourceManager &Mgr,
                                            const FileEntry *FE, Position Pos) {
+  // The language server protocol uses zero-based line and column numbers.
+  // Clang uses one-based numbers.
   SourceLocation InputLoc =
       Mgr.translateFileLineCol(FE, Pos.line + 1, Pos.character + 1);
   return Mgr.getMacroArgExpandedLocation(InputLoc);
@@ -469,9 +471,6 @@ CppFile::rebuildPreamble(CompilerInvocation &CI,
 SourceLocation clangd::getBeginningOfIdentifier(ParsedAST &Unit,
                                                 const Position &Pos,
                                                 const FileEntry *FE) {
-  // The language server protocol uses zero-based line and column numbers.
-  // Clang uses one-based numbers.
-
   const ASTContext &AST = Unit.getASTContext();
   const SourceManager &SourceMgr = AST.getSourceManager();
 

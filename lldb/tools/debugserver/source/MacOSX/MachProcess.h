@@ -246,7 +246,10 @@ public:
                          uint64_t plo_pthread_tsd_base_address_offset,
                          uint64_t plo_pthread_tsd_base_offset,
                          uint64_t plo_pthread_tsd_entry_size);
-
+  const char *
+  GetDeploymentInfo(const struct load_command&, uint64_t load_command_address,
+                    uint32_t& major_version, uint32_t& minor_version,
+                    uint32_t& patch_version);
   bool GetMachOInformationFromMemory(nub_addr_t mach_o_header_addr,
                                      int wordsize,
                                      struct mach_o_information &inf);

@@ -2916,7 +2916,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 
   // Check the return.
   ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
-  Assert(Ret, "musttail call must be precede a ret with an optional bitcast",
+  Assert(Ret, "musttail call must precede a ret with an optional bitcast",
          &CI);
   Assert(!Ret->getReturnValue() || Ret->getReturnValue() == RetVal,
          "musttail call result must be returned", Ret);

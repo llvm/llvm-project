@@ -18,7 +18,7 @@ def SandyBridgeModel : SchedMachineModel {
   // FIXME: Identify instructions that aren't a single fused micro-op.
   let IssueWidth = 4;
   let MicroOpBufferSize = 168; // Based on the reorder buffer.
-  let LoadLatency = 4;
+  let LoadLatency = 5;
   let MispredictPenalty = 16;
 
   // Based on the LSD (loop-stream detector) queue size.
@@ -63,9 +63,9 @@ def SBDivider : ProcResource<1>;
 // FP division and sqrt on port 0.
 def SBFPDivider : ProcResource<1>;
 
-// Loads are 4 cycles, so ReadAfterLd registers needn't be available until 4
+// Loads are 5 cycles, so ReadAfterLd registers needn't be available until 5
 // cycles after the memory operand.
-def : ReadAdvance<ReadAfterLd, 4>;
+def : ReadAdvance<ReadAfterLd, 5>;
 
 // Many SchedWrites are defined in pairs with and without a folded load.
 // Instructions with folded loads are usually micro-fused, so they only appear
@@ -75,7 +75,7 @@ def : ReadAdvance<ReadAfterLd, 4>;
 multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
                           int Lat, list<int> Res = [1], int UOps = 1,
-                          int LoadLat = 4> {
+                          int LoadLat = 5> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -84,7 +84,7 @@ multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
   }
 
   // Memory variant also uses a cycle on port 2/3 and adds LoadLat cycles to
-  // the latency (default = 4).
+  // the latency (default = 5).
   def : WriteRes<SchedRW.Folded, !listconcat([SBPort23], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
@@ -97,7 +97,7 @@ multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
 def : WriteRes<WriteRMW, [SBPort4]>;
 
 def : WriteRes<WriteStore, [SBPort23, SBPort4]>;
-def : WriteRes<WriteLoad,  [SBPort23]> { let Latency = 4; }
+def : WriteRes<WriteLoad,  [SBPort23]> { let Latency = 5; }
 def : WriteRes<WriteMove,  [SBPort015]>;
 def : WriteRes<WriteZero,  []>;
 
@@ -1953,6 +1953,20 @@ def SBWriteResGroup120 : SchedWriteRes<[SBPort0,SBPort1,SBPort5,SBPort23]> {
   let ResourceCycles = [1,1,1,1];
 }
 def: InstRW<[SBWriteResGroup120], (instregex "(V?)DPPDrmi")>;
+
+def SBWriteResGroup121 : SchedWriteRes<[SBPort0,SBPort1,SBPort5,SBPort23]> {
+  let Latency = 18;
+  let NumMicroOps = 5;
+  let ResourceCycles = [1,2,1,1];
+}
+def: InstRW<[SBWriteResGroup121], (instregex "(V?)DPPSrmi")>;
+
+def SBWriteResGroup122 : SchedWriteRes<[SBPort0,SBPort1,SBPort5,SBPort23]> {
+  let Latency = 19;
+  let NumMicroOps = 5;
+  let ResourceCycles = [1,2,1,1];
+}
+def: InstRW<[SBWriteResGroup122], (instregex "VDPPSYrmi")>;
 
 def SBWriteResGroup123 : SchedWriteRes<[SBPort0,SBPort23,SBFPDivider]> {
   let Latency = 20;
