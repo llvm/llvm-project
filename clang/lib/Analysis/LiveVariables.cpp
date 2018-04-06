@@ -381,7 +381,7 @@ void TransferFunctions::VisitBlockExpr(BlockExpr *BE) {
 void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
   const Decl* D = DR->getDecl();
   bool InAssignment = LV.inAssignment[DR];
-  if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+  if (isa<BindingDecl>(D)) {
     if (!InAssignment)
       val.liveBindings = LV.BSetFact.add(val.liveBindings, BD);
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
