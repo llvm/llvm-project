@@ -1,4 +1,4 @@
-# RUN: llvm-mca -march=aarch64 -mcpu=cortex-a57 -iterations=600 -timeline < %s | FileCheck %s
+# RUN: llvm-mca -march=aarch64 -mcpu=cortex-a57 -iterations=600 -timeline -timeline-max-iterations=4 < %s | FileCheck %s
 
    b  t
 
@@ -42,13 +42,12 @@
 
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:      	          012
-# CHECK-NEXT: Index	0123456789   
+# CHECK:      Index	0123456
 
-# CHECK:      [0,0]	DeER .    . .	b	t
-# CHECK:      [1,0]	D=eER.    . .	b	t
-# CHECK:      [2,0]	D==eER    . .	b	t
-# CHECK:      [3,0]	.D==eER   . .	b	t
+# CHECK:      [0,0]	DeER ..	   b   t
+# CHECK-NEXT: [1,0]	D=eER..	   b   t
+# CHECK-NEXT: [2,0]	D==eER.	   b   t
+# CHECK-NEXT: [3,0]	.D==eER	   b   t
 
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -58,4 +57,4 @@
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    4.3    4.3    0.0  	b   t
+# CHECK-NEXT: 0.     4     2.2    2.2    0.0  	b   t

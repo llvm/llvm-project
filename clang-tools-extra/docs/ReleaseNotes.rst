@@ -64,6 +64,12 @@ Improvements to clang-tidy
 
 - New module ``zircon`` for checks related to Fuchsia's Zircon kernel.
 
+- New :doc:`bugprone-parent-virtual-call
+  <clang-tidy/checks/bugprone-parent-virtual-call>` check
+
+  Detects and fixes calls to grand-...parent virtual methods instead of calls
+  to overridden parent's virtual methods.
+
 - New :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone-throw-keyword-missing>` check
 

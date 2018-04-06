@@ -222,7 +222,7 @@ static int Cond;
 }
 
 +(void)test {
-  // initX is inlined since we explicitely mark it as interesting
+  // initX is inlined since we explicitly mark it as interesting
   id x = [[MyObj alloc] initX]; // expected-warning {{Potential leak of an object}}
                                 // expected-note@-1 {{Method returns an instance of MyObj with a +1 retain count}}
                                 // expected-note@-2 {{Calling 'initX'}}

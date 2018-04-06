@@ -1138,8 +1138,8 @@ static void CollectOverriddenMethodsRecurse(const ObjCContainerDecl *Container,
   if (!Container)
     return;
 
-  // In categories look for overriden methods from protocols. A method from
-  // category is not "overriden" since it is considered as the "same" method
+  // In categories look for overridden methods from protocols. A method from
+  // category is not "overridden" since it is considered as the "same" method
   // (same USR) as the one from the interface.
   if (const ObjCCategoryDecl *
         Category = dyn_cast<ObjCCategoryDecl>(Container)) {

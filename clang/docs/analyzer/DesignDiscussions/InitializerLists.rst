@@ -21,7 +21,7 @@ This fix is overly conservative though. So i did a bit of investigation as to
 how model std::initializer_list better.
 
 According to the standard, std::initializer_list<T> is an object that has
-methods begin(), end(), and size(), where begin() returns a pointer to continous
+methods begin(), end(), and size(), where begin() returns a pointer to continuous
 array of size() objects of type T, and end() is equal to begin() plus size().
 The standard does hint that it should be possible to implement
 std::initializer_list<T> as a pair of pointers, or as a pointer and a size

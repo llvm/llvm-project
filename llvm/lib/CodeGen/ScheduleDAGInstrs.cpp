@@ -992,7 +992,7 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
   for (auto &I : loads)
     for (auto *SU : I.second)
       NodeNums.push_back(SU->NodeNum);
-  std::sort(NodeNums.begin(), NodeNums.end());
+  llvm::sort(NodeNums.begin(), NodeNums.end());
 
   // The N last elements in NodeNums will be removed, and the SU with
   // the lowest NodeNum of them will become the new BarrierChain to

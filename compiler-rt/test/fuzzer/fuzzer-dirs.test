@@ -17,5 +17,5 @@ LONG: INFO: -max_len is not provided; libFuzzer will not generate inputs larger 
 RUN: rm -rf %t/SUB1
 
 RUN: not %t-SimpleTest NONEXISTENT_DIR 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR
-NONEXISTENT_DIR: No such directory: NONEXISTENT_DIR; exiting
+NONEXISTENT_DIR: No such file or directory: NONEXISTENT_DIR; exiting
 

@@ -136,7 +136,7 @@ protected:
   friend class DebugMapModule;
   friend struct DIERef;
   friend class DWARFASTParserClang;
-  friend class DWARFUnit;
+  friend class DWARFCompileUnit;
   friend class SymbolFileDWARF;
   struct OSOInfo {
     lldb::ModuleSP module_sp;

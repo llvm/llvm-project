@@ -60,7 +60,7 @@ int array_comparisons() {
   return array1 >= array1; // expected-warning{{self-comparison always evaluates to true}}
 
   //
-  // compare differrent arrays
+  // compare different arrays
   //
   return array1 == array2; // expected-warning{{array comparison always evaluates to false}}
   return array1 != array2; // expected-warning{{array comparison always evaluates to true}}

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -o -
+; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=IGNORE_INTRIN %s
 
 ; PR16954
 ;
@@ -17,8 +18,22 @@ entry:
   ret i32 %1
 }
 
+define i32 @IgnoreIntrinsicTest() #1 {
+; IGNORE_INTRIN: IgnoreIntrinsicTest:
+  %1 = alloca i32, align 4
+  %2 = bitcast i32* %1 to i8*
+  call void @llvm.dbg.declare(metadata i32* %1, metadata !73, metadata !DIExpression()), !dbg !74
+  store volatile i32 1, i32* %1, align 4
+  %3 = load volatile i32, i32* %1, align 4
+  %4 = mul nsw i32 %3, 42
+  ret i32 %4
+; IGNORE_INTRIN-NOT: callq __stack_chk_fail
+; IGNORE_INTRIN:     .cfi_endproc
+}
+
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 attributes #0 = { sspreq }
 
@@ -93,3 +108,6 @@ attributes #0 = { sspreq }
 !70 = !DILocalVariable(name: "", line: 2, arg: 3, scope: !65, file: !10, type: !50)
 !71 = !DILocation(line: 1, scope: !65, inlinedAt: !40)
 !72 = !{i32 1, !"Debug Info Version", i32 3}
+!73 = !DILocalVariable(name: "x", scope: !74, file: !1, line: 2, type: !13)
+!74 = distinct !DISubprogram(name: "IgnoreIntrinsicTest", linkageName: "IgnoreIntrinsicTest", scope: !1, file: !1, line: 1, type: !13, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !5)
+!75 = !DILocation(line: 2, column: 16, scope: !7)

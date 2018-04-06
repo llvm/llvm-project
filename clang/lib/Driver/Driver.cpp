@@ -396,7 +396,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
   // Handle Apple-specific options available here.
   if (Target.isOSBinFormatMachO()) {
-    // If an explict Darwin arch name is given, that trumps all.
+    // If an explicit Darwin arch name is given, that trumps all.
     if (!DarwinArchName.empty()) {
       tools::darwin::setTripleTypeForMachOArchName(Target, DarwinArchName);
       return Target;

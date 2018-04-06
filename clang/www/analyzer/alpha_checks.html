@@ -551,12 +551,12 @@ when generating localized strings.
 NSString *reminderText = 
   NSLocalizedString(@"None", @"Indicates no reminders");
 if (reminderCount == 1) {
-  // Warning: Plural cases are not supported accross all languages. 
+  // Warning: Plural cases are not supported across all languages.
   // Use a .stringsdict file instead
   reminderText = 
     NSLocalizedString(@"1 Reminder", @"Indicates single reminder");
 } else if (reminderCount >= 2) {
-  // Warning: Plural cases are not supported accross all languages.
+  // Warning: Plural cases are not supported across all languages.
   // Use a .stringsdict file instead
   reminderText = 
     [NSString stringWithFormat:
@@ -712,7 +712,7 @@ void test() {
   size_t ts;
   scanf("%zd", &ts); // 'ts' marked as tainted
   int *p = (int *)malloc(ts * sizeof(int)); 
-    // warn: untrusted data as bufer size
+    // warn: untrusted data as buffer size
 }
 </pre></div></div></td></tr>
 

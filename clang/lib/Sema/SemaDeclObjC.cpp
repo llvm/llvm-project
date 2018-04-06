@@ -2723,7 +2723,7 @@ static void CheckProtocolMethodDefs(Sema &S,
             // This is because method will be implemented in the primary class 
             // or one of its super class implementation.
             
-            // Ugly, but necessary. Method declared in protcol might have
+            // Ugly, but necessary. Method declared in protocol might have
             // have been synthesized due to a property declared in the class which
             // uses the protocol.
             if (ObjCMethodDecl *MethodInClass =
@@ -3433,7 +3433,7 @@ static bool FilterMethodsByTypeBound(ObjCMethodDecl *Method,
            MethodInterface->isSuperClassOf(BoundInterface) ||
            BoundInterface->isSuperClassOf(MethodInterface);
   }
-  llvm_unreachable("unknow method context");
+  llvm_unreachable("unknown method context");
 }
 
 /// We first select the type of the method: Instance or Factory, then collect

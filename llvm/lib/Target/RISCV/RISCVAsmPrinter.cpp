@@ -14,6 +14,7 @@
 
 #include "RISCV.h"
 #include "InstPrinter/RISCVInstPrinter.h"
+#include "MCTargetDesc/RISCVMCExpr.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -48,6 +49,7 @@ public:
                              unsigned AsmVariant, const char *ExtraCode,
                              raw_ostream &OS) override;
 
+  void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
 
@@ -56,6 +58,15 @@ public:
     return LowerRISCVMachineOperandToMCOperand(MO, MCOp, *this);
   }
 };
+}
+
+#define GEN_COMPRESS_INSTR
+#include "RISCVGenCompressInstEmitter.inc"
+void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
+  MCInst CInst;
+  bool Res = compressInst(CInst, Inst, *TM.getMCSubtargetInfo(),
+                          OutStreamer->getContext());
+  AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real

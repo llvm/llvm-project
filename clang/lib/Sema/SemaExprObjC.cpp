@@ -2799,7 +2799,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
               // to select a better one.
               Method = Methods[0];
 
-              // If we find an instance method, emit waring.
+              // If we find an instance method, emit warning.
               if (Method->isInstanceMethod()) {
                 if (const ObjCInterfaceDecl *ID =
                     dyn_cast<ObjCInterfaceDecl>(Method->getDeclContext())) {

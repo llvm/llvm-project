@@ -102,7 +102,7 @@ void test_unreachable_templates_harness() {
   test_unreachable_templates<TestUnreachableB>(); 
 }
 
-// Do warn about explict template specializations, as they represent
+// Do warn about explicit template specializations, as they represent
 // actual concrete functions that somebody wrote.
 
 template <typename T> void funcToSpecialize() {}

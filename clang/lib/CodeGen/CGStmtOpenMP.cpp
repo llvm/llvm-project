@@ -4461,7 +4461,7 @@ void CodeGenFunction::EmitOMPUseDevicePtrClause(
       EmitDecl(*PvtVD);
 
       // The initialization variables reached its purpose in the emission
-      // ofthe previous declaration, so we don't need it anymore.
+      // of the previous declaration, so we don't need it anymore.
       LocalDeclMap.erase(InitVD);
 
       // Return the address of the private variable.
@@ -4503,7 +4503,7 @@ void CodeGenFunction::EmitOMPTargetDataDirective(
       CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
     };
 
-    // Codegen that selects wheather to generate the privatization code or not.
+    // Codegen that selects whether to generate the privatization code or not.
     auto &&PrivCodeGen = [&S, &Info, &PrivatizeDevicePointers,
                           &InnermostCodeGen](CodeGenFunction &CGF,
                                              PrePostActionTy &Action) {

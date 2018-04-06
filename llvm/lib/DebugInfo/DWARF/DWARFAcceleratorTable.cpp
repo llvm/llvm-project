@@ -601,7 +601,7 @@ Expected<DWARFDebugNames::Entry>
 DWARFDebugNames::NameIndex::getEntry(uint32_t *Offset) const {
   const DWARFDataExtractor &AS = Section.AccelSection;
   if (!AS.isValidOffset(*Offset))
-    return make_error<StringError>("Incorrectly terminated entry list",
+    return make_error<StringError>("Incorrectly terminated entry list.",
                                    inconvertibleErrorCode());
 
   uint32_t AbbrevCode = AS.getULEB128(Offset);
@@ -610,7 +610,7 @@ DWARFDebugNames::NameIndex::getEntry(uint32_t *Offset) const {
 
   const auto AbbrevIt = Abbrevs.find_as(AbbrevCode);
   if (AbbrevIt == Abbrevs.end())
-    return make_error<StringError>("Invalid abbreviation",
+    return make_error<StringError>("Invalid abbreviation.",
                                    inconvertibleErrorCode());
 
   Entry E(*this, *AbbrevIt);
@@ -618,7 +618,7 @@ DWARFDebugNames::NameIndex::getEntry(uint32_t *Offset) const {
   dwarf::FormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
   for (auto &Value : E.Values) {
     if (!Value.extractValue(AS, Offset, FormParams))
-      return make_error<StringError>("Error extracting index attribute values",
+      return make_error<StringError>("Error extracting index attribute values.",
                                      inconvertibleErrorCode());
   }
   return std::move(E);

@@ -289,16 +289,16 @@ public:
   /// induction, the induction descriptor \p D will contain the data describing
   /// this induction. If by some other means the caller has a better SCEV
   /// expression for \p Phi than the one returned by the ScalarEvolution
-  /// analysis, it can be passed through \p Expr. If the def-use chain 
+  /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore
   /// under proper runtime checks), they are passed through \p CastsToIgnore.
-  static bool 
+  static bool
   isInductionPHI(PHINode *Phi, const Loop* L, ScalarEvolution *SE,
                  InductionDescriptor &D, const SCEV *Expr = nullptr,
                  SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
 
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
-  /// If \p Phi is an induction, the induction descriptor \p D will contain 
+  /// If \p Phi is an induction, the induction descriptor \p D will contain
   /// the data describing this induction.
   static bool isFPInductionPHI(PHINode *Phi, const Loop* L,
                                ScalarEvolution *SE, InductionDescriptor &D);
@@ -334,11 +334,11 @@ public:
       Instruction::BinaryOpsEnd;
   }
 
-  /// Returns a reference to the type cast instructions in the induction 
+  /// Returns a reference to the type cast instructions in the induction
   /// update chain, that are redundant when guarded with a runtime
   /// SCEV overflow check.
-  const SmallVectorImpl<Instruction *> &getCastInsts() const { 
-    return RedundantCasts; 
+  const SmallVectorImpl<Instruction *> &getCastInsts() const {
+    return RedundantCasts;
   }
 
 private:
@@ -513,7 +513,7 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
                            RecurrenceDescriptor::MinMaxRecurrenceKind
                                MinMaxKind = RecurrenceDescriptor::MRK_Invalid,
-                           ArrayRef<Value *> RedOps = ArrayRef<Value *>());
+                           ArrayRef<Value *> RedOps = None);
 
 /// Create a target reduction of the given vector. The reduction operation
 /// is described by the \p Opcode parameter. min/max reductions require
@@ -525,7 +525,7 @@ createSimpleTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
                             unsigned Opcode, Value *Src,
                             TargetTransformInfo::ReductionFlags Flags =
                                 TargetTransformInfo::ReductionFlags(),
-                            ArrayRef<Value *> RedOps = ArrayRef<Value *>());
+                            ArrayRef<Value *> RedOps = None);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc
 /// The target is queried to determine if intrinsics or shuffle sequences are

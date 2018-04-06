@@ -4463,7 +4463,7 @@ bool ASTContext::QIdProtocolsAdoptObjCObjectProtocols(QualType QT,
   CollectInheritedProtocols(IDecl, InheritedProtocols);
   if (InheritedProtocols.empty())
     return false;
-  // Check that if every protocol in list of id<plist> conforms to a protcol
+  // Check that if every protocol in list of id<plist> conforms to a protocol
   // of IDecl's, then bridge casting is ok.
   bool Conforms = false;
   for (auto *Proto : OPT->quals()) {
@@ -6545,7 +6545,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
       S += "{objc_class=}";
       return;
     }
-    // TODO: Double check to make sure this intentially falls through.
+    // TODO: Double check to make sure this intentionally falls through.
     LLVM_FALLTHROUGH;
   }
   
@@ -6584,7 +6584,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
     if (OPT->isObjCClassType() || OPT->isObjCQualifiedClassType()) {
       // FIXME: Consider if we need to output qualifiers for 'Class<p>'.
       // Since this is a binary compatibility issue, need to consult with runtime
-      // folks. Fortunately, this is a *very* obsure construct.
+      // folks. Fortunately, this is a *very* obscure construct.
       S += '#';
       return;
     }

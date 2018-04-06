@@ -322,7 +322,7 @@ private:
   }
 
   /// Type tag information is stored immediately following the arguments, if
-  /// any, at the end of the object.  They are mutually exlusive with
+  /// any, at the end of the object.  They are mutually exclusive with
   /// availability slots.
   TypeTagForDatatypeData &getTypeTagForDatatypeDataSlot() {
     return *reinterpret_cast<TypeTagForDatatypeData*>(getArgsBuffer()+NumArgs);

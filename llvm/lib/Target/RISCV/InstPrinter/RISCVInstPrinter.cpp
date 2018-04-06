@@ -13,6 +13,7 @@
 
 #include "RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "MCTargetDesc/RISCVMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -30,6 +31,10 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "RISCVGenAsmWriter.inc"
 
+// Include the auto-generated portion of the compress emitter.
+#define GEN_UNCOMPRESS_INSTR
+#include "RISCVGenCompressInstEmitter.inc"
+
 static cl::opt<bool>
 NoAliases("riscv-no-aliases",
             cl::desc("Disable the emission of assembler pseudo instructions"),
@@ -38,8 +43,15 @@ NoAliases("riscv-no-aliases",
 
 void RISCVInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
                                  StringRef Annot, const MCSubtargetInfo &STI) {
-  if (NoAliases || !printAliasInstr(MI, STI, O))
-    printInstruction(MI, STI, O);
+  bool Res = false;
+  const MCInst *NewMI = MI;
+  MCInst UncompressedMI;
+  if (!NoAliases)
+    Res = uncompressInst(UncompressedMI, *MI, MRI, STI);
+  if (Res)
+    NewMI = const_cast<MCInst*>(&UncompressedMI);
+  if (NoAliases || !printAliasInstr(NewMI, STI, O))
+    printInstruction(NewMI, STI, O);
   printAnnotation(O, Annot);
 }
 

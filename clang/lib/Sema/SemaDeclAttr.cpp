@@ -6977,7 +6977,7 @@ createAttributeInsertion(const NamedDecl *D, const SourceManager &SM,
 /// \param Ctx The context that the reference occurred in
 /// \param ReferringDecl The exact declaration that was referenced.
 /// \param OffendingDecl A related decl to \c ReferringDecl that has an
-/// availability attribute corrisponding to \c K attached to it. Note that this
+/// availability attribute corresponding to \c K attached to it. Note that this
 /// may not be the same as ReferringDecl, i.e. if an EnumDecl is annotated and
 /// we refer to a member EnumConstantDecl, ReferringDecl is the EnumConstantDecl
 /// and OffendingDecl is the EnumDecl.

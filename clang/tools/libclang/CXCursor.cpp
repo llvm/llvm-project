@@ -1469,17 +1469,17 @@ void clang_getOverriddenCursors(CXCursor cursor,
   assert(cxcursor::getCursorTU(backRefCursor) == TU);
   Vec->push_back(backRefCursor);
 
-  // Get the overriden cursors.
+  // Get the overridden cursors.
   cxcursor::getOverriddenCursors(cursor, *Vec);
   
-  // Did we get any overriden cursors?  If not, return Vec to the pool
+  // Did we get any overridden cursors?  If not, return Vec to the pool
   // of available cursor vectors.
   if (Vec->size() == 1) {
     pool.AvailableCursors.push_back(Vec);
     return;
   }
 
-  // Now tell the caller about the overriden cursors.
+  // Now tell the caller about the overridden cursors.
   assert(Vec->size() > 1);
   *overridden = &((*Vec)[1]);
   *num_overridden = Vec->size() - 1;

@@ -713,7 +713,7 @@ struct TupleExpander : SetTheory::Expander {
 //===----------------------------------------------------------------------===//
 
 static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
-  std::sort(M.begin(), M.end(), deref<llvm::less>());
+  llvm::sort(M.begin(), M.end(), deref<llvm::less>());
   M.erase(std::unique(M.begin(), M.end(), deref<llvm::equal>()), M.end());
 }
 
@@ -985,7 +985,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   for (auto &RC : RegClasses)
     if (SuperRegRCsBV[RC.EnumValue])
       SuperRegRCs.emplace_back(&RC);
-  std::sort(SuperRegRCs.begin(), SuperRegRCs.end(), SizeOrder);
+  llvm::sort(SuperRegRCs.begin(), SuperRegRCs.end(), SizeOrder);
   assert(SuperRegRCs.front() == BiggestSuperRegRC && "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
@@ -996,11 +996,11 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     if (SuperRegClassesBV.any())
       SuperRegClasses.push_back(std::make_pair(&RC, SuperRegClassesBV));
   }
-  std::sort(SuperRegClasses.begin(), SuperRegClasses.end(),
-            [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
-                const std::pair<CodeGenRegisterClass *, BitVector> &B) {
-              return SizeOrder(A.first, B.first);
-            });
+  llvm::sort(SuperRegClasses.begin(), SuperRegClasses.end(),
+             [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
+                 const std::pair<CodeGenRegisterClass *, BitVector> &B) {
+               return SizeOrder(A.first, B.first);
+             });
 
   // Find the biggest subclass and subreg class such that R:subidx is in the
   // subreg class for all R in subclass.
@@ -1061,7 +1061,7 @@ void CodeGenRegisterClass::buildRegUnitSet(const CodeGenRegBank &RegBank,
     if (!RU.Artificial)
       TmpUnits.push_back(*UnitI);
   }
-  std::sort(TmpUnits.begin(), TmpUnits.end());
+  llvm::sort(TmpUnits.begin(), TmpUnits.end());
   std::unique_copy(TmpUnits.begin(), TmpUnits.end(),
                    std::back_inserter(RegUnits));
 }
@@ -1080,7 +1080,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   // Read in the user-defined (named) sub-register indices.
   // More indices will be synthesized later.
   std::vector<Record*> SRIs = Records.getAllDerivedDefinitions("SubRegIndex");
-  std::sort(SRIs.begin(), SRIs.end(), LessRecord());
+  llvm::sort(SRIs.begin(), SRIs.end(), LessRecord());
   for (unsigned i = 0, e = SRIs.size(); i != e; ++i)
     getSubRegIdx(SRIs[i]);
   // Build composite maps from ComposedOf fields.
@@ -1089,7 +1089,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
 
   // Read in the register definitions.
   std::vector<Record*> Regs = Records.getAllDerivedDefinitions("Register");
-  std::sort(Regs.begin(), Regs.end(), LessRecordRegister());
+  llvm::sort(Regs.begin(), Regs.end(), LessRecordRegister());
   // Assign the enumeration values.
   for (unsigned i = 0, e = Regs.size(); i != e; ++i)
     getReg(Regs[i]);
@@ -1100,7 +1100,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
 
   for (Record *R : Tups) {
     std::vector<Record *> TupRegs = *Sets.expand(R);
-    std::sort(TupRegs.begin(), TupRegs.end(), LessRecordRegister());
+    llvm::sort(TupRegs.begin(), TupRegs.end(), LessRecordRegister());
     for (Record *RC : TupRegs)
       getReg(RC);
   }

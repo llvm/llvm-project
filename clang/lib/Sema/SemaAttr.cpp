@@ -205,7 +205,7 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   // "#pragma pack(pop, identifier, n) is undefined"
   if (Action & Sema::PSK_Pop) {
     if (Alignment && !SlotLabel.empty())
-      Diag(PragmaLoc, diag::warn_pragma_pack_pop_identifer_and_alignment);
+      Diag(PragmaLoc, diag::warn_pragma_pack_pop_identifier_and_alignment);
     if (PackStack.Stack.empty())
       Diag(PragmaLoc, diag::warn_pragma_pop_failed) << "pack" << "stack empty";
   }

@@ -629,10 +629,10 @@ public:
     /// Distribute Loop condition used when composing 'omp distribute'
     ///  with 'omp for' in a same construct
     Expr *Cond;
-    /// Update of LowerBound for statically sheduled omp loops for
+    /// Update of LowerBound for statically scheduled omp loops for
     /// outer loop in combined constructs (e.g. 'distribute parallel for')
     Expr *NLB;
-    /// Update of UpperBound for statically sheduled omp loops for
+    /// Update of UpperBound for statically scheduled omp loops for
     /// outer loop in combined constructs (e.g. 'distribute parallel for')
     Expr *NUB;
   };
@@ -666,9 +666,9 @@ public:
     Expr *ST;
     /// \brief EnsureUpperBound -- expression UB = min(UB, NumIterations).
     Expr *EUB;
-    /// \brief Update of LowerBound for statically sheduled 'omp for' loops.
+    /// \brief Update of LowerBound for statically scheduled 'omp for' loops.
     Expr *NLB;
-    /// \brief Update of UpperBound for statically sheduled 'omp for' loops.
+    /// \brief Update of UpperBound for statically scheduled 'omp for' loops.
     Expr *NUB;
     /// \brief PreviousLowerBound - local variable passed to runtime in the
     /// enclosing schedule or null if that does not apply.

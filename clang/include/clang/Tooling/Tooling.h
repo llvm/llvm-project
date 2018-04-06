@@ -339,7 +339,7 @@ public:
   ///
   /// \param Action Tool action.
   ///
-  /// \returns 0 on success; 1 if any error occured; 2 if there is no error but
+  /// \returns 0 on success; 1 if any error occurred; 2 if there is no error but
   /// some files are skipped due to missing compile commands.
   int run(ToolAction *Action);
 

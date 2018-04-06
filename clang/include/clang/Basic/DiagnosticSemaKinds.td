@@ -751,7 +751,7 @@ def note_pragma_pack_pop_instead_reset : Note<
   "did you intend to use '#pragma pack (pop)' instead of '#pragma pack()'?">;
 // Follow the Microsoft implementation.
 def warn_pragma_pack_show : Warning<"value of #pragma pack(show) == %0">;
-def warn_pragma_pack_pop_identifer_and_alignment : Warning<
+def warn_pragma_pack_pop_identifier_and_alignment : Warning<
   "specifying both a name and alignment to 'pop' is undefined">;
 def warn_pragma_pop_failed : Warning<"#pragma %0(pop, ...) failed: %1">,
   InGroup<IgnoredPragmas>;

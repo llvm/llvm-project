@@ -36,7 +36,7 @@
   return [self performSelector : @selector(PlusZero)];
   return [self performSelector : @selector(PlusOne)]; // expected-error {{performSelector names a selector which retains the object}}
 
-  // Avoid the unkown selector warning for more complicated performSelector
+  // Avoid the unknown selector warning for more complicated performSelector
   // variations because it produces too many false positives.
   [self performSelector: sel1 withObject:0 afterDelay:0 inModes:0];
 

@@ -198,7 +198,7 @@ private:
   /// the tokens just expanded through __VA_OPT__ processing.  These (sub)
   /// sequence of tokens are folded into one stringified token.
   ///
-  /// \param[in] VCtx - contains relevent contextual information about the
+  /// \param[in] VCtx - contains relevant contextual information about the
   /// state of the tokens around and including the __VA_OPT__ token, necessary
   /// for stringification.
   void stringifyVAOPTContents(SmallVectorImpl<Token> &ReplacementToks,
