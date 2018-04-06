@@ -48,6 +48,8 @@ static const char *const THREAD_COMMAND_NEW = "new";
 static const char *const THREAD_COMMAND_PRINT_IDS = "print-ids";
 static const char *const THREAD_COMMAND_SEGFAULT = "segfault";
 
+static const char *const PRINT_PID_COMMAND = "print-pid";
+
 static bool g_print_thread_ids = false;
 static pthread_mutex_t g_print_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool g_threads_do_segfault = false;
@@ -60,6 +62,10 @@ static char g_message[256];
 
 static volatile char g_c1 = '0';
 static volatile char g_c2 = '1';
+
+static void print_pid() {
+  fprintf(stderr, "PID: %d\n", getpid());
+}
 
 static void print_thread_id() {
 // Put in the right magic here for your platform to spit out the thread id (tid)
@@ -349,6 +355,8 @@ int main(int argc, char **argv) {
         // At this point we don't do anything else with threads.
         // Later use thread index and send command to thread.
       }
+    } else if (std::strstr(argv[i], PRINT_PID_COMMAND)) {
+        print_pid();
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);
