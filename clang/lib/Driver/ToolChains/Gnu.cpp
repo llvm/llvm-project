@@ -221,37 +221,6 @@ void tools::gcc::Linker::RenderExtraToolArgs(const JobAction &JA,
   // The types are (hopefully) good enough.
 }
 
-static bool addXRayRuntime(const ToolChain &TC, const ArgList &Args,
-                           ArgStringList &CmdArgs) {
-  // Do not add the XRay runtime to shared libraries.
-  if (Args.hasArg(options::OPT_shared))
-    return false;
-
-  if (Args.hasFlag(options::OPT_fxray_instrument,
-                   options::OPT_fnoxray_instrument, false)) {
-    CmdArgs.push_back("-whole-archive");
-    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray", false));
-    CmdArgs.push_back("-no-whole-archive");
-    return true;
-  }
-
-  return false;
-}
-
-static void linkXRayRuntimeDeps(const ToolChain &TC, const ArgList &Args,
-                                ArgStringList &CmdArgs) {
-  CmdArgs.push_back("--no-as-needed");
-  CmdArgs.push_back("-lpthread");
-  if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
-    CmdArgs.push_back("-lrt");
-  CmdArgs.push_back("-lm");
-
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
-      TC.getTriple().getOS() != llvm::Triple::OpenBSD)
-    CmdArgs.push_back("-ldl");
-}
-
 static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   switch (T.getArch()) {
   case llvm::Triple::x86:
@@ -496,7 +465,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
 
       if (NeedsXRayDeps)
-        linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
+        linkXRayRuntimeDeps(ToolChain, CmdArgs);
 
       bool WantPthread = Args.hasArg(options::OPT_pthread) ||
                          Args.hasArg(options::OPT_pthreads);

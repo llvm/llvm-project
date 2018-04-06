@@ -237,7 +237,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
   // Copy out uses since UseMap will get touched below.
   using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
   SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
-  std::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
+  llvm::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
     return L.second.second < R.second.second;
   });
   for (const auto &Pair : Uses) {
@@ -290,7 +290,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
   // Copy out uses since UseMap could get touched below.
   using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
   SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
-  std::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
+  llvm::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
     return L.second.second < R.second.second;
   });
   UseMap.clear();

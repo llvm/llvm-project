@@ -22,29 +22,6 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-static bool addXRayRuntime(const ToolChain &TC, const ArgList &Args,
-                           ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_shared))
-    return false;
-
-  if (Args.hasFlag(options::OPT_fxray_instrument,
-                   options::OPT_fnoxray_instrument, false)) {
-    CmdArgs.push_back("-whole-archive");
-    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray", false));
-    CmdArgs.push_back("-no-whole-archive");
-    return true;
-  }
-
-  return false;
-}
-
-static void linkXRayRuntimeDeps(const ToolChain &TC, const ArgList &Args,
-                                ArgStringList &CmdArgs) {
-  CmdArgs.push_back("--no-as-needed");
-  CmdArgs.push_back("-lm");
-  CmdArgs.push_back("-lpthread");
-}
-
 void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfo &Output,
                                       const InputInfoList &Inputs,
@@ -221,7 +198,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
     if (NeedsXRayDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins", false));
-      linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
+      linkXRayRuntimeDeps(ToolChain, CmdArgs);
     }
     // FIXME: For some reason GCC passes -lgcc before adding
     // the default system libraries. Just mimic this for now.

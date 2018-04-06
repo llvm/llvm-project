@@ -72,6 +72,9 @@
 /* enable x86 relax relocations by default */
 #cmakedefine01 ENABLE_X86_RELAX_RELOCATIONS
 
+/* Enable the experimental new pass manager by default */
+#cmakedefine01 ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER
+
 /* Enable each functionality of modules */
 #cmakedefine01 CLANG_ENABLE_ARCMT
 #cmakedefine01 CLANG_ENABLE_OBJC_REWRITER

@@ -1032,7 +1032,7 @@ a realistic example:
 
       // Emit PointCount.
       OS.AddComment("safe point count");
-      AP.EmitInt32(MD.size());
+      AP.emitInt32(MD.size());
 
       // And each safe point...
       for (GCFunctionInfo::iterator PI = MD.begin(),
@@ -1049,18 +1049,18 @@ a realistic example:
 
       // Emit the stack frame size.
       OS.AddComment("stack frame size (in words)");
-      AP.EmitInt32(MD.getFrameSize() / IntPtrSize);
+      AP.emitInt32(MD.getFrameSize() / IntPtrSize);
 
       // Emit stack arity, i.e. the number of stacked arguments.
       unsigned RegisteredArgs = IntPtrSize == 4 ? 5 : 6;
       unsigned StackArity = MD.getFunction().arg_size() > RegisteredArgs ?
                             MD.getFunction().arg_size() - RegisteredArgs : 0;
       OS.AddComment("stack arity");
-      AP.EmitInt32(StackArity);
+      AP.emitInt32(StackArity);
 
       // Emit the number of live roots in the function.
       OS.AddComment("live root count");
-      AP.EmitInt32(MD.live_size(PI));
+      AP.emitInt32(MD.live_size(PI));
 
       // And for each live root...
       for (GCFunctionInfo::live_iterator LI = MD.live_begin(PI),
@@ -1068,7 +1068,7 @@ a realistic example:
                                          LI != LE; ++LI) {
         // Emit live root's offset within the stack frame.
         OS.AddComment("stack index (offset / wordsize)");
-        AP.EmitInt32(LI->StackOffset);
+        AP.emitInt32(LI->StackOffset);
       }
     }
   }

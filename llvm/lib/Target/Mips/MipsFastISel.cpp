@@ -67,6 +67,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdint>
 
@@ -1306,13 +1307,13 @@ bool MipsFastISel::fastLowerArguments() {
     return false;
   }
 
-  const ArrayRef<MCPhysReg> GPR32ArgRegs = {Mips::A0, Mips::A1, Mips::A2,
-                                            Mips::A3};
-  const ArrayRef<MCPhysReg> FGR32ArgRegs = {Mips::F12, Mips::F14};
-  const ArrayRef<MCPhysReg> AFGR64ArgRegs = {Mips::D6, Mips::D7};
-  ArrayRef<MCPhysReg>::iterator NextGPR32 = GPR32ArgRegs.begin();
-  ArrayRef<MCPhysReg>::iterator NextFGR32 = FGR32ArgRegs.begin();
-  ArrayRef<MCPhysReg>::iterator NextAFGR64 = AFGR64ArgRegs.begin();
+  std::array<MCPhysReg, 4> GPR32ArgRegs = {{Mips::A0, Mips::A1, Mips::A2,
+                                           Mips::A3}};
+  std::array<MCPhysReg, 2> FGR32ArgRegs = {{Mips::F12, Mips::F14}};
+  std::array<MCPhysReg, 2> AFGR64ArgRegs = {{Mips::D6, Mips::D7}};
+  auto NextGPR32 = GPR32ArgRegs.begin();
+  auto NextFGR32 = FGR32ArgRegs.begin();
+  auto NextAFGR64 = AFGR64ArgRegs.begin();
 
   struct AllocatedReg {
     const TargetRegisterClass *RC;
