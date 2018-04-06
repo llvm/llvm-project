@@ -184,7 +184,7 @@ CudaInstallationDetector::CudaInstallationDetector(
         StringRef GpuArch = FileName.slice(
             LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
         LibDeviceMap[GpuArch] = FilePath.str();
-        // Insert map entries for specifc devices with this compute
+        // Insert map entries for specific devices with this compute
         // capability. NVCC's choice of the libdevice library version is
         // rather peculiar and depends on the CUDA version.
         if (GpuArch == "compute_20") {

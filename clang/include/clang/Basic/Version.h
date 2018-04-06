@@ -30,11 +30,11 @@ namespace clang {
   /// This supports LLVM residing in a separate repository from clang.
   std::string getLLVMRepositoryPath();
 
-  /// \brief Retrieves the repository revision number (or identifer) from which
+  /// \brief Retrieves the repository revision number (or identifier) from which
   /// this Clang was built.
   std::string getClangRevision();
 
-  /// \brief Retrieves the repository revision number (or identifer) from which
+  /// \brief Retrieves the repository revision number (or identifier) from which
   /// LLVM was built.
   ///
   /// If Clang and LLVM are in the same repository, this returns the same

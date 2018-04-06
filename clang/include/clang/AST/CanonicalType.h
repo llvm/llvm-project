@@ -324,7 +324,7 @@ public:
   }
 };
 
-/// \brief Replacable canonical proxy adaptor class that provides the link
+/// \brief Replaceable canonical proxy adaptor class that provides the link
 /// between a canonical type and the accessors of the type.
 ///
 /// The CanProxyAdaptor is a replaceable class template that is instantiated

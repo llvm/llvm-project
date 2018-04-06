@@ -278,7 +278,7 @@ public:
 
   /// Translates the native parameter of outlined function if this is required
   /// for target.
-  /// \param FD Field decl from captured record for the paramater.
+  /// \param FD Field decl from captured record for the parameter.
   /// \param NativeParam Parameter itself.
   const VarDecl *translateParameter(const FieldDecl *FD,
                                     const VarDecl *NativeParam) const override;

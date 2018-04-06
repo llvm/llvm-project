@@ -4988,7 +4988,7 @@ enum CXCompletionChunkKind {
    * for "int x", indicating that the current argument will initialize that
    * parameter. After typing further, to \c add(17, (where the code-completion
    * point is after the ","), the code-completion string will contain a
-   * "current paremeter" chunk to "int y".
+   * "current parameter" chunk to "int y".
    */
   CXCompletionChunk_CurrentParameter,
   /**
@@ -5409,7 +5409,7 @@ CINDEX_LINKAGE unsigned clang_defaultCodeCompleteOptions(void);
  * user types punctuation characters or whitespace, at which point the
  * code-completion location will coincide with the cursor. For example, if \c p
  * is a pointer, code-completion might be triggered after the "-" and then
- * after the ">" in \c p->. When the code-completion location is afer the ">",
+ * after the ">" in \c p->. When the code-completion location is after the ">",
  * the completion results will provide, e.g., the members of the struct that
  * "p" points to. The client is responsible for placing the cursor at the
  * beginning of the token currently being typed, then filtering the results

@@ -199,7 +199,7 @@ private:
   llvm::DenseMap<const DirectoryEntry *, Module *> UmbrellaDirs;
 
   /// \brief A generation counter that is used to test whether modules of the
-  /// same name may shadow or are illegal redefintions.
+  /// same name may shadow or are illegal redefinitions.
   ///
   /// Modules from earlier scopes may shadow modules from later ones.
   /// Modules from the same scope may not have the same name.

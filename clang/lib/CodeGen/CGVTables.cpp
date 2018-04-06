@@ -870,7 +870,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
 
-/// This is a callback from Sema to tell us that that a particular vtable is
+/// This is a callback from Sema to tell us that a particular vtable is
 /// required to be emitted in this translation unit.
 ///
 /// This is only called for vtables that _must_ be emitted (mainly due to key

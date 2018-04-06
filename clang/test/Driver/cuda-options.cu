@@ -62,7 +62,7 @@
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix LINK %s
 
-// Verify that --cuda-gpu-arch option passes the correct GPU archtecture to
+// Verify that --cuda-gpu-arch option passes the correct GPU architecture to
 // device compilation.
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_30 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
@@ -92,21 +92,21 @@
 // RUN:    -check-prefix HOST-AS -check-prefix NOLINK %s
 
 // Verify that --[no-]cuda-gpu-arch arguments are handled correctly.
-// a) --no-cuda-gpu-arch=X negates preceeding --cuda-gpu-arch=X
+// a) --no-cuda-gpu-arch=X negates preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=sm_35 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,NOARCH-SM35 %s
 
-// b) --no-cuda-gpu-arch=X negates more than one preceeding --cuda-gpu-arch=X
+// b) --no-cuda-gpu-arch=X negates more than one preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=sm_35 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,NOARCH-SM35 %s
 
-// c) if --no-cuda-gpu-arch=X negates all preceeding --cuda-gpu-arch=X
+// c) if --no-cuda-gpu-arch=X negates all preceding --cuda-gpu-arch=X
 //    we default to sm_20 -- same as if no --cuda-gpu-arch were passed.
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \

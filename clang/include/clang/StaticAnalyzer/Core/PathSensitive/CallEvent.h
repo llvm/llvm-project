@@ -90,7 +90,7 @@ public:
   /// @param FuncName The name of the function that will be matched.
   ///
   /// @param RequiredArgs The number of arguments that is expected to match a
-  /// call. Omit this parameter to match every occurance of call with a given
+  /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
   CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
       : FuncName(FuncName), RequiredArgs(RequiredArgs) {}

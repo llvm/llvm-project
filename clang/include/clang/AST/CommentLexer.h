@@ -72,7 +72,7 @@ class Token {
 
   /// Integer value associated with a token.
   ///
-  /// If the token is a konwn command, contains command ID and TextPtr is
+  /// If the token is a known command, contains command ID and TextPtr is
   /// unused (command spelling can be found with CommandTraits).  Otherwise,
   /// contains the length of the string that starts at TextPtr.
   unsigned IntVal;

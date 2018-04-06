@@ -198,7 +198,7 @@ global char *p4;
 // CHECK: @p5 = common local_unnamed_addr addrspace(1) global i8* null, align 8
 generic char *p5;
 
-// Test default initialization of sturcture.
+// Test default initialization of structure.
 
 // CHECK: @S1 = weak local_unnamed_addr addrspace(1) global %struct.StructTy1 { i8 addrspace(5)* null, i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, align 8
 StructTy1 S1;
@@ -367,7 +367,7 @@ void test_cast_null_pointer_to_sizet(void) {
                                         (size_t)((generic char*)NULL));
 }
 
-// Test comparision between null pointers.
+// Test comparison between null pointers.
 #define TEST_EQ00(addr1, addr2) int test_eq00_##addr1##_##addr2(void) { return (addr1 char*)0 == (addr2 char*)0; }
 #define TEST_EQ0N(addr1, addr2) int test_eq0N_##addr1##_##addr2(void) { return (addr1 char*)0 == (addr2 char*)NULL; }
 #define TEST_EQN0(addr1, addr2) int test_eqN0_##addr1##_##addr2(void) { return (addr1 char*)NULL == (addr2 char*)0; }

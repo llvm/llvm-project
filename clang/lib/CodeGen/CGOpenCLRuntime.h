@@ -64,11 +64,11 @@ public:
 
   llvm::PointerType *getSamplerType(const Type *T);
 
-  // \brief Returnes a value which indicates the size in bytes of the pipe
+  // \brief Returns a value which indicates the size in bytes of the pipe
   // element.
   virtual llvm::Value *getPipeElemSize(const Expr *PipeArg);
 
-  // \brief Returnes a value which indicates the alignment in bytes of the pipe
+  // \brief Returns a value which indicates the alignment in bytes of the pipe
   // element.
   virtual llvm::Value *getPipeElemAlign(const Expr *PipeArg);
 

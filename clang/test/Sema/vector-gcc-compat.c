@@ -114,7 +114,7 @@ void logicTest(void) {
   v2i64_a >>= 1;
 }
 
-// For operations with floating point types, we check that interger constants
+// For operations with floating point types, we check that integer constants
 // can be respresented, or failing that checking based on the integer types.
 void floatTestConstant(void) {
   // Test that constants added to floats must be expressible as floating point

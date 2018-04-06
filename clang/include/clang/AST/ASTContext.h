@@ -1113,7 +1113,7 @@ public:
   /// \brief Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
   /// qualifiers on ObjCObjectPointerType. It can be set to true when
-  /// contructing the canonical type of a Objective-C type parameter.
+  /// constructing the canonical type of a Objective-C type parameter.
   QualType applyObjCProtocolQualifiers(QualType type,
       ArrayRef<ObjCProtocolDecl *> protocols, bool &hasError,
       bool allowOnPointerType = false) const;

@@ -1887,7 +1887,7 @@ void SourceManager::associateFileChunkWithMacroArgExp(
   //     0   -> SourceLocation()
   //     100 -> Expanded loc #1
   //     110 -> SourceLocation()
-  // and we found a new macro FileID that lexed from offet 105 with length 3,
+  // and we found a new macro FileID that lexed from offset 105 with length 3,
   // the new map will be:
   //     0   -> SourceLocation()
   //     100 -> Expanded loc #1

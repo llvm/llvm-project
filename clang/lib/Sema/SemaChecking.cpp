@@ -1661,7 +1661,7 @@ bool Sema::CheckMipsBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Mips::BI__builtin_msa_srlri_h: i = 1; l = 0; u = 15; break;
   case Mips::BI__builtin_msa_binsli_h:
   case Mips::BI__builtin_msa_binsri_h: i = 2; l = 0; u = 15; break;
-  // These intrinsics take an unsigned 5 bit immedate.
+  // These intrinsics take an unsigned 5 bit immediate.
   // The first block of intrinsics actually have an unsigned 5 bit field,
   // not a df/n field.
   case Mips::BI__builtin_msa_clei_u_b:
@@ -5625,7 +5625,7 @@ void CheckFormatHandler::EmitFormatDiagnostic(PartialDiagnostic PDiag,
                        Loc, IsStringLocation, StringRange, FixIt);
 }
 
-/// \brief If the format string is not within the funcion call, emit a note
+/// \brief If the format string is not within the function call, emit a note
 /// so that the function call and string are in diagnostic messages.
 ///
 /// \param InFunctionCall if true, the format string is within the function
@@ -9936,7 +9936,7 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE,
       ::CheckBoolLikeConversion(S, U->getSubExpr(), CC);
 }
 
-/// Diagnose integer type and any valid implicit convertion to it.
+/// Diagnose integer type and any valid implicit conversion to it.
 static bool checkOpenCLEnqueueIntType(Sema &S, Expr *E, const QualType &IntT) {
   // Taking into account implicit conversions,
   // allow any integer.
@@ -10844,7 +10844,7 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
 
     // If the parameter is a c++ class type and it has to be destructed in the
     // callee function, declare the destructor so that it can be called by the
-    // callee function. Do not perfom any direct access check on the dtor here.
+    // callee function. Do not perform any direct access check on the dtor here.
     if (!Param->isInvalidDecl()) {
       if (CXXRecordDecl *ClassDecl = Param->getType()->getAsCXXRecordDecl()) {
         if (!ClassDecl->isInvalidDecl() &&

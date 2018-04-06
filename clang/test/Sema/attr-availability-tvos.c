@@ -53,7 +53,7 @@ void test_tvos() {
   f3_tvos(0);
   f4_tvos(0); // expected-error{{'f4_tvos' is unavailable: obsoleted in tvOS 3.0}}
   // We get no warning here because any explicit 'tvos' availability causes
-  // the ios availablity to not implicitly become 'tvos' availability.  Otherwise we'd get
+  // the ios availability to not implicitly become 'tvos' availability.  Otherwise we'd get
   // a deprecated warning.
   f5_tvos(0); // no-warning
   f5_attr_reversed_tvos(0); // no-warning

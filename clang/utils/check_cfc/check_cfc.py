@@ -237,7 +237,7 @@ def run_step(command, my_env, error_on_failure):
 
 def get_temp_file_name(suffix):
     """Get a temporary file name with a particular suffix. Let the caller be
-    reponsible for deleting it."""
+    responsible for deleting it."""
     tf = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
     tf.close()
     return tf.name

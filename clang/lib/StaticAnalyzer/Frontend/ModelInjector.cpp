@@ -109,7 +109,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   // The preprocessor enters to the main file id when parsing is started, so
   // the main file id is changed to the model file during parsing and it needs
-  // to be reseted to the former main file id after parsing of the model file
+  // to be reset to the former main file id after parsing of the model file
   // is done.
   SM.setMainFileID(mainFileID);
 }

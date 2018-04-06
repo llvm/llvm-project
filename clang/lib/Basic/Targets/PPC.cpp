@@ -96,7 +96,7 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_CALL_ELF", "2");
 
   // This typically is only for a new enough linker (bfd >= 2.16.2 or gold), but
-  // our suppport post-dates this and it should work on all 64-bit ppc linux
+  // our support post-dates this and it should work on all 64-bit ppc linux
   // platforms. It is guaranteed to work on all elfv2 platforms.
   if (getTriple().getOS() == llvm::Triple::Linux && PointerWidth == 64)
     Builder.defineMacro("_CALL_LINUX", "1");

@@ -7,7 +7,7 @@ static_assert(ContainsInline::z == 10);
 
 void testImport() {
   typedef TestUnresolvedTypenameAndValueDecls::Derived<int> Imported;
-  Imported a; // Successfull instantiation
+  Imported a; // Successful instantiation
   static_assert(sizeof(Imported::foo) == sizeof(int));
   static_assert(sizeof(TestUnresolvedTypenameAndValueDecls::Derived<double>::NewUnresolvedUsingType) == sizeof(double));
 }

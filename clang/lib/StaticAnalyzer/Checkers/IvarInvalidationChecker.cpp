@@ -20,7 +20,7 @@
 //  been called on them. An invalidation method should either invalidate all
 //  the ivars or call another invalidation method (on self).
 //
-//  Partial invalidor annotation allows to addess cases when ivars are
+//  Partial invalidor annotation allows to address cases when ivars are
 //  invalidated by other methods, which might or might not be called from
 //  the invalidation method. The checker checks that each invalidation
 //  method and all the partial methods cumulatively invalidate all ivars.

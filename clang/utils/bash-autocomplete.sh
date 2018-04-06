@@ -12,7 +12,7 @@ _clang()
 {
   local cur prev words cword arg flags w1 w2
   # If latest bash-completion is not supported just initialize COMPREPLY and
-  # initialize variables by setting manualy.
+  # initialize variables by setting manually.
   _init_completion -n 2> /dev/null
   if [[ "$?" != 0 ]]; then
     COMPREPLY=()
