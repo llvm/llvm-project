@@ -1046,38 +1046,46 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
     SymbolOrder.insert({S, {Priority++, false}});
 
   // Build a map from sections to their priorities.
-  for (InputFile *File : ObjectFiles) {
-    for (Symbol *Sym : File->getSymbols()) {
-      auto It = SymbolOrder.find(Sym->getName());
-      if (It == SymbolOrder.end())
-        continue;
-      SymbolOrderEntry &Ent = It->second;
-      Ent.Present = true;
+  auto AddSym = [&](Symbol &Sym) {
+    auto It = SymbolOrder.find(Sym.getName());
+    if (It == SymbolOrder.end())
+      return;
+    SymbolOrderEntry &Ent = It->second;
+    Ent.Present = true;
 
-      auto *D = dyn_cast<Defined>(Sym);
-      if (Config->WarnSymbolOrdering) {
-        if (Sym->isUndefined())
-          warn(File->getName() +
-               ": unable to order undefined symbol: " + Sym->getName());
-        else if (Sym->isShared())
-          warn(File->getName() +
-               ": unable to order shared symbol: " + Sym->getName());
-        else if (D && !D->Section)
-          warn(File->getName() +
-               ": unable to order absolute symbol: " + Sym->getName());
-        else if (D && !D->Section->Live)
-          warn(File->getName() +
-               ": unable to order discarded symbol: " + Sym->getName());
-      }
-      if (!D)
-        continue;
+    if (Config->WarnSymbolOrdering) {
+      auto *D = dyn_cast<Defined>(&Sym);
+      InputFile *File = Sym.File;
+      if (Sym.isUndefined())
+        warn(File->getName() +
+             ": unable to order undefined symbol: " + Sym.getName());
+      else if (Sym.isShared())
+        warn(File->getName() +
+             ": unable to order shared symbol: " + Sym.getName());
+      else if (D && !D->Section)
+        warn(File->getName() +
+             ": unable to order absolute symbol: " + Sym.getName());
+      else if (D && !D->Section->Live)
+        warn(File->getName() +
+             ": unable to order discarded symbol: " + Sym.getName());
+    }
 
+    if (auto *D = dyn_cast<Defined>(&Sym)) {
       if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {
         int &Priority = SectionOrder[cast<InputSectionBase>(Sec->Repl)];
         Priority = std::min(Priority, Ent.Priority);
       }
     }
-  }
+  };
+  // We want both global and local symbols. We get the global ones from the
+  // symbol table and iterate the object files for the local ones.
+  for (Symbol *Sym : Symtab->getSymbols())
+    if (!Sym->isLazy())
+      AddSym(*Sym);
+  for (InputFile *File : ObjectFiles)
+    for (Symbol *Sym : File->getSymbols())
+      if (Sym->isLocal())
+        AddSym(*Sym);
 
   if (Config->WarnSymbolOrdering)
     for (auto OrderEntry : SymbolOrder)

@@ -970,9 +970,6 @@ SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
 // Because contents of a mergeable section is not contiguous in output,
 // it is not just an addition to a base output offset.
 uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
-  if (!Live)
-    return 0;
-
   // Find a string starting at a given offset.
   auto It = OffsetMap.find(Offset);
   if (It != OffsetMap.end())
