@@ -25,6 +25,7 @@ class XRayArgs {
   bool XRayInstrument = false;
   int InstructionThreshold = 200;
   bool XRayAlwaysEmitCustomEvents = false;
+  bool XRayRT = true;
 
 public:
   /// Parses the XRay arguments from an argument list.
@@ -32,7 +33,7 @@ public:
   void addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                llvm::opt::ArgStringList &CmdArgs, types::ID InputType) const;
 
-  bool needsXRayRt() const { return XRayInstrument; }
+  bool needsXRayRt() const { return XRayInstrument && XRayRT; }
 };
 
 } // namespace driver

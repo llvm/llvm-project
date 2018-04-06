@@ -12,7 +12,7 @@
 define i16 @test_movbe_i16(i16 *%a0, i16 %a1, i16 *%a2) {
 ; GENERIC-LABEL: test_movbe_i16:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movbew (%rdi), %ax # sched: [5:0.50]
+; GENERIC-NEXT:    movbew (%rdi), %ax # sched: [6:0.50]
 ; GENERIC-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -72,7 +72,7 @@ declare i16 @llvm.bswap.i16(i16)
 define i32 @test_movbe_i32(i32 *%a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_movbe_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movbel (%rdi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    movbel (%rdi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -132,7 +132,7 @@ declare i32 @llvm.bswap.i32(i32)
 define i64 @test_movbe_i64(i64 *%a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_movbe_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movbeq (%rdi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    movbeq (%rdi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

@@ -344,6 +344,28 @@ def no_debug_info_test(func):
     wrapper.__no_debug_info_test__ = True
     return wrapper
 
+def apple_simulator_test(platform):
+    """
+    Decorate the test as a test requiring a simulator for a specific platform.
+
+    Consider that a simulator is available if you have the corresponding SDK installed.
+    The SDK identifiers for simulators are iphonesimulator, appletvsimulator, watchsimulator
+    """
+    def should_skip_simulator_test():
+        if lldbplatformutil.getHostPlatform() != 'darwin':
+            return "simulator tests are run only on darwin hosts"
+        try:
+            DEVNULL = open(os.devnull, 'w')
+            output = subprocess.check_output(["xcodebuild", "-showsdks"], stderr=DEVNULL)
+            if re.search('%ssimulator' % platform, output):
+                return None
+            else:
+                return "%s simulator is not supported on this system." % platform
+        except subprocess.CalledProcessError:
+            return "%s is not supported on this system (xcodebuild failed)." % feature
+
+    return skipTestIfFn(should_skip_simulator_test)
+
 
 def debugserver_test(func):
     """Decorate the item as a debugserver test."""

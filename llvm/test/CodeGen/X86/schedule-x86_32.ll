@@ -42,7 +42,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    aaa # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_aaa:
 ; HASWELL:       # %bb.0:
@@ -126,7 +126,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    aad # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_aad:
 ; HASWELL:       # %bb.0:
@@ -210,7 +210,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    aam # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_aam:
 ; HASWELL:       # %bb.0:
@@ -294,7 +294,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    aas # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_aas:
 ; HASWELL:       # %bb.0:
@@ -382,7 +382,7 @@ define void @test_arpl(i16 %a0, i16 *%a1) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    arpl %ax, (%ecx) # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_arpl:
 ; HASWELL:       # %bb.0:
@@ -504,7 +504,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SANDY-NEXT:    bound %ecx, (%edx) # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    popl %esi # sched: [6:0.50]
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_bound:
 ; HASWELL:       # %bb.0:
@@ -636,7 +636,7 @@ define i8 @test_daa(i8 %a0) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    daa # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_daa:
 ; HASWELL:       # %bb.0:
@@ -720,7 +720,7 @@ define i8 @test_das(i8 %a0) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    das # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_das:
 ; HASWELL:       # %bb.0:
@@ -812,7 +812,7 @@ define void @test_dec16(i16 %a0, i16* %a1) optsize {
 ; SANDY-NEXT:    decw %ax # sched: [1:0.33]
 ; SANDY-NEXT:    decw (%ecx) # sched: [7:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_dec16:
 ; HASWELL:       # %bb.0:
@@ -915,7 +915,7 @@ define void @test_dec32(i32 %a0, i32* %a1) optsize {
 ; SANDY-NEXT:    decl %eax # sched: [1:0.33]
 ; SANDY-NEXT:    decl (%ecx) # sched: [7:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_dec32:
 ; HASWELL:       # %bb.0:
@@ -1019,7 +1019,7 @@ define void @test_inc16(i16 %a0, i16* %a1) optsize {
 ; SANDY-NEXT:    incw %ax # sched: [1:0.33]
 ; SANDY-NEXT:    incw (%ecx) # sched: [7:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_inc16:
 ; HASWELL:       # %bb.0:
@@ -1122,7 +1122,7 @@ define void @test_inc32(i32 %a0, i32* %a1) optsize {
 ; SANDY-NEXT:    incl %eax # sched: [1:0.33]
 ; SANDY-NEXT:    incl (%ecx) # sched: [7:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_inc32:
 ; HASWELL:       # %bb.0:
@@ -1214,7 +1214,7 @@ define void @test_into() optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    into # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_into:
 ; HASWELL:       # %bb.0:
@@ -1296,7 +1296,7 @@ define void @test_jcxz_jecxz() optsize {
 ; SANDY-NEXT:    jcxz JXTGT # sched: [2:1.00]
 ; SANDY-NEXT:    jecxz JXTGT # sched: [2:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_jcxz_jecxz:
 ; HASWELL:       # %bb.0:
@@ -1382,7 +1382,7 @@ define void @test_leave() optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    leave # sched: [7:0.67]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_leave:
 ; HASWELL:       # %bb.0:
@@ -1496,7 +1496,7 @@ define void @test_pop_push() optsize {
 ; SANDY-NEXT:    pushl %fs # sched: [100:0.33]
 ; SANDY-NEXT:    pushl %gs # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_pop_push:
 ; HASWELL:       # %bb.0:
@@ -1660,7 +1660,7 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; SANDY-NEXT:    # sched: [1:1.00]
 ; SANDY-NEXT:    pushw $7 # sched: [1:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_pop_push_16:
 ; HASWELL:       # %bb.0:
@@ -1812,7 +1812,7 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; SANDY-NEXT:    # sched: [1:1.00]
 ; SANDY-NEXT:    pushl $7 # sched: [1:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_pop_push_32:
 ; HASWELL:       # %bb.0:
@@ -1941,12 +1941,12 @@ define void @test_popa_popf_pusha_pushf() optsize {
 ; SANDY-LABEL: test_popa_popf_pusha_pushf:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    popal # sched: [4:0.50]
-; SANDY-NEXT:    popfl # sched: [4:0.50]
+; SANDY-NEXT:    popal # sched: [5:0.50]
+; SANDY-NEXT:    popfl # sched: [5:0.50]
 ; SANDY-NEXT:    pushal # sched: [1:1.00]
 ; SANDY-NEXT:    pushfl # sched: [1:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_popa_popf_pusha_pushf:
 ; HASWELL:       # %bb.0:
@@ -2049,14 +2049,14 @@ define void @test_ret() optsize {
 ; SANDY-LABEL: test_ret:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ; SANDY-NEXT:    retl $4095 # imm = 0xFFF
-; SANDY-NEXT:    # sched: [5:1.00]
-; SANDY-NEXT:    lretl # sched: [5:1.00]
+; SANDY-NEXT:    # sched: [6:1.00]
+; SANDY-NEXT:    lretl # sched: [6:1.00]
 ; SANDY-NEXT:    lretl $4095 # imm = 0xFFF
-; SANDY-NEXT:    # sched: [5:1.00]
+; SANDY-NEXT:    # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_ret:
 ; HASWELL:       # %bb.0:
@@ -2160,7 +2160,7 @@ define i8 @test_salc() optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    salc # sched: [1:0.33]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_salc:
 ; HASWELL:       # %bb.0:
@@ -2252,9 +2252,9 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    xchgl %eax, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    xchgl %ecx, %eax # sched: [1:0.33]
-; SANDY-NEXT:    xchgl %eax, (%edx) # sched: [5:1.00]
+; SANDY-NEXT:    xchgl %eax, (%edx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    retl # sched: [5:1.00]
+; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_xchg_32:
 ; HASWELL:       # %bb.0:

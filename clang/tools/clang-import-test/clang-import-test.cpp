@@ -313,7 +313,8 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
   auto &CG = *static_cast<CodeGenerator *>(ASTConsumers.back().get());
 
   if (ShouldDumpAST)
-    ASTConsumers.push_back(CreateASTDumper("", true, false, false));
+    ASTConsumers.push_back(CreateASTDumper(nullptr /*Dump to stdout.*/,
+                                           "", true, false, false));
 
   CI.getDiagnosticClient().BeginSourceFile(
       CI.getCompilerInstance().getLangOpts(),

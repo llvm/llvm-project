@@ -1426,6 +1426,21 @@ nub_bool_t DNBProcessSharedLibrariesUpdated(nub_process_t pid) {
   return false;
 }
 
+const char *DNBGetDeploymentInfo(nub_process_t pid,
+                                 const struct load_command& lc,
+                                 uint64_t load_command_address,
+                                 uint32_t& major_version,
+                                 uint32_t& minor_version,
+                                 uint32_t& patch_version) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->GetDeploymentInfo(lc, load_command_address,
+                                     major_version, minor_version,
+                                     patch_version);
+  return nullptr;
+}
+
+
 //----------------------------------------------------------------------
 // Get the current shared library information for a process. Only return
 // the shared libraries that have changed since the last shared library
