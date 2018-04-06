@@ -1698,6 +1698,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
+  Value *X, *Y;
   if (I.hasNoSignedZeros()) {
     // Subtraction from -0.0 is the canonical form of fneg.
     // fsub nsz 0, X ==> fsub nsz -0.0, X
@@ -1705,9 +1706,18 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
       return BinaryOperator::CreateFNegFMF(Op1, &I);
 
     // With no-signed-zeros: -(X - Y) --> Y - X
-    Value *X, *Y;
     if (match(Op0, m_NegZeroFP()) && match(Op1, m_FSub(m_Value(X), m_Value(Y))))
       return BinaryOperator::CreateFSubFMF(Y, X, &I);
+  }
+
+  // More generally than above, if Op0 is not -0.0: Z - (X - Y) --> Z + (Y - X)
+  // Canonicalize to fadd to make analysis easier.
+  // This can also help codegen because fadd is commutative.
+  if (I.hasNoSignedZeros() || CannotBeNegativeZero(Op0, SQ.TLI)) {
+    if (match(Op1, m_OneUse(m_FSub(m_Value(X), m_Value(Y))))) {
+      Value *NewSub = Builder.CreateFSubFMF(Y, X, &I);
+      return BinaryOperator::CreateFAddFMF(Op0, NewSub, &I);
+    }
   }
 
   if (isa<Constant>(Op0))
@@ -1721,7 +1731,6 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
     return BinaryOperator::CreateFAddFMF(Op0, ConstantExpr::getFNeg(C), &I);
   
   // X - (-Y) --> X + Y
-  Value *Y;
   if (match(Op1, m_FNeg(m_Value(Y))))
     return BinaryOperator::CreateFAddFMF(Op0, Y, &I);
 

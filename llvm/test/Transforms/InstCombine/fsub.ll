@@ -14,16 +14,42 @@ define float @test1(float %x, float %y) {
   ret float %t2
 }
 
-; FIXME: Can't do anything with the test above because -0.0 - 0.0 = -0.0, but if we have nsz:
+; Can't do anything with the test above because -0.0 - 0.0 = -0.0, but if we have nsz:
 ; -(X - Y) --> Y - X
 
-define float @neg_sub(float %x, float %y) {
-; CHECK-LABEL: @neg_sub(
+define float @neg_sub_nsz(float %x, float %y) {
+; CHECK-LABEL: @neg_sub_nsz(
 ; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret float [[T2]]
 ;
   %t1 = fsub float %x, %y
   %t2 = fsub nsz float -0.0, %t1
+  ret float %t2
+}
+
+; With nsz: Z - (X - Y) --> Z + (Y - X)
+
+define float @sub_sub_nsz(float %x, float %y, float %z) {
+; CHECK-LABEL: @sub_sub_nsz(
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd nsz float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub float %x, %y
+  %t2 = fsub nsz float %z, %t1
+  ret float %t2
+}
+
+; Same as above: if 'Z' is not -0.0, swap fsub operands and convert to fadd.
+
+define float @sub_sub_known_not_negzero(float %x, float %y) {
+; CHECK-LABEL: @sub_sub_known_not_negzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd float [[TMP1]], 4.200000e+01
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub float %x, %y
+  %t2 = fsub float 42.0, %t1
   ret float %t2
 }
 
