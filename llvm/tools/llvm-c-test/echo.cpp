@@ -1002,6 +1002,10 @@ int llvm_echo(void) {
   if (strcmp(LLVMGetDataLayoutStr(M), LLVMGetDataLayoutStr(Src)))
     report_fatal_error("Inconsistent DataLayout string representation");
 
+  size_t ModuleInlineAsmLen;
+  const char *ModuleAsm = LLVMGetModuleInlineAsm(Src, &ModuleInlineAsmLen);
+  LLVMSetModuleInlineAsm2(M, ModuleAsm, ModuleInlineAsmLen);
+
   declare_symbols(Src, M);
   clone_symbols(Src, M);
   char *Str = LLVMPrintModuleToString(M);
