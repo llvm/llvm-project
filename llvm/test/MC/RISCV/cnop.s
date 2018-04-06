@@ -10,8 +10,9 @@
        .type   alpha,@function
 alpha:
 # BB#0:
-       addi    sp, sp, -16
+       c.addi  sp, -16
        c.lw    a0, 0(a0)
+       c.lw    a1, 4(a0)
 # CHECK-INST: c.nop
 .Lfunc_end0:
        .size   alpha, .Lfunc_end0-alpha

@@ -19,20 +19,24 @@ define float @test1(float %x, float %y) {
 
 define float @neg_sub_nsz(float %x, float %y) {
 ; CHECK-LABEL: @neg_sub_nsz(
-; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %t1 = fsub float %x, %y
   %t2 = fsub nsz float -0.0, %t1
   ret float %t2
 }
 
+; If the subtract has another use, we don't do the transform (even though it
+; doesn't increase the IR instruction count) because we assume that fneg is 
+; easier to analyze and generally cheaper than generic fsub.
+
 declare void @use(float)
 
 define float @neg_sub_nsz_extra_use(float %x, float %y) {
 ; CHECK-LABEL: @neg_sub_nsz_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float [[Y]], [[X]]
+; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float -0.000000e+00, [[T1]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
 ; CHECK-NEXT:    ret float [[T2]]
 ;

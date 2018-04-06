@@ -672,6 +672,16 @@ def S_SETREG_IMM32_B32 : SOPK_Pseudo <
 
 } // End hasSideEffects = 1
 
+let SubtargetPredicate = isGFX9 in {
+  def S_CALL_B64 : SOPK_Pseudo<
+      "s_call_b64",
+      (outs SReg_64:$sdst),
+      (ins s16imm:$simm16),
+      "$sdst, $simm16"> {
+    let isCall = 1;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // SOPC Instructions
 //===----------------------------------------------------------------------===//
@@ -818,6 +828,13 @@ def S_ENDPGM_SAVED : SOPP <0x0000001B, (ins), "s_endpgm_saved"> {
   let isReturn = 1;
 }
 }
+
+let SubtargetPredicate = isGFX9 in {
+  let isBarrier = 1, isReturn = 1, simm16 = 0 in {
+    def S_ENDPGM_ORDERED_PS_DONE :
+      SOPP<0x01e, (ins), "s_endpgm_ordered_ps_done">;
+  } // End isBarrier = 1, isReturn = 1, simm16 = 0
+} // End SubtargetPredicate = isGFX9
 
 let isBranch = 1, SchedRW = [WriteBranch] in {
 def S_BRANCH : SOPP <
@@ -1325,6 +1342,8 @@ def S_SETREG_B32_vi        : SOPK_Real_vi <0x12, S_SETREG_B32>;
 //def S_GETREG_REGRD_B32_vi  : SOPK_Real_vi <0x13, S_GETREG_REGRD_B32>; // see pseudo for comments
 def S_SETREG_IMM32_B32_vi  : SOPK_Real64<0x14, S_SETREG_IMM32_B32>,
                              Select_vi<S_SETREG_IMM32_B32.Mnemonic>;
+
+def S_CALL_B64_vi          : SOPK_Real_vi <0x15, S_CALL_B64>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX9.

@@ -268,11 +268,11 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   // in the list. Merge entries that refer to the same dwarf register and use
   // the maximum size that needs to be spilled.
 
-  std::sort(LiveOuts.begin(), LiveOuts.end(),
-            [](const LiveOutReg &LHS, const LiveOutReg &RHS) {
-              // Only sort by the dwarf register number.
-              return LHS.DwarfRegNum < RHS.DwarfRegNum;
-            });
+  llvm::sort(LiveOuts.begin(), LiveOuts.end(),
+             [](const LiveOutReg &LHS, const LiveOutReg &RHS) {
+               // Only sort by the dwarf register number.
+               return LHS.DwarfRegNum < RHS.DwarfRegNum;
+             });
 
   for (auto I = LiveOuts.begin(), E = LiveOuts.end(); I != E; ++I) {
     for (auto II = std::next(I); II != E; ++II) {

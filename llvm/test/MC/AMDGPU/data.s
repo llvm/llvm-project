@@ -4,13 +4,13 @@
 
 .text
         v_mov_b32     v7, s24
-	v_mov_b32     v8, s25
-	.long         0xabadc0de
-	s_nop         0
-	s_endpgm                  
-	.long         0xbadc0de1, 0xbadc0de2, 0xbadc0de3, 0xbadc0de4
-	.byte         0x0a, 0x0b
-	.byte         0x0c
+  v_mov_b32     v8, s25
+  .long         0xabadc0de
+  s_nop         0
+  s_endpgm
+  .long         0xabadc0d1, 0xabadc0d2, 0xabadc0d3, 0xabadc0d4
+  .byte         0x0a, 0x0b
+  .byte         0x0c
 
 // CHECK: .text
 // CHECK: v_mov_b32
@@ -18,10 +18,10 @@
 // CHECK: .long 0xabadc0de
 // CHECK_SAME: : ABADC0DE
 // CHECK: s_endpgm
-// CHECK: .long 0xbadc0de1
-// CHECK: .long 0xbadc0de2
-// CHECK: .long 0xbadc0de3
-// CHECK: .long 0xbadc0de4
+// CHECK: .long 0xabadc0d1
+// CHECK: .long 0xabadc0d2
+// CHECK: .long 0xabadc0d3
+// CHECK: .long 0xabadc0d4
 // CHECK: .byte 0x0a, 0x0b, 0x0c
 // CHECK-SAME: : 0A 0B 0C
 // CHECK-NOT: .long
