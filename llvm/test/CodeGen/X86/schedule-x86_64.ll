@@ -4638,8 +4638,8 @@ define void @test_cmpxchg8b_cmpxchg16b(i8 *%a0) optsize {
 ; GENERIC-LABEL: test_cmpxchg8b_cmpxchg16b:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    cmpxchg8b (%rdi) # sched: [5:1.00]
-; GENERIC-NEXT:    cmpxchg16b (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    cmpxchg8b (%rdi) # sched: [6:1.00]
+; GENERIC-NEXT:    cmpxchg16b (%rdi) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4662,8 +4662,8 @@ define void @test_cmpxchg8b_cmpxchg16b(i8 *%a0) optsize {
 ; SANDY-LABEL: test_cmpxchg8b_cmpxchg16b:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    cmpxchg8b (%rdi) # sched: [5:1.00]
-; SANDY-NEXT:    cmpxchg16b (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    cmpxchg8b (%rdi) # sched: [6:1.00]
+; SANDY-NEXT:    cmpxchg16b (%rdi) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5132,13 +5132,13 @@ define void @test_div(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; GENERIC-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    divb %dil # sched: [25:10.00]
-; GENERIC-NEXT:    divb (%r8) # sched: [29:10.00]
+; GENERIC-NEXT:    divb (%r8) # sched: [30:10.00]
 ; GENERIC-NEXT:    divw %si # sched: [25:10.00]
-; GENERIC-NEXT:    divw (%r9) # sched: [29:10.00]
+; GENERIC-NEXT:    divw (%r9) # sched: [30:10.00]
 ; GENERIC-NEXT:    divl %edx # sched: [25:10.00]
-; GENERIC-NEXT:    divl (%rax) # sched: [29:10.00]
+; GENERIC-NEXT:    divl (%rax) # sched: [30:10.00]
 ; GENERIC-NEXT:    divq %rcx # sched: [25:10.00]
-; GENERIC-NEXT:    divq (%r10) # sched: [29:10.00]
+; GENERIC-NEXT:    divq (%r10) # sched: [30:10.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5180,13 +5180,13 @@ define void @test_div(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; SANDY-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    divb %dil # sched: [25:10.00]
-; SANDY-NEXT:    divb (%r8) # sched: [29:10.00]
+; SANDY-NEXT:    divb (%r8) # sched: [30:10.00]
 ; SANDY-NEXT:    divw %si # sched: [25:10.00]
-; SANDY-NEXT:    divw (%r9) # sched: [29:10.00]
+; SANDY-NEXT:    divw (%r9) # sched: [30:10.00]
 ; SANDY-NEXT:    divl %edx # sched: [25:10.00]
-; SANDY-NEXT:    divl (%rax) # sched: [29:10.00]
+; SANDY-NEXT:    divl (%rax) # sched: [30:10.00]
 ; SANDY-NEXT:    divq %rcx # sched: [25:10.00]
-; SANDY-NEXT:    divq (%r10) # sched: [29:10.00]
+; SANDY-NEXT:    divq (%r10) # sched: [30:10.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5380,13 +5380,13 @@ define void @test_idiv(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32
 ; GENERIC-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    idivb %dil # sched: [25:10.00]
-; GENERIC-NEXT:    idivb (%r8) # sched: [29:10.00]
+; GENERIC-NEXT:    idivb (%r8) # sched: [30:10.00]
 ; GENERIC-NEXT:    idivw %si # sched: [25:10.00]
-; GENERIC-NEXT:    idivw (%r9) # sched: [29:10.00]
+; GENERIC-NEXT:    idivw (%r9) # sched: [30:10.00]
 ; GENERIC-NEXT:    idivl %edx # sched: [25:10.00]
-; GENERIC-NEXT:    idivl (%rax) # sched: [29:10.00]
+; GENERIC-NEXT:    idivl (%rax) # sched: [30:10.00]
 ; GENERIC-NEXT:    idivq %rcx # sched: [25:10.00]
-; GENERIC-NEXT:    idivq (%r10) # sched: [29:10.00]
+; GENERIC-NEXT:    idivq (%r10) # sched: [30:10.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5428,13 +5428,13 @@ define void @test_idiv(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32
 ; SANDY-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    idivb %dil # sched: [25:10.00]
-; SANDY-NEXT:    idivb (%r8) # sched: [29:10.00]
+; SANDY-NEXT:    idivb (%r8) # sched: [30:10.00]
 ; SANDY-NEXT:    idivw %si # sched: [25:10.00]
-; SANDY-NEXT:    idivw (%r9) # sched: [29:10.00]
+; SANDY-NEXT:    idivw (%r9) # sched: [30:10.00]
 ; SANDY-NEXT:    idivl %edx # sched: [25:10.00]
-; SANDY-NEXT:    idivl (%rax) # sched: [29:10.00]
+; SANDY-NEXT:    idivl (%rax) # sched: [30:10.00]
 ; SANDY-NEXT:    idivq %rcx # sched: [25:10.00]
-; SANDY-NEXT:    idivq (%r10) # sched: [29:10.00]
+; SANDY-NEXT:    idivq (%r10) # sched: [30:10.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5542,7 +5542,7 @@ define void @test_imul_8(i8 %a0, i8* %a1) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    imulb %dil # sched: [3:1.00]
-; GENERIC-NEXT:    imulb (%rsi) # sched: [7:1.00]
+; GENERIC-NEXT:    imulb (%rsi) # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5566,7 +5566,7 @@ define void @test_imul_8(i8 %a0, i8* %a1) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    imulb %dil # sched: [3:1.00]
-; SANDY-NEXT:    imulb (%rsi) # sched: [7:1.00]
+; SANDY-NEXT:    imulb (%rsi) # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5625,15 +5625,15 @@ define void @test_imul_16(i16 %a0, i16* %a1) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    imulw %di # sched: [3:1.00]
-; GENERIC-NEXT:    imulw (%rsi) # sched: [7:1.00]
+; GENERIC-NEXT:    imulw (%rsi) # sched: [8:1.00]
 ; GENERIC-NEXT:    imulw %di, %di # sched: [3:1.00]
-; GENERIC-NEXT:    imulw (%rsi), %di # sched: [7:1.00]
+; GENERIC-NEXT:    imulw (%rsi), %di # sched: [8:1.00]
 ; GENERIC-NEXT:    imulw $511, %di, %di # imm = 0x1FF
 ; GENERIC-NEXT:    # sched: [3:1.00]
 ; GENERIC-NEXT:    imulw $511, (%rsi), %di # imm = 0x1FF
-; GENERIC-NEXT:    # sched: [7:1.00]
+; GENERIC-NEXT:    # sched: [8:1.00]
 ; GENERIC-NEXT:    imulw $7, %di, %di # sched: [3:1.00]
-; GENERIC-NEXT:    imulw $7, (%rsi), %di # sched: [7:1.00]
+; GENERIC-NEXT:    imulw $7, (%rsi), %di # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5673,15 +5673,15 @@ define void @test_imul_16(i16 %a0, i16* %a1) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    imulw %di # sched: [3:1.00]
-; SANDY-NEXT:    imulw (%rsi) # sched: [7:1.00]
+; SANDY-NEXT:    imulw (%rsi) # sched: [8:1.00]
 ; SANDY-NEXT:    imulw %di, %di # sched: [3:1.00]
-; SANDY-NEXT:    imulw (%rsi), %di # sched: [7:1.00]
+; SANDY-NEXT:    imulw (%rsi), %di # sched: [8:1.00]
 ; SANDY-NEXT:    imulw $511, %di, %di # imm = 0x1FF
 ; SANDY-NEXT:    # sched: [3:1.00]
 ; SANDY-NEXT:    imulw $511, (%rsi), %di # imm = 0x1FF
-; SANDY-NEXT:    # sched: [7:1.00]
+; SANDY-NEXT:    # sched: [8:1.00]
 ; SANDY-NEXT:    imulw $7, %di, %di # sched: [3:1.00]
-; SANDY-NEXT:    imulw $7, (%rsi), %di # sched: [7:1.00]
+; SANDY-NEXT:    imulw $7, (%rsi), %di # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5788,15 +5788,15 @@ define void @test_imul_32(i32 %a0, i32* %a1) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    imull %edi # sched: [3:1.00]
-; GENERIC-NEXT:    imull (%rsi) # sched: [7:1.00]
+; GENERIC-NEXT:    imull (%rsi) # sched: [8:1.00]
 ; GENERIC-NEXT:    imull %edi, %edi # sched: [3:1.00]
-; GENERIC-NEXT:    imull (%rsi), %edi # sched: [7:1.00]
+; GENERIC-NEXT:    imull (%rsi), %edi # sched: [8:1.00]
 ; GENERIC-NEXT:    imull $665536, %edi, %edi # imm = 0xA27C0
 ; GENERIC-NEXT:    # sched: [3:1.00]
 ; GENERIC-NEXT:    imull $665536, (%rsi), %edi # imm = 0xA27C0
-; GENERIC-NEXT:    # sched: [7:1.00]
+; GENERIC-NEXT:    # sched: [8:1.00]
 ; GENERIC-NEXT:    imull $7, %edi, %edi # sched: [3:1.00]
-; GENERIC-NEXT:    imull $7, (%rsi), %edi # sched: [7:1.00]
+; GENERIC-NEXT:    imull $7, (%rsi), %edi # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5836,15 +5836,15 @@ define void @test_imul_32(i32 %a0, i32* %a1) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    imull %edi # sched: [3:1.00]
-; SANDY-NEXT:    imull (%rsi) # sched: [7:1.00]
+; SANDY-NEXT:    imull (%rsi) # sched: [8:1.00]
 ; SANDY-NEXT:    imull %edi, %edi # sched: [3:1.00]
-; SANDY-NEXT:    imull (%rsi), %edi # sched: [7:1.00]
+; SANDY-NEXT:    imull (%rsi), %edi # sched: [8:1.00]
 ; SANDY-NEXT:    imull $665536, %edi, %edi # imm = 0xA27C0
 ; SANDY-NEXT:    # sched: [3:1.00]
 ; SANDY-NEXT:    imull $665536, (%rsi), %edi # imm = 0xA27C0
-; SANDY-NEXT:    # sched: [7:1.00]
+; SANDY-NEXT:    # sched: [8:1.00]
 ; SANDY-NEXT:    imull $7, %edi, %edi # sched: [3:1.00]
-; SANDY-NEXT:    imull $7, (%rsi), %edi # sched: [7:1.00]
+; SANDY-NEXT:    imull $7, (%rsi), %edi # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5951,15 +5951,15 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    imulq %rdi # sched: [3:1.00]
-; GENERIC-NEXT:    imulq (%rsi) # sched: [7:1.00]
+; GENERIC-NEXT:    imulq (%rsi) # sched: [8:1.00]
 ; GENERIC-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
-; GENERIC-NEXT:    imulq (%rsi), %rdi # sched: [7:1.00]
+; GENERIC-NEXT:    imulq (%rsi), %rdi # sched: [8:1.00]
 ; GENERIC-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
 ; GENERIC-NEXT:    # sched: [3:1.00]
 ; GENERIC-NEXT:    imulq $665536, (%rsi), %rdi # imm = 0xA27C0
-; GENERIC-NEXT:    # sched: [7:1.00]
+; GENERIC-NEXT:    # sched: [8:1.00]
 ; GENERIC-NEXT:    imulq $7, %rdi, %rdi # sched: [3:1.00]
-; GENERIC-NEXT:    imulq $7, (%rsi), %rdi # sched: [7:1.00]
+; GENERIC-NEXT:    imulq $7, (%rsi), %rdi # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5999,15 +5999,15 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    imulq %rdi # sched: [3:1.00]
-; SANDY-NEXT:    imulq (%rsi) # sched: [7:1.00]
+; SANDY-NEXT:    imulq (%rsi) # sched: [8:1.00]
 ; SANDY-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
-; SANDY-NEXT:    imulq (%rsi), %rdi # sched: [7:1.00]
+; SANDY-NEXT:    imulq (%rsi), %rdi # sched: [8:1.00]
 ; SANDY-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
 ; SANDY-NEXT:    # sched: [3:1.00]
 ; SANDY-NEXT:    imulq $665536, (%rsi), %rdi # imm = 0xA27C0
-; SANDY-NEXT:    # sched: [7:1.00]
+; SANDY-NEXT:    # sched: [8:1.00]
 ; SANDY-NEXT:    imulq $7, %rdi, %rdi # sched: [3:1.00]
-; SANDY-NEXT:    imulq $7, (%rsi), %rdi # sched: [7:1.00]
+; SANDY-NEXT:    imulq $7, (%rsi), %rdi # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -9888,7 +9888,7 @@ define void @test_popf_pushf() optsize {
 ; GENERIC-LABEL: test_popf_pushf:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    popfq # sched: [4:0.50]
+; GENERIC-NEXT:    popfq # sched: [5:0.50]
 ; GENERIC-NEXT:    pushfq # sched: [5:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -9912,7 +9912,7 @@ define void @test_popf_pushf() optsize {
 ; SANDY-LABEL: test_popf_pushf:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    popfq # sched: [4:0.50]
+; SANDY-NEXT:    popfq # sched: [5:0.50]
 ; SANDY-NEXT:    pushfq # sched: [5:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -9974,16 +9974,16 @@ define void @test_rcl_rcr_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    rclb %dil # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrb %dil # sched: [1:0.50]
-; GENERIC-NEXT:    rclb (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrb (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclb (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrb (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rclb $7, %dil # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrb $7, %dil # sched: [1:0.50]
-; GENERIC-NEXT:    rclb $7, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrb $7, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclb $7, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrb $7, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rclb %cl, %dil # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrb %cl, %dil # sched: [1:0.50]
-; GENERIC-NEXT:    rclb %cl, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrb %cl, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclb %cl, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrb %cl, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10028,16 +10028,16 @@ define void @test_rcl_rcr_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    rclb %dil # sched: [1:0.50]
 ; SANDY-NEXT:    rcrb %dil # sched: [1:0.50]
-; SANDY-NEXT:    rclb (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrb (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclb (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrb (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rclb $7, %dil # sched: [1:0.50]
 ; SANDY-NEXT:    rcrb $7, %dil # sched: [1:0.50]
-; SANDY-NEXT:    rclb $7, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrb $7, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclb $7, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrb $7, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rclb %cl, %dil # sched: [1:0.50]
 ; SANDY-NEXT:    rcrb %cl, %dil # sched: [1:0.50]
-; SANDY-NEXT:    rclb %cl, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrb %cl, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclb %cl, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrb %cl, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10157,16 +10157,16 @@ define void @test_rcl_rcr_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    rclw %di # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrw %di # sched: [1:0.50]
-; GENERIC-NEXT:    rclw (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrw (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclw (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrw (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rclw $7, %di # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrw $7, %di # sched: [1:0.50]
-; GENERIC-NEXT:    rclw $7, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrw $7, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclw $7, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrw $7, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rclw %cl, %di # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrw %cl, %di # sched: [1:0.50]
-; GENERIC-NEXT:    rclw %cl, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrw %cl, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclw %cl, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrw %cl, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10211,16 +10211,16 @@ define void @test_rcl_rcr_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    rclw %di # sched: [1:0.50]
 ; SANDY-NEXT:    rcrw %di # sched: [1:0.50]
-; SANDY-NEXT:    rclw (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrw (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclw (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrw (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rclw $7, %di # sched: [1:0.50]
 ; SANDY-NEXT:    rcrw $7, %di # sched: [1:0.50]
-; SANDY-NEXT:    rclw $7, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrw $7, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclw $7, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrw $7, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rclw %cl, %di # sched: [1:0.50]
 ; SANDY-NEXT:    rcrw %cl, %di # sched: [1:0.50]
-; SANDY-NEXT:    rclw %cl, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrw %cl, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclw %cl, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrw %cl, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10340,16 +10340,16 @@ define void @test_rcl_rcr_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    rcll %edi # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrl %edi # sched: [1:0.50]
-; GENERIC-NEXT:    rcll (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrl (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rcll (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrl (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rcll $7, %edi # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrl $7, %edi # sched: [1:0.50]
-; GENERIC-NEXT:    rcll $7, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrl $7, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rcll $7, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrl $7, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rcll %cl, %edi # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrl %cl, %edi # sched: [1:0.50]
-; GENERIC-NEXT:    rcll %cl, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrl %cl, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rcll %cl, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrl %cl, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10394,16 +10394,16 @@ define void @test_rcl_rcr_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    rcll %edi # sched: [1:0.50]
 ; SANDY-NEXT:    rcrl %edi # sched: [1:0.50]
-; SANDY-NEXT:    rcll (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrl (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rcll (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrl (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rcll $7, %edi # sched: [1:0.50]
 ; SANDY-NEXT:    rcrl $7, %edi # sched: [1:0.50]
-; SANDY-NEXT:    rcll $7, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrl $7, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rcll $7, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrl $7, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rcll %cl, %edi # sched: [1:0.50]
 ; SANDY-NEXT:    rcrl %cl, %edi # sched: [1:0.50]
-; SANDY-NEXT:    rcll %cl, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrl %cl, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rcll %cl, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrl %cl, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10523,16 +10523,16 @@ define void @test_rcl_rcr_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    rclq %rdi # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrq %rdi # sched: [1:0.50]
-; GENERIC-NEXT:    rclq (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrq (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclq (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrq (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rclq $7, %rdi # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrq $7, %rdi # sched: [1:0.50]
-; GENERIC-NEXT:    rclq $7, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrq $7, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclq $7, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrq $7, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    rclq %cl, %rdi # sched: [1:0.50]
 ; GENERIC-NEXT:    rcrq %cl, %rdi # sched: [1:0.50]
-; GENERIC-NEXT:    rclq %cl, (%rdx) # sched: [5:1.00]
-; GENERIC-NEXT:    rcrq %cl, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    rclq %cl, (%rdx) # sched: [6:1.00]
+; GENERIC-NEXT:    rcrq %cl, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10577,16 +10577,16 @@ define void @test_rcl_rcr_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    rclq %rdi # sched: [1:0.50]
 ; SANDY-NEXT:    rcrq %rdi # sched: [1:0.50]
-; SANDY-NEXT:    rclq (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrq (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclq (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrq (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rclq $7, %rdi # sched: [1:0.50]
 ; SANDY-NEXT:    rcrq $7, %rdi # sched: [1:0.50]
-; SANDY-NEXT:    rclq $7, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrq $7, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclq $7, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrq $7, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    rclq %cl, %rdi # sched: [1:0.50]
 ; SANDY-NEXT:    rcrq %cl, %rdi # sched: [1:0.50]
-; SANDY-NEXT:    rclq %cl, (%rdx) # sched: [5:1.00]
-; SANDY-NEXT:    rcrq %cl, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    rclq %cl, (%rdx) # sched: [6:1.00]
+; SANDY-NEXT:    rcrq %cl, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10949,10 +10949,10 @@ define void @test_ret() optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ; GENERIC-NEXT:    retq $4095 # imm = 0xFFF
-; GENERIC-NEXT:    # sched: [5:1.00]
-; GENERIC-NEXT:    lretl # sched: [5:1.00]
+; GENERIC-NEXT:    # sched: [6:1.00]
+; GENERIC-NEXT:    lretl # sched: [6:1.00]
 ; GENERIC-NEXT:    lretl $4095 # imm = 0xFFF
-; GENERIC-NEXT:    # sched: [5:1.00]
+; GENERIC-NEXT:    # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -10985,10 +10985,10 @@ define void @test_ret() optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ; SANDY-NEXT:    retq $4095 # imm = 0xFFF
-; SANDY-NEXT:    # sched: [5:1.00]
-; SANDY-NEXT:    lretl # sched: [5:1.00]
+; SANDY-NEXT:    # sched: [6:1.00]
+; SANDY-NEXT:    lretl # sched: [6:1.00]
 ; SANDY-NEXT:    lretl $4095 # imm = 0xFFF
-; SANDY-NEXT:    # sched: [5:1.00]
+; SANDY-NEXT:    # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16121,7 +16121,7 @@ define void @test_xchg_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    xchgb %sil, %dil # sched: [1:0.33]
-; GENERIC-NEXT:    xchgb %dil, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    xchgb %dil, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16145,7 +16145,7 @@ define void @test_xchg_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    xchgb %sil, %dil # sched: [1:0.33]
-; SANDY-NEXT:    xchgb %dil, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    xchgb %dil, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16205,7 +16205,7 @@ define void @test_xchg_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    xchgw %di, %ax # sched: [1:0.33]
 ; GENERIC-NEXT:    xchgw %si, %di # sched: [1:0.33]
-; GENERIC-NEXT:    xchgw %di, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    xchgw %di, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16232,7 +16232,7 @@ define void @test_xchg_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    xchgw %di, %ax # sched: [1:0.33]
 ; SANDY-NEXT:    xchgw %si, %di # sched: [1:0.33]
-; SANDY-NEXT:    xchgw %di, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    xchgw %di, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16298,7 +16298,7 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    xchgl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    xchgl %esi, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    xchgl %edi, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    xchgl %edi, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16325,7 +16325,7 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    xchgl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    xchgl %esi, %edi # sched: [1:0.33]
-; SANDY-NEXT:    xchgl %edi, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    xchgl %edi, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16391,7 +16391,7 @@ define void @test_xchg_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    xchgq %rdi, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    xchgq %rsi, %rdi # sched: [1:0.33]
-; GENERIC-NEXT:    xchgq %rdi, (%rdx) # sched: [5:1.00]
+; GENERIC-NEXT:    xchgq %rdi, (%rdx) # sched: [6:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16418,7 +16418,7 @@ define void @test_xchg_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    xchgq %rdi, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    xchgq %rsi, %rdi # sched: [1:0.33]
-; SANDY-NEXT:    xchgq %rdi, (%rdx) # sched: [5:1.00]
+; SANDY-NEXT:    xchgq %rdi, (%rdx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16483,7 +16483,7 @@ define void @test_xlat() optsize {
 ; GENERIC-LABEL: test_xlat:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    xlatb # sched: [4:0.50]
+; GENERIC-NEXT:    xlatb # sched: [5:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -16504,7 +16504,7 @@ define void @test_xlat() optsize {
 ; SANDY-LABEL: test_xlat:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    xlatb # sched: [4:0.50]
+; SANDY-NEXT:    xlatb # sched: [5:0.50]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;

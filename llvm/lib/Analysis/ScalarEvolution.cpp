@@ -9595,14 +9595,14 @@ bool ScalarEvolution::isImpliedViaMerge(ICmpInst::Predicate Pred,
   } else if (RAR && RAR->getLoop()->getHeader() == LBB) {
     // Case two: RHS is also a Phi from the same basic block, and it is an
     // AddRec. It means that there is a loop which has both AddRec and Unknown
-    // PHIs, for it we can compare incoming values of AddRec from preheader and
-    // latch with their respective incoming values of LPhi.
+    // PHIs, for it we can compare incoming values of AddRec from above the loop
+    // and latch with their respective incoming values of LPhi.
     assert(LPhi->getNumIncomingValues() == 2 &&
            "Phi node standing in loop header does not have exactly 2 inputs?");
     auto *RLoop = RAR->getLoop();
-    auto *Preheader = RLoop->getLoopPreheader();
-    assert(Preheader && "Loop with AddRec with no preheader?");
-    const SCEV *L1 = getSCEV(LPhi->getIncomingValueForBlock(Preheader));
+    auto *Predecessor = RLoop->getLoopPredecessor();
+    assert(Predecessor && "Loop with AddRec with no predecessor?");
+    const SCEV *L1 = getSCEV(LPhi->getIncomingValueForBlock(Predecessor));
     if (!ProvedEasily(L1, RAR->getStart()))
       return false;
     auto *Latch = RLoop->getLoopLatch();

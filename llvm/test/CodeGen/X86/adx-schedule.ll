@@ -12,8 +12,8 @@ define void @test_adcx(i32 %a0, i32* %a1, i64 %a2, i64* %a3) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    adcxl %edi, %edi # sched: [1:0.33]
 ; GENERIC-NEXT:    adcxq %rdx, %rdx # sched: [1:0.33]
-; GENERIC-NEXT:    adcxl (%rsi), %edi # sched: [5:0.50]
-; GENERIC-NEXT:    adcxq (%rcx), %rdx # sched: [5:0.50]
+; GENERIC-NEXT:    adcxl (%rsi), %edi # sched: [6:0.50]
+; GENERIC-NEXT:    adcxq (%rcx), %rdx # sched: [6:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -65,8 +65,8 @@ define void @test_adox(i32 %a0, i32* %a1, i64 %a2, i64* %a3) optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    adoxl %edi, %edi # sched: [1:0.33]
 ; GENERIC-NEXT:    adoxq %rdx, %rdx # sched: [1:0.33]
-; GENERIC-NEXT:    adoxl (%rsi), %edi # sched: [5:0.50]
-; GENERIC-NEXT:    adoxq (%rcx), %rdx # sched: [5:0.50]
+; GENERIC-NEXT:    adoxl (%rsi), %edi # sched: [6:0.50]
+; GENERIC-NEXT:    adoxq (%rcx), %rdx # sched: [6:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

@@ -6004,8 +6004,8 @@ def SKXWriteResGroup249 : SchedWriteRes<[SKXPort5,SKXPort01,SKXPort015]> {
   let NumMicroOps = 21;
   let ResourceCycles = [9,7,5];
 }
-def: InstRW<[SKXWriteResGroup249], (instregex "VPCONFLICTDZ256rr")>;
-def: InstRW<[SKXWriteResGroup249], (instregex "VPCONFLICTQZrr")>;
+def: InstRW<[SKXWriteResGroup249], (instregex "VPCONFLICTDZ256rr",
+                                              "VPCONFLICTQZrr")>;
 
 def SKXWriteResGroup250 : SchedWriteRes<[SKXPort1,SKXPort6,SKXPort23,SKXPort0156]> {
   let Latency = 37;

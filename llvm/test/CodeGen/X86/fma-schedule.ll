@@ -18,9 +18,9 @@ define void @test_vfmaddpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132pd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -106,9 +106,9 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132pd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -200,9 +200,9 @@ define void @test_vfmaddps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd231ps {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -288,9 +288,9 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) + ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) + ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -382,9 +382,9 @@ define void @test_vfmaddsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -470,9 +470,9 @@ define void @test_vfmaddss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -562,9 +562,9 @@ define void @test_vfmaddsubpd_128(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -650,9 +650,9 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132pd {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -744,9 +744,9 @@ define void @test_vfmaddsubps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) +/- xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) +/- xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} xmm0 = (xmm0 * mem) +/- xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) +/- mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm1 * mem) +/- xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -832,9 +832,9 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) +/- ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) +/- ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmaddsub132ps {{.*#+}} ymm0 = (ymm0 * mem) +/- ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -930,9 +930,9 @@ define void @test_vfmsubaddpd_128(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1018,9 +1018,9 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132pd {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1112,9 +1112,9 @@ define void @test_vfmsubaddps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * xmm2) -/+ xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * xmm2) -/+ xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} xmm0 = (xmm0 * mem) -/+ xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} xmm0 = (xmm1 * mem) -/+ xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1200,9 +1200,9 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * ymm2) -/+ ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsubadd132ps {{.*#+}} ymm0 = (ymm0 * mem) -/+ ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1298,9 +1298,9 @@ define void @test_vfmsubpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub231pd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1386,9 +1386,9 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1480,9 +1480,9 @@ define void @test_vfmsubps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132ps {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1568,9 +1568,9 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * ymm2) - ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132ps {{.*#+}} ymm0 = (ymm0 * mem) - ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1662,9 +1662,9 @@ define void @test_vfmsubsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ; GENERIC-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub231sd {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1750,9 +1750,9 @@ define void @test_vfmsubss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2
 ; GENERIC-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfmsub132ss {{.*#+}} xmm0 = (xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1842,9 +1842,9 @@ define void @test_vfnmaddpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1930,9 +1930,9 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132pd {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2024,9 +2024,9 @@ define void @test_vfnmaddps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2112,9 +2112,9 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) + ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * mem) + ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2206,9 +2206,9 @@ define void @test_vfnmaddsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132sd {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2294,9 +2294,9 @@ define void @test_vfnmaddss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * mem) + xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2386,9 +2386,9 @@ define void @test_vfnmsubpd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2474,9 +2474,9 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132pd {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2568,9 +2568,9 @@ define void @test_vfnmsubps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2656,9 +2656,9 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) - ymm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * ymm2) - ymm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132ps {{.*#+}} ymm0 = -(ymm0 * mem) - ymm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2750,9 +2750,9 @@ define void @test_vfnmsubsd_128(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; GENERIC-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132sd {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub231sd {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2838,9 +2838,9 @@ define void @test_vfnmsubss_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a
 ; GENERIC-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * xmm2) - xmm1 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2 sched: [5:0.50]
 ; GENERIC-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * xmm2) - xmm0 sched: [5:0.50]
-; GENERIC-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [9:0.50]
-; GENERIC-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [9:0.50]
+; GENERIC-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1 sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - mem sched: [10:0.50]
+; GENERIC-NEXT:    vfnmsub231ss {{.*#+}} xmm0 = -(xmm1 * mem) - xmm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

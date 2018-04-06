@@ -76,6 +76,10 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
                      options::OPT_fnoxray_always_emit_customevents, false))
       XRayAlwaysEmitCustomEvents = true;
 
+    if (!Args.hasFlag(options::OPT_fxray_link_deps,
+                      options::OPT_fnoxray_link_deps, true))
+      XRayRT = false;
+
     // Validate the always/never attribute files. We also make sure that they
     // are treated as actual dependencies.
     for (const auto &Filename :

@@ -411,3 +411,41 @@ entry:
 }
 
 declare void @sink(...)
+
+; stack object should be accessed using D-form load/store instead of X-form
+define signext i32 @func1() {
+; CHECK-LABEL: @func1
+; CHECK-NOT: stxvx
+; CHECK: stxv {{[0-9]+}}, {{[0-9]+}}(1)
+; CHECK-NOT: stxvx
+; CHECK: blr
+entry:
+  %a = alloca [4 x i32], align 4
+  %0 = bitcast [4 x i32]* %a to i8*
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 %0, i8 0, i64 16, i1 false)
+  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %a, i64 0, i64 0
+  %call = call signext i32 @callee(i32* nonnull %arraydecay) #3
+  ret i32 %call
+}
+
+; stack object should be accessed using D-form load/store instead of X-form
+define signext i32 @func2() {
+; CHECK-LABEL: @func2
+; CHECK-NOT: stxvx
+; CHECK: stxv [[ZEROREG:[0-9]+]], {{[0-9]+}}(1)
+; CHECK: stxv [[ZEROREG]], {{[0-9]+}}(1)
+; CHECK: stxv [[ZEROREG]], {{[0-9]+}}(1)
+; CHECK: stxv [[ZEROREG]], {{[0-9]+}}(1)
+; CHECK-NOT: stxvx
+; CHECK: blr
+entry:
+  %a = alloca [16 x i32], align 4
+  %0 = bitcast [16 x i32]* %a to i8*
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 %0, i8 0, i64 64, i1 false)
+  %arraydecay = getelementptr inbounds [16 x i32], [16 x i32]* %a, i64 0, i64 0
+  %call = call signext i32 @callee(i32* nonnull %arraydecay) #3
+  ret i32 %call
+}
+
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
+declare signext i32 @callee(i32*) local_unnamed_addr #2

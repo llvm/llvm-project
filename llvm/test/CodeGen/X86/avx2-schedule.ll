@@ -9,7 +9,7 @@
 define <8 x i32> @test_broadcasti128(<8 x i32> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_broadcasti128:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1] sched: [5:1.00]
+; GENERIC-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1] sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -236,7 +236,7 @@ define <4 x i32> @test_extracti128(<8 x i32> %a0, <8 x i32> %a1, <4 x i32> *%a2)
 define <2 x double> @test_gatherdpd(<2 x double> %a0, i8* %a1, <4 x i32> %a2, <2 x double> %a3) {
 ; GENERIC-LABEL: test_gatherdpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdpd:
@@ -271,7 +271,7 @@ declare <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double>, i8*, <4 x i32>, <2
 define <4 x double> @test_gatherdpd_ymm(<4 x double> %a0, i8* %a1, <4 x i32> %a2, <4 x double> %a3) {
 ; GENERIC-LABEL: test_gatherdpd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdpd_ymm:
@@ -306,7 +306,7 @@ declare <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double>, i8*, <4 x i32>
 define <4 x float> @test_gatherdps(<4 x float> %a0, i8* %a1, <4 x i32> %a2, <4 x float> %a3) {
 ; GENERIC-LABEL: test_gatherdps:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdps:
@@ -341,7 +341,7 @@ declare <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float>, i8*, <4 x i32>, <4 x
 define <8 x float> @test_gatherdps_ymm(<8 x float> %a0, i8* %a1, <8 x i32> %a2, <8 x float> %a3) {
 ; GENERIC-LABEL: test_gatherdps_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdps_ymm:
@@ -376,7 +376,7 @@ declare <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float>, i8*, <8 x i32>, 
 define <2 x double> @test_gatherqpd(<2 x double> %a0, i8* %a1, <2 x i64> %a2, <2 x double> %a3) {
 ; GENERIC-LABEL: test_gatherqpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherqpd:
@@ -411,7 +411,7 @@ declare <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double>, i8*, <2 x i64>, <2
 define <4 x double> @test_gatherqpd_ymm(<4 x double> %a0, i8* %a1, <4 x i64> %a2, <4 x double> %a3) {
 ; GENERIC-LABEL: test_gatherqpd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherqpd_ymm:
@@ -446,7 +446,7 @@ declare <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double>, i8*, <4 x i64>
 define <4 x float> @test_gatherqps(<4 x float> %a0, i8* %a1, <2 x i64> %a2, <4 x float> %a3) {
 ; GENERIC-LABEL: test_gatherqps:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherqps:
@@ -481,7 +481,7 @@ declare <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float>, i8*, <2 x i64>, <4 x
 define <4 x float> @test_gatherqps_ymm(<4 x float> %a0, i8* %a1, <4 x i64> %a2, <4 x float> %a3) {
 ; GENERIC-LABEL: test_gatherqps_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -523,7 +523,7 @@ define <8 x i32> @test_inserti128(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ; GENERIC-LABEL: test_inserti128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1 # sched: [1:1.00]
-; GENERIC-NEXT:    vinserti128 $1, (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vinserti128 $1, (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -609,7 +609,7 @@ define <16 x i16> @test_mpsadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_mpsadbw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmpsadbw $7, %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_mpsadbw:
@@ -653,7 +653,7 @@ define <32 x i8> @test_pabsb(<32 x i8> %a0, <32 x i8> *%a1) {
 ; GENERIC-LABEL: test_pabsb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpabsb %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpabsb (%rdi), %ymm1 # sched: [7:1.00]
+; GENERIC-NEXT:    vpabsb (%rdi), %ymm1 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -703,7 +703,7 @@ define <8 x i32> @test_pabsd(<8 x i32> %a0, <8 x i32> *%a1) {
 ; GENERIC-LABEL: test_pabsd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpabsd %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpabsd (%rdi), %ymm1 # sched: [7:1.00]
+; GENERIC-NEXT:    vpabsd (%rdi), %ymm1 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -753,7 +753,7 @@ define <16 x i16> @test_pabsw(<16 x i16> %a0, <16 x i16> *%a1) {
 ; GENERIC-LABEL: test_pabsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpabsw %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpabsw (%rdi), %ymm1 # sched: [7:1.00]
+; GENERIC-NEXT:    vpabsw (%rdi), %ymm1 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -803,7 +803,7 @@ define <16 x i16> @test_packssdw(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_packssdw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpackssdw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpackssdw (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_packssdw:
@@ -847,7 +847,7 @@ define <32 x i8> @test_packsswb(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_packsswb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpacksswb (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpacksswb (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_packsswb:
@@ -891,7 +891,7 @@ define <16 x i16> @test_packusdw(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_packusdw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpackusdw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpackusdw (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_packusdw:
@@ -935,7 +935,7 @@ define <32 x i8> @test_packuswb(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_packuswb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpackuswb (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpackuswb (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_packuswb:
@@ -979,7 +979,7 @@ define <32 x i8> @test_paddb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_paddb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddb:
@@ -1021,7 +1021,7 @@ define <8 x i32> @test_paddd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_paddd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddd:
@@ -1063,7 +1063,7 @@ define <4 x i64> @test_paddq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_paddq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddq (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddq:
@@ -1105,7 +1105,7 @@ define <32 x i8> @test_paddsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_paddsb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddsb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddsb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddsb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddsb:
@@ -1148,7 +1148,7 @@ define <16 x i16> @test_paddsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_paddsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddsw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddsw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddsw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddsw:
@@ -1191,7 +1191,7 @@ define <32 x i8> @test_paddusb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_paddusb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddusb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddusb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddusb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddusb:
@@ -1234,7 +1234,7 @@ define <16 x i16> @test_paddusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_paddusw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddusw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddusw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddusw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddusw:
@@ -1277,7 +1277,7 @@ define <16 x i16> @test_paddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; GENERIC-LABEL: test_paddw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpaddw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpaddw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_paddw:
@@ -1368,7 +1368,7 @@ define <4 x i64> @test_pand(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pand:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpand %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1417,7 +1417,7 @@ define <4 x i64> @test_pandn(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pandn:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpandn %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1468,7 +1468,7 @@ define <32 x i8> @test_pavgb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pavgb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpavgb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpavgb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpavgb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pavgb:
@@ -1520,7 +1520,7 @@ define <16 x i16> @test_pavgw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; GENERIC-LABEL: test_pavgw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpavgw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpavgw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpavgw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pavgw:
@@ -1572,7 +1572,7 @@ define <4 x i32> @test_pblendd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_pblendd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3] sched: [1:0.50]
-; GENERIC-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [5:0.50]
+; GENERIC-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [6:0.50]
 ; GENERIC-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1621,7 +1621,7 @@ define <8 x i32> @test_pblendd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2)
 ; GENERIC-LABEL: test_pblendd_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.50]
-; GENERIC-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [5:0.50]
+; GENERIC-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [6:0.50]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1670,7 +1670,7 @@ define <32 x i8> @test_pblendvb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2, <32
 ; GENERIC-LABEL: test_pblendvb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
-; GENERIC-NEXT:    vpblendvb %ymm3, (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpblendvb %ymm3, (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pblendvb:
@@ -1713,7 +1713,7 @@ define <16 x i16> @test_pblendw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_pblendw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [1:0.50]
-; GENERIC-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [5:0.50]
+; GENERIC-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3],mem[4],ymm1[5],mem[6],ymm1[7],mem[8],ymm1[9],mem[10],ymm1[11],mem[12],ymm1[13],mem[14],ymm1[15] sched: [6:0.50]
 ; GENERIC-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1762,7 +1762,7 @@ define <16 x i8> @test_pbroadcastb(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastb %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastb (%rdi), %xmm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastb (%rdi), %xmm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1811,7 +1811,7 @@ define <32 x i8> @test_pbroadcastb_ymm(<32 x i8> %a0, <32 x i8> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastb_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastb %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastb (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastb (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1860,7 +1860,7 @@ define <4 x i32> @test_pbroadcastd(<4 x i32> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastd %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastd (%rdi), %xmm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastd (%rdi), %xmm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1909,7 +1909,7 @@ define <8 x i32> @test_pbroadcastd_ymm(<8 x i32> %a0, <8 x i32> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastd_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastd %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastd (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastd (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1958,7 +1958,7 @@ define <2 x i64> @test_pbroadcastq(<2 x i64> %a0, <2 x i64> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastq %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastq (%rdi), %xmm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastq (%rdi), %xmm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2007,7 +2007,7 @@ define <4 x i64> @test_pbroadcastq_ymm(<4 x i64> %a0, <4 x i64> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastq_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastq %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastq (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastq (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2056,7 +2056,7 @@ define <8 x i16> @test_pbroadcastw(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastw %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastw (%rdi), %xmm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastw (%rdi), %xmm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2105,7 +2105,7 @@ define <16 x i16> @test_pbroadcastw_ymm(<16 x i16> %a0, <16 x i16> *%a1) {
 ; GENERIC-LABEL: test_pbroadcastw_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpbroadcastw %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpbroadcastw (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpbroadcastw (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2154,7 +2154,7 @@ define <32 x i8> @test_pcmpeqb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pcmpeqb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpeqb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpeqb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpeqb:
@@ -2198,7 +2198,7 @@ define <8 x i32> @test_pcmpeqd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pcmpeqd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpeqd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpeqd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpeqd:
@@ -2242,7 +2242,7 @@ define <4 x i64> @test_pcmpeqq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pcmpeqq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpeqq (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpeqq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpeqq:
@@ -2286,7 +2286,7 @@ define <16 x i16> @test_pcmpeqw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_pcmpeqw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpeqw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpeqw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpeqw:
@@ -2330,7 +2330,7 @@ define <32 x i8> @test_pcmpgtb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pcmpgtb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpgtb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpgtb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpgtb:
@@ -2374,7 +2374,7 @@ define <8 x i32> @test_pcmpgtd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pcmpgtd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpgtd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpgtd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpgtd:
@@ -2418,7 +2418,7 @@ define <4 x i64> @test_pcmpgtq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pcmpgtq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpgtq:
@@ -2462,7 +2462,7 @@ define <16 x i16> @test_pcmpgtw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_pcmpgtw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpgtw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpcmpgtw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpgtw:
@@ -2506,7 +2506,7 @@ define <4 x i64> @test_perm2i128(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_perm2i128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:1.00]
-; GENERIC-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [5:1.00]
+; GENERIC-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2555,7 +2555,7 @@ define <8 x i32> @test_permd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_permd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermd %ymm1, %ymm0, %ymm1 # sched: [1:1.00]
-; GENERIC-NEXT:    vpermd (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpermd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2605,7 +2605,7 @@ define <4 x double> @test_permpd(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_permpd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3] sched: [1:1.00]
-; GENERIC-NEXT:    vpermpd {{.*#+}} ymm1 = mem[0,2,2,3] sched: [5:1.00]
+; GENERIC-NEXT:    vpermpd {{.*#+}} ymm1 = mem[0,2,2,3] sched: [6:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2654,7 +2654,7 @@ define <8 x float> @test_permps(<8 x i32> %a0, <8 x float> %a1, <8 x float> *%a2
 ; GENERIC-LABEL: test_permps:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermps %ymm1, %ymm0, %ymm1 # sched: [1:1.00]
-; GENERIC-NEXT:    vpermps (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpermps (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2704,7 +2704,7 @@ define <4 x i64> @test_permq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; GENERIC-LABEL: test_permq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,2,3] sched: [1:1.00]
-; GENERIC-NEXT:    vpermq {{.*#+}} ymm1 = mem[0,2,2,3] sched: [5:1.00]
+; GENERIC-NEXT:    vpermq {{.*#+}} ymm1 = mem[0,2,2,3] sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2752,7 +2752,7 @@ define <4 x i64> @test_permq(<4 x i64> %a0, <4 x i64> *%a1) {
 define <4 x i32> @test_pgatherdd(<4 x i32> %a0, i8* %a1, <4 x i32> %a2, <4 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherdd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdd:
@@ -2787,7 +2787,7 @@ declare <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32>, i8*, <4 x i32>, <4 x i32>
 define <8 x i32> @test_pgatherdd_ymm(<8 x i32> %a0, i8* %a1, <8 x i32> %a2, <8 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherdd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdd_ymm:
@@ -2822,7 +2822,7 @@ declare <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32>, i8*, <8 x i32>, <8 x 
 define <2 x i64> @test_pgatherdq(<2 x i64> %a0, i8* %a1, <4 x i32> %a2, <2 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherdq:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdq:
@@ -2857,7 +2857,7 @@ declare <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64>, i8*, <4 x i32>, <2 x i64>
 define <4 x i64> @test_pgatherdq_ymm(<4 x i64> %a0, i8* %a1, <4 x i32> %a2, <4 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherdq_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdq_ymm:
@@ -2892,7 +2892,7 @@ declare <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64>, i8*, <4 x i32>, <4 x 
 define <4 x i32> @test_pgatherqd(<4 x i32> %a0, i8* %a1, <2 x i64> %a2, <4 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherqd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherqd:
@@ -2927,7 +2927,7 @@ declare <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32>, i8*, <2 x i64>, <4 x i32>
 define <4 x i32> @test_pgatherqd_ymm(<4 x i32> %a0, i8* %a1, <4 x i64> %a2, <4 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherqd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2968,7 +2968,7 @@ declare <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32>, i8*, <4 x i64>, <4 x 
 define <2 x i64> @test_pgatherqq(<2 x i64> %a0, i8 *%a1, <2 x i64> %a2, <2 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherqq:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherqq:
@@ -3003,7 +3003,7 @@ declare <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64>, i8*, <2 x i64>, <2 x i64>
 define <4 x i64> @test_pgatherqq_ymm(<4 x i64> %a0, i8 *%a1, <4 x i64> %a2, <4 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherqq_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [4:0.50]
+; GENERIC-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherqq_ymm:
@@ -3039,7 +3039,7 @@ define <8 x i32> @test_phaddd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_phaddd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vphaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; GENERIC-NEXT:    vphaddd (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
+; GENERIC-NEXT:    vphaddd (%rdi), %ymm0, %ymm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phaddd:
@@ -3082,7 +3082,7 @@ define <16 x i16> @test_phaddsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_phaddsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vphaddsw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vphaddsw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vphaddsw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phaddsw:
@@ -3125,7 +3125,7 @@ define <16 x i16> @test_phaddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_phaddw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vphaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; GENERIC-NEXT:    vphaddw (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
+; GENERIC-NEXT:    vphaddw (%rdi), %ymm0, %ymm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phaddw:
@@ -3168,7 +3168,7 @@ define <8 x i32> @test_phsubd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_phsubd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vphsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; GENERIC-NEXT:    vphsubd (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
+; GENERIC-NEXT:    vphsubd (%rdi), %ymm0, %ymm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phsubd:
@@ -3211,7 +3211,7 @@ define <16 x i16> @test_phsubsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_phsubsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vphsubsw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vphsubsw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vphsubsw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phsubsw:
@@ -3254,7 +3254,7 @@ define <16 x i16> @test_phsubw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_phsubw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vphsubw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; GENERIC-NEXT:    vphsubw (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
+; GENERIC-NEXT:    vphsubw (%rdi), %ymm0, %ymm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phsubw:
@@ -3297,7 +3297,7 @@ define <16 x i16> @test_pmaddubsw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) 
 ; GENERIC-LABEL: test_pmaddubsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaddubsw:
@@ -3341,7 +3341,7 @@ define <8 x i32> @test_pmaddwd(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_pmaddwd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmaddwd (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmaddwd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaddwd:
@@ -3581,7 +3581,7 @@ define <32 x i8> @test_pmaxsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pmaxsb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmaxsb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpmaxsb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaxsb:
@@ -3624,7 +3624,7 @@ define <8 x i32> @test_pmaxsd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pmaxsd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaxsd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmaxsd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpmaxsd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaxsd:
@@ -3667,7 +3667,7 @@ define <16 x i16> @test_pmaxsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_pmaxsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmaxsw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpmaxsw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaxsw:
@@ -3710,7 +3710,7 @@ define <32 x i8> @test_pmaxub(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pmaxub:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmaxub (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpmaxub (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaxub:
@@ -3753,7 +3753,7 @@ define <8 x i32> @test_pmaxud(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pmaxud:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmaxud (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpmaxud (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaxud:
@@ -3796,7 +3796,7 @@ define <16 x i16> @test_pmaxuw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_pmaxuw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpmaxuw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpmaxuw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaxuw:
@@ -3839,7 +3839,7 @@ define <32 x i8> @test_pminsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pminsb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpminsb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpminsb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpminsb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pminsb:
@@ -3882,7 +3882,7 @@ define <8 x i32> @test_pminsd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pminsd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpminsd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpminsd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpminsd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pminsd:
@@ -3925,7 +3925,7 @@ define <16 x i16> @test_pminsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_pminsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpminsw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpminsw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpminsw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pminsw:
@@ -3968,7 +3968,7 @@ define <32 x i8> @test_pminub(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pminub:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpminub %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpminub (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpminub (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pminub:
@@ -4011,7 +4011,7 @@ define <8 x i32> @test_pminud(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pminud:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpminud %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpminud (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpminud (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pminud:
@@ -4054,7 +4054,7 @@ define <16 x i16> @test_pminuw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_pminuw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpminuw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpminuw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpminuw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pminuw:
@@ -4138,7 +4138,7 @@ define <8 x i32> @test_pmovsxbd(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pmovsxbd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovsxbd %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovsxbd (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpmovsxbd (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4189,7 +4189,7 @@ define <4 x i64> @test_pmovsxbq(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pmovsxbq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovsxbq %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovsxbq (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpmovsxbq (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4240,7 +4240,7 @@ define <16 x i16> @test_pmovsxbw(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pmovsxbw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovsxbw %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovsxbw (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpmovsxbw (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4289,7 +4289,7 @@ define <4 x i64> @test_pmovsxdq(<4 x i32> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_pmovsxdq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovsxdq %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovsxdq (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpmovsxdq (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4338,7 +4338,7 @@ define <8 x i32> @test_pmovsxwd(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_pmovsxwd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovsxwd %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovsxwd (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpmovsxwd (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4387,7 +4387,7 @@ define <4 x i64> @test_pmovsxwq(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_pmovsxwq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovsxwq %xmm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovsxwq (%rdi), %ymm1 # sched: [5:1.00]
+; GENERIC-NEXT:    vpmovsxwq (%rdi), %ymm1 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4438,7 +4438,7 @@ define <8 x i32> @test_pmovzxbd(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pmovzxbd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero sched: [1:1.00]
-; GENERIC-NEXT:    vpmovzxbd {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero sched: [5:1.00]
+; GENERIC-NEXT:    vpmovzxbd {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4489,7 +4489,7 @@ define <4 x i64> @test_pmovzxbq(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pmovzxbq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero sched: [1:1.00]
-; GENERIC-NEXT:    vpmovzxbq {{.*#+}} ymm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero sched: [5:1.00]
+; GENERIC-NEXT:    vpmovzxbq {{.*#+}} ymm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4540,7 +4540,7 @@ define <16 x i16> @test_pmovzxbw(<16 x i8> %a0, <16 x i8> *%a1) {
 ; GENERIC-LABEL: test_pmovzxbw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero sched: [1:1.00]
-; GENERIC-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero sched: [5:1.00]
+; GENERIC-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4589,7 +4589,7 @@ define <4 x i64> @test_pmovzxdq(<4 x i32> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_pmovzxdq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero sched: [1:1.00]
-; GENERIC-NEXT:    vpmovzxdq {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero sched: [5:1.00]
+; GENERIC-NEXT:    vpmovzxdq {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4638,7 +4638,7 @@ define <8 x i32> @test_pmovzxwd(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_pmovzxwd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [1:1.00]
-; GENERIC-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero sched: [5:1.00]
+; GENERIC-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4687,7 +4687,7 @@ define <4 x i64> @test_pmovzxwq(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_pmovzxwq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero sched: [1:1.00]
-; GENERIC-NEXT:    vpmovzxwq {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero sched: [5:1.00]
+; GENERIC-NEXT:    vpmovzxwq {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4738,7 +4738,7 @@ define <4 x i64> @test_pmuldq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pmuldq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmuldq:
@@ -4782,7 +4782,7 @@ define <16 x i16> @test_pmulhrsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2
 ; GENERIC-LABEL: test_pmulhrsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmulhrsw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmulhrsw (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmulhrsw (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmulhrsw:
@@ -4825,7 +4825,7 @@ define <16 x i16> @test_pmulhuw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_pmulhuw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmulhuw (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmulhuw (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmulhuw:
@@ -4868,7 +4868,7 @@ define <16 x i16> @test_pmulhw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_pmulhw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmulhw (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmulhw (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmulhw:
@@ -4953,7 +4953,7 @@ define <16 x i16> @test_pmullw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_pmullw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmullw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmullw (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmullw (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmullw:
@@ -4995,7 +4995,7 @@ define <4 x i64> @test_pmuludq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_pmuludq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmuludq (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vpmuludq (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmuludq:
@@ -5039,7 +5039,7 @@ define <4 x i64> @test_por(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_por:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5088,7 +5088,7 @@ define <4 x i64> @test_psadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_psadbw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psadbw:
@@ -5132,7 +5132,7 @@ define <32 x i8> @test_pshufb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pshufb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpshufb %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpshufb (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpshufb (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pshufb:
@@ -5175,7 +5175,7 @@ define <8 x i32> @test_pshufd(<8 x i32> %a0, <8 x i32> *%a1) {
 ; GENERIC-LABEL: test_pshufd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
-; GENERIC-NEXT:    vpshufd {{.*#+}} ymm1 = mem[1,0,3,2,5,4,7,6] sched: [5:1.00]
+; GENERIC-NEXT:    vpshufd {{.*#+}} ymm1 = mem[1,0,3,2,5,4,7,6] sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5224,7 +5224,7 @@ define <16 x i16> @test_pshufhw(<16 x i16> %a0, <16 x i16> *%a1) {
 ; GENERIC-LABEL: test_pshufhw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpshufhw {{.*#+}} ymm0 = ymm0[0,1,2,3,7,6,5,4,8,9,10,11,15,14,13,12] sched: [1:1.00]
-; GENERIC-NEXT:    vpshufhw {{.*#+}} ymm1 = mem[0,1,2,3,5,4,7,6,8,9,10,11,13,12,15,14] sched: [5:1.00]
+; GENERIC-NEXT:    vpshufhw {{.*#+}} ymm1 = mem[0,1,2,3,5,4,7,6,8,9,10,11,13,12,15,14] sched: [6:1.00]
 ; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5273,7 +5273,7 @@ define <16 x i16> @test_pshuflw(<16 x i16> %a0, <16 x i16> *%a1) {
 ; GENERIC-LABEL: test_pshuflw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpshuflw {{.*#+}} ymm0 = ymm0[3,2,1,0,4,5,6,7,11,10,9,8,12,13,14,15] sched: [1:1.00]
-; GENERIC-NEXT:    vpshuflw {{.*#+}} ymm1 = mem[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15] sched: [5:1.00]
+; GENERIC-NEXT:    vpshuflw {{.*#+}} ymm1 = mem[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15] sched: [6:1.00]
 ; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5322,7 +5322,7 @@ define <32 x i8> @test_psignb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_psignb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsignb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsignb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsignb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psignb:
@@ -5365,7 +5365,7 @@ define <8 x i32> @test_psignd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_psignd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsignd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsignd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsignd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psignd:
@@ -5408,7 +5408,7 @@ define <16 x i16> @test_psignw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_psignw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsignw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsignw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsignw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psignw:
@@ -5451,7 +5451,7 @@ define <8 x i32> @test_pslld(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_pslld:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpslld %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpslld (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpslld (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpslld $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5535,7 +5535,7 @@ define <4 x i64> @test_psllq(<4 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_psllq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllq %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsllq (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsllq (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpsllq $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5585,7 +5585,7 @@ define <4 x i32> @test_psllvd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_psllvd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsllvd (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsllvd (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psllvd:
@@ -5628,7 +5628,7 @@ define <8 x i32> @test_psllvd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) 
 ; GENERIC-LABEL: test_psllvd_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsllvd (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsllvd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psllvd_ymm:
@@ -5671,7 +5671,7 @@ define <2 x i64> @test_psllvq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_psllvq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsllvq (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsllvq (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psllvq:
@@ -5714,7 +5714,7 @@ define <4 x i64> @test_psllvq_ymm(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; GENERIC-LABEL: test_psllvq_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsllvq (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsllvq (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psllvq_ymm:
@@ -5757,7 +5757,7 @@ define <16 x i16> @test_psllw(<16 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_psllw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsllw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsllw (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpsllw $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5807,7 +5807,7 @@ define <8 x i32> @test_psrad(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_psrad:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrad %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrad (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrad (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpsrad $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5857,7 +5857,7 @@ define <4 x i32> @test_psravd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_psravd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsravd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsravd (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsravd (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psravd:
@@ -5900,7 +5900,7 @@ define <8 x i32> @test_psravd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) 
 ; GENERIC-LABEL: test_psravd_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsravd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsravd (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsravd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psravd_ymm:
@@ -5943,7 +5943,7 @@ define <16 x i16> @test_psraw(<16 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_psraw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsraw %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsraw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsraw (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpsraw $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5993,7 +5993,7 @@ define <8 x i32> @test_psrld(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_psrld:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrld %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrld (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrld (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpsrld $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -6077,7 +6077,7 @@ define <4 x i64> @test_psrlq(<4 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_psrlq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrlq (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrlq (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpsrlq $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -6127,7 +6127,7 @@ define <4 x i32> @test_psrlvd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_psrlvd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrlvd (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrlvd (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psrlvd:
@@ -6170,7 +6170,7 @@ define <8 x i32> @test_psrlvd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) 
 ; GENERIC-LABEL: test_psrlvd_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrlvd (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrlvd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psrlvd_ymm:
@@ -6213,7 +6213,7 @@ define <2 x i64> @test_psrlvq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_psrlvq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrlvq (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrlvq (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psrlvq:
@@ -6256,7 +6256,7 @@ define <4 x i64> @test_psrlvq_ymm(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; GENERIC-LABEL: test_psrlvq_ymm:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrlvq (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrlvq (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psrlvq_ymm:
@@ -6299,7 +6299,7 @@ define <16 x i16> @test_psrlw(<16 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_psrlw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpsrlw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsrlw (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpsrlw $2, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -6349,7 +6349,7 @@ define <32 x i8> @test_psubb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_psubb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubb:
@@ -6391,7 +6391,7 @@ define <8 x i32> @test_psubd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_psubd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubd:
@@ -6433,7 +6433,7 @@ define <4 x i64> @test_psubq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_psubq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubq (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubq:
@@ -6475,7 +6475,7 @@ define <32 x i8> @test_psubsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_psubsb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubsb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubsb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubsb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubsb:
@@ -6518,7 +6518,7 @@ define <16 x i16> @test_psubsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; GENERIC-LABEL: test_psubsw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubsw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubsw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubsw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubsw:
@@ -6561,7 +6561,7 @@ define <32 x i8> @test_psubusb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_psubusb:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubusb (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubusb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubusb:
@@ -6604,7 +6604,7 @@ define <16 x i16> @test_psubusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; GENERIC-LABEL: test_psubusw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubusw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubusw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubusw:
@@ -6647,7 +6647,7 @@ define <16 x i16> @test_psubw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; GENERIC-LABEL: test_psubw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsubw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsubw (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpsubw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psubw:
@@ -6689,7 +6689,7 @@ define <32 x i8> @test_punpckhbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_punpckhbw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15],ymm0[24],mem[24],ymm0[25],mem[25],ymm0[26],mem[26],ymm0[27],mem[27],ymm0[28],mem[28],ymm0[29],mem[29],ymm0[30],mem[30],ymm0[31],mem[31] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15],ymm0[24],mem[24],ymm0[25],mem[25],ymm0[26],mem[26],ymm0[27],mem[27],ymm0[28],mem[28],ymm0[29],mem[29],ymm0[30],mem[30],ymm0[31],mem[31] sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_punpckhbw:
@@ -6731,7 +6731,7 @@ define <8 x i32> @test_punpckhdq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_punpckhdq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
 ; GENERIC-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6786,7 +6786,7 @@ define <4 x i64> @test_punpckhqdq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; GENERIC-LABEL: test_punpckhqdq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpckhqdq {{.*#+}} ymm1 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],mem[1],ymm0[3],mem[3] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -6835,7 +6835,7 @@ define <16 x i16> @test_punpckhwd(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a
 ; GENERIC-LABEL: test_punpckhwd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15] sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_punpckhwd:
@@ -6877,7 +6877,7 @@ define <32 x i8> @test_punpcklbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_punpcklbw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[16],mem[16],ymm0[17],mem[17],ymm0[18],mem[18],ymm0[19],mem[19],ymm0[20],mem[20],ymm0[21],mem[21],ymm0[22],mem[22],ymm0[23],mem[23] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[16],mem[16],ymm0[17],mem[17],ymm0[18],mem[18],ymm0[19],mem[19],ymm0[20],mem[20],ymm0[21],mem[21],ymm0[22],mem[22],ymm0[23],mem[23] sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_punpcklbw:
@@ -6919,7 +6919,7 @@ define <8 x i32> @test_punpckldq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_punpckldq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
 ; GENERIC-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6974,7 +6974,7 @@ define <4 x i64> @test_punpcklqdq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; GENERIC-LABEL: test_punpcklqdq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[2],mem[2] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7023,7 +7023,7 @@ define <16 x i16> @test_punpcklwd(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a
 ; GENERIC-LABEL: test_punpcklwd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11] sched: [1:1.00]
-; GENERIC-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11] sched: [5:1.00]
+; GENERIC-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11] sched: [6:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_punpcklwd:
@@ -7065,7 +7065,7 @@ define <4 x i64> @test_pxor(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pxor:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpxor %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
