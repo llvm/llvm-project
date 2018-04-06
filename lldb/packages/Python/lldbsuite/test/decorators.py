@@ -10,6 +10,7 @@ import platform
 import re
 import sys
 import tempfile
+import subprocess
 
 # Third-party modules
 import six
