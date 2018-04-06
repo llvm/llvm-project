@@ -472,17 +472,25 @@ class AggValueSlot {
   /// evaluating an expression which constructs such an object.
   bool AliasedFlag : 1;
 
+  /// This is set to true if the tail padding of this slot might overlap 
+  /// another object that may have already been initialized (and whose
+  /// value must be preserved by this initialization). If so, we may only
+  /// store up to the dsize of the type. Otherwise we can widen stores to
+  /// the size of the type.
+  bool OverlapFlag : 1;
+
 public:
   enum IsAliased_t { IsNotAliased, IsAliased };
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
   enum IsZeroed_t { IsNotZeroed, IsZeroed };
+  enum Overlap_t { DoesNotOverlap, MayOverlap };
   enum NeedsGCBarriers_t { DoesNotNeedGCBarriers, NeedsGCBarriers };
 
   /// ignored - Returns an aggregate value slot indicating that the
   /// aggregate value is being ignored.
   static AggValueSlot ignored() {
     return forAddr(Address::invalid(), Qualifiers(), IsNotDestructed,
-                   DoesNotNeedGCBarriers, IsNotAliased);
+                   DoesNotNeedGCBarriers, IsNotAliased, DoesNotOverlap);
   }
 
   /// forAddr - Make a slot for an aggregate value.
@@ -500,6 +508,7 @@ public:
                               IsDestructed_t isDestructed,
                               NeedsGCBarriers_t needsGC,
                               IsAliased_t isAliased,
+                              Overlap_t mayOverlap,
                               IsZeroed_t isZeroed = IsNotZeroed) {
     AggValueSlot AV;
     if (addr.isValid()) {
@@ -514,6 +523,7 @@ public:
     AV.ObjCGCFlag = needsGC;
     AV.ZeroedFlag = isZeroed;
     AV.AliasedFlag = isAliased;
+    AV.OverlapFlag = mayOverlap;
     return AV;
   }
 
@@ -521,9 +531,10 @@ public:
                                 IsDestructed_t isDestructed,
                                 NeedsGCBarriers_t needsGC,
                                 IsAliased_t isAliased,
+                                Overlap_t mayOverlap,
                                 IsZeroed_t isZeroed = IsNotZeroed) {
-    return forAddr(LV.getAddress(),
-                   LV.getQuals(), isDestructed, needsGC, isAliased, isZeroed);
+    return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, needsGC,
+                   isAliased, mayOverlap, isZeroed);
   }
 
   IsDestructed_t isExternallyDestructed() const {
@@ -571,6 +582,10 @@ public:
     return IsAliased_t(AliasedFlag);
   }
 
+  Overlap_t mayOverlap() const {
+    return Overlap_t(OverlapFlag);
+  }
+
   RValue asRValue() const {
     if (isIgnored()) {
       return RValue::getIgnored();
@@ -582,6 +597,14 @@ public:
   void setZeroed(bool V = true) { ZeroedFlag = V; }
   IsZeroed_t isZeroed() const {
     return IsZeroed_t(ZeroedFlag);
+  }
+
+  /// Get the preferred size to use when storing a value to this slot. This
+  /// is the type size unless that might overlap another object, in which
+  /// case it's the dsize.
+  CharUnits getPreferredSize(ASTContext &Ctx, QualType Type) const {
+    return mayOverlap() ? Ctx.getTypeInfoDataSizeInChars(Type).first
+                        : Ctx.getTypeSizeInChars(Type);
   }
 };
 

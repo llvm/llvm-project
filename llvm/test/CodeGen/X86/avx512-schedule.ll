@@ -1937,7 +1937,7 @@ define void @f32tof64_loadstore() {
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [6:0.50]
 ; GENERIC-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vmovsd %xmm0, -{{[0-9]+}}(%rsp) # sched: [5:1.00]
+; GENERIC-NEXT:    vmovsd %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f32tof64_loadstore:
@@ -1960,7 +1960,7 @@ define void @f64tof32_loadstore() nounwind uwtable {
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0 # sched: [4:1.00]
-; GENERIC-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp) # sched: [5:1.00]
+; GENERIC-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f64tof32_loadstore:
@@ -5934,7 +5934,7 @@ define <4 x i32> @mov_test4(i32* %x) {
 define void @mov_test5(float %x, float* %y) {
 ; GENERIC-LABEL: mov_test5:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovss %xmm0, (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    vmovss %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test5:
@@ -5948,7 +5948,7 @@ define void @mov_test5(float %x, float* %y) {
 define void @mov_test6(double %x, double* %y) {
 ; GENERIC-LABEL: mov_test6:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovsd %xmm0, (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    vmovsd %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test6:
@@ -6943,8 +6943,8 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 define i8 @conv1(<8 x i1>* %R) {
 ; GENERIC-LABEL: conv1:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    movb $-1, (%rdi) # sched: [5:1.00]
-; GENERIC-NEXT:    movb $-2, -{{[0-9]+}}(%rsp) # sched: [5:1.00]
+; GENERIC-NEXT:    movb $-1, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    movb $-2, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; GENERIC-NEXT:    movb $-2, %al # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7512,7 +7512,7 @@ define void @f1(i32 %c) {
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    movzbl {{.*}}(%rip), %edi # sched: [5:0.50]
 ; GENERIC-NEXT:    xorl $1, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    movb %dil, {{.*}}(%rip) # sched: [5:1.00]
+; GENERIC-NEXT:    movb %dil, {{.*}}(%rip) # sched: [1:1.00]
 ; GENERIC-NEXT:    jmp f2 # TAILCALL
 ;
 ; SKX-LABEL: f1:
@@ -7536,7 +7536,7 @@ define void @store_i16_i1(i16 %x, i1 *%y) {
 ; GENERIC-LABEL: store_i16_i1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    andl $1, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    movb %dil, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movb %dil, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_i16_i1:
@@ -7553,7 +7553,7 @@ define void @store_i8_i1(i8 %x, i1 *%y) {
 ; GENERIC-LABEL: store_i8_i1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    andl $1, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    movb %dil, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    movb %dil, (%rsi) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_i8_i1:
@@ -8698,7 +8698,7 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 ; GENERIC-NEXT:    subq $24, %rsp # sched: [1:0.33]
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 32
 ; GENERIC-NEXT:    vaddss %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill sched: [5:1.00]
+; GENERIC-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill sched: [1:1.00]
 ; GENERIC-NEXT:    callq func_f32
 ; GENERIC-NEXT:    vbroadcastss (%rsp), %zmm0 # 16-byte Folded Reload sched: [5:1.00]
 ; GENERIC-NEXT:    addq $24, %rsp # sched: [1:0.33]
@@ -8728,7 +8728,7 @@ define <8 x double> @broadcast_sd_spill(double %x) {
 ; GENERIC-NEXT:    subq $24, %rsp # sched: [1:0.33]
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 32
 ; GENERIC-NEXT:    vaddsd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill sched: [5:1.00]
+; GENERIC-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill sched: [1:1.00]
 ; GENERIC-NEXT:    callq func_f64
 ; GENERIC-NEXT:    vbroadcastsd (%rsp), %zmm0 # 16-byte Folded Reload sched: [5:1.00]
 ; GENERIC-NEXT:    addq $24, %rsp # sched: [1:0.33]

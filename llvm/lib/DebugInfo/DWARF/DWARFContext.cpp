@@ -499,7 +499,7 @@ void DWARFContext::dump(
                                    isLittleEndian(), 0);
     uint32_t Offset = 0;
     while (rnglistData.isValidOffset(Offset)) {
-      DWARFDebugRnglists Rnglists;
+      DWARFDebugRnglistTable Rnglists;
       uint32_t TableOffset = Offset;
       if (Error Err = Rnglists.extract(rnglistData, &Offset)) {
         errs() << "error: " + toString(std::move(Err)) << '\n';

@@ -455,7 +455,7 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
   // Need this flag to turn on new pass manager via Gold plugin.
   if (Args.hasFlag(options::OPT_fexperimental_new_pass_manager,
                    options::OPT_fno_experimental_new_pass_manager,
-                   /* Default */ false)) {
+                   /* Default */ ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER)) {
     CmdArgs.push_back("-plugin-opt=new-pass-manager");
   }
 

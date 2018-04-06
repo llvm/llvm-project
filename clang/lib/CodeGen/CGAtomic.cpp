@@ -1513,7 +1513,8 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
                                     getAtomicType());
     bool IsVolatile = rvalue.isVolatileQualified() ||
                       LVal.isVolatileQualified();
-    CGF.EmitAggregateCopy(Dest, Src, getAtomicType(), IsVolatile);
+    CGF.EmitAggregateCopy(Dest, Src, getAtomicType(),
+                          AggValueSlot::DoesNotOverlap, IsVolatile);
     return;
   }
 
@@ -2008,6 +2009,7 @@ void CodeGenFunction::EmitAtomicInit(Expr *init, LValue dest) {
                                         AggValueSlot::IsNotDestructed,
                                         AggValueSlot::DoesNotNeedGCBarriers,
                                         AggValueSlot::IsNotAliased,
+                                        AggValueSlot::DoesNotOverlap,
                                         Zeroed ? AggValueSlot::IsZeroed :
                                                  AggValueSlot::IsNotZeroed);
 

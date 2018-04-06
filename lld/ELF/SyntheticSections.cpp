@@ -2532,9 +2532,8 @@ void elf::mergeSections() {
   // splitIntoPieces needs to be called on each MergeInputSection
   // before calling finalizeContents(). Do that first.
   parallelForEach(InputSections, [](InputSectionBase *Sec) {
-    if (Sec->Live)
-      if (auto *S = dyn_cast<MergeInputSection>(Sec))
-        S->splitIntoPieces();
+    if (auto *S = dyn_cast<MergeInputSection>(Sec))
+      S->splitIntoPieces();
   });
 
   std::vector<MergeSyntheticSection *> MergeSections;

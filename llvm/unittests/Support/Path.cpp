@@ -885,58 +885,91 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
       fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/e"));
 
   typedef std::vector<std::string> v_t;
-  v_t visited;
-
-  // The directory iterator doesn't stat the file, so we should be able to
-  // iterate over the whole directory.
+  v_t VisitedNonBrokenSymlinks;
+  v_t VisitedBrokenSymlinks;
   std::error_code ec;
+
+  // Broken symbol links are expected to throw an error.
   for (fs::directory_iterator i(Twine(TestDirectory) + "/symlink", ec), e;
        i != e; i.increment(ec)) {
-    ASSERT_NO_ERROR(ec);
-    visited.push_back(path::filename(i->path()));
-  }
-  std::sort(visited.begin(), visited.end());
-  v_t expected = {"a", "b", "c", "d", "e"};
-  ASSERT_TRUE(visited.size() == expected.size());
-  ASSERT_TRUE(std::equal(visited.begin(), visited.end(), expected.begin()));
-  visited.clear();
-
-  // The recursive directory iterator has to stat the file, so we need to skip
-  // the broken symlinks.
-  for (fs::recursive_directory_iterator
-           i(Twine(TestDirectory) + "/symlink", ec),
-       e;
-       i != e; i.increment(ec)) {
-    ASSERT_NO_ERROR(ec);
-
-    ErrorOr<fs::basic_file_status> status = i->status();
-    if (status.getError() ==
-        std::make_error_code(std::errc::no_such_file_or_directory)) {
-      i.no_push();
+    if (ec == std::make_error_code(std::errc::no_such_file_or_directory)) {
+      VisitedBrokenSymlinks.push_back(path::filename(i->path()));
       continue;
     }
 
-    visited.push_back(path::filename(i->path()));
-  }
-  std::sort(visited.begin(), visited.end());
-  expected = {"b", "bb", "d", "da", "dd", "ddd", "ddd"};
-  ASSERT_TRUE(visited.size() == expected.size());
-  ASSERT_TRUE(std::equal(visited.begin(), visited.end(), expected.begin()));
-  visited.clear();
-
-  // This recursive directory iterator doesn't follow symlinks, so we don't need
-  // to skip them.
-  for (fs::recursive_directory_iterator
-           i(Twine(TestDirectory) + "/symlink", ec, /*follow_symlinks=*/false),
-       e;
-       i != e; i.increment(ec)) {
     ASSERT_NO_ERROR(ec);
-    visited.push_back(path::filename(i->path()));
+    VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
   }
-  std::sort(visited.begin(), visited.end());
-  expected = {"a", "b", "ba", "bb", "bc", "c", "d", "da", "dd", "ddd", "e"};
-  ASSERT_TRUE(visited.size() == expected.size());
-  ASSERT_TRUE(std::equal(visited.begin(), visited.end(), expected.begin()));
+  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
+  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
+  v_t ExpectedNonBrokenSymlinks = {"b", "d"};
+  ASSERT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());
+  ASSERT_TRUE(std::equal(VisitedNonBrokenSymlinks.begin(),
+                         VisitedNonBrokenSymlinks.end(),
+                         ExpectedNonBrokenSymlinks.begin()));
+  VisitedNonBrokenSymlinks.clear();
+
+  v_t ExpectedBrokenSymlinks = {"a", "c", "e"};
+  ASSERT_EQ(ExpectedBrokenSymlinks.size(), VisitedBrokenSymlinks.size());
+  ASSERT_TRUE(std::equal(VisitedBrokenSymlinks.begin(),
+                         VisitedBrokenSymlinks.end(),
+                         ExpectedBrokenSymlinks.begin()));
+  VisitedBrokenSymlinks.clear();
+
+  // Broken symbol links are expected to throw an error.
+  for (fs::recursive_directory_iterator i(
+      Twine(TestDirectory) + "/symlink", ec), e; i != e; i.increment(ec)) {
+    if (ec == std::make_error_code(std::errc::no_such_file_or_directory)) {
+      VisitedBrokenSymlinks.push_back(path::filename(i->path()));
+      continue;
+    }
+
+    ASSERT_NO_ERROR(ec);
+    VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
+  }
+  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
+  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
+  ExpectedNonBrokenSymlinks = {"b", "bb", "d", "da", "dd", "ddd", "ddd"};
+  ASSERT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());
+  ASSERT_TRUE(std::equal(VisitedNonBrokenSymlinks.begin(),
+                         VisitedNonBrokenSymlinks.end(),
+                         ExpectedNonBrokenSymlinks.begin()));
+  VisitedNonBrokenSymlinks.clear();
+
+  ExpectedBrokenSymlinks = {"a", "ba", "bc", "c", "e"};
+  ASSERT_EQ(ExpectedBrokenSymlinks.size(), VisitedBrokenSymlinks.size());
+  ASSERT_TRUE(std::equal(VisitedBrokenSymlinks.begin(),
+                         VisitedBrokenSymlinks.end(),
+                         ExpectedBrokenSymlinks.begin()));
+  VisitedBrokenSymlinks.clear();
+
+  for (fs::recursive_directory_iterator i(
+      Twine(TestDirectory) + "/symlink", ec, /*follow_symlinks=*/false), e;
+       i != e; i.increment(ec)) {
+    if (ec == std::make_error_code(std::errc::no_such_file_or_directory)) {
+      VisitedBrokenSymlinks.push_back(path::filename(i->path()));
+      continue;
+    }
+
+    ASSERT_NO_ERROR(ec);
+    VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
+  }
+  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
+  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
+  ExpectedNonBrokenSymlinks = {"a", "b", "ba", "bb", "bc", "c", "d", "da", "dd",
+                               "ddd", "e"};
+  ASSERT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());
+  ASSERT_TRUE(std::equal(VisitedNonBrokenSymlinks.begin(),
+                         VisitedNonBrokenSymlinks.end(),
+                         ExpectedNonBrokenSymlinks.begin()));
+  VisitedNonBrokenSymlinks.clear();
+
+  ExpectedBrokenSymlinks = {};
+  ASSERT_EQ(ExpectedBrokenSymlinks.size(), VisitedBrokenSymlinks.size());
+  ASSERT_TRUE(std::equal(VisitedBrokenSymlinks.begin(),
+                         VisitedBrokenSymlinks.end(),
+                         ExpectedBrokenSymlinks.begin()));
+  VisitedBrokenSymlinks.clear();
 
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/symlink"));
 }

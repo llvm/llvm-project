@@ -3343,7 +3343,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    cbtw # sched: [1:0.33]
 ; GENERIC-NEXT:    cltd # sched: [1:0.50]
-; GENERIC-NEXT:    cltq # sched: [1:0.50]
+; GENERIC-NEXT:    cltq # sched: [1:0.33]
 ; GENERIC-NEXT:    cqto # sched: [1:0.50]
 ; GENERIC-NEXT:    cwtd # sched: [2:1.00]
 ; GENERIC-NEXT:    cwtl # sched: [1:0.33]
@@ -3379,7 +3379,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    cbtw # sched: [1:0.33]
 ; SANDY-NEXT:    cltd # sched: [1:0.50]
-; SANDY-NEXT:    cltq # sched: [1:0.50]
+; SANDY-NEXT:    cltq # sched: [1:0.33]
 ; SANDY-NEXT:    cqto # sched: [1:0.50]
 ; SANDY-NEXT:    cwtd # sched: [2:1.00]
 ; SANDY-NEXT:    cwtl # sched: [1:0.33]
@@ -3391,7 +3391,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    cbtw # sched: [1:0.25]
 ; HASWELL-NEXT:    cltd # sched: [1:0.50]
-; HASWELL-NEXT:    cltq # sched: [1:0.50]
+; HASWELL-NEXT:    cltq # sched: [1:0.25]
 ; HASWELL-NEXT:    cqto # sched: [1:0.50]
 ; HASWELL-NEXT:    cwtd # sched: [2:0.50]
 ; HASWELL-NEXT:    cwtl # sched: [1:0.25]
@@ -3403,7 +3403,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    cbtw # sched: [1:0.25]
 ; BROADWELL-NEXT:    cltd # sched: [1:0.50]
-; BROADWELL-NEXT:    cltq # sched: [1:0.50]
+; BROADWELL-NEXT:    cltq # sched: [1:0.25]
 ; BROADWELL-NEXT:    cqto # sched: [1:0.50]
 ; BROADWELL-NEXT:    cwtd # sched: [2:0.50]
 ; BROADWELL-NEXT:    cwtl # sched: [1:0.25]
@@ -3415,7 +3415,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:    cbtw # sched: [1:0.25]
 ; SKYLAKE-NEXT:    cltd # sched: [1:0.50]
-; SKYLAKE-NEXT:    cltq # sched: [1:0.50]
+; SKYLAKE-NEXT:    cltq # sched: [1:0.25]
 ; SKYLAKE-NEXT:    cqto # sched: [1:0.50]
 ; SKYLAKE-NEXT:    cwtd # sched: [2:0.50]
 ; SKYLAKE-NEXT:    cwtl # sched: [1:0.25]
@@ -3427,7 +3427,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    cbtw # sched: [1:0.25]
 ; SKX-NEXT:    cltd # sched: [1:0.50]
-; SKX-NEXT:    cltq # sched: [1:0.50]
+; SKX-NEXT:    cltq # sched: [1:0.25]
 ; SKX-NEXT:    cqto # sched: [1:0.50]
 ; SKX-NEXT:    cwtd # sched: [2:0.50]
 ; SKX-NEXT:    cwtl # sched: [1:0.25]
@@ -7385,7 +7385,7 @@ define void @test_leave() optsize {
 ; GENERIC-LABEL: test_leave:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    leave # sched: [3:1.00]
+; GENERIC-NEXT:    leave # sched: [7:0.67]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7406,7 +7406,7 @@ define void @test_leave() optsize {
 ; SANDY-LABEL: test_leave:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    leave # sched: [3:1.00]
+; SANDY-NEXT:    leave # sched: [7:0.67]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7669,8 +7669,8 @@ define void @test_movnti(i32 %a0, i32 *%a1, i64 %a2, i64 *%a3) optsize {
 ; GENERIC-LABEL: test_movnti:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    movntil %edi, (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    movntiq %rdx, (%rcx) # sched: [5:1.00]
+; GENERIC-NEXT:    movntil %edi, (%rsi) # sched: [1:1.00]
+; GENERIC-NEXT:    movntiq %rdx, (%rcx) # sched: [1:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7693,8 +7693,8 @@ define void @test_movnti(i32 %a0, i32 *%a1, i64 %a2, i64 *%a3) optsize {
 ; SANDY-LABEL: test_movnti:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    movntil %edi, (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    movntiq %rdx, (%rcx) # sched: [5:1.00]
+; SANDY-NEXT:    movntil %edi, (%rsi) # sched: [1:1.00]
+; SANDY-NEXT:    movntiq %rdx, (%rcx) # sched: [1:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13540,22 +13540,22 @@ define void @test_setcc(i8 %a0, i8 *%a1) optsize {
 ; GENERIC-NEXT:    setge %dil # sched: [1:0.50]
 ; GENERIC-NEXT:    setle %dil # sched: [1:0.50]
 ; GENERIC-NEXT:    setg %dil # sched: [1:0.50]
-; GENERIC-NEXT:    seto (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setno (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setb (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setae (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    sete (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setne (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setbe (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    seta (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    sets (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setns (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setp (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setnp (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setl (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setge (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setle (%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    setg (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    seto (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setno (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setb (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setae (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    sete (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setne (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setbe (%rsi) # sched: [3:1.00]
+; GENERIC-NEXT:    seta (%rsi) # sched: [3:1.00]
+; GENERIC-NEXT:    sets (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setns (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setp (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setnp (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setl (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setge (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setle (%rsi) # sched: [2:1.00]
+; GENERIC-NEXT:    setg (%rsi) # sched: [2:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13654,22 +13654,22 @@ define void @test_setcc(i8 %a0, i8 *%a1) optsize {
 ; SANDY-NEXT:    setge %dil # sched: [1:0.50]
 ; SANDY-NEXT:    setle %dil # sched: [1:0.50]
 ; SANDY-NEXT:    setg %dil # sched: [1:0.50]
-; SANDY-NEXT:    seto (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setno (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setb (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setae (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    sete (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setne (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setbe (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    seta (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    sets (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setns (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setp (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setnp (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setl (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setge (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setle (%rsi) # sched: [5:1.00]
-; SANDY-NEXT:    setg (%rsi) # sched: [5:1.00]
+; SANDY-NEXT:    seto (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setno (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setb (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setae (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    sete (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setne (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setbe (%rsi) # sched: [3:1.00]
+; SANDY-NEXT:    seta (%rsi) # sched: [3:1.00]
+; SANDY-NEXT:    sets (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setns (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setp (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setnp (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setl (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setge (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setle (%rsi) # sched: [2:1.00]
+; SANDY-NEXT:    setg (%rsi) # sched: [2:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
