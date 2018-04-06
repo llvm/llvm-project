@@ -769,9 +769,9 @@ static bool isSafeIncreasingBound(const SCEV *Start,
     return false;
 
   DEBUG(dbgs() << "irce: isSafeIncreasingBound with:\n");
-  DEBUG(dbgs() << "irce: Start: " << *Start);
-  DEBUG(dbgs() << "irce: Step: " << *Step);
-  DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV);
+  DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
+  DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
+  DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
   DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred) << "\n");
   DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
 

@@ -572,6 +572,68 @@ nub_addr_t MachProcess::GetTSDAddressForThread(
       plo_pthread_tsd_entry_size);
 }
 
+
+const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
+                                           uint64_t load_command_address,
+                                           uint32_t& major_version,
+                                           uint32_t& minor_version,
+                                           uint32_t& patch_version) {
+  uint32_t cmd = lc.cmd & ~LC_REQ_DYLD;
+  bool lc_cmd_known =
+    cmd == LC_VERSION_MIN_IPHONEOS || cmd == LC_VERSION_MIN_MACOSX ||
+    cmd == LC_VERSION_MIN_TVOS || cmd == LC_VERSION_MIN_WATCHOS;
+
+  if (lc_cmd_known) {
+    struct version_min_command vers_cmd;
+    if (ReadMemory(load_command_address, sizeof(struct version_min_command),
+                   &vers_cmd) != sizeof(struct version_min_command)) {
+      return nullptr;
+    }
+    major_version = vers_cmd.sdk >> 16;
+    minor_version = (vers_cmd.sdk >> 8) & 0xffu;
+    patch_version = vers_cmd.sdk & 0xffu;
+
+    switch (cmd) {
+    case LC_VERSION_MIN_IPHONEOS:
+      return "iphoneos";
+    case LC_VERSION_MIN_MACOSX:
+      return "macosx";
+    case LC_VERSION_MIN_TVOS:
+      return "tvos";
+    case LC_VERSION_MIN_WATCHOS:
+      return "watchos";
+    default:
+      return nullptr;
+    }
+  }
+#if defined (LC_BUILD_VERSION)
+  if (cmd == LC_BUILD_VERSION) {
+    struct build_version_command build_vers;
+    if (ReadMemory(load_command_address, sizeof(struct build_version_command),
+                   &build_vers) != sizeof(struct build_version_command)) {
+      return nullptr;
+    }
+    major_version = build_vers.sdk >> 16;;
+    minor_version = (build_vers.sdk >> 8) & 0xffu;
+    patch_version = build_vers.sdk & 0xffu;
+
+    switch (build_vers.platform) {
+    case PLATFORM_MACOS:
+      return "macosx";
+    case PLATFORM_IOS:
+      return "iphoneos";
+    case PLATFORM_TVOS:
+      return "tvos";
+    case PLATFORM_WATCHOS:
+      return "watchos";
+    case PLATFORM_BRIDGEOS:
+      return "bridgeos";
+    }
+  }
+#endif
+  return nullptr;
+}
+
 // Given an address, read the mach-o header and load commands out of memory to
 // fill in
 // the mach_o_information "inf" object.
@@ -670,91 +732,22 @@ bool MachProcess::GetMachOInformationFromMemory(
           sizeof(struct uuid_command))
         uuid_copy(inf.uuid, uuidcmd.uuid);
     }
-    bool lc_cmd_known =
-        lc.cmd == LC_VERSION_MIN_IPHONEOS || lc.cmd == LC_VERSION_MIN_MACOSX;
-#if defined(LC_VERSION_MIN_TVOS)
-    lc_cmd_known |= lc.cmd == LC_VERSION_MIN_TVOS;
-#endif
-#if defined(LC_VERSION_MIN_WATCHOS)
-    lc_cmd_known |= lc.cmd == LC_VERSION_MIN_WATCHOS;
-#endif
-    if (lc_cmd_known) {
-      struct version_min_command vers_cmd;
-      if (ReadMemory(load_cmds_p, sizeof(struct version_min_command),
-                     &vers_cmd) != sizeof(struct version_min_command)) {
-        return false;
-      }
-      switch (lc.cmd) {
-      case LC_VERSION_MIN_IPHONEOS:
-        inf.min_version_os_name = "iphoneos";
-        break;
-      case LC_VERSION_MIN_MACOSX:
-        inf.min_version_os_name = "macosx";
-        break;
-#if defined(LC_VERSION_MIN_TVOS)
-      case LC_VERSION_MIN_TVOS:
-        inf.min_version_os_name = "tvos";
-        break;
-#endif
-#if defined(LC_VERSION_MIN_WATCHOS)
-      case LC_VERSION_MIN_WATCHOS:
-        inf.min_version_os_name = "watchos";
-        break;
-#endif
-      default:
-        return false;
-      }
-      uint32_t xxxx = vers_cmd.sdk >> 16;
-      uint32_t yy = (vers_cmd.sdk >> 8) & 0xffu;
-      uint32_t zz = vers_cmd.sdk & 0xffu;
+
+    uint32_t major_version, minor_version, patch_version;
+    if (const char *platform = GetDeploymentInfo(lc, load_cmds_p,
+                                                 major_version, minor_version,
+                                                 patch_version)) {
+      inf.min_version_os_name = platform;
       inf.min_version_os_version = "";
-      inf.min_version_os_version += std::to_string(xxxx);
+      inf.min_version_os_version += std::to_string(major_version);
       inf.min_version_os_version += ".";
-      inf.min_version_os_version += std::to_string(yy);
-      if (zz != 0) {
+      inf.min_version_os_version += std::to_string(minor_version);
+      if (patch_version != 0) {
         inf.min_version_os_version += ".";
-        inf.min_version_os_version += std::to_string(zz);
+        inf.min_version_os_version += std::to_string(patch_version);
       }
     }
-#if defined (LC_BUILD_VERSION)
-    if (lc.cmd == LC_BUILD_VERSION)
-    {
-        struct build_version_command build_vers;
-        if (ReadMemory(load_cmds_p, sizeof(struct build_version_command),
-                       &build_vers) != sizeof(struct build_version_command)) {
-          return false;
-        }
-        switch (build_vers.platform)
-        {
-            case PLATFORM_MACOS:
-                inf.min_version_os_name = "macosx";
-                break;
-            case PLATFORM_IOS:
-                inf.min_version_os_name = "iphoneos";
-                break;
-            case PLATFORM_TVOS:
-                inf.min_version_os_name = "tvos";
-                break;
-            case PLATFORM_WATCHOS:
-                inf.min_version_os_name = "watchos";
-                break;
-            case PLATFORM_BRIDGEOS:
-                inf.min_version_os_name = "bridgeos";
-                break;
-        }
-        uint32_t xxxx = build_vers.sdk >> 16;;
-        uint32_t yy = (build_vers.sdk >> 8) & 0xffu;
-        uint32_t zz = build_vers.sdk & 0xffu;
-        inf.min_version_os_version = "";
-        inf.min_version_os_version += std::to_string(xxxx);
-        inf.min_version_os_version += ".";
-        inf.min_version_os_version += std::to_string(yy);
-        if (zz != 0) {
-            inf.min_version_os_version += ".";
-            inf.min_version_os_version += std::to_string(zz);
-        }
-    }
-#endif
+
     load_cmds_p += lc.cmdsize;
   }
   return true;

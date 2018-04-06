@@ -672,7 +672,7 @@ const DWARFDebugLoc *DWARFContext::getDebugLoc() {
     return Loc.get();
 
   Loc.reset(new DWARFDebugLoc);
-  // assume all compile units have the same address byte size
+  // Assume all compile units have the same address byte size.
   if (getNumCompileUnits()) {
     DWARFDataExtractor LocData(*DObj, DObj->getLocSection(), isLittleEndian(),
                                getCompileUnitAtIndex(0)->getAddressByteSize());
@@ -685,9 +685,13 @@ const DWARFDebugLocDWO *DWARFContext::getDebugLocDWO() {
   if (LocDWO)
     return LocDWO.get();
 
-  DataExtractor LocData(DObj->getLocDWOSection().Data, isLittleEndian(), 0);
   LocDWO.reset(new DWARFDebugLocDWO());
-  LocDWO->parse(LocData);
+  // Assume all compile units have the same address byte size.
+  if (getNumCompileUnits()) {
+    DataExtractor LocData(DObj->getLocDWOSection().Data, isLittleEndian(),
+                          getCompileUnitAtIndex(0)->getAddressByteSize());
+    LocDWO->parse(LocData);
+  }
   return LocDWO.get();
 }
 
