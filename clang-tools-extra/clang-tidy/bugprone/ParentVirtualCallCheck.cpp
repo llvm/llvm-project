@@ -11,8 +11,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 #include <cctype>
 
 using namespace clang::ast_matchers;
@@ -27,11 +27,13 @@ static bool isParentOf(const CXXRecordDecl &Parent,
                        const CXXRecordDecl &ThisClass) {
   if (Parent.getCanonicalDecl() == ThisClass.getCanonicalDecl())
     return true;
-  const auto ClassIter = llvm::find_if(ThisClass.bases(), [=](auto &Base) {
-    auto *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    assert(BaseDecl);
-    return Parent.getCanonicalDecl() == BaseDecl->getCanonicalDecl();
-  });
+  const auto ClassIter = std::find_if(
+      ThisClass.bases().begin(), ThisClass.bases().end(),
+      [=](const CXXBaseSpecifier &Base) {
+        auto *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+        assert(BaseDecl);
+        return Parent.getCanonicalDecl() == BaseDecl->getCanonicalDecl();
+      });
   return ClassIter != ThisClass.bases_end();
 }
 
@@ -74,7 +76,8 @@ static std::string getNameAsString(const NamedDecl *Decl) {
 static std::string getExprAsString(const clang::Expr &E,
                                    clang::ASTContext &AC) {
   std::string Text = tooling::fixit::getText(E, AC).str();
-  Text.erase(llvm::remove_if(Text, std::isspace), Text.end());
+  Text.erase(std::remove_if(Text.begin(), Text.end(), std::isspace),
+             Text.end());
   return Text;
 }
 
