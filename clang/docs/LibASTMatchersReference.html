@@ -3891,6 +3891,17 @@ This matcher is only provided as a performance optimization of hasName.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;internal::Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;&gt;</td><td class="name" onclick="toggle('hasAnySelector0')"><a name="hasAnySelector0Anchor">hasAnySelector</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnySelector0"><pre>Matches when at least one of the supplied string equals to the
+Selector.getAsString()
+
+ matcher = objCMessageExpr(hasSelector("methodA:", "methodB:"));
+ matches both of the expressions below:
+    [myObj methodA:argA];
+    [myObj methodB:argB];
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;internal::Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;&gt;</td><td class="name" onclick="toggle('isInTemplateInstantiation0')"><a name="isInTemplateInstantiation0Anchor">isInTemplateInstantiation</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isInTemplateInstantiation0"><pre>Matches statements inside of a template instantiation.
 

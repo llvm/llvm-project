@@ -2313,9 +2313,7 @@ inline internal::Matcher<Stmt> sizeOfExpr(
 ///   namespace a { namespace b { class X; } }
 /// \endcode
 inline internal::Matcher<NamedDecl> hasName(const std::string &Name) {
-  std::vector<std::string> Names;
-  Names.push_back(Name);
-  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher(Names));
+  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher({Name}));
 }
 
 /// \brief Matches NamedDecl nodes that have any of the specified names.
@@ -2709,7 +2707,7 @@ AST_MATCHER_P(ObjCMessageExpr, hasReceiverType, internal::Matcher<QualType>,
   const QualType TypeDecl = Node.getReceiverType();
   return InnerMatcher.matches(TypeDecl, Finder, Builder);
 }
-  
+
 /// \brief Matches when BaseName == Selector.getAsString()
 ///
 ///  matcher = objCMessageExpr(hasSelector("loadHTMLString:baseURL:"));
@@ -2723,7 +2721,21 @@ AST_MATCHER_P(ObjCMessageExpr, hasSelector, std::string, BaseName) {
   return BaseName.compare(Sel.getAsString()) == 0;
 }
 
-  
+
+/// \brief Matches when at least one of the supplied string equals to the
+/// Selector.getAsString()
+///
+///  matcher = objCMessageExpr(hasSelector("methodA:", "methodB:"));
+///  matches both of the expressions below:
+/// \code
+///     [myObj methodA:argA];
+///     [myObj methodB:argB];
+/// \endcode
+extern const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>,
+                                        StringRef,
+                                        internal::hasAnySelectorFunc>
+                                        hasAnySelector;
+
 /// \brief Matches ObjC selectors whose name contains
 /// a substring matched by the given RegExp.
 ///  matcher = objCMessageExpr(matchesSelector("loadHTMLString\:baseURL?"));
