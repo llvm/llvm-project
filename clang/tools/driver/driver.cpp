@@ -314,13 +314,10 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
     return cc1_main(argv.slice(2), argv[0], GetExecutablePathVP);
   if (Tool == "as")
     return cc1as_main(argv.slice(2), argv[0], GetExecutablePathVP);
-<<<<<<< HEAD
   if (Tool == "apinotes")
     return cc1apinotes_main(argv.slice(2), argv[0], GetExecutablePathVP);
-=======
   if (Tool == "gen-reproducer")
     return cc1gen_reproducer_main(argv.slice(2), argv[0], GetExecutablePathVP);
->>>>>>> llvm.org/master
 
   // Reject unknown tools.
   llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
