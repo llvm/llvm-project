@@ -87,17 +87,6 @@ bool ARMFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
          MF.getSubtarget<ARMSubtarget>().useFastISel();
 }
 
-/// Returns true if the target can safely skip saving callee-saved registers
-/// for noreturn nounwind functions.
-bool ARMFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
-  assert(MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
-      MF.getFunction().hasFnAttribute(Attribute::NoUnwind));
-
-  // Frame pointer and link register are not treated as normal CSR, thus we
-  // can always skip CSR saves for nonreturning functions.
-  return true;
-}
-
 /// hasFP - Return true if the specified function should have a dedicated frame
 /// pointer register.  This is true if the function has variable sized allocas
 /// or if frame pointer elimination is disabled.

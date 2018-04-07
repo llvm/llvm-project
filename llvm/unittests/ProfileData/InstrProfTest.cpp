@@ -712,7 +712,7 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
   };
   std::unique_ptr<InstrProfValueData[]> VD_0(
       Record.getValueForSite(IPVK_IndirectCallTarget, 0));
-  std::sort(&VD_0[0], &VD_0[5], Cmp);
+  llvm::sort(&VD_0[0], &VD_0[5], Cmp);
   ASSERT_EQ(StringRef((const char *)VD_0[0].Value, 7), StringRef("callee2"));
   ASSERT_EQ(1000U, VD_0[0].Count);
   ASSERT_EQ(StringRef((const char *)VD_0[1].Value, 7), StringRef("callee3"));
@@ -726,7 +726,7 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
 
   std::unique_ptr<InstrProfValueData[]> VD_1(
       Record.getValueForSite(IPVK_IndirectCallTarget, 1));
-  std::sort(&VD_1[0], &VD_1[4], Cmp);
+  llvm::sort(&VD_1[0], &VD_1[4], Cmp);
   ASSERT_EQ(StringRef((const char *)VD_1[0].Value, 7), StringRef("callee2"));
   ASSERT_EQ(2500U, VD_1[0].Count);
   ASSERT_EQ(StringRef((const char *)VD_1[1].Value, 7), StringRef("callee1"));
@@ -738,7 +738,7 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
 
   std::unique_ptr<InstrProfValueData[]> VD_2(
       Record.getValueForSite(IPVK_IndirectCallTarget, 2));
-  std::sort(&VD_2[0], &VD_2[3], Cmp);
+  llvm::sort(&VD_2[0], &VD_2[3], Cmp);
   ASSERT_EQ(StringRef((const char *)VD_2[0].Value, 7), StringRef("callee4"));
   ASSERT_EQ(5500U, VD_2[0].Count);
   ASSERT_EQ(StringRef((const char *)VD_2[1].Value, 7), StringRef("callee3"));
@@ -748,7 +748,7 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
 
   std::unique_ptr<InstrProfValueData[]> VD_3(
       Record.getValueForSite(IPVK_IndirectCallTarget, 3));
-  std::sort(&VD_3[0], &VD_3[2], Cmp);
+  llvm::sort(&VD_3[0], &VD_3[2], Cmp);
   ASSERT_EQ(StringRef((const char *)VD_3[0].Value, 7), StringRef("callee3"));
   ASSERT_EQ(2000U, VD_3[0].Count);
   ASSERT_EQ(StringRef((const char *)VD_3[1].Value, 7), StringRef("callee2"));
@@ -781,7 +781,7 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
   };
   std::unique_ptr<InstrProfValueData[]> VD_0(
       Record.getValueForSite(IPVK_IndirectCallTarget, 0));
-  std::sort(&VD_0[0], &VD_0[5], Cmp);
+  llvm::sort(&VD_0[0], &VD_0[5], Cmp);
   ASSERT_EQ(VD_0[0].Value, 0x2000ULL);
   ASSERT_EQ(1000U, VD_0[0].Count);
   ASSERT_EQ(VD_0[1].Value, 0x3000ULL);

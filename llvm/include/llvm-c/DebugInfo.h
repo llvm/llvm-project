@@ -218,6 +218,56 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
                         size_t DirectoryLen);
 
 /**
+ * Create a new descriptor for the specified subprogram.
+ * \param Builder         The \c DIBuilder.
+ * \param Scope           Function scope.
+ * \param Name            Function name.
+ * \param NameLen         Length of enumeration name.
+ * \param LinkageName     Mangled function name.
+ * \param LinkageNameLen  Length of linkage name.
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
+ * \param Ty              Function type.
+ * \param IsLocalToUnit   True if this function is not externally visible.
+ * \param IsDefinition    True if this is a function definition.
+ * \param ScopeLine       Set to the beginning of the scope this starts
+ * \param Flags           E.g.: \c LLVMDIFlagLValueReference. These flags are
+ *                        used to emit dwarf attributes.
+ * \param IsOptimized     True if optimization is ON.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateFunction(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, const char *LinkageName, size_t LinkageNameLen,
+    LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
+    LLVMBool IsLocalToUnit, LLVMBool IsDefinition,
+    unsigned ScopeLine, LLVMDIFlags Flags, LLVMBool IsOptimized);
+
+/**
+ * Create a descriptor for a lexical block with the specified parent context.
+ * \param Builder      The \c DIBuilder.
+ * \param Scope        Parent lexical block.
+ * \param File         Source file.
+ * \param Line         The line in the source file.
+ * \param Column       The column in the source file.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope,
+    LLVMMetadataRef File, unsigned Line, unsigned Column);
+
+/**
+ * Create a descriptor for a lexical block with a new file attached.
+ * \param Builder        The \c DIBuilder.
+ * \param Scope          Lexical block.
+ * \param File           Source file.
+ * \param Discriminator  DWARF path discriminator value.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateLexicalBlockFile(LLVMDIBuilderRef Builder,
+                                    LLVMMetadataRef Scope,
+                                    LLVMMetadataRef File,
+                                    unsigned Discriminator);
+
+/**
  * Creates a new DebugLocation that describes a source location.
  * \param Line The line in the source file.
  * \param Column The column in the source file.
@@ -559,6 +609,20 @@ LLVMMetadataRef LLVMDIBuilderCreateClassType(LLVMDIBuilderRef Builder,
 LLVMMetadataRef
 LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
                                   LLVMMetadataRef Type);
+
+/**
+ * Get the metadata of the subprogram attached to a function.
+ *
+ * @see llvm::Function::getSubprogram()
+ */
+LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func);
+
+/**
+ * Set the subprogram attached to a function.
+ *
+ * @see llvm::Function::setSubprogram()
+ */
+void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP);
 
 #ifdef __cplusplus
 } /* end extern "C" */

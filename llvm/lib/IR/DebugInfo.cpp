@@ -754,6 +754,38 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
                                           StringRef(Directory, DirectoryLen)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateFunction(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, const char *LinkageName, size_t LinkageNameLen,
+    LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
+    LLVMBool IsLocalToUnit, LLVMBool IsDefinition,
+    unsigned ScopeLine, LLVMDIFlags Flags, LLVMBool IsOptimized) {
+  return wrap(unwrap(Builder)->createFunction(
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, {LinkageName, LinkageNameLen},
+      unwrapDI<DIFile>(File), LineNo, unwrapDI<DISubroutineType>(Ty),
+      IsLocalToUnit, IsDefinition, ScopeLine, map_from_llvmDIFlags(Flags),
+      IsOptimized, nullptr, nullptr, nullptr));
+}
+
+
+LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope,
+    LLVMMetadataRef File, unsigned Line, unsigned Col) {
+  return wrap(unwrap(Builder)->createLexicalBlock(unwrapDI<DIScope>(Scope),
+                                                  unwrapDI<DIFile>(File),
+                                                  Line, Col));
+}
+
+LLVMMetadataRef
+LLVMDIBuilderCreateLexicalBlockFile(LLVMDIBuilderRef Builder,
+                                    LLVMMetadataRef Scope,
+                                    LLVMMetadataRef File,
+                                    unsigned Discriminator) {
+  return wrap(unwrap(Builder)->createLexicalBlockFile(unwrapDI<DIScope>(Scope),
+                                                      unwrapDI<DIFile>(File),
+                                                      Discriminator));
+}
+
 LLVMMetadataRef
 LLVMDIBuilderCreateDebugLocation(LLVMContextRef Ctx, unsigned Line,
                                  unsigned Column, LLVMMetadataRef Scope,
@@ -941,4 +973,12 @@ LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
                                                      NumParameterTypes});
   return wrap(unwrap(Builder)->createSubroutineType(
     Elts, map_from_llvmDIFlags(Flags)));
+}
+
+LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func) {
+  return wrap(unwrap<Function>(Func)->getSubprogram());
+}
+
+void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP) {
+  unwrap<Function>(Func)->setSubprogram(unwrap<DISubprogram>(SP));
 }

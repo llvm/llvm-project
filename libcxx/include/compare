@@ -639,7 +639,7 @@ constexpr auto __get_comp_type() {
   constexpr _CCC _Cat = sizeof...(_Ts) == 0 ? _StrongOrd
       : __compute_comp_type(__type_kinds);
   if constexpr (_Cat == _None)
-    return ((void)0);
+    return void();
   else if constexpr (_Cat == _WeakEq)
     return weak_equality::equivalent;
   else if constexpr (_Cat == _StrongEq)
