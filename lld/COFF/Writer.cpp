@@ -209,12 +209,23 @@ private:
   OutputSection *TextSec;
   OutputSection *RdataSec;
   OutputSection *DataSec;
-  OutputSection *PdataSec;
   OutputSection *IdataSec;
   OutputSection *EdataSec;
   OutputSection *DidatSec;
   OutputSection *RsrcSec;
   OutputSection *RelocSec;
+
+  // The first and last .pdata sections in the output file.
+  //
+  // We need to keep track of the location of .pdata in whichever section it
+  // gets merged into so that we can sort its contents and emit a correct data
+  // directory entry for the exception table. This is also the case for some
+  // other sections (such as .edata) but because the contents of those sections
+  // are entirely linker-generated we can keep track of their locations using
+  // the chunks that the linker creates. All .pdata chunks come from input
+  // files, so we need to keep track of them separately.
+  Chunk *FirstPdata = nullptr;
+  Chunk *LastPdata;
 };
 } // anonymous namespace
 
@@ -362,17 +373,12 @@ void Writer::run() {
     fatal("failed to write the output file: " + toString(std::move(E)));
 }
 
-static StringRef getOutputSection(StringRef Name) {
+static StringRef getOutputSectionName(StringRef Name) {
   StringRef S = Name.split('$').first;
 
   // Treat a later period as a separator for MinGW, for sections like
   // ".ctors.01234".
-  S = S.substr(0, S.find('.', 1));
-
-  auto It = Config->Merge.find(S);
-  if (It == Config->Merge.end())
-    return S;
-  return It->second;
+  return S.substr(0, S.find('.', 1));
 }
 
 // For /order.
@@ -403,10 +409,15 @@ void Writer::createSections() {
 
   SmallDenseMap<StringRef, OutputSection *> Sections;
   auto CreateSection = [&](StringRef Name, uint32_t Perms) {
-    auto Sec = make<OutputSection>(Name);
+    auto I = Config->Merge.find(Name);
+    if (I != Config->Merge.end())
+      Name = I->second;
+    OutputSection *&Sec = Sections[Name];
+    if (!Sec) {
+      Sec = make<OutputSection>(Name);
+      OutputSections.push_back(Sec);
+    }
     Sec->addPermissions(Perms);
-    OutputSections.push_back(Sec);
-    Sections[Name] = Sec;
     return Sec;
   };
 
@@ -415,7 +426,7 @@ void Writer::createSections() {
   CreateSection(".bss", BSS | R | W);
   RdataSec = CreateSection(".rdata", DATA | R);
   DataSec = CreateSection(".data", DATA | R | W);
-  PdataSec = CreateSection(".pdata", DATA | R);
+  CreateSection(".pdata", DATA | R);
   IdataSec = CreateSection(".idata", DATA | R);
   EdataSec = CreateSection(".edata", DATA | R);
   DidatSec = CreateSection(".didat", DATA | R);
@@ -444,12 +455,13 @@ void Writer::createSections() {
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
   for (auto Pair : Map) {
-    StringRef Name = getOutputSection(Pair.first);
-    OutputSection *&Sec = Sections[Name];
-    if (!Sec) {
-      Sec = make<OutputSection>(Name);
-      OutputSections.push_back(Sec);
+    StringRef Name = getOutputSectionName(Pair.first);
+    if (Name == ".pdata") {
+      if (!FirstPdata)
+        FirstPdata = Pair.second.front();
+      LastPdata = Pair.second.back();
     }
+    OutputSection *Sec = CreateSection(Name, 0);
     std::vector<Chunk *> &Chunks = Pair.second;
     for (Chunk *C : Chunks) {
       Sec->addChunk(C);
@@ -838,9 +850,9 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // Write data directory
   auto *Dir = reinterpret_cast<data_directory *>(Buf);
   Buf += sizeof(*Dir) * NumberfOfDataDirectory;
-  if (EdataSec->getVirtualSize()) {
-    Dir[EXPORT_TABLE].RelativeVirtualAddress = EdataSec->getRVA();
-    Dir[EXPORT_TABLE].Size = EdataSec->getVirtualSize();
+  if (!Config->Exports.empty()) {
+    Dir[EXPORT_TABLE].RelativeVirtualAddress = Edata.getRVA();
+    Dir[EXPORT_TABLE].Size = Edata.getSize();
   }
   if (!Idata.empty()) {
     Dir[IMPORT_TABLE].RelativeVirtualAddress = Idata.getDirRVA();
@@ -852,9 +864,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     Dir[RESOURCE_TABLE].RelativeVirtualAddress = RsrcSec->getRVA();
     Dir[RESOURCE_TABLE].Size = RsrcSec->getVirtualSize();
   }
-  if (PdataSec->getVirtualSize()) {
-    Dir[EXCEPTION_TABLE].RelativeVirtualAddress = PdataSec->getRVA();
-    Dir[EXCEPTION_TABLE].Size = PdataSec->getVirtualSize();
+  if (FirstPdata) {
+    Dir[EXCEPTION_TABLE].RelativeVirtualAddress = FirstPdata->getRVA();
+    Dir[EXCEPTION_TABLE].Size =
+        LastPdata->getRVA() + LastPdata->getSize() - FirstPdata->getRVA();
   }
   if (RelocSec->getVirtualSize()) {
     Dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = RelocSec->getRVA();
@@ -1159,11 +1172,15 @@ void Writer::writeBuildId() {
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.
 void Writer::sortExceptionTable() {
-  if (PdataSec->getVirtualSize() == 0)
+  if (!FirstPdata)
     return;
   // We assume .pdata contains function table entries only.
-  uint8_t *Begin = Buffer->getBufferStart() + PdataSec->getFileOff();
-  uint8_t *End = Begin + PdataSec->getVirtualSize();
+  auto BufAddr = [&](Chunk *C) {
+    return Buffer->getBufferStart() + C->getOutputSection()->getFileOff() +
+           C->getRVA() - C->getOutputSection()->getRVA();
+  };
+  uint8_t *Begin = BufAddr(FirstPdata);
+  uint8_t *End = BufAddr(LastPdata) + LastPdata->getSize();
   if (Config->Machine == AMD64) {
     struct Entry { ulittle32_t Begin, End, Unwind; };
     sort(parallel::par, (Entry *)Begin, (Entry *)End,
