@@ -111,6 +111,12 @@ static cl::opt<std::string> ClWriteSummary(
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    ClThreshold("wholeprogramdevirt-branch-funnel-threshold", cl::Hidden,
+                cl::init(10), cl::ZeroOrMore,
+                cl::desc("Maximum number of call targets per "
+                         "call site to enable branch funnels"));
+
 // Find the minimum offset that we may store a value of size Size bits at. If
 // IsAfter is set, look for an offset before the object, otherwise look for an
 // offset after the object.
@@ -820,8 +826,7 @@ void DevirtModule::tryICallBranchFunnel(
   if (T.getArch() != Triple::x86_64)
     return;
 
-  const unsigned kBranchFunnelThreshold = 10;
-  if (TargetsForSlot.size() > kBranchFunnelThreshold)
+  if (TargetsForSlot.size() > ClThreshold)
     return;
 
   bool HasNonDevirt = !SlotInfo.CSInfo.AllCallSitesDevirted;

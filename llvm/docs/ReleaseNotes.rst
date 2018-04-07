@@ -58,6 +58,9 @@ Non-comprehensive list of changes in this release
   information available in LLVM to statically predict the performance of
   machine code for a specific CPU.
 
+* The optimization flag to merge constants (-fmerge-all-constants) is no longer
+  applied by default.
+
 * Note..
 
 .. NOTE

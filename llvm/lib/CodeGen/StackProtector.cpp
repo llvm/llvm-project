@@ -36,6 +36,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -182,6 +183,14 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
   return NeedsProtector;
 }
 
+static bool isLifetimeInst(const Instruction *I) {
+  if (const auto Intrinsic = dyn_cast<IntrinsicInst>(I)) {
+    const auto Id = Intrinsic->getIntrinsicID();
+    return Id == Intrinsic::lifetime_start || Id == Intrinsic::lifetime_end;
+  }
+  return false;
+}
+
 bool StackProtector::HasAddressTaken(const Instruction *AI) {
   for (const User *U : AI->users()) {
     if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
@@ -190,8 +199,10 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
     } else if (const PtrToIntInst *SI = dyn_cast<PtrToIntInst>(U)) {
       if (AI == SI->getOperand(0))
         return true;
-    } else if (isa<CallInst>(U)) {
-      return true;
+    } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
+      // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
+      if (!isa<DbgInfoIntrinsic>(CI) && !isLifetimeInst(CI))
+        return true;
     } else if (isa<InvokeInst>(U)) {
       return true;
     } else if (const SelectInst *SI = dyn_cast<SelectInst>(U)) {

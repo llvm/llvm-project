@@ -41,6 +41,7 @@
 #include <clocale>
 #include <cmath>
 #include <codecvt>
+#include <compare>
 #include <complex>
 #include <complex.h>
 #include <condition_variable>

@@ -1196,6 +1196,11 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_COROUTINES
 #endif
 
+// FIXME: Correct this macro when either (A) a feature test macro for the
+// spaceship operator is provided, or (B) a compiler provides a complete
+// implementation.
+#define _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
+
 // Decide whether to use availability macros.
 #if !defined(_LIBCPP_BUILDING_LIBRARY) &&                                      \
     !defined(_LIBCPP_DISABLE_AVAILABILITY) &&                                  \
