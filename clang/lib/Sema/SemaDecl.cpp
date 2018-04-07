@@ -15036,10 +15036,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       QualType::PrimitiveCopyKind PCK = FT.isNonTrivialToPrimitiveCopy();
       if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
         Record->setNonTrivialToPrimitiveCopy(true);
-      if (FT.isDestructedType()) {
+      if (FT.isDestructedType())
         Record->setNonTrivialToPrimitiveDestroy(true);
-        Record->setParamDestroyedInCallee(true);
-      }
       if (!FT.canPassInRegisters())
         Record->setCanPassInRegisters(false);
     }

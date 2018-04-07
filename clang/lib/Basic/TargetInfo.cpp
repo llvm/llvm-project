@@ -356,14 +356,6 @@ bool TargetInfo::initFeatureMap(
   return true;
 }
 
-TargetInfo::CallingConvKind
-TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
-  if (getCXXABI() != TargetCXXABI::Microsoft &&
-      (ClangABICompat4 || getTriple().getOS() == llvm::Triple::PS4))
-    return CCK_ClangABI4OrPS4;
-  return CCK_Default;
-}
-
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {
   switch (TK) {
   case OCLTK_Image:
