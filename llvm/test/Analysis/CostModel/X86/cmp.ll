@@ -256,12 +256,12 @@ define i32 @cmp_int(i32 %arg) {
 ; AVX512BW-LABEL: 'cmp_int'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp eq <16 x i8> undef, undef
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = icmp eq <32 x i8> undef, undef
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V64I8 = icmp eq <64 x i8> undef, undef
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %V128I8 = icmp eq <128 x i8> undef, undef
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64I8 = icmp eq <64 x i8> undef, undef
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V128I8 = icmp eq <128 x i8> undef, undef
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp eq <8 x i16> undef, undef
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = icmp eq <16 x i16> undef, undef
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32I16 = icmp eq <32 x i16> undef, undef
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V64I16 = icmp eq <64 x i16> undef, undef
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = icmp eq <32 x i16> undef, undef
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I16 = icmp eq <64 x i16> undef, undef
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp eq <4 x i32> undef, undef
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp eq <8 x i32> undef, undef
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I32 = icmp eq <16 x i32> undef, undef
