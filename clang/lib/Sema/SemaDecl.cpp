@@ -12287,8 +12287,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       // Try to apply the named return value optimization. We have to check
       // if we can do this here because lambdas keep return statements around
       // to deduce an implicit return type.
-      if (FD->getReturnType()->isRecordType() &&
-          (!getLangOpts().CPlusPlus || !FD->isDependentContext()))
+      if (getLangOpts().CPlusPlus && FD->getReturnType()->isRecordType() &&
+          !FD->isDependentContext())
         computeNRVO(Body, getCurFunction());
     }
 
