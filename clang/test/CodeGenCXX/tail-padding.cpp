@@ -11,7 +11,7 @@ namespace Implicit {
   // CHECK: define {{.*}} @_ZN8Implicit1CC1EOS0_
   // CHECK: call {{.*}} @_ZN8Implicit1AC2ERKS0_(
   // Note: this must memcpy 7 bytes, not 8, to avoid trampling over the virtual base class.
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 7, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i{{32|64}}(i8* {{.*}}, i8* {{.*}}, i{{32|64}} 7, i1 false)
   // CHECK: store i32 {{.*}} @_ZTVN8Implicit1CE
 }
 
@@ -28,7 +28,7 @@ namespace InitWithinNVSize {
   // CHECK: define {{.*}} @_ZN16InitWithinNVSize1CC1EOS0_
   // CHECK: call {{.*}} @_ZN16InitWithinNVSize1AC2ERKS0_(
   // This copies over the 'C::x' member, but that's OK because we've not initialized it yet.
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 8, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i{{32|64}}(i8* {{.*}}, i8* {{.*}}, i{{32|64}} 8, i1 false)
   // CHECK: store i32 {{.*}} @_ZTVN16InitWithinNVSize1CE
   // CHECK: store i8
 }

@@ -22,6 +22,7 @@
 #include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/YAMLParser.h"
 #include <cstdio>
 
 #ifdef __CYGWIN__
@@ -112,7 +113,7 @@ LibclangInvocationReporter::LibclangInvocationReporter(
   // Write out the information about the invocation to it.
   auto WriteStringKey = [&OS](StringRef Key, StringRef Value) {
     OS << R"(")" << Key << R"(":")";
-    OS << Value << '"';
+    OS << llvm::yaml::escape(Value) << '"';
   };
   OS << '{';
   WriteStringKey("toolchain", Idx.getClangToolchainPath());

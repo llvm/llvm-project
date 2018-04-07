@@ -243,6 +243,10 @@ module std [system] {
     header "codecvt"
     export *
   }
+  module compare {
+    header "compare"
+    export *
+  }
   module complex {
     header "complex"
     export *
