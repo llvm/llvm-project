@@ -5,6 +5,8 @@
 
   define void @ret() nounwind { ret void }
 
+  define void @tables() nounwind noreturn uwtable { ret void }
+
   define void @noret() noreturn nounwind {
   start:
     %p = alloca i32
@@ -29,6 +31,18 @@ body: |
 # CHECK: killed $r4
 # CHECK: def $r4
 name: ret
+body: |
+  bb.0:
+    $r4 = IMPLICIT_DEF
+    tBX_RET 14, $noreg
+---
+---
+# This function needs correct unwind tables anyway. Check that $r4 is saved and
+# restored.
+# CHECK-LABEL: name: tables
+# CHECK: killed $r4
+# CHECK: def $r4
+name: tables
 body: |
   bb.0:
     $r4 = IMPLICIT_DEF

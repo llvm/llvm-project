@@ -397,6 +397,51 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 }
 
 /// We want to turn:
+///   (select (icmp eq (and X, Y), 0), (and (lshr X, Z), 1), 1)
+/// into:
+///   zext (icmp ne i32 (and X, (or Y, (shl 1, Z))), 0)
+/// Note:
+///   Z may be 0 if lshr is missing.
+/// Worst case scenario is that we will replace 5 instructions with 5 different
+/// instructions, but we got rid of select.
+static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *IC,
+                                         Value *TrueVal, Value *FalseVal,
+                                         InstCombiner::BuilderTy &Builder) {
+  if (!(IC->hasOneUse() && IC->getOperand(0)->hasOneUse()))
+    return nullptr;
+
+  Value *X, *Y;
+  ICmpInst::Predicate EqPred;
+  if (!(match(IC, m_ICmp(EqPred, m_And(m_Value(X), m_Value(Y)), m_Zero())) &&
+        ICmpInst::Predicate::ICMP_EQ == EqPred && match(FalseVal, m_One())))
+    return nullptr;
+
+  // The TrueVal has general form of:
+  //   and %B, 1
+  Value *B;
+  if (!match(TrueVal, m_OneUse(m_And(m_Value(B), m_One()))))
+    return nullptr;
+
+  // Where %B can be one of:
+  //        %X
+  // or
+  //   lshr %X, %Z
+  // Where %Z may or may not be a constant.
+  Value *MaskB, *Z;
+  if (match(B, m_Specific(X))) {
+    MaskB = ConstantInt::get(SelType, 1);
+  } else if (match(B, m_OneUse(m_LShr(m_Specific(X), m_Value(Z))))) {
+    MaskB = Builder.CreateShl(ConstantInt::get(SelType, 1), Z);
+  } else
+    return nullptr;
+
+  Value *FullMask = Builder.CreateOr(Y, MaskB);
+  Value *MaskedX = Builder.CreateAnd(X, FullMask);
+  Value *ICmpNeZero = Builder.CreateIsNotNull(MaskedX);
+  return new ZExtInst(ICmpNeZero, SelType);
+}
+
+/// We want to turn:
 ///   (select (icmp eq (and X, C1), 0), Y, (or Y, C2))
 /// into:
 ///   (or (shl (and X, C1), C3), Y)
@@ -862,6 +907,10 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
         return replaceInstUsesWith(SI, V);
     }
   }
+
+  if (Instruction *V =
+          foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))
+    return V;
 
   if (Value *V = foldSelectICmpAndOr(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);

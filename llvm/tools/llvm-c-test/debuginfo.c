@@ -44,6 +44,34 @@ int llvm_test_dibuilder(void) {
   LLVMAddNamedMetadataOperand(M, "FooType",
     LLVMMetadataAsValue(LLVMGetModuleContext(M), StructDbgPtrTy));
 
+
+  LLVMTypeRef FooParamTys[] = { LLVMInt64Type(), LLVMInt64Type() };
+  LLVMTypeRef FooFuncTy = LLVMFunctionType(LLVMInt64Type(), FooParamTys, 2, 0);
+  LLVMValueRef FooFunction = LLVMAddFunction(M, "foo", FooFuncTy);
+
+  LLVMMetadataRef ParamTypes[] = {Int64Ty, Int64Ty};
+  LLVMMetadataRef FunctionTy =
+    LLVMDIBuilderCreateSubroutineType(DIB, File, ParamTypes, 2, 0);
+  LLVMMetadataRef FunctionMetadata =
+    LLVMDIBuilderCreateFunction(DIB, File, "foo", 3, "foo", 3,
+                                File, 42, FunctionTy, true, true,
+                                42, 0, false);
+  LLVMSetSubprogram(FooFunction, FunctionMetadata);
+
+  LLVMMetadataRef FooLexicalBlock =
+    LLVMDIBuilderCreateLexicalBlock(DIB, FunctionMetadata, File, 42, 0);
+
+  LLVMValueRef InnerFooFunction =
+    LLVMAddFunction(M, "foo_inner_scope", FooFuncTy);
+  LLVMMetadataRef InnerFunctionMetadata =
+    LLVMDIBuilderCreateFunction(DIB, FooLexicalBlock, "foo_inner_scope", 15,
+                                "foo_inner_scope", 15,
+                                File, 42, FunctionTy, true, true,
+                                42, 0, false);
+  LLVMSetSubprogram(InnerFooFunction, InnerFunctionMetadata);
+
+  LLVMDIBuilderFinalize(DIB);
+
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);
   LLVMDisposeMessage(MStr);

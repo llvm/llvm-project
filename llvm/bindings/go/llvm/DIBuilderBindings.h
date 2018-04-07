@@ -28,22 +28,6 @@ extern "C" {
 
 typedef struct LLVMOpaqueDIBuilder *LLVMDIBuilderRef;
 
-LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(LLVMDIBuilderRef D,
-                                                LLVMMetadataRef Scope,
-                                                LLVMMetadataRef File,
-                                                unsigned Line, unsigned Column);
-
-LLVMMetadataRef LLVMDIBuilderCreateLexicalBlockFile(LLVMDIBuilderRef D,
-                                                    LLVMMetadataRef Scope,
-                                                    LLVMMetadataRef File,
-                                                    unsigned Discriminator);
-
-LLVMMetadataRef LLVMDIBuilderCreateFunction(
-    LLVMDIBuilderRef D, LLVMMetadataRef Scope, const char *Name,
-    const char *LinkageName, LLVMMetadataRef File, unsigned Line,
-    LLVMMetadataRef CompositeType, int IsLocalToUnit, int IsDefinition,
-    unsigned ScopeLine, unsigned Flags, int IsOptimized);
-
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
     LLVMDIBuilderRef D, LLVMMetadataRef Scope, const char *Name,
     LLVMMetadataRef File, unsigned Line, LLVMMetadataRef Ty, int AlwaysPreserve,
