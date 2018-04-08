@@ -28,10 +28,11 @@ define float @neg_sub_nsz(float %x, float %y) {
 }
 
 ; If the subtract has another use, we don't do the transform (even though it
-; doesn't increase the IR instruction count) because we assume that fneg is 
+; doesn't increase the IR instruction count) because we assume that fneg is
 ; easier to analyze and generally cheaper than generic fsub.
 
 declare void @use(float)
+declare void @use2(float, double)
 
 define float @neg_sub_nsz_extra_use(float %x, float %y) {
 ; CHECK-LABEL: @neg_sub_nsz_extra_use(
@@ -144,5 +145,103 @@ define <2 x float> @neg_op1_vec_undef(<2 x float> %x, <2 x float> %y) {
   %negy = fsub <2 x float> <float -0.0, float undef>, %y
   %r = fsub <2 x float> %x, %negy
   ret <2 x float> %r
+}
+
+; Similar to above - but look through fpext/fptrunc casts to find the fneg.
+
+define double @neg_ext_op1(float %a, double %b) {
+; CHECK-LABEL: @neg_ext_op1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[A:%.*]] to double
+; CHECK-NEXT:    [[T3:%.*]] = fadd double [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret double [[T3]]
+;
+  %t1 = fsub float -0.0, %a
+  %t2 = fpext float %t1 to double
+  %t3 = fsub double %b, %t2
+  ret double %t3
+}
+
+; Verify that vectors work too.
+
+define <2 x float> @neg_trunc_op1(<2 x double> %a, <2 x float> %b) {
+; CHECK-LABEL: @neg_trunc_op1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x double> [[A:%.*]] to <2 x float>
+; CHECK-NEXT:    [[T3:%.*]] = fadd <2 x float> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[T3]]
+;
+  %t1 = fsub <2 x double> <double -0.0, double -0.0>, %a
+  %t2 = fptrunc <2 x double> %t1 to <2 x float>
+  %t3 = fsub <2 x float> %b, %t2
+  ret <2 x float> %t3
+}
+
+; No FMF needed, but they should propagate to the fadd.
+
+define double @neg_ext_op1_fast(float %a, double %b) {
+; CHECK-LABEL: @neg_ext_op1_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[A:%.*]] to double
+; CHECK-NEXT:    [[T3:%.*]] = fadd fast double [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret double [[T3]]
+;
+  %t1 = fsub float -0.0, %a
+  %t2 = fpext float %t1 to double
+  %t3 = fsub fast double %b, %t2
+  ret double %t3
+}
+
+; FIXME: Extra use should prevent the transform.
+
+define float @neg_ext_op1_extra_use(half %a, float %b) {
+; CHECK-LABEL: @neg_ext_op1_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = fsub half 0xH8000, [[A:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fpext half [[T1]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext half [[A]] to float
+; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    call void @use(float [[T2]])
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fsub half -0.0, %a
+  %t2 = fpext half %t1 to float
+  %t3 = fsub float %b, %t2
+  call void @use(float %t2)
+  ret float %t3
+}
+
+; One-use fptrunc is always hoisted above fneg, so the corresponding 
+; multi-use bug for fptrunc isn't visible with a fold starting from 
+; the last fsub.
+
+define float @neg_trunc_op1_extra_use(double %a, float %b) {
+; CHECK-LABEL: @neg_trunc_op1_extra_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[A:%.*]] to float
+; CHECK-NEXT:    [[T2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    call void @use(float [[T2]])
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fsub double -0.0, %a
+  %t2 = fptrunc double %t1 to float
+  %t3 = fsub float %b, %t2
+  call void @use(float %t2)
+  ret float %t3
+}
+
+; FIXME: But the bug is visible when both preceding values have other uses.
+; Extra uses should prevent the transform.
+
+define float @neg_trunc_op1_extra_uses(double %a, float %b) {
+; CHECK-LABEL: @neg_trunc_op1_extra_uses(
+; CHECK-NEXT:    [[T1:%.*]] = fsub double -0.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fptrunc double [[T1]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[A]] to float
+; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    call void @use2(float [[T2]], double [[T1]])
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fsub double -0.0, %a
+  %t2 = fptrunc double %t1 to float
+  %t3 = fsub float %b, %t2
+  call void @use2(float %t2, double %t1)
+  ret float %t3
 }
 

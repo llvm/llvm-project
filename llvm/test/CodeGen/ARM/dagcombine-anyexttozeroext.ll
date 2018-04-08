@@ -36,18 +36,14 @@ define float @g(<4 x i16>* nocapture %in) {
   ret float %3
 }
 
-; The backend generates for the following code an
-; (and 0xff (i32 extract_vector_elt (zext load <4 x i8> to 4 x i16)))
-;
-; The and is not redundant and cannot be removed. Since
-; extract_vector_elt is doing an implicit any_ext, the and
-; is required to guarantee that the top bits are set to zero.
-
-; Ideally should be a zext from <4 x i8> to <4 x 32>.
+; Make sure we generate zext from <4 x i8> to <4 x 32>.
 
 ; CHECK-LABEL: h:
 ; CHECK: vld1.32
-; CHECK: uxtb
+; CHECK: vmovl.u8 q8, d16
+; CHECK: vmovl.u16 q8, d16
+; CHECK: vmov r0, r1, d16
+; CHECK: vmov r2, r3, d17
 define <4 x i32> @h(<4 x i8> *%in) {
   %1 = load <4 x i8>, <4 x i8>* %in, align 4
   %2 = extractelement <4 x i8> %1, i32 0

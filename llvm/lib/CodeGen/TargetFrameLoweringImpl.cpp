@@ -36,6 +36,13 @@ bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
   return Attr.getValueAsString() == "true";
 }
 
+bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
+  assert(MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
+         MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+         !MF.getFunction().hasFnAttribute(Attribute::UWTable));
+  return false;
+}
+
 /// Returns the displacement from the frame register to the stack
 /// frame of the specified index, along with the frame register used
 /// (in output arg FrameReg). This is the default implementation which
@@ -83,6 +90,19 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // In Naked functions we aren't going to save any registers.
   if (MF.getFunction().hasFnAttribute(Attribute::Naked))
+    return;
+
+  // Noreturn+nounwind functions never restore CSR, so no saves are needed.
+  // Purely noreturn functions may still return through throws, so those must
+  // save CSR for caller exception handlers.
+  //
+  // If the function uses longjmp to break out of its current path of
+  // execution we do not need the CSR spills either: setjmp stores all CSRs
+  // it was called with into the jmp_buf, which longjmp then restores.
+  if (MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
+        MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+        !MF.getFunction().hasFnAttribute(Attribute::UWTable) &&
+        enableCalleeSaveSkip(MF))
     return;
 
   // Functions which call __builtin_unwind_init get all their registers saved.

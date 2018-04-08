@@ -575,6 +575,10 @@ func (d *DIBuilder) InsertValueAtEnd(v Value, diVarInfo, expr Metadata, bb Basic
 	return Value{C: result}
 }
 
+func (v Value) SetSubprogram(sp Metadata) {
+  C.LLVMSetSubprogram(v.C, sp.C)
+}
+
 func boolToCInt(v bool) C.int {
 	if v {
 		return 1

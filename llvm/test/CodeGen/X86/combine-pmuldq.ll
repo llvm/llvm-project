@@ -5,23 +5,14 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefix=AVX --check-prefix=AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefix=AVX --check-prefix=AVX512DQVL
 
-; TODO - shuffle+sext are superfluous
 define <2 x i64> @combine_shuffle_sext_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_sext_pmuldq:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    pmovsxdq %xmm0, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; SSE-NEXT:    pmovsxdq %xmm0, %xmm0
-; SSE-NEXT:    pmuldq %xmm2, %xmm0
+; SSE-NEXT:    pmuldq %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_shuffle_sext_pmuldq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-NEXT:    vpmovsxdq %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; AVX-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shufflevector <4 x i32> %a0, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
@@ -32,23 +23,14 @@ define <2 x i64> @combine_shuffle_sext_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
   ret <2 x i64> %5
 }
 
-; TODO - shuffle+zext are superfluous
 define <2 x i64> @combine_shuffle_zext_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_zext_pmuludq:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE-NEXT:    pmuludq %xmm2, %xmm0
+; SSE-NEXT:    pmuludq %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_shuffle_zext_pmuludq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shufflevector <4 x i32> %a0, <4 x i32> undef, <2 x i32> <i32 0, i32 2>

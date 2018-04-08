@@ -28,7 +28,7 @@ TEST(SmallPtrSetTest, Assignment) {
   (s2 = s1).insert(&buf[2]);
 
   // Self assign as well.
-  (s2 = s2).insert(&buf[3]);
+  (s2 = static_cast<SmallPtrSet<int *, 4> &>(s2)).insert(&buf[3]);
 
   s1 = s2;
   EXPECT_EQ(4U, s1.size());
@@ -56,7 +56,7 @@ TEST(SmallPtrSetTest, GrowthTest) {
 
   SmallPtrSet<int *, 4> s;
   typedef SmallPtrSet<int *, 4>::iterator iter;
-  
+
   s.insert(&buf[0]);
   s.insert(&buf[1]);
   s.insert(&buf[2]);

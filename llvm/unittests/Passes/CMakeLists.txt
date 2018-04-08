@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS Support Passes Core)
 
-# FIXME Temorarily disable this on windows
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT CYGWIN)
+if (LLVM_ENABLE_PLUGINS)
   add_llvm_unittest(PluginsTests PluginsTest.cpp)
   export_executable_symbols(PluginsTests)
 
