@@ -11679,11 +11679,11 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
 
   SmallVector<int, 4> LoInputs;
   copy_if(LoMask, std::back_inserter(LoInputs), [](int M) { return M >= 0; });
-  std::sort(LoInputs.begin(), LoInputs.end());
+  array_pod_sort(LoInputs.begin(), LoInputs.end());
   LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()), LoInputs.end());
   SmallVector<int, 4> HiInputs;
   copy_if(HiMask, std::back_inserter(HiInputs), [](int M) { return M >= 0; });
-  std::sort(HiInputs.begin(), HiInputs.end());
+  array_pod_sort(HiInputs.begin(), HiInputs.end());
   HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()), HiInputs.end());
   int NumLToL =
       std::lower_bound(LoInputs.begin(), LoInputs.end(), 4) - LoInputs.begin();
@@ -12486,12 +12486,12 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
       SmallVector<int, 4> LoInputs;
       copy_if(Mask, std::back_inserter(LoInputs),
               [](int M) { return M >= 0 && M < 8; });
-      std::sort(LoInputs.begin(), LoInputs.end());
+      array_pod_sort(LoInputs.begin(), LoInputs.end());
       LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()),
                      LoInputs.end());
       SmallVector<int, 4> HiInputs;
       copy_if(Mask, std::back_inserter(HiInputs), [](int M) { return M >= 8; });
-      std::sort(HiInputs.begin(), HiInputs.end());
+      array_pod_sort(HiInputs.begin(), HiInputs.end());
       HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()),
                      HiInputs.end());
 

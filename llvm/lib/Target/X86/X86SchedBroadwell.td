@@ -113,6 +113,13 @@ def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, h
 
 def : WriteRes<WriteLEA, [BWPort15]>; // LEA instructions can't fold loads.
 
+defm : BWWriteResPair<WriteCMOV,  [BWPort06], 1>; // Conditional move.
+def  : WriteRes<WriteSETCC, [BWPort06]>; // Setcc.
+def  : WriteRes<WriteSETCCStore, [BWPort06,BWPort4,BWPort237]> {
+  let Latency = 2;
+  let NumMicroOps = 3;
+}
+
 // Bit counts.
 defm : BWWriteResPair<WriteBitScan, [BWPort1], 3>;
 defm : BWWriteResPair<WriteLZCNT,   [BWPort1], 3>;
@@ -469,7 +476,6 @@ def: InstRW<[BWWriteResGroup6], (instregex "ADC(16|32|64)ri",
                                            "BTR(16|32|64)rr",
                                            "BTS(16|32|64)ri8",
                                            "BTS(16|32|64)rr",
-                                           "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rr",
                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
                                            "JMP_1",
@@ -481,7 +487,6 @@ def: InstRW<[BWWriteResGroup6], (instregex "ADC(16|32|64)ri",
                                            "SBB(16|32|64)ri",
                                            "SBB(16|32|64)i",
                                            "SBB(8|16|32|64)rr",
-                                           "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)r",
                                            "SHL(8|16|32|64)r1",
                                            "SHL(8|16|32|64)ri",
                                            "SHLX(32|64)rr",
@@ -790,13 +795,6 @@ def BWWriteResGroup22 : SchedWriteRes<[BWPort4,BWPort6,BWPort237]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[BWWriteResGroup22], (instregex "FNSTCW16m")>;
-
-def BWWriteResGroup23 : SchedWriteRes<[BWPort4,BWPort237,BWPort06]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[BWWriteResGroup23], (instregex "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)m")>;
 
 def BWWriteResGroup24 : SchedWriteRes<[BWPort4,BWPort237,BWPort15]> {
   let Latency = 2;
@@ -1398,7 +1396,6 @@ def BWWriteResGroup63 : SchedWriteRes<[BWPort23,BWPort06]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup63], (instregex "BT(16|32|64)mi8",
-                                            "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rm",
                                             "RORX(32|64)mi",
                                             "SARX(32|64)rm",
                                             "SHLX(32|64)rm",

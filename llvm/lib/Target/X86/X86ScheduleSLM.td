@@ -93,6 +93,13 @@ defm : SLMWriteResPair<WriteShift, [SLM_IEC_RSV0],  1>;
 defm : SLMWriteResPair<WriteJump,  [SLM_IEC_RSV1],  1>;
 defm : SLMWriteResPair<WriteCRC32, [SLM_IEC_RSV1],  3>;
 
+defm : SLMWriteResPair<WriteCMOV,  [SLM_IEC_RSV01], 1>;
+def  : WriteRes<WriteSETCC, [SLM_IEC_RSV01]>;
+def  : WriteRes<WriteSETCCStore, [SLM_IEC_RSV01, SLM_MEC_RSV]> {
+  // FIXME Latency and NumMicrOps?
+  let ResourceCycles = [2,1];
+}
+
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
 // the port to read all inputs. We don't model that.

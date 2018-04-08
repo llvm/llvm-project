@@ -127,7 +127,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
-  SchedModel.init(ST.getSchedModel(), &ST, TII);
+  SchedModel.init(&ST);
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
 

@@ -342,6 +342,10 @@ public:
     Info.resize(OrigUnit.getNumDIEs());
 
     auto CUDie = OrigUnit.getUnitDIE(false);
+    if (!CUDie) {
+      HasODR = false;
+      return;
+    }
     if (auto Lang = dwarf::toUnsigned(CUDie.find(dwarf::DW_AT_language)))
       HasODR = CanUseODR && (*Lang == dwarf::DW_LANG_C_plus_plus ||
                              *Lang == dwarf::DW_LANG_C_plus_plus_03 ||
@@ -4024,6 +4028,8 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
 
     // Recursively get all modules imported by this one.
     auto CUDie = CU->getUnitDIE(false);
+    if (!CUDie)
+      continue;
     if (!registerModuleReference(CUDie, *CU, ModuleMap, DMO, Ranges, StringPool,
                                  UniquingStringPool, ODRContexts, UnitID,
                                  Indent)) {
@@ -4083,6 +4089,10 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
   for (auto &CurrentUnit : CompileUnits) {
     auto InputDIE = CurrentUnit->getOrigUnit().getUnitDIE();
     CurrentUnit->setStartOffset(Linker.OutputDebugInfoSize);
+    if (!InputDIE) {
+      Linker.OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
+      continue;
+    }
     if (CurrentUnit->getInfo(0).Keep) {
       // Clone the InputDIE into your Unit DIE in our compile unit since it
       // already has a DIE inside of it.
@@ -4320,10 +4330,14 @@ bool DwarfLinker::link(const DebugMap &Map) {
       }
 
       // Now build the DIE parent links that we will use during the next phase.
-      for (auto &CurrentUnit : LinkContext.CompileUnits)
+      for (auto &CurrentUnit : LinkContext.CompileUnits) {
+        auto CUDie = CurrentUnit->getOrigUnit().getUnitDIE();
+        if (!CUDie)
+          continue;
         analyzeContextInfo(CurrentUnit->getOrigUnit().getUnitDIE(), 0,
                            *CurrentUnit, &ODRContexts.getRoot(),
                            UniquingStringPool, ODRContexts);
+      }
 
       std::unique_lock<std::mutex> LockGuard(ProcessedFilesMutex);
       ProcessedFiles.set(i);

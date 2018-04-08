@@ -141,6 +141,10 @@ defm : JWriteResIntPair<WriteIMul,  [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 
 defm : JWriteResIntPair<WriteIDiv,  [JALU1, JDiv], 41, [1, 41], 2>; // Worst case (i64 division)
 defm : JWriteResIntPair<WriteCRC32, [JALU01], 3, [4], 3>;
 
+defm : JWriteResIntPair<WriteCMOV,  [JALU01], 1>; // Conditional move.
+def  : WriteRes<WriteSETCC, [JALU01]>; // Setcc.
+def  : WriteRes<WriteSETCCStore, [JALU01,JSAGU]>;
+
 def  : WriteRes<WriteIMulH, [JALU1]> {
   let Latency = 6;
   let ResourceCycles = [4];

@@ -314,7 +314,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   MFI = &MF.getFrameInfo();
   MRI = &MF.getRegInfo();
-  SchedModel.init(ST.getSchedModel(), &ST, TII);
+  SchedModel.init(&ST);
 
   PreRegAlloc = MRI->isSSA();
 

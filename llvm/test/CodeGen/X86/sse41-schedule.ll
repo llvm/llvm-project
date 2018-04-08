@@ -369,8 +369,8 @@ define <2 x double> @test_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movapd %xmm0, %xmm3 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    movaps %xmm2, %xmm0 # sched: [1:0.25]
-; ZNVER1-SSE-NEXT:    blendvpd %xmm0, %xmm1, %xmm3 # sched: [3:0.33]
-; ZNVER1-SSE-NEXT:    blendvpd %xmm0, (%rdi), %xmm3 # sched: [11:0.67]
+; ZNVER1-SSE-NEXT:    blendvpd %xmm0, %xmm1, %xmm3 # sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    blendvpd %xmm0, (%rdi), %xmm3 # sched: [8:0.50]
 ; ZNVER1-SSE-NEXT:    movapd %xmm3, %xmm0 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
@@ -499,8 +499,8 @@ define <4 x float> @test_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movaps %xmm0, %xmm3 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    movaps %xmm2, %xmm0 # sched: [1:0.25]
-; ZNVER1-SSE-NEXT:    blendvps %xmm0, %xmm1, %xmm3 # sched: [3:0.33]
-; ZNVER1-SSE-NEXT:    blendvps %xmm0, (%rdi), %xmm3 # sched: [11:0.67]
+; ZNVER1-SSE-NEXT:    blendvps %xmm0, %xmm1, %xmm3 # sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    blendvps %xmm0, (%rdi), %xmm3 # sched: [8:0.50]
 ; ZNVER1-SSE-NEXT:    movaps %xmm3, %xmm0 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
