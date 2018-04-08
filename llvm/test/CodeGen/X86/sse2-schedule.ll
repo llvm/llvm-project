@@ -8970,13 +8970,13 @@ define i16 @test_pextrw(<8 x i16> %a0) {
 ;
 ; BTVER2-SSE-LABEL: test_pextrw:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    pextrw $6, %xmm0, %eax # sched: [1:0.50]
+; BTVER2-SSE-NEXT:    pextrw $6, %xmm0, %eax # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_pextrw:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vpextrw $6, %xmm0, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    vpextrw $6, %xmm0, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

@@ -2881,45 +2881,81 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
     return DAG.getNode(ISD::UDIV, DL, N1.getValueType(), N0, N1);
 
+  // Helper for determining whether a value is a power-2 constant scalar or a
+  // vector of such elements.
+  SmallBitVector KnownNegatives(
+      (N1C || !VT.isVector()) ? 1 : VT.getVectorNumElements(), false);
+  unsigned EltIndex = 0;
+  auto IsPowerOfTwo = [&KnownNegatives, &EltIndex](ConstantSDNode *C) {
+    unsigned Idx = EltIndex++;
+    if (C->isNullValue() || C->isOpaque())
+      return false;
+    if (C->getAPIntValue().isPowerOf2())
+      return true;
+    if ((-C->getAPIntValue()).isPowerOf2()) {
+      KnownNegatives.set(Idx);
+      return true;
+    }
+    return false;
+  };
+
   // fold (sdiv X, pow2) -> simple ops after legalize
   // FIXME: We check for the exact bit here because the generic lowering gives
   // better results in that case. The target-specific lowering should learn how
   // to handle exact sdivs efficiently.
-  if (N1C && !N1C->isNullValue() && !N1C->isOpaque() &&
-      !N->getFlags().hasExact() && (N1C->getAPIntValue().isPowerOf2() ||
-                                    (-N1C->getAPIntValue()).isPowerOf2())) {
+  if (!N->getFlags().hasExact() &&
+      ISD::matchUnaryPredicate(N1C ? SDValue(N1C, 0) : N1, IsPowerOfTwo)) {
     // Target-specific implementation of sdiv x, pow2.
     if (SDValue Res = BuildSDIVPow2(N))
       return Res;
 
-    unsigned lg2 = N1C->getAPIntValue().countTrailingZeros();
-
+    // Create constants that are functions of the shift amount value.
+    EVT ShiftAmtTy = getShiftAmountTy(N0.getValueType());
+    SDValue Bits = DAG.getConstant(VT.getScalarSizeInBits(), DL, ShiftAmtTy);
+    SDValue C1 = DAG.getNode(ISD::CTTZ, DL, VT, N1);
+    C1 = DAG.getZExtOrTrunc(C1, DL, ShiftAmtTy);
+    SDValue Inexact = DAG.getNode(ISD::SUB, DL, ShiftAmtTy, Bits, C1);
+    if (!isConstantOrConstantVector(Inexact))
+      return SDValue();
     // Splat the sign bit into the register
-    SDValue SGN =
-        DAG.getNode(ISD::SRA, DL, VT, N0,
-                    DAG.getConstant(VT.getScalarSizeInBits() - 1, DL,
-                                    getShiftAmountTy(N0.getValueType())));
-    AddToWorklist(SGN.getNode());
+    SDValue Sign = DAG.getNode(
+        ISD::SRA, DL, VT, N0,
+        DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, ShiftAmtTy));
+    AddToWorklist(Sign.getNode());
 
     // Add (N0 < 0) ? abs2 - 1 : 0;
-    SDValue SRL =
-        DAG.getNode(ISD::SRL, DL, VT, SGN,
-                    DAG.getConstant(VT.getScalarSizeInBits() - lg2, DL,
-                                    getShiftAmountTy(SGN.getValueType())));
-    SDValue ADD = DAG.getNode(ISD::ADD, DL, VT, N0, SRL);
-    AddToWorklist(SRL.getNode());
-    AddToWorklist(ADD.getNode());    // Divide by pow2
-    SDValue SRA = DAG.getNode(ISD::SRA, DL, VT, ADD,
-                  DAG.getConstant(lg2, DL,
-                                  getShiftAmountTy(ADD.getValueType())));
+    SDValue Srl = DAG.getNode(ISD::SRL, DL, VT, Sign, Inexact);
+    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Srl);
+    AddToWorklist(Srl.getNode());
+    AddToWorklist(Add.getNode()); // Divide by pow2
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Add, C1);
 
-    // If we're dividing by a positive value, we're done.  Otherwise, we must
-    // negate the result.
-    if (N1C->getAPIntValue().isNonNegative())
-      return SRA;
+    // If dividing by a positive value, we're done. Otherwise, the result must
+    // be negated.
+    if (KnownNegatives.none())
+      return Sra;
 
-    AddToWorklist(SRA.getNode());
-    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
+    AddToWorklist(Sra.getNode());
+    SDValue Sub =
+        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Sra);
+    // If all shift amount elements are negative, we're done.
+    if (KnownNegatives.all())
+      return Sub;
+
+    // Shift amount has both positive and negative elements.
+    assert(VT.isVector() && !N0C &&
+           "Expecting a non-splat vector shift amount");
+
+    SmallVector<SDValue, 64> VSelectMask;
+    for (int i = 0, e = VT.getVectorNumElements(); i < e; ++i)
+      VSelectMask.push_back(
+          DAG.getConstant(KnownNegatives[i] ? -1 : 0, DL, MVT::i1));
+
+    SDValue Mask =
+        DAG.getBuildVector(EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                            VT.getVectorElementCount()),
+                           DL, VSelectMask);
+    return DAG.getNode(ISD::VSELECT, DL, VT, Mask, Sub, Sra);
   }
 
   // If integer divide is expensive and we satisfy the requirements, emit an

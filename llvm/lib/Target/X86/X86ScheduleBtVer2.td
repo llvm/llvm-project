@@ -370,6 +370,25 @@ defm : JWriteResFpuPair<WriteShuffle256,  [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarVecShift, [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
 
 ////////////////////////////////////////////////////////////////////////////////
+// Vector Extraction instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+def JWritePEXTR : SchedWriteRes<[JFPU0, JFPA, JALU0]> { let Latency = 3; }
+def : InstRW<[JWritePEXTR], (instrs MMX_PEXTRWrr,
+                                    EXTRACTPSrr, VEXTRACTPSrr,
+                                    PEXTRBrr, VPEXTRBrr,
+                                    PEXTRDrr, VPEXTRDrr,
+                                    PEXTRQrr, VPEXTRQrr,
+                                    PEXTRWrr, VPEXTRWrr, PEXTRWrr_REV, VPEXTRWrr_REV)>;
+
+def JWritePEXTRSt : SchedWriteRes<[JFPU1, JSTC, JSAGU]> { let Latency = 3; }
+def : InstRW<[JWritePEXTRSt], (instrs EXTRACTPSmr, VEXTRACTPSmr,
+                                      PEXTRBmr, VPEXTRBmr,
+                                      PEXTRDmr, VPEXTRDmr,
+                                      PEXTRQmr, VPEXTRQmr,
+                                      PEXTRWmr, VPEXTRWmr)>;
+
+////////////////////////////////////////////////////////////////////////////////
 // SSE42 String instructions.
 ////////////////////////////////////////////////////////////////////////////////
 

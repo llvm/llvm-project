@@ -3018,7 +3018,7 @@ define i32 @test_pextrw(x86_mmx %a0) optsize {
 ;
 ; BTVER2-LABEL: test_pextrw:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    pextrw $0, %mm0, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    pextrw $0, %mm0, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pextrw:
