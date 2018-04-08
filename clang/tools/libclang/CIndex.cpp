@@ -4249,6 +4249,14 @@ int clang_File_isEqual(CXFile file1, CXFile file2) {
   return FEnt1->getUniqueID() == FEnt2->getUniqueID();
 }
 
+CXString clang_File_tryGetRealPathName(CXFile SFile) {
+  if (!SFile)
+    return cxstring::createNull();
+
+  FileEntry *FEnt = static_cast<FileEntry *>(SFile);
+  return cxstring::createRef(FEnt->tryGetRealPathName());
+}
+
 //===----------------------------------------------------------------------===//
 // CXCursor Operations.
 //===----------------------------------------------------------------------===//
