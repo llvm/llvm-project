@@ -27,14 +27,13 @@ static bool isParentOf(const CXXRecordDecl &Parent,
                        const CXXRecordDecl &ThisClass) {
   if (Parent.getCanonicalDecl() == ThisClass.getCanonicalDecl())
     return true;
-  const auto ClassIter = std::find_if(
-      ThisClass.bases().begin(), ThisClass.bases().end(),
-      [=](const CXXBaseSpecifier &Base) {
-        auto *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-        assert(BaseDecl);
-        return Parent.getCanonicalDecl() == BaseDecl->getCanonicalDecl();
-      });
-  return ClassIter != ThisClass.bases_end();
+  for (const CXXBaseSpecifier &Base : ThisClass.bases()) {
+    auto *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    assert(BaseDecl);
+    if (Parent.getCanonicalDecl() == BaseDecl->getCanonicalDecl())
+      return true;
+  }
+  return false;
 }
 
 static BasesVector getParentsByGrandParent(const CXXRecordDecl &GrandParent,

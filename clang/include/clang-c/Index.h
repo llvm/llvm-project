@@ -425,6 +425,13 @@ CINDEX_LINKAGE const char *clang_getFileContents(CXTranslationUnit tu,
 CINDEX_LINKAGE int clang_File_isEqual(CXFile file1, CXFile file2);
 
 /**
+ * \brief Returns the real path name of \c file.
+ *
+ * An empty string may be returned. Use \c clang_getFileName() in that case.
+ */
+CINDEX_LINKAGE CXString clang_File_tryGetRealPathName(CXFile file);
+
+/**
  * @}
  */
 

@@ -46,6 +46,7 @@ clang_Cursor_isVariadic
 clang_Cursor_getModule
 clang_Cursor_getStorageClass
 clang_File_isEqual
+clang_File_tryGetRealPathName
 clang_Module_getASTFile
 clang_Module_getParent
 clang_Module_getName
