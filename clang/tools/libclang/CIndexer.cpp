@@ -127,14 +127,14 @@ LibclangInvocationReporter::LibclangInvocationReporter(
   for (const auto &I : llvm::enumerate(Args)) {
     if (I.index())
       OS << ',';
-    OS << '"' << I.value() << '"';
+    OS << '"' << llvm::yaml::escape(I.value()) << '"';
   }
   if (!InvocationArgs.empty()) {
     OS << R"(],"invocation-args":[)";
     for (const auto &I : llvm::enumerate(InvocationArgs)) {
       if (I.index())
         OS << ',';
-      OS << '"' << I.value() << '"';
+      OS << '"' << llvm::yaml::escape(I.value()) << '"';
     }
   }
   if (!UnsavedFiles.empty()) {

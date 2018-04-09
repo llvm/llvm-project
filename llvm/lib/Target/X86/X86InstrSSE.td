@@ -56,7 +56,7 @@ def SSE_ALU_ITINS_S : SizeItins<
 
 let Sched = WriteFMul in {
 def SSE_MUL_F32S : OpndItins<
-  IIC_SSE_MUL_F32S_RR, IIC_SSE_MUL_F64S_RM
+  IIC_SSE_MUL_F32S_RR, IIC_SSE_MUL_F32S_RM
 >;
 
 def SSE_MUL_F64S : OpndItins<
@@ -70,7 +70,7 @@ def SSE_MUL_ITINS_S : SizeItins<
 
 let Sched = WriteFDiv in {
 def SSE_DIV_F32S : OpndItins<
-  IIC_SSE_DIV_F32S_RR, IIC_SSE_DIV_F64S_RM
+  IIC_SSE_DIV_F32S_RR, IIC_SSE_DIV_F32S_RM
 >;
 
 def SSE_DIV_F64S : OpndItins<
@@ -99,7 +99,7 @@ def SSE_ALU_ITINS_P : SizeItins<
 
 let Sched = WriteFMul in {
 def SSE_MUL_F32P : OpndItins<
-  IIC_SSE_MUL_F32P_RR, IIC_SSE_MUL_F64P_RM
+  IIC_SSE_MUL_F32P_RR, IIC_SSE_MUL_F32P_RM
 >;
 
 def SSE_MUL_F64P : OpndItins<
@@ -113,7 +113,7 @@ def SSE_MUL_ITINS_P : SizeItins<
 
 let Sched = WriteFDiv in {
 def SSE_DIV_F32P : OpndItins<
-  IIC_SSE_DIV_F32P_RR, IIC_SSE_DIV_F64P_RM
+  IIC_SSE_DIV_F32P_RR, IIC_SSE_DIV_F32P_RM
 >;
 
 def SSE_DIV_F64P : OpndItins<

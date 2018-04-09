@@ -2361,8 +2361,8 @@ define i64 @test_pavgb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_pavgb:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pavgb %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    pavgb (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pavgb %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pavgb (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -2439,8 +2439,8 @@ define i64 @test_pavgw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_pavgw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pavgw %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    pavgw (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pavgw %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pavgw (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -3753,8 +3753,8 @@ define i64 @test_pmaxsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_pmaxsw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pmaxsw %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    pmaxsw (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pmaxsw %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pmaxsw (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -3831,8 +3831,8 @@ define i64 @test_pmaxub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_pmaxub:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pmaxub %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    pmaxub (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pmaxub %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pmaxub (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -3909,8 +3909,8 @@ define i64 @test_pminsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_pminsw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pminsw %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    pminsw (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pminsw %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pminsw (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -3987,8 +3987,8 @@ define i64 @test_pminub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_pminub:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pminub %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    pminub (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pminub %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    pminub (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -4822,8 +4822,8 @@ define i64 @test_psignb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_psignb:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    psignb %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    psignb (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    psignb %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    psignb (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -4900,8 +4900,8 @@ define i64 @test_psignd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_psignd:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    psignd %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    psignd (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    psignd %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    psignd (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -4978,8 +4978,8 @@ define i64 @test_psignw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_psignw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    psignw %mm1, %mm0 # sched: [1:1.00]
-; ATOM-NEXT:    psignw (%rdi), %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    psignw %mm1, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    psignw (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;

@@ -18,6 +18,24 @@
 ; CHECK-NEXT:     Section: Undefined (0x0)
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
+; CHECK-NEXT:     Name: {{.*}}.o
+; CHECK-NEXT:     Value: 0x0
+; CHECK-NEXT:     Size: 0
+; CHECK-NEXT:     Binding: Local
+; CHECK-NEXT:     Type: File
+; CHECK-NEXT:     Other: 0
+; CHECK-NEXT:     Section: Absolute
+; CHECK-NEXT:   }
+; CHECK-NEXT:   Symbol {
+; CHECK-NEXT:     Name: {{.*}}.o
+; CHECK-NEXT:     Value: 0x0
+; CHECK-NEXT:     Size: 0
+; CHECK-NEXT:     Binding: Local
+; CHECK-NEXT:     Type: File
+; CHECK-NEXT:     Other: 0
+; CHECK-NEXT:     Section: Absolute
+; CHECK-NEXT:   }
+; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: bar
 ; CHECK-NEXT:     Value: 0x201010
 ; CHECK-NEXT:     Size: 8

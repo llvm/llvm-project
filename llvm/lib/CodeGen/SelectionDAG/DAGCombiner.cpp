@@ -3831,6 +3831,17 @@ bool DAGCombiner::isLegalNarrowLoad(LoadSDNode *LoadN, ISD::LoadExtType ExtType,
   if (LoadN->getNumValues() > 2)
     return false;
 
+ // Only allow byte offsets.
+  if (ShAmt % 8)
+    return false;
+
+  // Ensure that this isn't going to produce an unsupported unaligned access.
+  if (ShAmt && !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                                       ExtVT, LoadN->getAddressSpace(),
+                                       ShAmt / 8))
+    return false;
+
+
   // If the load that we're shrinking is an extload and we're not just
   // discarding the extension we can't simply shrink the load. Bail.
   // TODO: It would be possible to merge the extensions in some cases.
@@ -8434,8 +8445,9 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
 
   unsigned ShAmt = 0;
   if (N0.getOpcode() == ISD::SRL && N0.hasOneUse()) {
-    if (ConstantSDNode *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
-      ShAmt = N01->getZExtValue();
+    SDValue SRL = N0;
+    if (auto *ConstShift = dyn_cast<ConstantSDNode>(SRL.getOperand(1))) {
+      ShAmt = ConstShift->getZExtValue();
       unsigned EVTBits = ExtVT.getSizeInBits();
       // Is the shift amount a multiple of size of VT?
       if ((ShAmt & (EVTBits-1)) == 0) {
@@ -8448,17 +8460,35 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
       // At this point, we must have a load or else we can't do the transform.
       if (!isa<LoadSDNode>(N0)) return SDValue();
 
+      auto *LN0 = cast<LoadSDNode>(N0);
+
       // Because a SRL must be assumed to *need* to zero-extend the high bits
       // (as opposed to anyext the high bits), we can't combine the zextload
       // lowering of SRL and an sextload.
-      if (cast<LoadSDNode>(N0)->getExtensionType() == ISD::SEXTLOAD)
+      if (LN0->getExtensionType() == ISD::SEXTLOAD)
         return SDValue();
 
       // If the shift amount is larger than the input type then we're not
       // accessing any of the loaded bytes.  If the load was a zextload/extload
       // then the result of the shift+trunc is zero/undef (handled elsewhere).
-      if (ShAmt >= cast<LoadSDNode>(N0)->getMemoryVT().getSizeInBits())
+      if (ShAmt >= LN0->getMemoryVT().getSizeInBits())
         return SDValue();
+
+      // If the SRL is only used by a masking AND, we may be able to adjust
+      // the ExtVT to make the AND redundant.
+      SDNode *Mask = *(SRL->use_begin());
+      if (Mask->getOpcode() == ISD::AND &&
+          isa<ConstantSDNode>(Mask->getOperand(1))) {
+        const APInt &ShiftMask =
+          cast<ConstantSDNode>(Mask->getOperand(1))->getAPIntValue();
+        if (ShiftMask.isMask()) {
+          EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(),
+                                           ShiftMask.countTrailingOnes());
+          // Recompute the type.
+          if (TLI.isLoadExtLegal(ExtType, N0.getValueType(), MaskedVT))
+            ExtVT = MaskedVT;
+        }
+      }
     }
   }
 
