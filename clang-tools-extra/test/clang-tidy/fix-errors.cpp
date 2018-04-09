@@ -1,5 +1,5 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,google-explicit-constructor' -fix -- > %t.msg 2>&1
+// RUN: not clang-tidy %t.cpp -checks='-*,google-explicit-constructor' -fix -- > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.cpp -check-prefix=CHECK-FIX %s
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
