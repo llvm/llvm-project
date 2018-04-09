@@ -27,28 +27,25 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @jd(i32* %A) {
 entry:
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %exitcond = icmp ne i64 %indvars.iv, 1024
-  br i1 %exitcond, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
+for.body:                                         ; preds = %entry, %for.inc
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
   %call = call i32 @func(i32* %A) #2
-  %tmp = add nsw i64 %indvars.iv, 2
+  %tmp = add nsw i64 %i, 2
   %arrayidx = getelementptr inbounds i32, i32* %A, i64 %tmp
   store i32 %call, i32* %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br label %for.cond
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond = icmp ne i64 %i.next, 1024
+  br i1 %exitcond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.inc
   ret void
 }
 
-declare i32 @func(i32*) #1
+declare i32 @func(i32*) #0
 
-attributes #1 = { nounwind readonly }
+attributes #0 = { nounwind readonly }
