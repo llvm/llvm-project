@@ -269,7 +269,7 @@ public:
   /// \brief Imposes an order on \c DynTypedNode.
   ///
   /// Supports comparison of nodes that support memoization.
-  /// FIXME: Implement comparsion for other node types (currently
+  /// FIXME: Implement comparison for other node types (currently
   /// only Stmt, Decl, Type and NestedNameSpecifier return memoization data).
   bool operator<(const DynTypedNode &Other) const {
     if (!NodeKind.isSame(Other.NodeKind))

@@ -1453,7 +1453,7 @@ private:
   /// True if we need emit the life-time markers.
   const bool ShouldEmitLifetimeMarkers;
 
-  /// Add OpenCL kernel arg metadata and the kernel attribute meatadata to
+  /// Add OpenCL kernel arg metadata and the kernel attribute metadata to
   /// the function metadata.
   void EmitOpenCLKernelMetadata(const FunctionDecl *FD,
                                 llvm::Function *Fn);
@@ -1717,7 +1717,7 @@ public:
 
   void EmitInitializerForField(FieldDecl *Field, LValue LHS, Expr *Init);
 
-  /// Struct with all informations about dynamic [sub]class needed to set vptr.
+  /// Struct with all information about dynamic [sub]class needed to set vptr.
   struct VPtr {
     BaseSubobject Base;
     const CXXRecordDecl *NearestVBase;

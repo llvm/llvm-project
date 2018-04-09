@@ -1364,7 +1364,7 @@ void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
   // Read the rest of the line raw.  We do this because we don't want macros
   // to be expanded and we don't require that the tokens be valid preprocessing
   // tokens.  For example, this is allowed: "#warning `   'foo".  GCC does
-  // collapse multiple consequtive white space between tokens, but this isn't
+  // collapse multiple consecutive white space between tokens, but this isn't
   // specified by the standard.
   SmallString<128> Message;
   CurLexer->ReadToEndOfLine(&Message);

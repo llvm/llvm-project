@@ -1533,7 +1533,7 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'y': // Any MMX register.
   case 'v': // Any {X,Y,Z}MM register (Arch & context dependent)
   case 'x': // Any SSE register.
-  case 'k': // Any AVX512 mask register (same as Yk, additionaly allows k0
+  case 'k': // Any AVX512 mask register (same as Yk, additionally allows k0
             // for intermideate k reg operations).
   case 'Q': // Any register accessible as [r]h: a, b, c, and d.
   case 'R': // "Legacy" registers: ax, bx, cx, dx, di, si, sp, bp.

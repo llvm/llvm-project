@@ -291,9 +291,9 @@ public:
 
   /// \brief Simple predicate used by the default RankCandidate to
   /// determine whether to return an edit distance of 0 or InvalidDistance.
-  /// This can be overrided by validators that only need to determine if a
+  /// This can be overridden by validators that only need to determine if a
   /// candidate is viable, without ranking potentially viable candidates.
-  /// Only ValidateCandidate or RankCandidate need to be overriden by a
+  /// Only ValidateCandidate or RankCandidate need to be overridden by a
   /// callback wishing to check the viability of correction candidates.
   /// The default predicate always returns true if the candidate is not a type
   /// name or keyword, true for types if WantTypeSpecifiers is true, and true

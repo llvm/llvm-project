@@ -3808,7 +3808,7 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
   // Right now we only generate metadata for function that contain target
   // regions.
 
-  // If we do not have entries, we dont need to do anything.
+  // If we do not have entries, we don't need to do anything.
   if (OffloadEntriesInfoManager.empty())
     return;
 
@@ -4942,7 +4942,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
         CGF.VoidPtrTy);
   }
 
-  // NOTE: routine and part_id fields are intialized by __kmpc_omp_task_alloc()
+  // NOTE: routine and part_id fields are initialized by __kmpc_omp_task_alloc()
   // libcall.
   // Build kmp_int32 __kmpc_omp_task_with_deps(ident_t *, kmp_int32 gtid,
   // kmp_task_t *new_task, kmp_int32 ndeps, kmp_depend_info_t *dep_list,
@@ -5042,7 +5042,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
     return;
   TaskResultTy Result =
       emitTaskInit(CGF, Loc, D, TaskFunction, SharedsTy, Shareds, Data);
-  // NOTE: routine and part_id fields are intialized by __kmpc_omp_task_alloc()
+  // NOTE: routine and part_id fields are initialized by __kmpc_omp_task_alloc()
   // libcall.
   // Call to void __kmpc_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int
   // if_val, kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st, int nogroup, int
@@ -6605,7 +6605,7 @@ public:
       bool IsFirstComponentList, bool IsImplicit) const {
 
     // The following summarizes what has to be generated for each map and the
-    // types bellow. The generated information is expressed in this order:
+    // types below. The generated information is expressed in this order:
     // base pointer, section pointer, size, flags
     // (to add to the ones that come from the map type and modifier).
     //

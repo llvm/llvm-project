@@ -399,7 +399,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
 
     // Disable hardware FP features which have been enabled.
     // FIXME: Disabling vfp2 and neon should be enough as all the other
-    //        features are dependant on these 2 features in LLVM. However
+    //        features are dependent on these 2 features in LLVM. However
     //        there is currently no easy way to test this in clang, so for
     //        now just be explicit and disable all known dependent features
     //        as well.

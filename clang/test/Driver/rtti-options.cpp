@@ -1,5 +1,5 @@
 // Check that we emit warnings/errors for different combinations of
-// exceptions, rtti, and vptr sanitizer flags when targetting the PS4.
+// exceptions, rtti, and vptr sanitizer flags when targeting the PS4.
 // No warnings/errors should be emitted for unknown, except if combining
 // the vptr sanitizer with -fno-rtti
 

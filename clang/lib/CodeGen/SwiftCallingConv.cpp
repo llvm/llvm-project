@@ -740,8 +740,8 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
   components.append(numElts, eltTy);
 }
 
-bool swiftcall::shouldPassCXXRecordIndirectly(CodeGenModule &CGM,
-                                              const CXXRecordDecl *record) {
+bool swiftcall::mustPassRecordIndirectly(CodeGenModule &CGM,
+                                         const RecordDecl *record) {
   // FIXME: should we not rely on the standard computation in Sema, just in
   // case we want to diverge from the platform ABI (e.g. on targets where
   // that uses the MSVC rule)?
@@ -767,10 +767,8 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
     auto record = recordType->getDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
-    if (auto cxxRecord = dyn_cast<CXXRecordDecl>(record)) {
-      if (shouldPassCXXRecordIndirectly(CGM, cxxRecord))
-        return ABIArgInfo::getIndirect(layout.getAlignment(), /*byval*/ false);
-    }
+    if (mustPassRecordIndirectly(CGM, record))
+      return ABIArgInfo::getIndirect(layout.getAlignment(), /*byval*/ false);
 
     SwiftAggLowering lowering(CGM);
     lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);

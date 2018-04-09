@@ -298,7 +298,7 @@ public:
       auto Region = CounterMappingRegion::makeSkipped(
           *CovFileID, SR.LineStart, SR.ColumnStart, SR.LineEnd, SR.ColumnEnd);
       // Make sure that we only collect the regions that are inside
-      // the souce code of this function.
+      // the source code of this function.
       if (Region.LineStart >= FileLineRanges[*CovFileID].first &&
           Region.LineEnd <= FileLineRanges[*CovFileID].second)
         MappingRegions.push_back(Region);

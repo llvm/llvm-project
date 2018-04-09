@@ -178,7 +178,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TII = STI.getInstrInfo();
   TRI = STI.getRegisterInfo();
-  TSchedModel.init(STI.getSchedModel(), &STI, TII);
+  TSchedModel.init(&STI);
 
   // Before we handle the more subtle cases of register-register CMOVs inside
   // of potentially hot loops, we want to quickly remove all CMOVs with

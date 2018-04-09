@@ -1001,7 +1001,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
     RWPI = true;
   }
 
-  // ROPI and RWPI are not comaptible with PIC or PIE.
+  // ROPI and RWPI are not compatible with PIC or PIE.
   if ((ROPI || RWPI) && (PIC || PIE))
     ToolChain.getDriver().Diag(diag::err_drv_ropi_rwpi_incompatible_with_pic);
 

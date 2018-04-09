@@ -11,7 +11,7 @@
 // RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck --check-prefix=COFF %s
 
 namespace test1 {
-// Test that we produce the apropriate comdats when creating aliases to
+// Test that we produce the appropriate comdats when creating aliases to
 // weak_odr constructors and destructors.
 
 // CHECK1: @_ZN5test16foobarIvEC1Ev = weak_odr alias void {{.*}} @_ZN5test16foobarIvEC2Ev

@@ -359,9 +359,9 @@ void EHStreamer::emitExceptionTable() {
     LandingPads.push_back(&PadInfos[i]);
 
   // Order landing pads lexicographically by type id.
-  std::sort(LandingPads.begin(), LandingPads.end(),
-            [](const LandingPadInfo *L,
-               const LandingPadInfo *R) { return L->TypeIds < R->TypeIds; });
+  llvm::sort(LandingPads.begin(), LandingPads.end(),
+             [](const LandingPadInfo *L,
+                const LandingPadInfo *R) { return L->TypeIds < R->TypeIds; });
 
   // Compute the actions table and gather the first action index for each
   // landing pad site.

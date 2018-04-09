@@ -2137,7 +2137,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   }
 
   // Check if there was a request to override the contents of the file
-  // that was part of the precompiled header. Overridding such a file
+  // that was part of the precompiled header. Overriding such a file
   // can lead to problems when lexing using the source locations from the
   // PCH.
   SourceManager &SM = getSourceManager();

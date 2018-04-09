@@ -89,14 +89,14 @@ Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
     : Opts(createDriverOptTable()), Diags(Diags), VFS(std::move(VFS)),
       Mode(GCCMode), SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
       LTOMode(LTOK_None), ClangExecutable(ClangExecutable),
-      SysRoot(DEFAULT_SYSROOT), 
-      DriverTitle("clang LLVM compiler"), CCPrintOptionsFilename(nullptr),
-      CCPrintHeadersFilename(nullptr), CCLogDiagnosticsFilename(nullptr),
-      CCCPrintBindings(false), CCPrintHeaders(false), CCLogDiagnostics(false),
+      SysRoot(DEFAULT_SYSROOT), DriverTitle("clang LLVM compiler"),
+      CCPrintOptionsFilename(nullptr), CCPrintHeadersFilename(nullptr),
+      CCLogDiagnosticsFilename(nullptr), CCCPrintBindings(false),
+      CCPrintOptions(false), CCPrintHeaders(false), CCLogDiagnostics(false),
       CCGenDiagnostics(false), DefaultTargetTriple(DefaultTargetTriple),
-      CCCGenericGCCName(""), Saver(Alloc),
-      CheckInputsExist(true), CCCUsePCH(true),
-      GenReproducer(false), SuppressMissingInputWarning(false) {
+      CCCGenericGCCName(""), Saver(Alloc), CheckInputsExist(true),
+      CCCUsePCH(true), GenReproducer(false),
+      SuppressMissingInputWarning(false) {
 
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
@@ -396,7 +396,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
   // Handle Apple-specific options available here.
   if (Target.isOSBinFormatMachO()) {
-    // If an explict Darwin arch name is given, that trumps all.
+    // If an explicit Darwin arch name is given, that trumps all.
     if (!DarwinArchName.empty()) {
       tools::darwin::setTripleTypeForMachOArchName(Target, DarwinArchName);
       return Target;
@@ -1111,8 +1111,9 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
 // When clang crashes, produce diagnostic information including the fully
 // preprocessed source file(s).  Request that the developer attach the
 // diagnostic information to a bug report.
-void Driver::generateCompilationDiagnostics(Compilation &C,
-                                            const Command &FailingCommand) {
+void Driver::generateCompilationDiagnostics(
+    Compilation &C, const Command &FailingCommand,
+    StringRef AdditionalInformation, CompilationDiagnosticReport *Report) {
   if (C.getArgs().hasArg(options::OPT_fno_crash_diagnostics))
     return;
 
@@ -1238,6 +1239,8 @@ void Driver::generateCompilationDiagnostics(Compilation &C,
   SmallString<128> ReproCrashFilename;
   for (const char *TempFile : TempFiles) {
     Diag(clang::diag::note_drv_command_failed_diag_msg) << TempFile;
+    if (Report)
+      Report->TemporaryFiles.push_back(TempFile);
     if (ReproCrashFilename.empty()) {
       ReproCrashFilename = TempFile;
       llvm::sys::path::replace_extension(ReproCrashFilename, ".crash");
@@ -1266,6 +1269,11 @@ void Driver::generateCompilationDiagnostics(Compilation &C,
     ScriptOS << "# Original command: ";
     Cmd.Print(ScriptOS, "\n", /*Quote=*/true);
     Cmd.Print(ScriptOS, "\n", /*Quote=*/true, &CrashInfo);
+    if (!AdditionalInformation.empty())
+      ScriptOS << "\n# Additional information: " << AdditionalInformation
+               << "\n";
+    if (Report)
+      Report->TemporaryFiles.push_back(Script);
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 

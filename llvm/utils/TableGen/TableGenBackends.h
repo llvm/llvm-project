@@ -74,6 +74,7 @@ void EmitFastISel(RecordKeeper &RK, raw_ostream &OS);
 void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS);
 void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS);
 void EmitPseudoLowering(RecordKeeper &RK, raw_ostream &OS);
+void EmitCompressInst(RecordKeeper &RK, raw_ostream &OS);
 void EmitRegisterInfo(RecordKeeper &RK, raw_ostream &OS);
 void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS);
 void EmitMapTable(RecordKeeper &RK, raw_ostream &OS);

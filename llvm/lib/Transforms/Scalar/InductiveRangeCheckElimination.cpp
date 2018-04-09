@@ -312,13 +312,8 @@ InductiveRangeCheck::RangeCheckKind
 InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
                                          ScalarEvolution &SE, Value *&Index,
                                          Value *&Length, bool &IsSigned) {
-  auto IsNonNegativeAndNotLoopVarying = [&SE, L](Value *V) {
-    const SCEV *S = SE.getSCEV(V);
-    if (isa<SCEVCouldNotCompute>(S))
-      return false;
-
-    return SE.getLoopDisposition(S, L) == ScalarEvolution::LoopInvariant &&
-           SE.isKnownNonNegative(S);
+  auto IsLoopInvariant = [&SE, L](Value *V) {
+    return SE.isLoopInvariant(SE.getSCEV(V), L);
   };
 
   ICmpInst::Predicate Pred = ICI->getPredicate();
@@ -350,7 +345,7 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
       return RANGE_CHECK_LOWER;
     }
 
-    if (IsNonNegativeAndNotLoopVarying(LHS)) {
+    if (IsLoopInvariant(LHS)) {
       Index = RHS;
       Length = LHS;
       return RANGE_CHECK_UPPER;
@@ -362,7 +357,7 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_UGT:
     IsSigned = false;
-    if (IsNonNegativeAndNotLoopVarying(LHS)) {
+    if (IsLoopInvariant(LHS)) {
       Index = RHS;
       Length = LHS;
       return RANGE_CHECK_BOTH;

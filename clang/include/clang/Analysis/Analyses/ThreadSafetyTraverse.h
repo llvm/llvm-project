@@ -32,7 +32,7 @@ namespace til {
 
 // Defines an interface used to traverse SExprs.  Traversals have been made as
 // generic as possible, and are intended to handle any kind of pass over the
-// AST, e.g. visiters, copying, non-destructive rewriting, destructive
+// AST, e.g. visitors, copying, non-destructive rewriting, destructive
 // (in-place) rewriting, hashing, typing, etc.
 //
 // Traversals implement the functional notion of a "fold" operation on SExprs.

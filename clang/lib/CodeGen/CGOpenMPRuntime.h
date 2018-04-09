@@ -133,7 +133,7 @@ private:
   /// Base declarations for the reduction items.
   SmallVector<const VarDecl *, 4> BaseDecls;
 
-  /// Emits lvalue for shared expresion.
+  /// Emits lvalue for shared expression.
   LValue emitSharedLValue(CodeGenFunction &CGF, const Expr *E);
   /// Emits upper bound for shared expression (if array section).
   LValue emitSharedLValueUB(CodeGenFunction &CGF, const Expr *E);
@@ -1463,7 +1463,7 @@ public:
 
   /// Translates the native parameter of outlined function if this is required
   /// for target.
-  /// \param FD Field decl from captured record for the paramater.
+  /// \param FD Field decl from captured record for the parameter.
   /// \param NativeParam Parameter itself.
   virtual const VarDecl *translateParameter(const FieldDecl *FD,
                                             const VarDecl *NativeParam) const {
@@ -2049,7 +2049,7 @@ public:
 
   /// Translates the native parameter of outlined function if this is required
   /// for target.
-  /// \param FD Field decl from captured record for the paramater.
+  /// \param FD Field decl from captured record for the parameter.
   /// \param NativeParam Parameter itself.
   const VarDecl *translateParameter(const FieldDecl *FD,
                                     const VarDecl *NativeParam) const override;

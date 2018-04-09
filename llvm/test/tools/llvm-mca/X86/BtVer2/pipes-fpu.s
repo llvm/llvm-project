@@ -87,7 +87,7 @@ vsqrtps     %ymm0, %ymm2
 # CHECK-NEXT: [0,5]	.  DeeeeeeeeeeeeeeeeeeeeeER   .    .    .    .    .    .    .    .    .	vsqrtps	%xmm0, %xmm2
 # CHECK-NEXT: [0,6]	.   DeeeE-----------------R   .    .    .    .    .    .    .    .    .	vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: [0,7]	.    D===================eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER .	vsqrtps	%ymm0, %ymm2
-# CHECK:      [1,0]	.    .DeeeeE--------------------------------------------------------R .	vpmulld	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [1,0]	.    .DeeeeE--------------------------------------------------------R .	vpmulld	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: [1,1]	.    . DeE-----------------------------------------------------------R.	vpand	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: [1,2]	.    .  DeeeE--------------------------------------------------------R.	vcvttps2dq	%xmm0, %xmm2
 # CHECK-NEXT: [1,3]	.    .  DeeE----------------------------------------------------------R	vpclmulqdq	$0, %xmm0, %xmm1, %xmm2

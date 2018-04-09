@@ -456,10 +456,10 @@ bool MachineBasicBlock::isLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) const {
 }
 
 void MachineBasicBlock::sortUniqueLiveIns() {
-  std::sort(LiveIns.begin(), LiveIns.end(),
-            [](const RegisterMaskPair &LI0, const RegisterMaskPair &LI1) {
-              return LI0.PhysReg < LI1.PhysReg;
-            });
+  llvm::sort(LiveIns.begin(), LiveIns.end(),
+             [](const RegisterMaskPair &LI0, const RegisterMaskPair &LI1) {
+               return LI0.PhysReg < LI1.PhysReg;
+             });
   // Liveins are sorted by physreg now we can merge their lanemasks.
   LiveInVector::const_iterator I = LiveIns.begin();
   LiveInVector::const_iterator J;

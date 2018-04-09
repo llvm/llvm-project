@@ -83,7 +83,7 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // CHECK-DAG: call{{.*}}cudaRegisterVar(i8** %0, {{.*}}ext_constant_var{{.*}}i32 1, i32 4, i32 1, i32 0
 // CHECK: ret void
 
-// Test that we've built contructor..
+// Test that we've built constructor..
 // CHECK: define internal void @__cuda_module_ctor
 //   .. that calls __cudaRegisterFatBinary(&__cuda_fatbin_wrapper)
 // CHECK: call{{.*}}cudaRegisterFatBinary{{.*}}__cuda_fatbin_wrapper

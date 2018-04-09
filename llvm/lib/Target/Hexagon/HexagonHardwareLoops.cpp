@@ -928,6 +928,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
       // 'Add' instruction.
       const MachineInstr *EndValInstr = MRI->getVRegDef(End->getReg());
       if (EndValInstr->getOpcode() == Hexagon::A2_addi &&
+          EndValInstr->getOperand(1).getSubReg() == 0 &&
           EndValInstr->getOperand(2).getImm() == StartV) {
         DistR = EndValInstr->getOperand(1).getReg();
       } else {

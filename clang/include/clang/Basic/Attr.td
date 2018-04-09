@@ -2661,7 +2661,7 @@ def LoopHint : Attr {
   /// vectorize: vectorizes loop operations if State == Enable.
   /// vectorize_width: vectorize loop operations with width 'Value'.
   /// interleave: interleave multiple loop iterations if State == Enable.
-  /// interleave_count: interleaves 'Value' loop interations.
+  /// interleave_count: interleaves 'Value' loop iterations.
   /// unroll: fully unroll loop if State == Enable.
   /// unroll_count: unrolls loop 'Value' times.
   /// distribute: attempt to distribute loop if State == Enable

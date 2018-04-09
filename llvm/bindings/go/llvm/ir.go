@@ -1138,9 +1138,6 @@ func (v Value) AddTargetDependentFunctionAttr(attr, value string) {
 func (v Value) SetPersonality(p Value) {
 	C.LLVMSetPersonalityFn(v.C, p.C)
 }
-func (v Value) SetSubprogram(sp Metadata) {
-	C.LLVMSetSubprogram(v.C, sp.C)
-}
 
 // Operations on parameters
 func (v Value) ParamsCount() int { return int(C.LLVMCountParams(v.C)) }

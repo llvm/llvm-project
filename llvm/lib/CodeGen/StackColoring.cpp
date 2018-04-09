@@ -1224,7 +1224,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   });
 
   for (auto &s : LiveStarts)
-    std::sort(s.begin(), s.end());
+    llvm::sort(s.begin(), s.end());
 
   bool Changed = true;
   while (Changed) {

@@ -1435,7 +1435,7 @@ define <8 x i64> @mul_v8i64_sext(<8 x i16> %val1, <8 x i32> %val2) {
 ; AVX512-LABEL: mul_v8i64_sext:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxwq %xmm0, %zmm0
-; AVX512-NEXT:    vpmovsxdq %ymm1, %zmm1
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; AVX512-NEXT:    vpmuldq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %1 = sext <8 x i16> %val1 to <8 x i64>

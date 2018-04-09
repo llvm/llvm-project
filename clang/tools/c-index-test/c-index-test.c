@@ -662,7 +662,7 @@ static void ValidateCommentXML(const char *Str, const char *CommentSchemaFile) {
     printf(" CommentXMLValid");
   else if (status > 0) {
     xmlErrorPtr Error = xmlGetLastError();
-    printf(" CommentXMLInvalid [not vaild XML: %s]", Error->message);
+    printf(" CommentXMLInvalid [not valid XML: %s]", Error->message);
   } else
     printf(" libXMLError");
 

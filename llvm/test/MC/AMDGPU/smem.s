@@ -16,6 +16,22 @@ s_dcache_wb_vol
 // GFX89: s_dcache_wb_vol ; encoding: [0x00,0x00,0x8c,0xc0,0x00,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
 
+s_atc_probe 0x7, s[4:5], s0
+// GFX89:  s_atc_probe 7, s[4:5], s0 ; encoding: [0xc2,0x01,0x98,0xc0,0x00,0x00,0x00,0x00]
+// NOSICI: error: instruction not supported on this GPU
+
+s_atc_probe 0x0, s[4:5], 0x0
+// GFX89:  s_atc_probe 0, s[4:5], 0x0 ; encoding: [0x02,0x00,0x9a,0xc0,0x00,0x00,0x00,0x00]
+// NOSICI: error: instruction not supported on this GPU
+
+s_atc_probe_buffer 0x1, s[8:11], s0
+// GFX89:  s_atc_probe_buffer 1, s[8:11], s0 ; encoding: [0x44,0x00,0x9c,0xc0,0x00,0x00,0x00,0x00]
+// NOSICI: error: instruction not supported on this GPU
+
+s_atc_probe_buffer 0x0, s[8:11], s101
+// GFX89:  s_atc_probe_buffer 0, s[8:11], s101 ; encoding: [0x04,0x00,0x9c,0xc0,0x65,0x00,0x00,0x00]
+// NOSICI: error: instruction not supported on this GPU
+
 s_memrealtime s[4:5]
 // GFX89: s_memrealtime s[4:5] ; encoding: [0x00,0x01,0x94,0xc0,0x00,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
@@ -212,6 +228,26 @@ s_scratch_store_dwordx2 s[2:3], s[4:5], s101 glc
 s_scratch_store_dwordx4 s[4:7], s[4:5], s0 glc
 // GFX9: s_scratch_store_dwordx4 s[4:7], s[4:5], s0 glc ; encoding: [0x02,0x01,0x5d,0xc0,0x00,0x00,0x00,0x00]
 // NOSICIVI: error
+
+//===----------------------------------------------------------------------===//
+// s_dcache_discard instructions
+//===----------------------------------------------------------------------===//
+
+s_dcache_discard s[2:3], s0
+// GFX9:     s_dcache_discard s[2:3], s0 ; encoding: [0x01,0x00,0xa0,0xc0,0x00,0x00,0x00,0x00]
+// NOSICIVI: error: instruction not supported on this GPU
+
+s_dcache_discard s[2:3], 0x0
+// GFX9:     s_dcache_discard s[2:3], 0x0 ; encoding: [0x01,0x00,0xa2,0xc0,0x00,0x00,0x00,0x00]
+// NOSICIVI: error: instruction not supported on this GPU
+
+s_dcache_discard_x2 s[2:3], s101
+// GFX9:     s_dcache_discard_x2 s[2:3], s101 ; encoding: [0x01,0x00,0xa4,0xc0,0x65,0x00,0x00,0x00]
+// NOSICIVI: error: instruction not supported on this GPU
+
+s_dcache_discard_x2 s[2:3], 0x0
+// GFX9:     s_dcache_discard_x2 s[2:3], 0x0 ; encoding: [0x01,0x00,0xa6,0xc0,0x00,0x00,0x00,0x00]
+// NOSICIVI: error: instruction not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // s_atomic instructions

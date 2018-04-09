@@ -114,7 +114,7 @@ namespace constexpr_init_order {
   constexpr B b(1);
   constexpr B c(1);
   static_assert(b.a == 1, "p should be initialized before B() is executed");
-  static_assert(c.a == 7, "b not initialzed properly");
+  static_assert(c.a == 7, "b not initialized properly");
 }
 
 namespace default_args {

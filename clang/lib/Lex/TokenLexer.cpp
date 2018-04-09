@@ -483,7 +483,7 @@ void TokenLexer::ExpandFunctionArguments() {
       bool VaArgsPseudoPaste = false;
       // If this is the GNU ", ## __VA_ARGS__" extension, and we just learned
       // that __VA_ARGS__ expands to multiple tokens, avoid a pasting error when
-      // the expander trys to paste ',' with the first token of the __VA_ARGS__
+      // the expander tries to paste ',' with the first token of the __VA_ARGS__
       // expansion.
       if (NonEmptyPasteBefore && ResultToks.size() >= 2 &&
           ResultToks[ResultToks.size()-2].is(tok::comma) &&

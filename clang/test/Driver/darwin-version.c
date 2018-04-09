@@ -218,7 +218,7 @@
 // CHECK-VERSION-TNO-SAME-NOT: overriding
 // CHECK-VERSION-TNO-SAME-NOT: argument unused during compilation
 
-// Target with OS version is not overriden by -m<os>-version-min variables:
+// Target with OS version is not overridden by -m<os>-version-min variables:
 
 // RUN: %clang -target x86_64-apple-macos10.11.2 -mmacos-version-min=10.6 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV1 %s
@@ -236,7 +236,7 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV4 %s
 // CHECK-VERSION-TIGNORE-OSV4: "thumbv7k-apple-watchos3.0.0"
 
-// Target without OS version inlcudes the OS given by -m<os>-version-min arguments:
+// Target without OS version includes the OS given by -m<os>-version-min arguments:
 
 // RUN: %clang -target x86_64-apple-macos -mmacos-version-min=10.11 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-USE-OS-ARG1 %s
@@ -254,7 +254,7 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-USE-OS-ARG4 %s
 // CHECK-VERSION-USE-OS-ARG4: "thumbv7k-apple-watchos4.0.0"
 
-// Target with OS version is not overriden by environment variables:
+// Target with OS version is not overridden by environment variables:
 
 // RUN: env MACOSX_DEPLOYMENT_TARGET=10.1 \
 // RUN:   %clang -target i386-apple-macos10.5 -c %s -### 2>&1 | \
@@ -276,7 +276,7 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TWATCHOS-CMD %s
 // CHECK-VERSION-TWATCHOS-CMD: "thumbv7k-apple-watchos3.0.0"
 
-// Target with OS version is not overriden by the SDK:
+// Target with OS version is not overridden by the SDK:
 
 // RUN: %clang -target armv7-apple-ios9 -Wno-missing-sysroot -isysroot SDKs/iPhoneOS11.0.sdk -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-TIOS-SDK %s
@@ -290,7 +290,7 @@
 // RUN: FileCheck --check-prefix=CHECK-VERSION-TTVOS-SDK %s
 // CHECK-VERSION-TTVOS-SDK: thumbv7-apple-tvos9
 
-// Target with OS version is not overriden by arch:
+// Target with OS version is not overridden by arch:
 
 // RUN: %clang -target uknown-apple-macos10.11.2 -arch=armv7k -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-ARCH1 %s

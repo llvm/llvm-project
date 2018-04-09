@@ -148,15 +148,16 @@ void LegalizerInfo::computeTables() {
         if (TypeIdx < ScalarSizeChangeStrategies[OpcodeIdx].size() &&
             ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx] != nullptr)
           S = ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx];
-        std::sort(ScalarSpecifiedActions.begin(), ScalarSpecifiedActions.end());
+        llvm::sort(ScalarSpecifiedActions.begin(),
+                   ScalarSpecifiedActions.end());
         checkPartialSizeAndActionsVector(ScalarSpecifiedActions);
         setScalarAction(Opcode, TypeIdx, S(ScalarSpecifiedActions));
       }
 
       // 2. Handle pointer types
       for (auto PointerSpecifiedActions : AddressSpace2SpecifiedActions) {
-        std::sort(PointerSpecifiedActions.second.begin(),
-                  PointerSpecifiedActions.second.end());
+        llvm::sort(PointerSpecifiedActions.second.begin(),
+                   PointerSpecifiedActions.second.end());
         checkPartialSizeAndActionsVector(PointerSpecifiedActions.second);
         // For pointer types, we assume that there isn't a meaningfull way
         // to change the number of bits used in the pointer.
@@ -168,8 +169,8 @@ void LegalizerInfo::computeTables() {
       // 3. Handle vector types
       SizeAndActionsVec ElementSizesSeen;
       for (auto VectorSpecifiedActions : ElemSize2SpecifiedActions) {
-        std::sort(VectorSpecifiedActions.second.begin(),
-                  VectorSpecifiedActions.second.end());
+        llvm::sort(VectorSpecifiedActions.second.begin(),
+                   VectorSpecifiedActions.second.end());
         const uint16_t ElementSize = VectorSpecifiedActions.first;
         ElementSizesSeen.push_back({ElementSize, Legal});
         checkPartialSizeAndActionsVector(VectorSpecifiedActions.second);
@@ -187,7 +188,7 @@ void LegalizerInfo::computeTables() {
             Opcode, TypeIdx, ElementSize,
             moreToWiderTypesAndLessToWidest(NumElementsActions));
       }
-      std::sort(ElementSizesSeen.begin(), ElementSizesSeen.end());
+      llvm::sort(ElementSizesSeen.begin(), ElementSizesSeen.end());
       SizeChangeStrategy VectorElementSizeChangeStrategy =
           &unsupportedForDifferentSizes;
       if (TypeIdx < VectorElementSizeChangeStrategies[OpcodeIdx].size() &&

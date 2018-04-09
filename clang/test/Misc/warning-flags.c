@@ -81,7 +81,7 @@ CHECK-NEXT:   warn_on_superclass_use
 CHECK-NEXT:   warn_pp_convert_to_positive
 CHECK-NEXT:   warn_pp_expr_overflow
 CHECK-NEXT:   warn_pp_line_decimal
-CHECK-NEXT:   warn_pragma_pack_pop_identifer_and_alignment
+CHECK-NEXT:   warn_pragma_pack_pop_identifier_and_alignment
 CHECK-NEXT:   warn_pragma_pack_show
 CHECK-NEXT:   warn_property_getter_owning_mismatch
 CHECK-NEXT:   warn_register_objc_catch_parm

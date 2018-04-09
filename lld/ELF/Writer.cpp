@@ -494,7 +494,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
 static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
                                const Symbol &B) {
-  if (B.isFile() || B.isSection())
+  if (B.isSection())
     return false;
 
   // If sym references a section in a discarded group, don't keep it.

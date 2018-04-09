@@ -2798,7 +2798,7 @@ def NoThrowDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 Clang supports the GNU style ``__attribute__((nothrow))`` and Microsoft style
-``__declspec(nothrow)`` attribute as an equivilent of `noexcept` on function
+``__declspec(nothrow)`` attribute as an equivalent of `noexcept` on function
 declarations. This attribute informs the compiler that the annotated function
 does not throw an exception. This prevents exception-unwinding. This attribute
 is particularly useful on functions in the C Standard Library that are
@@ -3110,7 +3110,7 @@ the ability to distinguish between different versions of the same entity but
 with different ABI versions supported. For example, a newer version of a class
 could have a different set of data members and thus have a different size. Using
 the ``abi_tag`` attribute, it is possible to have different mangled names for
-a global variable of the class type. Therefor, the old code could keep using
+a global variable of the class type. Therefore, the old code could keep using
 the old manged name and the new code will use the new mangled name with tags.
   }];
 }

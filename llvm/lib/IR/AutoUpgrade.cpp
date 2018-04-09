@@ -958,8 +958,7 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
 // Replace a masked intrinsic with an older unmasked intrinsic.
 static Value *UpgradeX86MaskedShift(IRBuilder<> &Builder, CallInst &CI,
                                     Intrinsic::ID IID) {
-  Function *F = CI.getCalledFunction();
-  Function *Intrin = Intrinsic::getDeclaration(F->getParent(), IID);
+  Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID);
   Value *Rep = Builder.CreateCall(Intrin,
                                  { CI.getArgOperand(0), CI.getArgOperand(1) });
   return EmitX86Select(Builder, CI.getArgOperand(3), Rep, CI.getArgOperand(2));
@@ -986,6 +985,151 @@ static Value* UpgradeMaskToInt(IRBuilder<> &Builder, CallInst &CI) {
   unsigned NumElts = CI.getType()->getVectorNumElements();
   Value *Mask = getX86MaskVec(Builder, Op, NumElts);
   return Builder.CreateSExt(Mask, ReturnOp, "vpmovm2");
+}
+
+// Replace intrinsic with unmasked version and a select.
+static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
+                                      CallInst &CI, Value *&Rep) {
+  Name = Name.substr(12); // Remove avx512.mask.
+
+  unsigned VecWidth = CI.getType()->getPrimitiveSizeInBits();
+  unsigned EltWidth = CI.getType()->getScalarSizeInBits();
+  Intrinsic::ID IID;
+  if (Name.startswith("max.p")) {
+    if (VecWidth == 128 && EltWidth == 32)
+      IID = Intrinsic::x86_sse_max_ps;
+    else if (VecWidth == 128 && EltWidth == 64)
+      IID = Intrinsic::x86_sse2_max_pd;
+    else if (VecWidth == 256 && EltWidth == 32)
+      IID = Intrinsic::x86_avx_max_ps_256;
+    else if (VecWidth == 256 && EltWidth == 64)
+      IID = Intrinsic::x86_avx_max_pd_256;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("min.p")) {
+    if (VecWidth == 128 && EltWidth == 32)
+      IID = Intrinsic::x86_sse_min_ps;
+    else if (VecWidth == 128 && EltWidth == 64)
+      IID = Intrinsic::x86_sse2_min_pd;
+    else if (VecWidth == 256 && EltWidth == 32)
+      IID = Intrinsic::x86_avx_min_ps_256;
+    else if (VecWidth == 256 && EltWidth == 64)
+      IID = Intrinsic::x86_avx_min_pd_256;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pshuf.b.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_ssse3_pshuf_b_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pshuf_b;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pshuf_b_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmul.dq.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse41_pmuldq;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pmul_dq;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmul_dq_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmulu.dq.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse2_pmulu_dq;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pmulu_dq;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmulu_dq_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmul.hr.sw.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_ssse3_pmul_hr_sw_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pmul_hr_sw;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmul_hr_sw_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmulh.w.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse2_pmulh_w;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pmulh_w;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmulh_w_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmulhu.w.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse2_pmulhu_w;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pmulhu_w;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmulhu_w_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("packsswb.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse2_packsswb_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_packsswb;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_packsswb_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("packssdw.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse2_packssdw_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_packssdw;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_packssdw_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("packuswb.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse2_packuswb_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_packuswb;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_packuswb_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("packusdw.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse41_packusdw;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_packusdw;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_packusdw_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("vpermilvar.")) {
+    if (VecWidth == 128 && EltWidth == 32)
+      IID = Intrinsic::x86_avx_vpermilvar_ps;
+    else if (VecWidth == 128 && EltWidth == 64)
+      IID = Intrinsic::x86_avx_vpermilvar_pd;
+    else if (VecWidth == 256 && EltWidth == 32)
+      IID = Intrinsic::x86_avx_vpermilvar_ps_256;
+    else if (VecWidth == 256 && EltWidth == 64)
+      IID = Intrinsic::x86_avx_vpermilvar_pd_256;
+    else if (VecWidth == 512 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_vpermilvar_ps_512;
+    else if (VecWidth == 512 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_vpermilvar_pd_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else
+    return false;
+
+  Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI.getModule(), IID),
+                           { CI.getArgOperand(0), CI.getArgOperand(1) });
+  Rep = EmitX86Select(Builder, CI.getArgOperand(3), Rep,
+                      CI.getArgOperand(2));
+  return true;
 }
 
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
@@ -1896,152 +2040,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                { CI->getArgOperand(0), Builder.getInt1(false) });
       Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
-    } else if (IsX86 && (Name.startswith("avx512.mask.max.p") ||
-                         Name.startswith("avx512.mask.min.p"))) {
-      bool IsMin = Name[13] == 'i';
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      unsigned VecWidth = VecTy->getPrimitiveSizeInBits();
-      unsigned EltWidth = VecTy->getScalarSizeInBits();
-      Intrinsic::ID IID;
-      if (!IsMin && VecWidth == 128 && EltWidth == 32)
-        IID = Intrinsic::x86_sse_max_ps;
-      else if (!IsMin && VecWidth == 128 && EltWidth == 64)
-        IID = Intrinsic::x86_sse2_max_pd;
-      else if (!IsMin && VecWidth == 256 && EltWidth == 32)
-        IID = Intrinsic::x86_avx_max_ps_256;
-      else if (!IsMin && VecWidth == 256 && EltWidth == 64)
-        IID = Intrinsic::x86_avx_max_pd_256;
-      else if (IsMin && VecWidth == 128 && EltWidth == 32)
-        IID = Intrinsic::x86_sse_min_ps;
-      else if (IsMin && VecWidth == 128 && EltWidth == 64)
-        IID = Intrinsic::x86_sse2_min_pd;
-      else if (IsMin && VecWidth == 256 && EltWidth == 32)
-        IID = Intrinsic::x86_avx_min_ps_256;
-      else if (IsMin && VecWidth == 256 && EltWidth == 64)
-        IID = Intrinsic::x86_avx_min_pd_256;
-      else
-        llvm_unreachable("Unexpected intrinsic");
-
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               { CI->getArgOperand(0), CI->getArgOperand(1) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
-                          CI->getArgOperand(2));
-    } else if (IsX86 && Name.startswith("avx512.mask.pshuf.b.")) {
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      Intrinsic::ID IID;
-      if (VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_ssse3_pshuf_b_128;
-      else if (VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_pshuf_b;
-      else if (VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_pshuf_b_512;
-      else
-        llvm_unreachable("Unexpected intrinsic");
-
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               { CI->getArgOperand(0), CI->getArgOperand(1) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
-                          CI->getArgOperand(2));
-    } else if (IsX86 && (Name.startswith("avx512.mask.pmul.dq.") ||
-                         Name.startswith("avx512.mask.pmulu.dq."))) {
-      bool IsUnsigned = Name[16] == 'u';
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      Intrinsic::ID IID;
-      if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse41_pmuldq;
-      else if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_pmul_dq;
-      else if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_pmul_dq_512;
-      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse2_pmulu_dq;
-      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_pmulu_dq;
-      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_pmulu_dq_512;
-      else
-        llvm_unreachable("Unexpected intrinsic");
-
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               { CI->getArgOperand(0), CI->getArgOperand(1) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
-                          CI->getArgOperand(2));
-    } else if (IsX86 && Name.startswith("avx512.mask.pmul.hr.sw.")) {
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      Intrinsic::ID IID;
-      if (VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_ssse3_pmul_hr_sw_128;
-      else if (VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_pmul_hr_sw;
-      else if (VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_pmul_hr_sw_512;
-      else
-        llvm_unreachable("Unexpected intrinsic");
-
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               { CI->getArgOperand(0), CI->getArgOperand(1) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
-                          CI->getArgOperand(2));
-    } else if (IsX86 && (Name.startswith("avx512.mask.pmulh.w.") ||
-                         Name.startswith("avx512.mask.pmulhu.w."))) {
-      bool IsUnsigned = Name[17] == 'u';
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      Intrinsic::ID IID;
-      if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse2_pmulh_w;
-      else if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_pmulh_w;
-      else if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_pmulh_w_512;
-      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse2_pmulhu_w;
-      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_pmulhu_w;
-      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_pmulhu_w_512;
-      else
-        llvm_unreachable("Unexpected intrinsic");
-
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               { CI->getArgOperand(0), CI->getArgOperand(1) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
-                          CI->getArgOperand(2));
-    } else if (IsX86 && Name.startswith("avx512.mask.pack")) {
-      bool IsUnsigned = Name[16] == 'u';
-      bool IsDW = Name[18] == 'd';
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      Intrinsic::ID IID;
-      if (!IsUnsigned && !IsDW && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse2_packsswb_128;
-      else if (!IsUnsigned && !IsDW && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_packsswb;
-      else if (!IsUnsigned && !IsDW && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_packsswb_512;
-      else if (!IsUnsigned && IsDW && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse2_packssdw_128;
-      else if (!IsUnsigned && IsDW && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_packssdw;
-      else if (!IsUnsigned && IsDW && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_packssdw_512;
-      else if (IsUnsigned && !IsDW && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse2_packuswb_128;
-      else if (IsUnsigned && !IsDW && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_packuswb;
-      else if (IsUnsigned && !IsDW && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_packuswb_512;
-      else if (IsUnsigned && IsDW && VecTy->getPrimitiveSizeInBits() == 128)
-        IID = Intrinsic::x86_sse41_packusdw;
-      else if (IsUnsigned && IsDW && VecTy->getPrimitiveSizeInBits() == 256)
-        IID = Intrinsic::x86_avx2_packusdw;
-      else if (IsUnsigned && IsDW && VecTy->getPrimitiveSizeInBits() == 512)
-        IID = Intrinsic::x86_avx512_packusdw_512;
-      else
-        llvm_unreachable("Unexpected intrinsic");
-
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               { CI->getArgOperand(0), CI->getArgOperand(1) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
-                          CI->getArgOperand(2));
     } else if (IsX86 && Name.startswith("avx512.mask.psll")) {
       bool IsImmediate = Name[16] == 'i' ||
                          (Name.size() > 18 && Name[18] == 'i');
@@ -2248,28 +2246,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = upgradeMaskedMove(Builder, *CI);
     } else if (IsX86 && Name.startswith("avx512.cvtmask2")) {
       Rep = UpgradeMaskToInt(Builder, *CI);
-    } else if (IsX86 && Name.startswith("avx512.mask.vpermilvar.")) {
-      Intrinsic::ID IID;
-      if (Name.endswith("ps.128"))
-        IID = Intrinsic::x86_avx_vpermilvar_ps;
-      else if (Name.endswith("pd.128"))
-        IID = Intrinsic::x86_avx_vpermilvar_pd;
-      else if (Name.endswith("ps.256"))
-        IID = Intrinsic::x86_avx_vpermilvar_ps_256;
-      else if (Name.endswith("pd.256"))
-        IID = Intrinsic::x86_avx_vpermilvar_pd_256;
-      else if (Name.endswith("ps.512"))
-        IID = Intrinsic::x86_avx512_vpermilvar_ps_512;
-      else if (Name.endswith("pd.512"))
-        IID = Intrinsic::x86_avx512_vpermilvar_pd_512;
-      else
-        llvm_unreachable("Unexpected vpermilvar intrinsic");
-
-      Function *Intrin = Intrinsic::getDeclaration(F->getParent(), IID);
-      Rep = Builder.CreateCall(Intrin,
-                               { CI->getArgOperand(0), CI->getArgOperand(1) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
-                          CI->getArgOperand(2));
     } else if (IsX86 && Name.endswith(".movntdqa")) {
       Module *M = F->getParent();
       MDNode *Node = MDNode::get(
@@ -2303,6 +2279,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
       }
+    } else if (IsX86 && Name.startswith("avx512.mask.") &&
+               upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
+      // Rep will be updated by the call in the condition.
     } else if (IsNVVM && (Name == "abs.i" || Name == "abs.ll")) {
       Value *Arg = CI->getArgOperand(0);
       Value *Neg = Builder.CreateNeg(Arg, "neg");

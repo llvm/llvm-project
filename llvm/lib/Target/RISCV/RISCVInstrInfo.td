@@ -83,6 +83,14 @@ def uimmlog2xlen : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   let ParserMatchClass = UImmLog2XLenAsmOperand;
   // TODO: should ensure invalid shamt is rejected when decoding.
   let DecoderMethod = "decodeUImmOperand<6>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    if (STI.getTargetTriple().isArch64Bit())
+      return  isUInt<6>(Imm);
+    return isUInt<5>(Imm);
+  }];
 }
 
 def uimm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
@@ -94,6 +102,12 @@ def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<12>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<12>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isInt<12>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
 }
 
 def uimm12 : Operand<XLenVT> {
@@ -106,12 +120,24 @@ def simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<13, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<12, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
 }
 
 def uimm20 : Operand<XLenVT> {
   let ParserMatchClass = UImmAsmOperand<20>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<20>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<20>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
@@ -119,6 +145,12 @@ def simm21_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<20, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
 }
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.

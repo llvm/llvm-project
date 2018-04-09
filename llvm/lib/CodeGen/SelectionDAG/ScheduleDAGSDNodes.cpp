@@ -243,7 +243,7 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
     return;
 
   // Sort them in increasing order.
-  std::sort(Offsets.begin(), Offsets.end());
+  llvm::sort(Offsets.begin(), Offsets.end());
 
   // Check if the loads are close enough.
   SmallVector<SDNode*, 4> Loads;

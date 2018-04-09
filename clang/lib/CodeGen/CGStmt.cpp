@@ -1037,7 +1037,7 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     Builder.ClearInsertionPoint();
   }
 
-  // Emit the result value, even if unused, to evalute the side effects.
+  // Emit the result value, even if unused, to evaluate the side effects.
   const Expr *RV = S.getRetValue();
 
   // Treat block literals in a return expression as if they appeared

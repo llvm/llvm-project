@@ -121,7 +121,7 @@ static std::pair<const Stmt*,
 
 /// Adjusts a return value when the called function's return type does not
 /// match the caller's expression type. This can happen when a dynamic call
-/// is devirtualized, and the overridding method has a covariant (more specific)
+/// is devirtualized, and the overriding method has a covariant (more specific)
 /// return type than the parent's method. For C++ objects, this means we need
 /// to add base casts.
 static SVal adjustReturnValue(SVal V, QualType ExpectedTy, QualType ActualTy,

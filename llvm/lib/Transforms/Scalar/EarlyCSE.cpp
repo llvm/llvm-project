@@ -50,6 +50,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -69,6 +70,9 @@ STATISTIC(NumCSECVP,   "Number of compare instructions CVP'd");
 STATISTIC(NumCSELoad,  "Number of load instructions CSE'd");
 STATISTIC(NumCSECall,  "Number of call instructions CSE'd");
 STATISTIC(NumDSE,      "Number of trivial dead stores removed");
+
+DEBUG_COUNTER(CSECounter, "early-cse",
+              "Controls which instructions are removed");
 
 //===----------------------------------------------------------------------===//
 // SimpleValue
@@ -727,11 +731,15 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
                      << CondInst->getName() << "' as " << *TorF << " in "
                      << BB->getName() << "\n");
-        // Replace all dominated uses with the known value.
-        if (unsigned Count = replaceDominatedUsesWith(
-                CondInst, TorF, DT, BasicBlockEdge(Pred, BB))) {
-          Changed = true;
-          NumCSECVP += Count;
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          DEBUG(dbgs() << "Skipping due to debug counter\n");
+        } else {
+          // Replace all dominated uses with the known value.
+          if (unsigned Count = replaceDominatedUsesWith(
+                  CondInst, TorF, DT, BasicBlockEdge(Pred, BB))) {
+            Changed = true;
+            NumCSECVP += Count;
+          }
         }
       }
     }
@@ -751,6 +759,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // Dead instructions should just be removed.
     if (isInstructionTriviallyDead(Inst, &TLI)) {
       DEBUG(dbgs() << "EarlyCSE DCE: " << *Inst << '\n');
+      if (!DebugCounter::shouldExecute(CSECounter)) {
+        DEBUG(dbgs() << "Skipping due to debug counter\n");
+        continue;
+      }
       salvageDebugInfo(*Inst);
       removeMSSA(Inst);
       Inst->eraseFromParent();
@@ -840,21 +852,25 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // its simpler value.
     if (Value *V = SimplifyInstruction(Inst, SQ)) {
       DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V << '\n');
-      bool Killed = false;
-      if (!Inst->use_empty()) {
-        Inst->replaceAllUsesWith(V);
-        Changed = true;
+      if (!DebugCounter::shouldExecute(CSECounter)) {
+        DEBUG(dbgs() << "Skipping due to debug counter\n");
+      } else {
+        bool Killed = false;
+        if (!Inst->use_empty()) {
+          Inst->replaceAllUsesWith(V);
+          Changed = true;
+        }
+        if (isInstructionTriviallyDead(Inst, &TLI)) {
+          removeMSSA(Inst);
+          Inst->eraseFromParent();
+          Changed = true;
+          Killed = true;
+        }
+        if (Changed)
+          ++NumSimplify;
+        if (Killed)
+          continue;
       }
-      if (isInstructionTriviallyDead(Inst, &TLI)) {
-        removeMSSA(Inst);
-        Inst->eraseFromParent();
-        Changed = true;
-        Killed = true;
-      }
-      if (Changed)
-        ++NumSimplify;
-      if (Killed)
-        continue;
     }
 
     // If this is a simple instruction that we can value number, process it.
@@ -862,6 +878,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       // See if the instruction has an available value.  If so, use it.
       if (Value *V = AvailableValues.lookup(Inst)) {
         DEBUG(dbgs() << "EarlyCSE CSE: " << *Inst << "  to: " << *V << '\n');
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          DEBUG(dbgs() << "Skipping due to debug counter\n");
+          continue;
+        }
         if (auto *I = dyn_cast<Instruction>(V))
           I->andIRFlags(Inst);
         Inst->replaceAllUsesWith(V);
@@ -919,6 +939,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         if (Op != nullptr) {
           DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << *Inst
                        << "  to: " << *InVal.DefInst << '\n');
+          if (!DebugCounter::shouldExecute(CSECounter)) {
+            DEBUG(dbgs() << "Skipping due to debug counter\n");
+            continue;
+          }
           if (!Inst->use_empty())
             Inst->replaceAllUsesWith(Op);
           removeMSSA(Inst);
@@ -958,6 +982,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                               Inst)) {
         DEBUG(dbgs() << "EarlyCSE CSE CALL: " << *Inst
                      << "  to: " << *InVal.first << '\n');
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          DEBUG(dbgs() << "Skipping due to debug counter\n");
+          continue;
+        }
         if (!Inst->use_empty())
           Inst->replaceAllUsesWith(InVal.first);
         removeMSSA(Inst);
@@ -1009,6 +1037,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                 MSSA) &&
                "can't have an intervening store if not using MemorySSA!");
         DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << *Inst << '\n');
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          DEBUG(dbgs() << "Skipping due to debug counter\n");
+          continue;
+        }
         removeMSSA(Inst);
         Inst->eraseFromParent();
         Changed = true;
@@ -1041,11 +1073,15 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           if (LastStoreMemInst.isMatchingMemLoc(MemInst)) {
             DEBUG(dbgs() << "EarlyCSE DEAD STORE: " << *LastStore
                          << "  due to: " << *Inst << '\n');
-            removeMSSA(LastStore);
-            LastStore->eraseFromParent();
-            Changed = true;
-            ++NumDSE;
-            LastStore = nullptr;
+            if (!DebugCounter::shouldExecute(CSECounter)) {
+              DEBUG(dbgs() << "Skipping due to debug counter\n");
+            } else {
+              removeMSSA(LastStore);
+              LastStore->eraseFromParent();
+              Changed = true;
+              ++NumDSE;
+              LastStore = nullptr;
+            }
           }
           // fallthrough - we can exploit information about this store
         }

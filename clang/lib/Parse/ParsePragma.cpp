@@ -1245,7 +1245,7 @@ bool Parser::ParsePragmaAttributeSubjectMatchRuleSet(
 
 namespace {
 
-/// Describes the stage at which attribute subject rule parsing was interruped.
+/// Describes the stage at which attribute subject rule parsing was interrupted.
 enum class MissingAttributeSubjectRulesRecoveryPoint {
   Comma,
   ApplyTo,
@@ -2364,7 +2364,7 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
     TokenVector.push_back(Tok);
     AnnotTok.setAnnotationEndLoc(Tok.getLocation());
   }
-  // Add a sentinal EoF token to the end of the list.
+  // Add a sentinel EoF token to the end of the list.
   TokenVector.push_back(EoF);
   // We must allocate this array with new because EnterTokenStream is going to
   // delete it later.

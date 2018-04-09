@@ -29,7 +29,7 @@ int CheckSimple() {
     // CHECK: [[MASTER]]
     // CHECK-DAG: [[MNTH:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
     // CHECK-DAG: [[MWS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
-    // CHECK: [[MTMP1:%.+]] = sub i32 [[MNTH]], [[MWS]]
+    // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
     // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
 
     // printf in master-only basic block.
@@ -69,7 +69,7 @@ void CheckNoArgs() {
     // CHECK: [[MASTER]]
     // CHECK-DAG: [[MNTH:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
     // CHECK-DAG: [[MWS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
-    // CHECK: [[MTMP1:%.+]] = sub i32 [[MNTH]], [[MWS]]
+    // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
     // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
 
     // printf in master-only basic block.
@@ -102,7 +102,7 @@ void CheckAllocaIsInEntryBlock() {
     // CHECK: [[MASTER]]
     // CHECK-DAG: [[MNTH:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
     // CHECK-DAG: [[MWS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
-    // CHECK: [[MTMP1:%.+]] = sub i32 [[MNTH]], [[MWS]]
+    // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
     // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
 
     if (foo) {
