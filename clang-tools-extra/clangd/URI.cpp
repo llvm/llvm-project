@@ -196,5 +196,12 @@ llvm::Expected<std::string> URI::resolve(const URI &Uri,
   return S->get()->getAbsolutePath(Uri.Authority, Uri.Body, HintPath);
 }
 
+llvm::Expected<std::string> URI::includeSpelling(const URI &Uri) {
+  auto S = findSchemeByName(Uri.Scheme);
+  if (!S)
+    return S.takeError();
+  return S->get()->getIncludeSpelling(Uri);
+}
+
 } // namespace clangd
 } // namespace clang
