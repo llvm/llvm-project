@@ -900,8 +900,8 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
     ASSERT_NO_ERROR(ec);
     VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
   }
-  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
-  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
+  llvm::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
+  llvm::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
   v_t ExpectedNonBrokenSymlinks = {"b", "d"};
   ASSERT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());
   ASSERT_TRUE(std::equal(VisitedNonBrokenSymlinks.begin(),
@@ -927,8 +927,8 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
     ASSERT_NO_ERROR(ec);
     VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
   }
-  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
-  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
+  llvm::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
+  llvm::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
   ExpectedNonBrokenSymlinks = {"b", "bb", "d", "da", "dd", "ddd", "ddd"};
   ASSERT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());
   ASSERT_TRUE(std::equal(VisitedNonBrokenSymlinks.begin(),
@@ -954,8 +954,8 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
     ASSERT_NO_ERROR(ec);
     VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
   }
-  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
-  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
+  llvm::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
+  llvm::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
   ExpectedNonBrokenSymlinks = {"a", "b", "ba", "bb", "bc", "c", "d", "da", "dd",
                                "ddd", "e"};
   ASSERT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());

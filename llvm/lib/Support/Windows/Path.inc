@@ -45,6 +45,7 @@ typedef int errno_t;
 using namespace llvm;
 
 using llvm::sys::windows::UTF8ToUTF16;
+using llvm::sys::windows::CurCPToUTF16;
 using llvm::sys::windows::UTF16ToUTF8;
 using llvm::sys::path::widenPath;
 
@@ -62,7 +63,7 @@ namespace llvm {
 namespace sys  {
 namespace path {
 
-// Convert a UTF-8 path to UTF-16.  Also, if the absolute equivalent of the
+// Convert a (likely) UTF-8 path to UTF-16.  Also, if the absolute equivalent of the
 // path is longer than CreateDirectory can tolerate, make it absolute and
 // prefixed by '\\?\'.
 std::error_code widenPath(const Twine &Path8,
@@ -71,7 +72,7 @@ std::error_code widenPath(const Twine &Path8,
 
   // Several operations would convert Path8 to SmallString; more efficient to
   // do it once up front.
-  SmallString<128> Path8Str;
+  SmallString<2*MAX_PATH> Path8Str;
   Path8.toVector(Path8Str);
 
   // If we made this path absolute, how much longer would it get?
@@ -111,11 +112,17 @@ std::error_code widenPath(const Twine &Path8,
       else
         llvm::sys::path::append(FullPath, *I);
     }
-    return UTF8ToUTF16(FullPath, Path16);
+    Path8Str = FullPath;
   }
 
-  // Just use the caller's original path.
-  return UTF8ToUTF16(Path8Str, Path16);
+  // Path8Str now contains the full path or the original path
+  // If the conversion from UTF8 to UTF16 fails because of ERROR_NO_UNICODE_TRANSLATION,
+  // we also try using the current code page before giving up
+  auto ec = UTF8ToUTF16(Path8Str, Path16);
+  if (ec == mapWindowsError(ERROR_NO_UNICODE_TRANSLATION)) {
+    ec = CurCPToUTF16(Path8Str, Path16);
+  }
+  return ec;
 }
 } // end namespace path
 
@@ -1293,23 +1300,26 @@ void system_temp_directory(bool ErasedOnReboot, SmallVectorImpl<char> &Result) {
 } // end namespace path
 
 namespace windows {
-std::error_code UTF8ToUTF16(llvm::StringRef utf8,
-                            llvm::SmallVectorImpl<wchar_t> &utf16) {
-  if (!utf8.empty()) {
-    int len = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.begin(),
-                                    utf8.size(), utf16.begin(), 0);
+std::error_code CodePageToUTF16(unsigned codepage,
+                                llvm::StringRef original,
+                                llvm::SmallVectorImpl<wchar_t> &utf16) {
+  if (!original.empty()) {
+    int len = ::MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, original.begin(),
+                                    original.size(), utf16.begin(), 0);
 
-    if (len == 0)
+    if (len == 0) {
       return mapWindowsError(::GetLastError());
+    }
 
     utf16.reserve(len + 1);
     utf16.set_size(len);
 
-    len = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.begin(),
-                                utf8.size(), utf16.begin(), utf16.size());
+    len = ::MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, original.begin(),
+                                original.size(), utf16.begin(), utf16.size());
 
-    if (len == 0)
+    if (len == 0) {
       return mapWindowsError(::GetLastError());
+    }
   }
 
   // Make utf16 null terminated.
@@ -1319,32 +1329,44 @@ std::error_code UTF8ToUTF16(llvm::StringRef utf8,
   return std::error_code();
 }
 
+std::error_code UTF8ToUTF16(llvm::StringRef utf8,
+                            llvm::SmallVectorImpl<wchar_t> &utf16) {
+  return CodePageToUTF16(CP_UTF8, utf8, utf16);
+}
+
+std::error_code CurCPToUTF16(llvm::StringRef curcp,
+                            llvm::SmallVectorImpl<wchar_t> &utf16) {
+  return CodePageToUTF16(CP_ACP, curcp, utf16);
+}
+
 static
 std::error_code UTF16ToCodePage(unsigned codepage, const wchar_t *utf16,
                                 size_t utf16_len,
-                                llvm::SmallVectorImpl<char> &utf8) {
+                                llvm::SmallVectorImpl<char> &converted) {
   if (utf16_len) {
     // Get length.
-    int len = ::WideCharToMultiByte(codepage, 0, utf16, utf16_len, utf8.begin(),
+    int len = ::WideCharToMultiByte(codepage, 0, utf16, utf16_len, converted.begin(),
                                     0, NULL, NULL);
 
-    if (len == 0)
+    if (len == 0) {
       return mapWindowsError(::GetLastError());
+    }
 
-    utf8.reserve(len);
-    utf8.set_size(len);
+    converted.reserve(len);
+    converted.set_size(len);
 
     // Now do the actual conversion.
-    len = ::WideCharToMultiByte(codepage, 0, utf16, utf16_len, utf8.data(),
-                                utf8.size(), NULL, NULL);
+    len = ::WideCharToMultiByte(codepage, 0, utf16, utf16_len, converted.data(),
+                                converted.size(), NULL, NULL);
 
-    if (len == 0)
+    if (len == 0) {
       return mapWindowsError(::GetLastError());
+    }
   }
 
-  // Make utf8 null terminated.
-  utf8.push_back(0);
-  utf8.pop_back();
+  // Make the new string null terminated.
+  converted.push_back(0);
+  converted.pop_back();
 
   return std::error_code();
 }
@@ -1355,8 +1377,8 @@ std::error_code UTF16ToUTF8(const wchar_t *utf16, size_t utf16_len,
 }
 
 std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
-                             llvm::SmallVectorImpl<char> &utf8) {
-  return UTF16ToCodePage(CP_ACP, utf16, utf16_len, utf8);
+                             llvm::SmallVectorImpl<char> &curcp) {
+  return UTF16ToCodePage(CP_ACP, utf16, utf16_len, curcp);
 }
 
 } // end namespace windows

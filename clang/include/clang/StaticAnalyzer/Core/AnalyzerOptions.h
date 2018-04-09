@@ -367,7 +367,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// dependening on search mode).
+  /// depending on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
@@ -385,7 +385,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// dependening on search mode).
+  /// depending on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
@@ -402,7 +402,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// dependening on search mode).
+  /// depending on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
@@ -419,7 +419,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// dependening on search mode).
+  /// depending on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer

@@ -6747,9 +6747,9 @@ static void Write_IvarOffsetVar(RewriteModernObjC &RewriteObj,
    if (Ivar->getAccessControl() == ObjCIvarDecl::Private ||
        Ivar->getAccessControl() == ObjCIvarDecl::Package ||
        Class->getVisibility() == HiddenVisibility)
-     Visibility shoud be: HiddenVisibility;
+     Visibility should be: HiddenVisibility;
    else
-     Visibility shoud be: DefaultVisibility;
+     Visibility should be: DefaultVisibility;
   */
   
   Result += "\n";

@@ -8,6 +8,8 @@
 # CHECK: error: NameIndex @ 0x0: Abbreviation 0x4 contains multiple DW_IDX_die_offset attributes.
 # CHECK: NameIndex @ 0x0: Abbreviation 0x1: DW_IDX_die_offset uses an unknown form: DW_FORM_unknown_1fff.
 # CHECK: warning: NameIndex @ 0x0: Abbreviation 0x3 references an unknown tag: DW_TAG_unknown_8080.
+# CHECK: error: NameIndex @ 0x0: Abbreviation 0x5 has no DW_IDX_die_offset attribute.
+# CHECK: error: NameIndex @ 0x55: Indexing multiple compile units and abbreviation 0x1 has no DW_IDX_compile_unit attribute.
 
 	.section	.debug_str,"MS",@progbits,1
 .Lstring_producer:
@@ -38,6 +40,30 @@
 	.short	12                      # DW_AT_language
 	.byte	0                       # End Of Children Mark
 .Lcu_end0:
+
+.Lcu_begin1:
+	.long	.Lcu_end1-.Lcu_start1   # Length of Unit
+.Lcu_start1:
+	.short	4                       # DWARF version number
+	.long	.Lsection_abbrev        # Offset Into Abbrev. Section
+	.byte	8                       # Address Size (in bytes)
+	.byte	1                       # Abbrev [1] DW_TAG_compile_unit
+	.long	.Lstring_producer       # DW_AT_producer
+	.short	12                      # DW_AT_language
+	.byte	0                       # End Of Children Mark
+.Lcu_end1:
+
+.Lcu_begin2:
+	.long	.Lcu_end2-.Lcu_start2   # Length of Unit
+.Lcu_start2:
+	.short	4                       # DWARF version number
+	.long	.Lsection_abbrev        # Offset Into Abbrev. Section
+	.byte	8                       # Address Size (in bytes)
+	.byte	1                       # Abbrev [1] DW_TAG_compile_unit
+	.long	.Lstring_producer       # DW_AT_producer
+	.short	12                      # DW_AT_language
+	.byte	0                       # End Of Children Mark
+.Lcu_end2:
 
 	.section	.debug_names,"",@progbits
 	.long	.Lnames_end0-.Lnames_start0 # Header: contribution length
@@ -87,6 +113,36 @@
 	.byte   17                      # DW_FORM_ref1
 	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev
+	.byte	5                       # Abbrev code
+	.byte	46                      # DW_TAG_subprogram
+	.byte	4                       # DW_IDX_parent
+	.byte   5                       # DW_FORM_data2
+	.byte	0                       # End of abbrev
+	.byte	0                       # End of abbrev
 	.byte	0                       # End of abbrev list
 .Lnames_abbrev_end0:
 .Lnames_end0:
+
+	.long	.Lnames_end1-.Lnames_start1 # Header: contribution length
+.Lnames_start1:
+	.short	5                       # Header: version
+	.short	0                       # Header: padding
+	.long	2                       # Header: compilation unit count
+	.long	0                       # Header: local type unit count
+	.long	0                       # Header: foreign type unit count
+	.long	0                       # Header: bucket count
+	.long	0                       # Header: name count
+	.long	.Lnames_abbrev_end1-.Lnames_abbrev_start1 # Header: abbreviation table size
+	.long	0                       # Header: augmentation length
+	.long	.Lcu_begin1             # Compilation unit 0
+	.long	.Lcu_begin2             # Compilation unit 1
+.Lnames_abbrev_start1:
+	.byte	1                       # Abbrev code
+	.byte	46                      # DW_TAG_subprogram
+	.byte	3                       # DW_IDX_die_offset
+	.byte   17                      # DW_FORM_ref1
+	.byte	0                       # End of abbrev
+	.byte	0                       # End of abbrev
+	.byte	0                       # End of abbrev list
+.Lnames_abbrev_end1:
+.Lnames_end1:

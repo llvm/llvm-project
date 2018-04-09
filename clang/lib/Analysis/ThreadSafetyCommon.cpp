@@ -817,7 +817,7 @@ void SExprBuilder::enterCFG(CFG *Cfg, const NamedDecl *D,
 }
 
 void SExprBuilder::enterCFGBlock(const CFGBlock *B) {
-  // Intialize TIL basic block and add it to the CFG.
+  // Initialize TIL basic block and add it to the CFG.
   CurrentBB = lookupBlock(B);
   CurrentBB->reservePredecessors(B->pred_size());
   Scfg->add(CurrentBB);
@@ -892,7 +892,7 @@ void SExprBuilder::exitCFGBlockBody(const CFGBlock *B) {
     til::BasicBlock *BB1 = *It ? lookupBlock(*It) : nullptr;
     ++It;
     til::BasicBlock *BB2 = *It ? lookupBlock(*It) : nullptr;
-    // FIXME: make sure these arent' critical edges.
+    // FIXME: make sure these aren't critical edges.
     auto *Tm = new (Arena) til::Branch(C, BB1, BB2);
     CurrentBB->setTerminator(Tm);
   }

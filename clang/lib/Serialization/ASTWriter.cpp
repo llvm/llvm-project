@@ -3161,7 +3161,7 @@ void ASTWriter::WriteType(QualType T) {
 /// lexically declared within the given DeclContext.
 ///
 /// \returns the offset of the DECL_CONTEXT_LEXICAL block within the
-/// bistream, or 0 if no block was written.
+/// bitstream, or 0 if no block was written.
 uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
                                                  DeclContext *DC) {
   if (DC->decls_empty())

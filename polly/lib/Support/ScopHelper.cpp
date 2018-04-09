@@ -399,25 +399,6 @@ bool polly::isErrorBlock(BasicBlock &BB, const Region &R, LoopInfo &LI,
   if (DominatesAllPredecessors)
     return false;
 
-  // FIXME: This is a simple heuristic to determine if the load is executed
-  //        in a conditional. However, we actually would need the control
-  //        condition, i.e., the post dominance frontier. Alternatively we
-  //        could walk up the dominance tree until we find a block that is
-  //        not post dominated by the load and check if it is a conditional
-  //        or a loop header.
-  auto *DTNode = DT.getNode(&BB);
-  if (!DTNode)
-    return false;
-
-  DTNode = DTNode->getIDom();
-
-  if (!DTNode)
-    return false;
-
-  auto *IDomBB = DTNode->getBlock();
-  if (LI.isLoopHeader(IDomBB))
-    return false;
-
   for (Instruction &Inst : BB)
     if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
       if (isIgnoredIntrinsic(CI))

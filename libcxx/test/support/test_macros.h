@@ -169,6 +169,11 @@
 #define TEST_SAFE_STATIC
 #endif
 
+// FIXME: Fix this feature check when either (A) a compiler provides a complete
+// implementation, or (b) a feature check macro is specified
+#define TEST_HAS_NO_SPACESHIP_OPERATOR
+
+
 #if TEST_STD_VER < 11
 #define ASSERT_NOEXCEPT(...)
 #define ASSERT_NOT_NOEXCEPT(...)

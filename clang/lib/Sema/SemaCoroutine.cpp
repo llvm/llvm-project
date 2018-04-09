@@ -376,7 +376,7 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
 
 // See if return type is coroutine-handle and if so, invoke builtin coro-resume
 // on its address. This is to enable experimental support for coroutine-handle
-// returning await_suspend that results in a guranteed tail call to the target
+// returning await_suspend that results in a guaranteed tail call to the target
 // coroutine.
 static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
                            SourceLocation Loc) {

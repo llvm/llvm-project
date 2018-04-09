@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RISCV.h"
 #include "RISCVMCExpr.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"

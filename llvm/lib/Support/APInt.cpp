@@ -922,7 +922,7 @@ void APInt::ashrSlowCase(unsigned ShiftAmt) {
   // Save the original sign bit for later.
   bool Negative = isNegative();
 
-  // WordShift is the inter-part shift; BitShift is is intra-part shift.
+  // WordShift is the inter-part shift; BitShift is intra-part shift.
   unsigned WordShift = ShiftAmt / APINT_BITS_PER_WORD;
   unsigned BitShift = ShiftAmt % APINT_BITS_PER_WORD;
 

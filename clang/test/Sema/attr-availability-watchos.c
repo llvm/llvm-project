@@ -42,7 +42,7 @@ void test_watchos() {
   f3_watchos(0);
   f4_watchos(0); // expected-error{{'f4_watchos' is unavailable: obsoleted in watchOS 3.0}}
   // We get no warning here because any explicit 'watchos' availability causes
-  // the ios availablity to not implicitly become 'watchos' availability.  Otherwise we'd get
+  // the ios availability to not implicitly become 'watchos' availability.  Otherwise we'd get
   // a deprecated warning.
   f5_watchos(0); // no-warning
   f5_attr_reversed_watchos(0); // no-warning

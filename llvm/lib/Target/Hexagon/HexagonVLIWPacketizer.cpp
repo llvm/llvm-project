@@ -1687,8 +1687,12 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
     PacketStalls = false;
   PacketStalls |= producesStall(MI);
 
-  if (MI.isImplicitDef())
+  if (MI.isImplicitDef()) {
+    // Add to the packet to allow subsequent instructions to be checked
+    // properly.
+    CurrentPacketMIs.push_back(&MI);
     return MII;
+  }
   assert(ResourceTracker->canReserveResources(MI));
 
   bool ExtMI = HII->isExtended(MI) || HII->isConstExtended(MI);
@@ -1807,17 +1811,18 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
 
   SUnit *SUI = MIToSUnit[const_cast<MachineInstr *>(&I)];
 
-  // Check if the latency is 0 between this instruction and any instruction
-  // in the current packet. If so, we disregard any potential stalls due to
-  // the instructions in the previous packet. Most of the instruction pairs
-  // that can go together in the same packet have 0 latency between them.
-  // Only exceptions are newValueJumps as they're generated much later and
-  // the latencies can't be changed at that point. Another is .cur
-  // instructions if its consumer has a 0 latency successor (such as .new).
-  // In this case, the latency between .cur and the consumer stays non-zero
-  // even though we can have  both .cur and .new in the same packet. Changing
-  // the latency to 0 is not an option as it causes software pipeliner to
-  // not pipeline in some cases.
+  // If the latency is 0 and there is a data dependence between this
+  // instruction and any instruction in the current packet, we disregard any
+  // potential stalls due to the instructions in the previous packet. Most of
+  // the instruction pairs that can go together in the same packet have 0
+  // latency between them. The exceptions are
+  // 1. NewValueJumps as they're generated much later and the latencies can't
+  // be changed at that point.
+  // 2. .cur instructions, if its consumer has a 0 latency successor (such as
+  // .new). In this case, the latency between .cur and the consumer stays
+  // non-zero even though we can have  both .cur and .new in the same packet.
+  // Changing the latency to 0 is not an option as it causes software pipeliner
+  // to not pipeline in some cases.
 
   // For Example:
   // {
@@ -1830,19 +1835,10 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
   for (auto J : CurrentPacketMIs) {
     SUnit *SUJ = MIToSUnit[J];
     for (auto &Pred : SUI->Preds)
-      if (Pred.getSUnit() == SUJ &&
-          (Pred.getLatency() == 0 || HII->isNewValueJump(I) ||
-           HII->isToBeScheduledASAP(*J, I)))
-        return false;
-  }
-
-  // Check if the latency is greater than one between this instruction and any
-  // instruction in the previous packet.
-  for (auto J : OldPacketMIs) {
-    SUnit *SUJ = MIToSUnit[J];
-    for (auto &Pred : SUI->Preds)
-      if (Pred.getSUnit() == SUJ && Pred.getLatency() > 1)
-        return true;
+      if (Pred.getSUnit() == SUJ)
+        if ((Pred.getLatency() == 0 && Pred.isAssignedRegDep()) ||
+            HII->isNewValueJump(I) || HII->isToBeScheduledASAP(*J, I))
+          return false;
   }
 
   // Check if the latency is greater than one between this instruction and any

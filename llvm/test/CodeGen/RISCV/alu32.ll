@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
+; RUN: llc -mtriple=riscv32 -mattr=+c -filetype=obj < %s \
+; RUN:   |llvm-objdump -d -triple=riscv32 -mattr=+c -riscv-no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IC %s
+
 ; These tests are each targeted at a particular RISC-V ALU instruction. Other
 ; files in this folder exercise LLVM IR instructions that don't directly match a
 ; RISC-V instruction
@@ -13,6 +17,10 @@ define i32 @addi(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: addi:
+; RV32IC-NEXT:  c.addi a0, 1
+; RV32IC-NEXT:  c.jr ra
   %1 = add i32 %a, 1
   ret i32 %1
 }
@@ -60,6 +68,11 @@ define i32 @andi(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a0, a0, 6
 ; RV32I-NEXT:    ret
+
+
+; RV32IC-LABEL: andi:
+; RV32IC: c.andi a0, 6
+; RV32IC: c.jr ra
   %1 = and i32 %a, 6
   ret i32 %1
 }
@@ -69,6 +82,10 @@ define i32 @slli(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 7
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: slli:
+; RV32IC-NEXT:  slli a0, 7
+; RV32IC-NEXT:  c.jr ra
   %1 = shl i32 %a, 7
   ret i32 %1
 }
@@ -78,6 +95,10 @@ define i32 @srli(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a0, a0, 8
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: srli:
+; RV32IC-NEXT:    c.srli a0, 8
+; RV32IC-NEXT:    c.jr ra
   %1 = lshr i32 %a, 8
   ret i32 %1
 }
@@ -87,6 +108,10 @@ define i32 @srai(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a0, a0, 9
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: srai:
+; RV32IC-NEXT:  c.srai a0, 9
+; RV32IC-NEXT:  c.jr ra
   %1 = ashr i32 %a, 9
   ret i32 %1
 }
@@ -98,6 +123,11 @@ define i32 @add(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: add:
+; RV32IC-NEXT:    c.add a0, a1
+; RV32IC-NEXT:    c.jr ra
+
   %1 = add i32 %a, %b
   ret i32 %1
 }
@@ -107,6 +137,10 @@ define i32 @sub(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: sub:
+; RV32IC-NEXT:    c.sub a0, a1
+; RV32IC-NEXT:    c.jr ra
   %1 = sub i32 %a, %b
   ret i32 %1
 }
@@ -145,6 +179,10 @@ define i32 @xor(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: xor:
+; RV32IC-NEXT:    c.xor a0, a1
+; RV32IC-NEXT:    c.jr ra
   %1 = xor i32 %a, %b
   ret i32 %1
 }
@@ -181,6 +219,10 @@ define i32 @and(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
+
+; RV32IC-LABEL: and:
+; RV32IC-NEXT:    c.and a0, a1
+; RV32IC-NEXT:    c.jr ra
   %1 = and i32 %a, %b
   ret i32 %1
 }

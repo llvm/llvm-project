@@ -1765,7 +1765,7 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
                                     SOEnd = M->second.end();
            SO != SOEnd && !Done; ++SO) {
         assert(SO->second.size() > 0 && 
-               "All virtual functions have overridding virtual functions");
+               "All virtual functions have overriding virtual functions");
         
         // C++ [class.abstract]p4:
         //   A class is abstract if it contains or inherits at least one
@@ -2365,7 +2365,7 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   ASTContext &Context = getASTContext();
   CanQualType ParamType = Context.getCanonicalType(Param->getType());
   
-  // Is it the same as our our class type?
+  // Is it the same as our class type?
   CanQualType ClassTy 
     = Context.getCanonicalType(Context.getTagDeclType(getParent()));
   if (ParamType.getUnqualifiedType() != ClassTy)

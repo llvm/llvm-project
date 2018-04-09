@@ -524,7 +524,7 @@ void Parser::addExpressionCompletions() {
   }
 }
 
-/// \brief Parse an <Expresssion>
+/// \brief Parse an <Expression>
 bool Parser::parseExpressionImpl(VariantValue *Value) {
   switch (Tokenizer->nextTokenKind()) {
   case TokenInfo::TK_Literal:

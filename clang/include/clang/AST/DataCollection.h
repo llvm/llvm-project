@@ -12,7 +12,7 @@
 /// To collect data from Stmt nodes, subclass ConstStmtVisitor and include
 /// StmtDataCollectors.inc after defining the macros that you need. This
 /// provides data collection implementations for most Stmt kinds. Note
-/// that that code requires some conditions to be met:
+/// that the code requires some conditions to be met:
 ///
 ///   - There must be a method addData(const T &Data) that accepts strings,
 ///     integral types as well as QualType. All data is forwarded using

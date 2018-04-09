@@ -35,7 +35,7 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NOHVX %s
 // CHECK-NOHVX-NOT: "-target-feature" "+hvx
 
-// Hvx target feature should be added if -mno-hvx doesnot occur last
+// Hvx target feature should be added if -mno-hvx doesn't occur last
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mno-hvx -mhvx\
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXFEAT %s
 // CHECK-HVXFEAT: "-target-feature" "+hvxv62"

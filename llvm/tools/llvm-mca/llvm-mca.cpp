@@ -137,7 +137,9 @@ static cl::opt<bool>
                              cl::desc("Print the instruction info view"),
                              cl::init(true));
 
-static const Target *getTarget(const char *ProgName) {
+namespace {
+
+const Target *getTarget(const char *ProgName) {
   TripleName = Triple::normalize(TripleName);
   if (TripleName.empty())
     TripleName = Triple::normalize(sys::getDefaultTargetTriple());
@@ -156,13 +158,11 @@ static const Target *getTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static int AssembleInput(const char *ProgName, const Target *TheTarget,
-                         SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
-                         MCAsmInfo &MAI, MCSubtargetInfo &STI,
-                         MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
-  std::unique_ptr<MCAsmParser> Parser(createMCAsmParser(SrcMgr, Ctx, Str, MAI));
+int AssembleInput(const char *ProgName, MCAsmParser &Parser,
+                  const Target *TheTarget, MCSubtargetInfo &STI,
+                  MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, Parser, MCII, MCOptions));
 
   if (!TAP) {
     errs() << ProgName
@@ -170,11 +170,11 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
     return 1;
   }
 
-  Parser->setTargetParser(*TAP);
-  return Parser->Run(false);
+  Parser.setTargetParser(*TAP);
+  return Parser.Run(false);
 }
 
-static ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
+ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
   if (OutputFilename == "")
     OutputFilename = "-";
   std::error_code EC;
@@ -184,8 +184,6 @@ static ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
     return std::move(Out);
   return EC;
 }
-
-namespace {
 
 class MCStreamerWrapper final : public MCStreamer {
   using InstVec = std::vector<std::unique_ptr<const MCInst>>;
@@ -311,10 +309,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  int Res = AssembleInput(ProgName, TheTarget, SrcMgr, Ctx, Str, *MAI, *STI,
-                          *MCII, MCOptions);
-  if (Res)
-    return Res;
+  std::unique_ptr<MCAsmParser> P(createMCAsmParser(SrcMgr, Ctx, Str, *MAI));
+  if (AssembleInput(ProgName, *P, TheTarget, *STI, *MCII, MCOptions))
+    return 1;
 
   if (S->isEmpty()) {
     errs() << "error: no assembly instructions found.\n";
@@ -337,11 +334,10 @@ int main(int argc, char **argv) {
     Width = DispatchWidth;
 
   // Create an instruction builder.
-  std::unique_ptr<mca::InstrBuilder> IB =
-      llvm::make_unique<mca::InstrBuilder>(*STI, *MCII);
+  mca::InstrBuilder IB(*STI, *MCII);
 
   if (PrintInstructionTables) {
-    mca::InstructionTables IT(STI->getSchedModel(), *IB, *S);
+    mca::InstructionTables IT(STI->getSchedModel(), IB, *S);
 
     if (PrintInstructionInfoView) {
       IT.addView(
@@ -355,36 +351,33 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  std::unique_ptr<mca::Backend> B = llvm::make_unique<mca::Backend>(
-      *STI, *MRI, *IB, *S, Width, RegisterFileSize, LoadQueueSize,
-      StoreQueueSize, AssumeNoAlias);
+  mca::Backend B(*STI, *MRI, IB, *S, Width, RegisterFileSize, LoadQueueSize,
+                 StoreQueueSize, AssumeNoAlias);
+  mca::BackendPrinter Printer(B);
 
-  std::unique_ptr<mca::BackendPrinter> Printer =
-      llvm::make_unique<mca::BackendPrinter>(*B);
-
-  Printer->addView(llvm::make_unique<mca::SummaryView>(*S, Width));
+  Printer.addView(llvm::make_unique<mca::SummaryView>(*S, Width));
 
   if (PrintInstructionInfoView)
-    Printer->addView(
+    Printer.addView(
         llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, *S, *IP));
 
   if (PrintModeVerbose)
-    Printer->addView(llvm::make_unique<mca::BackendStatistics>(*STI));
+    Printer.addView(llvm::make_unique<mca::BackendStatistics>(*STI));
 
   if (PrintRegisterFileStats)
-    Printer->addView(llvm::make_unique<mca::RegisterFileStatistics>(*STI));
+    Printer.addView(llvm::make_unique<mca::RegisterFileStatistics>(*STI));
 
   if (PrintResourcePressureView)
-    Printer->addView(
+    Printer.addView(
         llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
 
   if (PrintTimelineView) {
-    Printer->addView(llvm::make_unique<mca::TimelineView>(
+    Printer.addView(llvm::make_unique<mca::TimelineView>(
         *STI, *IP, *S, TimelineMaxIterations, TimelineMaxCycles));
   }
 
-  B->run();
-  Printer->printReport(TOF->os());
+  B.run();
+  Printer.printReport(TOF->os());
   TOF->keep();
 
   return 0;

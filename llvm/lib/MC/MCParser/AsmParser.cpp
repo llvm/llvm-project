@@ -168,14 +168,6 @@ private:
   /// \brief List of forward directional labels for diagnosis at the end.
   SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
 
-  /// When generating dwarf for assembly source files we need to calculate the
-  /// logical line number based on the last parsed cpp hash file line comment
-  /// and current line. Since this is slow and messes up the SourceMgr's
-  /// cache we save the last info we queried with SrcMgr.FindLineNumber().
-  SMLoc LastQueryIDLoc;
-  unsigned LastQueryBuffer;
-  unsigned LastQueryLine;
-
   /// AssemblerDialect. ~OU means unset value and use value provided by MAI.
   unsigned AssemblerDialect = ~0U;
 
@@ -2189,20 +2181,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
           0, StringRef(), CppHashInfo.Filename);
       getContext().setGenDwarfFileNumber(FileNumber);
 
-      // Since SrcMgr.FindLineNumber() is slow and messes up the SourceMgr's
-      // cache with the different Loc from the call above we save the last
-      // info we queried here with SrcMgr.FindLineNumber().
-      unsigned CppHashLocLineNo;
-      if (LastQueryIDLoc == CppHashInfo.Loc &&
-          LastQueryBuffer == CppHashInfo.Buf)
-        CppHashLocLineNo = LastQueryLine;
-      else {
-        CppHashLocLineNo =
-            SrcMgr.FindLineNumber(CppHashInfo.Loc, CppHashInfo.Buf);
-        LastQueryLine = CppHashLocLineNo;
-        LastQueryIDLoc = CppHashInfo.Loc;
-        LastQueryBuffer = CppHashInfo.Buf;
-      }
+      unsigned CppHashLocLineNo =
+        SrcMgr.FindLineNumber(CppHashInfo.Loc, CppHashInfo.Buf);
       Line = CppHashInfo.LineNumber - 1 + (Line - CppHashLocLineNo);
     }
 

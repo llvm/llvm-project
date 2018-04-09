@@ -308,7 +308,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
       return Y;
     }
 
-    // If we deduced two declarations, make sure they they refer to the
+    // If we deduced two declarations, make sure that they refer to the
     // same declaration.
     if (Y.getKind() == TemplateArgument::Declaration &&
         isSameDeclaration(X.getAsDecl(), Y.getAsDecl()))

@@ -304,7 +304,7 @@ class Intrinsic {
   ListInit *Body;
   /// The architectural #ifdef guard.
   std::string Guard;
-  /// Set if the Unvailable bit is 1. This means we don't generate a body,
+  /// Set if the Unavailable bit is 1. This means we don't generate a body,
   /// just an "unavailable" attribute on a declaration.
   bool IsUnavailable;
   /// Is this intrinsic safe for big-endian? or does it need its arguments

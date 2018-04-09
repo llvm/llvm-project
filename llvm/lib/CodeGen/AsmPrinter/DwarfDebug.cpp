@@ -241,11 +241,11 @@ ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
                         return A.Expr->isFragment();
                       }) &&
          "multiple FI expressions without DW_OP_LLVM_fragment");
-  std::sort(FrameIndexExprs.begin(), FrameIndexExprs.end(),
-            [](const FrameIndexExpr &A, const FrameIndexExpr &B) -> bool {
-              return A.Expr->getFragmentInfo()->OffsetInBits <
-                     B.Expr->getFragmentInfo()->OffsetInBits;
-            });
+  llvm::sort(FrameIndexExprs.begin(), FrameIndexExprs.end(),
+             [](const FrameIndexExpr &A, const FrameIndexExpr &B) -> bool {
+               return A.Expr->getFragmentInfo()->OffsetInBits <
+                      B.Expr->getFragmentInfo()->OffsetInBits;
+             });
 
   return FrameIndexExprs;
 }
@@ -386,13 +386,12 @@ static StringRef getObjCMethodName(StringRef In) {
 }
 
 // Add the various names to the Dwarf accelerator table names.
-// TODO: Determine whether or not we should add names for programs
-// that do not have a DW_AT_name or DW_AT_linkage_name field - this
-// is only slightly different than the lookup of non-standard ObjC names.
 void DwarfDebug::addSubprogramNames(const DISubprogram *SP, DIE &Die) {
   if (!SP->isDefinition())
     return;
-  addAccelName(SP->getName(), Die);
+
+  if (SP->getName() != "")
+    addAccelName(SP->getName(), Die);
 
   // If the linkage name is different than the name, go ahead and output
   // that as well into the name table.
@@ -577,21 +576,22 @@ void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
 /// Sort and unique GVEs by comparing their fragment offset.
 static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
 sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
-  std::sort(GVEs.begin(), GVEs.end(),
-            [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
-              // Sort order: first null exprs, then exprs without fragment
-              // info, then sort by fragment offset in bits.
-              // FIXME: Come up with a more comprehensive comparator so
-              // the sorting isn't non-deterministic, and so the following
-              // std::unique call works correctly.
-              if (!A.Expr || !B.Expr)
-                return !!B.Expr;
-              auto FragmentA = A.Expr->getFragmentInfo();
-              auto FragmentB = B.Expr->getFragmentInfo();
-              if (!FragmentA || !FragmentB)
-                return !!FragmentB;
-              return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
-            });
+  llvm::sort(GVEs.begin(), GVEs.end(),
+             [](DwarfCompileUnit::GlobalExpr A,
+                DwarfCompileUnit::GlobalExpr B) {
+               // Sort order: first null exprs, then exprs without fragment
+               // info, then sort by fragment offset in bits.
+               // FIXME: Come up with a more comprehensive comparator so
+               // the sorting isn't non-deterministic, and so the following
+               // std::unique call works correctly.
+               if (!A.Expr || !B.Expr)
+                 return !!B.Expr;
+               auto FragmentA = A.Expr->getFragmentInfo();
+               auto FragmentB = B.Expr->getFragmentInfo();
+               if (!FragmentA || !FragmentB)
+                 return !!FragmentB;
+               return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
+             });
   GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
                          [](DwarfCompileUnit::GlobalExpr A,
                             DwarfCompileUnit::GlobalExpr B) {
@@ -1878,10 +1878,10 @@ void DwarfDebug::emitDebugARanges() {
   }
 
   // Sort the CU list (again, to ensure consistent output order).
-  std::sort(CUs.begin(), CUs.end(),
-            [](const DwarfCompileUnit *A, const DwarfCompileUnit *B) {
-              return A->getUniqueID() < B->getUniqueID();
-            });
+  llvm::sort(CUs.begin(), CUs.end(),
+             [](const DwarfCompileUnit *A, const DwarfCompileUnit *B) {
+               return A->getUniqueID() < B->getUniqueID();
+             });
 
   // Emit an arange table for each CU we used.
   for (DwarfCompileUnit *CU : CUs) {

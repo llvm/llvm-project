@@ -361,7 +361,7 @@ SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
     const MemRegion *Uncasted = MR->StripCasts(/*IncludeBaseCasts=*/false);
     if (Uncasted == MR) {
       // We reached the bottom of the hierarchy and did not find the derived
-      // class. We we must be casting the base to derived, so the cast should
+      // class. We must be casting the base to derived, so the cast should
       // fail.
       break;
     }

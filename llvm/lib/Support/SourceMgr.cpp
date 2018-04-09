@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -35,24 +36,6 @@
 using namespace llvm;
 
 static const size_t TabStop = 8;
-
-namespace {
-
-  struct LineNoCacheTy {
-    const char *LastQuery;
-    unsigned LastQueryBufferID;
-    unsigned LineNoOfQuery;
-  };
-
-} // end anonymous namespace
-
-static LineNoCacheTy *getCache(void *Ptr) {
-  return (LineNoCacheTy*)Ptr;
-}
-
-SourceMgr::~SourceMgr() {
-  delete getCache(LineNoCache);
-}
 
 unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
                                    SMLoc IncludeLoc,
@@ -85,46 +68,86 @@ unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
   return 0;
 }
 
+template <typename T>
+unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
+
+  // Ensure OffsetCache is allocated and populated with offsets of all the
+  // '\n' bytes.
+  std::vector<T> *Offsets = nullptr;
+  if (OffsetCache.isNull()) {
+    Offsets = new std::vector<T>();
+    OffsetCache = Offsets;
+    size_t Sz = Buffer->getBufferSize();
+    assert(Sz <= std::numeric_limits<T>::max());
+    StringRef S = Buffer->getBuffer();
+    for (size_t N = 0; N < Sz; ++N) {
+      if (S[N] == '\n') {
+        Offsets->push_back(static_cast<T>(N));
+      }
+    }
+  } else {
+    Offsets = OffsetCache.get<std::vector<T> *>();
+  }
+
+  const char *BufStart = Buffer->getBufferStart();
+  assert(Ptr >= BufStart && Ptr <= Buffer->getBufferEnd());
+  ptrdiff_t PtrDiff = Ptr - BufStart;
+  assert(PtrDiff >= 0 && static_cast<size_t>(PtrDiff) <= std::numeric_limits<T>::max());
+  T PtrOffset = static_cast<T>(PtrDiff);
+
+  // std::lower_bound returns the first EOL offset that's not-less-than
+  // PtrOffset, meaning the EOL that _ends the line_ that PtrOffset is on
+  // (including if PtrOffset refers to the EOL itself). If there's no such
+  // EOL, returns end().
+  auto EOL = std::lower_bound(Offsets->begin(), Offsets->end(), PtrOffset);
+
+  // Lines count from 1, so add 1 to the distance from the 0th line.
+  return (1 + (EOL - Offsets->begin()));
+}
+
+SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
+  : Buffer(std::move(Other.Buffer)),
+    OffsetCache(Other.OffsetCache),
+    IncludeLoc(Other.IncludeLoc) {
+  Other.OffsetCache = nullptr;
+}
+
+SourceMgr::SrcBuffer::~SrcBuffer() {
+  if (!OffsetCache.isNull()) {
+    if (OffsetCache.is<std::vector<uint8_t>*>())
+      delete OffsetCache.get<std::vector<uint8_t>*>();
+    else if (OffsetCache.is<std::vector<uint16_t>*>())
+      delete OffsetCache.get<std::vector<uint16_t>*>();
+    else if (OffsetCache.is<std::vector<uint32_t>*>())
+      delete OffsetCache.get<std::vector<uint32_t>*>();
+    else
+      delete OffsetCache.get<std::vector<uint64_t>*>();
+    OffsetCache = nullptr;
+  }
+}
+
 std::pair<unsigned, unsigned>
 SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   if (!BufferID)
     BufferID = FindBufferContainingLoc(Loc);
   assert(BufferID && "Invalid Location!");
 
-  const MemoryBuffer *Buff = getMemoryBuffer(BufferID);
+  auto &SB = getBufferInfo(BufferID);
+  const char *Ptr = Loc.getPointer();
 
-  // Count the number of \n's between the start of the file and the specified
-  // location.
-  unsigned LineNo = 1;
+  size_t Sz = SB.Buffer->getBufferSize();
+  assert(Sz <= std::numeric_limits<uint64_t>::max());
+  unsigned LineNo;
+  if (Sz <= std::numeric_limits<uint8_t>::max())
+    LineNo = SB.getLineNumber<uint8_t>(Ptr);
+  else if (Sz <= std::numeric_limits<uint16_t>::max())
+    LineNo = SB.getLineNumber<uint16_t>(Ptr);
+  else if (Sz <= std::numeric_limits<uint32_t>::max())
+    LineNo = SB.getLineNumber<uint32_t>(Ptr);
+  else
+    LineNo = SB.getLineNumber<uint64_t>(Ptr);
 
-  const char *BufStart = Buff->getBufferStart();
-  const char *Ptr = BufStart;
-
-  // If we have a line number cache, and if the query is to a later point in the
-  // same file, start searching from the last query location.  This optimizes
-  // for the case when multiple diagnostics come out of one file in order.
-  if (LineNoCacheTy *Cache = getCache(LineNoCache))
-    if (Cache->LastQueryBufferID == BufferID &&
-        Cache->LastQuery <= Loc.getPointer()) {
-      Ptr = Cache->LastQuery;
-      LineNo = Cache->LineNoOfQuery;
-    }
-
-  // Scan for the location being queried, keeping track of the number of lines
-  // we see.
-  for (; SMLoc::getFromPointer(Ptr) != Loc; ++Ptr)
-    if (*Ptr == '\n') ++LineNo;
-
-  // Allocate the line number cache if it doesn't exist.
-  if (!LineNoCache)
-    LineNoCache = new LineNoCacheTy();
-
-  // Update the line # cache.
-  LineNoCacheTy &Cache = *getCache(LineNoCache);
-  Cache.LastQueryBufferID = BufferID;
-  Cache.LastQuery = Ptr;
-  Cache.LineNoOfQuery = LineNo;
-  
+  const char *BufStart = SB.Buffer->getBufferStart();
   size_t NewlineOffs = StringRef(BufStart, Ptr-BufStart).find_last_of("\n\r");
   if (NewlineOffs == StringRef::npos) NewlineOffs = ~(size_t)0;
   return std::make_pair(LineNo, Ptr-BufStart-NewlineOffs);
@@ -247,7 +270,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN,
   : SM(&sm), Loc(L), Filename(FN), LineNo(Line), ColumnNo(Col), Kind(Kind),
     Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
     FixIts(Hints.begin(), Hints.end()) {
-  std::sort(FixIts.begin(), FixIts.end());
+  llvm::sort(FixIts.begin(), FixIts.end());
 }
 
 static void buildFixItLine(std::string &CaretLine, std::string &FixItLine,

@@ -1239,6 +1239,12 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   if (EltVT.isVector()) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
+    // vectors of f16 are loaded/stored as multiples of v2f16 elements.
+    if (EltVT == MVT::f16 && N->getValueType(0) == MVT::v2f16) {
+      assert(NumElts % 2 == 0 && "Vector must have even number of elements");
+      EltVT = MVT::v2f16;
+      NumElts /= 2;
+    }
   }
 
   // Build the "promoted" result VTList for the load. If we are really loading

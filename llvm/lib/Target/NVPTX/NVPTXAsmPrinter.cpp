@@ -1945,11 +1945,17 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
       llvm_unreachable("unsupported integer const type");
     break;
   }
+  case Type::HalfTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID: {
     const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV);
     Type *Ty = CFP->getType();
-    if (Ty == Type::getFloatTy(CPV->getContext())) {
+    if (Ty == Type::getHalfTy(CPV->getContext())) {
+      APInt API = CFP->getValueAPF().bitcastToAPInt();
+      uint16_t float16 = API.getLoBits(16).getZExtValue();
+      ConvertIntToBytes<>(ptr, float16);
+      aggBuffer->addBytes(ptr, 2, Bytes);
+    } else if (Ty == Type::getFloatTy(CPV->getContext())) {
       float float32 = (float) CFP->getValueAPF().convertToFloat();
       ConvertFloatToBytes(ptr, float32);
       aggBuffer->addBytes(ptr, 4, Bytes);

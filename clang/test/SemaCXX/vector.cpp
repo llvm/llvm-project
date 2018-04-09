@@ -190,7 +190,7 @@ void test_implicit_conversions(bool Cond, char16 c16, longlong16 ll16,
   (void)(Cond? to_c16 : to_c16e);
   (void)(Cond? to_ll16e : to_ll16);
 
-  // These 2 are convertable with -flax-vector-conversions (default)
+  // These 2 are convertible with -flax-vector-conversions (default)
   (void)(Cond? to_c16 : to_ll16);
   (void)(Cond? to_c16e : to_ll16e);
 }

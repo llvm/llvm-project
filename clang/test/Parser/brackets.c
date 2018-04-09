@@ -15,10 +15,10 @@ void test1() {
   // CHECK: fix-it:{{.*}}:{[[@LINE-6]]:10-[[@LINE-6]]:10}:"[]"
 
   int c = a[0];
-  int d = b[0]; // No undeclared identifer error here.
+  int d = b[0]; // No undeclared identifier error here.
 
   int *e = a;
-  int *f = b; // No undeclared identifer error here.
+  int *f = b; // No undeclared identifier error here.
 }
 
 struct S {

@@ -410,7 +410,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
       defaultEvalCall(Bldr, *I, *Call, CallOpts);
   }
 
-  // If the CFG was contructed without elements for temporary destructors
+  // If the CFG was constructed without elements for temporary destructors
   // and the just-called constructor created a temporary object then
   // stop exploration if the temporary object has a noreturn constructor.
   // This can lose coverage because the destructor, if it were present

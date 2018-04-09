@@ -91,7 +91,7 @@ public:
   ///
   /// To find the best matching node for a given path 'p', the
   /// \c findEquivalent() function is called recursively for each path segment
-  /// (back to fron) of 'p' until a node 'n' is reached that does not ..
+  /// (back to front) of 'p' until a node 'n' is reached that does not ..
   /// - .. have children. In this case it is checked
   ///   whether the stored path is equivalent to 'p'. If yes, the best match is
   ///   found. Otherwise continue with the parent node as if this node did not

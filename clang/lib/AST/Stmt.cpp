@@ -56,7 +56,7 @@ static StmtClassNameTable &getStmtInfoTableEntry(Stmt::StmtClass E) {
   if (Initialized)
     return StmtClassInfo[E];
 
-  // Intialize the table on the first use.
+  // Initialize the table on the first use.
   Initialized = true;
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT) \

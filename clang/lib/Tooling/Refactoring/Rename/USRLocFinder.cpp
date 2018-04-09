@@ -524,7 +524,7 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
     llvm::Error Err = ReplaceChange.replace(
         SM, CharSourceRange::getTokenRange(Start, End), Text);
     if (Err) {
-      llvm::errs() << "Faile to add replacement to AtomicChange: "
+      llvm::errs() << "Failed to add replacement to AtomicChange: "
                    << llvm::toString(std::move(Err)) << "\n";
       return;
     }

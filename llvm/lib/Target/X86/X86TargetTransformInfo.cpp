@@ -1534,6 +1534,15 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     { ISD::SETCC,   MVT::v16f32,  1 },
   };
 
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::SETCC,   MVT::v32i16,  1 },
+    { ISD::SETCC,   MVT::v64i8,   1 },
+  };
+
+  if (ST->hasBWI())
+    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
       return LT.first * Entry->Cost;

@@ -1101,7 +1101,7 @@ static bool MatchTwoAttributeLists(const AttrVec &Attrs1, const AttrVec &Attrs2,
   for (unsigned i = 0, e = Attrs1.size(); i != e; i++) {
     bool match = false;
     for (unsigned j = 0, f = Attrs2.size(); j != f; j++) {
-      // Matching attribute kind only. Except for Availabilty attributes,
+      // Matching attribute kind only. Except for Availability attributes,
       // we are not getting into details of the attributes. For all practical purposes
       // this is sufficient.
       if (Attrs1[i]->getKind() == Attrs2[j]->getKind()) {

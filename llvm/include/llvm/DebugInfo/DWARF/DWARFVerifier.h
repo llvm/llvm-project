@@ -240,6 +240,8 @@ private:
   unsigned verifyNameIndexAttribute(const DWARFDebugNames::NameIndex &NI,
                                     const DWARFDebugNames::Abbrev &Abbr,
                                     DWARFDebugNames::AttributeEncoding AttrEnc);
+  unsigned verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
+                                  uint32_t Name, const DataExtractor &StrData);
 
   /// Verify that the DWARF v5 accelerator table is valid.
   ///
@@ -251,6 +253,8 @@ private:
   /// - The buckets have a valid index, or they are empty.
   /// - All names are reachable via the hash table (they have the correct hash,
   ///   and the hash is in the correct bucket).
+  /// - Information in the index entries is consistent with the debug_info
+  ///   section DIEs.
   ///
   /// \param AccelSection section containing the acceleration table
   /// \param StrData string section

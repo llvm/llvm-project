@@ -133,7 +133,7 @@ SystemZPostRASchedStrategy(const MachineSchedContext *C)
         (C->MF->getSubtarget().getInstrInfo())), 
     MBB(nullptr), HazardRec(nullptr) {
   const TargetSubtargetInfo *ST = &C->MF->getSubtarget();
-  SchedModel.init(ST->getSchedModel(), ST, TII);
+  SchedModel.init(ST);
 }
 
 SystemZPostRASchedStrategy::~SystemZPostRASchedStrategy() {

@@ -210,7 +210,7 @@ private:
   ///
   /// Cache contains only source locations from preamble so it is
   /// guaranteed that they stay valid when the SourceManager is recreated.
-  /// This cache is used when loading preambule to increase performance
+  /// This cache is used when loading preamble to increase performance
   /// of that loading. It must be cleared when preamble is recreated.
   llvm::StringMap<SourceLocation> PreambleSrcLocCache;
 

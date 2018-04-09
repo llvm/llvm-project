@@ -73,7 +73,7 @@ float foo() {
 
 #else
 
-#error Unknwon test
+#error Unknown test
 
 #endif
 

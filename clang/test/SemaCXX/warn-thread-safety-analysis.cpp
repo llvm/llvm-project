@@ -1048,7 +1048,7 @@ void main() {
 namespace thread_annot_lock_61_modified {
   // Modified to fix the compiler errors
   // Test the fix for a bug introduced by the support of pass-by-reference
-  // paramters.
+  // parameters.
   struct Foo { Foo &operator<< (bool) {return *this;} };
   Foo &getFoo();
   struct Bar { Foo &func () {return getFoo();} };
@@ -1804,7 +1804,7 @@ struct TestTryLock {
     bool b = mu.TryLock();
 
     while (cond) {
-      if (b) {   // b should be uknown at this point b/c of the loop
+      if (b) {   // b should be unknown at this point b/c of the loop
         a = 10;  // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
       }
       b = !b;

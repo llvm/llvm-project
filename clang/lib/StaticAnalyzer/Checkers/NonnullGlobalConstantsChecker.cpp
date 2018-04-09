@@ -54,7 +54,7 @@ private:
 
 } // namespace
 
-/// Lazily initialize cache for required identifier informations.
+/// Lazily initialize cache for required identifier information.
 void NonnullGlobalConstantsChecker::initIdentifierInfo(ASTContext &Ctx) const {
   if (NSStringII)
     return;

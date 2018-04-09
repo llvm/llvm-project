@@ -211,7 +211,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch) {
   // module.private.modulemap that are supposed to define private submodules --
   // may have different flavors of names: FooPrivate, Foo_Private and Foo.Private.
   //
-  // Foo.Private is now depracated in favor of Foo_Private. Users of FooPrivate
+  // Foo.Private is now deprecated in favor of Foo_Private. Users of FooPrivate
   // should also rename to Foo_Private. Representing private as submodules
   // could force building unwanted dependencies into the parent module and cause
   // dependency cycles.

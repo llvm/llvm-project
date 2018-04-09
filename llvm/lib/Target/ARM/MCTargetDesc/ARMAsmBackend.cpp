@@ -239,7 +239,7 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
   }
   case ARM::fixup_arm_thumb_cb: {
     // If we have a Thumb CBZ or CBNZ instruction and its target is the next
-    // instruction it is is actually out of range for the instruction.
+    // instruction it is actually out of range for the instruction.
     // It will be changed to a NOP.
     int64_t Offset = (Value & ~1);
     if (Offset == 2)

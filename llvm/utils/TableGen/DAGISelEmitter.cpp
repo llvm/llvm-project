@@ -153,7 +153,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
 
   // We want to process the matches in order of minimal cost.  Sort the patterns
   // so the least cost one is at the start.
-  std::sort(Patterns.begin(), Patterns.end(), PatternSortingPredicate(CGP));
+  llvm::sort(Patterns.begin(), Patterns.end(), PatternSortingPredicate(CGP));
 
 
   // Convert each variant of each pattern into a Matcher.

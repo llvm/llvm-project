@@ -215,7 +215,7 @@ bool PTHLexer::SkipBlock() {
     // Compute the actual memory address of the '#' token data for this entry.
     HashEntryI = TokBuf + Offset;
 
-    // Optmization: "Sibling jumping".  #if...#else...#endif blocks can
+    // Optimization: "Sibling jumping".  #if...#else...#endif blocks can
     //  contain nested blocks.  In the side-table we can jump over these
     //  nested blocks instead of doing a linear search if the next "sibling"
     //  entry is not at a location greater than LastHashTokPtr.

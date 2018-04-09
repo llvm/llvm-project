@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -57,8 +58,38 @@ private:
     /// The memory buffer for the file.
     std::unique_ptr<MemoryBuffer> Buffer;
 
+    /// Helper type for OffsetCache below: since we're storing many offsets
+    /// into relatively small files (often smaller than 2^8 or 2^16 bytes),
+    /// we select the offset vector element type dynamically based on the
+    /// size of Buffer.
+    using VariableSizeOffsets = PointerUnion4<std::vector<uint8_t> *,
+                                              std::vector<uint16_t> *,
+                                              std::vector<uint32_t> *,
+                                              std::vector<uint64_t> *>;
+
+    /// Vector of offsets into Buffer at which there are line-endings
+    /// (lazily populated). Once populated, the '\n' that marks the end of
+    /// line number N from [1..] is at Buffer[OffsetCache[N-1]]. Since
+    /// these offsets are in sorted (ascending) order, they can be
+    /// binary-searched for the first one after any given offset (eg. an
+    /// offset corresponding to a particular SMLoc).
+    mutable VariableSizeOffsets OffsetCache;
+
+    /// Populate \c OffsetCache and look up a given \p Ptr in it, assuming
+    /// it points somewhere into \c Buffer. The static type parameter \p T
+    /// must be an unsigned integer type from uint{8,16,32,64}_t large
+    /// enough to store offsets inside \c Buffer.
+    template<typename T>
+    unsigned getLineNumber(const char *Ptr) const;
+
     /// This is the location of the parent include, or null if at the top level.
     SMLoc IncludeLoc;
+
+    SrcBuffer() = default;
+    SrcBuffer(SrcBuffer &&);
+    SrcBuffer(const SrcBuffer &) = delete;
+    SrcBuffer &operator=(const SrcBuffer &) = delete;
+    ~SrcBuffer();
   };
 
   /// This is all of the buffers that we are reading from.
@@ -66,10 +97,6 @@ private:
 
   // This is the list of directories we should search for include files in.
   std::vector<std::string> IncludeDirectories;
-
-  /// This is a cache for line number queries, its implementation is really
-  /// private to SourceMgr.cpp.
-  mutable void *LineNoCache = nullptr;
 
   DiagHandlerTy DiagHandler = nullptr;
   void *DiagContext = nullptr;
@@ -80,7 +107,7 @@ public:
   SourceMgr() = default;
   SourceMgr(const SourceMgr &) = delete;
   SourceMgr &operator=(const SourceMgr &) = delete;
-  ~SourceMgr();
+  ~SourceMgr() = default;
 
   void setIncludeDirs(const std::vector<std::string> &Dirs) {
     IncludeDirectories = Dirs;

@@ -277,7 +277,7 @@ public:
                       unsigned angledDirIdx, unsigned systemDirIdx,
                       bool noCurDirSearch) {
     assert(angledDirIdx <= systemDirIdx && systemDirIdx <= dirs.size() &&
-        "Directory indicies are unordered");
+        "Directory indices are unordered");
     SearchDirs = dirs;
     AngledDirIdx = angledDirIdx;
     SystemDirIdx = systemDirIdx;

@@ -1520,7 +1520,7 @@ unsigned ARMMCCodeEmitter::
 getBitfieldInvertedMaskOpValue(const MCInst &MI, unsigned Op,
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const {
-  // 10 bits. lower 5 bits are are the lsb of the mask, high five bits are the
+  // 10 bits. lower 5 bits are the lsb of the mask, high five bits are the
   // msb of the mask.
   const MCOperand &MO = MI.getOperand(Op);
   uint32_t v = ~MO.getImm();

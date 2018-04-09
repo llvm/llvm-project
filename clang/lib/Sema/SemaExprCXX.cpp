@@ -5476,7 +5476,7 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
   //      constraint that in the conversion the reference must bind directly to
   //      an lvalue.
   //   -- If E2 is an xvalue: E1 can be converted to match E2 if E1 can be
-  //      implicitly conveted to the type "rvalue reference to R2", subject to
+  //      implicitly converted to the type "rvalue reference to R2", subject to
   //      the constraint that the reference must bind directly.
   if (To->isLValue() || To->isXValue()) {
     QualType T = To->isLValue() ? Self.Context.getLValueReferenceType(ToType)

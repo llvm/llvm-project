@@ -4396,7 +4396,7 @@ static void TryReferenceInitialization(Sema &S,
 }
 
 /// Determine whether an expression is a non-referenceable glvalue (one to
-/// which a reference can never bind). Attemting to bind a reference to
+/// which a reference can never bind). Attempting to bind a reference to
 /// such a glvalue will always create a temporary.
 static bool isNonReferenceableGLValue(Expr *E) {
   return E->refersToBitField() || E->refersToVectorElement();

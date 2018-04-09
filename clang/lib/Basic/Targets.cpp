@@ -158,7 +158,7 @@ void defineCudaArchMacro(CudaArch GPU, clang::MacroBuilder &Builder) {
     case CudaArch::GFX810:
     case CudaArch::GFX900:
     case CudaArch::GFX902:
-      return "320";
+      return "1";
     case CudaArch::UNKNOWN:
       llvm_unreachable("unhandled Cuda/HIP Arch");
     }

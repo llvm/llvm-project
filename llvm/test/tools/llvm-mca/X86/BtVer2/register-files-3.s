@@ -46,4 +46,4 @@ idiv %eax
 # CHECK-NEXT: Index	0123456789          0123456789          0123456789     
 
 # CHECK:      [0,0]	DeeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .   .	idivl	%eax
-# CHECK:      [1,0]	.    .    .    .    .    . DeeeeeeeeeeeeeeeeeeeeeeeeeER	idivl	%eax
+# CHECK-NEXT: [1,0]	.    .    .    .    .    . DeeeeeeeeeeeeeeeeeeeeeeeeeER	idivl	%eax

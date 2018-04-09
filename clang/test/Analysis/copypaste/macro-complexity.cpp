@@ -20,7 +20,7 @@ int manualMacroClone(int a, int b) { // expected-note{{Similar code here}}
 }
 
 // Now we actually use the macro to generate the same AST as above. They
-// shouldn't be reported because the macros only slighly increase the complexity
+// shouldn't be reported because the macros only slightly increase the complexity
 // value and the resulting code will never pass the MinimumCloneComplexity
 // constraint.
 

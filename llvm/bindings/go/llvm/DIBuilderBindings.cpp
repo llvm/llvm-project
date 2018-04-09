@@ -19,39 +19,6 @@
 
 using namespace llvm;
 
-LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(LLVMDIBuilderRef Dref,
-                                                LLVMMetadataRef Scope,
-                                                LLVMMetadataRef File,
-                                                unsigned Line,
-                                                unsigned Column) {
-  DIBuilder *D = unwrap(Dref);
-  auto *LB = D->createLexicalBlock(unwrap<DILocalScope>(Scope),
-                                   unwrap<DIFile>(File), Line, Column);
-  return wrap(LB);
-}
-
-LLVMMetadataRef LLVMDIBuilderCreateLexicalBlockFile(LLVMDIBuilderRef Dref,
-                                                    LLVMMetadataRef Scope,
-                                                    LLVMMetadataRef File,
-                                                    unsigned Discriminator) {
-  DIBuilder *D = unwrap(Dref);
-  return wrap(D->createLexicalBlockFile(unwrap<DILocalScope>(Scope),
-                                        unwrap<DIFile>(File), Discriminator));
-}
-
-LLVMMetadataRef LLVMDIBuilderCreateFunction(
-    LLVMDIBuilderRef Dref, LLVMMetadataRef Scope, const char *Name,
-    const char *LinkageName, LLVMMetadataRef File, unsigned Line,
-    LLVMMetadataRef CompositeType, int IsLocalToUnit, int IsDefinition,
-    unsigned ScopeLine, unsigned Flags, int IsOptimized) {
-  DIBuilder *D = unwrap(Dref);
-  return wrap(D->createFunction(
-      unwrap<DIScope>(Scope), Name, LinkageName,
-      File ? unwrap<DIFile>(File) : nullptr, Line,
-      unwrap<DISubroutineType>(CompositeType), IsLocalToUnit, IsDefinition,
-      ScopeLine, static_cast<DINode::DIFlags>(Flags), IsOptimized));
-}
-
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
     LLVMDIBuilderRef Dref, LLVMMetadataRef Scope, const char *Name,
     LLVMMetadataRef File, unsigned Line, LLVMMetadataRef Ty, int AlwaysPreserve,

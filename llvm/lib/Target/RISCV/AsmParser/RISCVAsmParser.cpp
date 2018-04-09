@@ -26,6 +26,10 @@
 
 using namespace llvm;
 
+// Include the auto-generated portion of the compress emitter.
+#define GEN_COMPRESS_INSTR
+#include "RISCVGenCompressInstEmitter.inc"
+
 namespace {
 struct RISCVOperand;
 
@@ -595,10 +599,14 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   default:
     break;
-  case Match_Success:
+  case Match_Success: {
+    MCInst CInst;
+    bool Res = compressInst(CInst, Inst, getSTI(), Out.getContext());
+    CInst.setLoc(IDLoc);
     Inst.setLoc(IDLoc);
-    Out.EmitInstruction(Inst, getSTI());
+    Out.EmitInstruction((Res ? CInst : Inst), getSTI());
     return false;
+  }
   case Match_MissingFeature:
     return Error(IDLoc, "instruction use requires an option to be enabled");
   case Match_MnemonicFail:
@@ -945,7 +953,7 @@ bool RISCVAsmParser::classifySymbolRef(const MCExpr *Expr,
       isa<MCSymbolRefExpr>(BE->getRHS()))
     return true;
 
-  // See if the addend is is a constant, otherwise there's more going
+  // See if the addend is a constant, otherwise there's more going
   // on here than we can deal with.
   auto AddendExpr = dyn_cast<MCConstantExpr>(BE->getRHS());
   if (!AddendExpr)

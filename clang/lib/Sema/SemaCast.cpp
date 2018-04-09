@@ -1145,7 +1145,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       }
     }
   }
-  // Allow arbitray objective-c pointer conversion with static casts.
+  // Allow arbitrary objective-c pointer conversion with static casts.
   if (SrcType->isObjCObjectPointerType() &&
       DestType->isObjCObjectPointerType()) {
     Kind = CK_BitCast;
