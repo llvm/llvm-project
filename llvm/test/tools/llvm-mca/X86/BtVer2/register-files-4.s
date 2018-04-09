@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=22 -verbose -register-file-stats -resource-pressure=false -timeline -timeline-max-iterations=3 < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=22 -verbose -register-file-stats -timeline -timeline-max-iterations=3 < %s | FileCheck %s
 
 idiv %eax
 
@@ -45,5 +45,5 @@ idiv %eax
 # CHECK-NEXT:      	          0123456789          0123456789          0123456789          01234567
 # CHECK-NEXT: Index	0123456789          0123456789          0123456789          0123456789        
 # CHECK:      [0,0]	DeeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .    .    .    .    .    . .	idivl	%eax
-# CHECK-NEXT: [1,0]	.D========================eeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    . .	idivl	%eax
-# CHECK-NEXT: [2,0]	. D================================================eeeeeeeeeeeeeeeeeeeeeeeeeER	idivl	%eax
+# CHECK:      [1,0]	.D========================eeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    . .	idivl	%eax
+# CHECK:      [2,0]	. D================================================eeeeeeeeeeeeeeeeeeeeeeeeeER	idivl	%eax

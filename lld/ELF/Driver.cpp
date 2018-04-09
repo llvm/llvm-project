@@ -657,9 +657,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasArg(OPT_ignore_function_address_equality);
   Config->Init = Args.getLastArgValue(OPT_init, "_init");
   Config->LTOAAPipeline = Args.getLastArgValue(OPT_lto_aa_pipeline);
+  Config->LTODebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
+  Config->LTONewPassManager = Args.hasArg(OPT_lto_new_pass_manager);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);
   Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
   Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
+  Config->LTOSampleProfile = Args.getLastArgValue(OPT_lto_sample_profile);
   Config->MapFile = Args.getLastArgValue(OPT_Map);
   Config->MergeArmExidx =
       Args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
@@ -734,6 +737,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
     else if (S.startswith("mcpu="))
       parseClangOption(Saver.save("-" + S), Arg->getSpelling());
+    else if (S == "new-pass-manager")
+      Config->LTONewPassManager = true;
+    else if (S == "debug-pass-manager")
+      Config->LTODebugPassManager = true;
+    else if (S.startswith("sample-profile="))
+      Config->LTOSampleProfile = S.substr(strlen("sample-profile="));
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
              !S.startswith("-pass-through=") && !S.startswith("thinlto"))
       parseClangOption(S, Arg->getSpelling());

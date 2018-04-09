@@ -59,10 +59,10 @@ vhaddps  %xmm3, %xmm3, %xmm4
 # CHECK:      [0,0]	DeeER.    .    .	vmulps	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: [0,1]	D==eeeER  .    .	vhaddps	%xmm2, %xmm2, %xmm3
 # CHECK-NEXT: [0,2]	.D====eeeER    .	vhaddps	%xmm3, %xmm3, %xmm4
-# CHECK-NEXT: [1,0]	.DeeE-----R    .	vmulps	%xmm0, %xmm1, %xmm2
+# CHECK:      [1,0]	.DeeE-----R    .	vmulps	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: [1,1]	. D=eeeE---R   .	vhaddps	%xmm2, %xmm2, %xmm3
 # CHECK-NEXT: [1,2]	. D====eeeER   .	vhaddps	%xmm3, %xmm3, %xmm4
-# CHECK-NEXT: [2,0]	.  DeeE-----R  .	vmulps	%xmm0, %xmm1, %xmm2
+# CHECK:      [2,0]	.  DeeE-----R  .	vmulps	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: [2,1]	.  D====eeeER  .	vhaddps	%xmm2, %xmm2, %xmm3
 # CHECK-NEXT: [2,2]	.   D======eeeER	vhaddps	%xmm3, %xmm3, %xmm4
 

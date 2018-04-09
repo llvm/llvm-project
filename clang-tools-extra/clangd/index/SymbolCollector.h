@@ -59,8 +59,8 @@ public:
 
   bool
   handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                      ArrayRef<index::SymbolRelation> Relations, FileID FID,
-                      unsigned Offset,
+                      ArrayRef<index::SymbolRelation> Relations,
+                      SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override;
 
   SymbolSlab takeSymbols() { return std::move(Symbols).build(); }

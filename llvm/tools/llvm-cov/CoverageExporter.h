@@ -14,6 +14,7 @@
 #ifndef LLVM_COV_COVERAGEEXPORTER_H
 #define LLVM_COV_COVERAGEEXPORTER_H
 
+#include "CoverageFilters.h"
 #include "CoverageSummaryInfo.h"
 #include "CoverageViewOptions.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
@@ -40,7 +41,7 @@ public:
   virtual ~CoverageExporter(){};
 
   /// \brief Render the CoverageMapping object.
-  virtual void renderRoot() = 0;
+  virtual void renderRoot(const CoverageFilters &IgnoreFilenameFilters) = 0;
 
   /// \brief Render the CoverageMapping object for specified source files.
   virtual void renderRoot(const std::vector<std::string> &SourceFiles) = 0;

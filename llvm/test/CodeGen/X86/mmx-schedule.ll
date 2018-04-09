@@ -188,8 +188,8 @@ define <4 x float> @test_cvtpi2ps(x86_mmx %a0, x86_mmx* %a1, <4 x float> %a2, <4
 ;
 ; ATOM-LABEL: test_cvtpi2ps:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [0:?]
-; ATOM-NEXT:    cvtpi2ps %mm0, %xmm0 # sched: [0:?]
+; ATOM-NEXT:    cvtpi2ps %mm0, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [5:5.00]
 ; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -978,7 +978,7 @@ define <2 x i64> @test_movq2dq(x86_mmx %a0) optsize {
 ;
 ; ATOM-LABEL: test_movq2dq:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movq2dq %mm0, %xmm0 # sched: [0:?]
+; ATOM-NEXT:    movq2dq %mm0, %xmm0 # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movq2dq:
@@ -2127,8 +2127,8 @@ define i64 @test_palignr(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; ATOM-LABEL: test_palignr:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    palignr $1, %mm1, %mm0 # sched: [0:?]
-; ATOM-NEXT:    palignr $1, (%rdi), %mm0 # sched: [0:?]
+; ATOM-NEXT:    palignr $1, %mm1, %mm0 # sched: [1:1.00]
+; ATOM-NEXT:    palignr $1, (%rdi), %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;

@@ -117,8 +117,15 @@ entry:
 define float @fadd_f32_strict(<4 x float> %vec) {
 ; CHECK-LABEL: @fadd_f32_strict(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.vector.reduce.fadd.f32.f32.v4f32(float undef, <4 x float> [[VEC:%.*]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[VEC:%.*]], i32 0
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd float undef, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[VEC]], i32 1
+; CHECK-NEXT:    [[BIN_RDX1:%.*]] = fadd float [[BIN_RDX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[VEC]], i32 2
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd float [[BIN_RDX1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[VEC]], i32 3
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd float [[BIN_RDX2]], [[TMP3]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float undef, <4 x float> %vec)
@@ -128,8 +135,15 @@ entry:
 define float @fadd_f32_strict_accum(float %accum, <4 x float> %vec) {
 ; CHECK-LABEL: @fadd_f32_strict_accum(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.vector.reduce.fadd.f32.f32.v4f32(float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[VEC:%.*]], i32 0
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd float [[ACCUM:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[VEC]], i32 1
+; CHECK-NEXT:    [[BIN_RDX1:%.*]] = fadd float [[BIN_RDX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[VEC]], i32 2
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd float [[BIN_RDX1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[VEC]], i32 3
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd float [[BIN_RDX2]], [[TMP3]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call float @llvm.experimental.vector.reduce.fadd.f32.v4f32(float %accum, <4 x float> %vec)
@@ -169,8 +183,15 @@ entry:
 define float @fmul_f32_strict(<4 x float> %vec) {
 ; CHECK-LABEL: @fmul_f32_strict(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.vector.reduce.fmul.f32.f32.v4f32(float undef, <4 x float> [[VEC:%.*]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[VEC:%.*]], i32 0
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fmul float undef, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[VEC]], i32 1
+; CHECK-NEXT:    [[BIN_RDX1:%.*]] = fmul float [[BIN_RDX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[VEC]], i32 2
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul float [[BIN_RDX1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[VEC]], i32 3
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fmul float [[BIN_RDX2]], [[TMP3]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float undef, <4 x float> %vec)
@@ -180,8 +201,15 @@ entry:
 define float @fmul_f32_strict_accum(float %accum, <4 x float> %vec) {
 ; CHECK-LABEL: @fmul_f32_strict_accum(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.vector.reduce.fmul.f32.f32.v4f32(float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[VEC:%.*]], i32 0
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fmul float [[ACCUM:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[VEC]], i32 1
+; CHECK-NEXT:    [[BIN_RDX1:%.*]] = fmul float [[BIN_RDX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[VEC]], i32 2
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul float [[BIN_RDX1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[VEC]], i32 3
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fmul float [[BIN_RDX2]], [[TMP3]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call float @llvm.experimental.vector.reduce.fmul.f32.v4f32(float %accum, <4 x float> %vec)

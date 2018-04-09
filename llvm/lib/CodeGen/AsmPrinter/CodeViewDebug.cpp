@@ -524,7 +524,7 @@ void CodeViewDebug::emitTypeInformation() {
   if (TypeTable.empty())
     return;
 
-  // Start the .debug$T section with 0x4.
+  // Start the .debug$T or .debug$P section with 0x4.
   OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
   emitCodeViewMagicVersion();
 

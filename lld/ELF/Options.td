@@ -394,10 +394,16 @@ def start_group_paren: Flag<["-"], "(">;
 // LTO-related options.
 def lto_aa_pipeline: J<"lto-aa-pipeline=">,
   HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
+def lto_debug_pass_manager: F<"lto-debug-pass-manager">,
+  HelpText<"Debug new pass manager">;
+def lto_new_pass_manager: F<"lto-new-pass-manager">,
+  HelpText<"Use new pass manager">;
 def lto_newpm_passes: J<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_partitions: J<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
+def lto_sample_profile: J<"lto-sample-profile=">,
+  HelpText<"Sample profile file path">;
 def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm">;
 def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,

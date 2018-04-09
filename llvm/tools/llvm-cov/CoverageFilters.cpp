@@ -30,6 +30,10 @@ bool NameRegexCoverageFilter::matches(
   return llvm::Regex(Regex).match(Function.Name);
 }
 
+bool NameRegexCoverageFilter::matchesFilename(StringRef Filename) const {
+  return llvm::Regex(Regex).match(Filename);
+}
+
 bool NameWhitelistCoverageFilter::matches(
     const coverage::CoverageMapping &,
     const coverage::FunctionRecord &Function) const {
@@ -58,6 +62,14 @@ bool CoverageFilters::matches(const coverage::CoverageMapping &CM,
                               const coverage::FunctionRecord &Function) const {
   for (const auto &Filter : Filters) {
     if (Filter->matches(CM, Function))
+      return true;
+  }
+  return false;
+}
+
+bool CoverageFilters::matchesFilename(StringRef Filename) const {
+  for (const auto &Filter : Filters) {
+    if (Filter->matchesFilename(Filename))
       return true;
   }
   return false;

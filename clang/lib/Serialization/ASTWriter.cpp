@@ -5193,8 +5193,8 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       case UPD_CXX_INSTANTIATED_CLASS_DEFINITION: {
         auto *RD = cast<CXXRecordDecl>(D);
         UpdatedDeclContexts.insert(RD->getPrimaryContext());
-        Record.push_back(RD->canPassInRegisters());
         Record.push_back(RD->isParamDestroyedInCallee());
+        Record.push_back(RD->getArgPassingRestrictions());
         Record.AddCXXDefinitionData(RD);
         Record.AddOffset(WriteDeclContextLexicalBlock(
             *Context, const_cast<CXXRecordDecl *>(RD)));

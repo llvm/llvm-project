@@ -170,7 +170,11 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     if (NewYAMLSection.Name == ".debug$S")
       NewYAMLSection.DebugS = CodeViewYAML::fromDebugS(sectionData, SC);
     else if (NewYAMLSection.Name == ".debug$T")
-      NewYAMLSection.DebugT = CodeViewYAML::fromDebugT(sectionData);
+      NewYAMLSection.DebugT = CodeViewYAML::fromDebugT(sectionData,
+                                                       NewYAMLSection.Name);
+    else if (NewYAMLSection.Name == ".debug$P")
+      NewYAMLSection.DebugP = CodeViewYAML::fromDebugT(sectionData,
+                                                       NewYAMLSection.Name);
     else if (NewYAMLSection.Name == ".debug$H")
       NewYAMLSection.DebugH = CodeViewYAML::fromDebugH(sectionData);
 

@@ -23,6 +23,7 @@
 
 #include "BackendPrinter.h"
 #include "BackendStatistics.h"
+#include "CodeRegion.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
 #include "RegisterFileStatistics.h"
@@ -158,6 +159,44 @@ const Target *getTarget(const char *ProgName) {
   return TheTarget;
 }
 
+// A comment consumer that parses strings.
+// The only valid tokens are strings.
+class MCACommentConsumer : public AsmCommentConsumer {
+public:
+  mca::CodeRegions &Regions;
+
+  MCACommentConsumer(mca::CodeRegions &R) : Regions(R) {}
+  void HandleComment(SMLoc Loc, StringRef CommentText) override {
+    // Skip empty comments.
+    StringRef Comment(CommentText);
+    if (Comment.empty())
+      return;
+
+    // Skip spaces and tabs
+    unsigned Position = Comment.find_first_not_of(" \t");
+    if (Position >= Comment.size())
+      // we reached the end of the comment. Bail out.
+      return;
+
+    Comment = Comment.drop_front(Position);
+    if (Comment.consume_front("LLVM-MCA-END")) {
+      Regions.endRegion(Loc);
+      return;
+    }
+
+    // Now try to parse string LLVM-MCA-BEGIN
+    if (!Comment.consume_front("LLVM-MCA-BEGIN"))
+      return;
+
+    // Skip spaces and tabs
+    Position = Comment.find_first_not_of(" \t");
+    if (Position < Comment.size())
+      Comment = Comment.drop_front(Position);
+    // Use the rest of the string as a descriptor for this code snippet.
+    Regions.beginRegion(Comment, Loc);
+  }
+};
+
 int AssembleInput(const char *ProgName, MCAsmParser &Parser,
                   const Target *TheTarget, MCSubtargetInfo &STI,
                   MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
@@ -186,17 +225,16 @@ ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
 }
 
 class MCStreamerWrapper final : public MCStreamer {
-  using InstVec = std::vector<std::unique_ptr<const MCInst>>;
-  InstVec &Insts;
+  mca::CodeRegions &Regions;
 
 public:
-  MCStreamerWrapper(MCContext &Context, InstVec &Vec)
-      : MCStreamer(Context), Insts(Vec) {}
+  MCStreamerWrapper(MCContext &Context, mca::CodeRegions &R)
+      : MCStreamer(Context), Regions(R) {}
 
   // We only want to intercept the emission of new instructions.
   virtual void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                                bool /* unused */) override {
-    Insts.emplace_back(new MCInst(Inst));
+    Regions.addInstruction(llvm::make_unique<const MCInst>(Inst));
   }
 
   bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
@@ -213,7 +251,10 @@ public:
   void EmitCOFFSymbolType(int Type) override {}
   void EndCOFFSymbolDef() override {}
 
-  const InstVec &GetInstructionSequence() const { return Insts; }
+  const std::vector<std::unique_ptr<const MCInst>> &
+  GetInstructionSequence(unsigned Index) const {
+    return Regions.getInstructionSequence(Index);
+  }
 };
 } // end of anonymous namespace
 
@@ -272,9 +313,8 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<buffer_ostream> BOS;
 
-  std::unique_ptr<mca::SourceMgr> S = llvm::make_unique<mca::SourceMgr>(
-      PrintInstructionTables ? 1 : Iterations);
-  MCStreamerWrapper Str(Ctx, S->getSequence());
+  mca::CodeRegions Regions(SrcMgr);
+  MCStreamerWrapper Str(Ctx, Regions);
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
@@ -310,10 +350,14 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<MCAsmParser> P(createMCAsmParser(SrcMgr, Ctx, Str, *MAI));
+  MCAsmLexer &Lexer = P->getLexer();
+  MCACommentConsumer CC(Regions);
+  Lexer.setCommentConsumer(&CC);
+
   if (AssembleInput(ProgName, *P, TheTarget, *STI, *MCII, MCOptions))
     return 1;
 
-  if (S->isEmpty()) {
+  if (Regions.empty()) {
     errs() << "error: no assembly instructions found.\n";
     return 1;
   }
@@ -336,49 +380,68 @@ int main(int argc, char **argv) {
   // Create an instruction builder.
   mca::InstrBuilder IB(*STI, *MCII);
 
-  if (PrintInstructionTables) {
-    mca::InstructionTables IT(STI->getSchedModel(), IB, *S);
+  // Number each region in the sequence.
+  unsigned RegionIdx = 0;
+  for (const std::unique_ptr<mca::CodeRegion> &Region : Regions) {
+    // Skip empty code regions.
+    if (Region->empty())
+      continue;
 
-    if (PrintInstructionInfoView) {
-      IT.addView(
-          llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, *S, *IP));
+    // Don't print the header of this region if it is the default region, and
+    // it doesn't have an end location.
+    if (Region->startLoc().isValid() || Region->endLoc().isValid()) {
+      TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
+      StringRef Desc = Region->getDescription();
+      if (!Desc.empty())
+        TOF->os() << " - " << Desc;
+      TOF->os() << "\n\n";
     }
 
-    IT.addView(llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
-    IT.run();
-    IT.printReport(TOF->os());
-    TOF->keep();
-    return 0;
+    mca::SourceMgr S(Region->getInstructions(),
+                     PrintInstructionTables ? 1 : Iterations);
+
+    if (PrintInstructionTables) {
+      mca::InstructionTables IT(STI->getSchedModel(), IB, S);
+
+      if (PrintInstructionInfoView) {
+        IT.addView(
+            llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));
+      }
+
+      IT.addView(llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, S));
+      IT.run();
+      IT.printReport(TOF->os());
+      continue;
+    }
+
+    mca::Backend B(*STI, *MRI, IB, S, Width, RegisterFileSize, LoadQueueSize,
+                   StoreQueueSize, AssumeNoAlias);
+    mca::BackendPrinter Printer(B);
+
+    Printer.addView(llvm::make_unique<mca::SummaryView>(S, Width));
+    if (PrintInstructionInfoView)
+      Printer.addView(
+          llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));
+
+    if (PrintModeVerbose)
+      Printer.addView(llvm::make_unique<mca::BackendStatistics>(*STI));
+
+    if (PrintRegisterFileStats)
+      Printer.addView(llvm::make_unique<mca::RegisterFileStatistics>(*STI));
+
+    if (PrintResourcePressureView)
+      Printer.addView(
+          llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, S));
+
+    if (PrintTimelineView) {
+      Printer.addView(llvm::make_unique<mca::TimelineView>(
+          *STI, *IP, S, TimelineMaxIterations, TimelineMaxCycles));
+    }
+
+    B.run();
+    Printer.printReport(TOF->os());
   }
 
-  mca::Backend B(*STI, *MRI, IB, *S, Width, RegisterFileSize, LoadQueueSize,
-                 StoreQueueSize, AssumeNoAlias);
-  mca::BackendPrinter Printer(B);
-
-  Printer.addView(llvm::make_unique<mca::SummaryView>(*S, Width));
-
-  if (PrintInstructionInfoView)
-    Printer.addView(
-        llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, *S, *IP));
-
-  if (PrintModeVerbose)
-    Printer.addView(llvm::make_unique<mca::BackendStatistics>(*STI));
-
-  if (PrintRegisterFileStats)
-    Printer.addView(llvm::make_unique<mca::RegisterFileStatistics>(*STI));
-
-  if (PrintResourcePressureView)
-    Printer.addView(
-        llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, *S));
-
-  if (PrintTimelineView) {
-    Printer.addView(llvm::make_unique<mca::TimelineView>(
-        *STI, *IP, *S, TimelineMaxIterations, TimelineMaxCycles));
-  }
-
-  B.run();
-  Printer.printReport(TOF->os());
   TOF->keep();
-
   return 0;
 }

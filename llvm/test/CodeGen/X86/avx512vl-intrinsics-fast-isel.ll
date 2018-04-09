@@ -3215,6 +3215,195 @@ define <8 x float> @test_mm256_maskz_shuffle_ps(i8 %a0, <8 x float> %a1, <8 x fl
   ret <8 x float> %res1
 }
 
+define <4 x i64> @test_mm256_mask_mul_epi32(<4 x i64> %__W, i8 zeroext %__M, <4 x i64> %__X, <4 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm256_mask_mul_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuldq %ymm1, %ymm2, %ymm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_mul_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuldq %ymm1, %ymm2, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %tmp = shl <4 x i64> %__X, <i64 32, i64 32, i64 32, i64 32>
+  %tmp1 = ashr exact <4 x i64> %tmp, <i64 32, i64 32, i64 32, i64 32>
+  %tmp2 = shl <4 x i64> %__Y, <i64 32, i64 32, i64 32, i64 32>
+  %tmp3 = ashr exact <4 x i64> %tmp2, <i64 32, i64 32, i64 32, i64 32>
+  %tmp4 = mul nsw <4 x i64> %tmp3, %tmp1
+  %tmp5 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp5, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp6 = select <4 x i1> %extract.i, <4 x i64> %tmp4, <4 x i64> %__W
+  ret <4 x i64> %tmp6
+}
+
+define <4 x i64> @test_mm256_maskz_mul_epi32(i8 zeroext %__M, <4 x i64> %__X, <4 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm256_maskz_mul_epi32:
+; X32:       # %bb.0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuldq %ymm0, %ymm1, %ymm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_mul_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuldq %ymm0, %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+  %tmp = shl <4 x i64> %__X, <i64 32, i64 32, i64 32, i64 32>
+  %tmp1 = ashr exact <4 x i64> %tmp, <i64 32, i64 32, i64 32, i64 32>
+  %tmp2 = shl <4 x i64> %__Y, <i64 32, i64 32, i64 32, i64 32>
+  %tmp3 = ashr exact <4 x i64> %tmp2, <i64 32, i64 32, i64 32, i64 32>
+  %tmp4 = mul nsw <4 x i64> %tmp3, %tmp1
+  %tmp5 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp5, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp6 = select <4 x i1> %extract.i, <4 x i64> %tmp4, <4 x i64> zeroinitializer
+  ret <4 x i64> %tmp6
+}
+
+define <2 x i64> @test_mm_mask_mul_epi32(<2 x i64> %__W, i8 zeroext %__M, <2 x i64> %__X, <2 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm_mask_mul_epi32:
+; X32:       # %bb.0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuldq %xmm1, %xmm2, %xmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_mul_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuldq %xmm1, %xmm2, %xmm0 {%k1}
+; X64-NEXT:    retq
+  %tmp = shl <2 x i64> %__X, <i64 32, i64 32>
+  %tmp1 = ashr exact <2 x i64> %tmp, <i64 32, i64 32>
+  %tmp2 = shl <2 x i64> %__Y, <i64 32, i64 32>
+  %tmp3 = ashr exact <2 x i64> %tmp2, <i64 32, i64 32>
+  %tmp4 = mul nsw <2 x i64> %tmp3, %tmp1
+  %tmp5 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp5, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %tmp6 = select <2 x i1> %extract.i, <2 x i64> %tmp4, <2 x i64> %__W
+  ret <2 x i64> %tmp6
+}
+
+define <2 x i64> @test_mm_maskz_mul_epi32(i8 zeroext %__M, <2 x i64> %__X, <2 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm_maskz_mul_epi32:
+; X32:       # %bb.0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuldq %xmm0, %xmm1, %xmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_mul_epi32:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuldq %xmm0, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+  %tmp = shl <2 x i64> %__X, <i64 32, i64 32>
+  %tmp1 = ashr exact <2 x i64> %tmp, <i64 32, i64 32>
+  %tmp2 = shl <2 x i64> %__Y, <i64 32, i64 32>
+  %tmp3 = ashr exact <2 x i64> %tmp2, <i64 32, i64 32>
+  %tmp4 = mul nsw <2 x i64> %tmp3, %tmp1
+  %tmp5 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp5, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %tmp6 = select <2 x i1> %extract.i, <2 x i64> %tmp4, <2 x i64> zeroinitializer
+  ret <2 x i64> %tmp6
+}
+
+define <4 x i64> @test_mm256_mask_mul_epu32(<4 x i64> %__W, i8 zeroext %__M, <4 x i64> %__X, <4 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm256_mask_mul_epu32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuludq %ymm1, %ymm2, %ymm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_mul_epu32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuludq %ymm1, %ymm2, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %tmp = and <4 x i64> %__X, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %tmp1 = and <4 x i64> %__Y, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %tmp2 = mul nuw <4 x i64> %tmp1, %tmp
+  %tmp3 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp3, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp4 = select <4 x i1> %extract.i, <4 x i64> %tmp2, <4 x i64> %__W
+  ret <4 x i64> %tmp4
+}
+
+define <4 x i64> @test_mm256_maskz_mul_epu32(i8 zeroext %__M, <4 x i64> %__X, <4 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm256_maskz_mul_epu32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuludq %ymm0, %ymm1, %ymm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_mul_epu32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuludq %ymm0, %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %tmp = and <4 x i64> %__X, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %tmp1 = and <4 x i64> %__Y, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %tmp2 = mul nuw <4 x i64> %tmp1, %tmp
+  %tmp3 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp3, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp4 = select <4 x i1> %extract.i, <4 x i64> %tmp2, <4 x i64> zeroinitializer
+  ret <4 x i64> %tmp4
+}
+
+define <2 x i64> @test_mm_mask_mul_epu32(<2 x i64> %__W, i8 zeroext %__M, <2 x i64> %__X, <2 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm_mask_mul_epu32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuludq %xmm1, %xmm2, %xmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_mul_epu32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuludq %xmm1, %xmm2, %xmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %tmp = and <2 x i64> %__X, <i64 4294967295, i64 4294967295>
+  %tmp1 = and <2 x i64> %__Y, <i64 4294967295, i64 4294967295>
+  %tmp2 = mul nuw <2 x i64> %tmp1, %tmp
+  %tmp3 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp3, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %tmp4 = select <2 x i1> %extract.i, <2 x i64> %tmp2, <2 x i64> %__W
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i64> @test_mm_maskz_mul_epu32(i8 zeroext %__M, <2 x i64> %__X, <2 x i64> %__Y) nounwind {
+; X32-LABEL: test_mm_maskz_mul_epu32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_mul_epu32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %tmp = and <2 x i64> %__X, <i64 4294967295, i64 4294967295>
+  %tmp1 = and <2 x i64> %__Y, <i64 4294967295, i64 4294967295>
+  %tmp2 = mul nuw <2 x i64> %tmp1, %tmp
+  %tmp3 = bitcast i8 %__M to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %tmp3, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %tmp4 = select <2 x i1> %extract.i, <2 x i64> %tmp2, <2 x i64> zeroinitializer
+  ret <2 x i64> %tmp4
+}
+
 declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>)
 declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>)
 declare <4 x i32> @llvm.x86.avx512.mask.cvtpd2dq.128(<2 x double>, <4 x i32>, i8)

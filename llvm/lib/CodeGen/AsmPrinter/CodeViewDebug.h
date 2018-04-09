@@ -239,7 +239,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   }
 
   /// Emit the magic version number at the start of a CodeView type or symbol
-  /// section. Appears at the front of every .debug$S or .debug$T section.
+  /// section. Appears at the front of every .debug$S or .debug$T or .debug$P
+  /// section.
   void emitCodeViewMagicVersion();
 
   void emitTypeInformation();

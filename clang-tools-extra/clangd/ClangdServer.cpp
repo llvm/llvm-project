@@ -286,6 +286,13 @@ static llvm::Expected<HeaderFile> toHeaderFile(StringRef Header,
   auto U = URI::parse(Header);
   if (!U)
     return U.takeError();
+
+  auto IncludePath = URI::includeSpelling(*U);
+  if (!IncludePath)
+    return IncludePath.takeError();
+  if (!IncludePath->empty())
+    return HeaderFile{std::move(*IncludePath), /*Verbatim=*/true};
+
   auto Resolved = URI::resolve(*U, HintPath);
   if (!Resolved)
     return Resolved.takeError();

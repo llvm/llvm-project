@@ -20,6 +20,13 @@ LegalizeMutation LegalizeMutations::changeTo(unsigned TypeIdx, LLT Ty) {
       [=](const LegalityQuery &Query) { return std::make_pair(TypeIdx, Ty); };
 }
 
+LegalizeMutation LegalizeMutations::changeTo(unsigned TypeIdx,
+                                             unsigned FromTypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return std::make_pair(TypeIdx, Query.Types[FromTypeIdx]);
+  };
+}
+
 LegalizeMutation LegalizeMutations::widenScalarToNextPow2(unsigned TypeIdx,
                                                           unsigned Min) {
   return [=](const LegalityQuery &Query) {
