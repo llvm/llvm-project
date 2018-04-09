@@ -8,6 +8,8 @@
 // pointer fields are passed directly.
 
 // CHECK: %[[STRUCT_STRONGWEAK:.*]] = type { i8*, i8* }
+// CHECK: %[[STRUCT_CONTAINSSTRONGWEAK:.*]] = type { %[[STRUCT_STRONGWEAK]] }
+// CHECK: %[[STRUCT_DERIVEDSTRONGWEAK:.*]] = type { %[[STRUCT_STRONGWEAK]] }
 // CHECK: %[[STRUCT_STRONG:.*]] = type { i8* }
 // CHECK: %[[STRUCT_S:.*]] = type { i8* }
 // CHECK: %[[STRUCT_CONTAINSNONTRIVIAL:.*]] = type { %{{.*}}, i8* }
@@ -19,6 +21,21 @@ struct StrongWeak {
 #endif
   id fstrong;
   __weak id fweak;
+};
+
+#ifdef TRIVIALABI
+struct __attribute__((trivial_abi)) ContainsStrongWeak {
+#else
+struct ContainsStrongWeak {
+#endif
+  StrongWeak sw;
+};
+
+#ifdef TRIVIALABI
+struct __attribute__((trivial_abi)) DerivedStrongWeak : StrongWeak {
+#else
+struct DerivedStrongWeak : StrongWeak {
+#endif
 };
 
 #ifdef TRIVIALABI
@@ -82,6 +99,18 @@ void testCallStrongWeak(StrongWeak *a) {
 
 StrongWeak testReturnStrongWeak(StrongWeak *a) {
   return *a;
+}
+
+// CHECK: define void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(%[[STRUCT_CONTAINSSTRONGWEAK]]* %[[A:.*]])
+// CHECK: call %[[STRUCT_CONTAINSSTRONGWEAK]]* @_ZN18ContainsStrongWeakD1Ev(%[[STRUCT_CONTAINSSTRONGWEAK]]* %[[A]])
+
+void testParamContainsStrongWeak(ContainsStrongWeak a) {
+}
+
+// CHECK: define void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(%[[STRUCT_DERIVEDSTRONGWEAK]]* %[[A:.*]])
+// CHECK: call %[[STRUCT_DERIVEDSTRONGWEAK]]* @_ZN17DerivedStrongWeakD1Ev(%[[STRUCT_DERIVEDSTRONGWEAK]]* %[[A]])
+
+void testParamDerivedStrongWeak(DerivedStrongWeak a) {
 }
 
 // CHECK: define void @_Z15testParamStrong6Strong(i64 %[[A_COERCE:.*]])
