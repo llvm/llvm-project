@@ -88,13 +88,14 @@ public:
 
   bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
                            ArrayRef<SymbolRelation> Relations,
-                           FileID FID, unsigned Offset,
-                           ASTNodeInfo ASTNode) override {
+                           SourceLocation Loc, ASTNodeInfo ASTNode) override {
     ASTContext &Ctx = D->getASTContext();
     SourceManager &SM = Ctx.getSourceManager();
 
-    unsigned Line = SM.getLineNumber(FID, Offset);
-    unsigned Col = SM.getColumnNumber(FID, Offset);
+    Loc = SM.getFileLoc(Loc);
+    FileID FID = SM.getFileID(Loc);
+    unsigned Line = SM.getLineNumber(FID, SM.getFileOffset(Loc));
+    unsigned Col = SM.getColumnNumber(FID, SM.getFileOffset(Loc));
     OS << Line << ':' << Col << " | ";
 
     printSymbolInfo(getSymbolInfo(D), OS);
@@ -124,12 +125,14 @@ public:
   }
 
   bool handleModuleOccurence(const ImportDecl *ImportD, SymbolRoleSet Roles,
-                             FileID FID, unsigned Offset) override {
+                             SourceLocation Loc) override {
     ASTContext &Ctx = ImportD->getASTContext();
     SourceManager &SM = Ctx.getSourceManager();
 
-    unsigned Line = SM.getLineNumber(FID, Offset);
-    unsigned Col = SM.getColumnNumber(FID, Offset);
+    Loc = SM.getFileLoc(Loc);
+    FileID FID = SM.getFileID(Loc);
+    unsigned Line = SM.getLineNumber(FID, SM.getFileOffset(Loc));
+    unsigned Col = SM.getColumnNumber(FID, SM.getFileOffset(Loc));
     OS << Line << ':' << Col << " | ";
 
     printSymbolInfo(getSymbolInfo(ImportD), OS);

@@ -2239,17 +2239,6 @@ QualType::isNonTrivialToPrimitiveDestructiveMove() const {
   return isNonTrivialToPrimitiveCopy();
 }
 
-bool QualType::canPassInRegisters() const {
-  if (const auto *RT =
-          getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    return RT->getDecl()->canPassInRegisters();
-
-  if (getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
-    return false;
-
-  return true;
-}
-
 bool Type::isLiteralType(const ASTContext &Ctx) const {
   if (isDependentType())
     return false;

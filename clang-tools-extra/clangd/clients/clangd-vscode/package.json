@@ -2,11 +2,11 @@
     "name": "vscode-clangd",
     "displayName": "vscode-clangd",
     "description": "Clang Language Server",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "publisher": "llvm-vs-code-extensions",
     "homepage": "https://clang.llvm.org/extra/clangd.html",
     "engines": {
-        "vscode": "^1.15.0"
+        "vscode": "^1.18.0"
     },
     "categories": [
         "Languages",
@@ -32,12 +32,12 @@
         "test": "node ./node_modules/vscode/bin/test"
     },
     "dependencies": {
-        "vscode-languageclient": "^3.3.0",
-        "vscode-languageserver": "^3.3.0"
+        "vscode-languageclient": "^4.0.0",
+        "vscode-languageserver": "^4.0.0"
     },
     "devDependencies": {
         "typescript": "^2.0.3",
-        "vscode": "^1.0.3",
+        "vscode": "^1.1.0",
         "mocha": "^2.3.3",
         "@types/node": "^6.0.40",
         "@types/mocha": "^2.2.32"

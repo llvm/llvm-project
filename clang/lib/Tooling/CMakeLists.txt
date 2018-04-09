@@ -15,6 +15,7 @@ add_clang_library(clangTooling
   Execution.cpp
   FileMatchTrie.cpp
   FixIt.cpp
+  InterpolatingCompilationDatabase.cpp
   JSONCompilationDatabase.cpp
   Refactoring.cpp
   RefactoringCallbacks.cpp

@@ -423,7 +423,7 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   memset(&Header, 0, sizeof(Header));
 
   Header.amd_kernel_code_version_major = 1;
-  Header.amd_kernel_code_version_minor = 1;
+  Header.amd_kernel_code_version_minor = 2;
   Header.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
   Header.amd_machine_version_major = ISA.Major;
   Header.amd_machine_version_minor = ISA.Minor;

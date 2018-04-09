@@ -2608,6 +2608,13 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
 
 bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
                                                amd_kernel_code_t &Header) {
+  // max_scratch_backing_memory_byte_size is deprecated. Ignore it while parsing
+  // assembly for backwards compatibility.
+  if (ID == "max_scratch_backing_memory_byte_size") {
+    Parser.eatToEndOfStatement();
+    return false;
+  }
+
   SmallString<40> ErrStr;
   raw_svector_ostream Err(ErrStr);
   if (!parseAmdKernelCodeField(ID, getParser(), Header, Err)) {

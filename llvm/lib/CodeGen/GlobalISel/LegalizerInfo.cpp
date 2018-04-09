@@ -64,6 +64,7 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
       DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
                    << Mutation.first << ", " << Mutation.second << "\n");
       assert((Query.Types[Mutation.first] != Mutation.second ||
+              Rule.getAction() == Lower ||
               Rule.getAction() == MoreElements ||
               Rule.getAction() == FewerElements) &&
              "Simple loop detected");

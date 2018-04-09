@@ -1,7 +1,9 @@
-// RUN: clang-tidy %s -checks="-*,bugprone-suspicious-semicolon" -- -DERROR 2>&1 \
+// RUN: not clang-tidy %s \
+// RUN:     -checks="-*,bugprone-suspicious-semicolon" -- -DERROR 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK-ERROR \
 // RUN:       -implicit-check-not="{{warning|error}}:"
-// RUN: clang-tidy %s -checks="-*,bugprone-suspicious-semicolon,clang-diagnostic*" \
+// RUN: not clang-tidy %s \
+// RUN:     -checks="-*,bugprone-suspicious-semicolon,clang-diagnostic*" \
 // RUN:    -- -DWERROR -Wno-everything -Werror=unused-variable 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK-WERROR \
 // RUN:       -implicit-check-not="{{warning|error}}:"

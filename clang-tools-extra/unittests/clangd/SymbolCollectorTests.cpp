@@ -250,6 +250,7 @@ TEST_F(SymbolCollectorTest, References) {
     class Y;
     class Z {}; // not used anywhere
     Y* y = nullptr;  // used in header doesn't count
+    #define GLOBAL_Z(name) Z name;
   )";
   const std::string Main = R"(
     W* w = nullptr;
@@ -258,6 +259,7 @@ TEST_F(SymbolCollectorTest, References) {
     class V;
     V* v = nullptr; // Used, but not eligible for indexing.
     class Y{}; // definition doesn't count as a reference
+    GLOBAL_Z(z); // Not a reference to Z, we don't spell the type.
   )";
   CollectorOpts.CountReferences = true;
   runSymbolCollector(Header, Main);

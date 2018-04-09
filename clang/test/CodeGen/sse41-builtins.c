@@ -312,7 +312,11 @@ __m128i test_mm_mpsadbw_epu8(__m128i x, __m128i y) {
 
 __m128i test_mm_mul_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_mul_epi32
-  // CHECK: call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
+  // CHECK: shl <2 x i64> %{{.*}}, <i64 32, i64 32>
+  // CHECK: ashr <2 x i64> %{{.*}}, <i64 32, i64 32>
+  // CHECK: shl <2 x i64> %{{.*}}, <i64 32, i64 32>
+  // CHECK: ashr <2 x i64> %{{.*}}, <i64 32, i64 32>
+  // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_epi32(x, y);
 }
 

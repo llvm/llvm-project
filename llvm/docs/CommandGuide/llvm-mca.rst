@@ -25,6 +25,24 @@ Given an assembly code sequence, llvm-mca estimates the IPC (Instructions Per
 Cycle), as well as hardware resource pressure. The analysis and reporting style
 were inspired by the IACA tool from Intel.
 
+:program:`llvm-mca` allows the usage of special code comments to mark regions of
+the assembly code to be analyzed.  A comment starting with substring
+``LLVM-MCA-BEGIN`` marks the beginning of a code region. A comment starting with
+substring ``LLVM-MCA-END`` marks the end of a code region.  For example:
+
+.. code-block:: none
+
+  # LLVM-MCA-BEGIN My Code Region
+    ...
+  # LLVM-MCA-END
+
+Multiple regions can be specified provided that they do not overlap.  A code
+region can have an optional description. If no user defined region is specified,
+then :program:`llvm-mca` assumes a default region which contains every
+instruction in the input file.  Every region is analyzed in isolation, and the
+final performance report is the union of all the reports generated for every
+code region.
+
 OPTIONS
 -------
 

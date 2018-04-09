@@ -367,7 +367,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
                                            Block, Phi.getParent());
     Comparison.BB = Block;
     if (!Comparison.IsValid()) {
-      DEBUG(dbgs() << "skip: not a valid BCECmpBlock\n");
+      DEBUG(dbgs() << "chain with invalid BCECmpBlock, no merge.\n");
       return;
     }
     if (Comparison.doesOtherWork()) {

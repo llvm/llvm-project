@@ -467,6 +467,21 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR, LabelRecord &R) {
   return Error::success();
 }
 
+Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
+                                               PrecompRecord &Precomp) {
+  P.format(" start index = {0:X+}, types count = {1:X+}, signature = {2:X+},"
+           " precomp path = {3}",
+           Precomp.StartTypeIndex, Precomp.TypesCount, Precomp.Signature,
+           Precomp.PrecompFilePath);
+  return Error::success();
+}
+
+Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
+                                               EndPrecompRecord &EP) {
+  P.format(" signature = {0:X+}", EP.Signature);
+  return Error::success();
+}
+
 Error MinimalTypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
                                                NestedTypeRecord &Nested) {
   P.format(" [name = `{0}`, parent = {1}]", Nested.Name, Nested.Type);

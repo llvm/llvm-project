@@ -217,7 +217,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     OS << "  fi#" << (int)(i-NumFixedObjects) << ": ";
 
     if (SO.StackID != 0)
-      OS << "id=" << SO.StackID << ' ';
+      OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';
 
     if (SO.Size == ~0ULL) {
       OS << "dead\n";

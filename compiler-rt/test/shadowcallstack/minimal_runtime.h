@@ -1,15 +1,18 @@
 // A shadow call stack runtime is not yet included with compiler-rt, provide a
-// minimal runtime to allocate a shadow call stack and assign %gs to point at
-// it.
+// minimal runtime to allocate a shadow call stack and assign an
+// architecture-specific register to point at it.
 
 #pragma once
 
+#ifdef __x86_64__
 #include <asm/prctl.h>
+int arch_prctl(int code, void *addr);
+#endif
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
 
-int arch_prctl(int code, void *addr);
+#include "libc_support.h"
 
 __attribute__((no_sanitize("shadow-call-stack")))
 static void __shadowcallstack_init() {
@@ -18,9 +21,23 @@ static void __shadowcallstack_init() {
   if (stack == MAP_FAILED)
     abort();
 
+#if defined(__x86_64__)
   if (arch_prctl(ARCH_SET_GS, stack))
     abort();
+#elif defined(__aarch64__)
+  __asm__ __volatile__("mov x18, %0" ::"r"(stack));
+#else
+#error Unsupported platform
+#endif
 }
 
-__attribute__((section(".preinit_array"), used))
-    void (*__shadowcallstack_preinit)(void) = __shadowcallstack_init;
+int scs_main(void);
+
+__attribute__((no_sanitize("shadow-call-stack"))) int main(void) {
+  __shadowcallstack_init();
+
+  // We can't simply return scs_main() because scs_main might have corrupted our
+  // return address for testing purposes (see overflow.c), so we need to exit
+  // ourselves.
+  exit(scs_main());
+}

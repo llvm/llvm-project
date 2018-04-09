@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=5 -verbose -instruction-info=false -register-file-stats -timeline < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=5 -verbose -register-file-stats -timeline < %s | FileCheck %s
 
 vaddps %xmm0, %xmm0, %xmm0
 vmulps %xmm0, %xmm0, %xmm0
@@ -34,14 +34,13 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK: Timeline view:
 # CHECK-NEXT:     	          0123456789        
 # CHECK-NEXT: Index	0123456789          01234567
-
 # CHECK:      [0,0]	DeeeER    .    .    .    . .	vaddps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [0,1]	D===eeER  .    .    .    . .	vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]	.D====eeeER    .    .    . .	vaddps	%xmm0, %xmm0, %xmm0
+# CHECK:      [1,0]	.D====eeeER    .    .    . .	vaddps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [1,1]	.D=======eeER  .    .    . .	vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [2,0]	. D========eeeER    .    . .	vaddps	%xmm0, %xmm0, %xmm0
+# CHECK:      [2,0]	. D========eeeER    .    . .	vaddps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [2,1]	. D===========eeER  .    . .	vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [3,0]	.  D============eeeER    . .	vaddps	%xmm0, %xmm0, %xmm0
+# CHECK:      [3,0]	.  D============eeeER    . .	vaddps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [3,1]	.  D===============eeER  . .	vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [4,0]	.   D================eeeER .	vaddps	%xmm0, %xmm0, %xmm0
+# CHECK:      [4,0]	.   D================eeeER .	vaddps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [4,1]	.   D===================eeER	vmulps	%xmm0, %xmm0, %xmm0

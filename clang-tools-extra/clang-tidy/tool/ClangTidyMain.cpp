@@ -448,10 +448,9 @@ static int clangTidyMain(int argc, const char **argv) {
   runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
                EnableCheckProfile ? &Profile : nullptr);
   ArrayRef<ClangTidyError> Errors = Context.getErrors();
-  bool FoundErrors =
-      std::find_if(Errors.begin(), Errors.end(), [](const ClangTidyError &E) {
-        return E.DiagLevel == ClangTidyError::Error;
-      }) != Errors.end();
+  bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
+                       return E.DiagLevel == ClangTidyError::Error;
+                     }) != Errors.end();
 
   const bool DisableFixes = Fix && FoundErrors && !FixErrors;
 
@@ -489,6 +488,19 @@ static int clangTidyMain(int argc, const char **argv) {
                    << Plural << "\n";
     }
     return WErrorCount;
+  }
+
+  if (FoundErrors) {
+    // TODO: Figure out when zero exit code should be used with -fix-errors:
+    //   a. when a fix has been applied for an error
+    //   b. when a fix has been applied for all errors
+    //   c. some other condition.
+    // For now always returning zero when -fix-errors is used.
+    if (FixErrors)
+      return 0;
+    if (!Quiet)
+      llvm::errs() << "Found compiler error(s).\n";
+    return 1;
   }
 
   return 0;

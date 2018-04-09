@@ -112,61 +112,6 @@ void addMinGWDefines(const llvm::Triple &Triple, const LangOptions &Opts,
   addCygMingDefines(Opts, Builder);
 }
 
-void defineCudaArchMacro(CudaArch GPU, clang::MacroBuilder &Builder) {
-  std::string CUDAArchCode = [GPU] {
-    switch (GPU) {
-    case CudaArch::LAST:
-      break;
-    case CudaArch::SM_20:
-      return "200";
-    case CudaArch::SM_21:
-      return "210";
-    case CudaArch::SM_30:
-      return "300";
-    case CudaArch::SM_32:
-      return "320";
-    case CudaArch::SM_35:
-      return "350";
-    case CudaArch::SM_37:
-      return "370";
-    case CudaArch::SM_50:
-      return "500";
-    case CudaArch::SM_52:
-      return "520";
-    case CudaArch::SM_53:
-      return "530";
-    case CudaArch::SM_60:
-      return "600";
-    case CudaArch::SM_61:
-      return "610";
-    case CudaArch::SM_62:
-      return "620";
-    case CudaArch::SM_70:
-      return "700";
-    case CudaArch::SM_72:
-      return "720";
-    case CudaArch::GFX600:
-    case CudaArch::GFX601:
-    case CudaArch::GFX700:
-    case CudaArch::GFX701:
-    case CudaArch::GFX702:
-    case CudaArch::GFX703:
-    case CudaArch::GFX704:
-    case CudaArch::GFX801:
-    case CudaArch::GFX802:
-    case CudaArch::GFX803:
-    case CudaArch::GFX810:
-    case CudaArch::GFX900:
-    case CudaArch::GFX902:
-      return "1";
-    case CudaArch::UNKNOWN:
-      llvm_unreachable("unhandled Cuda/HIP Arch");
-    }
-    llvm_unreachable("unhandled Cuda/HIP Arch");
-  }();
-  Builder.defineMacro("__CUDA_ARCH__", CUDAArchCode);
-}
-
 //===----------------------------------------------------------------------===//
 // Driver code
 //===----------------------------------------------------------------------===//

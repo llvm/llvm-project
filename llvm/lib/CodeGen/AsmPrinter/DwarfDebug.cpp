@@ -1468,6 +1468,10 @@ void DwarfDebug::emitAccel(AccelTableT &Accel, MCSection *Section,
 }
 
 void DwarfDebug::emitAccelDebugNames() {
+  // Don't emit anything if we have no compilation units to index.
+  if (getUnits().empty())
+    return;
+
   Asm->OutStreamer->SwitchSection(
       Asm->getObjFileLowering().getDwarfDebugNamesSection());
   emitDWARF5AccelTable(Asm, AccelDebugNames, *this, getUnits());
