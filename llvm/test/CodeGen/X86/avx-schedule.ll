@@ -1607,13 +1607,13 @@ define <8 x float> @test_dpps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2
 ; GENERIC-LABEL: test_dpps:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [12:2.00]
-; GENERIC-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [19:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_dpps:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [12:2.00]
-; SANDY-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
+; SANDY-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [19:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_dpps:

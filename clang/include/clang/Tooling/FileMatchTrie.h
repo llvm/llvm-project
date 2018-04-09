@@ -72,7 +72,7 @@ public:
   ///
   /// Returns file name stored in this trie that is equivalent to 'FileName'
   /// according to 'Comparator', if it can be uniquely identified. If there
-  /// are no matches an empty \c StringRef is returned. If there are ambigious
+  /// are no matches an empty \c StringRef is returned. If there are ambiguous
   /// matches, an empty \c StringRef is returned and a corresponding message
   /// written to 'Error'.
   StringRef findEquivalent(StringRef FileName,

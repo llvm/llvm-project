@@ -59,6 +59,12 @@ Improvements to Clang's diagnostics
   ``-Wno-c++98-compat-extra-semi``, so if you want that diagnostic, you need
   to explicitly re-enable it (e.g. by appending ``-Wextra-semi``).
 
+- ``-Wself-assign`` and ``-Wself-assign-field`` were extended to diagnose
+  self-assignment operations using overloaded operators (i.e. classes).
+  If you are doing such an assignment intentionally, e.g. in a unit test for
+  a data structure, the warning can be suppressed by adding ``*&`` to the
+  right-hand side or casting it to the appropriate reference type.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

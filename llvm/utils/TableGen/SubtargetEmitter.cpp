@@ -134,7 +134,7 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   // Get all records of class and sort
   std::vector<Record*> DefList =
     Records.getAllDerivedDefinitions("SubtargetFeature");
-  std::sort(DefList.begin(), DefList.end(), LessRecord());
+  llvm::sort(DefList.begin(), DefList.end(), LessRecord());
 
   unsigned N = DefList.size();
   if (N == 0)
@@ -173,7 +173,7 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
   if (FeatureList.empty())
     return 0;
 
-  std::sort(FeatureList.begin(), FeatureList.end(), LessRecordFieldName());
+  llvm::sort(FeatureList.begin(), FeatureList.end(), LessRecordFieldName());
 
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
@@ -223,7 +223,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
   // Gather and sort processor information
   std::vector<Record*> ProcessorList =
                           Records.getAllDerivedDefinitions("Processor");
-  std::sort(ProcessorList.begin(), ProcessorList.end(), LessRecordFieldName());
+  llvm::sort(ProcessorList.begin(), ProcessorList.end(), LessRecordFieldName());
 
   // Begin processor table
   OS << "// Sorted (by key) array of values for CPU subtype.\n"
@@ -1091,7 +1091,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
           WriteIDs.push_back(SchedModels.getSchedRWIdx(VW, /*IsRead=*/false));
         }
       }
-      std::sort(WriteIDs.begin(), WriteIDs.end());
+      llvm::sort(WriteIDs.begin(), WriteIDs.end());
       for(unsigned W : WriteIDs) {
         MCReadAdvanceEntry RAEntry;
         RAEntry.UseIdx = UseIdx;
@@ -1109,8 +1109,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     // compression.
     //
     // WritePrecRes entries are sorted by ProcResIdx.
-    std::sort(WriteProcResources.begin(), WriteProcResources.end(),
-              LessWriteProcResources());
+    llvm::sort(WriteProcResources.begin(), WriteProcResources.end(),
+               LessWriteProcResources());
 
     SCDesc.NumWriteProcResEntries = WriteProcResources.size();
     std::vector<MCWriteProcResEntry>::iterator WPRPos =
@@ -1322,7 +1322,7 @@ void SubtargetEmitter::EmitProcessorLookup(raw_ostream &OS) {
   // Gather and sort processor information
   std::vector<Record*> ProcessorList =
                           Records.getAllDerivedDefinitions("Processor");
-  std::sort(ProcessorList.begin(), ProcessorList.end(), LessRecordFieldName());
+  llvm::sort(ProcessorList.begin(), ProcessorList.end(), LessRecordFieldName());
 
   // Begin processor table
   OS << "\n";
@@ -1387,7 +1387,7 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
      << " const TargetSchedModel *SchedModel) const {\n";
 
   std::vector<Record*> Prologs = Records.getAllDerivedDefinitions("PredicateProlog");
-  std::sort(Prologs.begin(), Prologs.end(), LessRecord());
+  llvm::sort(Prologs.begin(), Prologs.end(), LessRecord());
   for (Record *P : Prologs) {
     OS << P->getValueAsString("Code") << '\n';
   }
@@ -1471,7 +1471,7 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
                                              unsigned NumProcs) {
   std::vector<Record*> Features =
                        Records.getAllDerivedDefinitions("SubtargetFeature");
-  std::sort(Features.begin(), Features.end(), LessRecord());
+  llvm::sort(Features.begin(), Features.end(), LessRecord());
 
   OS << "// ParseSubtargetFeatures - Parses features string setting specified\n"
      << "// subtarget options.\n"

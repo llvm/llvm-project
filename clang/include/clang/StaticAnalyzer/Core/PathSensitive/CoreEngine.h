@@ -241,7 +241,7 @@ protected:
   /// the builder dies.
   ExplodedNodeSet &Frontier;
 
-  /// Checkes if the results are ready.
+  /// Checks if the results are ready.
   virtual bool checkResults() {
     return Finalized;
   }

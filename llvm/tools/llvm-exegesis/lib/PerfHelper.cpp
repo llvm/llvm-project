@@ -107,7 +107,9 @@ void Counter::stop() { ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0); }
 
 int64_t Counter::read() const {
   int64_t Count = 0;
-  ::read(FileDescriptor, &Count, sizeof(Count));
+  ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
+  if (ReadSize != sizeof(Count))
+    llvm::errs() << "Failed to read event counter";
   return Count;
 }
 

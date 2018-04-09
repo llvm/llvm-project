@@ -555,7 +555,7 @@ public:
   }
 
   const RetainSummary *find(IdentifierInfo* II, Selector S) {
-    // FIXME: Class method lookup.  Right now we dont' have a good way
+    // FIXME: Class method lookup.  Right now we don't have a good way
     // of going between IdentifierInfo* and the class hierarchy.
     MapTy::iterator I = M.find(ObjCSummaryKey(II, S));
 

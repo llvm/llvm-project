@@ -97,7 +97,7 @@ public:
   /// Add a set of ASTContexts as possible origins.
   ///
   /// Usually the set will be initialized in the constructor, but long-lived
-  /// ExternalASTMergers may neeed to import from new sources (for example,
+  /// ExternalASTMergers may need to import from new sources (for example,
   /// newly-parsed source files).
   ///
   /// Ensures that Importers does not gain duplicate entries as a result.

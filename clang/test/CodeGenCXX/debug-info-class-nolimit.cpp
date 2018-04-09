@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -debug-info-kind=standalone -o - -emit-llvm %s | FileCheck %s
 
 // We had a bug in -fstandalone-debug where UnicodeString would not be completed
-// when it was required to be complete. This orginally manifested as an
+// when it was required to be complete. This originally manifested as an
 // assertion in CodeView emission on Windows with some dllexport stuff, but it's
 // more general than that.
 

@@ -279,7 +279,7 @@ TEST_F(StringMapTest, IterMapKeys) {
   Map["D"] = 3;
 
   auto Keys = to_vector<4>(Map.keys());
-  std::sort(Keys.begin(), Keys.end());
+  llvm::sort(Keys.begin(), Keys.end());
 
   SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
   EXPECT_EQ(Expected, Keys);
@@ -293,7 +293,7 @@ TEST_F(StringMapTest, IterSetKeys) {
   Set.insert("D");
 
   auto Keys = to_vector<4>(Set.keys());
-  std::sort(Keys.begin(), Keys.end());
+  llvm::sort(Keys.begin(), Keys.end());
 
   SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
   EXPECT_EQ(Expected, Keys);

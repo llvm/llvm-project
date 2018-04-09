@@ -141,6 +141,10 @@ defm : JWriteResIntPair<WriteIMul,  [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 
 defm : JWriteResIntPair<WriteIDiv,  [JALU1, JDiv], 41, [1, 41], 2>; // Worst case (i64 division)
 defm : JWriteResIntPair<WriteCRC32, [JALU01], 3, [4], 3>;
 
+defm : JWriteResIntPair<WriteCMOV,  [JALU01], 1>; // Conditional move.
+def  : WriteRes<WriteSETCC, [JALU01]>; // Setcc.
+def  : WriteRes<WriteSETCCStore, [JALU01,JSAGU]>;
+
 def  : WriteRes<WriteIMulH, [JALU1]> {
   let Latency = 6;
   let ResourceCycles = [4];
@@ -368,6 +372,25 @@ defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteShuffle256,  [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarVecShift, [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
+
+////////////////////////////////////////////////////////////////////////////////
+// Vector Extraction instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+def JWritePEXTR : SchedWriteRes<[JFPU0, JFPA, JALU0]> { let Latency = 3; }
+def : InstRW<[JWritePEXTR], (instrs MMX_PEXTRWrr,
+                                    EXTRACTPSrr, VEXTRACTPSrr,
+                                    PEXTRBrr, VPEXTRBrr,
+                                    PEXTRDrr, VPEXTRDrr,
+                                    PEXTRQrr, VPEXTRQrr,
+                                    PEXTRWrr, VPEXTRWrr, PEXTRWrr_REV, VPEXTRWrr_REV)>;
+
+def JWritePEXTRSt : SchedWriteRes<[JFPU1, JSTC, JSAGU]> { let Latency = 3; }
+def : InstRW<[JWritePEXTRSt], (instrs EXTRACTPSmr, VEXTRACTPSmr,
+                                      PEXTRBmr, VPEXTRBmr,
+                                      PEXTRDmr, VPEXTRDmr,
+                                      PEXTRQmr, VPEXTRQmr,
+                                      PEXTRWmr, VPEXTRWmr)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE42 String instructions.

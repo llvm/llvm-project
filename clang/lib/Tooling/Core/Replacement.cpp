@@ -220,7 +220,7 @@ Replacements Replacements::getCanonicalReplacements() const {
 llvm::Expected<Replacements>
 Replacements::mergeIfOrderIndependent(const Replacement &R) const {
   Replacements Rs(R);
-  // A Replacements set containg a single replacement that is `R` referring to
+  // A Replacements set containing a single replacement that is `R` referring to
   // the code after the existing replacements `Replaces` are applied.
   Replacements RsShiftedByReplaces(getReplacementInChangedCode(R));
   // A Replacements set that is `Replaces` referring to the code after `R` is

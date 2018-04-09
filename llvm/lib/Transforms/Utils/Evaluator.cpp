@@ -203,7 +203,11 @@ Constant *Evaluator::ComputeLoadResult(Constant *P) {
       break;
     // Handle a constantexpr bitcast.
     case Instruction::BitCast:
-      if (auto *I = getInitializer(CE->getOperand(0)))
+      Constant *Val = getVal(CE->getOperand(0));
+      auto MM = MutatedMemory.find(Val);
+      auto *I = (MM != MutatedMemory.end()) ? MM->second
+                                            : getInitializer(CE->getOperand(0));
+      if (I)
         return ConstantFoldLoadThroughBitcast(
             I, P->getType()->getPointerElementType(), DL);
       break;

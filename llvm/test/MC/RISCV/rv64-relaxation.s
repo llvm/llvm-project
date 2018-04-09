@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -d - | FileCheck -check-prefix=INSTR %s
+# RUN:     | llvm-objdump -d -riscv-no-aliases - | FileCheck -check-prefix=INSTR %s
 
 FAR_JUMP_NEGATIVE:
   c.nop
@@ -18,26 +18,26 @@ start:
   c.bnez a0, NEAR_NEGATIVE
 #INSTR: c.bnez a0, -4
   c.bnez a0, FAR_BRANCH
-#INSTR-NEXT: bnez a0, 310
+#INSTR-NEXT: bne a0, zero, 310
   c.bnez a0, FAR_BRANCH_NEGATIVE
-#INSTR-NEXT: bnez a0, -268
+#INSTR-NEXT: bne a0, zero, -268
   c.bnez a0, FAR_JUMP
-#INSTR-NEXT: bnez a0, 2304
+#INSTR-NEXT: bne a0, zero, 2304
   c.bnez a0, FAR_JUMP_NEGATIVE
-#INSTR-NEXT: bnez a0, -2278
+#INSTR-NEXT: bne a0, zero, -2278
 
   c.beqz a0, NEAR
 #INSTR-NEXT: c.beqz a0, 36
   c.beqz a0, NEAR_NEGATIVE
 #INSTR-NEXT: c.beqz a0, -24
   c.beqz a0, FAR_BRANCH
-#INSTR-NEXT: beqz a0, 290
+#INSTR-NEXT: beq a0, zero, 290
   c.beqz a0, FAR_BRANCH_NEGATIVE
-#INSTR-NEXT: beqz a0, -288
+#INSTR-NEXT: beq a0, zero, -288
   c.beqz a0, FAR_JUMP
-#INSTR-NEXT: beqz a0, 2284
+#INSTR-NEXT: beq a0, zero, 2284
   c.beqz a0, FAR_JUMP_NEGATIVE
-#INSTR-NEXT: beqz a0, -2298
+#INSTR-NEXT: beq a0, zero, -2298
 
   c.j NEAR
 #INSTR-NEXT: c.j 16
@@ -48,9 +48,9 @@ start:
   c.j FAR_BRANCH_NEGATIVE
 #INSTR-NEXT: c.j -306
   c.j FAR_JUMP
-#INSTR-NEXT: j 2268
+#INSTR-NEXT: jal zero, 2268
   c.j FAR_JUMP_NEGATIVE
-#INSTR-NEXT: j -2314
+#INSTR-NEXT: jal zero, -2314
 
 NEAR:
   c.nop

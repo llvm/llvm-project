@@ -148,7 +148,7 @@ public:
 
   const LLT &get() const { return Ty; }
 
-  /// This ordering is used for std::unique() and std::sort(). There's no
+  /// This ordering is used for std::unique() and llvm::sort(). There's no
   /// particular logic behind the order but either A < B or B < A must be
   /// true if A != B.
   bool operator<(const LLTCodeGen &Other) const {
@@ -2207,7 +2207,7 @@ public:
       std::vector<unsigned> MergeInsnIDs;
       for (const auto &IDMatcherPair : Rule.defined_insn_vars())
         MergeInsnIDs.push_back(IDMatcherPair.second);
-      std::sort(MergeInsnIDs.begin(), MergeInsnIDs.end());
+      llvm::sort(MergeInsnIDs.begin(), MergeInsnIDs.end());
       for (const auto &MergeInsnID : MergeInsnIDs)
         Table << MatchTable::IntValue(MergeInsnID);
       Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList")
@@ -2435,7 +2435,7 @@ void RuleMatcher::emit(MatchTable &Table) {
 
       InsnIDs.push_back(Pair.second);
     }
-    std::sort(InsnIDs.begin(), InsnIDs.end());
+    llvm::sort(InsnIDs.begin(), InsnIDs.end());
 
     for (const auto &InsnID : InsnIDs) {
       // Reject the difficult cases until we have a more accurate check.
@@ -3732,11 +3732,11 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   std::vector<Record *> ComplexPredicates =
       RK.getAllDerivedDefinitions("GIComplexOperandMatcher");
-  std::sort(ComplexPredicates.begin(), ComplexPredicates.end(), orderByName);
+  llvm::sort(ComplexPredicates.begin(), ComplexPredicates.end(), orderByName);
 
   std::vector<Record *> CustomRendererFns =
       RK.getAllDerivedDefinitions("GICustomOperandRenderer");
-  std::sort(CustomRendererFns.begin(), CustomRendererFns.end(), orderByName);
+  llvm::sort(CustomRendererFns.begin(), CustomRendererFns.end(), orderByName);
 
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
@@ -3812,7 +3812,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   std::vector<LLTCodeGen> TypeObjects;
   for (const auto &Ty : LLTOperandMatcher::KnownTypes)
     TypeObjects.push_back(Ty);
-  std::sort(TypeObjects.begin(), TypeObjects.end());
+  llvm::sort(TypeObjects.begin(), TypeObjects.end());
   OS << "// LLT Objects.\n"
      << "enum {\n";
   for (const auto &TypeObject : TypeObjects) {
@@ -3834,7 +3834,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   std::vector<std::vector<Record *>> FeatureBitsets;
   for (auto &Rule : Rules)
     FeatureBitsets.push_back(Rule.getRequiredFeatures());
-  std::sort(
+  llvm::sort(
       FeatureBitsets.begin(), FeatureBitsets.end(),
       [&](const std::vector<Record *> &A, const std::vector<Record *> &B) {
         if (A.size() < B.size())

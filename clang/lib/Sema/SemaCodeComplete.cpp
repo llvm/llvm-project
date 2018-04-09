@@ -2379,7 +2379,7 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
 ///
 /// \param Block The most relevant type location for that block type.
 ///
-/// \param SuppressBlockName Determines wether or not the name of the block
+/// \param SuppressBlockName Determines whether or not the name of the block
 /// declaration is included in the resulting string.
 static std::string
 formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,

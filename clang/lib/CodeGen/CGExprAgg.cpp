@@ -746,7 +746,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     if (isToAtomic) {
       AggValueSlot valueDest = Dest;
       if (!valueDest.isIgnored() && CGF.CGM.isPaddedAtomicType(atomicType)) {
-        // Zero-initialize.  (Strictly speaking, we only need to intialize
+        // Zero-initialize.  (Strictly speaking, we only need to initialize
         // the padding at the end, but this is simpler.)
         if (!Dest.isZeroed())
           CGF.EmitNullInitialization(Dest.getAddress(), atomicType);

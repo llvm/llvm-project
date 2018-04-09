@@ -118,14 +118,14 @@ NSString *KHLocalizedString(NSString* key, NSString* comment) {
 
 - (NSString *)test1:(int)plural {
     if (plural) {
-        return MCLocalizedString(@"TYPE_PLURAL"); // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        return MCLocalizedString(@"TYPE_PLURAL"); // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     }
     return MCLocalizedString(@"TYPE");
 }
 
 - (NSString *)test2:(int)numOfReminders {
     if (numOfReminders > 0) {
-        return [NSString stringWithFormat:@"%@, %@", @"Test", (numOfReminders != 1) ? [NSString stringWithFormat:NSLocalizedString(@"%@ Reminders", @"Plural count of reminders"), numOfReminders] : [NSString stringWithFormat:NSLocalizedString(@"1 reminder", @"One reminder")]]; // expected-warning 2 {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note 2 {{Plural}}
+        return [NSString stringWithFormat:@"%@, %@", @"Test", (numOfReminders != 1) ? [NSString stringWithFormat:NSLocalizedString(@"%@ Reminders", @"Plural count of reminders"), numOfReminders] : [NSString stringWithFormat:NSLocalizedString(@"1 reminder", @"One reminder")]]; // expected-warning 2 {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note 2 {{Plural}}
     } 
     return nil;
 }
@@ -134,18 +134,18 @@ NSString *KHLocalizedString(NSString* key, NSString* comment) {
     NSString *count;
     if (self.unreadArticlesCount > 1)
     {
-        count = [count stringByAppendingFormat:@"%@", KHLocalizedString(@"New Stories", @"Plural count for new stories")]; // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        count = [count stringByAppendingFormat:@"%@", KHLocalizedString(@"New Stories", @"Plural count for new stories")]; // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     } else {
-        count = [count stringByAppendingFormat:@"%@",  KHLocalizedString(@"New Story", @"One new story")]; // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        count = [count stringByAppendingFormat:@"%@",  KHLocalizedString(@"New Story", @"One new story")]; // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     }
 }
 
 - (NSString *)test4:(int)count {
     if ( count == 1 )
     {
-        return [NSString stringWithFormat:KHLocalizedString(@"value.singular",nil), count]; // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        return [NSString stringWithFormat:KHLocalizedString(@"value.singular",nil), count]; // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     } else {
-        return [NSString stringWithFormat:KHLocalizedString(@"value.plural",nil), count]; // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        return [NSString stringWithFormat:KHLocalizedString(@"value.plural",nil), count]; // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     }
 }
 
@@ -153,9 +153,9 @@ NSString *KHLocalizedString(NSString* key, NSString* comment) {
 	int test = count == 1;
     if (test)
     {
-        return [NSString stringWithFormat:KHLocalizedString(@"value.singular",nil), count]; // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        return [NSString stringWithFormat:KHLocalizedString(@"value.singular",nil), count]; // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     } else {
-        return [NSString stringWithFormat:KHLocalizedString(@"value.plural",nil), count]; // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        return [NSString stringWithFormat:KHLocalizedString(@"value.plural",nil), count]; // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     }
 }
 
@@ -169,7 +169,7 @@ NSString *KHLocalizedString(NSString* key, NSString* comment) {
 		if (someOtherVariable)
         	return KHLocalizedString(@"OK",nil); // no-warning
     } else {
-        return KHLocalizedString(@"value.plural",nil); // expected-warning {{Plural cases are not supported accross all languages. Use a .stringsdict file}} expected-note {{Plural}}
+        return KHLocalizedString(@"value.plural",nil); // expected-warning {{Plural cases are not supported across all languages. Use a .stringsdict file}} expected-note {{Plural}}
     }
 	return nil;
 }

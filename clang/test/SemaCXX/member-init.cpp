@@ -101,7 +101,7 @@ namespace rdar14084171 {
   struct Sprite {
     Point location = Point(0,0); // expected-error {{no matching constructor for initialization of 'rdar14084171::Point'}}
   };
-  void f(Sprite& x) { x = x; }
+  void f(Sprite& x) { x = x; } // expected-warning {{explicitly assigning value of variable}}
 }
 
 namespace PR18560 {

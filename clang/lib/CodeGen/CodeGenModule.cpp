@@ -2675,7 +2675,7 @@ bool CodeGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor) {
 /// If D is non-null, it specifies a decl that correspond to this.  This is used
 /// to set the attributes on the global when it is first created.
 ///
-/// If IsForDefinition is true, it is guranteed that an actual global with
+/// If IsForDefinition is true, it is guaranteed that an actual global with
 /// type Ty will be returned, not conversion of a variable with the same
 /// mangled name but some other type.
 llvm::Constant *
@@ -2934,7 +2934,7 @@ CodeGenModule::CreateOrReplaceCXXRuntimeVariable(StringRef Name,
 /// GetAddrOfGlobalVar - Return the llvm::Constant for the address of the
 /// given global variable.  If Ty is non-null and if the global doesn't exist,
 /// then it will be created with the specified type instead of whatever the
-/// normal requested type would be. If IsForDefinition is true, it is guranteed
+/// normal requested type would be. If IsForDefinition is true, it is guaranteed
 /// that an actual global with type Ty will be returned, not conversion of a
 /// variable with the same mangled name but some other type.
 llvm::Constant *CodeGenModule::GetAddrOfGlobalVar(const VarDecl *D,
@@ -3330,7 +3330,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
     return true;
 
   // A variable cannot be both common and exist in a section.
-  // We dont try to determine which is the right section in the front-end.
+  // We don't try to determine which is the right section in the front-end.
   // If no specialized section name is applicable, it will resort to default.
   if (D->hasAttr<PragmaClangBSSSectionAttr>() ||
       D->hasAttr<PragmaClangDataSectionAttr>() ||
@@ -4188,7 +4188,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
     if (VD->isStaticDataMember() && VD->getAnyInitializer(InitVD) &&
         isa<CXXRecordDecl>(InitVD->getLexicalDeclContext())) {
       // Temporaries defined inside a class get linkonce_odr linkage because the
-      // class can be defined in multipe translation units.
+      // class can be defined in multiple translation units.
       Linkage = llvm::GlobalVariable::LinkOnceODRLinkage;
     } else {
       // There is no need for this temporary to have external linkage if the

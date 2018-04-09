@@ -39,8 +39,14 @@ multiclass X86SchedWritePair {
   }
 }
 
+// Loads, stores, and moves, not folded with other operations.
+def WriteLoad  : SchedWrite;
+def WriteStore : SchedWrite;
+def WriteMove  : SchedWrite;
+
 // Arithmetic.
 defm WriteALU  : X86SchedWritePair; // Simple integer ALU op.
+def WriteALURMW : WriteSequence<[WriteALULd, WriteStore]>;
 defm WriteIMul : X86SchedWritePair; // Integer multiplication.
 def  WriteIMulH : SchedWrite;       // Integer multiplication, high part.
 defm WriteIDiv : X86SchedWritePair; // Integer division.
@@ -50,6 +56,9 @@ defm WriteBitScan : X86SchedWritePair; // Bit scan forward/reverse.
 defm WritePOPCNT : X86SchedWritePair; // Bit population count.
 defm WriteLZCNT : X86SchedWritePair; // Leading zero count.
 defm WriteTZCNT : X86SchedWritePair; // Trailing zero count.
+defm WriteCMOV : X86SchedWritePair; // Conditional move.
+def  WriteSETCC : SchedWrite; // Set register based on condition code.
+def  WriteSETCCStore : SchedWrite;
 
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;
@@ -57,11 +66,6 @@ defm WriteShift : X86SchedWritePair;
 // BMI1 BEXTR, BMI2 BZHI
 defm WriteBEXTR : X86SchedWritePair;
 defm WriteBZHI  : X86SchedWritePair;
-
-// Loads, stores, and moves, not folded with other operations.
-def WriteLoad  : SchedWrite;
-def WriteStore : SchedWrite;
-def WriteMove  : SchedWrite;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.
@@ -641,12 +645,10 @@ def IIC_CMPXCHG_8B : InstrItinClass;
 def IIC_CMPXCHG_16B : InstrItinClass;
 def IIC_LODS : InstrItinClass;
 def IIC_OUTS : InstrItinClass;
-def IIC_CLC : InstrItinClass;
+def IIC_CLC_CMC_STC : InstrItinClass;
 def IIC_CLD : InstrItinClass;
 def IIC_CLI : InstrItinClass;
-def IIC_CMC : InstrItinClass;
 def IIC_CLTS : InstrItinClass;
-def IIC_STC : InstrItinClass;
 def IIC_STI : InstrItinClass;
 def IIC_STD : InstrItinClass;
 def IIC_XLAT : InstrItinClass;

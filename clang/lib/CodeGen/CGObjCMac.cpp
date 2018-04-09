@@ -6948,7 +6948,7 @@ llvm::Value *CGObjCNonFragileABIMac::EmitIvarOffset(
 
   // This could be 32bit int or 64bit integer depending on the architecture.
   // Cast it to 64bit integer value, if it is a 32bit integer ivar offset value
-  //  as this is what caller always expectes.
+  //  as this is what caller always expects.
   if (ObjCTypes.IvarOffsetVarTy == ObjCTypes.IntTy)
     IvarOffsetValue = CGF.Builder.CreateIntCast(
         IvarOffsetValue, ObjCTypes.LongTy, true, "ivar.conv");

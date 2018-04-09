@@ -482,6 +482,21 @@ public:
   }
 };
 
+TEST_F(LibclangReparseTest, FileName) {
+  std::string CppName = "main.cpp";
+  WriteFile(CppName, "int main() {}");
+  ClangTU = clang_parseTranslationUnit(Index, CppName.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+  CXFile cxf = clang_getFile(ClangTU, CppName.c_str());
+
+  CXString cxname = clang_getFileName(cxf);
+  ASSERT_TRUE(strstr(clang_getCString(cxname), CppName.c_str()));
+  clang_disposeString(cxname);
+
+  cxname = clang_File_tryGetRealPathName(cxf);
+  ASSERT_TRUE(strstr(clang_getCString(cxname), CppName.c_str()));
+  clang_disposeString(cxname);
+}
 
 TEST_F(LibclangReparseTest, Reparse) {
   const char *HeaderTop = "#ifndef H\n#define H\nstruct Foo { int bar;";

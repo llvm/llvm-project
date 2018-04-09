@@ -633,7 +633,7 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   SchedModel = STI->getSchedModel();
-  TSchedModel.init(SchedModel, STI, TII);
+  TSchedModel.init(STI);
   MRI = &MF.getRegInfo();
   MLI = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();

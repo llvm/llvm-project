@@ -3363,7 +3363,7 @@ CGCXXABI *clang::CodeGen::CreateMicrosoftCXXABI(CodeGenModule &CGM) {
 // BaseClassArray: Contains a list of classes in a hierarchy.  BaseClassArray is
 //   somewhat of a misnomer because the most derived class is also in the list
 //   as well as multiple copies of virtual bases (if they occur multiple times
-//   in the hiearchy.)  The BaseClassArray contains one BaseClassDescriptor for
+//   in the hierarchy.)  The BaseClassArray contains one BaseClassDescriptor for
 //   every path in the hierarchy, in pre-order depth first order.  Note, we do
 //   not declare a specific llvm type for BaseClassArray, it's merely an array
 //   of BaseClassDescriptor pointers.
@@ -3911,7 +3911,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
                                   SourceLocation(),
                                   &getContext().Idents.get("is_most_derived"),
                                   getContext().IntTy, ImplicitParamDecl::Other);
-  // Only add the parameter to the list if thie class has virtual bases.
+  // Only add the parameter to the list if the class has virtual bases.
   if (RD->getNumVBases() > 0)
     FunctionArgs.push_back(&IsMostDerived);
 

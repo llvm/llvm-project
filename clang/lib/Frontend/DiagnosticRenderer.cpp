@@ -186,7 +186,7 @@ void DiagnosticRenderer::emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
   }
 }
 
-/// \brief Helper to recursivly walk up the include stack and print each layer
+/// \brief Helper to recursively walk up the include stack and print each layer
 /// on the way back down.
 void DiagnosticRenderer::emitIncludeStackRecursively(FullSourceLoc Loc) {
   if (Loc.isInvalid()) {
@@ -227,7 +227,7 @@ void DiagnosticRenderer::emitImportStack(FullSourceLoc Loc) {
   emitImportStackRecursively(NextImportLoc.first, NextImportLoc.second);
 }
 
-/// \brief Helper to recursivly walk up the import stack and print each layer
+/// \brief Helper to recursively walk up the import stack and print each layer
 /// on the way back down.
 void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
                                                     StringRef ModuleName) {
@@ -448,7 +448,7 @@ static bool checkLocForMacroArgExpansion(SourceLocation Loc,
 }
 
 /// Check if all the locations in the range have the same macro argument
-/// expansion, and that that expansion starts with ArgumentLoc.
+/// expansion, and that the expansion starts with ArgumentLoc.
 static bool checkRangeForMacroArgExpansion(CharSourceRange Range,
                                            const SourceManager &SM,
                                            SourceLocation ArgumentLoc) {

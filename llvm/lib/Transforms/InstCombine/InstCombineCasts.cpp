@@ -1544,9 +1544,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
         if (OpWidth >= LHSWidth + RHSWidth && DstWidth >= SrcWidth) {
           Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
-          Instruction *RI = BinaryOperator::CreateFMul(LHS, RHS);
-          RI->copyFastMathFlags(OpI);
-          return RI;
+          return BinaryOperator::CreateFMulFMF(LHS, RHS, OpI);
         }
         break;
       case Instruction::FDiv:
@@ -1559,9 +1557,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
         if (OpWidth >= 2*DstWidth && DstWidth >= SrcWidth) {
           Value *LHS = Builder.CreateFPTrunc(OpI->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
-          Instruction *RI = BinaryOperator::CreateFDiv(LHS, RHS);
-          RI->copyFastMathFlags(OpI);
-          return RI;
+          return BinaryOperator::CreateFDivFMF(LHS, RHS, OpI);
         }
         break;
       case Instruction::FRem: {
@@ -1580,9 +1576,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
            RHS = Builder.CreateFPTrunc(OpI->getOperand(1), RHSMinType);
         }
 
-        Value *ExactResult = Builder.CreateFRem(LHS, RHS);
-        if (Instruction *RI = dyn_cast<Instruction>(ExactResult))
-          RI->copyFastMathFlags(OpI);
+        Value *ExactResult = Builder.CreateFRemFMF(LHS, RHS, OpI);
         return CastInst::CreateFPCast(ExactResult, Ty);
       }
     }
@@ -1590,9 +1584,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
     // (fptrunc (fneg x)) -> (fneg (fptrunc x))
     if (BinaryOperator::isFNeg(OpI)) {
       Value *InnerTrunc = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
-      Instruction *RI = BinaryOperator::CreateFNeg(InnerTrunc);
-      RI->copyFastMathFlags(OpI);
-      return RI;
+      return BinaryOperator::CreateFNegFMF(InnerTrunc, OpI);
     }
   }
 

@@ -96,9 +96,9 @@ cl::OptionCategory TestCategory("Test Options", "Description");
 TEST(CommandLineTest, ModifyExisitingOption) {
   StackOption<int> TestOption("test-option", cl::desc("old description"));
 
-  const char Description[] = "New description";
-  const char ArgString[] = "new-test-option";
-  const char ValueString[] = "Integer";
+  static const char Description[] = "New description";
+  static const char ArgString[] = "new-test-option";
+  static const char ValueString[] = "Integer";
 
   StringMap<cl::Option *> &Map =
       cl::getRegisteredOptions(*cl::TopLevelSubCommand);

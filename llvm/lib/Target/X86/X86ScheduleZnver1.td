@@ -153,6 +153,10 @@ defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
 
+defm : ZnWriteResPair<WriteCMOV,   [ZnALU], 1>;
+def  : WriteRes<WriteSETCC,  [ZnALU]>;
+def  : WriteRes<WriteSETCCStore,  [ZnALU, ZnAGU]>;
+
 // Bit counts.
 defm : ZnWriteResPair<WriteBitScan, [ZnALU], 3>;
 defm : ZnWriteResPair<WriteLZCNT,   [ZnALU], 2>;
@@ -276,14 +280,6 @@ def : InstRW<[WriteALULd, ReadAfterLd], (instregex "MOV16rm")>;
 // MOVSX, MOVZX.
 // r,m.
 def : InstRW<[WriteLoad], (instregex "MOV(S|Z)X32rm(8|16)")>;
-
-// CMOVcc.
-// r,r.
-def : InstRW<[WriteALU],
-      (instregex "CMOV(O|NO|B|AE|E|NE|BE|A|S|NS|P|NP|L|GE|LE|G)(16|32|64)rr")>;
-// r,m.
-def : InstRW<[WriteALULd, ReadAfterLd],
-      (instregex "CMOV(O|NO|B|AE|E|NE|BE|A|S|NS|P|NP|L|GE|LE|G)(16|32|64)rm")>;
 
 // XCHG.
 // r,r.
@@ -613,14 +609,6 @@ def : InstRW<[WriteMicrocoded], (instregex "SHRD(16|32|64)rrCL")>;
 
 // m,r,cl.
 def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)mrCL")>;
-
-// SETcc.
-// r.
-def : InstRW<[WriteShift],
-             (instregex "SET(O|NO|B|AE|E|NE|BE|A|S|NS|P|NP|L|GE|LE|G)r")>;
-// m.
-def : InstRW<[WriteShift],
-             (instregex "SET(O|NO|B|AE|E|NE|BE|A|S|NS|P|NP|L|GE|LE|G)m")>;
 
 //-- Misc instructions --//
 // CMPXCHG.
@@ -1149,18 +1137,6 @@ def : InstRW<[ZnWritePShiftY], (instregex "(V?)PS(R|L)LDQYri")>;
 // VPERM2F128.
 def : InstRW<[WriteMicrocoded], (instregex "VPERM2F128rr")>;
 def : InstRW<[WriteMicrocoded], (instregex "VPERM2F128rm")>;
-
-// BLENDVP S/D.
-def ZnWriteFPU01Lat3 : SchedWriteRes<[ZnFPU013]> {
-  let Latency = 3;
-}
-def ZnWriteFPU01Lat3Ld : SchedWriteRes<[ZnAGU, ZnFPU013]> {
-  let Latency = 11;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1, 2];
-}
-def : InstRW<[ZnWriteFPU01Lat3], (instregex "BLENDVP(S|D)rr0")>;
-def : InstRW<[ZnWriteFPU01Lat3Ld, ReadAfterLd], (instregex "BLENDVP(S|D)rm0")>;
 
 def ZnWriteBROADCAST : SchedWriteRes<[ZnAGU, ZnFPU13]> {
   let NumMicroOps = 2;

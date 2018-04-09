@@ -32,7 +32,7 @@ class GdbRemoteTestCaseBase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    _TIMEOUT_SECONDS = 7
+    _TIMEOUT_SECONDS = 120
 
     _GDBREMOTE_KILL_PACKET = "$k#6b"
 

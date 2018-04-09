@@ -2,6 +2,7 @@ set(LLVM_TARGET_DEFINITIONS RISCV.td)
 
 tablegen(LLVM RISCVGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM RISCVGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM RISCVGenCompressInstEmitter.inc -gen-compress-inst-emitter)
 tablegen(LLVM RISCVGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)

@@ -265,6 +265,11 @@ public:
                                 StringRef CandidateTriple,
                                 bool NeedsBiarchSuffix = false);
 
+    bool ScanGentooConfigs(const llvm::Triple &TargetTriple,
+                           const llvm::opt::ArgList &Args,
+                           const SmallVectorImpl<StringRef> &CandidateTriples,
+                           const SmallVectorImpl<StringRef> &BiarchTriples);
+
     bool ScanGentooGccConfig(const llvm::Triple &TargetTriple,
                              const llvm::opt::ArgList &Args,
                              StringRef CandidateTriple,

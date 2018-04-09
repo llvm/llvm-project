@@ -91,7 +91,8 @@ bool ARMFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
 /// for noreturn nounwind functions.
 bool ARMFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
   assert(MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
-      MF.getFunction().hasFnAttribute(Attribute::NoUnwind));
+         MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+         !MF.getFunction().hasFnAttribute(Attribute::UWTable));
 
   // Frame pointer and link register are not treated as normal CSR, thus we
   // can always skip CSR saves for nonreturning functions.

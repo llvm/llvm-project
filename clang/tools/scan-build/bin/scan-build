@@ -1013,7 +1013,7 @@ sub RunXcodebuild {
   }
   close(DETECT_XCODE);
 
-  # If --override-compiler is explicitely requested, resort to the old
+  # If --override-compiler is explicitly requested, resort to the old
   # behavior regardless of Xcode version.
   if ($Options{OverrideCompiler}) {
     $oldBehavior = 1;
@@ -1246,7 +1246,7 @@ ADVANCED OPTIONS:
 
  -maxloop <loop count>
 
-   Specifiy the number of times a block can be visited before giving up.
+   Specify the number of times a block can be visited before giving up.
    Default is 4. Increase for more comprehensive coverage at a cost of speed.
 
  -internal-stats

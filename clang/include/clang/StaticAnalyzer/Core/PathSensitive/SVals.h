@@ -510,7 +510,7 @@ private:
 /// \brief Value representing pointer-to-member.
 ///
 /// This value is qualified as NonLoc because neither loading nor storing
-/// operations are aplied to it. Instead, the analyzer uses the L-value coming
+/// operations are applied to it. Instead, the analyzer uses the L-value coming
 /// from pointer-to-member applied to an object.
 /// This SVal is represented by a DeclaratorDecl which can be a member function
 /// pointer or a member data pointer and a list of CXXBaseSpecifiers. This list

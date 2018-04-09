@@ -38,7 +38,8 @@ bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
 
 bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
   assert(MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
-      MF.getFunction().hasFnAttribute(Attribute::NoUnwind));
+         MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+         !MF.getFunction().hasFnAttribute(Attribute::UWTable));
   return false;
 }
 
@@ -100,6 +101,7 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // it was called with into the jmp_buf, which longjmp then restores.
   if (MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
         MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+        !MF.getFunction().hasFnAttribute(Attribute::UWTable) &&
         enableCalleeSaveSkip(MF))
     return;
 

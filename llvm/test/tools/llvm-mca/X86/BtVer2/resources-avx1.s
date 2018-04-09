@@ -1182,8 +1182,8 @@ vzeroupper
 # CHECK-NEXT:  10     17    6.00    *               	vdpps	$22, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                    	vextractf128	$1, %ymm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *        	vextractf128	$1, %ymm0, (%rax)
-# CHECK-NEXT:  1      1     0.50                    	vextractps	$1, %xmm0, %ecx
-# CHECK-NEXT:  2      6     1.00           *        	vextractps	$1, %xmm0, (%rax)
+# CHECK-NEXT:  1      3     1.00                    	vextractps	$1, %xmm0, %ecx
+# CHECK-NEXT:  1      3     1.00           *        	vextractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      3     1.00                    	vhaddpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     1.00    *               	vhaddpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  2      3     2.00                    	vhaddpd	%ymm0, %ymm1, %ymm2
@@ -1427,14 +1427,14 @@ vzeroupper
 # CHECK-NEXT:  2      6     2.00    *               	vpermilps	$1, (%rax), %ymm2
 # CHECK-NEXT:  6      3     3.00                    	vpermilps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  6      8     3.00    *               	vpermilps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.50                    	vpextrb	$1, %xmm0, %ecx
-# CHECK-NEXT:  2      6     1.00           *        	vpextrb	$1, %xmm0, (%rax)
-# CHECK-NEXT:  1      1     0.50                    	vpextrd	$1, %xmm0, %ecx
-# CHECK-NEXT:  2      6     1.00           *        	vpextrd	$1, %xmm0, (%rax)
-# CHECK-NEXT:  1      1     0.50                    	vpextrq	$1, %xmm0, %rcx
-# CHECK-NEXT:  2      6     1.00           *        	vpextrq	$1, %xmm0, (%rax)
-# CHECK-NEXT:  1      1     0.50                    	vpextrw	$1, %xmm0, %ecx
-# CHECK-NEXT:  2      6     1.00           *        	vpextrw	$1, %xmm0, (%rax)
+# CHECK-NEXT:  1      3     1.00                    	vpextrb	$1, %xmm0, %ecx
+# CHECK-NEXT:  1      3     1.00           *        	vpextrb	$1, %xmm0, (%rax)
+# CHECK-NEXT:  1      3     1.00                    	vpextrd	$1, %xmm0, %ecx
+# CHECK-NEXT:  1      3     1.00           *        	vpextrd	$1, %xmm0, (%rax)
+# CHECK-NEXT:  1      3     1.00                    	vpextrq	$1, %xmm0, %rcx
+# CHECK-NEXT:  1      3     1.00           *        	vpextrq	$1, %xmm0, (%rax)
+# CHECK-NEXT:  1      3     1.00                    	vpextrw	$1, %xmm0, %ecx
+# CHECK-NEXT:  1      3     1.00           *        	vpextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                    	vphaddd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      6     1.00    *               	vphaddd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                    	vphaddsw	%xmm0, %xmm1, %xmm2
@@ -1885,8 +1885,8 @@ vzeroupper
 # CHECK-NEXT:  -      -      -     6.00   6.00    -     2.00   2.00    -      -      -      -      -      -     	vdpps	$22, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     	vextractf128	$1, %ymm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     	vextractf128	$1, %ymm0, (%rax)
-# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     	vextractps	$1, %xmm0, %ecx
-# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -     1.00    -      -      -      -     	vextractps	$1, %xmm0, (%rax)
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	vextractps	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     	vextractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	vhaddpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     1.00    -      -      -      -      -      -     	vhaddpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -     2.00    -     2.00    -      -      -      -      -      -      -      -     	vhaddpd	%ymm0, %ymm1, %ymm2
@@ -2130,14 +2130,14 @@ vzeroupper
 # CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00   2.00    -      -      -      -      -      -     	vpermilps	$1, (%rax), %ymm2
 # CHECK-NEXT:  -      -      -     3.00   3.00   1.00   1.00    -      -      -      -      -      -      -     	vpermilps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -     3.00   3.00   1.00   1.00   2.00    -      -      -      -      -      -     	vpermilps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vpextrb	$1, %xmm0, %ecx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -     1.00    -     0.50   0.50    -     	vpextrb	$1, %xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vpextrd	$1, %xmm0, %ecx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -     1.00    -     0.50   0.50    -     	vpextrd	$1, %xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vpextrq	$1, %xmm0, %rcx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -     1.00    -     0.50   0.50    -     	vpextrq	$1, %xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vpextrw	$1, %xmm0, %ecx
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -     1.00    -     0.50   0.50    -     	vpextrw	$1, %xmm0, (%rax)
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	vpextrb	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     	vpextrb	$1, %xmm0, (%rax)
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	vpextrd	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     	vpextrd	$1, %xmm0, (%rax)
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	vpextrq	$1, %xmm0, %rcx
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     	vpextrq	$1, %xmm0, (%rax)
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	vpextrw	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     	vpextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vphaddd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	vphaddd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vphaddsw	%xmm0, %xmm1, %xmm2

@@ -2535,7 +2535,7 @@ struct VirtuallyInheritsFromNoPadding : virtual NoPadding {
   int d;
 };
 
-static_assert(!has_unique_object_representations<VirtuallyInheritsFromNoPadding>::value, "No virtual inheritence");
+static_assert(!has_unique_object_representations<VirtuallyInheritsFromNoPadding>::value, "No virtual inheritance");
 
 struct Padding {
   char a;

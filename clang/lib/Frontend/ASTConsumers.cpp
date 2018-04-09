@@ -138,12 +138,14 @@ clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
                                        FilterString);
 }
 
-std::unique_ptr<ASTConsumer> clang::CreateASTDumper(StringRef FilterString,
-                                                    bool DumpDecls,
-                                                    bool Deserialize,
-                                                    bool DumpLookups) {
+std::unique_ptr<ASTConsumer>
+clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out,
+                       StringRef FilterString,
+                       bool DumpDecls,
+                       bool Deserialize,
+                       bool DumpLookups) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
-  return llvm::make_unique<ASTPrinter>(nullptr,
+  return llvm::make_unique<ASTPrinter>(std::move(Out),
                                        Deserialize ? ASTPrinter::DumpFull :
                                        DumpDecls ? ASTPrinter::Dump :
                                        ASTPrinter::None,

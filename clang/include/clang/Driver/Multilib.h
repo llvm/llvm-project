@@ -150,7 +150,7 @@ public:
   /// Union this set of multilibs with another
   void combineWith(const MultilibSet &MS);
 
-  /// Remove all of thie multilibs from the set
+  /// Remove all of the multilibs from the set
   void clear() { Multilibs.clear(); }
 
   iterator begin() { return Multilibs.begin(); }

@@ -10,7 +10,7 @@ define i32 @test_x86_tbm_bextri_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
 ; GENERIC-NEXT:    # sched: [1:0.33]
 ; GENERIC-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
-; GENERIC-NEXT:    # sched: [5:0.50]
+; GENERIC-NEXT:    # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -35,7 +35,7 @@ define i64 @test_x86_tbm_bextri_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
 ; GENERIC-NEXT:    # sched: [1:0.33]
 ; GENERIC-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
-; GENERIC-NEXT:    # sched: [5:0.50]
+; GENERIC-NEXT:    # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -58,7 +58,7 @@ define i32 @test_x86_tbm_blcfill_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcfill_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcfilll %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcfilll (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcfilll (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -81,7 +81,7 @@ define i64 @test_x86_tbm_blcfill_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcfill_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcfillq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcfillq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcfillq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -104,7 +104,7 @@ define i32 @test_x86_tbm_blci_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blci_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcil %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcil (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcil (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -129,7 +129,7 @@ define i64 @test_x86_tbm_blci_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blci_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blciq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blciq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blciq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -154,7 +154,7 @@ define i32 @test_x86_tbm_blcic_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcic_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcicl %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcicl (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcicl (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -179,7 +179,7 @@ define i64 @test_x86_tbm_blcic_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcic_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcicq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcicq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcicq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -204,7 +204,7 @@ define i32 @test_x86_tbm_blcmsk_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcmsk_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcmskl %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcmskl (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcmskl (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -227,7 +227,7 @@ define i64 @test_x86_tbm_blcmsk_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcmsk_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcmskq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcmskq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcmskq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -250,7 +250,7 @@ define i32 @test_x86_tbm_blcs_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcs_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcsl %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcsl (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcsl (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -273,7 +273,7 @@ define i64 @test_x86_tbm_blcs_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcs_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blcsq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcsq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcsq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -296,7 +296,7 @@ define i32 @test_x86_tbm_blsfill_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsfill_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blsfilll %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blsfilll (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blsfilll (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -319,7 +319,7 @@ define i64 @test_x86_tbm_blsfill_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsfill_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blsfillq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blsfillq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blsfillq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -342,7 +342,7 @@ define i32 @test_x86_tbm_blsic_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsic_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blsicl %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blsicl (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blsicl (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -367,7 +367,7 @@ define i64 @test_x86_tbm_blsic_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsic_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    blsicq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blsicq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blsicq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -392,7 +392,7 @@ define i32 @test_x86_tbm_t1mskc_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_t1mskc_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    t1mskcl %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    t1mskcl (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    t1mskcl (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -417,7 +417,7 @@ define i64 @test_x86_tbm_t1mskc_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_t1mskc_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    t1mskcq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    t1mskcq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    t1mskcq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -442,7 +442,7 @@ define i32 @test_x86_tbm_tzmsk_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_tzmsk_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    tzmskl %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    tzmskl (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    tzmskl (%rsi), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -467,7 +467,7 @@ define i64 @test_x86_tbm_tzmsk_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_tzmsk_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    tzmskq %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    tzmskq (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    tzmskq (%rsi), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

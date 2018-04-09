@@ -155,7 +155,7 @@ void TimelineView::printTimelineViewEntry(raw_string_ostream &OS,
                                           const TimelineViewEntry &Entry,
                                           unsigned Iteration,
                                           unsigned SourceIndex) const {
-  if (SourceIndex == 0)
+  if (Iteration == 0 && SourceIndex == 0)
     OS << '\n';
   OS << '[' << Iteration << ',' << SourceIndex << "]\t";
   for (unsigned I = 0, E = Entry.CycleDispatched; I < E; ++I)

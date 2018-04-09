@@ -472,7 +472,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; KNL_64-NEXT:    vpmuludq %zmm3, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpsllq $32, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
-; KNL_64-NEXT:    vpmovsxdq %ymm1, %zmm1
+; KNL_64-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; KNL_64-NEXT:    vpmuldq {{.*}}(%rip){1to8}, %zmm1, %zmm1
 ; KNL_64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
@@ -503,7 +503,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_SMALL:       # %bb.0: # %entry
 ; SKX_SMALL-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_SMALL-NEXT:    vpmullq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; SKX_SMALL-NEXT:    vpmovsxdq %ymm1, %zmm1
+; SKX_SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; SKX_SMALL-NEXT:    vpmuldq {{.*}}(%rip){1to8}, %zmm1, %zmm1
 ; SKX_SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
@@ -515,7 +515,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_LARGE-LABEL: test9:
 ; SKX_LARGE:       # %bb.0: # %entry
 ; SKX_LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
-; SKX_LARGE-NEXT:    vpmovsxdq %ymm1, %zmm1
+; SKX_LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
 ; SKX_LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
@@ -558,7 +558,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; KNL_64-NEXT:    vpmuludq %zmm3, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpsllq $32, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
-; KNL_64-NEXT:    vpmovsxdq %ymm1, %zmm1
+; KNL_64-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; KNL_64-NEXT:    vpmuldq {{.*}}(%rip){1to8}, %zmm1, %zmm1
 ; KNL_64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
@@ -589,7 +589,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_SMALL:       # %bb.0: # %entry
 ; SKX_SMALL-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_SMALL-NEXT:    vpmullq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; SKX_SMALL-NEXT:    vpmovsxdq %ymm1, %zmm1
+; SKX_SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; SKX_SMALL-NEXT:    vpmuldq {{.*}}(%rip){1to8}, %zmm1, %zmm1
 ; SKX_SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
@@ -601,7 +601,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_LARGE-LABEL: test10:
 ; SKX_LARGE:       # %bb.0: # %entry
 ; SKX_LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
-; SKX_LARGE-NEXT:    vpmovsxdq %ymm1, %zmm1
+; SKX_LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
 ; SKX_LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax

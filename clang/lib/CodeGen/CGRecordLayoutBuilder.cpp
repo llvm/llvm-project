@@ -62,7 +62,7 @@ namespace {
 ///   because LLVM reads from the complete type it can generate incorrect code
 ///   if we do not clip the tail padding off of the bitfield in the complete
 ///   layout.  This introduces a somewhat awkward extra unnecessary clip stage.
-///   The location of the clip is stored internally as a sentinal of type
+///   The location of the clip is stored internally as a sentinel of type
 ///   SCISSOR.  If LLVM were updated to read base types (which it probably
 ///   should because locations of things such as VBases are bogus in the llvm
 ///   type anyway) then we could eliminate the SCISSOR.
@@ -74,7 +74,7 @@ namespace {
 struct CGRecordLowering {
   // MemberInfo is a helper structure that contains information about a record
   // member.  In additional to the standard member types, there exists a
-  // sentinal member type that ensures correct rounding.
+  // sentinel member type that ensures correct rounding.
   struct MemberInfo {
     CharUnits Offset;
     enum InfoKind { VFPtr, VBPtr, Field, Base, VBase, Scissor } Kind;
@@ -186,7 +186,7 @@ struct CGRecordLowering {
   void clipTailPadding();
   /// \brief Determines if we need a packed llvm struct.
   void determinePacked(bool NVBaseType);
-  /// \brief Inserts padding everwhere it's needed.
+  /// \brief Inserts padding everywhere it's needed.
   void insertPadding();
   /// \brief Fills out the structures that are ultimately consumed.
   void fillOutputFields();
@@ -629,7 +629,7 @@ void CGRecordLowering::determinePacked(bool NVBaseType) {
   // non-virtual sub-object and an unpacked complete object or vise versa.
   if (NVSize % NVAlignment)
     Packed = true;
-  // Update the alignment of the sentinal.
+  // Update the alignment of the sentinel.
   if (!Packed)
     Members.back().Data = getIntNType(Context.toBits(Alignment));
 }

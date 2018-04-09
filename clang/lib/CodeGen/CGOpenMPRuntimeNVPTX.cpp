@@ -529,8 +529,8 @@ static llvm::Value *getThreadLimit(CodeGenFunction &CGF,
   CGBuilderTy &Bld = CGF.Builder;
   return IsInSpmdExecutionMode
              ? getNVPTXNumThreads(CGF)
-             : Bld.CreateSub(getNVPTXNumThreads(CGF), getNVPTXWarpSize(CGF),
-                             "thread_limit");
+             : Bld.CreateNUWSub(getNVPTXNumThreads(CGF), getNVPTXWarpSize(CGF),
+                                "thread_limit");
 }
 
 /// Get the thread id of the OMP master thread.
@@ -545,9 +545,9 @@ static llvm::Value *getMasterThreadID(CodeGenFunction &CGF) {
   llvm::Value *NumThreads = getNVPTXNumThreads(CGF);
 
   // We assume that the warp size is a power of 2.
-  llvm::Value *Mask = Bld.CreateSub(getNVPTXWarpSize(CGF), Bld.getInt32(1));
+  llvm::Value *Mask = Bld.CreateNUWSub(getNVPTXWarpSize(CGF), Bld.getInt32(1));
 
-  return Bld.CreateAnd(Bld.CreateSub(NumThreads, Bld.getInt32(1)),
+  return Bld.CreateAnd(Bld.CreateNUWSub(NumThreads, Bld.getInt32(1)),
                        Bld.CreateNot(Mask), "master_tid");
 }
 
@@ -1714,13 +1714,11 @@ static void emitReductionListCopy(
 
       // Step 1.2: Get the address for dest element:
       // address = base + index * ElementSizeInChars.
-      unsigned ElementSizeInChars =
-          C.getTypeSizeInChars(Private->getType()).getQuantity();
+      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
       auto *CurrentOffset =
-          Bld.CreateMul(llvm::ConstantInt::get(CGM.SizeTy, ElementSizeInChars),
-                        ScratchpadIndex);
+          Bld.CreateNUWMul(ElementSizeInChars, ScratchpadIndex);
       auto *ScratchPadElemAbsolutePtrVal =
-          Bld.CreateAdd(DestBase.getPointer(), CurrentOffset);
+          Bld.CreateNUWAdd(DestBase.getPointer(), CurrentOffset);
       ScratchPadElemAbsolutePtrVal =
           Bld.CreateIntToPtr(ScratchPadElemAbsolutePtrVal, CGF.VoidPtrTy);
       DestElementAddr = Address(ScratchPadElemAbsolutePtrVal,
@@ -1731,13 +1729,11 @@ static void emitReductionListCopy(
     case ScratchpadToThread: {
       // Step 1.1: Get the address for the src element in the scratchpad.
       // address = base + index * ElementSizeInChars.
-      unsigned ElementSizeInChars =
-          C.getTypeSizeInChars(Private->getType()).getQuantity();
+      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
       auto *CurrentOffset =
-          Bld.CreateMul(llvm::ConstantInt::get(CGM.SizeTy, ElementSizeInChars),
-                        ScratchpadIndex);
+          Bld.CreateNUWMul(ElementSizeInChars, ScratchpadIndex);
       auto *ScratchPadElemAbsolutePtrVal =
-          Bld.CreateAdd(SrcBase.getPointer(), CurrentOffset);
+          Bld.CreateNUWAdd(SrcBase.getPointer(), CurrentOffset);
       ScratchPadElemAbsolutePtrVal =
           Bld.CreateIntToPtr(ScratchPadElemAbsolutePtrVal, CGF.VoidPtrTy);
       SrcElementAddr = Address(ScratchPadElemAbsolutePtrVal,
@@ -1796,22 +1792,20 @@ static void emitReductionListCopy(
     if ((IncrScratchpadDest || IncrScratchpadSrc) && (Idx + 1 < Size)) {
       llvm::Value *ScratchpadBasePtr =
           IncrScratchpadDest ? DestBase.getPointer() : SrcBase.getPointer();
-      unsigned ElementSizeInChars =
-          C.getTypeSizeInChars(Private->getType()).getQuantity();
-      ScratchpadBasePtr = Bld.CreateAdd(
+      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
+      ScratchpadBasePtr = Bld.CreateNUWAdd(
           ScratchpadBasePtr,
-          Bld.CreateMul(ScratchpadWidth, llvm::ConstantInt::get(
-                                             CGM.SizeTy, ElementSizeInChars)));
+          Bld.CreateNUWMul(ScratchpadWidth, ElementSizeInChars));
 
       // Take care of global memory alignment for performance
-      ScratchpadBasePtr = Bld.CreateSub(ScratchpadBasePtr,
-                                        llvm::ConstantInt::get(CGM.SizeTy, 1));
-      ScratchpadBasePtr = Bld.CreateSDiv(
+      ScratchpadBasePtr = Bld.CreateNUWSub(
+          ScratchpadBasePtr, llvm::ConstantInt::get(CGM.SizeTy, 1));
+      ScratchpadBasePtr = Bld.CreateUDiv(
           ScratchpadBasePtr,
           llvm::ConstantInt::get(CGM.SizeTy, GlobalMemoryAlignment));
-      ScratchpadBasePtr = Bld.CreateAdd(ScratchpadBasePtr,
-                                        llvm::ConstantInt::get(CGM.SizeTy, 1));
-      ScratchpadBasePtr = Bld.CreateMul(
+      ScratchpadBasePtr = Bld.CreateNUWAdd(
+          ScratchpadBasePtr, llvm::ConstantInt::get(CGM.SizeTy, 1));
+      ScratchpadBasePtr = Bld.CreateNUWMul(
           ScratchpadBasePtr,
           llvm::ConstantInt::get(CGM.SizeTy, GlobalMemoryAlignment));
 

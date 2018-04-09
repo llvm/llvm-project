@@ -2593,7 +2593,7 @@ void EnqueueVisitor::VisitMemberExpr(const MemberExpr *M) {
     return;
 
   // Ignore base anonymous struct/union fields, otherwise they will shadow the
-  // real field that that we are interested in.
+  // real field that we are interested in.
   if (auto *SubME = dyn_cast<MemberExpr>(M->getBase())) {
     if (auto *FD = dyn_cast_or_null<FieldDecl>(SubME->getMemberDecl())) {
       if (FD->isAnonymousStructOrUnion()) {
@@ -4247,6 +4247,14 @@ int clang_File_isEqual(CXFile file1, CXFile file2) {
   FileEntry *FEnt1 = static_cast<FileEntry *>(file1);
   FileEntry *FEnt2 = static_cast<FileEntry *>(file2);
   return FEnt1->getUniqueID() == FEnt2->getUniqueID();
+}
+
+CXString clang_File_tryGetRealPathName(CXFile SFile) {
+  if (!SFile)
+    return cxstring::createNull();
+
+  FileEntry *FEnt = static_cast<FileEntry *>(SFile);
+  return cxstring::createRef(FEnt->tryGetRealPathName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -7695,7 +7703,7 @@ CXTLSKind clang_getCursorTLSKind(CXCursor cursor) {
 }
 
  /// \brief If the given cursor is the "templated" declaration
- /// descibing a class or function template, return the class or
+ /// describing a class or function template, return the class or
  /// function template.
 static const Decl *maybeGetTemplateCursor(const Decl *D) {
   if (!D)

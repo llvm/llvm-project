@@ -1698,21 +1698,18 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  Value *X, *Y;
-  if (I.hasNoSignedZeros()) {
-    // Subtraction from -0.0 is the canonical form of fneg.
-    // fsub nsz 0, X ==> fsub nsz -0.0, X
-    if (match(Op0, m_PosZeroFP()))
-      return BinaryOperator::CreateFNegFMF(Op1, &I);
+  // Subtraction from -0.0 is the canonical form of fneg.
+  // fsub nsz 0, X ==> fsub nsz -0.0, X
+  if (I.hasNoSignedZeros() && match(Op0, m_PosZeroFP()))
+    return BinaryOperator::CreateFNegFMF(Op1, &I);
 
-    // With no-signed-zeros: -(X - Y) --> Y - X
-    if (match(Op0, m_NegZeroFP()) && match(Op1, m_FSub(m_Value(X), m_Value(Y))))
-      return BinaryOperator::CreateFSubFMF(Y, X, &I);
-  }
-
-  // More generally than above, if Op0 is not -0.0: Z - (X - Y) --> Z + (Y - X)
+  // If Op0 is not -0.0 or we can ignore -0.0: Z - (X - Y) --> Z + (Y - X)
   // Canonicalize to fadd to make analysis easier.
   // This can also help codegen because fadd is commutative.
+  // Note that if this fsub was really an fneg, the fadd with -0.0 will get
+  // killed later. We still limit that particular transform with 'hasOneUse'
+  // because an fneg is assumed better/cheaper than a generic fsub.
+  Value *X, *Y;
   if (I.hasNoSignedZeros() || CannotBeNegativeZero(Op0, SQ.TLI)) {
     if (match(Op1, m_OneUse(m_FSub(m_Value(X), m_Value(Y))))) {
       Value *NewSub = Builder.CreateFSubFMF(Y, X, &I);

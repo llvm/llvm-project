@@ -247,7 +247,7 @@ TYPED_TEST(DenseMapTest, AssignmentTest) {
   EXPECT_EQ(this->getValue(), copyMap[this->getKey()]);
 
   // test self-assignment.
-  copyMap = copyMap;
+  copyMap = static_cast<TypeParam &>(copyMap);
   EXPECT_EQ(1u, copyMap.size());
   EXPECT_EQ(this->getValue(), copyMap[this->getKey()]);
 }
@@ -262,7 +262,7 @@ TYPED_TEST(DenseMapTest, AssignmentTestNotSmall) {
     EXPECT_EQ(this->getValue(Key), copyMap[this->getKey(Key)]);
 
   // test self-assignment.
-  copyMap = copyMap;
+  copyMap = static_cast<TypeParam &>(copyMap);
   EXPECT_EQ(5u, copyMap.size());
   for (int Key = 0; Key < 5; ++Key)
     EXPECT_EQ(this->getValue(Key), copyMap[this->getKey(Key)]);

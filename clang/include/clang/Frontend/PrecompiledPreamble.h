@@ -107,7 +107,7 @@ public:
   /// Requires that CanReuse() is true.
   /// For in-memory preambles, PrecompiledPreamble instance continues to own the
   /// MemoryBuffer with the Preamble after this method returns. The caller is
-  /// reponsible for making sure the PrecompiledPreamble instance outlives the
+  /// responsible for making sure the PrecompiledPreamble instance outlives the
   /// compiler run and the AST that will be using the PCH.
   void AddImplicitPreamble(CompilerInvocation &CI,
                            IntrusiveRefCntPtr<vfs::FileSystem> &VFS,

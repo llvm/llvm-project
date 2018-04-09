@@ -111,7 +111,7 @@ void test15() {
 
 int test15b() {
   // Warn here with the self-init, since it does result in a use of
-  // an unintialized variable and this is the root cause.
+  // an uninitialized variable and this is the root cause.
   int x = x; // expected-warning {{variable 'x' is uninitialized when used within its own initialization}}
   return x;
 }

@@ -207,16 +207,16 @@ func (d *DIBuilder) CreateFunction(diScope Metadata, f DIFunction) Metadata {
 	result := C.LLVMDIBuilderCreateFunction(
 		d.ref,
 		diScope.C,
-		name,
-		linkageName,
+		name, C.size_t(len(f.Name)),
+		linkageName, C.size_t(len(f.LinkageName)),
 		f.File.C,
 		C.unsigned(f.Line),
 		f.Type.C,
-		boolToCInt(f.LocalToUnit),
-		boolToCInt(f.IsDefinition),
+		C.LLVMBool(boolToCInt(f.LocalToUnit)),
+		C.LLVMBool(boolToCInt(f.IsDefinition)),
 		C.unsigned(f.ScopeLine),
-		C.unsigned(f.Flags),
-		boolToCInt(f.Optimized),
+		C.LLVMDIFlags(f.Flags),
+		C.LLVMBool(boolToCInt(f.Optimized)),
 	)
 	return Metadata{C: result}
 }
@@ -390,7 +390,7 @@ func (d *DIBuilder) CreateStructType(scope Metadata, t DIStructType) Metadata {
 		C.unsigned(0), // Optional Objective-C runtime version.
 		t.VTableHolder.C,
 		uniqueID,
-		C.uint64_t(len(t.UniqueID)),
+		C.size_t(len(t.UniqueID)),
 	)
 	return Metadata{C: result}
 }
@@ -573,6 +573,10 @@ func (d *DIBuilder) InsertDeclareAtEnd(v Value, diVarInfo, expr Metadata, bb Bas
 func (d *DIBuilder) InsertValueAtEnd(v Value, diVarInfo, expr Metadata, bb BasicBlock) Value {
 	result := C.LLVMDIBuilderInsertValueAtEnd(d.ref, v.C, diVarInfo.C, expr.C, bb.C)
 	return Value{C: result}
+}
+
+func (v Value) SetSubprogram(sp Metadata) {
+  C.LLVMSetSubprogram(v.C, sp.C)
 }
 
 func boolToCInt(v bool) C.int {
