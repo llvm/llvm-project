@@ -16,7 +16,7 @@
 // CMOV instructions.
 multiclass CMOV<bits<8> opc, string Mnemonic, PatLeaf CondNode> {
   let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
-      isCommutable = 1, SchedRW = [WriteALU] in {
+      isCommutable = 1, SchedRW = [WriteCMOV] in {
     def NAME#16rr
       : I<opc, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2),
           !strconcat(Mnemonic, "{w}\t{$src2, $dst|$dst, $src2}"),
@@ -38,7 +38,7 @@ multiclass CMOV<bits<8> opc, string Mnemonic, PatLeaf CondNode> {
   }
 
   let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
-      SchedRW = [WriteALULd, ReadAfterLd] in {
+      SchedRW = [WriteCMOVLd, ReadAfterLd] in {
     def NAME#16rm
       : I<opc, MRMSrcMem, (outs GR16:$dst), (ins GR16:$src1, i16mem:$src2),
           !strconcat(Mnemonic, "{w}\t{$src2, $dst|$dst, $src2}"),
@@ -85,11 +85,11 @@ multiclass SETCC<bits<8> opc, string Mnemonic, PatLeaf OpNode> {
     def r    : I<opc, MRMXr,  (outs GR8:$dst), (ins),
                      !strconcat(Mnemonic, "\t$dst"),
                      [(set GR8:$dst, (X86setcc OpNode, EFLAGS))],
-                     IIC_SET_R>, TB, Sched<[WriteALU]>;
+                     IIC_SET_R>, TB, Sched<[WriteSETCC]>;
     def m    : I<opc, MRMXm,  (outs), (ins i8mem:$dst),
                      !strconcat(Mnemonic, "\t$dst"),
                      [(store (X86setcc OpNode, EFLAGS), addr:$dst)],
-                     IIC_SET_M>, TB, Sched<[WriteALU, WriteStore]>;
+                     IIC_SET_M>, TB, Sched<[WriteSETCCStore]>;
   } // Uses = [EFLAGS]
 }
 

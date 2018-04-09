@@ -110,6 +110,13 @@ defm : SBWriteResPair<WriteShift, [SBPort05],  1>;
 defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 defm : SBWriteResPair<WriteCRC32, [SBPort1],   3, [1], 1, 5>;
 
+defm : SBWriteResPair<WriteCMOV,  [SBPort05,SBPort015], 2, [1,1], 2>; // Conditional move.
+def  : WriteRes<WriteSETCC, [SBPort05]>; // Setcc.
+def  : WriteRes<WriteSETCCStore, [SBPort05,SBPort4,SBPort23]> {
+  let Latency = 2;
+  let NumMicroOps = 3;
+}
+
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
 // the port to read all inputs. We don't model that.
@@ -382,7 +389,6 @@ def: InstRW<[SBWriteResGroup4], (instregex "BT(16|32|64)ri8",
                                            "SAHF",
                                            "SAR(8|16|32|64)ri",
                                            "SAR(8|16|32|64)r1",
-                                           "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)r",
                                            "SHL(8|16|32|64)ri",
                                            "SHL(8|16|32|64)r1",
                                            "SHR(8|16|32|64)ri",
@@ -624,7 +630,6 @@ def SBWriteResGroup19 : SchedWriteRes<[SBPort05,SBPort015]> {
 def: InstRW<[SBWriteResGroup19], (instregex "ADC(8|16|32|64)ri",
                                             "ADC(8|16|32|64)rr",
                                             "ADC(8|16|32|64)i",
-                                            "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rr",
                                             "SBB(8|16|32|64)ri",
                                             "SBB(8|16|32|64)rr",
                                             "SBB(8|16|32|64)i",
@@ -948,13 +953,6 @@ def SBWriteResGroup37 : SchedWriteRes<[SBPort4,SBPort01,SBPort23]> {
 }
 def: InstRW<[SBWriteResGroup37], (instregex "VMASKMOVPD(Y?)mr",
                                             "VMASKMOVPS(Y?)mr")>;
-
-def SBWriteResGroup38 : SchedWriteRes<[SBPort4,SBPort23,SBPort05]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[SBWriteResGroup38], (instregex "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)m")>;
 
 def SBWriteResGroup39 : SchedWriteRes<[SBPort4,SBPort23,SBPort15]> {
   let Latency = 5;
@@ -1297,7 +1295,6 @@ def SBWriteResGroup65 : SchedWriteRes<[SBPort23,SBPort05,SBPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SBWriteResGroup65], (instregex "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rm")>;
 def: InstRW<[SBWriteResGroup65, ReadAfterLd], (instrs ADC8rm, ADC16rm, ADC32rm, ADC64rm,
                                                       SBB8rm, SBB16rm, SBB32rm, SBB64rm)>;
 

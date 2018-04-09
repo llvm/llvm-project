@@ -4514,7 +4514,7 @@ AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
       BE->getOpcode() != MCBinaryExpr::Sub)
     return false;
 
-  // See if the addend is is a constant, otherwise there's more going
+  // See if the addend is a constant, otherwise there's more going
   // on here than we can deal with.
   auto AddendExpr = dyn_cast<MCConstantExpr>(BE->getRHS());
   if (!AddendExpr)

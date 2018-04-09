@@ -113,6 +113,13 @@ defm : SKLWriteResPair<WriteCRC32, [SKLPort1], 3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 def : WriteRes<WriteLEA, [SKLPort15]>; // LEA instructions can't fold loads.
 
+defm : SKLWriteResPair<WriteCMOV,  [SKLPort06], 1>; // Conditional move.
+def  : WriteRes<WriteSETCC, [SKLPort06]>; // Setcc.
+def  : WriteRes<WriteSETCCStore, [SKLPort06,SKLPort4,SKLPort237]> {
+  let Latency = 2;
+  let NumMicroOps = 3;
+}
+
 // Bit counts.
 defm : SKLWriteResPair<WriteBitScan, [SKLPort1], 3>;
 defm : SKLWriteResPair<WriteLZCNT,   [SKLPort1], 3>;
@@ -534,7 +541,6 @@ def: InstRW<[SKLWriteResGroup7], (instregex "ADC(16|32|64)ri",
                                             "BTS(16|32|64)ri8",
                                             "BTS(16|32|64)rr",
                                             "CLAC",
-                                            "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rr",
                                             "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
                                             "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
                                             "JMP_1",
@@ -546,7 +552,6 @@ def: InstRW<[SKLWriteResGroup7], (instregex "ADC(16|32|64)ri",
                                             "SBB(16|32|64)ri",
                                             "SBB(16|32|64)i",
                                             "SBB(8|16|32|64)rr",
-                                            "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)r",
                                             "SHL(8|16|32|64)r1",
                                             "SHL(8|16|32|64)ri",
                                             "SHLX(32|64)rr",
@@ -811,13 +816,6 @@ def SKLWriteResGroup25 : SchedWriteRes<[SKLPort4,SKLPort6,SKLPort237]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[SKLWriteResGroup25], (instregex "FNSTCW16m")>;
-
-def SKLWriteResGroup26 : SchedWriteRes<[SKLPort4,SKLPort237,SKLPort06]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[SKLWriteResGroup26], (instregex "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)m")>;
 
 def SKLWriteResGroup27 : SchedWriteRes<[SKLPort4,SKLPort237,SKLPort15]> {
   let Latency = 2;
@@ -1421,7 +1419,6 @@ def SKLWriteResGroup74 : SchedWriteRes<[SKLPort23,SKLPort06]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SKLWriteResGroup74], (instregex "BT(16|32|64)mi8",
-                                             "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rm",
                                              "RORX(32|64)mi",
                                              "SARX(32|64)rm",
                                              "SHLX(32|64)rm",

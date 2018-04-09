@@ -118,7 +118,7 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
-  SchedModel.init(ST.getSchedModel(), &ST, TII);
+  SchedModel.init(&ST);
 }
 
 /// If this machine instr has memory reference information and it can be

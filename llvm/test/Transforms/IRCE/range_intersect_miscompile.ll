@@ -168,20 +168,20 @@ deopt:                                          ; preds = %range_check_block
   ret void
 }
 
-; We do not know whether %n is positive or negative, so we prohibit IRCE in
-; order to avoid incorrect intersection of signed and unsigned ranges.
-; The condition %tmp2 can be eliminated.
+; We can also properly eliminate range check against %n which is not always
+; known positive.
 
 define void @test_04(i32* %p) {
 
 ; CHECK-LABEL: test_04
+; CHECK:       entry
 ; CHECK-NOT:   preloop
-; CHECK-NOT:   postloop
 ; CHECK:         %tmp2 = icmp sgt i32 %iv.prev, -1
 ; CHECK-NEXT:    br i1 true, label %loop_header.split.us, label %exit
 ; CHECK:       range_check_block:
 ; CHECK-NEXT:    %range_check = icmp slt i32 %iv, %n
-; CHECK-NEXT:    br i1 %range_check, label %loop_latch, label %deopt
+; CHECK-NEXT:    br i1 true, label %loop_latch, label %deopt
+; CHECK:       postloop:
 
 entry:
   %n = load i32, i32* %p
@@ -226,7 +226,7 @@ define void @test_05(i32* %p) {
 ; CHECK-LABEL: test_05
 ; CHECK-NOT:     preloop
 ; CHECK:         entry:
-; CHECK-NEXT:      %n = load i32, i32* %p, !range !6
+; CHECK-NEXT:      %n = load i32, i32* %p, !range !
 ; CHECK-NEXT:      [[CMP_1:%[^ ]+]] = icmp ugt i32 %n, 2
 ; CHECK-NEXT:      %exit.mainloop.at = select i1 [[CMP_1]], i32 %n, i32 2
 ; CHECK-NEXT:      [[CMP_2:%[^ ]+]] = icmp ult i32 2, %exit.mainloop.at

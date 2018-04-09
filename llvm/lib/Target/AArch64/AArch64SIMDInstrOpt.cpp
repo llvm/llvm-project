@@ -700,7 +700,7 @@ bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
       static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
   if (!AAII)
     return false;
-  SchedModel.init(ST.getSchedModel(), &ST, AAII);
+  SchedModel.init(&ST);
   if (!SchedModel.hasInstrSchedModel())
     return false;
 

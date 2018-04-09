@@ -386,13 +386,12 @@ static StringRef getObjCMethodName(StringRef In) {
 }
 
 // Add the various names to the Dwarf accelerator table names.
-// TODO: Determine whether or not we should add names for programs
-// that do not have a DW_AT_name or DW_AT_linkage_name field - this
-// is only slightly different than the lookup of non-standard ObjC names.
 void DwarfDebug::addSubprogramNames(const DISubprogram *SP, DIE &Die) {
   if (!SP->isDefinition())
     return;
-  addAccelName(SP->getName(), Die);
+
+  if (SP->getName() != "")
+    addAccelName(SP->getName(), Die);
 
   // If the linkage name is different than the name, go ahead and output
   // that as well into the name table.

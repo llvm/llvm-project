@@ -61,12 +61,10 @@ static unsigned lcm(unsigned A, unsigned B) {
   return LCM;
 }
 
-void TargetSchedModel::init(const MCSchedModel &sm,
-                            const TargetSubtargetInfo *sti,
-                            const TargetInstrInfo *tii) {
-  SchedModel = sm;
-  STI = sti;
-  TII = tii;
+void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
+  STI = TSInfo;
+  SchedModel = TSInfo->getSchedModel();
+  TII = TSInfo->getInstrInfo();
   STI->initInstrItins(InstrItins);
 
   unsigned NumRes = SchedModel.getNumProcResourceKinds();

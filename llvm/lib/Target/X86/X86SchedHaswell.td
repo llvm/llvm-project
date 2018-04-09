@@ -119,6 +119,13 @@ defm : HWWriteResPair<WriteShift, [HWPort06],  1>;
 defm : HWWriteResPair<WriteJump,  [HWPort06],   1>;
 defm : HWWriteResPair<WriteCRC32, [HWPort1],   3>;
 
+defm : HWWriteResPair<WriteCMOV,  [HWPort06,HWPort0156], 2, [1,1], 2>; // Conditional move.
+def  : WriteRes<WriteSETCC, [HWPort06]>; // Setcc.
+def  : WriteRes<WriteSETCCStore, [HWPort06,HWPort4,HWPort237]> {
+  let Latency = 2;
+  let NumMicroOps = 3;
+}
+
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
 // the port to read all inputs. We don't model that.
@@ -830,7 +837,6 @@ def: InstRW<[HWWriteResGroup7], (instregex "BT(16|32|64)ri8",
                                            "SAR(8|16|32|64)r1",
                                            "SAR(8|16|32|64)ri",
                                            "SARX(32|64)rr",
-                                           "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)r",
                                            "SHL(8|16|32|64)r1",
                                            "SHL(8|16|32|64)ri",
                                            "SHLX(32|64)rr",
@@ -1405,13 +1411,6 @@ def HWWriteResGroup21 : SchedWriteRes<[HWPort4,HWPort6,HWPort237]> {
 }
 def: InstRW<[HWWriteResGroup21], (instregex "FNSTCW16m")>;
 
-def HWWriteResGroup22 : SchedWriteRes<[HWPort4,HWPort237,HWPort06]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[HWWriteResGroup22], (instregex "SET(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)m")>;
-
 def HWWriteResGroup23 : SchedWriteRes<[HWPort4,HWPort237,HWPort15]> {
   let Latency = 2;
   let NumMicroOps = 3;
@@ -1568,7 +1567,6 @@ def: InstRW<[HWWriteResGroup35], (instrs CWD, JCXZ, JECXZ, JRCXZ)>;
 def: InstRW<[HWWriteResGroup35], (instregex "ADC(8|16|32|64)ri",
                                             "ADC(8|16|32|64)rr",
                                             "ADC(8|16|32|64)i",
-                                            "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rr",
                                             "SBB(8|16|32|64)ri",
                                             "SBB(8|16|32|64)rr",
                                             "SBB(8|16|32|64)i",
@@ -1663,7 +1661,6 @@ def HWWriteResGroup43 : SchedWriteRes<[HWPort23,HWPort06,HWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[HWWriteResGroup43], (instregex "CMOV(AE|B|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)(16|32|64)rm")>;
 def: InstRW<[HWWriteResGroup43, ReadAfterLd], (instrs ADC8rm, ADC16rm, ADC32rm, ADC64rm,
                                                       SBB8rm, SBB16rm, SBB32rm, SBB64rm)>;
 

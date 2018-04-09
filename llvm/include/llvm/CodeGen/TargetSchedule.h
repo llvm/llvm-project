@@ -50,8 +50,7 @@ public:
   /// The machine model API keeps a copy of the top-level MCSchedModel table
   /// indices and may query TargetSubtargetInfo and TargetInstrInfo to resolve
   /// dynamic properties.
-  void init(const MCSchedModel &sm, const TargetSubtargetInfo *sti,
-            const TargetInstrInfo *tii);
+  void init(const TargetSubtargetInfo *TSInfo);
 
   /// Return the MCSchedClassDesc for this instruction.
   const MCSchedClassDesc *resolveSchedClass(const MachineInstr *MI) const;
