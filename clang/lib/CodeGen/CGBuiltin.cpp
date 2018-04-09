@@ -8264,6 +8264,32 @@ static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
   return EmitX86Select(CGF, Ops[3], Res, Ops[2]);
 }
 
+static Value *EmitX86Muldq(CodeGenFunction &CGF, bool IsSigned,
+                           ArrayRef<Value *> Ops) {
+  llvm::Type *Ty = Ops[0]->getType();
+  // Arguments have a vXi32 type so cast to vXi64.
+  Ty = llvm::VectorType::get(CGF.Int64Ty,
+                             Ty->getPrimitiveSizeInBits() / 64);
+  Value *LHS = CGF.Builder.CreateBitCast(Ops[0], Ty);
+  Value *RHS = CGF.Builder.CreateBitCast(Ops[1], Ty);
+
+  if (IsSigned) {
+    // Shift left then arithmetic shift right.
+    Constant *ShiftAmt = ConstantInt::get(Ty, 32);
+    LHS = CGF.Builder.CreateShl(LHS, ShiftAmt);
+    LHS = CGF.Builder.CreateAShr(LHS, ShiftAmt);
+    RHS = CGF.Builder.CreateShl(RHS, ShiftAmt);
+    RHS = CGF.Builder.CreateAShr(RHS, ShiftAmt);
+  } else {
+    // Clear the upper bits.
+    Constant *Mask = ConstantInt::get(Ty, 0xffffffff);
+    LHS = CGF.Builder.CreateAnd(LHS, Mask);
+    RHS = CGF.Builder.CreateAnd(RHS, Mask);
+  }
+
+  return CGF.Builder.CreateMul(LHS, RHS);
+}
+
 static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op, 
                               llvm::Type *DstTy) {
   unsigned NumberOfElements = DstTy->getVectorNumElements();
@@ -8967,6 +8993,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pminud512_mask:
   case X86::BI__builtin_ia32_pminuq512_mask:
     return EmitX86MinMax(*this, ICmpInst::ICMP_ULT, Ops);
+
+  case X86::BI__builtin_ia32_pmuludq128:
+  case X86::BI__builtin_ia32_pmuludq256:
+  case X86::BI__builtin_ia32_pmuludq512:
+    return EmitX86Muldq(*this, /*IsSigned*/false, Ops);
+
+  case X86::BI__builtin_ia32_pmuldq128:
+  case X86::BI__builtin_ia32_pmuldq256:
+  case X86::BI__builtin_ia32_pmuldq512:
+    return EmitX86Muldq(*this, /*IsSigned*/true, Ops);
 
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:

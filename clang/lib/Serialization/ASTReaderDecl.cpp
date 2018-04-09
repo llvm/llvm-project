@@ -742,8 +742,8 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setNonTrivialToPrimitiveDefaultInitialize(Record.readInt());
   RD->setNonTrivialToPrimitiveCopy(Record.readInt());
   RD->setNonTrivialToPrimitiveDestroy(Record.readInt());
-  RD->setCanPassInRegisters(Record.readInt());
   RD->setParamDestroyedInCallee(Record.readInt());
+  RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
   return Redecl;
 }
 
@@ -4116,8 +4116,9 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       bool HadRealDefinition =
           OldDD && (OldDD->Definition != RD ||
                     !Reader.PendingFakeDefinitionData.count(OldDD));
-      RD->setCanPassInRegisters(Record.readInt());
       RD->setParamDestroyedInCallee(Record.readInt());
+      RD->setArgPassingRestrictions(
+          (RecordDecl::ArgPassingKind)Record.readInt());
       ReadCXXRecordDefinition(RD, /*Update*/true);
 
       // Visible update is handled separately.

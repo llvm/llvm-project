@@ -816,7 +816,9 @@ int test_mm_movemask_pd(__m128d A) {
 
 __m128i test_mm_mul_epu32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_mul_epu32
-  // CHECK: call <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
+  // CHECK: and <2 x i64> %{{.*}}, <i64 4294967295, i64 4294967295>
+  // CHECK: and <2 x i64> %{{.*}}, <i64 4294967295, i64 4294967295>
+  // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_epu32(A, B);
 }
 
