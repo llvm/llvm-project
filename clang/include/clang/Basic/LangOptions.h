@@ -148,12 +148,19 @@ public:
   /// \brief Paths to the XRay "always instrument" files specifying which
   /// objects (files, functions, variables) should be imbued with the XRay
   /// "always instrument" attribute.
+  /// WARNING: This is a deprecated field and will go away in the future.
   std::vector<std::string> XRayAlwaysInstrumentFiles;
 
   /// \brief Paths to the XRay "never instrument" files specifying which
   /// objects (files, functions, variables) should be imbued with the XRay
   /// "never instrument" attribute.
+  /// WARNING: This is a deprecated field and will go away in the future.
   std::vector<std::string> XRayNeverInstrumentFiles;
+
+  /// \brief Paths to the XRay attribute list files, specifying which objects
+  /// (files, functions, variables) should be imbued with the appropriate XRay
+  /// attribute(s).
+  std::vector<std::string> XRayAttrListFiles;
 
   clang::ObjCRuntime ObjCRuntime;
 
