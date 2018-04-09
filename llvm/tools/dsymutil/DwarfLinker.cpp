@@ -585,13 +585,13 @@ static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
 void warn(Twine Warning, Twine Context) {
   warn_ostream() << Warning + "\n";
   if (!Context.isTriviallyEmpty())
-    note_ostream() << Twine("while processing ") + Context + ":\n";
+    note_ostream() << Twine("while processing ") + Context + "\n";
 }
 
 bool error(Twine Error, Twine Context) {
   error_ostream() << Error + "\n";
   if (!Context.isTriviallyEmpty())
-    note_ostream() << Twine("while processing ") + Context + ":\n";
+    note_ostream() << Twine("while processing ") + Context + "\n";
   return false;
 }
 
