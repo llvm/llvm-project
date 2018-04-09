@@ -185,6 +185,10 @@ void parseMerge(StringRef S) {
   std::tie(From, To) = S.split('=');
   if (From.empty() || To.empty())
     fatal("/merge: invalid argument: " + S);
+  if (From == ".rsrc" || To == ".rsrc")
+    fatal("/merge: cannot merge '.rsrc' with any section");
+  if (From == ".reloc" || To == ".reloc")
+    fatal("/merge: cannot merge '.reloc' with any section");
   auto Pair = Config->Merge.insert(std::make_pair(From, To));
   bool Inserted = Pair.second;
   if (!Inserted) {

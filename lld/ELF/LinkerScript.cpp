@@ -777,9 +777,8 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   if (PhdrEntry *L = Ctx->OutSec->PtLoad)
     L->LMAOffset = Ctx->LMAOffset;
 
-  // The Size previously denoted how many InputSections had been added to this
-  // section, and was used for sorting SHF_LINK_ORDER sections. Reset it to
-  // compute the actual size value.
+  // We can call this method multiple times during the creation of
+  // thunks and want to start over calculation each time.
   Sec->Size = 0;
 
   // We visited SectionsCommands from processSectionCommands to
