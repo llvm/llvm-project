@@ -47,7 +47,7 @@ struct DebugHSection {
   std::vector<GlobalHash> Hashes;
 };
 
-DebugHSection fromDebugH(ArrayRef<uint8_t> DebugT);
+DebugHSection fromDebugH(ArrayRef<uint8_t> DebugH);
 ArrayRef<uint8_t> toDebugH(const DebugHSection &DebugH,
                            BumpPtrAllocator &Alloc);
 

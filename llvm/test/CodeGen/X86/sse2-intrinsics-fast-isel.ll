@@ -1853,22 +1853,27 @@ define i32 @test_mm_movemask_pd(<2 x double> %a0) nounwind {
 }
 declare i32 @llvm.x86.sse2.movmsk.pd(<2 x double>) nounwind readnone
 
-define <2 x i64> @test_mm_mul_epu32(<2 x i64> %a0, <2 x i64> %a1) {
+define <2 x i64> @test_mm_mul_epu32(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_mul_epu32:
 ; X32:       # %bb.0:
+; X32-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
+; X32-NEXT:    pand %xmm2, %xmm0
+; X32-NEXT:    pand %xmm2, %xmm1
 ; X32-NEXT:    pmuludq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mul_epu32:
 ; X64:       # %bb.0:
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
+; X64-NEXT:    pand %xmm2, %xmm0
+; X64-NEXT:    pand %xmm2, %xmm1
 ; X64-NEXT:    pmuludq %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32> %arg0, <4 x i32> %arg1)
+  %A = and <2 x i64> %a0, <i64 4294967295, i64 4294967295>
+  %B = and <2 x i64> %a1, <i64 4294967295, i64 4294967295>
+  %res = mul nuw <2 x i64> %A, %B
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <2 x double> @test_mm_mul_pd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; X32-LABEL: test_mm_mul_pd:

@@ -356,6 +356,8 @@ void AppleAccelTableEmitter::emit() const {
 
 void Dwarf5AccelTableEmitter::Header::emit(
     const Dwarf5AccelTableEmitter &Ctx) const {
+  assert(CompUnitCount > 0 && "Index must have at least one CU.");
+
   AsmPrinter *Asm = Ctx.Asm;
   Asm->OutStreamer->AddComment("Header: unit length");
   Asm->EmitLabelDifference(Ctx.ContributionEnd, Ctx.ContributionStart,

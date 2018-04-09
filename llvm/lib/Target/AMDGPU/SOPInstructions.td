@@ -495,6 +495,16 @@ let SubtargetPredicate = isGFX9 in {
   def S_PACK_LL_B32_B16 : SOP2_32<"s_pack_ll_b32_b16">;
   def S_PACK_LH_B32_B16 : SOP2_32<"s_pack_lh_b32_b16">;
   def S_PACK_HH_B32_B16 : SOP2_32<"s_pack_hh_b32_b16">;
+
+  let Defs = [SCC] in {
+    def S_LSHL1_ADD_U32 : SOP2_32<"s_lshl1_add_u32">;
+    def S_LSHL2_ADD_U32 : SOP2_32<"s_lshl2_add_u32">;
+    def S_LSHL3_ADD_U32 : SOP2_32<"s_lshl3_add_u32">;
+    def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32">;
+  } // End Defs = [SCC]
+
+  def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32">;
+  def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1354,3 +1364,14 @@ def S_ORN1_SAVEEXEC_B64_vi    : SOP1_Real_vi<0x34, S_ORN1_SAVEEXEC_B64>;
 def S_ANDN1_WREXEC_B64_vi     : SOP1_Real_vi<0x35, S_ANDN1_WREXEC_B64>;
 def S_ANDN2_WREXEC_B64_vi     : SOP1_Real_vi<0x36, S_ANDN2_WREXEC_B64>;
 def S_BITREPLICATE_B64_B32_vi : SOP1_Real_vi<0x37, S_BITREPLICATE_B64_B32>;
+
+//===----------------------------------------------------------------------===//
+// SOP2 - GFX9.
+//===----------------------------------------------------------------------===//
+
+def S_LSHL1_ADD_U32_vi   : SOP2_Real_vi<0x2e, S_LSHL1_ADD_U32>;
+def S_LSHL2_ADD_U32_vi   : SOP2_Real_vi<0x2f, S_LSHL2_ADD_U32>;
+def S_LSHL3_ADD_U32_vi   : SOP2_Real_vi<0x30, S_LSHL3_ADD_U32>;
+def S_LSHL4_ADD_U32_vi   : SOP2_Real_vi<0x31, S_LSHL4_ADD_U32>;
+def S_MUL_HI_U32_vi      : SOP2_Real_vi<0x2c, S_MUL_HI_U32>;
+def S_MUL_HI_I32_vi      : SOP2_Real_vi<0x2d, S_MUL_HI_I32>;

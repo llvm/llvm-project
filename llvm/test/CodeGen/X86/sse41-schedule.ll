@@ -4817,8 +4817,8 @@ define <4 x i32> @test_pmulld(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; SLM-LABEL: test_pmulld:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    pmulld %xmm1, %xmm0 # sched: [11:11.00]
-; SLM-NEXT:    pmulld (%rdi), %xmm0 # sched: [14:11.00]
+; SLM-NEXT:    pmulld %xmm1, %xmm0 # sched: [4:1.00]
+; SLM-NEXT:    pmulld (%rdi), %xmm0 # sched: [7:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_pmulld:

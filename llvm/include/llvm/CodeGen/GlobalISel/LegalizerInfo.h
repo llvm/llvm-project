@@ -176,6 +176,8 @@ LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
 namespace LegalizeMutations {
 /// Select this specific type for the given type index.
 LegalizeMutation changeTo(unsigned TypeIdx, LLT Ty);
+/// Keep the same type as the given type index.
+LegalizeMutation changeTo(unsigned TypeIdx, unsigned FromTypeIdx);
 /// Widen the type for the given type index to the next power of 2.
 LegalizeMutation widenScalarToNextPow2(unsigned TypeIdx, unsigned Min = 0);
 /// Add more elements to the type for the given type index to the next power of
@@ -235,7 +237,7 @@ class LegalizeRuleSet {
     return *this;
   }
   /// Use the given action when the predicate is true.
-  /// Action should not be an action that requires mutation.
+  /// Action should be an action that requires mutation.
   LegalizeRuleSet &actionIf(LegalizeAction Action, LegalityPredicate Predicate,
                             LegalizeMutation Mutation) {
     add({Predicate, Action, Mutation});
@@ -248,6 +250,14 @@ class LegalizeRuleSet {
     using namespace LegalityPredicates;
     return actionIf(Action, typeInSet(0, Types));
   }
+  /// Use the given action when type index 0 is any type in the given list.
+  /// Action should be an action that requires mutation.
+  LegalizeRuleSet &actionFor(LegalizeAction Action,
+                             std::initializer_list<LLT> Types,
+                             LegalizeMutation Mutation) {
+    using namespace LegalityPredicates;
+    return actionIf(Action, typeInSet(0, Types), Mutation);
+  }
   /// Use the given action when type indexes 0 and 1 is any type pair in the
   /// given list.
   /// Action should not be an action that requires mutation.
@@ -256,6 +266,15 @@ class LegalizeRuleSet {
             std::initializer_list<std::pair<LLT, LLT>> Types) {
     using namespace LegalityPredicates;
     return actionIf(Action, typePairInSet(0, 1, Types));
+  }
+  /// Use the given action when type indexes 0 and 1 is any type pair in the
+  /// given list.
+  /// Action should be an action that requires mutation.
+  LegalizeRuleSet &actionFor(LegalizeAction Action,
+                             std::initializer_list<std::pair<LLT, LLT>> Types,
+                             LegalizeMutation Mutation) {
+    using namespace LegalityPredicates;
+    return actionIf(Action, typePairInSet(0, 1, Types), Mutation);
   }
   /// Use the given action when type indexes 0 and 1 are both in the given list.
   /// That is, the type pair is in the cartesian product of the list.
@@ -313,6 +332,45 @@ public:
   LegalizeRuleSet &legalForCartesianProduct(std::initializer_list<LLT> Types0,
                                             std::initializer_list<LLT> Types1) {
     return actionForCartesianProduct(LegalizeAction::Legal, Types0, Types1);
+  }
+
+  /// The instruction is lowered.
+  LegalizeRuleSet &lower() {
+    using namespace LegalizeMutations;
+    return actionIf(LegalizeAction::Lower, always, changeTo(0, 0));
+  }
+  /// The instruction is lowered if predicate is true. Keep type index 0 as the
+  /// same type.
+  LegalizeRuleSet &lowerIf(LegalityPredicate Predicate) {
+    using namespace LegalizeMutations;
+    return actionIf(LegalizeAction::Lower, Predicate, changeTo(0, 0));
+  }
+  /// The instruction is lowered when type index 0 is any type in the given
+  /// list. Keep type index 0 as the same type.
+  LegalizeRuleSet &lowerFor(std::initializer_list<LLT> Types) {
+    using namespace LegalizeMutations;
+    return lowerFor(Types, changeTo(0, 0));
+  }
+  /// The instruction is lowered when type indexes 0 and 1 is any type pair in the
+  /// given list. Keep type index 0 as the same type.
+  LegalizeRuleSet &lowerFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
+    return lowerFor(Types, LegalizeMutations::changeTo(0, 0));
+  }
+  /// The instruction is lowered when type indexes 0 and 1 is any type pair in the
+  /// given list.
+  LegalizeRuleSet &lowerFor(std::initializer_list<std::pair<LLT, LLT>> Types,
+                            LegalizeMutation Mutation) {
+    return actionFor(LegalizeAction::Lower, Types, Mutation);
+  }
+  /// The instruction is lowered if predicate is true.
+  LegalizeRuleSet &lowerIf(LegalityPredicate Predicate,
+                           LegalizeMutation Mutation) {
+    return actionIf(LegalizeAction::Lower, Predicate, Mutation);
+  }
+  /// The instruction is lowered when type index 0 is any type in the given list.
+  LegalizeRuleSet &lowerFor(std::initializer_list<LLT> Types,
+                            LegalizeMutation Mutation) {
+    return actionFor(LegalizeAction::Lower, Types, Mutation);
   }
 
   /// Like legalIf, but for the Libcall action.

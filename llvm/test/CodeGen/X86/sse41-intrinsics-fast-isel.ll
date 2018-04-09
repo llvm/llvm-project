@@ -787,16 +787,34 @@ declare <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8>, <16 x i8>, i8) nounwind rea
 define <2 x i64> @test_mm_mul_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_mul_epi32:
 ; X32:       # %bb.0:
+; X32-NEXT:    psllq $32, %xmm0
+; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X32-NEXT:    psrad $31, %xmm0
+; X32-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
+; X32-NEXT:    psllq $32, %xmm1
+; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; X32-NEXT:    psrad $31, %xmm1
+; X32-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; X32-NEXT:    pmuldq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mul_epi32:
 ; X64:       # %bb.0:
+; X64-NEXT:    psllq $32, %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X64-NEXT:    psrad $31, %xmm0
+; X64-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
+; X64-NEXT:    psllq $32, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; X64-NEXT:    psrad $31, %xmm1
+; X64-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; X64-NEXT:    pmuldq %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %arg0, <4 x i32> %arg1)
+  %A = shl <2 x i64> %a0, <i64 32, i64 32>
+  %A1 = ashr exact <2 x i64> %A, <i64 32, i64 32>
+  %B = shl <2 x i64> %a1, <i64 32, i64 32>
+  %B1 = ashr exact <2 x i64> %B, <i64 32, i64 32>
+  %res = mul nsw <2 x i64> %A1, %B1
   ret <2 x i64> %res
 }
 declare <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32>, <4 x i32>) nounwind readnone

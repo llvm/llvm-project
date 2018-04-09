@@ -67,8 +67,10 @@ define void @ldst_64bit() {
 ; CHECK-LABEL: ldst_64bit:
 ; CHECK: adrp [[RL:x[0-9]+]], var_64bit
 ; CHECK-NEXT: ldr {{x[0-9]+}}, {{\[}}[[RL]], {{#?}}:lo12:var_64bit{{\]}}
-; CHECK: adrp [[RQ:x[0-9]+]], var_128bit
-; CHECK-NEXT: add {{x[0-9]+}}, [[RQ]], {{#?}}:lo12:var_128bit
+; CHECK: adrp [[RQ1:x[0-9]+]], var_128bit
+; CHECK-NEXT: str {{x[0-9]+}}, {{\[}}[[RQ1]], {{#?}}:lo12:var_128bit{{\]}}
+; CHECK: adrp [[RQ2:x[0-9]+]], var_128bit+8
+; CHECK-NEXT: str {{x[0-9]+}}, {{\[}}[[RQ2]], {{#?}}:lo12:var_128bit+8{{\]}}
 }
 
 define void @ldst_half() {

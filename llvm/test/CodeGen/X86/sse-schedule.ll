@@ -1730,7 +1730,7 @@ define <4 x float> @test_divps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ATOM-LABEL: test_divps:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    divps %xmm1, %xmm0 # sched: [70:35.00]
-; ATOM-NEXT:    divps (%rdi), %xmm0 # sched: [125:62.50]
+; ATOM-NEXT:    divps (%rdi), %xmm0 # sched: [70:35.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_divps:
@@ -1838,7 +1838,7 @@ define float @test_divss(float %a0, float %a1, float *%a2) {
 ; ATOM-LABEL: test_divss:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    divss %xmm1, %xmm0 # sched: [34:17.00]
-; ATOM-NEXT:    divss (%rdi), %xmm0 # sched: [62:31.00]
+; ATOM-NEXT:    divss (%rdi), %xmm0 # sched: [34:17.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_divss:
@@ -3625,7 +3625,7 @@ define <4 x float> @test_mulps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ATOM-LABEL: test_mulps:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    mulps %xmm1, %xmm0 # sched: [5:5.00]
-; ATOM-NEXT:    mulps (%rdi), %xmm0 # sched: [10:5.00]
+; ATOM-NEXT:    mulps (%rdi), %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_mulps:
@@ -3733,7 +3733,7 @@ define float @test_mulss(float %a0, float %a1, float *%a2) {
 ; ATOM-LABEL: test_mulss:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    mulss %xmm1, %xmm0 # sched: [4:4.00]
-; ATOM-NEXT:    mulss (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    mulss (%rdi), %xmm0 # sched: [4:4.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_mulss:
