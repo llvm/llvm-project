@@ -99,6 +99,7 @@ void ParentVirtualCallCheck::registerMatchers(MatchFinder *Finder) {
 
 void ParentVirtualCallCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
+  (void)MatchedDecl;
   assert(MatchedDecl);
 
   const auto *Member = Result.Nodes.getNodeAs<MemberExpr>("member");
