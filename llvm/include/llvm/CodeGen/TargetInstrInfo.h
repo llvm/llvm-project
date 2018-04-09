@@ -421,7 +421,8 @@ public:
   /// Build the equivalent inputs of a REG_SEQUENCE for the given \p MI
   /// and \p DefIdx.
   /// \p [out] InputRegs of the equivalent REG_SEQUENCE. Each element of
-  /// the list is modeled as <Reg:SubReg, SubIdx>.
+  /// the list is modeled as <Reg:SubReg, SubIdx>. Operands with the undef
+  /// flag are not added to this list.
   /// E.g., REG_SEQUENCE %1:sub1, sub0, %2, sub1 would produce
   /// two elements:
   /// - %1:sub1, sub0
@@ -446,7 +447,8 @@ public:
   /// - %1:sub1, sub0
   ///
   /// \returns true if it is possible to build such an input sequence
-  /// with the pair \p MI, \p DefIdx. False otherwise.
+  /// with the pair \p MI, \p DefIdx and the operand has no undef flag set.
+  /// False otherwise.
   ///
   /// \pre MI.isExtractSubreg() or MI.isExtractSubregLike().
   ///
@@ -465,7 +467,8 @@ public:
   /// - InsertedReg: %1:sub1, sub3
   ///
   /// \returns true if it is possible to build such an input sequence
-  /// with the pair \p MI, \p DefIdx. False otherwise.
+  /// with the pair \p MI, \p DefIdx and the operand has no undef flag set.
+  /// False otherwise.
   ///
   /// \pre MI.isInsertSubreg() or MI.isInsertSubregLike().
   ///
