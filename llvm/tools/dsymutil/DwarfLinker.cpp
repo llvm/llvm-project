@@ -585,13 +585,13 @@ static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
 void warn(Twine Warning, Twine Context) {
   warn_ostream() << Warning + "\n";
   if (!Context.isTriviallyEmpty())
-    note_ostream() << Twine("while processing ") + Context + ":\n";
+    note_ostream() << Twine("while processing ") + Context + "\n";
 }
 
 bool error(Twine Error, Twine Context) {
   error_ostream() << Error + "\n";
   if (!Context.isTriviallyEmpty())
-    note_ostream() << Twine("while processing ") + Context + ":\n";
+    note_ostream() << Twine("while processing ") + Context + "\n";
   return false;
 }
 
@@ -1558,6 +1558,11 @@ private:
     LinkContext(const DebugMap &Map, DwarfLinker &Linker, DebugMapObject &DMO,
                 bool Verbose = false)
         : DMO(DMO), BinHolder(Verbose), RelocMgr(Linker) {
+      // Swift ASTs are not object files.
+      if (DMO.getType() == MachO::N_AST) {
+        ObjectFile = nullptr;
+        return;
+      }
       auto ErrOrObj = Linker.loadObject(BinHolder, DMO, Map);
       ObjectFile = ErrOrObj ? &*ErrOrObj : nullptr;
       DwarfContext = ObjectFile ? DWARFContext::create(*ObjectFile) : nullptr;
