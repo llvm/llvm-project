@@ -99,6 +99,15 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       } else
         D.Diag(clang::diag::err_drv_no_such_file) << Filename;
     }
+
+    for (const auto &Filename :
+         Args.getAllArgValues(options::OPT_fxray_attr_list)) {
+      if (llvm::sys::fs::exists(Filename)) {
+        AttrListFiles.push_back(Filename);
+        ExtraDeps.push_back(Filename);
+      } else
+        D.Diag(clang::diag::err_drv_no_such_file) << Filename;
+    }
   }
 }
 
@@ -125,6 +134,12 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
     SmallString<64> NeverInstrumentOpt("-fxray-never-instrument=");
     NeverInstrumentOpt += Never;
     CmdArgs.push_back(Args.MakeArgString(NeverInstrumentOpt));
+  }
+
+  for (const auto&AttrFile : AttrListFiles) {
+    SmallString<64> AttrListFileOpt("-fxray-attr-list=");
+    AttrListFileOpt += AttrFile;
+    CmdArgs.push_back(Args.MakeArgString(AttrListFileOpt));
   }
 
   for (const auto &Dep : ExtraDeps) {

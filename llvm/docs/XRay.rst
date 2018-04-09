@@ -117,6 +117,27 @@ it gets instrumented.
       ; ...
     }
 
+Special Case File
+-----------------
+
+Attributes can be imbued through the use of special case files instead of
+adding them to the original source files. You can use this to mark certain
+functions and classes to be never, always, or instrumented with first-argument
+logging from a file. The file's format is described below:
+
+.. code-block:: bash
+
+    # Comments are supported
+    [always]
+    fun:always_instrument
+    fun:log_arg1=arg1 # Log the first argument for the function
+
+    [never]
+    fun:never_instrument
+
+These files can be provided through the ``-fxray-attr-list=`` flag to clang.
+You may have multiple files loaded through multiple instances of the flag.
+
 XRay Runtime Library
 --------------------
 

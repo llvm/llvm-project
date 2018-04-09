@@ -26,12 +26,13 @@ namespace clang {
 class XRayFunctionFilter {
   std::unique_ptr<llvm::SpecialCaseList> AlwaysInstrument;
   std::unique_ptr<llvm::SpecialCaseList> NeverInstrument;
+  std::unique_ptr<llvm::SpecialCaseList> AttrList;
   SourceManager &SM;
 
 public:
   XRayFunctionFilter(ArrayRef<std::string> AlwaysInstrumentPaths,
                      ArrayRef<std::string> NeverInstrumentPaths,
-                     SourceManager &SM);
+                     ArrayRef<std::string> AttrListPaths, SourceManager &SM);
 
   enum class ImbueAttribute {
     NONE,

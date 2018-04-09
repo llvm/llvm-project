@@ -21,6 +21,7 @@ class ToolChain;
 class XRayArgs {
   std::vector<std::string> AlwaysInstrumentFiles;
   std::vector<std::string> NeverInstrumentFiles;
+  std::vector<std::string> AttrListFiles;
   std::vector<std::string> ExtraDeps;
   bool XRayInstrument = false;
   int InstructionThreshold = 200;
