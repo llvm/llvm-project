@@ -9,6 +9,7 @@ Compiled with:
   ld swift-ast.o -add_ast_path Inputs/swift-ast.swiftmodule -arch x86_64 -lSystem -macosx_version_min 10.9.0
 
 DSYMUTIL: filename:{{.*}}swift-ast.swiftmodule
+DSYMUTIL-NOT: The file was not recognized as a valid object file
 DSYMUTIL: DEBUG MAP OBJECT:{{.*}}swift-ast.swiftmodule
 
 READOBJ: Name:{{.*}}__swift_ast

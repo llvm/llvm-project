@@ -1558,6 +1558,11 @@ private:
     LinkContext(const DebugMap &Map, DwarfLinker &Linker, DebugMapObject &DMO,
                 bool Verbose = false)
         : DMO(DMO), BinHolder(Verbose), RelocMgr(Linker) {
+      // Swift ASTs are not object files.
+      if (DMO.getType() == MachO::N_AST) {
+        ObjectFile = nullptr;
+        return;
+      }
       auto ErrOrObj = Linker.loadObject(BinHolder, DMO, Map);
       ObjectFile = ErrOrObj ? &*ErrOrObj : nullptr;
       DwarfContext = ObjectFile ? DWARFContext::create(*ObjectFile) : nullptr;
