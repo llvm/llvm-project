@@ -123,7 +123,6 @@ void OutputSection::addSection(InputSection *IS) {
   Flags = AndFlags | OrFlags;
 
   Alignment = std::max(Alignment, IS->Alignment);
-  IS->OutSecOff = Size++;
 
   // If this section contains a table of fixed-size entries, sh_entsize
   // holds the element size. If it contains elements of different size we

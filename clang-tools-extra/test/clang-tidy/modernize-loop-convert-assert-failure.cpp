@@ -1,4 +1,4 @@
-// RUN: clang-tidy %s -checks=-*,modernize-loop-convert --
+// RUN: not clang-tidy %s -checks=-*,modernize-loop-convert --
 
 // Note: this test expects no assert failure happened in clang-tidy.
 

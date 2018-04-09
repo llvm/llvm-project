@@ -39,6 +39,7 @@ def write_file(file_name, text):
 
 def main():
   parser = argparse.ArgumentParser()
+  parser.add_argument('-expect-clang-tidy-error', action='store_true')
   parser.add_argument('-resource-dir')
   parser.add_argument('-assume-filename')
   parser.add_argument('input_file_name')
@@ -52,6 +53,7 @@ def main():
   input_file_name = args.input_file_name
   check_name = args.check_name
   temp_file_name = args.temp_file_name
+  expect_clang_tidy_error = args.expect_clang_tidy_error
 
   file_name_with_extension = assume_file_name or input_file_name
   _, extension = os.path.splitext(file_name_with_extension)
@@ -97,6 +99,8 @@ def main():
 
   args = ['clang-tidy', temp_file_name, '-fix', '--checks=-*,' + check_name] + \
         clang_tidy_extra_args
+  if expect_clang_tidy_error:
+    args.insert(0, 'not')
   print('Running ' + repr(args) + '...')
   try:
     clang_tidy_output = \
