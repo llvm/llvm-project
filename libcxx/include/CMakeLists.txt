@@ -1,183 +1,5 @@
-set(files
-  __bit_reference
-  __bsd_locale_defaults.h
-  __bsd_locale_fallbacks.h
-  __debug
-  __functional_03
-  __functional_base
-  __functional_base_03
-  __hash_table
-  __libcpp_version
-  __locale
-  __mutex_base
-  __nullptr
-  __split_buffer
-  __sso_allocator
-  __std_stream
-  __string
-  __threading_support
-  __tree
-  __tuple
-  __undef_macros
-  algorithm
-  any
-  array
-  atomic
-  bitset
-  cassert
-  ccomplex
-  cctype
-  cerrno
-  cfenv
-  cfloat
-  chrono
-  cinttypes
-  ciso646
-  climits
-  clocale
-  cmath
-  codecvt
-  compare
-  complex
-  complex.h
-  condition_variable
-  csetjmp
-  csignal
-  cstdarg
-  cstdbool
-  cstddef
-  cstdint
-  cstdio
-  cstdlib
-  cstring
-  ctgmath
-  ctime
-  ctype.h
-  cwchar
-  cwctype
-  deque
-  errno.h
-  exception
-  experimental/__config
-  experimental/__memory
-  experimental/algorithm
-  experimental/any
-  experimental/chrono
-  experimental/coroutine
-  experimental/deque
-  experimental/dynarray
-  experimental/filesystem
-  experimental/forward_list
-  experimental/functional
-  experimental/iterator
-  experimental/list
-  experimental/map
-  experimental/memory_resource
-  experimental/numeric
-  experimental/optional
-  experimental/propagate_const
-  experimental/ratio
-  experimental/regex
-  experimental/set
-  experimental/string
-  experimental/string_view
-  experimental/system_error
-  experimental/tuple
-  experimental/type_traits
-  experimental/unordered_map
-  experimental/unordered_set
-  experimental/utility
-  experimental/vector
-  ext/__hash
-  ext/hash_map
-  ext/hash_set
-  float.h
-  forward_list
-  fstream
-  functional
-  future
-  initializer_list
-  inttypes.h
-  iomanip
-  ios
-  iosfwd
-  iostream
-  istream
-  iterator
-  limits
-  limits.h
-  list
-  locale
-  locale.h
-  map
-  math.h
-  memory
-  module.modulemap
-  mutex
-  new
-  numeric
-  optional
-  ostream
-  queue
-  random
-  ratio
-  regex
-  scoped_allocator
-  set
-  setjmp.h
-  shared_mutex
-  sstream
-  stack
-  stdbool.h
-  stddef.h
-  stdexcept
-  stdint.h
-  stdio.h
-  stdlib.h
-  streambuf
-  string
-  string.h
-  string_view
-  strstream
-  system_error
-  tgmath.h
-  thread
-  tuple
-  type_traits
-  typeindex
-  typeinfo
-  unordered_map
-  unordered_set
-  utility
-  valarray
-  variant
-  vector
-  version
-  wchar.h
-  wctype.h
-  )
-
-if(LIBCXX_INSTALL_SUPPORT_HEADERS)
-  set(files
-    ${files}
-    support/android/locale_bionic.h
-    support/fuchsia/xlocale.h
-    support/ibm/limits.h
-    support/ibm/locale_mgmt_aix.h
-    support/ibm/support.h
-    support/ibm/xlocale.h
-    support/musl/xlocale.h
-    support/newlib/xlocale.h
-    support/solaris/floatingpoint.h
-    support/solaris/wchar.h
-    support/solaris/xlocale.h
-    support/win32/limits_msvc_win32.h
-    support/win32/locale_win32.h
-    support/xlocale/__nop_locale_mgmt.h
-    support/xlocale/__posix_l_fallback.h
-    support/xlocale/__strtonum_fallback.h
-    support/xlocale/xlocale.h
-    )
+if (NOT LIBCXX_INSTALL_SUPPORT_HEADERS)
+  set(LIBCXX_SUPPORT_HEADER_PATTERN PATTERN "support" EXCLUDE)
 endif()
 
 if (LIBCXX_NEEDS_SITE_CONFIG)
@@ -192,56 +14,44 @@ if (LIBCXX_NEEDS_SITE_CONFIG)
             ${LIBCXX_BINARY_DIR}/__config_site
   )
   # Add a target that executes the generation commands.
-  add_custom_target(cxx-generated-config ALL
+  add_custom_target(generate_config_header ALL
     DEPENDS ${LIBCXX_BINARY_DIR}/__generated_config)
-  set(generated_config_deps cxx-generated-config)
-else()
-  set(files
-    ${files}
-    __config
-    )
+  set(generated_config_deps generate_config_header)
 endif()
 
-if(NOT LIBCXX_USING_INSTALLED_LLVM AND LLVM_BINARY_DIR)
-  set(output_dir ${LLVM_BINARY_DIR}/include/c++/v1)
+set(LIBCXX_HEADER_PATTERN
+  PATTERN "*"
+  PATTERN "CMakeLists.txt" EXCLUDE
+  PATTERN ".svn" EXCLUDE
+  PATTERN "__config_site.in" EXCLUDE
+  ${LIBCXX_SUPPORT_HEADER_PATTERN}
+  )
 
-  set(out_files)
-  foreach(f ${files})
-    set(src ${CMAKE_CURRENT_SOURCE_DIR}/${f})
-    set(dst ${output_dir}/${f})
-    add_custom_command(OUTPUT ${dst}
-      DEPENDS ${src}
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-      COMMENT "Copying libc++'s ${f}...")
-    list(APPEND out_files ${dst})
-  endforeach()
+if(NOT LIBCXX_USING_INSTALLED_LLVM AND LLVM_BINARY_DIR)
+  file(COPY .
+    DESTINATION "${LLVM_BINARY_DIR}/include/c++/v1"
+    FILES_MATCHING
+    ${LIBCXX_HEADER_PATTERN}
+    )
 
   if (LIBCXX_NEEDS_SITE_CONFIG)
     # Copy the generated header as __config into build directory.
-    set(src ${LIBCXX_BINARY_DIR}/__generated_config)
-    set(dst ${output_dir}/__config)
-    add_custom_command(OUTPUT ${dst}
-        DEPENDS ${src} ${generated_config_deps}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-        COMMENT "Copying libc++'s __config")
-    list(APPEND out_files ${dst})
+    add_custom_command(
+        TARGET generate_config_header POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${LIBCXX_BINARY_DIR}/__generated_config
+                ${LLVM_BINARY_DIR}/include/c++/v1/__config)
   endif()
-
-  add_custom_target(cxx-headers ALL DEPENDS ${out_files} ${abilib_headers})
-else()
-  add_custom_target(cxx-headers)
 endif()
-set_target_properties(cxx-headers PROPERTIES FOLDER "Misc")
 
 if (LIBCXX_INSTALL_HEADERS)
-  foreach(file ${files})
-    get_filename_component(dir ${file} DIRECTORY)
-    install(FILES ${file}
-      DESTINATION ${LIBCXX_INSTALL_PREFIX}include/c++/v1/${dir}
-      COMPONENT cxx-headers
-      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    )
-  endforeach()
+  install(DIRECTORY .
+    DESTINATION ${LIBCXX_INSTALL_PREFIX}include/c++/v1
+    COMPONENT cxx-headers
+    FILES_MATCHING
+    ${LIBCXX_HEADER_PATTERN}
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  )
 
   if (LIBCXX_NEEDS_SITE_CONFIG)
     # Install the generated header as __config.
@@ -253,6 +63,8 @@ if (LIBCXX_INSTALL_HEADERS)
   endif()
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
+    # this target is just needed as a placeholder for the distribution target
+    add_custom_target(cxx-headers)
     add_custom_target(install-cxx-headers
                       DEPENDS cxx-headers ${generated_config_deps}
                       COMMAND "${CMAKE_COMMAND}"
@@ -261,6 +73,7 @@ if (LIBCXX_INSTALL_HEADERS)
     # Stripping is a no-op for headers
     add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
 
+    add_custom_target(libcxx-headers)
     add_custom_target(install-libcxx-headers DEPENDS install-cxx-headers)
     add_custom_target(install-libcxx-headers-stripped DEPENDS install-cxx-headers-stripped)
   endif()

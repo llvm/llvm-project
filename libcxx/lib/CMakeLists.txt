@@ -283,8 +283,7 @@ if (LIBCXX_ENABLE_STATIC)
 endif()
 
 # Add a meta-target for both libraries.
-add_custom_target(cxx DEPENDS ${LIBCXX_TARGETS})
-add_dependencies(cxx cxx-headers)
+add_custom_target(cxx DEPENDS ${LIBCXX_TARGETS} ${generated_config_deps})
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)

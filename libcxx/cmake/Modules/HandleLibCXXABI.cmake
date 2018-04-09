@@ -47,22 +47,12 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
         set(found TRUE)
         get_filename_component(dstdir ${fpath} PATH)
         get_filename_component(ifile ${fpath} NAME)
-        set(src ${incpath}/${fpath})
-
-        set(dst ${LIBCXX_BINARY_INCLUDE_DIR}/${dstdir}/${fpath})
-        add_custom_command(OUTPUT ${dst}
-            DEPENDS ${src}
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-            COMMENT "Copying C++ ABI header ${fpath}...")
-        list(APPEND abilib_headers "${dst}")
-
-        set(dst "${CMAKE_BINARY_DIR}/include/c++/v1/${dstdir}/${fpath}")
-        add_custom_command(OUTPUT ${dst}
-            DEPENDS ${src}
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-            COMMENT "Copying C++ ABI header ${fpath}...")
-        list(APPEND abilib_headers "${dst}")
-
+        file(COPY "${incpath}/${fpath}"
+          DESTINATION "${LIBCXX_BINARY_INCLUDE_DIR}/${dstdir}"
+          )
+        file(COPY "${incpath}/${fpath}"
+          DESTINATION "${CMAKE_BINARY_DIR}/include/c++/v1/${dstdir}"
+          )
         if (LIBCXX_INSTALL_HEADERS)
           install(FILES "${LIBCXX_BINARY_INCLUDE_DIR}/${fpath}"
             DESTINATION ${LIBCXX_INSTALL_PREFIX}include/c++/v1/${dstdir}
@@ -70,6 +60,7 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
             PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
             )
         endif()
+        list(APPEND abilib_headers "${LIBCXX_BINARY_INCLUDE_DIR}/${fpath}")
       endif()
     endforeach()
     if (NOT found)
@@ -78,7 +69,6 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
   endforeach()
 
   include_directories("${LIBCXX_BINARY_INCLUDE_DIR}")
-  add_custom_target(cxx-abi-headers ALL DEPENDS ${abilib_headers})
 endmacro()
 
 
