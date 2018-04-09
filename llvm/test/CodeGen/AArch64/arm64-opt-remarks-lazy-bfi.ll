@@ -36,9 +36,7 @@
 ; HOTNESS-NOT: Executing Pass
 ; HOTNESS: block-frequency: empty_func
 ; HOTNESS-NOT: Executing Pass
-; HOTNESS: Executing Pass 'MachineDominator Tree Construction'
-; HOTNESS-NEXT: Executing Pass 'Machine Natural Loop Construction'
-; HOTNESS-NEXT: Executing Pass 'AArch64 Assembly Printer'
+; HOTNESS: Executing Pass 'AArch64 Assembly Printer'
 
 ; HOTNESS: arm64-summary-remarks.ll:5:0: 1 instructions in function (hotness: 33)
 
@@ -47,8 +45,6 @@
 ; NO_HOTNESS-NEXT:  Freeing Pass 'Implement the 'patchable-function' attribute'
 ; NO_HOTNESS-NEXT: Executing Pass 'Lazy Machine Block Frequency Analysis'
 ; NO_HOTNESS-NEXT: Executing Pass 'Machine Optimization Remark Emitter'
-; NO_HOTNESS-NEXT: Executing Pass 'MachineDominator Tree Construction'
-; NO_HOTNESS-NEXT: Executing Pass 'Machine Natural Loop Construction'
 ; NO_HOTNESS-NEXT: Executing Pass 'AArch64 Assembly Printer'
 
 ; NO_HOTNESS: arm64-summary-remarks.ll:5:0: 1 instructions in function{{$}}

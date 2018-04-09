@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/GCStrategy.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -234,7 +235,6 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfo>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
-  AU.addRequired<MachineLoopInfo>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -996,6 +996,24 @@ void AsmPrinter::EmitFunctionBody() {
 
   bool ShouldPrintDebugScopes = MMI->hasDebugInfo();
 
+  if (isVerbose()) {
+    // Get MachineDominatorTree or compute it on the fly if it's unavailable
+    MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+    if (!MDT) {
+      OwnedMDT = make_unique<MachineDominatorTree>();
+      OwnedMDT->getBase().recalculate(*MF);
+      MDT = OwnedMDT.get();
+    }
+
+    // Get MachineLoopInfo or compute it on the fly if it's unavailable
+    MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+    if (!MLI) {
+      OwnedMLI = make_unique<MachineLoopInfo>();
+      OwnedMLI->getBase().analyze(MDT->getBase());
+      MLI = OwnedMLI.get();
+    }
+  }
+
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
@@ -1429,6 +1447,8 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   OutStreamer->Finish();
   OutStreamer->reset();
+  OwnedMLI.reset();
+  OwnedMDT.reset();
 
   return false;
 }
@@ -1454,7 +1474,6 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   }
 
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  LI = &getAnalysis<MachineLoopInfo>();
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   EnablePrintSchedInfo = PrintSchedule.getNumOccurrences()
@@ -2631,13 +2650,9 @@ static void emitBasicBlockLoopComments(const MachineBasicBlock &MBB,
 void AsmPrinter::setupCodePaddingContext(const MachineBasicBlock &MBB,
                                          MCCodePaddingContext &Context) const {
   assert(MF != nullptr && "Machine function must be valid");
-  assert(LI != nullptr && "Loop info must be valid");
   Context.IsPaddingActive = !MF->hasInlineAsm() &&
                             !MF->getFunction().optForSize() &&
                             TM.getOptLevel() != CodeGenOpt::None;
-  const MachineLoop *CurrentLoop = LI->getLoopFor(&MBB);
-  Context.IsBasicBlockInsideInnermostLoop =
-      CurrentLoop != nullptr && CurrentLoop->getSubLoops().empty();
   Context.IsBasicBlockReachableViaFallthrough =
       std::find(MBB.pred_begin(), MBB.pred_end(), MBB.getPrevNode()) !=
       MBB.pred_end();
@@ -2689,7 +2704,9 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
         OutStreamer->GetCommentOS() << '\n';
       }
     }
-    emitBasicBlockLoopComments(MBB, LI, *this);
+
+    assert(MLI != nullptr && "MachineLoopInfo should has been computed");
+    emitBasicBlockLoopComments(MBB, MLI, *this);
   }
 
   // Print the main label for the block.
