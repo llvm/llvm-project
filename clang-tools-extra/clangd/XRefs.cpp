@@ -79,10 +79,10 @@ public:
 
   bool
   handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                      ArrayRef<index::SymbolRelation> Relations, FileID FID,
-                      unsigned Offset,
+                      ArrayRef<index::SymbolRelation> Relations,
+                      SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    if (isSearchedLocation(FID, Offset)) {
+    if (Loc == SearchedLocation) {
       // Find and add definition declarations (for GoToDefinition).
       // We don't use parameter `D`, as Parameter `D` is the canonical
       // declaration, which is the first declaration of a redeclarable
@@ -98,18 +98,12 @@ public:
   }
 
 private:
-  bool isSearchedLocation(FileID FID, unsigned Offset) const {
-    const SourceManager &SourceMgr = AST.getSourceManager();
-    return SourceMgr.getFileOffset(SearchedLocation) == Offset &&
-           SourceMgr.getFileID(SearchedLocation) == FID;
-  }
-
   void finish() override {
     // Also handle possible macro at the searched location.
     Token Result;
     auto &Mgr = AST.getSourceManager();
-    if (!Lexer::getRawToken(SearchedLocation, Result, Mgr, AST.getLangOpts(),
-                            false)) {
+    if (!Lexer::getRawToken(Mgr.getSpellingLoc(SearchedLocation), Result, Mgr,
+                            AST.getLangOpts(), false)) {
       if (Result.is(tok::raw_identifier)) {
         PP.LookUpIdentifierInfo(Result);
       }
@@ -127,16 +121,7 @@ private:
         MacroInfo *MacroInf = MacroDef.getMacroInfo();
         if (MacroInf) {
           MacroInfos.push_back(MacroDecl{IdentifierInfo->getName(), MacroInf});
-          // Clear all collected delcarations if this is a macro search.
-          //
-          // In theory, there should be no declarataions being collected when we
-          // search a source location that refers to a macro.
-          // The occurrence location returned by `handleDeclOccurence` is
-          // limited (FID, Offset are from expansion location), we will collect
-          // all declarations inside the macro.
-          //
-          // FIXME: Avoid adding decls from inside macros in handlDeclOccurence.
-          Decls.clear();
+          assert(Decls.empty());
         }
       }
     }
@@ -252,21 +237,19 @@ public:
 
   bool
   handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                      ArrayRef<index::SymbolRelation> Relations, FileID FID,
-                      unsigned Offset,
+                      ArrayRef<index::SymbolRelation> Relations,
+                      SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     const SourceManager &SourceMgr = AST.getSourceManager();
-    if (SourceMgr.getMainFileID() != FID ||
+    SourceLocation HighlightStartLoc = SourceMgr.getFileLoc(Loc);
+    if (SourceMgr.getMainFileID() != SourceMgr.getFileID(HighlightStartLoc) ||
         std::find(Decls.begin(), Decls.end(), D) == Decls.end()) {
       return true;
     }
     SourceLocation End;
     const LangOptions &LangOpts = AST.getLangOpts();
-    SourceLocation StartOfFileLoc = SourceMgr.getLocForStartOfFile(FID);
-    SourceLocation HightlightStartLoc = StartOfFileLoc.getLocWithOffset(Offset);
-    End =
-        Lexer::getLocForEndOfToken(HightlightStartLoc, 0, SourceMgr, LangOpts);
-    SourceRange SR(HightlightStartLoc, End);
+    End = Lexer::getLocForEndOfToken(HighlightStartLoc, 0, SourceMgr, LangOpts);
+    SourceRange SR(HighlightStartLoc, End);
 
     DocumentHighlightKind Kind = DocumentHighlightKind::Text;
     if (static_cast<index::SymbolRoleSet>(index::SymbolRole::Write) & Roles)
