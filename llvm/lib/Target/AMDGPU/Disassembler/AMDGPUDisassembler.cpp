@@ -882,6 +882,9 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
   }
 
   auto *Symbols = static_cast<SectionSymbolsTy *>(DisInfo);
+  if (!Symbols)
+    return false;
+
   auto Result = std::find_if(Symbols->begin(), Symbols->end(),
                              [Value](const SymbolInfoTy& Val) {
                                 return std::get<0>(Val) == static_cast<uint64_t>(Value)

@@ -18,7 +18,6 @@
 #include "sanitizer_flags.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_report_decorator.h"
-#include "sanitizer_stackdepot.h"
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_symbolizer.h"
 
@@ -113,17 +112,22 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
 }
 
 #if SANITIZER_LINUX && !SANITIZER_GO
+// Weak default implementation for when sanitizer_stackdepot is not linked in.
+SANITIZER_WEAK_ATTRIBUTE StackDepotStats *StackDepotGetStats() {
+  return nullptr;
+}
+
 void BackgroundThread(void *arg) {
-  uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
-  uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
-  bool heap_profile = common_flags()->heap_profile;
+  const uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
+  const uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
+  const bool heap_profile = common_flags()->heap_profile;
   uptr prev_reported_rss = 0;
   uptr prev_reported_stack_depot_size = 0;
   bool reached_soft_rss_limit = false;
   uptr rss_during_last_reported_profile = 0;
   while (true) {
     SleepForMillis(100);
-    uptr current_rss_mb = GetRSS() >> 20;
+    const uptr current_rss_mb = GetRSS() >> 20;
     if (Verbosity()) {
       // If RSS has grown 10% since last time, print some information.
       if (prev_reported_rss * 11 / 10 < current_rss_mb) {
@@ -132,13 +136,15 @@ void BackgroundThread(void *arg) {
       }
       // If stack depot has grown 10% since last time, print it too.
       StackDepotStats *stack_depot_stats = StackDepotGetStats();
-      if (prev_reported_stack_depot_size * 11 / 10 <
-          stack_depot_stats->allocated) {
-        Printf("%s: StackDepot: %zd ids; %zdM allocated\n",
-               SanitizerToolName,
-               stack_depot_stats->n_uniq_ids,
-               stack_depot_stats->allocated >> 20);
-        prev_reported_stack_depot_size = stack_depot_stats->allocated;
+      if (stack_depot_stats) {
+        if (prev_reported_stack_depot_size * 11 / 10 <
+            stack_depot_stats->allocated) {
+          Printf("%s: StackDepot: %zd ids; %zdM allocated\n",
+                 SanitizerToolName,
+                 stack_depot_stats->n_uniq_ids,
+                 stack_depot_stats->allocated >> 20);
+          prev_reported_stack_depot_size = stack_depot_stats->allocated;
+        }
       }
     }
     // Check RSS against the limit.

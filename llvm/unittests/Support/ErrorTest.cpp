@@ -749,6 +749,7 @@ TEST(Error, ErrorMatchers) {
       "Expected: failed with Error of given type and the error is an object "
       "whose given property is equal to 1\n"
       "  Actual: failed  (CustomError { 0})");
+  EXPECT_THAT_ERROR(make_error<CustomError>(0), Failed<ErrorInfoBase>());
 
   EXPECT_THAT_EXPECTED(Expected<int>(0), Succeeded());
   EXPECT_NONFATAL_FAILURE(

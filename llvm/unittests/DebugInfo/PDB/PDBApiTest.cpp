@@ -87,6 +87,15 @@ class MockSession : public IPDBSession {
   findSymbolByAddress(uint64_t Address, PDB_SymType Type) const override {
     return nullptr;
   }
+  std::unique_ptr<PDBSymbol> findSymbolByRVA(uint32_t RVA,
+                                             PDB_SymType Type) const override {
+    return nullptr;
+  }
+  std::unique_ptr<PDBSymbol>
+  findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
+                         PDB_SymType Type) const override {
+    return nullptr;
+  }
   std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbers(const PDBSymbolCompiland &Compiland,
                   const IPDBSourceFile &File) const override {

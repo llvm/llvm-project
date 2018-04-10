@@ -38,7 +38,7 @@ public:
           "Expect URI body to be an absolute path starting with '/': " + Body,
           llvm::inconvertibleErrorCode());
     Body = Body.ltrim('/');
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
     constexpr char TestDir[] = "C:\\clangd-test";
 #else
     constexpr char TestDir[] = "/clangd-test";

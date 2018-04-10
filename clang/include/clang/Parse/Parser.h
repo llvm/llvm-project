@@ -2851,6 +2851,4 @@ private:
 
 }  // end namespace clang
 
-static const char *const GroupName = "clangparser";
-static const char *const GroupDescription = "===== Clang Parser =====";
 #endif

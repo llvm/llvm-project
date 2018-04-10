@@ -242,9 +242,11 @@ void MyriadToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
 }
 
-std::string MyriadToolChain::findLibCxxIncludePath() const {
+void MyriadToolChain::addLibCxxIncludePaths(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
   std::string Path(getDriver().getInstalledDir());
-  return Path + "/../include/c++/v1";
+  addSystemInclude(DriverArgs, CC1Args, Path + "/../include/c++/v1");
 }
 
 void MyriadToolChain::addLibStdCxxIncludePaths(

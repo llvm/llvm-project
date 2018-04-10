@@ -9,24 +9,10 @@
 /// \file
 ///
 /// This file implements a printer class for printing generic Backend
-/// statistics related to the dispatch logic, scheduler and retire unit.
+/// statistics related to the scheduler and retire unit.
 ///
 /// Example:
 /// ========
-///
-/// Dynamic Dispatch Stall Cycles:
-/// RAT     - Register unavailable:                      0
-/// RCU     - Retire tokens unavailable:                 0
-/// SCHEDQ  - Scheduler full:                            42
-/// LQ      - Load queue full:                           0
-/// SQ      - Store queue full:                          0
-/// GROUP   - Static restrictions on the dispatch group: 0
-///
-///
-/// Dispatch Logic - number of cycles where we saw N instructions dispatched:
-/// [# dispatched], [# cycles]
-///  0,              15  (11.5%)
-///  5,              4  (3.1%)
 ///
 /// Schedulers - number of cycles where we saw N instructions issued:
 /// [# issued], [# cycles]
@@ -40,7 +26,6 @@
 ///  1,           6  (4.6%)
 ///  2,           1  (0.8%)
 ///  4,           3  (2.3%)
-///
 ///
 /// Scheduler's queue usage:
 /// JALU01,  0/20
@@ -63,18 +48,12 @@ class BackendStatistics : public View {
   const llvm::MCSubtargetInfo &STI;
 
   using Histogram = llvm::DenseMap<unsigned, unsigned>;
-  Histogram DispatchGroupSizePerCycle;
   Histogram RetiredPerCycle;
   Histogram IssuedPerCycle;
 
-  unsigned NumDispatched;
   unsigned NumIssued;
   unsigned NumRetired;
   unsigned NumCycles;
-
-  // Counts dispatch stall events caused by unavailability of resources.  There
-  // is one counter for every generic stall kind (see class HWStallEvent).
-  llvm::SmallVector<unsigned, 8> HWStalls;
 
   // Tracks the usage of a scheduler's queue.
   struct BufferUsage {
@@ -88,23 +67,17 @@ class BackendStatistics : public View {
   llvm::DenseMap<unsigned, BufferUsage> BufferedResources;
 
   void updateHistograms() {
-    DispatchGroupSizePerCycle[NumDispatched]++;
     IssuedPerCycle[NumIssued]++;
     RetiredPerCycle[NumRetired]++;
-    NumDispatched = 0;
     NumIssued = 0;
     NumRetired = 0;
   }
 
   void printRetireUnitStatistics(llvm::raw_ostream &OS) const;
-  void printDispatchUnitStatistics(llvm::raw_ostream &OS) const;
   void printSchedulerStatistics(llvm::raw_ostream &OS) const;
 
-  void printDispatchStalls(llvm::raw_ostream &OS) const;
   void printRCUStatistics(llvm::raw_ostream &OS, const Histogram &Histogram,
                           unsigned Cycles) const;
-  void printDispatchUnitUsage(llvm::raw_ostream &OS, const Histogram &Stats,
-                              unsigned Cycles) const;
   void printIssuePerCycle(const Histogram &IssuePerCycle,
                           unsigned TotalCycles) const;
   void printSchedulerUsage(llvm::raw_ostream &OS,
@@ -112,19 +85,13 @@ class BackendStatistics : public View {
 
 public:
   BackendStatistics(const llvm::MCSubtargetInfo &sti)
-      : STI(sti), NumDispatched(0), NumIssued(0), NumRetired(0), NumCycles(0),
-        HWStalls(HWStallEvent::LastGenericEvent) { }
+      : STI(sti), NumIssued(0), NumRetired(0), NumCycles(0) { }
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;
 
   void onCycleBegin(unsigned Cycle) override { NumCycles++; }
 
   void onCycleEnd(unsigned Cycle) override { updateHistograms(); }
-
-  void onStallEvent(const HWStallEvent &Event) override {
-    if (Event.Type < HWStallEvent::LastGenericEvent)
-      HWStalls[Event.Type]++;
-  }
 
   // Increases the number of used scheduler queue slots of every buffered
   // resource in the Buffers set.
@@ -135,8 +102,6 @@ public:
   void onReleasedBuffers(llvm::ArrayRef<unsigned> Buffers) override;
 
   void printView(llvm::raw_ostream &OS) const override {
-    printDispatchStalls(OS);
-    printDispatchUnitStatistics(OS);
     printSchedulerStatistics(OS);
     printRetireUnitStatistics(OS);
     printSchedulerUsage(OS, STI.getSchedModel());

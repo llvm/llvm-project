@@ -10,7 +10,7 @@
 /// that may inhibit the HW prefetching.  This is done in two steps.  Before
 /// ISel, we mark strided loads (i.e. those that will likely benefit from
 /// prefetching) with metadata.  Then, after opcodes have been finalized, we
-/// insert MOVs and re-write loads to prevent unintnentional tag collisions.
+/// insert MOVs and re-write loads to prevent unintentional tag collisions.
 // ===---------------------------------------------------------------------===//
 
 #include "AArch64.h"
@@ -59,7 +59,7 @@ STATISTIC(NumStridedLoadsMarked, "Number of strided loads marked");
 STATISTIC(NumCollisionsAvoided,
           "Number of HW prefetch tag collisions avoided");
 STATISTIC(NumCollisionsNotAvoided,
-          "Number of HW prefetch tag collisions not avoided due to lack of regsiters");
+          "Number of HW prefetch tag collisions not avoided due to lack of registers");
 
 namespace {
 

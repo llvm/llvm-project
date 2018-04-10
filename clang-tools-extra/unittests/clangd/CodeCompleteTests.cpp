@@ -22,33 +22,6 @@
 
 namespace clang {
 namespace clangd {
-// Let GMock print completion items and signature help.
-void PrintTo(const CompletionItem &I, std::ostream *O) {
-  llvm::raw_os_ostream OS(*O);
-  OS << I.label << " - " << toJSON(I);
-}
-void PrintTo(const std::vector<CompletionItem> &V, std::ostream *O) {
-  *O << "{\n";
-  for (const auto &I : V) {
-    *O << "\t";
-    PrintTo(I, O);
-    *O << "\n";
-  }
-  *O << "}";
-}
-void PrintTo(const SignatureInformation &I, std::ostream *O) {
-  llvm::raw_os_ostream OS(*O);
-  OS << I.label << " - " << toJSON(I);
-}
-void PrintTo(const std::vector<SignatureInformation> &V, std::ostream *O) {
-  *O << "{\n";
-  for (const auto &I : V) {
-    *O << "\t";
-    PrintTo(I, O);
-    *O << "\n";
-  }
-  *O << "}";
-}
 
 namespace {
 using namespace llvm;

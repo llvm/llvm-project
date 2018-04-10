@@ -24,6 +24,7 @@
 #include "BackendPrinter.h"
 #include "BackendStatistics.h"
 #include "CodeRegion.h"
+#include "DispatchStatistics.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
 #include "RegisterFileStatistics.h"
@@ -92,6 +93,11 @@ static cl::opt<bool>
     PrintRegisterFileStats("register-file-stats",
                            cl::desc("Print register file statistics"),
                            cl::init(false));
+
+static cl::opt<bool>
+    PrintDispatchStats("dispatch-stats",
+                       cl::desc("Print dispatch statistics"),
+                       cl::init(false));
 
 static cl::opt<bool>
     PrintResourcePressureView("resource-pressure",
@@ -422,6 +428,9 @@ int main(int argc, char **argv) {
     if (PrintInstructionInfoView)
       Printer.addView(
           llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));
+
+    if (PrintDispatchStats)
+      Printer.addView(llvm::make_unique<mca::DispatchStatistics>(*STI));
 
     if (PrintModeVerbose)
       Printer.addView(llvm::make_unique<mca::BackendStatistics>(*STI));

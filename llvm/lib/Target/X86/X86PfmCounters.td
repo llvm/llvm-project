@@ -17,7 +17,7 @@ def SBPort0Counter : PfmIssueCounter<SBPort0, ["uops_dispatched_port:port_0"]>;
 def SBPort1Counter : PfmIssueCounter<SBPort1, ["uops_dispatched_port:port_1"]>;
 def SBPort23Counter : PfmIssueCounter<SBPort23,
                                       ["uops_dispatched_port:port_2",
-				       "uops_dispatched_port:port_3"]>;
+                                       "uops_dispatched_port:port_3"]>;
 def SBPort4Counter : PfmIssueCounter<SBPort4, ["uops_dispatched_port:port_4"]>;
 def SBPort5Counter : PfmIssueCounter<SBPort5, ["uops_dispatched_port:port_5"]>;
 }

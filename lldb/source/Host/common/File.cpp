@@ -100,7 +100,7 @@ int File::GetDescriptor() const {
   // Don't open the file descriptor if we don't need to, just get it from the
   // stream if we have one.
   if (StreamIsValid()) {
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
     return _fileno(m_stream);
 #else
     return fileno(m_stream);

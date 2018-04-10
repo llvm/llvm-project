@@ -754,6 +754,13 @@ void mxcsr() {
 // CHECK-LABEL: define void @mxcsr
 // CHECK: call void asm sideeffect inteldialect "fxrstor $0", "=*m,~{dirflag},~{fpsr},~{flags}"
 
+// Make sure we can find the register for the dirflag for popfd
+void dirflag() {
+  __asm popfd
+}
+// CHECK-LABEL: define void @dirflag
+// CHECK: call void asm sideeffect inteldialect "popfd", "~{dirflag},~{flags},~{esp},~{dirflag},~{fpsr},~{flags}"
+
 typedef union _LARGE_INTEGER {
   struct {
     unsigned int LowPart;

@@ -34,7 +34,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaEnumSectionContribs> Enumerator;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_DIA_DIAENUMSECTIONCONTRIBS_H

@@ -1404,10 +1404,12 @@ DIE *DwarfUnit::getIndexTyDie() {
     return IndexTyDie;
   // Construct an integer type to use for indexes.
   IndexTyDie = &createAndAddDIE(dwarf::DW_TAG_base_type, getUnitDie());
-  addString(*IndexTyDie, dwarf::DW_AT_name, "sizetype");
+  StringRef Name = "__ARRAY_SIZE_TYPE__";
+  addString(*IndexTyDie, dwarf::DW_AT_name, Name);
   addUInt(*IndexTyDie, dwarf::DW_AT_byte_size, None, sizeof(int64_t));
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
           dwarf::DW_ATE_unsigned);
+  DD->addAccelType(Name, *IndexTyDie, /*Flags*/ 0);
   return IndexTyDie;
 }
 

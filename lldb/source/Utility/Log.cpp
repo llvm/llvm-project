@@ -28,7 +28,7 @@
 #include <utility> // for pair
 
 #include <assert.h>  // for assert
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include <process.h> // for getpid
 #else
 #include <unistd.h>
