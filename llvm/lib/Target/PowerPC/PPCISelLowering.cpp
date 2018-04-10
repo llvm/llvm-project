@@ -12264,6 +12264,11 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
          N->getOperand(1).getValueType() == MVT::i16 ||
          (Subtarget.hasLDBRX() && Subtarget.isPPC64() &&
           N->getOperand(1).getValueType() == MVT::i64))) {
+      // STBRX can only handle simple types.
+      EVT mVT = cast<StoreSDNode>(N)->getMemoryVT();
+      if (mVT.isExtended())
+        break;
+
       SDValue BSwapOp = N->getOperand(1).getOperand(0);
       // Do an any-extend to 32-bits if this is a half-word input.
       if (BSwapOp.getValueType() == MVT::i16)
@@ -12271,7 +12276,6 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
       // If the type of BSWAP operand is wider than stored memory width
       // it need to be shifted to the right side before STBRX.
-      EVT mVT = cast<StoreSDNode>(N)->getMemoryVT();
       if (Op1VT.bitsGT(mVT)) {
         int Shift = Op1VT.getSizeInBits() - mVT.getSizeInBits();
         BSwapOp = DAG.getNode(ISD::SRL, dl, Op1VT, BSwapOp,

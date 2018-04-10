@@ -726,6 +726,10 @@ def : GCNPat <
   (i32 (add (i32 (ctpop i32:$popcnt)), i32:$val)),
   (V_BCNT_U32_B32_e64 $popcnt, $val)
 >;
+def : GCNPat <
+  (i16 (add (i16 (trunc (ctpop i32:$popcnt))), i16:$val)),
+  (V_BCNT_U32_B32_e64 $popcnt, $val)
+>;
 
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/
