@@ -147,6 +147,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeR600PacketizerPass(*PR);
   initializeR600ExpandSpecialInstrsPassPass(*PR);
   initializeR600VectorRegMergerPass(*PR);
+  initializeGlobalISel(*PR);
   initializeAMDGPUDAGToDAGISelPass(*PR);
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
