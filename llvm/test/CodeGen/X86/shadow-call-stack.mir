@@ -106,6 +106,14 @@ frameInfo:
 body: |
   ; CHECK: bb.0:
   bb.0:
+    ; Ensure these are not counted as machine instructions
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    DBG_VALUE 0
+    DBG_VALUE 0
+    DBG_VALUE 0
+
     ; CHECK: $eax = MOV32ri 13
     $eax = MOV32ri 13
 

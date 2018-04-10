@@ -78,6 +78,9 @@ FunctionPass *createX86FixupSetCC();
 /// Return a pass that avoids creating store forward block issues in the hardware.
 FunctionPass *createX86AvoidStoreForwardingBlocks();
 
+/// Return a pass that lowers EFLAGS copy pseudo instructions.
+FunctionPass *createX86FlagsCopyLoweringPass();
+
 /// Return a pass that expands WinAlloca pseudo-instructions.
 FunctionPass *createX86WinAllocaExpander();
 

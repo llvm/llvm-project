@@ -338,6 +338,107 @@ multiclass sve_int_bin_pred_arit_0<bits<3> opc, string asm> {
   def _D : sve_int_bin_pred_arit_log<0b11, 0b00, opc, asm, ZPR64>;
 }
 
+
+//===----------------------------------------------------------------------===//
+//SVE Index Generation Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_index_ii<bits<2> sz8_64, string asm, ZPRRegOp zprty,
+                       Operand imm_ty>
+: I<(outs zprty:$Zd), (ins imm_ty:$imm5, imm_ty:$imm5b),
+  asm, "\t$Zd, $imm5, $imm5b",
+  "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> imm5;
+  bits<5> imm5b;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = imm5b;
+  let Inst{15-10} = 0b010000;
+  let Inst{9-5}   = imm5;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_index_ii<string asm> {
+  def _B : sve_int_index_ii<0b00, asm, ZPR8, simm5_32b>;
+  def _H : sve_int_index_ii<0b01, asm, ZPR16, simm5_32b>;
+  def _S : sve_int_index_ii<0b10, asm, ZPR32, simm5_32b>;
+  def _D : sve_int_index_ii<0b11, asm, ZPR64, simm5_64b>;
+}
+
+class sve_int_index_ir<bits<2> sz8_64, string asm, ZPRRegOp zprty,
+                       RegisterClass srcRegType, Operand imm_ty>
+: I<(outs zprty:$Zd), (ins imm_ty:$imm5, srcRegType:$Rm),
+  asm, "\t$Zd, $imm5, $Rm",
+  "", []>, Sched<[]> {
+  bits<5> Rm;
+  bits<5> Zd;
+  bits<5> imm5;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rm;
+  let Inst{15-10} = 0b010010;
+  let Inst{9-5}   = imm5;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_index_ir<string asm> {
+  def _B : sve_int_index_ir<0b00, asm, ZPR8, GPR32, simm5_32b>;
+  def _H : sve_int_index_ir<0b01, asm, ZPR16, GPR32, simm5_32b>;
+  def _S : sve_int_index_ir<0b10, asm, ZPR32, GPR32, simm5_32b>;
+  def _D : sve_int_index_ir<0b11, asm, ZPR64, GPR64, simm5_64b>;
+}
+
+class sve_int_index_ri<bits<2> sz8_64, string asm, ZPRRegOp zprty,
+                       RegisterClass srcRegType, Operand imm_ty>
+: I<(outs zprty:$Zd), (ins srcRegType:$Rn, imm_ty:$imm5),
+  asm, "\t$Zd, $Rn, $imm5",
+  "", []>, Sched<[]> {
+  bits<5> Rn;
+  bits<5> Zd;
+  bits<5> imm5;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = imm5;
+  let Inst{15-10} = 0b010001;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_index_ri<string asm> {
+  def _B : sve_int_index_ri<0b00, asm, ZPR8, GPR32, simm5_32b>;
+  def _H : sve_int_index_ri<0b01, asm, ZPR16, GPR32, simm5_32b>;
+  def _S : sve_int_index_ri<0b10, asm, ZPR32, GPR32, simm5_32b>;
+  def _D : sve_int_index_ri<0b11, asm, ZPR64, GPR64, simm5_64b>;
+}
+
+class sve_int_index_rr<bits<2> sz8_64, string asm, ZPRRegOp zprty,
+                       RegisterClass srcRegType>
+: I<(outs zprty:$Zd), (ins srcRegType:$Rn, srcRegType:$Rm),
+  asm, "\t$Zd, $Rn, $Rm",
+  "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Rm;
+  bits<5> Rn;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rm;
+  let Inst{15-10} = 0b010011;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_index_rr<string asm> {
+  def _B : sve_int_index_rr<0b00, asm, ZPR8, GPR32>;
+  def _H : sve_int_index_rr<0b01, asm, ZPR16, GPR32>;
+  def _S : sve_int_index_rr<0b10, asm, ZPR32, GPR32>;
+  def _D : sve_int_index_rr<0b11, asm, ZPR64, GPR64>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Permute - Predicates Group
 //===----------------------------------------------------------------------===//

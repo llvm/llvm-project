@@ -3537,6 +3537,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
                  "expected compatible register or floating-point constant");
   case Match_InvalidMemoryIndexedSImm6:
     return Error(Loc, "index must be an integer in range [-32, 31].");
+  case Match_InvalidMemoryIndexedSImm5:
+    return Error(Loc, "index must be an integer in range [-16, 15].");
   case Match_InvalidMemoryIndexedSImm9:
     return Error(Loc, "index must be an integer in range [-256, 255].");
   case Match_InvalidMemoryIndexedSImm10:
@@ -4055,6 +4057,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed4SImm7:
   case Match_InvalidMemoryIndexed8SImm7:
   case Match_InvalidMemoryIndexed16SImm7:
+  case Match_InvalidMemoryIndexedSImm5:
   case Match_InvalidMemoryIndexedSImm9:
   case Match_InvalidMemoryIndexedSImm10:
   case Match_InvalidImm0_1:

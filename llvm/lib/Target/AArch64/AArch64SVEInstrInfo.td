@@ -31,4 +31,9 @@ let Predicates = [HasSVE] in {
   def RDVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdvl">;
   def ADDVL_XXI : sve_int_arith_vl<0b0, "addvl">;
   def ADDPL_XXI : sve_int_arith_vl<0b1, "addpl">;
+
+  defm INDEX_RR : sve_int_index_rr<"index">;
+  defm INDEX_IR : sve_int_index_ir<"index">;
+  defm INDEX_RI : sve_int_index_ri<"index">;
+  defm INDEX_II : sve_int_index_ii<"index">;
 }
