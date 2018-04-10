@@ -1526,6 +1526,38 @@ static Value *addFastMathFlag(Value *V) {
   return V;
 }
 
+// Helper to generate an ordered reduction.
+Value *
+llvm::getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src,
+                          unsigned Op,
+                          RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
+                          ArrayRef<Value *> RedOps) {
+  unsigned VF = Src->getType()->getVectorNumElements();
+
+  // Extract and apply reduction ops in ascending order:
+  // e.g. ((((Acc + Scl[0]) + Scl[1]) + Scl[2]) + ) ... + Scl[VF-1]
+  Value *Result = Acc;
+  for (unsigned ExtractIdx = 0; ExtractIdx != VF; ++ExtractIdx) {
+    Value *Ext =
+        Builder.CreateExtractElement(Src, Builder.getInt32(ExtractIdx));
+
+    if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
+      Result = Builder.CreateBinOp((Instruction::BinaryOps)Op, Result, Ext,
+                                   "bin.rdx");
+    } else {
+      assert(MinMaxKind != RecurrenceDescriptor::MRK_Invalid &&
+             "Invalid min/max");
+      Result = RecurrenceDescriptor::createMinMaxOp(Builder, MinMaxKind, Result,
+                                                    Ext);
+    }
+
+    if (!RedOps.empty())
+      propagateIRFlags(Result, RedOps);
+  }
+
+  return Result;
+}
+
 // Helper to generate a log2 shuffle reduction.
 Value *
 llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,

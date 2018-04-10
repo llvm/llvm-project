@@ -213,6 +213,13 @@ private:
   std::vector<CompileCommand> CompileCommands;
 };
 
+/// Returns a wrapped CompilationDatabase that defers to the provided one,
+/// but getCompileCommands() will infer commands for unknown files.
+/// The return value of getAllFiles() or getAllCompileCommands() is unchanged.
+/// See InterpolatingCompilationDatabase.cpp for details on heuristics.
+std::unique_ptr<CompilationDatabase>
+    inferMissingCompileCommands(std::unique_ptr<CompilationDatabase>);
+
 } // namespace tooling
 } // namespace clang
 

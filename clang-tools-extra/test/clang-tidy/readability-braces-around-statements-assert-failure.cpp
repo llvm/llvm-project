@@ -1,4 +1,4 @@
-// RUN: clang-tidy -checks='-*,readability-braces-around-statements' %s --
+// RUN: not clang-tidy -checks='-*,readability-braces-around-statements' %s --
 
 // Note: this test expects no assert failure happened in clang-tidy.
 

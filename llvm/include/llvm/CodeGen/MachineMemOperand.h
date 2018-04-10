@@ -184,7 +184,7 @@ public:
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, uint64_t s,
-                    unsigned base_alignment,
+                    uint64_t base_alignment,
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,

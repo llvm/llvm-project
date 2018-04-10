@@ -832,9 +832,6 @@ void PDBLinker::addObjFile(ObjFile *File) {
     for (const DebugSubsectionRecord &SS : Subsections) {
       switch (SS.kind()) {
       case DebugSubsectionKind::StringTable: {
-        auto Data = SS.getRecordData();
-        ArrayRef<uint8_t> Buffer;
-        cantFail(Data.readLongestContiguousChunk(0, Buffer));
         assert(!CVStrTab.valid() &&
                "Encountered multiple string table subsections!");
         ExitOnErr(CVStrTab.initialize(SS.getRecordData()));

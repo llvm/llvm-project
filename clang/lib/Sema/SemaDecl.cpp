@@ -15465,8 +15465,13 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         Record->setNonTrivialToPrimitiveDestroy(true);
         Record->setParamDestroyedInCallee(true);
       }
-      if (!FT.canPassInRegisters())
-        Record->setCanPassInRegisters(false);
+
+      if (const auto *RT = FT->getAs<RecordType>()) {
+        if (RT->getDecl()->getArgPassingRestrictions() ==
+            RecordDecl::APK_CanNeverPassInRegs)
+          Record->setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+      } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
+        Record->setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
     }
 
     if (Record && FD->getType().isVolatileQualified())

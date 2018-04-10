@@ -118,16 +118,16 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
   // registers), by weight next, and then by position.
   // TODO: Investigate more intelligent sorting heuristics. For starters, we
   // should try to coalesce adjacent live intervals before non-adjacent ones.
-  std::sort(SortedIntervals.begin(), SortedIntervals.end(),
-            [MRI](LiveInterval *LHS, LiveInterval *RHS) {
-              if (MRI->isLiveIn(LHS->reg) != MRI->isLiveIn(RHS->reg))
-                return MRI->isLiveIn(LHS->reg);
-              if (LHS->weight != RHS->weight)
-                return LHS->weight > RHS->weight;
-              if (LHS->empty() || RHS->empty())
-                return !LHS->empty() && RHS->empty();
-              return *LHS < *RHS;
-            });
+  llvm::sort(SortedIntervals.begin(), SortedIntervals.end(),
+             [MRI](LiveInterval *LHS, LiveInterval *RHS) {
+               if (MRI->isLiveIn(LHS->reg) != MRI->isLiveIn(RHS->reg))
+                 return MRI->isLiveIn(LHS->reg);
+               if (LHS->weight != RHS->weight)
+                 return LHS->weight > RHS->weight;
+               if (LHS->empty() || RHS->empty())
+                 return !LHS->empty() && RHS->empty();
+               return *LHS < *RHS;
+             });
 
   DEBUG(dbgs() << "Coloring register intervals:\n");
   SmallVector<unsigned, 16> SlotMapping(SortedIntervals.size(), -1u);

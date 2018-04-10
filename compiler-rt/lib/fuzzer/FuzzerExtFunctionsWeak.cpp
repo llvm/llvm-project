@@ -13,7 +13,8 @@
 // to clients right now.
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
-#if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FUCHSIA || LIBFUZZER_FREEBSD
+#if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FUCHSIA ||                \
+    LIBFUZZER_FREEBSD || LIBFUZZER_OPENBSD
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
@@ -51,4 +52,4 @@ ExternalFunctions::ExternalFunctions() {
 
 } // namespace fuzzer
 
-#endif // LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FUSCHIA || LIBFUZZER_FREEBSD
+#endif

@@ -32,6 +32,11 @@ public:
                        const coverage::FunctionRecord &Function) const {
     return true;
   }
+
+  /// \brief Return true if the filename passes the requirements of this filter.
+  virtual bool matchesFilename(StringRef Filename) const {
+    return true;
+  }
 };
 
 /// \brief Matches functions that contain a specific string in their name.
@@ -54,6 +59,8 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function) const override;
+
+  bool matchesFilename(StringRef Filename) const override;
 };
 
 /// \brief Matches functions whose name appears in a SpecialCaseList in the
@@ -133,6 +140,8 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function) const override;
+
+  bool matchesFilename(StringRef Filename) const override;
 };
 
 /// \brief A collection of filters.

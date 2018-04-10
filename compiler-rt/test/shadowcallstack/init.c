@@ -6,11 +6,15 @@
 
 // Basic smoke test for the runtime
 
+#include "libc_support.h"
+
 #ifdef INCLUDE_RUNTIME
 #include "minimal_runtime.h"
+#else
+#define scs_main main
 #endif
 
-int main(int argc, char **argv) {
-  printf("In main.\n");
+int scs_main(void) {
+  scs_fputs_stdout("In main.\n");
   return 0;
 }

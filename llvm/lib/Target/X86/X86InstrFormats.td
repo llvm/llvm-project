@@ -644,7 +644,7 @@ class MMXSDIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
       : Ii8<o, F, outs, ins, asm, pattern, itin>, XD, Requires<[HasSSE2]>;
 class MMXS2SIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                 list<dag> pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern>, XS, Requires<[HasSSE2]>;
+      : Ii8<o, F, outs, ins, asm, pattern, itin>, XS, Requires<[HasSSE2]>;
 
 // SSE3 Instruction Templates:
 //

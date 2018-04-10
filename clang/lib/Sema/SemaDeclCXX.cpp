@@ -5847,20 +5847,20 @@ static bool paramCanBeDestroyedInCallee(Sema &S, CXXRecordDecl *D,
   return HasNonDeletedCopyOrMove;
 }
 
-static bool computeCanPassInRegister(bool DestroyedInCallee,
-                                     const CXXRecordDecl *RD,
-                                     TargetInfo::CallingConvKind CCK,
-                                     Sema &S) {
+static RecordDecl::ArgPassingKind
+computeArgPassingRestrictions(bool DestroyedInCallee, const CXXRecordDecl *RD,
+                              TargetInfo::CallingConvKind CCK, Sema &S) {
   if (RD->isDependentType() || RD->isInvalidDecl())
-    return true;
+    return RecordDecl::APK_CanPassInRegs;
 
-  // The param cannot be passed in registers if CanPassInRegisters is already
-  // set to false.
-  if (!RD->canPassInRegisters())
-    return false;
+  // The param cannot be passed in registers if ArgPassingRestrictions is set to
+  // APK_CanNeverPassInRegs.
+  if (RD->getArgPassingRestrictions() == RecordDecl::APK_CanNeverPassInRegs)
+    return RecordDecl::APK_CanNeverPassInRegs;
 
   if (CCK != TargetInfo::CCK_MicrosoftX86_64)
-    return DestroyedInCallee;
+    return DestroyedInCallee ? RecordDecl::APK_CanPassInRegs
+                             : RecordDecl::APK_CannotPassInRegs;
 
   bool CopyCtorIsTrivial = false, CopyCtorIsTrivialForCall = false;
   bool DtorIsTrivialForCall = false;
@@ -5900,7 +5900,7 @@ static bool computeCanPassInRegister(bool DestroyedInCallee,
 
   // If the copy ctor and dtor are both trivial-for-calls, pass direct.
   if (CopyCtorIsTrivialForCall && DtorIsTrivialForCall)
-    return true;
+    return RecordDecl::APK_CanPassInRegs;
 
   // If a class has a destructor, we'd really like to pass it indirectly
   // because it allows us to elide copies.  Unfortunately, MSVC makes that
@@ -5914,8 +5914,8 @@ static bool computeCanPassInRegister(bool DestroyedInCallee,
   // passed in registers, which is non-conforming.
   if (CopyCtorIsTrivial &&
       S.getASTContext().getTypeSize(RD->getTypeForDecl()) <= 64)
-    return true;
-  return false;
+    return RecordDecl::APK_CanPassInRegs;
+  return RecordDecl::APK_CannotPassInRegs;
 }
 
 /// \brief Perform semantic checks on a class definition that has been
@@ -6090,8 +6090,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   if (Record->hasNonTrivialDestructor())
     Record->setParamDestroyedInCallee(DestroyedInCallee);
 
-  Record->setCanPassInRegisters(
-      computeCanPassInRegister(DestroyedInCallee, Record, CCK, *this));
+  Record->setArgPassingRestrictions(
+      computeArgPassingRestrictions(DestroyedInCallee, Record, CCK, *this));
 }
 
 /// Look up the special member function that would be called by a special

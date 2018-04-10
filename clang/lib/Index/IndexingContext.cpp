@@ -82,14 +82,9 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
     Loc = IdLocs.front();
   else
     Loc = ImportD->getLocation();
-  SourceManager &SM = Ctx->getSourceManager();
-  Loc = SM.getFileLoc(Loc);
-  if (Loc.isInvalid())
-    return true;
 
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+  SourceManager &SM = Ctx->getSourceManager();
+  FileID FID = SM.getFileID(SM.getFileLoc(Loc));
   if (FID.isInvalid())
     return true;
 
@@ -112,7 +107,7 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
   if (ImportD->isImplicit())
     Roles |= (unsigned)SymbolRole::Implicit;
 
-  return DataConsumer.handleModuleOccurence(ImportD, Roles, FID, Offset);
+  return DataConsumer.handleModuleOccurence(ImportD, Roles, Loc);
 }
 
 bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
@@ -327,13 +322,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
     return true;
 
   SourceManager &SM = Ctx->getSourceManager();
-  Loc = SM.getFileLoc(Loc);
-  if (Loc.isInvalid())
-    return true;
-
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+  FileID FID = SM.getFileID(SM.getFileLoc(Loc));
   if (FID.isInvalid())
     return true;
 
@@ -414,7 +403,6 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
                                Rel.RelatedSymbol->getCanonicalDecl()));
   }
 
-  IndexDataConsumer::ASTNodeInfo Node{ OrigE, OrigD, Parent, ContainerDC };
-  return DataConsumer.handleDeclOccurence(D, Roles, FinalRelations, FID, Offset,
-                                          Node);
+  IndexDataConsumer::ASTNodeInfo Node{OrigE, OrigD, Parent, ContainerDC};
+  return DataConsumer.handleDeclOccurence(D, Roles, FinalRelations, Loc, Node);
 }

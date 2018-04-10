@@ -101,7 +101,7 @@ public:
                        const CoverageViewOptions &Options, raw_ostream &OS);
 
   /// \brief Render the CoverageMapping object.
-  void renderRoot() override;
+  void renderRoot(const CoverageFilters &IgnoreFilenameFilters) override;
 
   /// \brief Render the CoverageMapping object for specified source files.
   void renderRoot(const std::vector<std::string> &SourceFiles) override;

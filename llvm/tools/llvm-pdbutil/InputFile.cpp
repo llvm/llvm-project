@@ -95,7 +95,8 @@ static inline bool isDebugSSection(object::SectionRef Section,
 
 static bool isDebugTSection(SectionRef Section, CVTypeArray &Types) {
   BinaryStreamReader Reader;
-  if (!isCodeViewDebugSubsection(Section, ".debug$T", Reader))
+  if (!isCodeViewDebugSubsection(Section, ".debug$T", Reader) &&
+      !isCodeViewDebugSubsection(Section, ".debug$P", Reader))
     return false;
   cantFail(Reader.readArray(Types, Reader.bytesRemaining()));
   return true;
