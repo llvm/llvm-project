@@ -469,15 +469,15 @@ foo:
   stxr   w1, w4, [x3]
   stxrb  w1, w4, [x3]
   stxrh  w1, w4, [x3]
-  stxp   w1, x2, x6, [x1]
-  stxp   w1, w2, w6, [x1]
+  stxp   w1, x2, x6, [x7]
+  stxp   w1, w2, w6, [x9]
 
 ; CHECK: stxr   w1, x4, [x3]            ; encoding: [0x64,0x7c,0x01,0xc8]
 ; CHECK: stxr   w1, w4, [x3]            ; encoding: [0x64,0x7c,0x01,0x88]
 ; CHECK: stxrb  w1, w4, [x3]            ; encoding: [0x64,0x7c,0x01,0x08]
 ; CHECK: stxrh  w1, w4, [x3]            ; encoding: [0x64,0x7c,0x01,0x48]
-; CHECK: stxp   w1, x2, x6, [x1]        ; encoding: [0x22,0x18,0x21,0xc8]
-; CHECK: stxp   w1, w2, w6, [x1]        ; encoding: [0x22,0x18,0x21,0x88]
+; CHECK: stxp   w1, x2, x6, [x7]        ; encoding: [0xe2,0x18,0x21,0xc8]
+; CHECK: stxp   w1, w2, w6, [x9]        ; encoding: [0x22,0x19,0x21,0x88]
 
 ;-----------------------------------------------------------------------------
 ; Load-acquire/Store-release non-exclusive
@@ -525,15 +525,15 @@ foo:
   stlxr   w8, w7, [x1]
   stlxrb  w8, w7, [x1]
   stlxrh  w8, w7, [x1]
-  stlxp   w1, x2, x6, [x1]
-  stlxp   w1, w2, w6, [x1]
+  stlxp   w1, x2, x6, [x7]
+  stlxp   w1, w2, w6, [x9]
 
 ; CHECK: stlxr  w8, x7, [x1]            ; encoding: [0x27,0xfc,0x08,0xc8]
 ; CHECK: stlxr  w8, w7, [x1]            ; encoding: [0x27,0xfc,0x08,0x88]
 ; CHECK: stlxrb w8, w7, [x1]            ; encoding: [0x27,0xfc,0x08,0x08]
 ; CHECK: stlxrh w8, w7, [x1]            ; encoding: [0x27,0xfc,0x08,0x48]
-; CHECK: stlxp  w1, x2, x6, [x1]        ; encoding: [0x22,0x98,0x21,0xc8]
-; CHECK: stlxp  w1, w2, w6, [x1]        ; encoding: [0x22,0x98,0x21,0x88]
+; CHECK: stlxp  w1, x2, x6, [x7]        ; encoding: [0xe2,0x98,0x21,0xc8]
+; CHECK: stlxp  w1, w2, w6, [x9]        ; encoding: [0x22,0x99,0x21,0x88]
 
 
 ;-----------------------------------------------------------------------------
