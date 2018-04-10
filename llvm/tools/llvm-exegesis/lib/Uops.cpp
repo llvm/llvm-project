@@ -38,43 +38,6 @@ static llvm::Error makeError(llvm::Twine Msg) {
                                              llvm::inconvertibleErrorCode());
 }
 
-// FIXME: Read the counter names from the ProcResourceUnits when PR36984 is
-// fixed.
-static const std::string *getEventNameFromProcResName(const char *ProcResName) {
-  static const std::unordered_map<std::string, std::string> Entries = {
-      {"SBPort0", "UOPS_DISPATCHED_PORT:PORT_0"},
-      {"SBPort1", "UOPS_DISPATCHED_PORT:PORT_1"},
-      {"SBPort4", "UOPS_DISPATCHED_PORT:PORT_4"},
-      {"SBPort5", "UOPS_DISPATCHED_PORT:PORT_5"},
-      {"HWPort0", "UOPS_DISPATCHED_PORT:PORT_0"},
-      {"HWPort1", "UOPS_DISPATCHED_PORT:PORT_1"},
-      {"HWPort2", "UOPS_DISPATCHED_PORT:PORT_2"},
-      {"HWPort3", "UOPS_DISPATCHED_PORT:PORT_3"},
-      {"HWPort4", "UOPS_DISPATCHED_PORT:PORT_4"},
-      {"HWPort5", "UOPS_DISPATCHED_PORT:PORT_5"},
-      {"HWPort6", "UOPS_DISPATCHED_PORT:PORT_6"},
-      {"HWPort7", "UOPS_DISPATCHED_PORT:PORT_7"},
-      {"SKLPort0", "UOPS_DISPATCHED_PORT:PORT_0"},
-      {"SKLPort1", "UOPS_DISPATCHED_PORT:PORT_1"},
-      {"SKLPort2", "UOPS_DISPATCHED_PORT:PORT_2"},
-      {"SKLPort3", "UOPS_DISPATCHED_PORT:PORT_3"},
-      {"SKLPort4", "UOPS_DISPATCHED_PORT:PORT_4"},
-      {"SKLPort5", "UOPS_DISPATCHED_PORT:PORT_5"},
-      {"SKLPort6", "UOPS_DISPATCHED_PORT:PORT_6"},
-      {"SKXPort7", "UOPS_DISPATCHED_PORT:PORT_7"},
-      {"SKXPort0", "UOPS_DISPATCHED_PORT:PORT_0"},
-      {"SKXPort1", "UOPS_DISPATCHED_PORT:PORT_1"},
-      {"SKXPort2", "UOPS_DISPATCHED_PORT:PORT_2"},
-      {"SKXPort3", "UOPS_DISPATCHED_PORT:PORT_3"},
-      {"SKXPort4", "UOPS_DISPATCHED_PORT:PORT_4"},
-      {"SKXPort5", "UOPS_DISPATCHED_PORT:PORT_5"},
-      {"SKXPort6", "UOPS_DISPATCHED_PORT:PORT_6"},
-      {"SKXPort7", "UOPS_DISPATCHED_PORT:PORT_7"},
-  };
-  const auto It = Entries.find(ProcResName);
-  return It == Entries.end() ? nullptr : &It->second;
-}
-
 static std::vector<llvm::MCInst> generateIndependentAssignments(
     const LLVMState &State, const llvm::MCInstrDesc &InstrDesc,
     llvm::SmallVector<Variable, 8> Vars, int MaxAssignments) {
@@ -228,19 +191,19 @@ UopsBenchmarkRunner::runMeasurements(const LLVMState &State,
   std::vector<BenchmarkMeasure> Result;
   for (unsigned ProcResIdx = 1;
        ProcResIdx < SchedModel.getNumProcResourceKinds(); ++ProcResIdx) {
-    const llvm::MCProcResourceDesc &ProcRes =
-        *SchedModel.getProcResource(ProcResIdx);
-    const std::string *const EventName =
-        getEventNameFromProcResName(ProcRes.Name);
-    if (!EventName)
+    const char *const PfmCounters = SchedModel.getExtraProcessorInfo()
+                                        .PfmCounters.IssueCounters[ProcResIdx];
+    if (!PfmCounters)
       continue;
-    pfm::Counter Counter{pfm::PerfEvent(*EventName)};
+    // FIXME: Sum results when there are several counters for a single ProcRes
+    // (e.g. P23 on SandyBridge).
+    pfm::Counter Counter{pfm::PerfEvent(PfmCounters)};
     Counter.start();
     Function();
     Counter.stop();
     Result.push_back({llvm::itostr(ProcResIdx),
                       static_cast<double>(Counter.read()) / NumRepetitions,
-                      ProcRes.Name});
+                      SchedModel.getProcResource(ProcResIdx)->Name});
   }
   return Result;
 }

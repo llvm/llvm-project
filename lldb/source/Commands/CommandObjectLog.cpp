@@ -19,6 +19,7 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -345,7 +346,7 @@ protected:
         }
       } else if (sub_command.equals_lower("increment")) {
         bool success;
-        bool increment = Args::StringToBoolean(param, false, &success);
+        bool increment = OptionArgParser::ToBoolean(param, false, &success);
         if (success) {
           Timer::SetQuiet(!increment);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

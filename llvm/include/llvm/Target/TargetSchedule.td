@@ -182,7 +182,8 @@ class ProcResourceKind;
 //
 // SchedModel ties these units to a processor for any stand-alone defs
 // of this class.
-class ProcResourceUnits<ProcResourceKind kind, int num> {
+class ProcResourceUnits<ProcResourceKind kind, int num,
+                        list<string> pfmCounters> {
   ProcResourceKind Kind = kind;
   int NumUnits = num;
   ProcResourceKind Super = ?;
@@ -197,8 +198,8 @@ def EponymousProcResourceKind : ProcResourceKind;
 
 // Subtargets typically define processor resource kind and number of
 // units in one place.
-class ProcResource<int num> : ProcResourceKind,
-  ProcResourceUnits<EponymousProcResourceKind, num>;
+class ProcResource<int num, list<string> pfmCounters = []> : ProcResourceKind,
+  ProcResourceUnits<EponymousProcResourceKind, num, pfmCounters>;
 
 class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   list<ProcResource> Resources = resources;
@@ -476,3 +477,23 @@ class RetireControlUnit<int bufferSize, int retirePerCycle> {
   SchedMachineModel SchedModel = ?;
 }
 
+// Allow the definition of hardware counters.
+class PfmCounter {
+  SchedMachineModel SchedModel = ?;
+}
+
+// Each processor can define how to measure cycles by defining a
+// PfmCycleCounter.
+class PfmCycleCounter<string counter> : PfmCounter {
+  string Counter = counter;
+}
+
+// Each ProcResourceUnits can define how to measure issued uops by defining
+// a PfmIssueCounter.
+class PfmIssueCounter<ProcResourceUnits resource, list<string> counters>
+    : PfmCounter{
+  // The resource units on which uops are issued.
+  ProcResourceUnits Resource = resource;
+  // The list of counters that measure issue events.
+  list<string> Counters = counters;
+}

@@ -401,12 +401,14 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
           break;
       }
     }
+    MF.getRegInfo().addLiveIn(GitPtrLo);
+    MF.front().addLiveIn(GitPtrLo);
     BuildMI(MBB, I, DL, SMovB32, RsrcLo)
       .addReg(GitPtrLo)
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
     // We now have the GIT ptr - now get the scratch descriptor from the entry
-    // at offset 0.
+    // at offset 0 (or offset 16 for a compute shader).
     PointerType *PtrTy =
       PointerType::get(Type::getInt64Ty(MF.getFunction().getContext()),
                        AMDGPUAS::CONSTANT_ADDRESS);
@@ -417,9 +419,11 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
                                        MachineMemOperand::MOInvariant |
                                        MachineMemOperand::MODereferenceable,
                                        0, 0);
+    unsigned Offset
+        = MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     BuildMI(MBB, I, DL, LoadDwordX4, ScratchRsrcReg)
       .addReg(Rsrc01)
-      .addImm(0) // offset
+      .addImm(Offset) // offset
       .addImm(0) // glc
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine)
       .addMemOperand(MMO);

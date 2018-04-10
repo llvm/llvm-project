@@ -239,6 +239,11 @@ void CodeGenSchedModels::collectOptionalProcessorInfo() {
 
   // Collect processor RetireControlUnit descriptors if available.
   collectRetireControlUnits();
+
+  // Find pfm counter definitions for each processor.
+  collectPfmCounters();
+
+  checkCompleteness();
 }
 
 /// Gather all processor models.
@@ -1534,6 +1539,23 @@ void CodeGenSchedModels::collectRegisterFiles() {
       int Cost = RegisterCosts.size() > I ? RegisterCosts[I] : 1;
       CGRF.Costs.emplace_back(RegisterClasses[I], Cost);
     }
+  }
+}
+
+// Collect all the RegisterFile definitions available in this target.
+void CodeGenSchedModels::collectPfmCounters() {
+  for (Record *Def : Records.getAllDerivedDefinitions("PfmIssueCounter")) {
+    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
+    PM.PfmIssueCounterDefs.emplace_back(Def);
+  }
+  for (Record *Def : Records.getAllDerivedDefinitions("PfmCycleCounter")) {
+    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
+    if (PM.PfmCycleCounterDef) {
+      PrintFatalError(Def->getLoc(),
+                      "multiple cycle counters for " +
+                          Def->getValueAsDef("SchedModel")->getName());
+    }
+    PM.PfmCycleCounterDef = Def;
   }
 }
 

@@ -373,8 +373,8 @@ private:
   ArrayRef<SubstringAndIndex>
   indexLookup(StringRef Key, const std::vector<SubstringAndIndex> &Idx) const {
     // Use pointers as iteratiors to ease conversion of result to ArrayRef.
-    auto Range =
-        std::equal_range(&Idx[0], &Idx[Idx.size()], Key, Less<Prefix>());
+    auto Range = std::equal_range(Idx.data(), Idx.data() + Idx.size(), Key,
+                                  Less<Prefix>());
     return {Range.first, Range.second};
   }
 

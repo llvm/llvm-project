@@ -9481,8 +9481,9 @@ bool X86InstrInfo::
 isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
   // FIXME: Return false for x87 stack register classes for now. We can't
   // allow any loads of these registers before FpGet_ST0_80.
-  return !(RC == &X86::CCRRegClass || RC == &X86::RFP32RegClass ||
-           RC == &X86::RFP64RegClass || RC == &X86::RFP80RegClass);
+  return !(RC == &X86::CCRRegClass || RC == &X86::DFCCRRegClass ||
+           RC == &X86::RFP32RegClass || RC == &X86::RFP64RegClass ||
+           RC == &X86::RFP80RegClass);
 }
 
 /// Return a virtual register initialized with the
