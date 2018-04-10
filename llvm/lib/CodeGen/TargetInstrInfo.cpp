@@ -1151,6 +1151,8 @@ bool TargetInstrInfo::getRegSequenceInputs(
   for (unsigned OpIdx = 1, EndOpIdx = MI.getNumOperands(); OpIdx != EndOpIdx;
        OpIdx += 2) {
     const MachineOperand &MOReg = MI.getOperand(OpIdx);
+    if (MOReg.isUndef())
+      continue;
     const MachineOperand &MOSubIdx = MI.getOperand(OpIdx + 1);
     assert(MOSubIdx.isImm() &&
            "One of the subindex of the reg_sequence is not an immediate");
@@ -1174,6 +1176,8 @@ bool TargetInstrInfo::getExtractSubregInputs(
   // Def = EXTRACT_SUBREG v0.sub1, sub0.
   assert(DefIdx == 0 && "EXTRACT_SUBREG only has one def");
   const MachineOperand &MOReg = MI.getOperand(1);
+  if (MOReg.isUndef())
+    return false;
   const MachineOperand &MOSubIdx = MI.getOperand(2);
   assert(MOSubIdx.isImm() &&
          "The subindex of the extract_subreg is not an immediate");
@@ -1198,6 +1202,8 @@ bool TargetInstrInfo::getInsertSubregInputs(
   assert(DefIdx == 0 && "INSERT_SUBREG only has one def");
   const MachineOperand &MOBaseReg = MI.getOperand(1);
   const MachineOperand &MOInsertedReg = MI.getOperand(2);
+  if (MOInsertedReg.isUndef())
+    return false;
   const MachineOperand &MOSubIdx = MI.getOperand(3);
   assert(MOSubIdx.isImm() &&
          "One of the subindex of the reg_sequence is not an immediate");
