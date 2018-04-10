@@ -512,6 +512,8 @@ importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL,
           isl_set_intersect_params(NewAccessDomain, S.getContext().release());
       CurrentAccessDomain = isl_set_intersect_params(CurrentAccessDomain,
                                                      S.getContext().release());
+      CurrentAccessDomain =
+          isl_set_intersect(CurrentAccessDomain, Stmt.getDomain().release());
 
       if (MA->isRead() &&
           isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==

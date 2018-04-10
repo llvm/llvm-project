@@ -153,6 +153,7 @@ struct Configuration {
   bool Target1Rel;
   bool Trace;
   bool UndefinedVersion;
+  bool WarnBackrefs;
   bool WarnCommon;
   bool WarnMissingEntry;
   bool WarnSymbolOrdering;

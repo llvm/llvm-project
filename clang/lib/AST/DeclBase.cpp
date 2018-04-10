@@ -101,7 +101,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     // padding at the start if required.
     size_t ExtraAlign =
         llvm::OffsetToAlignment(sizeof(Module *), alignof(Decl));
-    char *Buffer = reinterpret_cast<char *>(
+    auto *Buffer = reinterpret_cast<char *>(
         ::operator new(ExtraAlign + sizeof(Module *) + Size + Extra, Ctx));
     Buffer += ExtraAlign;
     auto *ParentModule =
@@ -145,8 +145,8 @@ void Decl::setInvalidDecl(bool Invalid) {
 
   // Marking a DecompositionDecl as invalid implies all the child BindingDecl's
   // are invalid too.
-  if (DecompositionDecl *DD = dyn_cast<DecompositionDecl>(this)) {
-    for (BindingDecl *Binding : DD->bindings()) {
+  if (auto *DD = dyn_cast<DecompositionDecl>(this)) {
+    for (auto *Binding : DD->bindings()) {
       Binding->setInvalidDecl();
     }
   }
@@ -199,28 +199,26 @@ void Decl::add(Kind k) {
 }
 
 bool Decl::isTemplateParameterPack() const {
-  if (const TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(this))
+  if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(this))
     return TTP->isParameterPack();
-  if (const NonTypeTemplateParmDecl *NTTP
-                                = dyn_cast<NonTypeTemplateParmDecl>(this))
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(this))
     return NTTP->isParameterPack();
-  if (const TemplateTemplateParmDecl *TTP
-                                    = dyn_cast<TemplateTemplateParmDecl>(this))
+  if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(this))
     return TTP->isParameterPack();
   return false;
 }
 
 bool Decl::isParameterPack() const {
-  if (const ParmVarDecl *Parm = dyn_cast<ParmVarDecl>(this))
+  if (const auto *Parm = dyn_cast<ParmVarDecl>(this))
     return Parm->isParameterPack();
   
   return isTemplateParameterPack();
 }
 
 FunctionDecl *Decl::getAsFunction() {
-  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(this))
+  if (auto *FD = dyn_cast<FunctionDecl>(this))
     return FD;
-  if (const FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(this))
+  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(this))
     return FTD->getTemplatedDecl();
   return nullptr;
 }
@@ -279,7 +277,7 @@ void PrettyStackTraceDecl::print(raw_ostream &OS) const {
 
   OS << Message;
 
-  if (const NamedDecl *DN = dyn_cast_or_null<NamedDecl>(TheDecl)) {
+  if (const auto *DN = dyn_cast_or_null<NamedDecl>(TheDecl)) {
     OS << " '";
     DN->printQualifiedName(OS);
     OS << '\'';
@@ -327,7 +325,7 @@ void Decl::setDeclContextsImpl(DeclContext *SemaDC, DeclContext *LexicalDC,
   if (SemaDC == LexicalDC) {
     DeclCtx = SemaDC;
   } else {
-    Decl::MultipleDC *MDC = new (Ctx) Decl::MultipleDC();
+    auto *MDC = new (Ctx) Decl::MultipleDC();
     MDC->SemanticDC = SemaDC;
     MDC->LexicalDC = LexicalDC;
     DeclCtx = MDC;
@@ -348,7 +346,7 @@ bool Decl::isLexicallyWithinFunctionOrMethod() const {
 
 bool Decl::isInAnonymousNamespace() const {
   for (const DeclContext *DC = getDeclContext(); DC; DC = DC->getParent()) {
-    if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC))
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
       if (ND->isAnonymousNamespace())
         return true;
   }
@@ -361,7 +359,7 @@ bool Decl::isInStdNamespace() const {
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
-  if (TranslationUnitDecl *TUD = dyn_cast<TranslationUnitDecl>(this))
+  if (auto *TUD = dyn_cast<TranslationUnitDecl>(this))
     return TUD;
 
   DeclContext *DC = getDeclContext();
@@ -426,7 +424,7 @@ bool Decl::isReferenced() const {
     return true;
 
   // Check redeclarations.
-  for (auto I : redecls())
+  for (const auto *I : redecls())
     if (I->Referenced)
       return true;
 
@@ -451,11 +449,11 @@ bool Decl::isExported() const {
 
 ExternalSourceSymbolAttr *Decl::getExternalSourceSymbolAttr() const {
   const Decl *Definition = nullptr;
-  if (auto ID = dyn_cast<ObjCInterfaceDecl>(this)) {
+  if (auto *ID = dyn_cast<ObjCInterfaceDecl>(this)) {
     Definition = ID->getDefinition();
-  } else if (auto PD = dyn_cast<ObjCProtocolDecl>(this)) {
+  } else if (auto *PD = dyn_cast<ObjCProtocolDecl>(this)) {
     Definition = PD->getDefinition();
-  } else if (auto TD = dyn_cast<TagDecl>(this)) {
+  } else if (auto *TD = dyn_cast<TagDecl>(this)) {
     Definition = TD->getDefinition();
   }
   if (!Definition)
@@ -475,9 +473,9 @@ bool Decl::hasDefiningAttr() const {
 }
 
 const Attr *Decl::getDefiningAttr() const {
-  if (AliasAttr *AA = getAttr<AliasAttr>())
+  if (auto *AA = getAttr<AliasAttr>())
     return AA;
-  if (IFuncAttr *IFA = getAttr<IFuncAttr>())
+  if (auto *IFA = getAttr<IFuncAttr>())
     return IFA;
   return nullptr;
 }
@@ -649,14 +647,14 @@ VersionTuple Decl::getVersionIntroduced() const {
         return Availability->getIntroduced();
     }
   }
-  return VersionTuple();
+  return {};
 }
 
 bool Decl::canBeWeakImported(bool &IsDefinition) const {
   IsDefinition = false;
 
   // Variables, if they aren't definitions.
-  if (const VarDecl *Var = dyn_cast<VarDecl>(this)) {
+  if (const auto *Var = dyn_cast<VarDecl>(this)) {
     if (Var->isThisDeclarationADefinition()) {
       IsDefinition = true;
       return false;
@@ -664,7 +662,7 @@ bool Decl::canBeWeakImported(bool &IsDefinition) const {
     return true;
 
   // Functions, if they aren't definitions.
-  } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(this)) {
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(this)) {
     if (FD->hasBody()) {
       IsDefinition = true;
       return false;
@@ -847,14 +845,14 @@ Decl *Decl::castFromDeclContext (const DeclContext *D) {
 #define DECL(NAME, BASE)
 #define DECL_CONTEXT(NAME) \
     case Decl::NAME:       \
-      return static_cast<NAME##Decl*>(const_cast<DeclContext*>(D));
+      return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
 #define DECL_CONTEXT_BASE(NAME)
 #include "clang/AST/DeclNodes.inc"
     default:
 #define DECL(NAME, BASE)
 #define DECL_CONTEXT_BASE(NAME)                  \
       if (DK >= first##NAME && DK <= last##NAME) \
-        return static_cast<NAME##Decl*>(const_cast<DeclContext*>(D));
+        return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
 #include "clang/AST/DeclNodes.inc"
       llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
@@ -866,14 +864,14 @@ DeclContext *Decl::castToDeclContext(const Decl *D) {
 #define DECL(NAME, BASE)
 #define DECL_CONTEXT(NAME) \
     case Decl::NAME:       \
-      return static_cast<NAME##Decl*>(const_cast<Decl*>(D));
+      return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
 #define DECL_CONTEXT_BASE(NAME)
 #include "clang/AST/DeclNodes.inc"
     default:
 #define DECL(NAME, BASE)
 #define DECL_CONTEXT_BASE(NAME)                                   \
       if (DK >= first##NAME && DK <= last##NAME)                  \
-        return static_cast<NAME##Decl*>(const_cast<Decl*>(D));
+        return static_cast<NAME##Decl *>(const_cast<Decl *>(D));
 #include "clang/AST/DeclNodes.inc"
       llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
@@ -882,17 +880,17 @@ DeclContext *Decl::castToDeclContext(const Decl *D) {
 SourceLocation Decl::getBodyRBrace() const {
   // Special handling of FunctionDecl to avoid de-serializing the body from PCH.
   // FunctionDecl stores EndRangeLoc for this purpose.
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(this)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(this)) {
     const FunctionDecl *Definition;
     if (FD->hasBody(Definition))
       return Definition->getSourceRange().getEnd();
-    return SourceLocation();
+    return {};
   }
 
   if (Stmt *Body = getBody())
     return Body->getSourceRange().getEnd();
 
-  return SourceLocation();
+  return {};
 }
 
 bool Decl::AccessDeclContextSanity() const {
@@ -932,9 +930,9 @@ static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (const ValueDecl *D = dyn_cast<ValueDecl>(this))
+  if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
-  else if (const TypedefNameDecl *D = dyn_cast<TypedefNameDecl>(this))
+  else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
     Ty = D->getUnderlyingType();
   else
     return nullptr;
@@ -951,22 +949,21 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
 /// code context that is not a closure (a lambda, block, etc.).
 template <class T> static Decl *getNonClosureContext(T *D) {
   if (getKind(D) == Decl::CXXMethod) {
-    CXXMethodDecl *MD = cast<CXXMethodDecl>(D);
+    auto *MD = cast<CXXMethodDecl>(D);
     if (MD->getOverloadedOperator() == OO_Call &&
         MD->getParent()->isLambda())
       return getNonClosureContext(MD->getParent()->getParent());
     return MD;
-  } else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+  } else if (auto *FD = dyn_cast<FunctionDecl>(D))
     return FD;
-  } else if (ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  else if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
     return MD;
-  } else if (BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
+  else if (auto *BD = dyn_cast<BlockDecl>(D))
     return getNonClosureContext(BD->getParent());
-  } else if (CapturedDecl *CD = dyn_cast<CapturedDecl>(D)) {
+  else if (auto *CD = dyn_cast<CapturedDecl>(D))
     return getNonClosureContext(CD->getParent());
-  } else {
+  else
     return nullptr;
-  }
 }
 
 Decl *Decl::getNonClosureContext() {
@@ -1026,7 +1023,7 @@ bool DeclContext::isStdNamespace() const {
   if (!isNamespace())
     return false;
 
-  const NamespaceDecl *ND = cast<NamespaceDecl>(this);
+  const auto *ND = cast<NamespaceDecl>(this);
   if (ND->isInline()) {
     return ND->getParent()->isStdNamespace();
   }
@@ -1045,7 +1042,7 @@ bool DeclContext::isDependentContext() const {
   if (isa<ClassTemplatePartialSpecializationDecl>(this))
     return true;
 
-  if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(this)) {
+  if (const auto *Record = dyn_cast<CXXRecordDecl>(this)) {
     if (Record->getDescribedClassTemplate())
       return true;
     
@@ -1053,7 +1050,7 @@ bool DeclContext::isDependentContext() const {
       return true;
   }
   
-  if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(this)) {
+  if (const auto *Function = dyn_cast<FunctionDecl>(this)) {
     if (Function->getDescribedFunctionTemplate())
       return true;
 
@@ -1132,18 +1129,18 @@ DeclContext *DeclContext::getPrimaryContext() {
 
   case Decl::Namespace:
     // The original namespace is our primary context.
-    return static_cast<NamespaceDecl*>(this)->getOriginalNamespace();
+    return static_cast<NamespaceDecl *>(this)->getOriginalNamespace();
 
   case Decl::ObjCMethod:
     return this;
 
   case Decl::ObjCInterface:
-    if (ObjCInterfaceDecl *Def = cast<ObjCInterfaceDecl>(this)->getDefinition())
+    if (auto *Def = cast<ObjCInterfaceDecl>(this)->getDefinition())
       return Def;
     return this;
       
   case Decl::ObjCProtocol:
-    if (ObjCProtocolDecl *Def = cast<ObjCProtocolDecl>(this)->getDefinition())
+    if (auto *Def = cast<ObjCProtocolDecl>(this)->getDefinition())
       return Def;
     return this;
       
@@ -1158,12 +1155,12 @@ DeclContext *DeclContext::getPrimaryContext() {
     if (DeclKind >= Decl::firstTag && DeclKind <= Decl::lastTag) {
       // If this is a tag type that has a definition or is currently
       // being defined, that definition is our primary context.
-      TagDecl *Tag = cast<TagDecl>(this);
+      auto *Tag = cast<TagDecl>(this);
 
       if (TagDecl *Def = Tag->getDefinition())
         return Def;
 
-      if (const TagType *TagTy = dyn_cast<TagType>(Tag->getTypeForDecl())) {
+      if (const auto *TagTy = dyn_cast<TagType>(Tag->getTypeForDecl())) {
         // Note, TagType::getDecl returns the (partial) definition one exists.
         TagDecl *PossiblePartialDef = TagTy->getDecl();
         if (PossiblePartialDef->isBeingDefined())
@@ -1190,7 +1187,7 @@ DeclContext::collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts){
     return;
   }
   
-  NamespaceDecl *Self = static_cast<NamespaceDecl *>(this);
+  auto *Self = static_cast<NamespaceDecl *>(this);
   for (NamespaceDecl *N = Self->getMostRecentDecl(); N;
        N = N->getPreviousDecl())
     Contexts.push_back(N);
@@ -1199,16 +1196,15 @@ DeclContext::collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts){
 }
 
 std::pair<Decl *, Decl *>
-DeclContext::BuildDeclChain(ArrayRef<Decl*> Decls,
+DeclContext::BuildDeclChain(ArrayRef<Decl *> Decls,
                             bool FieldsAlreadyLoaded) {
   // Build up a chain of declarations via the Decl::NextInContextAndBits field.
   Decl *FirstNewDecl = nullptr;
   Decl *PrevDecl = nullptr;
-  for (unsigned I = 0, N = Decls.size(); I != N; ++I) {
-    if (FieldsAlreadyLoaded && isa<FieldDecl>(Decls[I]))
+  for (auto *D : Decls) {
+    if (FieldsAlreadyLoaded && isa<FieldDecl>(D))
       continue;
 
-    Decl *D = Decls[I];
     if (PrevDecl)
       PrevDecl->NextInContextAndBits.setPointer(D);
     else
@@ -1253,7 +1249,7 @@ DeclContext::LoadLexicalDeclsFromExternalStorage() const {
   // We may have already loaded just the fields of this record, in which case
   // we need to ignore them.
   bool FieldsAlreadyLoaded = false;
-  if (const RecordDecl *RD = dyn_cast<RecordDecl>(this))
+  if (const auto *RD = dyn_cast<RecordDecl>(this))
     FieldsAlreadyLoaded = RD->LoadedFieldsFromExternalStorage;
   
   // Splice the newly-read declarations into the beginning of the list
@@ -1320,12 +1316,11 @@ ExternalASTSource::SetExternalVisibleDeclsForName(const DeclContext *DC,
     }
   } else {
     // Convert the array to a StoredDeclsList.
-    for (ArrayRef<NamedDecl*>::iterator
-           I = Decls.begin(), E = Decls.end(); I != E; ++I) {
+    for (auto *D : Decls) {
       if (List.isNull())
-        List.setOnlyValue(*I);
+        List.setOnlyValue(D);
       else
-        List.AddSubsequentDecl(*I);
+        List.AddSubsequentDecl(D);
     }
   }
 
@@ -1378,7 +1373,7 @@ void DeclContext::removeDecl(Decl *D) {
 
   // Remove D from the lookup table if necessary.
   if (isa<NamedDecl>(D)) {
-    NamedDecl *ND = cast<NamedDecl>(D);
+    auto *ND = cast<NamedDecl>(D);
 
     // Remove only decls that have a name
     if (!ND->getDeclName()) return;
@@ -1411,13 +1406,13 @@ void DeclContext::addHiddenDecl(Decl *D) {
 
   // Notify a C++ record declaration that we've added a member, so it can
   // update its class-specific state.
-  if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(this))
+  if (auto *Record = dyn_cast<CXXRecordDecl>(this))
     Record->addedMember(D);
 
   // If this is a newly-created (not de-serialized) import declaration, wire
   // it in to the list of local import declarations.
   if (!D->isFromASTFile()) {
-    if (ImportDecl *Import = dyn_cast<ImportDecl>(D))
+    if (auto *Import = dyn_cast<ImportDecl>(D))
       D->getASTContext().addedLocalImportDecl(Import);
   }
 }
@@ -1425,7 +1420,7 @@ void DeclContext::addHiddenDecl(Decl *D) {
 void DeclContext::addDecl(Decl *D) {
   addHiddenDecl(D);
 
-  if (NamedDecl *ND = dyn_cast<NamedDecl>(D))
+  if (auto *ND = dyn_cast<NamedDecl>(D))
     ND->getDeclContext()->getPrimaryContext()->
         makeDeclVisibleInContextWithFlags(ND, false, true);
 }
@@ -1433,7 +1428,7 @@ void DeclContext::addDecl(Decl *D) {
 void DeclContext::addDeclInternal(Decl *D) {
   addHiddenDecl(D);
 
-  if (NamedDecl *ND = dyn_cast<NamedDecl>(D))
+  if (auto *ND = dyn_cast<NamedDecl>(D))
     ND->getDeclContext()->getPrimaryContext()->
         makeDeclVisibleInContextWithFlags(ND, true, true);
 }
@@ -1457,7 +1452,7 @@ static bool shouldBeHidden(NamedDecl *D) {
   // from being visible?
   if (isa<ClassTemplateSpecializationDecl>(D))
     return true;
-  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
     if (FD->isFunctionTemplateSpecialization())
       return true;
 
@@ -1505,7 +1500,7 @@ StoredDeclsMap *DeclContext::buildLookup() {
 /// DeclContext, a DeclContext linked to it, or a transparent context
 /// nested within it.
 void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
-  for (Decl *D : DCtx->noload_decls()) {
+  for (auto *D : DCtx->noload_decls()) {
     // Insert this declaration into the lookup structure, but only if
     // it's semantically within its decl context. Any other decls which
     // should be found in this context are added eagerly.
@@ -1514,7 +1509,7 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
     // FindExternalVisibleDeclsByName if needed. Exception: if we're not
     // in C++, we do not track external visible decls for the TU, so in
     // that case we need to collect them all here.
-    if (NamedDecl *ND = dyn_cast<NamedDecl>(D))
+    if (auto *ND = dyn_cast<NamedDecl>(D))
       if (ND->getDeclContext() == DCtx && !shouldBeHidden(ND) &&
           (!ND->isFromASTFile() ||
            (isTranslationUnit() &&
@@ -1524,7 +1519,7 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
     // If this declaration is itself a transparent declaration context
     // or inline namespace, add the members of this declaration of that
     // context (recursively).
-    if (DeclContext *InnerCtx = dyn_cast<DeclContext>(D))
+    if (auto *InnerCtx = dyn_cast<DeclContext>(D))
       if (InnerCtx->isTransparentContext() || InnerCtx->isInlineNamespace())
         buildLookupImpl(InnerCtx, Internal);
   }
@@ -1577,7 +1572,7 @@ DeclContext::lookup(DeclarationName Name) const {
       }
     }
 
-    return lookup_result();
+    return {};
   }
 
   StoredDeclsMap *Map = LookupPtr;
@@ -1585,11 +1580,11 @@ DeclContext::lookup(DeclarationName Name) const {
     Map = const_cast<DeclContext*>(this)->buildLookup();
 
   if (!Map)
-    return lookup_result();
+    return {};
 
   StoredDeclsMap::iterator I = Map->find(Name);
   if (I == Map->end())
-    return lookup_result();
+    return {};
 
   return I->second.getLookupResult();
 }
@@ -1606,7 +1601,7 @@ DeclContext::noload_lookup(DeclarationName Name) {
   loadLazyLocalLexicalLookups();
   StoredDeclsMap *Map = LookupPtr;
   if (!Map)
-    return lookup_result();
+    return {};
 
   StoredDeclsMap::iterator I = Map->find(Name);
   return I != Map->end() ? I->second.getLookupResult()
@@ -1620,8 +1615,8 @@ void DeclContext::loadLazyLocalLexicalLookups() {
   if (HasLazyLocalLexicalLookups) {
     SmallVector<DeclContext *, 2> Contexts;
     collectAllContexts(Contexts);
-    for (unsigned I = 0, N = Contexts.size(); I != N; ++I)
-      buildLookupImpl(Contexts[I], hasExternalVisibleStorage());
+    for (auto *Context : Contexts)
+      buildLookupImpl(Context, hasExternalVisibleStorage());
     HasLazyLocalLexicalLookups = false;
   }
 }
@@ -1657,7 +1652,7 @@ void DeclContext::localUncachedLookup(DeclarationName Name,
   // FIXME: If we have lazy external declarations, this will not find them!
   // FIXME: Should we CollectAllContexts and walk them all here?
   for (Decl *D = FirstDecl; D; D = D->getNextDeclInContext()) {
-    if (NamedDecl *ND = dyn_cast<NamedDecl>(D))
+    if (auto *ND = dyn_cast<NamedDecl>(D))
       if (ND->getDeclName() == Name)
         Results.push_back(ND);
   }
@@ -1699,7 +1694,7 @@ bool DeclContext::InEnclosingNamespaceSetOf(const DeclContext *O) const {
     if (O->Equals(this))
       return true;
 
-    const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(O);
+    const auto *NS = dyn_cast<NamespaceDecl>(O);
     if (!NS || !NS->isInline())
       break;
     O = NS->getParent();
@@ -1758,7 +1753,7 @@ void DeclContext::makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
     getParent()->getPrimaryContext()->
         makeDeclVisibleInContextWithFlags(D, Internal, Recoverable);
 
-  Decl *DCAsDecl = cast<Decl>(this);
+  auto *DCAsDecl = cast<Decl>(this);
   // Notify that a decl was made visible unless we are a Tag being defined.
   if (!(isa<TagDecl>(DCAsDecl) && cast<TagDecl>(DCAsDecl)->isBeingDefined()))
     if (ASTMutationListener *L = DCAsDecl->getASTMutationListener())
@@ -1876,8 +1871,7 @@ DependentDiagnostic *DependentDiagnostic::Create(ASTContext &C,
   if (!Parent->LookupPtr)
     Parent->CreateStoredDeclsMap(C);
 
-  DependentStoredDeclsMap *Map =
-      static_cast<DependentStoredDeclsMap *>(Parent->LookupPtr);
+  auto *Map = static_cast<DependentStoredDeclsMap *>(Parent->LookupPtr);
 
   // Allocate the copy of the PartialDiagnostic via the ASTContext's
   // BumpPtrAllocator, rather than the ASTContext itself.
@@ -1885,7 +1879,7 @@ DependentDiagnostic *DependentDiagnostic::Create(ASTContext &C,
   if (PDiag.hasStorage())
     DiagStorage = new (C) PartialDiagnostic::Storage;
   
-  DependentDiagnostic *DD = new (C) DependentDiagnostic(PDiag, DiagStorage);
+  auto *DD = new (C) DependentDiagnostic(PDiag, DiagStorage);
 
   // TODO: Maybe we shouldn't reverse the order during insertion.
   DD->NextDiagnostic = Map->FirstDiagnostic;

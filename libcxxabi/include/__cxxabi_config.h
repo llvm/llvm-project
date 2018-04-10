@@ -60,4 +60,14 @@
 #define _LIBCXXABI_WEAK __attribute__((__weak__))
 #endif
 
+#if defined(__clang__)
+#define _LIBCXXABI_COMPILER_CLANG
+#endif
+
+#if __has_attribute(__no_sanitize__) && defined(_LIBCXXABI_COMPILER_CLANG)
+#define _LIBCXXABI_NO_CFI __attribute__((__no_sanitize__("cfi")))
+#else
+#define _LIBCXXABI_NO_CFI
+#endif
+
 #endif // ____CXXABI_CONFIG_H

@@ -38721,25 +38721,6 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   }
 }
 
-/// This function checks if any of the users of EFLAGS copies the EFLAGS. We
-/// know that the code that lowers COPY of EFLAGS has to use the stack, and if
-/// we don't adjust the stack we clobber the first frame index.
-/// See X86InstrInfo::copyPhysReg.
-static bool hasCopyImplyingStackAdjustment(const MachineFunction &MF) {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  return any_of(MRI.reg_instructions(X86::EFLAGS),
-                [](const MachineInstr &RI) { return RI.isCopy(); });
-}
-
-void X86TargetLowering::finalizeLowering(MachineFunction &MF) const {
-  if (hasCopyImplyingStackAdjustment(MF)) {
-    MachineFrameInfo &MFI = MF.getFrameInfo();
-    MFI.setHasCopyImplyingStackAdjustment(true);
-  }
-
-  TargetLoweringBase::finalizeLowering(MF);
-}
-
 SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
                                                   SDValue Value, SDValue Addr,
                                                   SelectionDAG &DAG) const {

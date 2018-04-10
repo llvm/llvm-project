@@ -64,6 +64,7 @@ void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
+void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
 
 } // end namespace llvm
 
@@ -84,6 +85,7 @@ extern "C" void LLVMInitializeX86Target() {
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
+  initializeX86FlagsCopyLoweringPassPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -456,6 +458,7 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86AvoidStoreForwardingBlocks());
   }
 
+  addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86WinAllocaExpander());
 }
 void X86PassConfig::addMachineSSAOptimization() {

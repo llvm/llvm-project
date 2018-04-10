@@ -849,8 +849,6 @@ public:
   ClobberWalker(const MemorySSA &MSSA, AliasAnalysis &AA, DominatorTree &DT)
       : MSSA(MSSA), AA(AA), DT(DT) {}
 
-  void reset() {}
-
   /// Finds the nearest clobber for the given query, optimizing phis if
   /// possible.
   MemoryAccess *findClobber(MemoryAccess *Start, UpwardsMemoryQuery &Q) {
@@ -912,7 +910,6 @@ namespace llvm {
 /// but the name has been retained for the moment.
 class MemorySSA::CachingWalker final : public MemorySSAWalker {
   ClobberWalker Walker;
-  bool AutoResetWalker = true;
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *, UpwardsMemoryQuery &);
 
@@ -926,13 +923,6 @@ public:
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                           const MemoryLocation &) override;
   void invalidateInfo(MemoryAccess *) override;
-
-  /// Whether we call resetClobberWalker() after each time we *actually* walk to
-  /// answer a clobber query.
-  void setAutoResetWalker(bool AutoReset) { AutoResetWalker = AutoReset; }
-
-  /// Drop the walker's persistent data structures.
-  void resetClobberWalker() { Walker.reset(); }
 
   void verify(const MemorySSA *MSSA) override {
     MemorySSAWalker::verify(MSSA);
@@ -1399,11 +1389,7 @@ void MemorySSA::buildMemorySSA() {
 
   CachingWalker *Walker = getWalkerImpl();
 
-  // We're doing a batch of updates; don't drop useful caches between them.
-  Walker->setAutoResetWalker(false);
   OptimizeUses(this, Walker, AA, DT).optimizeUses();
-  Walker->setAutoResetWalker(true);
-  Walker->resetClobberWalker();
 
   // Mark the uses in unreachable blocks as live on entry, so that they go
   // somewhere.
@@ -1565,9 +1551,6 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   // construction, we ignore them.
   if (!Def && !Use)
     return nullptr;
-
-  assert((Def || Use) &&
-         "Trying to create a memory access with a non-memory instruction");
 
   MemoryUseOrDef *MUD;
   if (Def)
@@ -2023,15 +2006,7 @@ void MemorySSA::CachingWalker::invalidateInfo(MemoryAccess *MA) {
 /// \returns our clobbering memory access
 MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
     MemoryAccess *StartingAccess, UpwardsMemoryQuery &Q) {
-  MemoryAccess *New = Walker.findClobber(StartingAccess, Q);
-#ifdef EXPENSIVE_CHECKS
-  MemoryAccess *NewNoCache = Walker.findClobber(StartingAccess, Q);
-  assert(NewNoCache == New && "Cache made us hand back a different result?");
-  (void)NewNoCache;
-#endif
-  if (AutoResetWalker)
-    resetClobberWalker();
-  return New;
+  return Walker.findClobber(StartingAccess, Q);
 }
 
 MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(

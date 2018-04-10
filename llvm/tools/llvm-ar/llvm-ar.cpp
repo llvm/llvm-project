@@ -109,9 +109,9 @@ MODIFIERS (generic):
 )";
 
 void printHelpMessage() {
-  if (Stem.find("ranlib") != StringRef::npos)
+  if (Stem.find_lower("ranlib") != StringRef::npos)
     outs() << RanlibHelp;
-  else if (Stem.find("ar") != StringRef::npos)
+  else if (Stem.find_lower("ar") != StringRef::npos)
     outs() << ArHelp;
 }
 
@@ -960,16 +960,16 @@ int main(int argc, char **argv) {
   llvm::InitializeAllAsmParsers();
 
   Stem = sys::path::stem(ToolName);
-  if (Stem.find("dlltool") != StringRef::npos)
+  if (Stem.find_lower("dlltool") != StringRef::npos)
     return dlltoolDriverMain(makeArrayRef(argv, argc));
 
-  if (Stem.find("ranlib") != StringRef::npos)
+  if (Stem.find_lower("ranlib") != StringRef::npos)
     return ranlib_main(argc, argv);
 
-  if (Stem.find("lib") != StringRef::npos)
+  if (Stem.find_lower("lib") != StringRef::npos)
     return libDriverMain(makeArrayRef(argv, argc));
 
-  if (Stem.find("ar") != StringRef::npos)
+  if (Stem.find_lower("ar") != StringRef::npos)
     return ar_main(argc, argv);
   fail("Not ranlib, ar, lib or dlltool!");
 }
