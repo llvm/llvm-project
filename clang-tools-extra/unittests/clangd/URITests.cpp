@@ -93,7 +93,7 @@ std::string resolveOrDie(const URI &U, llvm::StringRef HintPath = "") {
 }
 
 TEST(URITest, Create) {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   EXPECT_THAT(createOrDie("c:\\x\\y\\z"), "file:///c%3a/x/y/z");
 #else
   EXPECT_THAT(createOrDie("/x/y/z"), "file:///x/y/z");
@@ -162,7 +162,7 @@ TEST(URITest, ParseFailed) {
 }
 
 TEST(URITest, Resolve) {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   EXPECT_THAT(resolveOrDie(parseOrDie("file:///c%3a/x/y/z")), "c:\\x\\y\\z");
 #else
   EXPECT_EQ(resolveOrDie(parseOrDie("file:/a/b/c")), "/a/b/c");

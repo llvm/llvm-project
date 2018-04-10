@@ -3565,7 +3565,9 @@ void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
 
     // Start with removing all of the statement's accesses including erasing it
     // from all maps that are pointing to them.
-    for (auto *MA : *StmtIt)
+    // Make a temporary copy because removing MAs invalidates the iterator.
+    SmallVector<MemoryAccess *, 16> MAList(StmtIt->begin(), StmtIt->end());
+    for (MemoryAccess *MA : MAList)
       StmtIt->removeSingleMemoryAccess(MA, AfterHoisting);
 
     removeFromStmtMap(*StmtIt);

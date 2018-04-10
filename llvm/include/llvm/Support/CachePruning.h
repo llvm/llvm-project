@@ -52,9 +52,8 @@ struct CachePruningPolicy {
   /// the number of files based pruning.
   ///
   /// This defaults to 1000000 because with that many files there are
-  /// diminishing returns on the effectiveness of the cache, and some file
-  /// systems have a limit on how many files can be contained in a directory
-  /// (notably ext4, which is limited to around 6000000 files).
+  /// diminishing returns on the effectiveness of the cache, and file
+  /// systems have a limit on total number of files.
   uint64_t MaxSizeFiles = 1000000;
 };
 

@@ -242,7 +242,8 @@ bool ShadowCallStack::runOnMachineFunction(MachineFunction &Fn) {
       for (auto &LiveIn : MBB.liveins())
         UsedRegs.set(LiveIn.PhysReg);
       for (auto &MI : MBB) {
-        InstructionCount++;
+        if (!MI.isDebugValue() && !MI.isCFIInstruction() && !MI.isLabel())
+          InstructionCount++;
         for (auto &Op : MI.operands())
           if (Op.isReg() && Op.isDef())
             UsedRegs.set(Op.getReg());

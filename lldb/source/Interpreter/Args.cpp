@@ -12,11 +12,11 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -401,121 +401,6 @@ void Args::Clear() {
   m_argv.push_back(nullptr);
 }
 
-lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
-                                   llvm::StringRef s, lldb::addr_t fail_value,
-                                   Status *error_ptr) {
-  bool error_set = false;
-  if (s.empty()) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
-    return fail_value;
-  }
-
-  llvm::StringRef sref = s;
-
-  lldb::addr_t addr = LLDB_INVALID_ADDRESS;
-  if (!s.getAsInteger(0, addr)) {
-    if (error_ptr)
-      error_ptr->Clear();
-    return addr;
-  }
-
-  // Try base 16 with no prefix...
-  if (!s.getAsInteger(16, addr)) {
-    if (error_ptr)
-      error_ptr->Clear();
-    return addr;
-  }
-
-  Target *target = nullptr;
-  if (!exe_ctx || !(target = exe_ctx->GetTargetPtr())) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
-    return fail_value;
-  }
-
-  lldb::ValueObjectSP valobj_sp;
-  EvaluateExpressionOptions options;
-  options.SetCoerceToId(false);
-  options.SetUnwindOnError(true);
-  options.SetKeepInMemory(false);
-  options.SetTryAllThreads(true);
-
-  ExpressionResults expr_result =
-      target->EvaluateExpression(s, exe_ctx->GetFramePtr(), valobj_sp, options);
-
-  bool success = false;
-  if (expr_result == eExpressionCompleted) {
-    if (valobj_sp)
-      valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
-          valobj_sp->GetDynamicValueType(), true);
-    // Get the address to watch.
-    if (valobj_sp)
-      addr = valobj_sp->GetValueAsUnsigned(fail_value, &success);
-    if (success) {
-      if (error_ptr)
-        error_ptr->Clear();
-      return addr;
-    } else {
-      if (error_ptr) {
-        error_set = true;
-        error_ptr->SetErrorStringWithFormat(
-            "address expression \"%s\" resulted in a value whose type "
-            "can't be converted to an address: %s",
-            s.str().c_str(), valobj_sp->GetTypeName().GetCString());
-      }
-    }
-
-  } else {
-    // Since the compiler can't handle things like "main + 12" we should
-    // try to do this for now. The compiler doesn't like adding offsets
-    // to function pointer types.
-    static RegularExpression g_symbol_plus_offset_regex(
-        "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
-    RegularExpression::Match regex_match(3);
-    if (g_symbol_plus_offset_regex.Execute(sref, &regex_match)) {
-      uint64_t offset = 0;
-      bool add = true;
-      std::string name;
-      std::string str;
-      if (regex_match.GetMatchAtIndex(s, 1, name)) {
-        if (regex_match.GetMatchAtIndex(s, 2, str)) {
-          add = str[0] == '+';
-
-          if (regex_match.GetMatchAtIndex(s, 3, str)) {
-            if (!llvm::StringRef(str).getAsInteger(0, offset)) {
-              Status error;
-              addr = StringToAddress(exe_ctx, name.c_str(),
-                                     LLDB_INVALID_ADDRESS, &error);
-              if (addr != LLDB_INVALID_ADDRESS) {
-                if (add)
-                  return addr + offset;
-                else
-                  return addr - offset;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (error_ptr) {
-      error_set = true;
-      error_ptr->SetErrorStringWithFormat(
-          "address expression \"%s\" evaluation failed", s.str().c_str());
-    }
-  }
-
-  if (error_ptr) {
-    if (!error_set)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
-  }
-  return fail_value;
-}
-
 const char *Args::StripSpaces(std::string &s, bool leading, bool trailing,
                               bool return_null_if_empty) {
   static const char *k_white_space = " \t\v";
@@ -537,34 +422,6 @@ const char *Args::StripSpaces(std::string &s, bool leading, bool trailing,
   if (return_null_if_empty && s.empty())
     return nullptr;
   return s.c_str();
-}
-
-bool Args::StringToBoolean(llvm::StringRef ref, bool fail_value,
-                           bool *success_ptr) {
-  if (success_ptr)
-    *success_ptr = true;
-  ref = ref.trim();
-  if (ref.equals_lower("false") || ref.equals_lower("off") ||
-      ref.equals_lower("no") || ref.equals_lower("0")) {
-    return false;
-  } else if (ref.equals_lower("true") || ref.equals_lower("on") ||
-             ref.equals_lower("yes") || ref.equals_lower("1")) {
-    return true;
-  }
-  if (success_ptr)
-    *success_ptr = false;
-  return fail_value;
-}
-
-char Args::StringToChar(llvm::StringRef s, char fail_value, bool *success_ptr) {
-  if (success_ptr)
-    *success_ptr = false;
-  if (s.size() != 1)
-    return fail_value;
-
-  if (success_ptr)
-    *success_ptr = true;
-  return s[0];
 }
 
 bool Args::StringToVersion(llvm::StringRef string, uint32_t &major,
@@ -626,98 +483,6 @@ const char *Args::GetShellSafeArgument(const FileSpec &shell,
       break;
   }
   return safe_arg.c_str();
-}
-
-int64_t Args::StringToOptionEnum(llvm::StringRef s,
-                                 OptionEnumValueElement *enum_values,
-                                 int32_t fail_value, Status &error) {
-  error.Clear();
-  if (!enum_values) {
-    error.SetErrorString("invalid enumeration argument");
-    return fail_value;
-  }
-
-  if (s.empty()) {
-    error.SetErrorString("empty enumeration string");
-    return fail_value;
-  }
-
-  for (int i = 0; enum_values[i].string_value != nullptr; i++) {
-    llvm::StringRef this_enum(enum_values[i].string_value);
-    if (this_enum.startswith(s))
-      return enum_values[i].value;
-  }
-
-  StreamString strm;
-  strm.PutCString("invalid enumeration value, valid values are: ");
-  for (int i = 0; enum_values[i].string_value != nullptr; i++) {
-    strm.Printf("%s\"%s\"", i > 0 ? ", " : "", enum_values[i].string_value);
-  }
-  error.SetErrorString(strm.GetString());
-  return fail_value;
-}
-
-lldb::ScriptLanguage
-Args::StringToScriptLanguage(llvm::StringRef s, lldb::ScriptLanguage fail_value,
-                             bool *success_ptr) {
-  if (success_ptr)
-    *success_ptr = true;
-
-  if (s.equals_lower("python"))
-    return eScriptLanguagePython;
-  if (s.equals_lower("default"))
-    return eScriptLanguageDefault;
-  if (s.equals_lower("none"))
-    return eScriptLanguageNone;
-
-  if (success_ptr)
-    *success_ptr = false;
-  return fail_value;
-}
-
-Status Args::StringToFormat(const char *s, lldb::Format &format,
-                            size_t *byte_size_ptr) {
-  format = eFormatInvalid;
-  Status error;
-
-  if (s && s[0]) {
-    if (byte_size_ptr) {
-      if (isdigit(s[0])) {
-        char *format_char = nullptr;
-        unsigned long byte_size = ::strtoul(s, &format_char, 0);
-        if (byte_size != ULONG_MAX)
-          *byte_size_ptr = byte_size;
-        s = format_char;
-      } else
-        *byte_size_ptr = 0;
-    }
-
-    const bool partial_match_ok = true;
-    if (!FormatManager::GetFormatFromCString(s, partial_match_ok, format)) {
-      StreamString error_strm;
-      error_strm.Printf(
-          "Invalid format character or name '%s'. Valid values are:\n", s);
-      for (Format f = eFormatDefault; f < kNumFormats; f = Format(f + 1)) {
-        char format_char = FormatManager::GetFormatAsFormatChar(f);
-        if (format_char)
-          error_strm.Printf("'%c' or ", format_char);
-
-        error_strm.Printf("\"%s\"", FormatManager::GetFormatAsCString(f));
-        error_strm.EOL();
-      }
-
-      if (byte_size_ptr)
-        error_strm.PutCString(
-            "An optional byte size can precede the format character.\n");
-      error.SetErrorString(error_strm.GetString());
-    }
-
-    if (error.Fail())
-      return error;
-  } else {
-    error.SetErrorStringWithFormat("%s option string", s ? "empty" : "invalid");
-  }
-  return error;
 }
 
 lldb::Encoding Args::StringToEncoding(llvm::StringRef s,
@@ -854,7 +619,7 @@ void Args::ExpandEscapedCharacters(const char *src, std::string &dst) {
   dst.clear();
   if (src) {
     for (const char *p = src; *p != '\0'; ++p) {
-      if (isprint8(*p))
+      if (isprint(*p))
         dst.append(1, *p);
       else {
         switch (*p) {

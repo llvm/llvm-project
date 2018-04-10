@@ -59,7 +59,7 @@ sequence of MCInst is then analyzed by a 'Backend' module to generate a
 performance report.
 
 The Backend module internally emulates the execution of the machine code
-sequence in a loop of iterations (which by default is 70). At the end of this
+sequence in a loop of iterations (which by default is 100). At the end of this
 process, the backend collects a number of statistics which are then printed out
 in the form of a report.
 

@@ -28,7 +28,7 @@ class SourceMgr {
   const InstVec &Sequence;
   unsigned Current;
   unsigned Iterations;
-  static const unsigned DefaultIterations = 70;
+  static const unsigned DefaultIterations = 100;
 
 public:
   SourceMgr(const InstVec &MCInstSequence, unsigned NumIterations)

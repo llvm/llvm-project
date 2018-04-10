@@ -76,10 +76,15 @@ LatencyBenchmarkRunner::runMeasurements(const LLVMState &State,
   // measure several times and take the minimum value.
   constexpr const int NumMeasurements = 30;
   int64_t MinLatency = std::numeric_limits<int64_t>::max();
-  // FIXME: Read the perf event from the MCSchedModel (see PR36984).
-  const pfm::PerfEvent CyclesPerfEvent("UNHALTED_CORE_CYCLES");
+  const char *CounterName = State.getSubtargetInfo()
+                                .getSchedModel()
+                                .getExtraProcessorInfo()
+                                .PfmCounters.CycleCounter;
+  if (!CounterName)
+    llvm::report_fatal_error("sched model does not define a cycle counter");
+  const pfm::PerfEvent CyclesPerfEvent(CounterName);
   if (!CyclesPerfEvent.valid())
-    llvm::report_fatal_error("invalid perf event 'UNHALTED_CORE_CYCLES'");
+    llvm::report_fatal_error("invalid perf event");
   for (size_t I = 0; I < NumMeasurements; ++I) {
     pfm::Counter Counter(CyclesPerfEvent);
     Counter.start();

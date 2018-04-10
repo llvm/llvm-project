@@ -45,6 +45,9 @@ private:
                                                         StringRef InFile);
 
 protected:
+  static constexpr const char *GroupName = "factions";
+  static constexpr const char *GroupDescription =
+      "===== Frontend Actions =====";
   /// @name Implementation Action Interface
   /// @{
 

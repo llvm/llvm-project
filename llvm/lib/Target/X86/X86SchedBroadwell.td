@@ -163,7 +163,7 @@ defm : BWWriteResPair<WriteFRsqrt, [BWPort0], 5>; // Floating point reciprocal s
 defm : BWWriteResPair<WriteFMA,    [BWPort01], 5>; // Fused Multiply Add.
 defm : BWWriteResPair<WriteFShuffle,  [BWPort5],  1>; // Floating point vector shuffles.
 defm : BWWriteResPair<WriteFBlend,  [BWPort015],  1>; // Floating point vector blends.
-defm : BWWriteResPair<WriteFVarBlend,  [HWPort5], 2, [2]>; // Fp vector variable blends.
+defm : BWWriteResPair<WriteFVarBlend,  [BWPort5], 2, [2]>; // Fp vector variable blends.
 
 // FMA Scheduling helper class.
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }

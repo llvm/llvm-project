@@ -45,7 +45,7 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
 }
 
 const char *testRoot() {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   return "C:\\clangd-test";
 #else
   return "/clangd-test";

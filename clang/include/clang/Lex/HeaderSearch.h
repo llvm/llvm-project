@@ -21,15 +21,19 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Timer.h"
 #include <cassert>
 #include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+static const char *const IncGroupName = "includefiles";
+static const char *const IncGroupDescription = "===== Include Files =====";
 
 namespace clang {
 

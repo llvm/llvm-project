@@ -6796,102 +6796,12 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  bool FromEFLAGS = SrcReg == X86::EFLAGS;
-  bool ToEFLAGS = DestReg == X86::EFLAGS;
-  int Reg = FromEFLAGS ? DestReg : SrcReg;
-  bool is32 = X86::GR32RegClass.contains(Reg);
-  bool is64 = X86::GR64RegClass.contains(Reg);
-
-  if ((FromEFLAGS || ToEFLAGS) && (is32 || is64)) {
-    int Mov = is64 ? X86::MOV64rr : X86::MOV32rr;
-    int Push = is64 ? X86::PUSH64r : X86::PUSH32r;
-    int PushF = is64 ? X86::PUSHF64 : X86::PUSHF32;
-    int Pop = is64 ? X86::POP64r : X86::POP32r;
-    int PopF = is64 ? X86::POPF64 : X86::POPF32;
-    int AX = is64 ? X86::RAX : X86::EAX;
-
-    if (!Subtarget.hasLAHFSAHF()) {
-      assert(Subtarget.is64Bit() &&
-             "Not having LAHF/SAHF only happens on 64-bit.");
-      // Moving EFLAGS to / from another register requires a push and a pop.
-      // Notice that we have to adjust the stack if we don't want to clobber the
-      // first frame index. See X86FrameLowering.cpp - usesTheStack.
-      if (FromEFLAGS) {
-        BuildMI(MBB, MI, DL, get(PushF));
-        BuildMI(MBB, MI, DL, get(Pop), DestReg);
-      }
-      if (ToEFLAGS) {
-        BuildMI(MBB, MI, DL, get(Push))
-            .addReg(SrcReg, getKillRegState(KillSrc));
-        BuildMI(MBB, MI, DL, get(PopF));
-      }
-      return;
-    }
-
-    // The flags need to be saved, but saving EFLAGS with PUSHF/POPF is
-    // inefficient. Instead:
-    //   - Save the overflow flag OF into AL using SETO, and restore it using a
-    //     signed 8-bit addition of AL and INT8_MAX.
-    //   - Save/restore the bottom 8 EFLAGS bits (CF, PF, AF, ZF, SF) to/from AH
-    //     using LAHF/SAHF.
-    //   - When RAX/EAX is live and isn't the destination register, make sure it
-    //     isn't clobbered by PUSH/POP'ing it before and after saving/restoring
-    //     the flags.
-    // This approach is ~2.25x faster than using PUSHF/POPF.
-    //
-    // This is still somewhat inefficient because we don't know which flags are
-    // actually live inside EFLAGS. Were we able to do a single SETcc instead of
-    // SETO+LAHF / ADDB+SAHF the code could be 1.02x faster.
-    //
-    // PUSHF/POPF is also potentially incorrect because it affects other flags
-    // such as TF/IF/DF, which LLVM doesn't model.
-    //
-    // Notice that we have to adjust the stack if we don't want to clobber the
-    // first frame index.
-    // See X86ISelLowering.cpp - X86::hasCopyImplyingStackAdjustment.
-
-    const TargetRegisterInfo &TRI = getRegisterInfo();
-    MachineBasicBlock::LivenessQueryResult LQR =
-        MBB.computeRegisterLiveness(&TRI, AX, MI);
-    // We do not want to save and restore AX if we do not have to.
-    // Moreover, if we do so whereas AX is dead, we would need to set
-    // an undef flag on the use of AX, otherwise the verifier will
-    // complain that we read an undef value.
-    // We do not want to change the behavior of the machine verifier
-    // as this is usually wrong to read an undef value.
-    if (MachineBasicBlock::LQR_Unknown == LQR) {
-      LivePhysRegs LPR(TRI);
-      LPR.addLiveOuts(MBB);
-      MachineBasicBlock::iterator I = MBB.end();
-      while (I != MI) {
-        --I;
-        LPR.stepBackward(*I);
-      }
-      // AX contains the top most register in the aliasing hierarchy.
-      // It may not be live, but one of its aliases may be.
-      for (MCRegAliasIterator AI(AX, &TRI, true);
-           AI.isValid() && LQR != MachineBasicBlock::LQR_Live; ++AI)
-        LQR = LPR.contains(*AI) ? MachineBasicBlock::LQR_Live
-                                : MachineBasicBlock::LQR_Dead;
-    }
-    bool AXDead = (Reg == AX) || (MachineBasicBlock::LQR_Dead == LQR);
-    if (!AXDead)
-      BuildMI(MBB, MI, DL, get(Push)).addReg(AX, getKillRegState(true));
-    if (FromEFLAGS) {
-      BuildMI(MBB, MI, DL, get(X86::SETOr), X86::AL);
-      BuildMI(MBB, MI, DL, get(X86::LAHF));
-      BuildMI(MBB, MI, DL, get(Mov), Reg).addReg(AX);
-    }
-    if (ToEFLAGS) {
-      BuildMI(MBB, MI, DL, get(Mov), AX).addReg(Reg, getKillRegState(KillSrc));
-      BuildMI(MBB, MI, DL, get(X86::ADD8ri), X86::AL)
-          .addReg(X86::AL)
-          .addImm(INT8_MAX);
-      BuildMI(MBB, MI, DL, get(X86::SAHF));
-    }
-    if (!AXDead)
-      BuildMI(MBB, MI, DL, get(Pop), AX);
-    return;
+  if (SrcReg == X86::EFLAGS || DestReg == X86::EFLAGS) {
+    // FIXME: We use a fatal error here because historically LLVM has tried
+    // lower some of these physreg copies and we want to ensure we get
+    // reasonable bug reports if someone encounters a case no other testing
+    // found. This path should be removed after the LLVM 7 release.
+    report_fatal_error("Unable to copy EFLAGS physical register!");
   }
 
   DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg)
@@ -9571,8 +9481,9 @@ bool X86InstrInfo::
 isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
   // FIXME: Return false for x87 stack register classes for now. We can't
   // allow any loads of these registers before FpGet_ST0_80.
-  return !(RC == &X86::CCRRegClass || RC == &X86::RFP32RegClass ||
-           RC == &X86::RFP64RegClass || RC == &X86::RFP80RegClass);
+  return !(RC == &X86::CCRRegClass || RC == &X86::DFCCRRegClass ||
+           RC == &X86::RFP32RegClass || RC == &X86::RFP64RegClass ||
+           RC == &X86::RFP80RegClass);
 }
 
 /// Return a virtual register initialized with the

@@ -172,6 +172,18 @@ struct MCExtraProcessorInfo {
   unsigned NumRegisterFiles;
   const MCRegisterCostEntry *RegisterCostTable;
   unsigned NumRegisterCostEntries;
+
+  struct PfmCountersInfo {
+    // An optional name of a performance counter that can be used to measure
+    // cycles.
+    const char *CycleCounter;
+
+    // For each MCProcResourceDesc defined by the processor, an optional list of
+    // names of performance counters that can be used to measure the resource
+    // utilization.
+    const char **IssueCounters;
+  };
+  PfmCountersInfo PfmCounters;
 };
 
 /// Machine model for scheduling, bundling, and heuristics.

@@ -227,7 +227,7 @@ double test_mm512_reduce_max_pd(__m512d __W){
 // CHECK:   [[TMP6:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP7:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP8:%.*]] = icmp sgt <8 x i64> [[TMP5]], [[TMP6]]
+// CHECK:   [[TMP8:%.*]] = icmp slt <8 x i64> [[TMP5]], [[TMP6]]
 // CHECK:   [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i64> [[TMP5]], <8 x i64> [[TMP6]]
 // CHECK:   store <8 x i64> [[TMP9]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP10:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
@@ -242,7 +242,7 @@ double test_mm512_reduce_max_pd(__m512d __W){
 // CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
 // CHECK:   [[TMP16:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP17:%.*]] = icmp sgt <8 x i64> [[TMP14]], [[TMP15]]
+// CHECK:   [[TMP17:%.*]] = icmp slt <8 x i64> [[TMP14]], [[TMP15]]
 // CHECK:   [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i64> [[TMP14]], <8 x i64> [[TMP15]]
 // CHECK:   store <8 x i64> [[TMP18]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP19:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
@@ -257,14 +257,14 @@ double test_mm512_reduce_max_pd(__m512d __W){
 // CHECK:   [[TMP24:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I10_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
 // CHECK:   [[TMP25:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
-// CHECK:   [[TMP26:%.*]] = icmp sgt <8 x i64> [[TMP23]], [[TMP24]]
+// CHECK:   [[TMP26:%.*]] = icmp slt <8 x i64> [[TMP23]], [[TMP24]]
 // CHECK:   [[TMP27:%.*]] = select <8 x i1> [[TMP26]], <8 x i64> [[TMP23]], <8 x i64> [[TMP24]]
 // CHECK:   store <8 x i64> [[TMP27]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP28:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[VECEXT_I:%.*]] = extractelement <8 x i64> [[TMP28]], i32 0
 // CHECK:   ret i64 [[VECEXT_I]]
 long long test_mm512_reduce_min_epi64(__m512i __W){
-  return _mm512_reduce_max_epi64(__W);
+  return _mm512_reduce_min_epi64(__W);
 }
 
 // CHECK-LABEL: define i64 @test_mm512_reduce_min_epu64(<8 x i64> %__W) #0 {
@@ -294,7 +294,7 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK:   [[TMP6:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP7:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP8:%.*]] = icmp ugt <8 x i64> [[TMP5]], [[TMP6]]
+// CHECK:   [[TMP8:%.*]] = icmp ult <8 x i64> [[TMP5]], [[TMP6]]
 // CHECK:   [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i64> [[TMP5]], <8 x i64> [[TMP6]]
 // CHECK:   store <8 x i64> [[TMP9]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP10:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
@@ -309,7 +309,7 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
 // CHECK:   [[TMP16:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP17:%.*]] = icmp ugt <8 x i64> [[TMP14]], [[TMP15]]
+// CHECK:   [[TMP17:%.*]] = icmp ult <8 x i64> [[TMP14]], [[TMP15]]
 // CHECK:   [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i64> [[TMP14]], <8 x i64> [[TMP15]]
 // CHECK:   store <8 x i64> [[TMP18]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP19:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
@@ -324,14 +324,14 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK:   [[TMP24:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I10_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
 // CHECK:   [[TMP25:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
-// CHECK:   [[TMP26:%.*]] = icmp ugt <8 x i64> [[TMP23]], [[TMP24]]
+// CHECK:   [[TMP26:%.*]] = icmp ult <8 x i64> [[TMP23]], [[TMP24]]
 // CHECK:   [[TMP27:%.*]] = select <8 x i1> [[TMP26]], <8 x i64> [[TMP23]], <8 x i64> [[TMP24]]
 // CHECK:   store <8 x i64> [[TMP27]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP28:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[VECEXT_I:%.*]] = extractelement <8 x i64> [[TMP28]], i32 0
 // CHECK:   ret i64 [[VECEXT_I]]
 unsigned long long test_mm512_reduce_min_epu64(__m512i __W){
-  return _mm512_reduce_max_epu64(__W); 
+  return _mm512_reduce_min_epu64(__W);
 }
 
 // CHECK-LABEL: define double @test_mm512_reduce_min_pd(<8 x double> %__W) #0 {
@@ -813,7 +813,7 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x i64> [[TMP1]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP2:%.*]] = load i8, i8* [[__M_ADDR_I]], align 1
 // CHECK:   [[TMP3:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
-// CHECK:   store i64 0, i64* [[__D_ADDR_I_I]], align 8
+// CHECK:   store i64 -1, i64* [[__D_ADDR_I_I]], align 8
 // CHECK:   [[TMP4:%.*]] = load i64, i64* [[__D_ADDR_I_I]], align 8
 // CHECK:   [[VECINIT_I_I:%.*]] = insertelement <8 x i64> undef, i64 [[TMP4]], i32 0
 // CHECK:   [[TMP5:%.*]] = load i64, i64* [[__D_ADDR_I_I]], align 8
@@ -847,7 +847,7 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   [[TMP20:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
 // CHECK:   [[TMP21:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP22:%.*]] = icmp ugt <8 x i64> [[TMP19]], [[TMP20]]
+// CHECK:   [[TMP22:%.*]] = icmp ult <8 x i64> [[TMP19]], [[TMP20]]
 // CHECK:   [[TMP23:%.*]] = select <8 x i1> [[TMP22]], <8 x i64> [[TMP19]], <8 x i64> [[TMP20]]
 // CHECK:   store <8 x i64> [[TMP23]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP24:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
@@ -862,7 +862,7 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   [[TMP29:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I11_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
 // CHECK:   [[TMP30:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
-// CHECK:   [[TMP31:%.*]] = icmp ugt <8 x i64> [[TMP28]], [[TMP29]]
+// CHECK:   [[TMP31:%.*]] = icmp ult <8 x i64> [[TMP28]], [[TMP29]]
 // CHECK:   [[TMP32:%.*]] = select <8 x i1> [[TMP31]], <8 x i64> [[TMP28]], <8 x i64> [[TMP29]]
 // CHECK:   store <8 x i64> [[TMP32]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP33:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
@@ -877,14 +877,14 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP39:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP40:%.*]] = icmp ugt <8 x i64> [[TMP37]], [[TMP38]]
+// CHECK:   [[TMP40:%.*]] = icmp ult <8 x i64> [[TMP37]], [[TMP38]]
 // CHECK:   [[TMP41:%.*]] = select <8 x i1> [[TMP40]], <8 x i64> [[TMP37]], <8 x i64> [[TMP38]]
 // CHECK:   store <8 x i64> [[TMP41]], <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP42:%.*]] = load <8 x i64>, <8 x i64>* [[__V_ADDR_I]], align 64
 // CHECK:   [[VECEXT_I:%.*]] = extractelement <8 x i64> [[TMP42]], i32 0
 // CHECK:   ret i64 [[VECEXT_I]]
 long long test_mm512_mask_reduce_min_epu64(__mmask8 __M, __m512i __W){
-  return _mm512_mask_reduce_max_epu64(__M, __W); 
+  return _mm512_mask_reduce_min_epu64(__M, __W);
 }
 
 // CHECK-LABEL: define double @test_mm512_mask_reduce_min_pd(i8 zeroext %__M, <8 x double> %__W) #0 {

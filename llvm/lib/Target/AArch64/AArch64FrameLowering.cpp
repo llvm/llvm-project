@@ -1032,20 +1032,36 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
     // Argument access should always use the FP.
     if (isFixed) {
       UseFP = hasFP(MF);
-    } else if (hasFP(MF) && !RegInfo->hasBasePointer(MF) &&
-               !RegInfo->needsStackRealignment(MF)) {
-      // Use SP or FP, whichever gives us the best chance of the offset
-      // being in range for direct access. If the FPOffset is positive,
-      // that'll always be best, as the SP will be even further away.
+    } else if (hasFP(MF) && !RegInfo->needsStackRealignment(MF)) {
       // If the FPOffset is negative, we have to keep in mind that the
       // available offset range for negative offsets is smaller than for
-      // positive ones. If we have variable sized objects, we're stuck with
-      // using the FP regardless, though, as the SP offset is unknown
-      // and we don't have a base pointer available. If an offset is
+      // positive ones. If an offset is
       // available via the FP and the SP, use whichever is closest.
-      if (PreferFP || MFI.hasVarSizedObjects() || FPOffset >= 0 ||
-          (FPOffset >= -256 && Offset > -FPOffset))
+      bool FPOffsetFits = FPOffset >= -256;
+      PreferFP |= Offset > -FPOffset;
+
+      if (MFI.hasVarSizedObjects()) {
+        // If we have variable sized objects, we can use either FP or BP, as the
+        // SP offset is unknown. We can use the base pointer if we have one and
+        // FP is not preferred. If not, we're stuck with using FP.
+        bool CanUseBP = RegInfo->hasBasePointer(MF);
+        if (FPOffsetFits && CanUseBP) // Both are ok. Pick the best.
+          UseFP = PreferFP;
+        else if (!CanUseBP) // Can't use BP. Forced to use FP.
+          UseFP = true;
+        // else we can use BP and FP, but the offset from FP won't fit.
+        // That will make us scavenge registers which we can probably avoid by
+        // using BP. If it won't fit for BP either, we'll scavenge anyway.
+      } else if (PreferFP || FPOffset >= 0) {
+        // Use SP or FP, whichever gives us the best chance of the offset
+        // being in range for direct access. If the FPOffset is positive,
+        // that'll always be best, as the SP will be even further away.
         UseFP = true;
+      } else {
+        // We have the choice between FP and (SP or BP).
+        if (FPOffsetFits && PreferFP) // If FP is the best fit, use it.
+          UseFP = true;
+      }
     }
   }
 
@@ -1062,6 +1078,8 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
   if (RegInfo->hasBasePointer(MF))
     FrameReg = RegInfo->getBaseRegister();
   else {
+    assert(!MFI.hasVarSizedObjects() &&
+           "Can't use SP when we have var sized objects.");
     FrameReg = AArch64::SP;
     // If we're using the red zone for this function, the SP won't actually
     // be adjusted, so the offsets will be negative. They're also all

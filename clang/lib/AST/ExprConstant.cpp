@@ -452,8 +452,8 @@ namespace {
 
     // Note that we intentionally use std::map here so that references to
     // values are stable.
-    typedef std::map<const void*, APValue> MapTy;
-    typedef MapTy::const_iterator temp_iterator;
+    typedef std::pair<const void *, unsigned> MapKeyTy;
+    typedef std::map<MapKeyTy, APValue> MapTy;
     /// Temporaries - Temporary lvalues materialized within this stack frame.
     MapTy Temporaries;
 
@@ -462,6 +462,20 @@ namespace {
 
     /// Index - The call index of this call.
     unsigned Index;
+
+    /// The stack of integers for tracking version numbers for temporaries.
+    SmallVector<unsigned, 2> TempVersionStack = {1};
+    unsigned CurTempVersion = TempVersionStack.back();
+
+    unsigned getTempVersion() const { return TempVersionStack.back(); }
+
+    void pushTempVersion() {
+      TempVersionStack.push_back(++CurTempVersion);
+    }
+
+    void popTempVersion() {
+      TempVersionStack.pop_back();
+    }
 
     // FIXME: Adding this to every 'CallStackFrame' may have a nontrivial impact
     // on the overall stack usage of deeply-recursing constexpr evaluataions.
@@ -479,10 +493,36 @@ namespace {
                    APValue *Arguments);
     ~CallStackFrame();
 
-    APValue *getTemporary(const void *Key) {
-      MapTy::iterator I = Temporaries.find(Key);
-      return I == Temporaries.end() ? nullptr : &I->second;
+    // Return the temporary for Key whose version number is Version.
+    APValue *getTemporary(const void *Key, unsigned Version) {
+      MapKeyTy KV(Key, Version);
+      auto LB = Temporaries.lower_bound(KV);
+      if (LB != Temporaries.end() && LB->first == KV)
+        return &LB->second;
+      // Pair (Key,Version) wasn't found in the map. Check that no elements
+      // in the map have 'Key' as their key.
+      assert((LB == Temporaries.end() || LB->first.first != Key) &&
+             (LB == Temporaries.begin() || std::prev(LB)->first.first != Key) &&
+             "Element with key 'Key' found in map");
+      return nullptr;
     }
+
+    // Return the current temporary for Key in the map.
+    APValue *getCurrentTemporary(const void *Key) {
+      auto UB = Temporaries.upper_bound(MapKeyTy(Key, UINT_MAX));
+      if (UB != Temporaries.begin() && std::prev(UB)->first.first == Key)
+        return &std::prev(UB)->second;
+      return nullptr;
+    }
+
+    // Return the version number of the current temporary for Key.
+    unsigned getCurrentTemporaryVersion(const void *Key) const {
+      auto UB = Temporaries.upper_bound(MapKeyTy(Key, UINT_MAX));
+      if (UB != Temporaries.begin() && std::prev(UB)->first.first == Key)
+        return std::prev(UB)->first.second;
+      return 0;
+    }
+
     APValue &createTemporary(const void *Key, bool IsLifetimeExtended);
   };
 
@@ -612,7 +652,8 @@ namespace {
 
     /// EvaluatingObject - Pair of the AST node that an lvalue represents and
     /// the call index that that lvalue was allocated in.
-    typedef std::pair<APValue::LValueBase, unsigned> EvaluatingObject;
+    typedef std::pair<APValue::LValueBase, std::pair<unsigned, unsigned>>
+        EvaluatingObject;
 
     /// EvaluatingConstructors - Set of objects that are currently being
     /// constructed.
@@ -631,8 +672,10 @@ namespace {
       }
     };
 
-    bool isEvaluatingConstructor(APValue::LValueBase Decl, unsigned CallIndex) {
-      return EvaluatingConstructors.count(EvaluatingObject(Decl, CallIndex));
+    bool isEvaluatingConstructor(APValue::LValueBase Decl, unsigned CallIndex,
+                                 unsigned Version) {
+      return EvaluatingConstructors.count(
+          EvaluatingObject(Decl, {CallIndex, Version}));
     }
 
     /// The current array initialization index, if we're performing array
@@ -728,7 +771,7 @@ namespace {
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value) {
       EvaluatingDecl = Base;
       EvaluatingDeclValue = &Value;
-      EvaluatingConstructors.insert({Base, 0});
+      EvaluatingConstructors.insert({Base, {0, 0}});
     }
 
     const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
@@ -1092,11 +1135,16 @@ namespace {
     unsigned OldStackSize;
   public:
     ScopeRAII(EvalInfo &Info)
-        : Info(Info), OldStackSize(Info.CleanupStack.size()) {}
+        : Info(Info), OldStackSize(Info.CleanupStack.size()) {
+      // Push a new temporary version. This is needed to distinguish between
+      // temporaries created in different iterations of a loop.
+      Info.CurrentCall->pushTempVersion();
+    }
     ~ScopeRAII() {
       // Body moved to a static method to encourage the compiler to inline away
       // instances of this class.
       cleanup(Info, OldStackSize);
+      Info.CurrentCall->popTempVersion();
     }
   private:
     static void cleanup(EvalInfo &Info, unsigned OldStackSize) {
@@ -1176,7 +1224,8 @@ CallStackFrame::~CallStackFrame() {
 
 APValue &CallStackFrame::createTemporary(const void *Key,
                                          bool IsLifetimeExtended) {
-  APValue &Result = Temporaries[Key];
+  unsigned Version = Info.CurrentCall->getTempVersion();
+  APValue &Result = Temporaries[MapKeyTy(Key, Version)];
   assert(Result.isUninit() && "temporary created multiple times");
   Info.CleanupStack.push_back(Cleanup(&Result, IsLifetimeExtended));
   return Result;
@@ -1268,27 +1317,27 @@ namespace {
   struct LValue {
     APValue::LValueBase Base;
     CharUnits Offset;
-    unsigned InvalidBase : 1;
-    unsigned CallIndex : 31;
     SubobjectDesignator Designator;
-    bool IsNullPtr;
+    bool IsNullPtr : 1;
+    bool InvalidBase : 1;
 
     const APValue::LValueBase getLValueBase() const { return Base; }
     CharUnits &getLValueOffset() { return Offset; }
     const CharUnits &getLValueOffset() const { return Offset; }
-    unsigned getLValueCallIndex() const { return CallIndex; }
     SubobjectDesignator &getLValueDesignator() { return Designator; }
     const SubobjectDesignator &getLValueDesignator() const { return Designator;}
     bool isNullPointer() const { return IsNullPtr;}
 
+    unsigned getLValueCallIndex() const { return Base.getCallIndex(); }
+    unsigned getLValueVersion() const { return Base.getVersion(); }
+
     void moveInto(APValue &V) const {
       if (Designator.Invalid)
-        V = APValue(Base, Offset, APValue::NoLValuePath(), CallIndex,
-                    IsNullPtr);
+        V = APValue(Base, Offset, APValue::NoLValuePath(), IsNullPtr);
       else {
         assert(!InvalidBase && "APValues can't handle invalid LValue bases");
         V = APValue(Base, Offset, Designator.Entries,
-                    Designator.IsOnePastTheEnd, CallIndex, IsNullPtr);
+                    Designator.IsOnePastTheEnd, IsNullPtr);
       }
     }
     void setFrom(ASTContext &Ctx, const APValue &V) {
@@ -1296,12 +1345,11 @@ namespace {
       Base = V.getLValueBase();
       Offset = V.getLValueOffset();
       InvalidBase = false;
-      CallIndex = V.getLValueCallIndex();
       Designator = SubobjectDesignator(Ctx, V);
       IsNullPtr = V.isNullPointer();
     }
 
-    void set(APValue::LValueBase B, unsigned I = 0, bool BInvalid = false) {
+    void set(APValue::LValueBase B, bool BInvalid = false) {
 #ifndef NDEBUG
       // We only allow a few types of invalid bases. Enforce that here.
       if (BInvalid) {
@@ -1314,7 +1362,6 @@ namespace {
       Base = B;
       Offset = CharUnits::fromQuantity(0);
       InvalidBase = BInvalid;
-      CallIndex = I;
       Designator = SubobjectDesignator(getType(B));
       IsNullPtr = false;
     }
@@ -1323,13 +1370,12 @@ namespace {
       Base = (Expr *)nullptr;
       Offset = CharUnits::fromQuantity(TargetVal);
       InvalidBase = false;
-      CallIndex = 0;
       Designator = SubobjectDesignator(PointerTy->getPointeeType());
       IsNullPtr = true;
     }
 
     void setInvalid(APValue::LValueBase B, unsigned I = 0) {
-      set(B, I, true);
+      set(B, true);
     }
 
     // Check that this LValue is not based on a null pointer. If it is, produce
@@ -1530,6 +1576,15 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
 //===----------------------------------------------------------------------===//
 // Misc utilities
 //===----------------------------------------------------------------------===//
+
+/// A helper function to create a temporary and set an LValue.
+template <class KeyTy>
+static APValue &createTemporary(const KeyTy *Key, bool IsLifetimeExtended,
+                                LValue &LV, CallStackFrame &Frame) {
+  LV.set({Key, Frame.Info.CurrentCall->Index,
+          Frame.Info.CurrentCall->getTempVersion()});
+  return Frame.createTemporary(Key, IsLifetimeExtended);
+}
 
 /// Negate an APSInt in place, converting it to a signed form if necessary, and
 /// preserving its value (by extending by up to one bit as needed).
@@ -1860,7 +1915,7 @@ static const ValueDecl *GetLValueBaseDecl(const LValue &LVal) {
 }
 
 static bool IsLiteralLValue(const LValue &Value) {
-  if (Value.CallIndex)
+  if (Value.getLValueCallIndex())
     return false;
   const Expr *E = Value.Base.dyn_cast<const Expr*>();
   return E && !isa<MaterializeTemporaryExpr>(E);
@@ -2410,7 +2465,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
 /// \param Result Filled in with a pointer to the value of the variable.
 static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
                                 const VarDecl *VD, CallStackFrame *Frame,
-                                APValue *&Result) {
+                                APValue *&Result, const LValue *LVal) {
 
   // If this is a parameter to an active constexpr function call, perform
   // argument substitution.
@@ -2429,7 +2484,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   // If this is a local variable, dig out its value.
   if (Frame) {
-    Result = Frame->getTemporary(VD);
+    Result = LVal ? Frame->getTemporary(VD, LVal->getLValueVersion())
+                  : Frame->getCurrentTemporary(VD);
     if (!Result) {
       // Assume variables referenced within a lambda's call operator that were
       // not declared within the call operator are captures and during checking
@@ -3015,8 +3071,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   }
 
   CallStackFrame *Frame = nullptr;
-  if (LVal.CallIndex) {
-    Frame = Info.getCallFrame(LVal.CallIndex);
+  if (LVal.getLValueCallIndex()) {
+    Frame = Info.getCallFrame(LVal.getLValueCallIndex());
     if (!Frame) {
       Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
         << AK << LVal.Base.is<const ValueDecl*>();
@@ -3129,7 +3185,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       }
     }
 
-    if (!evaluateVarDeclInit(Info, E, VD, Frame, BaseVal))
+    if (!evaluateVarDeclInit(Info, E, VD, Frame, BaseVal, &LVal))
       return CompleteObject();
   } else {
     const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
@@ -3172,7 +3228,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       }
     } else {
-      BaseVal = Frame->getTemporary(Base);
+      BaseVal = Frame->getTemporary(Base, LVal.Base.getVersion());
       assert(BaseVal && "missing value for temporary");
     }
 
@@ -3192,7 +3248,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   // During the construction of an object, it is not yet 'const'.
   // FIXME: This doesn't do quite the right thing for const subobjects of the
   // object under construction.
-  if (Info.isEvaluatingConstructor(LVal.getLValueBase(), LVal.CallIndex)) {
+  if (Info.isEvaluatingConstructor(LVal.getLValueBase(),
+                                   LVal.getLValueCallIndex(),
+                                   LVal.getLValueVersion())) {
     BaseType = Info.Ctx.getCanonicalType(BaseType);
     BaseType.removeLocalConst();
     LifetimeStartedInEvaluation = true;
@@ -3230,7 +3288,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
 
   // Check for special cases where there is no existing APValue to look at.
   const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
-  if (Base && !LVal.CallIndex && !Type.isVolatileQualified()) {
+  if (Base && !LVal.getLValueCallIndex() && !Type.isVolatileQualified()) {
     if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(Base)) {
       // In C99, a CompoundLiteralExpr is an lvalue, and we defer evaluating the
       // initializer until now for such expressions. Such an expression can't be
@@ -3726,8 +3784,7 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
     return true;
 
   LValue Result;
-  Result.set(VD, Info.CurrentCall->Index);
-  APValue &Val = Info.CurrentCall->createTemporary(VD, true);
+  APValue &Val = createTemporary(VD, true, Result, *Info.CurrentCall);
 
   const Expr *InitE = VD->getInit();
   if (!InitE) {
@@ -3783,6 +3840,19 @@ struct StmtResult {
   /// The location containing the result, if any (used to support RVO).
   const LValue *Slot;
 };
+
+struct TempVersionRAII {
+  CallStackFrame &Frame;
+
+  TempVersionRAII(CallStackFrame &Frame) : Frame(Frame) {
+    Frame.pushTempVersion();
+  }
+
+  ~TempVersionRAII() {
+    Frame.popTempVersion();
+  }
+};
+
 }
 
 static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
@@ -4346,7 +4416,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   }
 
   EvalInfo::EvaluatingConstructorRAII EvalObj(
-      Info, {This.getLValueBase(), This.CallIndex});
+      Info, {This.getLValueBase(),
+             {This.getLValueCallIndex(), This.getLValueVersion()}});
   CallStackFrame Frame(Info, CallLoc, Definition, &This, ArgValues);
 
   // FIXME: Creating an APValue just to hold a nonexistent return value is
@@ -4607,9 +4678,12 @@ public:
     { return StmtVisitorTy::Visit(E->getResultExpr()); }
   bool VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E)
     { return StmtVisitorTy::Visit(E->getReplacement()); }
-  bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E)
-    { return StmtVisitorTy::Visit(E->getExpr()); }
+  bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
+    TempVersionRAII RAII(*Info.CurrentCall);
+    return StmtVisitorTy::Visit(E->getExpr());
+  }
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
+    TempVersionRAII RAII(*Info.CurrentCall);
     // The initializer may not have been parsed yet, or might be erroneous.
     if (!E->getExpr())
       return Error(E);
@@ -4687,7 +4761,7 @@ public:
   }
 
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-    if (APValue *Value = Info.CurrentCall->getTemporary(E))
+    if (APValue *Value = Info.CurrentCall->getCurrentTemporary(E))
       return DerivedSuccess(*Value, E);
 
     const Expr *Source = E->getSourceExpr();
@@ -5252,14 +5326,15 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
 
   if (!VD->getType()->isReferenceType()) {
     if (Frame) {
-      Result.set(VD, Frame->Index);
+      Result.set({VD, Frame->Index,
+                  Info.CurrentCall->getCurrentTemporaryVersion(VD)});
       return true;
     }
     return Success(VD);
   }
 
   APValue *V;
-  if (!evaluateVarDeclInit(Info, E, VD, Frame, V))
+  if (!evaluateVarDeclInit(Info, E, VD, Frame, V, nullptr))
     return false;
   if (V->isUninit()) {
     if (!Info.checkingPotentialConstantExpression())
@@ -5291,9 +5366,8 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
     *Value = APValue();
     Result.set(E);
   } else {
-    Value = &Info.CurrentCall->
-        createTemporary(E, E->getStorageDuration() == SD_Automatic);
-    Result.set(E, Info.CurrentCall->Index);
+    Value = &createTemporary(E, E->getStorageDuration() == SD_Automatic, Result,
+                             *Info.CurrentCall);
   }
 
   QualType Type = Inner->getType();
@@ -5770,7 +5844,6 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
       Result.Base = (Expr*)nullptr;
       Result.InvalidBase = false;
       Result.Offset = CharUnits::fromQuantity(N);
-      Result.CallIndex = 0;
       Result.Designator.setInvalid();
       Result.IsNullPtr = false;
       return true;
@@ -5786,9 +5859,9 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
       if (!evaluateLValue(SubExpr, Result))
         return false;
     } else {
-      Result.set(SubExpr, Info.CurrentCall->Index);
-      if (!EvaluateInPlace(Info.CurrentCall->createTemporary(SubExpr, false),
-                           Info, Result, SubExpr))
+      APValue &Value = createTemporary(SubExpr, false, Result,
+                                       *Info.CurrentCall);
+      if (!EvaluateInPlace(Value, Info, Result, SubExpr))
         return false;
     }
     // The result is a pointer to the first element of the array.
@@ -6554,9 +6627,8 @@ public:
 
   /// Visit an expression which constructs the value of this temporary.
   bool VisitConstructExpr(const Expr *E) {
-    Result.set(E, Info.CurrentCall->Index);
-    return EvaluateInPlace(Info.CurrentCall->createTemporary(E, false),
-                           Info, Result, E);
+    APValue &Value = createTemporary(E, false, Result, *Info.CurrentCall);
+    return EvaluateInPlace(Value, Info, Result, E);
   }
 
   bool VisitCastExpr(const CastExpr *E) {
@@ -8060,7 +8132,8 @@ static bool HasSameBase(const LValue &A, const LValue &B) {
   }
 
   return IsGlobalLValue(A.getLValueBase()) ||
-         A.getLValueCallIndex() == B.getLValueCallIndex();
+         (A.getLValueCallIndex() == B.getLValueCallIndex() &&
+          A.getLValueVersion() == B.getLValueVersion());
 }
 
 /// \brief Determine whether this is a pointer past the end of the complete
@@ -10000,15 +10073,13 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
     return true;
   } else if (T->isArrayType()) {
     LValue LV;
-    LV.set(E, Info.CurrentCall->Index);
-    APValue &Value = Info.CurrentCall->createTemporary(E, false);
+    APValue &Value = createTemporary(E, false, LV, *Info.CurrentCall);
     if (!EvaluateArray(E, LV, Value, Info))
       return false;
     Result = Value;
   } else if (T->isRecordType()) {
     LValue LV;
-    LV.set(E, Info.CurrentCall->Index);
-    APValue &Value = Info.CurrentCall->createTemporary(E, false);
+    APValue &Value = createTemporary(E, false, LV, *Info.CurrentCall);
     if (!EvaluateRecord(E, LV, Value, Info))
       return false;
     Result = Value;
@@ -10022,8 +10093,7 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
     QualType Unqual = T.getAtomicUnqualifiedType();
     if (Unqual->isArrayType() || Unqual->isRecordType()) {
       LValue LV;
-      LV.set(E, Info.CurrentCall->Index);
-      APValue &Value = Info.CurrentCall->createTemporary(E, false);
+      APValue &Value = createTemporary(E, false, LV, *Info.CurrentCall);
       if (!EvaluateAtomic(E, &LV, Value, Info))
         return false;
     } else {
@@ -10845,7 +10915,7 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   // is a temporary being used as the 'this' pointer.
   LValue This;
   ImplicitValueInitExpr VIE(RD ? Info.Ctx.getRecordType(RD) : Info.Ctx.IntTy);
-  This.set(&VIE, Info.CurrentCall->Index);
+  This.set({&VIE, Info.CurrentCall->Index});
 
   ArrayRef<const Expr*> Args;
 

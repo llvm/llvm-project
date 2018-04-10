@@ -3599,10 +3599,13 @@ private:
   /// Indicates whether this struct is destroyed in the callee. This flag is
   /// meaningless when Microsoft ABI is used since parameters are always
   /// destroyed in the callee.
-  bool ParamDestroyedInCallee : 1;
+  ///
+  /// Please note that MSVC won't merge adjacent bitfields if they don't have
+  /// the same type.
+  uint8_t ParamDestroyedInCallee : 1;
 
   /// Represents the way this type is passed to a function.
-  ArgPassingKind ArgPassingRestrictions : 2;
+  uint8_t ArgPassingRestrictions : 2;
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -3691,15 +3694,15 @@ public:
   /// it must have at least one trivial, non-deleted copy or move constructor.
   /// FIXME: This should be set as part of completeDefinition.
   bool canPassInRegisters() const {
-    return ArgPassingRestrictions == APK_CanPassInRegs;
+    return getArgPassingRestrictions() == APK_CanPassInRegs;
   }
 
   ArgPassingKind getArgPassingRestrictions() const {
-    return ArgPassingRestrictions;
+    return static_cast<ArgPassingKind>(ArgPassingRestrictions);
   }
 
   void setArgPassingRestrictions(ArgPassingKind Kind) {
-    ArgPassingRestrictions = Kind;
+    ArgPassingRestrictions = static_cast<uint8_t>(Kind);
   }
 
   bool isParamDestroyedInCallee() const {

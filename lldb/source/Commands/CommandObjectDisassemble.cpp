@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -101,14 +102,14 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     break;
 
   case 's': {
-    start_addr = Args::StringToAddress(execution_context, option_arg,
-                                       LLDB_INVALID_ADDRESS, &error);
+    start_addr = OptionArgParser::ToAddress(execution_context, option_arg,
+                                            LLDB_INVALID_ADDRESS, &error);
     if (start_addr != LLDB_INVALID_ADDRESS)
       some_location_specified = true;
   } break;
   case 'e': {
-    end_addr = Args::StringToAddress(execution_context, option_arg,
-                                     LLDB_INVALID_ADDRESS, &error);
+    end_addr = OptionArgParser::ToAddress(execution_context, option_arg,
+                                          LLDB_INVALID_ADDRESS, &error);
     if (end_addr != LLDB_INVALID_ADDRESS)
       some_location_specified = true;
   } break;
@@ -168,7 +169,7 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     break;
 
   case 'a': {
-    symbol_containing_addr = Args::StringToAddress(
+    symbol_containing_addr = OptionArgParser::ToAddress(
         execution_context, option_arg, LLDB_INVALID_ADDRESS, &error);
     if (symbol_containing_addr != LLDB_INVALID_ADDRESS) {
       some_location_specified = true;
