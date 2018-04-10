@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New option `MinTypeNameLength` for `modernize-use-auto` to limit the minimal
+  length of type names to be replaced with 'auto'. Use to skip replacing
+  short type names like 'int'/'bool' -> 'auto'. Default value is 5 which means
+  replace types with the name length >= 5 letters only (ex. double, unsigned).
+
 - New module `abseil` for checks related to the `Abseil <https://abseil.io>`_
   library.
 
