@@ -159,8 +159,8 @@ public:
     if (CS.getCalledValue() != Other.CS.getCalledValue())
       return false;
 
-    assert(CS.arg_size() == Other.CS.arg_size());
-    return std::equal(CS.arg_begin(), CS.arg_end(), Other.CS.arg_begin());
+    return CS.arg_size() == Other.CS.arg_size() &&
+           std::equal(CS.arg_begin(), CS.arg_end(), Other.CS.arg_begin());
   }
 
 private:
