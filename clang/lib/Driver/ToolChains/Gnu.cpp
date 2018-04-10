@@ -2391,12 +2391,9 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     return;
 
   switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx: {
-    std::string Path = findLibCxxIncludePath();
-    if (!Path.empty())
-      addSystemInclude(DriverArgs, CC1Args, Path);
+  case ToolChain::CST_Libcxx:
+    addLibCxxIncludePaths(DriverArgs, CC1Args);
     break;
-  }
 
   case ToolChain::CST_Libstdcxx:
     addLibStdCxxIncludePaths(DriverArgs, CC1Args);
@@ -2404,9 +2401,12 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-std::string Generic_GCC::findLibCxxIncludePath() const {
+void
+Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                   llvm::opt::ArgStringList &CC1Args) const {
   // FIXME: The Linux behavior would probaby be a better approach here.
-  return getDriver().SysRoot + "/usr/include/c++/v1";
+  addSystemInclude(DriverArgs, CC1Args,
+                   getDriver().SysRoot + "/usr/include/c++/v1");
 }
 
 void

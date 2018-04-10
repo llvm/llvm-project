@@ -194,3 +194,23 @@ Options
   // RemoveStars = 1
 
   auto my_first_pointer = new TypeName, my_second_pointer = new TypeName;
+
+.. option:: MinTypeNameLength
+
+   If the option is set to non-zero (default '5'), the check will ignore
+   type names having a length less than the option value.
+   The option affects expressions only, not iterators.
+
+.. code-block:: c++
+
+  // MinTypeNameLength = 0
+
+  int a = static_cast<int>(foo());            // ---> auto a = ...
+  bool b = new bool;                          // ---> auto b = ...
+  unsigned c = static_cast<unsigned>(foo());  // ---> auto c = ...
+
+  // MinTypeNameLength = 8
+
+  int a = static_cast<int>(foo());            // ---> int  a = ...
+  bool b = new bool;                          // ---> bool b = ...
+  unsigned c = static_cast<unsigned>(foo());  // ---> auto c = ...

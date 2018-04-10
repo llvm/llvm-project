@@ -14,12 +14,11 @@
 
 #include "llvm/ADT/STLExtras.h"      // for any_of
 #include "llvm/ADT/SmallVector.h"    // for SmallVectorImpl
-#include "llvm/Config/llvm-config.h" // for LLVM_ON_WIN32
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h" // for fs
 
-#if !defined(LLVM_ON_WIN32)
+#if !defined(_WIN32)
 #include <pwd.h>
 #endif
 
@@ -49,7 +48,7 @@ bool StandardTildeExpressionResolver::ResolvePartial(StringRef Expr,
   assert(Expr.empty() || Expr[0] == '~');
 
   Output.clear();
-#if defined(LLVM_ON_WIN32) || defined(__ANDROID__)
+#if defined(_WIN32) || defined(__ANDROID__)
   return false;
 #else
   if (Expr.empty())

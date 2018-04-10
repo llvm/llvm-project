@@ -1244,10 +1244,11 @@ public:
   /// \p TII is used to print the opcode name.  If it's not present, but the
   /// MI is in a function, the opcode will be printed using the function's TII.
   void print(raw_ostream &OS, bool IsStandalone = true, bool SkipOpers = false,
-             bool SkipDebugLoc = false,
+             bool SkipDebugLoc = false, bool AddNewLine = true,
              const TargetInstrInfo *TII = nullptr) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST, bool IsStandalone = true,
              bool SkipOpers = false, bool SkipDebugLoc = false,
+             bool AddNewLine = true,
              const TargetInstrInfo *TII = nullptr) const;
   void dump() const;
   /// @}

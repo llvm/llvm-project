@@ -275,7 +275,7 @@ def FPSW : X86Reg<"fpsw", 0>;
 def EFLAGS : X86Reg<"flags", 0>;
 
 // The direction flag.
-def DF : X86Reg<"DF", 0>;
+def DF : X86Reg<"dirflag", 0>;
 
 
 // Segment registers

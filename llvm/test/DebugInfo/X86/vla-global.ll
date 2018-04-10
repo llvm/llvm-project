@@ -5,7 +5,7 @@
 ; CHECK-NEXT:  DW_AT_type	({{.*}} "int")
 ; CHECK-NOT: DW_TAG
 ; CHECK:       DW_TAG_subrange_type
-; CHECK-NEXT:     DW_AT_type	({{.*}} "sizetype")
+; CHECK-NEXT:     DW_AT_type	({{.*}} "__ARRAY_SIZE_TYPE__")
 ; CHECK-NEXT:      DW_AT_count	(0x00000[[G]])
 ; Test that a VLA referring to a global variable is handled correctly.
 ; Clang doesn't generate this, but the verifier allows it.

@@ -38,4 +38,5 @@ add_clang_library(clangTidyModernizeModule
   clangTidy
   clangTidyReadabilityModule
   clangTidyUtils
+  clangTooling
   )

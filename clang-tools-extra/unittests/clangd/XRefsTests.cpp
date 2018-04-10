@@ -24,15 +24,6 @@ namespace clang {
 namespace clangd {
 using namespace llvm;
 
-void PrintTo(const DocumentHighlight &V, std::ostream *O) {
-  llvm::raw_os_ostream OS(*O);
-  OS << V.range;
-  if (V.kind == DocumentHighlightKind::Read)
-    OS << "(r)";
-  if (V.kind == DocumentHighlightKind::Write)
-    OS << "(w)";
-}
-
 namespace {
 using testing::ElementsAre;
 using testing::Field;

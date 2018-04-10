@@ -48,7 +48,7 @@
 #include "lldb/Utility/StreamCallback.h"
 #include "lldb/Utility/StreamString.h"
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 

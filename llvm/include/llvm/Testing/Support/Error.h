@@ -85,7 +85,7 @@ private:
 template <typename InfoT>
 class ErrorMatchesMono : public testing::MatcherInterface<const ErrorHolder &> {
 public:
-  explicit ErrorMatchesMono(Optional<testing::Matcher<InfoT>> Matcher)
+  explicit ErrorMatchesMono(Optional<testing::Matcher<InfoT &>> Matcher)
       : Matcher(std::move(Matcher)) {}
 
   bool MatchAndExplain(const ErrorHolder &Holder,
@@ -127,7 +127,7 @@ public:
   }
 
 private:
-  Optional<testing::Matcher<InfoT>> Matcher;
+  Optional<testing::Matcher<InfoT &>> Matcher;
 };
 } // namespace detail
 
@@ -152,7 +152,7 @@ testing::Matcher<const detail::ErrorHolder &> Failed() {
 template <typename InfoT, typename M>
 testing::Matcher<const detail::ErrorHolder &> Failed(M Matcher) {
   return MakeMatcher(new detail::ErrorMatchesMono<InfoT>(
-      testing::SafeMatcherCast<InfoT>(Matcher)));
+      testing::SafeMatcherCast<InfoT &>(Matcher)));
 }
 
 template <typename M>

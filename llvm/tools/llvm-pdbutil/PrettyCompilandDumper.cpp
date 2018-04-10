@@ -60,6 +60,12 @@ void CompilandDumper::start(const PDBSymbolCompiland &Symbol,
       while (auto File = Files->getNext()) {
         Printer.NewLine();
         WithColor(Printer, PDB_ColorItem::Path).get() << File->getFileName();
+        if (File->getChecksumType() != PDB_Checksum::None) {
+          auto ChecksumType = File->getChecksumType();
+          auto ChecksumHexString = toHex(File->getChecksum());
+          WithColor(Printer, PDB_ColorItem::Comment).get()
+              << " (" << ChecksumType << ": " << ChecksumHexString << ")";
+        }
 
         auto Lines = Session.findLineNumbers(Symbol, *File);
         if (!Lines)

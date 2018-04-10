@@ -377,6 +377,22 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
+static bool shouldIncludePTX(const ArgList &Args, const char *gpu_arch) {
+  bool includePTX = true;
+  for (Arg *A : Args) {
+    if (!(A->getOption().matches(options::OPT_cuda_include_ptx_EQ) ||
+          A->getOption().matches(options::OPT_no_cuda_include_ptx_EQ)))
+      continue;
+    A->claim();
+    const StringRef ArchStr = A->getValue();
+    if (ArchStr == "all" || ArchStr == gpu_arch) {
+      includePTX = A->getOption().matches(options::OPT_cuda_include_ptx_EQ);
+      continue;
+    }
+  }
+  return includePTX;
+}
+
 // All inputs to this linker must be from CudaDeviceActions, as we need to look
 // at the Inputs' Actions in order to figure out which GPU architecture they
 // correspond to.
@@ -404,6 +420,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
            "Device action expected to have associated a GPU architecture!");
     CudaArch gpu_arch = StringToCudaArch(gpu_arch_str);
 
+    if (II.getType() == types::TY_PP_Asm &&
+        !shouldIncludePTX(Args, gpu_arch_str))
+      continue;
     // We need to pass an Arch of the form "sm_XX" for cubin files and
     // "compute_XX" for ptx.
     const char *Arch =

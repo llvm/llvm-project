@@ -732,6 +732,8 @@
 		4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */; };
 		4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C56543419D2297A002E9C44 /* SBThreadPlan.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
+		4C719395207D235400FDF430 /* OptionArgParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C719394207D235400FDF430 /* OptionArgParser.cpp */; };
+		4C719399207D23E300FDF430 /* TestOptionArgParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C719398207D23E300FDF430 /* TestOptionArgParser.cpp */; };
 		4C7D48241F5099A1005314B4 /* SymbolFileDWARFDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */; };
 		4C7D48251F5099B2005314B4 /* SymbolFileDWARFDwoDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */; };
 		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -765,7 +767,6 @@
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
 		54067BF11DF2041B00749AA5 /* UBSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54067BEC1DF2034B00749AA5 /* UBSanRuntime.cpp */; };
 		6B74D89B200696BB0074051B /* Environment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22DC561920064C9600A7E9E8 /* Environment.cpp */; };
-		6B88947A2065AE5D002E5C59 /* CommandObjectStats.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */; };
 		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
 		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
 		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
@@ -785,7 +786,6 @@
 		6D99A3631BBC2F3200979793 /* ArmUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D99A3621BBC2F3200979793 /* ArmUnwindInfo.cpp */; };
 		6D9AB3DD1BB2B74E003F2289 /* TypeMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AB3DC1BB2B74E003F2289 /* TypeMap.cpp */; };
 		6DEC6F391BD66D750091ABA6 /* TaskPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */; };
-		7F94D7182040A13A006EE3EA /* CleanUpTest.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7F94D7172040A13A006EE3EA /* CleanUpTest.cpp */; };
 		8C26C4261C3EA5F90031DF7C /* TSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C26C4241C3EA4340031DF7C /* TSanRuntime.cpp */; };
 		8C2D6A53197A1EAF006989C9 /* MemoryHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A52197A1EAF006989C9 /* MemoryHistory.cpp */; };
 		8C2D6A5E197A250F006989C9 /* MemoryHistoryASan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A5A197A1FDC006989C9 /* MemoryHistoryASan.cpp */; };
@@ -2594,6 +2594,10 @@
 		4C56543819D22FD9002E9C44 /* SBThreadPlan.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBThreadPlan.i; sourceTree = "<group>"; };
 		4C5DBBC611E3FEC60035160F /* CommandObjectCommands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectCommands.cpp; path = source/Commands/CommandObjectCommands.cpp; sourceTree = "<group>"; };
 		4C5DBBC711E3FEC60035160F /* CommandObjectCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectCommands.h; path = source/Commands/CommandObjectCommands.h; sourceTree = "<group>"; };
+		4C719394207D235400FDF430 /* OptionArgParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OptionArgParser.cpp; path = source/Interpreter/OptionArgParser.cpp; sourceTree = "<group>"; };
+		4C719396207D237100FDF430 /* CommandOptionValidators.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CommandOptionValidators.h; path = include/lldb/Interpreter/CommandOptionValidators.h; sourceTree = "<group>"; };
+		4C719397207D237100FDF430 /* OptionArgParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = OptionArgParser.h; path = include/lldb/Interpreter/OptionArgParser.h; sourceTree = "<group>"; };
+		4C719398207D23E300FDF430 /* TestOptionArgParser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestOptionArgParser.cpp; sourceTree = "<group>"; };
 		4C73152119B7D71700F865A4 /* Iterable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Iterable.h; path = include/lldb/Utility/Iterable.h; sourceTree = "<group>"; };
 		4C7CF7E31295E10E00B4FBB5 /* ThreadPlanCallUserExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanCallUserExpression.h; path = include/lldb/Target/ThreadPlanCallUserExpression.h; sourceTree = "<group>"; };
 		4C7CF7E51295E12B00B4FBB5 /* ThreadPlanCallUserExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanCallUserExpression.cpp; path = source/Target/ThreadPlanCallUserExpression.cpp; sourceTree = "<group>"; };
@@ -3445,9 +3449,10 @@
 		2321F93C1BDD339A00BA9A93 /* Interpreter */ = {
 			isa = PBXGroup;
 			children = (
-				9A20572B1F3B8E6200F6C293 /* TestCompletion.cpp */,
 				2321F93D1BDD33CE00BA9A93 /* CMakeLists.txt */,
 				2321F93E1BDD33CE00BA9A93 /* TestArgs.cpp */,
+				9A20572B1F3B8E6200F6C293 /* TestCompletion.cpp */,
+				4C719398207D23E300FDF430 /* TestOptionArgParser.cpp */,
 			);
 			path = Interpreter;
 			sourceTree = "<group>";
@@ -5331,8 +5336,6 @@
 		26BC7DDF10F1B7E200F91463 /* Interpreter */ = {
 			isa = PBXGroup;
 			children = (
-				25420ECE1A64911B009ADBCB /* OptionValueChar.h */,
-				25420ECC1A6490B8009ADBCB /* OptionValueChar.cpp */,
 				26BC7D5310F1B77400F91463 /* Args.h */,
 				26BC7E6C10F1B85900F91463 /* Args.cpp */,
 				26A4EEB511682AAC007A372A /* LLDBWrapPython.cpp */,
@@ -5350,10 +5353,13 @@
 				26DFBC58113B48F300DD817F /* CommandObjectMultiword.cpp */,
 				26DFBC52113B48D600DD817F /* CommandObjectRegexCommand.h */,
 				26DFBC59113B48F300DD817F /* CommandObjectRegexCommand.cpp */,
+				4C719396207D237100FDF430 /* CommandOptionValidators.h */,
 				23DDF224196C3EE600BB8417 /* CommandOptionValidators.cpp */,
 				26BC7DE410F1B7F900F91463 /* CommandReturnObject.h */,
 				26BC7F0A10F1B8DD00F91463 /* CommandReturnObject.cpp */,
 				94005E0513F45A1B001EF42D /* embedded_interpreter.py */,
+				4C719397207D237100FDF430 /* OptionArgParser.h */,
+				4C719394207D235400FDF430 /* OptionArgParser.cpp */,
 				26A7A036135E6E5300FB369E /* OptionValue.h */,
 				26A7A034135E6E4200FB369E /* OptionValue.cpp */,
 				260A248D15D06C4F009981B0 /* OptionValues.h */,
@@ -5365,6 +5371,8 @@
 				260CC63C15D0440D002BF2E0 /* OptionValueArray.cpp */,
 				260CC62315D04377002BF2E0 /* OptionValueBoolean.h */,
 				260CC63D15D0440D002BF2E0 /* OptionValueBoolean.cpp */,
+				25420ECE1A64911B009ADBCB /* OptionValueChar.h */,
+				25420ECC1A6490B8009ADBCB /* OptionValueChar.cpp */,
 				260CC62515D04377002BF2E0 /* OptionValueDictionary.h */,
 				260CC63F15D0440D002BF2E0 /* OptionValueDictionary.cpp */,
 				260CC62615D04377002BF2E0 /* OptionValueEnumeration.h */,
@@ -7353,6 +7361,7 @@
 				23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */,
 				9A2057081F3B819100F6C293 /* MemoryRegionInfoTest.cpp in Sources */,
 				9A20572D1F3B8E6600F6C293 /* TestCompletion.cpp in Sources */,
+				4C719399207D23E300FDF430 /* TestOptionArgParser.cpp in Sources */,
 				23CB15371D66DA9300EDDDE1 /* PythonTestSuite.cpp in Sources */,
 				23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */,
 				4CEC86A7204738EB009B37B1 /* TestPPC64InstEmulation.cpp in Sources */,
@@ -7892,6 +7901,7 @@
 				2689010213353E6F00698AC0 /* ThreadPlanStepOverBreakpoint.cpp in Sources */,
 				3FDFED2919BA6D96009756A7 /* ThreadLauncher.cpp in Sources */,
 				232CB617191E00CD00EF39FC /* NativeBreakpointList.cpp in Sources */,
+				4C719395207D235400FDF430 /* OptionArgParser.cpp in Sources */,
 				942829561A89614C00521B30 /* JSON.cpp in Sources */,
 				267F68531CC02E920086832B /* RegisterContextLinux_s390x.cpp in Sources */,
 				232CB615191E00CD00EF39FC /* NativeBreakpoint.cpp in Sources */,
@@ -8808,7 +8818,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",

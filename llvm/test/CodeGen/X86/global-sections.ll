@@ -329,3 +329,8 @@ bb7:
 ; WIN32-SECTIONS: .section	.bss,"bw",one_only,_G17
 ; WIN32-SECTIONS: _G17:
 ; WIN32-SECTIONS:.byte	0
+
+; check weak ReadOnlyWithRel globals.
+@G18 = linkonce_odr unnamed_addr constant i64* @G15
+; DARWIN64: .section      __DATA,__const
+; DARWIN64: _G18:

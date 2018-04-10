@@ -3804,7 +3804,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     DS.SetRangeEnd(Tok.getLocation());
     if (DiagID != diag::err_bool_redeclaration)
-      ConsumeToken();
+      // After an error the next token can be an annotation token.
+      ConsumeAnyToken();
 
     AttrsLastTime = false;
   }

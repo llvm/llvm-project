@@ -456,6 +456,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
     F->setDoesNotThrow();
+  F->setDoesNotRecurse();
 
   // Generate the function.
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, TargetArgs,
@@ -3418,7 +3419,7 @@ static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
   CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
   CGF.CapturedStmtInfo = &CapStmtInfo;
   auto *Fn = CGF.GenerateOpenMPCapturedStmtFunction(*S);
-  Fn->addFnAttr(llvm::Attribute::NoInline);
+  Fn->setDoesNotRecurse();
   return Fn;
 }
 

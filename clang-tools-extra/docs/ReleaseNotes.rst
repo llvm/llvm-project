@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New option `MinTypeNameLength` for `modernize-use-auto` to limit the minimal
+  length of type names to be replaced with 'auto'. Use to skip replacing
+  short type names like 'int'/'bool' -> 'auto'. Default value is 5 which means
+  replace types with the name length >= 5 letters only (ex. double, unsigned).
+
 - New module `abseil` for checks related to the `Abseil <https://abseil.io>`_
   library.
 
@@ -87,6 +92,11 @@ Improvements to clang-tidy
   The usage of ``goto`` for control flow is error prone and should be replaced
   with looping constructs. Every backward jump is rejected. Forward jumps are
   only allowed in nested loops.
+
+- New alias :doc:`fuchsia-header-anon-namespaces
+  <clang-tidy/checks/fuchsia-header-anon-namespaces>` to :doc:`google-build-namespaces
+  <clang-tidy/checks/google-build-namespaces>`
+  added.
 
 - New :doc:`fuchsia-multiple-inheritance
   <clang-tidy/checks/fuchsia-multiple-inheritance>` check
