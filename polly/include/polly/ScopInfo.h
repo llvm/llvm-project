@@ -1558,7 +1558,14 @@ public:
   /// Remove @p MA from this statement.
   ///
   /// In contrast to removeMemoryAccess(), no other access will be eliminated.
-  void removeSingleMemoryAccess(MemoryAccess *MA);
+  ///
+  /// @param MA            The MemoryAccess to be removed.
+  /// @param AfterHoisting If true, also remove from data access lists.
+  ///                      These lists are filled during
+  ///                      ScopBuilder::buildAccessRelations. Therefore, if this
+  ///                      method is called before buildAccessRelations, false
+  ///                      must be passed.
+  void removeSingleMemoryAccess(MemoryAccess *MA, bool AfterHoisting = true);
 
   using iterator = MemoryAccessVec::iterator;
   using const_iterator = MemoryAccessVec::const_iterator;
@@ -2266,9 +2273,15 @@ private:
 
   /// Remove statements from the list of scop statements.
   ///
-  /// @param ShouldDelete A function that returns true if the statement passed
-  ///                     to it should be deleted.
-  void removeStmts(std::function<bool(ScopStmt &)> ShouldDelete);
+  /// @param ShouldDelete  A function that returns true if the statement passed
+  ///                      to it should be deleted.
+  /// @param AfterHoisting If true, also remove from data access lists.
+  ///                      These lists are filled during
+  ///                      ScopBuilder::buildAccessRelations. Therefore, if this
+  ///                      method is called before buildAccessRelations, false
+  ///                      must be passed.
+  void removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
+                   bool AfterHoisting = true);
 
   /// Removes @p Stmt from the StmtMap.
   void removeFromStmtMap(ScopStmt &Stmt);

@@ -13904,6 +13904,8 @@ define void @test_setcc(i8 %a0, i8 *%a1) optsize {
   ret void
 }
 
+; TODO - test_sgdt
+
 define void @test_shld_shrd_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; GENERIC-LABEL: test_shld_shrd_16:
 ; GENERIC:       # %bb.0:
@@ -14334,6 +14336,10 @@ define void @test_shld_shrd_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
   ret void
 }
 
+; TODO - test_sidt
+; TODO - test_sldt
+; TODO - test_smsw
+
 define void @test_stc_std() optsize {
 ; GENERIC-LABEL: test_stc_std:
 ; GENERIC:       # %bb.0:
@@ -14417,6 +14423,9 @@ define void @test_stc_std() optsize {
   call void asm sideeffect "stc \0A\09 std", ""()
   ret void
 }
+
+; TODO - test_sti
+; TODO - test_stgi
 
 define void @test_stos() optsize {
 ; GENERIC-LABEL: test_stos:
@@ -14521,6 +14530,8 @@ define void @test_stos() optsize {
   call void asm sideeffect "stosb \0A\09 stosw \0A\09 stosl \0A\09 stosq", ""()
   ret void
 }
+
+; TODO - test_str
 
 define void @test_sub_8(i8 %a0, i8* %a1) optsize {
 ; GENERIC-LABEL: test_sub_8:
@@ -15165,6 +15176,12 @@ define void @test_sub_64(i64 %a0, i64* %a1) optsize {
   ret void
 }
 
+; TODO - test_swapgs
+; TODO - test_syscall
+; TODO - test_sysenter
+; TODO - test_sysexit
+; TODO - test_sysret
+
 define void @test_test_8(i8 %a0, i8* %a1) optsize {
 ; GENERIC-LABEL: test_test_8:
 ; GENERIC:       # %bb.0:
@@ -15782,6 +15799,14 @@ define void @test_ud2() optsize {
   call void asm sideeffect "ud2", ""()
   ret void
 }
+
+; TODO - test_verr
+; TODO - test_verw
+; TODO - test_vmload
+; TODO - test_vmmcall
+; TODO - test_vmrun
+; TODO - test_vmsave
+; TODO - test_wbinvd
 
 define void @test_xadd_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; GENERIC-LABEL: test_xadd_8:

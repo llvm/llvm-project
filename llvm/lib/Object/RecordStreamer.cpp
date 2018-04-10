@@ -216,7 +216,10 @@ void RecordStreamer::flushSymverDirectives() {
       // TODO: Handle "@@@". Depending on SymbolAttribute value it needs to be
       // converted into @ or @@.
       const MCExpr *Value = MCSymbolRefExpr::create(Aliasee, getContext());
-      EmitAssignment(Alias, Value);
+      if (IsDefined)
+        markDefined(*Alias);
+      // Don't use EmitAssignment override as it always marks alias as defined.
+      MCStreamer::EmitAssignment(Alias, Value);
       if (Attr != MCSA_Invalid)
         EmitSymbolAttribute(Alias, Attr);
     }

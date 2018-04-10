@@ -224,71 +224,29 @@ entry:
 declare i64 @dummy()
 
 define i64 @f10(i64* %foo, i64 %bar, i64 %baz) {
-; PUSHF-LABEL: f10:
-; PUSHF:       # %bb.0:
-; PUSHF-NEXT:    pushq %rbp
-; PUSHF-NEXT:    .seh_pushreg 5
-; PUSHF-NEXT:    pushq %rsi
-; PUSHF-NEXT:    .seh_pushreg 6
-; PUSHF-NEXT:    pushq %rdi
-; PUSHF-NEXT:    .seh_pushreg 7
-; PUSHF-NEXT:    subq $32, %rsp
-; PUSHF-NEXT:    .seh_stackalloc 32
-; PUSHF-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
-; PUSHF-NEXT:    .seh_setframe 5, 32
-; PUSHF-NEXT:    .seh_endprologue
-; PUSHF-NEXT:    movq %rdx, %rsi
-; PUSHF-NEXT:    movq %rdx, %rax
-; PUSHF-NEXT:    lock cmpxchgq %r8, (%rcx)
-; PUSHF-NEXT:    pushfq
-; PUSHF-NEXT:    popq %rdi
-; PUSHF-NEXT:    callq dummy
-; PUSHF-NEXT:    pushq %rdi
-; PUSHF-NEXT:    popfq
-; PUSHF-NEXT:    cmovneq %rsi, %rax
-; PUSHF-NEXT:    addq $32, %rsp
-; PUSHF-NEXT:    popq %rdi
-; PUSHF-NEXT:    popq %rsi
-; PUSHF-NEXT:    popq %rbp
-; PUSHF-NEXT:    retq
-; PUSHF-NEXT:    .seh_handlerdata
-; PUSHF-NEXT:    .text
-; PUSHF-NEXT:    .seh_endproc
-;
-; SAHF-LABEL: f10:
-; SAHF:       # %bb.0:
-; SAHF-NEXT:    pushq %rbp
-; SAHF-NEXT:    .seh_pushreg 5
-; SAHF-NEXT:    pushq %rsi
-; SAHF-NEXT:    .seh_pushreg 6
-; SAHF-NEXT:    pushq %rdi
-; SAHF-NEXT:    .seh_pushreg 7
-; SAHF-NEXT:    subq $32, %rsp
-; SAHF-NEXT:    .seh_stackalloc 32
-; SAHF-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
-; SAHF-NEXT:    .seh_setframe 5, 32
-; SAHF-NEXT:    .seh_endprologue
-; SAHF-NEXT:    movq %rdx, %rsi
-; SAHF-NEXT:    movq %rdx, %rax
-; SAHF-NEXT:    lock cmpxchgq %r8, (%rcx)
-; SAHF-NEXT:    seto %al
-; SAHF-NEXT:    lahf
-; SAHF-NEXT:    movq %rax, %rdi
-; SAHF-NEXT:    callq dummy
-; SAHF-NEXT:    pushq %rax
-; SAHF-NEXT:    movq %rdi, %rax
-; SAHF-NEXT:    addb $127, %al
-; SAHF-NEXT:    sahf
-; SAHF-NEXT:    popq %rax
-; SAHF-NEXT:    cmovneq %rsi, %rax
-; SAHF-NEXT:    addq $32, %rsp
-; SAHF-NEXT:    popq %rdi
-; SAHF-NEXT:    popq %rsi
-; SAHF-NEXT:    popq %rbp
-; SAHF-NEXT:    retq
-; SAHF-NEXT:    .seh_handlerdata
-; SAHF-NEXT:    .text
-; SAHF-NEXT:    .seh_endproc
+; ALL-LABEL: f10:
+; ALL:       # %bb.0:
+; ALL-NEXT:    pushq %rsi
+; ALL-NEXT:    .seh_pushreg 6
+; ALL-NEXT:    pushq %rbx
+; ALL-NEXT:    .seh_pushreg 3
+; ALL-NEXT:    subq $40, %rsp
+; ALL-NEXT:    .seh_stackalloc 40
+; ALL-NEXT:    .seh_endprologue
+; ALL-NEXT:    movq %rdx, %rsi
+; ALL-NEXT:    movq %rdx, %rax
+; ALL-NEXT:    lock cmpxchgq %r8, (%rcx)
+; ALL-NEXT:    sete %bl
+; ALL-NEXT:    callq dummy
+; ALL-NEXT:    testb $-1, %bl
+; ALL-NEXT:    cmoveq %rsi, %rax
+; ALL-NEXT:    addq $40, %rsp
+; ALL-NEXT:    popq %rbx
+; ALL-NEXT:    popq %rsi
+; ALL-NEXT:    retq
+; ALL-NEXT:    .seh_handlerdata
+; ALL-NEXT:    .text
+; ALL-NEXT:    .seh_endproc
   %cx = cmpxchg i64* %foo, i64 %bar, i64 %baz seq_cst seq_cst
   %v = extractvalue { i64, i1 } %cx, 0
   %p = extractvalue { i64, i1 } %cx, 1

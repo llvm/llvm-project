@@ -1,4 +1,4 @@
-//===--- ASTImporter.h - Importing ASTs from other Contexts -----*- C++ -*-===//
+//===- ASTImporter.h - Importing ASTs from other Contexts -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,37 +11,44 @@
 //  context into another context.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_AST_ASTIMPORTER_H
 #define LLVM_CLANG_AST_ASTIMPORTER_H
 
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include <utility>
 
 namespace clang {
-  class ASTContext;
-  class CXXCtorInitializer;
-  class CXXBaseSpecifier;
-  class Decl;
-  class DeclContext;
-  class DiagnosticsEngine;
-  class Expr;
-  class FileManager;
-  class IdentifierInfo;
-  class NestedNameSpecifier;
-  class Stmt;
-  class TypeSourceInfo;
-  
+
+class ASTContext;
+class CXXBaseSpecifier;
+class CXXCtorInitializer;
+class Decl;
+class DeclContext;
+class Expr;
+class FileManager;
+class NamedDecl;
+class Stmt;
+class TagDecl;
+class TypeSourceInfo;
+
   /// \brief Imports selected nodes from one AST context into another context,
   /// merging AST nodes where appropriate.
   class ASTImporter {
   public:
-    typedef llvm::DenseSet<std::pair<Decl *, Decl *> > NonEquivalentDeclSet;
-    typedef llvm::DenseMap<const CXXBaseSpecifier *, CXXBaseSpecifier *>
-    ImportedCXXBaseSpecifierMap;
+    using NonEquivalentDeclSet = llvm::DenseSet<std::pair<Decl *, Decl *>>;
+    using ImportedCXXBaseSpecifierMap =
+        llvm::DenseMap<const CXXBaseSpecifier *, CXXBaseSpecifier *>;
 
   private:
     /// \brief The contexts we're importing to and from.
@@ -54,7 +61,7 @@ namespace clang {
     bool Minimal;
 
     /// \brief Whether the last diagnostic came from the "from" context.
-    bool LastDiagFromFrom;
+    bool LastDiagFromFrom = false;
     
     /// \brief Mapping from the already-imported types in the "from" context
     /// to the corresponding types in the "to" context.
@@ -312,6 +319,7 @@ namespace clang {
     bool IsStructurallyEquivalent(QualType From, QualType To,
                                   bool Complain = true);
   };
-}
+
+} // namespace clang
 
 #endif // LLVM_CLANG_AST_ASTIMPORTER_H

@@ -1819,13 +1819,15 @@ void ScopStmt::removeMemoryAccess(MemoryAccess *MA) {
   InstructionToAccess.erase(MA->getAccessInstruction());
 }
 
-void ScopStmt::removeSingleMemoryAccess(MemoryAccess *MA) {
-  auto MAIt = std::find(MemAccs.begin(), MemAccs.end(), MA);
-  assert(MAIt != MemAccs.end());
-  MemAccs.erase(MAIt);
+void ScopStmt::removeSingleMemoryAccess(MemoryAccess *MA, bool AfterHoisting) {
+  if (AfterHoisting) {
+    auto MAIt = std::find(MemAccs.begin(), MemAccs.end(), MA);
+    assert(MAIt != MemAccs.end());
+    MemAccs.erase(MAIt);
 
-  removeAccessData(MA);
-  Parent.removeAccessData(MA);
+    removeAccessData(MA);
+    Parent.removeAccessData(MA);
+  }
 
   auto It = InstructionToAccess.find(MA->getAccessInstruction());
   if (It != InstructionToAccess.end()) {
@@ -3553,12 +3555,20 @@ void Scop::removeFromStmtMap(ScopStmt &Stmt) {
   }
 }
 
-void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete) {
+void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
+                       bool AfterHoisting) {
   for (auto StmtIt = Stmts.begin(), StmtEnd = Stmts.end(); StmtIt != StmtEnd;) {
     if (!ShouldDelete(*StmtIt)) {
       StmtIt++;
       continue;
     }
+
+    // Start with removing all of the statement's accesses including erasing it
+    // from all maps that are pointing to them.
+    // Make a temporary copy because removing MAs invalidates the iterator.
+    SmallVector<MemoryAccess *, 16> MAList(StmtIt->begin(), StmtIt->end());
+    for (MemoryAccess *MA : MAList)
+      StmtIt->removeSingleMemoryAccess(MA, AfterHoisting);
 
     removeFromStmtMap(*StmtIt);
     StmtIt = Stmts.erase(StmtIt);
@@ -3569,7 +3579,7 @@ void Scop::removeStmtNotInDomainMap() {
   auto ShouldDelete = [this](ScopStmt &Stmt) -> bool {
     return !this->DomainMap.lookup(Stmt.getEntryBlock());
   };
-  removeStmts(ShouldDelete);
+  removeStmts(ShouldDelete, false);
 }
 
 void Scop::simplifySCoP(bool AfterHoisting) {
@@ -3592,7 +3602,7 @@ void Scop::simplifySCoP(bool AfterHoisting) {
     return RemoveStmt;
   };
 
-  removeStmts(ShouldDelete);
+  removeStmts(ShouldDelete, AfterHoisting);
 }
 
 InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) {
@@ -4856,13 +4866,15 @@ void Scop::removeAccessData(MemoryAccess *Access) {
     ValueDefAccs.erase(Access->getAccessValue());
   } else if (Access->isOriginalValueKind() && Access->isRead()) {
     auto &Uses = ValueUseAccs[Access->getScopArrayInfo()];
-    std::remove(Uses.begin(), Uses.end(), Access);
+    auto NewEnd = std::remove(Uses.begin(), Uses.end(), Access);
+    Uses.erase(NewEnd, Uses.end());
   } else if (Access->isOriginalPHIKind() && Access->isRead()) {
     PHINode *PHI = cast<PHINode>(Access->getAccessInstruction());
     PHIReadAccs.erase(PHI);
   } else if (Access->isOriginalAnyPHIKind() && Access->isWrite()) {
     auto &Incomings = PHIIncomingAccs[Access->getScopArrayInfo()];
-    std::remove(Incomings.begin(), Incomings.end(), Access);
+    auto NewEnd = std::remove(Incomings.begin(), Incomings.end(), Access);
+    Incomings.erase(NewEnd, Incomings.end());
   }
 }
 

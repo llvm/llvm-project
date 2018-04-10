@@ -1121,8 +1121,6 @@ namespace llvm {
     bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
-    void finalizeLowering(MachineFunction &MF) const override;
-
     SDValue expandIndirectJTBranch(const SDLoc& dl, SDValue Value, 
                                    SDValue Addr, SelectionDAG &DAG) 
                                    const override;
