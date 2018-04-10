@@ -298,6 +298,11 @@ inline namespace ParensAroundFriend { // expected-error 0-1{{C++11}}
   }
 }
 
+namespace rdar37099386 {
+  class A typename A; // expected-error {{expected a qualified name after 'typename'}}
+  // expected-error@-1 {{cannot combine with previous 'class' declaration specifier}}
+}
+
 // PR8380
 extern ""      // expected-error {{unknown linkage language}}
 test6a { ;// expected-error {{C++ requires a type specifier for all declarations}}
