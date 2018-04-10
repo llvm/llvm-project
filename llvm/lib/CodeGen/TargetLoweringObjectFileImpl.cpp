@@ -727,6 +727,8 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
   if (GO->isWeakForLinker()) {
     if (Kind.isReadOnly())
       return ConstTextCoalSection;
+    if (Kind.isReadOnlyWithRel())
+      return ConstDataCoalSection;
     return DataCoalSection;
   }
 
