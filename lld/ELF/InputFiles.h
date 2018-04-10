@@ -112,6 +112,13 @@ public:
   // True if this is an argument for --just-symbols. Usually false.
   bool JustSymbols = false;
 
+  // GroupId is used for --warn-backrefs which is an optional error
+  // checking feature. All files within the same --{start,end}-group
+  // get the same group ID. Otherwise, each file gets a new group
+  // ID. For more info, see checkDependency() in SymbolTable.cpp.
+  uint32_t GroupId;
+  static bool IsInGroup;
+
 protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
@@ -119,6 +126,8 @@ protected:
 
 private:
   const Kind FileKind;
+
+  static uint32_t NextGroupId;
 };
 
 template <typename ELFT> class ELFFileBase : public InputFile {

@@ -704,6 +704,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->UndefinedVersion =
       Args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
+  Config->WarnBackrefs =
+      Args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);
   Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   Config->WarnSymbolOrdering =
       Args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
@@ -936,6 +938,16 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
         Files.push_back(createObjectFile(*MB));
         Files.back()->JustSymbols = true;
       }
+      break;
+    case OPT_start_group:
+      if (InputFile::IsInGroup)
+        error("nested --start-group");
+      InputFile::IsInGroup = true;
+      break;
+    case OPT_end_group:
+      if (!InputFile::IsInGroup)
+        error("stray --end-group");
+      InputFile::IsInGroup = false;
       break;
     case OPT_start_lib:
       InLib = true;
