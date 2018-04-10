@@ -1065,7 +1065,10 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
       else if (D && !D->Section)
         warn(toString(File) +
              ": unable to order absolute symbol: " + Sym.getName());
-      else if (D && !D->Section->Live)
+      else if (D && isa<OutputSection>(D->Section))
+        warn(toString(File) +
+             ": unable to order synthetic symbol: " + Sym.getName());
+      else if (D && !D->Section->Repl->Live)
         warn(toString(File) +
              ": unable to order discarded symbol: " + Sym.getName());
     }
