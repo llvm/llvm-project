@@ -27,6 +27,7 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupOutputFile.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
@@ -590,8 +591,8 @@ protected:
     }
 
     if (argc > 0)
-      addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                   LLDB_INVALID_ADDRESS, &error);
+      addr = OptionArgParser::ToAddress(&m_exe_ctx, command[0].ref,
+                                        LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid start address expression.");
@@ -601,7 +602,7 @@ protected:
     }
 
     if (argc == 2) {
-      lldb::addr_t end_addr = Args::StringToAddress(
+      lldb::addr_t end_addr = OptionArgParser::ToAddress(
           &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, nullptr);
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
@@ -1036,13 +1037,13 @@ protected:
     }
 
     Status error;
-    lldb::addr_t low_addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                                  LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t low_addr = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
     if (low_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid low address");
       return false;
     }
-    lldb::addr_t high_addr = Args::StringToAddress(
+    lldb::addr_t high_addr = OptionArgParser::ToAddress(
         &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, &error);
     if (high_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid high address");
@@ -1345,8 +1346,8 @@ protected:
     size_t item_byte_size = byte_size_value.GetCurrentValue();
 
     Status error;
-    lldb::addr_t addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t addr = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression\n");
@@ -1469,7 +1470,7 @@ protected:
         break;
       }
       case eFormatBoolean:
-        uval64 = Args::StringToBoolean(entry.ref, false, &success);
+        uval64 = OptionArgParser::ToBoolean(entry.ref, false, &success);
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid boolean string value.\n", entry.c_str());
@@ -1642,8 +1643,8 @@ protected:
     }
 
     Status error;
-    lldb::addr_t addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t addr = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression");
@@ -1711,8 +1712,8 @@ protected:
       } else {
         auto load_addr_str = command[0].ref;
         if (command.GetArgumentCount() == 1) {
-          load_addr = Args::StringToAddress(&m_exe_ctx, load_addr_str,
-                                            LLDB_INVALID_ADDRESS, &error);
+          load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
+                                                 LLDB_INVALID_ADDRESS, &error);
           if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
             result.AppendErrorWithFormat(
                 "invalid address argument \"%s\": %s\n", command[0].c_str(),

@@ -37,6 +37,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -682,7 +683,7 @@ protected:
           if (!arg_str)
             continue;
           Status error;
-          lldb::addr_t arg_addr = Args::StringToAddress(
+          lldb::addr_t arg_addr = OptionArgParser::ToAddress(
               &exe_ctx, arg_str, LLDB_INVALID_ADDRESS, &error);
           if (arg_addr == 0 || arg_addr == LLDB_INVALID_ADDRESS || error.Fail())
             continue;

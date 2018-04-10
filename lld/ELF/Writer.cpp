@@ -1057,16 +1057,16 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
       auto *D = dyn_cast<Defined>(&Sym);
       InputFile *File = Sym.File;
       if (Sym.isUndefined())
-        warn(File->getName() +
+        warn(toString(File) +
              ": unable to order undefined symbol: " + Sym.getName());
       else if (Sym.isShared())
-        warn(File->getName() +
+        warn(toString(File) +
              ": unable to order shared symbol: " + Sym.getName());
       else if (D && !D->Section)
-        warn(File->getName() +
+        warn(toString(File) +
              ": unable to order absolute symbol: " + Sym.getName());
       else if (D && !D->Section->Live)
-        warn(File->getName() +
+        warn(toString(File) +
              ": unable to order discarded symbol: " + Sym.getName());
     }
 
