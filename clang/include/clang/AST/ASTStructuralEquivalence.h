@@ -1,4 +1,4 @@
-//===--- ASTStructuralEquivalence.h - ---------------------------*- C++ -*-===//
+//===- ASTStructuralEquivalence.h -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include <deque>
+#include <utility>
 
 namespace clang {
 
@@ -57,7 +58,7 @@ struct StructuralEquivalenceContext {
   bool Complain;
 
   /// \c true if the last diagnostic came from ToCtx.
-  bool LastDiagFromC2;
+  bool LastDiagFromC2 = false;
 
   StructuralEquivalenceContext(
       ASTContext &FromCtx, ASTContext &ToCtx,
@@ -66,8 +67,7 @@ struct StructuralEquivalenceContext {
       bool ErrorOnTagTypeMismatch = false)
       : FromCtx(FromCtx), ToCtx(ToCtx), NonEquivalentDecls(NonEquivalentDecls),
         StrictTypeSpelling(StrictTypeSpelling),
-        ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain),
-        LastDiagFromC2(false) {}
+        ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain) {}
 
   DiagnosticBuilder Diag1(SourceLocation Loc, unsigned DiagID);
   DiagnosticBuilder Diag2(SourceLocation Loc, unsigned DiagID);
@@ -98,6 +98,7 @@ private:
   /// \returns true if an error occurred, false otherwise.
   bool Finish();
 };
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H

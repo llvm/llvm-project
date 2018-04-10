@@ -558,12 +558,11 @@ void BlockGenerator::generateScalarLoads(
       continue;
 
 #ifndef NDEBUG
-    auto *StmtDom = Stmt.getDomain().release();
-    auto *AccDom = isl_map_domain(MA->getAccessRelation().release());
-    assert(isl_set_is_subset(StmtDom, AccDom) &&
+    auto StmtDom =
+        Stmt.getDomain().intersect_params(Stmt.getParent()->getContext());
+    auto AccDom = MA->getAccessRelation().domain();
+    assert(!StmtDom.is_subset(AccDom).is_false() &&
            "Scalar must be loaded in all statement instances");
-    isl_set_free(StmtDom);
-    isl_set_free(AccDom);
 #endif
 
     auto *Address =
