@@ -23,6 +23,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/DebugInfo.h"
@@ -51,7 +52,7 @@ namespace clang {
   public:
     ClangDiagnosticHandler(const CodeGenOptions &CGOpts, BackendConsumer *BCon)
         : CodeGenOpts(CGOpts), BackendCon(BCon) {}
-  
+
     bool handleDiagnostics(const DiagnosticInfo &DI) override;
 
     bool isAnalysisRemarkEnabled(StringRef PassName) const override {
@@ -90,9 +91,8 @@ namespace clang {
     const LangOptions &LangOpts;
     std::unique_ptr<raw_pwrite_stream> AsmOutStream;
     ASTContext *Context;
-
-    Timer LLVMIRGeneration;
-    unsigned LLVMIRGenerationRefCount;
+    static constexpr const char *GroupName = "frontend";
+    static constexpr const char *GroupDescription = "===== Frontend =====";
 
     /// True if we've finished generating IR. This prevents us from generating
     /// additional LLVM IR after emitting output in HandleTranslationUnit. This
@@ -121,8 +121,6 @@ namespace clang {
         : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
           CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
           AsmOutStream(std::move(OS)), Context(nullptr),
-          LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
-          LLVMIRGenerationRefCount(0),
           Gen(CreateLLVMCodeGen(Diags, InFile, HeaderSearchOpts, PPOpts,
                                 CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)) {
@@ -141,38 +139,22 @@ namespace clang {
 
     void Initialize(ASTContext &Ctx) override {
       assert(!Context && "initialized multiple times");
-
       Context = &Ctx;
-
-      if (llvm::TimePassesIsEnabled)
-        LLVMIRGeneration.startTimer();
-
+      NamedRegionTimer T("initbackendconsumer", "Init Backend Consumer",
+                         GroupName, GroupDescription,
+                         llvm::TimePassesIsEnabled);
       Gen->Initialize(Ctx);
-
-      if (llvm::TimePassesIsEnabled)
-        LLVMIRGeneration.stopTimer();
     }
 
     bool HandleTopLevelDecl(DeclGroupRef D) override {
       PrettyStackTraceDecl CrashInfo(*D.begin(), SourceLocation(),
                                      Context->getSourceManager(),
                                      "LLVM IR generation of declaration");
-
-      // Recurse.
-      if (llvm::TimePassesIsEnabled) {
-        LLVMIRGenerationRefCount += 1;
-        if (LLVMIRGenerationRefCount == 1)
-          LLVMIRGeneration.startTimer();
-      }
+      NamedRegionTimer T("handlehophevelhecl", "Handle Top Level Decl",
+                         GroupName, GroupDescription,
+                         llvm::TimePassesIsEnabled);
 
       Gen->HandleTopLevelDecl(D);
-
-      if (llvm::TimePassesIsEnabled) {
-        LLVMIRGenerationRefCount -= 1;
-        if (LLVMIRGenerationRefCount == 0)
-          LLVMIRGeneration.stopTimer();
-      }
-
       return true;
     }
 
@@ -180,13 +162,11 @@ namespace clang {
       PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
                                      Context->getSourceManager(),
                                      "LLVM IR generation of inline function");
-      if (llvm::TimePassesIsEnabled)
-        LLVMIRGeneration.startTimer();
+      NamedRegionTimer T("handleinlinefunction",
+                         "Handle Inline Function Definition", GroupName,
+                         GroupDescription, llvm::TimePassesIsEnabled);
 
       Gen->HandleInlineFunctionDefinition(D);
-
-      if (llvm::TimePassesIsEnabled)
-        LLVMIRGeneration.stopTimer();
     }
 
     void HandleInterestingDecl(DeclGroupRef D) override {
@@ -197,6 +177,8 @@ namespace clang {
 
     // Links each entry in LinkModules into our module.  Returns true on error.
     bool LinkInModules() {
+      NamedRegionTimer T("linkinmodules", "Link In Modules", GroupName,
+                         GroupDescription, llvm::TimePassesIsEnabled);
       for (auto &LM : LinkModules) {
         if (LM.PropagateAttrs)
           for (Function &F : *LM.Module)
@@ -227,21 +209,12 @@ namespace clang {
     void HandleTranslationUnit(ASTContext &C) override {
       {
         PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-        if (llvm::TimePassesIsEnabled) {
-          LLVMIRGenerationRefCount += 1;
-          if (LLVMIRGenerationRefCount == 1)
-            LLVMIRGeneration.startTimer();
-        }
+        NamedRegionTimer T("handletranslationunit", "Handle Translation Unit",
+                           GroupName, GroupDescription,
+                           llvm::TimePassesIsEnabled);
 
         Gen->HandleTranslationUnit(C);
-
-        if (llvm::TimePassesIsEnabled) {
-          LLVMIRGenerationRefCount -= 1;
-          if (LLVMIRGenerationRefCount == 0)
-            LLVMIRGeneration.stopTimer();
-        }
-
-	IRGenFinished = true;
+        IRGenFinished = true;
       }
 
       // Silently ignore if we weren't initialized for some reason.
@@ -309,23 +282,37 @@ namespace clang {
     }
 
     void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+      NamedRegionTimer T("handletagdecl",
+                         "Handle Tag Decl Required Definition", GroupName,
+                         GroupDescription, llvm::TimePassesIsEnabled);
       Gen->HandleTagDeclRequiredDefinition(D);
     }
 
     void CompleteTentativeDefinition(VarDecl *D) override {
+      NamedRegionTimer T("completetentative",
+                         "Complete Tentative Definition", GroupName,
+                         GroupDescription, llvm::TimePassesIsEnabled);
       Gen->CompleteTentativeDefinition(D);
     }
 
     void AssignInheritanceModel(CXXRecordDecl *RD) override {
+      NamedRegionTimer T("assigninheritance", "Assign Inheritance Model",
+                         GroupName, GroupDescription,
+                         llvm::TimePassesIsEnabled);
       Gen->AssignInheritanceModel(RD);
     }
 
     void HandleVTable(CXXRecordDecl *RD) override {
+      NamedRegionTimer T("handlevtable", "Handle VTable", GroupName,
+                         GroupDescription, llvm::TimePassesIsEnabled);
       Gen->HandleVTable(RD);
     }
 
     static void InlineAsmDiagHandler(const llvm::SMDiagnostic &SM,void *Context,
                                      unsigned LocCookie) {
+      NamedRegionTimer T("inlineasmhandler", "Inline Asm Diag Handler",
+                         GroupName, GroupDescription,
+                         llvm::TimePassesIsEnabled);
       SourceLocation Loc = SourceLocation::getFromRawEncoding(LocCookie);
       ((BackendConsumer*)Context)->InlineAsmDiagHandler2(SM, Loc);
     }
@@ -932,6 +919,8 @@ static void BitcodeInlineAsmDiagHandler(const llvm::SMDiagnostic &SM,
 }
 
 std::unique_ptr<llvm::Module> CodeGenAction::loadModule(MemoryBufferRef MBRef) {
+  NamedRegionTimer T("loadmodule", "Load Module", GroupName, GroupDescription,
+                     llvm::TimePassesIsEnabled);
   CompilerInstance &CI = getCompilerInstance();
   SourceManager &SM = CI.getSourceManager();
 
@@ -999,6 +988,8 @@ std::unique_ptr<llvm::Module> CodeGenAction::loadModule(MemoryBufferRef MBRef) {
 void CodeGenAction::ExecuteAction() {
   // If this is an IR file, we have to treat it specially.
   if (getCurrentFileKind().getLanguage() == InputKind::LLVM_IR) {
+    NamedRegionTimer T("executeaction", "LLVM_IR ExecuteAction", GroupName,
+                       GroupDescription, llvm::TimePassesIsEnabled);
     BackendAction BA = static_cast<BackendAction>(Act);
     CompilerInstance &CI = getCompilerInstance();
     std::unique_ptr<raw_pwrite_stream> OS =

@@ -1078,13 +1078,13 @@ __mmask8 test_mm512_mask_cmpeq_ps_mask(__mmask8 k, __m512 a, __m512 b) {
 __mmask8 test_mm512_cmple_pd_mask(__m512d a, __m512d b) {
   // CHECK-LABEL: @test_mm512_cmple_pd_mask
   // CHECK: @llvm.x86.avx512.mask.cmp.pd.512
-  return _mm512_cmpeq_pd_mask(a, b);
+  return _mm512_cmple_pd_mask(a, b);
 }
 
 __mmask8 test_mm512_cmple_ps_mask(__m512 a, __m512 b) {
   // CHECK-LABEL: @test_mm512_cmple_ps_mask
   // CHECK: @llvm.x86.avx512.mask.cmp.ps.512
-  return _mm512_cmpeq_ps_mask(a, b);
+  return _mm512_cmple_ps_mask(a, b);
 }
 
 __mmask8 test_mm512_mask_cmple_pd_mask(__mmask8 k, __m512d a, __m512d b) {

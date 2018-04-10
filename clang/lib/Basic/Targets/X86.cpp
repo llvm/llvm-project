@@ -182,7 +182,8 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsavec", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
     setFeatureEnabledImpl(Features, "mpx", true);
-    setFeatureEnabledImpl(Features, "sgx", true);
+    if (Kind != CK_SkylakeServer) // SKX inherits all SKL features, except SGX
+      setFeatureEnabledImpl(Features, "sgx", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
     setFeatureEnabledImpl(Features, "rtm", true);
     LLVM_FALLTHROUGH;

@@ -84,6 +84,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -118,7 +119,7 @@ static bool checkArgCount(Sema &S, CallExpr *call, unsigned desiredArgCount) {
   // Highlight all the excess arguments.
   SourceRange range(call->getArg(desiredArgCount)->getLocStart(),
                     call->getArg(argCount - 1)->getLocEnd());
-    
+
   return S.Diag(range.getBegin(), diag::err_typecheck_call_too_many_args)
     << 0 /*function call*/ << desiredArgCount << argCount
     << call->getArg(1)->getSourceRange();
@@ -224,7 +225,7 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall) {
 }
 
 static void SemaBuiltinMemChkCall(Sema &S, FunctionDecl *FDecl,
-		                  CallExpr *TheCall, unsigned SizeIdx,
+                                  CallExpr *TheCall, unsigned SizeIdx,
                                   unsigned DstSizeIdx) {
   if (TheCall->getNumArgs() <= SizeIdx ||
       TheCall->getNumArgs() <= DstSizeIdx)
@@ -491,6 +492,9 @@ static bool checkOpenCLEnqueueVariadicArgs(Sema &S, CallExpr *TheCall,
 ///                    void (^block)(local void*, ...),
 ///                    uint size0, ...)
 static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
+  llvm::NamedRegionTimer T(
+      "semaopenclbuiltin", "Sema OpenCL Builtin Enqueue Kernel",
+      Sema::GroupName, Sema::GroupDescription, llvm::TimePassesIsEnabled);
   unsigned NumArgs = TheCall->getNumArgs();
 
   if (NumArgs < 4) {
@@ -853,6 +857,10 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
+  llvm::NamedRegionTimer T("checkbuiltinfunction",
+                           "Check Builtin Function Call", GroupName,
+                           GroupDescription, llvm::TimePassesIsEnabled);
+
   ExprResult TheCallResult(TheCall);
 
   // Find out if any arguments are required to be integer constant expressions.
@@ -2252,6 +2260,9 @@ bool Sema::CheckX86BuiltinGatherScatterScale(unsigned BuiltinID,
 }
 
 bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  llvm::NamedRegionTimer T("checkx86builtin",
+                           "Check X86 Builtin Function Call", GroupName,
+                           GroupDescription, llvm::TimePassesIsEnabled);
   if (BuiltinID == X86::BI__builtin_cpu_supports)
     return SemaBuiltinCpuSupports(*this, TheCall);
 
@@ -2693,6 +2704,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
                      SourceRange Range, VariadicCallType CallType) {
+  llvm::NamedRegionTimer T("checkcall", "Check Call", GroupName,
+                           GroupDescription, llvm::TimePassesIsEnabled);
   // FIXME: We should check as much as we can in the template definition.
   if (CurContext->isDependentContext())
     return;
@@ -3331,6 +3344,10 @@ static bool checkBuiltinArgument(Sema &S, CallExpr *E, unsigned ArgIndex) {
 /// builtins,
 ExprResult
 Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
+  llvm::NamedRegionTimer T("semabuiltinatomic",
+                           "Sema Builtin Atomic Overloaded", GroupName,
+                           GroupDescription, llvm::TimePassesIsEnabled);
+
   CallExpr *TheCall = (CallExpr *)TheCallResult.get();
   DeclRefExpr *DRE =cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
   FunctionDecl *FDecl = cast<FunctionDecl>(DRE->getDecl());
@@ -9518,6 +9535,10 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
 static void
 CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
                         bool *ICContext = nullptr) {
+  llvm::NamedRegionTimer NRT("checkimplicit",
+                             "Check Implicit Conversion", Sema::GroupName,
+                             Sema::GroupDescription, llvm::TimePassesIsEnabled);
+
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = S.Context.getCanonicalType(E->getType()).getTypePtr();

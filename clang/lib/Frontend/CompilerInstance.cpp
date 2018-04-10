@@ -56,6 +56,8 @@
 #include <utility>
 
 using namespace clang;
+static const char *const GroupName = "frontend";
+static const char *const GroupDescription = "===== Frontend =====";
 
 CompilerInstance::CompilerInstance(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
@@ -957,6 +959,10 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   assert(hasDiagnostics() && "Diagnostics engine is not initialized!");
   assert(!getFrontendOpts().ShowHelp && "Client must handle '-help'!");
   assert(!getFrontendOpts().ShowVersion && "Client must handle '-version'!");
+
+  llvm::NamedRegionTimer T("compilerinstance", "Compiler Instance actions",
+                           GroupName, GroupDescription,
+                           llvm::TimePassesIsEnabled);
 
   // FIXME: Take this as an argument, once all the APIs we used have moved to
   // taking it as an input instead of hard-coding llvm::errs.

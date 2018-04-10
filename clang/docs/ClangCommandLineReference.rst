@@ -144,6 +144,10 @@ Compile CUDA code for device only
 
 CUDA GPU architecture (e.g. sm\_35).  May be specified more than once.
 
+.. option:: --cuda-include-ptx=<arg>, --no-cuda-include-ptx=<arg>
+
+Include (or not) PTX along with CUDA GPU binary for the given architecture (e.g. sm\_35). Argument may be 'all'. The option may be specified more than once. Default: --cuda-include-ptx=all
+
 .. option:: --cuda-host-only
 
 Compile CUDA code for host only.  Has no effect on non-CUDA compilations.
