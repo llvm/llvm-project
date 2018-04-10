@@ -343,9 +343,6 @@ public:
 
   ConstString GetStandardLibraryBaseName();
 
-  virtual bool GetReferenceCounts(ValueObject &valobj, size_t &strong,
-                                  size_t &weak);
-
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
 
