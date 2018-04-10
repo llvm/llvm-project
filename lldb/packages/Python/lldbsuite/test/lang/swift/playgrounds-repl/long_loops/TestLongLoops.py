@@ -20,6 +20,7 @@ class TestLongLoops(repl.PlaygroundREPLTest):
 
     mydir = repl.PlaygroundREPLTest.compute_mydir(__file__)
 
+    @decorators.expectedFailureDarwin("rdar://39317795")
     def do_test(self):
         """
         Test that long iteration loops don't crash
