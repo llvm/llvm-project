@@ -1132,3 +1132,9 @@ def X86 : Target {
   let AssemblyWriters = [ATTAsmWriter, IntelAsmWriter];
   let AllowRegisterRenaming = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Pfm Counters
+//===----------------------------------------------------------------------===//
+
+include "X86PfmCounters.td"

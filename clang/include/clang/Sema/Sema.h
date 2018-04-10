@@ -304,6 +304,9 @@ class Sema {
   bool shouldLinkPossiblyHiddenDecl(LookupResult &Old, const NamedDecl *New);
 
 public:
+  static constexpr const char *GroupName = "sema";
+  static constexpr const char *GroupDescription = "===== Sema =====";
+
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
   typedef OpaquePtr<TemplateName> TemplateTy;
   typedef OpaquePtr<QualType> TypeTy;

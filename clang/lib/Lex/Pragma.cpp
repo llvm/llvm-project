@@ -39,11 +39,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -54,6 +56,8 @@
 #include <vector>
 
 using namespace clang;
+static const char *const GroupName = "clangparser";
+static const char *const GroupDescription = "===== Clang Parser =====";
 
 // Out-of-line destructor to provide a home for the class.
 PragmaHandler::~PragmaHandler() = default;
@@ -82,6 +86,8 @@ PragmaNamespace::~PragmaNamespace() {
 /// the null handler isn't returned on failure to match.
 PragmaHandler *PragmaNamespace::FindHandler(StringRef Name,
                                             bool IgnoreNull) const {
+  llvm::NamedRegionTimer NRT("ppfindhandler", "PP Find Handler", GroupName,
+                             GroupDescription, llvm::TimePassesIsEnabled);
   if (PragmaHandler *Handler = Handlers.lookup(Name))
     return Handler;
   return IgnoreNull ? nullptr : Handlers.lookup(StringRef());
@@ -128,6 +134,8 @@ void PragmaNamespace::HandlePragma(Preprocessor &PP,
 /// rest of the pragma, passing it to the registered pragma handlers.
 void Preprocessor::HandlePragmaDirective(SourceLocation IntroducerLoc,
                                          PragmaIntroducerKind Introducer) {
+  llvm::NamedRegionTimer NRT("pppragma", "Handle Pragma Directive", GroupName,
+                             GroupDescription, llvm::TimePassesIsEnabled);
   if (Callbacks)
     Callbacks->PragmaDirective(IntroducerLoc, Introducer);
 

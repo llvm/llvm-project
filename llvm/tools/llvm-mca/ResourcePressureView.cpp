@@ -120,7 +120,8 @@ void ResourcePressureView::printResourcePressurePerIteration(
     }
 
     double Pressure = Usage / Executions;
-    TempStream << format("%.2f", Pressure);
+    // Round to the value to the nearest hundredth and then print it.
+    TempStream << format("%.2f", floor((Pressure * 100) + 0.5)/100);
     if (Pressure < 10.0)
       TempStream << "   ";
     else if (Pressure < 100.0)

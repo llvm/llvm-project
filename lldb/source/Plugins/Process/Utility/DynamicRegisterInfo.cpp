@@ -12,6 +12,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringExtractor.h"
@@ -283,7 +284,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
 
     llvm::StringRef format_str;
     if (reg_info_dict->GetValueForKeyAsString("format", format_str, nullptr)) {
-      if (Args::StringToFormat(format_str.str().c_str(), reg_info.format, NULL)
+      if (OptionArgParser::ToFormat(format_str.str().c_str(), reg_info.format,
+                                    NULL)
               .Fail()) {
         Clear();
         printf("error: invalid 'format' value in register dictionary\n");

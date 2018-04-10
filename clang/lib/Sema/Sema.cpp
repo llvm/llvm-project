@@ -40,6 +40,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/Timer.h"
 using namespace clang;
 using namespace sema;
 
@@ -842,6 +843,9 @@ void Sema::ActOnStartOfTranslationUnit() {
 /// translation unit when EOF is reached and all but the top-level scope is
 /// popped.
 void Sema::ActOnEndOfTranslationUnit() {
+  llvm::NamedRegionTimer T(
+      "actoneou1", "Act On End Of Translation Unit: Common case",
+      GroupName, GroupDescription, llvm::TimePassesIsEnabled);
   assert(DelayedDiagnostics.getCurrentPool() == nullptr
          && "reached end of translation unit with a pool attached?");
 
@@ -867,6 +871,10 @@ void Sema::ActOnEndOfTranslationUnit() {
   // Complete translation units and modules define vtables and perform implicit
   // instantiations. PCH files do not.
   if (TUKind != TU_Prefix) {
+    llvm::NamedRegionTimer T(
+        "actoneou2",
+        "Act On End Of Translation Unit: TUKind != TU_Prefix", GroupName,
+        GroupDescription, llvm::TimePassesIsEnabled);
     DiagnoseUseOfUnimplementedSelectors();
 
     // If DefinedUsedVTables ends up marking any virtual member functions it
@@ -929,6 +937,10 @@ void Sema::ActOnEndOfTranslationUnit() {
       UnusedFileScopedDecls.end());
 
   if (TUKind == TU_Prefix) {
+    llvm::NamedRegionTimer T(
+        "actoneou3",
+        "Act On End Of Translation Unit: TUKind == TU_Prefix", GroupName,
+        GroupDescription, llvm::TimePassesIsEnabled);
     // Translation unit prefixes don't need any of the checking below.
     if (!PP.isIncrementalProcessingEnabled())
       TUScope = nullptr;
@@ -963,6 +975,10 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   if (TUKind == TU_Module) {
+    llvm::NamedRegionTimer T(
+        "actoneou4",
+        "Act On End Of Translation Unit: TUKind == TU_Module", GroupName,
+        GroupDescription, llvm::TimePassesIsEnabled);
     // If we are building a module interface unit, we need to have seen the
     // module declaration by now.
     if (getLangOpts().getCompilingModule() ==
@@ -1557,6 +1573,9 @@ void ExternalSemaSource::ReadMismatchingDeleteExpressions(llvm::MapVector<
 ///  name, this parameter is populated with the decls of the various overloads.
 bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
                          UnresolvedSetImpl &OverloadSet) {
+  llvm::NamedRegionTimer T("tryascall", "Try Expr As Call", GroupName,
+                           GroupDescription, llvm::TimePassesIsEnabled);
+
   ZeroArgCallReturnTy = QualType();
   OverloadSet.clear();
 
@@ -1719,6 +1738,9 @@ static bool IsCallableWithAppend(Expr *E) {
 bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
                                 bool ForceComplain,
                                 bool (*IsPlausibleResult)(QualType)) {
+  llvm::NamedRegionTimer T("trytorecover", "Try To Recover With Call",
+                           GroupName, GroupDescription,
+                           llvm::TimePassesIsEnabled);
   SourceLocation Loc = E.get()->getExprLoc();
   SourceRange Range = E.get()->getSourceRange();
 
