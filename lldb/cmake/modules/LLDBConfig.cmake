@@ -277,27 +277,31 @@ include_directories(BEFORE
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/
-    COMPONENT lldb_headers
+    COMPONENT lldb-headers
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN ".svn" EXCLUDE
     PATTERN ".cmake" EXCLUDE
     PATTERN "Config.h" EXCLUDE
-    PATTERN "lldb-*.h" EXCLUDE
-    PATTERN "API/*.h" EXCLUDE
     )
 
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
-    COMPONENT lldb_headers
+    COMPONENT lldb-headers
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN ".svn" EXCLUDE
     PATTERN ".cmake" EXCLUDE
-    PATTERN "lldb-*.h" EXCLUDE
-    PATTERN "API/*.h" EXCLUDE
     )
+
+  add_custom_target(lldb-headers)
+  set_target_properties(lldb-headers PROPERTIES FOLDER "Misc")
+
+  if (NOT CMAKE_CONFIGURATION_TYPES)
+    add_llvm_install_targets(install-lldb-headers
+                             COMPONENT lldb-headers)
+  endif()
 endif()
 
 if (NOT LIBXML2_FOUND AND NOT (CMAKE_SYSTEM_NAME MATCHES "Windows"))
