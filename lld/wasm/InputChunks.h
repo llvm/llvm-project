@@ -44,7 +44,7 @@ class OutputSegment;
 
 class InputChunk {
 public:
-  enum Kind { DataSegment, Function, SyntheticFunction };
+  enum Kind { DataSegment, Function, SyntheticFunction, Section };
 
   Kind kind() const { return SectionKind; }
 
@@ -171,6 +171,25 @@ protected:
 
   StringRef Name;
   ArrayRef<uint8_t> Body;
+};
+
+// Represents a single Wasm Section within an input file.
+class InputSection : public InputChunk {
+public:
+  InputSection(const WasmSection &S, ObjFile *F);
+
+  StringRef getName() const override { return Section.Name; }
+  uint32_t getComdat() const override { return UINT32_MAX; }
+
+protected:
+  ArrayRef<uint8_t> data() const override { return Payload; }
+
+  // Offset within the input section.  This is only zero since this chunk
+  // type represents an entire input section, not part of one.
+  uint32_t getInputSectionOffset() const override { return 0; }
+
+  const WasmSection &Section;
+  ArrayRef<uint8_t> Payload;
 };
 
 } // namespace wasm

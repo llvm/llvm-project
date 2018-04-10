@@ -13,7 +13,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
@@ -620,7 +619,7 @@ void Args::ExpandEscapedCharacters(const char *src, std::string &dst) {
   dst.clear();
   if (src) {
     for (const char *p = src; *p != '\0'; ++p) {
-      if (isprint8(*p))
+      if (isprint(*p))
         dst.append(1, *p);
       else {
         switch (*p) {
