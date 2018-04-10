@@ -44,6 +44,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Timer.h"
 using namespace clang;
 using namespace sema;
 
@@ -1308,6 +1309,10 @@ Sema::ActOnGenericSelectionExpr(SourceLocation KeyLoc,
                                 Expr *ControllingExpr,
                                 ArrayRef<ParsedType> ArgTypes,
                                 ArrayRef<Expr *> ArgExprs) {
+  llvm::NamedRegionTimer T("actongenericselection",
+                           "Act On Generic Selection Expr", GroupName,
+                           GroupDescription, llvm::TimePassesIsEnabled);
+
   unsigned NumAssocs = ArgTypes.size();
   assert(NumAssocs == ArgExprs.size());
 
@@ -1520,6 +1525,9 @@ static ExprResult BuildCookedLiteralOperatorCall(Sema &S, Scope *Scope,
 ExprResult
 Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   assert(!StringToks.empty() && "Must have at least one string!");
+  llvm::NamedRegionTimer T("actonstringliteral", "Act On String Literal",
+                           GroupName, GroupDescription,
+                           llvm::TimePassesIsEnabled);
 
   StringLiteralParser Literal(StringToks, PP);
   if (Literal.hadError)
@@ -2027,6 +2035,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                         bool IsInlineAsmIdentifier, Token *KeywordReplacement) {
   assert(!(IsAddressOfOperand && HasTrailingLParen) &&
          "cannot be direct & operand and have a trailing lparen");
+  llvm::NamedRegionTimer T("actonid", "Act On Id Expression",
+                           GroupName, GroupDescription,
+                           llvm::TimePassesIsEnabled);
   if (SS.isInvalid())
     return ExprError();
 
@@ -3063,6 +3074,10 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
 }
 
 ExprResult Sema::ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind) {
+  llvm::NamedRegionTimer T("actonpredefined", "Act On Predefined Expr",
+                           GroupName, GroupDescription,
+                           llvm::TimePassesIsEnabled);
+
   PredefinedExpr::IdentType IT;
 
   switch (Kind) {

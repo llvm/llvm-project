@@ -95,7 +95,7 @@ option specifies "``-``", then the output will also be sent to standard output.
 .. option:: -iterations=<number of iterations>
 
  Specify the number of iterations to run. If this flag is set to 0, then the
- tool sets the number of iterations to a default value (i.e. 70).
+ tool sets the number of iterations to a default value (i.e. 100).
 
 .. option:: -noalias=<bool>
 

@@ -39,6 +39,7 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -489,7 +490,7 @@ Status ProcessLaunchCommandOptions::SetOptionValue(
   {
     bool success;
     const bool disable_aslr_arg =
-        Args::StringToBoolean(option_arg, true, &success);
+        OptionArgParser::ToBoolean(option_arg, true, &success);
     if (success)
       disable_aslr = disable_aslr_arg ? eLazyBoolYes : eLazyBoolNo;
     else
@@ -502,7 +503,8 @@ Status ProcessLaunchCommandOptions::SetOptionValue(
   case 'X': // shell expand args.
   {
     bool success;
-    const bool expand_args = Args::StringToBoolean(option_arg, true, &success);
+    const bool expand_args =
+        OptionArgParser::ToBoolean(option_arg, true, &success);
     if (success)
       launch_info.SetShellExpandArguments(expand_args);
     else

@@ -635,7 +635,7 @@ static void EmitRegisterFileInfo(const CodeGenProcModel &ProcModel,
     OS << ProcModel.ModelName << "RegisterCosts,\n  ";
   else
     OS << "nullptr,\n  ";
-  OS << NumCostEntries << " // Number of register cost entries.\n";
+  OS << NumCostEntries << ", // Number of register cost entries.\n";
 }
 
 unsigned
@@ -686,12 +686,68 @@ SubtargetEmitter::EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
 
   return CostTblIndex;
 }
+static bool EmitPfmIssueCountersTable(const CodeGenProcModel &ProcModel,
+                                      raw_ostream &OS) {
+  std::vector<const Record *> CounterDefs(ProcModel.ProcResourceDefs.size());
+  bool HasCounters = false;
+  for (const Record *CounterDef : ProcModel.PfmIssueCounterDefs) {
+    const Record *&CD = CounterDefs[ProcModel.getProcResourceIdx(
+        CounterDef->getValueAsDef("Resource"))];
+    if (CD) {
+      PrintFatalError(CounterDef->getLoc(),
+                      "multiple issue counters for " +
+                          CounterDef->getValueAsDef("Resource")->getName());
+    }
+    CD = CounterDef;
+    HasCounters = true;
+  }
+  if (!HasCounters) {
+    return false;
+  }
+  OS << "\nstatic const char* " << ProcModel.ModelName
+     << "PfmIssueCounters[] = {\n";
+  for (const Record *CounterDef : CounterDefs) {
+    if (CounterDef) {
+      const auto PfmCounters = CounterDef->getValueAsListOfStrings("Counters");
+      if (PfmCounters.empty())
+        PrintFatalError(CounterDef->getLoc(), "empty counter list");
+      for (const StringRef CounterName : PfmCounters)
+        OS << "  \"" << CounterName << ",\"";
+      OS << ",  //" << CounterDef->getValueAsDef("Resource")->getName() << "\n";
+    } else {
+      OS << "  nullptr,\n";
+    }
+  }
+  OS << "};\n";
+  return true;
+}
+
+static void EmitPfmCounters(const CodeGenProcModel &ProcModel,
+                            const bool HasPfmIssueCounters, raw_ostream &OS) {
+  OS << "  {\n";
+  // Emit the cycle counter.
+  if (ProcModel.PfmCycleCounterDef)
+    OS << "    \"" << ProcModel.PfmCycleCounterDef->getValueAsString("Counter")
+       << "\",  // Cycle counter.\n";
+  else
+    OS << "    nullptr,  // No cycle counter.\n";
+
+  // Emit a reference to issue counters table.
+  if (HasPfmIssueCounters)
+    OS << "    " << ProcModel.ModelName << "PfmIssueCounters\n";
+  else
+    OS << "    nullptr  // No issue counters.\n";
+  OS << "  }\n";
+}
 
 void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
                                               raw_ostream &OS) {
   // Generate a table of register file descriptors (one entry per each user
   // defined register file), and a table of register costs.
   unsigned NumCostEntries = EmitRegisterFileTables(ProcModel, OS);
+
+  // Generate a table of ProcRes counter names.
+  const bool HasPfmIssueCounters = EmitPfmIssueCountersTable(ProcModel, OS);
 
   // Now generate a table for the extra processor info.
   OS << "\nstatic const llvm::MCExtraProcessorInfo " << ProcModel.ModelName
@@ -704,6 +760,8 @@ void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
   // file descriptors and register costs).
   EmitRegisterFileInfo(ProcModel, ProcModel.RegisterFiles.size(),
                        NumCostEntries, OS);
+
+  EmitPfmCounters(ProcModel, HasPfmIssueCounters, OS);
 
   OS << "};\n";
 }
@@ -1308,9 +1366,9 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
     else
       OS << "  nullptr, // No Itinerary\n";
     if (PM.hasExtraProcessorInfo())
-      OS << "  &" << PM.ModelName << "ExtraInfo\n";
+      OS << "  &" << PM.ModelName << "ExtraInfo,\n";
     else
-      OS << "  nullptr  // No extra processor descriptor\n";
+      OS << "  nullptr // No extra processor descriptor\n";
     OS << "};\n";
   }
 }

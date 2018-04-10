@@ -18,6 +18,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private.h"
 
@@ -26,6 +27,22 @@
 namespace lldb_private {
 
 struct Option;
+
+typedef std::vector<std::tuple<std::string, int, std::string>> OptionArgVector;
+typedef std::shared_ptr<OptionArgVector> OptionArgVectorSP;
+
+struct OptionArgElement {
+  enum { eUnrecognizedArg = -1, eBareDash = -2, eBareDoubleDash = -3 };
+
+  OptionArgElement(int defs_index, int pos, int arg_pos)
+      : opt_defs_index(defs_index), opt_pos(pos), opt_arg_pos(arg_pos) {}
+
+  int opt_defs_index;
+  int opt_pos;
+  int opt_arg_pos;
+};
+
+typedef std::vector<OptionArgElement> OptionElementVector;
 
 static inline bool isprint8(int ch) {
   if (ch & 0xffffff00u)

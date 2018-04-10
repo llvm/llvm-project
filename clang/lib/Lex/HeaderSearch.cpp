@@ -30,11 +30,13 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -199,6 +201,9 @@ std::string HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
 }
 
 Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch) {
+  llvm::NamedRegionTimer T("lookupmodule", "Lookup Module", IncGroupName,
+                           IncGroupDescription, llvm::TimePassesIsEnabled);
+
   // Look in the module map to determine if there is a module by this name.
   Module *Module = ModMap.findModule(ModuleName);
   if (Module || !AllowSearch || !HSOpts->ImplicitModuleMaps)
@@ -223,6 +228,8 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch) {
 }
 
 Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName) {
+  llvm::NamedRegionTimer T("lookupmodule", "Lookup Module", IncGroupName,
+                           IncGroupDescription, llvm::TimePassesIsEnabled);
   Module *Module = nullptr;
 
   // Look through the various header search paths to load any available module
@@ -340,6 +347,8 @@ const FileEntry *DirectoryLookup::LookupFile(
     bool &InUserSpecifiedSystemFramework,
     bool &HasBeenMapped,
     SmallVectorImpl<char> &MappedName) const {
+  llvm::NamedRegionTimer T("lookupfile", "Lookup File", IncGroupName,
+                           IncGroupDescription, llvm::TimePassesIsEnabled);
   InUserSpecifiedSystemFramework = false;
   HasBeenMapped = false;
 
@@ -467,6 +476,8 @@ const FileEntry *DirectoryLookup::DoFrameworkLookup(
     SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule,
     bool &InUserSpecifiedSystemFramework) const {
+  llvm::NamedRegionTimer T("lookupfw", "Lookup Framework", IncGroupName,
+                           IncGroupDescription, llvm::TimePassesIsEnabled);
   FileManager &FileMgr = HS.getFileMgr();
 
   // Framework names must have a '/' in the filename.
@@ -633,6 +644,8 @@ const FileEntry *HeaderSearch::LookupFile(
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
     bool *IsMapped, bool SkipCache, bool BuildSystemModule) {
+  llvm::NamedRegionTimer T("lookupfile2", "Lookup File2", IncGroupName,
+                           IncGroupDescription, llvm::TimePassesIsEnabled);
   if (IsMapped)
     *IsMapped = false;
 
@@ -894,6 +907,8 @@ LookupSubframeworkHeader(StringRef Filename,
                          Module *RequestingModule,
                          ModuleMap::KnownHeader *SuggestedModule) {
   assert(ContextFileEnt && "No context file?");
+  llvm::NamedRegionTimer T("lookupsubfm", "Lookup SubFramework", IncGroupName,
+                           IncGroupDescription, llvm::TimePassesIsEnabled);
 
   // Framework names must have a '/' in the filename.  Find it.
   // FIXME: Should we permit '\' on Windows?
@@ -1111,6 +1126,9 @@ void HeaderSearch::MarkFileModuleHeader(const FileEntry *FE,
 bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
                                           const FileEntry *File, bool isImport,
                                           bool ModulesEnabled, Module *M) {
+  llvm::NamedRegionTimer T("shouldenterinc", "Should Enter Include File",
+                           IncGroupName, IncGroupDescription,
+                           llvm::TimePassesIsEnabled);
   ++NumIncluded; // Count # of attempted #includes.
 
   // Get information about this file.
@@ -1287,6 +1305,9 @@ static bool suggestModule(HeaderSearch &HS, const FileEntry *File,
 bool HeaderSearch::findUsableModuleForHeader(
     const FileEntry *File, const DirectoryEntry *Root, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemHeaderDir) {
+  llvm::NamedRegionTimer T("findmodule4header", "Find Usable Module For Header",
+                           IncGroupName, IncGroupDescription,
+                           llvm::TimePassesIsEnabled);
   if (File && needModuleLookup(RequestingModule, SuggestedModule)) {
     // If there is a module that corresponds to this header, suggest it.
     hasModuleMap(File->getName(), Root, IsSystemHeaderDir);
@@ -1299,6 +1320,9 @@ bool HeaderSearch::findUsableModuleForFrameworkHeader(
     const FileEntry *File, StringRef FrameworkName, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemFramework) {
   // If we're supposed to suggest a module, look for one now.
+  llvm::NamedRegionTimer T(
+      "findmodule4fwheader", "Find Usable Module For Framework Header",
+      IncGroupName, IncGroupDescription, llvm::TimePassesIsEnabled);
   if (needModuleLookup(RequestingModule, SuggestedModule)) {
     // Find the top-level framework based on this framework.
     SmallVector<std::string, 4> SubmodulePath;
@@ -1483,6 +1507,8 @@ HeaderSearch::loadModuleMapFile(const DirectoryEntry *Dir, bool IsSystem,
 }
 
 void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
+  llvm::NamedRegionTimer T("allmodules", "Collect All Modules", IncGroupName,
+                           IncGroupDescription, llvm::TimePassesIsEnabled);
   Modules.clear();
 
   if (HSOpts->ImplicitModuleMaps) {

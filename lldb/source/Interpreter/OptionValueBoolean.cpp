@@ -14,7 +14,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Host/PosixApi.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/STLExtras.h"
@@ -47,7 +47,7 @@ Status OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
     bool success = false;
-    bool value = Args::StringToBoolean(value_str, false, &success);
+    bool value = OptionArgParser::ToBoolean(value_str, false, &success);
     if (success) {
       m_value_was_set = true;
       m_current_value = value;

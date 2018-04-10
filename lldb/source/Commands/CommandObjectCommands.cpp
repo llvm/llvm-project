@@ -23,6 +23,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectRegexCommand.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
@@ -1639,7 +1640,7 @@ protected:
         break;
       case 's':
         m_synchronicity =
-            (ScriptedCommandSynchronicity)Args::StringToOptionEnum(
+            (ScriptedCommandSynchronicity)OptionArgParser::ToOptionEnum(
                 option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
           error.SetErrorStringWithFormat(

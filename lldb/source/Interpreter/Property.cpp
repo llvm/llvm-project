@@ -16,6 +16,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Target/Language.h"
 
@@ -53,7 +54,7 @@ Property::Property(const PropertyDefinition &definition)
     // "definition.default_cstr_value" as a string value that represents the
     // default value.
     if (definition.default_cstr_value)
-      m_value_sp.reset(new OptionValueBoolean(Args::StringToBoolean(
+      m_value_sp.reset(new OptionValueBoolean(OptionArgParser::ToBoolean(
           llvm::StringRef(definition.default_cstr_value), false, nullptr)));
     else
       m_value_sp.reset(
@@ -62,7 +63,8 @@ Property::Property(const PropertyDefinition &definition)
 
   case OptionValue::eTypeChar: {
     llvm::StringRef s(definition.default_cstr_value ? definition.default_cstr_value : "");
-    m_value_sp = std::make_shared<OptionValueChar>(Args::StringToChar(s, '\0', nullptr));
+    m_value_sp = std::make_shared<OptionValueChar>(
+        OptionArgParser::ToChar(s, '\0', nullptr));
     break;
   }
   case OptionValue::eTypeDictionary:
@@ -123,8 +125,8 @@ Property::Property(const PropertyDefinition &definition)
     {
       Format new_format = eFormatInvalid;
       if (definition.default_cstr_value)
-        Args::StringToFormat(definition.default_cstr_value, new_format,
-                             nullptr);
+        OptionArgParser::ToFormat(definition.default_cstr_value, new_format,
+                                  nullptr);
       else
         new_format = (Format)definition.default_uint_value;
       m_value_sp.reset(new OptionValueFormat(new_format));

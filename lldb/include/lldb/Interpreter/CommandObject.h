@@ -22,6 +22,7 @@
 
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
+#include "lldb/Interpreter/Options.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private.h"

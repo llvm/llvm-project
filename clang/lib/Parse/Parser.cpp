@@ -20,6 +20,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "llvm/Support/Timer.h"
 using namespace clang;
 
 
@@ -368,6 +369,8 @@ void Parser::EnterScope(unsigned ScopeFlags) {
 /// ExitScope - Pop a scope off the scope stack.
 void Parser::ExitScope() {
   assert(getCurScope() && "Scope imbalance!");
+  llvm::NamedRegionTimer NRT("clangscope", "Scope manipulation", GroupName,
+                             GroupDescription, llvm::TimePassesIsEnabled);
 
   // Inform the actions module that this scope is going away if there are any
   // decls in it.
@@ -543,6 +546,9 @@ bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
 /// ParseTopLevelDecl - Parse one top-level declaration, return whatever the
 /// action tells us to.  This returns true if the EOF was encountered.
 bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
+  llvm::NamedRegionTimer NRT("parsetopleveldecl", "Parse Top Level Decl",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds);
 
   // Skip over the EOF token, flagging end of previous input for incremental
@@ -1046,6 +1052,9 @@ Parser::ParseDeclarationOrFunctionDefinition(ParsedAttributesWithRange &attrs,
 Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                       const ParsedTemplateInfo &TemplateInfo,
                                       LateParsedAttrList *LateParsedAttrs) {
+  llvm::NamedRegionTimer NRT("parsefdef", "Parse Function Definition",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
@@ -1922,6 +1931,9 @@ bool Parser::isTokenEqualOrEqualTypo() {
 
 SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
   assert(Tok.is(tok::code_completion));
+  llvm::NamedRegionTimer NRT("codecompletion", "Code completion operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   PrevTokLocation = Tok.getLocation();
 
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
@@ -1947,29 +1959,47 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
 // Code-completion pass-through functions
 
 void Parser::CodeCompleteDirective(bool InConditional) {
+  llvm::NamedRegionTimer NRT("codecompletion", "Code completion operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   Actions.CodeCompletePreprocessorDirective(InConditional);
 }
 
 void Parser::CodeCompleteInConditionalExclusion() {
+  llvm::NamedRegionTimer NRT("codecompletion", "Code completion operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   Actions.CodeCompleteInPreprocessorConditionalExclusion(getCurScope());
 }
 
 void Parser::CodeCompleteMacroName(bool IsDefinition) {
+  llvm::NamedRegionTimer NRT("codecompletion", "Code completion operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   Actions.CodeCompletePreprocessorMacroName(IsDefinition);
 }
 
-void Parser::CodeCompletePreprocessorExpression() { 
+void Parser::CodeCompletePreprocessorExpression() {
+  llvm::NamedRegionTimer NRT("codecompletion", "Code completion operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   Actions.CodeCompletePreprocessorExpression();
 }
 
 void Parser::CodeCompleteMacroArgument(IdentifierInfo *Macro,
                                        MacroInfo *MacroInfo,
                                        unsigned ArgumentIndex) {
+  llvm::NamedRegionTimer NRT("codecompletion", "Code completion operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   Actions.CodeCompletePreprocessorMacroArgument(getCurScope(), Macro, MacroInfo,
                                                 ArgumentIndex);
 }
 
 void Parser::CodeCompleteNaturalLanguage() {
+  llvm::NamedRegionTimer NRT("codecompletion", "Code completion operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   Actions.CodeCompleteNaturalLanguage();
 }
 
@@ -2078,6 +2108,9 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
 ///
 /// Note that 'partition' is a context-sensitive keyword.
 Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
+  llvm::NamedRegionTimer NRT("moduleoperations", "Module related operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   SourceLocation StartLoc = Tok.getLocation();
 
   Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
@@ -2123,6 +2156,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
   assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
+  llvm::NamedRegionTimer NRT("moduleoperations", "Module related operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   SourceLocation ImportLoc = ConsumeToken();
   SourceLocation StartLoc = AtLoc.isInvalid() ? ImportLoc : AtLoc;
   
@@ -2160,6 +2196,9 @@ bool Parser::ParseModuleName(
     SourceLocation UseLoc,
     SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
     bool IsImport) {
+  llvm::NamedRegionTimer NRT("moduleoperations", "Module related operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   // Parse the module path.
   while (true) {
     if (!Tok.is(tok::identifier)) {
@@ -2190,6 +2229,9 @@ bool Parser::ParseModuleName(
 /// \returns false if the recover was successful and parsing may be continued, or
 /// true if parser must bail out to top level and handle the token there.
 bool Parser::parseMisplacedModuleImport() {
+  llvm::NamedRegionTimer NRT("moduleoperations", "Module related operations",
+                             GroupName, GroupDescription,
+                             llvm::TimePassesIsEnabled);
   while (true) {
     switch (Tok.getKind()) {
     case tok::annot_module_end:
