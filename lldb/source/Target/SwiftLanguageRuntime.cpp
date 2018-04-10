@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2018 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -3560,32 +3560,6 @@ ConstString SwiftLanguageRuntime::GetStandardLibraryName() {
   return GetStandardLibraryBaseName();
 }
 
-bool SwiftLanguageRuntime::GetReferenceCounts(ValueObject &valobj,
-                                              size_t &strong, size_t &weak) {
-  CompilerType compiler_type(valobj.GetCompilerType());
-  Flags type_flags(compiler_type.GetTypeInfo());
-  if (llvm::isa<SwiftASTContext>(compiler_type.GetTypeSystem()) &&
-      type_flags.AllSet(eTypeInstanceIsPointer)) {
-    lldb::addr_t ptr_value = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    if (ptr_value == LLDB_INVALID_ADDRESS)
-      return false;
-    ptr_value += GetProcess()->GetAddressByteSize();
-    Status error;
-    strong =
-        GetProcess()->ReadUnsignedIntegerFromMemory(ptr_value, 4, 0, error) >>
-        2;
-    if (error.Fail())
-      return false;
-    weak = GetProcess()->ReadUnsignedIntegerFromMemory(ptr_value + 4, 4, 0,
-                                                       error) >>
-           2;
-    if (error.Fail())
-      return false;
-    return true;
-  }
-  return false;
-}
-
 class ProjectionSyntheticChildren : public SyntheticChildren {
 public:
   struct FieldProjection {
@@ -4122,54 +4096,106 @@ public:
 
   virtual Options *GetOptions() { return nullptr; }
 
+private:
+  enum class ReferenceCountType {
+    eReferenceStrong,
+    eReferenceUnowned,
+    eReferenceWeak,
+  };
+
+  llvm::Optional<uint32_t> getReferenceCount(StringRef ObjName,
+                                             ReferenceCountType Type,
+                                             ExecutionContext &exe_ctx,
+                                             StackFrameSP &Frame) {
+    std::string Kind;
+    switch (Type) {
+    case ReferenceCountType::eReferenceStrong:
+      Kind = "";
+      break;
+    case ReferenceCountType::eReferenceUnowned:
+      Kind = "Unowned";
+      break;
+    case ReferenceCountType::eReferenceWeak:
+      Kind = "Weak";
+      break;
+    default:
+      llvm_unreachable("Unhandled refcount type in switch!");
+    }
+
+    EvaluateExpressionOptions eval_options;
+    eval_options.SetLanguage(lldb::eLanguageTypeSwift);
+    eval_options.SetResultIsInternal(true);
+    ValueObjectSP result_valobj_sp;
+    std::string Expr =
+        (llvm::Twine("Swift._get") + Kind + llvm::Twine("RetainCount(") +
+         ObjName + llvm::Twine(")"))
+            .str();
+    bool evalStatus = exe_ctx.GetTargetSP()->EvaluateExpression(
+        Expr, Frame.get(), result_valobj_sp, eval_options);
+    if (evalStatus != eExpressionCompleted)
+      return llvm::None;
+
+    bool success = false;
+    uint32_t count = result_valobj_sp->GetSyntheticValue()->GetValueAsUnsigned(
+        UINT32_MAX, &success);
+    if (!success)
+      return llvm::None;
+    return count;
+  }
+
 protected:
   bool DoExecute(const char *command, CommandReturnObject &result) {
-    ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
-    StackFrameSP frame_sp(exe_ctx.GetFrameSP());
+    StackFrameSP frame_sp(m_exe_ctx.GetFrameSP());
     EvaluateExpressionOptions options;
     options.SetLanguage(lldb::eLanguageTypeSwift);
     options.SetResultIsInternal(true);
-    options.SetUseDynamic();
     ValueObjectSP result_valobj_sp;
-    if (exe_ctx.GetTargetSP()->EvaluateExpression(command, frame_sp.get(),
-                                                  result_valobj_sp) ==
-        eExpressionCompleted) {
-      if (result_valobj_sp) {
-        if (result_valobj_sp->GetError().Fail()) {
-          result.SetStatus(lldb::eReturnStatusFailed);
-          result.AppendError(result_valobj_sp->GetError().AsCString());
-          return false;
-        }
-        result_valobj_sp =
-            result_valobj_sp->GetQualifiedRepresentationIfAvailable(
-                lldb::eDynamicCanRunTarget, true);
-        CompilerType result_type(result_valobj_sp->GetCompilerType());
-        if (result_type.GetTypeInfo() & lldb::eTypeInstanceIsPointer) {
-          size_t strong = 0, weak = 0;
-          if (!exe_ctx.GetProcessSP()
-                   ->GetSwiftLanguageRuntime()
-                   ->GetReferenceCounts(*result_valobj_sp.get(), strong,
-                                        weak)) {
-            result.AppendError("refcount not available");
-            result.SetStatus(lldb::eReturnStatusFailed);
-            return false;
-          } else {
-            result.AppendMessageWithFormat(
-                "refcount data: (strong = %zu, weak = %zu)\n", strong, weak);
-            result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-            return true;
-          }
-        } else {
-          result.AppendError("refcount only available for class types");
-          result.SetStatus(lldb::eReturnStatusFailed);
-          return false;
-        }
-      }
+
+    // We want to evaluate first the object we're trying to get the
+    // refcount of, in order, to, e.g. see whether it's available.
+    // So, given `language swift refcount patatino`, we try to
+    // evaluate `expr patatino` and fail early in case there is
+    // an error.
+    bool evalStatus = m_exe_ctx.GetTargetSP()->EvaluateExpression(
+        command, frame_sp.get(), result_valobj_sp, options);
+    if (evalStatus != eExpressionCompleted) {
+      result.SetStatus(lldb::eReturnStatusFailed);
+      if (result_valobj_sp && result_valobj_sp->GetError().Fail())
+        result.AppendError(result_valobj_sp->GetError().AsCString());
+      return false;
     }
-    result.SetStatus(lldb::eReturnStatusFailed);
-    if (result_valobj_sp && result_valobj_sp->GetError().Fail())
-      result.AppendError(result_valobj_sp->GetError().AsCString());
-    return false;
+
+    // At this point, we're sure we're grabbing in our hands a valid
+    // object and we can ask questions about it. `refcounts` are only
+    // defined on class objects, so we throw an error in case we're
+    // trying to look at something else.
+    result_valobj_sp = result_valobj_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicCanRunTarget, true);
+    CompilerType result_type(result_valobj_sp->GetCompilerType());
+    if (!(result_type.GetTypeInfo() & lldb::eTypeInstanceIsPointer)) {
+      result.AppendError("refcount only available for class types");
+      result.SetStatus(lldb::eReturnStatusFailed);
+      return false;
+    }
+
+    // Ask swift debugger support in the compiler about the objects
+    // reference counts, and return them to the user.
+    llvm::Optional<uint32_t> strong = getReferenceCount(
+        command, ReferenceCountType::eReferenceStrong, m_exe_ctx, frame_sp);
+    llvm::Optional<uint32_t> unowned = getReferenceCount(
+        command, ReferenceCountType::eReferenceUnowned, m_exe_ctx, frame_sp);
+    llvm::Optional<uint32_t> weak = getReferenceCount(
+        command, ReferenceCountType::eReferenceWeak, m_exe_ctx, frame_sp);
+
+    std::string unavailable = "<unavailable>";
+
+    result.AppendMessageWithFormat(
+        "refcount data: (strong = %s, unowned = %s, weak = %s)\n",
+        strong ? std::to_string(*strong).c_str() : unavailable.c_str(),
+        unowned ? std::to_string(*unowned).c_str() : unavailable.c_str(),
+        weak ? std::to_string(*weak).c_str() : unavailable.c_str());
+    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+    return true;
   }
 };
 
