@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -register-file-size=5 -iterations=2 -verbose -register-file-stats -timeline < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -register-file-size=5 -iterations=2 -dispatch-stats -register-file-stats -timeline < %s | FileCheck %s
 
 idiv %eax
 

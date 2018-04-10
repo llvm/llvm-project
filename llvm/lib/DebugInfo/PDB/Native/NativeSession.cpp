@@ -200,6 +200,17 @@ NativeSession::findSymbolByAddress(uint64_t Address, PDB_SymType Type) const {
   return nullptr;
 }
 
+std::unique_ptr<PDBSymbol>
+NativeSession::findSymbolByRVA(uint32_t RVA, PDB_SymType Type) const {
+  return nullptr;
+}
+
+std::unique_ptr<PDBSymbol>
+NativeSession::findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
+                                      PDB_SymType Type) const {
+  return nullptr;
+}
+
 std::unique_ptr<IPDBEnumLineNumbers>
 NativeSession::findLineNumbers(const PDBSymbolCompiland &Compiland,
                                const IPDBSourceFile &File) const {

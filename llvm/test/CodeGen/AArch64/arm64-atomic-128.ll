@@ -29,8 +29,7 @@ define void @fetch_and_nand(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw nand i128* %p, i128 %bits release
   store i128 %val, i128* @var, align 16
   ret void
@@ -45,8 +44,7 @@ define void @fetch_and_or(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw or i128* %p, i128 %bits seq_cst
   store i128 %val, i128* @var, align 16
   ret void
@@ -61,8 +59,7 @@ define void @fetch_and_add(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw add i128* %p, i128 %bits seq_cst
   store i128 %val, i128* @var, align 16
   ret void
@@ -77,8 +74,7 @@ define void @fetch_and_sub(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw sub i128* %p, i128 %bits seq_cst
   store i128 %val, i128* @var, align 16
   ret void
@@ -99,8 +95,7 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw min i128* %p, i128 %bits seq_cst
   store i128 %val, i128* @var, align 16
   ret void
@@ -121,8 +116,7 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw max i128* %p, i128 %bits seq_cst
   store i128 %val, i128* @var, align 16
   ret void
@@ -143,8 +137,7 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw umin i128* %p, i128 %bits seq_cst
   store i128 %val, i128* @var, align 16
   ret void
@@ -165,8 +158,7 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[SCRATCH_REGLO]], [[SCRATCH_REGHI]], [x0]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 
-; CHECK-DAG: str    [[DEST_REGLO]], [{{.*}}, :lo12:var]
-; CHECK-DAG: str    [[DEST_REGHI]], [{{.*}}, :lo12:var+8]
+; CHECK-DAG: stp    [[DEST_REGLO]], [[DEST_REGHI]]
   %val = atomicrmw umax i128* %p, i128 %bits seq_cst
   store i128 %val, i128* @var, align 16
   ret void

@@ -63,7 +63,8 @@ public:
     IntelKNL,
     IntelSKX,
     IntelCannonlake,
-    IntelIcelake,
+    IntelIcelakeClient,
+    IntelIcelakeServer,
   };
 
 protected:

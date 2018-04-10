@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -resource-pressure=false -instruction-info=false -verbose -register-file-stats -timeline < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -resource-pressure=false -instruction-info=false -dispatch-stats -register-file-stats -timeline < %s | FileCheck %s
 
   vdivps %ymm0, %ymm0, %ymm1
   vaddps %ymm0, %ymm0, %ymm2

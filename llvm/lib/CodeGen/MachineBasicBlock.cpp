@@ -408,12 +408,13 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
     OS.indent(IsInBundle ? 4 : 2);
     MI.print(OS, MST, IsStandalone, /*SkipOpers=*/false, /*SkipDebugLoc=*/false,
-             &TII);
+             /*AddNewLine=*/false, &TII);
 
     if (!IsInBundle && MI.getFlag(MachineInstr::BundledSucc)) {
       OS << " {";
       IsInBundle = true;
     }
+    OS << '\n';
   }
 
   if (IsInBundle)

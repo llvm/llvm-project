@@ -35,6 +35,7 @@ class InputChunk;
 class InputFunction;
 class InputSegment;
 class InputGlobal;
+class InputSection;
 
 class InputFile {
 public:
@@ -108,6 +109,7 @@ public:
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
   std::vector<InputGlobal *> Globals;
+  std::vector<InputSection *> CustomSections;
 
   ArrayRef<Symbol *> getSymbols() const { return Symbols; }
   Symbol *getSymbol(uint32_t Index) const { return Symbols[Index]; }

@@ -97,7 +97,7 @@ typedef std::pair<std::unique_ptr<MemoryBuffer>, std::error_code> MBErrPair;
 // Create a std::future that opens and maps a file using the best strategy for
 // the host platform.
 static std::future<MBErrPair> createFutureForFile(std::string Path) {
-#if LLVM_ON_WIN32
+#if _WIN32
   // On Windows, file I/O is relatively slow so it is best to do this
   // asynchronously.
   auto Strategy = std::launch::async;

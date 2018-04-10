@@ -670,6 +670,7 @@ struct CompletionItem {
   //              between a completion and a completion resolve request.
 };
 json::Expr toJSON(const CompletionItem &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CompletionItem &);
 
 bool operator<(const CompletionItem &, const CompletionItem &);
 
@@ -708,6 +709,8 @@ struct SignatureInformation {
   std::vector<ParameterInformation> parameters;
 };
 json::Expr toJSON(const SignatureInformation &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                              const SignatureInformation &);
 
 /// Represents the signature of a callable.
 struct SignatureHelp {
@@ -761,6 +764,7 @@ struct DocumentHighlight {
   }
 };
 json::Expr toJSON(const DocumentHighlight &DH);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DocumentHighlight &);
 
 } // namespace clangd
 } // namespace clang

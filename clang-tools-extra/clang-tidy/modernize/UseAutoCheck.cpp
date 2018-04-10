@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -287,9 +288,11 @@ StatementMatcher makeCombinedMatcher() {
 
 UseAutoCheck::UseAutoCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      MinTypeNameLength(Options.get("MinTypeNameLength", 5)),
       RemoveStars(Options.get("RemoveStars", 0)) {}
 
 void UseAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "MinTypeNameLength", MinTypeNameLength);
   Options.store(Opts, "RemoveStars", RemoveStars ? 1 : 0);
 }
 
@@ -414,6 +417,12 @@ void UseAutoCheck::replaceExpr(
     Loc = Loc.getNextTypeLoc();
   }
   SourceRange Range(Loc.getSourceRange());
+
+  if (MinTypeNameLength != 0 &&
+      tooling::fixit::getText(Loc.getSourceRange(), FirstDecl->getASTContext())
+              .size() < MinTypeNameLength)
+    return;
+
   auto Diag = diag(Range.getBegin(), Message);
 
   // Space after 'auto' to handle cases where the '*' in the pointer type is

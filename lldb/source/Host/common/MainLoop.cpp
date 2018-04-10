@@ -26,7 +26,7 @@
 
 #if HAVE_SYS_EVENT_H
 #include <sys/event.h>
-#elif defined(LLVM_ON_WIN32)
+#elif defined(_WIN32)
 #include <winsock2.h>
 #elif defined(__ANDROID__)
 #include <sys/syscall.h>
@@ -34,14 +34,14 @@
 #include <poll.h>
 #endif
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #define POLL WSAPoll
 #else
 #define POLL poll
 #endif
 
 #if SIGNAL_POLLING_UNSUPPORTED
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 typedef int sigset_t;
 typedef int siginfo_t;
 #endif
@@ -262,7 +262,7 @@ MainLoop::~MainLoop() {
 MainLoop::ReadHandleUP MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
                                                     const Callback &callback,
                                                     Status &error) {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   if (object_sp->GetFdType() != IOObject:: eFDTypeSocket) {
     error.SetErrorString("MainLoop: non-socket types unsupported on Windows");
     return nullptr;

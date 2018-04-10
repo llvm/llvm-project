@@ -331,8 +331,10 @@ LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty,
   switch (Dialect) {
   case LLVMInlineAsmDialectATT:
     AD = InlineAsm::AD_ATT;
+    break;
   case LLVMInlineAsmDialectIntel:
     AD = InlineAsm::AD_Intel;
+    break;
   }
   return wrap(InlineAsm::get(unwrap<FunctionType>(Ty),
                              StringRef(AsmString, AsmStringSize),
