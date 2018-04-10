@@ -65,3 +65,39 @@ body: |
     %4:gpr = PHI %0, %bb.1, %2, %bb.2
     %5:spr = VMOVSR %4, 14, %noreg
 ...
+
+# The current implementation doesn't perform any transformations if undef
+# operands are involved.
+# CHECK-LABEL: name: func-undefops
+# CHECK: body: |
+# CHECK:   bb.0:
+# CHECK:     Bcc %bb.2, 1, undef %cpsr
+#
+# CHECK:   bb.1:
+# CHECK:     %0:gpr = VMOVRS undef %1:spr, 14, %noreg
+# CHECK:     B %bb.3
+#
+# CHECK:   bb.2:
+# CHECK:     %2:gpr = VMOVRS undef %3:spr, 14, %noreg
+#
+# CHECK:   bb.3:
+# CHECK:     %4:gpr = PHI %0, %bb.1, %2, %bb.2
+# CHECK:     %5:spr = VMOVSR %4, 14, %noreg
+---
+name: func-undefops
+tracksRegLiveness: true
+body: |
+  bb.0:
+    Bcc %bb.2, 1, undef %cpsr
+
+  bb.1:
+    %0:gpr = VMOVRS undef %1:spr, 14, %noreg
+    B %bb.3
+
+  bb.2:
+    %2:gpr = VMOVRS undef %3:spr, 14, %noreg
+
+  bb.3:
+    %4:gpr = PHI %0, %bb.1, %2, %bb.2
+    %5:spr = VMOVSR %4, 14, %noreg
+...

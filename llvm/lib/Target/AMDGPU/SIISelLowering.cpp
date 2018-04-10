@@ -358,6 +358,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i16, Promote);
     setOperationAction(ISD::CTLZ, MVT::i16, Promote);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i16, Promote);
+    setOperationAction(ISD::CTPOP, MVT::i16, Promote);
 
     setOperationAction(ISD::SELECT_CC, MVT::i16, Expand);
 
