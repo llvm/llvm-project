@@ -9,7 +9,8 @@
 // Misc utils for Linux.
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
-#if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD
+#if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD ||                \
+    LIBFUZZER_OPENBSD
 #include "FuzzerCommand.h"
 
 #include <stdlib.h>
@@ -23,4 +24,4 @@ int ExecuteCommand(const Command &Cmd) {
 
 } // namespace fuzzer
 
-#endif // LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD
+#endif

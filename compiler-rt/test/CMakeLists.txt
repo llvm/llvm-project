@@ -61,7 +61,8 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(ubsan cfi)
     compiler_rt_test_runtime(sanitizer_common)
 
-    if(COMPILER_RT_BUILD_LIBFUZZER)
+    # OpenBSD not supporting asan, cannot run the tests
+    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
       compiler_rt_test_runtime(fuzzer)
     endif()
 
