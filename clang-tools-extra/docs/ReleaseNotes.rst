@@ -88,6 +88,11 @@ Improvements to clang-tidy
   with looping constructs. Every backward jump is rejected. Forward jumps are
   only allowed in nested loops.
 
+- New alias :doc:`fuchsia-header-anon-namespaces
+  <clang-tidy/checks/fuchsia-header-anon-namespaces>` to :doc:`google-build-namespaces
+  <clang-tidy/checks/google-build-namespaces>`
+  added.
+
 - New :doc:`fuchsia-multiple-inheritance
   <clang-tidy/checks/fuchsia-multiple-inheritance>` check
 
