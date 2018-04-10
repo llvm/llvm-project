@@ -16,7 +16,7 @@
 // X86-SAME: nocona, core2, penryn, bonnell, atom, silvermont, slm, goldmont,
 // X86-SAME: nehalem, corei7, westmere, sandybridge, corei7-avx, ivybridge,
 // X86-SAME: core-avx-i, haswell, core-avx2, broadwell, skylake, skylake-avx512,
-// X86-SAME: skx, cannonlake, icelake, knl, knm, lakemont, k6, k6-2, k6-3,
+// X86-SAME: skx, cannonlake, icelake-client, icelake-server, knl, knm, lakemont, k6, k6-2, k6-3,
 // X86-SAME: athlon, athlon-tbird, athlon-xp, athlon-mp, athlon-4, k8, athlon64,
 // X86-SAME: athlon-fx, opteron, k8-sse3, athlon64-sse3, opteron-sse3, amdfam10,
 // X86-SAME: barcelona, btver1, btver2, bdver1, bdver2, bdver3, bdver4, znver1,
@@ -28,7 +28,7 @@
 // X86_64-SAME: atom, silvermont, slm, goldmont, nehalem, corei7, westmere,
 // X86_64-SAME: sandybridge, corei7-avx, ivybridge, core-avx-i, haswell,
 // X86_64-SAME: core-avx2, broadwell, skylake, skylake-avx512, skx, cannonlake,
-// X86_64-SAME: icelake, knl, knm, k8, athlon64, athlon-fx, opteron, k8-sse3,
+// X86_64-SAME: icelake-client, icelake-server, knl, knm, k8, athlon64, athlon-fx, opteron, k8-sse3,
 // X86_64-SAME: athlon64-sse3, opteron-sse3, amdfam10, barcelona, btver1,
 // X86_64-SAME: btver2, bdver1, bdver2, bdver3, bdver4, znver1, x86-64
 

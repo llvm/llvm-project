@@ -46,7 +46,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 

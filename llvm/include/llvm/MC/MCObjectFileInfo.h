@@ -183,6 +183,7 @@ protected:
   MCSection *ConstTextCoalSection;
   MCSection *ConstDataSection;
   MCSection *DataCoalSection;
+  MCSection *ConstDataCoalSection;
   MCSection *DataCommonSection;
   MCSection *DataBSSSection;
   MCSection *FourByteConstantSection;
@@ -328,6 +329,9 @@ public:
   }
   const MCSection *getConstDataSection() const { return ConstDataSection; }
   const MCSection *getDataCoalSection() const { return DataCoalSection; }
+  const MCSection *getConstDataCoalSection() const {
+    return ConstDataCoalSection;
+  }
   const MCSection *getDataCommonSection() const { return DataCommonSection; }
   MCSection *getDataBSSSection() const { return DataBSSSection; }
   const MCSection *getFourByteConstantSection() const {

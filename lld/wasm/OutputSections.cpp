@@ -189,3 +189,38 @@ void DataSection::writeRelocations(raw_ostream &OS) const {
     for (const InputChunk *C : Seg->InputSegments)
       C->writeRelocations(OS);
 }
+
+CustomSection::CustomSection(std::string Name,
+                             ArrayRef<InputSection *> InputSections)
+    : OutputSection(WASM_SEC_CUSTOM, Name), PayloadSize(0),
+      InputSections(InputSections) {
+  raw_string_ostream OS(NameData);
+  encodeULEB128(Name.size(), OS);
+  OS << Name;
+  OS.flush();
+
+  for (InputSection *Section : InputSections) {
+    Section->OutputOffset = PayloadSize;
+    PayloadSize += Section->getSize();
+  }
+
+  createHeader(PayloadSize + NameData.size());
+}
+
+void CustomSection::writeTo(uint8_t *Buf) {
+  log("writing " + toString(*this) + " size=" + Twine(getSize()) +
+      " chunks=" + Twine(InputSections.size()));
+
+  assert(Offset);
+  Buf += Offset;
+
+  // Write section header
+  memcpy(Buf, Header.data(), Header.size());
+  Buf += Header.size();
+  memcpy(Buf, NameData.data(), NameData.size());
+  Buf += NameData.size();
+
+  // Write custom sections payload
+  parallelForEach(InputSections,
+                  [&](const InputSection *Section) { Section->writeTo(Buf); });
+}

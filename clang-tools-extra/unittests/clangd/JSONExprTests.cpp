@@ -15,9 +15,7 @@
 namespace clang {
 namespace clangd {
 namespace json {
-void PrintTo(const Expr &E, std::ostream *OS) {
-  llvm::raw_os_ostream(*OS) << llvm::formatv("{0:2}", E);
-}
+
 namespace {
 
 std::string s(const Expr &E) { return llvm::formatv("{0}", E).str(); }

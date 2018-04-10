@@ -4085,81 +4085,13 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            CS);
     break;
   }
-  case Intrinsic::memcpy_element_unordered_atomic: {
-    const AtomicMemCpyInst *MI = cast<AtomicMemCpyInst>(CS.getInstruction());
-
-    ConstantInt *ElementSizeCI =
-        dyn_cast<ConstantInt>(MI->getRawElementSizeInBytes());
-    Assert(ElementSizeCI,
-           "element size of the element-wise unordered atomic memory "
-           "intrinsic must be a constant int",
-           CS);
-    const APInt &ElementSizeVal = ElementSizeCI->getValue();
-    Assert(ElementSizeVal.isPowerOf2(),
-           "element size of the element-wise atomic memory intrinsic "
-           "must be a power of 2",
-           CS);
-
-    if (auto *LengthCI = dyn_cast<ConstantInt>(MI->getLength())) {
-      uint64_t Length = LengthCI->getZExtValue();
-      uint64_t ElementSize = MI->getElementSizeInBytes();
-      Assert((Length % ElementSize) == 0,
-             "constant length must be a multiple of the element size in the "
-             "element-wise atomic memory intrinsic",
-             CS);
-    }
-
-    auto IsValidAlignment = [&](uint64_t Alignment) {
-      return isPowerOf2_64(Alignment) && ElementSizeVal.ule(Alignment);
-    };
-    uint64_t DstAlignment = CS.getParamAlignment(0),
-             SrcAlignment = CS.getParamAlignment(1);
-    Assert(IsValidAlignment(DstAlignment),
-           "incorrect alignment of the destination argument", CS);
-    Assert(IsValidAlignment(SrcAlignment),
-           "incorrect alignment of the source argument", CS);
-    break;
-  }
-  case Intrinsic::memmove_element_unordered_atomic: {
-    auto *MI = cast<AtomicMemMoveInst>(CS.getInstruction());
-
-    ConstantInt *ElementSizeCI =
-        dyn_cast<ConstantInt>(MI->getRawElementSizeInBytes());
-    Assert(ElementSizeCI,
-           "element size of the element-wise unordered atomic memory "
-           "intrinsic must be a constant int",
-           CS);
-    const APInt &ElementSizeVal = ElementSizeCI->getValue();
-    Assert(ElementSizeVal.isPowerOf2(),
-           "element size of the element-wise atomic memory intrinsic "
-           "must be a power of 2",
-           CS);
-
-    if (auto *LengthCI = dyn_cast<ConstantInt>(MI->getLength())) {
-      uint64_t Length = LengthCI->getZExtValue();
-      uint64_t ElementSize = MI->getElementSizeInBytes();
-      Assert((Length % ElementSize) == 0,
-             "constant length must be a multiple of the element size in the "
-             "element-wise atomic memory intrinsic",
-             CS);
-    }
-
-    auto IsValidAlignment = [&](uint64_t Alignment) {
-      return isPowerOf2_64(Alignment) && ElementSizeVal.ule(Alignment);
-    };
-    uint64_t DstAlignment = CS.getParamAlignment(0),
-             SrcAlignment = CS.getParamAlignment(1);
-    Assert(IsValidAlignment(DstAlignment),
-           "incorrect alignment of the destination argument", CS);
-    Assert(IsValidAlignment(SrcAlignment),
-           "incorrect alignment of the source argument", CS);
-    break;
-  }
+  case Intrinsic::memcpy_element_unordered_atomic:
+  case Intrinsic::memmove_element_unordered_atomic:
   case Intrinsic::memset_element_unordered_atomic: {
-    auto *MI = cast<AtomicMemSetInst>(CS.getInstruction());
+    const auto *AMI = cast<AtomicMemIntrinsic>(CS.getInstruction());
 
     ConstantInt *ElementSizeCI =
-        dyn_cast<ConstantInt>(MI->getRawElementSizeInBytes());
+        dyn_cast<ConstantInt>(AMI->getRawElementSizeInBytes());
     Assert(ElementSizeCI,
            "element size of the element-wise unordered atomic memory "
            "intrinsic must be a constant int",
@@ -4170,9 +4102,9 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "must be a power of 2",
            CS);
 
-    if (auto *LengthCI = dyn_cast<ConstantInt>(MI->getLength())) {
+    if (auto *LengthCI = dyn_cast<ConstantInt>(AMI->getLength())) {
       uint64_t Length = LengthCI->getZExtValue();
-      uint64_t ElementSize = MI->getElementSizeInBytes();
+      uint64_t ElementSize = AMI->getElementSizeInBytes();
       Assert((Length % ElementSize) == 0,
              "constant length must be a multiple of the element size in the "
              "element-wise atomic memory intrinsic",
@@ -4182,9 +4114,14 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     auto IsValidAlignment = [&](uint64_t Alignment) {
       return isPowerOf2_64(Alignment) && ElementSizeVal.ule(Alignment);
     };
-    uint64_t DstAlignment = CS.getParamAlignment(0);
+    uint64_t DstAlignment = AMI->getDestAlignment();
     Assert(IsValidAlignment(DstAlignment),
            "incorrect alignment of the destination argument", CS);
+    if (const auto *AMT = dyn_cast<AtomicMemTransferInst>(AMI)) {
+      uint64_t SrcAlignment = AMT->getSourceAlignment();
+      Assert(IsValidAlignment(SrcAlignment),
+             "incorrect alignment of the source argument", CS);
+    }
     break;
   }
   case Intrinsic::gcroot:

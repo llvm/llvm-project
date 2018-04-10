@@ -49,7 +49,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaSectionContrib> Section;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_DIA_DIASECTIONCONTRIB_H

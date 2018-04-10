@@ -286,7 +286,7 @@ TEST_F(SymbolCollectorTest, SymbolRelativeWithFallback) {
               UnorderedElementsAre(AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
 }
 
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
 TEST_F(SymbolCollectorTest, CustomURIScheme) {
   // Use test URI scheme from URITests.cpp
   CollectorOpts.URISchemes.insert(CollectorOpts.URISchemes.begin(), "unittest");
@@ -571,7 +571,7 @@ TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {
                                          IncludeHeader(TestHeaderURI))));
 }
 
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
 TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
   CollectorOpts.CollectIncludePath = true;
   CanonicalIncludes Includes;

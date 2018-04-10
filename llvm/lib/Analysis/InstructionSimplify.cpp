@@ -90,7 +90,7 @@ static bool isSameCompare(Value *V, CmpInst::Predicate Pred, Value *LHS,
 }
 
 /// Does the given value dominate the specified phi node?
-static bool ValueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
+static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I)
     // Arguments and constants dominate all instructions.
@@ -99,7 +99,7 @@ static bool ValueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
   // If we are processing instructions (and/or basic blocks) that have not been
   // fully added to a function, the parent nodes may still be null. Simply
   // return the conservative answer in these cases.
-  if (!I->getParent() || !P->getParent() || !I->getParent()->getParent())
+  if (!I->getParent() || !P->getParent() || !I->getFunction())
     return false;
 
   // If we have a DominatorTree then do a precise test.
@@ -108,7 +108,7 @@ static bool ValueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
 
   // Otherwise, if the instruction is in the entry block and is not an invoke,
   // then it obviously dominates all phi nodes.
-  if (I->getParent() == &I->getParent()->getParent()->getEntryBlock() &&
+  if (I->getParent() == &I->getFunction()->getEntryBlock() &&
       !isa<InvokeInst>(I))
     return true;
 
@@ -443,13 +443,13 @@ static Value *ThreadBinOpOverPHI(Instruction::BinaryOps Opcode, Value *LHS,
   if (isa<PHINode>(LHS)) {
     PI = cast<PHINode>(LHS);
     // Bail out if RHS and the phi may be mutually interdependent due to a loop.
-    if (!ValueDominatesPHI(RHS, PI, Q.DT))
+    if (!valueDominatesPHI(RHS, PI, Q.DT))
       return nullptr;
   } else {
     assert(isa<PHINode>(RHS) && "No PHI instruction operand!");
     PI = cast<PHINode>(RHS);
     // Bail out if LHS and the phi may be mutually interdependent due to a loop.
-    if (!ValueDominatesPHI(LHS, PI, Q.DT))
+    if (!valueDominatesPHI(LHS, PI, Q.DT))
       return nullptr;
   }
 
@@ -490,7 +490,7 @@ static Value *ThreadCmpOverPHI(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
   PHINode *PI = cast<PHINode>(LHS);
 
   // Bail out if RHS and the phi may be mutually interdependent due to a loop.
-  if (!ValueDominatesPHI(RHS, PI, Q.DT))
+  if (!valueDominatesPHI(RHS, PI, Q.DT))
     return nullptr;
 
   // Evaluate the BinOp on the incoming phi values.
@@ -3986,7 +3986,7 @@ static Value *SimplifyPHINode(PHINode *PN, const SimplifyQuery &Q) {
   // instruction, we cannot return X as the result of the PHI node unless it
   // dominates the PHI block.
   if (HasUndefInput)
-    return ValueDominatesPHI(CommonValue, PN, Q.DT) ? CommonValue : nullptr;
+    return valueDominatesPHI(CommonValue, PN, Q.DT) ? CommonValue : nullptr;
 
   return CommonValue;
 }

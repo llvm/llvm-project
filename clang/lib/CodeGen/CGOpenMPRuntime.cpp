@@ -2982,6 +2982,7 @@ static llvm::Value *emitCopyprivateCopyFunction(
       CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
       ".omp.copyprivate.copy_func", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
   // Dest = (void*[n])(LHSArg);
@@ -4211,6 +4212,7 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
       llvm::Function::Create(TaskEntryTy, llvm::GlobalValue::InternalLinkage,
                              ".omp_task_entry.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskEntry, TaskEntryFnInfo);
+  TaskEntry->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, TaskEntry, TaskEntryFnInfo, Args,
                     Loc, Loc);
@@ -4312,6 +4314,7 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
                              ".omp_task_destructor.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), DestructorFn,
                                     DestructorFnInfo);
+  DestructorFn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, DestructorFn, DestructorFnInfo,
                     Args, Loc, Loc);
@@ -4589,6 +4592,7 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
       llvm::Function::Create(TaskDupTy, llvm::GlobalValue::InternalLinkage,
                              ".omp_task_dup.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskDup, TaskDupFnInfo);
+  TaskDup->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, TaskDup, TaskDupFnInfo, Args, Loc,
                     Loc);
@@ -5231,6 +5235,7 @@ llvm::Value *CGOpenMPRuntime::emitReductionFunction(
       CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
       ".omp.reduction.reduction_func", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
+  Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
 
@@ -5653,6 +5658,7 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     ".red_init.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
   Address PrivateAddr = CGF.EmitLoadOfPointer(
@@ -5728,6 +5734,7 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     ".red_comb.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
   llvm::Value *Size = nullptr;
@@ -5796,6 +5803,7 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     ".red_fini.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
   Address PrivateAddr = CGF.EmitLoadOfPointer(

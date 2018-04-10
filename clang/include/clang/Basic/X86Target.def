@@ -149,7 +149,11 @@ PROC_WITH_FEAT(Cannonlake, "cannonlake", PROC_64_BIT, FEATURE_AVX512VBMI)
 
 /// \name Icelake Client
 /// Icelake client microarchitecture based processors.
-PROC(Icelake, "icelake", PROC_64_BIT)
+PROC(IcelakeClient, "icelake-client", PROC_64_BIT)
+
+/// \name Icelake Server
+/// Icelake server microarchitecture based processors.
+PROC(IcelakeServer, "icelake-server", PROC_64_BIT)
 
 /// \name Knights Landing
 /// Knights Landing processor.

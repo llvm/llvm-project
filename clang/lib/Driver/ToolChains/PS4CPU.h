@@ -61,7 +61,9 @@ public:
          const llvm::opt::ArgList &Args);
 
   // No support for finding a C++ standard library yet.
-  std::string findLibCxxIncludePath() const override { return ""; }
+  void addLibCxxIncludePaths(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override {}
   void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override {}

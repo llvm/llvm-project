@@ -113,6 +113,27 @@ protected:
   size_t BodySize = 0;
 };
 
+// Represents a custom section in the output file.  Wasm custom sections are 
+// used for storing user-defined metadata.  Unlike the core sections types
+// they are identified by their string name.
+// The linker combines custom sections that have the same name by simply
+// concatenating them.
+// Note that some custom sections such as "name" and "linking" are handled
+// separately and are instead synthesized by the linker.
+class CustomSection : public OutputSection {
+public:
+  CustomSection(std::string Name, ArrayRef<InputSection *> InputSections);
+  size_t getSize() const override {
+    return Header.size() + NameData.size() + PayloadSize;
+  }
+  void writeTo(uint8_t *Buf) override;
+
+protected:
+  size_t PayloadSize;
+  ArrayRef<InputSection *> InputSections;
+  std::string NameData;
+};
+
 } // namespace wasm
 } // namespace lld
 
