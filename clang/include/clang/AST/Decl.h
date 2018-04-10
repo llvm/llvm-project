@@ -3541,6 +3541,31 @@ public:
 ///   union Y { int A, B; };     // Has body with members A and B (FieldDecls).
 /// This decl will be marked invalid if *any* members are invalid.
 class RecordDecl : public TagDecl {
+public:
+  /// Enum that represents the different ways arguments are passed to and
+  /// returned from function calls. This takes into account the target-specific
+  /// and version-specific rules along with the rules determined by the
+  /// language.
+  enum ArgPassingKind : unsigned {
+    /// The argument of this type can be passed directly in registers.
+    APK_CanPassInRegs,
+
+    /// The argument of this type cannot be passed directly in registers.
+    /// Records containing this type as a subobject are not forced to be passed
+    /// indirectly. This value is used only in C++. This value is required by
+    /// C++ because, in uncommon situations, it is possible for a class to have
+    /// only trivial copy/move constructors even when one of its subobjects has
+    /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
+    /// constructor in the derived class is deleted).
+    APK_CannotPassInRegs,
+
+    /// The argument of this type cannot be passed directly in registers.
+    /// Records containing this type as a subobject are forced to be passed
+    /// indirectly.
+    APK_CanNeverPassInRegs
+  };
+
+private:
   friend class DeclContext;
 
   // FIXME: This can be packed into the bitfields in Decl.
@@ -3571,16 +3596,16 @@ class RecordDecl : public TagDecl {
   bool NonTrivialToPrimitiveCopy : 1;
   bool NonTrivialToPrimitiveDestroy : 1;
 
-  /// True if this class can be passed in a non-address-preserving fashion
-  /// (such as in registers).
-  /// This does not imply anything about how the ABI in use will actually
-  /// pass an object of this class.
-  bool CanPassInRegisters : 1;
-
   /// Indicates whether this struct is destroyed in the callee. This flag is
   /// meaningless when Microsoft ABI is used since parameters are always
   /// destroyed in the callee.
-  bool ParamDestroyedInCallee : 1;
+  ///
+  /// Please note that MSVC won't merge adjacent bitfields if they don't have
+  /// the same type.
+  uint8_t ParamDestroyedInCallee : 1;
+
+  /// Represents the way this type is passed to a function.
+  uint8_t ArgPassingRestrictions : 2;
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -3669,12 +3694,15 @@ public:
   /// it must have at least one trivial, non-deleted copy or move constructor.
   /// FIXME: This should be set as part of completeDefinition.
   bool canPassInRegisters() const {
-    return CanPassInRegisters;
+    return getArgPassingRestrictions() == APK_CanPassInRegs;
   }
 
-  /// Set that we can pass this RecordDecl in registers.
-  void setCanPassInRegisters(bool CanPass) {
-    CanPassInRegisters = CanPass;
+  ArgPassingKind getArgPassingRestrictions() const {
+    return static_cast<ArgPassingKind>(ArgPassingRestrictions);
+  }
+
+  void setArgPassingRestrictions(ArgPassingKind Kind) {
+    ArgPassingRestrictions = static_cast<uint8_t>(Kind);
   }
 
   bool isParamDestroyedInCallee() const {

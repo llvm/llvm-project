@@ -19,28 +19,24 @@
 
 define zeroext i1 @opeq(
 ; CHECK-LABEL: @opeq(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_BASE:%.*]] = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* [[A:%.*]], i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0
-; CHECK-NEXT:    [[A_ELEM3_ADDR:%.*]] = getelementptr inbounds i8, i8* [[A_BASE]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[A_ELEM3_ADDR]], align 1
-; CHECK-NEXT:    [[B_BASE:%.*]] = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* [[B:%.*]], i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0
-; CHECK-NEXT:    [[B_ELEM3_ADDR:%.*]] = getelementptr inbounds i8, i8* [[B_BASE]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[B_ELEM3_ADDR]], align 1
-; CHECK-NEXT:    [[CMP_ELEM3:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[CMP_ELEM3]], label [[LAND_ELEM0:%.*]], label [[OPEQ_EXIT:%.*]]
+;
+; These 2 instructions are split. Then we can merge 3 bytes, instead of 2.
+; CHECK:         br label [[LAND_ELEM0:%.*]]
 ; CHECK:       land.elem1:
-; CHECK-NEXT:    [[A_ELEM1_ADDR:%.*]] = getelementptr inbounds i8, i8* [[A_BASE]], i64 1
-; CHECK-NEXT:    [[B_ELEM1_ADDR:%.*]] = getelementptr inbounds i8, i8* [[B_BASE]], i64 1
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[A_ELEM1_ADDR]], i8* [[B_ELEM1_ADDR]], i64 2)
+; CHECK-NEXT:    [[A_ELEM1_ADDR:%.*]] = getelementptr inbounds i8, i8* %a.base, i64 1
+; CHECK-NEXT:    [[B_ELEM1_ADDR:%.*]] = getelementptr inbounds i8, i8* %b.base, i64 1
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[A_ELEM1_ADDR]], i8* [[B_ELEM1_ADDR]], i64 3)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
-; CHECK-NEXT:    br label [[OPEQ_EXIT]]
+; CHECK-NEXT:    br label [[OPEQ_EXIT:%.*]]
 ; CHECK:       land.elem0:
+; CHECK:         [[A_BASE:%.*]] = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* [[A:%.*]], i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0
+; CHECK:         [[B_BASE:%.*]] = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* [[B:%.*]], i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* [[A_BASE]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[B_BASE]], align 1
 ; CHECK-NEXT:    [[CMP_ELEM0:%.*]] = icmp eq i8 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[CMP_ELEM0]], label [[LAND_ELEM1:%.*]], label [[OPEQ_EXIT]]
 ; CHECK:       opeq.exit:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP_ELEM0]], [[LAND_ELEM0]] ], [ [[TMP2]], [[LAND_ELEM1]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[CMP_ELEM0]], [[LAND_ELEM0]] ], [ [[TMP2]], [[LAND_ELEM1]] ]
 ; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %"class.std::tuple"* nocapture readonly dereferenceable(4) %a,

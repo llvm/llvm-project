@@ -1213,11 +1213,21 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   if (Config->Relocatable)
     return;
 
-  for (BaseCommand *Base : Script->SectionCommands)
-    if (auto *Sec = dyn_cast<OutputSection>(Base))
-      Sec->SortRank = getSectionRank(Sec);
-
   sortInputSections();
+
+  for (BaseCommand *Base : Script->SectionCommands) {
+    auto *OS = dyn_cast<OutputSection>(Base);
+    if (!OS)
+      continue;
+    OS->SortRank = getSectionRank(OS);
+
+    // We want to assign rude approximation values to OutSecOff fields
+    // to know the relative order of the input sections. We use it for
+    // sorting SHF_LINK_ORDER sections. See resolveShfLinkOrder().
+    uint64_t I = 0;
+    for (InputSection *Sec : getInputSections(OS))
+      Sec->OutSecOff = I++;
+  }
 
   if (!Script->HasSectionsCommand) {
     // We know that all the OutputSections are contiguous in this case.

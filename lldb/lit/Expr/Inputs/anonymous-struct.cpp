@@ -1,4 +1,4 @@
-#include <tgmath.h>
+#include <cmath>
 
 typedef struct {
     float f;

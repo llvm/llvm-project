@@ -525,9 +525,20 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
       // addl 4(%esp), %eax
       // The former is 2 bytes shorter. In case where the increment is 1, then
       // the saving can be 4 bytes (by using incl %eax).
-      if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Op1))
+      if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Op1)) {
         if (Imm->getAPIntValue().isSignedIntN(8))
           return false;
+
+        // If this is a 64-bit AND with an immediate that fits in 32-bits,
+        // prefer using the smaller and over folding the load. This is needed to
+        // make sure immediates created by shrinkAndImmediate are always folded.
+        // Ideally we would narrow the load during DAG combine and get the
+        // best of both worlds.
+        if (U->getOpcode() == ISD::AND &&
+            Imm->getAPIntValue().getBitWidth() == 64 &&
+            Imm->getAPIntValue().isIntN(32))
+          return false;
+      }
 
       // If the other operand is a TLS address, we should fold it instead.
       // This produces

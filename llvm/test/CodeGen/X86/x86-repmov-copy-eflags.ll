@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
@@ -39,15 +39,12 @@ declare void @g(%struct.T*)
 ; CHECK:     leal 8(%esp), %esi
 
 ; CHECK:     decl     (%esp)
-; CHECK:     seto     %al
-; CHECK:     lahf
-; CHECK:     movl     %eax, %edi
+; CHECK:     setne    %[[NE_REG:.*]]
 ; CHECK:     pushl     %esi
 ; CHECK:     calll     _g
 ; CHECK:     addl     $4, %esp
-; CHECK:     movl     %edi, %eax
-; CHECK:     addb     $127, %al
-; CHECK:     sahf
+; CHECK:     testb    $-1, %[[NE_REG]]
+; CHECK:     jne
 
 attributes #0 = { nounwind optsize }
 attributes #1 = { argmemonly nounwind }

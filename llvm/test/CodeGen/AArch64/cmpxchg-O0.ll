@@ -86,11 +86,10 @@ define { i128, i1 } @test_cmpxchg_128(i128* %addr, i128 %desired, i128 %new) nou
 @var128 = global i128 0
 define {i128, i1} @test_cmpxchg_128_unsplit(i128* %addr) {
 ; CHECK-LABEL: test_cmpxchg_128_unsplit:
-; CHECK:     add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128
-; CHECK:     ldr [[DESIRED_HI:x[0-9]+]], [x[[VAR128]], #8]
-; CHECK:     ldr [[DESIRED_LO:x[0-9]+]], [x[[VAR128]]]
-; CHECK:     ldr [[NEW_HI:x[0-9]+]], [x[[VAR128]], #8]
-; CHECK:     ldr [[NEW_LO:x[0-9]+]], [x[[VAR128]]]
+; CHECK:     ldr [[DESIRED_HI:x[0-9]+]], [{{x[0-9]+}}, :lo12:var128+8]
+; CHECK:     ldr [[DESIRED_LO:x[0-9]+]], [{{x[0-9]+}}, :lo12:var128]
+; CHECK:     ldr [[NEW_HI:x[0-9]+]], [{{x[0-9]+}}, :lo12:var128+8]
+; CHECK:     ldr [[NEW_LO:x[0-9]+]], [{{x[0-9]+}}, :lo12:var128]
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
 ; CHECK:     ldaxp [[OLD_LO:x[0-9]+]], [[OLD_HI:x[0-9]+]], [x0]
 ; CHECK:     cmp [[OLD_LO]], [[DESIRED_LO]]

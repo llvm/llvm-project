@@ -12,9 +12,11 @@ module asm "foo1:"
 module asm ".symver foo1, foo@@@VER1"
 ; CHECK-DAG: t foo@@VER1
 
+module asm ".global foo2"
 module asm ".symver foo2, foo@@@VER2"
 ; CHECK-DAG: U foo2
-; CHECK-DAG: t foo@VER2
+; CHECK-DAG: U foo@VER2
+module asm "call foo2"
 
 module asm ".symver foo3, foo@@@VER3"
 ; CHECK-DAG: t foo@@VER3
@@ -23,7 +25,7 @@ module asm ".symver foo4, foo@@@VER4"
 ; CHECK-DAG: T foo@@VER4
 
 module asm ".symver foo5, foo@@@VER5"
-; CHECK-DAG: T foo@VER5
+; CHECK-DAG: U foo@VER5
 
 module asm "foo3:"
 ; CHECK-DAG: t foo3

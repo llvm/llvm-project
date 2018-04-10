@@ -63,6 +63,7 @@ private:
   void readExtern();
   void readGroup();
   void readInclude();
+  void readInput();
   void readMemory();
   void readOutput();
   void readOutputArch();
@@ -233,10 +234,12 @@ void ScriptParser::readLinkerScript() {
       readEntry();
     } else if (Tok == "EXTERN") {
       readExtern();
-    } else if (Tok == "GROUP" || Tok == "INPUT") {
+    } else if (Tok == "GROUP") {
       readGroup();
     } else if (Tok == "INCLUDE") {
       readInclude();
+    } else if (Tok == "INPUT") {
+      readInput();
     } else if (Tok == "MEMORY") {
       readMemory();
     } else if (Tok == "OUTPUT") {
@@ -326,13 +329,10 @@ void ScriptParser::readExtern() {
 }
 
 void ScriptParser::readGroup() {
-  expect("(");
-  while (!errorCount() && !consume(")")) {
-    if (consume("AS_NEEDED"))
-      readAsNeeded();
-    else
-      addFile(unquote(next()));
-  }
+  bool Orig = InputFile::IsInGroup;
+  InputFile::IsInGroup = true;
+  readInput();
+  InputFile::IsInGroup = Orig;
 }
 
 void ScriptParser::readInclude() {
@@ -349,6 +349,16 @@ void ScriptParser::readInclude() {
     return;
   }
   setError("cannot find linker script " + Tok);
+}
+
+void ScriptParser::readInput() {
+  expect("(");
+  while (!errorCount() && !consume(")")) {
+    if (consume("AS_NEEDED"))
+      readAsNeeded();
+    else
+      addFile(unquote(next()));
+  }
 }
 
 void ScriptParser::readOutput() {

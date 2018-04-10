@@ -225,7 +225,7 @@ void SymbolCollector::initialize(ASTContext &Ctx) {
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurence(
     const Decl *D, index::SymbolRoleSet Roles,
-    ArrayRef<index::SymbolRelation> Relations, FileID FID, unsigned Offset,
+    ArrayRef<index::SymbolRelation> Relations, SourceLocation Loc,
     index::IndexDataConsumer::ASTNodeInfo ASTNode) {
   assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
   assert(CompletionAllocator && CompletionTUInfo);
@@ -235,9 +235,10 @@ bool SymbolCollector::handleDeclOccurence(
 
   // Mark D as referenced if this is a reference coming from the main file.
   // D may not be an interesting symbol, but it's cheaper to check at the end.
+  auto &SM = ASTCtx->getSourceManager();
   if (Opts.CountReferences &&
       (Roles & static_cast<unsigned>(index::SymbolRole::Reference)) &&
-      ASTCtx->getSourceManager().getMainFileID() == FID)
+      SM.getFileID(SM.getSpellingLoc(Loc)) == SM.getMainFileID())
     ReferencedDecls.insert(ND);
 
   // Don't continue indexing if this is a mere reference.

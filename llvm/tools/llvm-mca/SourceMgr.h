@@ -25,21 +25,20 @@ typedef std::pair<unsigned, const llvm::MCInst *> InstRef;
 
 class SourceMgr {
   using InstVec = std::vector<std::unique_ptr<const llvm::MCInst>>;
-  InstVec Sequence;
+  const InstVec &Sequence;
   unsigned Current;
   unsigned Iterations;
   static const unsigned DefaultIterations = 70;
 
 public:
-  SourceMgr(unsigned NumIterations)
-      : Current(0),
+  SourceMgr(const InstVec &MCInstSequence, unsigned NumIterations)
+      : Sequence(MCInstSequence), Current(0),
         Iterations(NumIterations ? NumIterations : DefaultIterations) {}
 
   unsigned getCurrentIteration() const { return Current / Sequence.size(); }
   unsigned getNumIterations() const { return Iterations; }
   unsigned size() const { return Sequence.size(); }
   const InstVec &getSequence() const { return Sequence; }
-  InstVec &getSequence() { return Sequence; }
 
   bool hasNext() { return Current < (Iterations * size()); }
   void updateNext() { Current++; }

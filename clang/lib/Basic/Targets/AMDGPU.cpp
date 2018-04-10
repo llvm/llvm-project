@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "Targets.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
@@ -264,7 +263,6 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   resetDataLayout(isAMDGCN(getTriple()) ? DataLayoutStringAMDGCN
                                         : DataLayoutStringR600);
   assert(DataLayout->getAllocaAddrSpace() == Private);
-  GCN_Subarch = CudaArch::GFX803; // Default to fiji
 
   setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
                      !isAMDGCN(Triple));
@@ -308,9 +306,6 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (GPU.Kind != GK_NONE)
     Builder.defineMacro(Twine("__") + Twine(GPU.CanonicalName) + Twine("__"));
-
-  if (Opts.CUDAIsDevice)
-    defineCudaArchMacro(GCN_Subarch, Builder);
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
   // removed in the near future.

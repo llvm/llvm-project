@@ -33,6 +33,7 @@
 #define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/BasicBlock.h"
@@ -61,6 +62,7 @@ private:
   MemorySSA *MSSA;
   SmallVector<MemoryPhi *, 8> InsertedPHIs;
   SmallPtrSet<BasicBlock *, 8> VisitedBlocks;
+  SmallSet<AssertingVH<MemoryPhi>, 8> NonOptPhis;
 
 public:
   MemorySSAUpdater(MemorySSA *MSSA) : MSSA(MSSA) {}

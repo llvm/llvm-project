@@ -22034,15 +22034,16 @@ static SDValue LowerVectorIntUnary(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
   unsigned NumElems = VT.getVectorNumElements();
   unsigned SizeInBits = VT.getSizeInBits();
+  MVT EltVT = VT.getVectorElementType();
+  SDValue Src = Op.getOperand(0);
+  assert(EltVT == Src.getSimpleValueType().getVectorElementType() &&
+         "Src and Op should have the same element type!");
 
   // Extract the Lo/Hi vectors
   SDLoc dl(Op);
-  SDValue Src = Op.getOperand(0);
-  unsigned SrcNumElems = Src.getSimpleValueType().getVectorNumElements();
   SDValue Lo = extractSubVector(Src, 0, DAG, dl, SizeInBits / 2);
-  SDValue Hi = extractSubVector(Src, SrcNumElems / 2, DAG, dl, SizeInBits / 2);
+  SDValue Hi = extractSubVector(Src, NumElems / 2, DAG, dl, SizeInBits / 2);
 
-  MVT EltVT = VT.getVectorElementType();
   MVT NewVT = MVT::getVectorVT(EltVT, NumElems / 2);
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
                      DAG.getNode(Op.getOpcode(), dl, NewVT, Lo),
@@ -23996,8 +23997,17 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // Custom splitting for BWI types when AVX512F is available but BWI isn't.
-  if ((SrcVT == MVT::v32i16 || SrcVT == MVT::v64i8) && DstVT.isVector())
-    return Lower512IntUnary(Op, DAG);
+  if ((SrcVT == MVT::v32i16 || SrcVT == MVT::v64i8) && DstVT.isVector() &&
+    DAG.getTargetLoweringInfo().isTypeLegal(DstVT)) {
+    SDLoc dl(Op);
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(Op.getOperand(0), dl);
+    EVT CastVT = MVT::getVectorVT(DstVT.getVectorElementType(),
+                                  DstVT.getVectorNumElements() / 2);
+    Lo = DAG.getBitcast(CastVT, Lo);
+    Hi = DAG.getBitcast(CastVT, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, DstVT, Lo, Hi);
+  }
 
   // Use MOVMSK for vector to scalar conversion to prevent scalarization.
   if ((SrcVT == MVT::v16i1 || SrcVT == MVT::v32i1) && DstVT.isScalarInteger()) {
@@ -25391,7 +25401,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // Custom splitting for BWI types when AVX512F is available but BWI isn't.
     if ((DstVT == MVT::v32i16 || DstVT == MVT::v64i8) &&
         SrcVT.isVector() && isTypeLegal(SrcVT)) {
-      SDValue Res = Lower512IntUnary(SDValue(N, 0), DAG);
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
+      MVT CastVT = (DstVT == MVT::v32i16) ? MVT::v16i16 : MVT::v32i8;
+      Lo = DAG.getBitcast(CastVT, Lo);
+      Hi = DAG.getBitcast(CastVT, Hi);
+      SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, DstVT, Lo, Hi);
       Results.push_back(Res);
       return;
     }
@@ -38704,25 +38719,6 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   case ISD::XOR:
     return false;
   }
-}
-
-/// This function checks if any of the users of EFLAGS copies the EFLAGS. We
-/// know that the code that lowers COPY of EFLAGS has to use the stack, and if
-/// we don't adjust the stack we clobber the first frame index.
-/// See X86InstrInfo::copyPhysReg.
-static bool hasCopyImplyingStackAdjustment(const MachineFunction &MF) {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  return any_of(MRI.reg_instructions(X86::EFLAGS),
-                [](const MachineInstr &RI) { return RI.isCopy(); });
-}
-
-void X86TargetLowering::finalizeLowering(MachineFunction &MF) const {
-  if (hasCopyImplyingStackAdjustment(MF)) {
-    MachineFrameInfo &MFI = MF.getFrameInfo();
-    MFI.setHasCopyImplyingStackAdjustment(true);
-  }
-
-  TargetLoweringBase::finalizeLowering(MF);
 }
 
 SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,

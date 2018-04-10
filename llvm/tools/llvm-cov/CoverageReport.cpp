@@ -379,10 +379,14 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
   return FileReports;
 }
 
-void CoverageReport::renderFileReports(raw_ostream &OS) const {
+void CoverageReport::renderFileReports(
+    raw_ostream &OS, const CoverageFilters &IgnoreFilenameFilters) const {
   std::vector<std::string> UniqueSourceFiles;
-  for (StringRef SF : Coverage.getUniqueSourceFiles())
-    UniqueSourceFiles.emplace_back(SF.str());
+  for (StringRef SF : Coverage.getUniqueSourceFiles()) {
+    // Apply ignore source files filters.
+    if (!IgnoreFilenameFilters.matchesFilename(SF))
+      UniqueSourceFiles.emplace_back(SF.str());
+  }
   renderFileReports(OS, UniqueSourceFiles);
 }
 

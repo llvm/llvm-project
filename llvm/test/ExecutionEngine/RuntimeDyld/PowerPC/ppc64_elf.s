@@ -28,7 +28,7 @@ bar:
 # rtdyld-check: (*{4}(stub_addr(ppc64_elf.o, .text, foo) +  0)) [15:0] = foo_gep [63:48]
 # rtdyld-check: (*{4}(stub_addr(ppc64_elf.o, .text, foo) +  4)) [15:0] = foo_gep [47:32]
 # rtdyld-check: (*{4}(stub_addr(ppc64_elf.o, .text, foo) + 12)) [15:0] = foo_gep [31:16]
-# rtdyld-check: (*{4}(stub_addr(ppc64_elf.o, .text, foo) + 16)) [15:0] = foo_gep [16:0]
+# rtdyld-check: (*{4}(stub_addr(ppc64_elf.o, .text, foo) + 16)) [15:0] = foo_gep [15:0]
 # rtdyld-check: decode_operand(foo_call, 0) = (stub_addr(ppc64_elf.o, .text, foo) - foo_call) >> 2
 foo_call:
 	bl foo

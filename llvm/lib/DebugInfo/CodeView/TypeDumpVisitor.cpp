@@ -553,3 +553,18 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, LabelRecord &LR) {
   W->printEnum("Mode", uint16_t(LR.Mode), makeArrayRef(LabelTypeEnum));
   return Error::success();
 }
+
+Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
+                                        PrecompRecord &Precomp) {
+  W->printHex("StartIndex", Precomp.getStartTypeIndex());
+  W->printHex("Count", Precomp.getTypesCount());
+  W->printHex("Signature", Precomp.getSignature());
+  W->printString("PrecompFile", Precomp.getPrecompFilePath());
+  return Error::success();
+}
+
+Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
+                                        EndPrecompRecord &EndPrecomp) {
+  W->printHex("Signature", EndPrecomp.getSignature());
+  return Error::success();
+}
