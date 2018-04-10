@@ -38,6 +38,8 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
+bool InputFile::IsInGroup;
+uint32_t InputFile::NextGroupId;
 std::vector<BinaryFile *> elf::BinaryFiles;
 std::vector<BitcodeFile *> elf::BitcodeFiles;
 std::vector<InputFile *> elf::ObjectFiles;
@@ -45,7 +47,13 @@ std::vector<InputFile *> elf::SharedFiles;
 
 TarWriter *elf::Tar;
 
-InputFile::InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
+InputFile::InputFile(Kind K, MemoryBufferRef M)
+    : MB(M), GroupId(NextGroupId), FileKind(K) {
+  // All files within the same --{start,end}-group get the same group ID.
+  // Otherwise, a new file will get a new group ID.
+  if (!IsInGroup)
+    ++NextGroupId;
+}
 
 Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
   // The --chroot option changes our virtual root directory.
@@ -760,8 +768,10 @@ InputFile *ArchiveFile::fetch(const Archive::Symbol &Sym) {
   if (Tar && C.getParent()->isThin())
     Tar->append(relativeToRoot(CHECK(C.getFullName(), this)), MB.getBuffer());
 
-  return createObjectFile(MB, getName(),
-                          C.getParent()->isThin() ? 0 : C.getChildOffset());
+  InputFile *File = createObjectFile(
+      MB, getName(), C.getParent()->isThin() ? 0 : C.getChildOffset());
+  File->GroupId = GroupId;
+  return File;
 }
 
 template <class ELFT>
@@ -1168,7 +1178,10 @@ InputFile *LazyObjFile::fetch() {
   MemoryBufferRef MBRef = getBuffer();
   if (MBRef.getBuffer().empty())
     return nullptr;
-  return createObjectFile(MBRef, ArchiveName, OffsetInArchive);
+
+  InputFile *File = createObjectFile(MBRef, ArchiveName, OffsetInArchive);
+  File->GroupId = GroupId;
+  return File;
 }
 
 template <class ELFT> void LazyObjFile::parse() {

@@ -23,6 +23,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Property.h"
@@ -544,7 +545,8 @@ public:
       break;
 
     case 'b':
-      m_broadcast_events = Args::StringToBoolean(option_arg, true, nullptr);
+      m_broadcast_events =
+          OptionArgParser::ToBoolean(option_arg, true, nullptr);
       break;
 
     case 'c':
@@ -560,7 +562,7 @@ public:
       break;
 
     case 'e':
-      m_echo_to_stderr = Args::StringToBoolean(option_arg, false, nullptr);
+      m_echo_to_stderr = OptionArgParser::ToBoolean(option_arg, false, nullptr);
       break;
 
     case 'f':
@@ -571,12 +573,12 @@ public:
       break;
 
     case 'l':
-      m_live_stream = Args::StringToBoolean(option_arg, false, nullptr);
+      m_live_stream = OptionArgParser::ToBoolean(option_arg, false, nullptr);
       break;
 
     case 'n':
       m_filter_fall_through_accepts =
-          Args::StringToBoolean(option_arg, true, nullptr);
+          OptionArgParser::ToBoolean(option_arg, true, nullptr);
       break;
 
     case 'r':

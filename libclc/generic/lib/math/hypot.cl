@@ -1,4 +1,7 @@
 #include <clc/clc.h>
 
-#define __CLC_BODY <hypot.inc>
+#include <math/clc_hypot.h>
+
+#define __CLC_FUNC hypot
+#define __CLC_BODY <clc_sw_binary.inc>
 #include <clc/math/gentype.inc>

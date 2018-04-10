@@ -47,6 +47,7 @@
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPlatform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/TargetList.h"
@@ -480,8 +481,8 @@ bool SBDebugger::SetDefaultArchitecture(const char *arch_name) {
 ScriptLanguage
 SBDebugger::GetScriptingLanguage(const char *script_language_name) {
   if (!script_language_name) return eScriptLanguageDefault;
-  return Args::StringToScriptLanguage(llvm::StringRef(script_language_name),
-                                      eScriptLanguageDefault, nullptr);
+  return OptionArgParser::ToScriptLanguage(
+      llvm::StringRef(script_language_name), eScriptLanguageDefault, nullptr);
 }
 
 const char *SBDebugger::GetVersionString() {

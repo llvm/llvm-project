@@ -28,7 +28,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/Platform.h"
@@ -405,7 +405,7 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
         match_info.GetProcessInfo().SetEffectiveGroupID(gid);
       } else if (key.equals("all_users")) {
         match_info.SetMatchAllUsers(
-            Args::StringToBoolean(value, false, &success));
+            OptionArgParser::ToBoolean(value, false, &success));
       } else if (key.equals("triple")) {
         match_info.GetProcessInfo().GetArchitecture() =
             HostInfo::GetAugmentedArchSpec(value);

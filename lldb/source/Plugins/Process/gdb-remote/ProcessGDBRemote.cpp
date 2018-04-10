@@ -52,6 +52,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/OptionGroupUInt64.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
@@ -534,7 +535,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
               reg_info.encoding = encoding;
           } else if (name.equals("format")) {
             Format format = eFormatInvalid;
-            if (Args::StringToFormat(value.str().c_str(), format, NULL)
+            if (OptionArgParser::ToFormat(value.str().c_str(), format, NULL)
                     .Success())
               reg_info.format = format;
             else {
@@ -4388,7 +4389,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (name == "format") {
             format_set = true;
             Format format = eFormatInvalid;
-            if (Args::StringToFormat(value.data(), format, NULL).Success())
+            if (OptionArgParser::ToFormat(value.data(), format, NULL).Success())
               reg_info.format = format;
             else if (value == "vector-sint8")
               reg_info.format = eFormatVectorOfSInt8;

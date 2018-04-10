@@ -8,6 +8,7 @@ add_lldb_library(lldbInterpreter
   CommandObjectScript.cpp
   CommandOptionValidators.cpp
   CommandReturnObject.cpp
+  OptionArgParser.cpp
   OptionGroupArchitecture.cpp
   OptionGroupBoolean.cpp
   OptionGroupFile.cpp

@@ -24,6 +24,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
@@ -329,7 +330,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(option_arg, true, &success);
+        m_cascade = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_arg.str().c_str());
@@ -571,7 +572,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(option_value, true, &success);
+        m_cascade = OptionArgParser::ToBoolean(option_value, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_value.str().c_str());
@@ -1252,7 +1253,7 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 'C':
-    m_flags.SetCascades(Args::StringToBoolean(option_arg, true, &success));
+    m_flags.SetCascades(OptionArgParser::ToBoolean(option_arg, true, &success));
     if (!success)
       error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                      option_arg.str().c_str());
@@ -2520,7 +2521,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(option_arg, true, &success);
+        m_cascade = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_arg.str().c_str());
