@@ -90,6 +90,7 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-type-vararg
    cppcoreguidelines-slicing
    cppcoreguidelines-special-member-functions
+   fuchsia-header-anon-namespaces (redirects to google-build-namespaces) <fuchsia-header-anon-namespaces>
    fuchsia-default-arguments
    fuchsia-multiple-inheritance
    fuchsia-overloaded-operator

@@ -3675,8 +3675,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 SDValue AArch64TargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
                                              SelectionDAG &DAG,
                                              unsigned Flag) const {
-  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty,
-                                    N->getOffset(), Flag);
+  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty, 0, Flag);
 }
 
 SDValue AArch64TargetLowering::getTargetNode(JumpTableSDNode *N, EVT Ty,
@@ -3750,9 +3749,9 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
                                       : AArch64II::MO_NO_FLAG);
   unsigned char OpFlags =
       Subtarget->ClassifyGlobalReference(GV, getTargetMachine());
-  if (OpFlags != AArch64II::MO_NO_FLAG)
-    assert(cast<GlobalAddressSDNode>(Op)->getOffset() == 0 &&
-           "unexpected offset in global node");
+
+  assert(cast<GlobalAddressSDNode>(Op)->getOffset() == 0 &&
+         "unexpected offset in global node");
 
   // This also catches the large code model case for Darwin.
   if ((OpFlags & AArch64II::MO_GOT) != 0) {
@@ -4990,15 +4989,11 @@ SDValue AArch64TargetLowering::LowerShiftLeftParts(SDValue Op,
 
 bool AArch64TargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
-  // FIXME: Only ELF can represent the full range of possible addends here, as
-  // the format stores the addend in a 64-bit field. With Mach-O the equivalent
-  // field is 24 bits, and with COFF it is 21 bits. To make this work with the
-  // other object formats we will need to arrange to prevent the addend from
-  // going out of bounds.
-  if (!getTargetMachine().getTargetTriple().isOSBinFormatELF())
-    return false;
-  return Subtarget->ClassifyGlobalReference(
-             GA->getGlobal(), getTargetMachine()) == AArch64II::MO_NO_FLAG;
+  DEBUG(dbgs() << "Skipping offset folding global address: ");
+  DEBUG(GA->dump());
+  DEBUG(dbgs() << "AArch64 doesn't support folding offsets into global "
+        "addresses\n");
+  return false;
 }
 
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {

@@ -1,5 +1,5 @@
-# RUN: llvm-mca -march=aarch64 -mcpu=exynos-m3 -iterations=300 -timeline < %s | FileCheck %s -check-prefix=ALL -check-prefix=M3
-# RUN: llvm-mca -march=aarch64 -mcpu=exynos-m1 -iterations=300 -timeline < %s | FileCheck %s -check-prefix=ALL -check-prefix=M1
+# RUN: llvm-mca -march=aarch64 -mcpu=exynos-m3 -iterations=300 -timeline -timeline-max-iterations=3 -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=M3
+# RUN: llvm-mca -march=aarch64 -mcpu=exynos-m1 -iterations=300 -timeline -timeline-max-iterations=3 -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=M1
 
    b   t
 
@@ -34,4 +34,4 @@
 # ALL-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # ALL:            [0]    [1]    [2]    [3]
-# ALL-NEXT: 0.     10    0.0    0.0    0.0  	b   t
+# ALL-NEXT: 0.     3     0.0    0.0    0.0  	b   t

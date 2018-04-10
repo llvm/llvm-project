@@ -440,6 +440,56 @@ multiclass sve_int_index_rr<string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE Shift by Immediate - Unpredicated Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_bin_cons_shift_b<bits<4> tsz8_64, bits<2> opc, string asm,
+                               ZPRRegOp zprty, Operand immtype>
+: I<(outs zprty:$Zd), (ins zprty:$Zn, immtype:$imm),
+  asm, "\t$Zd, $Zn, $imm",
+  "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<6> imm;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = tsz8_64{3-2};
+  let Inst{21}    = 0b1;
+  let Inst{20-19} = tsz8_64{1-0};
+  let Inst{18-16} = imm{2-0}; // imm3
+  let Inst{15-12} = 0b1001;
+  let Inst{11-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_bin_cons_shift_b_left<bits<2> opc, string asm> {
+  def _B : sve_int_bin_cons_shift_b<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
+  def _H : sve_int_bin_cons_shift_b<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
+    let Inst{19} = imm{3};
+  }
+  def _S : sve_int_bin_cons_shift_b<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
+    let Inst{20-19} = imm{4-3};
+  }
+  def _D : sve_int_bin_cons_shift_b<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
+    let Inst{22}    = imm{5};
+    let Inst{20-19} = imm{4-3};
+  }
+}
+
+multiclass sve_int_bin_cons_shift_b_right<bits<2> opc, string asm> {
+  def _B : sve_int_bin_cons_shift_b<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
+  def _H : sve_int_bin_cons_shift_b<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
+    let Inst{19} = imm{3};
+  }
+  def _S : sve_int_bin_cons_shift_b<{0,1,?,?}, opc, asm, ZPR32, vecshiftR32> {
+    let Inst{20-19} = imm{4-3};
+  }
+  def _D : sve_int_bin_cons_shift_b<{1,?,?,?}, opc, asm, ZPR64, vecshiftR64> {
+    let Inst{22}    = imm{5};
+    let Inst{20-19} = imm{4-3};
+  }
+}
+//===----------------------------------------------------------------------===//
 // SVE Permute - Predicates Group
 //===----------------------------------------------------------------------===//
 

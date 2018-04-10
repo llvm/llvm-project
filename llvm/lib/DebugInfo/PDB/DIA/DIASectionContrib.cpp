@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/DIA/DIARawSymbol.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASectionContrib.h"
+#include "llvm/DebugInfo/PDB/DIA/DIARawSymbol.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 
@@ -29,25 +29,14 @@ std::unique_ptr<PDBSymbolCompiland> DIASectionContrib::getCompiland() const {
 }
 
 template <typename ArgType>
-ArgType PrivateGetDIAValue(
-    IDiaSectionContrib *Section,
-    HRESULT(__stdcall IDiaSectionContrib::*Method)(ArgType *)) {
+ArgType
+PrivateGetDIAValue(IDiaSectionContrib *Section,
+                   HRESULT (__stdcall IDiaSectionContrib::*Method)(ArgType *)) {
   ArgType Value;
   if (S_OK == (Section->*Method)(&Value))
     return static_cast<ArgType>(Value);
 
   return ArgType();
-}
-
-template <typename ArgType, typename RetType>
-RetType PrivateGetDIAValue(
-    IDiaSectionContrib *Section,
-    HRESULT(__stdcall IDiaSectionContrib::*Method)(ArgType *)) {
-  ArgType Value;
-  if (S_OK == (Section->*Method)(&Value))
-    return static_cast<RetType>(Value);
-
-  return RetType();
 }
 
 uint32_t DIASectionContrib::getAddressSection() const {
@@ -66,6 +55,7 @@ uint32_t DIASectionContrib::getRelativeVirtualAddress() const {
   return PrivateGetDIAValue(Section,
                             &IDiaSectionContrib::get_relativeVirtualAddress);
 }
+
 uint32_t DIASectionContrib::getLength() const {
   return PrivateGetDIAValue(Section, &IDiaSectionContrib::get_length);
 }
@@ -87,7 +77,8 @@ bool DIASectionContrib::hasInitializedData() const {
 }
 
 bool DIASectionContrib::hasUninitializedData() const {
-  return PrivateGetDIAValue(Section, &IDiaSectionContrib::get_uninitializedData);
+  return PrivateGetDIAValue(Section,
+                            &IDiaSectionContrib::get_uninitializedData);
 }
 
 bool DIASectionContrib::isRemoved() const {

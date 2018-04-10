@@ -15,6 +15,7 @@ add_llvm_tool(llvm-mca
   BackendStatistics.cpp
   CodeRegion.cpp
   Dispatch.cpp
+  DispatchStatistics.cpp
   HWEventListener.cpp
   InstrBuilder.cpp
   Instruction.cpp

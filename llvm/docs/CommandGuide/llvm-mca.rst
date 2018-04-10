@@ -37,11 +37,31 @@ substring ``LLVM-MCA-END`` marks the end of a code region.  For example:
   # LLVM-MCA-END
 
 Multiple regions can be specified provided that they do not overlap.  A code
-region can have an optional description. If no user defined region is specified,
+region can have an optional description. If no user-defined region is specified,
 then :program:`llvm-mca` assumes a default region which contains every
 instruction in the input file.  Every region is analyzed in isolation, and the
 final performance report is the union of all the reports generated for every
 code region.
+
+Inline assembly directives may be used from source code to annotate the 
+assembly text:
+
+.. code-block:: c++
+
+  int foo(int a, int b) {
+    __asm volatile("# LLVM-MCA-BEGIN foo");
+    a += 42;
+    __asm volatile("# LLVM-MCA-END");
+    a *= b;
+    return a;
+  }
+
+So for example, you can compile code with clang, output assembly, and pipe it
+directly into llvm-mca for analysis:
+
+.. code-block:: bash
+
+  $ clang foo.c -O2 -target x86_64-unknown-unknown -S -o - | llvm-mca -mcpu=btver2
 
 OPTIONS
 -------
@@ -95,7 +115,7 @@ option specifies "``-``", then the output will also be sent to standard output.
 .. option:: -iterations=<number of iterations>
 
  Specify the number of iterations to run. If this flag is set to 0, then the
- tool sets the number of iterations to a default value (i.e. 70).
+ tool sets the number of iterations to a default value (i.e. 100).
 
 .. option:: -noalias=<bool>
 
@@ -143,6 +163,12 @@ option specifies "``-``", then the output will also be sent to standard output.
 .. option:: -register-file-stats
 
   Enable register file usage statistics.
+
+.. option:: -dispatch-stats
+
+  Enable extra dispatch statistics. This view collects and analyzes instruction
+  dispatch events, as well as static/dynamic dispatch stall events. This view
+  is disabled by default.
 
 .. option:: -instruction-info
 

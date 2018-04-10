@@ -36,4 +36,7 @@ let Predicates = [HasSVE] in {
   defm INDEX_IR : sve_int_index_ir<"index">;
   defm INDEX_RI : sve_int_index_ri<"index">;
   defm INDEX_II : sve_int_index_ii<"index">;
+
+  defm LSR_ZZI : sve_int_bin_cons_shift_b_right<0b01, "lsr">;
+  defm LSL_ZZI : sve_int_bin_cons_shift_b_left< 0b11, "lsl">;
 }

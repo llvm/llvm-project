@@ -83,6 +83,22 @@ static void printColumnNames(raw_string_ostream &OS, const MCSchedModel &SM) {
   }
 }
 
+static void printResourcePressure(raw_string_ostream &OS, double Pressure) {
+  if (!Pressure) {
+    OS << " -     ";
+    return;
+  }
+
+  // Round to the value to the nearest hundredth and then print it.
+  OS << format("%.2f", floor((Pressure * 100) + 0.5)/100);
+  if (Pressure < 10.0)
+    OS << "   ";
+  else if (Pressure < 100.0)
+    OS << "  ";
+  else
+    OS << ' ';
+}
+
 void ResourcePressureView::printResourcePressurePerIteration(
     raw_ostream &OS, unsigned Executions) const {
   std::string Buffer;
@@ -114,19 +130,7 @@ void ResourcePressureView::printResourcePressurePerIteration(
 
   for (unsigned I = 0, E = NumResourceUnits; I < E; ++I) {
     double Usage = ResourceUsage[I + Source.size() * E];
-    if (!Usage) {
-      TempStream << " -     ";
-      continue;
-    }
-
-    double Pressure = Usage / Executions;
-    TempStream << format("%.2f", Pressure);
-    if (Pressure < 10.0)
-      TempStream << "   ";
-    else if (Pressure < 100.0)
-      TempStream << "  ";
-    else
-      TempStream << ' ';
+    printResourcePressure(TempStream, Usage / Executions);
   }
 
   TempStream.flush();
@@ -145,22 +149,7 @@ void ResourcePressureView::printResourcePressurePerInstruction(
   for (unsigned I = 0, E = Source.size(); I < E; ++I) {
     for (unsigned J = 0; J < NumResourceUnits; ++J) {
       double Usage = ResourceUsage[J + I * NumResourceUnits];
-      if (!Usage) {
-        TempStream << " -     ";
-      } else {
-        double Pressure = Usage / Executions;
-        if (Pressure < 0.005) {
-          TempStream << " -     ";
-        } else {
-          TempStream << format("%.2f", Pressure);
-          if (Pressure < 10.0)
-            TempStream << "   ";
-          else if (Pressure < 100.0)
-            TempStream << "  ";
-          else
-            TempStream << ' ';
-        }
-      }
+      printResourcePressure(TempStream, Usage / Executions);
     }
 
     MCIP.printInst(&Source.getMCInstFromIndex(I), TempStream, "", STI);

@@ -3435,7 +3435,39 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
                            "is also a source");
     break;
   }
+  case AArch64::STXRB:
+  case AArch64::STXRH:
+  case AArch64::STXRW:
+  case AArch64::STXRX:
+  case AArch64::STLXRB:
+  case AArch64::STLXRH:
+  case AArch64::STLXRW:
+  case AArch64::STLXRX: {
+    unsigned Rs = Inst.getOperand(0).getReg();
+    unsigned Rt = Inst.getOperand(1).getReg();
+    unsigned Rn = Inst.getOperand(2).getReg();
+    if (RI->isSubRegisterEq(Rt, Rs) ||
+        (RI->isSubRegisterEq(Rn, Rs) && Rn != AArch64::SP))
+      return Error(Loc[0],
+                   "unpredictable STXR instruction, status is also a source");
+    break;
   }
+  case AArch64::STXPW:
+  case AArch64::STXPX:
+  case AArch64::STLXPW:
+  case AArch64::STLXPX: {
+    unsigned Rs = Inst.getOperand(0).getReg();
+    unsigned Rt1 = Inst.getOperand(1).getReg();
+    unsigned Rt2 = Inst.getOperand(2).getReg();
+    unsigned Rn = Inst.getOperand(3).getReg();
+    if (RI->isSubRegisterEq(Rt1, Rs) || RI->isSubRegisterEq(Rt2, Rs) ||
+        (RI->isSubRegisterEq(Rn, Rs) && Rn != AArch64::SP))
+      return Error(Loc[0],
+                   "unpredictable STXP instruction, status is also a source");
+    break;
+  }
+  }
+
 
   // Now check immediate ranges. Separate from the above as there is overlap
   // in the instructions being checked and this keeps the nested conditionals

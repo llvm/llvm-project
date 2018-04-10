@@ -713,7 +713,6 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
   FeatureRTM,
   FeatureXSAVEC,
   FeatureXSAVES,
-  FeatureSGX,
   FeatureCLFLUSHOPT,
   FeatureFastVectorFSQRT
 ]>;
@@ -722,7 +721,8 @@ class SkylakeClientProc<string Name> : ProcModel<Name, SkylakeClientModel,
                                                  SKLFeatures.Value, [
   ProcIntelSKL,
   FeatureHasFastGather,
-  FeaturePOPCNTFalseDeps
+  FeaturePOPCNTFalseDeps,
+  FeatureSGX
 ]>;
 def : SkylakeClientProc<"skylake">;
 
@@ -790,7 +790,8 @@ def CNLFeatures : ProcessorFeatures<SKLFeatures.Value, [
   FeaturePKU,
   FeatureVBMI,
   FeatureIFMA,
-  FeatureSHA
+  FeatureSHA,
+  FeatureSGX
 ]>;
 
 class CannonlakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
