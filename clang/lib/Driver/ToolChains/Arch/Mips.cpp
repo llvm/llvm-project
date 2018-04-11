@@ -343,6 +343,28 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   AddTargetFeature(Args, Features, options::OPT_mno_madd4, options::OPT_mmadd4,
                    "nomadd4");
   AddTargetFeature(Args, Features, options::OPT_mmt, options::OPT_mno_mt, "mt");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mindirect_jump_EQ)) {
+    StringRef Val = StringRef(A->getValue());
+    if (Val == "hazard") {
+      Arg *B =
+          Args.getLastArg(options::OPT_mmicromips, options::OPT_mno_micromips);
+      Arg *C = Args.getLastArg(options::OPT_mips16, options::OPT_mno_mips16);
+
+      if (B && B->getOption().matches(options::OPT_mmicromips))
+        D.Diag(diag::err_drv_unsupported_indirect_jump_opt)
+            << "hazard" << "micromips";
+      else if (C && C->getOption().matches(options::OPT_mips16))
+        D.Diag(diag::err_drv_unsupported_indirect_jump_opt)
+            << "hazard" << "mips16";
+      else if (mips::supportsIndirectJumpHazardBarrier(CPUName))
+        Features.push_back("+use-indirect-jump-hazard");
+      else
+        D.Diag(diag::err_drv_unsupported_indirect_jump_opt)
+            << "hazard" << CPUName;
+    } else
+      D.Diag(diag::err_drv_unknown_indirect_jump_opt) << Val;
+  }
 }
 
 mips::IEEE754Standard mips::getIEEE754Standard(StringRef &CPU) {
@@ -446,4 +468,21 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
       UseFPXX = false;
 
   return UseFPXX;
+}
+
+bool mips::supportsIndirectJumpHazardBarrier(StringRef &CPU) {
+  // Supporting the hazard barrier method of dealing with indirect
+  // jumps requires MIPSR2 support.
+  return llvm::StringSwitch<bool>(CPU)
+      .Case("mips32r2", true)
+      .Case("mips32r3", true)
+      .Case("mips32r5", true)
+      .Case("mips32r6", true)
+      .Case("mips64r2", true)
+      .Case("mips64r3", true)
+      .Case("mips64r5", true)
+      .Case("mips64r6", true)
+      .Case("octeon", true)
+      .Case("p5600", true)
+      .Default(false);
 }
