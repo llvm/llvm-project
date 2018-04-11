@@ -40,6 +40,22 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   assert((TargetPointerWidth == 32 || TargetPointerWidth == 64) &&
          "NVPTX only supports 32- and 64-bit modes.");
 
+  PTXVersion = 32;
+  for (const StringRef Feature : Opts.FeaturesAsWritten) {
+    if (!Feature.startswith("+ptx"))
+      continue;
+    PTXVersion = llvm::StringSwitch<unsigned>(Feature)
+                     .Case("+ptx61", 61)
+                     .Case("+ptx60", 60)
+                     .Case("+ptx50", 50)
+                     .Case("+ptx43", 43)
+                     .Case("+ptx42", 42)
+                     .Case("+ptx41", 41)
+                     .Case("+ptx40", 40)
+                     .Case("+ptx32", 32)
+                     .Default(32);
+  }
+
   TLSSupported = false;
   VLASupported = false;
   AddrSpaceMap = &NVPTXAddrSpaceMap;
@@ -145,7 +161,6 @@ ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
 bool NVPTXTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Cases("ptx", "nvptx", true)
-      .Case("satom", GPU >= CudaArch::SM_60) // Atomics w/ scope.
       .Default(false);
 }
 

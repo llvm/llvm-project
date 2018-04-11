@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-apply-replacements/Tooling/ApplyReplacements.h"
+#include "clang/Format/Format.h"
 #include "gtest/gtest.h"
 
 using namespace clang::replace;
@@ -41,11 +42,12 @@ TEST(ApplyReplacementsTest, mergeDiagnosticsWithNoFixes) {
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts.get());
   FileManager Files((FileSystemOptions()));
   SourceManager SM(Diagnostics, Files);
+  TUReplacements TURs;
   TUDiagnostics TUs =
       makeTUDiagnostics("path/to/source.cpp", "diagnostic", {}, {}, "path/to");
-  FileToReplacementsMap ReplacementsMap;
+  FileToChangesMap ReplacementsMap;
 
-  EXPECT_TRUE(mergeAndDeduplicate(TUs, ReplacementsMap, SM));
+  EXPECT_TRUE(mergeAndDeduplicate(TURs, TUs, ReplacementsMap, SM));
   EXPECT_TRUE(ReplacementsMap.empty());
 }
 

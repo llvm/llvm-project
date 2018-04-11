@@ -57,11 +57,6 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- New option `MinTypeNameLength` for `modernize-use-auto` to limit the minimal
-  length of type names to be replaced with 'auto'. Use to skip replacing
-  short type names like 'int'/'bool' -> 'auto'. Default value is 5 which means
-  replace types with the name length >= 5 letters only (ex. double, unsigned).
-
 - New module `abseil` for checks related to the `Abseil <https://abseil.io>`_
   library.
 
@@ -150,6 +145,13 @@ Improvements to clang-tidy
   <clang-tidy/checks/zircon-temporary-objects>` check
 
   Warns on construction of specific temporary objects in the Zircon kernel.
+
+- New option `MinTypeNameLength` for :doc:`modernize-use-auto
+  <clang-tidy/checks/modernize-use-auto>` check to limit the minimal length of
+  type names to be replaced with ``auto``. Use to skip replacing short type
+  names like ``int``/``bool`` with ``auto``. Default value is 5 which means
+  replace types with the name length >= 5 letters only (ex. ``double``,
+  ``unsigned``).
 
 - New alias :doc:`hicpp-avoid-goto
   <clang-tidy/checks/hicpp-avoid-goto>` to :doc:`cppcoreguidelines-avoid-goto

@@ -441,7 +441,7 @@ int main(int argc, char **argv) {
           llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));
 
     if (PrintDispatchStats)
-      Printer.addView(llvm::make_unique<mca::DispatchStatistics>(*STI));
+      Printer.addView(llvm::make_unique<mca::DispatchStatistics>());
 
     if (PrintSchedulerStats)
       Printer.addView(llvm::make_unique<mca::SchedulerStatistics>(*STI));

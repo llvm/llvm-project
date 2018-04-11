@@ -969,3 +969,7 @@ data32
 // CHECK: lgdtw 4(%eax)
 // CHECK:  encoding: [0x67,0x0f,0x01,0x50,0x04]
 data32 lgdt 4(%eax)
+
+// CHECK: wbnoinvd
+// CHECK:  encoding: [0xf3,0x0f,0x09]
+wbnoinvd

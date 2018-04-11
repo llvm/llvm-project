@@ -1,4 +1,4 @@
-//===--- Module.h - Module description --------------------------*- C++ -*-===//
+//===- Module.h - Module description ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,42 +15,49 @@
 #ifndef LLVM_CLANG_SERIALIZATION_MODULE_H
 #define LLVM_CLANG_SERIALIZATION_MODULE_H
 
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Support/Endian.h"
+#include <cassert>
+#include <cstdint>
 #include <memory>
 #include <string>
-
-namespace llvm {
-template <typename Info> class OnDiskChainedHashTable;
-template <typename Info> class OnDiskIterableChainedHashTable;
-}
+#include <vector>
 
 namespace clang {
 
-class DeclContext;
-class Module;
+class FileEntry;
 
 namespace serialization {
 
-namespace reader {
-  class ASTDeclContextNameLookupTrait;
-}
-
 /// \brief Specifies the kind of module that has been loaded.
 enum ModuleKind {
-  MK_ImplicitModule, ///< File is an implicitly-loaded module.
-  MK_ExplicitModule, ///< File is an explicitly-loaded module.
-  MK_PCH,            ///< File is a PCH file treated as such.
-  MK_Preamble,       ///< File is a PCH file treated as the preamble.
-  MK_MainFile,       ///< File is a PCH file treated as the actual main file.
-  MK_PrebuiltModule  ///< File is from a prebuilt module path.
+  /// File is an implicitly-loaded module.
+  MK_ImplicitModule,
+
+  /// File is an explicitly-loaded module.
+  MK_ExplicitModule,
+
+  /// File is a PCH file treated as such.
+  MK_PCH,
+
+  /// File is a PCH file treated as the preamble.
+  MK_Preamble,
+
+  /// File is a PCH file treated as the actual main file.
+  MK_MainFile,
+
+  /// File is from a prebuilt module path.
+  MK_PrebuiltModule
 };
 
 /// \brief The input file that has been loaded from this AST file, along with
@@ -65,7 +72,8 @@ class InputFile {
   llvm::PointerIntPair<const FileEntry *, 2, unsigned> Val;
 
 public:
-  InputFile() {}
+  InputFile() = default;
+
   InputFile(const FileEntry *File,
             bool isOverridden = false, bool isOutOfDate = false) {
     assert(!(isOverridden && isOutOfDate) &&
@@ -205,6 +213,7 @@ public:
   StringRef ModuleOffsetMap;
 
   // === Input Files ===
+
   /// \brief The cursor to the start of the input-files block.
   llvm::BitstreamCursor InputFilesCursor;
 
@@ -347,6 +356,7 @@ public:
   void *HeaderFileInfoTable = nullptr;
 
   // === Submodule information ===  
+
   /// \brief The number of submodules in this module.
   unsigned LocalNumSubmodules = 0;
   
@@ -470,8 +480,8 @@ public:
   void dump();
 };
 
-} // end namespace serialization
+} // namespace serialization
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SERIALIZATION_MODULE_H

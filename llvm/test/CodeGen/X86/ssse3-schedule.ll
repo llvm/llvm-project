@@ -29,10 +29,11 @@ define <16 x i8> @test_pabsb(<16 x i8> %a0, <16 x i8> *%a1) {
 ;
 ; ATOM-LABEL: test_pabsb:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pabsb (%rdi), %xmm1 # sched: [1:1.00]
-; ATOM-NEXT:    pabsb %xmm0, %xmm0 # sched: [1:0.50]
-; ATOM-NEXT:    por %xmm0, %xmm1 # sched: [1:0.50]
-; ATOM-NEXT:    movdqa %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    pabsb %xmm0, %xmm1 # sched: [1:0.50]
+; ATOM-NEXT:    pabsb (%rdi), %xmm0 # sched: [1:1.00]
+; ATOM-NEXT:    por %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pabsb:
@@ -157,10 +158,11 @@ define <4 x i32> @test_pabsd(<4 x i32> %a0, <4 x i32> *%a1) {
 ;
 ; ATOM-LABEL: test_pabsd:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pabsd (%rdi), %xmm1 # sched: [1:1.00]
-; ATOM-NEXT:    pabsd %xmm0, %xmm0 # sched: [1:0.50]
-; ATOM-NEXT:    por %xmm0, %xmm1 # sched: [1:0.50]
-; ATOM-NEXT:    movdqa %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    pabsd %xmm0, %xmm1 # sched: [1:0.50]
+; ATOM-NEXT:    pabsd (%rdi), %xmm0 # sched: [1:1.00]
+; ATOM-NEXT:    por %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pabsd:
@@ -285,10 +287,11 @@ define <8 x i16> @test_pabsw(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; ATOM-LABEL: test_pabsw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pabsw (%rdi), %xmm1 # sched: [1:1.00]
-; ATOM-NEXT:    pabsw %xmm0, %xmm0 # sched: [1:0.50]
-; ATOM-NEXT:    por %xmm0, %xmm1 # sched: [1:0.50]
-; ATOM-NEXT:    movdqa %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    pabsw %xmm0, %xmm1 # sched: [1:0.50]
+; ATOM-NEXT:    pabsw (%rdi), %xmm0 # sched: [1:1.00]
+; ATOM-NEXT:    por %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pabsw:

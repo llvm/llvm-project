@@ -268,6 +268,18 @@ void finally_within_finally() {
 // CHECK-LABEL: define internal void @"?fin$1@0@finally_within_finally@@"({{[^)]*}})
 // CHECK-SAME: [[finally_attrs]]
 
+void cleanup_with_func(const char *);
+void finally_with_func() {
+  __try {
+    might_crash();
+  } __finally {
+    cleanup_with_func(__func__);
+  }
+}
+
+// CHECK-LABEL: define internal void @"?fin$0@0@finally_with_func@@"({{[^)]*}})
+// CHECK: call void @cleanup_with_func(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@", i32 0, i32 0))
+
 // Look for the absence of noinline. Enum attributes come first, so check that
 // a string attribute is the first to verify that no enum attributes are
 // present.

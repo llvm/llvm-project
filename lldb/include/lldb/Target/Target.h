@@ -102,9 +102,6 @@ public:
 
   const char *GetDisassemblyFlavor() const;
 
-  //    void
-  //    SetDisassemblyFlavor(const char *flavor);
-
   InlineStrategy GetInlineStrategy() const;
 
   llvm::StringRef GetArg0() const;
@@ -488,9 +485,6 @@ public:
   static ArchSpec GetDefaultArchitecture();
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
-
-  //    void
-  //    UpdateInstanceName ();
 
   lldb::ModuleSP GetSharedModule(const ModuleSpec &module_spec,
                                  Status *error_ptr = nullptr);
@@ -992,13 +986,6 @@ public:
     return m_section_load_history.GetCurrentSectionLoadList();
   }
 
-  //    const SectionLoadList&
-  //    GetSectionLoadList() const
-  //    {
-  //        return const_cast<SectionLoadHistory
-  //        *>(&m_section_load_history)->GetCurrentSectionLoadList();
-  //    }
-
   static Target *GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
                                        const SymbolContext *sc_ptr);
 
@@ -1172,9 +1159,6 @@ public:
 
   bool GetSuppressStopHooks() { return m_suppress_stop_hooks; }
 
-  //    StopHookSP &
-  //    GetStopHookByIndex (size_t index);
-  //
   bool RemoveStopHookByID(lldb::user_id_t uid);
 
   void RemoveAllStopHooks();

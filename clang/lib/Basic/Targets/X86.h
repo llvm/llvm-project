@@ -100,6 +100,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasRetpoline = false;
   bool HasRetpolineExternalThunk = false;
   bool HasLAHFSAHF = false;
+  bool HasWBNOINVD = false;
 
 protected:
   /// \brief Enumeration of all of the X86 CPUs supported by Clang.

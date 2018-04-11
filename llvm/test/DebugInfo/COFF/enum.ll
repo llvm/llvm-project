@@ -26,12 +26,12 @@
 ; CHECK-NEXT:  StringId (0x1002) {
 ; CHECK-NEXT:    TypeLeafKind: LF_STRING_ID (0x1605)
 ; CHECK-NEXT:    Id: 0x0
-; CHECK-NEXT:    StringData: \<stdin>
+; CHECK-NEXT:    StringData: /foo/bar.cpp
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  UdtSourceLine (0x1003) {
 ; CHECK-NEXT:    TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
 ; CHECK-NEXT:    UDT: E (0x1001)
-; CHECK-NEXT:    SourceFile: \<stdin> (0x1002)
+; CHECK-NEXT:    SourceFile: /foo/bar.cpp (0x1002)
 ; CHECK-NEXT:    LineNumber: 1
 ; CHECK_NEXT  }
 
@@ -51,7 +51,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 !3 = !DIFile(filename: "-", directory: "/")
 !4 = !{!5}
 !5 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !6, line: 1, baseType: !7, size: 32, align: 32, elements: !8)
-!6 = !DIFile(filename: "<stdin>", directory: "/")
+!6 = !DIFile(filename: "bar.cpp", directory: "/foo")
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !8 = !{!9}
 !9 = !DIEnumerator(name: "BLAH", value: 0)

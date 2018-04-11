@@ -114,6 +114,16 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
 
   StringRef Dir = File->getDirectory(), Filename = File->getFilename();
 
+  // If this is a Unix-style path, just use it as is. Don't try to canonicalize
+  // it textually because one of the path components could be a symlink.
+  if (!Dir.empty() && Dir[0] == '/') {
+    Filepath = Dir;
+    if (Dir.back() != '/')
+      Filepath += '/';
+    Filepath += Filename;
+    return Filepath;
+  }
+
   // Clang emits directory and relative filename info into the IR, but CodeView
   // operates on full paths.  We could change Clang to emit full paths too, but
   // that would increase the IR size and probably not needed for other users.

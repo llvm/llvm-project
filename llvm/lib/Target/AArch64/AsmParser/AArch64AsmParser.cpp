@@ -88,7 +88,7 @@ private:
   int tryParseRegister();
   bool parseRegister(OperandVector &Operands);
   bool parseSymbolicImmVal(const MCExpr *&ImmVal);
-  bool parseVectorList(OperandVector &Operands);
+  bool parseNeonVectorList(OperandVector &Operands);
   bool parseOperand(OperandVector &Operands, bool isCondCode,
                     bool invertCondCode);
 
@@ -135,10 +135,12 @@ private:
   OperandMatchResultTy tryParseAddSubImm(OperandVector &Operands);
   OperandMatchResultTy tryParseGPR64sp0Operand(OperandVector &Operands);
   bool tryParseNeonVectorRegister(OperandVector &Operands);
+  OperandMatchResultTy tryParseVectorIndex(OperandVector &Operands);
   OperandMatchResultTy tryParseGPRSeqPair(OperandVector &Operands);
   template <bool ParseSuffix>
   OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
   OperandMatchResultTy tryParseSVEPredicateVector(OperandVector &Operands);
+  bool tryParseVectorList(OperandVector &Operands);
   OperandMatchResultTy tryParseSVEPattern(OperandVector &Operands);
 
 public:
@@ -2676,28 +2678,33 @@ bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
     Operands.push_back(
         AArch64Operand::CreateToken(Kind, false, S, getContext()));
 
-  // If there is an index specifier following the register, parse that too.
+  return tryParseVectorIndex(Operands) == MatchOperand_ParseFail;
+}
+
+OperandMatchResultTy
+AArch64AsmParser::tryParseVectorIndex(OperandVector &Operands) {
   SMLoc SIdx = getLoc();
   if (parseOptionalToken(AsmToken::LBrac)) {
     const MCExpr *ImmVal;
     if (getParser().parseExpression(ImmVal))
-      return false;
+      return MatchOperand_NoMatch;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
     if (!MCE) {
       TokError("immediate value expected for vector index");
-      return false;
+      return MatchOperand_ParseFail;;
     }
 
     SMLoc E = getLoc();
 
     if (parseToken(AsmToken::RBrac, "']' expected"))
-      return false;
+      return MatchOperand_ParseFail;;
 
     Operands.push_back(AArch64Operand::CreateVectorIndex(MCE->getValue(), SIdx,
                                                          E, getContext()));
+    return MatchOperand_Success;
   }
 
-  return false;
+  return MatchOperand_NoMatch;
 }
 
 // tryParseVectorRegister - Try to parse a vector register name with
@@ -2876,8 +2883,8 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
   return false;
 }
 
-/// parseVectorList - Parse a vector list operand for AdvSIMD instructions.
-bool AArch64AsmParser::parseVectorList(OperandVector &Operands) {
+/// parseVectorList - Parse a vector list operand for vector instructions.
+bool AArch64AsmParser::tryParseVectorList(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   assert(Parser.getTok().is(AsmToken::LCurly) && "Token is not a Left Bracket");
 
@@ -2961,26 +2968,15 @@ bool AArch64AsmParser::parseVectorList(OperandVector &Operands) {
   Operands.push_back(AArch64Operand::CreateVectorList(
       FirstReg, Count, NumElements, ElementWidth, S, getLoc(), getContext()));
 
-  // If there is an index specifier following the list, parse that too.
-  SMLoc SIdx = getLoc();
-  if (parseOptionalToken(AsmToken::LBrac)) { // Eat left bracket token.
-    const MCExpr *ImmVal;
-    if (getParser().parseExpression(ImmVal))
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
-    if (!MCE) {
-      TokError("immediate value expected for vector index");
-      return false;
-    }
-
-    SMLoc E = getLoc();
-    if (parseToken(AsmToken::RBrac, "']' expected"))
-      return false;
-
-    Operands.push_back(AArch64Operand::CreateVectorIndex(MCE->getValue(), SIdx,
-                                                         E, getContext()));
-  }
   return false;
+}
+
+/// parseNeonVectorList - Parse a vector list operand for AdvSIMD instructions.
+bool AArch64AsmParser::parseNeonVectorList(OperandVector &Operands) {
+  if (tryParseVectorList(Operands))
+    return true;
+
+  return tryParseVectorIndex(Operands) == MatchOperand_ParseFail;
 }
 
 OperandMatchResultTy
@@ -3068,7 +3064,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     return parseOperand(Operands, false, false);
   }
   case AsmToken::LCurly:
-    return parseVectorList(Operands);
+    return parseNeonVectorList(Operands);
   case AsmToken::Identifier: {
     // If we're expecting a Condition Code operand, then just parse that.
     if (isCondCode)

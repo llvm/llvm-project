@@ -39,7 +39,7 @@
 namespace mca {
 
 class SchedulerStatistics : public View {
-  const llvm::MCSubtargetInfo &STI;
+  const llvm::MCSchedModel &SM;
 
   using Histogram = llvm::DenseMap<unsigned, unsigned>;
   Histogram IssuedPerCycle;
@@ -61,15 +61,11 @@ class SchedulerStatistics : public View {
   }
 
   void printSchedulerStatistics(llvm::raw_ostream &OS) const;
-
-  void printIssuePerCycle(const Histogram &IssuePerCycle,
-                          unsigned TotalCycles) const;
-  void printSchedulerUsage(llvm::raw_ostream &OS,
-                           const llvm::MCSchedModel &SM) const;
+  void printSchedulerUsage(llvm::raw_ostream &OS) const;
 
 public:
-  SchedulerStatistics(const llvm::MCSubtargetInfo &sti)
-      : STI(sti), NumIssued(0), NumCycles(0) { }
+  SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
+      : SM(STI.getSchedModel()), NumIssued(0), NumCycles(0) { }
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;
 
@@ -87,7 +83,7 @@ public:
 
   void printView(llvm::raw_ostream &OS) const override {
     printSchedulerStatistics(OS);
-    printSchedulerUsage(OS, STI.getSchedModel());
+    printSchedulerUsage(OS);
   }
 };
 } // namespace mca

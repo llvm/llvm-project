@@ -2598,6 +2598,8 @@ def mclflushopt : Flag<["-"], "mclflushopt">, Group<m_x86_Features_Group>;
 def mno_clflushopt : Flag<["-"], "mno-clflushopt">, Group<m_x86_Features_Group>;
 def mclwb : Flag<["-"], "mclwb">, Group<m_x86_Features_Group>;
 def mno_clwb : Flag<["-"], "mno-clwb">, Group<m_x86_Features_Group>;
+def mwbnoinvd : Flag<["-"], "mwbnoinvd">, Group<m_x86_Features_Group>;
+def mno_wbnoinvd : Flag<["-"], "mno-wbnoinvd">, Group<m_x86_Features_Group>;
 def mclzero : Flag<["-"], "mclzero">, Group<m_x86_Features_Group>;
 def mno_clzero : Flag<["-"], "mno-clzero">, Group<m_x86_Features_Group>;
 def mcx16 : Flag<["-"], "mcx16">, Group<m_x86_Features_Group>;

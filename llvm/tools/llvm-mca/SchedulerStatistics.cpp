@@ -47,7 +47,8 @@ void SchedulerStatistics::onReleasedBuffers(ArrayRef<unsigned> Buffers) {
   }
 }
 
-void SchedulerStatistics::printSchedulerStatistics(llvm::raw_ostream &OS) const {
+void SchedulerStatistics::printSchedulerStatistics(
+    llvm::raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nSchedulers - number of cycles where we saw N instructions "
@@ -63,8 +64,7 @@ void SchedulerStatistics::printSchedulerStatistics(llvm::raw_ostream &OS) const 
   OS << Buffer;
 }
 
-void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS,
-                                            const MCSchedModel &SM) const {
+void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nScheduler's queue usage:\n";

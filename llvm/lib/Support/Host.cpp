@@ -1213,9 +1213,12 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["tbm"]    = HasExtLeaf1 && ((ECX >> 21) & 1);
   Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);
 
+  // Miscellaneous memory related features, detected by
+  // using the 0x80000008 leaf of the CPUID instruction
   bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
                      !getX86CpuIDAndInfo(0x80000008, &EAX, &EBX, &ECX, &EDX);
-  Features["clzero"] = HasExtLeaf8 && ((EBX >> 0) & 1);
+  Features["clzero"]   = HasExtLeaf8 && ((EBX >> 0) & 1);
+  Features["wbnoinvd"] = HasExtLeaf8 && ((EBX >> 9) & 1);
 
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
