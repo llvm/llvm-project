@@ -238,10 +238,9 @@ define i32 @compute_min_pessimization(i32 %x, i32 %y) {
 ; CHECK-LABEL: @compute_min_pessimization(
 ; CHECK-NEXT:    [[NOT_VALUE:%.*]] = sub i32 3, [[X:%.*]]
 ; CHECK-NEXT:    call void @fake_use(i32 [[NOT_VALUE]])
-; CHECK-NEXT:    [[NOT_Y:%.*]] = xor i32 [[Y:%.*]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[NOT_VALUE]], [[NOT_Y]]
-; CHECK-NEXT:    [[NOT_MIN:%.*]] = select i1 [[CMP]], i32 [[NOT_VALUE]], i32 [[NOT_Y]]
-; CHECK-NEXT:    [[MIN:%.*]] = xor i32 [[NOT_MIN]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[TMP2]], i32 [[Y]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %not_value = sub i32 3, %x

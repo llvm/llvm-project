@@ -34,13 +34,18 @@ function(get_xray_lib_for_arch arch lib)
 endfunction()
 
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
+set(XRAY_UNITTEST_LINK_FLAGS ${CMAKE_THREAD_LIBS_INIT})
+if (NOT APPLE)
+  append_list_if(COMPILER_RT_HAS_LIBM -lm XRAY_UNITTEST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBRT -lrt XRAY_UNITTEST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBDL -ldl XRAY_UNITTEST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread XRAY_UNITTEST_LINK_FLAGS)
+endif()
+
 macro(add_xray_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
   if(UNIX AND NOT APPLE)
     set(CMAKE_DL_LIBS_INIT "")
-    foreach(lib ${CMAKE_DL_LIBS})
-      list(APPEND CMAKE_DL_LIBS_INIT -l${lib})
-    endforeach()
     foreach(arch ${XRAY_TEST_ARCH})
       set(TEST_OBJECTS)
       get_xray_lib_for_arch(${arch} XRAY_RUNTIME_LIBS)
@@ -55,9 +60,7 @@ macro(add_xray_unittest testname)
         RUNTIME "${XRAY_RUNTIME_LIBS}"
         DEPS gtest xray
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
-        LINK_FLAGS ${TARGET_LINK_FLAGS}
-          -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
-          ${CMAKE_DL_LIBS_INIT} -lrt)
+        LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS} -lstdc++)
       set_target_properties(XRayUnitTests
         PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
@@ -66,11 +69,19 @@ endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
   foreach(arch ${XRAY_SUPPORTED_ARCH})
-    add_xray_lib("RTXRay.test.${arch}"
-      $<TARGET_OBJECTS:RTXray.${arch}>
-      $<TARGET_OBJECTS:RTXrayFDR.${arch}>
-      $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
-      $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>)
+    if (APPLE)
+      add_xray_lib("RTXRay.test.osx"
+        $<TARGET_OBJECTS:RTXray.osx>
+        $<TARGET_OBJECTS:RTXrayFDR.osx>
+        $<TARGET_OBJECTS:RTSanitizerCommon.osx>
+        $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>)
+    else()
+      add_xray_lib("RTXRay.test.${arch}"
+        $<TARGET_OBJECTS:RTXray.${arch}>
+        $<TARGET_OBJECTS:RTXrayFDR.${arch}>
+        $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+        $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>)
+    endif()
   endforeach()
   add_subdirectory(unit)
 endif()

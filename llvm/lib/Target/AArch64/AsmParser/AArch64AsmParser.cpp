@@ -86,7 +86,6 @@ private:
   bool parseCondCode(OperandVector &Operands, bool invertCondCode);
   unsigned matchRegisterNameAlias(StringRef Name, RegKind Kind);
   int tryParseRegister();
-  int tryMatchVectorRegister(StringRef &Kind, bool expected);
   bool parseRegister(OperandVector &Operands);
   bool parseSymbolicImmVal(const MCExpr *&ImmVal);
   bool parseVectorList(OperandVector &Operands);
@@ -121,8 +120,8 @@ private:
 
   /// }
 
-  OperandMatchResultTy tryParseSVERegister(int &Reg, StringRef &Kind,
-                                           RegKind MatchKind);
+  OperandMatchResultTy tryParseVectorRegister(int &Reg, StringRef &Kind,
+                                              RegKind MatchKind);
   OperandMatchResultTy tryParseOptionalShiftExtend(OperandVector &Operands);
   OperandMatchResultTy tryParseBarrierOperand(OperandVector &Operands);
   OperandMatchResultTy tryParseMRSSystemRegister(OperandVector &Operands);
@@ -822,7 +821,7 @@ public:
   template <int ElementWidth, unsigned Class>
   bool isSVEVectorRegOfWidth() const {
     return isSVEVectorReg<Class>() &&
-           (ElementWidth == -1 || Reg.ElementWidth == ElementWidth);
+           (ElementWidth == 0 || Reg.ElementWidth == ElementWidth);
   }
 
   bool isGPR32as64() const {
@@ -1573,8 +1572,11 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateReg(unsigned RegNum, RegKind Kind, unsigned ElementWidth,
-            SMLoc S, SMLoc E, MCContext &Ctx) {
+  CreateVectorReg(unsigned RegNum, RegKind Kind, unsigned ElementWidth,
+                  SMLoc S, SMLoc E, MCContext &Ctx) {
+    assert((Kind == RegKind::NeonVector || Kind == RegKind::SVEDataVector ||
+            Kind == RegKind::SVEPredicateVector) &&
+           "Invalid vector kind");
     auto Op = make_unique<AArch64Operand>(k_Register, Ctx);
     Op->Reg.RegNum = RegNum;
     Op->Reg.ElementWidth = ElementWidth;
@@ -1586,12 +1588,30 @@ public:
 
   static std::unique_ptr<AArch64Operand>
   CreateVectorList(unsigned RegNum, unsigned Count, unsigned NumElements,
-                   char ElementKind, SMLoc S, SMLoc E, MCContext &Ctx) {
+                   unsigned ElementWidth, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = make_unique<AArch64Operand>(k_VectorList, Ctx);
     Op->VectorList.RegNum = RegNum;
     Op->VectorList.Count = Count;
     Op->VectorList.NumElements = NumElements;
-    Op->VectorList.ElementKind = ElementKind;
+    switch (ElementWidth) {
+    case 0:
+      Op->VectorList.ElementKind = 0;
+      break;
+    case 8:
+      Op->VectorList.ElementKind = 'b';
+      break;
+    case 16:
+      Op->VectorList.ElementKind = 'h';
+      break;
+    case 32:
+      Op->VectorList.ElementKind = 's';
+      break;
+    case 64:
+      Op->VectorList.ElementKind = 'd';
+      break;
+    default:
+      llvm_unreachable("Unsupported elementwidth");
+    }
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -1839,29 +1859,65 @@ static unsigned MatchNeonVectorRegName(StringRef Name) {
       .Default(0);
 }
 
-static bool isValidVectorKind(StringRef Name) {
-  return StringSwitch<bool>(Name.lower())
-      .Case(".8b", true)
-      .Case(".16b", true)
-      .Case(".4h", true)
-      .Case(".8h", true)
-      .Case(".2s", true)
-      .Case(".4s", true)
-      .Case(".1d", true)
-      .Case(".2d", true)
-      .Case(".1q", true)
-      // Accept the width neutral ones, too, for verbose syntax. If those
-      // aren't used in the right places, the token operand won't match so
-      // all will work out.
-      .Case(".b", true)
-      .Case(".h", true)
-      .Case(".s", true)
-      .Case(".d", true)
-      // Needed for fp16 scalar pairwise reductions
-      .Case(".2h", true)
-      // another special case for the ARMv8.2a dot product operand
-      .Case(".4b", true)
-      .Default(false);
+/// Returns an optional pair of (#elements, element-width) if Suffix
+/// is a valid vector kind. Where the number of elements in a vector
+/// or the vector width is implicit or explicitly unknown (but still a
+/// valid suffix kind), 0 is used.
+static Optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
+                                                     RegKind VectorKind) {
+  std::pair<int, int> Res = {-1, -1};
+
+  switch (VectorKind) {
+  case RegKind::NeonVector:
+    Res =
+        StringSwitch<std::pair<int, int>>(Suffix.lower())
+            .Case("", {0, 0})
+            .Case(".1d", {1, 64})
+            .Case(".1q", {1, 128})
+            // '.2h' needed for fp16 scalar pairwise reductions
+            .Case(".2h", {2, 16})
+            .Case(".2s", {2, 32})
+            .Case(".2d", {2, 64})
+            // '.4b' is another special case for the ARMv8.2a dot product
+            // operand
+            .Case(".4b", {4, 8})
+            .Case(".4h", {4, 16})
+            .Case(".4s", {4, 32})
+            .Case(".8b", {8, 8})
+            .Case(".8h", {8, 16})
+            .Case(".16b", {16, 8})
+            // Accept the width neutral ones, too, for verbose syntax. If those
+            // aren't used in the right places, the token operand won't match so
+            // all will work out.
+            .Case(".b", {0, 8})
+            .Case(".h", {0, 16})
+            .Case(".s", {0, 32})
+            .Case(".d", {0, 64})
+            .Default({-1, -1});
+    break;
+  case RegKind::SVEPredicateVector:
+  case RegKind::SVEDataVector:
+    Res = StringSwitch<std::pair<int, int>>(Suffix.lower())
+              .Case("", {0, 0})
+              .Case(".b", {0, 8})
+              .Case(".h", {0, 16})
+              .Case(".s", {0, 32})
+              .Case(".d", {0, 64})
+              .Case(".q", {0, 128})
+              .Default({-1, -1});
+    break;
+  default:
+    llvm_unreachable("Unsupported RegKind");
+  }
+
+  if (Res == std::make_pair(-1, -1))
+    return Optional<std::pair<int, int>>();
+
+  return Optional<std::pair<int, int>>(Res);
+}
+
+static bool isValidVectorKind(StringRef Suffix, RegKind VectorKind) {
+  return parseVectorKind(Suffix, VectorKind).hasValue();
 }
 
 static unsigned matchSVEDataVectorRegName(StringRef Name) {
@@ -1920,34 +1976,6 @@ static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
       .Case("p14", AArch64::P14)
       .Case("p15", AArch64::P15)
       .Default(0);
-}
-
-static bool isValidSVEKind(StringRef Name) {
-  return StringSwitch<bool>(Name.lower())
-      .Case(".b", true)
-      .Case(".h", true)
-      .Case(".s", true)
-      .Case(".d", true)
-      .Case(".q", true)
-      .Default(false);
-}
-
-static void parseValidVectorKind(StringRef Name, unsigned &NumElements,
-                                 char &ElementKind) {
-  assert(isValidVectorKind(Name));
-
-  ElementKind = Name.lower()[Name.size() - 1];
-  NumElements = 0;
-
-  if (Name.size() == 2)
-    return;
-
-  // Parse the lane count
-  Name = Name.drop_front();
-  while (isdigit(Name.front())) {
-    NumElements = 10 * NumElements + (Name.front() - '0');
-    Name = Name.drop_front();
-  }
 }
 
 bool AArch64AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
@@ -2016,39 +2044,6 @@ int AArch64AsmParser::tryParseRegister() {
 
   Parser.Lex(); // Eat identifier token.
   return RegNum;
-}
-
-/// tryMatchVectorRegister - Try to parse a vector register name with optional
-/// kind specifier. If it is a register specifier, eat the token and return it.
-int AArch64AsmParser::tryMatchVectorRegister(StringRef &Kind, bool expected) {
-  MCAsmParser &Parser = getParser();
-  if (Parser.getTok().isNot(AsmToken::Identifier)) {
-    TokError("vector register expected");
-    return -1;
-  }
-
-  StringRef Name = Parser.getTok().getString();
-  // If there is a kind specifier, it's separated from the register name by
-  // a '.'.
-  size_t Start = 0, Next = Name.find('.');
-  StringRef Head = Name.slice(Start, Next);
-  unsigned RegNum = matchRegisterNameAlias(Head, RegKind::NeonVector);
-
-  if (RegNum) {
-    if (Next != StringRef::npos) {
-      Kind = Name.slice(Next, StringRef::npos);
-      if (!isValidVectorKind(Kind)) {
-        TokError("invalid vector kind qualifier");
-        return -1;
-      }
-    }
-    Parser.Lex(); // Eat the register token.
-    return RegNum;
-  }
-
-  if (expected)
-    TokError("vector register expected");
-  return -1;
 }
 
 /// tryParseSysCROperand - Try to parse a system instruction CR operand name.
@@ -2660,12 +2655,20 @@ bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
   // Check for a vector register specifier first.
   StringRef Kind;
-  int64_t Reg = tryMatchVectorRegister(Kind, false);
-  if (Reg == -1)
+  int Reg = -1;
+  OperandMatchResultTy Res =
+      tryParseVectorRegister(Reg, Kind, RegKind::NeonVector);
+  if (Res != MatchOperand_Success)
     return true;
+
+  const auto &KindRes = parseVectorKind(Kind, RegKind::NeonVector);
+  if (!KindRes)
+    return true;
+
+  unsigned ElementWidth = KindRes->second;
   Operands.push_back(
-      AArch64Operand::CreateReg(Reg, RegKind::NeonVector, S, getLoc(),
-                                getContext()));
+      AArch64Operand::CreateVectorReg(Reg, RegKind::NeonVector, ElementWidth,
+                                      S, getLoc(), getContext()));
 
   // If there was an explicit qualifier, that goes on as a literal text
   // operand.
@@ -2697,12 +2700,12 @@ bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
   return false;
 }
 
-// tryParseSVEDataVectorRegister - Try to parse a SVE vector register name with
+// tryParseVectorRegister - Try to parse a vector register name with
 // optional kind specifier. If it is a register specifier, eat the token
 // and return it.
 OperandMatchResultTy
-AArch64AsmParser::tryParseSVERegister(int &Reg, StringRef &Kind,
-                                      RegKind MatchKind) {
+AArch64AsmParser::tryParseVectorRegister(int &Reg, StringRef &Kind,
+                                         RegKind MatchKind) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
 
@@ -2719,8 +2722,8 @@ AArch64AsmParser::tryParseSVERegister(int &Reg, StringRef &Kind,
   if (RegNum) {
     if (Next != StringRef::npos) {
       Kind = Name.slice(Next, StringRef::npos);
-      if (!isValidSVEKind(Kind)) {
-        TokError("invalid sve vector kind qualifier");
+      if (!isValidVectorKind(Kind, MatchKind)) {
+        TokError("invalid vector kind qualifier");
         return MatchOperand_ParseFail;
       }
     }
@@ -2740,25 +2743,18 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
   const SMLoc S = getLoc();
   StringRef Kind;
   int RegNum = -1;
-  auto Res = tryParseSVERegister(RegNum, Kind, RegKind::SVEPredicateVector);
+  auto Res = tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
   if (Res != MatchOperand_Success)
     return Res;
 
-  unsigned ElementWidth = StringSwitch<unsigned>(Kind.lower())
-                              .Case("", -1)
-                              .Case(".b", 8)
-                              .Case(".h", 16)
-                              .Case(".s", 32)
-                              .Case(".d", 64)
-                              .Case(".q", 128)
-                              .Default(0);
-
-  if (!ElementWidth)
+  const auto &KindRes = parseVectorKind(Kind, RegKind::SVEPredicateVector);
+  if (!KindRes)
     return MatchOperand_NoMatch;
 
-  Operands.push_back(
-      AArch64Operand::CreateReg(RegNum, RegKind::SVEPredicateVector,
-                                ElementWidth, S, getLoc(), getContext()));
+  unsigned ElementWidth = KindRes->second;
+  Operands.push_back(AArch64Operand::CreateVectorReg(
+      RegNum, RegKind::SVEPredicateVector, ElementWidth, S,
+      getLoc(), getContext()));
 
   // Not all predicates are followed by a '/m' or '/z'.
   MCAsmParser &Parser = getParser();
@@ -2884,21 +2880,38 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
 bool AArch64AsmParser::parseVectorList(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   assert(Parser.getTok().is(AsmToken::LCurly) && "Token is not a Left Bracket");
+
+  // Wrapper around parse function
+  auto ParseVector = [this](int &Reg, StringRef &Kind, SMLoc Loc) {
+    if (tryParseVectorRegister(Reg, Kind, RegKind::NeonVector) ==
+        MatchOperand_Success) {
+      if (parseVectorKind(Kind, RegKind::NeonVector))
+        return true;
+      llvm_unreachable("Expected a valid vector kind");
+    }
+
+    Error(Loc, "vector register expected");
+    return false;
+  };
+
   SMLoc S = getLoc();
   Parser.Lex(); // Eat left bracket token.
   StringRef Kind;
-  int64_t FirstReg = tryMatchVectorRegister(Kind, true);
-  if (FirstReg == -1)
-    return true;
+  int FirstReg = -1;
+  if (!ParseVector(FirstReg, Kind, getLoc()))
+     return true;
+
   int64_t PrevReg = FirstReg;
   unsigned Count = 1;
 
   if (parseOptionalToken(AsmToken::Minus)) {
     SMLoc Loc = getLoc();
     StringRef NextKind;
-    int64_t Reg = tryMatchVectorRegister(NextKind, true);
-    if (Reg == -1)
+
+    int Reg;
+    if (!ParseVector(Reg, NextKind, getLoc()))
       return true;
+
     // Any Kind suffices must match on all regs in the list.
     if (Kind != NextKind)
       return Error(Loc, "mismatched register size suffix");
@@ -2915,8 +2928,8 @@ bool AArch64AsmParser::parseVectorList(OperandVector &Operands) {
     while (parseOptionalToken(AsmToken::Comma)) {
       SMLoc Loc = getLoc();
       StringRef NextKind;
-      int64_t Reg = tryMatchVectorRegister(NextKind, true);
-      if (Reg == -1)
+      int Reg;
+      if (!ParseVector(Reg, NextKind, getLoc()))
         return true;
       // Any Kind suffices must match on all regs in the list.
       if (Kind != NextKind)
@@ -2939,12 +2952,14 @@ bool AArch64AsmParser::parseVectorList(OperandVector &Operands) {
     return Error(S, "invalid number of vectors");
 
   unsigned NumElements = 0;
-  char ElementKind = 0;
-  if (!Kind.empty())
-    parseValidVectorKind(Kind, NumElements, ElementKind);
+  unsigned ElementWidth = 0;
+  if (!Kind.empty()) {
+    if (const auto &VK = parseVectorKind(Kind, RegKind::NeonVector))
+      std::tie(NumElements, ElementWidth) = *VK;
+  }
 
   Operands.push_back(AArch64Operand::CreateVectorList(
-      FirstReg, Count, NumElements, ElementKind, S, getLoc(), getContext()));
+      FirstReg, Count, NumElements, ElementWidth, S, getLoc(), getContext()));
 
   // If there is an index specifier following the list, parse that too.
   SMLoc SIdx = getLoc();
@@ -4454,8 +4469,13 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   if (RegNum == -1) {
     StringRef Kind;
     RegisterKind = RegKind::NeonVector;
-    RegNum = tryMatchVectorRegister(Kind, false);
-    if (!Kind.empty())
+    OperandMatchResultTy Res =
+      tryParseVectorRegister(RegNum, Kind, RegKind::NeonVector);
+
+    if (Res == MatchOperand_ParseFail)
+      return true;
+
+    if (Res == MatchOperand_Success && !Kind.empty())
       return Error(SRegLoc, "vector register without type specifier expected");
   }
 
@@ -4463,7 +4483,7 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
     StringRef Kind;
     RegisterKind = RegKind::SVEDataVector;
     OperandMatchResultTy Res =
-        tryParseSVERegister(RegNum, Kind, RegKind::SVEDataVector);
+        tryParseVectorRegister(RegNum, Kind, RegKind::SVEDataVector);
 
     if (Res == MatchOperand_ParseFail)
       return true;
@@ -4477,7 +4497,7 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
     StringRef Kind;
     RegisterKind = RegKind::SVEPredicateVector;
     OperandMatchResultTy Res =
-        tryParseSVERegister(RegNum, Kind, RegKind::SVEPredicateVector);
+        tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
 
     if (Res == MatchOperand_ParseFail)
       return true;
@@ -4722,7 +4742,7 @@ AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
   StringRef Kind;
 
   OperandMatchResultTy Res =
-      tryParseSVERegister(RegNum, Kind, RegKind::SVEDataVector);
+      tryParseVectorRegister(RegNum, Kind, RegKind::SVEDataVector);
 
   if (Res != MatchOperand_Success)
     return Res;
@@ -4730,20 +4750,14 @@ AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
   if (ParseSuffix && Kind.empty())
     return MatchOperand_NoMatch;
 
-  unsigned ElementWidth = StringSwitch<unsigned>(Kind.lower())
-                        .Case("", -1)
-                        .Case(".b", 8)
-                        .Case(".h", 16)
-                        .Case(".s", 32)
-                        .Case(".d", 64)
-                        .Case(".q", 128)
-                        .Default(0);
-  if (!ElementWidth)
+  const auto &KindRes = parseVectorKind(Kind, RegKind::SVEDataVector);
+  if (!KindRes)
     return MatchOperand_NoMatch;
 
-  Operands.push_back(
-    AArch64Operand::CreateReg(RegNum, RegKind::SVEDataVector, ElementWidth,
-                              S, S, getContext()));
+  unsigned ElementWidth = KindRes->second;
+  Operands.push_back(AArch64Operand::CreateVectorReg(
+      RegNum, RegKind::SVEDataVector, ElementWidth, S, S,
+      getContext()));
 
   return MatchOperand_Success;
 }

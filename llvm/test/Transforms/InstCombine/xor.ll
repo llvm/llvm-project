@@ -575,3 +575,147 @@ define i32 @test38(i32 %A, i32 %B) {
   %xor = xor i32 %and, %B
   ret i32 %xor
 }
+
+; The tests 39-47 are related to the canonicalization:
+; %notx = xor i32 %x, -1
+; %cmp = icmp sgt i32 %notx, %y
+; %smax = select i1 %cmp, i32 %notx, i32 %y
+; %res = xor i32 %smax, -1
+;   =>
+; %noty = xor i32 %y, -1
+; %cmp2 = icmp slt %x, %noty
+; %res = select i1 %cmp2, i32 %x, i32 %noty
+;
+; Same transformations is valid for smin/umax/umin.
+
+define i32 @test39(i32 %x) {
+; CHECK-LABEL: @test39(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 255
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %1 = xor i32 %x, -1
+  %2 = icmp sgt i32 %1, -256
+  %3 = select i1 %2, i32 %1, i32 -256
+  %res = xor i32 %3, -1
+  ret i32 %res
+}
+
+define i32 @test40(i32 %x, i32 %y) {
+; CHECK-LABEL: @test40(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %notx = xor i32 %x, -1
+  %cmp1 = icmp sgt i32 %notx, %y
+  %smax = select i1 %cmp1, i32 %notx, i32 %y
+  %res = xor i32 %smax, -1
+  ret i32 %res
+}
+
+define i32 @test41(i32 %x, i32 %y) {
+; CHECK-LABEL: @test41(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %notx = xor i32 %x, -1
+  %cmp1 = icmp slt i32 %notx, %y
+  %smin = select i1 %cmp1, i32 %notx, i32 %y
+  %res = xor i32 %smin, -1
+  ret i32 %res
+}
+
+define i32 @test42(i32 %x, i32 %y) {
+; CHECK-LABEL: @test42(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %notx = xor i32 %x, -1
+  %cmp1 = icmp ugt i32 %notx, %y
+  %umax = select i1 %cmp1, i32 %notx, i32 %y
+  %res = xor i32 %umax, -1
+  ret i32 %res
+}
+
+define i32 @test43(i32 %x, i32 %y) {
+; CHECK-LABEL: @test43(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %notx = xor i32 %x, -1
+  %cmp1 = icmp ult i32 %notx, %y
+  %umin = select i1 %cmp1, i32 %notx, i32 %y
+  %res = xor i32 %umin, -1
+  ret i32 %res
+}
+
+define i32 @test44(i32 %x, i32 %y) {
+; CHECK-LABEL: @test44(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 -4, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %z = add i32 %y, 3 ; thwart complexity-based canonicalization
+  %notx = xor i32 %x, -1
+  %cmp1 = icmp ult i32 %z, %notx
+  %umin = select i1 %cmp1, i32 %z, i32 %notx
+  %res = xor i32 %umin, -1
+  ret i32 %res
+}
+
+define i32 @test45(i32 %x, i32 %y) {
+; CHECK-LABEL: @test45(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %z = xor i32 %y, -1
+  %notx = xor i32 %x, -1
+  %cmp1 = icmp ult i32 %z, %notx
+  %umin = select i1 %cmp1, i32 %z, i32 %notx
+  %res = xor i32 %umin, -1
+  ret i32 %res
+}
+
+; Check that we work with splat vectors also.
+define <4 x i32> @test46(<4 x i32> %x) {
+; CHECK-LABEL: @test46(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[X:%.*]], <i32 255, i32 255, i32 255, i32 255>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[X]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %1 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %2 = icmp sgt <4 x i32> %1, <i32 -256, i32 -256, i32 -256, i32 -256>
+  %3 = select <4 x i1> %2, <4 x i32> %1, <4 x i32> <i32 -256, i32 -256, i32 -256, i32 -256>
+  %4 = xor <4 x i32> %3, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i32> %4
+}
+
+; Test case when select pattern has more than one use.
+define i32 @test47(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test47(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[CMP1]], i32 [[NOTX]], i32 [[Y]]
+; CHECK-NEXT:    [[UMIN:%.*]] = xor i32 [[UMAX]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[UMAX]], [[Z:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[ADD]], [[UMIN]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %notx = xor i32 %x, -1
+  %cmp1 = icmp ugt i32 %notx, %y
+  %umax = select i1 %cmp1, i32 %notx, i32 %y
+  %umin = xor i32 %umax, -1
+  %add = add i32 %umax, %z
+  %res = mul i32 %umin, %add
+  ret i32 %res
+}

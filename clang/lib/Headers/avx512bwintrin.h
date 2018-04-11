@@ -1101,14 +1101,14 @@ _mm512_madd_epi16(__m512i __A, __m512i __B) {
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_madd_epi16(__m512i __W, __mmask16 __U, __m512i __A, __m512i __B) {
-  return (__m512i)__builtin_ia32_selectd_512((__mask16)__U,
+  return (__m512i)__builtin_ia32_selectd_512((__mmask16)__U,
                                            (__v16si)_mm512_madd_epi16(__A, __B),
                                            (__v16si)__W);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_madd_epi16(__mmask16 __U, __m512i __A, __m512i __B) {
-  return (__m512i)__builtin_ia32_selectd_512((__mask16)__U,
+  return (__m512i)__builtin_ia32_selectd_512((__mmask16)__U,
                                            (__v16si)_mm512_madd_epi16(__A, __B),
                                            (__v16si)_mm512_setzero_si512());
 }
