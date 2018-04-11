@@ -1151,8 +1151,8 @@ TARGET_BUILTIN(__builtin_ia32_mulps512_mask, "V16fV16fV16fV16fUsIi", "", "avx512
 TARGET_BUILTIN(__builtin_ia32_subpd512_mask, "V8dV8dV8dV8dUcIi", "", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_subps512_mask, "V16fV16fV16fV16fUsIi", "", "avx512f")
 
-TARGET_BUILTIN(__builtin_ia32_pmaddubsw512_mask, "V32sV64cV64cV32sUi", "", "avx512bw")
-TARGET_BUILTIN(__builtin_ia32_pmaddwd512_mask, "V16iV32sV32sV16iUs", "", "avx512bw")
+TARGET_BUILTIN(__builtin_ia32_pmaddubsw512, "V32sV64cV64c", "", "avx512bw")
+TARGET_BUILTIN(__builtin_ia32_pmaddwd512, "V16iV32sV32s", "", "avx512bw")
 
 TARGET_BUILTIN(__builtin_ia32_addss_round_mask, "V4fV4fV4fV4fUcIi", "", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_divss_round_mask, "V4fV4fV4fV4fUcIi", "", "avx512f")

@@ -4793,32 +4793,12 @@ let TargetPrefix = "x86" in {
   def int_x86_avx512_pmulh_w_512 : GCCBuiltin<"__builtin_ia32_pmulhw512">,
               Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty,
                          llvm_v32i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_avx512_mask_pmaddw_d_128 : // FIXME: remove this intrinsic
-          Intrinsic<[llvm_v4i32_ty],
-          [llvm_v8i16_ty, llvm_v8i16_ty, llvm_v4i32_ty,  llvm_i8_ty],
-          [IntrNoMem]>;
-  def int_x86_avx512_mask_pmaddw_d_256 : // FIXME: remove this intrinsic
-          Intrinsic<[llvm_v8i32_ty],
-          [llvm_v16i16_ty, llvm_v16i16_ty, llvm_v8i32_ty,  llvm_i8_ty],
-          [IntrNoMem]>;
-  def int_x86_avx512_mask_pmaddw_d_512 :
-         GCCBuiltin<"__builtin_ia32_pmaddwd512_mask">,
-          Intrinsic<[llvm_v16i32_ty],
-          [llvm_v32i16_ty, llvm_v32i16_ty, llvm_v16i32_ty,  llvm_i16_ty],
-          [IntrNoMem]>;
-  def int_x86_avx512_mask_pmaddubs_w_128 : // FIXME: remove this intrinsic
-          Intrinsic<[llvm_v8i16_ty],
-          [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v8i16_ty,  llvm_i8_ty],
-          [IntrNoMem]>;
-  def int_x86_avx512_mask_pmaddubs_w_256 : // FIXME: remove this intrinsic
-          Intrinsic<[llvm_v16i16_ty],
-          [llvm_v32i8_ty, llvm_v32i8_ty, llvm_v16i16_ty,  llvm_i16_ty],
-          [IntrNoMem]>;
-  def int_x86_avx512_mask_pmaddubs_w_512 :
-         GCCBuiltin<"__builtin_ia32_pmaddubsw512_mask">,
-          Intrinsic<[llvm_v32i16_ty],
-          [llvm_v64i8_ty, llvm_v64i8_ty, llvm_v32i16_ty,  llvm_i32_ty],
-          [IntrNoMem]>;
+  def int_x86_avx512_pmaddw_d_512 : GCCBuiltin<"__builtin_ia32_pmaddwd512">,
+              Intrinsic<[llvm_v16i32_ty], [llvm_v32i16_ty,
+                         llvm_v32i16_ty], [IntrNoMem, Commutative]>;
+  def int_x86_avx512_pmaddubs_w_512 : GCCBuiltin<"__builtin_ia32_pmaddubsw512">,
+              Intrinsic<[llvm_v32i16_ty], [llvm_v64i8_ty,
+                         llvm_v64i8_ty], [IntrNoMem]>;
 
   def int_x86_avx512_mask_dbpsadbw_128 :
          GCCBuiltin<"__builtin_ia32_dbpsadbw128_mask">,

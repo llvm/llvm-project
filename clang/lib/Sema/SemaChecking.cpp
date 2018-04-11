@@ -1105,6 +1105,63 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       CorrectDelayedTyposInExpr(TheCallResult.get());
     return Res;
   }
+  case Builtin::BI__builtin_dump_struct: {
+    // We first want to ensure we are called with 2 arguments
+    if (checkArgCount(*this, TheCall, 2))
+      return ExprError();
+    // Ensure that the first argument is of type 'struct XX *'
+    const Expr *PtrArg = TheCall->getArg(0)->IgnoreParenImpCasts();
+    const QualType PtrArgType = PtrArg->getType();
+    if (!PtrArgType->isPointerType() ||
+        !PtrArgType->getPointeeType()->isRecordType()) {
+      Diag(PtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+          << PtrArgType << "structure pointer" << 1 << 0 << 3 << 1 << PtrArgType
+          << "structure pointer";
+      return ExprError();
+    }
+
+    // Ensure that the second argument is of type 'FunctionType'
+    const Expr *FnPtrArg = TheCall->getArg(1)->IgnoreImpCasts();
+    const QualType FnPtrArgType = FnPtrArg->getType();
+    if (!FnPtrArgType->isPointerType()) {
+      Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+          << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+          << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+      return ExprError();
+    }
+
+    const auto *FuncType =
+        FnPtrArgType->getPointeeType()->getAs<FunctionType>();
+
+    if (!FuncType) {
+      Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+          << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+          << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+      return ExprError();
+    }
+
+    if (const auto *FT = dyn_cast<FunctionProtoType>(FuncType)) {
+      if (!FT->getNumParams()) {
+        Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+            << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+            << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+        return ExprError();
+      }
+      QualType PT = FT->getParamType(0);
+      if (!FT->isVariadic() || FT->getReturnType() != Context.IntTy ||
+          !PT->isPointerType() || !PT->getPointeeType()->isCharType() ||
+          !PT->getPointeeType().isConstQualified()) {
+        Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+            << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+            << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+        return ExprError();
+      }
+    }
+
+    TheCall->setType(Context.IntTy);
+    break;
+  }
+
   // check secure string manipulation functions where overflows
   // are detectable at compile time
   case Builtin::BI__builtin___memcpy_chk:
