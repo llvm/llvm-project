@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
+; RUN: llc -fast-isel-sink-local-values -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -fast-isel-sink-local-values  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
 
 ; Verify that we have correct debug info for local variables in code

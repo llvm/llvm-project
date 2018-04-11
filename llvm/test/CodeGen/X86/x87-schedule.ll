@@ -177,10 +177,10 @@ define void @test_fadd(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fadd %st(0), %st(1) # sched: [0:?]
-; ATOM-NEXT:    fadd %st(2) # sched: [0:?]
-; ATOM-NEXT:    fadds (%ecx) # sched: [0:?]
-; ATOM-NEXT:    faddl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fadd %st(0), %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    fadd %st(2) # sched: [5:5.00]
+; ATOM-NEXT:    fadds (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    faddl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -301,10 +301,10 @@ define void @test_faddp_fiadd(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    faddp %st(1) # sched: [0:?]
-; ATOM-NEXT:    faddp %st(2) # sched: [0:?]
-; ATOM-NEXT:    fiadds (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fiaddl (%eax) # sched: [0:?]
+; ATOM-NEXT:    faddp %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    faddp %st(2) # sched: [5:5.00]
+; ATOM-NEXT:    fiadds (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    fiaddl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -421,8 +421,8 @@ define void @test_fbld_fbstp(i8* %a0) optsize {
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fbld (%eax) # sched: [0:?]
-; ATOM-NEXT:    fbstp (%eax) # sched: [0:?]
+; ATOM-NEXT:    fbld (%eax) # sched: [100:0.50]
+; ATOM-NEXT:    fbstp (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -895,10 +895,10 @@ define void @test_fcom(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fcom %st(1) # sched: [0:?]
-; ATOM-NEXT:    fcom %st(3) # sched: [0:?]
-; ATOM-NEXT:    fcoms (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fcoml (%eax) # sched: [0:?]
+; ATOM-NEXT:    fcom %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    fcom %st(3) # sched: [5:5.00]
+; ATOM-NEXT:    fcoms (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    fcoml (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1020,10 +1020,10 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fcomp %st(1) # sched: [0:?]
-; ATOM-NEXT:    fcomp %st(3) # sched: [0:?]
-; ATOM-NEXT:    fcomps (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fcompl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fcomp %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    fcomp %st(3) # sched: [5:5.00]
+; ATOM-NEXT:    fcomps (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    fcompl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    fcompp # sched: [1:1.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
@@ -1385,10 +1385,10 @@ define void @test_fdiv(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdiv %st(0), %st(1) # sched: [0:?]
-; ATOM-NEXT:    fdiv %st(2) # sched: [0:?]
-; ATOM-NEXT:    fdivs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fdivl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fdiv %st(0), %st(1) # sched: [34:17.00]
+; ATOM-NEXT:    fdiv %st(2) # sched: [34:17.00]
+; ATOM-NEXT:    fdivs (%ecx) # sched: [34:17.00]
+; ATOM-NEXT:    fdivl (%eax) # sched: [34:17.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1509,10 +1509,10 @@ define void @test_fdivp_fidiv(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdivp %st(1) # sched: [0:?]
-; ATOM-NEXT:    fdivp %st(2) # sched: [0:?]
-; ATOM-NEXT:    fidivs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fidivl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fdivp %st(1) # sched: [34:17.00]
+; ATOM-NEXT:    fdivp %st(2) # sched: [34:17.00]
+; ATOM-NEXT:    fidivs (%ecx) # sched: [34:17.00]
+; ATOM-NEXT:    fidivl (%eax) # sched: [34:17.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1633,10 +1633,10 @@ define void @test_fdivr(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdivr %st(0), %st(1) # sched: [0:?]
-; ATOM-NEXT:    fdivr %st(2) # sched: [0:?]
-; ATOM-NEXT:    fdivrs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fdivrl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fdivr %st(0), %st(1) # sched: [34:17.00]
+; ATOM-NEXT:    fdivr %st(2) # sched: [34:17.00]
+; ATOM-NEXT:    fdivrs (%ecx) # sched: [34:17.00]
+; ATOM-NEXT:    fdivrl (%eax) # sched: [34:17.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1757,10 +1757,10 @@ define void @test_fdivrp_fidivr(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fdivrp %st(1) # sched: [0:?]
-; ATOM-NEXT:    fdivrp %st(2) # sched: [0:?]
-; ATOM-NEXT:    fidivrs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fidivrl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fdivrp %st(1) # sched: [34:17.00]
+; ATOM-NEXT:    fdivrp %st(2) # sched: [34:17.00]
+; ATOM-NEXT:    fidivrs (%ecx) # sched: [34:17.00]
+; ATOM-NEXT:    fidivrl (%eax) # sched: [34:17.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -1955,10 +1955,10 @@ define void @test_ficom(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    ficoms (%ecx) # sched: [0:?]
-; ATOM-NEXT:    ficoml (%eax) # sched: [0:?]
-; ATOM-NEXT:    ficomps (%ecx) # sched: [0:?]
-; ATOM-NEXT:    ficompl (%eax) # sched: [0:?]
+; ATOM-NEXT:    ficoms (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    ficoml (%eax) # sched: [5:5.00]
+; ATOM-NEXT:    ficomps (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    ficompl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -2740,7 +2740,7 @@ define void @test_fldcw_fldenv(i8* %a0) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    fldcw (%eax) # sched: [5:2.50]
-; ATOM-NEXT:    fldenv (%eax) # sched: [0:?]
+; ATOM-NEXT:    fldenv (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -2961,10 +2961,10 @@ define void @test_fmul(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fmul %st(0), %st(1) # sched: [0:?]
-; ATOM-NEXT:    fmul %st(2) # sched: [0:?]
-; ATOM-NEXT:    fmuls (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fmull (%eax) # sched: [0:?]
+; ATOM-NEXT:    fmul %st(0), %st(1) # sched: [4:4.00]
+; ATOM-NEXT:    fmul %st(2) # sched: [4:4.00]
+; ATOM-NEXT:    fmuls (%ecx) # sched: [4:4.00]
+; ATOM-NEXT:    fmull (%eax) # sched: [4:4.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3085,10 +3085,10 @@ define void @test_fmulp_fimul(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fmulp %st(1) # sched: [0:?]
-; ATOM-NEXT:    fmulp %st(2) # sched: [0:?]
-; ATOM-NEXT:    fimuls (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fimull (%eax) # sched: [0:?]
+; ATOM-NEXT:    fmulp %st(1) # sched: [4:4.00]
+; ATOM-NEXT:    fmulp %st(2) # sched: [4:4.00]
+; ATOM-NEXT:    fimuls (%ecx) # sched: [4:4.00]
+; ATOM-NEXT:    fimull (%eax) # sched: [4:4.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3584,7 +3584,7 @@ define void @test_frstor(i8* %a0) optsize {
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    frstor (%eax) # sched: [0:?]
+; ATOM-NEXT:    frstor (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3670,7 +3670,7 @@ define void @test_fsave(i8* %a0) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    wait # sched: [1:0.50]
-; ATOM-NEXT:    fnsave (%eax) # sched: [0:?]
+; ATOM-NEXT:    fnsave (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -3762,7 +3762,7 @@ define void @test_fnsave(i8* %a0) optsize {
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fnsave (%eax) # sched: [0:?]
+; ATOM-NEXT:    fnsave (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4314,9 +4314,9 @@ define void @test_fstcw_fstenv_fstsw(i8* %a0) optsize {
 ; ATOM-NEXT:    wait # sched: [1:0.50]
 ; ATOM-NEXT:    fnstcw (%eax) # sched: [8:4.00]
 ; ATOM-NEXT:    wait # sched: [1:0.50]
-; ATOM-NEXT:    fnstenv (%eax) # sched: [0:?]
+; ATOM-NEXT:    fnstenv (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    wait # sched: [1:0.50]
-; ATOM-NEXT:    fnstsw (%eax) # sched: [0:?]
+; ATOM-NEXT:    fnstsw (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4443,8 +4443,8 @@ define void @test_fnstcw_fnstenv_fnstsw(i8* %a0) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    fnstcw (%eax) # sched: [8:4.00]
-; ATOM-NEXT:    fnstenv (%eax) # sched: [0:?]
-; ATOM-NEXT:    fnstsw (%eax) # sched: [0:?]
+; ATOM-NEXT:    fnstenv (%eax) # sched: [100:0.50]
+; ATOM-NEXT:    fnstsw (%eax) # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4549,10 +4549,10 @@ define void @test_fsub(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsub %st(0), %st(1) # sched: [0:?]
-; ATOM-NEXT:    fsub %st(2) # sched: [0:?]
-; ATOM-NEXT:    fsubs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fsubl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fsub %st(0), %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    fsub %st(2) # sched: [5:5.00]
+; ATOM-NEXT:    fsubs (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    fsubl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4673,10 +4673,10 @@ define void @test_fsubp_fisub(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsubp %st(1) # sched: [0:?]
-; ATOM-NEXT:    fsubp %st(2) # sched: [0:?]
-; ATOM-NEXT:    fisubs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fisubl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fsubp %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    fsubp %st(2) # sched: [5:5.00]
+; ATOM-NEXT:    fisubs (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    fisubl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4797,10 +4797,10 @@ define void @test_fsubr(float *%a0, double *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsubr %st(0), %st(1) # sched: [0:?]
-; ATOM-NEXT:    fsubr %st(2) # sched: [0:?]
-; ATOM-NEXT:    fsubrs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fsubrl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fsubr %st(0), %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    fsubr %st(2) # sched: [5:5.00]
+; ATOM-NEXT:    fsubrs (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    fsubrl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -4921,10 +4921,10 @@ define void @test_fsubrp_fisubr(i16 *%a0, i32 *%a1) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fsubrp %st(1) # sched: [0:?]
-; ATOM-NEXT:    fsubrp %st(2) # sched: [0:?]
-; ATOM-NEXT:    fisubrs (%ecx) # sched: [0:?]
-; ATOM-NEXT:    fisubrl (%eax) # sched: [0:?]
+; ATOM-NEXT:    fsubrp %st(1) # sched: [5:5.00]
+; ATOM-NEXT:    fsubrp %st(2) # sched: [5:5.00]
+; ATOM-NEXT:    fisubrs (%ecx) # sched: [5:5.00]
+; ATOM-NEXT:    fisubrl (%eax) # sched: [5:5.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;

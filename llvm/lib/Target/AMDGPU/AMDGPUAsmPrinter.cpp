@@ -837,6 +837,19 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.NumSGPR += ExtraSGPRs;
   ProgInfo.NumVGPR += ExtraVGPRs;
 
+  // Ensure there are enough SGPRs and VGPRs for wave dispatch, where wave
+  // dispatch registers are function args.
+  unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
+  for (auto &Arg : MF.getFunction().args()) {
+    unsigned NumRegs = (Arg.getType()->getPrimitiveSizeInBits() + 31) / 32;
+    if (Arg.hasAttribute(Attribute::InReg))
+      WaveDispatchNumSGPR += NumRegs;
+    else
+      WaveDispatchNumVGPR += NumRegs;
+  }
+  ProgInfo.NumSGPR = std::max(ProgInfo.NumSGPR, WaveDispatchNumSGPR);
+  ProgInfo.NumVGPR = std::max(ProgInfo.NumVGPR, WaveDispatchNumVGPR);
+
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.
   ProgInfo.NumSGPRsForWavesPerEU = std::max(

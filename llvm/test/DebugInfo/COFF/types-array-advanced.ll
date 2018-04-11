@@ -142,12 +142,12 @@
 ; CHECK:   StringId (0x100D) {
 ; CHECK:     TypeLeafKind: LF_STRING_ID (0x1605)
 ; CHECK:     Id: 0x0
-; CHECK:     StringData: \t.cpp
+; CHECK:     StringData: /t.cpp
 ; CHECK:   }
 ; CHECK:   UdtSourceLine (0x100E) {
 ; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
 ; CHECK:     UDT: incomplete_struct (0x100C)
-; CHECK:     SourceFile: \t.cpp (0x100D)
+; CHECK:     SourceFile: /t.cpp (0x100D)
 ; CHECK:     LineNumber: 4
 ; CHECK:   }
 ; CHECK:   Modifier (0x100F) {

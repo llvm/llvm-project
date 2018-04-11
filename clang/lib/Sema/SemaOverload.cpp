@@ -7796,10 +7796,12 @@ public:
     if (!HasArithmeticOrEnumeralCandidateType)
       return;
 
-    for (unsigned Arith = (Op == OO_PlusPlus? 0 : 1);
-         Arith < NumArithmeticTypes; ++Arith) {
+    for (unsigned Arith = 0; Arith < NumArithmeticTypes; ++Arith) {
+      const auto TypeOfT = ArithmeticTypes[Arith];
+      if (Op == OO_MinusMinus && TypeOfT == S.Context.BoolTy)
+        continue;
       addPlusPlusMinusMinusStyleOverloads(
-        ArithmeticTypes[Arith],
+        TypeOfT,
         VisibleTypeConversionsQuals.hasVolatile(),
         VisibleTypeConversionsQuals.hasRestrict());
     }

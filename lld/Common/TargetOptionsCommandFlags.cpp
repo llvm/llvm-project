@@ -16,7 +16,7 @@
 
 #include "lld/Common/TargetOptionsCommandFlags.h"
 
-#include "llvm/CodeGen/CommandFlags.def"
+#include "llvm/CodeGen/CommandFlags.inc"
 #include "llvm/Target/TargetOptions.h"
 
 // Define an externally visible version of

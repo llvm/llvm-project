@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -target-feature +ibt -target-feature +shstk -emit-llvm -o %t %s
-// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +ibt -target-feature +shstk -target-feature +clzero -fsyntax-only -o %t %s
+// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -target-feature +ibt -target-feature +shstk -target-feature +wbnoinvd -emit-llvm -o %t %s
+// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +ibt -target-feature +shstk -target-feature +clzero -target-feature +wbnoinvd -fsyntax-only -o %t %s
 
 #ifdef USE_ALL
 #define USE_3DNOW
@@ -305,6 +305,7 @@ void f0() {
   tmp_i = __rdtsc();
   tmp_i = __builtin_ia32_rdtscp(&tmp_Ui);
   tmp_LLi = __builtin_ia32_rdpmc(tmp_i);
+  __builtin_ia32_wbnoinvd();
 #ifdef USE_64
   tmp_LLi = __builtin_ia32_cvtss2si64(tmp_V4f);
   tmp_LLi = __builtin_ia32_cvttss2si64(tmp_V4f);

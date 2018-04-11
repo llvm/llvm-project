@@ -13,13 +13,13 @@
 ; RUN: llvm-dwarfdump -debug-line %t5.o | FileCheck %s --check-prefixes=OBJ,OBJ-5
 
 ; ASM-4-NOT: .file 0
-; ASM-5: .file 0 "/scratch{{.*[/\\]}}t.c" md5 "00000000000000000000000000000000"
+; ASM-5: .file 0 "/scratch{{.*[/\\]}}t.c" md5 0x00000000000000000000000000000000
 ; ASM: .file 1 "/scratch{{.*[/\\]}}t1.h"
 ; ASM-4-NOT:  md5
-; ASM-5-SAME: md5 "11111111111111111111111111111111"
+; ASM-5-SAME: md5 0x11111111111111111111111111111111
 ; ASM: .file 2 "/scratch{{.*[/\\]}}t2.h"
 ; ASM-4-NOT:  md5
-; ASM-5-SAME: md5 "22222222222222222222222222222222"
+; ASM-5-SAME: md5 0x22222222222222222222222222222222
 
 ; OBJ-5: file_names[ 0]:
 ; OBJ-5-NEXT: name: "t.c"

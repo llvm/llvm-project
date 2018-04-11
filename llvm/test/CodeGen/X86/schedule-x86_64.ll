@@ -15737,7 +15737,7 @@ define void @test_ud2() optsize {
 ; ATOM-LABEL: test_ud2:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    ud2 # sched: [0:?]
+; ATOM-NEXT:    ud2 # sched: [100:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;

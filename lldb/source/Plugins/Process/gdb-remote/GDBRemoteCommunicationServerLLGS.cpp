@@ -291,7 +291,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   // else.
   if (m_debugged_process_up &&
       m_debugged_process_up->GetID() != LLDB_INVALID_PROCESS_ID)
-    return Status("cannot attach to a process %" PRIu64
+    return Status("cannot attach to process %" PRIu64
                   " when another process with pid %" PRIu64
                   " is being debugged.",
                   pid, m_debugged_process_up->GetID());
@@ -2935,7 +2935,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttach(
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to attach to "
                   "pid %" PRIu64 ": %s\n",
                   __FUNCTION__, pid, error.AsCString());
-    return SendErrorResponse(0x01);
+    return SendErrorResponse(error);
   }
 
   // Notify we attached by sending a stop packet.

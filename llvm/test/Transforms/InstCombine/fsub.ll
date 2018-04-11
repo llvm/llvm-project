@@ -189,14 +189,13 @@ define double @neg_ext_op1_fast(float %a, double %b) {
   ret double %t3
 }
 
-; FIXME: Extra use should prevent the transform.
+; Extra use should prevent the transform.
 
 define float @neg_ext_op1_extra_use(half %a, float %b) {
 ; CHECK-LABEL: @neg_ext_op1_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub half 0xH8000, [[A:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = fpext half [[T1]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext half [[A]] to float
-; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = fsub float [[B:%.*]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T2]])
 ; CHECK-NEXT:    ret float [[T3]]
 ;
@@ -207,8 +206,8 @@ define float @neg_ext_op1_extra_use(half %a, float %b) {
   ret float %t3
 }
 
-; One-use fptrunc is always hoisted above fneg, so the corresponding 
-; multi-use bug for fptrunc isn't visible with a fold starting from 
+; One-use fptrunc is always hoisted above fneg, so the corresponding
+; multi-use bug for fptrunc isn't visible with a fold starting from
 ; the last fsub.
 
 define float @neg_trunc_op1_extra_use(double %a, float %b) {
@@ -226,15 +225,13 @@ define float @neg_trunc_op1_extra_use(double %a, float %b) {
   ret float %t3
 }
 
-; FIXME: But the bug is visible when both preceding values have other uses.
 ; Extra uses should prevent the transform.
 
 define float @neg_trunc_op1_extra_uses(double %a, float %b) {
 ; CHECK-LABEL: @neg_trunc_op1_extra_uses(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub double -0.000000e+00, [[A:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = fptrunc double [[T1]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[A]] to float
-; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = fsub float [[B:%.*]], [[T2]]
 ; CHECK-NEXT:    call void @use2(float [[T2]], double [[T1]])
 ; CHECK-NEXT:    ret float [[T3]]
 ;

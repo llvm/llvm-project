@@ -4670,10 +4670,10 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero sched: [1:1.00]
 ; ATOM-NEXT:    movq %rdi, %xmm2 # sched: [1:1.00]
-; ATOM-NEXT:    paddq %xmm0, %xmm2 # sched: [2:1.00]
 ; ATOM-NEXT:    paddq %xmm0, %xmm1 # sched: [2:1.00]
-; ATOM-NEXT:    movq %xmm2, (%rsi) # sched: [1:1.00]
+; ATOM-NEXT:    paddq %xmm0, %xmm2 # sched: [2:1.00]
 ; ATOM-NEXT:    movq %xmm1, %rax # sched: [3:3.00]
+; ATOM-NEXT:    movq %xmm2, (%rsi) # sched: [1:1.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movd_64:
@@ -10447,10 +10447,11 @@ define <4 x i32> @test_pshufd(<4 x i32> %a0, <4 x i32> *%a1) {
 ;
 ; ATOM-LABEL: test_pshufd:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pshufd {{.*#+}} xmm1 = mem[3,2,1,0] sched: [1:1.00]
-; ATOM-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,3,2] sched: [1:1.00]
-; ATOM-NEXT:    paddd %xmm0, %xmm1 # sched: [1:0.50]
-; ATOM-NEXT:    movdqa %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2] sched: [1:1.00]
+; ATOM-NEXT:    pshufd {{.*#+}} xmm0 = mem[3,2,1,0] sched: [1:1.00]
+; ATOM-NEXT:    paddd %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pshufd:
@@ -10575,10 +10576,11 @@ define <8 x i16> @test_pshufhw(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; ATOM-LABEL: test_pshufhw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pshufhw {{.*#+}} xmm1 = mem[0,1,2,3,7,6,5,4] sched: [1:1.00]
-; ATOM-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,7,6] sched: [1:1.00]
-; ATOM-NEXT:    paddw %xmm0, %xmm1 # sched: [1:0.50]
-; ATOM-NEXT:    movdqa %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,5,4,7,6] sched: [1:1.00]
+; ATOM-NEXT:    pshufhw {{.*#+}} xmm0 = mem[0,1,2,3,7,6,5,4] sched: [1:1.00]
+; ATOM-NEXT:    paddw %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pshufhw:
@@ -10703,10 +10705,11 @@ define <8 x i16> @test_pshuflw(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; ATOM-LABEL: test_pshuflw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pshuflw {{.*#+}} xmm1 = mem[3,2,1,0,4,5,6,7] sched: [1:1.00]
-; ATOM-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,0,3,2,4,5,6,7] sched: [1:1.00]
-; ATOM-NEXT:    paddw %xmm0, %xmm1 # sched: [1:0.50]
-; ATOM-NEXT:    movdqa %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[1,0,3,2,4,5,6,7] sched: [1:1.00]
+; ATOM-NEXT:    pshuflw {{.*#+}} xmm0 = mem[3,2,1,0,4,5,6,7] sched: [1:1.00]
+; ATOM-NEXT:    paddw %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pshuflw:

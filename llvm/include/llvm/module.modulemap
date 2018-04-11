@@ -20,12 +20,11 @@ module LLVM_Backend {
 
     // Exclude these; they're intended to be included into only a single
     // translation unit (or none) and aren't part of this module.
-    exclude header "CodeGen/CommandFlags.h"
     exclude header "CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "CodeGen/LinkAllCodegenComponents.h"
 
     // These are intended for (repeated) textual inclusion.
-    textual header "CodeGen/CommandFlags.def"
+    textual header "CodeGen/CommandFlags.inc"
     textual header "CodeGen/DIEValue.def"
     textual header "CodeGen/RuntimeLibcalls.def"
   }
@@ -234,7 +233,7 @@ module LLVM_MC {
   umbrella "MC"
   module * { export * }
 
-  textual header "MC/MCTargetOptionsCommandFlags.def"
+  textual header "MC/MCTargetOptionsCommandFlags.inc"
 }
 
 // Used by llvm-tblgen

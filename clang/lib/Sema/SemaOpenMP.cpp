@@ -161,12 +161,12 @@ private:
   bool ForceCapturing = false;
   CriticalsWithHintsTy Criticals;
 
-  typedef SmallVector<SharingMapTy, 8>::reverse_iterator reverse_iterator;
+  typedef StackTy::reverse_iterator reverse_iterator;
 
-  DSAVarData getDSA(StackTy::reverse_iterator &Iter, ValueDecl *D);
+  DSAVarData getDSA(reverse_iterator &Iter, ValueDecl *D);
 
   /// \brief Checks if the variable is a local for OpenMP region.
-  bool isOpenMPLocal(VarDecl *D, StackTy::reverse_iterator Iter);
+  bool isOpenMPLocal(VarDecl *D, reverse_iterator Iter);
 
   bool isStackEmpty() const {
     return Stack.empty() ||
@@ -300,35 +300,36 @@ public:
   /// match specified \a CPred predicate in any directive which matches \a DPred
   /// predicate.
   DSAVarData hasDSA(ValueDecl *D,
-                    const llvm::function_ref<bool(OpenMPClauseKind)> &CPred,
-                    const llvm::function_ref<bool(OpenMPDirectiveKind)> &DPred,
+                    const llvm::function_ref<bool(OpenMPClauseKind)> CPred,
+                    const llvm::function_ref<bool(OpenMPDirectiveKind)> DPred,
                     bool FromParent);
   /// \brief Checks if the specified variables has data-sharing attributes which
   /// match specified \a CPred predicate in any innermost directive which
   /// matches \a DPred predicate.
   DSAVarData
   hasInnermostDSA(ValueDecl *D,
-                  const llvm::function_ref<bool(OpenMPClauseKind)> &CPred,
-                  const llvm::function_ref<bool(OpenMPDirectiveKind)> &DPred,
+                  const llvm::function_ref<bool(OpenMPClauseKind)> CPred,
+                  const llvm::function_ref<bool(OpenMPDirectiveKind)> DPred,
                   bool FromParent);
   /// \brief Checks if the specified variables has explicit data-sharing
   /// attributes which match specified \a CPred predicate at the specified
   /// OpenMP region.
   bool hasExplicitDSA(ValueDecl *D,
-                      const llvm::function_ref<bool(OpenMPClauseKind)> &CPred,
+                      const llvm::function_ref<bool(OpenMPClauseKind)> CPred,
                       unsigned Level, bool NotLastprivate = false);
 
   /// \brief Returns true if the directive at level \Level matches in the
   /// specified \a DPred predicate.
   bool hasExplicitDirective(
-      const llvm::function_ref<bool(OpenMPDirectiveKind)> &DPred,
+      const llvm::function_ref<bool(OpenMPDirectiveKind)> DPred,
       unsigned Level);
 
   /// \brief Finds a directive which matches specified \a DPred predicate.
-  bool hasDirective(const llvm::function_ref<bool(OpenMPDirectiveKind,
-                                                  const DeclarationNameInfo &,
-                                                  SourceLocation)> &DPred,
-                    bool FromParent);
+  bool hasDirective(
+      const llvm::function_ref<bool(
+          OpenMPDirectiveKind, const DeclarationNameInfo &, SourceLocation)>
+          DPred,
+      bool FromParent);
 
   /// \brief Returns currently analyzed directive.
   OpenMPDirectiveKind getCurrentDirective() const {
@@ -479,7 +480,8 @@ public:
       ValueDecl *VD, bool CurrentRegionOnly,
       const llvm::function_ref<
           bool(OMPClauseMappableExprCommon::MappableExprComponentListRef,
-               OpenMPClauseKind)> &Check) {
+               OpenMPClauseKind)>
+          Check) {
     if (isStackEmpty())
       return false;
     auto SI = Stack.back().first.rbegin();
@@ -510,7 +512,8 @@ public:
       ValueDecl *VD, unsigned Level,
       const llvm::function_ref<
           bool(OMPClauseMappableExprCommon::MappableExprComponentListRef,
-               OpenMPClauseKind)> &Check) {
+               OpenMPClauseKind)>
+          Check) {
     if (isStackEmpty())
       return false;
 
@@ -603,7 +606,7 @@ static ValueDecl *getCanonicalDecl(ValueDecl *D) {
   return D;
 }
 
-DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator &Iter,
+DSAStackTy::DSAVarData DSAStackTy::getDSA(reverse_iterator &Iter,
                                           ValueDecl *D) {
   D = getCanonicalDecl(D);
   auto *VD = dyn_cast<VarDecl>(D);
@@ -939,7 +942,7 @@ DSAStackTy::getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
   return DSAVarData();
 }
 
-bool DSAStackTy::isOpenMPLocal(VarDecl *D, StackTy::reverse_iterator Iter) {
+bool DSAStackTy::isOpenMPLocal(VarDecl *D, reverse_iterator Iter) {
   D = D->getCanonicalDecl();
   if (!isStackEmpty()) {
     reverse_iterator I = Iter, E = Stack.back().first.rend();
@@ -1100,7 +1103,7 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
 DSAStackTy::DSAVarData DSAStackTy::getImplicitDSA(ValueDecl *D,
                                                   bool FromParent) {
   if (isStackEmpty()) {
-    StackTy::reverse_iterator I;
+    reverse_iterator I;
     return getDSA(I, D);
   }
   D = getCanonicalDecl(D);
@@ -1113,8 +1116,8 @@ DSAStackTy::DSAVarData DSAStackTy::getImplicitDSA(ValueDecl *D,
 
 DSAStackTy::DSAVarData
 DSAStackTy::hasDSA(ValueDecl *D,
-                   const llvm::function_ref<bool(OpenMPClauseKind)> &CPred,
-                   const llvm::function_ref<bool(OpenMPDirectiveKind)> &DPred,
+                   const llvm::function_ref<bool(OpenMPClauseKind)> CPred,
+                   const llvm::function_ref<bool(OpenMPDirectiveKind)> DPred,
                    bool FromParent) {
   if (isStackEmpty())
     return {};
@@ -1135,8 +1138,8 @@ DSAStackTy::hasDSA(ValueDecl *D,
 }
 
 DSAStackTy::DSAVarData DSAStackTy::hasInnermostDSA(
-    ValueDecl *D, const llvm::function_ref<bool(OpenMPClauseKind)> &CPred,
-    const llvm::function_ref<bool(OpenMPDirectiveKind)> &DPred,
+    ValueDecl *D, const llvm::function_ref<bool(OpenMPClauseKind)> CPred,
+    const llvm::function_ref<bool(OpenMPDirectiveKind)> DPred,
     bool FromParent) {
   if (isStackEmpty())
     return {};
@@ -1153,7 +1156,7 @@ DSAStackTy::DSAVarData DSAStackTy::hasInnermostDSA(
 }
 
 bool DSAStackTy::hasExplicitDSA(
-    ValueDecl *D, const llvm::function_ref<bool(OpenMPClauseKind)> &CPred,
+    ValueDecl *D, const llvm::function_ref<bool(OpenMPClauseKind)> CPred,
     unsigned Level, bool NotLastprivate) {
   if (isStackEmpty())
     return false;
@@ -1170,8 +1173,7 @@ bool DSAStackTy::hasExplicitDSA(
 }
 
 bool DSAStackTy::hasExplicitDirective(
-    const llvm::function_ref<bool(OpenMPDirectiveKind)> &DPred,
-    unsigned Level) {
+    const llvm::function_ref<bool(OpenMPDirectiveKind)> DPred, unsigned Level) {
   if (isStackEmpty())
     return false;
   auto StartI = Stack.back().first.begin();
@@ -1185,7 +1187,7 @@ bool DSAStackTy::hasExplicitDirective(
 bool DSAStackTy::hasDirective(
     const llvm::function_ref<bool(OpenMPDirectiveKind,
                                   const DeclarationNameInfo &, SourceLocation)>
-        &DPred,
+        DPred,
     bool FromParent) {
   // We look only in the enclosing region.
   if (isStackEmpty())
@@ -9943,9 +9945,9 @@ public:
 };
 } // namespace
 
-template <typename T>
-static T filterLookupForUDR(SmallVectorImpl<UnresolvedSet<8>> &Lookups,
-                            const llvm::function_ref<T(ValueDecl *)> &Gen) {
+template <typename T, typename U>
+static T filterLookupForUDR(SmallVectorImpl<U> &Lookups,
+                            const llvm::function_ref<T(ValueDecl *)> Gen) {
   for (auto &Set : Lookups) {
     for (auto *D : Set) {
       if (auto Res = Gen(cast<ValueDecl>(D)))

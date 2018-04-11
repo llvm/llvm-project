@@ -162,6 +162,7 @@ defm : BWWriteResPair<WriteFRcp,   [BWPort0], 5>; // Floating point reciprocal e
 defm : BWWriteResPair<WriteFRsqrt, [BWPort0], 5>; // Floating point reciprocal square root estimate.
 defm : BWWriteResPair<WriteFMA,    [BWPort01], 5>; // Fused Multiply Add.
 defm : BWWriteResPair<WriteFShuffle,  [BWPort5],  1>; // Floating point vector shuffles.
+defm : BWWriteResPair<WriteFVarShuffle,  [BWPort5],  1>; // Floating point vector variable shuffles.
 defm : BWWriteResPair<WriteFBlend,  [BWPort015],  1>; // Floating point vector blends.
 defm : BWWriteResPair<WriteFVarBlend,  [BWPort5], 2, [2]>; // Fp vector variable blends.
 
@@ -178,6 +179,7 @@ defm : BWWriteResPair<WriteVecShift, [BWPort0],  1>; // Vector integer shifts.
 defm : BWWriteResPair<WriteVecIMul,  [BWPort0],   5>; // Vector integer multiply.
 defm : BWWriteResPair<WritePMULLD,   [BWPort0], 10, [2], 2, 5>; // PMULLD
 defm : BWWriteResPair<WriteShuffle,  [BWPort5],  1>; // Vector shuffles.
+defm : BWWriteResPair<WriteVarShuffle, [BWPort5],  1>; // Vector variable shuffles.
 defm : BWWriteResPair<WriteBlend,  [BWPort15],  1>; // Vector blends.
 defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2]>; // Vector variable blends.
 defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 6, [1, 2]>; // Vector MPSAD.
@@ -288,7 +290,9 @@ def : WriteRes<WriteSystem,     [BWPort0156]> { let Latency = 100; } // def Writ
 
 // AVX2.
 defm : BWWriteResPair<WriteFShuffle256,  [BWPort5],  3>; // Fp 256-bit width vector shuffles.
+defm : BWWriteResPair<WriteFVarShuffle256,  [BWPort5],  3>; // Fp 256-bit width vector variable shuffles.
 defm : BWWriteResPair<WriteShuffle256,  [BWPort5],  3>;  // 256-bit width vector shuffles.
+defm : BWWriteResPair<WriteVarShuffle256,  [BWPort5],  3>;  // 256-bit width vector variable shuffles.
 defm : BWWriteResPair<WriteVarVecShift,  [BWPort0, BWPort5], 2, [2, 1]>; // Variable vector shifts.
 
 // Old microcoded instructions that nobody use.
@@ -366,7 +370,6 @@ def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVD64rr",
                                            "MMX_MOVD64to64rr",
                                            "MMX_MOVQ2DQrr",
                                            "MMX_PALIGNRrri",
-                                           "MMX_PSHUFBrr",
                                            "MMX_PSHUFWri",
                                            "MMX_PUNPCKHBWirr",
                                            "MMX_PUNPCKHDQirr",
@@ -404,9 +407,7 @@ def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVD64rr",
                                            "VPBROADCASTDrr",
                                            "VPBROADCASTQrr",
                                            "VPERMILPD(Y?)ri",
-                                           "VPERMILPD(Y?)rr",
                                            "VPERMILPS(Y?)ri",
-                                           "VPERMILPS(Y?)rr",
                                            "(V?)PMOVSXBDrr",
                                            "(V?)PMOVSXBQrr",
                                            "(V?)PMOVSXBWrr",
@@ -419,7 +420,6 @@ def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVD64rr",
                                            "(V?)PMOVZXDQrr",
                                            "(V?)PMOVZXWDrr",
                                            "(V?)PMOVZXWQrr",
-                                           "(V?)PSHUFB(Y?)rr",
                                            "(V?)PSHUFD(Y?)ri",
                                            "(V?)PSHUFHW(Y?)ri",
                                            "(V?)PSHUFLW(Y?)ri",
@@ -891,9 +891,7 @@ def: InstRW<[BWWriteResGroup28], (instregex "VBROADCASTSDYrr",
                                             "VPBROADCASTW(Y?)rr",
                                             "VPERM2F128rr",
                                             "VPERM2I128rr",
-                                            "VPERMDYrr",
                                             "VPERMPDYri",
-                                            "VPERMPSYrr",
                                             "VPERMQYri",
                                             "VPMOVSXBDYrr",
                                             "VPMOVSXBQYrr",
