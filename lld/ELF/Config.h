@@ -151,6 +151,7 @@ struct Configuration {
   bool WarnMissingEntry;
   bool ZCombreloc;
   bool ZExecstack;
+  bool ZHazardplt;
   bool ZNocopyreloc;
   bool ZNodelete;
   bool ZNodlopen;
