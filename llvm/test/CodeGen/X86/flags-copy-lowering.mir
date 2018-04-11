@@ -208,11 +208,10 @@ body:             |
     %3:gr8 = SETAr implicit $eflags
     %4:gr8 = SETBr implicit $eflags
     %5:gr8 = SETEr implicit $eflags
-    %6:gr8 = SETNEr implicit killed $eflags
+    SETNEm $rsp, 1, $noreg, -16, $noreg, implicit killed $eflags
     MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %3
     MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %4
     MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %5
-    MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %6
   ; CHECK-NOT:     $eflags =
   ; CHECK-NOT:             = SET{{.*}}
   ; CHECK:         MOV8mr {{.*}}, killed %[[A_REG]]

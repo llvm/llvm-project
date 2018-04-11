@@ -10,7 +10,6 @@ add_llvm_tool(llvm-exegesis
 add_subdirectory(lib)
 target_link_libraries(llvm-exegesis PRIVATE LLVMExegesis)
 
-if(HAVE_LIBPFM)
+if(LLVM_ENABLE_LIBPFM AND HAVE_LIBPFM)
   target_link_libraries(llvm-exegesis PRIVATE pfm)
 endif()
-

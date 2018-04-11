@@ -1545,16 +1545,35 @@ void SymbolTableBaseSection::finalizeContents() {
 // The ELF spec requires that all local symbols precede global symbols, so we
 // sort symbol entries in this function. (For .dynsym, we don't do that because
 // symbols for dynamic linking are inherently all globals.)
+//
+// Aside from above, we put local symbols in groups starting with the STT_FILE
+// symbol. That is convenient for purpose of identifying where are local symbols
+// coming from.
 void SymbolTableBaseSection::postThunkContents() {
   if (this->Type == SHT_DYNSYM)
     return;
-  // move all local symbols before global symbols.
-  auto It = std::stable_partition(
+
+  // Move all local symbols before global symbols.
+  auto E = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
         return S.Sym->isLocal() || S.Sym->computeBinding() == STB_LOCAL;
       });
-  size_t NumLocals = It - Symbols.begin();
+  size_t NumLocals = E - Symbols.begin();
   getParent()->Info = NumLocals + 1;
+
+  // Assign the growing unique ID for each local symbol's file.
+  DenseMap<InputFile *, unsigned> FileIDs;
+  for (auto I = Symbols.begin(); I != E; ++I)
+    FileIDs.insert({I->Sym->File, FileIDs.size()});
+
+  // Sort the local symbols to group them by file. We do not need to care about
+  // the STT_FILE symbols, they are already naturally placed first in each group.
+  // That happens because STT_FILE is always the first symbol in the object and
+  // hence precede all other local symbols we add for a file.
+  std::stable_sort(Symbols.begin(), E,
+                   [&](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+                     return FileIDs[L.Sym->File] < FileIDs[R.Sym->File];
+                   });
 }
 
 void SymbolTableBaseSection::addSymbol(Symbol *B) {

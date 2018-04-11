@@ -426,6 +426,12 @@ def FeatureEnableSIScheduler : SubtargetFeature<"si-scheduler",
   "Enable SI Machine Scheduler"
 >;
 
+def FeatureEnableDS128 : SubtargetFeature<"enable-ds128",
+  "EnableDS128",
+  "true",
+  "Use ds_{read|write}_b128"
+>;
+
 // Unless +-flat-for-global is specified, turn on FlatForGlobal for
 // all OS-es on VI and newer hardware to avoid assertion failures due
 // to missing ADDR64 variants of MUBUF instructions.

@@ -198,6 +198,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FREM, MVT::f64, Expand);
   setOperationAction(ISD::FREM, MVT::f80, Expand);
 
+  setOperationAction(ISD::BUILD_PAIR, MVT::i64, Expand);
+
   // Custom lowering hooks are needed for XOR
   // to fold it into CSINC/CSINV.
   setOperationAction(ISD::XOR, MVT::i32, Custom);

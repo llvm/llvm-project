@@ -2,7 +2,7 @@
 
 // Invalid element kind.
 zip1 z10.h, z22.h, z31.x
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid sve vector kind qualifier
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid vector kind qualifier
 // CHECK-NEXT: zip1 z10.h, z22.h, z31.x
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
