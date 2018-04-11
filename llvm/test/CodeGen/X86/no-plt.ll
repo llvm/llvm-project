@@ -3,6 +3,12 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu \
 ; RUN:   | FileCheck -check-prefix=X64 --check-prefix=STATIC %s
 
+define i32 @fp_weakfunc() {
+; X64: weakfunc@GOTPCREL(%rip)
+  ret i32 select (i1 icmp ne (i32 ()* @weakfunc, i32 ()* null), i32 1, i32 0)
+}
+declare extern_weak i32 @weakfunc() nonlazybind
+
 define void @memset_call(i8* nocapture %a, i8 %c, i32 %n) {
 ; X64: callq *memset@GOTPCREL(%rip)
   call void @llvm.memset.p0i8.i32(i8* %a, i8 %c, i32 %n, i1 false)

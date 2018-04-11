@@ -69,6 +69,12 @@ Improvements to clang-tidy
 
 - New module ``zircon`` for checks related to Fuchsia's Zircon kernel.
 
+- New :doc:`android-comparison-in-temp-failure-retry
+  <clang-tidy/checks/android-comparison-in-temp-failure-retry>` check
+
+  Diagnoses comparisons that appear to be incorrectly placed in the argument to
+  the ``TEMP_FAILURE_RETRY`` macro.
+
 - New :doc:`bugprone-parent-virtual-call
   <clang-tidy/checks/bugprone-parent-virtual-call>` check
 

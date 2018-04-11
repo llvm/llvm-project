@@ -23,6 +23,7 @@ class XRayArgs {
   std::vector<std::string> NeverInstrumentFiles;
   std::vector<std::string> AttrListFiles;
   std::vector<std::string> ExtraDeps;
+  std::vector<std::string> Modes;
   bool XRayInstrument = false;
   int InstructionThreshold = 200;
   bool XRayAlwaysEmitCustomEvents = false;
@@ -35,6 +36,8 @@ public:
                llvm::opt::ArgStringList &CmdArgs, types::ID InputType) const;
 
   bool needsXRayRt() const { return XRayInstrument && XRayRT; }
+  llvm::ArrayRef<std::string> modeList() const { return Modes; }
+
 };
 
 } // namespace driver

@@ -17,6 +17,7 @@ Clang-Tidy Checks
    android-cloexec-memfd-create
    android-cloexec-open
    android-cloexec-socket
+   android-comparison-in-temp-failure-retry
    boost-use-to-string
    bugprone-argument-comment
    bugprone-assert-side-effect

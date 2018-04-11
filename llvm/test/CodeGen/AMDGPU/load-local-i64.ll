@@ -5,8 +5,8 @@
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; Testing for ds_read/write_b128
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -amdgpu-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -amdgpu-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i64:
 ; SICIVI: s_mov_b32 m0

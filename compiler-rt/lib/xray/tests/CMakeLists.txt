@@ -17,6 +17,22 @@ set(XRAY_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/xray
   -I${COMPILER_RT_SOURCE_DIR}/lib)
 
+macro(add_xray_lib library)
+  add_library(${library} STATIC ${ARGN})
+  set_target_properties(${library} PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    FOLDER "Compiler-RT Runtime tests")
+endmacro()
+
+function(get_xray_lib_for_arch arch lib)
+  if(APPLE)
+    set(tgt_name "RTXRay.test.osx")
+  else()
+    set(tgt_name "RTXRay.test.${arch}")
+  endif()
+  set(${lib} "${tgt_name}" PARENT_SCOPE)
+endfunction()
+
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 macro(add_xray_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
@@ -27,6 +43,7 @@ macro(add_xray_unittest testname)
     endforeach()
     foreach(arch ${XRAY_TEST_ARCH})
       set(TEST_OBJECTS)
+      get_xray_lib_for_arch(${arch} XRAY_RUNTIME_LIBS)
       generate_compiler_rt_tests(TEST_OBJECTS
         XRayUnitTests "${testname}-${arch}-Test" "${arch}"
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
@@ -35,17 +52,25 @@ macro(add_xray_unittest testname)
         # the build/test cycle.
         COMPILE_DEPS ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         ${XRAY_HEADERS} ${XRAY_IMPL_FILES}
-        DEPS gtest xray llvm-xray
+        RUNTIME "${XRAY_RUNTIME_LIBS}"
+        DEPS gtest xray
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
-        LINK_FLAGS -fxray-instrument
-          ${TARGET_LINK_FLAGS}
+        LINK_FLAGS ${TARGET_LINK_FLAGS}
           -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
           ${CMAKE_DL_LIBS_INIT} -lrt)
-      set_target_properties(XRayUnitTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+      set_target_properties(XRayUnitTests
+        PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
   endif()
 endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
+  foreach(arch ${XRAY_SUPPORTED_ARCH})
+    add_xray_lib("RTXRay.test.${arch}"
+      $<TARGET_OBJECTS:RTXray.${arch}>
+      $<TARGET_OBJECTS:RTXrayFDR.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>)
+  endforeach()
   add_subdirectory(unit)
 endif()

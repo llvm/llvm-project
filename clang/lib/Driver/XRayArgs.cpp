@@ -27,6 +27,7 @@ namespace {
 constexpr char XRayInstrumentOption[] = "-fxray-instrument";
 constexpr char XRayInstructionThresholdOption[] =
     "-fxray-instruction-threshold=";
+constexpr const char *const XRaySupportedModes[] = {"xray-fdr", "xray-basic"};
 } // namespace
 
 XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
@@ -51,13 +52,14 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       }
     } else if (Triple.getOS() == llvm::Triple::FreeBSD ||
                Triple.getOS() == llvm::Triple::OpenBSD) {
-        if (Triple.getArch() != llvm::Triple::x86_64) {
-          D.Diag(diag::err_drv_clang_unsupported)
-              << (std::string(XRayInstrumentOption) + " on " + Triple.str());
-        }
+      if (Triple.getArch() != llvm::Triple::x86_64) {
+        D.Diag(diag::err_drv_clang_unsupported)
+            << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+      }
     } else {
       D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on non-supported target OS");
+          << (std::string(XRayInstrumentOption) +
+              " on non-supported target OS");
     }
     XRayInstrument = true;
     if (const Arg *A =
@@ -108,6 +110,33 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       } else
         D.Diag(clang::diag::err_drv_no_such_file) << Filename;
     }
+
+    // Get the list of modes we want to support.
+    auto SpecifiedModes = Args.getAllArgValues(options::OPT_fxray_modes);
+    if (SpecifiedModes.empty())
+      llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+    else
+      for (const auto &Arg : SpecifiedModes) {
+        if (Arg == "none") {
+          Modes.clear();
+          break;
+        }
+        if (Arg == "all") {
+          Modes.clear();
+          llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+          break;
+        }
+
+        // Parse CSV values for -fxray-modes=...
+        llvm::SmallVector<StringRef, 2> ModeParts;
+        llvm::SplitString(Arg, ModeParts, ",");
+        for (const auto &M : ModeParts)
+          Modes.push_back(M);
+      }
+
+    // Then we want to sort and unique the modes we've collected.
+    std::sort(Modes.begin(), Modes.end());
+    Modes.erase(std::unique(Modes.begin(), Modes.end()), Modes.end());
   }
 }
 
@@ -136,7 +165,7 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(NeverInstrumentOpt));
   }
 
-  for (const auto&AttrFile : AttrListFiles) {
+  for (const auto& AttrFile : AttrListFiles) {
     SmallString<64> AttrListFileOpt("-fxray-attr-list=");
     AttrListFileOpt += AttrFile;
     CmdArgs.push_back(Args.MakeArgString(AttrListFileOpt));
