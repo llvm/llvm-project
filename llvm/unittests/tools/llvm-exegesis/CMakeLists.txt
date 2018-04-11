@@ -22,7 +22,6 @@ add_llvm_unittest(LLVMExegesisTests
   )
 target_link_libraries(LLVMExegesisTests PRIVATE LLVMExegesis)
 
-if(HAVE_LIBPFM)
+if(LLVM_ENABLE_LIBPFM AND HAVE_LIBPFM)
   target_link_libraries(LLVMExegesisTests PRIVATE pfm)
 endif()
-

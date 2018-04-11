@@ -374,6 +374,11 @@ LLVM-specific variables
 **LLVM_USE_INTEL_JITEVENTS**:BOOL
   Enable building support for Intel JIT Events API. Defaults to OFF.
 
+**LLVM_ENABLE_LIBPFM**:BOOL
+  Enable building with libpfm to support hardware counter measurements in LLVM
+  tools.
+  Defaults to ON.
+
 **LLVM_ENABLE_ZLIB**:BOOL
   Enable building with zlib to support compression/uncompression in LLVM tools.
   Defaults to ON.

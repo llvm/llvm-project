@@ -94,11 +94,6 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
-static cl::opt<bool> EnableDS128(
-  "amdgpu-ds128",
-  cl::desc("Use DS_read/write_b128"),
-  cl::init(false));
-
 static cl::opt<unsigned> AssumeFrameIndexHighZeroBits(
   "amdgpu-frame-index-zero-bits",
   cl::desc("High bits of frame index assumed to be zero"),
@@ -5300,7 +5295,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     }
   } else if (AS == AMDGPUASI.LOCAL_ADDRESS) {
     // Use ds_read_b128 if possible.
-    if (Subtarget->useDS128(EnableDS128) && Load->getAlignment() >= 16 &&
+    if (Subtarget->useDS128() && Load->getAlignment() >= 16 &&
         MemVT.getStoreSize() == 16)
       return SDValue();
 
@@ -5703,7 +5698,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     }
   } else if (AS == AMDGPUASI.LOCAL_ADDRESS) {
     // Use ds_write_b128 if possible.
-    if (Subtarget->useDS128(EnableDS128) && Store->getAlignment() >= 16 &&
+    if (Subtarget->useDS128() && Store->getAlignment() >= 16 &&
         VT.getStoreSize() == 16)
       return SDValue();
 

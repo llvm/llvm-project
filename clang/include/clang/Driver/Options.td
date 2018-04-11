@@ -1108,6 +1108,10 @@ def fxray_attr_list :
   JoinedOrSeparate<["-"], "fxray-attr-list=">,
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Filename defining the list of functions/types for imbuing XRay attributes.">;
+def fxray_modes :
+  JoinedOrSeparate<["-"], "fxray-modes=">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"List of modes to link in by default into XRay instrumented binaries.">;
 
 def fxray_always_emit_customevents : Flag<["-"], "fxray-always-emit-customevents">, Group<f_Group>,
   Flags<[CC1Option]>,

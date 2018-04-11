@@ -711,9 +711,9 @@ TEST_F(InterpolateTest, Language) {
 
   // .h is ambiguous, so we add explicit language flags
   EXPECT_EQ(getCommand("foo.h"),
-            "clang -D dir/foo.cpp -x c++-header -std c++17");
+            "clang -D dir/foo.cpp -x c++-header -std=c++17");
   // and don't add -x if the inferred language is correct.
-  EXPECT_EQ(getCommand("foo.hpp"), "clang -D dir/foo.cpp -std c++17");
+  EXPECT_EQ(getCommand("foo.hpp"), "clang -D dir/foo.cpp -std=c++17");
   // respect -x if it's already there.
   EXPECT_EQ(getCommand("baz.h"), "clang -D dir/baz.cee -x c-header");
   // prefer a worse match with the right language

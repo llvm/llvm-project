@@ -504,7 +504,8 @@ define amdgpu_kernel void @merge_local_store_2_constants_i32_align_2(i32 addrspa
 }
 
 ; CHECK-LABEL: @merge_local_store_4_constants_i32
-; CHECK: store <4 x i32> <i32 1234, i32 123, i32 456, i32 333>, <4 x i32> addrspace(3)*
+; CHECK: store <2 x i32> <i32 456, i32 333>, <2 x i32> addrspace(3)*
+; CHECK: store <2 x i32> <i32 1234, i32 123>, <2 x i32> addrspace(3)*
 define amdgpu_kernel void @merge_local_store_4_constants_i32(i32 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(3)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(3)* %out, i32 2

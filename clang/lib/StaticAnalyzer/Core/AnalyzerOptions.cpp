@@ -445,6 +445,14 @@ bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
   return DisplayNotesAsEvents.getValue();
 }
 
+bool AnalyzerOptions::shouldAggressivelySimplifyRelationalComparison() {
+  if (!AggressiveRelationalComparisonSimplification.hasValue())
+    AggressiveRelationalComparisonSimplification =
+      getBooleanOption("aggressive-relational-comparison-simplification",
+                       /*Default=*/false);
+  return AggressiveRelationalComparisonSimplification.getValue();
+}
+
 StringRef AnalyzerOptions::getCTUDir() {
   if (!CTUDir.hasValue()) {
     CTUDir = getOptionAsString("ctu-dir", "");

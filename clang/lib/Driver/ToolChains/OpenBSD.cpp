@@ -241,8 +241,11 @@ SanitizerMask OpenBSD::getSupportedSanitizers() const {
   // For future use, only UBsan at the moment
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
 
-  if (IsX86 || IsX86_64)
+  if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Vptr;
+    Res |= SanitizerKind::Fuzzer;
+    Res |= SanitizerKind::FuzzerNoLink;
+  }
 
   return Res;
 }

@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 
 using namespace clang;
@@ -307,6 +309,192 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
   return makeNonLoc(LHS, op, *ConvertedRHS, resultTy);
 }
 
+// See if Sym is known to be a relation Rel with Bound.
+static bool isInRelation(BinaryOperator::Opcode Rel, SymbolRef Sym,
+                         llvm::APSInt Bound, ProgramStateRef State) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  SVal Result =
+      SVB.evalBinOpNN(State, Rel, nonloc::SymbolVal(Sym),
+                      nonloc::ConcreteInt(Bound), SVB.getConditionType());
+  if (auto DV = Result.getAs<DefinedSVal>()) {
+    return !State->assume(*DV, false);
+  }
+  return false;
+}
+
+// See if Sym is known to be within [min/4, max/4], where min and max
+// are the bounds of the symbol's integral type. With such symbols,
+// some manipulations can be performed without the risk of overflow.
+// assume() doesn't cause infinite recursion because we should be dealing
+// with simpler symbols on every recursive call.
+static bool isWithinConstantOverflowBounds(SymbolRef Sym,
+                                           ProgramStateRef State) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  BasicValueFactory &BV = SVB.getBasicValueFactory();
+
+  QualType T = Sym->getType();
+  assert(T->isSignedIntegerOrEnumerationType() &&
+         "This only works with signed integers!");
+  APSIntType AT = BV.getAPSIntType(T);
+
+  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(4), Min = -Max;
+  return isInRelation(BO_LE, Sym, Max, State) &&
+         isInRelation(BO_GE, Sym, Min, State);
+}
+
+// Same for the concrete integers: see if I is within [min/4, max/4].
+static bool isWithinConstantOverflowBounds(llvm::APSInt I) {
+  APSIntType AT(I);
+  assert(!AT.isUnsigned() &&
+         "This only works with signed integers!");
+
+  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(4), Min = -Max;
+  return (I <= Max) && (I >= -Max);
+}
+
+static std::pair<SymbolRef, llvm::APSInt>
+decomposeSymbol(SymbolRef Sym, BasicValueFactory &BV) {
+  if (const auto *SymInt = dyn_cast<SymIntExpr>(Sym))
+    if (BinaryOperator::isAdditiveOp(SymInt->getOpcode()))
+      return std::make_pair(SymInt->getLHS(),
+                            (SymInt->getOpcode() == BO_Add) ?
+                            (SymInt->getRHS()) :
+                            (-SymInt->getRHS()));
+
+  // Fail to decompose: "reduce" the problem to the "$x + 0" case.
+  return std::make_pair(Sym, BV.getValue(0, Sym->getType()));
+}
+
+// Simplify "(LSym + LInt) Op (RSym + RInt)" assuming all values are of the
+// same signed integral type and no overflows occur (which should be checked
+// by the caller).
+static NonLoc doRearrangeUnchecked(ProgramStateRef State,
+                                   BinaryOperator::Opcode Op,
+                                   SymbolRef LSym, llvm::APSInt LInt,
+                                   SymbolRef RSym, llvm::APSInt RInt) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  BasicValueFactory &BV = SVB.getBasicValueFactory();
+  SymbolManager &SymMgr = SVB.getSymbolManager();
+
+  QualType SymTy = LSym->getType();
+  assert(SymTy == RSym->getType() &&
+         "Symbols are not of the same type!");
+  assert(APSIntType(LInt) == BV.getAPSIntType(SymTy) &&
+         "Integers are not of the same type as symbols!");
+  assert(APSIntType(RInt) == BV.getAPSIntType(SymTy) &&
+         "Integers are not of the same type as symbols!");
+
+  QualType ResultTy;
+  if (BinaryOperator::isComparisonOp(Op))
+    ResultTy = SVB.getConditionType();
+  else if (BinaryOperator::isAdditiveOp(Op))
+    ResultTy = SymTy;
+  else
+    llvm_unreachable("Operation not suitable for unchecked rearrangement!");
+
+  // FIXME: Can we use assume() without getting into an infinite recursion?
+  if (LSym == RSym)
+    return SVB.evalBinOpNN(State, Op, nonloc::ConcreteInt(LInt),
+                           nonloc::ConcreteInt(RInt), ResultTy)
+        .castAs<NonLoc>();
+
+  SymbolRef ResultSym = nullptr;
+  BinaryOperator::Opcode ResultOp;
+  llvm::APSInt ResultInt;
+  if (BinaryOperator::isComparisonOp(Op)) {
+    // Prefer comparing to a non-negative number.
+    // FIXME: Maybe it'd be better to have consistency in
+    // "$x - $y" vs. "$y - $x" because those are solver's keys.
+    if (LInt > RInt) {
+      ResultSym = SymMgr.getSymSymExpr(RSym, BO_Sub, LSym, SymTy);
+      ResultOp = BinaryOperator::reverseComparisonOp(Op);
+      ResultInt = LInt - RInt; // Opposite order!
+    } else {
+      ResultSym = SymMgr.getSymSymExpr(LSym, BO_Sub, RSym, SymTy);
+      ResultOp = Op;
+      ResultInt = RInt - LInt; // Opposite order!
+    }
+  } else {
+    ResultSym = SymMgr.getSymSymExpr(LSym, Op, RSym, SymTy);
+    ResultInt = (Op == BO_Add) ? (LInt + RInt) : (LInt - RInt);
+    ResultOp = BO_Add;
+    // Bring back the cosmetic difference.
+    if (ResultInt < 0) {
+      ResultInt = -ResultInt;
+      ResultOp = BO_Sub;
+    } else if (ResultInt == 0) {
+      // Shortcut: Simplify "$x + 0" to "$x".
+      return nonloc::SymbolVal(ResultSym);
+    }
+  }
+  const llvm::APSInt &PersistentResultInt = BV.getValue(ResultInt);
+  return nonloc::SymbolVal(
+      SymMgr.getSymIntExpr(ResultSym, ResultOp, PersistentResultInt, ResultTy));
+}
+
+// Rearrange if symbol type matches the result type and if the operator is a
+// comparison operator, both symbol and constant must be within constant
+// overflow bounds.
+static bool shouldRearrange(ProgramStateRef State, BinaryOperator::Opcode Op,
+                            SymbolRef Sym, llvm::APSInt Int, QualType Ty) {
+  return Sym->getType() == Ty &&
+    (!BinaryOperator::isComparisonOp(Op) ||
+     (isWithinConstantOverflowBounds(Sym, State) && 
+      isWithinConstantOverflowBounds(Int)));
+}
+
+static Optional<NonLoc> tryRearrange(ProgramStateRef State,
+                                     BinaryOperator::Opcode Op, NonLoc Lhs,
+                                     NonLoc Rhs, QualType ResultTy) {
+  ProgramStateManager &StateMgr = State->getStateManager();
+  SValBuilder &SVB = StateMgr.getSValBuilder();
+
+  // We expect everything to be of the same type - this type.
+  QualType SingleTy;
+
+  auto &Opts =
+    StateMgr.getOwningEngine()->getAnalysisManager().getAnalyzerOptions();
+
+  SymbolRef LSym = Lhs.getAsSymbol();
+  if (!LSym)
+    return None;
+
+  // Always rearrange additive operations but rearrange comparisons only if
+  // option is set.
+  if (BinaryOperator::isComparisonOp(Op) &&
+      Opts.shouldAggressivelySimplifyRelationalComparison()) {
+    SingleTy = LSym->getType();
+    if (ResultTy != SVB.getConditionType())
+      return None;
+    // Initialize SingleTy later with a symbol's type.
+  } else if (BinaryOperator::isAdditiveOp(Op)) {
+    SingleTy = ResultTy;
+    // Substracting unsigned integers is a nightmare.
+    if (!SingleTy->isSignedIntegerOrEnumerationType())
+      return None;
+  } else {
+    // Don't rearrange other operations.
+    return None;
+  }
+
+  assert(!SingleTy.isNull() && "We should have figured out the type by now!");
+
+  SymbolRef RSym = Rhs.getAsSymbol();
+  if (!RSym || RSym->getType() != SingleTy)
+    return None;
+
+  BasicValueFactory &BV = State->getBasicVals();
+  llvm::APSInt LInt, RInt;
+  std::tie(LSym, LInt) = decomposeSymbol(LSym, BV);
+  std::tie(RSym, RInt) = decomposeSymbol(RSym, BV);
+  if (!shouldRearrange(State, Op, LSym, LInt, SingleTy) ||
+      !shouldRearrange(State, Op, RSym, RInt, SingleTy))
+    return None;
+
+  // We know that no overflows can occur anymore.
+  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt);
+}
+
 SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
                                   BinaryOperator::Opcode op,
                                   NonLoc lhs, NonLoc rhs,
@@ -558,6 +746,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       // Is the RHS a constant?
       if (const llvm::APSInt *RHSValue = getKnownValue(state, rhs))
         return MakeSymIntVal(Sym, op, *RHSValue, resultTy);
+
+      if (Optional<NonLoc> V = tryRearrange(state, op, lhs, rhs, resultTy))
+        return *V;
 
       // Give up -- this is not a symbolic expression we can handle.
       return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
