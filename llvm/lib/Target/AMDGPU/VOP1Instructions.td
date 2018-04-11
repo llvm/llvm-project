@@ -382,6 +382,8 @@ let SubtargetPredicate = isGFX9 in {
 def V_SWAP_B32 : VOP1_Pseudo <"v_swap_b32", VOP_SWAP_I32, [], 1>;
 }
 
+defm V_SCREEN_PARTITION_4SE_B32 : VOP1Inst <"v_screen_partition_4se_b32", VOP_I32_I32>;
+
 defm V_SAT_PK_U8_I16    : VOP1Inst<"v_sat_pk_u8_i16", VOP_I32_I32>;
 defm V_CVT_NORM_I16_F16 : VOP1Inst<"v_cvt_norm_i16_f16", VOP_I16_F16>;
 defm V_CVT_NORM_U16_F16 : VOP1Inst<"v_cvt_norm_u16_f16", VOP_I16_F16>;
@@ -515,7 +517,7 @@ multiclass VOP1Only_Real_vi <bits<10> op> {
   }
 }
 
-multiclass VOP1_Real_vi <bits<10> op> {
+multiclass VOP1_Real_e32e64_vi <bits<10> op> {
   let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
     def _e32_vi :
       VOP1_Real<!cast<VOP1_Pseudo>(NAME#"_e32"), SIEncodingFamily.VI>,
@@ -524,6 +526,10 @@ multiclass VOP1_Real_vi <bits<10> op> {
       VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
       VOP3e_vi <!add(0x140, op), !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
   }
+}
+
+multiclass VOP1_Real_vi <bits<10> op> {
+  defm NAME : VOP1_Real_e32e64_vi <op>;
 
   def _sdwa_vi :
     VOP_SDWA_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
@@ -587,9 +593,9 @@ defm V_FRACT_F64         : VOP1_Real_vi <0x32>;
 defm V_FREXP_EXP_I32_F32 : VOP1_Real_vi <0x33>;
 defm V_FREXP_MANT_F32    : VOP1_Real_vi <0x34>;
 defm V_CLREXCP           : VOP1_Real_vi <0x35>;
-defm V_MOVRELD_B32       : VOP1_Real_vi <0x36>;
-defm V_MOVRELS_B32       : VOP1_Real_vi <0x37>;
-defm V_MOVRELSD_B32      : VOP1_Real_vi <0x38>;
+defm V_MOVRELD_B32       : VOP1_Real_e32e64_vi <0x36>;
+defm V_MOVRELS_B32       : VOP1_Real_e32e64_vi <0x37>;
+defm V_MOVRELSD_B32      : VOP1_Real_e32e64_vi <0x38>;
 defm V_TRUNC_F64         : VOP1_Real_vi <0x17>;
 defm V_CEIL_F64          : VOP1_Real_vi <0x18>;
 defm V_FLOOR_F64         : VOP1_Real_vi <0x1A>;
@@ -692,3 +698,23 @@ def : GCNPat <
 >;
 
 } // End OtherPredicates = [isVI]
+
+//===----------------------------------------------------------------------===//
+// GFX9
+//===----------------------------------------------------------------------===//
+
+multiclass VOP1_Real_gfx9 <bits<10> op> {
+  let AssemblerPredicates = [isGFX9], DecoderNamespace = "GFX9" in {
+    defm NAME : VOP1_Real_e32e64_vi <op>;
+  }
+
+  def _sdwa_gfx9 :
+    VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
+
+  // For now left dpp only for asm/dasm
+  // TODO: add corresponding pseudo
+  def _dpp : VOP1_DPP<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")>;
+}
+
+defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;

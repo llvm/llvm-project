@@ -42,17 +42,15 @@
 namespace mca {
 
 class DispatchStatistics : public View {
-  const llvm::MCSubtargetInfo &STI;
-
-  using Histogram = llvm::DenseMap<unsigned, unsigned>;
-  Histogram DispatchGroupSizePerCycle;
-
   unsigned NumDispatched;
   unsigned NumCycles;
 
   // Counts dispatch stall events caused by unavailability of resources.  There
   // is one counter for every generic stall kind (see class HWStallEvent).
   llvm::SmallVector<unsigned, 8> HWStalls;
+
+  using Histogram = llvm::DenseMap<unsigned, unsigned>;
+  Histogram DispatchGroupSizePerCycle;
 
   void updateHistograms() {
     DispatchGroupSizePerCycle[NumDispatched]++;
@@ -62,12 +60,9 @@ class DispatchStatistics : public View {
   void printDispatchHistogram(llvm::raw_ostream &OS) const;
 
   void printDispatchStalls(llvm::raw_ostream &OS) const;
-  void printDispatchUnitUsage(llvm::raw_ostream &OS, const Histogram &Stats,
-                              unsigned Cycles) const;
 
 public:
-  DispatchStatistics(const llvm::MCSubtargetInfo &sti)
-      : STI(sti), NumDispatched(0), NumCycles(0),
+  DispatchStatistics() : NumDispatched(0), NumCycles(0),
         HWStalls(HWStallEvent::LastGenericEvent) {}
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;
@@ -76,10 +71,7 @@ public:
 
   void onCycleEnd(unsigned Cycle) override { updateHistograms(); }
 
-  void onStallEvent(const HWStallEvent &Event) override {
-    if (Event.Type < HWStallEvent::LastGenericEvent)
-      HWStalls[Event.Type]++;
-  }
+  void onStallEvent(const HWStallEvent &Event) override;
 
   void printView(llvm::raw_ostream &OS) const override {
     printDispatchStalls(OS);

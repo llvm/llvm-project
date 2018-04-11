@@ -1058,3 +1058,12 @@ v_add_f32 v0, v0, v0 mul:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 s
 // NOVI: error:
 // GFX9: v_add_f32_sdwa v0, v0, v0 clamp div:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x00,0x00,0x02,0x00,0xe6,0x05,0x02]
 v_add_f32 v0, v0, v0 clamp div:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+//---------------------------------------------------------------------------//
+// Check Instructions
+//---------------------------------------------------------------------------//
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_screen_partition_4se_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 ; encoding: [0xf9,0x6e,0x0a,0x7e,0x01,0x16,0x00,0x00]
+v_screen_partition_4se_b32_sdwa v5, v1 src0_sel:BYTE_0

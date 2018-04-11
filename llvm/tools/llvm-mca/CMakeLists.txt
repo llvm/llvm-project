@@ -12,7 +12,6 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-mca
   Backend.cpp
   BackendPrinter.cpp
-  BackendStatistics.cpp
   CodeRegion.cpp
   Dispatch.cpp
   DispatchStatistics.cpp
@@ -25,7 +24,9 @@ add_llvm_tool(llvm-mca
   llvm-mca.cpp
   RegisterFileStatistics.cpp
   ResourcePressureView.cpp
+  RetireControlUnitStatistics.cpp
   Scheduler.cpp
+  SchedulerStatistics.cpp
   Support.cpp
   SummaryView.cpp
   TimelineView.cpp

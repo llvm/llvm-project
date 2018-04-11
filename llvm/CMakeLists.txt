@@ -366,6 +366,8 @@ set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, 
 
 option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
 
+option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
+
 option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
 option(LLVM_ENABLE_ZLIB "Use zlib for compression/decompression if available." ON)

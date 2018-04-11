@@ -32,6 +32,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/StringSaver.h"
 
 namespace clang {
 namespace tooling {
@@ -45,20 +46,30 @@ class ToolResults {
 public:
   virtual ~ToolResults() = default;
   virtual void addResult(StringRef Key, StringRef Value) = 0;
-  virtual std::vector<std::pair<std::string, std::string>> AllKVResults() = 0;
+  virtual std::vector<std::pair<llvm::StringRef, llvm::StringRef>>
+  AllKVResults() = 0;
   virtual void forEachResult(
       llvm::function_ref<void(StringRef Key, StringRef Value)> Callback) = 0;
 };
 
+/// \brief Stores the key-value results in memory. It maintains the lifetime of
+/// the result. Clang tools using this class are expected to generate a small
+/// set of different results, or a large set of duplicated results.
 class InMemoryToolResults : public ToolResults {
 public:
+  InMemoryToolResults() : StringsPool(Arena) {}
   void addResult(StringRef Key, StringRef Value) override;
-  std::vector<std::pair<std::string, std::string>> AllKVResults() override;
+  std::vector<std::pair<llvm::StringRef, llvm::StringRef>>
+  AllKVResults() override;
   void forEachResult(llvm::function_ref<void(StringRef Key, StringRef Value)>
                          Callback) override;
 
 private:
-  std::vector<std::pair<std::string, std::string>> KVResults;
+  llvm::BumpPtrAllocator Arena;
+  llvm::StringSaver StringsPool;
+  llvm::DenseSet<llvm::StringRef> Strings;
+
+  std::vector<std::pair<llvm::StringRef, llvm::StringRef>> KVResults;
 };
 
 /// \brief The context of an execution, including the information about
