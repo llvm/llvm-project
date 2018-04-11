@@ -1992,6 +1992,9 @@ def mbranch_likely : Flag<["-"], "mbranch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
 def mno_branch_likely : Flag<["-"], "mno-branch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
+def mindirect_jump_EQ : Joined<["-"], "mindirect-jump=">,
+  Group<m_Group>,
+  HelpText<"Change indirect jump instructions to inhibit speculation">;
 def mdsp : Flag<["-"], "mdsp">, Group<m_Group>;
 def mno_dsp : Flag<["-"], "mno-dsp">, Group<m_Group>;
 def mdspr2 : Flag<["-"], "mdspr2">, Group<m_Group>;
