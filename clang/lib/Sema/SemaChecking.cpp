@@ -84,7 +84,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -119,7 +118,7 @@ static bool checkArgCount(Sema &S, CallExpr *call, unsigned desiredArgCount) {
   // Highlight all the excess arguments.
   SourceRange range(call->getArg(desiredArgCount)->getLocStart(),
                     call->getArg(argCount - 1)->getLocEnd());
-
+    
   return S.Diag(range.getBegin(), diag::err_typecheck_call_too_many_args)
     << 0 /*function call*/ << desiredArgCount << argCount
     << call->getArg(1)->getSourceRange();
@@ -225,7 +224,7 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall) {
 }
 
 static void SemaBuiltinMemChkCall(Sema &S, FunctionDecl *FDecl,
-                                  CallExpr *TheCall, unsigned SizeIdx,
+		                  CallExpr *TheCall, unsigned SizeIdx,
                                   unsigned DstSizeIdx) {
   if (TheCall->getNumArgs() <= SizeIdx ||
       TheCall->getNumArgs() <= DstSizeIdx)
@@ -492,9 +491,6 @@ static bool checkOpenCLEnqueueVariadicArgs(Sema &S, CallExpr *TheCall,
 ///                    void (^block)(local void*, ...),
 ///                    uint size0, ...)
 static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
-  llvm::NamedRegionTimer T(
-      "semaopenclbuiltin", "Sema OpenCL Builtin Enqueue Kernel",
-      Sema::GroupName, Sema::GroupDescription, llvm::TimePassesIsEnabled);
   unsigned NumArgs = TheCall->getNumArgs();
 
   if (NumArgs < 4) {
@@ -857,10 +853,6 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
-  llvm::NamedRegionTimer T("checkbuiltinfunction",
-                           "Check Builtin Function Call", GroupName,
-                           GroupDescription, llvm::TimePassesIsEnabled);
-
   ExprResult TheCallResult(TheCall);
 
   // Find out if any arguments are required to be integer constant expressions.
@@ -1113,6 +1105,63 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       CorrectDelayedTyposInExpr(TheCallResult.get());
     return Res;
   }
+  case Builtin::BI__builtin_dump_struct: {
+    // We first want to ensure we are called with 2 arguments
+    if (checkArgCount(*this, TheCall, 2))
+      return ExprError();
+    // Ensure that the first argument is of type 'struct XX *'
+    const Expr *PtrArg = TheCall->getArg(0)->IgnoreParenImpCasts();
+    const QualType PtrArgType = PtrArg->getType();
+    if (!PtrArgType->isPointerType() ||
+        !PtrArgType->getPointeeType()->isRecordType()) {
+      Diag(PtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+          << PtrArgType << "structure pointer" << 1 << 0 << 3 << 1 << PtrArgType
+          << "structure pointer";
+      return ExprError();
+    }
+
+    // Ensure that the second argument is of type 'FunctionType'
+    const Expr *FnPtrArg = TheCall->getArg(1)->IgnoreImpCasts();
+    const QualType FnPtrArgType = FnPtrArg->getType();
+    if (!FnPtrArgType->isPointerType()) {
+      Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+          << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+          << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+      return ExprError();
+    }
+
+    const auto *FuncType =
+        FnPtrArgType->getPointeeType()->getAs<FunctionType>();
+
+    if (!FuncType) {
+      Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+          << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+          << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+      return ExprError();
+    }
+
+    if (const auto *FT = dyn_cast<FunctionProtoType>(FuncType)) {
+      if (!FT->getNumParams()) {
+        Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+            << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+            << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+        return ExprError();
+      }
+      QualType PT = FT->getParamType(0);
+      if (!FT->isVariadic() || FT->getReturnType() != Context.IntTy ||
+          !PT->isPointerType() || !PT->getPointeeType()->isCharType() ||
+          !PT->getPointeeType().isConstQualified()) {
+        Diag(FnPtrArg->getLocStart(), diag::err_typecheck_convert_incompatible)
+            << FnPtrArgType << "'int (*)(const char *, ...)'" << 1 << 0 << 3
+            << 2 << FnPtrArgType << "'int (*)(const char *, ...)'";
+        return ExprError();
+      }
+    }
+
+    TheCall->setType(Context.IntTy);
+    break;
+  }
+
   // check secure string manipulation functions where overflows
   // are detectable at compile time
   case Builtin::BI__builtin___memcpy_chk:
@@ -2260,9 +2309,6 @@ bool Sema::CheckX86BuiltinGatherScatterScale(unsigned BuiltinID,
 }
 
 bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
-  llvm::NamedRegionTimer T("checkx86builtin",
-                           "Check X86 Builtin Function Call", GroupName,
-                           GroupDescription, llvm::TimePassesIsEnabled);
   if (BuiltinID == X86::BI__builtin_cpu_supports)
     return SemaBuiltinCpuSupports(*this, TheCall);
 
@@ -2704,8 +2750,6 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                      const Expr *ThisArg, ArrayRef<const Expr *> Args,
                      bool IsMemberFunction, SourceLocation Loc,
                      SourceRange Range, VariadicCallType CallType) {
-  llvm::NamedRegionTimer T("checkcall", "Check Call", GroupName,
-                           GroupDescription, llvm::TimePassesIsEnabled);
   // FIXME: We should check as much as we can in the template definition.
   if (CurContext->isDependentContext())
     return;
@@ -3344,10 +3388,6 @@ static bool checkBuiltinArgument(Sema &S, CallExpr *E, unsigned ArgIndex) {
 /// builtins,
 ExprResult
 Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
-  llvm::NamedRegionTimer T("semabuiltinatomic",
-                           "Sema Builtin Atomic Overloaded", GroupName,
-                           GroupDescription, llvm::TimePassesIsEnabled);
-
   CallExpr *TheCall = (CallExpr *)TheCallResult.get();
   DeclRefExpr *DRE =cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
   FunctionDecl *FDecl = cast<FunctionDecl>(DRE->getDecl());
@@ -9535,10 +9575,6 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
 static void
 CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
                         bool *ICContext = nullptr) {
-  llvm::NamedRegionTimer NRT("checkimplicit",
-                             "Check Implicit Conversion", Sema::GroupName,
-                             Sema::GroupDescription, llvm::TimePassesIsEnabled);
-
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = S.Context.getCanonicalType(E->getType()).getTypePtr();

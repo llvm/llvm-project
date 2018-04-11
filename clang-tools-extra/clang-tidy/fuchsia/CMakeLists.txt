@@ -15,5 +15,6 @@ add_clang_library(clangTidyFuchsiaModule
   clangBasic
   clangLex
   clangTidy
+  clangTidyGoogleModule
   clangTidyUtils
   )

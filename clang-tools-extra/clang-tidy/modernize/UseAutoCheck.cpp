@@ -287,8 +287,9 @@ StatementMatcher makeCombinedMatcher() {
 } // namespace
 
 UseAutoCheck::UseAutoCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), RemoveStars(Options.get("RemoveStars", 0)),
-      MinTypeNameLength(Options.get("MinTypeNameLength", 5)) {}
+    : ClangTidyCheck(Name, Context),
+      MinTypeNameLength(Options.get("MinTypeNameLength", 5)),
+      RemoveStars(Options.get("RemoveStars", 0)) {}
 
 void UseAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MinTypeNameLength", MinTypeNameLength);

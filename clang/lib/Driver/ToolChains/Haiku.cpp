@@ -22,8 +22,10 @@ Haiku::Haiku(const Driver &D, const llvm::Triple& Triple, const ArgList &Args)
 
 }
 
-std::string Haiku::findLibCxxIncludePath() const {
-  return getDriver().SysRoot + "/system/develop/headers/c++/v1";
+void Haiku::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args) const {
+  addSystemInclude(DriverArgs, CC1Args,
+                   getDriver().SysRoot + "/system/develop/headers/c++/v1");
 }
 
 void Haiku::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
