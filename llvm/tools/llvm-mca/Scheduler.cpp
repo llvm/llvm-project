@@ -308,24 +308,26 @@ void Scheduler::dump() const {
 }
 #endif
 
-Scheduler::Event Scheduler::canBeDispatched(const InstrDesc &Desc) const {
-  if (Desc.MayLoad && LSU->isLQFull())
-    return HWS_LD_QUEUE_UNAVAILABLE;
-  if (Desc.MayStore && LSU->isSQFull())
-    return HWS_ST_QUEUE_UNAVAILABLE;
+bool Scheduler::canBeDispatched(unsigned Index, const InstrDesc &Desc) const {
+  HWStallEvent::GenericEventType Type = HWStallEvent::Invalid;
 
-  Scheduler::Event Event;
-  switch (Resources->canBeDispatched(Desc.Buffers)) {
-  case ResourceStateEvent::RS_BUFFER_AVAILABLE:
-    Event = HWS_AVAILABLE;
-    break;
-  case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
-    Event = HWS_QUEUE_UNAVAILABLE;
-    break;
-  case ResourceStateEvent::RS_RESERVED:
-    Event = HWS_DISPATCH_GROUP_RESTRICTION;
+  if (Desc.MayLoad && LSU->isLQFull())
+    Type = HWStallEvent::LoadQueueFull;
+  else if (Desc.MayStore && LSU->isSQFull())
+    Type = HWStallEvent::StoreQueueFull;
+  else {
+    switch (Resources->canBeDispatched(Desc.Buffers)) {
+    default: return true;
+    case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
+      Type = HWStallEvent::SchedulerQueueFull;
+      break;
+    case ResourceStateEvent::RS_RESERVED:
+      Type = HWStallEvent::DispatchGroupStall;
+    }
   }
-  return Event;
+
+  Owner->notifyStallEvent(HWStallEvent(Type, Index));
+  return false;
 }
 
 void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {

@@ -197,9 +197,9 @@ Options
 
 .. option:: MinTypeNameLength
 
-   If the option is set to non-zero (default '5'), the check will ignore
-   type names having a length less than the option value.
-   The option affects expressions only, not iterators.
+   If the option is set to non-zero (default `5`), the check will ignore type
+   names having a length less than the option value. The option affects
+   expressions only, not iterators.
 
 .. code-block:: c++
 
