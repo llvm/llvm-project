@@ -1052,7 +1052,7 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
         // else we can use BP and FP, but the offset from FP won't fit.
         // That will make us scavenge registers which we can probably avoid by
         // using BP. If it won't fit for BP either, we'll scavenge anyway.
-      } else if (PreferFP || FPOffset >= 0) {
+      } else if (FPOffset >= 0) {
         // Use SP or FP, whichever gives us the best chance of the offset
         // being in range for direct access. If the FPOffset is positive,
         // that'll always be best, as the SP will be even further away.

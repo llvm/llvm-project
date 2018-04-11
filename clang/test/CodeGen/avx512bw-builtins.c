@@ -1036,32 +1036,36 @@ __m512i test_mm512_maskz_mulhi_epu16(__mmask32 __U, __m512i __A, __m512i __B) {
 
 __m512i test_mm512_maddubs_epi16(__m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_maddubs_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmaddubs.w.512
+  // CHECK: @llvm.x86.avx512.pmaddubs.w.512
   return _mm512_maddubs_epi16(__X,__Y); 
 }
 __m512i test_mm512_mask_maddubs_epi16(__m512i __W, __mmask32 __U, __m512i __X,         __m512i __Y) {
   // CHECK-LABEL: @test_mm512_mask_maddubs_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmaddubs.w.512
+  // CHECK: @llvm.x86.avx512.pmaddubs.w.512
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_mask_maddubs_epi16(__W,__U,__X,__Y); 
 }
 __m512i test_mm512_maskz_maddubs_epi16(__mmask32 __U, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_maskz_maddubs_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmaddubs.w.512
+  // CHECK: @llvm.x86.avx512.pmaddubs.w.512
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_maskz_maddubs_epi16(__U,__X,__Y); 
 }
 __m512i test_mm512_madd_epi16(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_madd_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmaddw.d.512
+  // CHECK: @llvm.x86.avx512.pmaddw.d.512
   return _mm512_madd_epi16(__A,__B); 
 }
 __m512i test_mm512_mask_madd_epi16(__m512i __W, __mmask16 __U, __m512i __A,      __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_madd_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmaddw.d.512
+  // CHECK: @llvm.x86.avx512.pmaddw.d.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_madd_epi16(__W,__U,__A,__B); 
 }
 __m512i test_mm512_maskz_madd_epi16(__mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_madd_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmaddw.d.512
+  // CHECK: @llvm.x86.avx512.pmaddw.d.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_madd_epi16(__U,__A,__B); 
 }
 

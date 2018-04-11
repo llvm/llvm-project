@@ -776,7 +776,7 @@ class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
   let ParserMethod = "tryParseSVEPredicateVector";
 }
 
-def PPRAsmOpAny : PPRAsmOperand<"PredicateAny", "PPR", -1>;
+def PPRAsmOpAny : PPRAsmOperand<"PredicateAny", "PPR",  0>;
 def PPRAsmOp8   : PPRAsmOperand<"PredicateB",   "PPR",  8>;
 def PPRAsmOp16  : PPRAsmOperand<"PredicateH",   "PPR", 16>;
 def PPRAsmOp32  : PPRAsmOperand<"PredicateS",   "PPR", 32>;
@@ -788,7 +788,7 @@ def PPR16  : PPRRegOp<"h", PPRAsmOp16,  PPR>;
 def PPR32  : PPRRegOp<"s", PPRAsmOp32,  PPR>;
 def PPR64  : PPRRegOp<"d", PPRAsmOp64,  PPR>;
 
-def PPRAsmOp3bAny : PPRAsmOperand<"Predicate3bAny", "PPR_3b", -1>;
+def PPRAsmOp3bAny : PPRAsmOperand<"Predicate3bAny", "PPR_3b",  0>;
 def PPRAsmOp3b8   : PPRAsmOperand<"Predicate3bB",   "PPR_3b",  8>;
 def PPRAsmOp3b16  : PPRAsmOperand<"Predicate3bH",   "PPR_3b", 16>;
 def PPRAsmOp3b32  : PPRAsmOperand<"Predicate3bS",   "PPR_3b", 32>;
@@ -818,10 +818,10 @@ class ZPRAsmOperand <string name, int Width>: AsmOperandClass {
                             # Width # ", AArch64::ZPRRegClassID>";
   let RenderMethod = "addRegOperands";
   let ParserMethod = "tryParseSVEDataVector<"
-                               # !if(!eq(Width, -1), "false", "true") # ">";
+                               # !if(!eq(Width, 0), "false", "true") # ">";
 }
 
-def ZPRAsmOpAny : ZPRAsmOperand<"VectorAny", -1>;
+def ZPRAsmOpAny : ZPRAsmOperand<"VectorAny", 0>;
 def ZPRAsmOp8   : ZPRAsmOperand<"VectorB",   8>;
 def ZPRAsmOp16  : ZPRAsmOperand<"VectorH",   16>;
 def ZPRAsmOp32  : ZPRAsmOperand<"VectorS",   32>;

@@ -8,7 +8,7 @@ sub z3.h, z26.h, z32.h
 
 // Invalid element kind.
 sub z4.h, z27.h, z31.x
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid sve vector kind qualifier
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid vector kind qualifier
 // CHECK-NEXT: sub z4.h, z27.h, z31.x
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

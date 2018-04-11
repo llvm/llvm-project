@@ -156,6 +156,9 @@ Improvements to clang-tidy
   <clang-tidy/checks/cppcoreguidelines-avoid-goto>`
   added.
 
+- Adding the missing bitwise assignment operations to 
+  :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp-signed-bitwise>`.
+
 - The 'misc-forwarding-reference-overload' check was renamed to :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone-forwarding-reference-overload>`
 

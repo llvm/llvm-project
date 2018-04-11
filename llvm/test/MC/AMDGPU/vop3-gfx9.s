@@ -445,3 +445,11 @@ v_sat_pk_u8_i16_e64 v5, -1
 v_sat_pk_u8_i16_e64 v5, v255
 // GFX9: v_sat_pk_u8_i16_e64 v5, v255 ; encoding: [0x05,0x00,0x8f,0xd1,0xff,0x01,0x00,0x00]
 // NOVI: error: instruction not supported on this GPU
+
+v_screen_partition_4se_b32_e64 v5, v1
+// GXF9: [0x05,0x00,0x77,0xd1,0x01,0x01,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
+
+v_screen_partition_4se_b32_e64 v5, -1
+// GXF9: [0x05,0x00,0x77,0xd1,0xc1,0x00,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
