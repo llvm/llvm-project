@@ -14,6 +14,7 @@
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
+#include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -930,6 +931,93 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
   return RValue::get(Overflow);
 }
 
+static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
+                               Value *&RecordPtr, CharUnits Align, Value *Func,
+                               int Lvl) {
+  const auto *RT = RType->getAs<RecordType>();
+  ASTContext &Context = CGF.getContext();
+  RecordDecl *RD = RT->getDecl()->getDefinition();
+  ASTContext &Ctx = RD->getASTContext();
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(RD);
+  std::string Pad = std::string(Lvl * 4, ' ');
+
+  Value *GString =
+      CGF.Builder.CreateGlobalStringPtr(RType.getAsString() + " {\n");
+  Value *Res = CGF.Builder.CreateCall(Func, {GString});
+
+  static llvm::DenseMap<QualType, const char *> Types;
+  if (Types.empty()) {
+    Types[Context.CharTy] = "%c";
+    Types[Context.BoolTy] = "%d";
+    Types[Context.IntTy] = "%d";
+    Types[Context.UnsignedIntTy] = "%u";
+    Types[Context.LongTy] = "%ld";
+    Types[Context.UnsignedLongTy] = "%lu";
+    Types[Context.LongLongTy] = "%lld";
+    Types[Context.UnsignedLongLongTy] = "%llu";
+    Types[Context.ShortTy] = "%hd";
+    Types[Context.UnsignedShortTy] = "%hu";
+    Types[Context.VoidPtrTy] = "%p";
+    Types[Context.FloatTy] = "%f";
+    Types[Context.DoubleTy] = "%f";
+    Types[Context.LongDoubleTy] = "%Lf";
+    Types[Context.getPointerType(Context.CharTy)] = "%s";
+  }
+
+  for (const auto *FD : RD->fields()) {
+    uint64_t Off = RL.getFieldOffset(FD->getFieldIndex());
+    Off = Ctx.toCharUnitsFromBits(Off).getQuantity();
+
+    Value *FieldPtr = RecordPtr;
+    if (RD->isUnion())
+      FieldPtr = CGF.Builder.CreatePointerCast(
+          FieldPtr, CGF.ConvertType(Context.getPointerType(FD->getType())));
+    else
+      FieldPtr = CGF.Builder.CreateStructGEP(CGF.ConvertType(RType), FieldPtr,
+                                             FD->getFieldIndex());
+
+    GString = CGF.Builder.CreateGlobalStringPtr(
+        llvm::Twine(Pad)
+            .concat(FD->getType().getAsString())
+            .concat(llvm::Twine(' '))
+            .concat(FD->getNameAsString())
+            .concat(" : ")
+            .str());
+    Value *TmpRes = CGF.Builder.CreateCall(Func, {GString});
+    Res = CGF.Builder.CreateAdd(Res, TmpRes);
+
+    QualType CanonicalType =
+        FD->getType().getUnqualifiedType().getCanonicalType();
+
+    // We check whether we are in a recursive type
+    if (CanonicalType->isRecordType()) {
+      Value *TmpRes =
+          dumpRecord(CGF, CanonicalType, FieldPtr, Align, Func, Lvl + 1);
+      Res = CGF.Builder.CreateAdd(TmpRes, Res);
+      continue;
+    }
+
+    // We try to determine the best format to print the current field
+    llvm::Twine Format = Types.find(CanonicalType) == Types.end()
+                             ? Types[Context.VoidPtrTy]
+                             : Types[CanonicalType];
+
+    Address FieldAddress = Address(FieldPtr, Align);
+    FieldPtr = CGF.Builder.CreateLoad(FieldAddress);
+
+    // FIXME Need to handle bitfield here
+    GString = CGF.Builder.CreateGlobalStringPtr(
+        Format.concat(llvm::Twine('\n')).str());
+    TmpRes = CGF.Builder.CreateCall(Func, {GString, FieldPtr});
+    Res = CGF.Builder.CreateAdd(Res, TmpRes);
+  }
+
+  GString = CGF.Builder.CreateGlobalStringPtr(Pad + "}\n");
+  Value *TmpRes = CGF.Builder.CreateCall(Func, {GString});
+  Res = CGF.Builder.CreateAdd(Res, TmpRes);
+  return Res;
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -1194,6 +1282,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BIcreall: {
     ComplexPairTy ComplexVal = EmitComplexExpr(E->getArg(0));
     return RValue::get(ComplexVal.first);
+  }
+
+  case Builtin::BI__builtin_dump_struct: {
+    Value *Func = EmitScalarExpr(E->getArg(1)->IgnoreImpCasts());
+    CharUnits Arg0Align = EmitPointerWithAlignment(E->getArg(0)).getAlignment();
+
+    const Expr *Arg0 = E->getArg(0)->IgnoreImpCasts();
+    QualType Arg0Type = Arg0->getType()->getPointeeType();
+
+    Value *RecordPtr = EmitScalarExpr(Arg0);
+    Value *Res = dumpRecord(*this, Arg0Type, RecordPtr, Arg0Align, Func, 0);
+    return RValue::get(Res);
   }
 
   case Builtin::BI__builtin_cimag:

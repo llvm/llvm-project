@@ -1,4 +1,4 @@
-; XFAIL: *
+; REQUIRES: to-be-fixed
 ; This requires further patches.
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ;

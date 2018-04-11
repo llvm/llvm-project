@@ -1374,6 +1374,7 @@ BUILTIN(__builtin_addressof, "v*v&", "nct")
 BUILTIN(__builtin_operator_new, "v*z", "tc")
 BUILTIN(__builtin_operator_delete, "vv*", "tn")
 BUILTIN(__builtin_char_memchr, "c*cC*iz", "n")
+BUILTIN(__builtin_dump_struct, "ivC*v*", "tn")
 
 // Safestack builtins
 BUILTIN(__builtin___get_unsafe_stack_start, "v*", "Fn")

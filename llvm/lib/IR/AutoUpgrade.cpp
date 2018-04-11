@@ -173,6 +173,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.pmul.hr.sw.") || // Added in 7.0
       Name.startswith("avx512.mask.pmulh.w.") || // Added in 7.0
       Name.startswith("avx512.mask.pmulhu.w.") || // Added in 7.0
+      Name.startswith("avx512.mask.pmaddw.d.") || // Added in 7.0
+      Name.startswith("avx512.mask.pmaddubs.w.") || // Added in 7.0
       Name.startswith("avx512.mask.packsswb.") || // Added in 5.0
       Name.startswith("avx512.mask.packssdw.") || // Added in 5.0
       Name.startswith("avx512.mask.packuswb.") || // Added in 5.0
@@ -1069,6 +1071,24 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx2_pmulhu_w;
     else if (VecWidth == 512)
       IID = Intrinsic::x86_avx512_pmulhu_w_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmaddw.d.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_sse2_pmadd_wd;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pmadd_wd;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmaddw_d_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmaddubs.w.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_ssse3_pmadd_ub_sw_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx2_pmadd_ub_sw;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmaddubs_w_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else if (Name.startswith("packsswb.")) {

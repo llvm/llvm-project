@@ -29,10 +29,11 @@ define amdgpu_kernel void @no_crash(i32 %arg) {
 ; longest chain vectorized
 
 ; CHECK-LABEL: @interleave_get_longest
-; CHECK: load <4 x i32>
+; CHECK: load <2 x i32>
 ; CHECK: load i32
 ; CHECK: store <2 x i32> zeroinitializer
 ; CHECK: load i32
+; CHECK: load <2 x i32>
 ; CHECK: load i32
 ; CHECK: load i32
 

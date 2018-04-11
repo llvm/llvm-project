@@ -727,8 +727,27 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &TestMBB,
   if (!CondReg)
     CondReg = promoteCondToReg(TestMBB, TestPos, TestLoc, Cond);
 
-  // Rewriting this is trivial: we just replace the register and remove the
-  // setcc.
-  MRI->replaceRegWith(SetCCI.getOperand(0).getReg(), CondReg);
+  // Rewriting a register def is trivial: we just replace the register and
+  // remove the setcc.
+  if (!SetCCI.mayStore()) {
+    assert(SetCCI.getOperand(0).isReg() &&
+           "Cannot have a non-register defined operand to SETcc!");
+    MRI->replaceRegWith(SetCCI.getOperand(0).getReg(), CondReg);
+    SetCCI.eraseFromParent();
+    return;
+  }
+
+  // Otherwise, we need to emit a store.
+  auto MIB = BuildMI(*SetCCI.getParent(), SetCCI.getIterator(),
+                     SetCCI.getDebugLoc(), TII->get(X86::MOV8mr));
+  // Copy the address operands.
+  for (int i = 0; i < X86::AddrNumOperands; ++i)
+    MIB.add(SetCCI.getOperand(i));
+
+  MIB.addReg(CondReg);
+
+  MIB->setMemRefs(SetCCI.memoperands_begin(), SetCCI.memoperands_end());
+
   SetCCI.eraseFromParent();
+  return;
 }
