@@ -193,6 +193,10 @@ def FeatureMT : SubtargetFeature<"mt", "HasMT", "true", "Mips MT ASE">;
 def FeatureLongCalls : SubtargetFeature<"long-calls", "UseLongCalls", "true",
                                         "Disable use of the jal instruction">;
 
+def FeatureUseIndirectJumpsHazard : SubtargetFeature<"use-indirect-jump-hazard",
+                                                    "UseIndirectJumpsHazard",
+                                                    "true", "Use indirect jump"
+                        " guards to prevent certain speculation based attacks">;
 //===----------------------------------------------------------------------===//
 // Mips processors supported.
 //===----------------------------------------------------------------------===//

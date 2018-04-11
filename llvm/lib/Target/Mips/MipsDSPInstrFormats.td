@@ -53,7 +53,7 @@ class DSPInst<string opstr = "">
 
 class PseudoDSP<dag outs, dag ins, list<dag> pattern,
                 InstrItinClass itin = IIPseudo>
-    : MipsPseudo<outs, ins, pattern, itin>, PredicateControl {
+    : MipsPseudo<outs, ins, pattern, itin> {
   let InsnPredicates = [HasDSP];
 }
 
