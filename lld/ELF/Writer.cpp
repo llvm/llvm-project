@@ -1234,14 +1234,11 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 
   if (!Script->HasSectionsCommand) {
     // We know that all the OutputSections are contiguous in this case.
-    auto E = Script->SectionCommands.end();
-    auto I = Script->SectionCommands.begin();
     auto IsSection = [](BaseCommand *Base) { return isa<OutputSection>(Base); };
-    I = std::find_if(I, E, IsSection);
-    E = std::find_if(llvm::make_reverse_iterator(E),
-                     llvm::make_reverse_iterator(I), IsSection)
-            .base();
-    std::stable_sort(I, E, compareSections);
+    std::stable_sort(
+        llvm::find_if(Script->SectionCommands, IsSection),
+        llvm::find_if(llvm::reverse(Script->SectionCommands), IsSection).base(),
+        compareSections);
     return;
   }
 

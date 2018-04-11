@@ -36,7 +36,8 @@ public:
     Results.addResult(Key, Value);
   }
 
-  std::vector<std::pair<std::string, std::string>> AllKVResults() override {
+  std::vector<std::pair<llvm::StringRef, llvm::StringRef>>
+  AllKVResults() override {
     return Results.AllKVResults();
   }
 
