@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=3 -mcpu=mips32r2 \
+; RUN: llc -fast-isel-sink-local-values -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=3 -mcpu=mips32r2 \
 ; RUN:     < %s | FileCheck %s
-; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=3 -mcpu=mips32 \
+; RUN: llc -fast-isel-sink-local-values -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=3 -mcpu=mips32 \
 ; RUN:     < %s | FileCheck %s
 
 @abcd = external global i32

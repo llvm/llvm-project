@@ -619,7 +619,7 @@ public:
   /// according to GCC.
   ///
   /// This is used by Sema for inline asm statements.
-  bool isValidGCCRegisterName(StringRef Name) const;
+  virtual bool isValidGCCRegisterName(StringRef Name) const;
 
   /// \brief Returns the "normalized" GCC register name.
   ///

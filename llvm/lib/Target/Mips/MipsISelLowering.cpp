@@ -2833,6 +2833,13 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 #include "MipsGenCallingConv.inc"
 
+ CCAssignFn *MipsTargetLowering::CCAssignFnForCall() const{
+   return CC_Mips;
+ }
+
+ CCAssignFn *MipsTargetLowering::CCAssignFnForReturn() const{
+   return RetCC_Mips;
+ }
 //===----------------------------------------------------------------------===//
 //                  Call Calling Convention Implementation
 //===----------------------------------------------------------------------===//

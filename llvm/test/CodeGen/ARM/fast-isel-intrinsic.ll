@@ -1,9 +1,9 @@
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-MACHO
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-ELF
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=THUMB
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=THUMB-LONG
+; RUN: llc -fast-isel-sink-local-values < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-MACHO
+; RUN: llc -fast-isel-sink-local-values < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-ELF
+; RUN: llc -fast-isel-sink-local-values < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=THUMB
+; RUN: llc -fast-isel-sink-local-values < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
+; RUN: llc -fast-isel-sink-local-values < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
+; RUN: llc -fast-isel-sink-local-values < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=THUMB-LONG
 
 ; Note that some of these tests assume that relocations are either
 ; movw/movt or constant pool loads. Different platforms will select

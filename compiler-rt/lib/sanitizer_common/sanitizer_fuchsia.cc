@@ -272,7 +272,7 @@ static uptr DoMmapFixedOrDie(zx_handle_t vmar, uptr fixed_addr, uptr map_size,
       ReportMmapFailureAndDie(map_size, name, "zx_vmo_create", status);
     return 0;
   }
-  _zx_object_set_property(vmo, ZX_PROP_NAME, name, sizeof(name) - 1);
+  _zx_object_set_property(vmo, ZX_PROP_NAME, name, internal_strlen(name));
   DCHECK_GE(base + size_, map_size + offset);
   uintptr_t addr;
 

@@ -5050,7 +5050,7 @@ def SSE_PHADDSUBW : OpndItins<
   IIC_SSE_PHADDSUBW_RR, IIC_SSE_PHADDSUBW_RM
 >;
 }
-let Sched = WriteShuffle in
+let Sched = WriteVarShuffle in
 def SSE_PSHUFB : OpndItins<
   IIC_SSE_PSHUFB_RR, IIC_SSE_PSHUFB_RM
 >;
@@ -7688,7 +7688,7 @@ defm VMASKMOVPD : avx_movmask_rm<0x2D, 0x2F, "vmaskmovpd",
 // VPERMIL - Permute Single and Double Floating-Point Values
 //
 
-let Sched = WriteFShuffle in
+let Sched = WriteFVarShuffle in
 def AVX_VPERMILV : OpndItins<
   IIC_SSE_SHUFP, IIC_SSE_SHUFP
 >;
@@ -7707,13 +7707,13 @@ multiclass avx_permil<bits<8> opc_rm, bits<8> opc_rmi, string OpcodeStr,
                (ins RC:$src1, RC:$src2),
                !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                [(set RC:$dst, (f_vt (X86VPermilpv RC:$src1, (i_vt RC:$src2))))]>, VEX_4V,
-               Sched<[WriteFShuffle]>;
+               Sched<[WriteFVarShuffle]>;
     def rm  : AVX8I<opc_rm, MRMSrcMem, (outs RC:$dst),
                (ins RC:$src1, x86memop_i:$src2),
                !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                [(set RC:$dst, (f_vt (X86VPermilpv RC:$src1,
                               (i_vt (bitconvert (i_frag addr:$src2))))))]>, VEX_4V,
-               Sched<[WriteFShuffleLd, ReadAfterLd]>;
+               Sched<[WriteFVarShuffleLd, ReadAfterLd]>;
 
     def ri  : AVXAIi8<opc_rmi, MRMSrcReg, (outs RC:$dst),
              (ins RC:$src1, u8imm:$src2),
@@ -8181,10 +8181,10 @@ multiclass avx2_perm<bits<8> opc, string OpcodeStr, PatFrag mem_frag,
   }
 }
 
-defm VPERMD : avx2_perm<0x36, "vpermd", loadv4i64, v8i32, WriteShuffle256,
+defm VPERMD : avx2_perm<0x36, "vpermd", loadv4i64, v8i32, WriteVarShuffle256,
                         i256mem>;
 let ExeDomain = SSEPackedSingle in
-defm VPERMPS : avx2_perm<0x16, "vpermps", loadv8f32, v8f32, WriteFShuffle256,
+defm VPERMPS : avx2_perm<0x16, "vpermps", loadv8f32, v8f32, WriteFVarShuffle256,
                         f256mem>;
 
 multiclass avx2_perm_imm<bits<8> opc, string OpcodeStr, PatFrag mem_frag,

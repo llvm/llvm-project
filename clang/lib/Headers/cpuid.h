@@ -215,8 +215,9 @@
 #define bit_3DNOWP      0x40000000
 #define bit_3DNOW       0x80000000
 
-/* Features in %ebx for leaf 0x80000001 */
+/* Features in %ebx for leaf 0x80000008 */
 #define bit_CLZERO      0x00000001
+#define bit_WBNOINVD    0x00000200
 
 
 #if __i386__

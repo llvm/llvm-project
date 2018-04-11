@@ -19,6 +19,7 @@
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "Mips.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -364,6 +365,10 @@ class TargetRegisterClass;
     bool isJumpTableRelative() const override {
       return getTargetMachine().isPositionIndependent();
     }
+
+   CCAssignFn *CCAssignFnForCall() const;
+
+   CCAssignFn *CCAssignFnForReturn() const;
 
   protected:
     SDValue getGlobalReg(SelectionDAG &DAG, EVT Ty) const;

@@ -5131,8 +5131,8 @@ declare <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8>, <32 x i8>) nounwind readnone
 define <32 x i8> @test_pshufb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_pshufb:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpshufb %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpshufb (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpshufb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpshufb (%rdi), %ymm0, %ymm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pshufb:

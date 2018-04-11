@@ -899,10 +899,9 @@ define <2 x double> @test_movddup(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; ATOM-LABEL: test_movddup:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0] sched: [1:1.00]
-; ATOM-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0] sched: [1:1.00]
-; ATOM-NEXT:    subpd %xmm0, %xmm1 # sched: [6:3.00]
-; ATOM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    movddup {{.*#+}} xmm1 = xmm0[0,0] sched: [1:1.00]
+; ATOM-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0] sched: [1:1.00]
+; ATOM-NEXT:    subpd %xmm1, %xmm0 # sched: [6:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movddup:
@@ -1027,10 +1026,9 @@ define <4 x float> @test_movshdup(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_movshdup:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [1:1.00]
-; ATOM-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3] sched: [1:1.00]
-; ATOM-NEXT:    addps %xmm0, %xmm1 # sched: [5:5.00]
-; ATOM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3] sched: [1:1.00]
+; ATOM-NEXT:    movshdup {{.*#+}} xmm0 = mem[1,1,3,3] sched: [1:1.00]
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movshdup:
@@ -1155,10 +1153,9 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_movsldup:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [1:1.00]
-; ATOM-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2] sched: [1:1.00]
-; ATOM-NEXT:    addps %xmm0, %xmm1 # sched: [5:5.00]
-; ATOM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    movsldup {{.*#+}} xmm1 = xmm0[0,0,2,2] sched: [1:1.00]
+; ATOM-NEXT:    movsldup {{.*#+}} xmm0 = mem[0,0,2,2] sched: [1:1.00]
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movsldup:

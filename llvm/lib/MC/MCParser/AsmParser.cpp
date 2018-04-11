@@ -2969,6 +2969,25 @@ bool AsmParser::parseDirectiveValue(StringRef IDVal, unsigned Size) {
   return false;
 }
 
+static bool parseHexOcta(AsmParser &Asm, uint64_t &hi, uint64_t &lo) {
+  if (Asm.getTok().isNot(AsmToken::Integer) &&
+      Asm.getTok().isNot(AsmToken::BigNum))
+    return Asm.TokError("unknown token in expression");
+  SMLoc ExprLoc = Asm.getTok().getLoc();
+  APInt IntValue = Asm.getTok().getAPIntVal();
+  Asm.Lex();
+  if (!IntValue.isIntN(128))
+    return Asm.Error(ExprLoc, "out of range literal value");
+  if (!IntValue.isIntN(64)) {
+    hi = IntValue.getHiBits(IntValue.getBitWidth() - 64).getZExtValue();
+    lo = IntValue.getLoBits(64).getZExtValue();
+  } else {
+    hi = 0;
+    lo = IntValue.getZExtValue();
+  }
+  return false;
+}
+
 /// ParseDirectiveOctaValue
 ///  ::= .octa [ hexconstant (, hexconstant)* ]
 
@@ -2976,21 +2995,9 @@ bool AsmParser::parseDirectiveOctaValue(StringRef IDVal) {
   auto parseOp = [&]() -> bool {
     if (checkForValidSection())
       return true;
-    if (getTok().isNot(AsmToken::Integer) && getTok().isNot(AsmToken::BigNum))
-      return TokError("unknown token in expression");
-    SMLoc ExprLoc = getTok().getLoc();
-    APInt IntValue = getTok().getAPIntVal();
     uint64_t hi, lo;
-    Lex();
-    if (!IntValue.isIntN(128))
-      return Error(ExprLoc, "out of range literal value");
-    if (!IntValue.isIntN(64)) {
-      hi = IntValue.getHiBits(IntValue.getBitWidth() - 64).getZExtValue();
-      lo = IntValue.getLoBits(64).getZExtValue();
-    } else {
-      hi = 0;
-      lo = IntValue.getZExtValue();
-    }
+    if (parseHexOcta(*this, hi, lo))
+      return true;
     if (MAI.isLittleEndian()) {
       getStreamer().EmitIntValue(lo, 8);
       getStreamer().EmitIntValue(hi, 8);
@@ -3283,7 +3290,8 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     Filename = Path;
   }
 
-  std::string Checksum;
+  uint64_t MD5Hi, MD5Lo;
+  bool HasMD5 = false;
 
   Optional<StringRef> Source;
   bool HasSource = false;
@@ -3296,12 +3304,10 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
         parseIdentifier(Keyword))
       return true;
     if (Keyword == "md5") {
+      HasMD5 = true;
       if (check(FileNumber == -1,
                 "MD5 checksum specified, but no file number") ||
-          check(getTok().isNot(AsmToken::String),
-                "unexpected token in '.file' directive") ||
-          parseEscapedString(Checksum) ||
-          check(Checksum.size() != 32, "invalid MD5 checksum specified"))
+          parseHexOcta(*this, MD5Hi, MD5Lo))
         return true;
     } else if (Keyword == "source") {
       HasSource = true;
@@ -3324,12 +3330,12 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     getStreamer().EmitFileDirective(Filename);
   else {
     MD5::MD5Result *CKMem = nullptr;
-    if (!Checksum.empty()) {
-      Checksum = fromHex(Checksum);
-      if (check(Checksum.size() != 16, "invalid MD5 checksum specified"))
-        return true;
+    if (HasMD5) {
       CKMem = (MD5::MD5Result *)Ctx.allocate(sizeof(MD5::MD5Result), 1);
-      memcpy(&CKMem->Bytes, Checksum.data(), 16);
+      for (unsigned i = 0; i != 8; ++i) {
+        CKMem->Bytes[i] = uint8_t(MD5Hi >> ((7 - i) * 8));
+        CKMem->Bytes[i + 8] = uint8_t(MD5Lo >> ((7 - i) * 8));
+      }
     }
     if (HasSource) {
       char *SourceBuf = static_cast<char *>(Ctx.allocate(SourceString.size()));

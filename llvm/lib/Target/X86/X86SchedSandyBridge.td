@@ -148,6 +148,7 @@ defm : SBWriteResPair<WriteCvtF2I, [SBPort1], 3>;
 defm : SBWriteResPair<WriteCvtI2F, [SBPort1], 4>;
 defm : SBWriteResPair<WriteCvtF2F, [SBPort1], 3>;
 defm : SBWriteResPair<WriteFShuffle, [SBPort5],  1>;
+defm : SBWriteResPair<WriteFVarShuffle, [SBPort5],  1>;
 defm : SBWriteResPair<WriteFBlend,  [SBPort05],  1>;
 defm : SBWriteResPair<WriteFVarBlend,  [SBPort0, SBPort5], 2>;
 
@@ -162,6 +163,7 @@ defm : SBWriteResPair<WriteVecALU,   [SBPort1], 3>;
 defm : SBWriteResPair<WriteVecIMul,  [SBPort0], 5>;
 defm : SBWriteResPair<WritePMULLD,   [SBPort0], 5, [1], 1, 6>; // TODO this is probably wrong for 256/512-bit for the "generic" model
 defm : SBWriteResPair<WriteShuffle,  [SBPort5], 1>;
+defm : SBWriteResPair<WriteVarShuffle,  [SBPort15], 1>;
 defm : SBWriteResPair<WriteBlend,   [SBPort15], 1>;
 defm : SBWriteResPair<WriteVarBlend, [SBPort1, SBPort5], 2>;
 defm : SBWriteResPair<WriteMPSAD, [SBPort0, SBPort15], 5, [1,2], 3>;
@@ -275,7 +277,9 @@ def : WriteRes<WriteNop, []>;
 // AVX2/FMA is not supported on that architecture, but we should define the basic
 // scheduling resources anyway.
 defm : SBWriteResPair<WriteFShuffle256, [SBPort0],  1>;
+defm : SBWriteResPair<WriteFVarShuffle256, [SBPort0],  1>;
 defm : SBWriteResPair<WriteShuffle256, [SBPort0],  1>;
+defm : SBWriteResPair<WriteVarShuffle256, [SBPort0],  1>;
 defm : SBWriteResPair<WriteVarVecShift, [SBPort0],  1>;
 defm : SBWriteResPair<WriteFMA, [SBPort01],  5>;
 
@@ -352,9 +356,7 @@ def: InstRW<[SBWriteResGroup2], (instregex "FDECSTP",
                                            "(V?)ORPS(Y?)rr",
                                            "VPERM2F128rr",
                                            "VPERMILPD(Y?)ri",
-                                           "VPERMILPD(Y?)rr",
                                            "VPERMILPS(Y?)ri",
-                                           "VPERMILPS(Y?)rr",
                                            "(V?)SHUFPD(Y?)rri",
                                            "(V?)SHUFPS(Y?)rri",
                                            "(V?)UNPCKHPD(Y?)rr",
@@ -408,7 +410,6 @@ def: InstRW<[SBWriteResGroup5], (instregex "MMX_PABSBrr",
                                            "MMX_PABSWrr",
                                            "MMX_PADDQirr",
                                            "MMX_PALIGNRrri",
-                                           "MMX_PSHUFBrr",
                                            "MMX_PSIGNBrr",
                                            "MMX_PSIGNDrr",
                                            "MMX_PSIGNWrr",
@@ -462,7 +463,6 @@ def: InstRW<[SBWriteResGroup5], (instregex "MMX_PABSBrr",
                                            "(V?)PMOVZXDQrr",
                                            "(V?)PMOVZXWDrr",
                                            "(V?)PMOVZXWQrr",
-                                           "(V?)PSHUFBrr",
                                            "(V?)PSHUFDri",
                                            "(V?)PSHUFHWri",
                                            "(V?)PSHUFLWri",

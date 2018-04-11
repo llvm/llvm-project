@@ -87,6 +87,7 @@ defm WriteFRcp   : X86SchedWritePair; // Floating point reciprocal estimate.
 defm WriteFRsqrt : X86SchedWritePair; // Floating point reciprocal square root estimate.
 defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
 defm WriteFShuffle  : X86SchedWritePair; // Floating point vector shuffles.
+defm WriteFVarShuffle  : X86SchedWritePair; // Floating point vector variable shuffles.
 defm WriteFBlend  : X86SchedWritePair; // Floating point vector blends.
 defm WriteFVarBlend  : X86SchedWritePair; // Fp vector variable blends.
 
@@ -106,6 +107,7 @@ defm WriteVecShift : X86SchedWritePair; // Vector integer shifts.
 defm WriteVecIMul  : X86SchedWritePair; // Vector integer multiply.
 defm WritePMULLD : X86SchedWritePair; // PMULLD
 defm WriteShuffle  : X86SchedWritePair; // Vector shuffles.
+defm WriteVarShuffle  : X86SchedWritePair; // Vector variable shuffles.
 defm WriteBlend  : X86SchedWritePair; // Vector blends.
 defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.
 defm WriteMPSAD : X86SchedWritePair; // Vector MPSAD.
@@ -150,7 +152,9 @@ def WriteSystem : SchedWrite;
 
 // AVX2.
 defm WriteFShuffle256 : X86SchedWritePair; // Fp 256-bit width vector shuffles.
+defm WriteFVarShuffle256 : X86SchedWritePair; // Fp 256-bit width variable shuffles.
 defm WriteShuffle256 : X86SchedWritePair; // 256-bit width vector shuffles.
+defm WriteVarShuffle256 : X86SchedWritePair; // 256-bit width vector variable shuffles.
 defm WriteVarVecShift : X86SchedWritePair; // Variable vector shifts.
 
 // Old microcoded instructions that nobody use.

@@ -81,12 +81,25 @@ static void collectCallers(Function *F, DenseSet<Function *> &Callers) {
   for (auto U : F->users()) {
     if (auto *CI = dyn_cast<CallInst>(&*U)) {
       auto *Caller = CI->getParent()->getParent();
-      if (Callers.count(Caller))
-        continue;
-      Callers.insert(Caller);
-      collectCallers(Caller, Callers);
+      if (Callers.insert(Caller).second)
+        collectCallers(Caller, Callers);
     }
   }
+}
+
+/// If \p U is instruction or constant, collect functions which directly or
+/// indirectly use it.
+static void collectFunctionUsers(User *U, DenseSet<Function *> &Funcs) {
+  if (auto *I = dyn_cast<Instruction>(U)) {
+    auto *F = I->getParent()->getParent();
+    if (Funcs.insert(F).second)
+      collectCallers(F, Funcs);
+    return;
+  }
+  if (!isa<Constant>(U))
+    return;
+  for (auto UU : U->users())
+    collectFunctionUsers(&*UU, Funcs);
 }
 
 bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
@@ -101,32 +114,28 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
                                    M.getDataLayout());
         F.setName(Name);
       }
+      DEBUG(dbgs() << "found enqueued kernel: " << F.getName() << '\n');
       auto RuntimeHandle = (F.getName() + ".runtime_handle").str();
+      auto T = Type::getInt8Ty(C)->getPointerTo(AMDGPUAS::GLOBAL_ADDRESS);
       auto *GV = new GlobalVariable(
-          M, Type::getInt8Ty(C)->getPointerTo(AMDGPUAS::GLOBAL_ADDRESS),
-          /*IsConstant=*/true, GlobalValue::ExternalLinkage,
-          /*Initializer=*/nullptr, RuntimeHandle, /*InsertBefore=*/nullptr,
-          GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS,
-          /*IsExternallyInitialized=*/true);
+          M, T,
+          /*IsConstant=*/false, GlobalValue::ExternalLinkage,
+          /*Initializer=*/Constant::getNullValue(T), RuntimeHandle,
+          /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
+          AMDGPUAS::GLOBAL_ADDRESS,
+          /*IsExternallyInitialized=*/false);
       DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
 
       for (auto U : F.users()) {
-        if (!isa<ConstantExpr>(&*U))
+        auto *UU = &*U;
+        if (!isa<ConstantExpr>(UU))
           continue;
-        auto *BitCast = cast<ConstantExpr>(&*U);
+        collectFunctionUsers(UU, Callers);
+        auto *BitCast = cast<ConstantExpr>(UU);
         auto *NewPtr = ConstantExpr::getPointerCast(GV, BitCast->getType());
         BitCast->replaceAllUsesWith(NewPtr);
         F.addFnAttr("runtime-handle", RuntimeHandle);
         F.setLinkage(GlobalValue::ExternalLinkage);
-
-        // Collect direct or indirect callers of enqueue_kernel.
-        for (auto U : NewPtr->users()) {
-          if (auto *I = dyn_cast<Instruction>(&*U)) {
-            auto *F = I->getParent()->getParent();
-            Callers.insert(F);
-            collectCallers(F, Callers);
-          }
-        }
         Changed = true;
       }
     }
@@ -136,6 +145,7 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
     if (F->getCallingConv() != CallingConv::AMDGPU_KERNEL)
       continue;
     F->addFnAttr("calls-enqueue-kernel");
+    DEBUG(dbgs() << "mark enqueue_kernel caller:" << F->getName() << '\n');
   }
   return Changed;
 }
