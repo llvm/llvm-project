@@ -93,11 +93,16 @@ void still_forbidden() {
   // Staying within the allowed standard types is ok for bitwise assignment
   // operations.
   std::ctype_base::mask var = std::ctype_base::mask::print;
-  var<<= std::ctype_base::mask::upper;
-  var>>= std::ctype_base::mask::upper;
-  var &= std::ctype_base::mask::upper;
-  var |= std::ctype_base::mask::upper;
-  var ^= std::ctype_base::mask::upper;
+  SResult<<= std::ctype_base::mask::upper;
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
+  SResult>>= std::ctype_base::mask::upper;
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
+  SResult &= std::ctype_base::mask::upper;
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
+  SResult |= std::ctype_base::mask::upper;
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
+  SResult ^= std::ctype_base::mask::upper;
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
 
   UResult = std::locale::category::collate << 1u;
   UResult = std::locale::category::ctype << 1;
