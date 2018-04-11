@@ -74,11 +74,12 @@ def MMX_UNPCK_L_ITINS : OpndItins<
 def MMX_PCK_ITINS : OpndItins<
   IIC_MMX_PCK_RR, IIC_MMX_PCK_RM
 >;
+} // Sched
 
+let Sched = WriteVarShuffle in
 def MMX_PSHUF_ITINS : OpndItins<
   IIC_MMX_PSHUF, IIC_MMX_PSHUF
 >;
-} // Sched
 
 let Sched = WriteCvtF2I in {
 def MMX_CVT_PD_ITINS : OpndItins<

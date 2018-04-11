@@ -159,8 +159,10 @@ defm : HWWriteResPair<WriteCvtI2F, [HWPort1], 4>;
 defm : HWWriteResPair<WriteCvtF2F, [HWPort1], 3>;
 defm : HWWriteResPair<WriteFMA,   [HWPort01], 5>;
 defm : HWWriteResPair<WriteFShuffle,  [HWPort5],  1>;
+defm : HWWriteResPair<WriteFVarShuffle,  [HWPort5],  1>;
 defm : HWWriteResPair<WriteFBlend,  [HWPort015],  1>;
 defm : HWWriteResPair<WriteFShuffle256,  [HWPort5],  3>;
+defm : HWWriteResPair<WriteFVarShuffle256,  [HWPort5],  3>;
 defm : HWWriteResPair<WriteFVarBlend,  [HWPort5], 2, [2]>;
 
 // Vector integer operations.
@@ -174,8 +176,10 @@ defm : HWWriteResPair<WriteVecALU,   [HWPort15],  1>;
 defm : HWWriteResPair<WriteVecIMul,  [HWPort0],   5>;
 defm : HWWriteResPair<WritePMULLD,   [HWPort0], 10, [2], 2, 6>;
 defm : HWWriteResPair<WriteShuffle,  [HWPort5],  1>;
+defm : HWWriteResPair<WriteVarShuffle,  [HWPort5],  1>;
 defm : HWWriteResPair<WriteBlend,  [HWPort15],  1>;
 defm : HWWriteResPair<WriteShuffle256,  [HWPort5],  3>;
+defm : HWWriteResPair<WriteVarShuffle256,  [HWPort5],  3>;
 defm : HWWriteResPair<WriteVarBlend,  [HWPort5], 2, [2]>;
 defm : HWWriteResPair<WriteVarVecShift,  [HWPort0, HWPort5], 2, [2, 1]>;
 defm : HWWriteResPair<WriteMPSAD,  [HWPort0, HWPort5], 6, [1, 2]>;
@@ -724,7 +728,6 @@ def: InstRW<[HWWriteResGroup4], (instregex "MMX_MOVD64rr",
                                            "MMX_MOVD64to64rr",
                                            "MMX_MOVQ2DQrr",
                                            "MMX_PALIGNRrri",
-                                           "MMX_PSHUFBrr",
                                            "MMX_PSHUFWri",
                                            "MMX_PUNPCKHBWirr",
                                            "MMX_PUNPCKHDQirr",
@@ -762,9 +765,7 @@ def: InstRW<[HWWriteResGroup4], (instregex "MMX_MOVD64rr",
                                            "VPBROADCASTDrr",
                                            "VPBROADCASTQrr",
                                            "VPERMILPD(Y?)ri",
-                                           "VPERMILPD(Y?)rr",
                                            "VPERMILPS(Y?)ri",
-                                           "VPERMILPS(Y?)rr",
                                            "(V?)PMOVSXBDrr",
                                            "(V?)PMOVSXBQrr",
                                            "(V?)PMOVSXBWrr",
@@ -777,7 +778,6 @@ def: InstRW<[HWWriteResGroup4], (instregex "MMX_MOVD64rr",
                                            "(V?)PMOVZXDQrr",
                                            "(V?)PMOVZXWDrr",
                                            "(V?)PMOVZXWQrr",
-                                           "(V?)PSHUFB(Y?)rr",
                                            "(V?)PSHUFD(Y?)ri",
                                            "(V?)PSHUFHW(Y?)ri",
                                            "(V?)PSHUFLW(Y?)ri",
@@ -1780,9 +1780,7 @@ def: InstRW<[HWWriteResGroup51], (instregex "VBROADCASTSDYrr",
                                             "VPBROADCASTWrr",
                                             "VPERM2F128rr",
                                             "VPERM2I128rr",
-                                            "VPERMDYrr",
                                             "VPERMPDYri",
-                                            "VPERMPSYrr",
                                             "VPERMQYri",
                                             "VPMOVSXBDYrr",
                                             "VPMOVSXBQYrr",

@@ -2,8 +2,8 @@
 
 // Test combinations of options to the .file directive.
 
-        .file 1 "dir1/foo" md5 "ee87e05688663173cd6043a3a15bba6e" source "void foo() {}"
-        .file 2 "dir2/bar" source "void bar() {}" md5 "816225a0c90ca8948b70eb58be4d522f"
+        .file 1 "dir1/foo" md5 0xee87e05688663173cd6043a3a15bba6e source "void foo() {}"
+        .file 2 "dir2/bar" source "void bar() {}" md5 0x816225a0c90ca8948b70eb58be4d522f
         .loc 1 1 0
         nop
         .loc 2 1 0

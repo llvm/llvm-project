@@ -350,6 +350,11 @@ v_cvt_norm_u16_f16_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0x0 bank_mask:0x0
 // NOVI:   error
 v_sat_pk_u8_i16_dpp v5, v1 row_ror:15 row_mask:0x0 bank_mask:0x0
 
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_screen_partition_4se_b32_dpp v5, v1 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0 ; encoding: [0xfa,0x6e,0x0a,0x7e,0x01,0xe4,0x08,0x00]
+v_screen_partition_4se_b32_dpp v5, v1 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+
 //===----------------------------------------------------------------------===//
 // Check VOP2 opcodes
 //===----------------------------------------------------------------------===//

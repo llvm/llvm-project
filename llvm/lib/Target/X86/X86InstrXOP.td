@@ -279,7 +279,7 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
             [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                              (vt128 VR128:$src3))))]>,
-            XOP_4V, Sched<[WriteShuffle]>;
+            XOP_4V, Sched<[WriteVarShuffle]>;
   def rrm : IXOPi8Reg<opc, MRMSrcMemOp4, (outs VR128:$dst),
             (ins VR128:$src1, VR128:$src2, i128mem:$src3),
             !strconcat(OpcodeStr,
@@ -287,7 +287,7 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
             [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                              (vt128 (bitconvert (loadv2i64 addr:$src3))))))]>,
-            XOP_4V, VEX_W, Sched<[WriteShuffleLd, ReadAfterLd, ReadAfterLd]>;
+            XOP_4V, VEX_W, Sched<[WriteVarShuffleLd, ReadAfterLd, ReadAfterLd]>;
   def rmr : IXOPi8Reg<opc, MRMSrcMem, (outs VR128:$dst),
             (ins VR128:$src1, i128mem:$src2, VR128:$src3),
             !strconcat(OpcodeStr,
@@ -295,7 +295,7 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
             [(set VR128:$dst,
               (v16i8 (OpNode (vt128 VR128:$src1), (vt128 (bitconvert (loadv2i64 addr:$src2))),
                              (vt128 VR128:$src3))))]>,
-            XOP_4V, Sched<[WriteShuffleLd, ReadAfterLd,
+            XOP_4V, Sched<[WriteVarShuffleLd, ReadAfterLd,
                            // 128mem:$src2
                            ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                            ReadDefault,
@@ -307,7 +307,7 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                 (ins VR128:$src1, VR128:$src2, VR128:$src3),
                 !strconcat(OpcodeStr,
                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                []>, XOP_4V, VEX_W, Sched<[WriteShuffle]>, FoldGenData<NAME#rrr>;
+                []>, XOP_4V, VEX_W, Sched<[WriteVarShuffle]>, FoldGenData<NAME#rrr>;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -367,7 +367,7 @@ multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set RC:$dst,
            (VT (X86vpermil2 RC:$src1, RC:$src2, RC:$src3, (i8 imm:$src4))))]>,
-        Sched<[WriteFShuffle]>;
+        Sched<[WriteFVarShuffle]>;
   def rm : IXOP5<Opc, MRMSrcMemOp4, (outs RC:$dst),
         (ins RC:$src1, RC:$src2, intmemop:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
@@ -376,7 +376,7 @@ multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
           (VT (X86vpermil2 RC:$src1, RC:$src2,
                            (bitconvert (IntLdFrag addr:$src3)),
                            (i8 imm:$src4))))]>, VEX_W,
-        Sched<[WriteFShuffleLd, ReadAfterLd, ReadAfterLd]>;
+        Sched<[WriteFVarShuffleLd, ReadAfterLd, ReadAfterLd]>;
   def mr : IXOP5<Opc, MRMSrcMem, (outs RC:$dst),
         (ins RC:$src1, fpmemop:$src2, RC:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
@@ -384,7 +384,7 @@ multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
         [(set RC:$dst,
           (VT (X86vpermil2 RC:$src1, (FPLdFrag addr:$src2),
                            RC:$src3, (i8 imm:$src4))))]>,
-        Sched<[WriteFShuffleLd, ReadAfterLd,
+        Sched<[WriteFVarShuffleLd, ReadAfterLd,
                // fpmemop:$src2
                ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                // RC:$src3
@@ -395,7 +395,7 @@ multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
         (ins RC:$src1, RC:$src2, RC:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        []>, VEX_W, Sched<[WriteFShuffle]>, FoldGenData<NAME#rr>;
+        []>, VEX_W, Sched<[WriteFVarShuffle]>, FoldGenData<NAME#rr>;
 }
 
 let ExeDomain = SSEPackedDouble in {

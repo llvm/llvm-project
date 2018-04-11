@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple x86_64-unknown-unknown -dwarf-version 5 -fdebug-compilation-dir=/tmp -filetype=obj %s -o - | llvm-dwarfdump --debug-line --debug-line-str -v - | FileCheck %s
 
-        .file 1 "dir1/foo"   md5 "00112233445566778899aabbccddeeff"
-        .file 2 "dir2" "bar" md5 "ffeeddccbbaa99887766554433221100"
+        .file 1 "dir1/foo"   md5 0x00112233445566778899aabbccddeeff
+        .file 2 "dir2" "bar" md5 0xffeeddccbbaa99887766554433221100
         .loc 1 1 0
         nop
         .loc 2 1 0

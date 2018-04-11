@@ -593,10 +593,11 @@ define <4 x float> @test_cmpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
   %1 = fcmp oeq <4 x float> %a0, %a1
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = fcmp oeq <4 x float> %a0, %2
-  %4 = or <4 x i1> %1, %3
-  %5 = sext <4 x i1> %4 to <4 x i32>
-  %6 = bitcast <4 x i32> %5 to <4 x float>
-  ret <4 x float> %6
+  %4 = sext <4 x i1> %1 to <4 x i32>
+  %5 = sext <4 x i1> %3 to <4 x i32>
+  %6 = or <4 x i32> %4, %5
+  %7 = bitcast <4 x i32> %6 to <4 x float>
+  ret <4 x float> %7
 }
 
 define float @test_cmpss(float %a0, float %a1, float *%a2) {

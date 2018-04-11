@@ -1725,12 +1725,12 @@ defm VPBROADCASTMB2Q : avx512_mask_broadcast<0x2A, "vpbroadcastmb2q",
 //===----------------------------------------------------------------------===//
 // -- VPERMI2 - 3 source operands form --
 
-let Sched = WriteFShuffle256 in
+let Sched = WriteFVarShuffle256 in
 def AVX512_PERM2_F : OpndItins<
   IIC_SSE_SHUFP, IIC_SSE_SHUFP
 >;
 
-let Sched = WriteShuffle256 in
+let Sched = WriteVarShuffle256 in
 def AVX512_PERM2_I : OpndItins<
   IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
 >;
@@ -8969,7 +8969,7 @@ let Predicates = [HasDQI, NoBWI] in {
 //
 
 // FIXME: Is there a better scheduler itinerary for VPCOMPRESS/VPEXPAND?
-let Sched = WriteShuffle256 in {
+let Sched = WriteVarShuffle256 in {
 def AVX512_COMPRESS : OpndItins<
   IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
 >;
