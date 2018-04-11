@@ -17,12 +17,12 @@ set(XRAY_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/xray
   -I${COMPILER_RT_SOURCE_DIR}/lib)
 
-macro(add_xray_lib library)
+function(add_xray_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     FOLDER "Compiler-RT Runtime tests")
-endmacro()
+endfunction()
 
 function(get_xray_lib_for_arch arch lib)
   if(APPLE)
@@ -68,20 +68,20 @@ macro(add_xray_unittest testname)
 endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
+  if (APPLE)
+    add_xray_lib("RTXRay.test.osx"
+      $<TARGET_OBJECTS:RTXray.osx>
+      $<TARGET_OBJECTS:RTXrayFDR.osx>
+      $<TARGET_OBJECTS:RTSanitizerCommon.osx>
+      $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>)
+  else()
   foreach(arch ${XRAY_SUPPORTED_ARCH})
-    if (APPLE)
-      add_xray_lib("RTXRay.test.osx"
-        $<TARGET_OBJECTS:RTXray.osx>
-        $<TARGET_OBJECTS:RTXrayFDR.osx>
-        $<TARGET_OBJECTS:RTSanitizerCommon.osx>
-        $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>)
-    else()
-      add_xray_lib("RTXRay.test.${arch}"
-        $<TARGET_OBJECTS:RTXray.${arch}>
-        $<TARGET_OBJECTS:RTXrayFDR.${arch}>
-        $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
-        $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>)
-    endif()
+    add_xray_lib("RTXRay.test.${arch}"
+      $<TARGET_OBJECTS:RTXray.${arch}>
+      $<TARGET_OBJECTS:RTXrayFDR.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>)
   endforeach()
+  endif()
   add_subdirectory(unit)
 endif()

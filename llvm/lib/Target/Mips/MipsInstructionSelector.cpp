@@ -15,11 +15,19 @@
 #include "MipsRegisterBankInfo.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "mips-isel"
 
 using namespace llvm;
 
 namespace {
+
+#define GET_GLOBALISEL_PREDICATE_BITSET
+#include "MipsGenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATE_BITSET
 
 class MipsInstructionSelector : public InstructionSelector {
 public:
@@ -27,29 +35,81 @@ public:
                           const MipsRegisterBankInfo &RBI);
 
   bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
+  static const char *getName() { return DEBUG_TYPE; }
 
 private:
+  bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+
+  const MipsTargetMachine &TM;
+  const MipsSubtarget &STI;
   const MipsInstrInfo &TII;
   const MipsRegisterInfo &TRI;
+  const MipsRegisterBankInfo &RBI;
+
+#define GET_GLOBALISEL_PREDICATES_DECL
+#include "MipsGenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATES_DECL
+
+#define GET_GLOBALISEL_TEMPORARIES_DECL
+#include "MipsGenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_DECL
 };
 
 } // end anonymous namespace
 
+#define GET_GLOBALISEL_IMPL
+#include "MipsGenGlobalISel.inc"
+#undef GET_GLOBALISEL_IMPL
+
 MipsInstructionSelector::MipsInstructionSelector(
     const MipsTargetMachine &TM, const MipsSubtarget &STI,
     const MipsRegisterBankInfo &RBI)
-    : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()) {}
+    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
+      TRI(*STI.getRegisterInfo()), RBI(RBI),
+
+#define GET_GLOBALISEL_PREDICATES_INIT
+#include "MipsGenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATES_INIT
+#define GET_GLOBALISEL_TEMPORARIES_INIT
+#include "MipsGenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_INIT
+{
+}
+
+static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
+                       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                       const RegisterBankInfo &RBI) {
+  unsigned DstReg = I.getOperand(0).getReg();
+  if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+    return true;
+
+  const TargetRegisterClass *RC = &Mips::GPR32RegClass;
+
+  if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
+    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                 << " operand\n");
+    return false;
+  }
+  return true;
+}
 
 bool MipsInstructionSelector::select(MachineInstr &I,
                                      CodeGenCoverage &CoverageInfo) const {
 
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
   if (!isPreISelGenericOpcode(I.getOpcode())) {
-    // Not global isel generic opcode.
-    // TODO: select copy
+    if (I.isCopy())
+      return selectCopy(I, TII, MRI, TRI, RBI);
+
     return true;
   }
 
+  if (selectImpl(I, CoverageInfo)) {
+    return true;
+  }
   // We didn't select anything.
   return false;
 }

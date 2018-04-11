@@ -162,13 +162,9 @@ Error TestClient::SendMessage(StringRef message) {
 Error TestClient::SendMessage(StringRef message, std::string &response_string) {
   if (Error E = SendMessage(message, response_string, PacketResult::Success))
     return E;
-  if (response_string[0] == 'E') {
-    return make_error<StringError>(
-        formatv("Error `{0}` while sending message: {1}", response_string,
-                message)
-            .str(),
-        inconvertibleErrorCode());
-  }
+  StringExtractorGDBRemote Extractor(response_string);
+  if (Extractor.IsErrorResponse())
+    return Extractor.GetStatus().ToError();
   return Error::success();
 }
 

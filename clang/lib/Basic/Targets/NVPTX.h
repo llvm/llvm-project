@@ -40,6 +40,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
   static const Builtin::Info BuiltinInfo[];
   CudaArch GPU;
+  uint32_t PTXVersion;
   std::unique_ptr<TargetInfo> HostTarget;
 
 public:
@@ -55,7 +56,8 @@ public:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    Features["satom"] = GPU >= CudaArch::SM_60;
+    Features[CudaArchToString(GPU)] = true;
+    Features["ptx" + std::to_string(PTXVersion)] = true;
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 

@@ -1,4 +1,4 @@
-; RUN: llc -disable-fp-elim -O0 %s -mtriple x86_64-unknown-linux-gnu -o - | FileCheck %s
+; RUN: llc -fast-isel-sink-local-values -disable-fp-elim -O0 %s -mtriple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
 ; int callme(int);
 ; int isel_line_test2() {

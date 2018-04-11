@@ -647,11 +647,11 @@ define i32 @test_movd(x86_mmx %a0, i32 %a1, i32 *%a2) {
 ;
 ; ATOM-LABEL: test_movd:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movd (%rsi), %mm1 # sched: [1:1.00]
-; ATOM-NEXT:    movd %edi, %mm2 # sched: [1:1.00]
-; ATOM-NEXT:    paddd %mm2, %mm1 # sched: [1:0.50]
-; ATOM-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
-; ATOM-NEXT:    movd %mm1, %ecx # sched: [3:3.00]
+; ATOM-NEXT:    movd %edi, %mm1 # sched: [1:1.00]
+; ATOM-NEXT:    movd (%rsi), %mm2 # sched: [1:1.00]
+; ATOM-NEXT:    paddd %mm1, %mm2 # sched: [1:0.50]
+; ATOM-NEXT:    paddd %mm2, %mm0 # sched: [1:0.50]
+; ATOM-NEXT:    movd %mm2, %ecx # sched: [3:3.00]
 ; ATOM-NEXT:    movd %mm0, %eax # sched: [3:3.00]
 ; ATOM-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
@@ -3509,8 +3509,8 @@ define i64 @test_pinsrw(x86_mmx %a0, i32 %a1, i16* %a2) optsize {
 ;
 ; ATOM-LABEL: test_pinsrw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movswl (%rsi), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    pinsrw $0, %edi, %mm0 # sched: [1:1.00]
+; ATOM-NEXT:    movswl (%rsi), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    pinsrw $1, %eax, %mm0 # sched: [1:1.00]
 ; ATOM-NEXT:    movq %mm0, %rax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]

@@ -1,4 +1,4 @@
-//===--------------------- BackendStatistics.h ------------------*- C++ -*-===//
+//===--------------------- SchedulerStatistics.h ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements a printer class for printing generic Backend
-/// statistics related to the scheduler and retire unit.
+/// This file defines class SchedulerStatistics. Class SchedulerStatistics is a
+/// View that listens to instruction issue events in order to print general
+/// statistics related to the hardware schedulers.
 ///
 /// Example:
 /// ========
@@ -20,13 +21,6 @@
 ///  1,          4  (3.1%)
 ///  2,          8  (6.2%)
 ///
-/// Retire Control Unit - number of cycles where we saw N instructions retired:
-/// [# retired], [# cycles]
-///  0,           9  (6.9%)
-///  1,           6  (4.6%)
-///  2,           1  (0.8%)
-///  4,           3  (2.3%)
-///
 /// Scheduler's queue usage:
 /// JALU01,  0/20
 /// JFPU01,  18/18
@@ -34,8 +28,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_MCA_BACKENDSTATISTICS_H
-#define LLVM_TOOLS_LLVM_MCA_BACKENDSTATISTICS_H
+#ifndef LLVM_TOOLS_LLVM_MCA_SCHEDULERSTATISTICS_H
+#define LLVM_TOOLS_LLVM_MCA_SCHEDULERSTATISTICS_H
 
 #include "View.h"
 #include "llvm/ADT/SmallVector.h"
@@ -44,15 +38,13 @@
 
 namespace mca {
 
-class BackendStatistics : public View {
-  const llvm::MCSubtargetInfo &STI;
+class SchedulerStatistics : public View {
+  const llvm::MCSchedModel &SM;
 
   using Histogram = llvm::DenseMap<unsigned, unsigned>;
-  Histogram RetiredPerCycle;
   Histogram IssuedPerCycle;
 
   unsigned NumIssued;
-  unsigned NumRetired;
   unsigned NumCycles;
 
   // Tracks the usage of a scheduler's queue.
@@ -61,31 +53,19 @@ class BackendStatistics : public View {
     unsigned MaxUsedSlots;
   };
 
-  // There is a map entry for each buffered resource in the scheduling model.
-  // Every time a buffer is consumed/freed, this view updates the corresponding
-  // entry.
   llvm::DenseMap<unsigned, BufferUsage> BufferedResources;
 
   void updateHistograms() {
     IssuedPerCycle[NumIssued]++;
-    RetiredPerCycle[NumRetired]++;
     NumIssued = 0;
-    NumRetired = 0;
   }
 
-  void printRetireUnitStatistics(llvm::raw_ostream &OS) const;
   void printSchedulerStatistics(llvm::raw_ostream &OS) const;
-
-  void printRCUStatistics(llvm::raw_ostream &OS, const Histogram &Histogram,
-                          unsigned Cycles) const;
-  void printIssuePerCycle(const Histogram &IssuePerCycle,
-                          unsigned TotalCycles) const;
-  void printSchedulerUsage(llvm::raw_ostream &OS,
-                           const llvm::MCSchedModel &SM) const;
+  void printSchedulerUsage(llvm::raw_ostream &OS) const;
 
 public:
-  BackendStatistics(const llvm::MCSubtargetInfo &sti)
-      : STI(sti), NumIssued(0), NumRetired(0), NumCycles(0) { }
+  SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
+      : SM(STI.getSchedModel()), NumIssued(0), NumCycles(0) { }
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;
 
@@ -103,8 +83,7 @@ public:
 
   void printView(llvm::raw_ostream &OS) const override {
     printSchedulerStatistics(OS);
-    printRetireUnitStatistics(OS);
-    printSchedulerUsage(OS, STI.getSchedModel());
+    printSchedulerUsage(OS);
   }
 };
 } // namespace mca

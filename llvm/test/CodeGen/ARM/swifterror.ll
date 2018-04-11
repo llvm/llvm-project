@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-APPLE --check-prefix=CHECK-ARMV7 %s
-; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-O0 %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=armv7-linux-androideabi | FileCheck --check-prefix=CHECK-ANDROID %s
+; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-APPLE --check-prefix=CHECK-ARMV7 %s
+; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs -O0 < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs < %s -mtriple=armv7-linux-androideabi | FileCheck --check-prefix=CHECK-ANDROID %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)

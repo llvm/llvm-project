@@ -362,27 +362,7 @@ bool DispatchUnit::checkRCU(unsigned Index, const InstrDesc &Desc) {
 }
 
 bool DispatchUnit::checkScheduler(unsigned Index, const InstrDesc &Desc) {
-  // If this is a zero-latency instruction, then it bypasses
-  // the scheduler.
-  HWStallEvent::GenericEventType Type = HWStallEvent::Invalid;
-  switch (SC->canBeDispatched(Desc)) {
-  case Scheduler::HWS_AVAILABLE:
-    return true;
-  case Scheduler::HWS_QUEUE_UNAVAILABLE:
-    Type = HWStallEvent::SchedulerQueueFull;
-    break;
-  case Scheduler::HWS_LD_QUEUE_UNAVAILABLE:
-    Type = HWStallEvent::LoadQueueFull;
-    break;
-  case Scheduler::HWS_ST_QUEUE_UNAVAILABLE:
-    Type = HWStallEvent::StoreQueueFull;
-    break;
-  case Scheduler::HWS_DISPATCH_GROUP_RESTRICTION:
-    Type = HWStallEvent::DispatchGroupStall;
-  }
-
-  Owner->notifyStallEvent(HWStallEvent(Type, Index));
-  return false;
+  return SC->canBeDispatched(Index, Desc);
 }
 
 void DispatchUnit::updateRAWDependencies(ReadState &RS,

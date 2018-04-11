@@ -121,12 +121,12 @@
 ; CHECK:   StringId (0x1008) {
 ; CHECK:     TypeLeafKind: LF_STRING_ID (0x1605)
 ; CHECK:     Id: 0x0
-; CHECK:     StringData: \t.cpp
+; CHECK:     StringData: /t.cpp
 ; CHECK:   }
 ; CHECK:   UdtSourceLine (0x1009) {
 ; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
 ; CHECK:     UDT: A (0x1007)
-; CHECK:     SourceFile: \t.cpp (0x1008)
+; CHECK:     SourceFile: /t.cpp (0x1008)
 ; CHECK:     LineNumber: 1
 ; CHECK:   }
 ; CHECK:   Class (0x100A) {
@@ -241,7 +241,7 @@
 ; CHECK:   UdtSourceLine (0x1014) {
 ; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
 ; CHECK:     UDT: B (0x1013)
-; CHECK:     SourceFile: \t.cpp (0x1008)
+; CHECK:     SourceFile: /t.cpp (0x1008)
 ; CHECK:     LineNumber: 11
 ; CHECK:   }
 ; CHECK: ]

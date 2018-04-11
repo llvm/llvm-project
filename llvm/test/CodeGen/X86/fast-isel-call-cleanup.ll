@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel -O0 -code-model=large -mcpu=generic -mtriple=x86_64-apple-darwin10 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -fast-isel-sink-local-values -fast-isel -O0 -code-model=large -mcpu=generic -mtriple=x86_64-apple-darwin10 -relocation-model=pic < %s | FileCheck %s
 
 ; Check that fast-isel cleans up when it fails to lower a call instruction.
 define void @fastiselcall() {

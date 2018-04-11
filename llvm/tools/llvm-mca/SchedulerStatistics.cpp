@@ -1,4 +1,4 @@
-//===--------------------- BackendStatistics.cpp ---------------*- C++ -*-===//
+//===--------------------- SchedulerStatistics.cpp --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,32 +8,23 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// Functionalities used by the BackendPrinter to print out histograms
-/// related to number of {issue/retire} per number of cycles.
+/// This file implements the SchedulerStatistics interface.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "BackendStatistics.h"
+#include "SchedulerStatistics.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
 
 namespace mca {
 
-void BackendStatistics::onInstructionEvent(const HWInstructionEvent &Event) {
-  switch (Event.Type) {
-  default:
-    break;
-  case HWInstructionEvent::Retired: {
-    ++NumRetired;
-    break;
-  }
-  case HWInstructionEvent::Issued:
+void SchedulerStatistics::onInstructionEvent(const HWInstructionEvent &Event) {
+  if (Event.Type == HWInstructionEvent::Issued)
     ++NumIssued;
-  }
 }
 
-void BackendStatistics::onReservedBuffers(ArrayRef<unsigned> Buffers) {
+void SchedulerStatistics::onReservedBuffers(ArrayRef<unsigned> Buffers) {
   for (const unsigned Buffer : Buffers) {
     if (BufferedResources.find(Buffer) != BufferedResources.end()) {
       BufferUsage &BU = BufferedResources[Buffer];
@@ -47,7 +38,7 @@ void BackendStatistics::onReservedBuffers(ArrayRef<unsigned> Buffers) {
   }
 }
 
-void BackendStatistics::onReleasedBuffers(ArrayRef<unsigned> Buffers) {
+void SchedulerStatistics::onReleasedBuffers(ArrayRef<unsigned> Buffers) {
   for (const unsigned Buffer : Buffers) {
     assert(BufferedResources.find(Buffer) != BufferedResources.end() &&
            "Buffered resource not in map?");
@@ -56,29 +47,8 @@ void BackendStatistics::onReleasedBuffers(ArrayRef<unsigned> Buffers) {
   }
 }
 
-void BackendStatistics::printRetireUnitStatistics(llvm::raw_ostream &OS) const {
-  std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
-  TempStream << "\n\nRetire Control Unit - "
-             << "number of cycles where we saw N instructions retired:\n";
-  TempStream << "[# retired], [# cycles]\n";
-
-  for (const std::pair<unsigned, unsigned> &Entry : RetiredPerCycle) {
-    TempStream << " " << Entry.first;
-    if (Entry.first < 10)
-      TempStream << ",           ";
-    else
-      TempStream << ",          ";
-    TempStream << Entry.second << "  ("
-               << format("%.1f", ((double)Entry.second / NumCycles) * 100.0)
-               << "%)\n";
-  }
-
-  TempStream.flush();
-  OS << Buffer;
-}
-
-void BackendStatistics::printSchedulerStatistics(llvm::raw_ostream &OS) const {
+void SchedulerStatistics::printSchedulerStatistics(
+    llvm::raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nSchedulers - number of cycles where we saw N instructions "
@@ -94,8 +64,7 @@ void BackendStatistics::printSchedulerStatistics(llvm::raw_ostream &OS) const {
   OS << Buffer;
 }
 
-void BackendStatistics::printSchedulerUsage(raw_ostream &OS,
-                                            const MCSchedModel &SM) const {
+void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nScheduler's queue usage:\n";

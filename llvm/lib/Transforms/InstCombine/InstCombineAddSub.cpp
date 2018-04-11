@@ -1731,16 +1731,16 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (match(Op1, m_FNeg(m_Value(Y))))
     return BinaryOperator::CreateFAddFMF(Op0, Y, &I);
 
-  if (FPTruncInst *FPTI = dyn_cast<FPTruncInst>(Op1)) {
-    if (Value *V = dyn_castFNegVal(FPTI->getOperand(0))) {
-      Value *NewTrunc = Builder.CreateFPTrunc(V, I.getType());
-      return BinaryOperator::CreateFAddFMF(Op0, NewTrunc, &I);
-    }
-  } else if (FPExtInst *FPEI = dyn_cast<FPExtInst>(Op1)) {
-    if (Value *V = dyn_castFNegVal(FPEI->getOperand(0))) {
-      Value *NewExt = Builder.CreateFPExt(V, I.getType());
-      return BinaryOperator::CreateFAddFMF(Op0, NewExt, &I);
-    }
+  // Similar to above, but look through a cast of the negated value:
+  // X - (fptrunc(-Y)) --> X + fptrunc(Y)
+  if (match(Op1, m_OneUse(m_FPTrunc(m_FNeg(m_Value(Y)))))) {
+    Value *TruncY = Builder.CreateFPTrunc(Y, I.getType());
+    return BinaryOperator::CreateFAddFMF(Op0, TruncY, &I);
+  }
+  // X - (fpext(-Y)) --> X + fpext(Y)
+  if (match(Op1, m_OneUse(m_FPExt(m_FNeg(m_Value(Y)))))) {
+    Value *ExtY = Builder.CreateFPExt(Y, I.getType());
+    return BinaryOperator::CreateFAddFMF(Op0, ExtY, &I);
   }
 
   // Handle specials cases for FSub with selects feeding the operation

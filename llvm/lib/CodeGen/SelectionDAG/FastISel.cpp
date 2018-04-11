@@ -113,6 +113,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "isel"
 
+// FIXME: Remove this when compile time issues are addressed. Do this by only
+// numbering instructions between local value map flush points instead of the
+// entire BB.
+static cl::opt<bool> SinkLocalValues("fast-isel-sink-local-values",
+                                     cl::init(false), cl::Hidden,
+                                     cl::desc("Sink local values in FastISel"));
+
 STATISTIC(NumFastIselSuccessIndependent, "Number of insts selected by "
                                          "target-independent selector");
 STATISTIC(NumFastIselSuccessTarget, "Number of insts selected by "
@@ -180,7 +187,7 @@ void FastISel::flushLocalValueMap() {
   // Try to sink local values down to their first use so that we can give them a
   // better debug location. This has the side effect of shrinking local value
   // live ranges, which helps out fast regalloc.
-  if (LastLocalValue != EmitStartPt) {
+  if (SinkLocalValues && LastLocalValue != EmitStartPt) {
     // Sink local value materialization instructions between EmitStartPt and
     // LastLocalValue. Visit them bottom-up, starting from LastLocalValue, to
     // avoid inserting into the range that we're iterating over.
