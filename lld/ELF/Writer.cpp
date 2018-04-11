@@ -1234,14 +1234,11 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 
   if (!Script->HasSectionsCommand) {
     // We know that all the OutputSections are contiguous in this case.
-    auto E = Script->SectionCommands.end();
-    auto I = Script->SectionCommands.begin();
     auto IsSection = [](BaseCommand *Base) { return isa<OutputSection>(Base); };
-    I = std::find_if(I, E, IsSection);
-    E = std::find_if(llvm::make_reverse_iterator(E),
-                     llvm::make_reverse_iterator(I), IsSection)
-            .base();
-    std::stable_sort(I, E, compareSections);
+    std::stable_sort(
+        llvm::find_if(Script->SectionCommands, IsSection),
+        llvm::find_if(llvm::reverse(Script->SectionCommands), IsSection).base(),
+        compareSections);
     return;
   }
 
@@ -1676,15 +1673,15 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     } while (Changed);
   }
 
+  // createThunks may have added local symbols to the static symbol table
+  applySynthetic({InX::SymTab},
+                 [](SyntheticSection *SS) { SS->postThunkContents(); });
+
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSection *Sec : OutputSections)
     Sec->finalize<ELFT>();
-
-  // createThunks may have added local symbols to the static symbol table
-  applySynthetic({InX::SymTab},
-                 [](SyntheticSection *SS) { SS->postThunkContents(); });
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
