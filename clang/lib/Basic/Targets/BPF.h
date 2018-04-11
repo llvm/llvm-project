@@ -63,6 +63,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
+  bool isValidGCCRegisterName(StringRef Name) const override { return true; }
   ArrayRef<const char *> getGCCRegNames() const override { return None; }
 
   bool validateAsmConstraint(const char *&Name,
