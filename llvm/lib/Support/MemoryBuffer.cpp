@@ -531,3 +531,5 @@ MemoryBufferRef MemoryBuffer::getMemBufferRef() const {
   StringRef Identifier = getBufferIdentifier();
   return MemoryBufferRef(Data, Identifier);
 }
+
+void MemoryBuffer::anchor() {}
