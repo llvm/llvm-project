@@ -62,7 +62,7 @@ Expected<SymbolNameSet> lookupFlagsWithLegacyFn(SymbolFlagsMap &SymbolFlags,
 ///        takes a const std::string& or StringRef and returns a JITSymbol) to
 ///        find the address and flags for each symbol in Symbols and store the
 ///        result in Query. If any JITSymbol returned by FindSymbol is in an
-///        error then Query.setFailed(...) is called with that error and the
+///        error then Query.notifyFailed(...) is called with that error and the
 ///        function returns immediately. On success, returns the set of symbols
 ///        not found.
 ///
@@ -76,14 +76,14 @@ SymbolNameSet lookupWithLegacyFn(AsynchronousSymbolQuery &Query,
   for (auto &S : Symbols) {
     if (JITSymbol Sym = FindSymbol(*S)) {
       if (auto Addr = Sym.getAddress()) {
-        Query.setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
-        Query.notifySymbolFinalized();
+        Query.resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
+        Query.finalizeSymbol();
       } else {
-        Query.setFailed(Addr.takeError());
+        Query.notifyFailed(Addr.takeError());
         return SymbolNameSet();
       }
     } else if (auto Err = Sym.takeError()) {
-      Query.setFailed(std::move(Err));
+      Query.notifyFailed(std::move(Err));
       return SymbolNameSet();
     } else
       SymbolsNotFound.insert(S);

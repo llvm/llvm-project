@@ -69,18 +69,16 @@ Metadata *ProfileSummary::getDetailedSummaryMD(LLVMContext &Context) {
 // "SampleProfile"). The rest of the elements of the outer MDTuple are specific
 // to the kind of profile summary as returned by getFormatSpecificMD.
 Metadata *ProfileSummary::getMD(LLVMContext &Context) {
-  std::vector<Metadata *> Components;
-  Components.push_back(getKeyValMD(Context, "ProfileFormat", KindStr[PSK]));
-
-  Components.push_back(getKeyValMD(Context, "TotalCount", getTotalCount()));
-  Components.push_back(getKeyValMD(Context, "MaxCount", getMaxCount()));
-  Components.push_back(
-      getKeyValMD(Context, "MaxInternalCount", getMaxInternalCount()));
-  Components.push_back(
-      getKeyValMD(Context, "MaxFunctionCount", getMaxFunctionCount()));
-  Components.push_back(getKeyValMD(Context, "NumCounts", getNumCounts()));
-  Components.push_back(getKeyValMD(Context, "NumFunctions", getNumFunctions()));
-  Components.push_back(getDetailedSummaryMD(Context));
+  Metadata *Components[] = {
+    getKeyValMD(Context, "ProfileFormat", KindStr[PSK]),
+    getKeyValMD(Context, "TotalCount", getTotalCount()),
+    getKeyValMD(Context, "MaxCount", getMaxCount()),
+    getKeyValMD(Context, "MaxInternalCount", getMaxInternalCount()),
+    getKeyValMD(Context, "MaxFunctionCount", getMaxFunctionCount()),
+    getKeyValMD(Context, "NumCounts", getNumCounts()),
+    getKeyValMD(Context, "NumFunctions", getNumFunctions()),
+    getDetailedSummaryMD(Context),
+  };
   return MDTuple::get(Context, Components);
 }
 
@@ -144,12 +142,8 @@ static bool getSummaryFromMD(MDTuple *MD, SummaryEntryVector &Summary) {
 }
 
 ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
-  if (!MD)
-    return nullptr;
-  if (!isa<MDTuple>(MD))
-    return nullptr;
-  MDTuple *Tuple = cast<MDTuple>(MD);
-  if (Tuple->getNumOperands() != 8)
+  MDTuple *Tuple = dyn_cast_or_null<MDTuple>(MD);
+  if (!Tuple || Tuple->getNumOperands() != 8)
     return nullptr;
 
   auto &FormatMD = Tuple->getOperand(0);
@@ -185,7 +179,7 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
   SummaryEntryVector Summary;
   if (!getSummaryFromMD(dyn_cast<MDTuple>(Tuple->getOperand(7)), Summary))
     return nullptr;
-  return new ProfileSummary(SummaryKind, Summary, TotalCount, MaxCount,
-                            MaxInternalCount, MaxFunctionCount, NumCounts,
-                            NumFunctions);
+  return new ProfileSummary(SummaryKind, std::move(Summary), TotalCount,
+                            MaxCount, MaxInternalCount, MaxFunctionCount,
+                            NumCounts, NumFunctions);
 }

@@ -104,6 +104,12 @@ class OutputStream {
 public:
   OutputStream(char *StartBuf, size_t Size)
       : Buffer(StartBuf), CurrentPosition(0), BufferCapacity(Size) {}
+  OutputStream() = default;
+  void reset(char *Buffer_, size_t BufferCapacity_) {
+    CurrentPosition = 0;
+    Buffer = Buffer_;
+    BufferCapacity = BufferCapacity_;
+  }
 
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
@@ -184,7 +190,8 @@ public:
     KSpecialName,
     KCtorVtableSpecialName,
     KQualifiedName,
-    KEmptyName,
+    KNestedName,
+    KLocalName,
     KVectorType,
     KParameterPack,
     KTemplateArgumentPack,
@@ -470,11 +477,11 @@ public:
   }
 };
 
-class AbiTagAttr final : public Node {
-  const Node* Base;
+struct AbiTagAttr : Node {
+  Node *Base;
   StringView Tag;
-public:
-  AbiTagAttr(const Node* Base_, StringView Tag_)
+
+  AbiTagAttr(Node* Base_, StringView Tag_)
       : Node(KAbiTagAttr, Base_->RHSComponentCache,
              Base_->ArrayCache, Base_->FunctionCache),
         Base(Base_), Tag(Tag_) {}
@@ -804,8 +811,8 @@ public:
 };
 
 class FunctionEncoding final : public Node {
-  const Node *Ret;
-  const Node *Name;
+  Node *Ret;
+  Node *Name;
   NodeArray Params;
   Node *Attrs;
   Qualifiers CVQuals;
@@ -819,6 +826,11 @@ public:
              /*FunctionCache=*/Cache::Yes),
         Ret(Ret_), Name(Name_), Params(Params_), Attrs(Attrs_),
         CVQuals(CVQuals_), RefQual(RefQual_) {}
+
+  Qualifiers getCVQuals() const { return CVQuals; }
+  FunctionRefQual getRefQual() const { return RefQual; }
+  NodeArray getParams() const { return Params; }
+  Node *getReturnType() const { return Ret; }
 
   bool hasRHSComponentSlow(OutputStream &) const override { return true; }
   bool hasFunctionSlow(OutputStream &) const override { return true; }
@@ -901,6 +913,36 @@ public:
   }
 };
 
+struct NestedName : Node {
+  Node *Qual;
+  Node *Name;
+
+  NestedName(Node *Qual_, Node *Name_)
+      : Node(KNestedName), Qual(Qual_), Name(Name_) {}
+
+  StringView getBaseName() const override { return Name->getBaseName(); }
+
+  void printLeft(OutputStream &S) const override {
+    Qual->print(S);
+    S += "::";
+    Name->print(S);
+  }
+};
+
+struct LocalName : Node {
+  Node *Encoding;
+  Node *Entity;
+
+  LocalName(Node *Encoding_, Node *Entity_)
+      : Node(KLocalName), Encoding(Encoding_), Entity(Entity_) {}
+
+  void printLeft(OutputStream &S) const override {
+    Encoding->print(S);
+    S += "::";
+    Entity->print(S);
+  }
+};
+
 class QualifiedName final : public Node {
   // qualifier::name
   const Node *Qualifier;
@@ -917,12 +959,6 @@ public:
     S += "::";
     Name->print(S);
   }
-};
-
-class EmptyName : public Node {
-public:
-  EmptyName() : Node(KEmptyName) {}
-  void printLeft(OutputStream &) const override {}
 };
 
 class VectorType final : public Node {
@@ -1148,12 +1184,11 @@ struct ForwardTemplateReference : Node {
   }
 };
 
-class NameWithTemplateArgs final : public Node {
+struct NameWithTemplateArgs : Node {
   // name<template_args>
   Node *Name;
   Node *TemplateArgs;
 
-public:
   NameWithTemplateArgs(Node *Name_, Node *TemplateArgs_)
       : Node(KNameWithTemplateArgs), Name(Name_), TemplateArgs(TemplateArgs_) {}
 
@@ -1180,10 +1215,9 @@ public:
   }
 };
 
-class StdQualifiedName final : public Node {
+struct StdQualifiedName : Node {
   Node *Child;
 
-public:
   StdQualifiedName(Node *Child_) : Node(KStdQualifiedName), Child(Child_) {}
 
   StringView getBaseName() const override { return Child->getBaseName(); }
@@ -1887,14 +1921,17 @@ public:
                               BlockList->Current - N);
   }
 
-  ~BumpPointerAllocator() {
+  void reset() {
     while (BlockList) {
       BlockMeta* Tmp = BlockList;
       BlockList = BlockList->Next;
       if (reinterpret_cast<char*>(Tmp) != InitialBuffer)
         delete[] reinterpret_cast<char*>(Tmp);
     }
+    BlockList = new (InitialBuffer) BlockMeta{nullptr, 0};
   }
+
+  ~BumpPointerAllocator() { reset(); }
 };
 
 template <class T, size_t N>
@@ -2041,6 +2078,18 @@ struct Db {
   BumpPointerAllocator ASTAllocator;
 
   Db(const char *First_, const char *Last_) : First(First_), Last(Last_) {}
+
+  void reset(const char *First_, const char *Last_) {
+    First = First_;
+    Last = Last_;
+    Names.clear();
+    Subs.clear();
+    TemplateParams.clear();
+    ParsingLambdaParams = false;
+    TryToParseTemplateArgs = true;
+    PermitForwardTemplateReferences = false;
+    ASTAllocator.reset();
+  }
 
   template <class T, class... Args> T *make(Args &&... args) {
     return new (ASTAllocator.allocate(sizeof(T)))
@@ -2236,7 +2285,7 @@ Node *Db::parseLocalName(NameState *State) {
 
   if (consumeIf('s')) {
     First = parse_discriminator(First, Last);
-    return make<QualifiedName>(Encoding, make<NameType>("string literal"));
+    return make<LocalName>(Encoding, make<NameType>("string literal"));
   }
 
   if (consumeIf('d')) {
@@ -2246,14 +2295,14 @@ Node *Db::parseLocalName(NameState *State) {
     Node *N = parseName(State);
     if (N == nullptr)
       return nullptr;
-    return make<QualifiedName>(Encoding, N);
+    return make<LocalName>(Encoding, N);
   }
 
   Node *Entity = parseName(State);
   if (Entity == nullptr)
     return nullptr;
   First = parse_discriminator(First, Last);
-  return make<QualifiedName>(Encoding, Entity);
+  return make<LocalName>(Encoding, Entity);
 }
 
 // <unscoped-name> ::= <unqualified-name>
@@ -2709,7 +2758,7 @@ Node *Db::parseNestedName(NameState *State) {
 
   Node *SoFar = nullptr;
   auto PushComponent = [&](Node *Comp) {
-    if (SoFar) SoFar = make<QualifiedName>(SoFar, Comp);
+    if (SoFar) SoFar = make<NestedName>(SoFar, Comp);
     else       SoFar = Comp;
     if (State) State->EndsWithTemplateArgs = false;
   };
@@ -4991,6 +5040,22 @@ Node *Db::parse() {
     return nullptr;
   return Ty;
 }
+
+bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
+                            size_t InitSize) {
+  size_t BufferSize;
+  if (Buf == nullptr) {
+    Buf = static_cast<char *>(std::malloc(InitSize));
+    if (Buf == nullptr)
+      return true;
+    BufferSize = InitSize;
+  } else
+    BufferSize = *N;
+
+  S.reset(Buf, BufferSize);
+  return false;
+}
+
 }  // unnamed namespace
 
 enum {
@@ -5010,33 +5075,23 @@ __cxa_demangle(const char *MangledName, char *Buf, size_t *N, int *Status) {
     return nullptr;
   }
 
-  size_t BufSize = Buf != nullptr ? *N : 0;
   int InternalStatus = success;
-  size_t MangledNameLength = std::strlen(MangledName);
+  Db Parser(MangledName, MangledName + std::strlen(MangledName));
+  OutputStream S;
 
-  Db Parser(MangledName, MangledName + MangledNameLength);
   Node *AST = Parser.parse();
 
   if (AST == nullptr)
     InternalStatus = invalid_mangled_name;
-
-  if (InternalStatus == success) {
+  else if (initializeOutputStream(Buf, N, S, 1024))
+    InternalStatus = memory_alloc_failure;
+  else {
     assert(Parser.ForwardTemplateRefs.empty());
-
-    if (Buf == nullptr) {
-      BufSize = 1024;
-      Buf = static_cast<char*>(std::malloc(BufSize));
-    }
-
-    if (Buf) {
-      OutputStream Stream(Buf, BufSize);
-      AST->print(Stream);
-      Stream += '\0';
-      if (N != nullptr)
-        *N = Stream.getCurrentPosition();
-      Buf = Stream.getBuffer();
-    } else
-      InternalStatus = memory_alloc_failure;
+    AST->print(S);
+    S += '\0';
+    if (N != nullptr)
+      *N = S.getCurrentPosition();
+    Buf = S.getBuffer();
   }
 
   if (Status)

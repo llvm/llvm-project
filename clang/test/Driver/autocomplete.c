@@ -33,7 +33,8 @@
 // RUN: %clang --autocomplete=-cl-std=,CL2 | FileCheck %s -check-prefix=CLSTD
 // CLSTD: CL2.0
 // RUN: %clang --autocomplete=-cl-std= | FileCheck %s -check-prefix=CLSTDALL
-// CLSTDALL: cl
+// CLSTDALL: c++
+// CLSTDALL-NEXT: cl
 // CLSTDALL-NEXT: CL
 // CLSTDALL-NEXT: cl1.1
 // CLSTDALL-NEXT: CL1.1

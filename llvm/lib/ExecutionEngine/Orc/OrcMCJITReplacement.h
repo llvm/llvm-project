@@ -175,25 +175,24 @@ class OrcMCJITReplacement : public ExecutionEngine {
       for (auto &S : Symbols) {
         if (auto Sym = M.findMangledSymbol(*S)) {
           if (auto Addr = Sym.getAddress())
-            Query->setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
+            Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
           else {
-            Query->setFailed(Addr.takeError());
+            Query->notifyFailed(Addr.takeError());
             return SymbolNameSet();
           }
         } else if (auto Err = Sym.takeError()) {
-          Query->setFailed(std::move(Err));
+          Query->notifyFailed(std::move(Err));
           return SymbolNameSet();
         } else {
           if (auto Sym2 = M.ClientResolver->findSymbol(*S)) {
             if (auto Addr = Sym2.getAddress())
-              Query->setDefinition(S,
-                                   JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
+              Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
             else {
-              Query->setFailed(Addr.takeError());
+              Query->notifyFailed(Addr.takeError());
               return SymbolNameSet();
             }
           } else if (auto Err = Sym2.takeError()) {
-            Query->setFailed(std::move(Err));
+            Query->notifyFailed(std::move(Err));
             return SymbolNameSet();
           } else
             UnresolvedSymbols.insert(S);

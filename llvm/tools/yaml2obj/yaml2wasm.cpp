@@ -240,6 +240,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     if (auto Err = writeSectionContent(OS, *S))
       return Err;
   } else {
+    writeStringRef(Section.Name, OS);
     Section.Payload.writeAsBinary(OS);
   }
   return 0;

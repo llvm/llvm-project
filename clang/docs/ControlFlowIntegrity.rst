@@ -224,8 +224,8 @@ flag relax pointer type checking for call sites in that translation unit,
 applied across all functions compiled with ``-fsanitize=cfi-icall``.
 
 Specifically, pointers in return and argument types are treated as equivalent as
-long as the qualifiers for the type they point to match. For example, ``char*``
-``char**`, and ``int*`` are considered equivalent types. However, ``char*`` and
+long as the qualifiers for the type they point to match. For example, ``char*``,
+``char**``, and ``int*`` are considered equivalent types. However, ``char*`` and
 ``const char*`` are considered separate types.
 
 ``-fsanitize-cfi-icall-generalize-pointers`` is not compatible with

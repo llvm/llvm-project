@@ -299,13 +299,13 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "+ (id)init;\n"
                "@end");
 
-  verifyFormat("@interface Foo <Baz : Blech> : Bar <Baz, Quux> {\n"
+  verifyFormat("@interface Foo<Baz : Blech> : Bar <Baz, Quux> {\n"
                "  int _i;\n"
                "}\n"
                "+ (id)init;\n"
                "@end");
 
-  verifyFormat("@interface Foo <Bar : Baz <Blech>> : Xyzzy <Corge> {\n"
+  verifyFormat("@interface Foo<Bar : Baz <Blech>> : Xyzzy <Corge> {\n"
                "  int _i;\n"
                "}\n"
                "+ (id)init;\n"
@@ -333,6 +333,9 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
   verifyFormat("@interface ccccccccccccc () <\n"
                "    ccccccccccccc, ccccccccccccc,\n"
                "    ccccccccccccc, ccccccccccccc> {\n"
+               "}");
+  verifyFormat("@interface ccccccccccccc (ccccccccccc) <\n"
+               "    ccccccccccccc> {\n"
                "}");
   Style.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   verifyFormat("@interface ddddddddddddd () <\n"
@@ -536,39 +539,7 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "            ofSize:(size_t)height\n"
                "                  :(size_t)width;");
   Style.ColumnLimit = 40;
-  // Make sure selectors with 0, 1, or more arguments are not indented
-  // when IndentWrappedFunctionNames is false.
-  Style.IndentWrappedFunctionNames = false;
-  verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaa;\n");
-  verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
-  verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a\n"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
-  verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
-               " aaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a\n"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
-  verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a\n"
-               " aaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
-
-  // Continuation indent width should win over aligning colons if the function
-  // name is long.
-  Style = getGoogleStyle(FormatStyle::LK_ObjC);
-  Style.ColumnLimit = 40;
-  Style.IndentWrappedFunctionNames = true;
-  verifyFormat("- (void)shortf:(GTMFoo *)theFoo\n"
-               "    dontAlignNamef:(NSRect)theRect {\n"
-               "}");
-
-  // Make sure we don't break aligning for short parameter names.
-  verifyFormat("- (void)shortf:(GTMFoo *)theFoo\n"
-               "       aShortf:(NSRect)theRect {\n"
-               "}");
-
-  // Make sure selectors with 0, 1, or more arguments are indented
-  // when IndentWrappedFunctionNames is true.
+  // Make sure selectors with 0, 1, or more arguments are indented when wrapped.
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa;\n");
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
@@ -582,6 +553,19 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a\n"
                "     aaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
+
+  // Continuation indent width should win over aligning colons if the function
+  // name is long.
+  Style = getGoogleStyle(FormatStyle::LK_ObjC);
+  Style.ColumnLimit = 40;
+  verifyFormat("- (void)shortf:(GTMFoo *)theFoo\n"
+               "    dontAlignNamef:(NSRect)theRect {\n"
+               "}");
+
+  // Make sure we don't break aligning for short parameter names.
+  verifyFormat("- (void)shortf:(GTMFoo *)theFoo\n"
+               "       aShortf:(NSRect)theRect {\n"
+               "}");
 
   // Format pairs correctly.
   Style.ColumnLimit = 80;

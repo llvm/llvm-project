@@ -26,9 +26,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: uwtable
 define void @_Z3fooi(i32) #0 !dbg !6 {
-; CHECK: load i32, i32* %2, align 4, !tbaa
-; CHECK: store i32 %5, i32* @x, align 4, !tbaa
-; CHECK: call void @_Z3barv(), !dbg ![[BAR:[0-9]+]]
+; CHECK: load i32, i32* %2, align 4, !dbg ![[LOAD:[0-9]+]], !tbaa
+; CHECK: store i32 %5, i32* @x, align 4, !dbg ![[BAR:[0-9]+]], !tbaa
+; CHECK: call void @_Z3barv(), !dbg ![[BAR]]
 ; CHECK: call void @_Z3bazv(), !dbg ![[BAZ:[0-9]+]]
   %2 = alloca i32, align 4
   store i32 %0, i32* %2, align 4, !tbaa !8
@@ -60,6 +60,7 @@ declare void @_Z3bazv() #1
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
+; CHECK: ![[LOAD]] = !DILocation(line: 6, column: 7
 ; CHECK: ![[BAR]] = !DILocation(line: 0
 ; CHECK: ![[BAZ]] = !DILocation(line: 12, column: 5
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1)

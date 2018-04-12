@@ -14,12 +14,17 @@ define float @trunc_unsigned_f32(float %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_unsigned_f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundss $11, %xmm0, %xmm0
+; SSE41-NEXT:    cvttss2si %xmm0, %rax
+; SSE41-NEXT:    movl %eax, %eax
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    cvtsi2ssq %rax, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_unsigned_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttss2si %xmm0, %rax
+; AVX1-NEXT:    movl %eax, %eax
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptoui float %x to i32
   %r = uitofp i32 %i to float
@@ -47,12 +52,35 @@ define double @trunc_unsigned_f64(double %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_unsigned_f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundsd $11, %xmm0, %xmm0
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE41-NEXT:    movapd %xmm0, %xmm2
+; SSE41-NEXT:    subsd %xmm1, %xmm2
+; SSE41-NEXT:    cvttsd2si %xmm2, %rax
+; SSE41-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; SSE41-NEXT:    xorq %rax, %rcx
+; SSE41-NEXT:    cvttsd2si %xmm0, %rax
+; SSE41-NEXT:    ucomisd %xmm1, %xmm0
+; SSE41-NEXT:    cmovaeq %rcx, %rax
+; SSE41-NEXT:    movq %rax, %xmm0
+; SSE41-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; SSE41-NEXT:    subpd {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    haddpd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_unsigned_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rax
+; AVX1-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; AVX1-NEXT:    xorq %rax, %rcx
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX1-NEXT:    vucomisd %xmm1, %xmm0
+; AVX1-NEXT:    cmovaeq %rcx, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm0
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptoui double %x to i64
   %r = uitofp i64 %i to double
@@ -90,12 +118,45 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_unsigned_v4f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundps $11, %xmm0, %xmm0
+; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE41-NEXT:    cvttss2si %xmm1, %rax
+; SSE41-NEXT:    cvttss2si %xmm0, %rcx
+; SSE41-NEXT:    movd %ecx, %xmm1
+; SSE41-NEXT:    pinsrd $1, %eax, %xmm1
+; SSE41-NEXT:    movaps %xmm0, %xmm2
+; SSE41-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
+; SSE41-NEXT:    cvttss2si %xmm2, %rax
+; SSE41-NEXT:    pinsrd $2, %eax, %xmm1
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE41-NEXT:    cvttss2si %xmm0, %rax
+; SSE41-NEXT:    pinsrd $3, %eax, %xmm1
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [1258291200,1258291200,1258291200,1258291200]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; SSE41-NEXT:    psrld $16, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2],mem[3],xmm1[4],mem[5],xmm1[6],mem[7]
+; SSE41-NEXT:    addps {{.*}}(%rip), %xmm1
+; SSE41-NEXT:    addps %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_unsigned_v4f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundps $11, %xmm0, %xmm0
+; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vcvttss2si %xmm1, %rax
+; AVX1-NEXT:    vcvttss2si %xmm0, %rcx
+; AVX1-NEXT:    vmovd %ecx, %xmm1
+; AVX1-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX1-NEXT:    vcvttss2si %xmm2, %rax
+; AVX1-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; AVX1-NEXT:    vcvttss2si %xmm0, %rax
+; AVX1-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptoui <4 x float> %x to <4 x i32>
   %r = uitofp <4 x i32> %i to <4 x float>
@@ -140,12 +201,61 @@ define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_unsigned_v2f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundpd $11, %xmm0, %xmm0
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE41-NEXT:    movaps %xmm1, %xmm3
+; SSE41-NEXT:    subsd %xmm2, %xmm3
+; SSE41-NEXT:    cvttsd2si %xmm3, %rax
+; SSE41-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; SSE41-NEXT:    xorq %rcx, %rax
+; SSE41-NEXT:    cvttsd2si %xmm1, %rdx
+; SSE41-NEXT:    ucomisd %xmm2, %xmm1
+; SSE41-NEXT:    cmovaeq %rax, %rdx
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    subsd %xmm2, %xmm1
+; SSE41-NEXT:    cvttsd2si %xmm1, %rax
+; SSE41-NEXT:    xorq %rcx, %rax
+; SSE41-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE41-NEXT:    ucomisd %xmm2, %xmm0
+; SSE41-NEXT:    cmovaeq %rax, %rcx
+; SSE41-NEXT:    movq %rcx, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
+; SSE41-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [4.503600e+15,1.934281e+25]
+; SSE41-NEXT:    subpd %xmm2, %xmm0
+; SSE41-NEXT:    movq %rdx, %xmm3
+; SSE41-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; SSE41-NEXT:    subpd %xmm2, %xmm3
+; SSE41-NEXT:    haddpd %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_unsigned_v2f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundpd $11, %xmm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; AVX1-NEXT:    vsubsd %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vcvttsd2si %xmm3, %rax
+; AVX1-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; AVX1-NEXT:    xorq %rcx, %rax
+; AVX1-NEXT:    vcvttsd2si %xmm1, %rdx
+; AVX1-NEXT:    vucomisd %xmm2, %xmm1
+; AVX1-NEXT:    cmovaeq %rax, %rdx
+; AVX1-NEXT:    vsubsd %xmm2, %xmm0, %xmm1
+; AVX1-NEXT:    vcvttsd2si %xmm1, %rax
+; AVX1-NEXT:    xorq %rcx, %rax
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
+; AVX1-NEXT:    vucomisd %xmm2, %xmm0
+; AVX1-NEXT:    cmovaeq %rax, %rcx
+; AVX1-NEXT:    vmovq %rcx, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX1-NEXT:    vmovapd {{.*#+}} xmm2 = [4.503600e+15,1.934281e+25]
+; AVX1-NEXT:    vsubpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %rdx, %xmm3
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; AVX1-NEXT:    vsubpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptoui <2 x double> %x to <2 x i64>
   %r = uitofp <2 x i64> %i to <2 x double>
@@ -217,13 +327,106 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_unsigned_v4f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundpd $11, %xmm0, %xmm0
-; SSE41-NEXT:    roundpd $11, %xmm1, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm3
+; SSE41-NEXT:    movhlps {{.*#+}} xmm3 = xmm1[1],xmm3[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE41-NEXT:    movaps %xmm3, %xmm4
+; SSE41-NEXT:    subsd %xmm2, %xmm4
+; SSE41-NEXT:    cvttsd2si %xmm4, %rcx
+; SSE41-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; SSE41-NEXT:    xorq %rdx, %rcx
+; SSE41-NEXT:    cvttsd2si %xmm3, %rax
+; SSE41-NEXT:    ucomisd %xmm2, %xmm3
+; SSE41-NEXT:    cmovaeq %rcx, %rax
+; SSE41-NEXT:    movaps %xmm1, %xmm3
+; SSE41-NEXT:    subsd %xmm2, %xmm3
+; SSE41-NEXT:    cvttsd2si %xmm3, %rsi
+; SSE41-NEXT:    xorq %rdx, %rsi
+; SSE41-NEXT:    cvttsd2si %xmm1, %rcx
+; SSE41-NEXT:    ucomisd %xmm2, %xmm1
+; SSE41-NEXT:    cmovaeq %rsi, %rcx
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE41-NEXT:    movaps %xmm1, %xmm3
+; SSE41-NEXT:    subsd %xmm2, %xmm3
+; SSE41-NEXT:    cvttsd2si %xmm3, %rsi
+; SSE41-NEXT:    xorq %rdx, %rsi
+; SSE41-NEXT:    cvttsd2si %xmm1, %rdi
+; SSE41-NEXT:    ucomisd %xmm2, %xmm1
+; SSE41-NEXT:    cmovaeq %rsi, %rdi
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    subsd %xmm2, %xmm1
+; SSE41-NEXT:    cvttsd2si %xmm1, %rsi
+; SSE41-NEXT:    xorq %rdx, %rsi
+; SSE41-NEXT:    cvttsd2si %xmm0, %rdx
+; SSE41-NEXT:    ucomisd %xmm2, %xmm0
+; SSE41-NEXT:    cmovaeq %rsi, %rdx
+; SSE41-NEXT:    movq %rdx, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
+; SSE41-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE41-NEXT:    movapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
+; SSE41-NEXT:    subpd %xmm3, %xmm0
+; SSE41-NEXT:    movq %rdi, %xmm1
+; SSE41-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE41-NEXT:    subpd %xmm3, %xmm1
+; SSE41-NEXT:    haddpd %xmm1, %xmm0
+; SSE41-NEXT:    movq %rcx, %xmm1
+; SSE41-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE41-NEXT:    subpd %xmm3, %xmm1
+; SSE41-NEXT:    movq %rax, %xmm4
+; SSE41-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; SSE41-NEXT:    subpd %xmm3, %xmm4
+; SSE41-NEXT:    haddpd %xmm4, %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_unsigned_v4f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundpd $11, %ymm0, %ymm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vsubsd %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vcvttsd2si %xmm3, %rcx
+; AVX1-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rax
+; AVX1-NEXT:    vucomisd %xmm1, %xmm2
+; AVX1-NEXT:    cmovaeq %rcx, %rax
+; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rcx
+; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rsi
+; AVX1-NEXT:    vucomisd %xmm1, %xmm0
+; AVX1-NEXT:    cmovaeq %rcx, %rsi
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX1-NEXT:    vsubsd %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vcvttsd2si %xmm3, %rcx
+; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rdi
+; AVX1-NEXT:    vucomisd %xmm1, %xmm2
+; AVX1-NEXT:    cmovaeq %rcx, %rdi
+; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vcvttsd2si %xmm2, %rcx
+; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rdx
+; AVX1-NEXT:    vucomisd %xmm1, %xmm0
+; AVX1-NEXT:    cmovaeq %rcx, %rdx
+; AVX1-NEXT:    vmovq %rdx, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX1-NEXT:    vmovapd {{.*#+}} xmm2 = [4.503600e+15,1.934281e+25]
+; AVX1-NEXT:    vsubpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %rdi, %xmm3
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; AVX1-NEXT:    vsubpd %xmm2, %xmm3, %xmm3
+; AVX1-NEXT:    vhaddpd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %rsi, %xmm3
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; AVX1-NEXT:    vsubpd %xmm2, %xmm3, %xmm3
+; AVX1-NEXT:    vmovq %rax, %xmm4
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; AVX1-NEXT:    vsubpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vhaddpd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
   %i = fptoui <4 x double> %x to <4 x i64>
   %r = uitofp <4 x i64> %i to <4 x double>
@@ -240,12 +443,15 @@ define float @trunc_signed_f32(float %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_signed_f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundss $11, %xmm0, %xmm0
+; SSE41-NEXT:    cvttss2si %xmm0, %eax
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    cvtsi2ssl %eax, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_signed_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttss2si %xmm0, %eax
+; AVX1-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptosi float %x to i32
   %r = sitofp i32 %i to float
@@ -262,12 +468,15 @@ define double @trunc_signed_f64(double %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_signed_f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundsd $11, %xmm0, %xmm0
+; SSE41-NEXT:    cvttsd2si %xmm0, %rax
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    cvtsi2sdq %rax, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_signed_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptosi double %x to i64
   %r = sitofp i64 %i to double
@@ -283,12 +492,14 @@ define <4 x float> @trunc_signed_v4f32(<4 x float> %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_signed_v4f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundps $11, %xmm0, %xmm0
+; SSE41-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE41-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_signed_v4f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundps $11, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX1-NEXT:    retq
   %i = fptosi <4 x float> %x to <4 x i32>
   %r = sitofp <4 x i32> %i to <4 x float>
@@ -309,12 +520,23 @@ define <2 x double> @trunc_signed_v2f64(<2 x double> %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_signed_v2f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundpd $11, %xmm0, %xmm0
+; SSE41-NEXT:    cvttsd2si %xmm0, %rax
+; SSE41-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE41-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    cvtsi2sdq %rax, %xmm0
+; SSE41-NEXT:    cvtsi2sdq %rcx, %xmm1
+; SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_signed_v2f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundpd $11, %xmm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vcvttsd2si %xmm1, %rax
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
+; AVX1-NEXT:    vcvtsi2sdq %rcx, %xmm2, %xmm0
+; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm1
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    retq
   %i = fptosi <2 x double> %x to <2 x i64>
   %r = sitofp <2 x i64> %i to <2 x double>
@@ -343,13 +565,39 @@ define <4 x double> @trunc_signed_v4f64(<4 x double> %x) nounwind {
 ;
 ; SSE41-LABEL: trunc_signed_v4f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    roundpd $11, %xmm0, %xmm0
-; SSE41-NEXT:    roundpd $11, %xmm1, %xmm1
+; SSE41-NEXT:    cvttsd2si %xmm1, %rax
+; SSE41-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE41-NEXT:    cvttsd2si %xmm1, %rcx
+; SSE41-NEXT:    cvttsd2si %xmm0, %rdx
+; SSE41-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE41-NEXT:    cvttsd2si %xmm0, %rsi
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    cvtsi2sdq %rdx, %xmm0
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    cvtsi2sdq %rsi, %xmm1
+; SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    cvtsi2sdq %rax, %xmm1
+; SSE41-NEXT:    cvtsi2sdq %rcx, %xmm2
+; SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_signed_v4f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundpd $11, %ymm0, %ymm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vcvttsd2si %xmm1, %rax
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vcvttsd2si %xmm1, %rdx
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rsi
+; AVX1-NEXT:    vcvtsi2sdq %rsi, %xmm2, %xmm0
+; AVX1-NEXT:    vcvtsi2sdq %rdx, %xmm2, %xmm1
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vcvtsi2sdq %rcx, %xmm2, %xmm1
+; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
   %i = fptosi <4 x double> %x to <4 x i64>
   %r = sitofp <4 x i64> %i to <4 x double>
