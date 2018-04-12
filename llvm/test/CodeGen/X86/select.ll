@@ -104,14 +104,23 @@ declare i1 @return_false()
 
 ;; Select between two floating point constants.
 define float @test3(i32 %x) nounwind readnone {
-; CHECK-LABEL: test3:
-; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rcx
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test3:
+; GENERIC:       ## %bb.0: ## %entry
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    testl %edi, %edi
+; GENERIC-NEXT:    sete %al
+; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test3:
+; ATOM:       ## %bb.0: ## %entry
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    testl %edi, %edi
+; ATOM-NEXT:    sete %al
+; ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    retq
 ;
 ; MCU-LABEL: test3:
 ; MCU:       # %bb.0: # %entry
@@ -266,15 +275,25 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 
 ; Select with fp80's
 define x86_fp80 @test7(i32 %tmp8) nounwind {
-; CHECK-LABEL: test7:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rcx
-; CHECK-NEXT:    fldt (%rax,%rcx)
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test7:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    testl %edi, %edi
+; GENERIC-NEXT:    setns %al
+; GENERIC-NEXT:    shlq $4, %rax
+; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    fldt (%rax,%rcx)
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test7:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    testl %edi, %edi
+; ATOM-NEXT:    setns %al
+; ATOM-NEXT:    shlq $4, %rax
+; ATOM-NEXT:    fldt (%rax,%rcx)
+; ATOM-NEXT:    retq
 ;
 ; MCU-LABEL: test7:
 ; MCU:       # %bb.0:
@@ -330,31 +349,32 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; ATOM-NEXT:    testb $1, %dil
 ; ATOM-NEXT:    jne LBB7_1
 ; ATOM-NEXT:  ## %bb.2:
-; ATOM-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; ATOM-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; ATOM-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    jmp LBB7_3
 ; ATOM-NEXT:  LBB7_1:
-; ATOM-NEXT:    movd %r9d, %xmm0
+; ATOM-NEXT:    movd %r9d, %xmm1
 ; ATOM-NEXT:    movd %r8d, %xmm2
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; ATOM-NEXT:    movd %ecx, %xmm3
 ; ATOM-NEXT:    movd %edx, %xmm0
-; ATOM-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:  LBB7_3:
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; ATOM-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; ATOM-NEXT:    pcmpeqd %xmm2, %xmm2
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    paddd %xmm2, %xmm1
-; ATOM-NEXT:    movdqa %xmm0, (%rsi)
 ; ATOM-NEXT:    movq %xmm1, 16(%rsi)
+; ATOM-NEXT:    movdqa %xmm0, (%rsi)
 ; ATOM-NEXT:    retq
 ;
 ; MCU-LABEL: test8:
@@ -634,8 +654,8 @@ define noalias i8* @test12(i64 %count) nounwind ssp noredzone {
 ; ATOM:       ## %bb.0: ## %entry
 ; ATOM-NEXT:    movq %rdi, %rax
 ; ATOM-NEXT:    movl $4, %ecx
-; ATOM-NEXT:    mulq %rcx
 ; ATOM-NEXT:    movq $-1, %rdi
+; ATOM-NEXT:    mulq %rcx
 ; ATOM-NEXT:    cmovnoq %rax, %rdi
 ; ATOM-NEXT:    jmp __Znam ## TAILCALL
 ;
@@ -894,8 +914,8 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $127, %edi
 ; ATOM-NEXT:    movl $127, %eax
-; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    movb $-128, %cl
+; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    cmpl $-128, %eax
 ; ATOM-NEXT:    jl LBB22_2
 ; ATOM-NEXT:  ## %bb.1:
@@ -946,8 +966,8 @@ define void @clamp(i32 %src, i16* %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
 ; ATOM-NEXT:    movl $32767, %eax ## imm = 0x7FFF
-; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    movl $32768, %ecx ## imm = 0x8000
+; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
 ; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movw %cx, (%rsi)

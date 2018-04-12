@@ -4,7 +4,9 @@
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture, i8, i64, i32) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32) nounwind
 declare void @llvm.init.trampoline(i8*, i8*, i8*)
 
 define void @test1(i32* %Q, i32* %P) {
@@ -86,6 +88,21 @@ define void @test6(i32 *%p, i8 *%q) {
   ret void
 }
 
+; Should delete store of 10 even though memset is a may-store to P (P and Q may
+; alias).
+define void @test6_atomic(i32* align 4 %p, i8* align 4 %q) {
+; CHECK-LABEL: @test6_atomic(
+; CHECK-NEXT:    store atomic i32 10, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 [[Q:%.*]], i8 42, i64 900, i32 4)
+; CHECK-NEXT:    store atomic i32 30, i32* [[P]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 10, i32* %p unordered, align 4       ;; dead.
+  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 4 %q, i8 42, i64 900, i32 4)
+  store atomic i32 30, i32* %p unordered, align 4
+  ret void
+}
+
 ; Should delete store of 10 even though memcpy is a may-store to P (P and Q may
 ; alias).
 define void @test7(i32 *%p, i8 *%q, i8* noalias %r) {
@@ -97,6 +114,21 @@ define void @test7(i32 *%p, i8 *%q, i8* noalias %r) {
   store i32 10, i32* %p, align 4       ;; dead.
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %q, i8* %r, i64 900, i1 false)
   store i32 30, i32* %p, align 4
+  ret void
+}
+
+; Should delete store of 10 even though memcpy is a may-store to P (P and Q may
+; alias).
+define void @test7_atomic(i32* align 4 %p, i8* align 4 %q, i8* noalias align 4 %r) {
+; CHECK-LABEL: @test7_atomic(
+; CHECK-NEXT:    store atomic i32 10, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 4 [[Q:%.*]], i8* align 4 [[R:%.*]], i64 900, i32 4)
+; CHECK-NEXT:    store atomic i32 30, i32* [[P]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 10, i32* %p unordered, align 4       ;; dead.
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 4 %q, i8* align 4 %r, i64 900, i32 4)
+  store atomic i32 30, i32* %p unordered, align 4
   ret void
 }
 
@@ -256,6 +288,42 @@ define void @test15(i8* %P, i8* %Q) nounwind ssp {
   ret void
 }
 
+;; Fully dead overwrite of memcpy.
+define void @test15_atomic(i8* %P, i8* %Q) nounwind ssp {
+; CHECK-LABEL: @test15_atomic(
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  ret void
+}
+
+; It would only be valid to remove the non-atomic memcpy
+define void @test15_atomic_weaker(i8* %P, i8* %Q) nounwind ssp {
+; CHECK-LABEL: @test15_atomic_weaker(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  ret void
+}
+
+; It would only be valid to remove the non-atomic memcpy
+define void @test15_atomic_weaker_2(i8* %P, i8* %Q) nounwind ssp {
+; CHECK-LABEL: @test15_atomic_weaker_2(
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q]], i64 12, i1 false)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
+  ret void
+}
+
 ;; Full overwrite of smaller memcpy.
 define void @test16(i8* %P, i8* %Q) nounwind ssp {
 ; CHECK-LABEL: @test16(
@@ -267,6 +335,42 @@ define void @test16(i8* %P, i8* %Q) nounwind ssp {
   ret void
 }
 
+;; Full overwrite of smaller memcpy.
+define void @test16_atomic(i8* %P, i8* %Q) nounwind ssp {
+; CHECK-LABEL: @test16_atomic(
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 8, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 8, i32 1)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  ret void
+}
+
+;; Full overwrite of smaller memory where overwrite has stronger atomicity
+define void @test16_atomic_weaker(i8* %P, i8* %Q) nounwind ssp {
+; CHECK-LABEL: @test16_atomic_weaker(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 8, i1 false)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  ret void
+}
+
+;; Full overwrite of smaller memory where overwrite has weaker atomicity.
+define void @test16_atomic_weaker_2(i8* %P, i8* %Q) nounwind ssp {
+; CHECK-LABEL: @test16_atomic_weaker_2(
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 8, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q]], i64 12, i1 false)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 8, i32 1)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
+  ret void
+}
+
 ;; Overwrite of memset by memcpy.
 define void @test17(i8* %P, i8* noalias %Q) nounwind ssp {
 ; CHECK-LABEL: @test17(
@@ -275,6 +379,44 @@ define void @test17(i8* %P, i8* noalias %Q) nounwind ssp {
 ;
   tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+  ret void
+}
+
+;; Overwrite of memset by memcpy.
+define void @test17_atomic(i8* %P, i8* noalias %Q) nounwind ssp {
+; CHECK-LABEL: @test17_atomic(
+; CHECK-NEXT:    tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 [[P:%.*]], i8 42, i64 8, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %P, i8 42, i64 8, i32 1)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  ret void
+}
+
+;; Overwrite of memset by memcpy. Overwrite is stronger atomicity. We can
+;; remove the memset.
+define void @test17_atomic_weaker(i8* %P, i8* noalias %Q) nounwind ssp {
+; CHECK-LABEL: @test17_atomic_weaker(
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* align 1 [[P:%.*]], i8 42, i64 8, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.p0i8.i64(i8* align 1 %P, i8 42, i64 8, i1 false)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  ret void
+}
+
+;; Overwrite of memset by memcpy. Overwrite is weaker atomicity. We can remove
+;; the memset.
+define void @test17_atomic_weaker_2(i8* %P, i8* noalias %Q) nounwind ssp {
+; CHECK-LABEL: @test17_atomic_weaker_2(
+; CHECK-NEXT:    tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 [[P:%.*]], i8 42, i64 8, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %P, i8 42, i64 8, i32 1)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
   ret void
 }
 
@@ -305,6 +447,17 @@ define void @test18(i8* %P, i8* %Q, i8* %R) nounwind ssp {
 ;
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %R, i64 12, i1 false)
+  ret void
+}
+
+define void @test18_atomic(i8* %P, i8* %Q, i8* %R) nounwind ssp {
+; CHECK-LABEL: @test18_atomic(
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %R, i64 12, i32 1)
   ret void
 }
 
@@ -666,6 +819,18 @@ define void @test36(i8* %P, i8* %Q) {
   ret void
 }
 
+define void @test36_atomic(i8* %P, i8* %Q) {
+; CHECK-LABEL: @test36_atomic(
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+
+  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  ret void
+}
+
 define void @test37(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
@@ -675,6 +840,18 @@ define void @test37(i8* %P, i8* %Q, i8* %R) {
 
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   tail call void @llvm.memmove.p0i8.p0i8.i64(i8* %P, i8* %R, i64 12, i1 false)
+  ret void
+}
+
+define void @test37_atomic(i8* %P, i8* %Q, i8* %R) {
+; CHECK-LABEL: @test37_atomic(
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %R, i64 12, i32 1)
   ret void
 }
 
@@ -691,6 +868,18 @@ define void @test38(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
+define void @test38_atomic(i8* %P, i8* %Q, i8* %R) {
+; CHECK-LABEL: @test38_atomic(
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    ret void
+;
+
+  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %R, i64 12, i32 1)
+  ret void
+}
+
 define void @test39(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test39(
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
@@ -703,4 +892,17 @@ define void @test39(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
+define void @test39_atomic(i8* %P, i8* %Q, i8* %R) {
+; CHECK-LABEL: @test39_atomic(
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 8, i32 1)
+; CHECK-NEXT:    ret void
+;
+
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %R, i64 8, i32 1)
+  ret void
+}
+
 declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
+declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32)

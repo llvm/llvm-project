@@ -37,3 +37,4 @@ required_libraries =
  Support
  Target
  TransformUtils
+ MCJIT

@@ -482,6 +482,12 @@ let Defs = [EAX, EBX, ECX, EDX], Uses = [EAX, ECX] in
 let SchedRW = [WriteSystem] in {
 def INVD : I<0x08, RawFrm, (outs), (ins), "invd", [], IIC_INVD>, TB;
 def WBINVD : I<0x09, RawFrm, (outs), (ins), "wbinvd", [], IIC_INVD>, TB;
+
+// wbnoinvd is like wbinvd, except without invalidation
+// encoding: like wbinvd + an 0xF3 prefix
+def WBNOINVD : I<0x09, RawFrm, (outs), (ins), "wbnoinvd",
+                 [(int_x86_wbnoinvd)], IIC_INVD>, XS,
+                 Requires<[HasWBNOINVD]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//

@@ -59,7 +59,8 @@ Value *SSAUpdaterBulk::computeValueAt(BasicBlock *BB, RewriteInfo &R,
   if (!R.Defines.count(BB)) {
     if (DT->isReachableFromEntry(BB) && PredCache.get(BB).size()) {
       BasicBlock *IDom = DT->getNode(BB)->getIDom()->getBlock();
-      R.Defines[BB] = computeValueAt(IDom, R, DT);
+      Value *V = computeValueAt(IDom, R, DT);
+      R.Defines[BB] = V;
     } else
       R.Defines[BB] = UndefValue::get(R.Ty);
   }

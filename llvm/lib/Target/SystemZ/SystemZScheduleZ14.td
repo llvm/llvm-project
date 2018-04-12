@@ -24,9 +24,6 @@ def Z14Model : SchedMachineModel {
 
     // Extra cycles for a mispredicted branch.
     let MispredictPenalty = 20;
-
-    // FIXME: Remove when all errors have been fixed.
-    let FullInstRWOverlapCheck = 0;
 }
 
 let SchedModel = Z14Model in  {
@@ -81,17 +78,8 @@ def : WriteRes<VecDF,   [Z14_VecUnit]> { let Latency = 8; }
 def : WriteRes<VecDF2,  [Z14_VecUnit, Z14_VecUnit]> { let Latency = 9; }
 def : WriteRes<VecDFX,  [Z14_VecUnit]> { let Latency = 1; }
 def : WriteRes<VecDFX2, [Z14_VecUnit, Z14_VecUnit]> { let Latency = 2; }
-def : WriteRes<VecFPd,  [Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit,
-                         Z14_VecFPdUnit, Z14_VecFPdUnit, Z14_VecFPdUnit]>
-                         { let Latency = 30; }
+def : WriteRes<VecFPd,  [Z14_VecFPdUnit]> { let Latency = 30;
+                                            let ResourceCycles = [30]; }
 def : WriteRes<VecMul,  [Z14_VecUnit]> { let Latency = 5; }
 def : WriteRes<VecStr,  [Z14_VecUnit]> { let Latency = 4; }
 def : WriteRes<VecXsPm, [Z14_VecUnit]> { let Latency = 3; }
@@ -604,7 +592,8 @@ def : InstRW<[LSU, LSU, Lat5, GroupAlone], (instregex "LPD(G)?$")>;
 def : InstRW<[LSU, Lat30, GroupAlone], (instregex "TR$")>;
 def : InstRW<[FXa, FXa, FXa, LSU, LSU, Lat30, GroupAlone], (instregex "TRT$")>;
 def : InstRW<[FXa, LSU, Lat30], (instregex "TRTR$")>;
-def : InstRW<[FXa, Lat30], (instregex "TR(TR)?(T)?(E|EOpt)?$")>;
+def : InstRW<[FXa, Lat30], (instregex "TRE$")>;
+def : InstRW<[FXa, Lat30], (instregex "TRT(R)?E(Opt)?$")>;
 def : InstRW<[LSU, Lat30], (instregex "TR(T|O)(T|O)(Opt)?$")>;
 def : InstRW<[FXa, Lat30], (instregex "CU(12|14|21|24|41|42)(Opt)?$")>;
 def : InstRW<[FXa, Lat30], (instregex "(CUUTF|CUTFU)(Opt)?$")>;
@@ -897,7 +886,7 @@ def : InstRW<[VecFPd, Lat30], (instregex "DI(E|D)BR$")>;
 
 // Compare
 def : InstRW<[VecXsPm, LSU, Lat8], (instregex "(K|C)(E|D)B$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "(K|C)(E|D)BR?$")>;
+def : InstRW<[VecXsPm, Lat4], (instregex "(K|C)(E|D)BR$")>;
 def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "(K|C)XBR$")>;
 
 // Test Data Class

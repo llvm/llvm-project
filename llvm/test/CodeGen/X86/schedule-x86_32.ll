@@ -1220,7 +1220,7 @@ define void @test_into() optsize {
 ; ATOM-LABEL: test_into:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    into # sched: [0:?]
+; ATOM-NEXT:    into # sched: [6:3.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;

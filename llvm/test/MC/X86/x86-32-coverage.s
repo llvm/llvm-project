@@ -2788,6 +2788,10 @@
 // CHECK:  encoding: [0x0f,0x09]
         	wbinvd
 
+// CHECK: wbnoinvd
+// CHECK:  encoding: [0xf3,0x0f,0x09]
+        	wbnoinvd
+
 // CHECK: cpuid
 // CHECK:  encoding: [0x0f,0xa2]
         	cpuid
