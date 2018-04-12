@@ -8833,8 +8833,8 @@ multiclass avx512_gather_scatter_prefetch<bits<8> opc, Format F, string OpcodeSt
                        RegisterClass KRC, X86MemOperand memop> {
   let Predicates = [HasPFI], hasSideEffects = 1 in
   def m  : AVX5128I<opc, F, (outs), (ins KRC:$mask, memop:$src),
-            !strconcat(OpcodeStr, "\t{$src {${mask}}|{${mask}}, $src}"),
-            [], IIC_SSE_PREFETCH>, EVEX, EVEX_K, Sched<[WriteLoad]>;
+            !strconcat(OpcodeStr, "\t{$src {${mask}}|{${mask}}, $src}"), []>,
+            EVEX, EVEX_K, Sched<[WriteLoad]>;
 }
 
 defm VGATHERPF0DPS: avx512_gather_scatter_prefetch<0xC6, MRM1m, "vgatherpf0dps",

@@ -154,6 +154,8 @@ static const char *getReasonStr(SIScheduleCandReason Reason) {
 
 #endif
 
+namespace llvm {
+namespace SISched {
 static bool tryLess(int TryVal, int CandVal,
                     SISchedulerCandidate &TryCand,
                     SISchedulerCandidate &Cand,
@@ -187,6 +189,8 @@ static bool tryGreater(int TryVal, int CandVal,
   Cand.setRepeat(Reason);
   return false;
 }
+} // end namespace SISched
+} // end namespace llvm
 
 // SIScheduleBlock //
 
@@ -212,7 +216,8 @@ void SIScheduleBlock::tryCandidateTopDown(SISchedCandidate &Cand,
   }
 
   if (Cand.SGPRUsage > 60 &&
-      tryLess(TryCand.SGPRUsage, Cand.SGPRUsage, TryCand, Cand, RegUsage))
+      SISched::tryLess(TryCand.SGPRUsage, Cand.SGPRUsage,
+                       TryCand, Cand, RegUsage))
     return;
 
   // Schedule low latency instructions as top as possible.
@@ -230,21 +235,22 @@ void SIScheduleBlock::tryCandidateTopDown(SISchedCandidate &Cand,
   // could go quite high, thus above the arbitrary limit of 60 will encourage
   // use the already loaded constants (in order to release some SGPRs) before
   // loading more.
-  if (tryLess(TryCand.HasLowLatencyNonWaitedParent,
-              Cand.HasLowLatencyNonWaitedParent,
-              TryCand, Cand, SIScheduleCandReason::Depth))
+  if (SISched::tryLess(TryCand.HasLowLatencyNonWaitedParent,
+                       Cand.HasLowLatencyNonWaitedParent,
+                       TryCand, Cand, SIScheduleCandReason::Depth))
     return;
 
-  if (tryGreater(TryCand.IsLowLatency, Cand.IsLowLatency,
-                 TryCand, Cand, SIScheduleCandReason::Depth))
+  if (SISched::tryGreater(TryCand.IsLowLatency, Cand.IsLowLatency,
+                          TryCand, Cand, SIScheduleCandReason::Depth))
     return;
 
   if (TryCand.IsLowLatency &&
-      tryLess(TryCand.LowLatencyOffset, Cand.LowLatencyOffset,
-              TryCand, Cand, SIScheduleCandReason::Depth))
+      SISched::tryLess(TryCand.LowLatencyOffset, Cand.LowLatencyOffset,
+                       TryCand, Cand, SIScheduleCandReason::Depth))
     return;
 
-  if (tryLess(TryCand.VGPRUsage, Cand.VGPRUsage, TryCand, Cand, RegUsage))
+  if (SISched::tryLess(TryCand.VGPRUsage, Cand.VGPRUsage,
+                       TryCand, Cand, RegUsage))
     return;
 
   // Fall through to original instruction order.
@@ -1576,19 +1582,19 @@ bool SIScheduleBlockScheduler::tryCandidateLatency(SIBlockSchedCandidate &Cand,
   }
 
   // Try to hide high latencies.
-  if (tryLess(TryCand.LastPosHighLatParentScheduled,
-              Cand.LastPosHighLatParentScheduled, TryCand, Cand, Latency))
+  if (SISched::tryLess(TryCand.LastPosHighLatParentScheduled,
+                 Cand.LastPosHighLatParentScheduled, TryCand, Cand, Latency))
     return true;
   // Schedule high latencies early so you can hide them better.
-  if (tryGreater(TryCand.IsHighLatency, Cand.IsHighLatency,
-                 TryCand, Cand, Latency))
+  if (SISched::tryGreater(TryCand.IsHighLatency, Cand.IsHighLatency,
+                          TryCand, Cand, Latency))
     return true;
-  if (TryCand.IsHighLatency && tryGreater(TryCand.Height, Cand.Height,
-                                          TryCand, Cand, Depth))
+  if (TryCand.IsHighLatency && SISched::tryGreater(TryCand.Height, Cand.Height,
+                                                   TryCand, Cand, Depth))
     return true;
-  if (tryGreater(TryCand.NumHighLatencySuccessors,
-                 Cand.NumHighLatencySuccessors,
-                 TryCand, Cand, Successor))
+  if (SISched::tryGreater(TryCand.NumHighLatencySuccessors,
+                          Cand.NumHighLatencySuccessors,
+                          TryCand, Cand, Successor))
     return true;
   return false;
 }
@@ -1600,17 +1606,17 @@ bool SIScheduleBlockScheduler::tryCandidateRegUsage(SIBlockSchedCandidate &Cand,
     return true;
   }
 
-  if (tryLess(TryCand.VGPRUsageDiff > 0, Cand.VGPRUsageDiff > 0,
-              TryCand, Cand, RegUsage))
+  if (SISched::tryLess(TryCand.VGPRUsageDiff > 0, Cand.VGPRUsageDiff > 0,
+                       TryCand, Cand, RegUsage))
     return true;
-  if (tryGreater(TryCand.NumSuccessors > 0,
-                 Cand.NumSuccessors > 0,
-                 TryCand, Cand, Successor))
+  if (SISched::tryGreater(TryCand.NumSuccessors > 0,
+                          Cand.NumSuccessors > 0,
+                          TryCand, Cand, Successor))
     return true;
-  if (tryGreater(TryCand.Height, Cand.Height, TryCand, Cand, Depth))
+  if (SISched::tryGreater(TryCand.Height, Cand.Height, TryCand, Cand, Depth))
     return true;
-  if (tryLess(TryCand.VGPRUsageDiff, Cand.VGPRUsageDiff,
-              TryCand, Cand, RegUsage))
+  if (SISched::tryLess(TryCand.VGPRUsageDiff, Cand.VGPRUsageDiff,
+                       TryCand, Cand, RegUsage))
     return true;
   return false;
 }

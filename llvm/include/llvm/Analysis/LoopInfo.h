@@ -527,7 +527,7 @@ public:
   ///
   /// If this loop contains the same llvm.loop metadata on each branch to the
   /// header then the node is returned. If any latch instruction does not
-  /// contain llvm.loop or or if multiple latches contain different nodes then
+  /// contain llvm.loop or if multiple latches contain different nodes then
   /// 0 is returned.
   MDNode *getLoopID() const;
   /// Set the llvm.loop loop id metadata for this loop.

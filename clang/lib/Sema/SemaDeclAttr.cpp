@@ -2042,16 +2042,6 @@ static void handleDependencyAttr(Sema &S, Scope *Scope, Decl *D,
 static void handleUnusedAttr(Sema &S, Decl *D, const AttributeList &AL) {
   bool IsCXX17Attr = AL.isCXX11Attribute() && !AL.getScopeName();
 
-  if (IsCXX17Attr && isa<VarDecl>(D)) {
-    // The C++17 spelling of this attribute cannot be applied to a static data
-    // member per [dcl.attr.unused]p2.
-    if (cast<VarDecl>(D)->isStaticDataMember()) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
-          << AL.getName() << ExpectedForMaybeUnused;
-      return;
-    }
-  }
-
   // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus17 && IsCXX17Attr)

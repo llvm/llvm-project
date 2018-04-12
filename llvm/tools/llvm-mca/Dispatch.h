@@ -289,7 +289,7 @@ public:
     return RAT->collectWrites(Vec, RegID);
   }
 
-  void cycleEvent(unsigned Cycle) {
+  void cycleEvent() {
     RCU->cycleEvent();
     AvailableEntries =
         CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;

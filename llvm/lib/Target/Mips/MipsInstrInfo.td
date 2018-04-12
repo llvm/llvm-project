@@ -2324,13 +2324,15 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 class Barrier<string asmstr, InstrItinClass itin = NoItinerary> :
   InstSE<(outs), (ins), asmstr, [], itin, FrmOther, asmstr>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def SSNOP : MMRel, StdMMR6Rel, Barrier<"ssnop", II_SSNOP>, BARRIER_FM<1>,
+              ISA_MIPS1;
+  def EHB : MMRel, Barrier<"ehb", II_EHB>, BARRIER_FM<3>, ISA_MIPS1;
 
-def SSNOP : MMRel, StdMMR6Rel, Barrier<"ssnop", II_SSNOP>, BARRIER_FM<1>;
-def EHB : MMRel, Barrier<"ehb", II_EHB>, BARRIER_FM<3>;
-
-let isCTI = 1 in
-def PAUSE : MMRel, StdMMR6Rel, Barrier<"pause", II_PAUSE>, BARRIER_FM<5>,
-            ISA_MIPS32R2;
+  let isCTI = 1 in
+  def PAUSE : MMRel, StdMMR6Rel, Barrier<"pause", II_PAUSE>, BARRIER_FM<5>,
+              ISA_MIPS32R2;
+}
 
 // JR_HB and JALR_HB are defined here using the new style naming
 // scheme because some of this code is shared with Mips32r6InstrInfo.td
@@ -2389,10 +2391,10 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
 class TLB<string asmstr, InstrItinClass itin = NoItinerary> :
   InstSE<(outs), (ins), asmstr, [], itin, FrmOther, asmstr>;
 let AdditionalPredicates = [NotInMicroMips] in {
-def TLBP : MMRel, TLB<"tlbp", II_TLBP>, COP0_TLB_FM<0x08>;
-def TLBR : MMRel, TLB<"tlbr", II_TLBR>, COP0_TLB_FM<0x01>;
-def TLBWI : MMRel, TLB<"tlbwi", II_TLBWI>, COP0_TLB_FM<0x02>;
-def TLBWR : MMRel, TLB<"tlbwr", II_TLBWR>, COP0_TLB_FM<0x06>;
+  def TLBP : MMRel, TLB<"tlbp", II_TLBP>, COP0_TLB_FM<0x08>, ISA_MIPS1;
+  def TLBR : MMRel, TLB<"tlbr", II_TLBR>, COP0_TLB_FM<0x01>, ISA_MIPS1;
+  def TLBWI : MMRel, TLB<"tlbwi", II_TLBWI>, COP0_TLB_FM<0x02>, ISA_MIPS1;
+  def TLBWR : MMRel, TLB<"tlbwr", II_TLBWR>, COP0_TLB_FM<0x06>, ISA_MIPS1;
 }
 class CacheOp<string instr_asm, Operand MemOpnd,
               InstrItinClass itin = NoItinerary> :
@@ -2406,7 +2408,7 @@ def CACHE : MMRel, CacheOp<"cache", mem, II_CACHE>, CACHEOP_FM<0b101111>,
             INSN_MIPS3_32_NOT_32R6_64R6;
 def PREF :  MMRel, CacheOp<"pref", mem, II_PREF>, CACHEOP_FM<0b110011>,
             INSN_MIPS3_32_NOT_32R6_64R6;
-
+// FIXME: We are missing the prefx instruction.
 def ROL : MipsAsmPseudoInst<(outs),
                             (ins GPR32Opnd:$rs, GPR32Opnd:$rt, GPR32Opnd:$rd),
                             "rol\t$rs, $rt, $rd">;

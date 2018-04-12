@@ -56,10 +56,14 @@ public:
 
 private:
   void doPeepholeLoadStoreADDI();
+  void doPeepholeBuildPairF64SplitF64();
 };
 }
 
-void RISCVDAGToDAGISel::PostprocessISelDAG() { doPeepholeLoadStoreADDI(); }
+void RISCVDAGToDAGISel::PostprocessISelDAG() {
+  doPeepholeLoadStoreADDI();
+  doPeepholeBuildPairF64SplitF64();
+}
 
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
@@ -210,6 +214,42 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
     if (Base.getNode()->use_empty())
       CurDAG->RemoveDeadNode(Base.getNode());
   }
+}
+
+// Remove redundant BuildPairF64+SplitF64 pairs. i.e. cases where an f64 is
+// built of two i32 values, only to be split apart again. This must be done
+// here as a peephole optimisation as the DAG has not been fully legalized at
+// the point BuildPairF64/SplitF64 nodes are created in RISCVISelLowering, so
+// some nodes would not yet have been replaced with libcalls.
+void RISCVDAGToDAGISel::doPeepholeBuildPairF64SplitF64() {
+  SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
+  ++Position;
+
+  while (Position != CurDAG->allnodes_begin()) {
+    SDNode *N = &*--Position;
+    // Skip dead nodes and any nodes other than SplitF64Pseudo.
+    if (N->use_empty() || !N->isMachineOpcode() ||
+        !(N->getMachineOpcode() == RISCV::SplitF64Pseudo))
+      continue;
+
+    // If the operand to SplitF64 is a BuildPairF64, the split operation is
+    // redundant. Just use the operands to BuildPairF64 as the result.
+    SDValue F64Val = N->getOperand(0);
+    if (F64Val.isMachineOpcode() &&
+        F64Val.getMachineOpcode() == RISCV::BuildPairF64Pseudo) {
+      DEBUG(dbgs() << "Removing redundant SplitF64Pseudo and replacing uses "
+                      "with BuildPairF64Pseudo operands:\n");
+      DEBUG(dbgs() << "N:    ");
+      DEBUG(N->dump(CurDAG));
+      DEBUG(dbgs() << "F64Val: ");
+      DEBUG(F64Val->dump(CurDAG));
+      DEBUG(dbgs() << "\n");
+      SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
+      SDValue To[] = {F64Val.getOperand(0), F64Val.getOperand(1)};
+      CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);
+    }
+  }
+  CurDAG->RemoveDeadNodes();
 }
 
 // This pass converts a legalized DAG into a RISCV-specific DAG, ready

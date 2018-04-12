@@ -35,7 +35,7 @@ def GetLo8XForm : SDNodeXForm<imm, [{
 let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP, SSP],
     SchedRW = [WriteJump] in
   def MOVPC32r : Ii32<0xE8, Pseudo, (outs GR32:$reg), (ins i32imm:$label),
-                      "", [], IIC_CALL_RI>;
+                      "", []>;
 
 
 // ADJCALLSTACKDOWN/UP implicitly use/def ESP because they may be expanded into
@@ -163,7 +163,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, isCodeGenOnly = 1 in {
 def EH_RETURN   : I<0xC3, RawFrm, (outs), (ins GR32:$addr),
                     "ret\t#eh_return, addr: $addr",
-                    [(X86ehret GR32:$addr)], IIC_RET>, Sched<[WriteJumpLd]>;
+                    [(X86ehret GR32:$addr)]>, Sched<[WriteJumpLd]>;
 
 }
 
@@ -171,7 +171,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, isCodeGenOnly = 1 in {
 def EH_RETURN64   : I<0xC3, RawFrm, (outs), (ins GR64:$addr),
                      "ret\t#eh_return, addr: $addr",
-                     [(X86ehret GR64:$addr)], IIC_RET>, Sched<[WriteJumpLd]>;
+                     [(X86ehret GR64:$addr)]>, Sched<[WriteJumpLd]>;
 
 }
 
@@ -256,14 +256,12 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
 // this so that we don't have to have a MachineBasicBlock which ends
 // with a RET and also has successors.
 let isPseudo = 1, SchedRW = [WriteJumpLd] in {
-def MORESTACK_RET: I<0, Pseudo, (outs), (ins),
-                          "", [], IIC_RET>;
+def MORESTACK_RET: I<0, Pseudo, (outs), (ins), "", []>;
 
 // This instruction is lowered to a RET followed by a MOV.  The two
 // instructions are not generated on a higher level since then the
 // verifier sees a MachineBasicBlock ending with a non-terminator.
-def MORESTACK_RET_RESTORE_R10 : I<0, Pseudo, (outs), (ins),
-                                  "", [], IIC_RET>;
+def MORESTACK_RET_RESTORE_R10 : I<0, Pseudo, (outs), (ins), "", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -319,8 +317,7 @@ def MOV64ImmSExti8 : I<0, Pseudo, (outs GR64:$dst), (ins i64i8imm:$src), "",
 // that would make it more difficult to rematerialize.
 let isReMaterializable = 1, isAsCheapAsAMove = 1,
     isPseudo = 1, hasSideEffects = 0, SchedRW = [WriteMove] in
-def MOV32ri64 : I<0, Pseudo, (outs GR32:$dst), (ins i64i32imm:$src), "", [],
-                  IIC_MOV>;
+def MOV32ri64 : I<0, Pseudo, (outs GR32:$dst), (ins i64i32imm:$src), "", []>;
 
 // This 64-bit pseudo-move can be used for both a 64-bit constant that is
 // actually the zero-extension of a 32-bit constant and for labels in the
@@ -398,28 +395,28 @@ def : Pat<(sub GR64:$op, (i64 (X86setcc_c X86_COND_B, EFLAGS))),
 let SchedRW = [WriteMicrocoded] in {
 let Defs = [ECX,EDI,ESI], Uses = [ECX,EDI,ESI], isCodeGenOnly = 1 in {
 def REP_MOVSB_32 : I<0xA4, RawFrm, (outs), (ins), "{rep;movsb|rep movsb}",
-                    [(X86rep_movs i8)], IIC_REP_MOVS>, REP,
+                    [(X86rep_movs i8)]>, REP,
                    Requires<[Not64BitMode]>;
 def REP_MOVSW_32 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsw|rep movsw}",
-                    [(X86rep_movs i16)], IIC_REP_MOVS>, REP, OpSize16,
+                    [(X86rep_movs i16)]>, REP, OpSize16,
                    Requires<[Not64BitMode]>;
 def REP_MOVSD_32 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsl|rep movsd}",
-                    [(X86rep_movs i32)], IIC_REP_MOVS>, REP, OpSize32,
+                    [(X86rep_movs i32)]>, REP, OpSize32,
                    Requires<[Not64BitMode]>;
 }
 
 let Defs = [RCX,RDI,RSI], Uses = [RCX,RDI,RSI], isCodeGenOnly = 1 in {
 def REP_MOVSB_64 : I<0xA4, RawFrm, (outs), (ins), "{rep;movsb|rep movsb}",
-                    [(X86rep_movs i8)], IIC_REP_MOVS>, REP,
+                    [(X86rep_movs i8)]>, REP,
                    Requires<[In64BitMode]>;
 def REP_MOVSW_64 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsw|rep movsw}",
-                    [(X86rep_movs i16)], IIC_REP_MOVS>, REP, OpSize16,
+                    [(X86rep_movs i16)]>, REP, OpSize16,
                    Requires<[In64BitMode]>;
 def REP_MOVSD_64 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsl|rep movsd}",
-                    [(X86rep_movs i32)], IIC_REP_MOVS>, REP, OpSize32,
+                    [(X86rep_movs i32)]>, REP, OpSize32,
                    Requires<[In64BitMode]>;
 def REP_MOVSQ_64 : RI<0xA5, RawFrm, (outs), (ins), "{rep;movsq|rep movsq}",
-                    [(X86rep_movs i64)], IIC_REP_MOVS>, REP,
+                    [(X86rep_movs i64)]>, REP,
                    Requires<[In64BitMode]>;
 }
 
@@ -427,36 +424,36 @@ def REP_MOVSQ_64 : RI<0xA5, RawFrm, (outs), (ins), "{rep;movsq|rep movsq}",
 let Defs = [ECX,EDI], isCodeGenOnly = 1 in {
   let Uses = [AL,ECX,EDI] in
   def REP_STOSB_32 : I<0xAA, RawFrm, (outs), (ins), "{rep;stosb|rep stosb}",
-                      [(X86rep_stos i8)], IIC_REP_STOS>, REP,
+                      [(X86rep_stos i8)]>, REP,
                      Requires<[Not64BitMode]>;
   let Uses = [AX,ECX,EDI] in
   def REP_STOSW_32 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosw|rep stosw}",
-                      [(X86rep_stos i16)], IIC_REP_STOS>, REP, OpSize16,
+                      [(X86rep_stos i16)]>, REP, OpSize16,
                      Requires<[Not64BitMode]>;
   let Uses = [EAX,ECX,EDI] in
   def REP_STOSD_32 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosl|rep stosd}",
-                      [(X86rep_stos i32)], IIC_REP_STOS>, REP, OpSize32,
+                      [(X86rep_stos i32)]>, REP, OpSize32,
                      Requires<[Not64BitMode]>;
 }
 
 let Defs = [RCX,RDI], isCodeGenOnly = 1 in {
   let Uses = [AL,RCX,RDI] in
   def REP_STOSB_64 : I<0xAA, RawFrm, (outs), (ins), "{rep;stosb|rep stosb}",
-                      [(X86rep_stos i8)], IIC_REP_STOS>, REP,
-                     Requires<[In64BitMode]>;
+                       [(X86rep_stos i8)]>, REP,
+                       Requires<[In64BitMode]>;
   let Uses = [AX,RCX,RDI] in
   def REP_STOSW_64 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosw|rep stosw}",
-                      [(X86rep_stos i16)], IIC_REP_STOS>, REP, OpSize16,
-                     Requires<[In64BitMode]>;
+                       [(X86rep_stos i16)]>, REP, OpSize16,
+                       Requires<[In64BitMode]>;
   let Uses = [RAX,RCX,RDI] in
   def REP_STOSD_64 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosl|rep stosd}",
-                      [(X86rep_stos i32)], IIC_REP_STOS>, REP, OpSize32,
-                     Requires<[In64BitMode]>;
+                       [(X86rep_stos i32)]>, REP, OpSize32,
+                       Requires<[In64BitMode]>;
 
   let Uses = [RAX,RCX,RDI] in
   def REP_STOSQ_64 : RI<0xAB, RawFrm, (outs), (ins), "{rep;stosq|rep stosq}",
-                      [(X86rep_stos i64)], IIC_REP_STOS>, REP,
-                     Requires<[In64BitMode]>;
+                        [(X86rep_stos i64)]>, REP,
+                        Requires<[In64BitMode]>;
 }
 } // SchedRW
 
@@ -761,43 +758,39 @@ defm LOCK_DEC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM1m, "X86lock_dec", "dec">;
 
 // Atomic compare and swap.
 multiclass LCMPXCHG_UnOp<bits<8> Opc, Format Form, string mnemonic,
-                         SDPatternOperator frag, X86MemOperand x86memop,
-                         InstrItinClass itin> {
+                         SDPatternOperator frag, X86MemOperand x86memop> {
 let isCodeGenOnly = 1, usesCustomInserter = 1 in {
   def NAME : I<Opc, Form, (outs), (ins x86memop:$ptr),
                !strconcat(mnemonic, "\t$ptr"),
-               [(frag addr:$ptr)], itin>, TB, LOCK;
+               [(frag addr:$ptr)]>, TB, LOCK;
 }
 }
 
 multiclass LCMPXCHG_BinOp<bits<8> Opc8, bits<8> Opc, Format Form,
-                          string mnemonic, SDPatternOperator frag,
-                          InstrItinClass itin8, InstrItinClass itin> {
+                          string mnemonic, SDPatternOperator frag> {
 let isCodeGenOnly = 1, SchedRW = [WriteALULd, WriteRMW] in {
   let Defs = [AL, EFLAGS], Uses = [AL] in
   def NAME#8  : I<Opc8, Form, (outs), (ins i8mem:$ptr, GR8:$swap),
                   !strconcat(mnemonic, "{b}\t{$swap, $ptr|$ptr, $swap}"),
-                  [(frag addr:$ptr, GR8:$swap, 1)], itin8>, TB, LOCK;
+                  [(frag addr:$ptr, GR8:$swap, 1)]>, TB, LOCK;
   let Defs = [AX, EFLAGS], Uses = [AX] in
   def NAME#16 : I<Opc, Form, (outs), (ins i16mem:$ptr, GR16:$swap),
                   !strconcat(mnemonic, "{w}\t{$swap, $ptr|$ptr, $swap}"),
-                  [(frag addr:$ptr, GR16:$swap, 2)], itin>, TB, OpSize16, LOCK;
+                  [(frag addr:$ptr, GR16:$swap, 2)]>, TB, OpSize16, LOCK;
   let Defs = [EAX, EFLAGS], Uses = [EAX] in
   def NAME#32 : I<Opc, Form, (outs), (ins i32mem:$ptr, GR32:$swap),
                   !strconcat(mnemonic, "{l}\t{$swap, $ptr|$ptr, $swap}"),
-                  [(frag addr:$ptr, GR32:$swap, 4)], itin>, TB, OpSize32, LOCK;
+                  [(frag addr:$ptr, GR32:$swap, 4)]>, TB, OpSize32, LOCK;
   let Defs = [RAX, EFLAGS], Uses = [RAX] in
   def NAME#64 : RI<Opc, Form, (outs), (ins i64mem:$ptr, GR64:$swap),
                    !strconcat(mnemonic, "{q}\t{$swap, $ptr|$ptr, $swap}"),
-                   [(frag addr:$ptr, GR64:$swap, 8)], itin>, TB, LOCK;
+                   [(frag addr:$ptr, GR64:$swap, 8)]>, TB, LOCK;
 }
 }
 
 let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX],
     SchedRW = [WriteALULd, WriteRMW] in {
-defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b",
-                                X86cas8, i64mem,
-                                IIC_CMPX_LOCK_8B>;
+defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b", X86cas8, i64mem>;
 }
 
 // This pseudo must be used when the frame uses RBX as
@@ -827,16 +820,14 @@ def LCMPXCHG8B_SAVE_EBX :
       (ins i64mem:$ptr, GR32:$ebx_input, GR32:$ebx_save),
       !strconcat("cmpxchg8b", "\t$ptr"),
       [(set GR32:$dst, (X86cas8save_ebx addr:$ptr, GR32:$ebx_input,
-                                        GR32:$ebx_save))],
-      IIC_CMPX_LOCK_8B>;
+                                        GR32:$ebx_save))]>;
 }
 
 
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
     Predicates = [HasCmpxchg16b], SchedRW = [WriteALULd, WriteRMW] in {
 defm LCMPXCHG16B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg16b",
-                                 X86cas16, i128mem,
-                                 IIC_CMPX_LOCK_16B>, REX_W;
+                                 X86cas16, i128mem>, REX_W;
 }
 
 // Same as LCMPXCHG8B_SAVE_RBX but for the 16 Bytes variant.
@@ -849,52 +840,45 @@ def LCMPXCHG16B_SAVE_RBX :
       (ins i128mem:$ptr, GR64:$rbx_input, GR64:$rbx_save),
       !strconcat("cmpxchg16b", "\t$ptr"),
       [(set GR64:$dst, (X86cas16save_rbx addr:$ptr, GR64:$rbx_input,
-                                                    GR64:$rbx_save))],
-      IIC_CMPX_LOCK_16B>;
+                                                    GR64:$rbx_save))]>;
 }
 
-defm LCMPXCHG : LCMPXCHG_BinOp<0xB0, 0xB1, MRMDestMem, "cmpxchg",
-                               X86cas, IIC_CMPX_LOCK_8, IIC_CMPX_LOCK>;
+defm LCMPXCHG : LCMPXCHG_BinOp<0xB0, 0xB1, MRMDestMem, "cmpxchg", X86cas>;
 
 // Atomic exchange and add
 multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
-                             string frag,
-                             InstrItinClass itin8, InstrItinClass itin> {
+                             string frag> {
   let Constraints = "$val = $dst", Defs = [EFLAGS], isCodeGenOnly = 1,
       SchedRW = [WriteALULd, WriteRMW] in {
     def NAME#8  : I<opc8, MRMSrcMem, (outs GR8:$dst),
                     (ins GR8:$val, i8mem:$ptr),
                     !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
                     [(set GR8:$dst,
-                          (!cast<PatFrag>(frag # "_8") addr:$ptr, GR8:$val))],
-                    itin8>;
+                          (!cast<PatFrag>(frag # "_8") addr:$ptr, GR8:$val))]>;
     def NAME#16 : I<opc, MRMSrcMem, (outs GR16:$dst),
                     (ins GR16:$val, i16mem:$ptr),
                     !strconcat(mnemonic, "{w}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR16:$dst,
-                       (!cast<PatFrag>(frag # "_16") addr:$ptr, GR16:$val))],
-                    itin>, OpSize16;
+                       (!cast<PatFrag>(frag # "_16") addr:$ptr, GR16:$val))]>,
+                    OpSize16;
     def NAME#32 : I<opc, MRMSrcMem, (outs GR32:$dst),
                     (ins GR32:$val, i32mem:$ptr),
                     !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR32:$dst,
-                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))],
-                    itin>, OpSize32;
+                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>, 
+                    OpSize32;
     def NAME#64 : RI<opc, MRMSrcMem, (outs GR64:$dst),
                      (ins GR64:$val, i64mem:$ptr),
                      !strconcat(mnemonic, "{q}\t{$val, $ptr|$ptr, $val}"),
                      [(set
                         GR64:$dst,
-                        (!cast<PatFrag>(frag # "_64") addr:$ptr, GR64:$val))],
-                     itin>;
+                        (!cast<PatFrag>(frag # "_64") addr:$ptr, GR64:$val))]>;
   }
 }
 
-defm LXADD : ATOMIC_LOAD_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add",
-                               IIC_XADD_LOCK_MEM8, IIC_XADD_LOCK_MEM>,
-             TB, LOCK;
+defm LXADD : ATOMIC_LOAD_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
 
 /* The following multiclass tries to make sure that in code like
  *    x.store (immediate op x.load(acquire), release)

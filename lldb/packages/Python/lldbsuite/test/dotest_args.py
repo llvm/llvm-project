@@ -83,6 +83,8 @@ def create_parser():
         help=textwrap.dedent('''Specify the extra flags to be passed to the toolchain when building the inferior programs to be debugged
                                                            suggestions: do not lump the "-A arch1 -A arch2" together such that the -E option applies to only one of the architectures'''))
 
+    group.add_argument('--dsymutil', metavar='dsymutil', dest='dsymutil', help=textwrap.dedent('Specify which dsymutil to use.'))
+
     # Test filtering options
     group = parser.add_argument_group('Test filtering options')
     group.add_argument(

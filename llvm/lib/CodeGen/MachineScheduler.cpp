@@ -2561,11 +2561,12 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
 }
 #endif
 
+namespace llvm {
 /// Return true if this heuristic determines order.
-static bool tryLess(int TryVal, int CandVal,
-                    GenericSchedulerBase::SchedCandidate &TryCand,
-                    GenericSchedulerBase::SchedCandidate &Cand,
-                    GenericSchedulerBase::CandReason Reason) {
+bool tryLess(int TryVal, int CandVal,
+             GenericSchedulerBase::SchedCandidate &TryCand,
+             GenericSchedulerBase::SchedCandidate &Cand,
+             GenericSchedulerBase::CandReason Reason) {
   if (TryVal < CandVal) {
     TryCand.Reason = Reason;
     return true;
@@ -2578,10 +2579,10 @@ static bool tryLess(int TryVal, int CandVal,
   return false;
 }
 
-static bool tryGreater(int TryVal, int CandVal,
-                       GenericSchedulerBase::SchedCandidate &TryCand,
-                       GenericSchedulerBase::SchedCandidate &Cand,
-                       GenericSchedulerBase::CandReason Reason) {
+bool tryGreater(int TryVal, int CandVal,
+                GenericSchedulerBase::SchedCandidate &TryCand,
+                GenericSchedulerBase::SchedCandidate &Cand,
+                GenericSchedulerBase::CandReason Reason) {
   if (TryVal > CandVal) {
     TryCand.Reason = Reason;
     return true;
@@ -2594,9 +2595,9 @@ static bool tryGreater(int TryVal, int CandVal,
   return false;
 }
 
-static bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
-                       GenericSchedulerBase::SchedCandidate &Cand,
-                       SchedBoundary &Zone) {
+bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
+                GenericSchedulerBase::SchedCandidate &Cand,
+                SchedBoundary &Zone) {
   if (Zone.isTop()) {
     if (Cand.SU->getDepth() > Zone.getScheduledLatency()) {
       if (tryLess(TryCand.SU->getDepth(), Cand.SU->getDepth(),
@@ -2618,6 +2619,7 @@ static bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
   }
   return false;
 }
+} // end namespace llvm
 
 static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop) {
   DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
@@ -2772,13 +2774,14 @@ void GenericScheduler::registerRoots() {
   }
 }
 
-static bool tryPressure(const PressureChange &TryP,
-                        const PressureChange &CandP,
-                        GenericSchedulerBase::SchedCandidate &TryCand,
-                        GenericSchedulerBase::SchedCandidate &Cand,
-                        GenericSchedulerBase::CandReason Reason,
-                        const TargetRegisterInfo *TRI,
-                        const MachineFunction &MF) {
+namespace llvm {
+bool tryPressure(const PressureChange &TryP,
+                 const PressureChange &CandP,
+                 GenericSchedulerBase::SchedCandidate &TryCand,
+                 GenericSchedulerBase::SchedCandidate &Cand,
+                 GenericSchedulerBase::CandReason Reason,
+                 const TargetRegisterInfo *TRI,
+                 const MachineFunction &MF) {
   // If one candidate decreases and the other increases, go with it.
   // Invalid candidates have UnitInc==0.
   if (tryGreater(TryP.getUnitInc() < 0, CandP.getUnitInc() < 0, TryCand, Cand,
@@ -2811,7 +2814,7 @@ static bool tryPressure(const PressureChange &TryP,
   return tryGreater(TryRank, CandRank, TryCand, Cand, Reason);
 }
 
-static unsigned getWeakLeft(const SUnit *SU, bool isTop) {
+unsigned getWeakLeft(const SUnit *SU, bool isTop) {
   return (isTop) ? SU->WeakPredsLeft : SU->WeakSuccsLeft;
 }
 
@@ -2822,7 +2825,7 @@ static unsigned getWeakLeft(const SUnit *SU, bool isTop) {
 /// copies which can be prescheduled. The rest (e.g. x86 MUL) could be bundled
 /// with the operation that produces or consumes the physreg. We'll do this when
 /// regalloc has support for parallel copies.
-static int biasPhysRegCopy(const SUnit *SU, bool isTop) {
+int biasPhysRegCopy(const SUnit *SU, bool isTop) {
   const MachineInstr *MI = SU->getInstr();
   if (!MI->isCopy())
     return 0;
@@ -2842,6 +2845,7 @@ static int biasPhysRegCopy(const SUnit *SU, bool isTop) {
     return AtBoundary ? -1 : 1;
   return 0;
 }
+} // end namespace llvm
 
 void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
@@ -2892,7 +2896,7 @@ void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
 //              if Cand is from a different zone than TryCand.
 void GenericScheduler::tryCandidate(SchedCandidate &Cand,
                                     SchedCandidate &TryCand,
-                                    SchedBoundary *Zone) {
+                                    SchedBoundary *Zone) const {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
     TryCand.Reason = NodeOrder;

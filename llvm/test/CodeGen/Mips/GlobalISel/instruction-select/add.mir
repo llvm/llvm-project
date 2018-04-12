@@ -11,10 +11,6 @@ alignment:       2
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
 body:             |
   bb.0.entry:
     liveins: $a0, $a1
