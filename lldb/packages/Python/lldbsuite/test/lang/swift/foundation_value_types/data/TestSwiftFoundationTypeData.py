@@ -14,5 +14,4 @@ import lldbsuite.test.decorators as decorators
 
 lldbinline.MakeInlineTest(
     __file__, globals(), decorators=[
-        decorators.skipUnlessDarwin,
-        decorators.expectedFailureAll(bugnumber="https://bugs.swift.org/browse/SR-3320")])
+        decorators.skipUnlessDarwin])
