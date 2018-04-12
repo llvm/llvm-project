@@ -301,6 +301,12 @@ def parseOptionsAndInitTestdirs():
                     configuration.compiler = candidate
                     break
 
+    if args.dsymutil:
+      os.environ['DSYMUTIL'] = args.dsymutil
+    else if platform_system == 'Darwin':
+      os.environ['DSYMUTIL'] = seven.get_command_output(
+          'xcrun -find -toolchain default dsymutil')
+
     if args.channels:
         lldbtest_config.channels = args.channels
 
