@@ -11,7 +11,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 
 using namespace clang;
@@ -420,8 +419,8 @@ void UseAutoCheck::replaceExpr(
   SourceRange Range(Loc.getSourceRange());
 
   if (MinTypeNameLength != 0 &&
-      Lexer::MeasureTokenLength(Loc.getLocStart(), Context->getSourceManager(),
-                                getLangOpts()) < MinTypeNameLength)
+      tooling::fixit::getText(Loc.getSourceRange(), FirstDecl->getASTContext())
+              .size() < MinTypeNameLength)
     return;
 
   auto Diag = diag(Range.getBegin(), Message);

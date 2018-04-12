@@ -4,7 +4,8 @@
 define <4 x float> @truncf32(<4 x float> %a) {
 ; CHECK-LABEL: truncf32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvrspiz 34, 34
+; CHECK-NEXT:    xvcvspsxws 0, 34
+; CHECK-NEXT:    xvcvsxwsp 34, 0
 ; CHECK-NEXT:    blr
   %t0 = fptosi <4 x float> %a to <4 x i32>
   %t1 = sitofp <4 x i32> %t0 to <4 x float>
@@ -14,7 +15,8 @@ define <4 x float> @truncf32(<4 x float> %a) {
 define <2 x double> @truncf64(<2 x double> %a) {
 ; CHECK-LABEL: truncf64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvrdpiz 34, 34
+; CHECK-NEXT:    xvcvdpsxds 34, 34
+; CHECK-NEXT:    xvcvsxddp 34, 34
 ; CHECK-NEXT:    blr
   %t0 = fptosi <2 x double> %a to <2 x i64>
   %t1 = sitofp <2 x i64> %t0 to <2 x double>
@@ -24,7 +26,8 @@ define <2 x double> @truncf64(<2 x double> %a) {
 define <4 x float> @truncf32u(<4 x float> %a) {
 ; CHECK-LABEL: truncf32u:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvrspiz 34, 34
+; CHECK-NEXT:    xvcvspuxws 0, 34
+; CHECK-NEXT:    xvcvuxwsp 34, 0
 ; CHECK-NEXT:    blr
   %t0 = fptoui <4 x float> %a to <4 x i32>
   %t1 = uitofp <4 x i32> %t0 to <4 x float>
@@ -34,7 +37,8 @@ define <4 x float> @truncf32u(<4 x float> %a) {
 define <2 x double> @truncf64u(<2 x double> %a) {
 ; CHECK-LABEL: truncf64u:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvrdpiz 34, 34
+; CHECK-NEXT:    xvcvdpuxds 34, 34
+; CHECK-NEXT:    xvcvuxddp 34, 34
 ; CHECK-NEXT:    blr
   %t0 = fptoui <2 x double> %a to <2 x i64>
   %t1 = uitofp <2 x i64> %t0 to <2 x double>

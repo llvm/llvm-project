@@ -153,13 +153,13 @@ private:
       for (auto &S : Symbols) {
         if (auto Sym = findSymbol(*S)) {
           if (auto Addr = Sym.getAddress())
-            Query->setDefinition(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
+            Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
           else {
-            Query->setFailed(Addr.takeError());
+            Query->notifyFailed(Addr.takeError());
             return orc::SymbolNameSet();
           }
         } else if (auto Err = Sym.takeError()) {
-          Query->setFailed(std::move(Err));
+          Query->notifyFailed(std::move(Err));
           return orc::SymbolNameSet();
         } else
           UnresolvedSymbols.insert(S);

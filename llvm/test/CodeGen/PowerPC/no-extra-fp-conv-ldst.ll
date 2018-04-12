@@ -36,7 +36,11 @@ entry:
   ret float %conv1
 
 ; CHECK-LABEL: @foo
-; CHECK: friz 1, 1
+; CHECK-DAG: fctiwz [[REG2:[0-9]+]], 1
+; CHECK-DAG: addi [[REG1:[0-9]+]], 1,
+; CHECK: stfiwx [[REG2]], 0, [[REG1]]
+; CHECK: lfiwax [[REG3:[0-9]+]], 0, [[REG1]]
+; CHECK: fcfids 1, [[REG3]]
 ; CHECK: blr
 }
 
@@ -48,7 +52,11 @@ entry:
   ret double %conv1
 
 ; CHECK-LABEL: @food
-; CHECK: friz 1, 1
+; CHECK-DAG: fctiwz [[REG2:[0-9]+]], 1
+; CHECK-DAG: addi [[REG1:[0-9]+]], 1,
+; CHECK: stfiwx [[REG2]], 0, [[REG1]]
+; CHECK: lfiwax [[REG3:[0-9]+]], 0, [[REG1]]
+; CHECK: fcfid 1, [[REG3]]
 ; CHECK: blr
 }
 
@@ -60,7 +68,11 @@ entry:
   ret float %conv1
 
 ; CHECK-LABEL: @foou
-; CHECK: friz 1, 1
+; CHECK-DAG: fctiwuz [[REG2:[0-9]+]], 1
+; CHECK-DAG: addi [[REG1:[0-9]+]], 1,
+; CHECK: stfiwx [[REG2]], 0, [[REG1]]
+; CHECK: lfiwzx [[REG3:[0-9]+]], 0, [[REG1]]
+; CHECK: fcfidus 1, [[REG3]]
 ; CHECK: blr
 }
 
@@ -72,7 +84,11 @@ entry:
   ret double %conv1
 
 ; CHECK-LABEL: @fooud
-; CHECK: friz 1, 1
+; CHECK-DAG: fctiwuz [[REG2:[0-9]+]], 1
+; CHECK-DAG: addi [[REG1:[0-9]+]], 1,
+; CHECK: stfiwx [[REG2]], 0, [[REG1]]
+; CHECK: lfiwzx [[REG3:[0-9]+]], 0, [[REG1]]
+; CHECK: fcfidu 1, [[REG3]]
 ; CHECK: blr
 }
 

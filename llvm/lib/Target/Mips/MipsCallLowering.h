@@ -15,9 +15,7 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MIPSCALLLOWERING_H
 #define LLVM_LIB_TARGET_MIPS_MIPSCALLLOWERING_H
 
-#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/ValueTypes.h"
 
 namespace llvm {
 

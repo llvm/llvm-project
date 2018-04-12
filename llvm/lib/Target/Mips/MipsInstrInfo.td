@@ -2040,12 +2040,14 @@ def SDC2 : StdMMR6Rel, SW_FT2<"sdc2", COP2Opnd, II_SDC2, store>,
 
 // COP3 Memory Instructions
 let DecoderNamespace = "COP3_" in {
-  def LWC3 : LW_FT3<"lwc3", COP3Opnd, II_LWC3, load>, LW_FM<0x33>;
-  def SWC3 : SW_FT3<"swc3", COP3Opnd, II_SWC3, store>, LW_FM<0x3b>;
+  def LWC3 : LW_FT3<"lwc3", COP3Opnd, II_LWC3, load>, LW_FM<0x33>,
+             ISA_MIPS1_NOT_32R6_64R6, NOT_ASE_CNMIPS;
+  def SWC3 : SW_FT3<"swc3", COP3Opnd, II_SWC3, store>, LW_FM<0x3b>,
+             ISA_MIPS1_NOT_32R6_64R6, NOT_ASE_CNMIPS;
   def LDC3 : LW_FT3<"ldc3", COP3Opnd, II_LDC3, load>, LW_FM<0x37>,
-             ISA_MIPS2;
+             ISA_MIPS2, NOT_ASE_CNMIPS;
   def SDC3 : SW_FT3<"sdc3", COP3Opnd, II_SDC3, store>, LW_FM<0x3f>,
-             ISA_MIPS2;
+             ISA_MIPS2, NOT_ASE_CNMIPS;
 }
 
   def SYNC : MMRel, StdMMR6Rel, SYNC_FT<"sync">, SYNC_FM, ISA_MIPS2;

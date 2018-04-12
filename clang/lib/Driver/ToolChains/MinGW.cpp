@@ -453,11 +453,14 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  StringRef Slash = llvm::sys::path::get_separator();
+
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx:
+    addSystemInclude(DriverArgs, CC1Args, Base + Arch + Slash + "include" +
+                                              Slash + "c++" + Slash + "v1");
     addSystemInclude(DriverArgs, CC1Args,
-                     Base + "include" + llvm::sys::path::get_separator() +
-                         "c++" + llvm::sys::path::get_separator() + "v1");
+                     Base + "include" + Slash + "c++" + Slash + "v1");
     break;
 
   case ToolChain::CST_Libstdcxx:
@@ -472,7 +475,7 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     llvm::sys::path::append(CppIncludeBases[3], "include", "c++");
     for (auto &CppIncludeBase : CppIncludeBases) {
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
-      CppIncludeBase += llvm::sys::path::get_separator();
+      CppIncludeBase += Slash;
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + Arch);
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
     }

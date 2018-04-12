@@ -26,6 +26,13 @@
 namespace clang {
 namespace format {
 
+// Returns true if a TT_SelectorName should be indented when wrapped,
+// false otherwise.
+static bool shouldIndentWrappedSelectorName(const FormatStyle &Style,
+                                            LineType LineType) {
+  return Style.IndentWrappedFunctionNames || LineType == LT_ObjCMethodDecl;
+}
+
 // Returns the length of everything up to the first possible line break after
 // the ), ], } or > matching \c Tok.
 static unsigned getLengthToMatchingParen(const FormatToken &Tok) {
@@ -698,7 +705,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         State.Stack.back().AlignColons = false;
       } else {
         State.Stack.back().ColonPos =
-            (Style.IndentWrappedFunctionNames
+            (shouldIndentWrappedSelectorName(Style, State.Line->Type)
                  ? std::max(State.Stack.back().Indent,
                             State.FirstIndent + Style.ContinuationIndentWidth)
                  : State.Stack.back().Indent) +
@@ -897,7 +904,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (NextNonComment->is(TT_SelectorName)) {
     if (!State.Stack.back().ObjCSelectorNameFound) {
       unsigned MinIndent = State.Stack.back().Indent;
-      if (Style.IndentWrappedFunctionNames)
+      if (shouldIndentWrappedSelectorName(Style, State.Line->Type))
         MinIndent = std::max(MinIndent,
                              State.FirstIndent + Style.ContinuationIndentWidth);
       // If LongestObjCSelectorName is 0, we are indenting the first
@@ -1000,13 +1007,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   if (Current.isMemberAccess())
     State.Stack.back().StartOfFunctionCall =
         !Current.NextOperator ? 0 : State.Column;
-  if (Current.is(TT_SelectorName)) {
+  if (Current.is(TT_SelectorName))
     State.Stack.back().ObjCSelectorNameFound = true;
-    if (Style.IndentWrappedFunctionNames) {
-      State.Stack.back().Indent =
-          State.FirstIndent + Style.ContinuationIndentWidth;
-    }
-  }
   if (Current.is(TT_CtorInitializerColon) &&
       Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterColon) {
     // Indent 2 from the column, so:

@@ -16,7 +16,7 @@ entry:
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            green
-; CHECK-NEXT:     Payload:         '05677265656E626172717578'
+; CHECK-NEXT:     Payload:         '626172717578'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            red
-; CHECK-NEXT:     Payload:         037265646578747261666F6F
+; CHECK-NEXT:     Payload:         6578747261666F6F

@@ -52,11 +52,12 @@ public:
     Common = 1U << 2,
     Absolute = 1U << 3,
     Exported = 1U << 4,
-    NotMaterialized = 1U << 5
+    Lazy = 1U << 5,
+    Materializing = 1U << 6
   };
 
   static JITSymbolFlags stripTransientFlags(JITSymbolFlags Orig) {
-    return static_cast<FlagNames>(Orig.Flags & ~NotMaterialized);
+    return static_cast<FlagNames>(Orig.Flags & ~Lazy & ~Materializing);
   }
 
   /// @brief Default-construct a JITSymbolFlags instance.
@@ -75,9 +76,18 @@ public:
     return (Flags & HasError) == HasError;
   }
 
-  /// @brief Returns true if this symbol has been fully materialized (i.e. is
-  ///        callable).
-  bool isMaterialized() const { return !(Flags & NotMaterialized); }
+  /// @brief Returns true if this is a lazy symbol.
+  ///        This flag is used internally by the JIT APIs to track
+  ///        materialization states.
+  bool isLazy() const { return Flags & Lazy; }
+
+  /// @brief Returns true if this symbol is in the process of being
+  ///        materialized.
+  bool isMaterializing() const { return Flags & Materializing; }
+
+  /// @brief Returns true if this symbol is fully materialized.
+  ///        (i.e. neither lazy, nor materializing).
+  bool isMaterialized() const { return !(Flags & (Lazy | Materializing)); }
 
   /// @brief Returns true if the Weak flag is set.
   bool isWeak() const {

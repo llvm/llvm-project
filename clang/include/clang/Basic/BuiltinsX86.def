@@ -679,7 +679,8 @@ TARGET_BUILTIN(__builtin_ia32_clflushopt, "vvC*", "", "clflushopt")
 //CLWB
 TARGET_BUILTIN(__builtin_ia32_clwb, "vvC*", "", "clwb")
 
-//WBNOINVD
+//WB[NO]INVD
+TARGET_BUILTIN(__builtin_ia32_wbinvd, "v", "", "")
 TARGET_BUILTIN(__builtin_ia32_wbnoinvd, "v", "", "wbnoinvd")
 
 // ADX
