@@ -1059,6 +1059,18 @@ template <class ELFT> static void handleUndefined(StringRef Name) {
     Symtab->fetchLazy<ELFT>(Sym);
 }
 
+// If all references to a DSO happen to be weak, the DSO is not added
+// to DT_NEEDED. If that happens, we need to eliminate shared symbols
+// created from the DSO. Otherwise, they become dangling references
+// that point to a non-existent DSO.
+template <class ELFT> static void demoteSharedSymbols() {
+  for (Symbol *Sym : Symtab->getSymbols())
+    if (auto *S = dyn_cast<SharedSymbol>(Sym))
+      if (!S->getFile<ELFT>().IsNeeded)
+        replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
+                                 S->Type);
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
@@ -1219,6 +1231,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.
   markLive<ELFT>();
+  demoteSharedSymbols<ELFT>();
   decompressSections();
   mergeSections();
   if (Config->ICF)
