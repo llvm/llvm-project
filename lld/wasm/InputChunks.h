@@ -176,20 +176,22 @@ protected:
 // Represents a single Wasm Section within an input file.
 class InputSection : public InputChunk {
 public:
-  InputSection(const WasmSection &S, ObjFile *F);
+  InputSection(const WasmSection &S, ObjFile *F)
+      : InputChunk(F, InputChunk::Section), Section(S) {
+    assert(Section.Type == llvm::wasm::WASM_SEC_CUSTOM);
+  }
 
   StringRef getName() const override { return Section.Name; }
   uint32_t getComdat() const override { return UINT32_MAX; }
 
 protected:
-  ArrayRef<uint8_t> data() const override { return Payload; }
+  ArrayRef<uint8_t> data() const override { return Section.Content; }
 
   // Offset within the input section.  This is only zero since this chunk
   // type represents an entire input section, not part of one.
   uint32_t getInputSectionOffset() const override { return 0; }
 
   const WasmSection &Section;
-  ArrayRef<uint8_t> Payload;
 };
 
 } // namespace wasm

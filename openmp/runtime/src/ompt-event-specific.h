@@ -1,6 +1,3 @@
-#ifndef __OMPT_EVENT_SPECIFIC_H__
-#define __OMPT_EVENT_SPECIFIC_H__
-
 /******************************************************************************
  * File: ompt-event-specific.h
  *
@@ -9,6 +6,18 @@
  *   specify which of the OMPT events are implemented by this runtime system
  *   and the level of their implementation by a runtime system.
  *****************************************************************************/
+
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.txt for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef __OMPT_EVENT_SPECIFIC_H__
+#define __OMPT_EVENT_SPECIFIC_H__
 
 #define _ompt_tokenpaste_helper(x, y) x##y
 #define _ompt_tokenpaste(x, y) _ompt_tokenpaste_helper(x, y)

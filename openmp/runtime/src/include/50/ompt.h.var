@@ -2,6 +2,15 @@
  * include/50/ompt.h.var
  */
 
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.txt for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __OMPT__
 #define __OMPT__
 
