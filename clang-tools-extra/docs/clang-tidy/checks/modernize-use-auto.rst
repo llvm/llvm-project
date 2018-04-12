@@ -177,24 +177,6 @@ Known Limitations
 Options
 -------
 
-.. option:: RemoveStars
-
-   If the option is set to non-zero (default is `0`), the check will remove
-   stars from the non-typedef pointer types when replacing type names with
-   ``auto``. Otherwise, the check will leave stars. For example:
-
-.. code-block:: c++
-
-  TypeName *my_first_pointer = new TypeName, *my_second_pointer = new TypeName;
-
-  // RemoveStars = 0
-
-  auto *my_first_pointer = new TypeName, *my_second_pointer = new TypeName;
-
-  // RemoveStars = 1
-
-  auto my_first_pointer = new TypeName, my_second_pointer = new TypeName;
-
 .. option:: MinTypeNameLength
 
    If the option is set to non-zero (default `5`), the check will ignore type
@@ -214,3 +196,21 @@ Options
   int a = static_cast<int>(foo());            // ---> int  a = ...
   bool b = new bool;                          // ---> bool b = ...
   unsigned c = static_cast<unsigned>(foo());  // ---> auto c = ...
+
+.. option:: RemoveStars
+
+   If the option is set to non-zero (default is `0`), the check will remove
+   stars from the non-typedef pointer types when replacing type names with
+   ``auto``. Otherwise, the check will leave stars. For example:
+
+.. code-block:: c++
+
+  TypeName *my_first_pointer = new TypeName, *my_second_pointer = new TypeName;
+
+  // RemoveStars = 0
+
+  auto *my_first_pointer = new TypeName, *my_second_pointer = new TypeName;
+
+  // RemoveStars = 1
+
+  auto my_first_pointer = new TypeName, my_second_pointer = new TypeName;
