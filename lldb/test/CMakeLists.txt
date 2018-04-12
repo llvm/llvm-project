@@ -13,7 +13,7 @@ function(add_python_test_target name test_script args comment)
     )
 endfunction()
 
-set(LLDB_TEST_DEPS lldb)
+set(LLDB_TEST_DEPS lldb dsymutil)
 
 # darwin-debug is an hard dependency for the testsuite.
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -67,6 +67,7 @@ set(LLDB_TEST_USER_ARGS
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
   --executable $<TARGET_FILE:lldb>
+  --dsymutil $<TARGET_FILE:dsymutil>
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
   --build-dir

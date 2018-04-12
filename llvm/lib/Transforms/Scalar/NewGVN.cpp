@@ -1705,7 +1705,7 @@ bool NewGVN::isCycleFree(const Instruction *I) const {
   if (ICS == ICS_Unknown) {
     SCCFinder.Start(I);
     auto &SCC = SCCFinder.getComponentFor(I);
-    // It's cycle free if it's size 1 or or the SCC is *only* phi nodes.
+    // It's cycle free if it's size 1 or the SCC is *only* phi nodes.
     if (SCC.size() == 1)
       InstCycleState.insert({I, ICS_CycleFree});
     else {

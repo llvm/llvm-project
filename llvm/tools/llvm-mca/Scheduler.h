@@ -464,7 +464,7 @@ public:
   bool canBeDispatched(unsigned Idx, const InstrDesc &Desc) const;
   void scheduleInstruction(unsigned Idx, Instruction &MCIS);
 
-  void cycleEvent(unsigned Cycle);
+  void cycleEvent();
 
 #ifndef NDEBUG
   void dump() const;

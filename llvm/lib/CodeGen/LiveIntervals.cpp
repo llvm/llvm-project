@@ -785,7 +785,7 @@ MachineBasicBlock*
 LiveIntervals::intervalIsInOneMBB(const LiveInterval &LI) const {
   // A local live range must be fully contained inside the block, meaning it is
   // defined and killed at instructions, not at block boundaries. It is not
-  // live in or or out of any block.
+  // live in or out of any block.
   //
   // It is technically possible to have a PHI-defined live range identical to a
   // single block, but we are going to return false in that case.

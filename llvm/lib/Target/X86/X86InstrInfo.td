@@ -1127,21 +1127,21 @@ def trunc_su : PatFrag<(ops node:$src), (trunc node:$src), [{
 
 // Nop
 let hasSideEffects = 0, SchedRW = [WriteNop] in {
-  def NOOP : I<0x90, RawFrm, (outs), (ins), "nop", [], IIC_NOP>;
+  def NOOP : I<0x90, RawFrm, (outs), (ins), "nop", []>;
   def NOOPW : I<0x1f, MRMXm, (outs), (ins i16mem:$zero),
-                "nop{w}\t$zero", [], IIC_NOP>, TB, OpSize16;
+                "nop{w}\t$zero", []>, TB, OpSize16;
   def NOOPL : I<0x1f, MRMXm, (outs), (ins i32mem:$zero),
-                "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
+                "nop{l}\t$zero", []>, TB, OpSize32;
   def NOOPQ : RI<0x1f, MRMXm, (outs), (ins i64mem:$zero),
-                "nop{q}\t$zero", [], IIC_NOP>, TB,
+                "nop{q}\t$zero", []>, TB,
                 Requires<[In64BitMode]>;
   // Also allow register so we can assemble/disassemble
   def NOOPWr : I<0x1f, MRMXr, (outs), (ins GR16:$zero),
-                 "nop{w}\t$zero", [], IIC_NOP>, TB, OpSize16;
+                 "nop{w}\t$zero", []>, TB, OpSize16;
   def NOOPLr : I<0x1f, MRMXr, (outs), (ins GR32:$zero),
-                 "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
+                 "nop{l}\t$zero", []>, TB, OpSize32;
   def NOOPQr : RI<0x1f, MRMXr, (outs), (ins GR64:$zero),
-                  "nop{q}\t$zero", [], IIC_NOP>, TB,
+                  "nop{q}\t$zero", []>, TB,
                   Requires<[In64BitMode]>;
 }
 
@@ -2053,15 +2053,15 @@ def LOCK_PREFIX : I<0xF0, RawFrm, (outs),  (ins), "lock", []>;
 let SchedRW = [WriteNop] in {
 
 // Rex64 instruction prefix
-def REX64_PREFIX : I<0x48, RawFrm, (outs),  (ins), "rex64", [], IIC_NOP>,
+def REX64_PREFIX : I<0x48, RawFrm, (outs),  (ins), "rex64", []>,
                      Requires<[In64BitMode]>;
 
 // Data16 instruction prefix
-def DATA16_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data16", [], IIC_NOP>,
+def DATA16_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data16", []>,
                      Requires<[Not16BitMode]>;
 
 // Data instruction prefix
-def DATA32_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data32", [], IIC_NOP>,
+def DATA32_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data32", []>,
                      Requires<[In16BitMode]>;
 } // SchedRW
 

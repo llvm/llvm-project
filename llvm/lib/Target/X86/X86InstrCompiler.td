@@ -35,7 +35,7 @@ def GetLo8XForm : SDNodeXForm<imm, [{
 let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP, SSP],
     SchedRW = [WriteJump] in
   def MOVPC32r : Ii32<0xE8, Pseudo, (outs GR32:$reg), (ins i32imm:$label),
-                      "", [], IIC_CALL_RI>;
+                      "", []>;
 
 
 // ADJCALLSTACKDOWN/UP implicitly use/def ESP because they may be expanded into
@@ -163,7 +163,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, isCodeGenOnly = 1 in {
 def EH_RETURN   : I<0xC3, RawFrm, (outs), (ins GR32:$addr),
                     "ret\t#eh_return, addr: $addr",
-                    [(X86ehret GR32:$addr)], IIC_RET>, Sched<[WriteJumpLd]>;
+                    [(X86ehret GR32:$addr)]>, Sched<[WriteJumpLd]>;
 
 }
 
@@ -171,7 +171,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, isCodeGenOnly = 1 in {
 def EH_RETURN64   : I<0xC3, RawFrm, (outs), (ins GR64:$addr),
                      "ret\t#eh_return, addr: $addr",
-                     [(X86ehret GR64:$addr)], IIC_RET>, Sched<[WriteJumpLd]>;
+                     [(X86ehret GR64:$addr)]>, Sched<[WriteJumpLd]>;
 
 }
 
@@ -256,14 +256,12 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
 // this so that we don't have to have a MachineBasicBlock which ends
 // with a RET and also has successors.
 let isPseudo = 1, SchedRW = [WriteJumpLd] in {
-def MORESTACK_RET: I<0, Pseudo, (outs), (ins),
-                          "", [], IIC_RET>;
+def MORESTACK_RET: I<0, Pseudo, (outs), (ins), "", []>;
 
 // This instruction is lowered to a RET followed by a MOV.  The two
 // instructions are not generated on a higher level since then the
 // verifier sees a MachineBasicBlock ending with a non-terminator.
-def MORESTACK_RET_RESTORE_R10 : I<0, Pseudo, (outs), (ins),
-                                  "", [], IIC_RET>;
+def MORESTACK_RET_RESTORE_R10 : I<0, Pseudo, (outs), (ins), "", []>;
 }
 
 //===----------------------------------------------------------------------===//

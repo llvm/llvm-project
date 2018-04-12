@@ -944,7 +944,7 @@ COFFObjectFile::getPE32PlusHeader(const pe32plus_header *&Res) const {
 std::error_code
 COFFObjectFile::getDataDirectory(uint32_t Index,
                                  const data_directory *&Res) const {
-  // Error if if there's no data directory or the index is out of range.
+  // Error if there's no data directory or the index is out of range.
   if (!DataDirectory) {
     Res = nullptr;
     return object_error::parse_failed;

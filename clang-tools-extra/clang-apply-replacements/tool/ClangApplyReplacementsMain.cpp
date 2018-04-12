@@ -97,16 +97,13 @@ int main(int argc, char **argv) {
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts.get());
 
   // Determine a formatting style from options.
-  format::FormatStyle FormatStyle;
-  if (DoFormat) {
-    auto FormatStyleOrError =
-        format::getStyle(FormatStyleOpt, FormatStyleConfig, "LLVM");
-    if (!FormatStyleOrError) {
-      llvm::errs() << llvm::toString(FormatStyleOrError.takeError()) << "\n";
-      return 1;
-    }
-    FormatStyle = *FormatStyleOrError;
+  auto FormatStyleOrError =
+      format::getStyle(FormatStyleOpt, FormatStyleConfig, "LLVM");
+  if (!FormatStyleOrError) {
+    llvm::errs() << llvm::toString(FormatStyleOrError.takeError()) << "\n";
+    return 1;
   }
+  format::FormatStyle FormatStyle = std::move(*FormatStyleOrError);
 
   TUReplacements TURs;
   TUReplacementFiles TUFiles;

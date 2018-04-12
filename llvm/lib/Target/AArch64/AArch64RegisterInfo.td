@@ -489,24 +489,24 @@ def V128_lo : RegisterOperand<FPR128_lo, "printVRegOperand"> {
   let ParserMatchClass = VectorRegLoAsmOperand;
 }
 
-class TypedVecListAsmOperand<int count, int regsize, int lanes, string kind>
+class TypedVecListAsmOperand<int count, int regsize, int lanes, int eltsize>
     : AsmOperandClass {
-  let Name = "TypedVectorList" # count # "_" # lanes # kind;
+  let Name = "TypedVectorList" # count # "_" # lanes # eltsize;
 
   let PredicateMethod
-      = "isTypedVectorList<" # count # ", " # lanes # ", '" # kind # "'>";
+      = "isTypedVectorList<RegKind::NeonVector, " # count # ", " # lanes # ", " # eltsize # ">";
   let RenderMethod = "addVectorList" # regsize # "Operands<" # count # ">";
 }
 
-class TypedVecListRegOperand<RegisterClass Reg, int lanes, string kind>
+class TypedVecListRegOperand<RegisterClass Reg, int lanes, string eltsize>
     : RegisterOperand<Reg, "printTypedVectorList<" # lanes # ", '"
-                                                   # kind # "'>">;
+                                                   # eltsize # "'>">;
 
 multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
   // With implicit types (probably on instruction instead). E.g. { v0, v1 }
   def _64AsmOperand : AsmOperandClass {
     let Name = NAME # "64";
-    let PredicateMethod = "isImplicitlyTypedVectorList<" # count # ">";
+    let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ">";
     let RenderMethod = "addVectorList64Operands<" # count # ">";
   }
 
@@ -516,7 +516,7 @@ multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
 
   def _128AsmOperand : AsmOperandClass {
     let Name = NAME # "128";
-    let PredicateMethod = "isImplicitlyTypedVectorList<" # count # ">";
+    let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ">";
     let RenderMethod = "addVectorList128Operands<" # count # ">";
   }
 
@@ -527,25 +527,25 @@ multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
   // 64-bit register lists with explicit type.
 
   // { v0.8b, v1.8b }
-  def _8bAsmOperand : TypedVecListAsmOperand<count, 64, 8, "b">;
+  def _8bAsmOperand : TypedVecListAsmOperand<count, 64, 8, 8>;
   def "8b" : TypedVecListRegOperand<Reg64, 8, "b"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_8bAsmOperand");
   }
 
   // { v0.4h, v1.4h }
-  def _4hAsmOperand : TypedVecListAsmOperand<count, 64, 4, "h">;
+  def _4hAsmOperand : TypedVecListAsmOperand<count, 64, 4, 16>;
   def "4h" : TypedVecListRegOperand<Reg64, 4, "h"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_4hAsmOperand");
   }
 
   // { v0.2s, v1.2s }
-  def _2sAsmOperand : TypedVecListAsmOperand<count, 64, 2, "s">;
+  def _2sAsmOperand : TypedVecListAsmOperand<count, 64, 2, 32>;
   def "2s" : TypedVecListRegOperand<Reg64, 2, "s"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_2sAsmOperand");
   }
 
   // { v0.1d, v1.1d }
-  def _1dAsmOperand : TypedVecListAsmOperand<count, 64, 1, "d">;
+  def _1dAsmOperand : TypedVecListAsmOperand<count, 64, 1, 64>;
   def "1d" : TypedVecListRegOperand<Reg64, 1, "d"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_1dAsmOperand");
   }
@@ -553,49 +553,49 @@ multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
   // 128-bit register lists with explicit type
 
   // { v0.16b, v1.16b }
-  def _16bAsmOperand : TypedVecListAsmOperand<count, 128, 16, "b">;
+  def _16bAsmOperand : TypedVecListAsmOperand<count, 128, 16, 8>;
   def "16b" : TypedVecListRegOperand<Reg128, 16, "b"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_16bAsmOperand");
   }
 
   // { v0.8h, v1.8h }
-  def _8hAsmOperand : TypedVecListAsmOperand<count, 128, 8, "h">;
+  def _8hAsmOperand : TypedVecListAsmOperand<count, 128, 8, 16>;
   def "8h" : TypedVecListRegOperand<Reg128, 8, "h"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_8hAsmOperand");
   }
 
   // { v0.4s, v1.4s }
-  def _4sAsmOperand : TypedVecListAsmOperand<count, 128, 4, "s">;
+  def _4sAsmOperand : TypedVecListAsmOperand<count, 128, 4, 32>;
   def "4s" : TypedVecListRegOperand<Reg128, 4, "s"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_4sAsmOperand");
   }
 
   // { v0.2d, v1.2d }
-  def _2dAsmOperand : TypedVecListAsmOperand<count, 128, 2, "d">;
+  def _2dAsmOperand : TypedVecListAsmOperand<count, 128, 2, 64>;
   def "2d" : TypedVecListRegOperand<Reg128, 2, "d"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_2dAsmOperand");
   }
 
   // { v0.b, v1.b }
-  def _bAsmOperand : TypedVecListAsmOperand<count, 128, 0, "b">;
+  def _bAsmOperand : TypedVecListAsmOperand<count, 128, 0, 8>;
   def "b" : TypedVecListRegOperand<Reg128, 0, "b"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_bAsmOperand");
   }
 
   // { v0.h, v1.h }
-  def _hAsmOperand : TypedVecListAsmOperand<count, 128, 0, "h">;
+  def _hAsmOperand : TypedVecListAsmOperand<count, 128, 0, 16>;
   def "h" : TypedVecListRegOperand<Reg128, 0, "h"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_hAsmOperand");
   }
 
   // { v0.s, v1.s }
-  def _sAsmOperand : TypedVecListAsmOperand<count, 128, 0, "s">;
+  def _sAsmOperand : TypedVecListAsmOperand<count, 128, 0, 32>;
   def "s" : TypedVecListRegOperand<Reg128, 0, "s"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_sAsmOperand");
   }
 
   // { v0.d, v1.d }
-  def _dAsmOperand : TypedVecListAsmOperand<count, 128, 0, "d">;
+  def _dAsmOperand : TypedVecListAsmOperand<count, 128, 0, 64>;
   def "d" : TypedVecListRegOperand<Reg128, 0, "d"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_dAsmOperand");
   }

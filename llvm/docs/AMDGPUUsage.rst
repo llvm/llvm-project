@@ -2269,7 +2269,7 @@ VGPR register initial state is defined in
                 > 1)                              wavefront lane.
      ========== ========================== ====== ==============================
 
-The setting of registers is is done by GPU CP/ADC/SPI hardware as follows:
+The setting of registers is done by GPU CP/ADC/SPI hardware as follows:
 
 1. SGPRs before the Work-Group Ids are set by CP using the 16 User Data
    registers.
