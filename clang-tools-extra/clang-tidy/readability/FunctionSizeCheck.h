@@ -33,6 +33,8 @@ namespace readability {
 ///     level after `NestingThreshold`. This may differ significantly from the
 ///     expected value for macro-heavy code. The default is `-1` (ignore the
 ///     nesting level).
+///   * `VariableThreshold` - flag functions having a high number of variable
+///     declarations. The default is `-1` (ignore the number of variables).
 class FunctionSizeCheck : public ClangTidyCheck {
 public:
   FunctionSizeCheck(StringRef Name, ClangTidyContext *Context);
@@ -47,6 +49,7 @@ private:
   const unsigned BranchThreshold;
   const unsigned ParameterThreshold;
   const unsigned NestingThreshold;
+  const unsigned VariableThreshold;
 };
 
 } // namespace readability

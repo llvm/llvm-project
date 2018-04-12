@@ -158,6 +158,11 @@ Improvements to clang-tidy
   <clang-tidy/checks/cppcoreguidelines-avoid-goto>`
   added.
 
+- Added `VariableThreshold` option to :doc:`readability-function-size
+  <clang-tidy/checks/readability-function-size>` check
+
+  Flags functions that have more than a specified number of variables declared in the body.
+
 - Adding the missing bitwise assignment operations to 
   :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp-signed-bitwise>`.
 
