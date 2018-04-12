@@ -675,7 +675,11 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
 
 void Instruction::applyMergedLocation(const DILocation *LocA,
                                       const DILocation *LocB) {
-  setDebugLoc(DILocation::getMergedLocation(LocA, LocB, this));
+  // Note: There is a divergence from upstream llvm here. Due to a bug, we may
+  // generate an incorrect location for dbginfo intrinsics (the inline scopes
+  // are wrong) here. See: rdar://38225089 and rdar://37605718.
+  setDebugLoc(DILocation::getMergedLocation(
+      LocA, LocB, DILocation::WithGeneratedLocation, this));
 }
 
 //===----------------------------------------------------------------------===//

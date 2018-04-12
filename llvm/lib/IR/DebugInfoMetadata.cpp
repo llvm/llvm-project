@@ -69,16 +69,17 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                    Storage, Context.pImpl->DILocations);
 }
 
-const DILocation *
-DILocation::getMergedLocation(const DILocation *LocA, const DILocation *LocB,
-                              const Instruction *ForInst) {
+const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
+                                                const DILocation *LocB,
+                                                bool GenerateLocation,
+                                                Instruction *ForInst) {
   if (!LocA || !LocB)
     return nullptr;
 
   if (LocA == LocB || !LocA->canDiscriminate(*LocB))
     return LocA;
 
-  if (!dyn_cast_or_null<CallInst>(ForInst))
+  if (!GenerateLocation)
     return nullptr;
 
   // We cannot change the scope for debug info intrinsics.

@@ -6,7 +6,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Simplify CFG will try to sink the last instruction in a series of basic
 ; blocks, creating a "common" instruction in the successor block.  If the
 ; debug locations of the commoned instructions have different file/line
-; numbers the debug location of the common instruction should not be set.
+; numbers the debug location of the common instruction should be a merged
+; location.
 
 ; Generated from source:
 
@@ -24,8 +25,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: define i32 @test
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call1, %if.else ], [ %call, %if.then ]
-; CHECK: sub nsw i32 %b, %[[PHI]]
-; CHECK-NOT: !dbg
+; CHECK: sub nsw i32 %b, %[[PHI]], !dbg [[testMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @test(i32 %a, i32 %b) !dbg !6 {
@@ -61,9 +61,8 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i32 @test2
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call1, %if.else ], [ %call, %if.then ]
-; CHECK: sub nsw i32 %b, %[[PHI]], !dbg ![[DBG:.*]]
+; CHECK: sub nsw i32 %b, %[[PHI]], !dbg [[test2Loc:![0-9]+]]
 ; CHECK: ret i32
-; CHECK: ![[DBG]] = !DILocation(line: 17, scope: !{{.*}})
 
 define i32 @test2(i32 %a, i32 %b) !dbg !15 {
 entry:
@@ -84,6 +83,9 @@ if.end:                                           ; preds = %if.else, %if.then
   %b.addr.0 = phi i32 [ %sub, %if.then ], [ %sub2, %if.else ]
   ret i32 %b.addr.0, !dbg !17
 }
+
+; CHECK: [[testMergedLoc]] = !DILocation(line: 0
+; CHECK: [[test2Loc]] = !DILocation(line: 17
 
 declare i32 @foo()
 declare i32 @bar()

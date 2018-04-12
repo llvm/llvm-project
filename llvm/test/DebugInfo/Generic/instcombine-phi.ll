@@ -5,8 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; If all the operands to a phi node are of the same operation, instcombine
 ; will try to pull them through the phi node, combining them into a single
-; operation.  Check that when it does this the combined operation does not
-; have a debug location set.
+; operation. Check that when it does this the combined operation has a merged
+; debug location.
 
 ; Test folding of a binary operation.  Generated from source:
 
@@ -24,8 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: define i32 @binop
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: sub nsw i32 %b, %[[PHI]]
-; CHECK-NOT: !dbg
+; CHECK: sub nsw i32 %b, %[[PHI]], !dbg [[binopMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @binop(i32 %a, i32 %b) !dbg !6 {
@@ -66,8 +65,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i32 @cmp
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: icmp slt i32 %[[PHI]], %b
-; CHECK-NOT: !dbg
+; CHECK: icmp slt i32 %[[PHI]], %b, !dbg [[cmpMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @cmp(i32 %a, i32 %b) !dbg !15 {
@@ -108,8 +106,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i32* @gep
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i64 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: getelementptr inbounds i32, i32* %b, i64 %[[PHI]]
-; CHECK-NOT: !dbg
+; CHECK: getelementptr inbounds i32, i32* %b, i64 %[[PHI]], !dbg [[gepMergedLoc:![0-9]+]]
 ; CHECK: ret i32*
 
 define i32* @gep(i32 %a, i32* %b) !dbg !23 {
@@ -149,8 +146,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i32 @load
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32* [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: load i32, i32* %[[PHI]]
-; CHECK-NOT: !dbg
+; CHECK: load i32, i32* %[[PHI]],{{.*}} !dbg [[loadMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @load(i32 %a) !dbg !31 {
@@ -190,8 +186,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i64 @cast
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: sext i32 %[[PHI]] to i64
-; CHECK-NOT: !dbg
+; CHECK: sext i32 %[[PHI]] to i64, !dbg [[castMergedLoc:![0-9]+]]
 ; CHECK: ret i64
 
 define i64 @cast(i32 %a) !dbg !39 {
@@ -231,8 +226,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i32 @binop_const
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: add nsw i32 %[[PHI]], -5
-; CHECK-NOT: !dbg
+; CHECK: add nsw i32 %[[PHI]], -5, !dbg [[binopConstMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @binop_const(i32 %a) !dbg !45 {
@@ -273,8 +267,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define i32 @cmp_const
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i32 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: icmp slt i32 %[[PHI]], 10
-; CHECK-NOT: !dbg
+; CHECK: icmp slt i32 %[[PHI]], 10, !dbg [[cmpConstMergedLoc:![0-9]+]]
 ; CHECK: ret i32
 
 define i32 @cmp_const(i32 %a) !dbg !53 {
@@ -304,6 +297,14 @@ declare i64 @foo2()
 declare i64 @bar2()
 declare i32* @foo3()
 declare i32* @bar3()
+
+; CHECK: [[binopMergedLoc]] = !DILocation(line: 0
+; CHECK: [[cmpMergedLoc]] = !DILocation(line: 0
+; CHECK: [[gepMergedLoc]] = !DILocation(line: 0
+; CHECK: [[loadMergedLoc]] = !DILocation(line: 0
+; CHECK: [[castMergedLoc]] = !DILocation(line: 0
+; CHECK: [[binopConstMergedLoc]] = !DILocation(line: 0
+; CHECK: [[cmpConstMergedLoc]] = !DILocation(line: 0
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
