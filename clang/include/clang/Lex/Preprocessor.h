@@ -1041,12 +1041,14 @@ public:
 
   macro_iterator macro_begin(bool IncludeExternalMacros = true) const;
   macro_iterator macro_end(bool IncludeExternalMacros = true) const;
-  llvm::iterator_range<macro_iterator>
 
+  llvm::iterator_range<macro_iterator>
   macros(bool IncludeExternalMacros = true) const {
-    return llvm::make_range(macro_begin(IncludeExternalMacros),
-                            macro_end(IncludeExternalMacros));
+    macro_iterator begin = macro_begin(IncludeExternalMacros);
+    macro_iterator end = macro_end(IncludeExternalMacros);
+    return llvm::make_range(begin, end);
   }
+
   /// \}
 
   /// \brief Return the name of the macro defined before \p Loc that has

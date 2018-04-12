@@ -56,6 +56,7 @@ public:
 private:
   SmallVector<char, 0> SV;
   std::string BufferName;
+  void anchor() override;
 };
 
 } // namespace llvm

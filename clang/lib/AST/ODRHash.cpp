@@ -646,9 +646,19 @@ public:
     AddDecl(T->getDecl());
     QualType UnderlyingType = T->getDecl()->getUnderlyingType();
     VisitQualifiers(UnderlyingType.getQualifiers());
-    while (const TypedefType *Underlying =
-               dyn_cast<TypedefType>(UnderlyingType.getTypePtr())) {
-      UnderlyingType = Underlying->getDecl()->getUnderlyingType();
+    while (true) {
+      if (const TypedefType *Underlying =
+              dyn_cast<TypedefType>(UnderlyingType.getTypePtr())) {
+        UnderlyingType = Underlying->getDecl()->getUnderlyingType();
+        continue;
+      }
+      if (const ElaboratedType *Underlying =
+              dyn_cast<ElaboratedType>(UnderlyingType.getTypePtr())) {
+        UnderlyingType = Underlying->getNamedType();
+        continue;
+      }
+
+      break;
     }
     AddType(UnderlyingType.getTypePtr());
     VisitType(T);

@@ -28,6 +28,8 @@
 
 using namespace llvm;
 
+void llvm::ObjectMemoryBuffer::anchor() {}
+
 namespace {
 
 static struct RegisterJIT {
@@ -665,3 +667,5 @@ LinkingSymbolResolver::findSymbol(const std::string &Name) {
     return nullptr;
   return ClientResolver->findSymbol(Name);
 }
+
+void LinkingSymbolResolver::anchor() {}

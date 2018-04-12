@@ -916,8 +916,14 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
 
     // Reconstruct the AttributesList based on the vector we constructed.
     assert(ArgAttrVec.size() == Args.size());
+
+    // Again, be sure to remove any allocsize attributes, since their indices
+    // may now be incorrect.
+    AttributeSet FnAttrs = CallPAL.getFnAttributes().removeAttribute(
+        F->getContext(), Attribute::AllocSize);
+
     AttributeList NewCallPAL = AttributeList::get(
-        F->getContext(), CallPAL.getFnAttributes(), RetAttrs, ArgAttrVec);
+        F->getContext(), FnAttrs, RetAttrs, ArgAttrVec);
 
     SmallVector<OperandBundleDef, 1> OpBundles;
     CS.getOperandBundlesAsDefs(OpBundles);

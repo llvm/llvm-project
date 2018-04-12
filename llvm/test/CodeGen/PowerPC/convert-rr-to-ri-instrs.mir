@@ -571,6 +571,16 @@
   }
 
   ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLDICLo3(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shr = lshr i64 %a, 11
+    %and = and i64 %shr, 16777215
+    %tobool = icmp eq i64 %and, 0
+    %cond = select i1 %tobool, i64 %b, i64 %and
+    ret i64 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testRLWINM(i32 zeroext %a) local_unnamed_addr #0 {
   entry:
     %shl = shl i32 %a, 4
@@ -3969,6 +3979,60 @@ body:             |
     %2 = RLDICLo %0, 61, 3, implicit-def $cr0
     ; CHECK-NOT: ANDI
     ; CHECK-LATE-NOT: andi.
+    %3 = COPY killed $cr0
+    %4 = ISEL8 %1, %2, %3.sub_eq
+    $x3 = COPY %4
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLDICLo3
+# CHECK-ALL: name: testRLDICLo3
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 3, class: crrc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = LI8 2
+    %2 = RLDICLo %0, 32, 32, implicit-def $cr0
+    ; CHECK: ANDIo8 %0, 0
+    ; CHECK-LATE: li 3, 2
+    ; CHECK-LATE: andi. 3, 3, 0
     %3 = COPY killed $cr0
     %4 = ISEL8 %1, %2, %3.sub_eq
     $x3 = COPY %4

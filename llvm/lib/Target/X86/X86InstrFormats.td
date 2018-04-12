@@ -875,53 +875,53 @@ class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 
 // FMA3 Instruction Templates
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
-           list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
+           list<dag>pattern>
+      : I<o, F, outs, ins, asm, pattern>, T8PD,
         VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoVLX]>;
 class FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
+            list<dag>pattern>
+      : I<o, F, outs, ins, asm, pattern>, T8PD,
         VEX_4V, FMASC, Requires<[HasFMA, NoFMA4, NoAVX512]>;
 class FMA3S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
-                list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
+                list<dag>pattern>
+      : I<o, F, outs, ins, asm, pattern>, T8PD,
         VEX_4V, FMASC, Requires<[HasFMA, NoAVX512]>;
 
 // FMA4 Instruction Templates
 class FMA4<bits<8> o, Format F, dag outs, dag ins, string asm,
-           list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
+           list<dag>pattern>
+      : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
         VEX_4V, FMASC, Requires<[HasFMA4, NoVLX]>;
 class FMA4S<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
+            list<dag>pattern>
+      : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
         VEX_4V, FMASC, Requires<[HasFMA4, NoAVX512]>;
 class FMA4S_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
-                list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
+                list<dag>pattern>
+      : Ii8Reg<o, F, outs, ins, asm, pattern>, TAPD,
         VEX_4V, FMASC, Requires<[HasFMA4]>;
 
 // XOP 2, 3 and 4 Operand Instruction Template
 class IXOP<bits<8> o, Format F, dag outs, dag ins, string asm,
-           list<dag> pattern, InstrItinClass itin = NoItinerary>
-      : I<o, F, outs, ins, asm, pattern, itin, SSEPackedDouble>,
+           list<dag> pattern>
+      : I<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedDouble>,
          XOP9, Requires<[HasXOP]>;
 
 // XOP 2 and 3 Operand Instruction Templates with imm byte
 class IXOPi8<bits<8> o, Format F, dag outs, dag ins, string asm,
-           list<dag> pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedDouble>,
+           list<dag> pattern>
+      : Ii8<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedDouble>,
          XOP8, Requires<[HasXOP]>;
 // XOP 4 Operand Instruction Templates with imm byte
 class IXOPi8Reg<bits<8> o, Format F, dag outs, dag ins, string asm,
-           list<dag> pattern, InstrItinClass itin = NoItinerary>
-      : Ii8Reg<o, F, outs, ins, asm, pattern, itin, SSEPackedDouble>,
+           list<dag> pattern>
+      : Ii8Reg<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedDouble>,
          XOP8, Requires<[HasXOP]>;
 
 //  XOP 5 operand instruction (VEX encoding!)
 class IXOP5<bits<8> o, Format F, dag outs, dag ins, string asm,
-           list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8Reg<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
+           list<dag>pattern>
+      : Ii8Reg<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedInt>, TAPD,
         VEX_4V, Requires<[HasXOP]>;
 
 // X86-64 Instruction templates...
