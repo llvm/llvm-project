@@ -57,7 +57,7 @@ struct ImplicitT {
 int main()
 {
     {
-        typedef std::pair<int, short> P1;
+        typedef std::pair<int, int> P1;
         typedef std::pair<double, long> P2;
         const P1 p1(3, 4);
         const P2 p2 = p1;
@@ -154,7 +154,7 @@ int main()
     }
 #if TEST_STD_VER > 11
     {
-        typedef std::pair<int, short> P1;
+        typedef std::pair<int, int> P1;
         typedef std::pair<double, long> P2;
         constexpr P1 p1(3, 4);
         constexpr P2 p2 = p1;
