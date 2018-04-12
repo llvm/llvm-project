@@ -303,7 +303,7 @@ def parseOptionsAndInitTestdirs():
 
     if args.dsymutil:
       os.environ['DSYMUTIL'] = args.dsymutil
-    else if platform_system == 'Darwin':
+    elif platform_system == 'Darwin':
       os.environ['DSYMUTIL'] = seven.get_command_output(
           'xcrun -find -toolchain default dsymutil')
 
