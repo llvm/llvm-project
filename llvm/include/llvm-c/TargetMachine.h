@@ -137,6 +137,14 @@ LLVMBool LLVMTargetMachineEmitToMemoryBuffer(LLVMTargetMachineRef T, LLVMModuleR
   disposed with LLVMDisposeMessage. */
 char* LLVMGetDefaultTargetTriple(void);
 
+/** Get the host CPU as a string. The result needs to be disposed with
+  LLVMDisposeMessage. */
+char* LLVMGetHostCPUName(void);
+
+/** Get the host CPU's features as a string. The result needs to be disposed
+  with LLVMDisposeMessage. */
+char* LLVMGetHostCPUFeatures(void);
+
 /** Adds the target-specific analysis passes to the pass manager. */
 void LLVMAddAnalysisPasses(LLVMTargetMachineRef T, LLVMPassManagerRef PM);
 

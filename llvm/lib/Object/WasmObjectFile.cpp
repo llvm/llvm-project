@@ -178,6 +178,11 @@ static Error readSection(WasmSection &Section, const uint8_t *&Ptr,
   if (Ptr + Size > Eof)
     return make_error<StringError>("Section too large",
                                    object_error::parse_failed);
+  if (Section.Type == wasm::WASM_SEC_CUSTOM) {
+    const uint8_t *NameStart = Ptr;
+    Section.Name = readString(Ptr);
+    Size -= Ptr - NameStart;
+  }
   Section.Content = ArrayRef<uint8_t>(Ptr, Size);
   Ptr += Size;
   return Error::success();
@@ -618,7 +623,6 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
 
 Error WasmObjectFile::parseCustomSection(WasmSection &Sec,
                                          const uint8_t *Ptr, const uint8_t *End) {
-  Sec.Name = readString(Ptr);
   if (Sec.Name == "name") {
     if (Error Err = parseNameSection(Ptr, End))
       return Err;

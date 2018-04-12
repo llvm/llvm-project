@@ -60,6 +60,11 @@
 // CLWB: "-target-feature" "+clwb"
 // NO-CLWB: "-target-feature" "-clwb"
 
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mwbnoinvd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=WBNOINVD %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-wbnoinvd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-WBNOINVD %s
+// WBNOINVD: "-target-feature" "+wbnoinvd"
+// NO-WBNOINVD: "-target-feature" "-wbnoinvd"
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mmovbe %s -### -o %t.o 2>&1 | FileCheck -check-prefix=MOVBE %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-movbe %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-MOVBE %s
 // MOVBE: "-target-feature" "+movbe"

@@ -249,6 +249,8 @@ def FeatureCLFLUSHOPT : SubtargetFeature<"clflushopt", "HasCLFLUSHOPT", "true",
                                       "Flush A Cache Line Optimized">;
 def FeatureCLWB    : SubtargetFeature<"clwb", "HasCLWB", "true",
                                       "Cache Line Write Back">;
+def FeatureWBNOINVD    : SubtargetFeature<"wbnoinvd", "HasWBNOINVD", "true",
+                                      "Write Back No Invalidate">;
 def FeatureRDPID : SubtargetFeature<"rdpid", "HasRDPID", "true",
                                     "Support RDPID instructions">;
 // On some processors, instructions that implicitly take two memory operands are
@@ -825,6 +827,7 @@ def : IcelakeClientProc<"icelake-client">;
 class IcelakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  ICLFeatures.Value, [
   ProcIntelICX,
+  FeatureWBNOINVD,
   FeatureHasFastGather
 ]>;
 def : IcelakeServerProc<"icelake-server">;

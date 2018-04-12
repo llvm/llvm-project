@@ -12,10 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsLegalizerInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Type.h"
 
 using namespace llvm;
 

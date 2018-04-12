@@ -1559,6 +1559,10 @@ ptwriteq 0xdeadbeef(%rbx,%rcx,8)
 // CHECK:  encoding: [0xf3,0x48,0x0f,0xae,0xe0]
 ptwriteq %rax
 
+// CHECK: wbnoinvd
+// CHECK:  encoding: [0xf3,0x0f,0x09]
+wbnoinvd
+
 //  __asm __volatile(
 //    "pushf        \n\t"
 //    "popf       \n\t"

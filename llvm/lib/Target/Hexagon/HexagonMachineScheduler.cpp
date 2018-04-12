@@ -451,10 +451,6 @@ void ConvergingVLIWScheduler::VLIWSchedBoundary::removeReady(SUnit *SU) {
   }
 }
 
-static unsigned getWeakLeft(const SUnit *SU, bool IsTop) {
-  return (IsTop) ? SU->WeakPredsLeft : SU->WeakSuccsLeft;
-}
-
 /// If this queue only has one ready candidate, return it. As a side effect,
 /// advance the cycle until at least one node is ready. If multiple instructions
 /// are ready, return NULL.

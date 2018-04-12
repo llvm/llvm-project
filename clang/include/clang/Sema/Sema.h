@@ -3800,7 +3800,11 @@ public:
     CES_Strict = 0,
     CES_AllowParameters = 1,
     CES_AllowDifferentTypes = 2,
+    CES_AllowExceptionVariables = 4,
+    CES_FormerDefault = (CES_AllowParameters),
     CES_Default = (CES_AllowParameters | CES_AllowDifferentTypes),
+    CES_AsIfByStdMove = (CES_AllowParameters | CES_AllowDifferentTypes |
+                         CES_AllowExceptionVariables),
   };
 
   VarDecl *getCopyElisionCandidate(QualType ReturnType, Expr *E,

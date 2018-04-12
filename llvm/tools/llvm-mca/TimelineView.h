@@ -162,7 +162,7 @@ public:
   }
 
   // Event handlers.
-  void onCycleBegin(unsigned Cycle) override { CurrentCycle = Cycle; }
+  void onCycleEnd() override { ++CurrentCycle; }
   void onInstructionEvent(const HWInstructionEvent &Event) override;
 
   // print functionalities.

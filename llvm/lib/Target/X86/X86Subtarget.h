@@ -360,6 +360,9 @@ protected:
   /// Processor supports Cache Line Write Back instruction
   bool HasCLWB;
 
+  /// Processor supports Write Back No Invalidate instruction
+  bool HasWBNOINVD;
+
   /// Processor support RDPID instruction
   bool HasRDPID;
 
@@ -621,6 +624,7 @@ public:
   bool hasIBT() const { return HasIBT; }
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
   bool hasCLWB() const { return HasCLWB; }
+  bool hasWBNOINVD() const { return HasWBNOINVD; }
   bool hasRDPID() const { return HasRDPID; }
   bool useRetpoline() const { return UseRetpoline; }
   bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }

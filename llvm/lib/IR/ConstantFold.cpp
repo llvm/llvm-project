@@ -321,7 +321,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     if (ByteStart == 0 && ByteSize*8 == SrcBitSize)
       return CE->getOperand(0);
 
-    // If extracting something completely in the input, if if the input is a
+    // If extracting something completely in the input, if the input is a
     // multiple of 8 bits, recurse.
     if ((SrcBitSize&7) == 0 && (ByteStart+ByteSize)*8 <= SrcBitSize)
       return ExtractConstantBytes(CE->getOperand(0), ByteStart, ByteSize);

@@ -284,7 +284,7 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
   ReadyQueue[Idx] = &MCIS;
 }
 
-void Scheduler::cycleEvent(unsigned /* unused */) {
+void Scheduler::cycleEvent() {
   SmallVector<ResourceRef, 8> ResourcesFreed;
   Resources->cycleEvent(ResourcesFreed);
 

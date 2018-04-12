@@ -9409,7 +9409,12 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_TO_SINT:         return LowerFP_TO_INT(Op, DAG,
                                                       SDLoc(Op));
   case ISD::UINT_TO_FP:
-  case ISD::SINT_TO_FP:         return LowerINT_TO_FP(Op, DAG);
+  case ISD::SINT_TO_FP:
+    // Conversions to f128 are legal.
+    if (EnableQuadPrecision && (Op->getValueType(0) == MVT::f128))
+      return Op;
+    return LowerINT_TO_FP(Op, DAG);
+
   case ISD::FLT_ROUNDS_:        return LowerFLT_ROUNDS_(Op, DAG);
 
   // Lower 64-bit shifts.

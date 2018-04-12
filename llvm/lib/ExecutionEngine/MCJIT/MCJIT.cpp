@@ -665,3 +665,5 @@ LinkingSymbolResolver::findSymbol(const std::string &Name) {
     return nullptr;
   return ClientResolver->findSymbol(Name);
 }
+
+void LinkingSymbolResolver::anchor() {}

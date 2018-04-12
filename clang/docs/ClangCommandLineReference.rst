@@ -2484,6 +2484,8 @@ X86
 
 .. option:: -mvpclmulqdq, -mno-vpclmulqdq
 
+.. option:: -mwbnoinvd, -mno-wbnoinvd
+
 .. option:: -mx87, -m80387, -mno-x87
 
 .. option:: -mxop, -mno-xop

@@ -520,6 +520,13 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+reserved-r19");
   }
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_fvectorize,
+                                     options::OPT_fno_vectorize)) {
+    if (A->getOption().matches(options::OPT_fvectorize)) {
+      CC1Args.push_back("-mllvm");
+      CC1Args.push_back("-hexagon-autohvx");
+    }
+  }
 }
 
 void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

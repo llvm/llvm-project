@@ -527,6 +527,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   bool needsFrameMoves = MMI.hasDebugInfo() || F.needsUnwindTableEntry();
   bool HasFP = hasFP(MF);
 
+  // At this point, we're going to decide whether or not the function uses a
+  // redzone. In most cases, the function doesn't have a redzone so let's
+  // assume that's false and set it to true in the case that there's a redzone.
+  AFI->setHasRedZone(false);
+
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
@@ -551,7 +556,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       AFI->setHasRedZone(true);
       ++NumRedZoneFunctions;
     } else {
-      AFI->setHasRedZone(false);
       emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP, -NumBytes, TII,
                       MachineInstr::FrameSetup);
 

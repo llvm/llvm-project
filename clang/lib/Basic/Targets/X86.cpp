@@ -154,6 +154,8 @@ bool X86TargetInfo::initFeatureMap(
     break;
 
   case CK_IcelakeServer:
+    setFeatureEnabledImpl(Features, "wbnoinvd", true);
+    LLVM_FALLTHROUGH;
   case CK_IcelakeClient:
     setFeatureEnabledImpl(Features, "vaes", true);
     setFeatureEnabledImpl(Features, "gfni", true);
@@ -792,6 +794,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCLFLUSHOPT = true;
     } else if (Feature == "+clwb") {
       HasCLWB = true;
+    } else if (Feature == "+wbnoinvd") {
+      HasWBNOINVD = true;
     } else if (Feature == "+prefetchwt1") {
       HasPREFETCHWT1 = true;
     } else if (Feature == "+clzero") {
@@ -1134,6 +1138,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CLFLUSHOPT__");
   if (HasCLWB)
     Builder.defineMacro("__CLWB__");
+  if (HasWBNOINVD)
+    Builder.defineMacro("__WBNOINVD__");
   if (HasMPX)
     Builder.defineMacro("__MPX__");
   if (HasSHSTK)
@@ -1297,6 +1303,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("tbm", true)
       .Case("vaes", true)
       .Case("vpclmulqdq", true)
+      .Case("wbnoinvd", true)
       .Case("x87", true)
       .Case("xop", true)
       .Case("xsave", true)
@@ -1371,6 +1378,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("tbm", HasTBM)
       .Case("vaes", HasVAES)
       .Case("vpclmulqdq", HasVPCLMULQDQ)
+      .Case("wbnoinvd", HasWBNOINVD)
       .Case("x86", true)
       .Case("x86_32", getTriple().getArch() == llvm::Triple::x86)
       .Case("x86_64", getTriple().getArch() == llvm::Triple::x86_64)

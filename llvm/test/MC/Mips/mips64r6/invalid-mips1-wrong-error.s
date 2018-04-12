@@ -15,3 +15,5 @@
         lwre      $zero,-19147($gp)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         swle      $15,13694($s3)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         swre      $s1,-26590($14)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lwc3      $12, 4($4)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        swc3      $12, 4($4)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

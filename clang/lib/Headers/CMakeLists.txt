@@ -95,6 +95,7 @@ set(files
   varargs.h
   vecintrin.h
   vpclmulqdqintrin.h
+  wbnoinvdintrin.h
   wmmintrin.h
   __wmmintrin_aes.h
   __wmmintrin_pclmul.h

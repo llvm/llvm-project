@@ -47,6 +47,9 @@ public:
   /// newly loaded object.
   virtual void notifyObjectLoaded(ExecutionEngine *EE,
                                   const object::ObjectFile &) {}
+
+private:
+  void anchor() override;
 };
 
 // RuntimeDyld clients often want to handle the memory management of
@@ -142,6 +145,9 @@ protected:
   };
   typedef std::vector<EHFrame> EHFrameInfos;
   EHFrameInfos EHFrames;
+
+private:
+  void anchor() override;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
