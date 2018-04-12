@@ -425,15 +425,28 @@ static Printable PrintNodeId(const SDNode &Node) {
 
 // Print the MMO with more information from the SelectionDAG.
 static void printMemOperand(raw_ostream &OS, const MachineMemOperand &MMO,
-                            const SelectionDAG *G) {
-  const MachineFunction &MF = G->getMachineFunction();
-  const Function &F = MF.getFunction();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetInstrInfo *TII = G->getSubtarget().getInstrInfo();
-  ModuleSlotTracker MST(F.getParent());
-  MST.incorporateFunction(F);
+                            const MachineFunction *MF, const Module *M,
+                            const MachineFrameInfo *MFI,
+                            const TargetInstrInfo *TII, LLVMContext &Ctx) {
+  ModuleSlotTracker MST(M);
+  if (MF)
+    MST.incorporateFunction(MF->getFunction());
   SmallVector<StringRef, 0> SSNs;
-  MMO.print(OS, MST, SSNs, *G->getContext(), &MFI, TII);
+  MMO.print(OS, MST, SSNs, Ctx, MFI, TII);
+}
+
+static void printMemOperand(raw_ostream &OS, const MachineMemOperand &MMO,
+                            const SelectionDAG *G) {
+  if (G) {
+    const MachineFunction *MF = &G->getMachineFunction();
+    return printMemOperand(OS, MMO, MF, MF->getFunction().getParent(),
+                           &MF->getFrameInfo(), G->getSubtarget().getInstrInfo(),
+                           *G->getContext());
+  } else {
+    LLVMContext Ctx;
+    return printMemOperand(OS, MMO, /*MF=*/nullptr, /*M=*/nullptr,
+                           /*MFI=*/nullptr, /*TII=*/nullptr, Ctx);
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

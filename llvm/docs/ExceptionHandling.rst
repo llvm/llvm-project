@@ -365,7 +365,7 @@ abstract interface.
 
 When used in the native Windows C++ exception handling implementation, this
 intrinsic serves as a placeholder to delimit code before a catch handler is
-outlined.  When the handler is is outlined, this intrinsic will be replaced
+outlined.  When the handler is outlined, this intrinsic will be replaced
 by instructions that retrieve the exception object pointer from the frame
 allocation block.
 

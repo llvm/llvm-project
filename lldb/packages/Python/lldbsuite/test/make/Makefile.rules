@@ -147,7 +147,7 @@ ARCHFLAG ?= -arch
 # Change any build/tool options needed
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
-	DS := $(shell xcrun -find -toolchain default dsymutil)
+	DS := $(DSYMUTIL)
 	DSFLAGS =
 	DSYM = $(EXE).dSYM
 	AR := $(CROSS_COMPILE)libtool
@@ -668,7 +668,7 @@ endif
 
 #----------------------------------------------------------------------
 # From http://blog.melski.net/tag/debugging-makefiles/
-# 
+#
 # Usage: make print-CC print-CXX print-LD
 #----------------------------------------------------------------------
 print-%:

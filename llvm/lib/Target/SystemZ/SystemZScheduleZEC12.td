@@ -24,9 +24,6 @@ def ZEC12Model : SchedMachineModel {
 
     // Extra cycles for a mispredicted branch.
     let MispredictPenalty = 16;
-
-    // FIXME: Remove when all errors have been fixed.
-    let FullInstRWOverlapCheck = 0;
 }
 
 let SchedModel = ZEC12Model in  {
@@ -567,7 +564,8 @@ def : InstRW<[LSU, LSU, Lat5, GroupAlone], (instregex "LPD(G)?$")>;
 def : InstRW<[LSU, Lat30, GroupAlone], (instregex "TR$")>;
 def : InstRW<[FXU, FXU, FXU, LSU, LSU, Lat30, GroupAlone], (instregex "TRT$")>;
 def : InstRW<[FXU, LSU, Lat30], (instregex "TRTR$")>;
-def : InstRW<[FXU, Lat30], (instregex "TR(TR)?(T)?(E|EOpt)?$")>;
+def : InstRW<[FXU, Lat30], (instregex "TRE$")>;
+def : InstRW<[FXU, Lat30], (instregex "TRT(R)?E(Opt)?$")>;
 def : InstRW<[LSU, Lat30], (instregex "TR(T|O)(T|O)(Opt)?$")>;
 def : InstRW<[FXU, Lat30], (instregex "CU(12|14|21|24|41|42)(Opt)?$")>;
 def : InstRW<[FXU, Lat30], (instregex "(CUUTF|CUTFU)(Opt)?$")>;

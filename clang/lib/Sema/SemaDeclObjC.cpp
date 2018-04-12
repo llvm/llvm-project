@@ -341,6 +341,13 @@ void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
   if (!MDecl)
     return;
 
+  QualType ResultType = MDecl->getReturnType();
+  if (!ResultType->isDependentType() && !ResultType->isVoidType() &&
+      !MDecl->isInvalidDecl() &&
+      RequireCompleteType(MDecl->getLocation(), ResultType,
+                          diag::err_func_def_incomplete_result))
+    MDecl->setInvalidDecl();
+
   // Allow all of Sema to see that we are entering a method definition.
   PushDeclContext(FnBodyScope, MDecl);
   PushFunctionScope();

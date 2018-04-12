@@ -55,7 +55,7 @@ for.inc:
 ; CHECK-LABEL: test_inc_ne
 ; CHECK: main.exit.selector:
 ; CHECK: [[PSEUDO_PHI:%[^ ]+]] = phi i32 [ %inc, %for.inc ]
-; CHECK: [[COND:%[^ ]+]] = icmp slt i32 [[PSEUDO_PHI]], %N
+; CHECK: [[COND:%[^ ]+]] = icmp ult i32 [[PSEUDO_PHI]], %N
 ; CHECK: br i1 [[COND]], label %main.pseudo.exit, label %for.cond.cleanup.loopexit
 define void @test_inc_ne(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:

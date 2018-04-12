@@ -186,7 +186,11 @@ a:
         sb        $s6,-19857($14)
         sc        $15,18904($s3)       # CHECK: sc $15, 18904($19)     # encoding: [0xe2,0x6f,0x49,0xd8]
         sdbbp                          # CHECK: sdbbp                  # encoding: [0x70,0x00,0x00,0x3f]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SDBBP
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SDBBP_MM
         sdbbp     34                   # CHECK: sdbbp 34               # encoding: [0x70,0x00,0x08,0xbf]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SDBBP
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SDBBP_MM
         sdc1      $f31,30574($13)
         sdc2      $20,23157($s2)       # CHECK: sdc2 $20, 23157($18)   # encoding: [0xfa,0x54,0x5a,0x75]
         sgt       $4, $5               # CHECK: slt $4, $5, $4         # encoding: [0x00,0xa4,0x20,0x2a]
@@ -245,9 +249,17 @@ a:
         tgeu      $22,$28              # CHECK: tgeu $22, $gp          # encoding: [0x02,0xdc,0x00,0x31]
         tgeu      $20,$14,379          # CHECK: tgeu $20, $14, 379     # encoding: [0x02,0x8e,0x5e,0xf1]
         tlbp                           # CHECK: tlbp                   # encoding: [0x42,0x00,0x00,0x08]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBP
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBP_MM
         tlbr                           # CHECK: tlbr                   # encoding: [0x42,0x00,0x00,0x01]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBR
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBR_MM
         tlbwi                          # CHECK: tlbwi                  # encoding: [0x42,0x00,0x00,0x02]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBWI
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBWI_MM
         tlbwr                          # CHECK: tlbwr                  # encoding: [0x42,0x00,0x00,0x06]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBWR
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBWR_MM
         tlt       $15,$13              # CHECK: tlt $15, $13           # encoding: [0x01,0xed,0x00,0x32]
         tlt       $2,$19,133           # CHECK: tlt $2, $19, 133       # encoding: [0x00,0x53,0x21,0x72]
         tlti      $14,-21059

@@ -12,106 +12,72 @@
 //
 //===----------------------------------------------------------------------===//
 
-let Sched = WriteFAdd in {
-def I3DNOW_FALU_ITINS : OpndItins<
-  IIC_3DNOW_FALU_RR, IIC_3DNOW_FALU_RM
->;
+class I3DNow<bits<8> o, Format F, dag outs, dag ins, string asm, list<dag> pat>
+      : I<o, F, outs, ins, asm, pat>, Requires<[Has3DNow]> {
 }
 
-let Sched = WriteCvtF2I in {
-def I3DNOW_FCVT_F2I_ITINS : OpndItins<
-  IIC_3DNOW_FCVT_F2I_RR, IIC_3DNOW_FCVT_F2I_RM
->;
-}
-
-let Sched = WriteCvtI2F in {
-def I3DNOW_FCVT_I2F_ITINS : OpndItins<
-  IIC_3DNOW_FCVT_I2F_RR, IIC_3DNOW_FCVT_I2F_RM
->;
-}
-
-let Sched = WriteVecIMul in {
-def I3DNOW_MISC_FUNC_ITINS : OpndItins<
-  IIC_3DNOW_MISC_FUNC_REG, IIC_3DNOW_MISC_FUNC_MEM
->;
-}
-
-let Sched = WriteShuffle in {
-def I3DNOW_PSHUF_ITINS : OpndItins<
-  IIC_MMX_PSHUF, IIC_MMX_PSHUF
->;
-}
-
-class I3DNow<bits<8> o, Format F, dag outs, dag ins, string asm, list<dag> pat,
-             InstrItinClass itin>
-      : I<o, F, outs, ins, asm, pat, itin>, Requires<[Has3DNow]> {
-}
-
-class I3DNow_binop<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat,
-                   InstrItinClass itin>
+class I3DNow_binop<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat>
       : I3DNow<o, F, (outs VR64:$dst), ins,
-          !strconcat(Mnemonic, "\t{$src2, $dst|$dst, $src2}"), pat, itin>,
-        ThreeDNow {
+          !strconcat(Mnemonic, "\t{$src2, $dst|$dst, $src2}"), pat>, ThreeDNow {
   let Constraints = "$src1 = $dst";
 }
 
-class I3DNow_conv<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat,
-                  InstrItinClass itin>
+class I3DNow_conv<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat>
       : I3DNow<o, F, (outs VR64:$dst), ins,
-          !strconcat(Mnemonic, "\t{$src, $dst|$dst, $src}"), pat, itin>,
-        ThreeDNow;
+          !strconcat(Mnemonic, "\t{$src, $dst|$dst, $src}"), pat>, ThreeDNow;
 
-multiclass I3DNow_binop_rm_int<bits<8> opc, string Mn, OpndItins itins,
-                               bit Commutable = 0, string Ver = ""> {
+multiclass I3DNow_binop_rm_int<bits<8> opc, string Mn,
+                               X86FoldableSchedWrite sched, bit Commutable = 0,
+                               string Ver = ""> {
   let isCommutable = Commutable in
   def rr : I3DNow_binop<opc, MRMSrcReg, (ins VR64:$src1, VR64:$src2), Mn,
     [(set VR64:$dst, (!cast<Intrinsic>(
-      !strconcat("int_x86_3dnow", Ver, "_", Mn)) VR64:$src1, VR64:$src2))],
-      itins.rr>, Sched<[itins.Sched]>;
+      !strconcat("int_x86_3dnow", Ver, "_", Mn)) VR64:$src1, VR64:$src2))]>,
+      Sched<[sched]>;
   def rm : I3DNow_binop<opc, MRMSrcMem, (ins VR64:$src1, i64mem:$src2), Mn,
     [(set VR64:$dst, (!cast<Intrinsic>(
       !strconcat("int_x86_3dnow", Ver, "_", Mn)) VR64:$src1,
-        (bitconvert (load_mmx addr:$src2))))], itins.rm>,
-        Sched<[itins.Sched.Folded, ReadAfterLd]>;
+        (bitconvert (load_mmx addr:$src2))))]>,
+        Sched<[sched.Folded, ReadAfterLd]>;
 }
 
-multiclass I3DNow_conv_rm_int<bits<8> opc, string Mn, OpndItins itins,
-                              string Ver = ""> {
+multiclass I3DNow_conv_rm_int<bits<8> opc, string Mn,
+                              X86FoldableSchedWrite sched, string Ver = ""> {
   def rr : I3DNow_conv<opc, MRMSrcReg, (ins VR64:$src), Mn,
     [(set VR64:$dst, (!cast<Intrinsic>(
-      !strconcat("int_x86_3dnow", Ver, "_", Mn)) VR64:$src))], itins.rr>,
-      Sched<[itins.Sched]>;
+      !strconcat("int_x86_3dnow", Ver, "_", Mn)) VR64:$src))]>,
+      Sched<[sched]>;
   def rm : I3DNow_conv<opc, MRMSrcMem, (ins i64mem:$src), Mn,
     [(set VR64:$dst, (!cast<Intrinsic>(
       !strconcat("int_x86_3dnow", Ver, "_", Mn))
-        (bitconvert (load_mmx addr:$src))))], itins.rm>,
-        Sched<[itins.Sched.Folded, ReadAfterLd]>;
+        (bitconvert (load_mmx addr:$src))))]>,
+        Sched<[sched.Folded, ReadAfterLd]>;
 }
 
-defm PAVGUSB  : I3DNow_binop_rm_int<0xBF, "pavgusb", I3DNOW_MISC_FUNC_ITINS, 1>;
-defm PF2ID    : I3DNow_conv_rm_int<0x1D, "pf2id", I3DNOW_FCVT_F2I_ITINS>;
-defm PFACC    : I3DNow_binop_rm_int<0xAE, "pfacc", I3DNOW_FALU_ITINS>;
-defm PFADD    : I3DNow_binop_rm_int<0x9E, "pfadd", I3DNOW_FALU_ITINS, 1>;
-defm PFCMPEQ  : I3DNow_binop_rm_int<0xB0, "pfcmpeq", I3DNOW_FALU_ITINS, 1>;
-defm PFCMPGE  : I3DNow_binop_rm_int<0x90, "pfcmpge", I3DNOW_FALU_ITINS>;
-defm PFCMPGT  : I3DNow_binop_rm_int<0xA0, "pfcmpgt", I3DNOW_FALU_ITINS>;
-defm PFMAX    : I3DNow_binop_rm_int<0xA4, "pfmax", I3DNOW_FALU_ITINS>;
-defm PFMIN    : I3DNow_binop_rm_int<0x94, "pfmin", I3DNOW_FALU_ITINS>;
-defm PFMUL    : I3DNow_binop_rm_int<0xB4, "pfmul", I3DNOW_FALU_ITINS, 1>;
-defm PFRCP    : I3DNow_conv_rm_int<0x96, "pfrcp", I3DNOW_FALU_ITINS>;
-defm PFRCPIT1 : I3DNow_binop_rm_int<0xA6, "pfrcpit1", I3DNOW_FALU_ITINS>;
-defm PFRCPIT2 : I3DNow_binop_rm_int<0xB6, "pfrcpit2", I3DNOW_FALU_ITINS>;
-defm PFRSQIT1 : I3DNow_binop_rm_int<0xA7, "pfrsqit1", I3DNOW_FALU_ITINS>;
-defm PFRSQRT  : I3DNow_conv_rm_int<0x97, "pfrsqrt", I3DNOW_FALU_ITINS>;
-defm PFSUB    : I3DNow_binop_rm_int<0x9A, "pfsub", I3DNOW_FALU_ITINS, 1>;
-defm PFSUBR   : I3DNow_binop_rm_int<0xAA, "pfsubr", I3DNOW_FALU_ITINS, 1>;
-defm PI2FD    : I3DNow_conv_rm_int<0x0D, "pi2fd", I3DNOW_FCVT_I2F_ITINS>;
-defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", I3DNOW_MISC_FUNC_ITINS, 1>;
+defm PAVGUSB  : I3DNow_binop_rm_int<0xBF, "pavgusb", WriteVecIMul, 1>;
+defm PF2ID    : I3DNow_conv_rm_int<0x1D, "pf2id", WriteCvtF2I>;
+defm PFACC    : I3DNow_binop_rm_int<0xAE, "pfacc", WriteFAdd>;
+defm PFADD    : I3DNow_binop_rm_int<0x9E, "pfadd", WriteFAdd, 1>;
+defm PFCMPEQ  : I3DNow_binop_rm_int<0xB0, "pfcmpeq", WriteFAdd, 1>;
+defm PFCMPGE  : I3DNow_binop_rm_int<0x90, "pfcmpge", WriteFAdd>;
+defm PFCMPGT  : I3DNow_binop_rm_int<0xA0, "pfcmpgt", WriteFAdd>;
+defm PFMAX    : I3DNow_binop_rm_int<0xA4, "pfmax", WriteFAdd>;
+defm PFMIN    : I3DNow_binop_rm_int<0x94, "pfmin", WriteFAdd>;
+defm PFMUL    : I3DNow_binop_rm_int<0xB4, "pfmul", WriteFAdd, 1>;
+defm PFRCP    : I3DNow_conv_rm_int<0x96, "pfrcp", WriteFAdd>;
+defm PFRCPIT1 : I3DNow_binop_rm_int<0xA6, "pfrcpit1", WriteFAdd>;
+defm PFRCPIT2 : I3DNow_binop_rm_int<0xB6, "pfrcpit2", WriteFAdd>;
+defm PFRSQIT1 : I3DNow_binop_rm_int<0xA7, "pfrsqit1", WriteFAdd>;
+defm PFRSQRT  : I3DNow_conv_rm_int<0x97, "pfrsqrt", WriteFAdd>;
+defm PFSUB    : I3DNow_binop_rm_int<0x9A, "pfsub", WriteFAdd, 1>;
+defm PFSUBR   : I3DNow_binop_rm_int<0xAA, "pfsubr", WriteFAdd, 1>;
+defm PI2FD    : I3DNow_conv_rm_int<0x0D, "pi2fd", WriteCvtI2F>;
+defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", WriteVecIMul, 1>;
 
 // FIXME: Is there a better scheduler class for EMMS/FEMMS?
 let SchedRW = [WriteMicrocoded] in
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
-                   [(int_x86_mmx_femms)], IIC_MMX_EMMS>, TB;
+                   [(int_x86_mmx_femms)]>, TB;
 
 // PREFETCHWT1 is supported we want to use it for everything but T0.
 def PrefetchWLevel : PatFrag<(ops), (i32 imm), [{
@@ -127,21 +93,20 @@ let SchedRW = [WriteLoad] in {
 let Predicates = [Has3DNow, NoSSEPrefetch] in
 def PREFETCH : I3DNow<0x0D, MRM0m, (outs), (ins i8mem:$addr),
                       "prefetch\t$addr",
-                      [(prefetch addr:$addr, imm, imm, (i32 1))],
-                      IIC_SSE_PREFETCH>, TB;
+                      [(prefetch addr:$addr, imm, imm, (i32 1))]>, TB;
 
 def PREFETCHW : I<0x0D, MRM1m, (outs), (ins i8mem:$addr), "prefetchw\t$addr",
-                  [(prefetch addr:$addr, (i32 1), (i32 PrefetchWLevel), (i32 1))],
-                  IIC_SSE_PREFETCH>, TB, Requires<[HasPrefetchW]>;
+                  [(prefetch addr:$addr, (i32 1), (i32 PrefetchWLevel), (i32 1))]>,
+                  TB, Requires<[HasPrefetchW]>;
 
 def PREFETCHWT1 : I<0x0D, MRM2m, (outs), (ins i8mem:$addr), "prefetchwt1\t$addr",
-                    [(prefetch addr:$addr, (i32 1), (i32 PrefetchWT1Level), (i32 1))],
-                    IIC_SSE_PREFETCH>, TB, Requires<[HasPREFETCHWT1]>;
+                    [(prefetch addr:$addr, (i32 1), (i32 PrefetchWT1Level), (i32 1))]>,
+                    TB, Requires<[HasPREFETCHWT1]>;
 }
 
 // "3DNowA" instructions
-defm PF2IW    : I3DNow_conv_rm_int<0x1C, "pf2iw", I3DNOW_FCVT_F2I_ITINS, "a">;
-defm PI2FW    : I3DNow_conv_rm_int<0x0C, "pi2fw", I3DNOW_FCVT_I2F_ITINS, "a">;
-defm PFNACC   : I3DNow_binop_rm_int<0x8A, "pfnacc", I3DNOW_FALU_ITINS, 0, "a">;
-defm PFPNACC  : I3DNow_binop_rm_int<0x8E, "pfpnacc", I3DNOW_FALU_ITINS, 0, "a">;
-defm PSWAPD   : I3DNow_conv_rm_int<0xBB, "pswapd", I3DNOW_PSHUF_ITINS, "a">;
+defm PF2IW    : I3DNow_conv_rm_int<0x1C, "pf2iw", WriteCvtF2I, "a">;
+defm PI2FW    : I3DNow_conv_rm_int<0x0C, "pi2fw", WriteCvtI2F, "a">;
+defm PFNACC   : I3DNow_binop_rm_int<0x8A, "pfnacc", WriteFAdd, 0, "a">;
+defm PFPNACC  : I3DNow_binop_rm_int<0x8E, "pfpnacc", WriteFAdd, 0, "a">;
+defm PSWAPD   : I3DNow_conv_rm_int<0xBB, "pswapd", WriteShuffle, "a">;

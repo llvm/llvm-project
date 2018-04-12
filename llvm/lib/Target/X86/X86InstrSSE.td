@@ -3488,46 +3488,39 @@ let Predicates = [UseSSE2] in {
 // Prefetch intrinsic.
 let Predicates = [HasSSEPrefetch], SchedRW = [WriteLoad] in {
 def PREFETCHT0   : I<0x18, MRM1m, (outs), (ins i8mem:$src),
-    "prefetcht0\t$src", [(prefetch addr:$src, imm, (i32 3), (i32 1))],
-    IIC_SSE_PREFETCH>, TB;
+    "prefetcht0\t$src", [(prefetch addr:$src, imm, (i32 3), (i32 1))]>, TB;
 def PREFETCHT1   : I<0x18, MRM2m, (outs), (ins i8mem:$src),
-    "prefetcht1\t$src", [(prefetch addr:$src, imm, (i32 2), (i32 1))],
-    IIC_SSE_PREFETCH>, TB;
+    "prefetcht1\t$src", [(prefetch addr:$src, imm, (i32 2), (i32 1))]>, TB;
 def PREFETCHT2   : I<0x18, MRM3m, (outs), (ins i8mem:$src),
-    "prefetcht2\t$src", [(prefetch addr:$src, imm, (i32 1), (i32 1))],
-    IIC_SSE_PREFETCH>, TB;
+    "prefetcht2\t$src", [(prefetch addr:$src, imm, (i32 1), (i32 1))]>, TB;
 def PREFETCHNTA  : I<0x18, MRM0m, (outs), (ins i8mem:$src),
-    "prefetchnta\t$src", [(prefetch addr:$src, imm, (i32 0), (i32 1))],
-    IIC_SSE_PREFETCH>, TB;
+    "prefetchnta\t$src", [(prefetch addr:$src, imm, (i32 0), (i32 1))]>, TB;
 }
 
 // FIXME: How should flush instruction be modeled?
 let SchedRW = [WriteLoad] in {
 // Flush cache
 def CLFLUSH : I<0xAE, MRM7m, (outs), (ins i8mem:$src),
-               "clflush\t$src", [(int_x86_sse2_clflush addr:$src)],
-               IIC_SSE_PREFETCH>, PS, Requires<[HasSSE2]>;
+               "clflush\t$src", [(int_x86_sse2_clflush addr:$src)]>,
+               PS, Requires<[HasSSE2]>;
 }
 
 let SchedRW = [WriteNop] in {
 // Pause. This "instruction" is encoded as "rep; nop", so even though it
 // was introduced with SSE2, it's backward compatible.
 def PAUSE : I<0x90, RawFrm, (outs), (ins),
-              "pause", [(int_x86_sse2_pause)], IIC_SSE_PAUSE>, OBXS;
+              "pause", [(int_x86_sse2_pause)]>, OBXS;
 }
 
 let SchedRW = [WriteFence] in {
 // Load, store, and memory fence
 // TODO: As with mfence, we may want to ease the availablity of sfence/lfence
 // to include any 64-bit target.
-def SFENCE : I<0xAE, MRM_F8, (outs), (ins),
-               "sfence", [(int_x86_sse_sfence)], IIC_SSE_SFENCE>,
+def SFENCE : I<0xAE, MRM_F8, (outs), (ins), "sfence", [(int_x86_sse_sfence)]>,
                PS, Requires<[HasSSE1]>;
-def LFENCE : I<0xAE, MRM_E8, (outs), (ins),
-               "lfence", [(int_x86_sse2_lfence)], IIC_SSE_LFENCE>,
+def LFENCE : I<0xAE, MRM_E8, (outs), (ins), "lfence", [(int_x86_sse2_lfence)]>,
                TB, Requires<[HasSSE2]>;
-def MFENCE : I<0xAE, MRM_F0, (outs), (ins),
-               "mfence", [(int_x86_sse2_mfence)], IIC_SSE_MFENCE>,
+def MFENCE : I<0xAE, MRM_F0, (outs), (ins), "mfence", [(int_x86_sse2_mfence)]>,
                TB, Requires<[HasMFence]>;
 } // SchedRW
 
@@ -3538,18 +3531,18 @@ def : Pat<(X86MFence), (MFENCE)>;
 //===----------------------------------------------------------------------===//
 
 def VLDMXCSR : VPSI<0xAE, MRM2m, (outs), (ins i32mem:$src),
-               "ldmxcsr\t$src", [(int_x86_sse_ldmxcsr addr:$src)],
-               IIC_SSE_LDMXCSR>, VEX, Sched<[WriteLoad]>, VEX_WIG;
+               "ldmxcsr\t$src", [(int_x86_sse_ldmxcsr addr:$src)]>,
+               VEX, Sched<[WriteLoad]>, VEX_WIG;
 def VSTMXCSR : VPSI<0xAE, MRM3m, (outs), (ins i32mem:$dst),
-               "stmxcsr\t$dst", [(int_x86_sse_stmxcsr addr:$dst)],
-               IIC_SSE_STMXCSR>, VEX, Sched<[WriteStore]>, VEX_WIG;
+               "stmxcsr\t$dst", [(int_x86_sse_stmxcsr addr:$dst)]>,
+               VEX, Sched<[WriteStore]>, VEX_WIG;
 
 def LDMXCSR : I<0xAE, MRM2m, (outs), (ins i32mem:$src),
-              "ldmxcsr\t$src", [(int_x86_sse_ldmxcsr addr:$src)],
-              IIC_SSE_LDMXCSR>, TB, Sched<[WriteLoad]>;
+              "ldmxcsr\t$src", [(int_x86_sse_ldmxcsr addr:$src)]>,
+              TB, Sched<[WriteLoad]>;
 def STMXCSR : I<0xAE, MRM3m, (outs), (ins i32mem:$dst),
-              "stmxcsr\t$dst", [(int_x86_sse_stmxcsr addr:$dst)],
-              IIC_SSE_STMXCSR>, TB, Sched<[WriteStore]>;
+              "stmxcsr\t$dst", [(int_x86_sse_stmxcsr addr:$dst)]>,
+              TB, Sched<[WriteStore]>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Move Aligned/Unaligned Packed Integer Instructions
@@ -5306,13 +5299,12 @@ def MONITOR : PseudoI<(outs), (ins i32mem:$src1, GR32:$src2, GR32:$src3),
 }
 
 let Uses = [EAX, ECX, EDX] in
-def MONITORrrr : I<0x01, MRM_C8, (outs), (ins), "monitor", [], IIC_SSE_MONITOR>,
-                 TB, Requires<[HasSSE3]>;
+def MONITORrrr : I<0x01, MRM_C8, (outs), (ins), "monitor", []>,
+                   TB, Requires<[HasSSE3]>;
 
 let Uses = [ECX, EAX] in
 def MWAITrr   : I<0x01, MRM_C9, (outs), (ins), "mwait",
-                [(int_x86_sse3_mwait ECX, EAX)], IIC_SSE_MWAIT>,
-                TB, Requires<[HasSSE3]>;
+                  [(int_x86_sse3_mwait ECX, EAX)]>, TB, Requires<[HasSSE3]>;
 } // SchedRW
 
 def : InstAlias<"mwait\t{%eax, %ecx|ecx, eax}", (MWAITrr)>, Requires<[Not64BitMode]>;
