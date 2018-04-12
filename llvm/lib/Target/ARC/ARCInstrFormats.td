@@ -62,7 +62,7 @@ class InstARC<int sz, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Namespace = "ARC";
   dag OutOperandList = outs;
   dag InOperandList = ins;
-  let AsmString   = asmstr;
+  let AsmString = asmstr;
   let Pattern = pattern;
   let Size = sz;
 }

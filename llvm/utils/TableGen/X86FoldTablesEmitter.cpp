@@ -106,8 +106,8 @@ class X86FoldTablesEmitter {
 
     friend raw_ostream &operator<<(raw_ostream &OS,
                                    const X86FoldTableEntry &E) {
-      OS << "{ X86::" << E.RegInst->TheDef->getName().str()
-         << ", X86::" << E.MemInst->TheDef->getName().str() << ", ";
+      OS << "{ X86::" << E.RegInst->TheDef->getName()
+         << ", X86::" << E.MemInst->TheDef->getName() << ", ";
 
       if (E.IsLoad)
         OS << "TB_FOLDED_LOAD | ";
@@ -157,7 +157,7 @@ private:
 
   // Print the given table as a static const C++ array of type
   // X86MemoryFoldTableEntry.
-  void printTable(const FoldTable &Table, std::string TableName,
+  void printTable(const FoldTable &Table, StringRef TableName,
                   raw_ostream &OS) {
     OS << "static const X86MemoryFoldTableEntry MemoryFold" << TableName
        << "[] = {\n";

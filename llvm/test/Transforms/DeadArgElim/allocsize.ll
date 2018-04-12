@@ -11,3 +11,8 @@ define i64 @NeedsArg(i64 %s) {
 	%c = call i64 @MagickMallocAligned(i64 0, i64 %s)
 	ret i64 %c
 }
+
+define i64 @Test2(i64 %s) {
+	%c = call i64 @MagickMallocAligned(i64 0, i64 %s) allocsize(1)
+	ret i64 %c
+}

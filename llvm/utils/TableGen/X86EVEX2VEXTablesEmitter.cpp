@@ -261,7 +261,7 @@ public:
     // Also for instructions that their EVEX version was upgraded to work with
     // k-registers. For example VPCMPEQBrm (xmm output register) and
     // VPCMPEQBZ128rm (k register output register).
-    for (unsigned i = 0; i < Inst->Operands.size(); i++) {
+    for (unsigned i = 0, e = Inst->Operands.size(); i < e; i++) {
       Record *OpRec1 = Inst->Operands[i].Rec;
       Record *OpRec2 = Inst2->Operands[i].Rec;
 
