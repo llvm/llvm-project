@@ -22,6 +22,10 @@
 #include <iostream>
 #include "test_iterators.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
+#endif
+
 typedef std::num_get<char, input_iterator<const char*> > F;
 
 class my_facet
