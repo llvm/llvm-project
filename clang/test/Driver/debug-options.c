@@ -225,9 +225,9 @@
 //
 // GARANGE: -generate-arange-section
 //
-// FDTS: "-backend-option" "-generate-type-units"
+// FDTS: "-mllvm" "-generate-type-units"
 //
-// NOFDTS-NOT: "-backend-option" "-generate-type-units"
+// NOFDTS-NOT: "-mllvm" "-generate-type-units"
 //
 // CI: "-dwarf-column-info"
 //

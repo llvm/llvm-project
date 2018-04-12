@@ -928,7 +928,6 @@ enum AttributeDeclKind {
   ExpectedFunctionVariableOrClass,
   ExpectedKernelFunction,
   ExpectedFunctionWithProtoType,
-  ExpectedForMaybeUnused,
 };
 
 } // namespace clang

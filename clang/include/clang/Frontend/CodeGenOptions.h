@@ -177,9 +177,6 @@ public:
   /// function instead of to trap instructions.
   std::string TrapFuncName;
 
-  /// A list of command-line options to forward to the LLVM backend.
-  std::vector<std::string> BackendOptions;
-
   /// A list of dependent libraries.
   std::vector<std::string> DependentLibraries;
 

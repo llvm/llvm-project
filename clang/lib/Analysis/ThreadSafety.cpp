@@ -1450,6 +1450,14 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   // If the condition is a call to a Trylock function, then grab the attributes
   for (const auto *Attr : FunDecl->attrs()) {
     switch (Attr->getKind()) {
+      case attr::TryAcquireCapability: {
+        auto *A = cast<TryAcquireCapabilityAttr>(Attr);
+        getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
+                    Exp, FunDecl, PredBlock, CurrBlock, A->getSuccessValue(),
+                    Negate);
+        CapDiagKind = ClassifyDiagnostic(A);
+        break;
+      };
       case attr::ExclusiveTrylockFunction: {
         const auto *A = cast<ExclusiveTrylockFunctionAttr>(Attr);
         getMutexIDs(ExclusiveLocksToAdd, A, Exp, FunDecl,
@@ -2249,10 +2257,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
                     A, nullptr, D);
         CapDiagKind = ClassifyDiagnostic(A);
       } else if (isa<ExclusiveTrylockFunctionAttr>(Attr)) {
-        // Don't try to check trylock functions for now
+        // Don't try to check trylock functions for now.
         return;
       } else if (isa<SharedTrylockFunctionAttr>(Attr)) {
-        // Don't try to check trylock functions for now
+        // Don't try to check trylock functions for now.
+        return;
+      } else if (isa<TryAcquireCapabilityAttr>(Attr)) {
+        // Don't try to check trylock functions for now.
         return;
       }
     }
