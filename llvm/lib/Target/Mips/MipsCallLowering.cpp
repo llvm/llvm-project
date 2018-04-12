@@ -15,7 +15,6 @@
 
 #include "MipsCallLowering.h"
 #include "MipsCCState.h"
-#include "MipsISelLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 using namespace llvm;
@@ -192,7 +191,7 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   CCInfo.AnalyzeFormalArguments(Ins, TLI.CCAssignFnForCall());
 
-  IncomingValueHandler Handler(MIRBuilder, MIRBuilder.getMF().getRegInfo());
+  IncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
   if (!Handler.handle(ArgLocs, ArgInfos))
     return false;
 

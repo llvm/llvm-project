@@ -717,13 +717,13 @@ class SS428I<bits<8> o, Format F, dag outs, dag ins, string asm,
 //   SS42FI - SSE 4.2 instructions with T8XD prefix.
 // NOTE: 'HasSSE42' is used as SS42FI is only used for CRC32 insns.
 class SS42FI<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern, InstrItinClass itin = NoItinerary>
-      : I<o, F, outs, ins, asm, pattern, itin>, T8XD, Requires<[HasSSE42]>;
+             list<dag> pattern>
+      : I<o, F, outs, ins, asm, pattern>, T8XD, Requires<[HasSSE42]>;
 
 //   SS42AI = SSE 4.2 instructions with TA prefix
 class SS42AI<bits<8> o, Format F, dag outs, dag ins, string asm,
-             list<dag> pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
+             list<dag> pattern>
+      : Ii8<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedInt>, TAPD,
         Requires<[UseSSE42]>;
 
 // AVX Instruction Templates:
@@ -857,19 +857,19 @@ class AVX512<bits<8> o, Format F, dag outs, dag ins, string asm,
 // AES8I
 // These use the same encoding as the SSE4.2 T8 and TA encodings.
 class AES8I<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag>pattern, InstrItinClass itin = IIC_AES>
-      : I<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, T8PD,
+            list<dag>pattern>
+      : I<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedInt>, T8PD,
         Requires<[NoAVX, HasAES]>;
 
 class AESAI<bits<8> o, Format F, dag outs, dag ins, string asm,
-            list<dag> pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
+            list<dag> pattern>
+      : Ii8<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedInt>, TAPD,
         Requires<[NoAVX, HasAES]>;
 
 // PCLMUL Instruction Templates
 class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
-               list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD;
+               list<dag>pattern>
+      : Ii8<o, F, outs, ins, asm, pattern, NoItinerary, SSEPackedInt>, TAPD;
 
 // FMA3 Instruction Templates
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,

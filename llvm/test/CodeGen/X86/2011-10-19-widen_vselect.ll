@@ -71,7 +71,8 @@ define void @full_test() {
 ; X32-NEXT:    subl $60, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 64
 ; X32-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; X32-NEXT:    roundps $11, %xmm2, %xmm1
+; X32-NEXT:    cvttps2dq %xmm2, %xmm0
+; X32-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    cmpltps %xmm2, %xmm0
 ; X32-NEXT:    movaps {{.*#+}} xmm3 = <1,1,u,u>
@@ -92,7 +93,8 @@ define void @full_test() {
 ; X64-LABEL: full_test:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; X64-NEXT:    roundps $11, %xmm2, %xmm1
+; X64-NEXT:    cvttps2dq %xmm2, %xmm0
+; X64-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    cmpltps %xmm2, %xmm0
 ; X64-NEXT:    movaps {{.*#+}} xmm3 = <1,1,u,u>

@@ -1,3 +1,16 @@
+/*
+ * ompt-internal.h - header of OMPT internal data structures
+ */
+
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.txt for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __OMPT_INTERNAL_H__
 #define __OMPT_INTERNAL_H__
 

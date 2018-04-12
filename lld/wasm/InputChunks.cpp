@@ -143,13 +143,3 @@ void InputFunction::setTableIndex(uint32_t Index) {
   assert(!hasTableIndex());
   TableIndex = Index;
 }
-
-InputSection::InputSection(const WasmSection &S, ObjFile *F)
-    : InputChunk(F, InputChunk::Section), Section(S) {
-  assert(Section.Type == llvm::wasm::WASM_SEC_CUSTOM);
-  // TODO check LEB errors
-  unsigned Count;
-  uint64_t NameSize = llvm::decodeULEB128(Section.Content.data(), &Count);
-  uint32_t PayloadOffset = Count + NameSize;
-  Payload = Section.Content.slice(PayloadOffset);
-}

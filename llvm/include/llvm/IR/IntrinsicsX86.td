@@ -6403,10 +6403,14 @@ let TargetPrefix = "x86" in {
 }
 
 //===----------------------------------------------------------------------===//
-// Cache line write back intrinsics
+// Cache write back intrinsics
 
-// Write back no-invalidate
 let TargetPrefix = "x86" in {
+  // Write back and invalidate
+  def int_x86_wbinvd : GCCBuiltin<"__builtin_ia32_wbinvd">,
+      Intrinsic<[], [], []>;
+
+  // Write back no-invalidate
   def int_x86_wbnoinvd : GCCBuiltin<"__builtin_ia32_wbnoinvd">,
       Intrinsic<[], [], []>;
 }

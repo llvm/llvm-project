@@ -5,7 +5,18 @@
 define float @f_i128_f(float %v) {
 ; CHECK-LABEL: f_i128_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    friz 1, 1
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    std 0, 16(1)
+; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl __fixsfti
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    bl __floattisf
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi 1, 1, 32
+; CHECK-NEXT:    ld 0, 16(1)
+; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
   %a = fptosi float %v to i128

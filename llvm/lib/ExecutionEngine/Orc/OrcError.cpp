@@ -29,6 +29,8 @@ public:
 
   std::string message(int condition) const override {
     switch (static_cast<OrcErrorCode>(condition)) {
+    case OrcErrorCode::UnknownORCError:
+      return "Unknown ORC error";
     case OrcErrorCode::DuplicateDefinition:
       return "Duplicate symbol definition";
     case OrcErrorCode::JITSymbolNotFound:

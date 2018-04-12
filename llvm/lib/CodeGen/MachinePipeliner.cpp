@@ -931,7 +931,7 @@ void SwingSchedulerDAG::schedule() {
     }
   });
 
-  llvm::sort(NodeSets.begin(), NodeSets.end(), std::greater<NodeSet>());
+  std::stable_sort(NodeSets.begin(), NodeSets.end(), std::greater<NodeSet>());
 
   groupRemainingNodes(NodeSets);
 

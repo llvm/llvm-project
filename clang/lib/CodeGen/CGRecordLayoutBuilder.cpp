@@ -214,12 +214,13 @@ private:
 };
 } // namespace {
 
-CGRecordLowering::CGRecordLowering(CodeGenTypes &Types, const RecordDecl *D,                                 bool Packed)
-  : Types(Types), Context(Types.getContext()), D(D),
-    RD(dyn_cast<CXXRecordDecl>(D)),
-    Layout(Types.getContext().getASTRecordLayout(D)),
-    DataLayout(Types.getDataLayout()), IsZeroInitializable(true),
-    IsZeroInitializableAsBase(true), Packed(Packed) {}
+CGRecordLowering::CGRecordLowering(CodeGenTypes &Types, const RecordDecl *D,
+                                   bool Packed)
+    : Types(Types), Context(Types.getContext()), D(D),
+      RD(dyn_cast<CXXRecordDecl>(D)),
+      Layout(Types.getContext().getASTRecordLayout(D)),
+      DataLayout(Types.getDataLayout()), IsZeroInitializable(true),
+      IsZeroInitializableAsBase(true), Packed(Packed) {}
 
 void CGRecordLowering::setBitFieldInfo(
     const FieldDecl *FD, CharUnits StartOffset, llvm::Type *StorageType) {

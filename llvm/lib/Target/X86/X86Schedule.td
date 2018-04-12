@@ -170,92 +170,6 @@ def WriteNop : SchedWrite;
 // Instruction Itinerary classes used for X86
 def IIC_ALU_MEM     : InstrItinClass;
 def IIC_ALU_NONMEM  : InstrItinClass;
-def IIC_LEA         : InstrItinClass;
-def IIC_LEA_16      : InstrItinClass;
-def IIC_MUL8_MEM    : InstrItinClass;
-def IIC_MUL8_REG    : InstrItinClass;
-def IIC_MUL16_MEM   : InstrItinClass;
-def IIC_MUL16_REG   : InstrItinClass;
-def IIC_MUL32_MEM   : InstrItinClass;
-def IIC_MUL32_REG   : InstrItinClass;
-def IIC_MUL64_MEM   : InstrItinClass;
-def IIC_MUL64_REG   : InstrItinClass;
-// imul by al, ax, eax, tax
-def IIC_IMUL8_MEM   : InstrItinClass;
-def IIC_IMUL8_REG   : InstrItinClass;
-def IIC_IMUL16_MEM  : InstrItinClass;
-def IIC_IMUL16_REG  : InstrItinClass;
-def IIC_IMUL32_MEM  : InstrItinClass;
-def IIC_IMUL32_REG  : InstrItinClass;
-def IIC_IMUL64_MEM  : InstrItinClass;
-def IIC_IMUL64_REG  : InstrItinClass;
-// imul reg by reg|mem
-def IIC_IMUL16_RM   : InstrItinClass;
-def IIC_IMUL16_RR   : InstrItinClass;
-def IIC_IMUL32_RM   : InstrItinClass;
-def IIC_IMUL32_RR   : InstrItinClass;
-def IIC_IMUL64_RM   : InstrItinClass;
-def IIC_IMUL64_RR   : InstrItinClass;
-// imul reg = reg/mem * imm
-def IIC_IMUL16_RMI  : InstrItinClass;
-def IIC_IMUL16_RRI  : InstrItinClass;
-def IIC_IMUL32_RMI  : InstrItinClass;
-def IIC_IMUL32_RRI  : InstrItinClass;
-def IIC_IMUL64_RMI  : InstrItinClass;
-def IIC_IMUL64_RRI  : InstrItinClass;
-// div
-def IIC_DIV8_MEM    : InstrItinClass;
-def IIC_DIV8_REG    : InstrItinClass;
-def IIC_DIV16_MEM   : InstrItinClass;
-def IIC_DIV16_REG   : InstrItinClass;
-def IIC_DIV32_MEM   : InstrItinClass;
-def IIC_DIV32_REG   : InstrItinClass;
-def IIC_DIV64_MEM   : InstrItinClass;
-def IIC_DIV64_REG   : InstrItinClass;
-// idiv
-def IIC_IDIV8_MEM   : InstrItinClass;
-def IIC_IDIV8_REG   : InstrItinClass;
-def IIC_IDIV16_MEM  : InstrItinClass;
-def IIC_IDIV16_REG  : InstrItinClass;
-def IIC_IDIV32_MEM  : InstrItinClass;
-def IIC_IDIV32_REG  : InstrItinClass;
-def IIC_IDIV64_MEM  : InstrItinClass;
-def IIC_IDIV64_REG  : InstrItinClass;
-// neg/not/inc/dec
-def IIC_UNARY_REG   : InstrItinClass;
-def IIC_UNARY_MEM   : InstrItinClass;
-// add/sub/and/or/xor/sbc/cmp/test
-def IIC_BIN_MEM     : InstrItinClass;
-def IIC_BIN_NONMEM  : InstrItinClass;
-// adc/sbc
-def IIC_BIN_CARRY_MEM     : InstrItinClass;
-def IIC_BIN_CARRY_NONMEM  : InstrItinClass;
-// shift/rotate
-def IIC_SR          : InstrItinClass;
-// shift double
-def IIC_SHD16_REG_IM : InstrItinClass;
-def IIC_SHD16_REG_CL : InstrItinClass;
-def IIC_SHD16_MEM_IM : InstrItinClass;
-def IIC_SHD16_MEM_CL : InstrItinClass;
-def IIC_SHD32_REG_IM : InstrItinClass;
-def IIC_SHD32_REG_CL : InstrItinClass;
-def IIC_SHD32_MEM_IM : InstrItinClass;
-def IIC_SHD32_MEM_CL : InstrItinClass;
-def IIC_SHD64_REG_IM : InstrItinClass;
-def IIC_SHD64_REG_CL : InstrItinClass;
-def IIC_SHD64_MEM_IM : InstrItinClass;
-def IIC_SHD64_MEM_CL : InstrItinClass;
-//sign extension movs
-def IIC_MOVSX : InstrItinClass;
-def IIC_MOVSX_R16_R8 : InstrItinClass;
-def IIC_MOVSX_R16_M8 : InstrItinClass;
-//zero extension movs
-def IIC_MOVZX : InstrItinClass;
-def IIC_MOVZX_R16_R8 : InstrItinClass;
-def IIC_MOVZX_R16_M8 : InstrItinClass;
-
-def IIC_REP_MOVS : InstrItinClass;
-def IIC_REP_STOS : InstrItinClass;
 
 // SSE scalar/parallel binary operations
 def IIC_SSE_ALU_F32S_RR : InstrItinClass;
@@ -313,12 +227,6 @@ def IIC_SSE_PSHUF_MI : InstrItinClass;
 def IIC_SSE_PACK : InstrItinClass;
 def IIC_SSE_UNPCK : InstrItinClass;
 
-def IIC_SSE_MOVMSK : InstrItinClass;
-def IIC_SSE_MASKMOV : InstrItinClass;
-
-def IIC_SSE_PEXTRW : InstrItinClass;
-def IIC_SSE_PINSRW : InstrItinClass;
-
 def IIC_SSE_PABS_RR : InstrItinClass;
 def IIC_SSE_PABS_RM : InstrItinClass;
 
@@ -353,15 +261,7 @@ def IIC_SSE_MOVU_P_RR : InstrItinClass;
 def IIC_SSE_MOVU_P_RM : InstrItinClass;
 def IIC_SSE_MOVU_P_MR : InstrItinClass;
 
-def IIC_SSE_MOVDQ : InstrItinClass;
-def IIC_SSE_MOVD_ToGP : InstrItinClass;
-def IIC_SSE_MOVQ_RR : InstrItinClass;
-
 def IIC_SSE_MOV_LH : InstrItinClass;
-
-def IIC_SSE_LDDQU : InstrItinClass;
-
-def IIC_SSE_MOVNT : InstrItinClass;
 
 def IIC_SSE_PHADDSUBD_RR : InstrItinClass;
 def IIC_SSE_PHADDSUBD_RM : InstrItinClass;
@@ -378,20 +278,6 @@ def IIC_SSE_PMADD : InstrItinClass;
 def IIC_SSE_PMULHRSW : InstrItinClass;
 def IIC_SSE_PALIGNRR : InstrItinClass;
 def IIC_SSE_PALIGNRM : InstrItinClass;
-def IIC_SSE_MWAIT : InstrItinClass;
-def IIC_SSE_MONITOR : InstrItinClass;
-def IIC_SSE_MWAITX : InstrItinClass;
-def IIC_SSE_MONITORX : InstrItinClass;
-def IIC_SSE_CLZERO : InstrItinClass;
-
-def IIC_SSE_PREFETCH : InstrItinClass;
-def IIC_SSE_PAUSE : InstrItinClass;
-def IIC_SSE_LFENCE : InstrItinClass;
-def IIC_SSE_MFENCE : InstrItinClass;
-def IIC_SSE_SFENCE : InstrItinClass;
-def IIC_SSE_LDMXCSR : InstrItinClass;
-def IIC_SSE_STMXCSR : InstrItinClass;
-
 def IIC_SSE_CVT_PD_RR : InstrItinClass;
 def IIC_SSE_CVT_PD_RM : InstrItinClass;
 def IIC_SSE_CVT_PS_RR : InstrItinClass;
@@ -405,88 +291,6 @@ def IIC_SSE_CVT_SS2SI64_RR : InstrItinClass;
 def IIC_SSE_CVT_SD2SI_RM : InstrItinClass;
 def IIC_SSE_CVT_SD2SI_RR : InstrItinClass;
 
-def IIC_AVX_ZERO : InstrItinClass;
-
-def IIC_CMPX_LOCK : InstrItinClass;
-def IIC_CMPX_LOCK_8 : InstrItinClass;
-def IIC_CMPX_LOCK_8B : InstrItinClass;
-def IIC_CMPX_LOCK_16B : InstrItinClass;
-
-def IIC_XADD_LOCK_MEM : InstrItinClass;
-def IIC_XADD_LOCK_MEM8 : InstrItinClass;
-
-// System instructions
-def IIC_RDRAND : InstrItinClass;
-def IIC_RDSEED : InstrItinClass;
-def IIC_INS : InstrItinClass;
-def IIC_LWP : InstrItinClass;
-def IIC_ENTER : InstrItinClass;
-def IIC_LEAVE : InstrItinClass;
-def IIC_POP_MEM : InstrItinClass;
-def IIC_POP_REG16 : InstrItinClass;
-def IIC_POP_REG : InstrItinClass;
-def IIC_POP_F : InstrItinClass;
-def IIC_POP_FD : InstrItinClass;
-def IIC_POP_A : InstrItinClass;
-def IIC_PUSH_IMM : InstrItinClass;
-def IIC_PUSH_MEM : InstrItinClass;
-def IIC_PUSH_REG : InstrItinClass;
-def IIC_PUSH_F : InstrItinClass;
-def IIC_PUSH_A : InstrItinClass;
-def IIC_BSWAP : InstrItinClass;
-def IIC_BIT_SCAN_MEM : InstrItinClass;
-def IIC_BIT_SCAN_REG : InstrItinClass;
-def IIC_LZCNT_RR : InstrItinClass;
-def IIC_LZCNT_RM : InstrItinClass;
-def IIC_TZCNT_RR : InstrItinClass;
-def IIC_TZCNT_RM : InstrItinClass;
-def IIC_MOVS : InstrItinClass;
-def IIC_STOS : InstrItinClass;
-def IIC_SCAS : InstrItinClass;
-def IIC_CMPS : InstrItinClass;
-def IIC_MOV : InstrItinClass;
-def IIC_MOV_MEM : InstrItinClass;
-def IIC_AHF : InstrItinClass;
-def IIC_BT_MI : InstrItinClass;
-def IIC_BT_MR : InstrItinClass;
-def IIC_BT_RI : InstrItinClass;
-def IIC_BT_RR : InstrItinClass;
-def IIC_BTX_MI : InstrItinClass;
-def IIC_BTX_MR : InstrItinClass;
-def IIC_BTX_RI : InstrItinClass;
-def IIC_BTX_RR : InstrItinClass;
-def IIC_XCHG_REG : InstrItinClass;
-def IIC_XCHG_MEM : InstrItinClass;
-def IIC_XADD_REG : InstrItinClass;
-def IIC_XADD_MEM : InstrItinClass;
-def IIC_CMPXCHG_MEM : InstrItinClass;
-def IIC_CMPXCHG_REG : InstrItinClass;
-def IIC_CMPXCHG_MEM8 : InstrItinClass;
-def IIC_CMPXCHG_REG8 : InstrItinClass;
-def IIC_CMPXCHG_8B : InstrItinClass;
-def IIC_CMPXCHG_16B : InstrItinClass;
-def IIC_LODS : InstrItinClass;
-def IIC_OUTS : InstrItinClass;
-def IIC_CLC_CMC_STC : InstrItinClass;
-def IIC_CLD : InstrItinClass;
-def IIC_STD : InstrItinClass;
-def IIC_XLAT : InstrItinClass;
-def IIC_AAA : InstrItinClass;
-def IIC_AAD : InstrItinClass;
-def IIC_AAM : InstrItinClass;
-def IIC_AAS : InstrItinClass;
-def IIC_DAA : InstrItinClass;
-def IIC_DAS : InstrItinClass;
-def IIC_BOUND : InstrItinClass;
-def IIC_ARPL_REG : InstrItinClass;
-def IIC_ARPL_MEM : InstrItinClass;
-def IIC_MOVBE : InstrItinClass;
-def IIC_AES   : InstrItinClass;
-def IIC_BLEND_MEM : InstrItinClass;
-def IIC_BLEND_NOMEM : InstrItinClass;
-def IIC_CBW   : InstrItinClass;
-def IIC_CRC32_REG : InstrItinClass;
-def IIC_CRC32_MEM : InstrItinClass;
 def IIC_SSE_DPPD_RR : InstrItinClass;
 def IIC_SSE_DPPD_RM : InstrItinClass;
 def IIC_SSE_DPPS_RR : InstrItinClass;
@@ -503,13 +307,9 @@ def IIC_SSE_ROUNDPS_REG : InstrItinClass;
 def IIC_SSE_ROUNDPS_MEM : InstrItinClass;
 def IIC_SSE_ROUNDPD_REG : InstrItinClass;
 def IIC_SSE_ROUNDPD_MEM : InstrItinClass;
-def IIC_SSE_POPCNT_RR : InstrItinClass;
-def IIC_SSE_POPCNT_RM : InstrItinClass;
-def IIC_SSE_PCLMULQDQ_RR : InstrItinClass;
-def IIC_SSE_PCLMULQDQ_RM : InstrItinClass;
 
 //===----------------------------------------------------------------------===//
-// Processor instruction itineraries.
+// Generic Processor Scheduler Models.
 
 // IssueWidth is analogous to the number of decode units. Core and its
 // descendents, including Nehalem and SandyBridge have 4 decoders.
