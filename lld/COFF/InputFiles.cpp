@@ -465,7 +465,7 @@ void BitcodeFile::parse() {
     } else {
       Sym = Symtab->addRegular(this, SymName);
     }
-    SymbolBodies.push_back(Sym);
+    Symbols.push_back(Sym);
   }
   Directives = Obj->getCOFFLinkerOpts();
 }

@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// All symbols are handled as SymbolBodies regardless of their types.
-// This file defines various types of SymbolBodies.
+// This file defines various types of Symbols.
 //
 //===----------------------------------------------------------------------===//
 
