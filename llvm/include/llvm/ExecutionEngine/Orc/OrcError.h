@@ -22,7 +22,8 @@ namespace orc {
 
 enum class OrcErrorCode : int {
   // RPC Errors
-  DuplicateDefinition = 1,
+  UnknownORCError = 1,
+  DuplicateDefinition,
   JITSymbolNotFound,
   RemoteAllocatorDoesNotExist,
   RemoteAllocatorIdAlreadyInUse,

@@ -67,9 +67,9 @@ public:
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;
 
-  void onCycleBegin(unsigned Cycle) override { NumCycles++; }
+  void onCycleBegin() override { NumCycles++; }
 
-  void onCycleEnd(unsigned Cycle) override { updateHistograms(); }
+  void onCycleEnd() override { updateHistograms(); }
 
   void onStallEvent(const HWStallEvent &Event) override;
 

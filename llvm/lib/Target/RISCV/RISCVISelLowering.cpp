@@ -142,8 +142,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
 
   // Function alignments (log2).
-  setMinFunctionAlignment(3);
-  setPrefFunctionAlignment(3);
+  unsigned FunctionAlignment = Subtarget.hasStdExtC() ? 1 : 2;
+  setMinFunctionAlignment(FunctionAlignment);
+  setPrefFunctionAlignment(FunctionAlignment);
 
   // Effectively disable jump table generation.
   setMinimumJumpTableEntries(INT_MAX);

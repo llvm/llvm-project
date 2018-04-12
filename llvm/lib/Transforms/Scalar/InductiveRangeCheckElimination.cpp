@@ -804,6 +804,13 @@ static bool CannotBeMinInLoop(const SCEV *BoundSCEV, Loop *L,
                                      SE.getConstant(Min));
 }
 
+static bool isKnownNonNegativeInLoop(const SCEV *BoundSCEV, Loop *L,
+                                     ScalarEvolution &SE) {
+  const SCEV *Zero = SE.getZero(BoundSCEV->getType());
+  return SE.isAvailableAtLoopEntry(BoundSCEV, L) &&
+         SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SGE, BoundSCEV, Zero);
+}
+
 Optional<LoopStructure>
 LoopStructure::parseLoopStructure(ScalarEvolution &SE,
                                   BranchProbabilityInfo *BPI, Loop &L,
@@ -963,8 +970,8 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
         // If both parts are known non-negative, it is profitable to use
         // unsigned comparison in increasing loop. This allows us to make the
         // comparison check against "RightSCEV + 1" more optimistic.
-        if (SE.isKnownNonNegative(IndVarStart) &&
-            SE.isKnownNonNegative(RightSCEV))
+        if (isKnownNonNegativeInLoop(IndVarStart, &L, SE) &&
+            isKnownNonNegativeInLoop(RightSCEV, &L, SE))
           Pred = ICmpInst::ICMP_ULT;
         else
           Pred = ICmpInst::ICMP_SLT;

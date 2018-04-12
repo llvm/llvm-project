@@ -49,6 +49,8 @@ a:
         div.s     $f4,$f5,$f15
         divu      $zero,$25,$15
         ehb                            # CHECK: ehb # encoding:  [0x00,0x00,0x00,0xc0]
+                                       # CHECK-NEXT:             # <MCInst #{{[0-9]+}} EHB
+                                       # CHECK-NOT:              # <MCInst #{{[0-9]+}} EHB_MM
         j         1f                   # CHECK: j $tmp0 # encoding: [0b000010AA,A,A,A]
                                        # CHECK:         #   fixup A - offset: 0, value: ($tmp0), kind: fixup_Mips_26
         j         a                    # CHECK: j a     # encoding: [0b000010AA,A,A,A]
@@ -127,6 +129,8 @@ a:
         srl       $25,$s4,$a0          # CHECK: srlv $25, $20, $4      # encoding: [0x00,0x94,0xc8,0x06]
         srlv      $25,$s4,$a0          # CHECK: srlv $25, $20, $4      # encoding: [0x00,0x94,0xc8,0x06]
         ssnop                          # CHECK: ssnop                  # encoding: [0x00,0x00,0x00,0x40]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SSNOP
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SSNOP_MM
         sub       $s6,$s3,$12
         sub       $22,$17,-3126        # CHECK: addi $22, $17, 3126    # encoding: [0x22,0x36,0x0c,0x36]
         sub       $13,6512             # CHECK: addi $13, $13, -6512   # encoding: [0x21,0xad,0xe6,0x90]
@@ -143,9 +147,17 @@ a:
         syscall                        # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
         syscall   256                  # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         tlbp                           # CHECK: tlbp                   # encoding: [0x42,0x00,0x00,0x08]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBP
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBP_MM
         tlbr                           # CHECK: tlbr                   # encoding: [0x42,0x00,0x00,0x01]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBR
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBR_MM
         tlbwi                          # CHECK: tlbwi                  # encoding: [0x42,0x00,0x00,0x02]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBWI
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBWI_MM
         tlbwr                          # CHECK: tlbwr                  # encoding: [0x42,0x00,0x00,0x06]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBWR
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBWR_MM
         xor       $s2,$a0,$s8
         xor       $2, 4                # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
 

@@ -20,6 +20,12 @@
 # RUN: | llvm-objdump  -triple riscv64 -mattr=+c -d -riscv-no-aliases - \
 # RUN: | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST %s
 
+# CHECK-BYTES: 2e 85
+# CHECK-ALIAS: add a0, zero, a1
+# CHECK-INST: c.mv a0, a1
+# CHECK: # encoding:  [0x2e,0x85]
+addi a0, a1, 0
+
 # CHECK-BYTES: e0 1f
 # CHECK-ALIAS: addi s0, sp, 1020
 # CHECK-INST: c.addi4spn s0, sp, 1020

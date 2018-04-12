@@ -52,10 +52,10 @@ void Backend::runCycle(unsigned Cycle) {
 void Backend::notifyCycleBegin(unsigned Cycle) {
   DEBUG(dbgs() << "[E] Cycle begin: " << Cycle << '\n');
   for (HWEventListener *Listener : Listeners)
-    Listener->onCycleBegin(Cycle);
+    Listener->onCycleBegin();
 
-  DU->cycleEvent(Cycle);
-  HWS->cycleEvent(Cycle);
+  DU->cycleEvent();
+  HWS->cycleEvent();
 }
 
 void Backend::notifyInstructionEvent(const HWInstructionEvent &Event) {
@@ -88,6 +88,6 @@ void Backend::notifyReleasedBuffers(ArrayRef<unsigned> Buffers) {
 void Backend::notifyCycleEnd(unsigned Cycle) {
   DEBUG(dbgs() << "[E] Cycle end: " << Cycle << "\n\n");
   for (HWEventListener *Listener : Listeners)
-    Listener->onCycleEnd(Cycle);
+    Listener->onCycleEnd();
 }
 } // namespace mca.

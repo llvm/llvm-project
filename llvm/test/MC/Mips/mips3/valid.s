@@ -1,6 +1,6 @@
 # Instructions that are valid
 #
-# RUN: llvm-mc %s -triple=mips64-unknown-linux -show-encoding -mcpu=mips3 | FileCheck %s
+# RUN: llvm-mc %s -triple=mips64-unknown-linux -show-encoding -show-inst -mcpu=mips3 | FileCheck %s
 a:
         .set noat
         abs.d     $f7,$f25             # CHECK: encoding:
@@ -242,9 +242,17 @@ a:
         tgeu      $22,$28              # CHECK: tgeu $22, $gp          # encoding: [0x02,0xdc,0x00,0x31]
         tgeu      $20,$14,379          # CHECK: tgeu $20, $14, 379     # encoding: [0x02,0x8e,0x5e,0xf1]
         tlbp                           # CHECK: tlbp                   # encoding: [0x42,0x00,0x00,0x08]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBP
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBP_MM
         tlbr                           # CHECK: tlbr                   # encoding: [0x42,0x00,0x00,0x01]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBR
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBR_MM
         tlbwi                          # CHECK: tlbwi                  # encoding: [0x42,0x00,0x00,0x02]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBWI
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBWI_MM
         tlbwr                          # CHECK: tlbwr                  # encoding: [0x42,0x00,0x00,0x06]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} TLBWR
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} TLBWR_MM
         tlt       $15,$13              # CHECK: tlt $15, $13           # encoding: [0x01,0xed,0x00,0x32]
         tlt       $2,$19,133           # CHECK: tlt $2, $19, 133       # encoding: [0x00,0x53,0x21,0x72]
         tlti      $14,-21059

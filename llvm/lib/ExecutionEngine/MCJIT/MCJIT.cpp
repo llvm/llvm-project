@@ -28,8 +28,6 @@
 
 using namespace llvm;
 
-void llvm::ObjectMemoryBuffer::anchor() {}
-
 namespace {
 
 static struct RegisterJIT {

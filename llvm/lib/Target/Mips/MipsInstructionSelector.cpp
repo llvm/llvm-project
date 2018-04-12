@@ -13,11 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsRegisterBankInfo.h"
-#include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "mips-isel"
 

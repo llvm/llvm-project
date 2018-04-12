@@ -1497,26 +1497,25 @@ public:
   /// discriminator.
   inline const DILocation *cloneWithDuplicationFactor(unsigned DF) const;
 
+  enum { NoGeneratedLocation = false, WithGeneratedLocation = true };
+
   /// When two instructions are combined into a single instruction we also
   /// need to combine the original locations into a single location.
   ///
   /// When the locations are the same we can use either location. When they
-  /// differ, we need a third location which is distinct from either. If
-  /// they have the same file/line but have a different discriminator we
-  /// could create a location with a new discriminator. If they are from
-  /// different files/lines the location is ambiguous and can't be
-  /// represented in a single line entry.  In this case, no location
-  /// should be set, unless the merged instruction is a call, which we will
-  /// set the merged debug location as line 0 of the nearest common scope
-  /// where 2 locations are inlined from. This only applies to Instruction;
-  /// for MachineInstruction, as it is post-inline, we will treat the call
-  /// instruction the same way as other instructions.
+  /// differ, we need a third location which is distinct from either. If they
+  /// have the same file/line but have a different discriminator we could
+  /// create a location with a new discriminator. If they are from different
+  /// files/lines the location is ambiguous and can't be represented in a line
+  /// entry. In this case, if \p GenerateLocation is true, we will set the
+  /// merged debug location as line 0 of the nearest common scope where the two
+  /// locations are inlined from.
   ///
-  /// \p ForInst: The Instruction the merged DILocation is for. If the
-  /// Instruction is unavailable or non-existent, use nullptr.
+  /// \p GenerateLocation: Whether the merged location can be generated when
+  /// \p LocA and \p LocB differ.
   static const DILocation *
   getMergedLocation(const DILocation *LocA, const DILocation *LocB,
-                    const Instruction *ForInst = nullptr);
+                    bool GenerateLocation = NoGeneratedLocation);
 
   /// Returns the base discriminator for a given encoded discriminator \p D.
   static unsigned getBaseDiscriminatorFromDiscriminator(unsigned D) {

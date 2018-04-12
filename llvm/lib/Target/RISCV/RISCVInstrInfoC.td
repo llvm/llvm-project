@@ -675,6 +675,8 @@ def : CompressPat<(ADD GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
                   (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
                   (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, 0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 def : CompressPat<(EBREAK), (C_EBREAK)>;
 def : CompressPat<(JALR X1, GPRNoX0:$rs1, 0),
                   (C_JALR GPRNoX0:$rs1)>;
