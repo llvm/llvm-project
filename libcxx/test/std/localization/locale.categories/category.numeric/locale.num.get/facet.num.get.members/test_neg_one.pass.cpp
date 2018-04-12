@@ -21,8 +21,9 @@
 #include <sstream>
 #include <iostream>
 #include "test_iterators.h"
+#include "test_macros.h"
 
-#ifdef _MSC_VER
+#ifdef TEST_COMPILER_C1XX
 #pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
 #endif
 
