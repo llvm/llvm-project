@@ -33,7 +33,7 @@ int main()
         Myconv myconv;
         try
         {
-            myconv.to_bytes(L"\xDA83");
+            (void)myconv.to_bytes(L"\xDA83");
             assert(false);
         }
         catch (const std::range_error&)
@@ -41,7 +41,7 @@ int main()
         }
         try
         {
-            myconv.from_bytes('\xA5');
+            (void)myconv.from_bytes('\xA5');
             assert(false);
         }
         catch (const std::range_error&)
@@ -56,7 +56,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            myconv.from_bytes('\xA5');
+            (void)myconv.from_bytes('\xA5');
             assert(false);
         }
         catch (const std::range_error&)
