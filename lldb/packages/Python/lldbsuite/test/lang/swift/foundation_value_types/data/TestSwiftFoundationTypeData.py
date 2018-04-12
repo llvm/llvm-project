@@ -12,9 +12,7 @@
 import lldbsuite.test.lldbinline as lldbinline
 import lldbsuite.test.decorators as decorators
 
-# https://bugs.swift.org/browse/SR-3320
-# This test fails with an assertion error with stdlib resilience enabled:
-#  https://github.com/apple/swift/pull/13573
 lldbinline.MakeInlineTest(
     __file__, globals(), decorators=[
-        decorators.skipIf])
+        decorators.skipUnlessDarwin,
+        decorators.expectedFailureAll(bugnumber="https://bugs.swift.org/browse/SR-3320")])
