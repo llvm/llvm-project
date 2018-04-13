@@ -21,8 +21,10 @@
 ; CHECK:       define {{.*}}@foo
 ; CHECK:       if.end:
 ; CHECK-NEXT:  %storemerge = phi
-; This final check is the "real" test, verify no !dbg on the store.
-; CHECK-NEXT:  store i32 %storemerge{{.*}}, align 4{{$}}
+;
+; The debug location on the store should be a line-0 location.
+; CHECK-NEXT:  store i32 %storemerge{{.*}}, align 4, !dbg [[storeLoc:![0-9]+]]
+; CHECK: [[storeLoc]] = !DILocation(line: 0
 ;
 ; ModuleID = 'test1.ll'
 source_filename = "test.c"

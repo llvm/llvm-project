@@ -68,16 +68,16 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                    Storage, Context.pImpl->DILocations);
 }
 
-const DILocation *
-DILocation::getMergedLocation(const DILocation *LocA, const DILocation *LocB,
-                              const Instruction *ForInst) {
+const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
+                                                const DILocation *LocB,
+                                                bool GenerateLocation) {
   if (!LocA || !LocB)
     return nullptr;
 
   if (LocA == LocB || !LocA->canDiscriminate(*LocB))
     return LocA;
 
-  if (!dyn_cast_or_null<CallInst>(ForInst))
+  if (!GenerateLocation)
     return nullptr;
 
   SmallPtrSet<DILocation *, 5> InlinedLocationsA;
