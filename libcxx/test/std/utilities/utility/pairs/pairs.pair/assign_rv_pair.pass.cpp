@@ -49,7 +49,7 @@ int CountAssign::moved = 0;
 int main()
 {
     {
-        typedef std::pair<std::unique_ptr<int>, short> P;
+        typedef std::pair<std::unique_ptr<int>, int> P;
         P p1(std::unique_ptr<int>(new int(3)), 4);
         P p2;
         p2 = std::move(p1);

@@ -15,19 +15,19 @@
 // {
 // public:
 //     // types:
-// 	using traits_type               = traits;
-// 	using value_type                = charT;
-// 	using pointer                   = value_type*;
-// 	using const_pointer             = const value_type*;
-// 	using reference                 = value_type&;
-// 	using const_reference           = const value_type&;
-// 	using const_iterator            = implementation-defined ; // see 24.4.2.2
-// 	using iterator                  = const_iterator;
-// 	using const_reverse_iterator    = reverse_iterator<const_iterator>;
-// 	using iterator                  = const_reverse_iterator;
-// 	using size_type                 = size_t;
-// 	using difference_type           = ptrdiff_t;
-// 	static constexpr size_type npos = size_type(-1);
+//     using traits_type               = traits;
+//     using value_type                = charT;
+//     using pointer                   = value_type*;
+//     using const_pointer             = const value_type*;
+//     using reference                 = value_type&;
+//     using const_reference           = const value_type&;
+//     using const_iterator            = implementation-defined ; // see 24.4.2.2
+//     using iterator                  = const_iterator;
+//     using const_reverse_iterator    = reverse_iterator<const_iterator>;
+//     using iterator                  = const_reverse_iterator;
+//     using size_type                 = size_t;
+//     using difference_type           = ptrdiff_t;
+//     static constexpr size_type npos = size_type(-1);
 //
 // };
 

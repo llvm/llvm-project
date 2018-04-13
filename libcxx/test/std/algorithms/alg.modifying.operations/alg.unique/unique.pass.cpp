@@ -26,7 +26,7 @@
 TEST_CONSTEXPR bool test_constexpr() {
           int ia[]       = {0, 1, 1, 3, 4};
     const int expected[] = {0, 1, 3, 4};
-	const size_t N = 4;
+    const size_t N = 4;
 
     auto it = std::unique(std::begin(ia), std::end(ia));
     return it == (std::begin(ia) + N)

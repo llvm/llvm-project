@@ -115,7 +115,7 @@ void DoubleFree() {
 }
 
 void StackOverflow(int Idx) {
-  int some_stack[10000];
+  int some_stack[256];
   static volatile int *x;
   x = &some_stack[0];
   if (Idx > 0)

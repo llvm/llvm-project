@@ -1129,27 +1129,6 @@ define <8 x i16> @test_x86_sse2_pmulhu_w(<8 x i16> %a0, <8 x i16> %a1) {
 declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 
-define <2 x i64> @test_x86_sse2_pmulu_dq(<4 x i32> %a0, <4 x i32> %a1) {
-; SSE-LABEL: test_x86_sse2_pmulu_dq:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    pmuludq %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xf4,0xc1]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX2-LABEL: test_x86_sse2_pmulu_dq:
-; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xf4,0xc1]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse2_pmulu_dq:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xf4,0xc1]
-; SKX-NEXT:    retl ## encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32> %a0, <4 x i32> %a1) ; <<2 x i64>> [#uses=1]
-  ret <2 x i64> %res
-}
-declare <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32>, <4 x i32>) nounwind readnone
-
-
 define <2 x i64> @test_x86_sse2_psad_bw(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: test_x86_sse2_psad_bw:
 ; SSE:       ## %bb.0:

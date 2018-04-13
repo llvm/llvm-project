@@ -25,28 +25,14 @@ class SizeItins<OpndItins arg_s, OpndItins arg_d> {
   OpndItins d = arg_d;
 }
 
-class MoveLoadStoreItins<InstrItinClass arg_rr, InstrItinClass arg_rm,
-                         InstrItinClass arg_mr> {
-  InstrItinClass rr = arg_rr;
-  InstrItinClass rm = arg_rm;
-  InstrItinClass mr = arg_mr;
-}
-
-class ShiftOpndItins<InstrItinClass arg_rr, InstrItinClass arg_rm,
-                     InstrItinClass arg_ri> {
-  InstrItinClass rr = arg_rr;
-  InstrItinClass rm = arg_rm;
-  InstrItinClass ri = arg_ri;
-}
-
 // scalar
 let Sched = WriteFAdd in {
 def SSE_ALU_F32S : OpndItins<
-  IIC_SSE_ALU_F32S_RR, IIC_SSE_ALU_F32S_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_ALU_F64S : OpndItins<
-  IIC_SSE_ALU_F64S_RR, IIC_SSE_ALU_F64S_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -56,11 +42,11 @@ def SSE_ALU_ITINS_S : SizeItins<
 
 let Sched = WriteFMul in {
 def SSE_MUL_F32S : OpndItins<
-  IIC_SSE_MUL_F32S_RR, IIC_SSE_MUL_F32S_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_MUL_F64S : OpndItins<
-  IIC_SSE_MUL_F64S_RR, IIC_SSE_MUL_F64S_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -70,11 +56,11 @@ def SSE_MUL_ITINS_S : SizeItins<
 
 let Sched = WriteFDiv in {
 def SSE_DIV_F32S : OpndItins<
-  IIC_SSE_DIV_F32S_RR, IIC_SSE_DIV_F32S_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_DIV_F64S : OpndItins<
-  IIC_SSE_DIV_F64S_RR, IIC_SSE_DIV_F64S_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -85,11 +71,11 @@ def SSE_DIV_ITINS_S : SizeItins<
 // parallel
 let Sched = WriteFAdd in {
 def SSE_ALU_F32P : OpndItins<
-  IIC_SSE_ALU_F32P_RR, IIC_SSE_ALU_F32P_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_ALU_F64P : OpndItins<
-  IIC_SSE_ALU_F64P_RR, IIC_SSE_ALU_F64P_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -99,11 +85,11 @@ def SSE_ALU_ITINS_P : SizeItins<
 
 let Sched = WriteFMul in {
 def SSE_MUL_F32P : OpndItins<
-  IIC_SSE_MUL_F32P_RR, IIC_SSE_MUL_F32P_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_MUL_F64P : OpndItins<
-  IIC_SSE_MUL_F64P_RR, IIC_SSE_MUL_F64P_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -113,11 +99,11 @@ def SSE_MUL_ITINS_P : SizeItins<
 
 let Sched = WriteFDiv in {
 def SSE_DIV_F32P : OpndItins<
-  IIC_SSE_DIV_F32P_RR, IIC_SSE_DIV_F32P_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_DIV_F64P : OpndItins<
-  IIC_SSE_DIV_F64P_RR, IIC_SSE_DIV_F64P_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -127,78 +113,65 @@ def SSE_DIV_ITINS_P : SizeItins<
 
 let Sched = WriteVecLogic in
 def SSE_BIT_ITINS_P : OpndItins<
-  IIC_SSE_BIT_P_RR, IIC_SSE_BIT_P_RM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteVecALU in {
 def SSE_INTALU_ITINS_P : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_INTALUQ_ITINS_P : OpndItins<
-  IIC_SSE_INTALUQ_P_RR, IIC_SSE_INTALUQ_P_RM
+  NoItinerary, NoItinerary
 >;
 }
 
 let Sched = WriteVecIMul in
 def SSE_INTMUL_ITINS_P : OpndItins<
-  IIC_SSE_INTMUL_P_RR, IIC_SSE_INTMUL_P_RM
+  NoItinerary, NoItinerary
 >;
 
-// FIXME: Merge SSE_INTSHIFT_P + SSE_INTSHIFT_ITINS_P.
 let Sched = WriteVecShift in
 def SSE_INTSHIFT_P : OpndItins<
-  IIC_SSE_INTSH_P_RR, IIC_SSE_INTSH_P_RM
->;
-
-def SSE_INTSHIFT_ITINS_P : ShiftOpndItins<
-  IIC_SSE_INTSH_P_RR, IIC_SSE_INTSH_P_RM, IIC_SSE_INTSH_P_RI
+  NoItinerary, NoItinerary
 >;
 
 def SSE_MOVA_ITINS : OpndItins<
-  IIC_SSE_MOVA_P_RR, IIC_SSE_MOVA_P_RM
->;
-
-def SSE_MOVA : MoveLoadStoreItins<
-  IIC_SSE_MOVA_P_RR, IIC_SSE_MOVA_P_RM, IIC_SSE_MOVA_P_MR
+  NoItinerary, NoItinerary
 >;
 
 def SSE_MOVU_ITINS : OpndItins<
-  IIC_SSE_MOVU_P_RR, IIC_SSE_MOVU_P_RM
->;
-
-def SSE_MOVU : MoveLoadStoreItins<
-  IIC_SSE_MOVU_P_RR, IIC_SSE_MOVU_P_RM, IIC_SSE_MOVU_P_MR
+  NoItinerary, NoItinerary
 >;
 
 def SSE_DPPD_ITINS : OpndItins<
-  IIC_SSE_DPPD_RR, IIC_SSE_DPPD_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_DPPS_ITINS : OpndItins<
-  IIC_SSE_DPPS_RR, IIC_SSE_DPPS_RM
+  NoItinerary, NoItinerary
 >;
 
 def DEFAULT_ITINS : OpndItins<
-  IIC_ALU_NONMEM, IIC_ALU_MEM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_EXTRACT_ITINS : OpndItins<
-  IIC_SSE_EXTRACTPS_RR, IIC_SSE_EXTRACTPS_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_INSERT_ITINS : OpndItins<
-  IIC_SSE_INSERTPS_RR, IIC_SSE_INSERTPS_RM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteMPSAD in
 def SSE_MPSADBW_ITINS : OpndItins<
-  IIC_SSE_MPSADBW_RR, IIC_SSE_MPSADBW_RM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WritePMULLD in
 def SSE_PMULLD_ITINS : OpndItins<
-  IIC_SSE_PMULLD_RR, IIC_SSE_PMULLD_RM
+  NoItinerary, NoItinerary
 >;
 
 // Definitions for backward compatibility.
@@ -206,42 +179,42 @@ def SSE_PMULLD_ITINS : OpndItins<
 // than the actual scheduling model.
 let Sched = WriteShuffle in
 def DEFAULT_ITINS_SHUFFLESCHED :  OpndItins<
-  IIC_ALU_NONMEM, IIC_ALU_MEM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteVecIMul in
 def DEFAULT_ITINS_VECIMULSCHED :  OpndItins<
-  IIC_ALU_NONMEM, IIC_ALU_MEM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteShuffle in
 def SSE_INTALU_ITINS_SHUFF_P : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteShuffle in
 def SSE_PACK : OpndItins<
-  IIC_SSE_PACK, IIC_SSE_PACK
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteVarBlend in
 def DEFAULT_ITINS_VARBLENDSCHED :  OpndItins<
-  IIC_ALU_NONMEM, IIC_ALU_MEM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteFVarBlend in
 def DEFAULT_ITINS_FVARBLENDSCHED :  OpndItins<
-  IIC_ALU_NONMEM, IIC_ALU_MEM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteFBlend in
 def SSE_INTALU_ITINS_FBLEND_P : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteBlend in
 def SSE_INTALU_ITINS_BLEND_P : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 
 //===----------------------------------------------------------------------===//
@@ -1119,68 +1092,68 @@ let Constraints = "$src1 = $dst", AddedComplexity = 20 in {
 
 let Sched = WriteCvtF2I in {
 def SSE_CVT_SS2SI_32 : OpndItins<
-  IIC_SSE_CVT_SS2SI32_RR, IIC_SSE_CVT_SS2SI32_RM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteCvtF2I in
 def SSE_CVT_SS2SI_64 : OpndItins<
-  IIC_SSE_CVT_SS2SI64_RR, IIC_SSE_CVT_SS2SI64_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_SD2SI : OpndItins<
-  IIC_SSE_CVT_SD2SI_RR, IIC_SSE_CVT_SD2SI_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_PS2I : OpndItins<
-  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_PD2I : OpndItins<
-  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+  NoItinerary, NoItinerary
 >;
 }
 
 let Sched = WriteCvtI2F in {
 def SSE_CVT_SI2SS : OpndItins<
-  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_SI2SD : OpndItins<
-  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_I2PS : OpndItins<
-  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_I2PD : OpndItins<
-  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+  NoItinerary, NoItinerary
 >;
 }
 
 let Sched = WriteCvtF2F in {
 def SSE_CVT_SD2SS : OpndItins<
-  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_SS2SD : OpndItins<
-  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_PD2PS : OpndItins<
-  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_PS2PD : OpndItins<
-  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_PH2PS : OpndItins<
-  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_CVT_PS2PH : OpndItins<
-  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -2120,7 +2093,7 @@ let Predicates = [UseSSE2] in {
 
 let Sched = WriteFAdd in
 def SSE_COMIS : OpndItins<
-  IIC_SSE_COMIS_RR, IIC_SSE_COMIS_RM
+  NoItinerary, NoItinerary
 >;
 
 // sse12_cmp_scalar - sse 1 & 2 compare scalar instructions
@@ -2413,7 +2386,7 @@ let Predicates = [UseSSE1] in {
 
 let Sched = WriteFShuffle in
 def SSE_SHUFP : OpndItins<
-  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+  NoItinerary, NoItinerary
 >;
 
 /// sse12_shuffle - sse 1 & 2 fp shuffle instructions
@@ -2461,7 +2434,7 @@ let Constraints = "$src1 = $dst" in {
 
 let Sched = WriteFShuffle in
 def SSE_UNPCK : OpndItins<
-  IIC_SSE_UNPCK, IIC_SSE_UNPCK
+  NoItinerary, NoItinerary
 >;
 
 /// sse12_unpack_interleave - sse 1 & 2 fp unpack and interleave
@@ -3034,29 +3007,29 @@ defm : scalar_math_f64_patterns<fdiv, "DIV">;
 
 let Sched = WriteFSqrt in {
 def SSE_SQRTPS : OpndItins<
-  IIC_SSE_SQRTPS_RR, IIC_SSE_SQRTPS_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_SQRTSS : OpndItins<
-  IIC_SSE_SQRTSS_RR, IIC_SSE_SQRTSS_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_SQRTPD : OpndItins<
-  IIC_SSE_SQRTPD_RR, IIC_SSE_SQRTPD_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_SQRTSD : OpndItins<
-  IIC_SSE_SQRTSD_RR, IIC_SSE_SQRTSD_RM
+  NoItinerary, NoItinerary
 >;
 }
 
 let Sched = WriteFRsqrt in {
 def SSE_RSQRTPS : OpndItins<
-  IIC_SSE_RSQRTPS_RR, IIC_SSE_RSQRTPS_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_RSQRTSS : OpndItins<
-  IIC_SSE_RSQRTSS_RR, IIC_SSE_RSQRTSS_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -3070,11 +3043,11 @@ def SSE_RSQRT_S : SizeItins<
 
 let Sched = WriteFRcp in {
 def SSE_RCPP : OpndItins<
-  IIC_SSE_RCPP_RR, IIC_SSE_RCPP_RM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_RCPS : OpndItins<
-  IIC_SSE_RCPS_RR, IIC_SSE_RCPS_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -3644,7 +3617,7 @@ let Predicates = [HasAVX, NoVLX] in {
 
 let Sched = WriteVecIMul in
 def SSE_PMADD : OpndItins<
-  IIC_SSE_PMADD, IIC_SSE_PMADD
+  NoItinerary, NoItinerary
 >;
 
 let ExeDomain = SSEPackedInt in { // SSE integer instructions
@@ -3873,7 +3846,7 @@ defm PCMPGTD : PDI_binop_all<0x66, "pcmpgtd", X86pcmpgt, v4i32, v8i32,
 
 let Sched = WriteShuffle in
 def SSE_PSHUF : OpndItins<
-  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+  NoItinerary, NoItinerary
 >;
 
 let ExeDomain = SSEPackedInt in {
@@ -4045,7 +4018,7 @@ let Constraints = "$src1 = $dst" in {
 
 let Sched = WriteShuffle in
 def SSE_PUNPCK : OpndItins<
-  IIC_SSE_UNPCK, IIC_SSE_UNPCK
+  NoItinerary, NoItinerary
 >;
 
 let ExeDomain = SSEPackedInt in {
@@ -4689,7 +4662,7 @@ let Predicates = [UseSSE3] in {
 // FIXME: Improve MOVDDUP/BROADCAST reg/mem scheduling itineraries.
 let Sched = WriteFShuffle in
 def SSE_MOVDDUP : OpndItins<
-  IIC_SSE_MOV_LH, IIC_SSE_MOV_LH
+  NoItinerary, NoItinerary
 >;
 
 multiclass sse3_replicate_dfp<string OpcodeStr> {
@@ -4813,7 +4786,7 @@ let Constraints = "$src1 = $dst", Predicates = [UseSSE3] in {
 
 let Sched = WriteFHAdd in
 def SSE_HADDSUB : OpndItins<
-  IIC_SSE_HADDSUB_RR, IIC_SSE_HADDSUB_RM
+  NoItinerary, NoItinerary
 >;
 
 // Horizontal ops
@@ -4896,7 +4869,7 @@ let Constraints = "$src1 = $dst" in {
 
 let Sched = WriteVecALU in
 def SSE_PABS : OpndItins<
-  IIC_SSE_PABS_RR, IIC_SSE_PABS_RM
+  NoItinerary, NoItinerary
 >;
 
 /// SS3I_unop_rm_int - Simple SSSE3 unary op whose type can be v*{i8,i16,i32}.
@@ -4958,26 +4931,26 @@ defm PABSD : SS3I_unop_rm<0x1E, "pabsd", v4i32, abs, SSE_PABS, memopv2i64>;
 
 let Sched = WritePHAdd in {
 def SSE_PHADDSUBD : OpndItins<
-  IIC_SSE_PHADDSUBD_RR, IIC_SSE_PHADDSUBD_RM
+  NoItinerary, NoItinerary
 >;
 def SSE_PHADDSUBSW : OpndItins<
-  IIC_SSE_PHADDSUBSW_RR, IIC_SSE_PHADDSUBSW_RM
+  NoItinerary, NoItinerary
 >;
 def SSE_PHADDSUBW : OpndItins<
-  IIC_SSE_PHADDSUBW_RR, IIC_SSE_PHADDSUBW_RM
+  NoItinerary, NoItinerary
 >;
 }
 let Sched = WriteVarShuffle in
 def SSE_PSHUFB : OpndItins<
-  IIC_SSE_PSHUFB_RR, IIC_SSE_PSHUFB_RM
+  NoItinerary, NoItinerary
 >;
 let Sched = WriteVecALU in
 def SSE_PSIGN : OpndItins<
-  IIC_SSE_PSIGN_RR, IIC_SSE_PSIGN_RM
+  NoItinerary, NoItinerary
 >;
 let Sched = WriteVecIMul in
 def SSE_PMULHRSW : OpndItins<
-  IIC_SSE_PMULHRSW, IIC_SSE_PMULHRSW
+  NoItinerary, NoItinerary
 >;
 
 /// SS3I_binop_rm - Simple SSSE3 bin op
@@ -5172,7 +5145,7 @@ defm PMULHRSW    : SS3I_binop_rm<0x0B, "pmulhrsw", X86mulhrs, v8i16, v8i16,
 
 let Sched = WriteShuffle in
 def SSE_PALIGN : OpndItins<
-  IIC_SSE_PALIGNRR, IIC_SSE_PALIGNRM
+  NoItinerary, NoItinerary
 >;
 
 multiclass ssse3_palignr<string asm, ValueType VT, RegisterClass RC,
@@ -5768,11 +5741,11 @@ let Predicates = [UseAVX] in {
 //===----------------------------------------------------------------------===//
 
 def SSE_ROUNDPS : OpndItins<
-  IIC_SSE_ROUNDPS_REG, IIC_SSE_ROUNDPS_MEM
+  NoItinerary, NoItinerary
 >;
 
 def SSE_ROUNDPD : OpndItins<
-  IIC_SSE_ROUNDPD_REG, IIC_SSE_ROUNDPD_MEM
+  NoItinerary, NoItinerary
 >;
 
 multiclass sse41_fp_unop_p<bits<8> opc, string OpcodeStr,
@@ -6073,7 +6046,7 @@ let Predicates = [UseSSE41] in {
 
 let Sched = WriteVecLogic in
 def SSE_PTEST : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
@@ -7601,12 +7574,12 @@ defm VMASKMOVPD : avx_movmask_rm<0x2D, 0x2F, "vmaskmovpd",
 
 let Sched = WriteFVarShuffle in
 def AVX_VPERMILV : OpndItins<
-  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteFShuffle in
 def AVX_VPERMIL : OpndItins<
-  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+  NoItinerary, NoItinerary
 >;
 
 multiclass avx_permil<bits<8> opc_rm, bits<8> opc_rmi, string OpcodeStr,
@@ -8065,12 +8038,12 @@ let Predicates = [HasAVX1Only] in {
 
 let Sched = WriteFShuffle256 in
 def AVX2_PERMV_F : OpndItins<
-  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteShuffle256 in
 def AVX2_PERMV_I : OpndItins<
-  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+  NoItinerary, NoItinerary
 >;
 
 multiclass avx2_perm<bits<8> opc, string OpcodeStr, PatFrag mem_frag,

@@ -186,6 +186,7 @@
 #define bit_AVX512BITALG     0x00001000
 #define bit_AVX512VPOPCNTDQ  0x00004000
 #define bit_RDPID            0x00400000
+#define bit_CLDEMOTE         0x02000000
 
 /* Features in %edx for leaf 7 sub-leaf 0 */
 #define bit_AVX5124VNNIW  0x00000004
