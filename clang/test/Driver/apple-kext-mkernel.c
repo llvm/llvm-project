@@ -26,7 +26,3 @@
 // RUN: %clang -target x86_64-apple-darwin10 \
 // RUN:   -Werror -fno-builtin -fno-exceptions -fno-common -fno-rtti \
 // RUN:   -mkernel -fsyntax-only %s
-
-// RUN: %clang -c %s -target armv7k-apple-watchos -fapple-kext -mwatchos-version-min=1.0.0 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-WATCH
-// CHECK-WATCH-NOT: "-backend-option" "-arm-long-calls"

@@ -1350,7 +1350,7 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   // Forward the -mglobal-merge option for explicit control over the pass.
   if (Arg *A = Args.getLastArg(options::OPT_mglobal_merge,
                                options::OPT_mno_global_merge)) {
-    CmdArgs.push_back("-backend-option");
+    CmdArgs.push_back("-mllvm");
     if (A->getOption().matches(options::OPT_mno_global_merge))
       CmdArgs.push_back("-arm-global-merge=false");
     else
@@ -1464,21 +1464,21 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   if (Arg *A = Args.getLastArg(options::OPT_mfix_cortex_a53_835769,
                                options::OPT_mno_fix_cortex_a53_835769)) {
-    CmdArgs.push_back("-backend-option");
+    CmdArgs.push_back("-mllvm");
     if (A->getOption().matches(options::OPT_mfix_cortex_a53_835769))
       CmdArgs.push_back("-aarch64-fix-cortex-a53-835769=1");
     else
       CmdArgs.push_back("-aarch64-fix-cortex-a53-835769=0");
   } else if (Triple.isAndroid()) {
     // Enabled A53 errata (835769) workaround by default on android
-    CmdArgs.push_back("-backend-option");
+    CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-aarch64-fix-cortex-a53-835769=1");
   }
 
   // Forward the -mglobal-merge option for explicit control over the pass.
   if (Arg *A = Args.getLastArg(options::OPT_mglobal_merge,
                                options::OPT_mno_global_merge)) {
-    CmdArgs.push_back("-backend-option");
+    CmdArgs.push_back("-mllvm");
     if (A->getOption().matches(options::OPT_mno_global_merge))
       CmdArgs.push_back("-aarch64-enable-global-merge=false");
     else
@@ -3048,13 +3048,13 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   // Always enabled for SCE tuning.
   if (Args.hasArg(options::OPT_gdwarf_aranges) ||
       DebuggerTuning == llvm::DebuggerKind::SCE) {
-    CmdArgs.push_back("-backend-option");
+    CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-arange-section");
   }
 
   if (Args.hasFlag(options::OPT_fdebug_types_section,
                    options::OPT_fno_debug_types_section, false)) {
-    CmdArgs.push_back("-backend-option");
+    CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-type-units");
   }
 
@@ -4073,17 +4073,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mrestrict_it,
                                options::OPT_mno_restrict_it)) {
     if (A->getOption().matches(options::OPT_mrestrict_it)) {
-      CmdArgs.push_back("-backend-option");
+      CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-arm-restrict-it");
     } else {
-      CmdArgs.push_back("-backend-option");
+      CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-arm-no-restrict-it");
     }
   } else if (Triple.isOSWindows() &&
              (Triple.getArch() == llvm::Triple::arm ||
               Triple.getArch() == llvm::Triple::thumb)) {
     // Windows on ARM expects restricted IT blocks
-    CmdArgs.push_back("-backend-option");
+    CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-arm-restrict-it");
   }
 

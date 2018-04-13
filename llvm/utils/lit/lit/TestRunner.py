@@ -922,11 +922,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         f.seek(0, 0)
         procData[i] = (procData[i][0], f.read())
 
-    def to_string(bytes):
-        if isinstance(bytes, str):
-            return bytes
-        return bytes.encode('utf-8')
-
     exitCode = None
     for i,(out,err) in enumerate(procData):
         res = procs[i].wait()

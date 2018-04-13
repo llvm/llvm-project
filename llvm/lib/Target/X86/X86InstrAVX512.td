@@ -585,11 +585,11 @@ multiclass vinsert_for_type<ValueType EltVT32, int Opcode128,
 // FIXME: Is there a better scheduler itinerary for VINSERTF/VINSERTI?
 let Sched = WriteFShuffle256 in
 def AVX512_VINSERTF : OpndItins<
-  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+  NoItinerary, NoItinerary
 >;
 let Sched = WriteShuffle256 in
 def AVX512_VINSERTI : OpndItins<
-  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+  NoItinerary, NoItinerary
 >;
 
 defm VINSERTF : vinsert_for_type<f32, 0x18, f64, 0x1a, AVX512_VINSERTF>;
@@ -1712,12 +1712,12 @@ defm VPBROADCASTMB2Q : avx512_mask_broadcast<0x2A, "vpbroadcastmb2q",
 
 let Sched = WriteFVarShuffle256 in
 def AVX512_PERM2_F : OpndItins<
-  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteVarShuffle256 in
 def AVX512_PERM2_I : OpndItins<
-  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+  NoItinerary, NoItinerary
 >;
 
 multiclass avx512_perm_i<bits<8> opc, string OpcodeStr, OpndItins itins,
@@ -1881,12 +1881,12 @@ defm VPERMT2PD : avx512_perm_t_sizes<0x7F, "vpermt2pd", AVX512_PERM2_F,
 
 let Sched = WriteFVarBlend in
 def AVX512_BLENDM : OpndItins<
-  IIC_SSE_ALU_F32P_RR, IIC_SSE_ALU_F32P_RM
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteVarBlend in
 def AVX512_PBLENDM : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 
 multiclass avx512_blendmask<bits<8> opc, string OpcodeStr, OpndItins itins,
@@ -3170,7 +3170,7 @@ defm : operation_subvector_mask_lowering<VK32, v32i1, VK64, v64i1>;
 //
 
 
-multiclass avx512_load<bits<8> opc, string OpcodeStr, MoveLoadStoreItins itins,
+multiclass avx512_load<bits<8> opc, string OpcodeStr,
                        X86VectorVTInfo _, PatFrag ld_frag, PatFrag mload,
                        SchedWrite SchedRR, SchedWrite SchedRM,
                        bit NoRMPattern = 0,
@@ -3239,15 +3239,15 @@ multiclass avx512_alignedload_vl<bits<8> opc, string OpcodeStr,
                                   Predicate prd, SchedWrite SchedRR,
                                   SchedWrite SchedRM, bit NoRMPattern = 0> {
   let Predicates = [prd] in
-  defm Z : avx512_load<opc, OpcodeStr, SSE_MOVA, _.info512,
+  defm Z : avx512_load<opc, OpcodeStr, _.info512,
                        _.info512.AlignedLdFrag, masked_load_aligned512,
                        SchedRR, SchedRM, NoRMPattern>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
-  defm Z256 : avx512_load<opc, OpcodeStr, SSE_MOVA, _.info256,
+  defm Z256 : avx512_load<opc, OpcodeStr, _.info256,
                           _.info256.AlignedLdFrag, masked_load_aligned256,
                           SchedRR, SchedRM, NoRMPattern>, EVEX_V256;
-  defm Z128 : avx512_load<opc, OpcodeStr, SSE_MOVA, _.info128,
+  defm Z128 : avx512_load<opc, OpcodeStr, _.info128,
                           _.info128.AlignedLdFrag, masked_load_aligned128,
                           SchedRR, SchedRM, NoRMPattern>, EVEX_V128;
   }
@@ -3259,21 +3259,21 @@ multiclass avx512_load_vl<bits<8> opc, string OpcodeStr,
                                   SchedWrite SchedRM, bit NoRMPattern = 0,
                                   SDPatternOperator SelectOprr = vselect> {
   let Predicates = [prd] in
-  defm Z : avx512_load<opc, OpcodeStr, SSE_MOVU, _.info512, _.info512.LdFrag,
+  defm Z : avx512_load<opc, OpcodeStr, _.info512, _.info512.LdFrag,
                        masked_load_unaligned, SchedRR, SchedRM, NoRMPattern,
                        SelectOprr>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
-  defm Z256 : avx512_load<opc, OpcodeStr, SSE_MOVU, _.info256, _.info256.LdFrag,
+  defm Z256 : avx512_load<opc, OpcodeStr, _.info256, _.info256.LdFrag,
                          masked_load_unaligned, SchedRR, SchedRM, NoRMPattern,
                          SelectOprr>, EVEX_V256;
-  defm Z128 : avx512_load<opc, OpcodeStr, SSE_MOVU, _.info128, _.info128.LdFrag,
+  defm Z128 : avx512_load<opc, OpcodeStr, _.info128, _.info128.LdFrag,
                          masked_load_unaligned, SchedRR, SchedRM, NoRMPattern,
                          SelectOprr>, EVEX_V128;
   }
 }
 
-multiclass avx512_store<bits<8> opc, string OpcodeStr, MoveLoadStoreItins itins,
+multiclass avx512_store<bits<8> opc, string OpcodeStr,
                         X86VectorVTInfo _, PatFrag st_frag, PatFrag mstore,
                         string Name, SchedWrite SchedRR, SchedWrite SchedMR,
                         bit NoMRPattern = 0> {
@@ -3318,14 +3318,14 @@ multiclass avx512_store_vl< bits<8> opc, string OpcodeStr,
                             string Name, SchedWrite SchedRR, SchedWrite SchedMR,
                             bit NoMRPattern = 0> {
   let Predicates = [prd] in
-  defm Z : avx512_store<opc, OpcodeStr, SSE_MOVU, _.info512, store,
+  defm Z : avx512_store<opc, OpcodeStr, _.info512, store,
                         masked_store_unaligned, Name#Z, SchedRR, SchedMR,
                         NoMRPattern>, EVEX_V512;
   let Predicates = [prd, HasVLX] in {
-    defm Z256 : avx512_store<opc, OpcodeStr, SSE_MOVU, _.info256, store,
+    defm Z256 : avx512_store<opc, OpcodeStr, _.info256, store,
                              masked_store_unaligned, Name#Z256, SchedRR,
                              SchedMR, NoMRPattern>, EVEX_V256;
-    defm Z128 : avx512_store<opc, OpcodeStr, SSE_MOVU, _.info128, store,
+    defm Z128 : avx512_store<opc, OpcodeStr, _.info128, store,
                              masked_store_unaligned, Name#Z128, SchedRR,
                              SchedMR, NoMRPattern>, EVEX_V128;
   }
@@ -3336,15 +3336,15 @@ multiclass avx512_alignedstore_vl<bits<8> opc, string OpcodeStr,
                                   string Name, SchedWrite SchedRR,
                                   SchedWrite SchedMR, bit NoMRPattern = 0> {
   let Predicates = [prd] in
-  defm Z : avx512_store<opc, OpcodeStr, SSE_MOVA, _.info512, alignedstore,
+  defm Z : avx512_store<opc, OpcodeStr, _.info512, alignedstore,
                         masked_store_aligned512, Name#Z, SchedRR, SchedMR,
                         NoMRPattern>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
-    defm Z256 : avx512_store<opc, OpcodeStr, SSE_MOVA, _.info256, alignedstore,
+    defm Z256 : avx512_store<opc, OpcodeStr, _.info256, alignedstore,
                              masked_store_aligned256, Name#Z256, SchedRR,
                              SchedMR, NoMRPattern>, EVEX_V256;
-    defm Z128 : avx512_store<opc, OpcodeStr, SSE_MOVA, _.info128, alignedstore,
+    defm Z128 : avx512_store<opc, OpcodeStr, _.info128, alignedstore,
                              masked_store_aligned128, Name#Z128, SchedRR,
                              SchedMR, NoMRPattern>, EVEX_V128;
   }
@@ -5689,7 +5689,7 @@ multiclass avx512_var_shift_w<bits<8> opc, string OpcodeStr,
 
 let Sched = WriteVarVecShift in
 def AVX512_VARSHIFT_P : OpndItins<
-  IIC_SSE_INTSH_P_RR, IIC_SSE_INTSH_P_RM
+  NoItinerary, NoItinerary
 >;
 
 defm VPSLLV : avx512_var_shift_types<0x47, "vpsllv", shl, AVX512_VARSHIFT_P>,
@@ -8199,12 +8199,12 @@ defm VRNDSCALESD : avx512_rndscale_scalar<0x0B, "vrndscalesd", SSE_ALU_F64S,
 
 let Sched = WriteShuffle256 in
 def AVX512_EXTEND : OpndItins<
-  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+  NoItinerary, NoItinerary
 >;
 
 let Sched = WriteShuffle256 in
 def AVX512_TRUNCATE : OpndItins<
-  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+  NoItinerary, NoItinerary
 >;
 
 multiclass avx512_trunc_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -8939,10 +8939,10 @@ let Predicates = [HasDQI, NoBWI] in {
 // FIXME: Is there a better scheduler itinerary for VPCOMPRESS/VPEXPAND?
 let Sched = WriteVarShuffle256 in {
 def AVX512_COMPRESS : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 def AVX512_EXPAND : OpndItins<
-  IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
+  NoItinerary, NoItinerary
 >;
 }
 
@@ -10035,7 +10035,7 @@ defm VSHUFPD: avx512_shufp<"vshufpd", avx512vl_i64_info, avx512vl_f64_info>, PD,
 
 let Sched = WriteVecShift in
 def AVX512_BYTESHIFT : OpndItins<
-  IIC_SSE_INTSHDQ_P_RI, IIC_SSE_INTSHDQ_P_RI
+  NoItinerary, NoItinerary
 >;
 
 multiclass avx512_shift_packed<bits<8> opc, SDNode OpNode, Format MRMr,

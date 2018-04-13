@@ -82,6 +82,8 @@ TEST(PartialDemangleTest, TestNameChopping) {
     Buf = D.getFunctionParameters(Buf, &Size);
     EXPECT_STREQ(Buf, N.Params);
   }
+
+  std::free(Buf);
 }
 
 TEST(PartialDemangleTest, TestNameMeta) {

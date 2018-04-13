@@ -73,6 +73,12 @@ struct Config {
   /// Sample PGO profile path.
   std::string SampleProfile;
 
+  /// The directory to store .dwo files.
+  std::string DwoDir;
+
+  /// The objcopy binary used to extract dwo files.
+  std::string Objcopy;
+
   /// Optimization remarks file path.
   std::string RemarksFilename = "";
 
