@@ -24,12 +24,26 @@ namespace clang {
 namespace clangd {
 
 struct SymbolLocation {
+  // Specify a position (Line, Column) of symbol. Using Line/Column allows us to
+  // build LSP responses without reading the file content.
+  struct Position {
+    uint32_t Line = 0; // 0-based
+    // Using UTF-16 code units.
+    uint32_t Column = 0; // 0-based
+  };
+
   // The URI of the source file where a symbol occurs.
   llvm::StringRef FileURI;
   // The 0-based offsets of the symbol from the beginning of the source file,
   // using half-open range, [StartOffset, EndOffset).
+  // DO NOT use these fields, as they will be removed immediately.
+  // FIXME(hokein): remove these fields in favor of Position.
   unsigned StartOffset = 0;
   unsigned EndOffset = 0;
+
+  /// The symbol range, using half-open range [Start, End).
+  Position Start;
+  Position End;
 
   operator bool() const { return !FileURI.empty(); }
 };

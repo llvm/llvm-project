@@ -364,27 +364,6 @@ define <8 x i16> @test_x86_sse41_pminuw(<8 x i16> %a0, <8 x i16> %a1) {
 declare <8 x i16> @llvm.x86.sse41.pminuw(<8 x i16>, <8 x i16>) nounwind readnone
 
 
-define <2 x i64> @test_x86_sse41_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
-; SSE41-LABEL: test_x86_sse41_pmuldq:
-; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pmuldq %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x38,0x28,0xc1]
-; SSE41-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX2-LABEL: test_x86_sse41_pmuldq:
-; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x28,0xc1]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse41_pmuldq:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x28,0xc1]
-; SKX-NEXT:    retl ## encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %a0, <4 x i32> %a1) ; <<2 x i64>> [#uses=1]
-  ret <2 x i64> %res
-}
-declare <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32>, <4 x i32>) nounwind readnone
-
-
 define i32 @test_x86_sse41_ptestc(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE41-LABEL: test_x86_sse41_ptestc:
 ; SSE41:       ## %bb.0:

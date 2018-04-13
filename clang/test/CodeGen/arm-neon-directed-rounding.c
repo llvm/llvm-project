@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a57 -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a57 \
+// RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
+// RUN:     opt -S -mem2reg | FileCheck %s
 
 #include <arm_neon.h>
 
@@ -84,4 +86,11 @@ float32x2_t test_vrnd_f32(float32x2_t a) {
 // CHECK:   ret <4 x float> [[VRNDQ_V1_I]]
 float32x4_t test_vrndq_f32(float32x4_t a) {
   return vrndq_f32(a);
+}
+
+// CHECK-LABEL: define float @test_vrndns_f32(float %a) #0 {
+// CHECK:   [[VRNDN_I:%.*]] = call float @llvm.arm.neon.vrintn.f32(float %a) #2
+// CHECK:   ret float [[VRNDN_I]]
+float32_t test_vrndns_f32(float32_t a) {
+  return vrndns_f32(a);
 }

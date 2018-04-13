@@ -54,7 +54,7 @@ public:
 
   /// Register cleanup handler, which is used when the recovery context is
   /// finished.
-  /// The recovery context owns the the handler.
+  /// The recovery context owns the handler.
   void registerCleanup(CrashRecoveryContextCleanup *cleanup);
 
   void unregisterCleanup(CrashRecoveryContextCleanup *cleanup);

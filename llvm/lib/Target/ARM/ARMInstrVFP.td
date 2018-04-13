@@ -977,7 +977,7 @@ multiclass vrint_inst_anpm<string opc, bits<2> rm,
 }
 
 defm VRINTA : vrint_inst_anpm<"a", 0b00, fround>;
-defm VRINTN : vrint_inst_anpm<"n", 0b01>;
+defm VRINTN : vrint_inst_anpm<"n", 0b01, int_arm_neon_vrintn>;
 defm VRINTP : vrint_inst_anpm<"p", 0b10, fceil>;
 defm VRINTM : vrint_inst_anpm<"m", 0b11, ffloor>;
 

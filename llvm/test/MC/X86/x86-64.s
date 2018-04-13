@@ -1563,6 +1563,14 @@ ptwriteq %rax
 // CHECK:  encoding: [0xf3,0x0f,0x09]
 wbnoinvd
 
+// CHECK: cldemote 4(%rax)
+// CHECK:  encoding: [0x0f,0x1c,0x40,0x04]
+cldemote 4(%rax)
+
+// CHECK: cldemote 3735928559(%rbx,%rcx,8)
+// CHECK:  encoding: [0x0f,0x1c,0x84,0xcb,0xef,0xbe,0xad,0xde]
+cldemote 0xdeadbeef(%rbx,%rcx,8)
+
 //  __asm __volatile(
 //    "pushf        \n\t"
 //    "popf       \n\t"

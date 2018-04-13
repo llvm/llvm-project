@@ -522,7 +522,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
         // operands, the following check on the kill flag would suffice.
         // if(!jmpInstr->getOperand(0).isKill()) break;
 
-        // This predicate register is live out out of BB
+        // This predicate register is live out of BB
         // this would only work if we can actually use Live
         // variable analysis on phy regs - but LLVM does not
         // provide LV analysis on phys regs.

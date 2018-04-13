@@ -14,6 +14,18 @@
 // RUN:     2>&1 | FileCheck --check-prefixes FDR,BASIC %s
 // RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none -### %s \
 // RUN:     2>&1 | FileCheck --check-prefixes NONE %s
+//
+// We also should support overriding the modes in an additive manner.
+//
+// RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none,xray-fdr \
+// RUN:     -### %s \
+// RUN:     2>&1 | FileCheck --check-prefixes FDR %s
+// RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=xray-fdr,none \
+// RUN:     -### %s \
+// RUN:     2>&1 | FileCheck --check-prefixes NONE %s
+// RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none,all \
+// RUN:     -### %s \
+// RUN:     2>&1 | FileCheck --check-prefixes FDR,BASIC %s
 
 // BASIC: libclang_rt.xray-basic
 // FDR: libclang_rt.xray-fdr
