@@ -78,7 +78,7 @@ public:
   // section.
   uint64_t getOffset(uint64_t Offset) const;
 
-  uint64_t getVA(uint64_t Offset) const;
+  uint64_t getVA(uint64_t Offset = 0) const;
 
 protected:
   SectionBase(Kind SectionKind, StringRef Name, uint64_t Flags,
