@@ -131,6 +131,9 @@ def XZR   : AArch64Reg<31, "xzr", [WZR]>, DwarfRegAlias<WSP>;
 // Condition code register.
 def NZCV  : AArch64Reg<0, "nzcv">;
 
+// First fault status register
+def FFR : AArch64Reg<0, "ffr">, DwarfRegNum<[47]>;
+
 // GPR register classes with the intersections of GPR32/GPR32sp and
 // GPR64/GPR64sp for use by the coalescer.
 def GPR32common : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 0, 30)> {
@@ -834,3 +837,32 @@ def ZPR16   : ZPRRegOp<"h", ZPRAsmOp16,  ZPR>;
 def ZPR32   : ZPRRegOp<"s", ZPRAsmOp32,  ZPR>;
 def ZPR64   : ZPRRegOp<"d", ZPRAsmOp64,  ZPR>;
 def ZPR128  : ZPRRegOp<"q", ZPRAsmOp128, ZPR>;
+
+
+let Namespace = "AArch64" in {
+  def zsub0 : SubRegIndex<128, -1>;
+}
+
+class ZPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
+  let Name = "SVEVectorList" # NumRegs # ElementWidth;
+  let ParserMethod = "tryParseVectorList<RegKind::SVEDataVector>";
+  let PredicateMethod =
+      "isTypedVectorList<RegKind::SVEDataVector, " #NumRegs #", 0, " #ElementWidth #">";
+  let RenderMethod = "addVectorListOperands<AArch64Operand::VecListIdx_ZReg, " # NumRegs # ">";
+}
+
+def Z_b  : RegisterOperand<ZPR,  "printTypedVectorList<0,'b'>"> {
+  let ParserMatchClass = ZPRVectorList<8, 1>;
+}
+
+def Z_h  : RegisterOperand<ZPR,  "printTypedVectorList<0,'h'>"> {
+  let ParserMatchClass = ZPRVectorList<16, 1>;
+}
+
+def Z_s  : RegisterOperand<ZPR,  "printTypedVectorList<0,'s'>"> {
+  let ParserMatchClass = ZPRVectorList<32, 1>;
+}
+
+def Z_d  : RegisterOperand<ZPR,  "printTypedVectorList<0,'d'>"> {
+  let ParserMatchClass = ZPRVectorList<64, 1>;
+}

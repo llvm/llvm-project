@@ -856,13 +856,17 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
         SanOpts.set(SanitizerKind::KernelAddress, false);
       if (mask & SanitizerKind::KernelAddress)
         SanOpts.set(SanitizerKind::Address, false);
+      if (mask & SanitizerKind::HWAddress)
+        SanOpts.set(SanitizerKind::KernelHWAddress, false);
+      if (mask & SanitizerKind::KernelHWAddress)
+        SanOpts.set(SanitizerKind::HWAddress, false);
     }
   }
 
   // Apply sanitizer attributes to the function.
   if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress))
     Fn->addFnAttr(llvm::Attribute::SanitizeAddress);
-  if (SanOpts.hasOneOf(SanitizerKind::HWAddress))
+  if (SanOpts.hasOneOf(SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress))
     Fn->addFnAttr(llvm::Attribute::SanitizeHWAddress);
   if (SanOpts.has(SanitizerKind::Thread))
     Fn->addFnAttr(llvm::Attribute::SanitizeThread);

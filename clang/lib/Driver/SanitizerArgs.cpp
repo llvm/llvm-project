@@ -33,11 +33,12 @@ enum : SanitizerMask {
   NotAllowedWithMinimalRuntime = Vptr,
   RequiresPIE = DataFlow | HWAddress | Scudo,
   NeedsUnwindTables = Address | HWAddress | Thread | Memory | DataFlow,
-  SupportsCoverage = Address | HWAddress | KernelAddress | Memory | Leak |
-                     Undefined | Integer | Nullability | DataFlow | Fuzzer |
-                     FuzzerNoLink,
+  SupportsCoverage = Address | HWAddress | KernelAddress | KernelHWAddress |
+                     Memory | Leak | Undefined | Integer | Nullability |
+                     DataFlow | Fuzzer | FuzzerNoLink,
   RecoverableByDefault = Undefined | Integer | Nullability,
   Unrecoverable = Unreachable | Return,
+  AlwaysRecoverable = KernelAddress | KernelHWAddress,
   LegacyFsanitizeRecoverMask = Undefined | Integer,
   NeedsLTO = CFI,
   TrappingSupported = (Undefined & ~Vptr) | UnsignedIntegerOverflow |
@@ -347,7 +348,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                     KernelAddress | Efficiency),
       std::make_pair(ShadowCallStack, Address | HWAddress | Leak | Thread |
                                           Memory | KernelAddress | Efficiency |
-                                          SafeStack)};
+                                          SafeStack),
+      std::make_pair(KernelHWAddress, Address | HWAddress | Leak | Thread |
+                                          Memory | KernelAddress | Efficiency |
+                                          SafeStack | ShadowCallStack)};
 
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
@@ -422,8 +426,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // default in ASan?
 
   // Parse -f(no-)?sanitize-recover flags.
-  SanitizerMask RecoverableKinds = RecoverableByDefault;
+  SanitizerMask RecoverableKinds = RecoverableByDefault | AlwaysRecoverable;
   SanitizerMask DiagnosedUnrecoverableKinds = 0;
+  SanitizerMask DiagnosedAlwaysRecoverableKinds = 0;
   for (const auto *Arg : Args) {
     const char *DeprecatedReplacement = nullptr;
     if (Arg->getOption().matches(options::OPT_fsanitize_recover)) {
@@ -451,7 +456,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       RecoverableKinds |= expandSanitizerGroups(Add);
       Arg->claim();
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_recover_EQ)) {
-      RecoverableKinds &= ~expandSanitizerGroups(parseArgValues(D, Arg, true));
+      SanitizerMask Remove = parseArgValues(D, Arg, true);
+      // Report error if user explicitly tries to disable recovery from
+      // always recoverable sanitizer.
+      if (SanitizerMask KindsToDiagnose =
+              Remove & AlwaysRecoverable & ~DiagnosedAlwaysRecoverableKinds) {
+        SanitizerSet SetToDiagnose;
+        SetToDiagnose.Mask |= KindsToDiagnose;
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << Arg->getOption().getName() << toString(SetToDiagnose);
+        DiagnosedAlwaysRecoverableKinds |= KindsToDiagnose;
+      }
+      RecoverableKinds &= ~expandSanitizerGroups(Remove);
       Arg->claim();
     }
     if (DeprecatedReplacement) {

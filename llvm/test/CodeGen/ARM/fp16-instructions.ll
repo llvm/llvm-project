@@ -28,6 +28,10 @@
 ; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fullfp16 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
 
+; TODO: we can't pass half-precision arguments as "half" types yet. We do
+; that for the time being by passing "float %f.coerce" and the necessary
+; bitconverts/truncates. But when we can pass half types, we do want to use
+; and test that here.
 
 define float @RetValBug(float %A.coerce) {
 entry:
@@ -477,9 +481,10 @@ entry:
 ; CHECK-HARDFP-FULLFP16-FAST-NEXT:  vmov.f32  s0, s2
 }
 
-; TODO:
 ; 17. VMAXNM
 ; 18. VMINNM
+; Tested in fp16-vminmaxnm.ll and fp16-vminmaxnm-safe.ll
+
 
 ; 19. VMLA
 define float @VMLA(float %a.coerce, float %b.coerce, float %c.coerce) {

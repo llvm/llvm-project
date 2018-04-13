@@ -28,11 +28,12 @@ static bool isParentOf(const CXXRecordDecl &Parent,
                        const CXXRecordDecl &ThisClass) {
   if (Parent.getCanonicalDecl() == ThisClass.getCanonicalDecl())
     return true;
+  const CXXRecordDecl *ParentCanonicalDecl = Parent.getCanonicalDecl();
   return ThisClass.bases_end() !=
          llvm::find_if(ThisClass.bases(), [=](const CXXBaseSpecifier &Base) {
            auto *BaseDecl = Base.getType()->getAsCXXRecordDecl();
            assert(BaseDecl);
-           return Parent.getCanonicalDecl() == BaseDecl->getCanonicalDecl();
+           return ParentCanonicalDecl == BaseDecl->getCanonicalDecl();
          });
 }
 

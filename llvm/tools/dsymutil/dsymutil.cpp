@@ -28,10 +28,9 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
@@ -388,9 +387,8 @@ struct TempFileVector {
 } // namespace
 
 int main(int argc, char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
-  llvm::PrettyStackTraceProgram StackPrinter(argc, argv);
-  llvm::llvm_shutdown_obj Shutdown;
+  InitLLVM X(argc, argv);
+
   void *P = (void *)(intptr_t)getOutputFileName;
   std::string SDKPath = llvm::sys::fs::getMainExecutable(argv[0], P);
   SDKPath = llvm::sys::path::parent_path(SDKPath);

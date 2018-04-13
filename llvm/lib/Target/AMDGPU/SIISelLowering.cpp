@@ -4188,7 +4188,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
 
-  // Make sure we we do any optimizations that will make it easier to fold
+  // Make sure we do any optimizations that will make it easier to fold
   // source modifiers before obscuring it with bit operations.
 
   // XXX - Why doesn't this get called when vector_shuffle is expanded?

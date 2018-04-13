@@ -623,11 +623,12 @@ bool CommandObjectExpression::DoExecute(const char *command,
   if (expr == nullptr)
     expr = command;
 
+  Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+  if (!target)
+    target = GetDummyTarget();
+
   if (EvaluateExpression(expr, &(result.GetOutputStream()),
                          &(result.GetErrorStream()), &result)) {
-    Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
-    if (!target)
-        target = GetDummyTarget();
 
     if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();
@@ -644,9 +645,15 @@ bool CommandObjectExpression::DoExecute(const char *command,
       }
       history.AppendString(fixed_command);
     }
+    // Increment statistics to record this expression evaluation
+    // success.
+    target->IncrementStats(StatisticKind::ExpressionSuccessful);
     return true;
   }
 
+  // Increment statistics to record this expression evaluation
+  // failure.
+  target->IncrementStats(StatisticKind::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }

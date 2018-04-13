@@ -58,10 +58,6 @@ public:
   // Returns the location of all ranges marked by [[ ]] (or $name[[ ]]).
   std::vector<Range> ranges(llvm::StringRef Name = "") const;
 
-  // The same to `range` method, but returns range in offsets [start, end).
-  std::pair<std::size_t, std::size_t>
-  offsetRange(llvm::StringRef Name = "") const;
-
 private:
   std::string Code;
   llvm::StringMap<llvm::SmallVector<Position, 1>> Points;

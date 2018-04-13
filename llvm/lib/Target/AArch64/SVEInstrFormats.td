@@ -27,6 +27,21 @@ def sve_pred_enum : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = SVEPatternOperand;
 }
 
+
+class SImmMulVlOperand<int Bits, int Scale> : AsmOperandClass {
+  let Name = "SImm" # Bits # "Scale" # Scale # "MulVl";
+  let DiagnosticType = "InvalidMemoryIndexed" # Scale # "SImm" # Bits;
+  let PredicateMethod = "isSImmScaled<" # Bits # ", " # Scale # ">";
+  let RenderMethod = "addImmScaledOperands<" # Scale # ">";
+}
+
+def SImm4MulVlOperand : SImmMulVlOperand<4,1>;
+
+def simm4MulVl : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -8 && Imm < 8; }]> {
+  let DecoderMethod = "DecodeSImm<4>";
+  let ParserMatchClass = SImm4MulVlOperand;
+}
+
 class SVELogicalImmOperand<int Width> : AsmOperandClass {
   let Name = "SVELogicalImm" # Width;
   let DiagnosticType = "LogicalSecondSource";
@@ -490,6 +505,46 @@ multiclass sve_int_bin_cons_shift_b_right<bits<2> opc, string asm> {
   }
 }
 //===----------------------------------------------------------------------===//
+// SVE Memory - Store Group
+//===----------------------------------------------------------------------===//
+
+class sve_mem_cst_si<bits<2> msz, bits<2> esz, string asm,
+                     RegisterOperand VecList>
+: I<(outs), (ins VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4MulVl:$imm4),
+  asm, "\t$Zt, $Pg, [$Rn, $imm4, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rn;
+  bits<5> Zt;
+  bits<4> imm4;
+  let Inst{31-25} = 0b1110010;
+  let Inst{24-23} = msz;
+  let Inst{22-21} = esz;
+  let Inst{20}    = 0;
+  let Inst{19-16} = imm4;
+  let Inst{15-13} = 0b111;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayStore = 1;
+}
+
+multiclass sve_mem_cst_si<bits<2> msz, bits<2> esz, string asm,
+                          RegisterOperand listty, ZPRRegOp zprty>
+{
+  def NAME : sve_mem_cst_si<msz, esz, asm, listty>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg, [$Rn, $imm4, mul vl]",
+                 (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4MulVl:$imm4), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg, [$Rn]",
+                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg, [$Rn]",
+                  (!cast<Instruction>(NAME) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Permute - Predicates Group
 //===----------------------------------------------------------------------===//
 
@@ -520,3 +575,47 @@ multiclass sve_int_perm_bin_perm_pp<bits<3> opc, string asm> {
   def _S : sve_int_perm_bin_perm_pp<opc, 0b10, asm, PPR32>;
   def _D : sve_int_perm_bin_perm_pp<opc, 0b11, asm, PPR64>;
 }
+
+//===----------------------------------------------------------------------===//
+// SVE Memory - Contiguous Load Group
+//===----------------------------------------------------------------------===//
+
+class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
+                          RegisterOperand VecList>
+: I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4MulVl:$imm4),
+  asm, "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rn;
+  bits<5> Zt;
+  bits<4> imm4;
+  let Inst{31-25} = 0b1010010;
+  let Inst{24-21} = dtype;
+  let Inst{20}    = nf;
+  let Inst{19-16} = imm4;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+  let Uses = !if(!eq(nf, 1), [FFR], []);
+  let Defs = !if(!eq(nf, 1), [FFR], []);
+}
+
+multiclass sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
+                               RegisterOperand listty, ZPRRegOp zprty> {
+  def _REAL : sve_mem_cld_si_base<dtype, nf, asm, listty>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
+                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4MulVl:$imm4), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                  (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+}
+
+multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
+                          ZPRRegOp zprty>
+: sve_mem_cld_si_base<dtype, 0, asm, listty, zprty>;

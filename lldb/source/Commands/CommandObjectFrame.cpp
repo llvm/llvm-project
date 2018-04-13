@@ -720,7 +720,16 @@ protected:
       m_interpreter.TruncationWarningGiven();
     }
 
-    return result.Succeeded();
+    // Increment statistics.
+    bool res = result.Succeeded();
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = GetDummyTarget();
+    if (res)
+      target->IncrementStats(StatisticKind::FrameVarSuccess);
+    else
+      target->IncrementStats(StatisticKind::FrameVarFailure);
+    return res;
   }
 
 protected:

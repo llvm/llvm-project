@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
 
@@ -393,9 +392,6 @@ protected:
 
   /// What processor and OS we're targeting.
   Triple TargetTriple;
-
-  /// Instruction itineraries for scheduling
-  InstrItineraryData InstrItins;
 
   /// GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
@@ -790,11 +786,6 @@ public:
   bool supportPrintSchedInfo() const override { return false; }
 
   bool enableEarlyIfConversion() const override;
-
-  /// Return the instruction itineraries based on the subtarget selection.
-  const InstrItineraryData *getInstrItineraryData() const override {
-    return &InstrItins;
-  }
 
   AntiDepBreakMode getAntiDepBreakMode() const override {
     return TargetSubtargetInfo::ANTIDEP_CRITICAL;
