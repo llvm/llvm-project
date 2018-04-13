@@ -360,6 +360,7 @@ private:
   void add(int32_t Tag, std::function<uint64_t()> Fn);
   void addInt(int32_t Tag, uint64_t Val);
   void addInSec(int32_t Tag, InputSection *Sec);
+  void addInSecRelative(int32_t Tag, InputSection *Sec);
   void addOutSec(int32_t Tag, OutputSection *Sec);
   void addSize(int32_t Tag, OutputSection *Sec);
   void addSym(int32_t Tag, Symbol *Sym);

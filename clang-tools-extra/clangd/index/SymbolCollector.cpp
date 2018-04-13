@@ -192,9 +192,24 @@ llvm::Optional<SymbolLocation> getSymbolLocation(
   FileURIStorage = std::move(*U);
   SymbolLocation Result;
   Result.FileURI = FileURIStorage;
-  Result.StartOffset = SM.getFileOffset(NameLoc);
-  Result.EndOffset = Result.StartOffset + clang::Lexer::MeasureTokenLength(
-                                              NameLoc, SM, LangOpts);
+  auto TokenLength = clang::Lexer::MeasureTokenLength(NameLoc, SM, LangOpts);
+
+  auto CreatePosition = [&SM](SourceLocation Loc) {
+    auto FileIdAndOffset = SM.getDecomposedLoc(Loc);
+    auto FileId = FileIdAndOffset.first;
+    auto Offset = FileIdAndOffset.second;
+    SymbolLocation::Position Pos;
+    // Position is 0-based while SourceManager is 1-based.
+    Pos.Line = SM.getLineNumber(FileId, Offset) - 1;
+    // FIXME: Use UTF-16 code units, not UTF-8 bytes.
+    Pos.Column = SM.getColumnNumber(FileId, Offset) - 1;
+    return Pos;
+  };
+
+  Result.Start = CreatePosition(NameLoc);
+  auto EndLoc = NameLoc.getLocWithOffset(TokenLength);
+  Result.End = CreatePosition(EndLoc);
+
   return std::move(Result);
 }
 
