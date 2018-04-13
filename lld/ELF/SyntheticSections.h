@@ -52,7 +52,6 @@ public:
   // If any additional finalization of contents are needed post thunk creation.
   virtual void postThunkContents() {}
   virtual bool empty() const { return false; }
-  uint64_t getVA() const;
 
   static bool classof(const SectionBase *D) {
     return D->kind() == InputSectionBase::Synthetic;

@@ -24,6 +24,10 @@
 
 namespace __sanitizer {
 
+// Allows the tools to name their allocations appropriately.
+extern const char *PrimaryAllocatorName;
+extern const char *SecondaryAllocatorName;
+
 // Since flags are immutable and allocator behavior can be changed at runtime
 // (unit tests or ASan on Android are some examples), allocator_may_return_null
 // flag value is cached here and can be altered later.

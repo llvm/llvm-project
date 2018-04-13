@@ -56,12 +56,6 @@ using llvm::support::endian::write64le;
 
 constexpr size_t MergeNoTailSection::NumShards;
 
-uint64_t SyntheticSection::getVA() const {
-  if (OutputSection *Sec = getParent())
-    return Sec->Addr + OutSecOff;
-  return 0;
-}
-
 // Returns an LLD version string.
 static ArrayRef<uint8_t> getVersion() {
   // Check LLD_VERSION first for ease of testing.
