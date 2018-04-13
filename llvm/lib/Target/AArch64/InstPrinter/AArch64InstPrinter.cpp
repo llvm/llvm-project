@@ -1111,6 +1111,41 @@ static unsigned getNextVectorRegister(unsigned Reg, unsigned Stride = 1) {
     case AArch64::Q31:
       Reg = AArch64::Q0;
       break;
+    case AArch64::Z0:  Reg = AArch64::Z1;  break;
+    case AArch64::Z1:  Reg = AArch64::Z2;  break;
+    case AArch64::Z2:  Reg = AArch64::Z3;  break;
+    case AArch64::Z3:  Reg = AArch64::Z4;  break;
+    case AArch64::Z4:  Reg = AArch64::Z5;  break;
+    case AArch64::Z5:  Reg = AArch64::Z6;  break;
+    case AArch64::Z6:  Reg = AArch64::Z7;  break;
+    case AArch64::Z7:  Reg = AArch64::Z8;  break;
+    case AArch64::Z8:  Reg = AArch64::Z9;  break;
+    case AArch64::Z9:  Reg = AArch64::Z10; break;
+    case AArch64::Z10: Reg = AArch64::Z11; break;
+    case AArch64::Z11: Reg = AArch64::Z12; break;
+    case AArch64::Z12: Reg = AArch64::Z13; break;
+    case AArch64::Z13: Reg = AArch64::Z14; break;
+    case AArch64::Z14: Reg = AArch64::Z15; break;
+    case AArch64::Z15: Reg = AArch64::Z16; break;
+    case AArch64::Z16: Reg = AArch64::Z17; break;
+    case AArch64::Z17: Reg = AArch64::Z18; break;
+    case AArch64::Z18: Reg = AArch64::Z19; break;
+    case AArch64::Z19: Reg = AArch64::Z20; break;
+    case AArch64::Z20: Reg = AArch64::Z21; break;
+    case AArch64::Z21: Reg = AArch64::Z22; break;
+    case AArch64::Z22: Reg = AArch64::Z23; break;
+    case AArch64::Z23: Reg = AArch64::Z24; break;
+    case AArch64::Z24: Reg = AArch64::Z25; break;
+    case AArch64::Z25: Reg = AArch64::Z26; break;
+    case AArch64::Z26: Reg = AArch64::Z27; break;
+    case AArch64::Z27: Reg = AArch64::Z28; break;
+    case AArch64::Z28: Reg = AArch64::Z29; break;
+    case AArch64::Z29: Reg = AArch64::Z30; break;
+    case AArch64::Z30: Reg = AArch64::Z31; break;
+    // Vector lists can wrap around.
+    case AArch64::Z31:
+      Reg = AArch64::Z0;
+      break;
     }
   }
   return Reg;
@@ -1159,6 +1194,8 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
     Reg = FirstReg;
   else if (unsigned FirstReg = MRI.getSubReg(Reg, AArch64::qsub0))
     Reg = FirstReg;
+  else if (unsigned FirstReg = MRI.getSubReg(Reg, AArch64::zsub0))
+    Reg = FirstReg;
 
   // If it's a D-reg, we need to promote it to the equivalent Q-reg before
   // printing (otherwise getRegisterName fails).
@@ -1169,7 +1206,11 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
   }
 
   for (unsigned i = 0; i < NumRegs; ++i, Reg = getNextVectorRegister(Reg)) {
-    O << getRegisterName(Reg, AArch64::vreg) << LayoutSuffix;
+    if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg))
+      O << getRegisterName(Reg) << LayoutSuffix;
+    else
+      O << getRegisterName(Reg, AArch64::vreg) << LayoutSuffix;
+
     if (i + 1 != NumRegs)
       O << ", ";
   }

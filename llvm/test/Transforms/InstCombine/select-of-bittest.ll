@@ -177,11 +177,10 @@ define i32 @f_var0(i32 %arg, i32 %arg1) {
 ; Should be exactly as the previous one
 define i32 @f_var0_commutative_and(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var0_commutative_and(
-; CHECK-NEXT:    [[TMP:%.*]] = and i32 [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[ARG]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i32 [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARG1:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %tmp = and i32 %arg1, %arg ; in different order
@@ -259,10 +258,10 @@ define i32 @f_var1(i32 %arg, i32 %arg1) {
 ; Should be exactly as the previous one
 define i32 @f_var1_commutative_and(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var1_commutative_and(
-; CHECK-NEXT:    [[TMP:%.*]] = and i32 [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[ARG]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARG1:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %tmp = and i32 %arg1, %arg ; in different order
@@ -398,11 +397,11 @@ define i32 @f_var3(i32 %arg, i32 %arg1, i32 %arg2) {
 ; Should be exactly as the previous one
 define i32 @f_var3_commutative_and(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @f_var3_commutative_and(
-; CHECK-NEXT:    [[TMP:%.*]] = and i32 [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[ARG]], [[ARG2:%.*]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP3]], i32 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 1, [[ARG2:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
   %tmp = and i32 %arg1, %arg ; in different order

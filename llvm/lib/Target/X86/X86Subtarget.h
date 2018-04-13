@@ -205,6 +205,9 @@ protected:
   /// Processor has Cache Line Zero instruction
   bool HasCLZERO;
 
+  /// Processor has Cache Line Demote instruction
+  bool HasCLDEMOTE;
+
   /// Processor has Prefetch with intent to Write instruction
   bool HasPREFETCHWT1;
 
@@ -577,6 +580,7 @@ public:
   bool hasLAHFSAHF() const { return HasLAHFSAHF; }
   bool hasMWAITX() const { return HasMWAITX; }
   bool hasCLZERO() const { return HasCLZERO; }
+  bool hasCLDEMOTE() const { return HasCLDEMOTE; }
   bool isSHLDSlow() const { return IsSHLDSlow; }
   bool isPMULLDSlow() const { return IsPMULLDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }

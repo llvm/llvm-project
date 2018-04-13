@@ -1,4 +1,4 @@
-# Build for the XRay runtime support library.
+# Build for all components of the XRay runtime support library.
 
 # XRay runtime library implementation files.
 set(XRAY_SOURCES
@@ -8,7 +8,7 @@ set(XRAY_SOURCES
   xray_log_interface.cc
   xray_utils.cc)
 
-# XRay mode implementation files.
+# Implementation files for all XRay modes.
 set(XRAY_FDR_MODE_SOURCES
   xray_buffer_queue.cc
   xray_fdr_logging.cc)
@@ -16,42 +16,21 @@ set(XRAY_FDR_MODE_SOURCES
 set(XRAY_BASIC_MODE_SOURCES
   xray_inmemory_log.cc)
 
-set(x86_64_SOURCES
-    xray_x86_64.cc
-    xray_trampoline_x86_64.S)
-
-set(arm_SOURCES
-    xray_arm.cc
-    xray_trampoline_arm.S)
-
-set(armhf_SOURCES
-    ${arm_SOURCES})
-
-set(aarch64_SOURCES
-  xray_AArch64.cc
-  xray_trampoline_AArch64.S)
-
-set(mips_SOURCES
-    xray_mips.cc
-    xray_trampoline_mips.S)
-
-set(mipsel_SOURCES
-    xray_mips.cc
-    xray_trampoline_mips.S)
-
-set(mips64_SOURCES
-    xray_mips64.cc
-    xray_trampoline_mips64.S)
-
-set(mips64el_SOURCES
-    xray_mips64.cc
-    xray_trampoline_mips64.S)
-
+# Implementation files for all XRay architectures.
+set(aarch64_SOURCES xray_AArch64.cc xray_trampoline_AArch64.S)
+set(arm_SOURCES xray_arm.cc xray_trampoline_arm.S)
+set(armhf_SOURCES ${arm_SOURCES})
+set(mips_SOURCES xray_mips.cc xray_trampoline_mips.S)
+set(mipsel_SOURCES xray_mips.cc xray_trampoline_mips.S)
+set(mips64_SOURCES xray_mips64.cc xray_trampoline_mips64.S)
+set(mips64el_SOURCES xray_mips64.cc xray_trampoline_mips64.S)
 set(powerpc64le_SOURCES
     xray_powerpc64.cc
     xray_trampoline_powerpc64.cc
     xray_trampoline_powerpc64_asm.S)
+set(x86_64_SOURCES xray_x86_64.cc xray_trampoline_x86_64.S)
 
+# Now put it all together...
 include_directories(..)
 include_directories(../../include)
 
@@ -127,9 +106,11 @@ if (APPLE)
     LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
     LINK_LIBS ${XRAY_LINK_LIBS}
     PARENT_TARGET xray)
-else()
-foreach(arch ${XRAY_SUPPORTED_ARCH})
-  if(CAN_TARGET_${arch})
+else() # not Apple
+  foreach(arch ${XRAY_SUPPORTED_ARCH})
+    if(NOT CAN_TARGET_${arch})
+      continue()
+    endif()
     add_compiler_rt_object_libraries(RTXray
       ARCHS ${arch}
       SOURCES ${XRAY_SOURCES} ${${arch}_SOURCES} CFLAGS ${XRAY_CFLAGS}
@@ -143,6 +124,7 @@ foreach(arch ${XRAY_SUPPORTED_ARCH})
       SOURCES ${XRAY_BASIC_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
       DEFS ${XRAY_COMMON_DEFINITIONS})
 
+    # Common XRay archive for instrumented binaries.
     add_compiler_rt_runtime(clang_rt.xray
      STATIC
      ARCHS ${arch}
@@ -150,25 +132,24 @@ foreach(arch ${XRAY_SUPPORTED_ARCH})
      DEFS ${XRAY_COMMON_DEFINITIONS}
      OBJECT_LIBS ${XRAY_COMMON_RUNTIME_OBJECT_LIBS} RTXray
      PARENT_TARGET xray)
-   # FDR Mode runtime
-   add_compiler_rt_runtime(clang_rt.xray-fdr
-     STATIC
-     ARCHS ${arch}
-     CFLAGS ${XRAY_CFLAGS}
-     DEFS ${XRAY_COMMON_DEFINITIONS}
-     OBJECT_LIBS RTXrayFDR
-     PARENT_TARGET xray)
-   # Basic Mode runtime
-   add_compiler_rt_runtime(clang_rt.xray-basic
-     STATIC
-     ARCHS ${arch}
-     CFLAGS ${XRAY_CFLAGS}
-     DEFS ${XRAY_COMMON_DEFINITIONS}
-     OBJECT_LIBS RTXrayBASIC
-     PARENT_TARGET xray)
-  endif()
-endforeach()
-endif()
+    # FDR mode runtime archive (addon for clang_rt.xray)
+    add_compiler_rt_runtime(clang_rt.xray-fdr
+      STATIC
+      ARCHS ${arch}
+      CFLAGS ${XRAY_CFLAGS}
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      OBJECT_LIBS RTXrayFDR
+      PARENT_TARGET xray)
+    # Basic mode runtime archive (addon for clang_rt.xray)
+    add_compiler_rt_runtime(clang_rt.xray-basic
+      STATIC
+      ARCHS ${arch}
+      CFLAGS ${XRAY_CFLAGS}
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      OBJECT_LIBS RTXrayBASIC
+      PARENT_TARGET xray)
+  endforeach()
+endif() # not Apple
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)

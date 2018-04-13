@@ -39,8 +39,10 @@ protected:
         CpuName(llvm::sys::getHostCPUName().str()) {}
 
   static void SetUpTestCase() {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
+    LLVMInitializeX86TargetInfo();
+    LLVMInitializeX86TargetMC();
+    LLVMInitializeX86Target();
+    LLVMInitializeX86AsmPrinter();
   }
 
   std::unique_ptr<llvm::LLVMTargetMachine> createTargetMachine() {
@@ -54,12 +56,26 @@ protected:
             TT, CpuName, "", Options, llvm::Reloc::Model::Static)));
   }
 
+  bool IsSupportedTarget() const {
+    return llvm::StringRef(TT).startswith_lower("x86_64");
+  }
+
 private:
   const std::string TT;
   const std::string CpuName;
 };
 
+// Used to skip tests on unsupported architectures and operating systems.
+// To skip a test, add this macro at the top of a test-case.
+#define SKIP_UNSUPPORTED_PLATFORM \
+  do \
+    if (!IsSupportedTarget()) \
+      return; \
+  while(0)
+
+
 TEST_F(MachineFunctionGeneratorTest, DISABLED_JitFunction) {
+  SKIP_UNSUPPORTED_PLATFORM;
   JitFunctionContext Context(createTargetMachine());
   JitFunction Function(std::move(Context), {});
   ASSERT_THAT(Function.getFunctionBytes().str(), ElementsAre(0xc3));
@@ -69,6 +85,7 @@ TEST_F(MachineFunctionGeneratorTest, DISABLED_JitFunction) {
 }
 
 TEST_F(MachineFunctionGeneratorTest, DISABLED_JitFunctionXOR32rr) {
+  SKIP_UNSUPPORTED_PLATFORM;
   JitFunctionContext Context(createTargetMachine());
   JitFunction Function(
       std::move(Context),
@@ -78,6 +95,7 @@ TEST_F(MachineFunctionGeneratorTest, DISABLED_JitFunctionXOR32rr) {
 }
 
 TEST_F(MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV64ri) {
+  SKIP_UNSUPPORTED_PLATFORM;
   JitFunctionContext Context(createTargetMachine());
   JitFunction Function(std::move(Context),
                        {MCInstBuilder(MOV64ri32).addReg(RAX).addImm(42)});
@@ -87,6 +105,7 @@ TEST_F(MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV64ri) {
 }
 
 TEST_F(MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV32ri) {
+  SKIP_UNSUPPORTED_PLATFORM;
   JitFunctionContext Context(createTargetMachine());
   JitFunction Function(std::move(Context),
                        {MCInstBuilder(MOV32ri).addReg(EAX).addImm(42)});

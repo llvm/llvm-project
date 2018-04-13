@@ -51,13 +51,20 @@ MATCHER_P(DefURI, P, "") { return arg.Definition.FileURI == P; }
 MATCHER_P(IncludeHeader, P, "") {
   return arg.Detail && arg.Detail->IncludeHeader == P;
 }
-MATCHER_P(DeclRange, Offsets, "") {
-  return arg.CanonicalDeclaration.StartOffset == Offsets.first &&
-      arg.CanonicalDeclaration.EndOffset == Offsets.second;
+MATCHER_P(DeclRange, Pos, "") {
+  return std::tie(arg.CanonicalDeclaration.Start.Line,
+                  arg.CanonicalDeclaration.Start.Column,
+                  arg.CanonicalDeclaration.End.Line,
+                  arg.CanonicalDeclaration.End.Column) ==
+         std::tie(Pos.start.line, Pos.start.character, Pos.end.line,
+                  Pos.end.character);
 }
-MATCHER_P(DefRange, Offsets, "") {
-  return arg.Definition.StartOffset == Offsets.first &&
-         arg.Definition.EndOffset == Offsets.second;
+MATCHER_P(DefRange, Pos, "") {
+  return std::tie(arg.Definition.Start.Line,
+                  arg.Definition.Start.Column, arg.Definition.End.Line,
+                  arg.Definition.End.Column) ==
+         std::tie(Pos.start.line, Pos.start.character, Pos.end.line,
+                  Pos.end.character);
 }
 MATCHER_P(Refs, R, "") { return int(arg.References) == R; }
 
@@ -209,7 +216,7 @@ TEST_F(SymbolCollectorTest, Template) {
   )");
   runSymbolCollector(Header.code(), /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAreArray({AllOf(
-                           QName("Tmpl"), DeclRange(Header.offsetRange()))}));
+                           QName("Tmpl"), DeclRange(Header.range()))}));
 }
 
 TEST_F(SymbolCollectorTest, Locations) {
@@ -221,6 +228,9 @@ TEST_F(SymbolCollectorTest, Locations) {
 
     // Declared in header, defined nowhere.
     extern int $zdecl[[Z]];
+
+    void $foodecl[[fo\
+o]]();
   )cpp");
   Annotations Main(R"cpp(
     int $xdef[[X]] = 42;
@@ -234,13 +244,15 @@ TEST_F(SymbolCollectorTest, Locations) {
   EXPECT_THAT(
       Symbols,
       UnorderedElementsAre(
-          AllOf(QName("X"), DeclRange(Header.offsetRange("xdecl")),
-                DefRange(Main.offsetRange("xdef"))),
-          AllOf(QName("Cls"), DeclRange(Header.offsetRange("clsdecl")),
-                DefRange(Main.offsetRange("clsdef"))),
-          AllOf(QName("print"), DeclRange(Header.offsetRange("printdecl")),
-                DefRange(Main.offsetRange("printdef"))),
-          AllOf(QName("Z"), DeclRange(Header.offsetRange("zdecl")))));
+          AllOf(QName("X"), DeclRange(Header.range("xdecl")),
+                DefRange(Main.range("xdef"))),
+          AllOf(QName("Cls"), DeclRange(Header.range("clsdecl")),
+                DefRange(Main.range("clsdef"))),
+          AllOf(QName("print"), DeclRange(Header.range("printdecl")),
+                DefRange(Main.range("printdef"))),
+          AllOf(QName("Z"), DeclRange(Header.range("zdecl"))),
+          AllOf(QName("foo"), DeclRange(Header.range("foodecl")))
+          ));
 }
 
 TEST_F(SymbolCollectorTest, References) {
@@ -365,9 +377,9 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacro) {
   EXPECT_THAT(
       Symbols,
       UnorderedElementsAre(
-          AllOf(QName("abc_Test"), DeclRange(Header.offsetRange("expansion")),
+          AllOf(QName("abc_Test"), DeclRange(Header.range("expansion")),
                 DeclURI(TestHeaderURI)),
-          AllOf(QName("Test"), DeclRange(Header.offsetRange("spelling")),
+          AllOf(QName("Test"), DeclRange(Header.range("spelling")),
                 DeclURI(TestHeaderURI))));
 }
 
@@ -382,7 +394,8 @@ TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
                      /*ExtraArgs=*/{"-DNAME=name"});
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(
-                  QName("name"), DeclRange(Header.offsetRange("expansion")),
+                  QName("name"),
+                  DeclRange(Header.range("expansion")),
                   DeclURI(TestHeaderURI))));
 }
 
@@ -511,9 +524,13 @@ SymInfo:
   Kind:            Function
   Lang:            Cpp
 CanonicalDeclaration:
-  StartOffset:     0
-  EndOffset:       1
   FileURI:        file:///path/foo.h
+  Start:
+    Line: 1
+    Column: 0
+  End:
+    Line: 1
+    Column: 1
 CompletionLabel:    'Foo1-label'
 CompletionFilterText:    'filter'
 CompletionPlainInsertText:    'plain'
@@ -531,9 +548,13 @@ SymInfo:
   Kind:            Function
   Lang:            Cpp
 CanonicalDeclaration:
-  StartOffset:     10
-  EndOffset:       12
   FileURI:        file:///path/bar.h
+  Start:
+    Line: 1
+    Column: 0
+  End:
+    Line: 1
+    Column: 1
 CompletionLabel:    'Foo2-label'
 CompletionFilterText:    'filter'
 CompletionPlainInsertText:    'plain'
@@ -542,6 +563,7 @@ CompletionSnippetInsertText:    'snippet'
 )";
 
   auto Symbols1 = SymbolsFromYAML(YAML1);
+
   EXPECT_THAT(Symbols1,
               UnorderedElementsAre(AllOf(
                   QName("clang::Foo1"), Labeled("Foo1-label"), Doc("Foo doc"),
@@ -646,17 +668,17 @@ TEST_F(SymbolCollectorTest, AvoidUsingFwdDeclsAsCanonicalDecls) {
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(
                   AllOf(QName("C"), DeclURI(TestHeaderURI),
-                        DeclRange(Header.offsetRange("cdecl")),
+                        DeclRange(Header.range("cdecl")),
                         IncludeHeader(TestHeaderURI), DefURI(TestHeaderURI),
-                        DefRange(Header.offsetRange("cdecl"))),
+                        DefRange(Header.range("cdecl"))),
                   AllOf(QName("S"), DeclURI(TestHeaderURI),
-                        DeclRange(Header.offsetRange("sdecl")),
+                        DeclRange(Header.range("sdecl")),
                         IncludeHeader(TestHeaderURI), DefURI(TestHeaderURI),
-                        DefRange(Header.offsetRange("sdecl"))),
+                        DefRange(Header.range("sdecl"))),
                   AllOf(QName("U"), DeclURI(TestHeaderURI),
-                        DeclRange(Header.offsetRange("udecl")),
+                        DeclRange(Header.range("udecl")),
                         IncludeHeader(TestHeaderURI), DefURI(TestHeaderURI),
-                        DefRange(Header.offsetRange("udecl")))));
+                        DefRange(Header.range("udecl")))));
 }
 
 TEST_F(SymbolCollectorTest, ClassForwardDeclarationIsCanonical) {

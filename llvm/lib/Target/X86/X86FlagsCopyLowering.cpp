@@ -707,7 +707,7 @@ void X86FlagsCopyLoweringPass::rewriteCondJmp(
 void X86FlagsCopyLoweringPass::rewriteCopy(MachineInstr &MI,
                                            MachineOperand &FlagUse,
                                            MachineInstr &CopyDefI) {
-  // Just replace this copy with the the original copy def.
+  // Just replace this copy with the original copy def.
   MRI->replaceRegWith(MI.getOperand(0).getReg(),
                       CopyDefI.getOperand(0).getReg());
   MI.eraseFromParent();

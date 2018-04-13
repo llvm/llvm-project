@@ -2599,6 +2599,8 @@ def mbmi : Flag<["-"], "mbmi">, Group<m_x86_Features_Group>;
 def mno_bmi : Flag<["-"], "mno-bmi">, Group<m_x86_Features_Group>;
 def mbmi2 : Flag<["-"], "mbmi2">, Group<m_x86_Features_Group>;
 def mno_bmi2 : Flag<["-"], "mno-bmi2">, Group<m_x86_Features_Group>;
+def mcldemote : Flag<["-"], "mcldemote">, Group<m_x86_Features_Group>;
+def mno_cldemote : Flag<["-"], "mno-cldemote">, Group<m_x86_Features_Group>;
 def mclflushopt : Flag<["-"], "mclflushopt">, Group<m_x86_Features_Group>;
 def mno_clflushopt : Flag<["-"], "mno-clflushopt">, Group<m_x86_Features_Group>;
 def mclwb : Flag<["-"], "mclwb">, Group<m_x86_Features_Group>;

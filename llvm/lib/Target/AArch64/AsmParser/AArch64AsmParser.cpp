@@ -1139,6 +1139,7 @@ public:
   enum VecListIndexType {
     VecListIdx_DReg = 0,
     VecListIdx_QReg = 1,
+    VecListIdx_ZReg = 2,
   };
 
   template <VecListIndexType RegTy, unsigned NumRegs>
@@ -1150,8 +1151,13 @@ public:
                    AArch64::D0_D1_D2, AArch64::D0_D1_D2_D3 },
       /* QReg */ { AArch64::Q0,
                    AArch64::Q0,       AArch64::Q0_Q1,
-                   AArch64::Q0_Q1_Q2, AArch64::Q0_Q1_Q2_Q3 }
+                   AArch64::Q0_Q1_Q2, AArch64::Q0_Q1_Q2_Q3 },
+      /* ZReg */ { AArch64::Z0,
+                   AArch64::Z0 }
     };
+
+    assert((RegTy != VecListIdx_ZReg || NumRegs <= 1) &&
+           " NumRegs must be 0 or 1 for ZRegs");
 
     unsigned FirstReg = FirstRegs[(unsigned)RegTy][NumRegs];
     Inst.addOperand(MCOperand::createReg(FirstReg + getVectorListStart() -
