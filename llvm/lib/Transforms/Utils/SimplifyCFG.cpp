@@ -5519,7 +5519,7 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   SmallVector<int64_t,4> Values;
   for (auto &C : SI->cases())
     Values.push_back(C.getCaseValue()->getValue().getSExtValue());
-  std::sort(Values.begin(), Values.end());
+  llvm::sort(Values.begin(), Values.end());
 
   // If the switch is already dense, there's nothing useful to do here.
   if (isSwitchDense(Values))

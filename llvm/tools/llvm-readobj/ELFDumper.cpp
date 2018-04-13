@@ -1551,6 +1551,7 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef HEXAGON_DYNAMIC_TAG
     }
+
   case EM_MIPS:
     switch (Type) {
 #define MIPS_DYNAMIC_TAG(name, value)                                          \
@@ -1559,12 +1560,22 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef MIPS_DYNAMIC_TAG
     }
+
+    case EM_PPC64:
+      switch(Type) {
+#define PPC64_DYNAMIC_TAG(name, value)                                         \
+    case DT_##name:                                                            \
+      return #name;
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef PPC64_DYNAMIC_TAG
+    }
   }
 #undef DYNAMIC_TAG
   switch (Type) {
 // Now handle all dynamic tags except the architecture specific ones
 #define MIPS_DYNAMIC_TAG(name, value)
 #define HEXAGON_DYNAMIC_TAG(name, value)
+#define PPC64_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value)                                               \
@@ -1574,6 +1585,7 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
 #undef DYNAMIC_TAG
 #undef MIPS_DYNAMIC_TAG
 #undef HEXAGON_DYNAMIC_TAG
+#undef PPC64_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
   default: return "unknown";
   }

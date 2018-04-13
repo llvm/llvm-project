@@ -344,6 +344,10 @@ bool TargetTransformInfo::shouldMaximizeVectorBandwidth(bool OptSize) const {
   return TTIImpl->shouldMaximizeVectorBandwidth(OptSize);
 }
 
+unsigned TargetTransformInfo::getMinimumVF(unsigned ElemWidth) const {
+  return TTIImpl->getMinimumVF(ElemWidth);
+}
+
 bool TargetTransformInfo::shouldConsiderAddressTypePromotion(
     const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const {
   return TTIImpl->shouldConsiderAddressTypePromotion(

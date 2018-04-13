@@ -26,10 +26,8 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -345,16 +343,12 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
 }
 
 int main(int argc, char **argv) {
-  // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
-
+  InitLLVM X(argc, argv);
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   LLVMContext Context;
   Context.setDiagnosticHandler(
     llvm::make_unique<LLVMLinkDiagnosticHandler>(), true);
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
   if (!DisableDITypeMap)

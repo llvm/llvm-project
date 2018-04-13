@@ -18,13 +18,21 @@ namespace clang {
 namespace format {
 
 class FormatTestProto : public ::testing::Test {
+  enum StatusCheck { SC_ExpectComplete, SC_ExpectIncomplete };
+
 protected:
   static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
+                            unsigned Length, const FormatStyle &Style,
+                            StatusCheck CheckComplete = SC_ExpectComplete) {
     DEBUG(llvm::errs() << "---\n");
     DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
-    tooling::Replacements Replaces = reformat(Style, Code, Ranges);
+    FormattingAttemptStatus Status;
+    tooling::Replacements Replaces =
+        reformat(Style, Code, Ranges, "<stdin>", &Status);
+    bool ExpectedCompleteFormat = CheckComplete == SC_ExpectComplete;
+    EXPECT_EQ(ExpectedCompleteFormat, Status.FormatComplete)
+        << Code << "\n\n";
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
@@ -40,6 +48,12 @@ protected:
   static void verifyFormat(llvm::StringRef Code) {
     EXPECT_EQ(Code.str(), format(Code)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code)));
+  }
+
+  static void verifyIncompleteFormat(llvm::StringRef Code) {
+    FormatStyle Style = getGoogleStyle(FormatStyle::LK_Proto);
+    EXPECT_EQ(Code.str(),
+              format(Code, 0, Code.size(), Style, SC_ExpectIncomplete));
   }
 };
 
@@ -490,6 +504,13 @@ TEST_F(FormatTestProto, AcceptsOperatorAsKeyInOptions) {
                "    >\n"
                "  >\n"
                "};");
+}
+
+TEST_F(FormatTestProto, IncompleteFormat) {
+  verifyIncompleteFormat("option (");
+  verifyIncompleteFormat("option (MyProto.options) = { bbbbbbbbb:");
+  verifyIncompleteFormat("option (MyProto.options) = { bbbbbbbbb: <\n");
+  verifyIncompleteFormat("option (MyProto.options) = { bbbbbbbbb: [\n");
 }
 
 } // end namespace tooling

@@ -15,8 +15,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
-#include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/MachO.h"
@@ -26,17 +24,17 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
+#include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -949,11 +947,8 @@ static int ranlib_main(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
   ToolName = argv[0];
-  // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();

@@ -273,7 +273,7 @@ public:
     int OldSize = Slices.size();
     Slices.append(NewSlices.begin(), NewSlices.end());
     auto SliceI = Slices.begin() + OldSize;
-    std::sort(SliceI, Slices.end());
+    llvm::sort(SliceI, Slices.end());
     std::inplace_merge(Slices.begin(), SliceI, Slices.end());
   }
 
@@ -1057,7 +1057,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
 
   // Sort the uses. This arranges for the offsets to be in ascending order,
   // and the sizes to be in descending order.
-  std::sort(Slices.begin(), Slices.end());
+  llvm::sort(Slices.begin(), Slices.end());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1891,7 +1891,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
              "All non-integer types eliminated!");
       return RHSTy->getNumElements() < LHSTy->getNumElements();
     };
-    std::sort(CandidateTys.begin(), CandidateTys.end(), RankVectorTypes);
+    llvm::sort(CandidateTys.begin(), CandidateTys.end(), RankVectorTypes);
     CandidateTys.erase(
         std::unique(CandidateTys.begin(), CandidateTys.end(), RankVectorTypes),
         CandidateTys.end());
@@ -4152,7 +4152,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   }
 
   if (!IsSorted)
-    std::sort(AS.begin(), AS.end());
+    llvm::sort(AS.begin(), AS.end());
 
   /// Describes the allocas introduced by rewritePartition in order to migrate
   /// the debug info.

@@ -16,6 +16,11 @@
 #define MIPS_DYNAMIC_TAG_DEFINED
 #endif
 
+#ifndef PPC64_DYNAMIC_TAG
+#define PPC64_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define PPC64_DYNAMIC_TAG_DEFINED
+#endif
+
 #ifndef DYNAMIC_TAG_MARKER
 #define DYNAMIC_TAG_MARKER(name, value) DYNAMIC_TAG(name, value)
 #define DYNAMIC_TAG_MARKER_DEFINED
@@ -171,6 +176,10 @@ MIPS_DYNAMIC_TAG(MIPS_RWPLT, 0x70000034)        // Points to the base
 MIPS_DYNAMIC_TAG(MIPS_RLD_MAP_REL, 0x70000035)  // Relative offset of run time loader
                                                 // map, used for debugging.
 
+// PPC64 specific dynamic table entries.
+PPC64_DYNAMIC_TAG(PPC64_GLINK, 0x70000000) // Address of 32 bytes before the
+                                           // first glink lazy resolver stub.
+
 // Sun machine-independent extensions.
 DYNAMIC_TAG(AUXILIARY, 0x7FFFFFFD) // Shared object to load before self
 DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
@@ -181,7 +190,13 @@ DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 #endif
 #ifdef MIPS_DYNAMIC_TAG_DEFINED
 #undef MIPS_DYNAMIC_TAG
+#undef MIPS_DYNAMIC_TAG_DEFINED
 #endif
 #ifdef HEXAGON_DYNAMIC_TAG_DEFINED
 #undef HEXAGON_DYNAMIC_TAG
+#undef HEXAGON_DYNAMIC_TAG_DEFINED
+#endif
+#ifdef PPC64_DYNAMIC_TAG_DEFINED
+#undef PPC64_DYNAMIC_TAG
+#undef PPC64_DYNAMIC_TAG_DEFINED
 #endif

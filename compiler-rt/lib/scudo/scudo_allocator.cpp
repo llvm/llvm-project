@@ -278,6 +278,9 @@ struct ScudoAllocator {
 
   void init() {
     SanitizerToolName = "Scudo";
+    PrimaryAllocatorName = "ScudoPrimary";
+    SecondaryAllocatorName = "ScudoSecondary";
+
     initFlags();
 
     performSanityChecks();

@@ -224,7 +224,7 @@ public:
   }
 
   void addCriticalWithHint(OMPCriticalDirective *D, llvm::APSInt Hint) {
-    Criticals[D->getDirectiveName().getAsString()] = std::make_pair(D, Hint);
+    Criticals.try_emplace(D->getDirectiveName().getAsString(), D, Hint);
   }
   const std::pair<OMPCriticalDirective *, llvm::APSInt>
   getCriticalWithHint(const DeclarationNameInfo &Name) const {
@@ -3405,7 +3405,7 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
         if (FD->getNumParams() > PVD->getFunctionScopeIndex() &&
             FD->getParamDecl(PVD->getFunctionScopeIndex())
                     ->getCanonicalDecl() == PVD->getCanonicalDecl()) {
-          UniformedArgs.insert(std::make_pair(PVD->getCanonicalDecl(), E));
+          UniformedArgs.try_emplace(PVD->getCanonicalDecl(), E);
           continue;
         }
     if (isa<CXXThisExpr>(E)) {

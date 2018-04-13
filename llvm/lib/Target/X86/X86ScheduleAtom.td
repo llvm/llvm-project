@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the itinerary class data for the Intel Atom
+// This file defines the schedule class data for the Intel Atom
 // in order (Saltwell-32nm/Bonnell-45nm) processors.
 //
 //===----------------------------------------------------------------------===//

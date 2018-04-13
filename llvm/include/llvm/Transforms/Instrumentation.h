@@ -133,7 +133,8 @@ ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
 FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0,
                                         bool Recover = false);
 
-FunctionPass *createHWAddressSanitizerPass(bool Recover = false);
+FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
+                                           bool Recover = false);
 
 // Insert ThreadSanitizer (race detection) instrumentation
 FunctionPass *createThreadSanitizerPass();

@@ -5,6 +5,10 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-darwin -cost-model -analyze -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-apple-darwin -cost-model -analyze -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512F
 ; RUN: opt < %s -mtriple=x86_64-apple-darwin -cost-model -analyze -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512DQ
+;
+; RUN: opt < %s -mtriple=x86_64-apple-darwin -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-apple-darwin -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-apple-darwin -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
 
 define i32 @fptosi_double_i64(i32 %arg) {
 ; SSE-LABEL: 'fptosi_double_i64'

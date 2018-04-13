@@ -180,12 +180,14 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
           std::make_pair(std::distance(GVtoClusterMap.member_begin(I),
                                        GVtoClusterMap.member_end()), I));
 
-  std::sort(Sets.begin(), Sets.end(), [](const SortType &a, const SortType &b) {
-    if (a.first == b.first)
-      return a.second->getData()->getName() > b.second->getData()->getName();
-    else
-      return a.first > b.first;
-  });
+  llvm::sort(Sets.begin(), Sets.end(),
+             [](const SortType &a, const SortType &b) {
+               if (a.first == b.first)
+                 return a.second->getData()->getName() >
+                        b.second->getData()->getName();
+               else
+                 return a.first > b.first;
+             });
 
   for (auto &I : Sets) {
     unsigned CurrentClusterID = BalancinQueue.top().first;

@@ -49,11 +49,13 @@ protected:
     std::string Error;
     const llvm::Target *TheTarget =
         llvm::TargetRegistry::lookupTarget(TT, Error);
-    assert(TheTarget);
+    EXPECT_TRUE(TheTarget) << Error << " " << TT;
     const llvm::TargetOptions Options;
+    llvm::TargetMachine* TM = TheTarget->createTargetMachine(
+            TT, CpuName, "", Options, llvm::Reloc::Model::Static);
+    EXPECT_TRUE(TM) << TT << " " << CpuName;
     return std::unique_ptr<llvm::LLVMTargetMachine>(
-        static_cast<llvm::LLVMTargetMachine *>(TheTarget->createTargetMachine(
-            TT, CpuName, "", Options, llvm::Reloc::Model::Static)));
+        static_cast<llvm::LLVMTargetMachine *>(TM));
   }
 
   bool IsSupportedTarget() const {

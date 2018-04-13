@@ -22,10 +22,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <cstring>
@@ -145,10 +143,7 @@ static bool parseCommand(StringRef InputString, bool &IsData,
 }
 
 int main(int argc, char **argv) {
-  // Print stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
-  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
+  InitLLVM X(argc, argv);
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
 
