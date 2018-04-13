@@ -22,14 +22,14 @@ constexpr int gi = 5;
 constexpr float gf = 8.f;
 
 int main() {
-	static_assert(std::launder(&gi) == &gi, "" );
-	static_assert(std::launder(&gf) == &gf, "" );
+    static_assert(std::launder(&gi) == &gi, "" );
+    static_assert(std::launder(&gf) == &gf, "" );
 
-  	const int *i = &gi;
-  	const float *f = &gf;
+    const int *i = &gi;
+    const float *f = &gf;
     static_assert(std::is_same<decltype(i), decltype(std::launder(i))>::value, "");
     static_assert(std::is_same<decltype(f), decltype(std::launder(f))>::value, "");
 
-	assert(std::launder(i) == i);
-	assert(std::launder(f) == f);
+    assert(std::launder(i) == i);
+    assert(std::launder(f) == f);
 }

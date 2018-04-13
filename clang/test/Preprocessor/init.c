@@ -2652,7 +2652,7 @@
 // Thumbebv7: #define __THUMB_INTERWORK__ 1
 // Thumbebv7: #define __thumb2__ 1
 
-// RUN: %clang -E -dM -ffreestanding -target thumbv7-pc-mingw32 %s -o - | FileCheck -match-full-lines -check-prefix THUMB-MINGW %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=thumbv7-pc-windows-gnu -fdwarf-exceptions %s -o - | FileCheck -match-full-lines -check-prefix THUMB-MINGW %s
 
 // THUMB-MINGW:#define __ARM_DWARF_EH__ 1
 

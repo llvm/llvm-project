@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DRIVER_XRAYARGS_H
 #define LLVM_CLANG_DRIVER_XRAYARGS_H
 
+#include "clang/Basic/XRayInstr.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -24,6 +25,7 @@ class XRayArgs {
   std::vector<std::string> AttrListFiles;
   std::vector<std::string> ExtraDeps;
   std::vector<std::string> Modes;
+  XRayInstrSet InstrumentationBundle;
   bool XRayInstrument = false;
   int InstructionThreshold = 200;
   bool XRayAlwaysEmitCustomEvents = false;
@@ -37,7 +39,7 @@ public:
 
   bool needsXRayRt() const { return XRayInstrument && XRayRT; }
   llvm::ArrayRef<std::string> modeList() const { return Modes; }
-
+  XRayInstrSet instrumentationBundle() const { return InstrumentationBundle; }
 };
 
 } // namespace driver

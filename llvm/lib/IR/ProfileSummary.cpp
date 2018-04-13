@@ -179,7 +179,7 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
   SummaryEntryVector Summary;
   if (!getSummaryFromMD(dyn_cast<MDTuple>(Tuple->getOperand(7)), Summary))
     return nullptr;
-  return new ProfileSummary(SummaryKind, Summary, TotalCount, MaxCount,
-                            MaxInternalCount, MaxFunctionCount, NumCounts,
-                            NumFunctions);
+  return new ProfileSummary(SummaryKind, std::move(Summary), TotalCount,
+                            MaxCount, MaxInternalCount, MaxFunctionCount,
+                            NumCounts, NumFunctions);
 }

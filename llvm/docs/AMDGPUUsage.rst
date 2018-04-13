@@ -763,12 +763,16 @@ The following relocation types are supported:
      Relocation Type            Kind    Value  Field       Calculation
      ========================== ======= =====  ==========  ==============================
      ``R_AMDGPU_NONE``                  0      *none*      *none*
-     ``R_AMDGPU_ABS32_LO``      Dynamic 1      ``word32``  (S + A) & 0xFFFFFFFF
-     ``R_AMDGPU_ABS32_HI``      Dynamic 2      ``word32``  (S + A) >> 32
-     ``R_AMDGPU_ABS64``         Dynamic 3      ``word64``  S + A
+     ``R_AMDGPU_ABS32_LO``      Static, 1      ``word32``  (S + A) & 0xFFFFFFFF
+                                Dynamic
+     ``R_AMDGPU_ABS32_HI``      Static, 2      ``word32``  (S + A) >> 32
+                                Dynamic
+     ``R_AMDGPU_ABS64``         Static, 3      ``word64``  S + A
+                                Dynamic 
      ``R_AMDGPU_REL32``         Static  4      ``word32``  S + A - P
      ``R_AMDGPU_REL64``         Static  5      ``word64``  S + A - P
-     ``R_AMDGPU_ABS32``         Static  6      ``word32``  S + A
+     ``R_AMDGPU_ABS32``         Static, 6      ``word32``  S + A
+                                Dynamic
      ``R_AMDGPU_GOTPCREL``      Static  7      ``word32``  G + GOT + A - P
      ``R_AMDGPU_GOTPCREL32_LO`` Static  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
      ``R_AMDGPU_GOTPCREL32_HI`` Static  9      ``word32``  (G + GOT + A - P) >> 32
@@ -778,6 +782,12 @@ The following relocation types are supported:
      ``R_AMDGPU_RELATIVE64``    Dynamic 13     ``word64``  B + A
      ========================== ======= =====  ==========  ==============================
 
+``R_AMDGPU_ABS32_LO`` and ``R_AMDGPU_ABS32_HI`` are only supported by
+the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
+
+There is no current OS loader support for 32 bit programs and so
+``R_AMDGPU_ABS32`` is not used.
+     
 .. _amdgpu-dwarf:
 
 DWARF
