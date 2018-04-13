@@ -98,6 +98,10 @@ class MockGDBServerResponder:
         to the given packet received from the client.
         """
         self.packetLog.append(packet)
+        if packet is MockGDBServer.PACKET_INTERRUPT:
+            return self.interrupt()
+        if packet == "c":
+            return self.cont()
         if packet == "g":
             return self.readRegisters()
         if packet[0] == "G":
@@ -133,7 +137,15 @@ class MockGDBServerResponder:
             if data is not None:
                 return self._qXferResponse(data, has_more)
             return ""
+        if packet[0] == "Z":
+            return self.setBreakpoint(packet)
         return self.other(packet)
+
+    def interrupt(self):
+        raise self.UnexpectedPacketException()
+
+    def cont(self):
+        raise self.UnexpectedPacketException()
 
     def readRegisters(self):
         return "00000000" * self.registerCount
@@ -157,7 +169,7 @@ class MockGDBServerResponder:
         return "OK"
 
     def qSupported(self, client_supported):
-        return "PacketSize=3fff;QStartNoAckMode+"
+        return "qXfer:features:read+;PacketSize=3fff;QStartNoAckMode+"
 
     def qfThreadInfo(self):
         return "l"
@@ -178,9 +190,20 @@ class MockGDBServerResponder:
     def selectThread(self, op, thread_id):
         return "OK"
 
+    def setBreakpoint(self, packet):
+        raise self.UnexpectedPacketException()
+
     def other(self, packet):
         # empty string means unsupported
         return ""
+
+    """
+    Raised when we receive a packet for which there is no default action.
+    Override the responder class to implement behavior suitable for the test at
+    hand.
+    """
+    class UnexpectedPacketException(Exception):
+        pass
 
 
 class MockGDBServer:
@@ -200,7 +223,6 @@ class MockGDBServer:
     _receivedData = None
     _receivedDataOffset = None
     _shouldSendAck = True
-    _isExpectingAck = False
 
     def __init__(self, port = 0):
         self.responder = MockGDBServerResponder()
@@ -237,7 +259,6 @@ class MockGDBServer:
         except:
             return
         self._shouldSendAck = True
-        self._isExpectingAck = False
         self._receivedData = ""
         self._receivedDataOffset = 0
         data = None
@@ -290,6 +311,9 @@ class MockGDBServer:
             if data[0] == '+':
                 self._receivedData = data[1:]
                 return self.PACKET_ACK
+            if ord(data[0]) == 3:
+                self._receivedData = data[1:]
+                return self.PACKET_INTERRUPT
             if data[0] == '$':
                 i += 1
             else:
@@ -329,21 +353,15 @@ class MockGDBServer:
 
     def _handlePacket(self, packet):
         if packet is self.PACKET_ACK:
-            # If we are expecting an ack, we'll just ignore it because there's
-            # nothing else we're supposed to do.
-            #
-            # However, if we aren't expecting an ack, it's likely the initial
-            # ack that lldb client sends, and observations of real servers
-            # suggest we're supposed to ack back.
-            if not self._isExpectingAck:
-                self._client.sendall('+')
+            # Ignore ACKs from the client. For the future, we can consider
+            # adding validation code to make sure the client only sends ACKs
+            # when it's supposed to.
             return
         response = ""
         # We'll handle the ack stuff here since it's not something any of the
         # tests will be concerned about, and it'll get turned off quicly anyway.
         if self._shouldSendAck:
             self._client.sendall('+')
-            self._isExpectingAck = True
         if packet == "QStartNoAckMode":
             self._shouldSendAck = False
             response = "OK"
@@ -351,10 +369,12 @@ class MockGDBServer:
             # Delegate everything else to our responder
             response = self.responder.respond(packet)
         # Handle packet framing since we don't want to bother tests with it.
-        framed = frame_packet(response)
-        self._client.sendall(framed)
+        if response is not None:
+            framed = frame_packet(response)
+            self._client.sendall(framed)
 
     PACKET_ACK = object()
+    PACKET_INTERRUPT = object()
 
     class InvalidPacketException(Exception):
         pass
@@ -372,24 +392,19 @@ class GDBRemoteTestBase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
     server = None
-    temp_files = None
 
     def setUp(self):
         TestBase.setUp(self)
-        self.temp_files = []
         self.server = MockGDBServer()
         self.server.start()
 
     def tearDown(self):
-        for temp_file in self.temp_files:
-            self.RemoveTempFile(temp_file)
         # TestBase.tearDown will kill the process, but we need to kill it early
         # so its client connection closes and we can stop the server before
         # finally calling the base tearDown.
         if self.process() is not None:
             self.process().Kill()
         self.server.stop()
-        self.temp_files = []
         TestBase.tearDown(self)
 
     def createTarget(self, yaml_path):
@@ -401,9 +416,8 @@ class GDBRemoteTestBase(TestBase):
         during tearDown.
         """
         yaml_base, ext = os.path.splitext(yaml_path)
-        obj_path = "%s" % yaml_base
+        obj_path = self.getBuildArtifact(yaml_base)
         self.yaml2obj(yaml_path, obj_path)
-        self.temp_files.append(obj_path)
         return self.dbg.CreateTarget(obj_path)
 
     def connect(self, target):
@@ -418,6 +432,7 @@ class GDBRemoteTestBase(TestBase):
         process = target.ConnectRemote(listener, url, "gdb-remote", error)
         self.assertTrue(error.Success(), error.description)
         self.assertTrue(process, PROCESS_IS_VALID)
+        return process
 
     def assertPacketLogContains(self, packets):
         """
@@ -438,5 +453,5 @@ class GDBRemoteTestBase(TestBase):
                 i += 1
             j += 1
         if i < len(packets):
-            self.fail("Did not receive: %s\nLast 10 packets:\n\t%s" %
-                    (packets[i], '\n\t'.join(log[-10:])))
+            self.fail(u"Did not receive: %s\nLast 10 packets:\n\t%s" %
+                    (packets[i], u'\n\t'.join(log[-10:])))
