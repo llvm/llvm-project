@@ -673,6 +673,7 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
   // Don't recurse exponentially.
   if (Depth > 6) return 0;
 
+  EVT VT = Op.getValueType();
   switch (Op.getOpcode()) {
   default: return false;
   case ISD::ConstantFP: {
@@ -681,7 +682,6 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
 
     // Don't invert constant FP values after legalization unless the target says
     // the negated constant is legal.
-    EVT VT = Op.getValueType();
     return TLI.isOperationLegal(ISD::ConstantFP, VT) ||
       TLI.isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT);
   }
@@ -690,8 +690,7 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
     if (!Options->UnsafeFPMath) return 0;
 
     // After operation legalization, it might not be legal to create new FSUBs.
-    if (LegalOperations &&
-        !TLI.isOperationLegalOrCustom(ISD::FSUB,  Op.getValueType()))
+    if (LegalOperations && !TLI.isOperationLegalOrCustom(ISD::FSUB, VT))
       return 0;
 
     // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)

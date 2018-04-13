@@ -271,8 +271,8 @@ static llvm::Optional<std::string> readDelimitedMessage(std::istream &In,
   std::string JSON;
   std::string Line;
   while (std::getline(In, Line)) {
-    if (!In.eof()) // getline() consumed the newline.
-      Line.push_back('\n');
+    Line.push_back('\n'); // getline() consumed the newline.
+
     auto LineRef = llvm::StringRef(Line).trim();
     if (LineRef.startswith("#")) // comment
       continue;
@@ -280,7 +280,7 @@ static llvm::Optional<std::string> readDelimitedMessage(std::istream &In,
     bool IsDelim = LineRef.find_first_not_of('-') == llvm::StringRef::npos;
     if (!IsDelim) // Line is part of a JSON message.
       JSON += Line;
-    if (IsDelim || In.eof()) {
+    if (IsDelim) {
       Out.mirrorInput(
           llvm::formatv("Content-Length: {0}\r\n\r\n{1}", JSON.size(), JSON));
       return std::move(JSON);

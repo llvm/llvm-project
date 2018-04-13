@@ -21,6 +21,11 @@
 #include <sstream>
 #include <iostream>
 #include "test_iterators.h"
+#include "test_macros.h"
+
+#ifdef TEST_COMPILER_C1XX
+#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
+#endif
 
 typedef std::num_get<char, input_iterator<const char*> > F;
 
