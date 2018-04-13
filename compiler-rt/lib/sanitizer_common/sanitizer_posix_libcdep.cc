@@ -230,7 +230,9 @@ bool SignalContext::IsStackOverflow() const {
   // take it into account.
   bool IsStackAccess = addr >= (sp & ~0xFFF) && addr < sp + 0xFFFF;
 #else
-  bool IsStackAccess = addr + 512 > sp && addr < sp + 0xFFFF;
+  // Let's accept up to a page size away from top of stack. Things like stack
+  // probing can trigger accesses with such large offsets.
+  bool IsStackAccess = addr + GetPageSizeCached() > sp && addr < sp + 0xFFFF;
 #endif
 
 #if __powerpc__
