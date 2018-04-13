@@ -246,7 +246,7 @@ def : WriteRes<WriteNop, []>;
 defm : ZnWriteResFpuPair<WriteFShuffle256, [ZnFPU], 100>;
 defm : ZnWriteResFpuPair<WriteFVarShuffle256, [ZnFPU], 100>;
 
-//Microcoded Instructions
+// Microcoded Instructions
 let Latency = 100 in {
   def : WriteRes<WriteMicrocoded, []>;
   def : WriteRes<WriteSystem, []>;
@@ -264,7 +264,7 @@ let Latency = 100 in {
   def : WriteRes<WritePCmpIStrILd, []>;
   }
 
-//=== Regex based itineraries ===//
+//=== Regex based InstRW ===//
 // Notation:
 // - r: register.
 // - m = memory.

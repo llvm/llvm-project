@@ -592,7 +592,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
   SmallVector<StringRef, 4> Filenames;
   for (const auto &LI : LineInfo)
     Filenames.push_back(LI.first());
-  std::sort(Filenames.begin(), Filenames.end());
+  llvm::sort(Filenames.begin(), Filenames.end());
 
   for (StringRef Filename : Filenames) {
     auto AllLines = LineConsumer(Filename);

@@ -20,10 +20,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include <cstdlib>
 
 using namespace lld;
@@ -114,10 +112,7 @@ static bool canExitEarly() { return StringRef(getenv("LLD_IN_TEST")) != "1"; }
 /// Universal linker main(). This linker emulates the gnu, darwin, or
 /// windows linker based on the argv[0] or -flavor option.
 int main(int Argc, const char **Argv) {
-  // Standard set up, so program fails gracefully.
-  sys::PrintStackTraceOnErrorSignal(Argv[0]);
-  PrettyStackTraceProgram StackPrinter(Argc, Argv);
-  llvm_shutdown_obj Shutdown;
+  InitLLVM X(Argc, Argv);
 
   std::vector<const char *> Args(Argv, Argv + Argc);
   switch (parseFlavor(Args)) {

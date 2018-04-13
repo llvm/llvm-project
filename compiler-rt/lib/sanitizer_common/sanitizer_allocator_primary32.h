@@ -125,7 +125,7 @@ class SizeClassAllocator32 {
   }
 
   void *MapWithCallback(uptr size) {
-    void *res = MmapOrDie(size, "SizeClassAllocator32");
+    void *res = MmapOrDie(size, PrimaryAllocatorName);
     MapUnmapCallback().OnMap((uptr)res, size);
     return res;
   }
@@ -286,7 +286,7 @@ class SizeClassAllocator32 {
   uptr AllocateRegion(AllocatorStats *stat, uptr class_id) {
     CHECK_LT(class_id, kNumClasses);
     uptr res = reinterpret_cast<uptr>(MmapAlignedOrDieOnFatalError(
-        kRegionSize, kRegionSize, "SizeClassAllocator32"));
+        kRegionSize, kRegionSize, PrimaryAllocatorName));
     if (UNLIKELY(!res))
       return 0;
     MapUnmapCallback().OnMap(res, kRegionSize);

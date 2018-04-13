@@ -577,8 +577,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
   setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
 
-  setTargetDAGCombine(ISD::GlobalAddress);
-
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = 4;
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = 4;
@@ -3679,8 +3677,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 SDValue AArch64TargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
                                              SelectionDAG &DAG,
                                              unsigned Flag) const {
-  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty,
-                                    N->getOffset(), Flag);
+  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty, 0, Flag);
 }
 
 SDValue AArch64TargetLowering::getTargetNode(JumpTableSDNode *N, EVT Ty,
@@ -3755,9 +3752,8 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
   unsigned char OpFlags =
       Subtarget->ClassifyGlobalReference(GV, getTargetMachine());
 
-  if (OpFlags != AArch64II::MO_NO_FLAG)
-    assert(cast<GlobalAddressSDNode>(Op)->getOffset() == 0 &&
-           "unexpected offset in global node");
+  assert(cast<GlobalAddressSDNode>(Op)->getOffset() == 0 &&
+         "unexpected offset in global node");
 
   // This also catches the large code model case for Darwin.
   if ((OpFlags & AArch64II::MO_GOT) != 0) {
@@ -4995,8 +4991,10 @@ SDValue AArch64TargetLowering::LowerShiftLeftParts(SDValue Op,
 
 bool AArch64TargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
-  // Offsets are folded in the DAG combine rather than here so that we can
-  // intelligently choose an offset based on the uses.
+  DEBUG(dbgs() << "Skipping offset folding global address: ");
+  DEBUG(GA->dump());
+  DEBUG(dbgs() << "AArch64 doesn't support folding offsets into global "
+        "addresses\n");
   return false;
 }
 
@@ -10619,53 +10617,6 @@ static SDValue performNVCASTCombine(SDNode *N) {
   return SDValue();
 }
 
-// If all users of the globaladdr are of the form (globaladdr + constant), find
-// the smallest constant, fold it into the globaladdr's offset and rewrite the
-// globaladdr as (globaladdr + constant) - constant.
-static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
-                                           const AArch64Subtarget *Subtarget,
-                                           const TargetMachine &TM) {
-  auto *GN = dyn_cast<GlobalAddressSDNode>(N);
-  if (!GN || Subtarget->ClassifyGlobalReference(GN->getGlobal(), TM) !=
-                 AArch64II::MO_NO_FLAG)
-    return SDValue();
-
-  uint64_t MinOffset = -1ull;
-  for (SDNode *N : GN->uses()) {
-    if (N->getOpcode() != ISD::ADD)
-      return SDValue();
-    auto *C = dyn_cast<ConstantSDNode>(N->getOperand(0));
-    if (!C)
-      C = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    if (!C)
-      return SDValue();
-    MinOffset = std::min(MinOffset, C->getZExtValue());
-  }
-  uint64_t Offset = MinOffset + GN->getOffset();
-
-  // Check whether folding this offset is legal. It must not go out of bounds of
-  // the referenced object to avoid violating the code model, and must be
-  // smaller than 2^21 because this is the largest offset expressible in all
-  // object formats.
-  //
-  // This check also prevents us from folding negative offsets, which will end
-  // up being treated in the same way as large positive ones. They could also
-  // cause code model violations, and aren't really common enough to matter.
-  if (Offset >= (1 << 21))
-    return SDValue();
-
-  const GlobalValue *GV = GN->getGlobal();
-  Type *T = GV->getValueType();
-  if (!T->isSized() ||
-      Offset > GV->getParent()->getDataLayout().getTypeAllocSize(T))
-    return SDValue();
-
-  SDLoc DL(GN);
-  SDValue Result = DAG.getGlobalAddress(GV, DL, MVT::i64, Offset);
-  return DAG.getNode(ISD::SUB, DL, MVT::i64, Result,
-                     DAG.getConstant(MinOffset, DL, MVT::i64));
-}
-
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -10753,8 +10704,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     default:
       break;
     }
-  case ISD::GlobalAddress:
-    return performGlobalAddressCombine(N, DAG, Subtarget, getTargetMachine());
   }
   return SDValue();
 }

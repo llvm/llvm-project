@@ -73,6 +73,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -83,7 +84,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -1205,21 +1205,11 @@ static void simplifyChunkList(llvm::cl::list<opts::ModuleSubsection> &Chunks) {
   Chunks.push_back(opts::ModuleSubsection::All);
 }
 
-int main(int argc_, const char *argv_[]) {
-  // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal(argv_[0]);
-  PrettyStackTraceProgram X(argc_, argv_);
-
+int main(int Argc, const char **Argv) {
+  InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-pdbutil: ");
 
-  SmallVector<const char *, 256> argv;
-  SpecificBumpPtrAllocator<char> ArgAllocator;
-  ExitOnErr(errorCodeToError(sys::Process::GetArgumentVector(
-      argv, makeArrayRef(argv_, argc_), ArgAllocator)));
-
-  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
-
-  cl::ParseCommandLineOptions(argv.size(), argv.data(), "LLVM PDB Dumper\n");
+  cl::ParseCommandLineOptions(Argc, Argv, "LLVM PDB Dumper\n");
 
   if (opts::BytesSubcommand) {
     if (!parseRange(opts::bytes::DumpBlockRangeOpt,

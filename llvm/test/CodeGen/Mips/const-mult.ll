@@ -257,77 +257,29 @@ define i32 @mul42949673_32(i32 %a) {
 define i64 @mul42949673_64(i64 %a) {
 ; MIPS32-LABEL: mul42949673_64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $sp, $sp, -8
-; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    sw $16, 4($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 16, -4
-; MIPS32-NEXT:    sll $1, $4, 3
-; MIPS32-NEXT:    addu $2, $1, $4
-; MIPS32-NEXT:    sltu $1, $2, $1
-; MIPS32-NEXT:    srl $3, $4, 29
-; MIPS32-NEXT:    sll $6, $5, 3
-; MIPS32-NEXT:    or $3, $6, $3
+; MIPS32-NEXT:    lui $1, 655
+; MIPS32-NEXT:    ori $1, $1, 23593
+; MIPS32-NEXT:    multu $4, $1
+; MIPS32-NEXT:    mflo $2
+; MIPS32-NEXT:    mfhi $1
+; MIPS32-NEXT:    sll $3, $5, 3
 ; MIPS32-NEXT:    addu $3, $3, $5
-; MIPS32-NEXT:    addu $1, $3, $1
-; MIPS32-NEXT:    srl $3, $4, 27
-; MIPS32-NEXT:    sll $6, $5, 5
-; MIPS32-NEXT:    or $3, $6, $3
-; MIPS32-NEXT:    addu $1, $3, $1
-; MIPS32-NEXT:    sll $3, $4, 5
-; MIPS32-NEXT:    addu $2, $3, $2
-; MIPS32-NEXT:    sll $6, $4, 10
-; MIPS32-NEXT:    subu $7, $6, $2
-; MIPS32-NEXT:    sltu $3, $2, $3
-; MIPS32-NEXT:    sll $8, $4, 13
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    addu $3, $8, $7
-; MIPS32-NEXT:    sll $7, $4, 15
-; MIPS32-NEXT:    addu $9, $7, $3
-; MIPS32-NEXT:    srl $10, $4, 22
-; MIPS32-NEXT:    sll $11, $5, 10
-; MIPS32-NEXT:    or $10, $11, $10
-; MIPS32-NEXT:    sll $11, $4, 20
-; MIPS32-NEXT:    subu $1, $10, $1
-; MIPS32-NEXT:    subu $10, $11, $9
-; MIPS32-NEXT:    sltu $2, $6, $2
-; MIPS32-NEXT:    srl $6, $4, 17
-; MIPS32-NEXT:    sll $12, $5, 15
-; MIPS32-NEXT:    srl $13, $4, 12
-; MIPS32-NEXT:    sll $14, $5, 20
-; MIPS32-NEXT:    srl $15, $4, 9
-; MIPS32-NEXT:    sll $24, $5, 23
-; MIPS32-NEXT:    sll $25, $4, 23
-; MIPS32-NEXT:    srl $gp, $4, 7
-; MIPS32-NEXT:    sll $16, $5, 25
-; MIPS32-NEXT:    or $gp, $16, $gp
-; MIPS32-NEXT:    sll $16, $4, 25
-; MIPS32-NEXT:    subu $1, $1, $2
-; MIPS32-NEXT:    addu $10, $25, $10
-; MIPS32-NEXT:    or $2, $24, $15
-; MIPS32-NEXT:    or $13, $14, $13
-; MIPS32-NEXT:    or $6, $12, $6
-; MIPS32-NEXT:    srl $4, $4, 19
-; MIPS32-NEXT:    sll $5, $5, 13
-; MIPS32-NEXT:    or $4, $5, $4
-; MIPS32-NEXT:    addu $1, $4, $1
-; MIPS32-NEXT:    sltu $3, $3, $8
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    addu $1, $6, $1
-; MIPS32-NEXT:    sltu $3, $9, $7
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    subu $1, $13, $1
-; MIPS32-NEXT:    sltu $3, $11, $9
-; MIPS32-NEXT:    subu $1, $1, $3
-; MIPS32-NEXT:    addu $1, $2, $1
-; MIPS32-NEXT:    addu $2, $16, $10
-; MIPS32-NEXT:    sltu $3, $10, $25
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    sltu $3, $2, $16
-; MIPS32-NEXT:    addu $1, $gp, $1
-; MIPS32-NEXT:    addu $3, $1, $3
-; MIPS32-NEXT:    lw $16, 4($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    sll $4, $5, 5
+; MIPS32-NEXT:    addu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 10
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 13
+; MIPS32-NEXT:    addu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 15
+; MIPS32-NEXT:    addu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 20
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 25
+; MIPS32-NEXT:    sll $5, $5, 23
+; MIPS32-NEXT:    addu $3, $5, $3
+; MIPS32-NEXT:    addu $3, $4, $3
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 8
+; MIPS32-NEXT:    addu $3, $1, $3
 ;
 ; MIPS64-LABEL: mul42949673_64:
 ; MIPS64:       # %bb.0: # %entry
@@ -412,115 +364,34 @@ entry:
 define i64 @mul22224078_64(i64 %a) {
 ; MIPS32-LABEL: mul22224078_64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $sp, $sp, -32
-; MIPS32-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32-NEXT:    sw $22, 28($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $21, 24($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $20, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $19, 16($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $18, 12($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $17, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $16, 4($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 22, -4
-; MIPS32-NEXT:    .cfi_offset 21, -8
-; MIPS32-NEXT:    .cfi_offset 20, -12
-; MIPS32-NEXT:    .cfi_offset 19, -16
-; MIPS32-NEXT:    .cfi_offset 18, -20
-; MIPS32-NEXT:    .cfi_offset 17, -24
-; MIPS32-NEXT:    .cfi_offset 16, -28
-; MIPS32-NEXT:    srl $1, $4, 31
-; MIPS32-NEXT:    sll $2, $5, 1
-; MIPS32-NEXT:    or $1, $2, $1
-; MIPS32-NEXT:    srl $2, $4, 28
-; MIPS32-NEXT:    sll $3, $5, 4
-; MIPS32-NEXT:    or $2, $3, $2
-; MIPS32-NEXT:    subu $1, $2, $1
-; MIPS32-NEXT:    sll $2, $4, 1
-; MIPS32-NEXT:    sll $3, $4, 4
-; MIPS32-NEXT:    sltu $6, $3, $2
-; MIPS32-NEXT:    subu $1, $1, $6
-; MIPS32-NEXT:    subu $2, $3, $2
-; MIPS32-NEXT:    sll $3, $4, 6
-; MIPS32-NEXT:    subu $6, $3, $2
-; MIPS32-NEXT:    srl $7, $4, 26
-; MIPS32-NEXT:    sll $8, $5, 6
-; MIPS32-NEXT:    or $7, $8, $7
-; MIPS32-NEXT:    sll $8, $4, 8
-; MIPS32-NEXT:    subu $1, $7, $1
-; MIPS32-NEXT:    subu $7, $8, $6
-; MIPS32-NEXT:    sll $9, $4, 10
-; MIPS32-NEXT:    subu $10, $9, $7
-; MIPS32-NEXT:    sltu $2, $3, $2
-; MIPS32-NEXT:    sll $3, $4, 13
-; MIPS32-NEXT:    srl $11, $4, 24
-; MIPS32-NEXT:    sll $12, $5, 8
-; MIPS32-NEXT:    subu $1, $1, $2
-; MIPS32-NEXT:    or $2, $12, $11
-; MIPS32-NEXT:    subu $11, $3, $10
-; MIPS32-NEXT:    srl $12, $4, 22
-; MIPS32-NEXT:    sll $13, $5, 10
-; MIPS32-NEXT:    sll $14, $4, 16
-; MIPS32-NEXT:    subu $15, $14, $11
-; MIPS32-NEXT:    srl $24, $4, 14
-; MIPS32-NEXT:    srl $25, $4, 12
-; MIPS32-NEXT:    srl $gp, $4, 10
-; MIPS32-NEXT:    srl $16, $4, 8
-; MIPS32-NEXT:    subu $1, $2, $1
-; MIPS32-NEXT:    or $2, $13, $12
-; MIPS32-NEXT:    sltu $6, $8, $6
-; MIPS32-NEXT:    srl $8, $4, 19
-; MIPS32-NEXT:    sll $12, $5, 13
-; MIPS32-NEXT:    srl $13, $4, 16
-; MIPS32-NEXT:    sll $17, $5, 16
-; MIPS32-NEXT:    sll $18, $5, 18
-; MIPS32-NEXT:    sll $19, $5, 20
-; MIPS32-NEXT:    sll $20, $5, 22
-; MIPS32-NEXT:    sll $5, $5, 24
-; MIPS32-NEXT:    sll $21, $4, 18
-; MIPS32-NEXT:    subu $22, $21, $15
-; MIPS32-NEXT:    or $5, $5, $16
-; MIPS32-NEXT:    or $gp, $20, $gp
-; MIPS32-NEXT:    or $25, $19, $25
-; MIPS32-NEXT:    or $24, $18, $24
-; MIPS32-NEXT:    or $13, $17, $13
-; MIPS32-NEXT:    or $8, $12, $8
-; MIPS32-NEXT:    sll $12, $4, 24
-; MIPS32-NEXT:    sll $16, $4, 22
-; MIPS32-NEXT:    sll $4, $4, 20
-; MIPS32-NEXT:    subu $1, $1, $6
-; MIPS32-NEXT:    subu $1, $2, $1
-; MIPS32-NEXT:    sltu $2, $9, $7
-; MIPS32-NEXT:    subu $1, $1, $2
-; MIPS32-NEXT:    subu $1, $8, $1
-; MIPS32-NEXT:    sltu $2, $3, $10
-; MIPS32-NEXT:    subu $1, $1, $2
-; MIPS32-NEXT:    subu $1, $13, $1
-; MIPS32-NEXT:    sltu $2, $14, $11
-; MIPS32-NEXT:    subu $1, $1, $2
-; MIPS32-NEXT:    subu $1, $24, $1
-; MIPS32-NEXT:    addu $3, $4, $22
-; MIPS32-NEXT:    sltu $2, $21, $15
-; MIPS32-NEXT:    subu $1, $1, $2
-; MIPS32-NEXT:    addu $6, $16, $3
-; MIPS32-NEXT:    addu $1, $25, $1
-; MIPS32-NEXT:    addu $2, $12, $6
-; MIPS32-NEXT:    sltu $7, $2, $12
-; MIPS32-NEXT:    sltu $6, $6, $16
-; MIPS32-NEXT:    sltu $3, $3, $4
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    addu $1, $gp, $1
-; MIPS32-NEXT:    addu $1, $1, $6
-; MIPS32-NEXT:    addu $1, $5, $1
-; MIPS32-NEXT:    addu $3, $1, $7
-; MIPS32-NEXT:    lw $16, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $17, 8($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $18, 12($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $19, 16($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $20, 20($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $21, 24($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $22, 28($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lui $1, 339
+; MIPS32-NEXT:    ori $1, $1, 7374
+; MIPS32-NEXT:    multu $4, $1
+; MIPS32-NEXT:    mflo $2
+; MIPS32-NEXT:    mfhi $1
+; MIPS32-NEXT:    sll $3, $5, 1
+; MIPS32-NEXT:    sll $4, $5, 4
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 6
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 8
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 10
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 13
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 16
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 24
+; MIPS32-NEXT:    sll $6, $5, 22
+; MIPS32-NEXT:    sll $7, $5, 20
+; MIPS32-NEXT:    sll $5, $5, 18
+; MIPS32-NEXT:    subu $3, $5, $3
+; MIPS32-NEXT:    addu $3, $7, $3
+; MIPS32-NEXT:    addu $3, $6, $3
+; MIPS32-NEXT:    addu $3, $4, $3
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 32
+; MIPS32-NEXT:    addu $3, $1, $3
 ;
 ; MIPS64-LABEL: mul22224078_64:
 ; MIPS64:       # %bb.0: # %entry
@@ -592,53 +463,23 @@ entry:
 define i64 @mul22245375_64(i64 %a) {
 ; MIPS32-LABEL: mul22245375_64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $4, 12
-; MIPS32-NEXT:    addu $2, $1, $4
-; MIPS32-NEXT:    sltu $1, $2, $1
-; MIPS32-NEXT:    srl $3, $4, 20
-; MIPS32-NEXT:    sll $6, $5, 12
-; MIPS32-NEXT:    or $3, $6, $3
+; MIPS32-NEXT:    lui $1, 339
+; MIPS32-NEXT:    ori $1, $1, 28671
+; MIPS32-NEXT:    multu $4, $1
+; MIPS32-NEXT:    mflo $2
+; MIPS32-NEXT:    mfhi $1
+; MIPS32-NEXT:    sll $3, $5, 12
 ; MIPS32-NEXT:    addu $3, $3, $5
-; MIPS32-NEXT:    addu $1, $3, $1
-; MIPS32-NEXT:    srl $3, $4, 17
-; MIPS32-NEXT:    sll $6, $5, 15
-; MIPS32-NEXT:    or $3, $6, $3
-; MIPS32-NEXT:    addu $1, $3, $1
-; MIPS32-NEXT:    sll $3, $4, 15
-; MIPS32-NEXT:    addu $2, $3, $2
-; MIPS32-NEXT:    sltu $3, $2, $3
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    srl $3, $4, 14
-; MIPS32-NEXT:    sll $6, $5, 18
-; MIPS32-NEXT:    or $3, $6, $3
-; MIPS32-NEXT:    srl $6, $4, 12
-; MIPS32-NEXT:    sll $7, $5, 20
-; MIPS32-NEXT:    subu $1, $3, $1
-; MIPS32-NEXT:    or $3, $7, $6
-; MIPS32-NEXT:    sll $6, $4, 18
-; MIPS32-NEXT:    srl $7, $4, 10
-; MIPS32-NEXT:    sll $8, $5, 22
-; MIPS32-NEXT:    srl $9, $4, 8
-; MIPS32-NEXT:    sll $5, $5, 24
-; MIPS32-NEXT:    or $5, $5, $9
-; MIPS32-NEXT:    or $7, $8, $7
-; MIPS32-NEXT:    sltu $8, $6, $2
-; MIPS32-NEXT:    sll $9, $4, 24
-; MIPS32-NEXT:    sll $10, $4, 22
-; MIPS32-NEXT:    sll $4, $4, 20
-; MIPS32-NEXT:    subu $1, $1, $8
-; MIPS32-NEXT:    addu $1, $3, $1
-; MIPS32-NEXT:    subu $2, $6, $2
-; MIPS32-NEXT:    addu $2, $4, $2
-; MIPS32-NEXT:    sltu $3, $2, $4
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    addu $1, $7, $1
-; MIPS32-NEXT:    addu $2, $10, $2
-; MIPS32-NEXT:    sltu $3, $2, $10
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    addu $1, $5, $1
-; MIPS32-NEXT:    addu $2, $9, $2
-; MIPS32-NEXT:    sltu $3, $2, $9
+; MIPS32-NEXT:    sll $4, $5, 15
+; MIPS32-NEXT:    addu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 18
+; MIPS32-NEXT:    subu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 20
+; MIPS32-NEXT:    addu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 22
+; MIPS32-NEXT:    addu $3, $4, $3
+; MIPS32-NEXT:    sll $4, $5, 24
+; MIPS32-NEXT:    addu $3, $4, $3
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    addu $3, $1, $3
 ;

@@ -958,7 +958,8 @@ static bool isCopyOfAPHI(const Value *V) {
 // order. The BlockInstRange numbers are generated in an RPO walk of the basic
 // blocks.
 void NewGVN::sortPHIOps(MutableArrayRef<ValPair> Ops) const {
-  std::sort(Ops.begin(), Ops.end(), [&](const ValPair &P1, const ValPair &P2) {
+  llvm::sort(Ops.begin(), Ops.end(),
+             [&](const ValPair &P1, const ValPair &P2) {
     return BlockInstRange.lookup(P1.second).first <
            BlockInstRange.lookup(P2.second).first;
   });
@@ -3423,10 +3424,10 @@ bool NewGVN::runGVN() {
   for (auto &B : RPOT) {
     auto *Node = DT->getNode(B);
     if (Node->getChildren().size() > 1)
-      std::sort(Node->begin(), Node->end(),
-                [&](const DomTreeNode *A, const DomTreeNode *B) {
-                  return RPOOrdering[A] < RPOOrdering[B];
-                });
+      llvm::sort(Node->begin(), Node->end(),
+                 [&](const DomTreeNode *A, const DomTreeNode *B) {
+                   return RPOOrdering[A] < RPOOrdering[B];
+                 });
   }
 
   // Now a standard depth first ordering of the domtree is equivalent to RPO.
@@ -3948,7 +3949,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
         convertClassToDFSOrdered(*CC, DFSOrderedSet, UseCounts, ProbablyDead);
 
         // Sort the whole thing.
-        std::sort(DFSOrderedSet.begin(), DFSOrderedSet.end());
+        llvm::sort(DFSOrderedSet.begin(), DFSOrderedSet.end());
         for (auto &VD : DFSOrderedSet) {
           int MemberDFSIn = VD.DFSIn;
           int MemberDFSOut = VD.DFSOut;
@@ -4110,7 +4111,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
     // If we have possible dead stores to look at, try to eliminate them.
     if (CC->getStoreCount() > 0) {
       convertClassToLoadsAndStores(*CC, PossibleDeadStores);
-      std::sort(PossibleDeadStores.begin(), PossibleDeadStores.end());
+      llvm::sort(PossibleDeadStores.begin(), PossibleDeadStores.end());
       ValueDFSStack EliminationStack;
       for (auto &VD : PossibleDeadStores) {
         int MemberDFSIn = VD.DFSIn;

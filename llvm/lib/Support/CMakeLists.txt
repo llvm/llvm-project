@@ -76,6 +76,7 @@ add_llvm_library(LLVMSupport
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
+  InitLLVM.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
   JamCRC.cpp

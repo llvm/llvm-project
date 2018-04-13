@@ -14,20 +14,19 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <map>
 #include <set>
@@ -506,7 +505,7 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
 }
 
 int main(int argc, const char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  InitLLVM X(argc, argv);
 
   cl::HideUnrelatedOptions(OptReportCategory);
   cl::ParseCommandLineOptions(

@@ -272,7 +272,7 @@ namespace {
       write(Len);
       write(Number);
 
-      std::sort(
+      llvm::sort(
           SortedLinesByFile.begin(), SortedLinesByFile.end(),
           [](StringMapEntry<GCOVLines> *LHS, StringMapEntry<GCOVLines> *RHS) {
             return LHS->getKey() < RHS->getKey();

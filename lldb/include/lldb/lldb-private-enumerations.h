@@ -234,6 +234,18 @@ enum class CompilerContextKind {
   Typedef
 };
 
+//----------------------------------------------------------------------
+// Enumerations that can be used to specify the kind of metric we're
+// looking at when collecting stats.
+//----------------------------------------------------------------------
+enum StatisticKind {
+  ExpressionSuccessful = 0,
+  ExpressionFailure = 1,
+  FrameVarSuccess = 2,
+  FrameVarFailure = 3,
+  StatisticMax = 4
+};
+
 } // namespace lldb_private
 
 namespace llvm {

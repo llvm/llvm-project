@@ -119,8 +119,12 @@ public:
   // Pass identification, replacement for typeid.
   static char ID;
 
-  HWAddressSanitizer(bool Recover = false)
-      : FunctionPass(ID), Recover(Recover || ClRecover) {}
+  explicit HWAddressSanitizer(bool CompileKernel = false, bool Recover = false)
+      : FunctionPass(ID) {
+    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
+    this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0 ?
+        ClEnableKhwasan : CompileKernel;
+  }
 
   StringRef getPassName() const override { return "HWAddressSanitizer"; }
 
@@ -156,6 +160,7 @@ private:
   Type *IntptrTy;
   Type *Int8Ty;
 
+  bool CompileKernel;
   bool Recover;
 
   Function *HwasanCtorFunction;
@@ -178,8 +183,10 @@ INITIALIZE_PASS_END(
     HWAddressSanitizer, "hwasan",
     "HWAddressSanitizer: detect memory bugs using tagged addressing.", false, false)
 
-FunctionPass *llvm::createHWAddressSanitizerPass(bool Recover) {
-  return new HWAddressSanitizer(Recover);
+FunctionPass *llvm::createHWAddressSanitizerPass(bool CompileKernel,
+                                                 bool Recover) {
+  assert(!CompileKernel || Recover);
+  return new HWAddressSanitizer(CompileKernel, Recover);
 }
 
 /// \brief Module-level initialization.
@@ -197,7 +204,7 @@ bool HWAddressSanitizer::doInitialization(Module &M) {
   Int8Ty = IRB.getInt8Ty();
 
   HwasanCtorFunction = nullptr;
-  if (!ClEnableKhwasan) {
+  if (!CompileKernel) {
     std::tie(HwasanCtorFunction, std::ignore) =
         createSanitizerCtorAndInitFunctions(M, kHwasanModuleCtorName,
                                             kHwasanInitName,
@@ -335,9 +342,11 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
       IRB.CreateLoad(IRB.CreateIntToPtr(ShadowLong, IRB.getInt8PtrTy()));
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
-  if (ClMatchAllTag != -1) {
+  int matchAllTag = ClMatchAllTag.getNumOccurrences() > 0 ?
+      ClMatchAllTag : (CompileKernel ? 0xFF : -1);
+  if (matchAllTag != -1) {
     Value *TagNotIgnored = IRB.CreateICmpNE(PtrTag,
-        ConstantInt::get(PtrTag->getType(), ClMatchAllTag));
+        ConstantInt::get(PtrTag->getType(), matchAllTag));
     TagMismatch = IRB.CreateAnd(TagMismatch, TagNotIgnored);
   }
 
@@ -502,7 +511,7 @@ Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
 Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong,
                                       Value *Tag) {
   Value *TaggedPtrLong;
-  if (ClEnableKhwasan) {
+  if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
     Value *ShiftedTag = IRB.CreateOr(
         IRB.CreateShl(Tag, kPointerTagShift),
@@ -519,7 +528,7 @@ Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong
 // Remove tag from an address.
 Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
   Value *UntaggedPtrLong;
-  if (ClEnableKhwasan) {
+  if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
     UntaggedPtrLong = IRB.CreateOr(PtrLong,
         ConstantInt::get(PtrLong->getType(), 0xFFULL << kPointerTagShift));

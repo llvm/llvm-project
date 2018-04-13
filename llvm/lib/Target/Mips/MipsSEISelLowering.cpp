@@ -705,6 +705,77 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static bool shouldTransformMulToShiftsAddsSubs(APInt C, EVT VT,
+                                               SelectionDAG &DAG,
+                                               const MipsSubtarget &Subtarget) {
+  // Estimate the number of operations the below transform will turn a
+  // constant multiply into. The number is approximately how many powers
+  // of two summed together that the constant can be broken down into.
+
+  SmallVector<APInt, 16> WorkStack(1, C);
+  unsigned Steps = 0;
+  unsigned BitWidth = C.getBitWidth();
+
+  while (!WorkStack.empty()) {
+    APInt Val = WorkStack.pop_back_val();
+
+    if (Val == 0 || Val == 1)
+      continue;
+
+    if (Val.isPowerOf2()) {
+      ++Steps;
+      continue;
+    }
+
+    APInt Floor = APInt(BitWidth, 1) << Val.logBase2();
+    APInt Ceil = Val.isNegative() ? APInt(BitWidth, 0)
+                                  : APInt(BitWidth, 1) << C.ceilLogBase2();
+
+    if ((Val - Floor).ule(Ceil - Val)) {
+      WorkStack.push_back(Floor);
+      WorkStack.push_back(Val - Floor);
+      ++Steps;
+      continue;
+    }
+
+    WorkStack.push_back(Ceil);
+    WorkStack.push_back(Ceil - Val);
+    ++Steps;
+
+    // If we have taken more than 12[1] / 8[2] steps to attempt the
+    // optimization for a native sized value, it is more than likely that this
+    // optimization will make things worse.
+    //
+    // [1] MIPS64 requires 6 instructions at most to materialize any constant,
+    //     multiplication requires at least 4 cycles, but another cycle (or two)
+    //     to retrieve the result from the HI/LO registers.
+    //
+    // [2] For MIPS32, more than 8 steps is expensive as the constant could be
+    //     materialized in 2 instructions, multiplication requires at least 4
+    //     cycles, but another cycle (or two) to retrieve the result from the
+    //     HI/LO registers.
+
+    if (Steps > 12 && (Subtarget.isABI_N32() || Subtarget.isABI_N64()))
+      return false;
+
+    if (Steps > 8 && Subtarget.isABI_O32())
+      return false;
+  }
+
+  // If the value being multiplied is not supported natively, we have to pay
+  // an additional legalization cost, conservatively assume an increase in the
+  // cost of 3 instructions per step. This values for this heuristic were
+  // determined experimentally.
+  unsigned RegisterSize = DAG.getTargetLoweringInfo()
+                              .getRegisterType(*DAG.getContext(), VT)
+                              .getSizeInBits();
+  Steps *= (VT.getSizeInBits() != RegisterSize) * 3;
+  if (Steps > 27)
+    return false;
+
+  return true;
+}
+
 static SDValue genConstMult(SDValue X, APInt C, const SDLoc &DL, EVT VT,
                             EVT ShiftTy, SelectionDAG &DAG) {
   // Return 0.
@@ -743,11 +814,13 @@ static SDValue genConstMult(SDValue X, APInt C, const SDLoc &DL, EVT VT,
 
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  const TargetLowering::DAGCombinerInfo &DCI,
-                                 const MipsSETargetLowering *TL) {
+                                 const MipsSETargetLowering *TL,
+                                 const MipsSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-    if (!VT.isVector())
+    if (!VT.isVector() && shouldTransformMulToShiftsAddsSubs(
+                              C->getAPIntValue(), VT, DAG, Subtarget))
       return genConstMult(N->getOperand(0), C->getAPIntValue(), SDLoc(N), VT,
                           TL->getScalarShiftAmountTy(DAG.getDataLayout(), VT),
                           DAG);
@@ -948,7 +1021,7 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
     Val = performORCombine(N, DAG, DCI, Subtarget);
     break;
   case ISD::MUL:
-    return performMULCombine(N, DAG, DCI, this);
+    return performMULCombine(N, DAG, DCI, this, Subtarget);
   case ISD::SHL:
     Val = performSHLCombine(N, DAG, DCI, Subtarget);
     break;

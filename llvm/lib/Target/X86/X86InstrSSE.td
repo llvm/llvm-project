@@ -13,165 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-class OpndItins<InstrItinClass arg_rr, InstrItinClass arg_rm> {
-  InstrItinClass rr = arg_rr;
-  InstrItinClass rm = arg_rm;
-  // InstrSchedModel info.
-  X86FoldableSchedWrite Sched = WriteFAdd;
-}
-
-class SizeItins<OpndItins arg_s, OpndItins arg_d> {
-  OpndItins s = arg_s;
-  OpndItins d = arg_d;
-}
-
-// scalar
-let Sched = WriteFAdd in {
-def SSE_ALU_F32S : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_ALU_F64S : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_ALU_ITINS_S : SizeItins<
-  SSE_ALU_F32S, SSE_ALU_F64S
->;
-
-let Sched = WriteFMul in {
-def SSE_MUL_F32S : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_MUL_F64S : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_MUL_ITINS_S : SizeItins<
-  SSE_MUL_F32S, SSE_MUL_F64S
->;
-
-let Sched = WriteFDiv in {
-def SSE_DIV_F32S : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_DIV_F64S : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_DIV_ITINS_S : SizeItins<
-  SSE_DIV_F32S, SSE_DIV_F64S
->;
-
-// parallel
-let Sched = WriteFAdd in {
-def SSE_ALU_F32P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_ALU_F64P : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_ALU_ITINS_P : SizeItins<
-  SSE_ALU_F32P, SSE_ALU_F64P
->;
-
-let Sched = WriteFMul in {
-def SSE_MUL_F32P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_MUL_F64P : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_MUL_ITINS_P : SizeItins<
-  SSE_MUL_F32P, SSE_MUL_F64P
->;
-
-let Sched = WriteFDiv in {
-def SSE_DIV_F32P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_DIV_F64P : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_DIV_ITINS_P : SizeItins<
-  SSE_DIV_F32P, SSE_DIV_F64P
->;
-
-let Sched = WriteVecLogic in
-def SSE_BIT_ITINS_P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteVecALU in {
-def SSE_INTALU_ITINS_P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_INTALUQ_ITINS_P : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-let Sched = WriteVecIMul in
-def SSE_INTMUL_ITINS_P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteVecShift in
-def SSE_INTSHIFT_P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_MOVA_ITINS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_MOVU_ITINS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_DPPD_ITINS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_DPPS_ITINS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteMPSAD in
-def SSE_MPSADBW_ITINS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WritePMULLD in
-def SSE_PMULLD_ITINS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteShuffle in
-def SSE_INTALU_ITINS_SHUFF_P : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteShuffle in
-def SSE_PACK : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 Instructions Classes
 //===----------------------------------------------------------------------===//
@@ -1045,73 +886,6 @@ let Constraints = "$src1 = $dst", AddedComplexity = 20 in {
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Conversion Instructions
 //===----------------------------------------------------------------------===//
-
-let Sched = WriteCvtF2I in {
-def SSE_CVT_SS2SI_32 : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteCvtF2I in
-def SSE_CVT_SS2SI_64 : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_SD2SI : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_PS2I : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_PD2I : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-let Sched = WriteCvtI2F in {
-def SSE_CVT_SI2SS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_SI2SD : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_I2PS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_I2PD : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-let Sched = WriteCvtF2F in {
-def SSE_CVT_SD2SS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_SS2SD : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_PD2PS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_PS2PD : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_PH2PS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_CVT_PS2PH : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
 
 // FIXME: We probably want to match the rm form only when optimizing for
 // size, to avoid false depenendecies (see sse_fp_unop_s for details)
@@ -2048,11 +1822,6 @@ let Predicates = [UseSSE2] in {
 // SSE 1 & 2 - Compare Instructions
 //===----------------------------------------------------------------------===//
 
-let Sched = WriteFAdd in
-def SSE_COMIS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 // sse12_cmp_scalar - sse 1 & 2 compare scalar instructions
 multiclass sse12_cmp_scalar<RegisterClass RC, X86MemOperand x86memop,
                             Operand CC, SDNode OpNode, ValueType VT,
@@ -2339,11 +2108,6 @@ let Predicates = [UseSSE1] in {
 // SSE 1 & 2 - Shuffle Instructions
 //===----------------------------------------------------------------------===//
 
-let Sched = WriteFShuffle in
-def SSE_SHUFP : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 /// sse12_shuffle - sse 1 & 2 fp shuffle instructions
 multiclass sse12_shuffle<RegisterClass RC, X86MemOperand x86memop,
                          ValueType vt, string asm, PatFrag mem_frag,
@@ -2386,11 +2150,6 @@ let Constraints = "$src1 = $dst" in {
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Unpack FP Instructions
 //===----------------------------------------------------------------------===//
-
-let Sched = WriteFShuffle in
-def SSE_UNPCK : OpndItins<
-  NoItinerary, NoItinerary
->;
 
 /// sse12_unpack_interleave - sse 1 & 2 fp unpack and interleave
 multiclass sse12_unpack_interleave<bits<8> opc, SDNode OpNode, ValueType vt,
@@ -2953,7 +2712,6 @@ defm : scalar_math_f64_patterns<fsub, "SUB">;
 defm : scalar_math_f64_patterns<fmul, "MUL">;
 defm : scalar_math_f64_patterns<fdiv, "DIV">;
 
-
 /// Unop Arithmetic
 /// In addition, we also have a special variant of the scalar form here to
 /// represent the associated intrinsic operation.  This form is unlike the
@@ -2961,60 +2719,6 @@ defm : scalar_math_f64_patterns<fdiv, "DIV">;
 /// scalar) and leaves the top elements undefined.
 ///
 /// And, we have a special variant form for a full-vector intrinsic form.
-
-let Sched = WriteFSqrt in {
-def SSE_SQRTPS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_SQRTSS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_SQRTPD : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_SQRTSD : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-let Sched = WriteFRsqrt in {
-def SSE_RSQRTPS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_RSQRTSS : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_RSQRT_P : SizeItins<
-  SSE_RSQRTPS, SSE_RSQRTPS
->;
-
-def SSE_RSQRT_S : SizeItins<
-  SSE_RSQRTSS, SSE_RSQRTSS
->;
-
-let Sched = WriteFRcp in {
-def SSE_RCPP : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_RCPS : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-
-def SSE_RCP_P : SizeItins<
-  SSE_RCPP, SSE_RCPP
->;
-
-def SSE_RCP_S : SizeItins<
-  SSE_RCPS, SSE_RCPS
->;
 
 /// sse_fp_unop_s - SSE1 unops in scalar form
 /// For the non-AVX defs, we need $src1 to be tied to $dst because
@@ -3573,11 +3277,6 @@ let Predicates = [HasAVX, NoVLX] in {
 // SSE2 - Packed Integer Arithmetic Instructions
 //===---------------------------------------------------------------------===//
 
-let Sched = WriteVecIMul in
-def SSE_PMADD : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 let ExeDomain = SSEPackedInt in { // SSE integer instructions
 
 /// PDI_binop_rm2 - Simple SSE2 binary operator with different src and dst types
@@ -3801,11 +3500,6 @@ defm PCMPGTD : PDI_binop_all<0x66, "pcmpgtd", X86pcmpgt, v4i32, v8i32,
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Integer Shuffle Instructions
 //===---------------------------------------------------------------------===//
-
-let Sched = WriteShuffle in
-def SSE_PSHUF : OpndItins<
-  NoItinerary, NoItinerary
->;
 
 let ExeDomain = SSEPackedInt in {
 multiclass sse2_pshuffle<string OpcodeStr, ValueType vt128, ValueType vt256,
@@ -4614,12 +4308,6 @@ let Predicates = [UseSSE3] in {
 // SSE3 - Replicate Double FP - MOVDDUP
 //===---------------------------------------------------------------------===//
 
-// FIXME: Improve MOVDDUP/BROADCAST reg/mem scheduling itineraries.
-let Sched = WriteFShuffle in
-def SSE_MOVDDUP : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 multiclass sse3_replicate_dfp<string OpcodeStr> {
 def rr  : S3DI<0x12, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
@@ -4819,11 +4507,6 @@ let Constraints = "$src1 = $dst" in {
 // SSSE3 - Packed Absolute Instructions
 //===---------------------------------------------------------------------===//
 
-let Sched = WriteVecALU in
-def SSE_PABS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 /// SS3I_unop_rm_int - Simple SSSE3 unary op whose type can be v*{i8,i16,i32}.
 multiclass SS3I_unop_rm<bits<8> opc, string OpcodeStr, ValueType vt,
                         SDNode OpNode, X86FoldableSchedWrite sched, PatFrag ld_frag> {
@@ -4880,30 +4563,6 @@ defm PABSD : SS3I_unop_rm<0x1E, "pabsd", v4i32, abs, WriteVecALU, memopv2i64>;
 //===---------------------------------------------------------------------===//
 // SSSE3 - Packed Binary Operator Instructions
 //===---------------------------------------------------------------------===//
-
-let Sched = WritePHAdd in {
-def SSE_PHADDSUBD : OpndItins<
-  NoItinerary, NoItinerary
->;
-def SSE_PHADDSUBSW : OpndItins<
-  NoItinerary, NoItinerary
->;
-def SSE_PHADDSUBW : OpndItins<
-  NoItinerary, NoItinerary
->;
-}
-let Sched = WriteVarShuffle in
-def SSE_PSHUFB : OpndItins<
-  NoItinerary, NoItinerary
->;
-let Sched = WriteVecALU in
-def SSE_PSIGN : OpndItins<
-  NoItinerary, NoItinerary
->;
-let Sched = WriteVecIMul in
-def SSE_PMULHRSW : OpndItins<
-  NoItinerary, NoItinerary
->;
 
 /// SS3I_binop_rm - Simple SSSE3 bin op
 multiclass SS3I_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -5094,11 +4753,6 @@ defm PMULHRSW    : SS3I_binop_rm<0x0B, "pmulhrsw", X86mulhrs, v8i16, v8i16,
 //===---------------------------------------------------------------------===//
 // SSSE3 - Packed Align Instruction Patterns
 //===---------------------------------------------------------------------===//
-
-let Sched = WriteShuffle in
-def SSE_PALIGN : OpndItins<
-  NoItinerary, NoItinerary
->;
 
 multiclass ssse3_palignr<string asm, ValueType VT, RegisterClass RC,
                          PatFrag memop_frag, X86MemOperand x86memop,
@@ -5688,14 +5342,6 @@ let Predicates = [UseAVX] in {
 // SSE4.1 - Round Instructions
 //===----------------------------------------------------------------------===//
 
-def SSE_ROUNDPS : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-def SSE_ROUNDPD : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 multiclass sse41_fp_unop_p<bits<8> opc, string OpcodeStr,
                            X86MemOperand x86memop, RegisterClass RC,
                            ValueType VT, PatFrag mem_frag, SDNode OpNode,
@@ -5991,11 +5637,6 @@ let Predicates = [UseSSE41] in {
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//
-
-let Sched = WriteVecLogic in
-def SSE_PTEST : OpndItins<
-  NoItinerary, NoItinerary
->;
 
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
 // the intel intrinsic that corresponds to this.
@@ -6948,7 +6589,7 @@ let Constraints = "$src1 = $dst" in {
 // SHA-NI Instructions
 //===----------------------------------------------------------------------===//
 
-// FIXME: Is there a better scheduler itinerary for SHA than WriteVecIMul?
+// FIXME: Is there a better scheduler class for SHA than WriteVecIMul?
 multiclass SHAI_binop<bits<8> Opc, string OpcodeStr, Intrinsic IntId,
                       X86FoldableSchedWrite sched, bit UsesXMM0 = 0> {
   def rr : I<Opc, MRMSrcReg, (outs VR128:$dst),
@@ -7516,16 +7157,6 @@ defm VMASKMOVPD : avx_movmask_rm<0x2D, 0x2F, "vmaskmovpd",
 // VPERMIL - Permute Single and Double Floating-Point Values
 //
 
-let Sched = WriteFVarShuffle in
-def AVX_VPERMILV : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteFShuffle in
-def AVX_VPERMIL : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 multiclass avx_permil<bits<8> opc_rm, bits<8> opc_rmi, string OpcodeStr,
                       RegisterClass RC, X86MemOperand x86memop_f,
                       X86MemOperand x86memop_i, PatFrag i_frag,
@@ -7980,16 +7611,6 @@ let Predicates = [HasAVX1Only] in {
 // VPERM - Permute instructions
 //
 
-let Sched = WriteFShuffle256 in
-def AVX2_PERMV_F : OpndItins<
-  NoItinerary, NoItinerary
->;
-
-let Sched = WriteShuffle256 in
-def AVX2_PERMV_I : OpndItins<
-  NoItinerary, NoItinerary
->;
-
 multiclass avx2_perm<bits<8> opc, string OpcodeStr, PatFrag mem_frag,
                      ValueType OpVT, X86FoldableSchedWrite Sched,
                      X86MemOperand memOp> {
@@ -8413,12 +8034,12 @@ multiclass GF2P8MULB_rm<string OpcodeStr, ValueType OpVT,
     let isCommutable = 1 in
     def rr : PDI<0xCF, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2), "",
                  [(set RC:$dst, (OpVT (X86GF2P8mulb RC:$src1, RC:$src2)))]>,
-             Sched<[SSE_INTALU_ITINS_P.Sched]>, T8PD;
+             Sched<[WriteVecALU]>, T8PD;
 
     def rm : PDI<0xCF, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, X86MemOp:$src2), "",
                  [(set RC:$dst, (OpVT (X86GF2P8mulb RC:$src1,
                                  (bitconvert (MemOpFrag addr:$src2)))))]>,
-             Sched<[SSE_INTALU_ITINS_P.Sched.Folded, ReadAfterLd]>, T8PD;
+             Sched<[WriteVecALU.Folded, ReadAfterLd]>, T8PD;
   }
 }
 

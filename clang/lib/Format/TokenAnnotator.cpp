@@ -592,7 +592,8 @@ private:
           return false;
       }
     }
-    return true;
+    // There are no top-level unbalanced braces in text protos.
+    return Style.Language != FormatStyle::LK_TextProto;
   }
 
   void updateParameterCount(FormatToken *Left, FormatToken *Current) {
@@ -712,6 +713,11 @@ private:
       } else if (Contexts.back().ContextKind == tok::l_paren) {
         Tok->Type = TT_InlineASMColon;
       }
+      // Detects trailing pieces like key:
+      if ((Style.Language == FormatStyle::LK_Proto ||
+           Style.Language == FormatStyle::LK_TextProto) &&
+          !CurrentToken)
+        return false;
       break;
     case tok::pipe:
     case tok::amp:
@@ -798,6 +804,10 @@ private:
           if (Previous && Previous->Type != TT_DictLiteral)
             Previous->Type = TT_SelectorName;
         }
+      } else if (Style.Language == FormatStyle::LK_TextProto ||
+                 Style.Language == FormatStyle::LK_Proto) {
+        // In TT_Proto and TT_TextProto, tok::less cannot be a binary operator.
+        return false;
       } else {
         Tok->Type = TT_BinaryOperator;
         NonTemplateLess.insert(Tok);
@@ -809,13 +819,16 @@ private:
     case tok::r_square:
       return false;
     case tok::r_brace:
-      // Lines can start with '}'.
-      if (Tok->Previous)
+      // Lines can start with '}' except in text protos.
+      if (Tok->Previous || Style.Language == FormatStyle::LK_TextProto)
         return false;
       break;
     case tok::greater:
-      if (Style.Language != FormatStyle::LK_TextProto)
-        Tok->Type = TT_BinaryOperator;
+      // In protos and text protos tok::greater cannot be a binary operator.
+      if (Style.Language == FormatStyle::LK_Proto ||
+          Style.Language == FormatStyle::LK_TextProto)
+        return false;
+      Tok->Type = TT_BinaryOperator;
       break;
     case tok::kw_operator:
       if (Style.Language == FormatStyle::LK_TextProto ||

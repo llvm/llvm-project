@@ -239,7 +239,7 @@ public:
     SmallVector<std::pair<BasicBlock *, Value *>, 4> Ops;
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
-    std::sort(Ops.begin(), Ops.end());
+    llvm::sort(Ops.begin(), Ops.end());
     for (auto &P : Ops) {
       Blocks.push_back(P.first);
       Values.push_back(P.second);
@@ -361,7 +361,7 @@ public:
 
     for (auto &U : I->uses())
       op_push_back(U.getUser());
-    std::sort(op_begin(), op_end());
+    llvm::sort(op_begin(), op_end());
   }
 
   void setMemoryUseOrder(unsigned MUO) { MemoryUseOrder = MUO; }
@@ -761,7 +761,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
   }
   if (Preds.size() < 2)
     return 0;
-  std::sort(Preds.begin(), Preds.end());
+  llvm::sort(Preds.begin(), Preds.end());
 
   unsigned NumOrigPreds = Preds.size();
   // We can only sink instructions through unconditional branches.
