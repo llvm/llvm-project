@@ -26,6 +26,7 @@
 #include "clang/Basic/VersionTuple.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -75,9 +76,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -443,6 +444,25 @@ static void parseSanitizerKinds(StringRef FlagName,
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
     else
       S.set(K, true);
+  }
+}
+
+static void parseXRayInstrumentationBundle(StringRef FlagName, StringRef Bundle,
+                                           ArgList &Args, DiagnosticsEngine &D,
+                                           XRayInstrSet &S) {
+  llvm::SmallVector<StringRef, 2> BundleParts;
+  llvm::SplitString(Bundle, BundleParts, ",");
+  for (const auto B : BundleParts) {
+    auto Mask = parseXRayInstrValue(B);
+    if (Mask == XRayInstrKind::None)
+      if (B != "none")
+        D.Report(diag::err_drv_invalid_value) << FlagName << Bundle;
+      else
+        S.Mask = Mask;
+    else if (Mask == XRayInstrKind::All)
+      S.Mask = Mask;
+    else
+      S.set(Mask, true);
   }
 }
 
@@ -820,11 +840,23 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_finstrument_functions_after_inlining);
   Opts.InstrumentFunctionEntryBare =
       Args.hasArg(OPT_finstrument_function_entry_bare);
-  Opts.XRayInstrumentFunctions = Args.hasArg(OPT_fxray_instrument);
+
+  Opts.XRayInstrumentFunctions =
+      Args.hasArg(OPT_fxray_instrument);
   Opts.XRayAlwaysEmitCustomEvents =
       Args.hasArg(OPT_fxray_always_emit_customevents);
   Opts.XRayInstructionThreshold =
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
+
+  auto XRayInstrBundles =
+      Args.getAllArgValues(OPT_fxray_instrumentation_bundle);
+  if (XRayInstrBundles.empty())
+    Opts.XRayInstrumentationBundle.Mask = XRayInstrKind::All;
+  else
+    for (const auto &A : XRayInstrBundles)
+      parseXRayInstrumentationBundle("-fxray-instrumentation-bundle=", A, Args,
+                                     Diags, Opts.XRayInstrumentationBundle);
+
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.EmitOpenCLArgMetadata = Args.hasArg(OPT_cl_kernel_arg_info);

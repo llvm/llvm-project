@@ -1147,6 +1147,11 @@ def fxray_link_deps : Flag<["-"], "fxray-link-deps">, Group<f_Group>,
 def fnoxray_link_deps : Flag<["-"], "fnoxray-link-deps">, Group<f_Group>,
   Flags<[CC1Option]>;
 
+def fxray_instrumentation_bundle :
+  JoinedOrSeparate<["-"], "fxray-instrumentation-bundle=">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Select which XRay instrumentation points to emit. Options: all, none, function, custom. Default is 'all'.">;
+
 def ffine_grained_bitfield_accesses : Flag<["-"],
   "ffine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Use separate accesses for bitfields with legal widths and alignments.">;
@@ -2618,6 +2623,8 @@ def mbmi : Flag<["-"], "mbmi">, Group<m_x86_Features_Group>;
 def mno_bmi : Flag<["-"], "mno-bmi">, Group<m_x86_Features_Group>;
 def mbmi2 : Flag<["-"], "mbmi2">, Group<m_x86_Features_Group>;
 def mno_bmi2 : Flag<["-"], "mno-bmi2">, Group<m_x86_Features_Group>;
+def mcldemote : Flag<["-"], "mcldemote">, Group<m_x86_Features_Group>;
+def mno_cldemote : Flag<["-"], "mno-cldemote">, Group<m_x86_Features_Group>;
 def mclflushopt : Flag<["-"], "mclflushopt">, Group<m_x86_Features_Group>;
 def mno_clflushopt : Flag<["-"], "mno-clflushopt">, Group<m_x86_Features_Group>;
 def mclwb : Flag<["-"], "mclwb">, Group<m_x86_Features_Group>;

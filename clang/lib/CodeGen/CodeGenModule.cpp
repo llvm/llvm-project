@@ -1846,9 +1846,10 @@ bool CodeGenModule::imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
                                    StringRef Category) const {
   if (!LangOpts.XRayInstrument)
     return false;
+
   const auto &XRayFilter = getContext().getXRayFilter();
   using ImbueAttr = XRayFunctionFilter::ImbueAttribute;
-  auto Attr = XRayFunctionFilter::ImbueAttribute::NONE;
+  auto Attr = ImbueAttr::NONE;
   if (Loc.isValid())
     Attr = XRayFilter.shouldImbueLocation(Loc, Category);
   if (Attr == ImbueAttr::NONE)

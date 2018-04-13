@@ -1883,6 +1883,9 @@ TARGET_BUILTIN(__builtin_ia32_mwaitx, "vUiUiUi", "", "mwaitx")
 // CLZERO
 TARGET_BUILTIN(__builtin_ia32_clzero, "vv*", "", "clzero")
 
+// CLDEMOTE
+TARGET_BUILTIN(__builtin_ia32_cldemote, "vvC*", "", "cldemote")
+
 // MSVC
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")

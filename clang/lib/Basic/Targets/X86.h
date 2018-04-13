@@ -91,6 +91,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasXSAVES = false;
   bool HasMWAITX = false;
   bool HasCLZERO = false;
+  bool HasCLDEMOTE = false;
   bool HasPKU = false;
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
