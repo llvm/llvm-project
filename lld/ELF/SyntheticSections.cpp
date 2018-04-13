@@ -56,12 +56,6 @@ using llvm::support::endian::write64le;
 
 constexpr size_t MergeNoTailSection::NumShards;
 
-uint64_t SyntheticSection::getVA() const {
-  if (OutputSection *Sec = getParent())
-    return Sec->Addr + OutSecOff;
-  return 0;
-}
-
 // Returns an LLD version string.
 static ArrayRef<uint8_t> getVersion() {
   // Check LLD_VERSION first for ease of testing.
@@ -1028,6 +1022,13 @@ void DynamicSection<ELFT>::addInSec(int32_t Tag, InputSection *Sec) {
 }
 
 template <class ELFT>
+void DynamicSection<ELFT>::addInSecRelative(int32_t Tag, InputSection *Sec) {
+  size_t TagOffset = Entries.size() * Entsize;
+  Entries.push_back(
+      {Tag, [=] { return Sec->getVA(0) - (getVA() + TagOffset); }});
+}
+
+template <class ELFT>
 void DynamicSection<ELFT>::addOutSec(int32_t Tag, OutputSection *Sec) {
   Entries.push_back({Tag, [=] { return Sec->Addr; }});
 }
@@ -1180,8 +1181,13 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     else
       addInt(DT_MIPS_GOTSYM, InX::DynSymTab->getNumSymbols());
     addInSec(DT_PLTGOT, InX::MipsGot);
-    if (InX::MipsRldMap)
-      addInSec(DT_MIPS_RLD_MAP, InX::MipsRldMap);
+    if (InX::MipsRldMap) {
+      if (!Config->Pie)
+        addInSec(DT_MIPS_RLD_MAP, InX::MipsRldMap);
+      // Store the offset to the .rld_map section
+      // relative to the address of the tag.
+      addInSecRelative(DT_MIPS_RLD_MAP_REL, InX::MipsRldMap);
+    }
   }
 
   addInt(DT_NULL, 0);

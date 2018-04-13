@@ -576,7 +576,7 @@ def check_breakpoint_result(
         if 'file' in break_results:
             out_file_name = break_results['file']
         test.assertTrue(
-            file_name == out_file_name,
+            file_name.endswith(out_file_name),
             "Breakpoint file name '%s' doesn't match resultant name '%s'." %
             (file_name,
              out_file_name))

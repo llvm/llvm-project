@@ -11,16 +11,14 @@
 #define liblldb_CommandObjectStats_h_
 
 #include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandObjectMultiword.h"
 
 namespace lldb_private {
-class CommandObjectStats : public CommandObjectParsed {
+class CommandObjectStats : public CommandObjectMultiword {
 public:
   CommandObjectStats(CommandInterpreter &interpreter);
 
   ~CommandObjectStats() override;
-
-protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override;
 };
 } // namespace lldb_private
 

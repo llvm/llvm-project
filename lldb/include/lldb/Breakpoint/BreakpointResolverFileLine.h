@@ -63,7 +63,7 @@ public:
   lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
 
 protected:
-  void FilterContexts(SymbolContextList &sc_list);
+  void FilterContexts(SymbolContextList &sc_list, bool is_relative);
 
   friend class Breakpoint;
   FileSpec m_file_spec;   // This is the file spec we are looking for.

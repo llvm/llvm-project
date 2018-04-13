@@ -35,6 +35,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
@@ -1283,6 +1284,28 @@ protected:
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
+
+  //------------------------------------------------------------------
+  // Utilities for `statistics` command.
+  //------------------------------------------------------------------
+private:
+  std::vector<uint32_t> m_stats_storage;
+  bool m_collecting_stats = false;
+
+public:
+  void SetCollectingStats(bool v) { m_collecting_stats = v; }
+
+  bool GetCollectingStats() { return m_collecting_stats; }
+
+  void IncrementStats(lldb_private::StatisticKind key) {
+    if (!GetCollectingStats())
+      return;
+    lldbassert(key < lldb_private::StatisticKind::StatisticMax &&
+               "invalid statistics!");
+    m_stats_storage[key] += 1;
+  }
+
+  std::vector<uint32_t> GetStatistics() { return m_stats_storage; }
 
 private:
   //------------------------------------------------------------------

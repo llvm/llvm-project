@@ -52,7 +52,6 @@ public:
   // If any additional finalization of contents are needed post thunk creation.
   virtual void postThunkContents() {}
   virtual bool empty() const { return false; }
-  uint64_t getVA() const;
 
   static bool classof(const SectionBase *D) {
     return D->kind() == InputSectionBase::Synthetic;
@@ -360,6 +359,7 @@ private:
   void add(int32_t Tag, std::function<uint64_t()> Fn);
   void addInt(int32_t Tag, uint64_t Val);
   void addInSec(int32_t Tag, InputSection *Sec);
+  void addInSecRelative(int32_t Tag, InputSection *Sec);
   void addOutSec(int32_t Tag, OutputSection *Sec);
   void addSize(int32_t Tag, OutputSection *Sec);
   void addSym(int32_t Tag, Symbol *Sym);

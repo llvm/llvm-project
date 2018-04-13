@@ -195,6 +195,20 @@ ThreadSP ThreadList::GetThreadSPForThreadPtr(Thread *thread_ptr) {
   return thread_sp;
 }
 
+ThreadSP ThreadList::GetBackingThread(const ThreadSP &real_thread) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
+
+  ThreadSP thread_sp;
+  const uint32_t num_threads = m_threads.size();
+  for (uint32_t idx = 0; idx < num_threads; ++idx) {
+    if (m_threads[idx]->GetBackingThread() == real_thread) {
+      thread_sp = m_threads[idx];
+      break;
+    }
+  }
+  return thread_sp;
+}
+
 ThreadSP ThreadList::FindThreadByIndexID(uint32_t index_id, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
