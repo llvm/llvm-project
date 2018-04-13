@@ -215,7 +215,7 @@ JitFunction::JitFunction(JitFunctionContext &&Context,
   // Adding the generated object file containing the assembled function.
   // The ExecutionEngine makes sure the object file is copied into an
   // executable page.
-  ExecEngine->addObjectFile(ObjHolder.takeBinary().first);
+  ExecEngine->addObjectFile(std::move(ObjHolder));
   // Setting function
   FunctionBytes =
       llvm::StringRef(reinterpret_cast<const char *>(

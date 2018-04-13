@@ -1,11 +1,11 @@
-; Test kernel hwasan instrumentation.
+; Test KHWASan instrumentation.
 ;
 ; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s --allow-empty --check-prefixes=INIT
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,NO-MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-mapping-offset=12345678 -S | FileCheck %s  --check-prefixes=CHECK,OFFSET,NO-MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=0 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,ABORT,NO-MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,RECOVER,NO-MATCH-ALL
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-match-all-tag=0xff -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,RECOVER,MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-mapping-offset=12345678 -S | FileCheck %s  --check-prefixes=CHECK,OFFSET,MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=0 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,ABORT,MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,RECOVER,MATCH-ALL
+; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -hwasan-match-all-tag=-1 -S | FileCheck %s  --check-prefixes=CHECK,NOOFFSET,RECOVER,NO-MATCH-ALL
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"

@@ -439,10 +439,10 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
 #endif  // MERGEICMPS_DOT_ON
   // Reorder blocks by LHS. We can do that without changing the
   // semantics because we are only accessing dereferencable memory.
-  std::sort(Comparisons_.begin(), Comparisons_.end(),
-            [](const BCECmpBlock &a, const BCECmpBlock &b) {
-              return a.Lhs() < b.Lhs();
-            });
+  llvm::sort(Comparisons_.begin(), Comparisons_.end(),
+             [](const BCECmpBlock &a, const BCECmpBlock &b) {
+               return a.Lhs() < b.Lhs();
+             });
 #ifdef MERGEICMPS_DOT_ON
   errs() << "AFTER REORDERING:\n\n";
   dump();

@@ -553,7 +553,7 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
   auto Comparator = [&](const Value *A, const Value *B) {
     return valueComesBefore(OI, A, B);
   };
-  std::sort(OpsToRename.begin(), OpsToRename.end(), Comparator);
+  llvm::sort(OpsToRename.begin(), OpsToRename.end(), Comparator);
   ValueDFS_Compare Compare(OI);
   // Compute liveness, and rename in O(uses) per Op.
   for (auto *Op : OpsToRename) {

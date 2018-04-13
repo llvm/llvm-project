@@ -6089,9 +6089,6 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
           ((addr_size == 8) ? sizeof(mach_header_64) : sizeof(mach_header));
       load_command lc;
       for (uint32_t i = 0; i < mh.ncmds && !os_handled; ++i) {
-        const nub_size_t bytes_read =
-            DNBProcessMemoryRead(pid, load_command_addr, sizeof(lc), &lc);
-
         uint32_t major_version, minor_version, patch_version;
         auto *platform = DNBGetDeploymentInfo(pid, lc, load_command_addr,
                                               major_version, minor_version,

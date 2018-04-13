@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME: Investigate a better scheduler itinerary once MPX is used inside LLVM.
+// FIXME: Investigate a better scheduler class once MPX is used inside LLVM.
 let SchedRW = [WriteSystem] in {
 
 multiclass mpx_bound_make<bits<8> opc, string OpcodeStr> {

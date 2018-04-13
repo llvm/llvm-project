@@ -72,10 +72,11 @@ class SizeClassAllocator64 {
   void Init(s32 release_to_os_interval_ms) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
     if (kUsingConstantSpaceBeg) {
-      CHECK_EQ(kSpaceBeg, address_range.Init(TotalSpaceSize, AllocatorName(),
-                                             kSpaceBeg));
+      CHECK_EQ(kSpaceBeg, address_range.Init(TotalSpaceSize,
+                                             PrimaryAllocatorName, kSpaceBeg));
     } else {
-      NonConstSpaceBeg = address_range.Init(TotalSpaceSize, AllocatorName());
+      NonConstSpaceBeg = address_range.Init(TotalSpaceSize,
+                                            PrimaryAllocatorName);
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
@@ -546,7 +547,6 @@ class SizeClassAllocator64 {
   friend class MemoryMapper;
 
   ReservedAddressRange address_range;
-  static const char *AllocatorName() { return "sanitizer_allocator"; }
 
   static const uptr kRegionSize = kSpaceSize / kNumClassesRounded;
   // FreeArray is the array of free-d chunks (stored as 4-byte offsets).

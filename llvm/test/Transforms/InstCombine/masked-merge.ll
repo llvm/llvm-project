@@ -211,6 +211,10 @@ define <3 x i32> @xor_constmask_vec_undef(<3 x i32> %x, <3 x i32> %y) {
 ; Commutativity.
 ; ============================================================================ ;
 
+; Used to make sure that the IR complexity sorting does not interfere.
+declare i32 @gen32()
+
+
 define i32 @or_commutative0(i32 %x, i32 %y, i32 %m) {
 ; CHECK-LABEL: @or_commutative0(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
@@ -226,14 +230,16 @@ define i32 @or_commutative0(i32 %x, i32 %y, i32 %m) {
   ret i32 %or
 }
 
-define i32 @or_commutative1(i32 %x, i32 %y, i32 %m) {
+define i32 @or_commutative1(i32 %x, i32 %m) {
 ; CHECK-LABEL: @or_commutative1(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %x, %m
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
@@ -257,14 +263,16 @@ define i32 @or_commutative2(i32 %x, i32 %y, i32 %m) {
 }
 
 
-define i32 @or_commutative3(i32 %x, i32 %y, i32 %m) {
+define i32 @or_commutative3(i32 %x, i32 %m) {
 ; CHECK-LABEL: @or_commutative3(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %m, %x ; swapped order
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
@@ -287,14 +295,16 @@ define i32 @or_commutative4(i32 %x, i32 %y, i32 %m) {
   ret i32 %or
 }
 
-define i32 @or_commutative5(i32 %x, i32 %y, i32 %m) {
+define i32 @or_commutative5(i32 %x, i32 %m) {
 ; CHECK-LABEL: @or_commutative5(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %x, %m
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
@@ -303,14 +313,16 @@ define i32 @or_commutative5(i32 %x, i32 %y, i32 %m) {
 }
 
 
-define i32 @or_commutative6(i32 %x, i32 %y, i32 %m) {
+define i32 @or_commutative6(i32 %x, i32 %m) {
 ; CHECK-LABEL: @or_commutative6(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %m, %x ; swapped order
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
@@ -335,14 +347,16 @@ define i32 @xor_commutative0(i32 %x, i32 %y, i32 %m) {
   ret i32 %xor
 }
 
-define i32 @xor_commutative1(i32 %x, i32 %y, i32 %m) {
+define i32 @xor_commutative1(i32 %x, i32 %m) {
 ; CHECK-LABEL: @xor_commutative1(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %x, %m
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
@@ -366,14 +380,16 @@ define i32 @xor_commutative2(i32 %x, i32 %y, i32 %m) {
 }
 
 
-define i32 @xor_commutative3(i32 %x, i32 %y, i32 %m) {
+define i32 @xor_commutative3(i32 %x, i32 %m) {
 ; CHECK-LABEL: @xor_commutative3(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %m, %x ; swapped order
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
@@ -396,14 +412,16 @@ define i32 @xor_commutative4(i32 %x, i32 %y, i32 %m) {
   ret i32 %xor
 }
 
-define i32 @xor_commutative5(i32 %x, i32 %y, i32 %m) {
+define i32 @xor_commutative5(i32 %x, i32 %m) {
 ; CHECK-LABEL: @xor_commutative5(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %x, %m
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
@@ -412,20 +430,23 @@ define i32 @xor_commutative5(i32 %x, i32 %y, i32 %m) {
 }
 
 
-define i32 @xor_commutative6(i32 %x, i32 %y, i32 %m) {
+define i32 @xor_commutative6(i32 %x, i32 %m) {
 ; CHECK-LABEL: @xor_commutative6(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
+  %y = call i32 @gen32()
   %and = and i32 %m, %x ; swapped order
   %neg = xor i32 %m, -1
   %and1 = and i32 %y, %neg; swapped order
   %xor = xor i32 %and1, %and ; swapped order
   ret i32 %xor
 }
+
 
 
 define i32 @or_constmask_commutative(i32 %x, i32 %y) {

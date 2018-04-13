@@ -1105,7 +1105,8 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
             LangOpts.Sanitize.hasOneOf(SanitizerKind::Address |
                                        SanitizerKind::KernelAddress))
       .Case("hwaddress_sanitizer",
-            LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress))
+            LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
+                                       SanitizerKind::KernelHWAddress))
       .Case("assume_nonnull", true)
       .Case("attribute_analyzer_noreturn", true)
       .Case("attribute_availability", true)

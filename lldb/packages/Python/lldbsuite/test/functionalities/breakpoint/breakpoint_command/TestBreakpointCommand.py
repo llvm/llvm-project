@@ -62,7 +62,31 @@ class BreakpointCommandTestCase(TestBase):
         # setting breakpoint commands on two breakpoints at a time
         lldbutil.run_break_set_by_file_and_line(
             self, None, self.line, num_expected_locations=1, loc_exact=True)
-
+        # Make sure relative path source breakpoints work as expected. We test
+        # with partial paths with and without "./" prefixes.
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "breakpoint/breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./breakpoint/breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        # Test relative breakpoints with incorrect paths and make sure we get
+        # no breakpoint locations
+        lldbutil.run_break_set_by_file_and_line(
+            self, "invalid/main.c", self.line,
+            num_expected_locations=0, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./invalid/main.c", self.line,
+            num_expected_locations=0, loc_exact=True)
         # Now add callbacks for the breakpoints just created.
         self.runCmd(
             "breakpoint command add -s command -o 'frame variable --show-types --scope' 1 4")

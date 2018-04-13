@@ -24,11 +24,7 @@
 #elif defined(_AIX)
 # include <support/ibm/xlocale.h>
 #elif defined(__ANDROID__)
-// Android gained the locale aware functions in L (API level 21)
-# include <android/api-level.h>
-# if __ANDROID_API__ <= 20
-#  include <support/android/locale_bionic.h>
-# endif
+# include <support/android/locale_bionic.h>
 #elif defined(__sun__)
 # include <xlocale.h>
 # include <support/solaris/xlocale.h>

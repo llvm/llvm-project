@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
 // InstrSchedModel annotations for out-of-order CPUs.
-//
-// These annotations are independent of the itinerary classes defined below.
 
 // Instructions with folded loads need to read the memory operand immediately,
 // but other register operands don't have to be read until the load is ready.
@@ -184,7 +183,7 @@ def WriteNop : SchedWrite;
 // latencies. Since these latencies are not used for pipeline hazards,
 // they do not need to be exact.
 //
-// The GenericX86Model contains no instruction itineraries
+// The GenericX86Model contains no instruction schedules
 // and disables PostRAScheduler.
 class GenericX86Model : SchedMachineModel {
   let IssueWidth = 4;

@@ -356,11 +356,19 @@ let isBranch = 1, isTerminator = 1 in {
                                  { let Size = 8; }
 } // let isBranch, isTerminator
 
-// Indirect, unconditional Jump.
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
-def J :  F32_DOP_RR<0b00100, 0b100000, 0,
-               (outs), (ins GPR32:$C),
-               "j\t[$C]", [(brind i32:$C)]>;
+// Unconditional Jump.
+let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
+  // Indirect.
+  let isIndirectBranch = 1 in
+  def J :  F32_DOP_RR<0b00100, 0b100000, 0,
+                      (outs), (ins GPR32:$C),
+                      "j\t[$C]", [(brind i32:$C)]>;
+
+  // Direct.
+  def J_LImm : F32_DOP_RLIMM<0b00100, 0b100000, 0,
+                             (outs), (ins i32imm:$LImm),
+                             "j\t$LImm", []>;
+}
 
 // Call instructions.
 let isCall = 1, isBarrier = 1, Defs = [BLINK], Uses = [SP] in {
@@ -372,6 +380,10 @@ let isCall = 1, isBarrier = 1, Defs = [BLINK], Uses = [SP] in {
   let isIndirectBranch = 1 in
   def JL : F32_DOP_RR<0b00100, 0b100010, 0, (outs), (ins GPR32:$C),
                      "jl\t[$C]", [(ARCJumpLink i32:$C)]>;
+
+  // Direct unconditional call.
+  def JL_LImm : F32_DOP_RLIMM<0b00100, 0b100010, 0, (outs), (ins i32imm:$LImm),
+                              "jl\t$LImm", []>;
 } // let isCall, isBarrier, Defs, Uses
 
 // Pattern to generate BL instruction.

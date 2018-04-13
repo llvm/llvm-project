@@ -571,8 +571,8 @@ void ConstantHoistingPass::findAndMakeBaseConstant(
 /// rematerialized with an add from a common base constant.
 void ConstantHoistingPass::findBaseConstants() {
   // Sort the constants by value and type. This invalidates the mapping!
-  std::sort(ConstCandVec.begin(), ConstCandVec.end(),
-            [](const ConstantCandidate &LHS, const ConstantCandidate &RHS) {
+  llvm::sort(ConstCandVec.begin(), ConstCandVec.end(),
+             [](const ConstantCandidate &LHS, const ConstantCandidate &RHS) {
     if (LHS.ConstInt->getType() != RHS.ConstInt->getType())
       return LHS.ConstInt->getType()->getBitWidth() <
              RHS.ConstInt->getType()->getBitWidth();
