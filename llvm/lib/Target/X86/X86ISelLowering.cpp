@@ -20855,24 +20855,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
 
-  case Intrinsic::x86_sse41_pmuldq:
-  case Intrinsic::x86_avx2_pmul_dq:
-  case Intrinsic::x86_avx512_pmul_dq_512: {
-    MVT OpVT = Op.getSimpleValueType();
-    return DAG.getNode(X86ISD::PMULDQ, dl, OpVT,
-                       DAG.getBitcast(OpVT, Op.getOperand(1)),
-                       DAG.getBitcast(OpVT, Op.getOperand(2)));
-  }
-
-  case Intrinsic::x86_sse2_pmulu_dq:
-  case Intrinsic::x86_avx2_pmulu_dq:
-  case Intrinsic::x86_avx512_pmulu_dq_512: {
-    MVT OpVT = Op.getSimpleValueType();
-    return DAG.getNode(X86ISD::PMULUDQ, dl, OpVT,
-                       DAG.getBitcast(OpVT, Op.getOperand(1)),
-                       DAG.getBitcast(OpVT, Op.getOperand(2)));
-  }
-
   case Intrinsic::x86_avx2_permd:
   case Intrinsic::x86_avx2_permps:
     // Operands intentionally swapped. Mask is last operand to intrinsic,

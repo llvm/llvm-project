@@ -25,20 +25,6 @@ class SizeItins<OpndItins arg_s, OpndItins arg_d> {
   OpndItins d = arg_d;
 }
 
-class MoveLoadStoreItins<InstrItinClass arg_rr, InstrItinClass arg_rm,
-                         InstrItinClass arg_mr> {
-  InstrItinClass rr = arg_rr;
-  InstrItinClass rm = arg_rm;
-  InstrItinClass mr = arg_mr;
-}
-
-class ShiftOpndItins<InstrItinClass arg_rr, InstrItinClass arg_rm,
-                     InstrItinClass arg_ri> {
-  InstrItinClass rr = arg_rr;
-  InstrItinClass rm = arg_rm;
-  InstrItinClass ri = arg_ri;
-}
-
 // scalar
 let Sched = WriteFAdd in {
 def SSE_ALU_F32S : OpndItins<
@@ -154,16 +140,8 @@ def SSE_MOVA_ITINS : OpndItins<
   NoItinerary, NoItinerary
 >;
 
-def SSE_MOVA : MoveLoadStoreItins<
-  NoItinerary, NoItinerary, NoItinerary
->;
-
 def SSE_MOVU_ITINS : OpndItins<
   NoItinerary, NoItinerary
->;
-
-def SSE_MOVU : MoveLoadStoreItins<
-  NoItinerary, NoItinerary, NoItinerary
 >;
 
 def SSE_DPPD_ITINS : OpndItins<

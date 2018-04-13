@@ -144,7 +144,7 @@ static void recordCondition(CallSite CS, BasicBlock *From, BasicBlock *To,
 }
 
 /// Record ICmp conditions relevant to any argument in CS following Pred's
-/// single successors. If there are conflicting conditions along a path, like
+/// single predecessors. If there are conflicting conditions along a path, like
 /// x == 1 and x == 0, the first condition will be used.
 static void recordConditions(CallSite CS, BasicBlock *Pred,
                              ConditionsTy &Conditions) {

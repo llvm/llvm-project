@@ -817,7 +817,6 @@ define <2 x i64> @test_mm_mul_epi32(<2 x i64> %a0, <2 x i64> %a1) {
   %res = mul nsw <2 x i64> %A1, %B1
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <2 x i64> @test_mm_mullo_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_mullo_epi32:

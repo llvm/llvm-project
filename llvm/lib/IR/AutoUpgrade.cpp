@@ -168,6 +168,12 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.pmull.") || // Added in 4.0
       Name.startswith("avx512.mask.cvtdq2pd.") || // Added in 4.0
       Name.startswith("avx512.mask.cvtudq2pd.") || // Added in 4.0
+      Name == "sse2.pmulu.dq" || // Added in 7.0
+      Name == "sse41.pmuldq" || // Added in 7.0
+      Name == "avx2.pmulu.dq" || // Added in 7.0
+      Name == "avx2.pmul.dq" || // Added in 7.0
+      Name == "avx512.pmulu.dq.512" || // Added in 7.0
+      Name == "avx512.pmul.dq.512" || // Added in 7.0
       Name.startswith("avx512.mask.pmul.dq.") || // Added in 4.0
       Name.startswith("avx512.mask.pmulu.dq.") || // Added in 4.0
       Name.startswith("avx512.mask.pmul.hr.sw.") || // Added in 7.0
@@ -906,6 +912,35 @@ static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
   return Res;
 }
 
+static Value *upgradePMULDQ(IRBuilder<> &Builder, CallInst &CI, bool IsSigned) {
+  Type *Ty = CI.getType();
+
+  // Arguments have a vXi32 type so cast to vXi64.
+  Value *LHS = Builder.CreateBitCast(CI.getArgOperand(0), Ty);
+  Value *RHS = Builder.CreateBitCast(CI.getArgOperand(1), Ty);
+
+  if (IsSigned) {
+    // Shift left then arithmetic shift right.
+    Constant *ShiftAmt = ConstantInt::get(Ty, 32);
+    LHS = Builder.CreateShl(LHS, ShiftAmt);
+    LHS = Builder.CreateAShr(LHS, ShiftAmt);
+    RHS = Builder.CreateShl(RHS, ShiftAmt);
+    RHS = Builder.CreateAShr(RHS, ShiftAmt);
+  } else {
+    // Clear the upper bits.
+    Constant *Mask = ConstantInt::get(Ty, 0xffffffff);
+    LHS = Builder.CreateAnd(LHS, Mask);
+    RHS = Builder.CreateAnd(RHS, Mask);
+  }
+
+  Value *Res = Builder.CreateMul(LHS, RHS);
+
+  if (CI.getNumArgOperands() == 4)
+    Res = EmitX86Select(Builder, CI.getArgOperand(3), Res, CI.getArgOperand(2));
+
+  return Res;
+}
+
 // Applying mask on vector of i1's and make sure result is at least 8 bits wide.
 static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder,Value *Vec, Value *Mask,
                                      unsigned NumElts) {
@@ -1026,24 +1061,6 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx2_pshuf_b;
     else if (VecWidth == 512)
       IID = Intrinsic::x86_avx512_pshuf_b_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.startswith("pmul.dq.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse41_pmuldq;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmul_dq;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmul_dq_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.startswith("pmulu.dq.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulu_dq;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulu_dq;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulu_dq_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else if (Name.startswith("pmul.hr.sw.")) {
@@ -1455,6 +1472,16 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx2.pminu") ||
                          Name.startswith("avx512.mask.pminu"))) {
       Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_ULT);
+    } else if (IsX86 && (Name == "sse2.pmulu.dq" ||
+                         Name == "avx2.pmulu.dq" ||
+                         Name == "avx512.pmulu.dq.512" ||
+                         Name.startswith("avx512.mask.pmulu.dq."))) {
+      Rep = upgradePMULDQ(Builder, *CI, /*Signed*/false);
+    } else if (IsX86 && (Name == "sse41.pmuldq" ||
+                         Name == "avx2.pmul.dq" ||
+                         Name == "avx512.pmul.dq.512" ||
+                         Name.startswith("avx512.mask.pmul.dq."))) {
+      Rep = upgradePMULDQ(Builder, *CI, /*Signed*/true);
     } else if (IsX86 && (Name == "sse2.cvtdq2pd" ||
                          Name == "sse2.cvtps2pd" ||
                          Name == "avx.cvtdq2.pd.256" ||
