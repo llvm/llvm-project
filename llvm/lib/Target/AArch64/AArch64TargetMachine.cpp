@@ -243,6 +243,9 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
+
+  if (TT.isOSBinFormatMachO())
+    this->Options.TrapUnreachable = true;
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
