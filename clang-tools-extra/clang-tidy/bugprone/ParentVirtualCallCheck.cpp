@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cctype>
@@ -27,13 +28,13 @@ static bool isParentOf(const CXXRecordDecl &Parent,
                        const CXXRecordDecl &ThisClass) {
   if (Parent.getCanonicalDecl() == ThisClass.getCanonicalDecl())
     return true;
-  for (const CXXBaseSpecifier &Base : ThisClass.bases()) {
-    auto *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    assert(BaseDecl);
-    if (Parent.getCanonicalDecl() == BaseDecl->getCanonicalDecl())
-      return true;
-  }
-  return false;
+  const CXXRecordDecl *ParentCanonicalDecl = Parent.getCanonicalDecl();
+  return ThisClass.bases_end() !=
+         llvm::find_if(ThisClass.bases(), [=](const CXXBaseSpecifier &Base) {
+           auto *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+           assert(BaseDecl);
+           return ParentCanonicalDecl == BaseDecl->getCanonicalDecl();
+         });
 }
 
 static BasesVector getParentsByGrandParent(const CXXRecordDecl &GrandParent,
@@ -76,9 +77,9 @@ static std::string getExprAsString(const clang::Expr &E,
                                    clang::ASTContext &AC) {
   std::string Text = tooling::fixit::getText(E, AC).str();
   Text.erase(
-      std::remove_if(
-          Text.begin(), Text.end(),
-          [](char c) { return std::isspace(static_cast<unsigned char>(c)); }),
+      llvm::remove_if(
+          Text,
+          [](char C) { return std::isspace(static_cast<unsigned char>(C)); }),
       Text.end());
   return Text;
 }
@@ -92,16 +93,11 @@ void ParentVirtualCallCheck::registerMatchers(MatchFinder *Finder) {
                                 hasSourceExpression(cxxThisExpr(hasType(
                                     type(anything()).bind("thisType")))))))
                      .bind("member")),
-          callee(cxxMethodDecl(isVirtual())))
-          .bind("call"),
+          callee(cxxMethodDecl(isVirtual()))),
       this);
 }
 
 void ParentVirtualCallCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
-  (void)MatchedDecl;
-  assert(MatchedDecl);
-
   const auto *Member = Result.Nodes.getNodeAs<MemberExpr>("member");
   assert(Member);
 

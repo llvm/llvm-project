@@ -408,9 +408,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse2_pmulh_w : GCCBuiltin<"__builtin_ia32_pmulhw128">,
               Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
                          llvm_v8i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_sse2_pmulu_dq : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty,
-                         llvm_v4i32_ty], [IntrNoMem, Commutative]>;
   def int_x86_sse2_pmadd_wd : GCCBuiltin<"__builtin_ia32_pmaddwd128">,
               Intrinsic<[llvm_v4i32_ty], [llvm_v8i16_ty,
                          llvm_v8i16_ty], [IntrNoMem, Commutative]>;
@@ -801,13 +798,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse41_packusdw        : GCCBuiltin<"__builtin_ia32_packusdw128">,
               Intrinsic<[llvm_v8i16_ty], [llvm_v4i32_ty, llvm_v4i32_ty],
                         [IntrNoMem]>;
-}
-
-// Vector multiply
-let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse41_pmuldq          : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty, llvm_v4i32_ty],
-                        [IntrNoMem, Commutative]>;
 }
 
 // Vector insert
@@ -1667,12 +1657,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx2_pmulh_w : GCCBuiltin<"__builtin_ia32_pmulhw256">,
               Intrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty,
                          llvm_v16i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_avx2_pmulu_dq : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v4i64_ty], [llvm_v8i32_ty,
-                         llvm_v8i32_ty], [IntrNoMem, Commutative]>;
-  def int_x86_avx2_pmul_dq : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v4i64_ty], [llvm_v8i32_ty,
-                         llvm_v8i32_ty], [IntrNoMem, Commutative]>;
   def int_x86_avx2_pmadd_wd : GCCBuiltin<"__builtin_ia32_pmaddwd256">,
               Intrinsic<[llvm_v8i32_ty], [llvm_v16i16_ty,
                          llvm_v16i16_ty], [IntrNoMem, Commutative]>;
@@ -4783,10 +4767,6 @@ let TargetPrefix = "x86" in {
   def int_x86_avx512_mask_psubus_w_512 : GCCBuiltin<"__builtin_ia32_psubusw512_mask">,
           Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty,
                      llvm_v32i16_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_pmulu_dq_512 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v8i64_ty], [llvm_v16i32_ty, llvm_v16i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_pmul_dq_512 : // FIXME: remove this intrinsic
-              Intrinsic<[llvm_v8i64_ty], [llvm_v16i32_ty, llvm_v16i32_ty], [IntrNoMem]>;
   def int_x86_avx512_pmulhu_w_512 : GCCBuiltin<"__builtin_ia32_pmulhuw512">,
               Intrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty,
                          llvm_v32i16_ty], [IntrNoMem, Commutative]>;
@@ -6413,4 +6393,12 @@ let TargetPrefix = "x86" in {
   // Write back no-invalidate
   def int_x86_wbnoinvd : GCCBuiltin<"__builtin_ia32_wbnoinvd">,
       Intrinsic<[], [], []>;
+}
+
+//===----------------------------------------------------------------------===//
+// Cache-line demote
+
+let TargetPrefix = "x86" in {
+  def int_x86_cldemote : GCCBuiltin<"__builtin_ia32_cldemote">,
+      Intrinsic<[], [llvm_ptr_ty], []>;
 }

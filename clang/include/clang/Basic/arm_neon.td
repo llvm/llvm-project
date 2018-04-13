@@ -1116,6 +1116,12 @@ def SCALAR_FCVTZU_N_U64 : SInst<"vcvt_n_u64", "bsi", "Sd">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Scalar Floating-point Round to Integral
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_DIRECTED_ROUNDING)" in {
+def SCALAR_FRINTN_S32 : SInst<"vrndn", "ss", "Sf">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Scalar Reduce Pairwise Addition (Scalar and Floating Point)
 def SCALAR_ADDP  : SInst<"vpadd", "sd", "SfSHlSHdSHUl">;
 

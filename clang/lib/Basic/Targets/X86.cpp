@@ -800,6 +800,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPREFETCHWT1 = true;
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
+    } else if (Feature == "+cldemote") {
+      HasCLDEMOTE = true;
     } else if (Feature == "+rdpid") {
       HasRDPID = true;
     } else if (Feature == "+retpoline") {
@@ -1154,6 +1156,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CLZERO__");
   if (HasRDPID)
     Builder.defineMacro("__RDPID__");
+  if (HasCLDEMOTE)
+    Builder.defineMacro("__CLDEMOTE__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1263,6 +1267,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512ifma", true)
       .Case("bmi", true)
       .Case("bmi2", true)
+      .Case("cldemote", true)
       .Case("clflushopt", true)
       .Case("clwb", true)
       .Case("clzero", true)
@@ -1334,6 +1339,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512ifma", HasAVX512IFMA)
       .Case("bmi", HasBMI)
       .Case("bmi2", HasBMI2)
+      .Case("cldemote", HasCLDEMOTE)
       .Case("clflushopt", HasCLFLUSHOPT)
       .Case("clwb", HasCLWB)
       .Case("clzero", HasCLZERO)

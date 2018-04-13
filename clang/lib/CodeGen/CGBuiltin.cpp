@@ -5590,6 +5590,12 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vgetq_lane_f32:
     return Builder.CreateExtractElement(Ops[0], Ops[1], "vget_lane");
 
+  case NEON::BI__builtin_neon_vrndns_f32: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *Tys[] = {Arg->getType()};
+    Function *F = CGM.getIntrinsic(Intrinsic::arm_neon_vrintn, Tys);
+    return Builder.CreateCall(F, {Arg}, "vrndn"); }
+
   case NEON::BI__builtin_neon_vset_lane_i8:
   case NEON::BI__builtin_neon_vset_lane_i16:
   case NEON::BI__builtin_neon_vset_lane_i32:

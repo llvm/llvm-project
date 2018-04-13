@@ -146,21 +146,16 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
     else
       for (const auto &Arg : SpecifiedModes) {
-        if (Arg == "none") {
-          Modes.clear();
-          break;
-        }
-        if (Arg == "all") {
-          Modes.clear();
-          llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
-          break;
-        }
-
         // Parse CSV values for -fxray-modes=...
         llvm::SmallVector<StringRef, 2> ModeParts;
         llvm::SplitString(Arg, ModeParts, ",");
         for (const auto &M : ModeParts)
-          Modes.push_back(M);
+          if (M == "none")
+            Modes.clear();
+          else if (M == "all")
+            llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+          else
+            Modes.push_back(M);
       }
 
     // Then we want to sort and unique the modes we've collected.
@@ -204,5 +199,11 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
     SmallString<64> ExtraDepOpt("-fdepfile-entry=");
     ExtraDepOpt += Dep;
     CmdArgs.push_back(Args.MakeArgString(ExtraDepOpt));
+  }
+
+  for (const auto &Mode : Modes) {
+    SmallString<64> ModeOpt("-fxray-modes=");
+    ModeOpt += Mode;
+    CmdArgs.push_back(Args.MakeArgString(ModeOpt));
   }
 }

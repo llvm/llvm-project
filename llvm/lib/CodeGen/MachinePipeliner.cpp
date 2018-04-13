@@ -1991,7 +1991,7 @@ void SwingSchedulerDAG::groupRemainingNodes(NodeSetType &NodeSets) {
   if (!NewSet.empty())
     NodeSets.push_back(NewSet);
 
-  // Create new nodes sets with the connected nodes any any remaining node that
+  // Create new nodes sets with the connected nodes any remaining node that
   // has no predecessor.
   for (unsigned i = 0; i < SUnits.size(); ++i) {
     SUnit *SU = &SUnits[i];

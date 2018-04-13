@@ -247,3 +247,12 @@ define <8 x i16> @mm_avg_epu16(<8 x i16> %a0, <8 x i16> %a1) {
 declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 
+define <2 x i64> @test_x86_sse2_pmulu_dq(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: test_x86_sse2_pmulu_dq:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pmuludq %xmm1, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32> %a0, <4 x i32> %a1) ; <<2 x i64>> [#uses=1]
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32>, <4 x i32>) nounwind readnone

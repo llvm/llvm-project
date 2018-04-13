@@ -195,6 +195,44 @@ TEST(FileIndexTest, NoIncludeCollected) {
   EXPECT_TRUE(SeenSymbol);
 }
 
+TEST(FileIndexTest, TemplateParamsInLabel) {
+  auto Source = R"cpp(
+template <class Ty>
+class vector {
+};
+
+template <class Ty>
+vector<Ty> make_vector(Ty* begin, Ty* end) {}
+)cpp";
+
+  FileIndex M;
+  M.update("f", build("f", Source).getPointer());
+
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  bool SeenVector = false;
+  bool SeenMakeVector = false;
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+    if (Sym.Name == "vector") {
+      EXPECT_EQ(Sym.CompletionLabel, "vector<class Ty>");
+      EXPECT_EQ(Sym.CompletionSnippetInsertText, "vector<${1:class Ty}>");
+      EXPECT_EQ(Sym.CompletionPlainInsertText, "vector");
+      SeenVector = true;
+      return;
+    }
+
+    if (Sym.Name == "make_vector") {
+      EXPECT_EQ(Sym.CompletionLabel, "make_vector(Ty *begin, Ty *end)");
+      EXPECT_EQ(Sym.CompletionSnippetInsertText,
+                "make_vector(${1:Ty *begin}, ${2:Ty *end})");
+      EXPECT_EQ(Sym.CompletionPlainInsertText, "make_vector");
+      SeenMakeVector = true;
+    }
+  });
+  EXPECT_TRUE(SeenVector);
+  EXPECT_TRUE(SeenMakeVector);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

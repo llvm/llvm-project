@@ -83,15 +83,5 @@ std::vector<Range> Annotations::ranges(llvm::StringRef Name) const {
   return {R.begin(), R.end()};
 }
 
-std::pair<std::size_t, std::size_t>
-Annotations::offsetRange(llvm::StringRef Name) const {
-  auto R = range(Name);
-  llvm::Expected<size_t> Start = positionToOffset(Code, R.start);
-  llvm::Expected<size_t> End = positionToOffset(Code, R.end);
-  assert(Start);
-  assert(End);
-  return {*Start, *End};
-}
-
 } // namespace clangd
 } // namespace clang
