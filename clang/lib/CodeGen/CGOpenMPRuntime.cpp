@@ -1285,7 +1285,7 @@ void CGOpenMPRuntime::emitUserDefinedReduction(
         cast<VarDecl>(D->lookup(Priv).front()),
         /*IsCombiner=*/false);
   }
-  UDRMap.insert(std::make_pair(D, std::make_pair(Combiner, Initializer)));
+  UDRMap.try_emplace(D, Combiner, Initializer);
   if (CGF) {
     auto &Decls = FunctionUDRMap.FindAndConstruct(CGF->CurFn);
     Decls.second.push_back(D);
@@ -2817,7 +2817,7 @@ CGOpenMPRuntime::getOrCreateInternalVariable(llvm::Type *Ty,
   llvm::raw_svector_ostream Out(Buffer);
   Out << Name;
   auto RuntimeName = Out.str();
-  auto &Elem = *InternalVars.insert(std::make_pair(RuntimeName, nullptr)).first;
+  auto &Elem = *InternalVars.try_emplace(RuntimeName, nullptr).first;
   if (Elem.second) {
     assert(Elem.second->getType()->getPointerElementType() == Ty &&
            "OMP internal variable has different type than requested");
@@ -4659,31 +4659,31 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   auto I = Data.PrivateCopies.begin();
   for (auto *E : Data.PrivateVars) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    Privates.push_back(std::make_pair(
+    Privates.emplace_back(
         C.getDeclAlign(VD),
         PrivateHelpersTy(VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
-                         /*PrivateElemInit=*/nullptr)));
+                         /*PrivateElemInit=*/nullptr));
     ++I;
   }
   I = Data.FirstprivateCopies.begin();
   auto IElemInitRef = Data.FirstprivateInits.begin();
   for (auto *E : Data.FirstprivateVars) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    Privates.push_back(std::make_pair(
+    Privates.emplace_back(
         C.getDeclAlign(VD),
         PrivateHelpersTy(
             VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
-            cast<VarDecl>(cast<DeclRefExpr>(*IElemInitRef)->getDecl()))));
+            cast<VarDecl>(cast<DeclRefExpr>(*IElemInitRef)->getDecl())));
     ++I;
     ++IElemInitRef;
   }
   I = Data.LastprivateCopies.begin();
   for (auto *E : Data.LastprivateVars) {
     auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    Privates.push_back(std::make_pair(
+    Privates.emplace_back(
         C.getDeclAlign(VD),
         PrivateHelpersTy(VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
-                         /*PrivateElemInit=*/nullptr)));
+                         /*PrivateElemInit=*/nullptr));
     ++I;
   }
   std::stable_sort(Privates.begin(), Privates.end(), stable_sort_comparator);
@@ -7240,7 +7240,7 @@ emitOffloadingArrays(CodeGenFunction &CGF,
 
       if (Info.requiresDevicePointerInfo())
         if (auto *DevVD = BasePointers[i].getDevicePtrDecl())
-          Info.CaptureDeviceAddrMap.insert(std::make_pair(DevVD, BPAddr));
+          Info.CaptureDeviceAddrMap.try_emplace(DevVD, BPAddr);
 
       llvm::Value *PVal = Pointers[i];
       llvm::Value *P = CGF.Builder.CreateConstInBoundsGEP2_32(

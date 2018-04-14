@@ -929,3 +929,8 @@ void overflow(signed char n, signed char m) {
     clang_analyzer_eval(n - 126 == m + 3); // expected-warning{{UNKNOWN}}
   }
 }
+
+int mixed_integer_types(int x, int y) {
+  short a = x - 1U;
+  return a - y;
+}
