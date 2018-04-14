@@ -356,6 +356,8 @@
 // RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
 // LINK_PROFILE_FIRST: {{ld(.exe)?"}} "{{[^"]+}}libclang_rt.profile_{{[a-z]+}}.a"
 
+// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -exported_symbols_list /dev/null -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Wl,-exported_symbols_list,/dev/null -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Wl,-exported_symbol,foo -### %t.o 2> %t.log
