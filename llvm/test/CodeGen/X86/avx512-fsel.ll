@@ -19,6 +19,7 @@ define i32 @test(float %a, float %b)  {
 ; CHECK-NEXT:    jmp LBB0_2
 ; CHECK-NEXT:  LBB0_1: ## %L_0
 ; CHECK-NEXT:    callq ___assert_rtn
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  LBB0_2: ## %L_1
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx

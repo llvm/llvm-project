@@ -642,6 +642,24 @@ public:
     VisitFunctionType(T);
   }
 
+  void VisitPointerType(const PointerType *T) {
+    AddQualType(T->getPointeeType());
+    VisitType(T);
+  }
+
+  void VisitReferenceType(const ReferenceType *T) {
+    AddQualType(T->getPointeeTypeAsWritten());
+    VisitType(T);
+  }
+
+  void VisitLValueReferenceType(const LValueReferenceType *T) {
+    VisitReferenceType(T);
+  }
+
+  void VisitRValueReferenceType(const RValueReferenceType *T) {
+    VisitReferenceType(T);
+  }
+
   void VisitTypedefType(const TypedefType *T) {
     AddDecl(T->getDecl());
     QualType UnderlyingType = T->getDecl()->getUnderlyingType();
