@@ -27,16 +27,11 @@ namespace clang {
 namespace clangd {
 
 namespace {
-/// If \p ND is a template specialization, returns the primary template.
+/// If \p ND is a template specialization, returns the described template.
 /// Otherwise, returns \p ND.
 const NamedDecl &getTemplateOrThis(const NamedDecl &ND) {
-  if (auto Cls = dyn_cast<CXXRecordDecl>(&ND)) {
-    if (auto T = Cls->getDescribedTemplate())
-      return *T;
-  } else if (auto Func = dyn_cast<FunctionDecl>(&ND)) {
-    if (auto T = Func->getPrimaryTemplate())
-      return *T;
-  }
+  if (auto T = ND.getDescribedTemplate())
+    return *T;
   return ND;
 }
 
