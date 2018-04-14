@@ -41,10 +41,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -367,13 +365,11 @@ void initializePollyPasses(llvm::PassRegistry &Registry);
 // main for opt
 //
 int main(int argc, char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  InitLLVM X(argc, argv);
 
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
   LLVMContext Context;
 
   InitializeAllTargets();
@@ -730,7 +726,7 @@ int main(int argc, char **argv) {
   // a stream to write to them. Note that llc does something similar and it
   // may be worth to abstract this out in the future.
   SmallVector<char, 0> Buffer;
-  SmallVector<char, 0> CompileTwiceBuffer;
+  SmallVector<char, 0> FirstRunBuffer;
   std::unique_ptr<raw_svector_ostream> BOS;
   raw_ostream *OS = nullptr;
 
@@ -759,28 +755,30 @@ int main(int argc, char **argv) {
   // Before executing passes, print the final values of the LLVM options.
   cl::PrintOptionValues();
 
-  // If requested, run all passes again with the same pass manager to catch
-  // bugs caused by persistent state in the passes
-  if (RunTwice) {
+  if (!RunTwice) {
+    // Now that we have all of the passes ready, run them.
+    Passes.run(*M);
+  } else {
+    // If requested, run all passes twice with the same pass manager to catch
+    // bugs caused by persistent state in the passes.
     std::unique_ptr<Module> M2(CloneModule(*M));
-    Passes.run(*M2);
-    CompileTwiceBuffer = Buffer;
+    // Run all passes on the original module first, so the second run processes
+    // the clone to catch CloneModule bugs.
+    Passes.run(*M);
+    FirstRunBuffer = Buffer;
     Buffer.clear();
-  }
 
-  // Now that we have all of the passes ready, run them.
-  Passes.run(*M);
+    Passes.run(*M2);
 
-  // Compare the two outputs and make sure they're the same
-  if (RunTwice) {
+    // Compare the two outputs and make sure they're the same
     assert(Out);
-    if (Buffer.size() != CompileTwiceBuffer.size() ||
-        (memcmp(Buffer.data(), CompileTwiceBuffer.data(), Buffer.size()) !=
-         0)) {
-      errs() << "Running the pass manager twice changed the output.\n"
-                "Writing the result of the second run to the specified output.\n"
-                "To generate the one-run comparison binary, just run without\n"
-                "the compile-twice option\n";
+    if (Buffer.size() != FirstRunBuffer.size() ||
+        (memcmp(Buffer.data(), FirstRunBuffer.data(), Buffer.size()) != 0)) {
+      errs()
+          << "Running the pass manager twice changed the output.\n"
+             "Writing the result of the second run to the specified output.\n"
+             "To generate the one-run comparison binary, just run without\n"
+             "the compile-twice option\n";
       Out->os() << BOS->str();
       Out->keep();
       if (OptRemarkFile)

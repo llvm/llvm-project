@@ -382,7 +382,7 @@ unsigned LowerSwitch::Clusterify(CaseVector& Cases, SwitchInst *SI) {
     Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
                               Case.getCaseSuccessor()));
 
-  std::sort(Cases.begin(), Cases.end(), CaseCmp());
+  llvm::sort(Cases.begin(), Cases.end(), CaseCmp());
 
   // Merge case into clusters
   if (Cases.size() >= 2) {

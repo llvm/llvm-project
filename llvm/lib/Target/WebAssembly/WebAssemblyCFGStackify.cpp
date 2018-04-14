@@ -147,9 +147,10 @@ static void PlaceBlockMarker(
   }
 
   // Add the BLOCK.
-  MachineInstr *Begin = BuildMI(*Header, InsertPos, MBB.findDebugLoc(InsertPos),
-                                TII.get(WebAssembly::BLOCK))
-                            .addImm(int64_t(WebAssembly::ExprType::Void));
+  MachineInstr *Begin =
+      BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
+              TII.get(WebAssembly::BLOCK))
+          .addImm(int64_t(WebAssembly::ExprType::Void));
 
   // Mark the end of the block.
   InsertPos = MBB.begin();

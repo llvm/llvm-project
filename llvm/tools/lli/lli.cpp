@@ -40,16 +40,15 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -316,10 +315,7 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
 // main Driver function
 //
 int main(int argc, char **argv, char * const *envp) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
-
-  atexit(llvm_shutdown); // Call llvm_shutdown() on exit.
+  InitLLVM X(argc, argv);
 
   if (argc > 1)
     ExitOnErr.setBanner(std::string(argv[0]) + ": ");

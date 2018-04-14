@@ -1869,11 +1869,11 @@ bool LowerTypeTestsModule::lower() {
     }
     Sets.emplace_back(I, MaxIndex);
   }
-  std::sort(Sets.begin(), Sets.end(),
-            [](const std::pair<GlobalClassesTy::iterator, unsigned> &S1,
-               const std::pair<GlobalClassesTy::iterator, unsigned> &S2) {
-              return S1.second < S2.second;
-            });
+  llvm::sort(Sets.begin(), Sets.end(),
+             [](const std::pair<GlobalClassesTy::iterator, unsigned> &S1,
+                const std::pair<GlobalClassesTy::iterator, unsigned> &S2) {
+               return S1.second < S2.second;
+             });
 
   // For each disjoint set we found...
   for (const auto &S : Sets) {
@@ -1894,7 +1894,7 @@ bool LowerTypeTestsModule::lower() {
 
     // Order type identifiers by global index for determinism. This ordering is
     // stable as there is a one-to-one mapping between metadata and indices.
-    std::sort(TypeIds.begin(), TypeIds.end(), [&](Metadata *M1, Metadata *M2) {
+    llvm::sort(TypeIds.begin(), TypeIds.end(), [&](Metadata *M1, Metadata *M2) {
       return TypeIdInfo[M1].Index < TypeIdInfo[M2].Index;
     });
 

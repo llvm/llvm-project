@@ -6870,6 +6870,17 @@ class N3VSPat<SDNode OpNode, NeonI Inst>
                  (v2f32 (COPY_TO_REGCLASS (v2f32 (IMPLICIT_DEF)), DPR_VFP2)),
                  SPR:$b, ssub_0)), DPR_VFP2)), ssub_0)>;
 
+class N3VSPatFP16<SDNode OpNode, NeonI Inst>
+  : NEONFPPat<(f16 (OpNode HPR:$a, HPR:$b)),
+              (EXTRACT_SUBREG
+               (v4f16 (COPY_TO_REGCLASS (Inst
+                (INSERT_SUBREG
+                 (v4f16 (COPY_TO_REGCLASS (v4f16 (IMPLICIT_DEF)), DPR_VFP2)),
+                 HPR:$a, ssub_0),
+                (INSERT_SUBREG
+                 (v4f16 (COPY_TO_REGCLASS (v4f16 (IMPLICIT_DEF)), DPR_VFP2)),
+                 HPR:$b, ssub_0)), DPR_VFP2)), ssub_0)>;
+
 class N3VSMulOpPat<SDNode MulNode, SDNode OpNode, NeonI Inst>
   : NEONFPPat<(f32 (OpNode SPR:$acc, (f32 (MulNode SPR:$a, SPR:$b)))),
               (EXTRACT_SUBREG
@@ -6912,6 +6923,8 @@ def : N3VSMulOpPat<fmul, fsub, VFMSfd>,
       Requires<[HasVFP4, UseNEONForFP, UseFusedMAC]>;
 def : N2VSPat<fabs, VABSfd>;
 def : N2VSPat<fneg, VNEGfd>;
+def : N3VSPatFP16<fmaxnan, VMAXhd>, Requires<[HasFullFP16]>;
+def : N3VSPatFP16<fminnan, VMINhd>, Requires<[HasFullFP16]>;
 def : N3VSPat<fmaxnan, VMAXfd>, Requires<[HasNEON]>;
 def : N3VSPat<fminnan, VMINfd>, Requires<[HasNEON]>;
 def : NVCVTFIPat<fp_to_sint, VCVTf2sd>;

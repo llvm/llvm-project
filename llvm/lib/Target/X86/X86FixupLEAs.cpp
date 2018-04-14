@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -125,6 +125,7 @@ public:
   }
 
 private:
+  TargetSchedModel TSM;
   MachineFunction *MF;
   const X86InstrInfo *TII; // Machine instruction info.
   bool OptIncDec;
@@ -202,6 +203,7 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
   if (!OptLEA && !OptIncDec)
     return false;
 
+  TSM.init(&Func.getSubtarget());
   TII = ST.getInstrInfo();
 
   DEBUG(dbgs() << "Start X86FixupLEAs\n";);
@@ -264,8 +266,7 @@ FixupLEAPass::searchBackwards(MachineOperand &p, MachineBasicBlock::iterator &I,
     if (usesRegister(p, CurInst) == RU_Write) {
       return CurInst;
     }
-    InstrDistance += TII->getInstrLatency(
-        MF->getSubtarget().getInstrItineraryData(), *CurInst);
+    InstrDistance += TSM.computeInstrLatency(&*CurInst);
     Found = getPreviousInstr(CurInst, MFI);
   }
   return MachineBasicBlock::iterator();

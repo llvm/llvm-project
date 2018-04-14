@@ -955,7 +955,7 @@ public:
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::NoVRegs);
+        MachineFunctionProperties::Property::NoVRegs);
   }
 
 private:
@@ -974,6 +974,14 @@ char &llvm::PostRAMachineSinkingID = PostRAMachineSinking::ID;
 
 INITIALIZE_PASS(PostRAMachineSinking, "postra-machine-sink",
                 "PostRA Machine Sink", false, false)
+
+static bool aliasWithRegsInLiveIn(MachineBasicBlock *SI,
+                                  SmallSet<unsigned, 8> &AliasedRegs) {
+  for (const auto LI : SI->liveins())
+    if (AliasedRegs.count(LI.PhysReg))
+      return true;
+  return false;
+}
 
 static MachineBasicBlock *
 getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
@@ -1002,11 +1010,90 @@ getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
   for (auto *SI : CurBB.successors()) {
     if (SI == BB)
       continue;
-    for (const auto LI : SI->liveins())
-      if (AliasedRegs.count(LI.PhysReg))
-        return nullptr;
+    if (aliasWithRegsInLiveIn(SI, AliasedRegs))
+      return nullptr;
   }
   return BB;
+}
+
+static MachineBasicBlock *getSingleLiveInSuccBB(
+    MachineBasicBlock &CurBB, ArrayRef<MachineBasicBlock *> SinkableBBs,
+    ArrayRef<unsigned> DefedRegsInCopy, const TargetRegisterInfo *TRI) {
+  MachineBasicBlock *SingleBB = nullptr;
+  for (auto DefReg : DefedRegsInCopy) {
+    MachineBasicBlock *BB =
+        getSingleLiveInSuccBB(CurBB, SinkableBBs, DefReg, TRI);
+    if (!BB || (SingleBB && SingleBB != BB))
+      return nullptr;
+    SingleBB = BB;
+  }
+  return SingleBB;
+}
+
+static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
+                           SmallVectorImpl<unsigned> &UsedOpsInCopy,
+                           BitVector &UsedRegs, const TargetRegisterInfo *TRI) {
+  for (auto U : UsedOpsInCopy) {
+    MachineOperand &MO = MI->getOperand(U);
+    unsigned SrcReg = MO.getReg();
+    if (UsedRegs[SrcReg]) {
+      MachineBasicBlock::iterator NI = std::next(MI->getIterator());
+      for (MachineInstr &UI : make_range(NI, CurBB.end())) {
+        if (UI.killsRegister(SrcReg, TRI)) {
+          UI.clearRegisterKills(SrcReg, TRI);
+          MO.setIsKill(true);
+          break;
+        }
+      }
+    }
+  }
+}
+
+static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
+                         SmallVectorImpl<unsigned> &UsedOpsInCopy,
+                         SmallVectorImpl<unsigned> &DefedRegsInCopy) {
+  for (auto DefReg : DefedRegsInCopy)
+    SuccBB->removeLiveIn(DefReg);
+  for (auto U : UsedOpsInCopy) {
+    unsigned Reg = MI->getOperand(U).getReg();
+    if (!SuccBB->isLiveIn(Reg))
+      SuccBB->addLiveIn(Reg);
+  }
+}
+
+static bool hasRegisterDependency(MachineInstr *MI,
+                                  SmallVectorImpl<unsigned> &UsedOpsInCopy,
+                                  SmallVectorImpl<unsigned> &DefedRegsInCopy,
+                                  BitVector &ModifiedRegs,
+                                  BitVector &UsedRegs) {
+  bool HasRegDependency = false;
+  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = MI->getOperand(i);
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    if (MO.isDef()) {
+      if (ModifiedRegs[Reg] || UsedRegs[Reg]) {
+        HasRegDependency = true;
+        break;
+      }
+      DefedRegsInCopy.push_back(Reg);
+
+      // FIXME: instead of isUse(), readsReg() would be a better fix here,
+      // For example, we can ignore modifications in reg with undef. However,
+      // it's not perfectly clear if skipping the internal read is safe in all
+      // other targets.
+    } else if (MO.isUse()) {
+      if (ModifiedRegs[Reg]) {
+        HasRegDependency = true;
+        break;
+      }
+      UsedOpsInCopy.push_back(i);
+    }
+  }
+  return HasRegDependency;
 }
 
 bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
@@ -1044,16 +1131,21 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       continue;
     }
 
-    unsigned DefReg = MI->getOperand(0).getReg();
-    unsigned SrcReg = MI->getOperand(1).getReg();
+    // Track the operand index for use in Copy.
+    SmallVector<unsigned, 2> UsedOpsInCopy;
+    // Track the register number defed in Copy.
+    SmallVector<unsigned, 2> DefedRegsInCopy;
+
     // Don't sink the COPY if it would violate a register dependency.
-    if (ModifiedRegs[DefReg] || ModifiedRegs[SrcReg] || UsedRegs[DefReg]) {
+    if (hasRegisterDependency(MI, UsedOpsInCopy, DefedRegsInCopy, ModifiedRegs,
+                              UsedRegs)) {
       TII->trackRegDefsUses(*MI, ModifiedRegs, UsedRegs, TRI);
       continue;
     }
-
+    assert((!UsedOpsInCopy.empty() && !DefedRegsInCopy.empty()) &&
+           "Unexpect SrcReg or DefReg");
     MachineBasicBlock *SuccBB =
-        getSingleLiveInSuccBB(CurBB, SinkableBBs, DefReg, TRI);
+        getSingleLiveInSuccBB(CurBB, SinkableBBs, DefedRegsInCopy, TRI);
     // Don't sink if we cannot find a single sinkable successor in which Reg
     // is live-in.
     if (!SuccBB) {
@@ -1065,22 +1157,10 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
 
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.
-    if (UsedRegs[SrcReg]) {
-      MachineBasicBlock::iterator NI = std::next(MI->getIterator());
-      for (MachineInstr &UI : make_range(NI, CurBB.end())) {
-        if (UI.killsRegister(SrcReg, TRI)) {
-          UI.clearRegisterKills(SrcReg, TRI);
-          MI->getOperand(1).setIsKill(true);
-          break;
-        }
-      }
-    }
-
+    clearKillFlags(MI, CurBB, UsedOpsInCopy, UsedRegs, TRI);
     MachineBasicBlock::iterator InsertPos = SuccBB->getFirstNonPHI();
     SuccBB->splice(InsertPos, &CurBB, MI);
-    SuccBB->removeLiveIn(DefReg);
-    if (!SuccBB->isLiveIn(SrcReg))
-      SuccBB->addLiveIn(SrcReg);
+    updateLiveIn(MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
 
     Changed = true;
     ++NumPostRACopySink;

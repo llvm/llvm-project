@@ -402,39 +402,35 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 ///   zext (icmp ne i32 (and X, (or Y, (shl 1, Z))), 0)
 /// Note:
 ///   Z may be 0 if lshr is missing.
-/// Worst case scenario is that we will replace 5 instructions with 5 different
+/// Worst-case scenario is that we will replace 5 instructions with 5 different
 /// instructions, but we got rid of select.
-static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *IC,
-                                         Value *TrueVal, Value *FalseVal,
+static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *Cmp,
+                                         Value *TVal, Value *FVal,
                                          InstCombiner::BuilderTy &Builder) {
-  if (!(IC->hasOneUse() && IC->getOperand(0)->hasOneUse()))
+  if (!(Cmp->hasOneUse() && Cmp->getOperand(0)->hasOneUse() &&
+        Cmp->getPredicate() == ICmpInst::ICMP_EQ &&
+        match(Cmp->getOperand(1), m_Zero()) && match(FVal, m_One())))
     return nullptr;
 
-  Value *X, *Y;
-  ICmpInst::Predicate EqPred;
-  if (!(match(IC, m_ICmp(EqPred, m_And(m_Value(X), m_Value(Y)), m_Zero())) &&
-        ICmpInst::Predicate::ICMP_EQ == EqPred && match(FalseVal, m_One())))
-    return nullptr;
-
-  // The TrueVal has general form of:
-  //   and %B, 1
+  // The TrueVal has general form of:  and %B, 1
   Value *B;
-  if (!match(TrueVal, m_OneUse(m_And(m_Value(B), m_One()))))
+  if (!match(TVal, m_OneUse(m_And(m_Value(B), m_One()))))
     return nullptr;
 
-  // Where %B can be one of:
-  //        %X
-  // or
-  //   lshr %X, %Z
-  // Where %Z may or may not be a constant.
-  Value *MaskB, *Z;
-  if (match(B, m_Specific(X))) {
-    MaskB = ConstantInt::get(SelType, 1);
-  } else if (match(B, m_OneUse(m_LShr(m_Specific(X), m_Value(Z))))) {
-    MaskB = Builder.CreateShl(ConstantInt::get(SelType, 1), Z);
-  } else
+  // Where %B may be optionally shifted:  lshr %X, %Z.
+  Value *X, *Z;
+  const bool HasShift = match(B, m_OneUse(m_LShr(m_Value(X), m_Value(Z))));
+  if (!HasShift)
+    X = B;
+
+  Value *Y;
+  if (!match(Cmp->getOperand(0), m_c_And(m_Specific(X), m_Value(Y))))
     return nullptr;
 
+  // ((X & Y) == 0) ? ((X >> Z) & 1) : 1 --> (X & (Y | (1 << Z))) != 0
+  // ((X & Y) == 0) ? (X & 1) : 1 --> (X & (Y | 1)) != 0
+  Constant *One = ConstantInt::get(SelType, 1);
+  Value *MaskB = HasShift ? Builder.CreateShl(One, Z) : One;
   Value *FullMask = Builder.CreateOr(Y, MaskB);
   Value *MaskedX = Builder.CreateAnd(X, FullMask);
   Value *ICmpNeZero = Builder.CreateIsNotNull(MaskedX);

@@ -277,7 +277,7 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
   if (Resources->mustIssueImmediately(Desc)) {
     DEBUG(dbgs() << "[SCHEDULER] Instruction " << Idx
                  << " issued immediately\n");
-    return issueInstruction(MCIS, Idx);
+    return issueInstruction(Idx, MCIS);
   }
 
   DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx << " to the Ready Queue\n");
@@ -293,10 +293,15 @@ void Scheduler::cycleEvent() {
 
   updateIssuedQueue();
   updatePendingQueue();
-  bool InstructionsWerePromoted = false;
-  do {
-    InstructionsWerePromoted = issue();
-  } while(InstructionsWerePromoted);
+
+  while (issue()) {
+    // Instructions that have been issued during this cycle might have unblocked
+    // other dependent instructions. Dependent instructions may be issued during
+    // this same cycle if operands have ReadAdvance entries.  Promote those
+    // instructions to the ReadyQueue and tell to the caller that we need
+    // another round of 'issue()'.
+    promoteToReadyQueue();
+  }
 }
 
 #ifndef NDEBUG
@@ -317,7 +322,8 @@ bool Scheduler::canBeDispatched(unsigned Index, const InstrDesc &Desc) const {
     Type = HWStallEvent::StoreQueueFull;
   else {
     switch (Resources->canBeDispatched(Desc.Buffers)) {
-    default: return true;
+    default:
+      return true;
     case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
       Type = HWStallEvent::SchedulerQueueFull;
       break;
@@ -330,7 +336,7 @@ bool Scheduler::canBeDispatched(unsigned Index, const InstrDesc &Desc) const {
   return false;
 }
 
-void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {
+void Scheduler::issueInstruction(unsigned InstrIndex, Instruction &IS) {
   const InstrDesc &D = IS.getDesc();
 
   if (!D.Buffers.empty()) {
@@ -362,65 +368,51 @@ void Scheduler::issueInstruction(Instruction &IS, unsigned InstrIndex) {
   notifyInstructionExecuted(InstrIndex);
 }
 
-bool Scheduler::promoteToReadyQueue() {
+void Scheduler::promoteToReadyQueue() {
   // Scan the set of waiting instructions and promote them to the
   // ready queue if operands are all ready.
-  bool InstructionsWerePromoted = false;
   for (auto I = WaitQueue.begin(), E = WaitQueue.end(); I != E;) {
     const QueueEntryTy &Entry = *I;
+    unsigned IID = Entry.first;
+    Instruction &Inst = *Entry.second;
 
     // Check if this instruction is now ready. In case, force
     // a transition in state using method 'update()'.
-    Entry.second->update();
-    bool IsReady = Entry.second->isReady();
+    Inst.update();
 
-    const InstrDesc &Desc = Entry.second->getDesc();
+    const InstrDesc &Desc = Inst.getDesc();
     bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-    if (IsReady && IsMemOp)
-      IsReady &= LSU->isReady(Entry.first);
-
-    if (IsReady) {
-      notifyInstructionReady(Entry.first);
-      ReadyQueue[Entry.first] = Entry.second;
-      auto ToRemove = I;
+    if (!Inst.isReady() || (IsMemOp && !LSU->isReady(IID))) {
       ++I;
-      WaitQueue.erase(ToRemove);
-      InstructionsWerePromoted = true;
-    } else {
-      ++I;
+      continue;
     }
+
+    notifyInstructionReady(IID);
+    ReadyQueue[IID] = &Inst;
+    auto ToRemove = I;
+    ++I;
+    WaitQueue.erase(ToRemove);
   }
-  
-  return InstructionsWerePromoted;
 }
 
-
 bool Scheduler::issue() {
-  std::vector<unsigned> ToRemove;
-  for (const QueueEntryTy QueueEntry : ReadyQueue) {
-    // Give priority to older instructions in ReadyQueue. The ready queue is
-    // ordered by key, and therefore older instructions are visited first.
-    Instruction &IS = *QueueEntry.second;
-    const InstrDesc &D = IS.getDesc();
-    if (!Resources->canBeIssued(D))
-      continue;
-    unsigned InstrIndex = QueueEntry.first;
-    issueInstruction(IS, InstrIndex);
-    ToRemove.emplace_back(InstrIndex);
-  }
+  // Give priority to older instructions in the ReadyQueue. Since the ready
+  // queue is ordered by key, this will always prioritize older instructions.
+  const auto It = std::find_if(ReadyQueue.begin(), ReadyQueue.end(),
+                               [&](const QueueEntryTy &Entry) {
+                                 const Instruction &IS = *Entry.second;
+                                 const InstrDesc &D = IS.getDesc();
+                                 return Resources->canBeIssued(D);
+                               });
 
-  if (ToRemove.empty())
+  if (It == ReadyQueue.end())
     return false;
 
-  for (const unsigned InstrIndex : ToRemove)
-    ReadyQueue.erase(InstrIndex);
-
-  // Instructions that have been issued during this cycle might have unblocked
-  // other dependent instructions. Dependent instructions
-  // may be issued during this same cycle if operands have ReadAdvance entries.
-  // Promote those instructions to the ReadyQueue and tell to the caller that
-  // we need another round of 'issue()'.
-  return promoteToReadyQueue();
+  // We found an instruction. Issue it, and update the ready queue.
+  const QueueEntryTy &Entry = *It;
+  issueInstruction(Entry.first, *Entry.second);
+  ReadyQueue.erase(Entry.first);
+  return true;
 }
 
 void Scheduler::updatePendingQueue() {
@@ -428,7 +420,6 @@ void Scheduler::updatePendingQueue() {
   // started.
   for (QueueEntryTy Entry : WaitQueue)
     Entry.second->cycleEvent();
-
   promoteToReadyQueue();
 }
 

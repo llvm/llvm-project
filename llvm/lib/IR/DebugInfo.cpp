@@ -61,47 +61,60 @@ void DebugInfoFinder::reset() {
 }
 
 void DebugInfoFinder::processModule(const Module &M) {
-  for (auto *CU : M.debug_compile_units()) {
-    addCompileUnit(CU);
-    for (auto DIG : CU->getGlobalVariables()) {
-      if (!addGlobalVariable(DIG))
-        continue;
-      auto *GV = DIG->getVariable();
-      processScope(GV->getScope());
-      processType(GV->getType().resolve());
-    }
-    for (auto *ET : CU->getEnumTypes())
-      processType(ET);
-    for (auto *RT : CU->getRetainedTypes())
-      if (auto *T = dyn_cast<DIType>(RT))
-        processType(T);
-      else
-        processSubprogram(cast<DISubprogram>(RT));
-    for (auto *Import : CU->getImportedEntities()) {
-      auto *Entity = Import->getEntity().resolve();
-      if (auto *T = dyn_cast<DIType>(Entity))
-        processType(T);
-      else if (auto *SP = dyn_cast<DISubprogram>(Entity))
-        processSubprogram(SP);
-      else if (auto *NS = dyn_cast<DINamespace>(Entity))
-        processScope(NS->getScope());
-      else if (auto *M = dyn_cast<DIModule>(Entity))
-        processScope(M->getScope());
-    }
-  }
+  for (auto *CU : M.debug_compile_units())
+    processCompileUnit(CU);
   for (auto &F : M.functions()) {
     if (auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
       processSubprogram(SP);
     // There could be subprograms from inlined functions referenced from
     // instructions only. Walk the function to find them.
-    for (const BasicBlock &BB : F) {
-      for (const Instruction &I : BB) {
-        if (!I.getDebugLoc())
-          continue;
-        processLocation(M, I.getDebugLoc().get());
-      }
-    }
+    for (const BasicBlock &BB : F)
+      for (const Instruction &I : BB)
+        processInstruction(M, I);
   }
+}
+
+void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
+  if (!addCompileUnit(CU))
+    return;
+  for (auto DIG : CU->getGlobalVariables()) {
+    if (!addGlobalVariable(DIG))
+      continue;
+    auto *GV = DIG->getVariable();
+    processScope(GV->getScope());
+    processType(GV->getType().resolve());
+  }
+  for (auto *ET : CU->getEnumTypes())
+    processType(ET);
+  for (auto *RT : CU->getRetainedTypes())
+    if (auto *T = dyn_cast<DIType>(RT))
+      processType(T);
+    else
+      processSubprogram(cast<DISubprogram>(RT));
+  for (auto *Import : CU->getImportedEntities()) {
+    auto *Entity = Import->getEntity().resolve();
+    if (auto *T = dyn_cast<DIType>(Entity))
+      processType(T);
+    else if (auto *SP = dyn_cast<DISubprogram>(Entity))
+      processSubprogram(SP);
+    else if (auto *NS = dyn_cast<DINamespace>(Entity))
+      processScope(NS->getScope());
+    else if (auto *M = dyn_cast<DIModule>(Entity))
+      processScope(M->getScope());
+    else
+      llvm_unreachable("unexpected imported entity type");
+  }
+}
+
+void DebugInfoFinder::processInstruction(const Module &M,
+                                         const Instruction &I) {
+  if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
+    processDeclare(M, DDI);
+  else if (auto *DVI = dyn_cast<DbgValueInst>(&I))
+    processValue(M, DVI);
+
+  if (auto DbgLoc = I.getDebugLoc())
+    processLocation(M, DbgLoc.get());
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
@@ -165,6 +178,15 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   if (!addSubprogram(SP))
     return;
   processScope(SP->getScope().resolve());
+  // Some of the users, e.g. CloneFunctionInto / CloneModule, need to set up a
+  // ValueMap containing identity mappings for all of the DICompileUnit's, not
+  // just DISubprogram's, referenced from anywhere within the Function being
+  // cloned prior to calling MapMetadata / RemapInstruction to avoid their
+  // duplication later as DICompileUnit's are also directly referenced by
+  // llvm.dbg.cu list. Thefore we need to collect DICompileUnit's here as well.
+  // Also, DICompileUnit's may reference DISubprogram's too and therefore need
+  // to be at least looked through.
+  processCompileUnit(SP->getUnit());
   processType(SP->getType());
   for (auto *Element : SP->getTemplateParams()) {
     if (auto *TType = dyn_cast<DITemplateTypeParameter>(Element)) {

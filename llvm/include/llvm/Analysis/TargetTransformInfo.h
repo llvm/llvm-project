@@ -680,6 +680,11 @@ public:
   /// size of the widest element type.
   bool shouldMaximizeVectorBandwidth(bool OptSize) const;
 
+  /// \return The minimum vectorization factor for types of given element
+  /// bit width, or 0 if there is no mimimum VF. The returned value only
+  /// applies when shouldMaximizeVectorBandwidth returns true.
+  unsigned getMinimumVF(unsigned ElemWidth) const;
+
   /// \return True if it should be considered for address type promotion.
   /// \p AllowPromotionWithoutCommonHeader Set true if promoting \p I is
   /// profitable without finding other extensions fed by the same input.
@@ -1074,6 +1079,7 @@ public:
   virtual unsigned getRegisterBitWidth(bool Vector) const = 0;
   virtual unsigned getMinVectorRegisterBitWidth() = 0;
   virtual bool shouldMaximizeVectorBandwidth(bool OptSize) const = 0;
+  virtual unsigned getMinimumVF(unsigned ElemWidth) const = 0;
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() = 0;
@@ -1372,6 +1378,9 @@ public:
   }
   bool shouldMaximizeVectorBandwidth(bool OptSize) const override {
     return Impl.shouldMaximizeVectorBandwidth(OptSize);
+  }
+  unsigned getMinimumVF(unsigned ElemWidth) const override {
+    return Impl.getMinimumVF(ElemWidth);
   }
   bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) override {

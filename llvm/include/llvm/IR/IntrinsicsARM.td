@@ -369,6 +369,10 @@ class Neon_3Arg_Long_Intrinsic
   : Intrinsic<[llvm_anyvector_ty],
               [LLVMMatchType<0>, LLVMTruncatedType<0>, LLVMTruncatedType<0>],
               [IntrNoMem]>;
+
+class Neon_1FloatArg_Intrinsic
+  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
+
 class Neon_CvtFxToFP_Intrinsic
   : Intrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty, llvm_i32_ty], [IntrNoMem]>;
 class Neon_CvtFPToFx_Intrinsic
@@ -591,8 +595,8 @@ def int_arm_neon_vtbx2 : Neon_Tbl4Arg_Intrinsic;
 def int_arm_neon_vtbx3 : Neon_Tbl5Arg_Intrinsic;
 def int_arm_neon_vtbx4 : Neon_Tbl6Arg_Intrinsic;
 
-// Vector Rounding
-def int_arm_neon_vrintn : Neon_1Arg_Intrinsic;
+// Vector and Scalar Rounding.
+def int_arm_neon_vrintn : Neon_1FloatArg_Intrinsic;
 def int_arm_neon_vrintx : Neon_1Arg_Intrinsic;
 def int_arm_neon_vrinta : Neon_1Arg_Intrinsic;
 def int_arm_neon_vrintz : Neon_1Arg_Intrinsic;

@@ -43,44 +43,36 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   DebugInfoFinder *DIFinder) {
   DenseMap<const MDNode *, MDNode *> Cache;
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
-  if (BB->hasName()) NewBB->setName(BB->getName()+NameSuffix);
+  if (BB->hasName())
+    NewBB->setName(BB->getName() + NameSuffix);
 
   bool hasCalls = false, hasDynamicAllocas = false, hasStaticAllocas = false;
   Module *TheModule = F ? F->getParent() : nullptr;
 
   // Loop over all instructions, and copy them over.
-  for (BasicBlock::const_iterator II = BB->begin(), IE = BB->end();
-       II != IE; ++II) {
+  for (const Instruction &I : *BB) {
+    if (DIFinder && TheModule)
+      DIFinder->processInstruction(*TheModule, I);
 
-    if (DIFinder && TheModule) {
-      if (auto *DDI = dyn_cast<DbgDeclareInst>(II))
-        DIFinder->processDeclare(*TheModule, DDI);
-      else if (auto *DVI = dyn_cast<DbgValueInst>(II))
-        DIFinder->processValue(*TheModule, DVI);
-
-      if (auto DbgLoc = II->getDebugLoc())
-        DIFinder->processLocation(*TheModule, DbgLoc.get());
-    }
-
-    Instruction *NewInst = II->clone();
-    if (II->hasName())
-      NewInst->setName(II->getName()+NameSuffix);
+    Instruction *NewInst = I.clone();
+    if (I.hasName())
+      NewInst->setName(I.getName() + NameSuffix);
     NewBB->getInstList().push_back(NewInst);
-    VMap[&*II] = NewInst; // Add instruction map to value.
+    VMap[&I] = NewInst; // Add instruction map to value.
 
-    hasCalls |= (isa<CallInst>(II) && !isa<DbgInfoIntrinsic>(II));
-    if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
+    hasCalls |= (isa<CallInst>(I) && !isa<DbgInfoIntrinsic>(I));
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
       if (isa<ConstantInt>(AI->getArraySize()))
         hasStaticAllocas = true;
       else
         hasDynamicAllocas = true;
     }
   }
-  
+
   if (CodeInfo) {
     CodeInfo->ContainsCalls          |= hasCalls;
     CodeInfo->ContainsDynamicAllocas |= hasDynamicAllocas;
-    CodeInfo->ContainsDynamicAllocas |= hasStaticAllocas && 
+    CodeInfo->ContainsDynamicAllocas |= hasStaticAllocas &&
                                         BB != &BB->getParent()->getEntryBlock();
   }
   return NewBB;
@@ -175,7 +167,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
     // Create a new basic block and copy instructions into it!
     BasicBlock *CBB = CloneBasicBlock(&BB, VMap, NameSuffix, NewFunc, CodeInfo,
-                                      SP ? &DIFinder : nullptr);
+                                      ModuleLevelChanges ? &DIFinder : nullptr);
 
     // Add basic block mapping.
     VMap[&BB] = CBB;
@@ -197,15 +189,15 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       Returns.push_back(RI);
   }
 
-  for (DISubprogram *ISP : DIFinder.subprograms()) {
-    if (ISP != SP) {
+  for (DISubprogram *ISP : DIFinder.subprograms())
+    if (ISP != SP)
       VMap.MD()[ISP].reset(ISP);
-    }
-  }
 
-  for (auto *Type : DIFinder.types()) {
+  for (DICompileUnit *CU : DIFinder.compile_units())
+    VMap.MD()[CU].reset(CU);
+
+  for (DIType *Type : DIFinder.types())
     VMap.MD()[Type].reset(Type);
-  }
 
   // Loop over all of the instructions in the function, fixing up operand
   // references as we go.  This uses VMap to do all the hard work.

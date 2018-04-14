@@ -2,7 +2,7 @@
 
 
 ; If computeKnownSignBits (in SelectionDAG) can do a simple
-; look-thru for extractelement then we we know that the add will yield a
+; look-thru for extractelement then we know that the add will yield a
 ; non-negative result.
 define i1 @test1(<4 x i16>* %in) {
 ; CHECK-LABEL: ! %bb.0:

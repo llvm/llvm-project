@@ -21,6 +21,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -76,22 +77,13 @@ LLVM_ATTRIBUTE_NORETURN static void fatalError(const Twine &Message) {
 
 } // anonymous namespace
 
-int main(int argc_, const char *argv_[]) {
-  sys::PrintStackTraceOnErrorSignal(argv_[0]);
-  PrettyStackTraceProgram X(argc_, argv_);
-
+int main(int Argc, const char **Argv) {
+  InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-rc: ");
-
-  SmallVector<const char *, 256> argv;
-  SpecificBumpPtrAllocator<char> ArgAllocator;
-  ExitOnErr(errorCodeToError(sys::Process::GetArgumentVector(
-      argv, makeArrayRef(argv_, argc_), ArgAllocator)));
-
-  llvm_shutdown_obj Y;
 
   RcOptTable T;
   unsigned MAI, MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(argv_ + 1, argc_);
+  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
   // The tool prints nothing when invoked with no command-line arguments.

@@ -7,6 +7,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512F
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512BW
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx512f,+avx512bw,+avx512vbmi | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512VBMI
+;
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
 
 ;
 ; Verify the cost model for reverse shuffles.

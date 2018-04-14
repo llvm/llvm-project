@@ -55,12 +55,15 @@ using llvm::X86::RAX;
 class MCInstrDescViewTest : public ::testing::Test {
 protected:
   MCInstrDescViewTest()
-      : TheTriple(llvm::sys::getProcessTriple()),
-        CpuName(llvm::sys::getHostCPUName().str()) {}
+      : TheTriple("x86_64") {}
+
+  static void SetUpTestCase() {
+    LLVMInitializeX86TargetInfo();
+    LLVMInitializeX86TargetMC();
+    LLVMInitializeX86Target();
+  }
 
   void SetUp() override {
-    llvm::InitializeNativeTarget();
-
     std::string Error;
     const auto *Target = llvm::TargetRegistry::lookupTarget(TheTriple, Error);
     InstrInfo.reset(Target->createMCInstrInfo());
@@ -68,7 +71,6 @@ protected:
   }
 
   const std::string TheTriple;
-  const std::string CpuName;
   std::unique_ptr<const llvm::MCInstrInfo> InstrInfo;
   std::unique_ptr<const llvm::MCRegisterInfo> RegInfo;
 };

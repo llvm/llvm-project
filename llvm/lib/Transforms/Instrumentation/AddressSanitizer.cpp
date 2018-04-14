@@ -589,9 +589,10 @@ struct AddressSanitizer : public FunctionPass {
 
   explicit AddressSanitizer(bool CompileKernel = false, bool Recover = false,
                             bool UseAfterScope = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel || ClEnableKasan),
-        Recover(Recover || ClRecover),
-        UseAfterScope(UseAfterScope || ClUseAfterScope) {
+      : FunctionPass(ID), UseAfterScope(UseAfterScope || ClUseAfterScope) {
+    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
+    this->CompileKernel = ClEnableKasan.getNumOccurrences() > 0 ?
+        ClEnableKasan : CompileKernel;
     initializeAddressSanitizerPass(*PassRegistry::getPassRegistry());
   }
 
@@ -717,8 +718,7 @@ public:
   explicit AddressSanitizerModule(bool CompileKernel = false,
                                   bool Recover = false,
                                   bool UseGlobalsGC = true)
-      : ModulePass(ID), CompileKernel(CompileKernel || ClEnableKasan),
-        Recover(Recover || ClRecover),
+      : ModulePass(ID),
         UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
         // Not a typo: ClWithComdat is almost completely pointless without
         // ClUseGlobalsGC (because then it only works on modules without
@@ -727,7 +727,12 @@ public:
         // argument is designed as workaround. Therefore, disable both
         // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
         // do globals-gc.
-        UseCtorComdat(UseGlobalsGC && ClWithComdat) {}
+        UseCtorComdat(UseGlobalsGC && ClWithComdat) {
+          this->Recover = ClRecover.getNumOccurrences() > 0 ?
+              ClRecover : Recover;
+          this->CompileKernel = ClEnableKasan.getNumOccurrences() > 0 ?
+              ClEnableKasan : CompileKernel;
+	}
 
   bool runOnModule(Module &M) override;
   StringRef getPassName() const override { return "AddressSanitizerModule"; }

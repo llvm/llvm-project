@@ -30,7 +30,7 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// Start of implicit kernel args
   unsigned ABIArgOffset;
 
-  // Kernels + shaders. i.e. functions called by the driver and not not called
+  // Kernels + shaders. i.e. functions called by the driver and not called
   // by other functions.
   bool IsEntryFunction;
 

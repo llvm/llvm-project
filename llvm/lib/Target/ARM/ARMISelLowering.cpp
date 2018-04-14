@@ -527,6 +527,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
     setOperationAction(ISD::BITCAST, MVT::f16, Custom);
+
+    setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
   }
 
   for (MVT VT : MVT::vector_valuetypes()) {
@@ -1147,6 +1150,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (Subtarget->hasNEON()) {
     // vmin and vmax aren't available in a scalar form, so we use
     // a NEON instruction with an undef lane instead.
+    setOperationAction(ISD::FMINNAN, MVT::f16, Legal);
+    setOperationAction(ISD::FMAXNAN, MVT::f16, Legal);
     setOperationAction(ISD::FMINNAN, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNAN, MVT::f32, Legal);
     setOperationAction(ISD::FMINNAN, MVT::v2f32, Legal);

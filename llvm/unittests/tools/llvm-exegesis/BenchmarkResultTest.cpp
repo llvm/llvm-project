@@ -10,6 +10,7 @@
 #include "BenchmarkResult.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
@@ -34,7 +35,11 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Measurements.push_back(BenchmarkMeasure{"b", 2, ""});
   ToDisk.Error = "error";
 
-  const llvm::StringRef Filename("data.yaml");
+  llvm::SmallString<64> Filename;
+  std::error_code EC;
+  EC = llvm::sys::fs::createUniqueDirectory("BenchmarkResultTestDir", Filename);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(Filename, "data.yaml");
 
   ToDisk.writeYamlOrDie(Filename);
 

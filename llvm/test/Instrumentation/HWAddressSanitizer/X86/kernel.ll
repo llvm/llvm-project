@@ -1,4 +1,4 @@
-; Test kernel hwasan instrumentation.
+; Test KHWASan instrumentation.
 ; Generic code is covered by ../kernel.ll, only the x86_64 specific code is
 ; tested here.
 ;

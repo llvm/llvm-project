@@ -443,7 +443,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
           //
           // So, instead of forcing the instruction to write to VCC, we provide
-          // a hint to the register allocator to use VCC and then we we will run
+          // a hint to the register allocator to use VCC and then we will run
           // this pass again after RA and shrink it if it outputs to VCC.
           MRI.setRegAllocationHint(MI.getOperand(0).getReg(), 0, AMDGPU::VCC);
           continue;
