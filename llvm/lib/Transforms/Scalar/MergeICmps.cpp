@@ -231,7 +231,7 @@ bool BCECmpBlock::doesOtherWork() const {
   DenseSet<Instruction *> BlockInsts(
       {Lhs_.GEP, Rhs_.GEP, Lhs_.LoadI, Rhs_.LoadI, CmpI, BranchI});
   // TODO(courbet): Can we allow some other things ? This is very conservative.
-  // We might be able to get away with anything does does not have any side
+  // We might be able to get away with anything does not have any side
   // effects outside of the basic block.
   // Note: The GEPs and/or loads are not necessarily in the same block.
   for (const Instruction &Inst : *BB) {

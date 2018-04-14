@@ -511,7 +511,8 @@ Value *FAddCombine::performFactorization(Instruction *I) {
 }
 
 Value *FAddCombine::simplify(Instruction *I) {
-  assert(I->isFast() && "Expected 'fast' instruction");
+  assert(I->hasAllowReassoc() && I->hasNoSignedZeros() &&
+         "Expected 'reassoc'+'nsz' instruction");
 
   // Currently we are not able to handle vector type.
   if (I->getType()->isVectorTy())
@@ -1378,7 +1379,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, LHS, RHS))
     return replaceInstUsesWith(I, V);
 
-  if (I.isFast()) {
+  if (I.hasAllowReassoc() && I.hasNoSignedZeros()) {
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }
@@ -1747,7 +1748,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);
 
-  if (I.isFast()) {
+  if (I.hasAllowReassoc() && I.hasNoSignedZeros()) {
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }

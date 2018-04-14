@@ -12,6 +12,19 @@ define float @test1(float %arg) {
   ret float %t2
 }
 
+; Check again using the minimal subset of FMF.
+; Both 'reassoc' and 'nsz' are required.
+define float @test1_minimal(float %arg) {
+; CHECK-LABEL: @test1_minimal(
+; CHECK-NEXT:    [[ARG_NEG:%.*]] = fsub reassoc nsz float -0.000000e+00, [[ARG:%.*]]
+; CHECK-NEXT:    ret float [[ARG_NEG]]
+;
+  %t1 = fsub reassoc nsz float -1.200000e+01, %arg
+  %t2 = fadd reassoc nsz float %t1, 1.200000e+01
+  ret float %t2
+}
+
+; Verify the fold is not done with only 'reassoc' ('nsz' is required).
 define float @test1_reassoc(float %arg) {
 ; CHECK-LABEL: @test1_reassoc(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub reassoc float -1.200000e+01, [[ARG:%.*]]
@@ -210,6 +223,18 @@ define float @test9(float %X) {
   ret float %Z
 }
 
+; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
+define float @test9_reassoc_nsz(float %X) {
+; CHECK-LABEL: @test9_reassoc_nsz(
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul reassoc nsz float [[X:%.*]], 9.400000e+01
+; CHECK-NEXT:    ret float [[FACTOR]]
+;
+  %Y = fmul reassoc nsz float %X, 4.700000e+01
+  %Z = fadd reassoc nsz float %Y, %Y
+  ret float %Z
+}
+
+; TODO: This doesn't require 'nsz'.  It should fold to X * 94.0
 define float @test9_reassoc(float %X) {
 ; CHECK-LABEL: @test9_reassoc(
 ; CHECK-NEXT:    [[Y:%.*]] = fmul reassoc float [[X:%.*]], 4.700000e+01
@@ -221,25 +246,44 @@ define float @test9_reassoc(float %X) {
   ret float %Z
 }
 
+; Side note: (x + x + x) and (3*x) each have only a single rounding.  So
+; transforming x+x+x to 3*x is always safe, even without any FMF.
+; To avoid that special-case, we have the addition of 'x' four times, here.
 define float @test10(float %X) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast float [[X:%.*]], 4.000000e+00
 ; CHECK-NEXT:    ret float [[FACTOR]]
 ;
   %Y = fadd fast float %X ,%X
   %Z = fadd fast float %Y, %X
-  ret float %Z
+  %W = fadd fast float %Z, %X
+  ret float %W
 }
 
+; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
+define float @test10_reassoc_nsz(float %X) {
+; CHECK-LABEL: @test10_reassoc_nsz(
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul reassoc nsz float [[X:%.*]], 4.000000e+00
+; CHECK-NEXT:    ret float [[FACTOR]]
+;
+  %Y = fadd reassoc nsz float %X ,%X
+  %Z = fadd reassoc nsz float %Y, %X
+  %W = fadd reassoc nsz float %Z, %X
+  ret float %W
+}
+
+; TODO: This doesn't require 'nsz'.  It should fold to 4 * x
 define float @test10_reassoc(float %X) {
 ; CHECK-LABEL: @test10_reassoc(
 ; CHECK-NEXT:    [[Y:%.*]] = fadd reassoc float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[Y]], [[X]]
-; CHECK-NEXT:    ret float [[Z]]
+; CHECK-NEXT:    [[W:%.*]] = fadd reassoc float [[Z]], [[X]]
+; CHECK-NEXT:    ret float [[W]]
 ;
   %Y = fadd reassoc float %X ,%X
   %Z = fadd reassoc float %Y, %X
-  ret float %Z
+  %W = fadd reassoc float %Z, %X
+  ret float %W
 }
 
 define float @test11(float %W) {
@@ -253,6 +297,20 @@ define float @test11(float %W) {
   ret float %Z
 }
 
+; Check again using the minimal subset of FMF.
+; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
+define float @test11_reassoc_nsz(float %W) {
+; CHECK-LABEL: @test11_reassoc_nsz(
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul reassoc nsz float [[W:%.*]], 3.810000e+02
+; CHECK-NEXT:    ret float [[FACTOR]]
+;
+  %X = fmul reassoc nsz float %W, 127.0
+  %Y = fadd reassoc nsz float %X ,%X
+  %Z = fadd reassoc nsz float %Y, %X
+  ret float %Z
+}
+
+; TODO: This doesn't require 'nsz'.  It should fold to W*381.0.
 define float @test11_reassoc(float %W) {
 ; CHECK-LABEL: @test11_reassoc(
 ; CHECK-NEXT:    [[X:%.*]] = fmul reassoc float [[W:%.*]], 1.270000e+02
@@ -280,6 +338,22 @@ define float @test12(float %X) {
   ret float %Z
 }
 
+; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
+define float @test12_reassoc_nsz(float %X) {
+; CHECK-LABEL: @test12_reassoc_nsz(
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul reassoc nsz float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[Z:%.*]] = fsub reassoc nsz float 6.000000e+00, [[FACTOR]]
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %A = fsub reassoc nsz float 1.000000e+00, %X
+  %B = fsub reassoc nsz float 2.000000e+00, %X
+  %C = fsub reassoc nsz float 3.000000e+00, %X
+  %Y = fadd reassoc nsz float %A ,%B
+  %Z = fadd reassoc nsz float %Y, %C
+  ret float %Z
+}
+
+; TODO: This doesn't require 'nsz'.  It should fold to (6.0 - 3.0*x)
 define float @test12_reassoc(float %X) {
 ; CHECK-LABEL: @test12_reassoc(
 ; CHECK-NEXT:    [[A:%.*]] = fsub reassoc float 1.000000e+00, [[X:%.*]]
@@ -337,6 +411,21 @@ define float @test14(float %X1, float %X2) {
   ret float %D
 }
 
+; (x1 * 47) + (x2 * -47) => (x1 - x2) * 47
+; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
+define float @test14_reassoc_nsz(float %X1, float %X2) {
+; CHECK-LABEL: @test14_reassoc_nsz(
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X1:%.*]], [[X2:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], 4.700000e+01
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %B = fmul reassoc nsz float %X1, 47.   ; X1*47
+  %C = fmul reassoc nsz float %X2, -47.  ; X2*-47
+  %D = fadd reassoc nsz float %B, %C    ; X1*47 + X2*-47 -> 47*(X1-X2)
+  ret float %D
+}
+
+; TODO: This doesn't require 'nsz'.  It should fold to ((x1 - x2) * 47.0)
 define float @test14_reassoc(float %X1, float %X2) {
 ; CHECK-LABEL: @test14_reassoc(
 ; CHECK-NEXT:    [[B:%.*]] = fmul reassoc float [[X1:%.*]], 4.700000e+01
