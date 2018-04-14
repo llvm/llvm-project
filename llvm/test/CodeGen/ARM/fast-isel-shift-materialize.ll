@@ -19,7 +19,7 @@ bb:
   %tmp4 = lshr i32 %tmp3, 2
   %tmp10 = lshr i32 %tmp9, 2
   call void @foo(i32 %tmp10, i32 %tmp4)
-  unreachable
+  ret i32 undef
 }
 
 attributes #0 = { minsize }

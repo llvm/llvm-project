@@ -988,6 +988,8 @@ StringRef Darwin::getOSLibraryNameSuffix() const {
 /// Check if the link command contains a symbol export directive.
 static bool hasExportSymbolDirective(const ArgList &Args) {
   for (Arg *A : Args) {
+    if (A->getOption().matches(options::OPT_exported__symbols__list))
+      return true;
     if (!A->getOption().matches(options::OPT_Wl_COMMA) &&
         !A->getOption().matches(options::OPT_Xlinker))
       continue;

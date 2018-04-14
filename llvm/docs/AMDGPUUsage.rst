@@ -198,11 +198,8 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                       - Radeon RX Vega 64
                                                                         Liquid
                                                                       - Radeon Instinct MI25
-     ``gfx902``                  ``amdgcn``   APU   - xnack           *TBA*
-                                                      [on]
-                                                                      .. TODO
-                                                                         Add product
-                                                                         names.
+     ``gfx902``                  ``amdgcn``   APU   - xnack           - Ryzen 3 2200G
+                                                      [on]            - Ryzen 5 2400G
      =========== =============== ============ ===== ========= ======= ==================
 
 .. _amdgpu-target-features:
