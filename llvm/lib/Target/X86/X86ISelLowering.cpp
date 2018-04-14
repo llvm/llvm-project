@@ -22371,7 +22371,7 @@ static SDValue LowerABS(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
-  // For AVX1 cases, split to use use legal ops (everything but v4i64).
+  // For AVX1 cases, split to use legal ops (everything but v4i64).
   if (VT.getScalarType() != MVT::i64 && VT.is256BitVector())
     return Lower256IntArith(Op, DAG);
 

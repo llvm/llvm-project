@@ -201,8 +201,8 @@ template <class Ty>
 class vector {
 };
 
-template <class Ty>
-vector<Ty> make_vector(Ty* begin, Ty* end) {}
+template <class Ty, class Arg>
+vector<Ty> make_vector(Arg A) {}
 )cpp";
 
   FileIndex M;
@@ -222,9 +222,9 @@ vector<Ty> make_vector(Ty* begin, Ty* end) {}
     }
 
     if (Sym.Name == "make_vector") {
-      EXPECT_EQ(Sym.CompletionLabel, "make_vector(Ty *begin, Ty *end)");
+      EXPECT_EQ(Sym.CompletionLabel, "make_vector<class Ty>(Arg A)");
       EXPECT_EQ(Sym.CompletionSnippetInsertText,
-                "make_vector(${1:Ty *begin}, ${2:Ty *end})");
+                "make_vector<${1:class Ty}>(${2:Arg A})");
       EXPECT_EQ(Sym.CompletionPlainInsertText, "make_vector");
       SeenMakeVector = true;
     }

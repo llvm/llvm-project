@@ -862,7 +862,7 @@ public:
   // Set the branch weights based on the count values.
   void setBranchWeights();
 
-  // Annotate the value profile call sites all all value kind.
+  // Annotate the value profile call sites for all value kind.
   void annotateValueSites();
 
   // Annotate the value profile call sites for one value kind.
