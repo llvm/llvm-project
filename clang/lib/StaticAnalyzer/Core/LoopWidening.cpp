@@ -59,6 +59,18 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
     ITraits.setTrait(Region,
                      RegionAndSymbolInvalidationTraits::TK_EntireMemSpace);
   }
+
+  // 'this' pointer is not an lvalue, we should not invalidate it. If the loop
+  // is located in a method, constructor or destructor, the value of 'this'
+  // pointer shoule remain unchanged.
+  if (const CXXMethodDecl *CXXMD = dyn_cast<CXXMethodDecl>(STC->getDecl())) {
+    const CXXThisRegion *ThisR = MRMgr.getCXXThisRegion(
+        CXXMD->getThisType(STC->getAnalysisDeclContext()->getASTContext()),
+        STC);
+    ITraits.setTrait(ThisR,
+                     RegionAndSymbolInvalidationTraits::TK_PreserveContents);
+  }
+
   return PrevState->invalidateRegions(Regions, getLoopCondition(LoopStmt),
                                       BlockCount, LCtx, true, nullptr, nullptr,
                                       &ITraits);

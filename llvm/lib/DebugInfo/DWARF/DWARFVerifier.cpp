@@ -1196,14 +1196,8 @@ bool DWARFVerifier::handleAccelTables() {
   return NumErrors == 0;
 }
 
-raw_ostream &DWARFVerifier::error() const {
-  return WithColor(OS, HighlightColor::Error).get() << "error: ";
-}
+raw_ostream &DWARFVerifier::error() const { return WithColor::error(OS); }
 
-raw_ostream &DWARFVerifier::warn() const {
-  return WithColor(OS, HighlightColor::Warning).get() << "warning: ";
-}
+raw_ostream &DWARFVerifier::warn() const { return WithColor::warning(OS); }
 
-raw_ostream &DWARFVerifier::note() const {
-  return WithColor(OS, HighlightColor::Note).get() << "note: ";
-}
+raw_ostream &DWARFVerifier::note() const { return WithColor::note(OS); }

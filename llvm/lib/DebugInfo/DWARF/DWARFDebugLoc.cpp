@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -91,7 +92,7 @@ DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
   while (true) {
     Entry E;
     if (!Data.isValidOffsetForDataOfSize(*Offset, 2 * Data.getAddressSize())) {
-      llvm::errs() << "Location list overflows the debug_loc section.\n";
+      WithColor::error() << "location list overflows the debug_loc section.\n";
       return None;
     }
 
@@ -108,13 +109,13 @@ DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
       return LL;
 
     if (!Data.isValidOffsetForDataOfSize(*Offset, 2)) {
-      llvm::errs() << "Location list overflows the debug_loc section.\n";
+      WithColor::error() << "location list overflows the debug_loc section.\n";
       return None;
     }
 
     unsigned Bytes = Data.getU16(Offset);
     if (!Data.isValidOffsetForDataOfSize(*Offset, Bytes)) {
-      llvm::errs() << "Location list overflows the debug_loc section.\n";
+      WithColor::error() << "location list overflows the debug_loc section.\n";
       return None;
     }
     // A single location description describing the location of the object...
@@ -138,7 +139,7 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
       break;
   }
   if (data.isValidOffset(Offset))
-    errs() << "error: failed to consume entire .debug_loc section\n";
+    WithColor::error() << "failed to consume entire .debug_loc section\n";
 }
 
 Optional<DWARFDebugLocDWO::LocationList>
@@ -150,8 +151,8 @@ DWARFDebugLocDWO::parseOneLocationList(DataExtractor Data, unsigned *Offset) {
   while (auto Kind =
              static_cast<dwarf::LocationListEntry>(Data.getU8(Offset))) {
     if (Kind != dwarf::DW_LLE_startx_length) {
-      llvm::errs() << "error: dumping support for LLE of kind " << (int)Kind
-                   << " not implemented\n";
+      WithColor::error() << "dumping support for LLE of kind " << (int)Kind
+                         << " not implemented\n";
       return None;
     }
 

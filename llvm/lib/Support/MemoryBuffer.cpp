@@ -18,6 +18,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ObjectMemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -533,3 +534,4 @@ MemoryBufferRef MemoryBuffer::getMemBufferRef() const {
 }
 
 void MemoryBuffer::anchor() {}
+void ObjectMemoryBuffer::anchor() {}
