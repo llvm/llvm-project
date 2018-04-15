@@ -9,7 +9,6 @@
 
 #include "DebugMap.h"
 #include "BinaryHolder.h"
-#include "ErrorReporting.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -23,6 +22,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -63,10 +63,9 @@ void DebugMapObject::print(raw_ostream &OS) const {
   Entries.reserve(Symbols.getNumItems());
   for (const auto &Sym : make_range(Symbols.begin(), Symbols.end()))
     Entries.push_back(std::make_pair(Sym.getKey(), Sym.getValue()));
-  llvm::sort(Entries.begin(), Entries.end(),
-             [](const Entry &LHS, const Entry &RHS) {
-               return LHS.first < RHS.first;
-             });
+  llvm::sort(
+      Entries.begin(), Entries.end(),
+      [](const Entry &LHS, const Entry &RHS) { return LHS.first < RHS.first; });
   for (const auto &Sym : Entries) {
     if (Sym.second.ObjectAddress)
       OS << format("\t%016" PRIx64, uint64_t(*Sym.second.ObjectAddress));
@@ -243,7 +242,8 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   sys::path::append(Path, Filename);
   auto ErrOrObjectFiles = BinHolder.GetObjectFiles(Path);
   if (auto EC = ErrOrObjectFiles.getError()) {
-    warn_ostream() << "Unable to open " << Path << " " << EC.message() << '\n';
+    WithColor::warning() << "Unable to open " << Path << " " << EC.message()
+                         << '\n';
   } else if (auto ErrOrObjectFile = BinHolder.Get(Ctxt.BinaryTriple)) {
     // Rewrite the object file symbol addresses in the debug map. The YAML
     // input is mainly used to test dsymutil without requiring binaries

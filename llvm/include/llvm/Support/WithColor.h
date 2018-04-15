@@ -41,6 +41,15 @@ public:
 
   raw_ostream &get() { return OS; }
   operator raw_ostream &() { return OS; }
+
+  /// Convenience method for printing "error: " to stderr.
+  static raw_ostream &error();
+
+  /// Convenience method for printing "warning: " to stderr.
+  static raw_ostream &warning();
+
+  /// Convenience method for printing "note: " to stderr.
+  static raw_ostream &note();
 };
 
 } // end namespace llvm
