@@ -23,6 +23,8 @@ namespace llvm {
 
 struct InstrItinerary;
 class MCSubtargetInfo;
+class MCInstrInfo;
+class InstrItineraryData;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
@@ -300,16 +302,25 @@ struct MCSchedModel {
   static int computeInstrLatency(const MCSubtargetInfo &STI,
                                  const MCSchedClassDesc &SCDesc);
 
-  /// Returns the reciprocal throughput information from a MCSchedClassDesc.
+  int computeInstrLatency(const MCSubtargetInfo &STI, unsigned SClass) const;
+
+  // Returns the reciprocal throughput information from a MCSchedClassDesc.
   static Optional<double>
   getReciprocalThroughput(const MCSubtargetInfo &STI,
                           const MCSchedClassDesc &SCDesc);
+
+  static Optional<double>
+  getReciprocalThroughput(unsigned SchedClass, const InstrItineraryData &IID);
+
+  Optional<double> computeReciprocalThroughput(const MCSubtargetInfo &STI,
+                                               const MCInstrInfo &MCII,
+                                               unsigned Opcode) const;
 
   /// Returns the default initialized model.
   static const MCSchedModel &GetDefaultSchedModel() { return Default; }
   static const MCSchedModel Default;
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif
