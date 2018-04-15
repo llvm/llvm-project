@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -225,8 +226,9 @@ void DWARFUnit::extractDIEsToVector(
   // should always terminate at or before the start of the next compilation
   // unit header).
   if (DIEOffset > NextCUOffset)
-    fprintf(stderr, "warning: DWARF compile unit extends beyond its "
-                    "bounds cu 0x%8.8x at 0x%8.8x'\n", getOffset(), DIEOffset);
+    WithColor::warning() << format("DWARF compile unit extends beyond its "
+                                   "bounds cu 0x%8.8x at 0x%8.8x\n",
+                                   getOffset(), DIEOffset);
 }
 
 size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
