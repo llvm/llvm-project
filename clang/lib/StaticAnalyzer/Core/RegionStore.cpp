@@ -2050,6 +2050,9 @@ RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
     R = GetElementZeroRegion(SR, T);
   }
 
+  assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&
+         "'this' pointer is not an l-value and is not assignable");
+
   // Clear out bindings that may overlap with this binding.
   RegionBindingsRef NewB = removeSubRegionBindings(B, cast<SubRegion>(R));
   return NewB.addBinding(BindingKey::Make(R, BindingKey::Direct), V);
