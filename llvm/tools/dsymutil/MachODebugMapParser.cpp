@@ -9,11 +9,11 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
-#include "ErrorReporting.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace {
@@ -102,9 +102,10 @@ private:
                          StringRef BinaryPath);
 
   void Warning(const Twine &Msg, StringRef File = StringRef()) {
-    warn_ostream() << "("
-                   << MachOUtils::getArchName(Result->getTriple().getArchName())
-                   << ") " << File << " " << Msg << "\n";
+    WithColor::warning() << "("
+                         << MachOUtils::getArchName(
+                                Result->getTriple().getArchName())
+                         << ") " << File << " " << Msg << "\n";
 
     if (PaperTrailWarnings) {
       if (!File.empty())

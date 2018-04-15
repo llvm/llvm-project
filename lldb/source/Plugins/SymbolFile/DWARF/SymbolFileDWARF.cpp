@@ -772,7 +772,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
       } else {
         ModuleSP module_sp(m_obj_file->GetModule());
         if (module_sp) {
-          const DWARFDIE cu_die = dwarf_cu->GetCompileUnitDIEOnly();
+          const DWARFDIE cu_die = dwarf_cu->GetUnitDIEOnly();
           if (cu_die) {
             FileSpec cu_file_spec{cu_die.GetName(), false};
             if (cu_file_spec) {
@@ -909,7 +909,7 @@ bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
   assert(sc.comp_unit);
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
-    const DWARFDIE cu_die = dwarf_cu->GetCompileUnitDIEOnly();
+    const DWARFDIE cu_die = dwarf_cu->GetUnitDIEOnly();
 
     if (cu_die) {
       const char *cu_comp_dir = resolveCompDir(
@@ -948,7 +948,7 @@ bool SymbolFileDWARF::ParseImportedModules(
       UpdateExternalModuleListIfNeeded();
 
       if (sc.comp_unit) {
-        const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
+        const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
 
         if (die) {
           for (DWARFDIE child_die = die.GetFirstChild(); child_die;
@@ -1024,7 +1024,7 @@ bool SymbolFileDWARF::ParseCompileUnitLineTable(const SymbolContext &sc) {
 
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
-    const DWARFDIE dwarf_cu_die = dwarf_cu->GetCompileUnitDIEOnly();
+    const DWARFDIE dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
     if (dwarf_cu_die) {
       const dw_offset_t cu_line_offset =
           dwarf_cu_die.GetAttributeValueAsUnsigned(DW_AT_stmt_list,
@@ -1109,7 +1109,7 @@ bool SymbolFileDWARF::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
   if (dwarf_cu == nullptr)
     return false;
 
-  const DWARFDIE dwarf_cu_die = dwarf_cu->GetCompileUnitDIEOnly();
+  const DWARFDIE dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
   if (!dwarf_cu_die)
     return false;
 
@@ -1620,7 +1620,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
   for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
     DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
-    const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
+    const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
     if (die && die.HasChildren() == false) {
       const char *name = die.GetAttributeValueAsString(DW_AT_name, nullptr);
 

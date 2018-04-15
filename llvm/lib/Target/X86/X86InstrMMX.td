@@ -311,11 +311,11 @@ defm MMX_PADDUSW : MMXI_binop_rm_int<0xDD, "paddusw", int_x86_mmx_paddus_w,
                                    WriteVecALU, 1>;
 
 defm MMX_PHADDW  : SS3I_binop_rm_int_mm<0x01, "phaddw", int_x86_ssse3_phadd_w,
-                                   WriteVecALU>;
+                                        WritePHAdd>;
 defm MMX_PHADDD  : SS3I_binop_rm_int_mm<0x02, "phaddd", int_x86_ssse3_phadd_d,
-                                   WriteVecALU>;
+                                        WritePHAdd>;
 defm MMX_PHADDSW : SS3I_binop_rm_int_mm<0x03, "phaddsw",int_x86_ssse3_phadd_sw,
-                                   WriteVecALU>;
+                                        WritePHAdd>;
 
 // -- Subtraction
 defm MMX_PSUBB : MMXI_binop_rm_int<0xF8, "psubb", int_x86_mmx_psub_b,
@@ -369,30 +369,30 @@ defm MMX_PMADDUBSW : SS3I_binop_rm_int_mm<0x04, "pmaddubsw",
                                      int_x86_ssse3_pmadd_ub_sw, WriteVecIMul>;
 let Predicates = [HasSSE1] in {
 defm MMX_PAVGB   : MMXI_binop_rm_int<0xE0, "pavgb", int_x86_mmx_pavg_b,
-                                     WriteVecIMul, 1>;
+                                     WriteVecALU, 1>;
 defm MMX_PAVGW   : MMXI_binop_rm_int<0xE3, "pavgw", int_x86_mmx_pavg_w,
-                                     WriteVecIMul, 1>;
+                                     WriteVecALU, 1>;
 
 defm MMX_PMINUB  : MMXI_binop_rm_int<0xDA, "pminub", int_x86_mmx_pminu_b,
-                                     WriteVecIMul, 1>;
+                                     WriteVecALU, 1>;
 defm MMX_PMINSW  : MMXI_binop_rm_int<0xEA, "pminsw", int_x86_mmx_pmins_w,
-                                     WriteVecIMul, 1>;
+                                     WriteVecALU, 1>;
 
 defm MMX_PMAXUB  : MMXI_binop_rm_int<0xDE, "pmaxub", int_x86_mmx_pmaxu_b,
-                                     WriteVecIMul, 1>;
+                                     WriteVecALU, 1>;
 defm MMX_PMAXSW  : MMXI_binop_rm_int<0xEE, "pmaxsw", int_x86_mmx_pmaxs_w,
-                                     WriteVecIMul, 1>;
+                                     WriteVecALU, 1>;
 
 defm MMX_PSADBW  : MMXI_binop_rm_int<0xF6, "psadbw", int_x86_mmx_psad_bw,
                                      WriteVecIMul, 1>;
 }
 
 defm MMX_PSIGNB :  SS3I_binop_rm_int_mm<0x08, "psignb", int_x86_ssse3_psign_b,
-                                        WriteVecIMul>;
+                                        WriteVecALU>;
 defm MMX_PSIGNW :  SS3I_binop_rm_int_mm<0x09, "psignw", int_x86_ssse3_psign_w,
-                                        WriteVecIMul>;
+                                        WriteVecALU>;
 defm MMX_PSIGND :  SS3I_binop_rm_int_mm<0x0A, "psignd", int_x86_ssse3_psign_d,
-                                        WriteVecIMul>;
+                                        WriteVecALU>;
 let Constraints = "$src1 = $dst" in
   defm MMX_PALIGNR : ssse3_palign_mm<"palignr", int_x86_mmx_palignr_b>;
 
