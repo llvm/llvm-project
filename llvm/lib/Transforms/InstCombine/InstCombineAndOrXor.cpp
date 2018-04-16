@@ -2446,6 +2446,10 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
+  // A^B --> A|B iff A and B have no bits set in common.
+  if (haveNoCommonBitsSet(Op0, Op1, DL, &AC, &I, &DT))
+    return BinaryOperator::CreateOr(Op0, Op1);
+
   // Apply DeMorgan's Law for 'nand' / 'nor' logic with an inverted operand.
   Value *X, *Y;
 

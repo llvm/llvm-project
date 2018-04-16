@@ -399,11 +399,8 @@ define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools_multi_uses2(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses2(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], [[A:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[C]], [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = xor i1 [[AND1]], [[AND2]]
-; CHECK-NEXT:    ret i1 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %not, %a

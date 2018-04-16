@@ -841,6 +841,19 @@ def ZPR128  : ZPRRegOp<"q", ZPRAsmOp128, ZPR>;
 
 let Namespace = "AArch64" in {
   def zsub0 : SubRegIndex<128, -1>;
+  def zsub1 : SubRegIndex<128, -1>;
+  def zsub2 : SubRegIndex<128, -1>;
+}
+
+// Pairs, triples, and quads of SVE vector registers.
+def ZSeqPairs   : RegisterTuples<[zsub0, zsub1], [(rotl ZPR, 0), (rotl ZPR, 1)]>;
+def ZSeqTriples : RegisterTuples<[zsub0, zsub1, zsub2], [(rotl ZPR, 0), (rotl ZPR, 1), (rotl ZPR, 2)]>;
+
+def ZPR2   : RegisterClass<"AArch64", [untyped], 128, (add ZSeqPairs)>  {
+  let Size = 256;
+}
+def ZPR3  : RegisterClass<"AArch64", [untyped], 128, (add ZSeqTriples)> {
+  let Size = 384;
 }
 
 class ZPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
@@ -865,4 +878,36 @@ def Z_s  : RegisterOperand<ZPR,  "printTypedVectorList<0,'s'>"> {
 
 def Z_d  : RegisterOperand<ZPR,  "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 1>;
+}
+
+def ZZ_b  : RegisterOperand<ZPR2, "printTypedVectorList<0,'b'>"> {
+  let ParserMatchClass = ZPRVectorList<8, 2>;
+}
+
+def ZZ_h  : RegisterOperand<ZPR2, "printTypedVectorList<0,'h'>"> {
+  let ParserMatchClass = ZPRVectorList<16, 2>;
+}
+
+def ZZ_s  : RegisterOperand<ZPR2, "printTypedVectorList<0,'s'>"> {
+  let ParserMatchClass = ZPRVectorList<32, 2>;
+}
+
+def ZZ_d  : RegisterOperand<ZPR2, "printTypedVectorList<0,'d'>"> {
+  let ParserMatchClass = ZPRVectorList<64, 2>;
+}
+
+def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {
+  let ParserMatchClass = ZPRVectorList<8, 3>;
+}
+
+def ZZZ_h  : RegisterOperand<ZPR3, "printTypedVectorList<0,'h'>"> {
+  let ParserMatchClass = ZPRVectorList<16, 3>;
+}
+
+def ZZZ_s  : RegisterOperand<ZPR3, "printTypedVectorList<0,'s'>"> {
+  let ParserMatchClass = ZPRVectorList<32, 3>;
+}
+
+def ZZZ_d  : RegisterOperand<ZPR3, "printTypedVectorList<0,'d'>"> {
+  let ParserMatchClass = ZPRVectorList<64, 3>;
 }
