@@ -247,7 +247,7 @@ enum StatisticKind {
 };
 
 
-std::string GetStatDescription(lldb_private::StatisticKind K) {
+inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
    case StatisticKind::ExpressionSuccessful:
      return "Number of expr evaluation successes";
