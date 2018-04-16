@@ -915,6 +915,8 @@ public:
     void
     SetLaunchInfo (const lldb::SBLaunchInfo &launch_info);
 
+    lldb::SBStructuredData GetStatistics();
+
     bool
     operator == (const lldb::SBTarget &rhs) const;
 

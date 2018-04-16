@@ -26,11 +26,11 @@ RUN: llvm-pdbutil pdb2yaml -modules -module-files -subsections=lines,fc %t.pdb |
 CHECK-LABEL: DbiStream:
 CHECK-NEXT:   VerHeader:       V70
 CHECK-NEXT:   Age:             1
-CHECK-NEXT:   BuildNumber:     0
+CHECK-NEXT:   BuildNumber:     36363
 CHECK-NEXT:   PdbDllVersion:   0
 CHECK-NEXT:   PdbDllRbld:      0
 CHECK-NEXT:   Flags:           0
-CHECK-NEXT:   MachineType:     x86
+CHECK-NEXT:   MachineType:     Amd64
 CHECK-NEXT:   Modules:
 
 CHECK-LABEL:    - Module:          {{.*}}pdb_lines_1.obj
