@@ -443,72 +443,38 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
 
 /// Return whether "X LOp (Y ROp Z)" is always equal to
 /// "(X LOp Y) ROp (X LOp Z)".
-static bool LeftDistributesOverRight(Instruction::BinaryOps LOp,
+static bool leftDistributesOverRight(Instruction::BinaryOps LOp,
                                      Instruction::BinaryOps ROp) {
-  switch (LOp) {
-  default:
-    return false;
+  // X & (Y | Z) <--> (X & Y) | (X & Z)
+  // X & (Y ^ Z) <--> (X & Y) ^ (X & Z)
+  if (LOp == Instruction::And)
+    return ROp == Instruction::Or || ROp == Instruction::Xor;
 
-  case Instruction::And:
-    // And distributes over Or and Xor.
-    switch (ROp) {
-    default:
-      return false;
-    case Instruction::Or:
-    case Instruction::Xor:
-      return true;
-    }
+  // X | (Y & Z) <--> (X | Y) & (X | Z)
+  if (LOp == Instruction::Or)
+    return ROp == Instruction::And;
 
-  case Instruction::Mul:
-    // Multiplication distributes over addition and subtraction.
-    switch (ROp) {
-    default:
-      return false;
-    case Instruction::Add:
-    case Instruction::Sub:
-      return true;
-    }
+  // X * (Y + Z) <--> (X * Y) + (X * Z)
+  // X * (Y - Z) <--> (X * Y) - (X * Z)
+  if (LOp == Instruction::Mul)
+    return ROp == Instruction::Add || ROp == Instruction::Sub;
 
-  case Instruction::Or:
-    // Or distributes over And.
-    switch (ROp) {
-    default:
-      return false;
-    case Instruction::And:
-      return true;
-    }
-  }
+  return false;
 }
 
 /// Return whether "(X LOp Y) ROp Z" is always equal to
 /// "(X ROp Z) LOp (Y ROp Z)".
-static bool RightDistributesOverLeft(Instruction::BinaryOps LOp,
+static bool rightDistributesOverLeft(Instruction::BinaryOps LOp,
                                      Instruction::BinaryOps ROp) {
   if (Instruction::isCommutative(ROp))
-    return LeftDistributesOverRight(ROp, LOp);
+    return leftDistributesOverRight(ROp, LOp);
 
-  switch (LOp) {
-  default:
-    return false;
-  // (X >> Z) & (Y >> Z)  -> (X&Y) >> Z  for all shifts.
-  // (X >> Z) | (Y >> Z)  -> (X|Y) >> Z  for all shifts.
-  // (X >> Z) ^ (Y >> Z)  -> (X^Y) >> Z  for all shifts.
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-    switch (ROp) {
-    default:
-      return false;
-    case Instruction::Shl:
-    case Instruction::LShr:
-    case Instruction::AShr:
-      return true;
-    }
-  }
+  // (X {&|^} Y) >> Z <--> (X >> Z) {&|^} (Y >> Z) for all shifts.
+  return Instruction::isBitwiseLogicOp(LOp) && Instruction::isShift(ROp);
+
   // TODO: It would be nice to handle division, aka "(X + Y)/Z = X/Z + Y/Z",
   // but this requires knowing that the addition does not overflow and other
   // such subtleties.
-  return false;
 }
 
 /// This function returns identity value for given opcode, which can be used to
@@ -569,7 +535,7 @@ Value *InstCombiner::tryFactorization(BinaryOperator &I,
   bool InnerCommutative = Instruction::isCommutative(InnerOpcode);
 
   // Does "X op' (Y op Z)" always equal "(X op' Y) op (X op' Z)"?
-  if (LeftDistributesOverRight(InnerOpcode, TopLevelOpcode))
+  if (leftDistributesOverRight(InnerOpcode, TopLevelOpcode))
     // Does the instruction have the form "(A op' B) op (A op' D)" or, in the
     // commutative case, "(A op' B) op (C op' A)"?
     if (A == C || (InnerCommutative && A == D)) {
@@ -588,7 +554,7 @@ Value *InstCombiner::tryFactorization(BinaryOperator &I,
     }
 
   // Does "(X op Y) op' Z" always equal "(X op' Z) op (Y op' Z)"?
-  if (!SimplifiedInst && RightDistributesOverLeft(TopLevelOpcode, InnerOpcode))
+  if (!SimplifiedInst && rightDistributesOverLeft(TopLevelOpcode, InnerOpcode))
     // Does the instruction have the form "(A op' B) op (C op' B)" or, in the
     // commutative case, "(A op' B) op (B op' D)"?
     if (B == D || (InnerCommutative && B == C)) {
@@ -687,7 +653,7 @@ Value *InstCombiner::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
   }
 
   // Expansion.
-  if (Op0 && RightDistributesOverLeft(Op0->getOpcode(), TopLevelOpcode)) {
+  if (Op0 && rightDistributesOverLeft(Op0->getOpcode(), TopLevelOpcode)) {
     // The instruction has the form "(A op' B) op C".  See if expanding it out
     // to "(A op C) op' (B op C)" results in simplifications.
     Value *A = Op0->getOperand(0), *B = Op0->getOperand(1), *C = RHS;
@@ -724,7 +690,7 @@ Value *InstCombiner::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
     }
   }
 
-  if (Op1 && LeftDistributesOverRight(TopLevelOpcode, Op1->getOpcode())) {
+  if (Op1 && leftDistributesOverRight(TopLevelOpcode, Op1->getOpcode())) {
     // The instruction has the form "A op (B op' C)".  See if expanding it out
     // to "(A op B) op' (A op C)" results in simplifications.
     Value *A = LHS, *B = Op1->getOperand(0), *C = Op1->getOperand(1);

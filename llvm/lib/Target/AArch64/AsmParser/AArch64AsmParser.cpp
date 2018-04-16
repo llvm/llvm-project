@@ -1154,11 +1154,11 @@ public:
                    AArch64::Q0,       AArch64::Q0_Q1,
                    AArch64::Q0_Q1_Q2, AArch64::Q0_Q1_Q2_Q3 },
       /* ZReg */ { AArch64::Z0,
-                   AArch64::Z0 }
+                   AArch64::Z0,       AArch64::Z0_Z1 }
     };
 
-    assert((RegTy != VecListIdx_ZReg || NumRegs <= 1) &&
-           " NumRegs must be 0 or 1 for ZRegs");
+    assert((RegTy != VecListIdx_ZReg || NumRegs <= 2) &&
+           " NumRegs must be <= 2 for ZRegs");
 
     unsigned FirstReg = FirstRegs[(unsigned)RegTy][NumRegs];
     Inst.addOperand(MCOperand::createReg(FirstReg + getVectorListStart() -
@@ -3647,6 +3647,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be an integer in range [-16, 15].");
   case Match_InvalidMemoryIndexed1SImm4:
     return Error(Loc, "index must be an integer in range [-8, 7].");
+  case Match_InvalidMemoryIndexed2SImm4:
+    return Error(Loc, "index must be a multiple of 2 in range [-16, 14].");
   case Match_InvalidMemoryIndexedSImm9:
     return Error(Loc, "index must be an integer in range [-256, 255].");
   case Match_InvalidMemoryIndexedSImm10:
@@ -4162,6 +4164,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryXExtend64:
   case Match_InvalidMemoryXExtend128:
   case Match_InvalidMemoryIndexed1SImm4:
+  case Match_InvalidMemoryIndexed2SImm4:
   case Match_InvalidMemoryIndexed4SImm7:
   case Match_InvalidMemoryIndexed8SImm7:
   case Match_InvalidMemoryIndexed16SImm7:

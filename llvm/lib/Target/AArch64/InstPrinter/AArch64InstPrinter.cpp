@@ -1180,6 +1180,7 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
   // list).
   unsigned NumRegs = 1;
   if (MRI.getRegClass(AArch64::DDRegClassID).contains(Reg) ||
+      MRI.getRegClass(AArch64::ZPR2RegClassID).contains(Reg) ||
       MRI.getRegClass(AArch64::QQRegClassID).contains(Reg))
     NumRegs = 2;
   else if (MRI.getRegClass(AArch64::DDDRegClassID).contains(Reg) ||

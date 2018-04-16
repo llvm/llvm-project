@@ -36,10 +36,19 @@ class SImmMulVlOperand<int Bits, int Scale> : AsmOperandClass {
 }
 
 def SImm4MulVlOperand : SImmMulVlOperand<4,1>;
+def SImm4Scale2MulVlOperand : SImmMulVlOperand<4,2>;
 
 def simm4MulVl : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -8 && Imm < 8; }]> {
   let DecoderMethod = "DecodeSImm<4>";
   let ParserMatchClass = SImm4MulVlOperand;
+}
+
+def simm4Scale2MulVl : Operand<i64>, ImmLeaf<i64, [{
+    return (Imm >= -16 && Imm <= 14) && ((Imm % 2) == 0x0);
+  }]> {
+  let DecoderMethod = "DecodeSImm<4>";
+  let PrintMethod = "printImmScale<2>";
+  let ParserMatchClass = SImm4Scale2MulVlOperand;
 }
 
 class SVELogicalImmOperand<int Width> : AsmOperandClass {
@@ -619,3 +628,34 @@ multiclass sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
 multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
                           ZPRRegOp zprty>
 : sve_mem_cld_si_base<dtype, 0, asm, listty, zprty>;
+
+class sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
+                     string asm, Operand immtype>
+: I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, immtype:$imm4),
+  asm, "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zt;
+  bits<3> Pg;
+  bits<5> Rn;
+  bits<4> imm4;
+  let Inst{31-25} = 0b1010010;
+  let Inst{24-23} = sz;
+  let Inst{22-21} = nregs;
+  let Inst{20}    = 0;
+  let Inst{19-16} = imm4;
+  let Inst{15-13} = 0b111;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+}
+
+multiclass sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
+                          string asm, Operand immtype> {
+  def NAME : sve_mem_eld_si<sz, nregs, VecList, asm, immtype>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                  (!cast<Instruction>(NAME) VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+}

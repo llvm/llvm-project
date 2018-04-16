@@ -190,6 +190,14 @@ bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
          "LHS and RHS should have the same type");
   assert(LHS->getType()->isIntOrIntVectorTy() &&
          "LHS and RHS should be integers");
+  // Look for an inverted mask: (X & ~M) op (Y & M).
+  Value *M;
+  if (match(LHS, m_c_And(m_Not(m_Value(M)), m_Value())) &&
+      match(RHS, m_c_And(m_Specific(M), m_Value())))
+    return true;
+  if (match(RHS, m_c_And(m_Not(m_Value(M)), m_Value())) &&
+      match(LHS, m_c_And(m_Specific(M), m_Value())))
+    return true;
   IntegerType *IT = cast<IntegerType>(LHS->getType()->getScalarType());
   KnownBits LHSKnown(IT->getBitWidth());
   KnownBits RHSKnown(IT->getBitWidth());
