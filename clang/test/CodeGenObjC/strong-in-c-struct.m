@@ -70,6 +70,11 @@ typedef struct {
   volatile char i6;
 } Bitfield1;
 
+typedef struct {
+  id x;
+  volatile int a[16];
+} VolatileArray ;
+
 #endif
 
 #ifdef USESTRUCT
@@ -538,6 +543,21 @@ void test_copy_constructor_Bitfield1(Bitfield1 *a) {
 
 void test_strong_in_union() {
   U t;
+}
+
+// CHECK: define void @test_copy_constructor_VolatileArray(
+// CHECK: call void @__copy_constructor_8_8_s0_AB8s4n16_tv64w32_AE(
+
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_s0_AB8s4n16_tv64w32_AE(
+// CHECK: %[[ADDR_CUR:.*]] = phi i8**
+// CHECK: %[[ADDR_CUR1:.*]] = phi i8**
+// CHECK: %[[V12:.*]] = bitcast i8** %[[ADDR_CUR]] to i32*
+// CHECK: %[[V13:.*]] = bitcast i8** %[[ADDR_CUR1]] to i32*
+// CHECK: %[[V14:.*]] = load volatile i32, i32* %[[V13]], align 4
+// CHECK: store volatile i32 %[[V14]], i32* %[[V12]], align 4
+
+void test_copy_constructor_VolatileArray(VolatileArray *a) {
+  VolatileArray t = *a;
 }
 
 #endif /* USESTRUCT */
