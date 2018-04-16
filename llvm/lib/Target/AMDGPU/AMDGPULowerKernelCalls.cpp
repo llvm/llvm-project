@@ -78,6 +78,12 @@ static Function *cloneKernel(Function &F) {
                              "", F.getFunctionType(), F.getAttributes()))
                        : CloneFunction(&F, ignored);
   NewF->setCallingConv(CallingConv::C);
+  // If we are copying a definition, we know there are no external references
+  // and we can force internal linkage.
+  if (!NewF->isDeclaration()) {
+    NewF->setVisibility(GlobalValue::DefaultVisibility);
+    NewF->setLinkage(GlobalValue::InternalLinkage);
+  }
   setNameForBody(NewF, F);
   return NewF;
 }

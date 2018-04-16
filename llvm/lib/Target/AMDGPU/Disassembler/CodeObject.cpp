@@ -170,6 +170,8 @@ void HSACodeObject::InitMarkers() const {
       }
 
       FunctionMarkers.push_back(*ExpectedCodeOffset);
+    } else {
+      consumeError(ExpectedKernel.takeError());
     }
   }
 
@@ -246,6 +248,8 @@ HSACodeObject::getCode(const FunctionSym *Function) const {
     if (!KernelCodeStartOr)
       return KernelCodeStartOr.takeError();
     CodeStart = KernelCodeStartOr.get();
+  } else {
+    consumeError(ExpectedKernel.takeError());
   }
 
   auto CodeEndI = std::upper_bound(FunctionMarkers.begin(),
