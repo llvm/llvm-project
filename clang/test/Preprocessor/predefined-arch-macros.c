@@ -1371,6 +1371,7 @@
 // CHECK_GLM_M64: #define __PRFCHW__ 1
 // CHECK_GLM_M64: #define __RDRND__ 1
 // CHECK_GLM_M64: #define __RDSEED__ 1
+// CHECK_GLM_M64: #define __SHA__ 1
 // CHECK_GLM_M64: #define __SSE2__ 1
 // CHECK_GLM_M64: #define __SSE3__ 1
 // CHECK_GLM_M64: #define __SSE4_1__ 1
@@ -1386,6 +1387,146 @@
 // CHECK_GLM_M64: #define __tune_goldmont__ 1
 // CHECK_GLM_M64: #define __x86_64 1
 // CHECK_GLM_M64: #define __x86_64__ 1
+
+// RUN: %clang -march=goldmont-plus -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck %s -check-prefix=CHECK_GLMP_M32
+// CHECK_GLMP_M32: #define __AES__ 1
+// CHECK_GLMP_M32: #define __CLFLUSHOPT__ 1
+// CHECK_GLMP_M32: #define __FSGSBASE__ 1
+// CHECK_GLMP_M32: #define __FXSR__ 1
+// CHECK_GLMP_M32: #define __MMX__ 1
+// CHECK_GLMP_M32: #define __MPX__ 1
+// CHECK_GLMP_M32: #define __PCLMUL__ 1
+// CHECK_GLMP_M32: #define __POPCNT__ 1
+// CHECK_GLMP_M32: #define __PRFCHW__ 1
+// CHECK_GLMP_M32: #define __RDPID__ 1
+// CHECK_GLMP_M32: #define __RDRND__ 1
+// CHECK_GLMP_M32: #define __RDSEED__ 1
+// CHECK_GLMP_M32: #define __SGX__ 1
+// CHECK_GLMP_M32: #define __SHA__ 1
+// CHECK_GLMP_M32: #define __SSE2__ 1
+// CHECK_GLMP_M32: #define __SSE3__ 1
+// CHECK_GLMP_M32: #define __SSE4_1__ 1
+// CHECK_GLMP_M32: #define __SSE4_2__ 1
+// CHECK_GLMP_M32: #define __SSE_MATH__ 1
+// CHECK_GLMP_M32: #define __SSE__ 1
+// CHECK_GLMP_M32: #define __SSSE3__ 1
+// CHECK_GLMP_M32: #define __XSAVEC__ 1
+// CHECK_GLMP_M32: #define __XSAVEOPT__ 1
+// CHECK_GLMP_M32: #define __XSAVES__ 1
+// CHECK_GLMP_M32: #define __XSAVE__ 1
+// CHECK_GLMP_M32: #define __goldmont_plus 1
+// CHECK_GLMP_M32: #define __goldmont_plus__ 1
+// CHECK_GLMP_M32: #define __i386 1
+// CHECK_GLMP_M32: #define __i386__ 1
+// CHECK_GLMP_M32: #define __tune_goldmont_plus__ 1
+// CHECK_GLMP_M32: #define i386 1
+
+// RUN: %clang -march=goldmont-plus -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck %s -check-prefix=CHECK_GLMP_M64
+// CHECK_GLMP_M64: #define __AES__ 1
+// CHECK_GLMP_M64: #define __CLFLUSHOPT__ 1
+// CHECK_GLMP_M64: #define __FSGSBASE__ 1
+// CHECK_GLMP_M64: #define __FXSR__ 1
+// CHECK_GLMP_M64: #define __MMX__ 1
+// CHECK_GLMP_M64: #define __MPX__ 1
+// CHECK_GLMP_M64: #define __PCLMUL__ 1
+// CHECK_GLMP_M64: #define __POPCNT__ 1
+// CHECK_GLMP_M64: #define __PRFCHW__ 1
+// CHECK_GLMP_M64: #define __RDPID__ 1
+// CHECK_GLMP_M64: #define __RDRND__ 1
+// CHECK_GLMP_M64: #define __RDSEED__ 1
+// CHECK_GLMP_M64: #define __SGX__ 1
+// CHECK_GLMP_M64: #define __SHA__ 1
+// CHECK_GLMP_M64: #define __SSE2__ 1
+// CHECK_GLMP_M64: #define __SSE3__ 1
+// CHECK_GLMP_M64: #define __SSE4_1__ 1
+// CHECK_GLMP_M64: #define __SSE4_2__ 1
+// CHECK_GLMP_M64: #define __SSE__ 1
+// CHECK_GLMP_M64: #define __SSSE3__ 1
+// CHECK_GLMP_M64: #define __XSAVEC__ 1
+// CHECK_GLMP_M64: #define __XSAVEOPT__ 1
+// CHECK_GLMP_M64: #define __XSAVES__ 1
+// CHECK_GLMP_M64: #define __XSAVE__ 1
+// CHECK_GLMP_M64: #define __goldmont_plus 1
+// CHECK_GLMP_M64: #define __goldmont_plus__ 1
+// CHECK_GLMP_M64: #define __tune_goldmont_plus__ 1
+// CHECK_GLMP_M64: #define __x86_64 1
+// CHECK_GLMP_M64: #define __x86_64__ 1
+
+// RUN: %clang -march=tremont -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck %s -check-prefix=CHECK_TRM_M32
+// CHECK_TRM_M32: #define __AES__ 1
+// CHECK_TRM_M32: #define __CLDEMOTE__ 1
+// CHECK_TRM_M32: #define __CLFLUSHOPT__ 1
+// CHECK_TRM_M32: #define __FSGSBASE__ 1
+// CHECK_TRM_M32: #define __FXSR__ 1
+// CHECK_TRM_M32: #define __GFNI__ 1
+// CHECK_TRM_M32: #define __MMX__ 1
+// CHECK_TRM_M32: #define __MPX__ 1
+// CHECK_TRM_M32: #define __PCLMUL__ 1
+// CHECK_TRM_M32: #define __POPCNT__ 1
+// CHECK_TRM_M32: #define __PRFCHW__ 1
+// CHECK_TRM_M32: #define __RDPID__ 1
+// CHECK_TRM_M32: #define __RDRND__ 1
+// CHECK_TRM_M32: #define __RDSEED__ 1
+// CHECK_TRM_M32: #define __SGX__ 1
+// CHECK_TRM_M32: #define __SHA__ 1
+// CHECK_TRM_M32: #define __SSE2__ 1
+// CHECK_TRM_M32: #define __SSE3__ 1
+// CHECK_TRM_M32: #define __SSE4_1__ 1
+// CHECK_TRM_M32: #define __SSE4_2__ 1
+// CHECK_TRM_M32: #define __SSE_MATH__ 1
+// CHECK_TRM_M32: #define __SSE__ 1
+// CHECK_TRM_M32: #define __SSSE3__ 1
+// CHECK_TRM_M32: #define __XSAVEC__ 1
+// CHECK_TRM_M32: #define __XSAVEOPT__ 1
+// CHECK_TRM_M32: #define __XSAVES__ 1
+// CHECK_TRM_M32: #define __XSAVE__ 1
+// CHECK_TRM_M32: #define __i386 1
+// CHECK_TRM_M32: #define __i386__ 1
+// CHECK_TRM_M32: #define __tremont 1
+// CHECK_TRM_M32: #define __tremont__ 1
+// CHECK_TRM_M32: #define __tune_tremont__ 1
+// CHECK_TRM_M32: #define i386 1
+
+// RUN: %clang -march=tremont -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck %s -check-prefix=CHECK_TRM_M64
+// CHECK_TRM_M64: #define __AES__ 1
+// CHECK_TRM_M64: #define __CLDEMOTE__ 1
+// CHECK_TRM_M64: #define __CLFLUSHOPT__ 1
+// CHECK_TRM_M64: #define __FSGSBASE__ 1
+// CHECK_TRM_M64: #define __FXSR__ 1
+// CHECK_TRM_M64: #define __GFNI__ 1
+// CHECK_TRM_M64: #define __MMX__ 1
+// CHECK_TRM_M64: #define __MPX__ 1
+// CHECK_TRM_M64: #define __PCLMUL__ 1
+// CHECK_TRM_M64: #define __POPCNT__ 1
+// CHECK_TRM_M64: #define __PRFCHW__ 1
+// CHECK_TRM_M64: #define __RDPID__ 1
+// CHECK_TRM_M64: #define __RDRND__ 1
+// CHECK_TRM_M64: #define __RDSEED__ 1
+// CHECK_TRM_M64: #define __SGX__ 1
+// CHECK_TRM_M64: #define __SHA__ 1
+// CHECK_TRM_M64: #define __SSE2__ 1
+// CHECK_TRM_M64: #define __SSE3__ 1
+// CHECK_TRM_M64: #define __SSE4_1__ 1
+// CHECK_TRM_M64: #define __SSE4_2__ 1
+// CHECK_TRM_M64: #define __SSE__ 1
+// CHECK_TRM_M64: #define __SSSE3__ 1
+// CHECK_TRM_M64: #define __XSAVEC__ 1
+// CHECK_TRM_M64: #define __XSAVEOPT__ 1
+// CHECK_TRM_M64: #define __XSAVES__ 1
+// CHECK_TRM_M64: #define __XSAVE__ 1
+// CHECK_TRM_M64: #define __tremont 1
+// CHECK_TRM_M64: #define __tremont__ 1
+// CHECK_TRM_M64: #define __tune_tremont__ 1
+// CHECK_TRM_M64: #define __x86_64 1
+// CHECK_TRM_M64: #define __x86_64__ 1
 
 // RUN: %clang -march=slm -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \

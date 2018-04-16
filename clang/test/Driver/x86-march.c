@@ -84,6 +84,14 @@
 // RUN:   | FileCheck %s -check-prefix=goldmont
 // goldmont: "-target-cpu" "goldmont"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=goldmont-plus 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=goldmont-plus
+// goldmont-plus: "-target-cpu" "goldmont-plus"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=tremont 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=tremont
+// tremont: "-target-cpu" "tremont"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=k8 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=k8
 // k8: "-target-cpu" "k8"

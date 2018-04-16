@@ -18,10 +18,10 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/ObjectMemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include <cassert>
 #include <cerrno>
 #include <cstring>
@@ -534,4 +534,4 @@ MemoryBufferRef MemoryBuffer::getMemBufferRef() const {
 }
 
 void MemoryBuffer::anchor() {}
-void ObjectMemoryBuffer::anchor() {}
+void SmallVectorMemoryBuffer::anchor() {}

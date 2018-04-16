@@ -39,8 +39,7 @@ SRCS="
 "
 
 if [ "`uname -a | grep Linux`" != "" ]; then
-	SUFFIX="linux_amd64"
-	OSCFLAGS="-fPIC -ffreestanding -Wno-maybe-uninitialized -Wno-unused-const-variable -Werror -Wno-unknown-warning-option"
+	OSCFLAGS="-fPIC -Wno-maybe-uninitialized"
 	OSLDFLAGS="-lpthread -fPIC -fpie"
 	SRCS="
 		$SRCS
@@ -52,7 +51,13 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		../../sanitizer_common/sanitizer_linux.cc
 		../../sanitizer_common/sanitizer_linux_libcdep.cc
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-	"
+		"
+	if [ "`uname -a | grep ppc64le`" != "" ]; then
+		SUFFIX="linux_ppc64le"
+	elif [ "`uname -a | grep x86_64`" != "" ]; then
+		SUFFIX="linux_amd64"
+		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Werror -Wno-unknown-warning-option"
+	fi
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	SUFFIX="freebsd_amd64"
 	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
@@ -132,7 +137,12 @@ done
 
 FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++11 -m64 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS"
 if [ "$DEBUG" = "" ]; then
-	FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -msse3 -fomit-frame-pointer"
+	FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
+	if [ "$SUFFIX" = "linux_ppc64le" ]; then
+		FLAGS="$FLAGS -mcpu=power8 -fno-function-sections"
+	elif [ "$SUFFIX" = "linux_amd64" ]; then
+		FLAGS="$FLAGS -msse3"
+	fi
 else
 	FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"
 fi

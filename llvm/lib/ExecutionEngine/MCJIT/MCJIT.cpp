@@ -164,7 +164,7 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
   // Flush the output buffer to get the generated code into memory
 
   std::unique_ptr<MemoryBuffer> CompiledObjBuffer(
-                                new ObjectMemoryBuffer(std::move(ObjBufferSV)));
+      new SmallVectorMemoryBuffer(std::move(ObjBufferSV)));
 
   // If we have an object cache, tell it about the new object.
   // Note that we're using the compiled image, not the loaded image (as below).

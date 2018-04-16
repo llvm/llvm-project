@@ -104,6 +104,9 @@ PROC_WITH_FEAT(Silvermont, "silvermont", PROC_64_BIT, FEATURE_SSE4_2)
 PROC_ALIAS(Silvermont, "slm")
 
 PROC(Goldmont, "goldmont", PROC_64_BIT)
+PROC(GoldmontPlus, "goldmont-plus", PROC_64_BIT)
+
+PROC(Tremont, "tremont", PROC_64_BIT)
 //@}
 
 /// \name Nehalem
