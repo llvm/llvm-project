@@ -118,7 +118,7 @@ public:
   /// notify-finalized callback is called with the given error.
   ///
   /// It is illegal to call setFailed after both callbacks have been made.
-  void notifyFailed(Error Err);
+  void notifyMaterializationFailed(Error Err);
 
   /// @brief Set the resolved symbol information for the given symbol name.
   ///
@@ -206,6 +206,25 @@ createSymbolResolver(LookupFlagsFn &&LookupFlags, LookupFn &&Lookup) {
       std::forward<LookupFlagsFn>(LookupFlags), std::forward<LookupFn>(Lookup));
 }
 
+/// @brief Tracks responsibility for materialization.
+class MaterializationResponsibility {
+public:
+  MaterializationResponsibility(VSO &V, SymbolFlagsMap SymbolFlags);
+  MaterializationResponsibility(MaterializationResponsibility &&) = default;
+  MaterializationResponsibility &
+  operator=(MaterializationResponsibility &&) = default;
+  ~MaterializationResponsibility();
+  MaterializationResponsibility takeResponsibility(SymbolNameSet Symbols);
+  const VSO &getTargetVSO() const { return V; }
+  void resolve(const SymbolMap &Symbols);
+  void finalize();
+  void notifyMaterializationFailed();
+
+private:
+  VSO &V;
+  SymbolFlagsMap SymbolFlags;
+};
+
 /// @brief A MaterializationUnit represents a set of symbol definitions that can
 ///        be materialized as a group, or individually discarded (when
 ///        overriding definitions are encountered).
@@ -224,13 +243,13 @@ public:
   /// @brief Implementations of this method should materialize all symbols
   ///        in the materialzation unit, except for those that have been
   ///        previously discarded.
-  virtual Error materialize(VSO &V) = 0;
+  virtual void materialize(MaterializationResponsibility R) = 0;
 
   /// @brief Implementations of this method should discard the given symbol
   ///        from the source (e.g. if the source is an LLVM IR Module and the
   ///        symbol is a function, delete the function body or mark it available
   ///        externally).
-  virtual void discard(VSO &V, SymbolStringPtr Name) = 0;
+  virtual void discard(const VSO &V, SymbolStringPtr Name) = 0;
 
 private:
   virtual void anchor();
@@ -254,11 +273,21 @@ public:
   using SetDefinitionsResult =
       std::map<SymbolStringPtr, RelativeLinkageStrength>;
 
-  using MaterializationUnitList =
-      std::vector<std::unique_ptr<MaterializationUnit>>;
+  struct Materializer {
+  public:
+    Materializer(std::unique_ptr<MaterializationUnit> MU,
+                 MaterializationResponsibility R);
+    void operator()();
+
+  private:
+    std::unique_ptr<MaterializationUnit> MU;
+    MaterializationResponsibility R;
+  };
+
+  using MaterializerList = std::vector<Materializer>;
 
   struct LookupResult {
-    MaterializationUnitList MaterializationUnits;
+    MaterializerList Materializers;
     SymbolNameSet UnresolvedSymbols;
   };
 
@@ -291,14 +320,11 @@ public:
   ///        mark the symbols as finalized yet.
   void resolve(const SymbolMap &SymbolValues);
 
-  /// @brief Notify the VSO that the given symbols failed to finalize.
-  void notifyResolutionFailed(const SymbolNameSet &Names);
-
   /// @brief Finalize the given symbols.
   void finalize(const SymbolNameSet &SymbolsToFinalize);
 
-  /// @brief Notify the VSO that the given symbols failed to finalize.
-  void notifyFinalizationFailed(const SymbolNameSet &Names);
+  /// @brief Notify the VSO that the given symbols failed to materialized.
+  void notifyMaterializationFailed(const SymbolNameSet &Names);
 
   /// @brief Look up the flags for the given symbols.
   ///
@@ -324,11 +350,11 @@ public:
 private:
   class UnmaterializedInfo {
   public:
-    UnmaterializedInfo(size_t SymbolsRemaining,
-                       std::unique_ptr<MaterializationUnit> MU);
+    UnmaterializedInfo(std::unique_ptr<MaterializationUnit> MU);
+    void discard(VSO &V, SymbolStringPtr Name);
 
-    uint64_t SymbolsRemaining;
     std::unique_ptr<MaterializationUnit> MU;
+    SymbolFlagsMap Symbols;
   };
 
   using UnmaterializedInfoList = std::list<UnmaterializedInfo>;
@@ -351,6 +377,7 @@ private:
   public:
     SymbolTableEntry(JITSymbolFlags SymbolFlags,
                      UnmaterializedInfoIterator UnmaterializedInfoItr);
+    SymbolTableEntry(JITSymbolFlags SymbolFlags);
     SymbolTableEntry(JITEvaluatedSymbol Sym);
     SymbolTableEntry(SymbolTableEntry &&Other);
     SymbolTableEntry &operator=(SymbolTableEntry &&Other);
@@ -363,8 +390,8 @@ private:
     void replaceWith(VSO &V, SymbolStringPtr Name, JITSymbolFlags Flags,
                      UnmaterializedInfoIterator NewUMII);
 
-    // Move entry to materializing state, detach from UMII.
-    std::unique_ptr<MaterializationUnit> initMaterialize(VSO &V);
+    // Notify this entry that it is being materialized.
+    void notifyMaterializing();
 
     // Move entry to resolved state.
     void resolve(VSO &V, JITEvaluatedSymbol Sym);
@@ -382,8 +409,6 @@ private:
   private:
     void destroy();
   };
-
-  void detach(UnmaterializedInfoIterator UMII);
 
   std::map<SymbolStringPtr, SymbolTableEntry> Symbols;
   UnmaterializedInfoList UnmaterializedInfos;
@@ -434,20 +459,11 @@ public:
 /// ExecutionSession.
 class MaterializeOnCurrentThread {
 public:
-  MaterializeOnCurrentThread(ExecutionSession &ES) : ES(ES) {}
-
-  void operator()(VSO &V, std::unique_ptr<MaterializationUnit> MU) {
-    if (auto Err = MU->materialize(V))
-      ES.reportError(std::move(Err));
-  }
-
-private:
-  ExecutionSession &ES;
+  void operator()(VSO::Materializer M) { M(); }
 };
 
 /// Materialization function object wrapper for the lookup method.
-using MaterializationDispatcher =
-    std::function<void(VSO &V, std::unique_ptr<MaterializationUnit> S)>;
+using MaterializationDispatcher = std::function<void(VSO::Materializer M)>;
 
 /// @brief Look up a set of symbols by searching a list of VSOs.
 ///

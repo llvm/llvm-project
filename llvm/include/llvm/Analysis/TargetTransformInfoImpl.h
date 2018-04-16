@@ -353,6 +353,8 @@ public:
 
   bool shouldMaximizeVectorBandwidth(bool OptSize) const { return false; }
 
+  unsigned getMinimumVF(unsigned ElemWidth) const { return 0; }
+
   bool
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader) {

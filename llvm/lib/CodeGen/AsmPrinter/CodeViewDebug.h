@@ -251,6 +251,10 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitInlineeLinesSubsection();
 
+  void emitDebugInfoForThunk(const Function *GV,
+                             FunctionInfo &FI,
+                             const MCSymbol *Fn);
+
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 
   void emitDebugInfoForGlobals();

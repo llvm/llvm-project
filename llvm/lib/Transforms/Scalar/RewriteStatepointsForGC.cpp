@@ -1823,7 +1823,7 @@ static void relocationViaAlloca(
       }
     }
 
-    std::sort(Uses.begin(), Uses.end());
+    llvm::sort(Uses.begin(), Uses.end());
     auto Last = std::unique(Uses.begin(), Uses.end());
     Uses.erase(Last, Uses.end());
 

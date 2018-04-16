@@ -667,13 +667,16 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
   // fneg is removable even if it has multiple uses.
   if (Op.getOpcode() == ISD::FNEG) return 2;
 
-  // Don't allow anything with multiple uses.
-  if (!Op.hasOneUse()) return 0;
+  // Don't allow anything with multiple uses unless we know it is free.
+  EVT VT = Op.getValueType();
+  if (!Op.hasOneUse())
+    if (!(Op.getOpcode() == ISD::FP_EXTEND &&
+          TLI.isFPExtFree(VT, Op.getOperand(0).getValueType())))
+      return 0;
 
   // Don't recurse exponentially.
   if (Depth > 6) return 0;
 
-  EVT VT = Op.getValueType();
   switch (Op.getOpcode()) {
   default: return false;
   case ISD::ConstantFP: {
@@ -735,9 +738,6 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
   const TargetOptions &Options = DAG.getTarget().Options;
   // fneg is removable even if it has multiple uses.
   if (Op.getOpcode() == ISD::FNEG) return Op.getOperand(0);
-
-  // Don't allow anything with multiple uses.
-  assert(Op.hasOneUse() && "Unknown reuse!");
 
   assert(Depth <= 6 && "GetNegatedExpression doesn't match isNegatibleForFree");
 

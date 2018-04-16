@@ -90,7 +90,7 @@ std::string TargetSubtargetInfo::getSchedInfoStr(const MachineInstr &MI) const {
   TargetSchedModel TSchedModel;
   TSchedModel.init(this);
   unsigned Latency = TSchedModel.computeInstrLatency(&MI);
-  Optional<double> RThroughput = TSchedModel.computeInstrRThroughput(&MI);
+  Optional<double> RThroughput = TSchedModel.computeReciprocalThroughput(&MI);
   return createSchedInfoStr(Latency, RThroughput);
 }
 
@@ -110,7 +110,7 @@ std::string TargetSubtargetInfo::getSchedInfoStr(MCInst const &MCI) const {
   } else
     return std::string();
   Optional<double> RThroughput =
-      TSchedModel.computeInstrRThroughput(MCI.getOpcode());
+      TSchedModel.computeReciprocalThroughput(MCI.getOpcode());
   return createSchedInfoStr(Latency, RThroughput);
 }
 

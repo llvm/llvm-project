@@ -231,7 +231,7 @@ bool BCECmpBlock::doesOtherWork() const {
   DenseSet<Instruction *> BlockInsts(
       {Lhs_.GEP, Rhs_.GEP, Lhs_.LoadI, Rhs_.LoadI, CmpI, BranchI});
   // TODO(courbet): Can we allow some other things ? This is very conservative.
-  // We might be able to get away with anything does does not have any side
+  // We might be able to get away with anything does not have any side
   // effects outside of the basic block.
   // Note: The GEPs and/or loads are not necessarily in the same block.
   for (const Instruction &Inst : *BB) {
@@ -439,10 +439,10 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
 #endif  // MERGEICMPS_DOT_ON
   // Reorder blocks by LHS. We can do that without changing the
   // semantics because we are only accessing dereferencable memory.
-  std::sort(Comparisons_.begin(), Comparisons_.end(),
-            [](const BCECmpBlock &a, const BCECmpBlock &b) {
-              return a.Lhs() < b.Lhs();
-            });
+  llvm::sort(Comparisons_.begin(), Comparisons_.end(),
+             [](const BCECmpBlock &a, const BCECmpBlock &b) {
+               return a.Lhs() < b.Lhs();
+             });
 #ifdef MERGEICMPS_DOT_ON
   errs() << "AFTER REORDERING:\n\n";
   dump();

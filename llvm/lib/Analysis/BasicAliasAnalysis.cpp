@@ -1176,13 +1176,13 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
                              DecompObject.OtherOffset;
 
   // If the GEP has no variable indices, we know the precise offset
-  // from the base, then use it. If the GEP has variable indices, we're in
-  // a bit more trouble: we can't count on the constant offsets that come
-  // from non-struct sources, since these can be "rewound" by a negative
-  // variable offset. So use only offsets that came from structs.
+  // from the base, then use it. If the GEP has variable indices,
+  // we can't get exact GEP offset to identify pointer alias. So return
+  // false in that case.
+  if (!DecompGEP.VarIndices.empty())
+    return false;
   int64_t GEPBaseOffset = DecompGEP.StructOffset;
-  if (DecompGEP.VarIndices.empty())
-    GEPBaseOffset += DecompGEP.OtherOffset;
+  GEPBaseOffset += DecompGEP.OtherOffset;
 
   return (GEPBaseOffset >= ObjectBaseOffset + (int64_t)ObjectAccessSize);
 }

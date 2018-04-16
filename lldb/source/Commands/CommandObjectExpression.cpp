@@ -623,10 +623,7 @@ bool CommandObjectExpression::DoExecute(const char *command,
   if (expr == nullptr)
     expr = command;
 
-  Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
-  if (!target)
-    target = GetDummyTarget();
-
+  Target *target = GetSelectedOrDummyTarget();
   if (EvaluateExpression(expr, &(result.GetOutputStream()),
                          &(result.GetErrorStream()), &result)) {
 

@@ -469,6 +469,8 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
     // Initialize SingleTy later with a symbol's type.
   } else if (BinaryOperator::isAdditiveOp(Op)) {
     SingleTy = ResultTy;
+    if (LSym->getType() != SingleTy)
+      return None;
     // Substracting unsigned integers is a nightmare.
     if (!SingleTy->isSignedIntegerOrEnumerationType())
       return None;

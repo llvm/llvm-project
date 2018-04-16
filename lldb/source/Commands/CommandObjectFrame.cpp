@@ -722,9 +722,7 @@ protected:
 
     // Increment statistics.
     bool res = result.Succeeded();
-    Target *target = m_exe_ctx.GetTargetPtr();
-    if (!target)
-      target = GetDummyTarget();
+    Target *target = GetSelectedOrDummyTarget();
     if (res)
       target->IncrementStats(StatisticKind::FrameVarSuccess);
     else

@@ -679,10 +679,10 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
       Sum += NameFS.second.getEntrySamples();
       R.push_back(&NameFS.second);
     }
-    std::sort(R.begin(), R.end(),
-              [](const FunctionSamples *L, const FunctionSamples *R) {
-                return L->getEntrySamples() > R->getEntrySamples();
-              });
+    llvm::sort(R.begin(), R.end(),
+               [](const FunctionSamples *L, const FunctionSamples *R) {
+                 return L->getEntrySamples() > R->getEntrySamples();
+               });
   }
   return R;
 }
@@ -1170,13 +1170,13 @@ static SmallVector<InstrProfValueData, 2> SortCallTargets(
   SmallVector<InstrProfValueData, 2> R;
   for (auto I = M.begin(); I != M.end(); ++I)
     R.push_back({Function::getGUID(I->getKey()), I->getValue()});
-  std::sort(R.begin(), R.end(),
-            [](const InstrProfValueData &L, const InstrProfValueData &R) {
-              if (L.Count == R.Count)
-                return L.Value > R.Value;
-              else
-                return L.Count > R.Count;
-            });
+  llvm::sort(R.begin(), R.end(),
+             [](const InstrProfValueData &L, const InstrProfValueData &R) {
+               if (L.Count == R.Count)
+                 return L.Value > R.Value;
+               else
+                 return L.Count > R.Count;
+             });
   return R;
 }
 

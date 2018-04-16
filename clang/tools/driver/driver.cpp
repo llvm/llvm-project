@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/Driver.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
@@ -34,9 +34,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -322,21 +321,11 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
 }
 
 int main(int argc_, const char **argv_) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv_[0]);
-  llvm::PrettyStackTraceProgram X(argc_, argv_);
-  llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
+  llvm::InitLLVM X(argc_, argv_);
+  SmallVector<const char *, 256> argv(argv_, argv_ + argc_);
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
-
-  SmallVector<const char *, 256> argv;
-  llvm::SpecificBumpPtrAllocator<char> ArgAllocator;
-  std::error_code EC = llvm::sys::Process::GetArgumentVector(
-      argv, llvm::makeArrayRef(argv_, argc_), ArgAllocator);
-  if (EC) {
-    llvm::errs() << "error: couldn't get arguments: " << EC.message() << '\n';
-    return 1;
-  }
 
   llvm::InitializeAllTargets();
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(argv[0]);

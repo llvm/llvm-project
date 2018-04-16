@@ -244,6 +244,9 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
+  if (TT.isOSBinFormatMachO())
+    this->Options.TrapUnreachable = true;
+
   // Enable GlobalISel at or below EnableGlobalISelAt0.
   if (getOptLevel() <= EnableGlobalISelAtO)
     setGlobalISel(true);

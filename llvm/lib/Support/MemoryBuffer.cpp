@@ -21,6 +21,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include <cassert>
 #include <cerrno>
 #include <cstring>
@@ -533,3 +534,4 @@ MemoryBufferRef MemoryBuffer::getMemBufferRef() const {
 }
 
 void MemoryBuffer::anchor() {}
+void SmallVectorMemoryBuffer::anchor() {}

@@ -50,6 +50,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   // First off, we need to create the new module.
   std::unique_ptr<Module> New =
       llvm::make_unique<Module>(M.getModuleIdentifier(), M.getContext());
+  New->setSourceFileName(M.getSourceFileName());
   New->setDataLayout(M.getDataLayout());
   New->setTargetTriple(M.getTargetTriple());
   New->setModuleInlineAsm(M.getModuleInlineAsm());

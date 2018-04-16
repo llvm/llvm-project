@@ -1,4 +1,4 @@
-//===- ObjectMemoryBuffer.h - SmallVector-backed MemoryBuffrer  -*- C++ -*-===//
+//===- SmallVectorMemoryBuffer.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -27,25 +27,25 @@ namespace llvm {
 /// instances. This is useful for MCJIT and Orc, where object files are streamed
 /// into SmallVectors, then inspected using ObjectFile (which takes a
 /// MemoryBuffer).
-class ObjectMemoryBuffer : public MemoryBuffer {
+class SmallVectorMemoryBuffer : public MemoryBuffer {
 public:
-
-  /// \brief Construct an ObjectMemoryBuffer from the given SmallVector r-value.
+  /// \brief Construct an SmallVectorMemoryBuffer from the given SmallVector
+  /// r-value.
   ///
   /// FIXME: It'd be nice for this to be a non-templated constructor taking a
   /// SmallVectorImpl here instead of a templated one taking a SmallVector<N>,
   /// but SmallVector's move-construction/assignment currently only take
   /// SmallVectors. If/when that is fixed we can simplify this constructor and
   /// the following one.
-  ObjectMemoryBuffer(SmallVectorImpl<char> &&SV)
-    : SV(std::move(SV)), BufferName("<in-memory object>") {
+  SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV)
+      : SV(std::move(SV)), BufferName("<in-memory object>") {
     init(this->SV.begin(), this->SV.end(), false);
   }
 
-  /// \brief Construct a named ObjectMemoryBuffer from the given SmallVector
-  ///        r-value and StringRef.
-  ObjectMemoryBuffer(SmallVectorImpl<char> &&SV, StringRef Name)
-    : SV(std::move(SV)), BufferName(Name) {
+  /// \brief Construct a named SmallVectorMemoryBuffer from the given
+  /// SmallVector r-value and StringRef.
+  SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV, StringRef Name)
+      : SV(std::move(SV)), BufferName(Name) {
     init(this->SV.begin(), this->SV.end(), false);
   }
 
@@ -56,6 +56,7 @@ public:
 private:
   SmallVector<char, 0> SV;
   std::string BufferName;
+  void anchor() override;
 };
 
 } // namespace llvm

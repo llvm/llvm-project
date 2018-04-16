@@ -331,6 +331,10 @@ public:
   /// an entity from this module is used.
   llvm::SmallVector<LinkLibrary, 2> LinkLibraries;
 
+  /// Autolinking uses the framework name for linking purposes
+  /// when this is false and the export_as name otherwise.
+  bool UseExportAsModuleLinkName = false;
+
   /// \brief The set of "configuration macros", which are macros that
   /// (intentionally) change how this module is built.
   std::vector<std::string> ConfigMacros;

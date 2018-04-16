@@ -16,7 +16,6 @@
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
-#include "sanitizer_symbolizer.h"
 
 using namespace __sanitizer;
 

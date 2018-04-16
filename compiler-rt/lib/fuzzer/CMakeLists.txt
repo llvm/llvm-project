@@ -103,7 +103,8 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
              -D_LIBCPP_ABI_VERSION=Fuzzer
              -D_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=1
              -fvisibility=hidden
-      CMAKE_ARGS -DLIBCXX_ENABLE_EXCEPTIONS=OFF
+      CMAKE_ARGS -DCMAKE_CXX_COMPILER_WORKS=ON
+                 -DLIBCXX_ENABLE_EXCEPTIONS=OFF
                  -DLIBCXX_CXX_ABI=none)
     target_compile_options(RTfuzzer.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     add_dependencies(RTfuzzer.${arch} libcxx_fuzzer_${arch}-build)

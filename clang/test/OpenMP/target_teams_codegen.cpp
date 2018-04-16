@@ -38,9 +38,9 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK-DAG: %ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
@@ -341,7 +341,7 @@ int foo(int n) {
 // correct and loaded correctly for the target regions in foo().
 
 // CHECK:       define internal void [[HVT0]](i[[SZ]] {{[^,]+}}, i[[SZ]] {{[^,]+}}, i[[SZ]] {{[^)]+}})
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] {{[^)]+}})
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] {{[^)]+}})
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] {{[^)]+}})
@@ -363,7 +363,7 @@ int foo(int n) {
 // CHECK-64:    store i32 [[AA]], i32* [[AA_C]], align
 // CHECK-32:    store i32 [[AA]], i32* [[AA_CASTED]], align
 // CHECK:       [[PARAM:%.+]] = load i[[SZ]], i[[SZ]]* [[AA_CASTED]], align
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* [[OMP_OUTLINED1:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[PARAM]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* [[OMP_OUTLINED1:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[PARAM]])
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED1]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}})
@@ -385,7 +385,7 @@ int foo(int n) {
 // CHECK:       [[AA_C:%.+]] = bitcast i[[SZ]]* [[AA_CASTED]] to i16*
 // CHECK:       store i16 [[AA]], i16* [[AA_C]], align
 // CHECK:       [[PARAM:%.+]] = load i[[SZ]], i[[SZ]]* [[AA_CASTED]], align
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* [[OMP_OUTLINED2:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[PARAM]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* [[OMP_OUTLINED2:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[PARAM]])
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED2]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}})
@@ -416,7 +416,7 @@ int foo(int n) {
 // CHECK-DAG:   store i16 [[AA]], i16* [[AA_C]], align
 // CHECK-DAG:   [[PARAM1:%.+]] = load i[[SZ]], i[[SZ]]* [[A_CASTED]], align
 // CHECK-DAG:   [[PARAM2:%.+]] = load i[[SZ]], i[[SZ]]* [[AA_CASTED]], align
-// CHECK-DAG:   call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]])* [[OMP_OUTLINED3:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[PARAM1]], i[[SZ]] [[PARAM2]])
+// CHECK-DAG:   call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]])* [[OMP_OUTLINED3:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[PARAM1]], i[[SZ]] [[PARAM2]])
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED3]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}})
@@ -468,7 +468,7 @@ int foo(int n) {
 // CHECK-32-DAG:store i32 [[LOCAL_AV]], i32* [[LOCAL_A_CASTED]], align
 // CHECK-DAG:   [[REF_A:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_A_CASTED]],
 
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 9, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], [10 x float]*, i[[SZ]], float*, [5 x [10 x double]]*, i[[SZ]], i[[SZ]], double*, [[TT]]*)* [[OMP_OUTLINED4:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[REF_A]], [10 x float]* [[REF_B]], i[[SZ]] [[VAL_VLA1]], float* [[REF_BN]], [5 x [10 x double]]* [[REF_C]], i[[SZ]] [[VAL_VLA2]], i[[SZ]] [[VAL_VLA3]], double* [[REF_CN]], [[TT]]* [[REF_D]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 9, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], [10 x float]*, i[[SZ]], float*, [5 x [10 x double]]*, i[[SZ]], i[[SZ]], double*, [[TT]]*)* [[OMP_OUTLINED4:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[REF_A]], [10 x float]* [[REF_B]], i[[SZ]] [[VAL_VLA1]], float* [[REF_BN]], [5 x [10 x double]]* [[REF_C]], i[[SZ]] [[VAL_VLA2]], i[[SZ]] [[VAL_VLA3]], double* [[REF_CN]], [[TT]]* [[REF_D]])
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED4]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, [10 x float]* {{.+}}, i[[SZ]] %{{.+}}, float* {{.+}}, [5 x [10 x double]]* {{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, double* {{.+}}, [[TT]]* {{.+}})
@@ -746,7 +746,7 @@ int bar(int n){
 // CHECK-32-DAG:store i32 [[LOCAL_BV]], i32* [[LOCAL_B_CASTED]], align
 // CHECK-DAG:   [[REF_B:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_B_CASTED]],
 
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 5, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S1]]*, i[[SZ]], i[[SZ]], i[[SZ]], i16*)* [[OMP_OUTLINED5:@.+]] to void (i32*, i32*, ...)*), [[S1]]* [[REF_THIS]], i[[SZ]] [[REF_B]], i[[SZ]] [[VAL_VLA1]], i[[SZ]] [[VAL_VLA2]], i16* [[REF_C]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 5, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S1]]*, i[[SZ]], i[[SZ]], i[[SZ]], i16*)* [[OMP_OUTLINED5:@.+]] to void (i32*, i32*, ...)*), [[S1]]* [[REF_THIS]], i[[SZ]] [[REF_B]], i[[SZ]] [[VAL_VLA1]], i[[SZ]] [[VAL_VLA2]], i16* [[REF_C]])
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED5]](i32* noalias %.global_tid., i32* noalias %.bound_tid., [[S1]]* %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i16* {{.+}})
@@ -789,7 +789,7 @@ int bar(int n){
 // CHECK-DAG:   store i8 [[CONV_AAA]], i8* [[CONV]], align
 // CHECK-DAG:   [[REF_AAA:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_AAA_CASTED]],
 
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]], i[[SZ]], [10 x i32]*)* [[OMP_OUTLINED6:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[REF_A]], i[[SZ]] [[REF_AA]], i[[SZ]] [[REF_AAA]], [10 x i32]* [[REF_B]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]], i[[SZ]], [10 x i32]*)* [[OMP_OUTLINED6:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[REF_A]], i[[SZ]] [[REF_AA]], i[[SZ]] [[REF_AAA]], [10 x i32]* [[REF_B]])
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED6]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x i32]* {{.+}})
@@ -822,7 +822,7 @@ int bar(int n){
 // CHECK-DAG:   store i16 [[CONV_AA]], i16* [[CONV]], align
 // CHECK-DAG:   [[REF_AA:%.+]] = load i[[SZ]], i[[SZ]]* [[LOCAL_AA_CASTED]],
 
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%ident_t* [[DEF_LOC]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]], [10 x i32]*)* [[OMP_OUTLINED7:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[REF_A]], i[[SZ]] [[REF_AA]], [10 x i32]* [[REF_B]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]], [10 x i32]*)* [[OMP_OUTLINED7:@.+]] to void (i32*, i32*, ...)*), i[[SZ]] [[REF_A]], i[[SZ]] [[REF_AA]], [10 x i32]* [[REF_B]])
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED7]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x i32]* {{.+}})

@@ -35,7 +35,7 @@ private:
   class WorkerFunctionState {
   public:
     llvm::Function *WorkerFn;
-    const CGFunctionInfo *CGFI;
+    const CGFunctionInfo &CGFI;
     SourceLocation Loc;
 
     WorkerFunctionState(CodeGenModule &CGM, SourceLocation Loc);

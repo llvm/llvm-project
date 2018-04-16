@@ -659,11 +659,11 @@ void SanitizerCoverageModule::InjectTraceForSwitch(
           C = ConstantExpr::getCast(CastInst::ZExt, It.getCaseValue(), Int64Ty);
         Initializers.push_back(C);
       }
-      std::sort(Initializers.begin() + 2, Initializers.end(),
-                [](const Constant *A, const Constant *B) {
-                  return cast<ConstantInt>(A)->getLimitedValue() <
-                         cast<ConstantInt>(B)->getLimitedValue();
-                });
+      llvm::sort(Initializers.begin() + 2, Initializers.end(),
+                 [](const Constant *A, const Constant *B) {
+                   return cast<ConstantInt>(A)->getLimitedValue() <
+                          cast<ConstantInt>(B)->getLimitedValue();
+                 });
       ArrayType *ArrayOfInt64Ty = ArrayType::get(Int64Ty, Initializers.size());
       GlobalVariable *GV = new GlobalVariable(
           *CurModule, ArrayOfInt64Ty, false, GlobalVariable::InternalLinkage,

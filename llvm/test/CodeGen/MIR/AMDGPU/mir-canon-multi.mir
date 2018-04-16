@@ -1,10 +1,8 @@
 # RUN: llc -o -  -march=amdgcn  -run-pass mir-canonicalizer  -x mir %s | FileCheck %s
 
 # CHECK: %namedVReg1352:vgpr_32 = COPY %namedVReg4353
-# CHECK: %namedVReg1357:vgpr_32 = COPY %namedVReg4354
-# CHECK: %namedVReg1358:vgpr_32 = COPY %namedVReg1361
 # CHECK: %namedVReg1359:vgpr_32 = COPY %namedVReg1362
-
+# CHECK: %namedVReg1360:vgpr_32 = COPY %namedVReg1363
 ...
 ---
 name: foo

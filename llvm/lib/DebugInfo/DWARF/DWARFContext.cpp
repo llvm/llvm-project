@@ -44,6 +44,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
@@ -502,7 +503,7 @@ void DWARFContext::dump(
       DWARFDebugRnglistTable Rnglists;
       uint32_t TableOffset = Offset;
       if (Error Err = Rnglists.extract(rnglistData, &Offset)) {
-        errs() << "error: " + toString(std::move(Err)) << '\n';
+        WithColor::error() << toString(std::move(Err)) << '\n';
         uint64_t Length = Rnglists.length();
         // Keep going after an error, if we can, assuming that the length field
         // could be read. If it couldn't, stop reading the section.
@@ -1167,7 +1168,7 @@ static bool isRelocScattered(const object::ObjectFile &Obj,
 }
 
 ErrorPolicy DWARFContext::defaultErrorHandler(Error E) {
-  errs() << "error: " + toString(std::move(E)) << '\n';
+  WithColor::error() << toString(std::move(E)) << '\n';
   return ErrorPolicy::Continue;
 }
 

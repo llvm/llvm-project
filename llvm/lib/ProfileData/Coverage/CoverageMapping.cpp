@@ -83,7 +83,7 @@ Counter CounterExpressionBuilder::simplify(Counter ExpressionTree) {
     return Counter::getZero();
 
   // Group the terms by counter ID.
-  std::sort(Terms.begin(), Terms.end(), [](const Term &LHS, const Term &RHS) {
+  llvm::sort(Terms.begin(), Terms.end(), [](const Term &LHS, const Term &RHS) {
     return LHS.CounterID < RHS.CounterID;
   });
 
@@ -457,8 +457,8 @@ class SegmentBuilder {
 
   /// Sort a nested sequence of regions from a single file.
   static void sortNestedRegions(MutableArrayRef<CountedRegion> Regions) {
-    std::sort(Regions.begin(), Regions.end(), [](const CountedRegion &LHS,
-                                                 const CountedRegion &RHS) {
+    llvm::sort(Regions.begin(), Regions.end(), [](const CountedRegion &LHS,
+                                                  const CountedRegion &RHS) {
       if (LHS.startLoc() != RHS.startLoc())
         return LHS.startLoc() < RHS.startLoc();
       if (LHS.endLoc() != RHS.endLoc())
@@ -555,7 +555,7 @@ std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
   for (const auto &Function : getCoveredFunctions())
     Filenames.insert(Filenames.end(), Function.Filenames.begin(),
                      Function.Filenames.end());
-  std::sort(Filenames.begin(), Filenames.end());
+  llvm::sort(Filenames.begin(), Filenames.end());
   auto Last = std::unique(Filenames.begin(), Filenames.end());
   Filenames.erase(Last, Filenames.end());
   return Filenames;

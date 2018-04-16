@@ -115,6 +115,7 @@ if(APPLE)
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
                 RTUbsan
     CFLAGS ${TSAN_RTL_CFLAGS}
     LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
@@ -152,6 +153,15 @@ else()
       add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_aarch64.S)
     elseif(arch MATCHES "powerpc64|powerpc64le")
       add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_ppc64.S)
+      # Sanity check for Go runtime.
+      set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
+      add_custom_target(GotsanRuntimeCheck
+	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
+	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
+	COMMENT "Checking TSan Go runtime..."
+	VERBATIM)
     elseif(arch MATCHES "mips64|mips64le")
       add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_mips64.S)
     else()
@@ -165,6 +175,7 @@ else()
               $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
               $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
               $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
               $<TARGET_OBJECTS:RTUbsan.${arch}>
       CFLAGS ${TSAN_RTL_CFLAGS}
       PARENT_TARGET tsan)

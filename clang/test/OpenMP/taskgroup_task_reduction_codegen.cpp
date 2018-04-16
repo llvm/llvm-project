@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 // CHECK:       [[A:%.+]] = alloca i32,
 // CHECK:       [[B:%.+]] = alloca float,
 // CHECK:       [[C:%.+]] = alloca [5 x %struct.S],
-// CHECK:       [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%ident_t*
+// CHECK:       [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
 // CHECK:       [[RD_IN1:%.+]] = alloca [3 x [[T1:%[^,]+]]],
 // CHECK:       [[TD1:%.+]] = alloca i8*,
 // CHECK:       [[RD_IN2:%.+]] = alloca [2 x [[T2:%[^,]+]]],
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 
 // CHECK:       [[VLA:%.+]] = alloca i16, i64 [[VLA_SIZE:%[^,]+]],
 
-// CHECK:       call void @__kmpc_taskgroup(%ident_t* {{[^,]+}}, i32 [[GTID]])
+// CHECK:       call void @__kmpc_taskgroup(%struct.ident_t* {{[^,]+}}, i32 [[GTID]])
 // CHECK-DAG:   [[BC_A:%.+]] = bitcast i32* [[A]] to i8*
 // CHECK-DAG:   store i8* [[BC_A]], i8** [[A_REF:[^,]+]],
 // CHECK-DAG:   [[A_REF]] = getelementptr inbounds [[T1]], [[T1]]* [[GEPA:%[^,]+]], i32 0, i32 0
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[TMP29:%.+]] = call i8* @__kmpc_task_reduction_init(i32 [[GTID]], i32 3, i8* [[TMP28]])
 // DEBUG-DAG:   call void @llvm.dbg.declare(metadata i8** [[TD1]],
 // CHECK-DAG:   store i8* [[TMP29]], i8** [[TD1]],
-// CHECK-DAG:   call void @__kmpc_taskgroup(%ident_t* {{[^,]+}}, i32 [[GTID]])
+// CHECK-DAG:   call void @__kmpc_taskgroup(%struct.ident_t* {{[^,]+}}, i32 [[GTID]])
 // CHECK-DAG:   [[TMP31:%.+]] = bitcast [5 x %struct.S]* [[C]] to i8*
 // CHECK-DAG:   store i8* [[TMP31]], i8** [[TMP30:%[^,]+]],
 // CHECK-DAG:   [[TMP30]] = getelementptr inbounds [[T2]], [[T2]]* [[GEPC:%[^,]+]], i32 0, i32 0
@@ -136,8 +136,8 @@ int main(int argc, char **argv) {
 // CHECK:       [[TMP47:%.+]] = bitcast [2 x [[T2]]]* [[RD_IN2]] to i8*
 // CHECK:       [[TMP48:%.+]] = call i8* @__kmpc_task_reduction_init(i32 [[GTID]], i32 2, i8* [[TMP47]])
 // CHECK:       store i8* [[TMP48]], i8** [[TD2]],
-// CHECK:       call void @__kmpc_end_taskgroup(%ident_t* {{[^,]+}}, i32 [[GTID]])
-// CHECK:       call void @__kmpc_end_taskgroup(%ident_t* {{[^,]+}}, i32 [[GTID]])
+// CHECK:       call void @__kmpc_end_taskgroup(%struct.ident_t* {{[^,]+}}, i32 [[GTID]])
+// CHECK:       call void @__kmpc_end_taskgroup(%struct.ident_t* {{[^,]+}}, i32 [[GTID]])
 
 // CHECK-DAG: define internal void @[[AINIT]](i8*)
 // CHECK-DAG: store i32 0, i32* %
@@ -197,8 +197,8 @@ int main(int argc, char **argv) {
 // CHECK_DAG: }
 
 // CHECK-DAG: define internal void @[[VLAINIT]](i8*)
-// CHECK-DAG: call i32 @__kmpc_global_thread_num(%ident_t* {{[^,]+}})
-// CHECK-DAG: call i8* @__kmpc_threadprivate_cached(%ident_t*
+// CHECK-DAG: call i32 @__kmpc_global_thread_num(%struct.ident_t* {{[^,]+}})
+// CHECK-DAG: call i8* @__kmpc_threadprivate_cached(%struct.ident_t*
 // CHECK-DAG: phi i16* [
 // CHECK-DAG: store i16 0, i16* %
 // CHECK-DAG: br i1 %
@@ -206,8 +206,8 @@ int main(int argc, char **argv) {
 // CHECK-DAG: }
 
 // CHECK-DAG: define internal void @[[VLACOMB]](i8*, i8*)
-// CHECK-DAG: call i32 @__kmpc_global_thread_num(%ident_t* {{[^,]+}})
-// CHECK-DAG: call i8* @__kmpc_threadprivate_cached(%ident_t*
+// CHECK-DAG: call i32 @__kmpc_global_thread_num(%struct.ident_t* {{[^,]+}})
+// CHECK-DAG: call i8* @__kmpc_threadprivate_cached(%struct.ident_t*
 // CHECK-DAG: phi i16* [
 // CHECK-DAG: phi i16* [
 // CHECK-DAG: sext i16 %{{.+}} to i32

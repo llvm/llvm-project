@@ -42,7 +42,7 @@ public:
                            DWARFDIECollection &matching_dies,
                            uint32_t depth = UINT32_MAX) const;
   bool Verify(lldb_private::Stream *s) const;
-  void Dump(lldb_private::Stream *s) const;
+  virtual void Dump(lldb_private::Stream *s) const = 0;
   // Offset of the initial length field.
   dw_offset_t GetOffset() const { return m_offset; }
   lldb::user_id_t GetID() const;
@@ -65,24 +65,25 @@ public:
   dw_addr_t GetBaseAddress() const;
   dw_addr_t GetAddrBase() const;
   dw_addr_t GetRangesBase() const;
-  void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base, dw_offset_t base_obj_offset);
+  void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base,
+                   dw_offset_t base_obj_offset);
   void ClearDIEs(bool keep_compile_unit_die);
-  void BuildAddressRangeTable(SymbolFileDWARF *dwarf2Data,
+  void BuildAddressRangeTable(SymbolFileDWARF *dwarf,
                               DWARFDebugAranges *debug_aranges);
 
   lldb::ByteOrder GetByteOrder() const;
 
   lldb_private::TypeSystem *GetTypeSystem();
 
+  const DWARFDebugAranges &GetFunctionAranges();
+
   DWARFFormValue::FixedFormSizes GetFixedFormSizes();
 
   void SetBaseAddress(dw_addr_t base_addr);
 
-  DWARFDIE
-  GetCompileUnitDIEOnly();
+  DWARFDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
 
-  DWARFDIE
-  DIE();
+  DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 
   bool HasDIEsParsed() const;
 
@@ -93,8 +94,6 @@ public:
   static bool IsDWARF64(const DWARFUnit *cu);
 
   static uint8_t GetDefaultAddressSize();
-
-  static void SetDefaultAddressSize(uint8_t addr_size);
 
   void *GetUserData() const;
 
@@ -134,10 +133,33 @@ public:
   dw_offset_t GetBaseObjOffset() const;
 
 protected:
-  virtual DWARFCompileUnit &Data() = 0;
-  virtual const DWARFCompileUnit &Data() const = 0;
+  DWARFUnit(SymbolFileDWARF *dwarf);
 
-  DWARFUnit();
+  SymbolFileDWARF *m_dwarf = nullptr;
+  std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
+  const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
+  void *m_user_data = nullptr;
+  // The compile unit debug information entry item
+  DWARFDebugInfoEntry::collection m_die_array;
+  // A table similar to the .debug_aranges table, but this one points to the
+  // exact DW_TAG_subprogram DIEs
+  std::unique_ptr<DWARFDebugAranges> m_func_aranges_ap;
+  dw_addr_t m_base_addr = 0;
+  dw_offset_t m_length = 0;
+  uint16_t m_version = 0;
+  uint8_t m_addr_size = 0;
+  DWARFProducer m_producer = eProducerInvalid;
+  uint32_t m_producer_version_major = 0;
+  uint32_t m_producer_version_minor = 0;
+  uint32_t m_producer_version_update = 0;
+  lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
+  bool m_is_dwarf64 = false;
+  lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
+  dw_addr_t m_addr_base = 0;   // Value of DW_AT_addr_base
+  dw_addr_t m_ranges_base = 0; // Value of DW_AT_ranges_base
+  // If this is a dwo compile unit this is the offset of the base compile unit
+  // in the main object file
+  dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
 
   static void
   IndexPrivate(DWARFUnit *dwarf_cu, const lldb::LanguageType cu_language,
@@ -151,9 +173,26 @@ protected:
   dw_offset_t m_offset;
 
 private:
-  const DWARFDebugInfoEntry *GetCompileUnitDIEPtrOnly();
+  void ParseProducerInfo();
 
-  const DWARFDebugInfoEntry *DIEPtr();
+  // Get the DWARF unit DWARF debug informration entry. Parse the single DIE
+  // if needed.
+  const DWARFDebugInfoEntry *GetUnitDIEPtrOnly() {
+    ExtractDIEsIfNeeded(true);
+    if (m_die_array.empty())
+      return NULL;
+    return &m_die_array[0];
+  }
+
+  // Get all DWARF debug informration entries. Parse all DIEs if needed.
+  const DWARFDebugInfoEntry *DIEPtr() {
+    ExtractDIEsIfNeeded(false);
+    if (m_die_array.empty())
+      return NULL;
+    return &m_die_array[0];
+  }
+
+  void AddUnitDIE(DWARFDebugInfoEntry &die);
 
   DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
 };

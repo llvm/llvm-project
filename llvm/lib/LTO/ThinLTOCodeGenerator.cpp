@@ -23,7 +23,6 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/ExecutionEngine/ObjectMemoryBuffer.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -39,6 +38,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -274,7 +274,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     // Run codegen now. resulting binary is in OutputBuffer.
     PM.run(TheModule);
   }
-  return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
+  return make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
 }
 
 /// Manage caching for a single Module.
@@ -475,7 +475,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
       auto Index = buildModuleSummaryIndex(TheModule, nullptr, &PSI);
       WriteBitcodeToFile(TheModule, OS, true, &Index);
     }
-    return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
+    return make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
   }
 
   return codegenModule(TheModule, TM);
@@ -947,12 +947,12 @@ void ThinLTOCodeGenerator::run() {
   std::vector<int> ModulesOrdering;
   ModulesOrdering.resize(Modules.size());
   std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
-  std::sort(ModulesOrdering.begin(), ModulesOrdering.end(),
-            [&](int LeftIndex, int RightIndex) {
-              auto LSize = Modules[LeftIndex].getBuffer().size();
-              auto RSize = Modules[RightIndex].getBuffer().size();
-              return LSize > RSize;
-            });
+  llvm::sort(ModulesOrdering.begin(), ModulesOrdering.end(),
+             [&](int LeftIndex, int RightIndex) {
+               auto LSize = Modules[LeftIndex].getBuffer().size();
+               auto RSize = Modules[RightIndex].getBuffer().size();
+               return LSize > RSize;
+             });
 
   // Parallel optimizer + codegen
   {

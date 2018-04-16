@@ -6143,6 +6143,13 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize,
         break;
       }
     }
+    if (unsigned MinVF = TTI.getMinimumVF(SmallestType)) {
+      if (MaxVF < MinVF) {
+        DEBUG(dbgs() << "LV: Overriding calculated MaxVF(" << MaxVF
+                     << ") with target's minimum: " << MinVF << '\n');
+        MaxVF = MinVF;
+      }
+    }
   }
   return MaxVF;
 }

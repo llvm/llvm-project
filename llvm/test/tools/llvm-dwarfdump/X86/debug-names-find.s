@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o %t
-# RUN: llvm-dwarfdump -find=foo %t | FileCheck --check-prefix=FOO %s
-# RUN: llvm-dwarfdump -find=baz %t | FileCheck --check-prefix=BAZ %s
-# RUN: llvm-dwarfdump -find=missing %t | FileCheck --check-prefix=MISSING %s
+# RUN: llvm-dwarfdump -find=foo - <%t | FileCheck --check-prefix=FOO %s
+# RUN: llvm-dwarfdump -find=baz - <%t | FileCheck --check-prefix=BAZ %s
+# RUN: llvm-dwarfdump -find=missing - <%t | FileCheck --check-prefix=MISSING %s
 
 # FOO: DW_TAG_subprogram
 # FOO-NEXT: DW_AT_name ("foo")
