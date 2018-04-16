@@ -37,6 +37,14 @@ void DbiStreamBuilder::setAge(uint32_t A) { Age = A; }
 
 void DbiStreamBuilder::setBuildNumber(uint16_t B) { BuildNumber = B; }
 
+void DbiStreamBuilder::setBuildNumber(uint8_t Major, uint8_t Minor) {
+  BuildNumber = (uint16_t(Major) << DbiBuildNo::BuildMajorShift) &
+                DbiBuildNo::BuildMajorMask;
+  BuildNumber |= (uint16_t(Minor) << DbiBuildNo::BuildMinorShift) &
+                 DbiBuildNo::BuildMinorMask;
+  BuildNumber |= DbiBuildNo::NewVersionFormatMask;
+}
+
 void DbiStreamBuilder::setPdbDllVersion(uint16_t V) { PdbDllVersion = V; }
 
 void DbiStreamBuilder::setPdbDllRbld(uint16_t R) { PdbDllRbld = R; }
@@ -44,6 +52,11 @@ void DbiStreamBuilder::setPdbDllRbld(uint16_t R) { PdbDllRbld = R; }
 void DbiStreamBuilder::setFlags(uint16_t F) { Flags = F; }
 
 void DbiStreamBuilder::setMachineType(PDB_Machine M) { MachineType = M; }
+
+void DbiStreamBuilder::setMachineType(COFF::MachineTypes M) {
+  // These enums are mirrors of each other, so we can just cast the value.
+  MachineType = static_cast<pdb::PDB_Machine>(static_cast<unsigned>(M));
+}
 
 void DbiStreamBuilder::setSectionMap(ArrayRef<SecMapEntry> SecMap) {
   SectionMap = SecMap;
@@ -251,7 +264,7 @@ Error DbiStreamBuilder::finalize() {
   H->TypeServerSize = 0;
   H->SymRecordStreamIndex = SymRecordStreamIndex;
   H->PublicSymbolStreamIndex = PublicsStreamIndex;
-  H->MFCTypeServerIndex = kInvalidStreamIndex;
+  H->MFCTypeServerIndex = 0; // Not sure what this is, but link.exe writes 0.
   H->GlobalSymbolStreamIndex = GlobalsStreamIndex;
 
   Header = H;

@@ -2192,10 +2192,26 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
           // If all users are going to be vectorized, instruction can be
           // considered as dead.
           // The same, if have only one user, it will be vectorized for sure.
-          if (areAllUsersVectorized(E))
+          if (areAllUsersVectorized(E)) {
             // Take credit for instruction that will become dead.
+            if (E->hasOneUse()) {
+              Instruction *Ext = E->user_back();
+              if ((isa<SExtInst>(Ext) || isa<ZExtInst>(Ext)) &&
+                  all_of(Ext->users(),
+                         [](User *U) { return isa<GetElementPtrInst>(U); })) {
+                // Use getExtractWithExtendCost() to calculate the cost of
+                // extractelement/ext pair.
+                DeadCost -= TTI->getExtractWithExtendCost(
+                    Ext->getOpcode(), Ext->getType(), VecTy, i);
+                // Add back the cost of s|zext which is subtracted seperately.
+                DeadCost += TTI->getCastInstrCost(
+                    Ext->getOpcode(), Ext->getType(), E->getType(), Ext);
+                continue;
+              }
+            }
             DeadCost -=
                 TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, i);
+          }
         }
         return DeadCost;
       }

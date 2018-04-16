@@ -588,6 +588,14 @@ v_subb_co_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ct
 // GFX9: v_subbrev_co_u32_dpp v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x3c,0x02,0x01,0x09,0xa1]
 v_subbrev_co_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
+// NOSICI: error
+// VI9:    v_cndmask_b32_dpp v5, v1, v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x00,0x01,0xe4,0x00,0x00]
+v_cndmask_b32_dpp v5, v1, v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+
+// NOSICI: error
+// VI9:    v_cndmask_b32_dpp v5, v1, v2, vcc row_shl:15 row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x00,0x01,0x0f,0x01,0x00]
+v_cndmask_b32_dpp v5, v1, v2, vcc row_shl:15 row_mask:0x0 bank_mask:0x0
+
 //===----------------------------------------------------------------------===//
 // Check that immideates and scalar regs are not supported
 //===----------------------------------------------------------------------===//

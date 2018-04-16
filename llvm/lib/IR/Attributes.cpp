@@ -922,6 +922,10 @@ AttributeList::get(LLVMContext &C,
          "Pointless attribute!");
 
   unsigned MaxIndex = Attrs.back().first;
+  // If the MaxIndex is FunctionIndex and there are other indices in front
+  // of it, we need to use the largest of those to get the right size.
+  if (MaxIndex == FunctionIndex && Attrs.size() > 1)
+    MaxIndex = Attrs[Attrs.size() - 2].first;
 
   SmallVector<AttributeSet, 4> AttrVec(attrIdxToArrayIdx(MaxIndex) + 1);
   for (const auto Pair : Attrs)

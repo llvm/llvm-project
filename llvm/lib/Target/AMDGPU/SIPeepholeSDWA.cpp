@@ -890,6 +890,10 @@ bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI,
                            Opc == AMDGPU::V_MAC_F32_e32))
     return false;
 
+  // FIXME: has SDWA but require handling of implicit VCC use
+  if (Opc == AMDGPU::V_CNDMASK_B32_e32)
+    return false;
+
   return true;
 }
 

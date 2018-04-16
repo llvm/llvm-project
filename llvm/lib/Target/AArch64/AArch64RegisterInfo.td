@@ -842,13 +842,23 @@ def ZPR128  : ZPRRegOp<"q", ZPRAsmOp128, ZPR>;
 let Namespace = "AArch64" in {
   def zsub0 : SubRegIndex<128, -1>;
   def zsub1 : SubRegIndex<128, -1>;
+  def zsub2 : SubRegIndex<128, -1>;
+  def zsub3 : SubRegIndex<128, -1>;
 }
 
 // Pairs, triples, and quads of SVE vector registers.
 def ZSeqPairs   : RegisterTuples<[zsub0, zsub1], [(rotl ZPR, 0), (rotl ZPR, 1)]>;
+def ZSeqTriples : RegisterTuples<[zsub0, zsub1, zsub2], [(rotl ZPR, 0), (rotl ZPR, 1), (rotl ZPR, 2)]>;
+def ZSeqQuads   : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [(rotl ZPR, 0), (rotl ZPR, 1), (rotl ZPR, 2), (rotl ZPR, 3)]>;
 
 def ZPR2   : RegisterClass<"AArch64", [untyped], 128, (add ZSeqPairs)>  {
   let Size = 256;
+}
+def ZPR3  : RegisterClass<"AArch64", [untyped], 128, (add ZSeqTriples)> {
+  let Size = 384;
+}
+def ZPR4 : RegisterClass<"AArch64", [untyped], 128, (add ZSeqQuads)> {
+  let Size = 512;
 }
 
 class ZPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
@@ -889,4 +899,36 @@ def ZZ_s  : RegisterOperand<ZPR2, "printTypedVectorList<0,'s'>"> {
 
 def ZZ_d  : RegisterOperand<ZPR2, "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 2>;
+}
+
+def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {
+  let ParserMatchClass = ZPRVectorList<8, 3>;
+}
+
+def ZZZ_h  : RegisterOperand<ZPR3, "printTypedVectorList<0,'h'>"> {
+  let ParserMatchClass = ZPRVectorList<16, 3>;
+}
+
+def ZZZ_s  : RegisterOperand<ZPR3, "printTypedVectorList<0,'s'>"> {
+  let ParserMatchClass = ZPRVectorList<32, 3>;
+}
+
+def ZZZ_d  : RegisterOperand<ZPR3, "printTypedVectorList<0,'d'>"> {
+  let ParserMatchClass = ZPRVectorList<64, 3>;
+}
+
+def ZZZZ_b : RegisterOperand<ZPR4, "printTypedVectorList<0,'b'>"> {
+  let ParserMatchClass = ZPRVectorList<8, 4>;
+}
+
+def ZZZZ_h : RegisterOperand<ZPR4, "printTypedVectorList<0,'h'>"> {
+  let ParserMatchClass = ZPRVectorList<16, 4>;
+}
+
+def ZZZZ_s : RegisterOperand<ZPR4, "printTypedVectorList<0,'s'>"> {
+  let ParserMatchClass = ZPRVectorList<32, 4>;
+}
+
+def ZZZZ_d : RegisterOperand<ZPR4, "printTypedVectorList<0,'d'>"> {
+  let ParserMatchClass = ZPRVectorList<64, 4>;
 }

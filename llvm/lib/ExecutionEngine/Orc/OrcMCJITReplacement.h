@@ -177,22 +177,22 @@ class OrcMCJITReplacement : public ExecutionEngine {
           if (auto Addr = Sym.getAddress())
             Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
           else {
-            Query->notifyFailed(Addr.takeError());
+            Query->notifyMaterializationFailed(Addr.takeError());
             return SymbolNameSet();
           }
         } else if (auto Err = Sym.takeError()) {
-          Query->notifyFailed(std::move(Err));
+          Query->notifyMaterializationFailed(std::move(Err));
           return SymbolNameSet();
         } else {
           if (auto Sym2 = M.ClientResolver->findSymbol(*S)) {
             if (auto Addr = Sym2.getAddress())
               Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym2.getFlags()));
             else {
-              Query->notifyFailed(Addr.takeError());
+              Query->notifyMaterializationFailed(Addr.takeError());
               return SymbolNameSet();
             }
           } else if (auto Err = Sym2.takeError()) {
-            Query->notifyFailed(std::move(Err));
+            Query->notifyMaterializationFailed(std::move(Err));
             return SymbolNameSet();
           } else
             UnresolvedSymbols.insert(S);
