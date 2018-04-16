@@ -75,6 +75,8 @@ public:
 
   lldb::SBProcess GetProcess();
 
+  lldb::SBStructuredData GetStatistics();
+
   //------------------------------------------------------------------
   /// Return the platform object associated with the target.
   ///

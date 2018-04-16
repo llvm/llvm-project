@@ -101,8 +101,6 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
       processScope(NS->getScope());
     else if (auto *M = dyn_cast<DIModule>(Entity))
       processScope(M->getScope());
-    else
-      llvm_unreachable("unexpected imported entity type");
   }
 }
 
