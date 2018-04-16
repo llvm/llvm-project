@@ -23,6 +23,7 @@ if(APPLE)
     $<TARGET_OBJECTS:RTSanitizerCommon.osx>
     $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
     $<TARGET_OBJECTS:RTSanitizerCommonCoverage.osx>
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.osx>
     $<TARGET_OBJECTS:RTUbsan.osx>)
   set(TSAN_TEST_RUNTIME RTTsanTest)
   add_library(${TSAN_TEST_RUNTIME} STATIC ${TSAN_TEST_RUNTIME_OBJECTS})

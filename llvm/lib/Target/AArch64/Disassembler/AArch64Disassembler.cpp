@@ -94,6 +94,9 @@ static DecodeStatus DecodeZPR2RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeZPR3RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const void *Decode);
+static DecodeStatus DecodeZPR4RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const void *Decode);
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const void *Decode);
@@ -518,6 +521,30 @@ static DecodeStatus DecodeZPR3RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
   unsigned Register = ZZZDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static const unsigned ZZZZDecoderTable[] = {
+  AArch64::Z0_Z1_Z2_Z3,     AArch64::Z1_Z2_Z3_Z4,     AArch64::Z2_Z3_Z4_Z5,
+  AArch64::Z3_Z4_Z5_Z6,     AArch64::Z4_Z5_Z6_Z7,     AArch64::Z5_Z6_Z7_Z8,
+  AArch64::Z6_Z7_Z8_Z9,     AArch64::Z7_Z8_Z9_Z10,    AArch64::Z8_Z9_Z10_Z11,
+  AArch64::Z9_Z10_Z11_Z12,  AArch64::Z10_Z11_Z12_Z13, AArch64::Z11_Z12_Z13_Z14,
+  AArch64::Z12_Z13_Z14_Z15, AArch64::Z13_Z14_Z15_Z16, AArch64::Z14_Z15_Z16_Z17,
+  AArch64::Z15_Z16_Z17_Z18, AArch64::Z16_Z17_Z18_Z19, AArch64::Z17_Z18_Z19_Z20,
+  AArch64::Z18_Z19_Z20_Z21, AArch64::Z19_Z20_Z21_Z22, AArch64::Z20_Z21_Z22_Z23,
+  AArch64::Z21_Z22_Z23_Z24, AArch64::Z22_Z23_Z24_Z25, AArch64::Z23_Z24_Z25_Z26,
+  AArch64::Z24_Z25_Z26_Z27, AArch64::Z25_Z26_Z27_Z28, AArch64::Z26_Z27_Z28_Z29,
+  AArch64::Z27_Z28_Z29_Z30, AArch64::Z28_Z29_Z30_Z31, AArch64::Z29_Z30_Z31_Z0,
+  AArch64::Z30_Z31_Z0_Z1,   AArch64::Z31_Z0_Z1_Z2
+};
+
+static DecodeStatus DecodeZPR4RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const void* Decoder) {
+  if (RegNo > 31)
+    return Fail;
+  unsigned Register = ZZZZDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }

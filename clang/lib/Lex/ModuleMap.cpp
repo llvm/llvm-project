@@ -54,6 +54,24 @@
 
 using namespace clang;
 
+void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
+  auto PendingLinkAs = PendingLinkAsModule.find(Mod->Name);
+  if (PendingLinkAs != PendingLinkAsModule.end()) {
+    for (auto &Name : PendingLinkAs->second) {
+      auto *M = findModule(Name.getKey());
+      if (M)
+        M->UseExportAsModuleLinkName = true;
+    }
+  }
+}
+
+void ModuleMap::addLinkAsDependency(Module *Mod) {
+  if (findModule(Mod->ExportAsModule))
+    Mod->UseExportAsModuleLinkName = true;
+  else
+    PendingLinkAsModule[Mod->ExportAsModule].insert(Mod->Name);
+}
+
 Module::HeaderKind ModuleMap::headerRoleToKind(ModuleHeaderRole Role) {
   switch ((int)Role) {
   default: llvm_unreachable("unknown header role");
@@ -2412,6 +2430,8 @@ void ModuleMapParser::parseExportAsDecl() {
   }
   
   ActiveModule->ExportAsModule = Tok.getString();
+  Map.addLinkAsDependency(ActiveModule);
+
   consumeToken();
 }
 

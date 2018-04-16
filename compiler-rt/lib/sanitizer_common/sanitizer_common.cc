@@ -17,8 +17,6 @@
 #include "sanitizer_flags.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_placement_new.h"
-#include "sanitizer_stacktrace_printer.h"
-#include "sanitizer_symbolizer.h"
 
 namespace __sanitizer {
 
@@ -106,18 +104,6 @@ void ReportErrorSummary(const char *error_message, const char *alt_tool_name) {
               alt_tool_name ? alt_tool_name : SanitizerToolName, error_message);
   __sanitizer_report_error_summary(buff.data());
 }
-
-#if !SANITIZER_GO
-void ReportErrorSummary(const char *error_type, const AddressInfo &info,
-                        const char *alt_tool_name) {
-  if (!common_flags()->print_summary) return;
-  InternalScopedString buff(kMaxSummaryLength);
-  buff.append("%s ", error_type);
-  RenderFrame(&buff, "%L %F", 0, info, common_flags()->symbolize_vs_style,
-              common_flags()->strip_path_prefix);
-  ReportErrorSummary(buff.data(), alt_tool_name);
-}
-#endif
 
 // Removes the ANSI escape sequences from the input string (in-place).
 void RemoveANSIEscapeSequencesFromString(char *str) {

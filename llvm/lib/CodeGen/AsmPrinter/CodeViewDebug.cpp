@@ -838,6 +838,57 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
     emitCodeViewMagicVersion();
 }
 
+// Emit an S_THUNK32/S_END symbol pair for a thunk routine.
+// The only supported thunk ordinal is currently the standard type.
+void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
+                                          FunctionInfo &FI,
+                                          const MCSymbol *Fn) {
+  std::string FuncName = GlobalValue::dropLLVMManglingEscape(GV->getName());
+  const ThunkOrdinal ordinal = ThunkOrdinal::Standard; // Only supported kind.
+
+  OS.AddComment("Symbol subsection for " + Twine(FuncName));
+  MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
+
+  // Emit S_THUNK32
+  MCSymbol *ThunkRecordBegin = MMI->getContext().createTempSymbol(),
+           *ThunkRecordEnd   = MMI->getContext().createTempSymbol();
+  OS.AddComment("Record length");
+  OS.emitAbsoluteSymbolDiff(ThunkRecordEnd, ThunkRecordBegin, 2);
+  OS.EmitLabel(ThunkRecordBegin);
+  OS.AddComment("Record kind: S_THUNK32");
+  OS.EmitIntValue(unsigned(SymbolKind::S_THUNK32), 2);
+  OS.AddComment("PtrParent");
+  OS.EmitIntValue(0, 4);
+  OS.AddComment("PtrEnd");
+  OS.EmitIntValue(0, 4);
+  OS.AddComment("PtrNext");
+  OS.EmitIntValue(0, 4);
+  OS.AddComment("Thunk section relative address");
+  OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
+  OS.AddComment("Thunk section index");
+  OS.EmitCOFFSectionIndex(Fn);
+  OS.AddComment("Code size");
+  OS.emitAbsoluteSymbolDiff(FI.End, Fn, 2);
+  OS.AddComment("Ordinal");
+  OS.EmitIntValue(unsigned(ordinal), 1);
+  OS.AddComment("Function name");
+  emitNullTerminatedSymbolName(OS, FuncName);
+  // Additional fields specific to the thunk ordinal would go here.
+  OS.EmitLabel(ThunkRecordEnd);
+
+  // Local variables/inlined routines are purposely omitted here.  The point of
+  // marking this as a thunk is so Visual Studio will NOT stop in this routine.
+
+  // Emit S_PROC_ID_END
+  const unsigned RecordLengthForSymbolEnd = 2;
+  OS.AddComment("Record length");
+  OS.EmitIntValue(RecordLengthForSymbolEnd, 2);
+  OS.AddComment("Record kind: S_PROC_ID_END");
+  OS.EmitIntValue(unsigned(SymbolKind::S_PROC_ID_END), 2);
+
+  endCVSubsection(SymbolsEnd);
+}
+
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
                                              FunctionInfo &FI) {
   // For each function there is a separate subsection which holds the PC to
@@ -852,6 +903,11 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   auto *SP = GV->getSubprogram();
   assert(SP);
   setCurrentSubprogram(SP);
+
+  if (SP->isThunk()) {
+    emitDebugInfoForThunk(GV, FI, Fn);
+    return;
+  }
 
   // If we have a display name, build the fully qualified name by walking the
   // chain of scopes.
@@ -2516,7 +2572,8 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   ScopeVariables.clear();
 
   // Don't emit anything if we don't have any line tables.
-  if (!CurFn->HaveLineInfo) {
+  // Thunks are compiler-generated and probably won't have source correlation.
+  if (!CurFn->HaveLineInfo && !GV.getSubprogram()->isThunk()) {
     FnDebugInfo.erase(&GV);
     CurFn = nullptr;
     return;

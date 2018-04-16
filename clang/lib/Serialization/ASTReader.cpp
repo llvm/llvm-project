@@ -5171,6 +5171,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case SUBMODULE_LINK_LIBRARY:
+      ModMap.resolveLinkAsDependencies(CurrentModule);
       CurrentModule->LinkLibraries.push_back(
                                          Module::LinkLibrary(Blob, Record[0]));
       break;
@@ -5203,6 +5204,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
 
     case SUBMODULE_EXPORT_AS:
       CurrentModule->ExportAsModule = Blob.str();
+      ModMap.addLinkAsDependency(CurrentModule);
       break;
     }
   }

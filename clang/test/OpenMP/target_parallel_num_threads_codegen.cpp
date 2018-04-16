@@ -38,9 +38,9 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK-DAG: %ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[S1:%.+]] = type { double }
 // CHECK-DAG: [[ENTTY:%.+]] = type { i8*, i8*, i[[SZ:32|64]], i32, i32 }
@@ -288,15 +288,15 @@ int bar(int n){
 // CHECK-64:    [[CONV:%.+]] = bitcast i[[SZ]]* [[CAPE_ADDR]] to i32*
 // CHECK-64:    [[NT:%.+]] = load i32, i32* [[CONV]], align
 // CHECK-32:    [[NT:%.+]] = load i32, i32* [[CAPE_ADDR]], align
-// CHECK:       call void @__kmpc_push_num_threads(%ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 2,
+// CHECK:       call void @__kmpc_push_num_threads(%struct.ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 2,
 //
 //
 
 
 // CHECK:       define internal void [[HVT2]]([[S1]]* {{%.+}})
-// CHECK:       call void @__kmpc_push_num_threads(%ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 1024)
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 1,
+// CHECK:       call void @__kmpc_push_num_threads(%struct.ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 1024)
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 1,
 //
 //
 
@@ -312,8 +312,8 @@ int bar(int n){
 // CHECK-64:    [[CONV:%.+]] = bitcast i[[SZ]]* [[CAPE_ADDR]] to i32*
 // CHECK-64:    [[NT:%.+]] = load i32, i32* [[CONV]], align
 // CHECK-32:    [[NT:%.+]] = load i32, i32* [[CAPE_ADDR]], align
-// CHECK:       call void @__kmpc_push_num_threads(%ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 0,
+// CHECK:       call void @__kmpc_push_num_threads(%struct.ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0,
 //
 //
 // CHECK:       define internal void [[HVT4]](i[[SZ]] [[PARM:%.+]])
@@ -321,8 +321,8 @@ int bar(int n){
 // CHECK-64:    [[CONV:%.+]] = bitcast i[[SZ]]* [[CAPE_ADDR]] to i32*
 // CHECK-64:    [[NT:%.+]] = load i32, i32* [[CONV]], align
 // CHECK-32:    [[NT:%.+]] = load i32, i32* [[CAPE_ADDR]], align
-// CHECK:       call void @__kmpc_push_num_threads(%ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 0,
+// CHECK:       call void @__kmpc_push_num_threads(%struct.ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0,
 //
 //
 
@@ -331,8 +331,8 @@ int bar(int n){
 
 
 // CHECK:       define internal void [[HVT5]](
-// CHECK:       call void @__kmpc_push_num_threads(%ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 20)
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 0,
+// CHECK:       call void @__kmpc_push_num_threads(%struct.ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 20)
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0,
 //
 //
 
@@ -342,8 +342,8 @@ int bar(int n){
 // CHECK:       [[CONV:%.+]] = bitcast i[[SZ]]* [[CAPE_ADDR]] to i16*
 // CHECK:       [[T:%.+]] = load i16, i16* [[CONV]], align
 // CHECK:       [[NT:%.+]] = sext i16 [[T]] to i32
-// CHECK:       call void @__kmpc_push_num_threads(%ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 2,
+// CHECK:       call void @__kmpc_push_num_threads(%struct.ident_t* {{[^,]+}}, i32 {{[^,]+}}, i32 [[NT]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 2,
 //
 //
 

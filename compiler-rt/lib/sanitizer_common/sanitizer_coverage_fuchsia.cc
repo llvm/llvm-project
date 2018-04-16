@@ -1,11 +1,11 @@
-//===-- sanitizer_coverage_fuchsia.cc ------------------------------------===//
+//===-- sanitizer_coverage_fuchsia.cc -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Sanitizer Coverage Controller for Trace PC Guard, Fuchsia-specific version.
 //

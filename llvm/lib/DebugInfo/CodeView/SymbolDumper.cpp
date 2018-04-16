@@ -129,6 +129,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, BlockSym &Block) {
 }
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, Thunk32Sym &Thunk) {
+  W.printString("Name", Thunk.Name);
   W.printNumber("Parent", Thunk.Parent);
   W.printNumber("End", Thunk.End);
   W.printNumber("Next", Thunk.Next);

@@ -108,8 +108,11 @@ void hexagon::getHexagonTargetFeatures(const Driver &D, const ArgList &Args,
 
   Features.push_back(UseLongCalls ? "+long-calls" : "-long-calls");
 
-  bool HasHVX(false);
+  bool HasHVX = false;
   handleHVXTargetFeatures(D, Args, Features, HasHVX);
+
+  if (HexagonToolChain::isAutoHVXEnabled(Args) && !HasHVX)
+    D.Diag(diag::warn_drv_vectorize_needs_hvx);
 }
 
 // Hexagon tools start.
@@ -520,12 +523,9 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+reserved-r19");
   }
-  if (Arg *A = DriverArgs.getLastArg(options::OPT_fvectorize,
-                                     options::OPT_fno_vectorize)) {
-    if (A->getOption().matches(options::OPT_fvectorize)) {
-      CC1Args.push_back("-mllvm");
-      CC1Args.push_back("-hexagon-autohvx");
-    }
+  if (isAutoHVXEnabled(DriverArgs)) {
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("-hexagon-autohvx");
   }
 }
 
@@ -562,6 +562,13 @@ HexagonToolChain::GetCXXStdlibType(const ArgList &Args) const {
     getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
 
   return ToolChain::CST_Libstdcxx;
+}
+
+bool HexagonToolChain::isAutoHVXEnabled(const llvm::opt::ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_fvectorize,
+                               options::OPT_fno_vectorize))
+    return A->getOption().matches(options::OPT_fvectorize);
+  return false;
 }
 
 //

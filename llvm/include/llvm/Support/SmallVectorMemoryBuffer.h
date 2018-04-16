@@ -1,5 +1,4 @@
-//===- SmallVectorMemoryBuffer.h - SmallVector-backed MemoryBuffrer  -*- C++
-//-*-===//
+//===- SmallVectorMemoryBuffer.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -44,8 +43,7 @@ public:
   }
 
   /// \brief Construct a named SmallVectorMemoryBuffer from the given
-  /// SmallVector
-  ///        r-value and StringRef.
+  /// SmallVector r-value and StringRef.
   SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV, StringRef Name)
       : SV(std::move(SV)), BufferName(Name) {
     init(this->SV.begin(), this->SV.end(), false);
