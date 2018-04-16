@@ -17,7 +17,7 @@
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/ObjectMemoryBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 namespace llvm {
 class MCJIT;
