@@ -334,8 +334,19 @@ bool ARMTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
 
+  std::string ArchFeature;
   std::vector<StringRef> TargetFeatures;
   llvm::ARM::ArchKind Arch = llvm::ARM::parseArch(getTriple().getArchName());
+
+  // Map the base architecture to an appropriate target feature, so we don't
+  // rely on the target triple.
+  llvm::ARM::ArchKind CPUArch = llvm::ARM::parseCPUArch(CPU);
+  if (CPUArch == llvm::ARM::ArchKind::INVALID)
+    CPUArch = Arch;
+  if (CPUArch != llvm::ARM::ArchKind::INVALID) {
+    ArchFeature = ("+" + llvm::ARM::getArchName(CPUArch)).str();
+    TargetFeatures.push_back(ArchFeature);
+  }
 
   // get default FPU features
   unsigned FPUKind = llvm::ARM::getDefaultFPU(CPU, Arch);
