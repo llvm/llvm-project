@@ -20,11 +20,11 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: define internal void @__omp_offloading_{{.*}}_main_l[[@LINE-6]]_worker()
-// CHECK: [[TID:%.+]] = call i32 @__kmpc_global_thread_num(%ident_t* @
+// CHECK: [[TID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @
 // CHECK: call void [[PARALLEL:@.+]]_wrapper(i16 0, i32 [[TID]])
 
 // CHECK: define void @__omp_offloading_{{.*}}_main_l[[@LINE-10]](i{{64|32}} %{{[^,].*}}, i32* dereferenceable{{[^,]*}}, i{{64|32}} %{{[^,)]*}})
-// CHECK: [[TID:%.+]] = call i32 @__kmpc_global_thread_num(%ident_t* @
+// CHECK: [[TID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @
 // CHECK: call void @__kmpc_kernel_init(
 // CHECK: call void @__kmpc_data_sharing_init_stack()
 // CHECK: call void @__kmpc_for_static_init_4(
@@ -47,14 +47,14 @@ int main(int argc, char **argv) {
 // CHECK: call void @__kmpc_end_sharing_variables()
 // CHECK: br label
 
-// CHECK: call void @__kmpc_serialized_parallel(%ident_t* @
+// CHECK: call void @__kmpc_serialized_parallel(%struct.ident_t* @
 // CHECK: [[GTID_ADDR:%.*]] = load i32*, i32** %
 // CHECK: call void [[PARALLEL]](i32* [[GTID_ADDR]], i32* %{{.+}}, i{{64|32}} [[LB_]], i{{64|32}} [[UB_]], i{{64|32}} [[ARGC_]], i32* [[A_ADDR]])
-// CHECK: call void @__kmpc_end_serialized_parallel(%ident_t* @
+// CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* @
 // CHECK: br label %
 
 
-// CHECK: call void @__kmpc_for_static_fini(%ident_t* @
+// CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @
 
 // CHECK: call void @__kmpc_kernel_deinit(i16 1)
 // CHECK: call void @llvm.nvvm.barrier0()

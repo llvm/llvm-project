@@ -9,12 +9,12 @@
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
-// CHECK-DAG: %ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// CHECK-DEBUG-DAG: %ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DEBUG-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DEBUG-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DEBUG-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DEBUG-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 // CHECK-DEBUG-DAG: [[LOC1:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;main;[[@LINE+15]];9;;\00"
 // CHECK-DEBUG-DAG: [[LOC2:@.+]] = private unnamed_addr constant [{{.+}} x i8] c";{{.*}}parallel_codegen.cpp;tmain;[[@LINE+7]];9;;\00"
 
@@ -38,21 +38,21 @@ int main (int argc, char **argv) {
 // CHECK-LABEL: define {{[a-z\_\b]*[ ]?i32}} @main({{i32[ ]?[a-z]*}} %argc, i8** %argv)
 // CHECK: store i32 %argc, i32* [[ARGC_ADDR:%.+]],
 // CHECK: [[VLA:%.+]] = alloca i32, i{{[0-9]+}} [[VLA_SIZE:%[^,]+]],
-// CHECK:  call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]], i32* [[VLA]])
+// CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]], i32* [[VLA]])
 // CHECK-NEXT:  [[ARGV:%.+]] = load i8**, i8*** {{%[a-z0-9.]+}}
 // CHECK-NEXT:  [[RET:%.+]] = call {{[a-z\_\b]*[ ]?i32}} [[TMAIN:@.+tmain.+]](i8** [[ARGV]])
 // CHECK:       ret i32
 // CHECK-NEXT:  }
 // CHECK-DEBUG-LABEL: define i32 @main(i32 %argc, i8** %argv)
-// CHECK-DEBUG:       [[LOC_2_ADDR:%.+]] = alloca %ident_t
-// CHECK-DEBUG:       [[KMPC_LOC_VOIDPTR:%.+]] = bitcast %ident_t* [[LOC_2_ADDR]] to i8*
-// CHECK-DEBUG-NEXT:  [[KMPC_DEFAULT_LOC_VOIDPTR:%.+]] = bitcast %ident_t* [[DEF_LOC_2]] to i8*
+// CHECK-DEBUG:       [[LOC_2_ADDR:%.+]] = alloca %struct.ident_t
+// CHECK-DEBUG:       [[KMPC_LOC_VOIDPTR:%.+]] = bitcast %struct.ident_t* [[LOC_2_ADDR]] to i8*
+// CHECK-DEBUG-NEXT:  [[KMPC_DEFAULT_LOC_VOIDPTR:%.+]] = bitcast %struct.ident_t* [[DEF_LOC_2]] to i8*
 // CHECK-DEBUG-NEXT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[KMPC_LOC_VOIDPTR]], i8* align 8 [[KMPC_DEFAULT_LOC_VOIDPTR]], i64 24, i1 false)
 // CHECK-DEBUG:       store i32 %argc, i32* [[ARGC_ADDR:%.+]],
 // CHECK-DEBUG:       [[VLA:%.+]] = alloca i32, i64 [[VLA_SIZE:%[^,]+]],
-// CHECK-DEBUG:       [[KMPC_LOC_PSOURCE_REF:%.+]] = getelementptr inbounds %ident_t, %ident_t* [[LOC_2_ADDR]], i32 0, i32 4
+// CHECK-DEBUG:       [[KMPC_LOC_PSOURCE_REF:%.+]] = getelementptr inbounds %struct.ident_t, %struct.ident_t* [[LOC_2_ADDR]], i32 0, i32 4
 // CHECK-DEBUG-NEXT:  store i8* getelementptr inbounds ([{{.+}} x i8], [{{.+}} x i8]* [[LOC1]], i32 0, i32 0), i8** [[KMPC_LOC_PSOURCE_REF]]
-// CHECK-DEBUG:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[LOC_2_ADDR]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i64 [[VLA_SIZE]], i32* [[VLA]])
+// CHECK-DEBUG:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[LOC_2_ADDR]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i64 [[VLA_SIZE]], i32* [[VLA]])
 // CHECK-DEBUG-NEXT:  [[ARGV:%.+]] = load i8**, i8*** {{%[a-z0-9.]+}}
 // CHECK-DEBUG-NEXT:  [[RET:%.+]] = call i32 [[TMAIN:@.+tmain.+]](i8** [[ARGV]])
 // CHECK-DEBUG:       ret i32
@@ -82,26 +82,26 @@ int main (int argc, char **argv) {
 // CHECK-DEBUG-NEXT:  }
 
 // CHECK-DAG: define linkonce_odr {{.*}}void [[FOO]]({{i32[ ]?[a-z]*}} %argc)
-// CHECK-DAG: declare {{.*}}void @__kmpc_fork_call(%ident_t*, i32, void (i32*, i32*, ...)*, ...)
+// CHECK-DAG: declare {{.*}}void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 // CHECK-DEBUG-DAG: define linkonce_odr void [[FOO]](i32 %argc)
-// CHECK-DEBUG-DAG: declare void @__kmpc_fork_call(%ident_t*, i32, void (i32*, i32*, ...)*, ...)
+// CHECK-DEBUG-DAG: declare void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 // CHECK-DEBUG-DAG:       define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i64 [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
 // CHECK-DEBUG-DAG:       call void [[OMP_OUTLINED_DEBUG]]
 
 // CHECK:       define linkonce_odr {{[a-z\_\b]*[ ]?i32}} [[TMAIN]](i8** %argc)
 // CHECK:       store i8** %argc, i8*** [[ARGC_ADDR:%.+]],
-// CHECK-NEXT:  call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]])
+// CHECK-NEXT:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]])
 // CHECK-NEXT:  ret i32 0
 // CHECK-NEXT:  }
 // CHECK-DEBUG:       define linkonce_odr i32 [[TMAIN]](i8** %argc)
-// CHECK-DEBUG-DAG:   [[LOC_2_ADDR:%.+]] = alloca %ident_t
-// CHECK-DEBUG:       [[KMPC_LOC_VOIDPTR:%.+]] = bitcast %ident_t* [[LOC_2_ADDR]] to i8*
-// CHECK-DEBUG-NEXT:  [[KMPC_DEFAULT_LOC_VOIDPTR:%.+]] = bitcast %ident_t* [[DEF_LOC_2]] to i8*
+// CHECK-DEBUG-DAG:   [[LOC_2_ADDR:%.+]] = alloca %struct.ident_t
+// CHECK-DEBUG:       [[KMPC_LOC_VOIDPTR:%.+]] = bitcast %struct.ident_t* [[LOC_2_ADDR]] to i8*
+// CHECK-DEBUG-NEXT:  [[KMPC_DEFAULT_LOC_VOIDPTR:%.+]] = bitcast %struct.ident_t* [[DEF_LOC_2]] to i8*
 // CHECK-DEBUG-NEXT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[KMPC_LOC_VOIDPTR]], i8* align 8 [[KMPC_DEFAULT_LOC_VOIDPTR]], i64 24, i1 false)
 // CHECK-DEBUG-NEXT:  store i8** %argc, i8*** [[ARGC_ADDR:%.+]],
-// CHECK-DEBUG:  [[KMPC_LOC_PSOURCE_REF:%.+]] = getelementptr inbounds %ident_t, %ident_t* [[LOC_2_ADDR]], i32 0, i32 4
+// CHECK-DEBUG:  [[KMPC_LOC_PSOURCE_REF:%.+]] = getelementptr inbounds %struct.ident_t, %struct.ident_t* [[LOC_2_ADDR]], i32 0, i32 4
 // CHECK-DEBUG-NEXT:  store i8* getelementptr inbounds ([{{.+}} x i8], [{{.+}} x i8]* [[LOC2]], i32 0, i32 0), i8** [[KMPC_LOC_PSOURCE_REF]]
-// CHECK-DEBUG-NEXT:  call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[LOC_2_ADDR]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]])
+// CHECK-DEBUG-NEXT:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[LOC_2_ADDR]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i8***)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i8*** [[ARGC_ADDR]])
 // CHECK-DEBUG-NEXT:  ret i32 0
 // CHECK-DEBUG-NEXT:  }
 

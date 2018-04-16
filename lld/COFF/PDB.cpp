@@ -1102,8 +1102,7 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setAge(BuildId.PDB70.Age);
   DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
-  DbiBuilder.setMachineType(Config->is64() ? pdb::PDB_Machine::Amd64
-                                           : pdb::PDB_Machine::x86);
+  DbiBuilder.setMachineType(Config->Machine);
   // Technically we are not link.exe 14.11, but there are known cases where
   // debugging tools on Windows expect Microsoft-specific version numbers or
   // they fail to work at all.  Since we know we produce PDBs that are

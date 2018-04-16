@@ -292,9 +292,9 @@
 // RUN: %clang -c %s -target mipsel-linux-android14 -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
 // RUN: %clang -c %s -target mipsel-linux-android16 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 // RUN: %clang -c %s -target mipsel-linux-android24 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 //
 // 64-bit Android targets are always PIE.
 // RUN: %clang -c %s -target aarch64-linux-android -### 2>&1 \

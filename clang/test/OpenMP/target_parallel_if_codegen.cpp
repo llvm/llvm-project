@@ -38,9 +38,9 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK-DAG: %ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[S1:%.+]] = type { double }
 // CHECK-DAG: [[ENTTY:%.+]] = type { i8*, i8*, i[[SZ:32|64]], i32, i32 }
@@ -309,7 +309,7 @@ int bar(int n){
 // CHECK:       br i1 [[TB]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S1]]*, i[[SZ]])* [[OMP_OUTLINED3:@.+]] to void (i32*, i32*, ...)*), [[S1]]* {{.+}}, i[[SZ]] [[ARG]])
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S1]]*, i[[SZ]])* [[OMP_OUTLINED3:@.+]] to void (i32*, i32*, ...)*), [[S1]]* {{.+}}, i[[SZ]] [[ARG]])
 // CHECK:       br label {{%?}}[[END:.+]]
 //
 // CHECK:       [[IF_ELSE]]
@@ -331,7 +331,7 @@ int bar(int n){
 // CHECK:       br i1 [[TB]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S1]]*)* [[OMP_OUTLINED4:@.+]] to void (i32*, i32*, ...)*), [[S1]]* {{.+}})
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S1]]*)* [[OMP_OUTLINED4:@.+]] to void (i32*, i32*, ...)*), [[S1]]* {{.+}})
 // CHECK:       br label {{%?}}[[END:.+]]
 //
 // CHECK:       [[IF_ELSE]]
@@ -359,7 +359,7 @@ int bar(int n){
 // CHECK:       br i1 [[TB]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED1:@.+]] to void (i32*, i32*, ...)*))
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED1:@.+]] to void (i32*, i32*, ...)*))
 // CHECK:       br label {{%?}}[[END:.+]]
 //
 // CHECK:       [[IF_ELSE]]
@@ -372,7 +372,7 @@ int bar(int n){
 //
 //
 // CHECK:       define internal void [[HVT4]]()
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED2:@.+]] to void (i32*, i32*, ...)*))
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED2:@.+]] to void (i32*, i32*, ...)*))
 // CHECK-NEXT:  ret
 //
 //
@@ -395,7 +395,7 @@ int bar(int n){
 // CHECK-NOT:   call void @__kmpc_serialized_parallel(
 // CHECK-NOT:   call void [[OMP_OUTLINED5:@.+]](i32* {{%.+}}, i32* {{%.+}}, i[[SZ]] {{.+}})
 // CHECK-NOT:   call void @__kmpc_end_serialized_parallel(
-// CHECK:       call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%ident_t* [[DEF_LOC]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]])* [[OMP_OUTLINED5:@.+]] to void (i32*, i32*, ...)*),
+// CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]], i[[SZ]])* [[OMP_OUTLINED5:@.+]] to void (i32*, i32*, ...)*),
 // CHECK:       ret
 //
 //

@@ -3017,6 +3017,14 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
   if (Old->isInvalidDecl())
     return true;
 
+  // Disallow redeclaration of some builtins.
+  if (!getASTContext().canBuiltinBeRedeclared(Old)) {
+    Diag(New->getLocation(), diag::err_builtin_redeclare) << Old->getDeclName();
+    Diag(Old->getLocation(), diag::note_previous_builtin_declaration)
+        << Old << Old->getType();
+    return true;
+  }
+
   diag::kind PrevDiag;
   SourceLocation OldLocation;
   std::tie(PrevDiag, OldLocation) =

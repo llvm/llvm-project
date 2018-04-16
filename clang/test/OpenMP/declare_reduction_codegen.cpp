@@ -26,7 +26,7 @@ void add(short &out, short &in) {}
 // CHECK: foo_reduction_array
 void foo_reduction_array() {
   short y[1];
-  // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+  // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 #pragma omp parallel for reduction(my_add : y)
   for (int i = 0; i < 1; i++) {
   }
@@ -148,9 +148,9 @@ int main() {
 #pragma omp parallel reduction(fun : sss)
   {
   }
-  // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
-  // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
-  // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call({{[^@]*}} @{{[^@]*}}[[REGION:@[^ ]+]]
+  // CHECK: call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+  // CHECK: call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+  // CHECK: call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call({{[^@]*}} @{{[^@]*}}[[REGION:@[^ ]+]]
   // CHECK-LABEL: work
   work<A>();
   // CHECK-LABEL: foo

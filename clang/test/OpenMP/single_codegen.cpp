@@ -221,7 +221,7 @@ struct St {
 };
 
 void array_func(int n, int a[n], St s[2]) {
-// ARRAY: call void @__kmpc_copyprivate(%ident_t* @{{.+}}, i32 %{{.+}}, i64 16, i8* %{{.+}}, void (i8*, i8*)* [[CPY:@.+]], i32 %{{.+}})
+// ARRAY: call void @__kmpc_copyprivate(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i64 16, i8* %{{.+}}, void (i8*, i8*)* [[CPY:@.+]], i32 %{{.+}})
 #pragma omp single copyprivate(a, s)
   ;
 }

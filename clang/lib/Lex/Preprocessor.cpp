@@ -85,12 +85,14 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
     : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts),
-      FileMgr(Headers.getFileMgr()), SourceMgr(SM),
-      PCMCache(PCMCache), ScratchBuf(new ScratchBuffer(SourceMgr)),
-      HeaderInfo(Headers), TheModuleLoader(TheModuleLoader),
-      ExternalSource(nullptr), Identifiers(opts, IILookup),
-      PragmaHandlers(new PragmaNamespace(StringRef())), TUKind(TUKind),
-      SkipMainFilePreamble(0, true),
+      FileMgr(Headers.getFileMgr()), SourceMgr(SM), PCMCache(PCMCache),
+      ScratchBuf(new ScratchBuffer(SourceMgr)), HeaderInfo(Headers),
+      TheModuleLoader(TheModuleLoader), ExternalSource(nullptr),
+      // As the language options may have not been loaded yet (when
+      // deserializing an ASTUnit), adding keywords to the identifier table is
+      // deferred to Preprocessor::Initialize().
+      Identifiers(IILookup), PragmaHandlers(new PragmaNamespace(StringRef())),
+      TUKind(TUKind), SkipMainFilePreamble(0, true),
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
   
@@ -190,6 +192,9 @@ void Preprocessor::Initialize(const TargetInfo &Target,
   // Initialize information about built-ins.
   BuiltinInfo.InitializeTarget(Target, AuxTarget);
   HeaderInfo.setTarget(Target);
+
+  // Populate the identifier table with info about keywords for the current language.
+  Identifiers.AddKeywords(LangOpts);
 }
 
 void Preprocessor::InitializeForModelFile() {
