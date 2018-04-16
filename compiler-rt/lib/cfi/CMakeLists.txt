@@ -31,6 +31,7 @@ if(OS_NAME MATCHES "Linux")
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
                   RTSanitizerCommonCoverage
+                  RTSanitizerCommonSymbolizer
                   RTUbsan
       CFLAGS ${CFI_CFLAGS} ${CFI_DIAG_CFLAGS}
       PARENT_TARGET cfi)

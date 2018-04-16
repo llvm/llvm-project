@@ -7111,6 +7111,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
+  // Conversions to f128 are legal.
+  if (EnableQuadPrecision && (Op.getValueType() == MVT::f128))
+    return Op;
+
   if (Subtarget.hasQPX() && Op.getOperand(0).getValueType() == MVT::v4i1) {
     if (Op.getValueType() != MVT::v4f32 && Op.getValueType() != MVT::v4f64)
       return SDValue();
@@ -9377,27 +9381,19 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
-  case ISD::VASTART:
-    return LowerVASTART(Op, DAG);
 
-  case ISD::VAARG:
-    return LowerVAARG(Op, DAG);
+  // Variable argument lowering.
+  case ISD::VASTART:            return LowerVASTART(Op, DAG);
+  case ISD::VAARG:              return LowerVAARG(Op, DAG);
+  case ISD::VACOPY:             return LowerVACOPY(Op, DAG);
 
-  case ISD::VACOPY:
-    return LowerVACOPY(Op, DAG);
-
-  case ISD::STACKRESTORE:
-    return LowerSTACKRESTORE(Op, DAG);
-
-  case ISD::DYNAMIC_STACKALLOC:
-    return LowerDYNAMIC_STACKALLOC(Op, DAG);
-
+  case ISD::STACKRESTORE:       return LowerSTACKRESTORE(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::GET_DYNAMIC_AREA_OFFSET:
     return LowerGET_DYNAMIC_AREA_OFFSET(Op, DAG);
 
-  case ISD::EH_DWARF_CFA:
-    return LowerEH_DWARF_CFA(Op, DAG);
-
+  // Exception handling lowering.
+  case ISD::EH_DWARF_CFA:       return LowerEH_DWARF_CFA(Op, DAG);
   case ISD::EH_SJLJ_SETJMP:     return lowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP:    return lowerEH_SJLJ_LONGJMP(Op, DAG);
 
@@ -9406,15 +9402,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::TRUNCATE:           return LowerTRUNCATE(Op, DAG);
   case ISD::SELECT_CC:          return LowerSELECT_CC(Op, DAG);
   case ISD::FP_TO_UINT:
-  case ISD::FP_TO_SINT:         return LowerFP_TO_INT(Op, DAG,
-                                                      SDLoc(Op));
+  case ISD::FP_TO_SINT:         return LowerFP_TO_INT(Op, DAG, SDLoc(Op));
   case ISD::UINT_TO_FP:
-  case ISD::SINT_TO_FP:
-    // Conversions to f128 are legal.
-    if (EnableQuadPrecision && (Op->getValueType(0) == MVT::f128))
-      return Op;
-    return LowerINT_TO_FP(Op, DAG);
-
+  case ISD::SINT_TO_FP:         return LowerINT_TO_FP(Op, DAG);
   case ISD::FLT_ROUNDS_:        return LowerFLT_ROUNDS_(Op, DAG);
 
   // Lower 64-bit shifts.

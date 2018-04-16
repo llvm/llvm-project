@@ -35,7 +35,7 @@ TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
   auto Lookup = [&](std::shared_ptr<AsynchronousSymbolQuery> Query,
                     SymbolNameSet Symbols) {
     auto R = V.lookup(std::move(Query), Symbols);
-    EXPECT_TRUE(R.MaterializationUnits.empty())
+    EXPECT_TRUE(R.Materializers.empty())
         << "Query resulted in unexpected materialization work";
     return std::move(R.UnresolvedSymbols);
   };

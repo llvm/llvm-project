@@ -1308,14 +1308,13 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
     return FoldedFAdd;
 
-  // -A + B  -->  B - A
-  if (Value *LHSV = dyn_castFNegVal(LHS))
-    return BinaryOperator::CreateFSubFMF(RHS, LHSV, &I);
-
-  // A + -B  -->  A - B
-  if (!isa<Constant>(RHS))
-    if (Value *V = dyn_castFNegVal(RHS))
-      return BinaryOperator::CreateFSubFMF(LHS, V, &I);
+  Value *X;
+  // (-X) + Y --> Y - X
+  if (match(LHS, m_FNeg(m_Value(X))))
+    return BinaryOperator::CreateFSubFMF(RHS, X, &I);
+  // Y + (-X) --> Y - X
+  if (match(RHS, m_FNeg(m_Value(X))))
+    return BinaryOperator::CreateFSubFMF(LHS, X, &I);
 
   // Check for (fadd double (sitofp x), y), see if we can merge this into an
   // integer add followed by a promotion.

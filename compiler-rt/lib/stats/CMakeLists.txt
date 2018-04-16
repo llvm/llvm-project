@@ -24,6 +24,7 @@ add_compiler_rt_runtime(clang_rt.stats
   SOURCES stats.cc
   OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc
+              RTSanitizerCommonSymbolizer
   CFLAGS ${SANITIZER_COMMON_CFLAGS}
   LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
   LINK_LIBS ${STATS_LINK_LIBS}

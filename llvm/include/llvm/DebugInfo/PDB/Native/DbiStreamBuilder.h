@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/Error.h"
 
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -46,10 +47,12 @@ public:
   void setVersionHeader(PdbRaw_DbiVer V);
   void setAge(uint32_t A);
   void setBuildNumber(uint16_t B);
+  void setBuildNumber(uint8_t Major, uint8_t Minor);
   void setPdbDllVersion(uint16_t V);
   void setPdbDllRbld(uint16_t R);
   void setFlags(uint16_t F);
   void setMachineType(PDB_Machine M);
+  void setMachineType(COFF::MachineTypes M);
   void setSectionMap(ArrayRef<SecMapEntry> SecMap);
 
   // Add given bytes as a new stream.

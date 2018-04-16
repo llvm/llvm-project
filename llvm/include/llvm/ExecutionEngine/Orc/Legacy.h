@@ -79,11 +79,11 @@ SymbolNameSet lookupWithLegacyFn(AsynchronousSymbolQuery &Query,
         Query.resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
         Query.finalizeSymbol();
       } else {
-        Query.notifyFailed(Addr.takeError());
+        Query.notifyMaterializationFailed(Addr.takeError());
         return SymbolNameSet();
       }
     } else if (auto Err = Sym.takeError()) {
-      Query.notifyFailed(std::move(Err));
+      Query.notifyMaterializationFailed(std::move(Err));
       return SymbolNameSet();
     } else
       SymbolsNotFound.insert(S);

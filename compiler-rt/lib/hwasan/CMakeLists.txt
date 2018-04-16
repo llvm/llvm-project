@@ -79,6 +79,7 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
                 RTUbsan
     CFLAGS ${HWASAN_RTL_CFLAGS}
     PARENT_TARGET hwasan)
@@ -114,6 +115,7 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
             RTSanitizerCommon
             RTSanitizerCommonLibc
             RTSanitizerCommonCoverage
+            RTSanitizerCommonSymbolizer
             RTUbsan
             # The only purpose of RTHWAsan_dynamic_version_script_dummy is to
             # carry a dependency of the shared runtime on the version script.

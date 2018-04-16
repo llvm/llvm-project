@@ -27,8 +27,8 @@
 void loop_with_counter_collapse() {
   // LIFETIME: call void @llvm.lifetime.end
   // LIFETIME: call void @llvm.lifetime.end
-  // CHECK: call void @__kmpc_for_static_init_8(%ident_t* @
-  // CHECK: call void @__kmpc_for_static_fini(%ident_t* @
+  // CHECK: call void @__kmpc_for_static_init_8(%struct.ident_t* @
+  // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @
   // LIFETIME: call void @llvm.lifetime.end
   // LIFETIME: call void @llvm.lifetime.end
   // LIFETIME: call void @llvm.lifetime.end

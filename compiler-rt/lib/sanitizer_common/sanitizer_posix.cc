@@ -21,7 +21,6 @@
 #include "sanitizer_libc.h"
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
-#include "sanitizer_stacktrace.h"
 
 #include <errno.h>
 #include <fcntl.h>

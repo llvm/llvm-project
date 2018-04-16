@@ -26,6 +26,7 @@ foreach (arch ${ESAN_SUPPORTED_ARCH})
             $<TARGET_OBJECTS:RTInterception.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+            $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
     CFLAGS ${ESAN_RTL_CFLAGS})
   add_sanitizer_rt_symbols(clang_rt.esan
     ARCHS ${arch}

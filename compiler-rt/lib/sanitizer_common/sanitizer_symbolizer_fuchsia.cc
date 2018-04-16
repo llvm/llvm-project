@@ -16,7 +16,11 @@
 #if SANITIZER_FUCHSIA
 
 #include "sanitizer_fuchsia.h"
+#include "sanitizer_stacktrace.h"
 #include "sanitizer_symbolizer.h"
+
+#include <limits.h>
+#include <unwind.h>
 
 namespace __sanitizer {
 
@@ -101,6 +105,47 @@ Symbolizer *Symbolizer::PlatformInit() {
 }
 
 void Symbolizer::LateInitialize() { Symbolizer::GetOrInit(); }
+
+void StartReportDeadlySignal() {}
+void ReportDeadlySignal(const SignalContext &sig, u32 tid,
+                        UnwindSignalStackCallbackType unwind,
+                        const void *unwind_context) {}
+
+struct UnwindTraceArg {
+  BufferedStackTrace *stack;
+  u32 max_depth;
+};
+
+_Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
+  UnwindTraceArg *arg = static_cast<UnwindTraceArg *>(param);
+  CHECK_LT(arg->stack->size, arg->max_depth);
+  uptr pc = _Unwind_GetIP(ctx);
+  if (pc < PAGE_SIZE) return _URC_NORMAL_STOP;
+  arg->stack->trace_buffer[arg->stack->size++] = pc;
+  return (arg->stack->size == arg->max_depth ? _URC_NORMAL_STOP
+                                             : _URC_NO_REASON);
+}
+
+void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
+  CHECK_GE(max_depth, 2);
+  size = 0;
+  UnwindTraceArg arg = {this, Min(max_depth + 1, kStackTraceMax)};
+  _Unwind_Backtrace(Unwind_Trace, &arg);
+  CHECK_GT(size, 0);
+  // We need to pop a few frames so that pc is on top.
+  uptr to_pop = LocatePcInTrace(pc);
+  // trace_buffer[0] belongs to the current function so we always pop it,
+  // unless there is only 1 frame in the stack trace (1 frame is always better
+  // than 0!).
+  PopStackFrames(Min(to_pop, static_cast<uptr>(1)));
+  trace_buffer[0] = pc;
+}
+
+void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
+                                                    u32 max_depth) {
+  CHECK_NE(context, nullptr);
+  UNREACHABLE("signal context doesn't exist");
+}
 
 }  // namespace __sanitizer
 

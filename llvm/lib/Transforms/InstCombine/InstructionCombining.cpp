@@ -405,28 +405,23 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
 
       // Transform: "(A op C1) op (B op C2)" ==> "(A op B) op (C1 op C2)"
       // if C1 and C2 are constants.
+      Value *A, *B;
+      Constant *C1, *C2;
       if (Op0 && Op1 &&
           Op0->getOpcode() == Opcode && Op1->getOpcode() == Opcode &&
-          isa<Constant>(Op0->getOperand(1)) &&
-          isa<Constant>(Op1->getOperand(1)) &&
-          Op0->hasOneUse() && Op1->hasOneUse()) {
-        Value *A = Op0->getOperand(0);
-        Constant *C1 = cast<Constant>(Op0->getOperand(1));
-        Value *B = Op1->getOperand(0);
-        Constant *C2 = cast<Constant>(Op1->getOperand(1));
-
-        Constant *Folded = ConstantExpr::get(Opcode, C1, C2);
-        BinaryOperator *New = BinaryOperator::Create(Opcode, A, B);
-        if (isa<FPMathOperator>(New)) {
+          match(Op0, m_OneUse(m_BinOp(m_Value(A), m_Constant(C1)))) &&
+          match(Op1, m_OneUse(m_BinOp(m_Value(B), m_Constant(C2))))) {
+        BinaryOperator *NewBO = BinaryOperator::Create(Opcode, A, B);
+        if (isa<FPMathOperator>(NewBO)) {
           FastMathFlags Flags = I.getFastMathFlags();
           Flags &= Op0->getFastMathFlags();
           Flags &= Op1->getFastMathFlags();
-          New->setFastMathFlags(Flags);
+          NewBO->setFastMathFlags(Flags);
         }
-        InsertNewInstWith(New, I);
-        New->takeName(Op1);
-        I.setOperand(0, New);
-        I.setOperand(1, Folded);
+        InsertNewInstWith(NewBO, I);
+        NewBO->takeName(Op1);
+        I.setOperand(0, NewBO);
+        I.setOperand(1, ConstantExpr::get(Opcode, C1, C2));
         // Conservatively clear the optional flags, since they may not be
         // preserved by the reassociation.
         ClearSubclassDataAfterReassociation(I);
@@ -486,37 +481,27 @@ static Value *getIdentityValue(Instruction::BinaryOps Opcode, Value *V) {
   return ConstantExpr::getBinOpIdentity(Opcode, V->getType());
 }
 
-/// This function factors binary ops which can be combined using distributive
-/// laws. This function tries to transform 'Op' based TopLevelOpcode to enable
-/// factorization e.g for ADD(SHL(X , 2), MUL(X, 5)), When this function called
-/// with TopLevelOpcode == Instruction::Add and Op = SHL(X, 2), transforms
-/// SHL(X, 2) to MUL(X, 4) i.e. returns Instruction::Mul with LHS set to 'X' and
-/// RHS to 4.
+/// This function predicates factorization using distributive laws. By default,
+/// it just returns the 'Op' inputs. But for special-cases like
+/// 'add(shl(X, 5), ...)', this function will have TopOpcode == Instruction::Add
+/// and Op = shl(X, 5). The 'shl' is treated as the more general 'mul X, 32' to
+/// allow more factorization opportunities.
 static Instruction::BinaryOps
-getBinOpsForFactorization(Instruction::BinaryOps TopLevelOpcode,
-                          BinaryOperator *Op, Value *&LHS, Value *&RHS) {
+getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
+                          Value *&LHS, Value *&RHS) {
   assert(Op && "Expected a binary operator");
-
   LHS = Op->getOperand(0);
   RHS = Op->getOperand(1);
-
-  switch (TopLevelOpcode) {
-  default:
-    return Op->getOpcode();
-
-  case Instruction::Add:
-  case Instruction::Sub:
-    if (Op->getOpcode() == Instruction::Shl) {
-      if (Constant *CST = dyn_cast<Constant>(Op->getOperand(1))) {
-        // The multiplier is really 1 << CST.
-        RHS = ConstantExpr::getShl(ConstantInt::get(Op->getType(), 1), CST);
-        return Instruction::Mul;
-      }
+  if (TopOpcode == Instruction::Add || TopOpcode == Instruction::Sub) {
+    Constant *C;
+    if (match(Op, m_Shl(m_Value(), m_Constant(C)))) {
+      // X << C --> X * (1 << C)
+      RHS = ConstantExpr::getShl(ConstantInt::get(Op->getType(), 1), C);
+      return Instruction::Mul;
     }
-    return Op->getOpcode();
+    // TODO: We can add other conversions e.g. shr => div etc.
   }
-
-  // TODO: We can add other conversions e.g. shr => div etc.
+  return Op->getOpcode();
 }
 
 /// This tries to simplify binary operations by factorizing out common terms
@@ -639,16 +624,14 @@ Value *InstCombiner::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
     // term.
     if (Op0)
       if (Value *Ident = getIdentityValue(LHSOpcode, RHS))
-        if (Value *V =
-                tryFactorization(I, LHSOpcode, A, B, RHS, Ident))
+        if (Value *V = tryFactorization(I, LHSOpcode, A, B, RHS, Ident))
           return V;
 
     // The instruction has the form "(B) op (C op' D)".  Try to factorize common
     // term.
     if (Op1)
       if (Value *Ident = getIdentityValue(RHSOpcode, LHS))
-        if (Value *V =
-                tryFactorization(I, RHSOpcode, LHS, Ident, C, D))
+        if (Value *V = tryFactorization(I, RHSOpcode, LHS, Ident, C, D))
           return V;
   }
 
@@ -788,23 +771,6 @@ Value *InstCombiner::dyn_castNegVal(Value *V) const {
     }
     return ConstantExpr::getNeg(CV);
   }
-
-  return nullptr;
-}
-
-/// Given a 'fsub' instruction, return the RHS of the instruction if the LHS is
-/// a constant negative zero (which is the 'negate' form).
-Value *InstCombiner::dyn_castFNegVal(Value *V, bool IgnoreZeroSign) const {
-  if (BinaryOperator::isFNeg(V, IgnoreZeroSign))
-    return BinaryOperator::getFNegArgument(V);
-
-  // Constants can be considered to be negated values if they can be folded.
-  if (ConstantFP *C = dyn_cast<ConstantFP>(V))
-    return ConstantExpr::getFNeg(C);
-
-  if (ConstantDataVector *C = dyn_cast<ConstantDataVector>(V))
-    if (C->getType()->getElementType()->isFloatingPointTy())
-      return ConstantExpr::getFNeg(C);
 
   return nullptr;
 }

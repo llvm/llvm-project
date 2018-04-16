@@ -406,30 +406,6 @@ define float @fold13_reassoc(float %x) {
   ret float %sub
 }
 
-; -x + y => y - x
-; This is always safe.  No FMF required.
-define float @fold14(float %x, float %y) {
-; CHECK-LABEL: @fold14(
-; CHECK-NEXT:    [[ADD:%.*]] = fsub float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[ADD]]
-;
-  %neg = fsub float -0.0, %x
-  %add = fadd float %neg, %y
-  ret float %add
-}
-
-; x + -y => x - y
-; This is always safe.  No FMF required.
-define float @fold15(float %x, float %y) {
-; CHECK-LABEL: @fold15(
-; CHECK-NEXT:    [[ADD:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret float [[ADD]]
-;
-  %neg = fsub float -0.0, %y
-  %add = fadd float %x, %neg
-  ret float %add
-}
-
 ; (select X+Y, X-Y) => X + (select Y, -Y)
 ; This is always safe.  No FMF required.
 define float @fold16(float %x, float %y) {

@@ -41,6 +41,7 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
             $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
+            $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
             $<TARGET_OBJECTS:RTUbsan.${arch}>
     CFLAGS ${MSAN_RTL_CFLAGS}
     PARENT_TARGET msan)

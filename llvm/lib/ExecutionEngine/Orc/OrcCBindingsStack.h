@@ -155,11 +155,11 @@ private:
           if (auto Addr = Sym.getAddress())
             Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
           else {
-            Query->notifyFailed(Addr.takeError());
+            Query->notifyMaterializationFailed(Addr.takeError());
             return orc::SymbolNameSet();
           }
         } else if (auto Err = Sym.takeError()) {
-          Query->notifyFailed(std::move(Err));
+          Query->notifyMaterializationFailed(std::move(Err));
           return orc::SymbolNameSet();
         } else
           UnresolvedSymbols.insert(S);

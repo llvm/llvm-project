@@ -45,7 +45,7 @@ int maini1() {
   static long aa = 32;
 // CHECK-DAG: define void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+1]](i32* dereferenceable{{.*}}, i64 {{.*}}, i64 {{.*}})
 #pragma omp target map(tofrom \
-                       : a)
+                       : a, b)
   {
     static long aaa = 23;
     a = foo() + bar() + b + c + d + aa + aaa;
