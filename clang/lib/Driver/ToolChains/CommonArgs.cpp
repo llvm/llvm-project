@@ -1007,12 +1007,17 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   if ((ROPI || RWPI) && (PIC || PIE))
     ToolChain.getDriver().Diag(diag::err_drv_ropi_rwpi_incompatible_with_pic);
 
-  // When targettng MIPS64 with N64, the default is PIC, unless -mno-abicalls is
-  // used.
-  if ((Triple.getArch() == llvm::Triple::mips64 ||
-       Triple.getArch() == llvm::Triple::mips64el) &&
-      Args.hasArg(options::OPT_mno_abicalls))
-    return std::make_tuple(llvm::Reloc::Static, 0U, false);
+  if (Triple.getArch() == llvm::Triple::mips ||
+       Triple.getArch() == llvm::Triple::mipsel ||
+       Triple.getArch() == llvm::Triple::mips64 ||
+       Triple.getArch() == llvm::Triple::mips64el) {
+    // When targettng MIPS with -mno-abicalls, it's always static.
+    if(Args.hasArg(options::OPT_mno_abicalls))
+      return std::make_tuple(llvm::Reloc::Static, 0U, false);
+    // Unlike other architectures, MIPS, even with -fPIC/-mxgot/multigot,
+    // does not use PIC level 2 for historical reasons.
+    IsPICLevelTwo = false;
+  }
 
   if (PIC)
     return std::make_tuple(llvm::Reloc::PIC_, IsPICLevelTwo ? 2U : 1U, PIE);

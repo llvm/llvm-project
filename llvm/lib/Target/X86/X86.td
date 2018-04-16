@@ -413,6 +413,10 @@ def ProcIntelSLM  : SubtargetFeature<"slm", "X86ProcFamily", "IntelSLM",
                     "Intel Silvermont processors">;
 def ProcIntelGLM  : SubtargetFeature<"glm", "X86ProcFamily", "IntelGLM",
                     "Intel Goldmont processors">;
+def ProcIntelGLP  : SubtargetFeature<"glp", "X86ProcFamily", "IntelGLP",
+                    "Intel Goldmont Plus processors">;
+def ProcIntelTRM  : SubtargetFeature<"tremont", "X86ProcFamily", "IntelTRM",
+                    "Intel Tremont processors">;
 def ProcIntelHSW  : SubtargetFeature<"haswell", "X86ProcFamily",
                     "IntelHaswell", "Intel Haswell processors">;
 def ProcIntelBDW  : SubtargetFeature<"broadwell", "X86ProcFamily",
@@ -564,8 +568,17 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
 def : SilvermontProc<"silvermont">;
 def : SilvermontProc<"slm">; // Legacy alias.
 
-class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
-  ProcIntelGLM,
+class ProcessorFeatures<list<SubtargetFeature> Inherited,
+                        list<SubtargetFeature> NewFeatures> {
+  list<SubtargetFeature> Value = !listconcat(Inherited, NewFeatures);
+}
+
+class ProcModel<string Name, SchedMachineModel Model,
+                list<SubtargetFeature> ProcFeatures,
+                list<SubtargetFeature> OtherFeatures> :
+  ProcessorModel<Name, Model, !listconcat(ProcFeatures, OtherFeatures)>;
+
+def GLMFeatures : ProcessorFeatures<[], [
   FeatureX87,
   FeatureMMX,
   FeatureSSE42,
@@ -592,7 +605,28 @@ class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureCLFLUSHOPT,
   FeatureFSGSBase
 ]>;
+
+class GoldmontProc<string Name> : ProcModel<Name, SLMModel,
+      GLMFeatures.Value, [ ProcIntelGLM ]>;
 def : GoldmontProc<"goldmont">;
+
+class GoldmontPlusProc<string Name> : ProcModel<Name, SLMModel,
+      GLMFeatures.Value, [
+  ProcIntelGLP,
+  FeatureRDPID,
+  FeatureSGX
+]>;
+def : GoldmontPlusProc<"goldmont-plus">;
+
+class TremontProc<string Name> : ProcModel<Name, SLMModel,
+      GLMFeatures.Value, [
+  ProcIntelTRM,
+  FeatureCLDEMOTE,
+  FeatureGFNI,
+  FeatureRDPID,
+  FeatureSGX
+]>;
+def : TremontProc<"tremont">;
 
 // "Arrandale" along with corei3 and corei5
 class NehalemProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
@@ -625,16 +659,6 @@ class WestmereProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureMacroFusion
 ]>;
 def : WestmereProc<"westmere">;
-
-class ProcessorFeatures<list<SubtargetFeature> Inherited,
-                        list<SubtargetFeature> NewFeatures> {
-  list<SubtargetFeature> Value = !listconcat(Inherited, NewFeatures);
-}
-
-class ProcModel<string Name, SchedMachineModel Model,
-                list<SubtargetFeature> ProcFeatures,
-                list<SubtargetFeature> OtherFeatures> :
-  ProcessorModel<Name, Model, !listconcat(ProcFeatures, OtherFeatures)>;
 
 // SSE is not listed here since llvm treats AVX as a reimplementation of SSE,
 // rather than a superset.
