@@ -26,7 +26,6 @@
 #include "sanitizer_linux.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
-#include "sanitizer_stacktrace.h"
 
 #include <dlfcn.h>  // for dlsym()
 #include <link.h>

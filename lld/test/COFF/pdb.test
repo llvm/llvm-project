@@ -34,11 +34,11 @@
 # CHECK-NEXT: DbiStream:
 # CHECK-NEXT:   VerHeader:       V70
 # CHECK-NEXT:   Age:             1
-# CHECK-NEXT:   BuildNumber:     0
+# CHECK-NEXT:   BuildNumber:     36363
 # CHECK-NEXT:   PdbDllVersion:   0
 # CHECK-NEXT:   PdbDllRbld:      0
 # CHECK-NEXT:   Flags:           0
-# CHECK-NEXT:   MachineType:     x86
+# CHECK-NEXT:   MachineType:     Amd64
 # CHECK-NEXT: TpiStream:
 # CHECK-NEXT:   Version:         VC80
 # CHECK-NEXT:   Records:

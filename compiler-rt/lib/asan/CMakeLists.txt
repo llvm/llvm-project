@@ -126,6 +126,7 @@ if(APPLE)
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
                 RTLSanCommon
                 RTUbsan
     CFLAGS ${ASAN_DYNAMIC_CFLAGS}
@@ -140,6 +141,7 @@ else()
     RTSanitizerCommon
     RTSanitizerCommonLibc
     RTSanitizerCommonCoverage
+    RTSanitizerCommonSymbolizer
     RTLSanCommon
     RTUbsan)
 

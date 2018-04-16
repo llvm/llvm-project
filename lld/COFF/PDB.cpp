@@ -978,6 +978,23 @@ void PDBLinker::addNatvisFiles() {
   }
 }
 
+static codeview::CPUType toCodeViewMachine(COFF::MachineTypes Machine) {
+  switch (Machine) {
+  case COFF::IMAGE_FILE_MACHINE_AMD64:
+    return codeview::CPUType::X64;
+  case COFF::IMAGE_FILE_MACHINE_ARM:
+    return codeview::CPUType::ARM7;
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+    return codeview::CPUType::ARM64;
+  case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    return codeview::CPUType::ARMNT;
+  case COFF::IMAGE_FILE_MACHINE_I386:
+    return codeview::CPUType::Intel80386;
+  default:
+    llvm_unreachable("Unsupported CPU Type");
+  }
+}
+
 static void addCommonLinkerModuleSymbols(StringRef Path,
                                          pdb::DbiModuleDescriptorBuilder &Mod,
                                          BumpPtrAllocator &Allocator) {
@@ -988,7 +1005,7 @@ static void addCommonLinkerModuleSymbols(StringRef Path,
   ONS.Name = "* Linker *";
   ONS.Signature = 0;
 
-  CS.Machine = Config->is64() ? CPUType::X64 : CPUType::Intel80386;
+  CS.Machine = toCodeViewMachine(Config->Machine);
   // Interestingly, if we set the string to 0.0.0.0, then when trying to view
   // local variables WinDbg emits an error that private symbols are not present.
   // By setting this to a valid MSVC linker version string, local variables are
@@ -1085,6 +1102,13 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setAge(BuildId.PDB70.Age);
   DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
+  DbiBuilder.setMachineType(Config->is64() ? pdb::PDB_Machine::Amd64
+                                           : pdb::PDB_Machine::x86);
+  // Technically we are not link.exe 14.11, but there are known cases where
+  // debugging tools on Windows expect Microsoft-specific version numbers or
+  // they fail to work at all.  Since we know we produce PDBs that are
+  // compatible with LINK 14.11, we set that version number here.
+  DbiBuilder.setBuildNumber(14, 11);
 }
 
 void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
