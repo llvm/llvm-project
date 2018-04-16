@@ -2909,6 +2909,10 @@ def warn_mismatched_availability_override_unavail : Warning<
   "%select{the protocol method it implements|its overridden method}1 is "
   "available">,
   InGroup<Availability>;
+def warn_availability_on_static_initializer : Warning<
+  "ignoring availability attribute %select{on '+load' method|"
+  "with constructor attribute|with destructor attribute}0">,
+  InGroup<Availability>;
 def note_overridden_method : Note<
   "overridden method is here">;
 def warn_availability_swift_unavailable_deprecated_only : Warning<
