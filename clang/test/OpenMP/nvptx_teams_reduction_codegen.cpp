@@ -283,7 +283,7 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_PTR:%.+]] = bitcast double* [[REMOTE_ELT]] to i8*
   // CHECK: store i8* [[REMOTE_ELT_PTR]], i8** [[REMOTE_ELT_REF]], align
   //
-  // CHECK: [[REDUCE:%.+]] = icmp eq i32 [[SHOULD_REDUCE]], 1
+  // CHECK: [[REDUCE:%.+]] = icmp ne i32 [[SHOULD_REDUCE]], 0
   // CHECK: br i1 [[REDUCE]], label {{%?}}[[DO_REDUCE:.+]], label {{%?}}[[REDUCE_ELSE:.+]]
   //
   // CHECK: [[DO_REDUCE]]
@@ -658,7 +658,7 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_PTR:%.+]] = bitcast float* [[REMOTE_ELT2]] to i8*
   // CHECK: store i8* [[REMOTE_ELT_PTR]], i8** [[REMOTE_ELT_REF]], align
   //
-  // CHECK: [[REDUCE:%.+]] = icmp eq i32 [[SHOULD_REDUCE]], 1
+  // CHECK: [[REDUCE:%.+]] = icmp ne i32 [[SHOULD_REDUCE]], 0
   // CHECK: br i1 [[REDUCE]], label {{%?}}[[DO_REDUCE:.+]], label {{%?}}[[REDUCE_ELSE:.+]]
   //
   // CHECK: [[DO_REDUCE]]
@@ -1087,7 +1087,7 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_PTR:%.+]] = bitcast i16* [[REMOTE_ELT2]] to i8*
   // CHECK: store i8* [[REMOTE_ELT_PTR]], i8** [[REMOTE_ELT_REF]], align
   //
-  // CHECK: [[REDUCE:%.+]] = icmp eq i32 [[SHOULD_REDUCE]], 1
+  // CHECK: [[REDUCE:%.+]] = icmp ne i32 [[SHOULD_REDUCE]], 0
   // CHECK: br i1 [[REDUCE]], label {{%?}}[[DO_REDUCE:.+]], label {{%?}}[[REDUCE_ELSE:.+]]
   //
   // CHECK: [[DO_REDUCE]]

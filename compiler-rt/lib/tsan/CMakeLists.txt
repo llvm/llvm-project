@@ -115,6 +115,7 @@ if(APPLE)
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
                 RTUbsan
     CFLAGS ${TSAN_RTL_CFLAGS}
     LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
@@ -174,6 +175,7 @@ else()
               $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
               $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
               $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
               $<TARGET_OBJECTS:RTUbsan.${arch}>
       CFLAGS ${TSAN_RTL_CFLAGS}
       PARENT_TARGET tsan)

@@ -44,6 +44,7 @@ if(COMPILER_RT_HAS_LSAN)
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
                   RTSanitizerCommonCoverage
+                  RTSanitizerCommonSymbolizer
       CFLAGS ${LSAN_CFLAGS}
       LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
       LINK_LIBS ${LSAN_LINK_LIBS}
@@ -58,6 +59,7 @@ if(COMPILER_RT_HAS_LSAN)
                 $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
                 $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
                 $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
+                $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
                 $<TARGET_OBJECTS:RTLSanCommon.${arch}>
         CFLAGS ${LSAN_CFLAGS}
         PARENT_TARGET lsan)

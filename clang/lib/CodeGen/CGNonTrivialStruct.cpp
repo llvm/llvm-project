@@ -21,10 +21,11 @@ using namespace clang;
 using namespace CodeGen;
 
 // Return the size of a field in number of bits.
-static uint64_t getFieldSize(const FieldDecl *FD, ASTContext &Ctx) {
-  if (FD->isBitField())
+static uint64_t getFieldSize(const FieldDecl *FD, QualType FT,
+                             ASTContext &Ctx) {
+  if (FD && FD->isBitField())
     return FD->getBitWidthValue(Ctx);
-  return Ctx.getTypeSize(FD->getType());
+  return Ctx.getTypeSize(FT);
 }
 
 namespace {
@@ -187,7 +188,7 @@ struct CopyStructVisitor : StructVisitor<Derived>,
                     Ts... Args) {
     assert(!FT.isVolatileQualified() && "volatile field not expected");
     ASTContext &Ctx = asDerived().getContext();
-    uint64_t FieldSize = getFieldSize(FD, Ctx);
+    uint64_t FieldSize = getFieldSize(FD, FT, Ctx);
 
     // Ignore zero-sized fields.
     if (FieldSize == 0)
@@ -336,7 +337,7 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
     uint64_t OffsetInBits =
         this->Ctx.toBits(CurStackOffset) + this->getFieldOffsetInBits(FD);
     this->appendStr("_tv" + llvm::to_string(OffsetInBits) + "w" +
-                    llvm::to_string(getFieldSize(FD, this->Ctx)));
+                    llvm::to_string(getFieldSize(FD, FT, this->Ctx)));
   }
 };
 
@@ -595,16 +596,25 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
   template <class... Ts>
   void visitVolatileTrivial(QualType FT, const FieldDecl *FD, CharUnits Offset,
                             std::array<Address, 2> Addrs) {
-    QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
-    llvm::PointerType *PtrTy = this->CGF->ConvertType(RT)->getPointerTo();
-    Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);
-    LValue DstBase = this->CGF->MakeAddrLValue(
-        this->CGF->Builder.CreateBitCast(DstAddr, PtrTy), FT);
-    LValue DstLV = this->CGF->EmitLValueForField(DstBase, FD);
-    Address SrcAddr = this->getAddrWithOffset(Addrs[SrcIdx], Offset);
-    LValue SrcBase = this->CGF->MakeAddrLValue(
-        this->CGF->Builder.CreateBitCast(SrcAddr, PtrTy), FT);
-    LValue SrcLV = this->CGF->EmitLValueForField(SrcBase, FD);
+    LValue DstLV, SrcLV;
+    if (FD) {
+      QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
+      llvm::PointerType *PtrTy = this->CGF->ConvertType(RT)->getPointerTo();
+      Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);
+      LValue DstBase = this->CGF->MakeAddrLValue(
+          this->CGF->Builder.CreateBitCast(DstAddr, PtrTy), FT);
+      DstLV = this->CGF->EmitLValueForField(DstBase, FD);
+      Address SrcAddr = this->getAddrWithOffset(Addrs[SrcIdx], Offset);
+      LValue SrcBase = this->CGF->MakeAddrLValue(
+          this->CGF->Builder.CreateBitCast(SrcAddr, PtrTy), FT);
+      SrcLV = this->CGF->EmitLValueForField(SrcBase, FD);
+    } else {
+      llvm::PointerType *Ty = this->CGF->ConvertType(FT)->getPointerTo();
+      Address DstAddr = this->CGF->Builder.CreateBitCast(Addrs[DstIdx], Ty);
+      Address SrcAddr = this->CGF->Builder.CreateBitCast(Addrs[SrcIdx], Ty);
+      DstLV = this->CGF->MakeAddrLValue(DstAddr, FT);
+      SrcLV = this->CGF->MakeAddrLValue(SrcAddr, FT);
+    }
     RValue SrcVal = this->CGF->EmitLoadOfLValue(SrcLV, SourceLocation());
     this->CGF->EmitStoreThroughLValue(SrcVal, DstLV);
   }

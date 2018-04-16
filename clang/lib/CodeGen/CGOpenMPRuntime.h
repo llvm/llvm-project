@@ -282,6 +282,7 @@ private:
   OpenMPDefaultLocMapTy OpenMPDefaultLocMap;
   Address getOrCreateDefaultLocation(unsigned Flags);
 
+  QualType IdentQTy;
   llvm::StructType *IdentTy = nullptr;
   /// \brief Map for SourceLocation and OpenMP runtime library debug locations.
   typedef llvm::DenseMap<unsigned, llvm::Value *> OpenMPDebugLocMapTy;
@@ -692,7 +693,7 @@ private:
     llvm::Value *TaskEntry = nullptr;
     llvm::Value *NewTaskNewTaskTTy = nullptr;
     LValue TDBase;
-    RecordDecl *KmpTaskTQTyRD = nullptr;
+    const RecordDecl *KmpTaskTQTyRD = nullptr;
     llvm::Value *TaskDupFn = nullptr;
   };
   /// Emit task region for the task directive. The task region is emitted in

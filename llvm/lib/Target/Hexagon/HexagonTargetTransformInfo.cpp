@@ -28,7 +28,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagontti"
 
-static cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(true),
+static cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(false),
   cl::Hidden, cl::desc("Enable loop vectorizer for HVX"));
 
 static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
