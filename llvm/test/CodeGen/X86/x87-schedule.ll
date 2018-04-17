@@ -1187,16 +1187,16 @@ define void @test_fcomi_fcomip() optsize {
 ; SKYLAKE-LABEL: test_fcomi_fcomip:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fcomi %st(3) # sched: [3:1.00]
-; SKYLAKE-NEXT:    fcompi %st(3) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcomi %st(3) # sched: [2:1.00]
+; SKYLAKE-NEXT:    fcompi %st(3) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_fcomi_fcomip:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fcomi %st(3) # sched: [3:1.00]
-; SKX-NEXT:    fcompi %st(3) # sched: [3:1.00]
+; SKX-NEXT:    fcomi %st(3) # sched: [2:1.00]
+; SKX-NEXT:    fcompi %st(3) # sched: [2:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
@@ -5073,14 +5073,14 @@ define void @test_ftst() optsize {
 ; SKYLAKE-LABEL: test_ftst:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    ftst # sched: [3:1.00]
+; SKYLAKE-NEXT:    ftst # sched: [2:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_ftst:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    ftst # sched: [3:1.00]
+; SKX-NEXT:    ftst # sched: [2:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
@@ -5175,7 +5175,7 @@ define void @test_fucom_fucomp_fucompp() optsize {
 ; SKYLAKE-NEXT:    fucom %st(3) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    fucomp %st(1) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    fucomp %st(3) # sched: [1:1.00]
-; SKYLAKE-NEXT:    fucompp # sched: [3:1.00]
+; SKYLAKE-NEXT:    fucompp # sched: [2:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
@@ -5186,7 +5186,7 @@ define void @test_fucom_fucomp_fucompp() optsize {
 ; SKX-NEXT:    fucom %st(3) # sched: [1:1.00]
 ; SKX-NEXT:    fucomp %st(1) # sched: [1:1.00]
 ; SKX-NEXT:    fucomp %st(3) # sched: [1:1.00]
-; SKX-NEXT:    fucompp # sched: [3:1.00]
+; SKX-NEXT:    fucompp # sched: [2:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
@@ -5267,16 +5267,16 @@ define void @test_fucomi_fucomip() optsize {
 ; SKYLAKE-LABEL: test_fucomi_fucomip:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fucomi %st(3) # sched: [3:1.00]
-; SKYLAKE-NEXT:    fucompi %st(3) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fucomi %st(3) # sched: [2:1.00]
+; SKYLAKE-NEXT:    fucompi %st(3) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_fucomi_fucomip:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fucomi %st(3) # sched: [3:1.00]
-; SKX-NEXT:    fucompi %st(3) # sched: [3:1.00]
+; SKX-NEXT:    fucomi %st(3) # sched: [2:1.00]
+; SKX-NEXT:    fucompi %st(3) # sched: [2:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;

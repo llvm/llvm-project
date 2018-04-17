@@ -962,6 +962,7 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
     Types[Context.DoubleTy] = "%f";
     Types[Context.LongDoubleTy] = "%Lf";
     Types[Context.getPointerType(Context.CharTy)] = "%s";
+    Types[Context.getPointerType(Context.getConstType(Context.CharTy))] = "%s";
   }
 
   for (const auto *FD : RD->fields()) {
