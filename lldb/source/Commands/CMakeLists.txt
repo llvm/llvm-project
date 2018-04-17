@@ -22,6 +22,7 @@ add_lldb_library(lldbCommands
   CommandObjectSettings.cpp
   CommandObjectSource.cpp
   CommandObjectSyntax.cpp
+  CommandObjectStats.cpp
   CommandObjectTarget.cpp
   CommandObjectThread.cpp
   CommandObjectType.cpp
