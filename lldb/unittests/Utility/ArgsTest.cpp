@@ -9,7 +9,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 
 #include <limits>
@@ -120,7 +120,9 @@ TEST(ArgsTest, TestArgv) {
 
 TEST(ArgsTest, StringListConstructor) {
   StringList list;
-  list << "foo" << "bar" << "baz";
+  list << "foo"
+       << "bar"
+       << "baz";
   Args args(list);
   ASSERT_EQ(3u, args.GetArgumentCount());
   EXPECT_EQ("foo", args[0].ref);

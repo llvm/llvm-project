@@ -41,6 +41,7 @@ endif()
 
 add_lldb_library(lldbUtility
   ArchSpec.cpp
+  Args.cpp
   Baton.cpp
   Connection.cpp
   ConstString.cpp

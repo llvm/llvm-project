@@ -182,6 +182,7 @@ defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5],  1>; // Vector variable shu
 defm : SKXWriteResPair<WriteBlend,  [SKXPort15],  1>; // Vector blends.
 defm : SKXWriteResPair<WriteVarBlend,  [SKXPort5], 2, [2]>; // Vector variable blends.
 defm : SKXWriteResPair<WriteMPSAD,  [SKXPort0, SKXPort5], 6, [1, 2]>; // Vector MPSAD.
+defm : SKXWriteResPair<WritePSADBW, [SKXPort5], 3>; // Vector PSADBW.
 
 // Vector bitwise operations.
 // These are often used on both floating point and integer vectors.
@@ -1006,10 +1007,6 @@ def: InstRW<[SKXWriteResGroup7], (instregex "ADC(16|32|64)ri",
                                             "BTS(16|32|64)ri8",
                                             "BTS(16|32|64)rr",
                                             "CLAC",
-                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
-                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
-                                            "JMP_1",
-                                            "JMP_4",
                                             "RORX(32|64)ri",
                                             "SAR(8|16|32|64)r1",
                                             "SAR(8|16|32|64)ri",
@@ -1265,9 +1262,9 @@ def SKXWriteResGroup10 : SchedWriteRes<[SKXPort0156]> {
 def: InstRW<[SKXWriteResGroup10], (instrs CBW, CWDE, CDQE)>;
 def: InstRW<[SKXWriteResGroup10], (instregex "CLC",
                                              "CMC",
-                                             "LAHF",
+                                             "LAHF", // TODO: This doesn't match Agner's data
                                              "NOOP",
-                                             "SAHF",
+                                             "SAHF", // TODO: This doesn't match Agner's data
                                              "SGDT64m",
                                              "SIDT64m",
                                              "SLDT64m",
@@ -1687,9 +1684,7 @@ def: InstRW<[SKXWriteResGroup32], (instregex "ADD_FPrST0",
                                              "KUNPCKBWrr",
                                              "KUNPCKDQrr",
                                              "KUNPCKWDrr",
-                                             "MMX_PSADBWirr",
                                              "PCMPGTQrr",
-                                             "PSADBWrr",
                                              "SUBR_FPrST0",
                                              "SUBR_FST0r",
                                              "SUBR_FrST0",
@@ -1905,11 +1900,7 @@ def: InstRW<[SKXWriteResGroup32], (instregex "ADD_FPrST0",
                                              "VPMOVZXWQZ128rr",
                                              "VPMOVZXWQZ256rr",
                                              "VPMOVZXWQZrr",
-                                             "VPSADBWYrr",
-                                             "VPSADBWZ128rr",
-                                             "VPSADBWZ256rr",
-                                             "VPSADBWZrr",
-                                             "VPSADBWrr",
+                                             "VPSADBWZrr", // TODO: 512-bit ops require ports 0/1 to be joined.
                                              "VPTESTMBZ128rr",
                                              "VPTESTMBZ256rr",
                                              "VPTESTMBZrr",
@@ -2528,7 +2519,6 @@ def SKXWriteResGroup58 : SchedWriteRes<[SKXPort23]> {
 def: InstRW<[SKXWriteResGroup58], (instregex "MMX_MOVD64rm",
                                              "MMX_MOVD64to64rm",
                                              "MMX_MOVQ64rm",
-                                             "MOV(8|16|32|64)rm",
                                              "MOV64toPQIrm",
                                              "MOVDDUPrm",
                                              "MOVDI2PDIrm",

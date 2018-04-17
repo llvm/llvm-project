@@ -4637,15 +4637,15 @@ define i64 @test_psadbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ;
 ; BTVER2-LABEL: test_psadbw:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    psadbw %mm1, %mm0 # sched: [2:1.00]
+; BTVER2-NEXT:    psadbw %mm1, %mm0 # sched: [2:0.50]
 ; BTVER2-NEXT:    psadbw (%rdi), %mm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    movq %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psadbw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    psadbw %mm1, %mm0 # sched: [4:1.00]
-; ZNVER1-NEXT:    psadbw (%rdi), %mm0 # sched: [11:1.00]
+; ZNVER1-NEXT:    psadbw %mm1, %mm0 # sched: [3:1.00]
+; ZNVER1-NEXT:    psadbw (%rdi), %mm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    movq %mm0, %rax # sched: [2:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call x86_mmx @llvm.x86.mmx.psad.bw(x86_mmx %a0, x86_mmx %a1)

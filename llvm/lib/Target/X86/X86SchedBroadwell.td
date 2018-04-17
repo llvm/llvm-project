@@ -185,6 +185,7 @@ defm : BWWriteResPair<WriteVarShuffle, [BWPort5],  1>; // Vector variable shuffl
 defm : BWWriteResPair<WriteBlend,  [BWPort15],  1>; // Vector blends.
 defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2]>; // Vector variable blends.
 defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 6, [1, 2]>; // Vector MPSAD.
+defm : BWWriteResPair<WritePSADBW,  [BWPort0],   5>; // Vector PSADBW.
 
 // Vector bitwise operations.
 // These are often used on both floating point and integer vectors.
@@ -478,10 +479,6 @@ def: InstRW<[BWWriteResGroup6], (instregex "ADC(16|32|64)ri",
                                            "BTR(16|32|64)rr",
                                            "BTS(16|32|64)ri8",
                                            "BTS(16|32|64)rr",
-                                           "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
-                                           "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
-                                           "JMP_1",
-                                           "JMP_4",
                                            "RORX(32|64)ri",
                                            "SAR(8|16|32|64)r1",
                                            "SAR(8|16|32|64)ri",
@@ -614,9 +611,9 @@ def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
 def: InstRW<[BWWriteResGroup9], (instrs CBW, CWDE, CDQE)>;
 def: InstRW<[BWWriteResGroup9], (instregex "CLC",
                                            "CMC",
-                                           "LAHF",
+                                           "LAHF", // TODO: This doesnt match Agner's data
                                            "NOOP",
-                                           "SAHF",
+                                           "SAHF", // TODO: This doesn't match Agner's data
                                            "SGDT64m",
                                            "SIDT64m",
                                            "SLDT64m",
@@ -1101,7 +1098,6 @@ def: InstRW<[BWWriteResGroup47], (instregex "MMX_PMADDUBSWrr",
                                             "MMX_PMULHWirr",
                                             "MMX_PMULLWirr",
                                             "MMX_PMULUDQirr",
-                                            "MMX_PSADBWirr",
                                             "MUL_FPrST0",
                                             "MUL_FST0r",
                                             "MUL_FrST0",
@@ -1115,7 +1111,6 @@ def: InstRW<[BWWriteResGroup47], (instregex "MMX_PMADDUBSWrr",
                                             "(V?)PMULHW(Y?)rr",
                                             "(V?)PMULLW(Y?)rr",
                                             "(V?)PMULUDQ(Y?)rr",
-                                            "(V?)PSADBW(Y?)rr",
                                             "(V?)RCPPSr",
                                             "(V?)RCPSSr",
                                             "(V?)RSQRTPSr",
@@ -1138,7 +1133,6 @@ def BWWriteResGroup49 : SchedWriteRes<[BWPort23]> {
 def: InstRW<[BWWriteResGroup49], (instregex "MMX_MOVD64rm",
                                             "MMX_MOVD64to64rm",
                                             "MMX_MOVQ64rm",
-                                            "MOV(16|32|64)rm",
                                             "MOVSX(16|32|64)rm16",
                                             "MOVSX(16|32|64)rm32",
                                             "MOVSX(16|32|64)rm8",

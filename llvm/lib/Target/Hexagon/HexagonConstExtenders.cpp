@@ -1396,10 +1396,50 @@ void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
     AssignmentMap::iterator F = IMap.find({EV, ExtExpr()});
     if (F == IMap.end())
       continue;
+
     // Finally, check if all extenders have the same value as the initializer.
-    auto SameValue = [&EV,this](unsigned I) {
+    // Make sure that extenders that are a part of a stack address are not
+    // merged with those that aren't. Stack addresses need an offset field
+    // (to be used by frame index elimination), while non-stack expressions
+    // can be replaced with forms (such as rr) that do not have such a field.
+    // Example:
+    //
+    // Collected 3 extenders
+    //  =2. imm:0  off:32968  bb#2: %7 = ## + __ << 0, def
+    //   0. imm:0  off:267  bb#0: __ = ## + SS#1 << 0
+    //   1. imm:0  off:267  bb#1: __ = ## + SS#1 << 0
+    // Ranges
+    //   0. [-756,267]a1+0
+    //   1. [-756,267]a1+0
+    //   2. [201,65735]a1+0
+    // RangeMap
+    //   [-756,267]a1+0 -> 0 1
+    //   [201,65735]a1+0 -> 2
+    // IMap (before fixup) = {
+    //   [imm:0  off:267, ## + __ << 0] -> { 2 }
+    //   [imm:0  off:267, ## + SS#1 << 0] -> { 0 1 }
+    // }
+    // IMap (after fixup) = {
+    //   [imm:0  off:267, ## + __ << 0] -> { 2 0 1 }
+    //   [imm:0  off:267, ## + SS#1 << 0] -> { }
+    // }
+    // Inserted def in bb#0 for initializer: [imm:0  off:267, ## + __ << 0]
+    //   %12:intregs = A2_tfrsi 267
+    //
+    // The result was
+    //   %12:intregs = A2_tfrsi 267
+    //   S4_pstorerbt_rr %3, %12, %stack.1, 0, killed %4
+    // Which became
+    //   r0 = #267
+    //   if (p0.new) memb(r0+r29<<#4) = r2
+
+    bool IsStack = any_of(F->second, [this](unsigned I) {
+                      return Extenders[I].Expr.Rs.isSlot();
+                   });
+    auto SameValue = [&EV,this,IsStack](unsigned I) {
       const ExtDesc &ED = Extenders[I];
-      return ExtValue(ED).Offset == EV.Offset;
+      return ED.Expr.Rs.isSlot() == IsStack &&
+             ExtValue(ED).Offset == EV.Offset;
     };
     if (all_of(P.second, SameValue)) {
       F->second.insert(P.second.begin(), P.second.end());
