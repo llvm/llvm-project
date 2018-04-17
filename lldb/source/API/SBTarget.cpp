@@ -23,6 +23,7 @@
 #include "lldb/API/SBSourceManager.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContextList.h"
 #include "lldb/Breakpoint/BreakpointID.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
@@ -38,6 +39,7 @@
 #include "lldb/Core/STLUtils.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectVariable.h"
@@ -179,6 +181,25 @@ SBDebugger SBTarget::GetDebugger() const {
   if (target_sp)
     debugger.reset(target_sp->GetDebugger().shared_from_this());
   return debugger;
+}
+
+SBStructuredData SBTarget::GetStatistics() {
+  SBStructuredData data;
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return data;
+
+  auto stats_up = llvm::make_unique<StructuredData::Dictionary>();
+  int i = 0;
+  for (auto &Entry : target_sp->GetStatistics()) {
+    std::string Desc = lldb_private::GetStatDescription(
+        static_cast<lldb_private::StatisticKind>(i));
+    stats_up->AddIntegerItem(Desc, Entry);
+    i += 1;
+  }
+
+  data.m_impl_up->SetObjectSP(std::move(stats_up));
+  return data;
 }
 
 SBProcess SBTarget::LoadCore(const char *core_file) {

@@ -998,6 +998,13 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
         Match = *I;
         return Ovl_Match;
       }
+
+      // Builtins that have custom typechecking or have a reference should
+      // not be overloadable or redeclarable.
+      if (!getASTContext().canBuiltinBeRedeclared(OldF)) {
+        Match = *I;
+        return Ovl_NonFunction;
+      }
     } else if (isa<UsingDecl>(OldD) || isa<UsingPackDecl>(OldD)) {
       // We can overload with these, which can show up when doing
       // redeclaration checks for UsingDecls.
