@@ -154,7 +154,9 @@ def  : WriteRes<WriteFLoad,        [BWPort23]> { let Latency = 5; }
 def  : WriteRes<WriteFStore,       [BWPort237, BWPort4]>;
 def  : WriteRes<WriteFMove,        [BWPort5]>;
 
-defm : BWWriteResPair<WriteFAdd,   [BWPort1], 3>; // Floating point add/sub/compare.
+defm : BWWriteResPair<WriteFAdd,   [BWPort1], 3>; // Floating point add/sub.
+defm : BWWriteResPair<WriteFCmp,   [BWPort1], 3>; // Floating point compare.
+defm : BWWriteResPair<WriteFCom,   [BWPort1], 3>; // Floating point compare to flags.
 defm : BWWriteResPair<WriteFMul,   [BWPort0], 5>; // Floating point multiplication.
 defm : BWWriteResPair<WriteFDiv,   [BWPort0], 12>; // 10-14 cycles. // Floating point division.
 defm : BWWriteResPair<WriteFSqrt,  [BWPort0], 15>; // Floating point square root.
@@ -183,6 +185,7 @@ defm : BWWriteResPair<WriteVarShuffle, [BWPort5],  1>; // Vector variable shuffl
 defm : BWWriteResPair<WriteBlend,  [BWPort15],  1>; // Vector blends.
 defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2]>; // Vector variable blends.
 defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 6, [1, 2]>; // Vector MPSAD.
+defm : BWWriteResPair<WritePSADBW,  [BWPort0],   5>; // Vector PSADBW.
 
 // Vector bitwise operations.
 // These are often used on both floating point and integer vectors.
@@ -476,10 +479,6 @@ def: InstRW<[BWWriteResGroup6], (instregex "ADC(16|32|64)ri",
                                            "BTR(16|32|64)rr",
                                            "BTS(16|32|64)ri8",
                                            "BTS(16|32|64)rr",
-                                           "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
-                                           "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
-                                           "JMP_1",
-                                           "JMP_4",
                                            "RORX(32|64)ri",
                                            "SAR(8|16|32|64)r1",
                                            "SAR(8|16|32|64)ri",
@@ -612,9 +611,9 @@ def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
 def: InstRW<[BWWriteResGroup9], (instrs CBW, CWDE, CDQE)>;
 def: InstRW<[BWWriteResGroup9], (instregex "CLC",
                                            "CMC",
-                                           "LAHF",
+                                           "LAHF", // TODO: This doesnt match Agner's data
                                            "NOOP",
-                                           "SAHF",
+                                           "SAHF", // TODO: This doesn't match Agner's data
                                            "SGDT64m",
                                            "SIDT64m",
                                            "SLDT64m",
@@ -843,29 +842,13 @@ def: InstRW<[BWWriteResGroup27], (instregex "ADD_FPrST0",
                                             "(V?)ADDSSrr",
                                             "(V?)ADDSUBPD(Y?)rr",
                                             "(V?)ADDSUBPS(Y?)rr",
-                                            "(V?)CMPPD(Y?)rri",
-                                            "(V?)CMPPS(Y?)rri",
-                                            "(V?)CMPSDrr",
-                                            "(V?)CMPSSrr",
-                                            "(V?)COMISDrr",
-                                            "(V?)COMISSrr",
                                             "(V?)CVTDQ2PS(Y?)rr",
                                             "(V?)CVTPS2DQ(Y?)rr",
                                             "(V?)CVTTPS2DQ(Y?)rr",
-                                            "(V?)MAX(C?)PD(Y?)rr",
-                                            "(V?)MAX(C?)PS(Y?)rr",
-                                            "(V?)MAX(C?)SDrr",
-                                            "(V?)MAX(C?)SSrr",
-                                            "(V?)MIN(C?)PD(Y?)rr",
-                                            "(V?)MIN(C?)PS(Y?)rr",
-                                            "(V?)MIN(C?)SDrr",
-                                            "(V?)MIN(C?)SSrr",
                                             "(V?)SUBPD(Y?)rr",
                                             "(V?)SUBPS(Y?)rr",
                                             "(V?)SUBSDrr",
-                                            "(V?)SUBSSrr",
-                                            "(V?)UCOMISDrr",
-                                            "(V?)UCOMISSrr")>;
+                                            "(V?)SUBSSrr")>;
 
 def BWWriteResGroup27_16 : SchedWriteRes<[BWPort1, BWPort0156]> {
   let Latency = 3;
@@ -1115,7 +1098,6 @@ def: InstRW<[BWWriteResGroup47], (instregex "MMX_PMADDUBSWrr",
                                             "MMX_PMULHWirr",
                                             "MMX_PMULLWirr",
                                             "MMX_PMULUDQirr",
-                                            "MMX_PSADBWirr",
                                             "MUL_FPrST0",
                                             "MUL_FST0r",
                                             "MUL_FrST0",
@@ -1129,7 +1111,6 @@ def: InstRW<[BWWriteResGroup47], (instregex "MMX_PMADDUBSWrr",
                                             "(V?)PMULHW(Y?)rr",
                                             "(V?)PMULLW(Y?)rr",
                                             "(V?)PMULUDQ(Y?)rr",
-                                            "(V?)PSADBW(Y?)rr",
                                             "(V?)RCPPSr",
                                             "(V?)RCPSSr",
                                             "(V?)RSQRTPSr",
@@ -1152,7 +1133,6 @@ def BWWriteResGroup49 : SchedWriteRes<[BWPort23]> {
 def: InstRW<[BWWriteResGroup49], (instregex "MMX_MOVD64rm",
                                             "MMX_MOVD64to64rm",
                                             "MMX_MOVQ64rm",
-                                            "MOV(16|32|64)rm",
                                             "MOVSX(16|32|64)rm16",
                                             "MOVSX(16|32|64)rm32",
                                             "MOVSX(16|32|64)rm8",
@@ -1832,29 +1812,13 @@ def: InstRW<[BWWriteResGroup91], (instregex "MMX_CVTPI2PSirm",
                                             "(V?)ADDSSrm",
                                             "(V?)ADDSUBPDrm",
                                             "(V?)ADDSUBPSrm",
-                                            "(V?)CMPPDrmi",
-                                            "(V?)CMPPSrmi",
-                                            "(V?)CMPSDrm",
-                                            "(V?)CMPSSrm",
-                                            "(V?)COMISDrm",
-                                            "(V?)COMISSrm",
                                             "(V?)CVTDQ2PSrm",
                                             "(V?)CVTPS2DQrm",
                                             "(V?)CVTTPS2DQrm",
-                                            "(V?)MAX(C?)PDrm",
-                                            "(V?)MAX(C?)PSrm",
-                                            "(V?)MAX(C?)SDrm",
-                                            "(V?)MAX(C?)SSrm",
-                                            "(V?)MIN(C?)PDrm",
-                                            "(V?)MIN(C?)PSrm",
-                                            "(V?)MIN(C?)SDrm",
-                                            "(V?)MIN(C?)SSrm",
                                             "(V?)SUBPDrm",
                                             "(V?)SUBPSrm",
                                             "(V?)SUBSDrm",
-                                            "(V?)SUBSSrm",
-                                            "(V?)UCOMISDrm",
-                                            "(V?)UCOMISSrm")>;
+                                            "(V?)SUBSSrm")>;
 
 def BWWriteResGroup91_16 : SchedWriteRes<[BWPort1, BWPort0156, BWPort23]> {
   let Latency = 8;

@@ -25,3 +25,18 @@
 // CHECK-MTI: "-fno-use-cxa-atexit"
 // CHECK-MIPS-NOT: "-fno-use-cxa-atexit"
 
+// RUN: %clang -target x86_64-apple-darwin -fregister-global-dtors-with-atexit -fno-register-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+// RUN: %clang -target x86_64-apple-darwin -fno-register-global-dtors-with-atexit -fregister-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHATEXIT %s
+// RUN: %clang -target x86_64-apple-darwin -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHATEXIT %s
+// RUN: %clang -target x86_64-pc-linux-gnu -fregister-global-dtors-with-atexit -fno-register-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+// RUN: %clang -target x86_64-pc-linux-gnu -fno-register-global-dtors-with-atexit -fregister-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHATEXIT %s
+// RUN: %clang -target x86_64-pc-linux-gnu -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+
+// WITHATEXIT: -fregister-global-dtors-with-atexit
+// WITHOUTATEXIT-NOT: -fregister-global-dtors-with-atexit

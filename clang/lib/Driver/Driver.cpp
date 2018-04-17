@@ -3379,11 +3379,26 @@ class ToolSelector final {
   const Tool *combineBackendCompile(ArrayRef<JobActionInfo> ActionInfo,
                                     const ActionList *&Inputs,
                                     ActionList &CollapsedOffloadAction) {
-    if (ActionInfo.size() < 2 || !canCollapsePreprocessorAction())
+    if (ActionInfo.size() < 2)
       return nullptr;
     auto *BJ = dyn_cast<BackendJobAction>(ActionInfo[0].JA);
     auto *CJ = dyn_cast<CompileJobAction>(ActionInfo[1].JA);
     if (!BJ || !CJ)
+      return nullptr;
+
+    // Check if the initial input (to the compile job or its predessor if one
+    // exists) is LLVM bitcode. In that case, no preprocessor step is required
+    // and we can still collapse the compile and backend jobs when we have
+    // -save-temps. I.e. there is no need for a separate compile job just to
+    // emit unoptimized bitcode.
+    bool InputIsBitcode = true;
+    for (size_t i = 1; i < ActionInfo.size(); i++)
+      if (ActionInfo[i].JA->getType() != types::TY_LLVM_BC &&
+          ActionInfo[i].JA->getType() != types::TY_LTO_BC) {
+        InputIsBitcode = false;
+        break;
+      }
+    if (!InputIsBitcode && !canCollapsePreprocessorAction())
       return nullptr;
 
     // Get compiler tool.
@@ -3391,7 +3406,7 @@ class ToolSelector final {
     if (!T)
       return nullptr;
 
-    if (T->canEmitIR() && (SaveTemps || EmbedBitcode))
+    if (T->canEmitIR() && ((SaveTemps && !InputIsBitcode) || EmbedBitcode))
       return nullptr;
 
     Inputs = &CJ->getInputs();

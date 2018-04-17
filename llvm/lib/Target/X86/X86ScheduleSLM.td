@@ -125,6 +125,8 @@ def  : WriteRes<WriteFLoad,        [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteFMove,        [SLM_FPC_RSV01]>;
 
 defm : SLMWriteResPair<WriteFAdd,   [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteFCmp,   [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteFCom,   [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteFMul,   [SLM_FPC_RSV0, SLMFPMultiplier], 5, [1,2]>;
 defm : SLMWriteResPair<WriteFDiv,   [SLM_FPC_RSV0, SLMFPDivider], 34, [1,34]>;
 defm : SLMWriteResPair<WriteFRcp,   [SLM_FPC_RSV0], 5>;
@@ -153,6 +155,7 @@ defm : SLMWriteResPair<WriteShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
+defm : SLMWriteResPair<WritePSADBW, [SLM_FPC_RSV0],  4>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.

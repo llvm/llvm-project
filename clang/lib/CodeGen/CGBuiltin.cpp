@@ -949,6 +949,8 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
   if (Types.empty()) {
     Types[Context.CharTy] = "%c";
     Types[Context.BoolTy] = "%d";
+    Types[Context.SignedCharTy] = "%hhd";
+    Types[Context.UnsignedCharTy] = "%hhu";
     Types[Context.IntTy] = "%d";
     Types[Context.UnsignedIntTy] = "%u";
     Types[Context.LongTy] = "%ld";
@@ -962,6 +964,7 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
     Types[Context.DoubleTy] = "%f";
     Types[Context.LongDoubleTy] = "%Lf";
     Types[Context.getPointerType(Context.CharTy)] = "%s";
+    Types[Context.getPointerType(Context.getConstType(Context.CharTy))] = "%s";
   }
 
   for (const auto *FD : RD->fields()) {

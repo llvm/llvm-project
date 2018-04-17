@@ -32,8 +32,6 @@ void *internal_memrchr(const void *s, int c, uptr n);
 int internal_memcmp(const void* s1, const void* s2, uptr n);
 void *internal_memcpy(void *dest, const void *src, uptr n);
 void *internal_memmove(void *dest, const void *src, uptr n);
-// Set [s, s + n) to 0. Both s and n should be 16-aligned.
-void internal_bzero_aligned16(void *s, uptr n);
 // Should not be used in performance-critical places.
 void *internal_memset(void *s, int c, uptr n);
 char* internal_strchr(const char *s, int c);
@@ -41,7 +39,6 @@ char *internal_strchrnul(const char *s, int c);
 int internal_strcmp(const char *s1, const char *s2);
 uptr internal_strcspn(const char *s, const char *reject);
 char *internal_strdup(const char *s);
-char *internal_strndup(const char *s, uptr n);
 uptr internal_strlen(const char *s);
 uptr internal_strlcat(char *dst, const char *src, uptr maxlen);
 char *internal_strncat(char *dst, const char *src, uptr n);
@@ -50,8 +47,6 @@ uptr internal_strlcpy(char *dst, const char *src, uptr maxlen);
 char *internal_strncpy(char *dst, const char *src, uptr n);
 uptr internal_strnlen(const char *s, uptr maxlen);
 char *internal_strrchr(const char *s, int c);
-// This is O(N^2), but we are not using it in hot places.
-uptr internal_wcslen(const wchar_t *s);
 char *internal_strstr(const char *haystack, const char *needle);
 // Works only for base=10 and doesn't set errno.
 s64 internal_simple_strtoll(const char *nptr, char **endptr, int base);

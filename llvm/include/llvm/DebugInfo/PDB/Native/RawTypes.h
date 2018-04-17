@@ -177,18 +177,6 @@ struct DbiStreamHeader {
 };
 static_assert(sizeof(DbiStreamHeader) == 64, "Invalid DbiStreamHeader size!");
 
-struct SectionContribEntry {
-  support::ulittle16_t Section;
-  char Padding1[2];
-  support::little32_t Offset;
-  support::little32_t Size;
-  support::ulittle32_t Characteristics;
-  support::ulittle16_t ModuleIndex;
-  char Padding2[2];
-  support::ulittle32_t DataCrc;
-  support::ulittle32_t RelocCrc;
-};
-
 /// The header preceeding the File Info Substream of the DBI stream.
 struct FileInfoSubstreamHeader {
   /// Total # of modules, should match number of records in the ModuleInfo
@@ -230,7 +218,7 @@ struct ModuleInfoHeader {
   support::ulittle32_t Mod;
 
   /// First section contribution of this module.
-  SectionContribEntry SC;
+  SectionContrib SC;
 
   /// See ModInfoFlags definition.
   support::ulittle16_t Flags;

@@ -49,6 +49,10 @@ uint16_t DbiModuleDescriptor::getTypeServerIndex() const {
          ModInfoFlags::TypeServerIndexShift;
 }
 
+const SectionContrib &DbiModuleDescriptor::getSectionContrib() const {
+  return Layout->SC;
+}
+
 uint16_t DbiModuleDescriptor::getModuleStreamIndex() const {
   return Layout->ModDiStream;
 }

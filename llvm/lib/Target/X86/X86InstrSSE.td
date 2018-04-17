@@ -1854,23 +1854,23 @@ let ExeDomain = SSEPackedSingle in
 defm VCMPSS : sse12_cmp_scalar<FR32, f32mem, AVXCC, X86cmps, f32, loadf32,
                  "cmp${cc}ss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                  "cmpss\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-                 WriteFAdd>, XS, VEX_4V, VEX_LIG, VEX_WIG;
+                 WriteFCmp>, XS, VEX_4V, VEX_LIG, VEX_WIG;
 let ExeDomain = SSEPackedDouble in
 defm VCMPSD : sse12_cmp_scalar<FR64, f64mem, AVXCC, X86cmps, f64, loadf64,
                  "cmp${cc}sd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                  "cmpsd\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-                 WriteFAdd>, // same latency as 32 bit compare
+                 WriteFCmp>, // same latency as 32 bit compare
                  XD, VEX_4V, VEX_LIG, VEX_WIG;
 
 let Constraints = "$src1 = $dst" in {
   let ExeDomain = SSEPackedSingle in
   defm CMPSS : sse12_cmp_scalar<FR32, f32mem, SSECC, X86cmps, f32, loadf32,
                   "cmp${cc}ss\t{$src2, $dst|$dst, $src2}",
-                  "cmpss\t{$cc, $src2, $dst|$dst, $src2, $cc}", WriteFAdd>, XS;
+                  "cmpss\t{$cc, $src2, $dst|$dst, $src2, $cc}", WriteFCmp>, XS;
   let ExeDomain = SSEPackedDouble in
   defm CMPSD : sse12_cmp_scalar<FR64, f64mem, SSECC, X86cmps, f64, loadf64,
                   "cmp${cc}sd\t{$src2, $dst|$dst, $src2}",
-                  "cmpsd\t{$cc, $src2, $dst|$dst, $src2, $cc}", WriteFAdd>, XD;
+                  "cmpsd\t{$cc, $src2, $dst|$dst, $src2, $cc}", WriteFCmp>, XD;
 }
 
 multiclass sse12_cmp_scalar_int<Operand memop, Operand CC,
@@ -1894,21 +1894,21 @@ let isCodeGenOnly = 1 in {
   let ExeDomain = SSEPackedSingle in
   defm VCMPSS  : sse12_cmp_scalar_int<ssmem, AVXCC, int_x86_sse_cmp_ss,
                        "cmp${cc}ss\t{$src, $src1, $dst|$dst, $src1, $src}",
-                       WriteFAdd, sse_load_f32>, XS, VEX_4V;
+                       WriteFCmp, sse_load_f32>, XS, VEX_4V;
   let ExeDomain = SSEPackedDouble in
   defm VCMPSD  : sse12_cmp_scalar_int<sdmem, AVXCC, int_x86_sse2_cmp_sd,
                        "cmp${cc}sd\t{$src, $src1, $dst|$dst, $src1, $src}",
-                       WriteFAdd, sse_load_f64>, // same latency as f32
+                       WriteFCmp, sse_load_f64>, // same latency as f32
                        XD, VEX_4V;
   let Constraints = "$src1 = $dst" in {
     let ExeDomain = SSEPackedSingle in
     defm CMPSS  : sse12_cmp_scalar_int<ssmem, SSECC, int_x86_sse_cmp_ss,
                          "cmp${cc}ss\t{$src, $dst|$dst, $src}",
-                         WriteFAdd, sse_load_f32>, XS;
+                         WriteFCmp, sse_load_f32>, XS;
     let ExeDomain = SSEPackedDouble in
     defm CMPSD  : sse12_cmp_scalar_int<sdmem, SSECC, int_x86_sse2_cmp_sd,
                          "cmp${cc}sd\t{$src, $dst|$dst, $src}",
-                         WriteFAdd, sse_load_f64>, XD;
+                         WriteFCmp, sse_load_f64>, XD;
 }
 }
 
@@ -1951,49 +1951,49 @@ let mayLoad = 1 in
 
 let Defs = [EFLAGS] in {
   defm VUCOMISS : sse12_ord_cmp<0x2E, FR32, X86cmp, f32, f32mem, loadf32,
-                               "ucomiss", WriteFAdd>, PS, VEX, VEX_LIG, VEX_WIG;
+                               "ucomiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
   defm VUCOMISD : sse12_ord_cmp<0x2E, FR64, X86cmp, f64, f64mem, loadf64,
-                               "ucomisd", WriteFAdd>, PD, VEX, VEX_LIG, VEX_WIG;
+                               "ucomisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
   let Pattern = []<dag> in {
     defm VCOMISS  : sse12_ord_cmp<0x2F, FR32, undef, f32, f32mem, loadf32,
-                                "comiss", WriteFAdd>, PS, VEX, VEX_LIG, VEX_WIG;
+                                "comiss", WriteFCom>, PS, VEX, VEX_LIG, VEX_WIG;
     defm VCOMISD  : sse12_ord_cmp<0x2F, FR64, undef, f64, f64mem, loadf64,
-                                "comisd", WriteFAdd>, PD, VEX, VEX_LIG, VEX_WIG;
+                                "comisd", WriteFCom>, PD, VEX, VEX_LIG, VEX_WIG;
   }
 
   let isCodeGenOnly = 1 in {
     defm VUCOMISS  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v4f32, ssmem,
-                      sse_load_f32, "ucomiss", WriteFAdd>, PS, VEX, VEX_WIG;
+                      sse_load_f32, "ucomiss", WriteFCom>, PS, VEX, VEX_WIG;
     defm VUCOMISD  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v2f64, sdmem,
-                      sse_load_f64, "ucomisd", WriteFAdd>, PD, VEX, VEX_WIG;
+                      sse_load_f64, "ucomisd", WriteFCom>, PD, VEX, VEX_WIG;
 
     defm VCOMISS  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v4f32, ssmem,
-                       sse_load_f32, "comiss", WriteFAdd>, PS, VEX, VEX_WIG;
+                       sse_load_f32, "comiss", WriteFCom>, PS, VEX, VEX_WIG;
     defm VCOMISD  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v2f64, sdmem,
-                       sse_load_f64, "comisd", WriteFAdd>, PD, VEX, VEX_WIG;
+                       sse_load_f64, "comisd", WriteFCom>, PD, VEX, VEX_WIG;
   }
   defm UCOMISS  : sse12_ord_cmp<0x2E, FR32, X86cmp, f32, f32mem, loadf32,
-                                  "ucomiss", WriteFAdd>, PS;
+                                  "ucomiss", WriteFCom>, PS;
   defm UCOMISD  : sse12_ord_cmp<0x2E, FR64, X86cmp, f64, f64mem, loadf64,
-                                  "ucomisd", WriteFAdd>, PD;
+                                  "ucomisd", WriteFCom>, PD;
 
   let Pattern = []<dag> in {
     defm COMISS  : sse12_ord_cmp<0x2F, FR32, undef, f32, f32mem, loadf32,
-                                    "comiss", WriteFAdd>, PS;
+                                    "comiss", WriteFCom>, PS;
     defm COMISD  : sse12_ord_cmp<0x2F, FR64, undef, f64, f64mem, loadf64,
-                                    "comisd", WriteFAdd>, PD;
+                                    "comisd", WriteFCom>, PD;
   }
 
   let isCodeGenOnly = 1 in {
     defm UCOMISS  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v4f32, ssmem,
-                            sse_load_f32, "ucomiss", WriteFAdd>, PS;
+                            sse_load_f32, "ucomiss", WriteFCom>, PS;
     defm UCOMISD  : sse12_ord_cmp_int<0x2E, VR128, X86ucomi, v2f64, sdmem,
-                            sse_load_f64, "ucomisd", WriteFAdd>, PD;
+                            sse_load_f64, "ucomisd", WriteFCom>, PD;
 
     defm COMISS  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v4f32, ssmem,
-                                sse_load_f32, "comiss", WriteFAdd>, PS;
+                                sse_load_f32, "comiss", WriteFCom>, PS;
     defm COMISD  : sse12_ord_cmp_int<0x2F, VR128, X86comi, v2f64, sdmem,
-                                    sse_load_f64, "comisd", WriteFAdd>, PD;
+                                    sse_load_f64, "comisd", WriteFCom>, PD;
   }
 } // Defs = [EFLAGS]
 
@@ -2028,28 +2028,28 @@ multiclass sse12_cmp_packed<RegisterClass RC, X86MemOperand x86memop,
 defm VCMPPS : sse12_cmp_packed<VR128, f128mem, AVXCC, v4f32,
                "cmp${cc}ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                "cmpps\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-               WriteFAdd, SSEPackedSingle, loadv4f32>, PS, VEX_4V, VEX_WIG;
+               WriteFCmp, SSEPackedSingle, loadv4f32>, PS, VEX_4V, VEX_WIG;
 defm VCMPPD : sse12_cmp_packed<VR128, f128mem, AVXCC, v2f64,
                "cmp${cc}pd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                "cmppd\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-               WriteFAdd, SSEPackedDouble, loadv2f64>, PD, VEX_4V, VEX_WIG;
+               WriteFCmp, SSEPackedDouble, loadv2f64>, PD, VEX_4V, VEX_WIG;
 defm VCMPPSY : sse12_cmp_packed<VR256, f256mem, AVXCC, v8f32,
                "cmp${cc}ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                "cmpps\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-               WriteFAdd, SSEPackedSingle, loadv8f32>, PS, VEX_4V, VEX_L;
+               WriteFCmp, SSEPackedSingle, loadv8f32>, PS, VEX_4V, VEX_L;
 defm VCMPPDY : sse12_cmp_packed<VR256, f256mem, AVXCC, v4f64,
                "cmp${cc}pd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                "cmppd\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-               WriteFAdd, SSEPackedDouble, loadv4f64>, PD, VEX_4V, VEX_L;
+               WriteFCmp, SSEPackedDouble, loadv4f64>, PD, VEX_4V, VEX_L;
 let Constraints = "$src1 = $dst" in {
   defm CMPPS : sse12_cmp_packed<VR128, f128mem, SSECC, v4f32,
                  "cmp${cc}ps\t{$src2, $dst|$dst, $src2}",
                  "cmpps\t{$cc, $src2, $dst|$dst, $src2, $cc}",
-                 WriteFAdd, SSEPackedSingle, memopv4f32>, PS;
+                 WriteFCmp, SSEPackedSingle, memopv4f32>, PS;
   defm CMPPD : sse12_cmp_packed<VR128, f128mem, SSECC, v2f64,
                  "cmp${cc}pd\t{$src2, $dst|$dst, $src2}",
                  "cmppd\t{$cc, $src2, $dst|$dst, $src2, $cc}",
-                 WriteFAdd, SSEPackedDouble, memopv2f64>, PD;
+                 WriteFCmp, SSEPackedDouble, memopv2f64>, PD;
 }
 
 def CommutableCMPCC : PatLeaf<(imm), [{
@@ -2583,19 +2583,19 @@ let isCommutable = 0 in {
   defm DIV : basic_sse12_fp_binop_p<0x5E, "div", fdiv, WriteFDiv>,
              basic_sse12_fp_binop_s<0x5E, "div", fdiv, WriteFDiv>,
              basic_sse12_fp_binop_s_int<0x5E, "div", null_frag, WriteFDiv>;
-  defm MAX : basic_sse12_fp_binop_p<0x5F, "max", X86fmax, WriteFAdd>,
-             basic_sse12_fp_binop_s<0x5F, "max", X86fmax, WriteFAdd>,
-             basic_sse12_fp_binop_s_int<0x5F, "max", X86fmaxs, WriteFAdd>;
-  defm MIN : basic_sse12_fp_binop_p<0x5D, "min", X86fmin, WriteFAdd>,
-             basic_sse12_fp_binop_s<0x5D, "min", X86fmin, WriteFAdd>,
-             basic_sse12_fp_binop_s_int<0x5D, "min", X86fmins, WriteFAdd>;
+  defm MAX : basic_sse12_fp_binop_p<0x5F, "max", X86fmax, WriteFCmp>,
+             basic_sse12_fp_binop_s<0x5F, "max", X86fmax, WriteFCmp>,
+             basic_sse12_fp_binop_s_int<0x5F, "max", X86fmaxs, WriteFCmp>;
+  defm MIN : basic_sse12_fp_binop_p<0x5D, "min", X86fmin, WriteFCmp>,
+             basic_sse12_fp_binop_s<0x5D, "min", X86fmin, WriteFCmp>,
+             basic_sse12_fp_binop_s_int<0x5D, "min", X86fmins, WriteFCmp>;
 }
 
 let isCodeGenOnly = 1 in {
-  defm MAXC: basic_sse12_fp_binop_p<0x5F, "max", X86fmaxc, WriteFAdd>,
-             basic_sse12_fp_binop_s<0x5F, "max", X86fmaxc, WriteFAdd>;
-  defm MINC: basic_sse12_fp_binop_p<0x5D, "min", X86fminc, WriteFAdd>,
-             basic_sse12_fp_binop_s<0x5D, "min", X86fminc, WriteFAdd>;
+  defm MAXC: basic_sse12_fp_binop_p<0x5F, "max", X86fmaxc, WriteFCmp>,
+             basic_sse12_fp_binop_s<0x5F, "max", X86fmaxc, WriteFCmp>;
+  defm MINC: basic_sse12_fp_binop_p<0x5D, "min", X86fminc, WriteFCmp>,
+             basic_sse12_fp_binop_s<0x5D, "min", X86fminc, WriteFCmp>;
 }
 
 // Patterns used to select SSE scalar fp arithmetic instructions from
@@ -3370,15 +3370,15 @@ defm PMADDWD : PDI_binop_rm2<0xF5, "pmaddwd", X86vpmaddwd, v4i32, v8i16, VR128,
 
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in
 defm VPSADBW : PDI_binop_rm2<0xF6, "vpsadbw", X86psadbw, v2i64, v16i8, VR128,
-                             loadv2i64, i128mem, WriteVecALU, 0>,
+                             loadv2i64, i128mem, WritePSADBW, 0>,
                              VEX_4V, VEX_WIG;
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in
 defm VPSADBWY : PDI_binop_rm2<0xF6, "vpsadbw", X86psadbw, v4i64, v32i8, VR256,
-                             loadv4i64, i256mem, WriteVecALU, 0>,
+                             loadv4i64, i256mem, WritePSADBW, 0>,
                              VEX_4V, VEX_L, VEX_WIG;
 let Constraints = "$src1 = $dst" in
 defm PSADBW : PDI_binop_rm2<0xF6, "psadbw", X86psadbw, v2i64, v16i8, VR128,
-                            memopv2i64, i128mem, WriteVecALU>;
+                            memopv2i64, i128mem, WritePSADBW>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Integer Logical Instructions
