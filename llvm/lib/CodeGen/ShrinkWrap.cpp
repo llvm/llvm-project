@@ -68,6 +68,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -138,6 +139,9 @@ class ShrinkWrap : public MachineFunctionPass {
   /// Current opcode for frame destroy.
   unsigned FrameDestroyOpcode;
 
+  /// Stack pointer register, used by llvm.{savestack,restorestack}
+  unsigned SP;
+
   /// Entry block.
   const MachineBasicBlock *Entry;
 
@@ -186,9 +190,11 @@ class ShrinkWrap : public MachineFunctionPass {
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
     MLI = &getAnalysis<MachineLoopInfo>();
     EntryFreq = MBFI->getEntryFreq();
-    const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+    const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
+    const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
     FrameSetupOpcode = TII.getCallFrameSetupOpcode();
     FrameDestroyOpcode = TII.getCallFrameDestroyOpcode();
+    SP = Subtarget.getTargetLowering()->getStackPointerRegisterToSaveRestore();
     Entry = &MF.front();
     CurrentCSRs.clear();
     MachineFunc = &MF;
@@ -262,7 +268,13 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
         continue;
       assert(TargetRegisterInfo::isPhysicalRegister(PhysReg) &&
              "Unallocated register?!");
-      UseOrDefCSR = RCI.getLastCalleeSavedAlias(PhysReg);
+      // The stack pointer is not normally described as a callee-saved register
+      // in calling convention definitions, so we need to watch for it
+      // separately. An SP mentioned by a call instruction, we can ignore,
+      // though, as it's harmless and we do not want to effectively disable tail
+      // calls by forcing the restore point to post-dominate them.
+      UseOrDefCSR = (!MI.isCall() && PhysReg == SP) ||
+                    RCI.getLastCalleeSavedAlias(PhysReg);
     } else if (MO.isRegMask()) {
       // Check if this regmask clobbers any of the CSRs.
       for (unsigned Reg : getCurrentCSRs(RS)) {

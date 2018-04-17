@@ -149,6 +149,8 @@ def  : WriteRes<WriteFLoad,        [HWPort23]> { let Latency = 5; }
 def  : WriteRes<WriteFMove,        [HWPort5]>;
 
 defm : HWWriteResPair<WriteFAdd,   [HWPort1], 3>;
+defm : HWWriteResPair<WriteFCmp,   [HWPort1], 3, [1], 1, 6>;
+defm : HWWriteResPair<WriteFCom,   [HWPort1], 3>;
 defm : HWWriteResPair<WriteFMul,   [HWPort0], 5>;
 defm : HWWriteResPair<WriteFDiv,   [HWPort0], 12>; // 10-14 cycles.
 defm : HWWriteResPair<WriteFRcp,   [HWPort0], 5>;
@@ -1041,16 +1043,12 @@ def: InstRW<[HWWriteResGroup12], (instregex "FCOM32m",
                                             "(V?)ADDSSrm",
                                             "(V?)CMPSDrm",
                                             "(V?)CMPSSrm",
-                                            "(V?)COMISDrm",
-                                            "(V?)COMISSrm",
                                             "(V?)MAX(C?)SDrm",
                                             "(V?)MAX(C?)SSrm",
                                             "(V?)MIN(C?)SDrm",
                                             "(V?)MIN(C?)SSrm",
                                             "(V?)SUBSDrm",
-                                            "(V?)SUBSSrm",
-                                            "(V?)UCOMISDrm",
-                                            "(V?)UCOMISSrm")>;
+                                            "(V?)SUBSSrm")>;
 
 def HWWriteResGroup13 : SchedWriteRes<[HWPort5,HWPort23]> {
   let Latency = 7;
@@ -1730,29 +1728,13 @@ def: InstRW<[HWWriteResGroup50], (instregex "ADD_FPrST0",
                                             "(V?)ADDSSrr",
                                             "(V?)ADDSUBPD(Y?)rr",
                                             "(V?)ADDSUBPS(Y?)rr",
-                                            "(V?)CMPPD(Y?)rri",
-                                            "(V?)CMPPS(Y?)rri",
-                                            "(V?)CMPSDrr",
-                                            "(V?)CMPSSrr",
-                                            "(V?)COMISDrr",
-                                            "(V?)COMISSrr",
                                             "(V?)CVTDQ2PS(Y?)rr",
                                             "(V?)CVTPS2DQ(Y?)rr",
                                             "(V?)CVTTPS2DQ(Y?)rr",
-                                            "(V?)MAX(C?)PD(Y?)rr",
-                                            "(V?)MAX(C?)PS(Y?)rr",
-                                            "(V?)MAX(C?)SDrr",
-                                            "(V?)MAX(C?)SSrr",
-                                            "(V?)MIN(C?)PD(Y?)rr",
-                                            "(V?)MIN(C?)PS(Y?)rr",
-                                            "(V?)MIN(C?)SDrr",
-                                            "(V?)MIN(C?)SSrr",
                                             "(V?)SUBPD(Y?)rr",
                                             "(V?)SUBPS(Y?)rr",
                                             "(V?)SUBSDrr",
-                                            "(V?)SUBSSrr",
-                                            "(V?)UCOMISDrr",
-                                            "(V?)UCOMISSrr")>;
+                                            "(V?)SUBSSrr")>;
 
 def HWWriteResGroup50_16i : SchedWriteRes<[HWPort1, HWPort0156]> {
   let Latency = 3;
@@ -1804,15 +1786,9 @@ def: InstRW<[HWWriteResGroup52], (instregex "(V?)ADDPDrm",
                                             "(V?)ADDPSrm",
                                             "(V?)ADDSUBPDrm",
                                             "(V?)ADDSUBPSrm",
-                                            "(V?)CMPPDrmi",
-                                            "(V?)CMPPSrmi",
                                             "(V?)CVTDQ2PSrm",
                                             "(V?)CVTPS2DQrm",
                                             "(V?)CVTTPS2DQrm",
-                                            "(V?)MAX(C?)PDrm",
-                                            "(V?)MAX(C?)PSrm",
-                                            "(V?)MIN(C?)PDrm",
-                                            "(V?)MIN(C?)PSrm",
                                             "(V?)SUBPDrm",
                                             "(V?)SUBPSrm")>;
 
