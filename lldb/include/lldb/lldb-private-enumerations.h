@@ -234,6 +234,35 @@ enum class CompilerContextKind {
   Typedef
 };
 
+//----------------------------------------------------------------------
+// Enumerations that can be used to specify the kind of metric we're
+// looking at when collecting stats.
+//----------------------------------------------------------------------
+enum StatisticKind {
+  ExpressionSuccessful = 0,
+  ExpressionFailure = 1,
+  FrameVarSuccess = 2,
+  FrameVarFailure = 3,
+  StatisticMax = 4
+};
+
+
+inline std::string GetStatDescription(lldb_private::StatisticKind K) {
+   switch (K) {
+   case StatisticKind::ExpressionSuccessful:
+     return "Number of expr evaluation successes";
+   case StatisticKind::ExpressionFailure:
+     return "Number of expr evaluation failures";
+   case StatisticKind::FrameVarSuccess:
+     return "Number of frame var successes";
+   case StatisticKind::FrameVarFailure:
+     return "Number of frame var failures";
+   case StatisticKind::StatisticMax:
+     return "";
+   }
+   llvm_unreachable("Statistic not registered!");
+}
+
 } // namespace lldb_private
 
 namespace llvm {

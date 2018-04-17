@@ -809,6 +809,7 @@
 		4CF52AF51428291E0051E832 /* SBFileSpecList.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CF52AF41428291E0051E832 /* SBFileSpecList.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
 		54067BF11DF2041B00749AA5 /* UBSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54067BEC1DF2034B00749AA5 /* UBSanRuntime.cpp */; };
+		6BC247F6208675190070F7C5 /* CommandObjectStats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */; };
 		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
 		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
 		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
@@ -2792,6 +2793,8 @@
 		54067BED1DF2034B00749AA5 /* UBSanRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UBSanRuntime.h; sourceTree = "<group>"; };
 		69A01E1C1236C5D400C660B5 /* Host.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Host.cpp; sourceTree = "<group>"; };
 		69A01E1F1236C5D400C660B5 /* Symbols.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Symbols.cpp; sourceTree = "<group>"; };
+		6B8894772065AE5C002E5C59 /* CommandObjectStats.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectStats.h; path = source/Commands/CommandObjectStats.h; sourceTree = "<group>"; };
+		6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectStats.cpp; path = source/Commands/CommandObjectStats.cpp; sourceTree = "<group>"; };
 		6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DebugMacros.h; path = include/lldb/Symbol/DebugMacros.h; sourceTree = "<group>"; };
 		6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaASTContext.h; path = include/lldb/Symbol/JavaASTContext.h; sourceTree = "<group>"; };
 		6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaASTContext.cpp; path = source/Symbol/JavaASTContext.cpp; sourceTree = "<group>"; };
@@ -5295,6 +5298,8 @@
 		26BC7D0D10F1B71D00F91463 /* Commands */ = {
 			isa = PBXGroup;
 			children = (
+				6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */,
+				6B8894772065AE5C002E5C59 /* CommandObjectStats.h */,
 				4CA9637A11B6E99A00780E28 /* CommandObjectApropos.h */,
 				4CA9637911B6E99A00780E28 /* CommandObjectApropos.cpp */,
 				499F381E11A5B3F300F5CE02 /* CommandObjectArgs.h */,
@@ -8077,6 +8082,7 @@
 				2689007D13353E2200698AC0 /* Args.cpp in Sources */,
 				2689007F13353E2200698AC0 /* CommandCompletions.cpp in Sources */,
 				AE6897281B94F6DE0018845D /* DWARFASTParserGo.cpp in Sources */,
+				6BC247F6208675190070F7C5 /* CommandObjectStats.cpp in Sources */,
 				945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */,
 				26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */,
 				AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */,
