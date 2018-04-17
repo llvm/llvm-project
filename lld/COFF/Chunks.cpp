@@ -31,8 +31,7 @@ namespace coff {
 
 SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
     : Chunk(SectionKind), Repl(this), Header(H), File(F),
-      Relocs(File->getCOFFObj()->getRelocations(Header)),
-      NumRelocs(std::distance(Relocs.begin(), Relocs.end())) {
+      Relocs(File->getCOFFObj()->getRelocations(Header)) {
   // Initialize SectionName.
   File->getCOFFObj()->getSectionName(Header, SectionName);
 
