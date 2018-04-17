@@ -242,4 +242,29 @@ ASM_SYMBOL(__xray_CustomEvent):
 	ASM_SIZE(__xray_CustomEvent)
 	CFI_ENDPROC
 
+//===----------------------------------------------------------------------===//
+
+	.global ASM_SYMBOL(__xray_TypedEvent)
+	.align 16, 0x90
+	ASM_TYPE_FUNCTION(__xray_TypedEvent)
+ASM_SYMBOL(__xray_TypedEvent):
+	CFI_STARTPROC
+	SAVE_REGISTERS
+
+	// We pass three arguments to this trampoline, which should be in rdi, rsi
+	// and rdx without our intervention.
+	movq ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)(%rip), %rax
+	testq %rax,%rax
+	je .LtypedEventCleanup
+
+	ALIGNED_CALL_RAX
+
+.LtypedEventCleanup:
+	RESTORE_REGISTERS
+	retq
+	ASM_SIZE(__xray_TypedEvent)
+	CFI_ENDPROC
+
+//===----------------------------------------------------------------------===//
+
 NO_EXEC_STACK_DIRECTIVE

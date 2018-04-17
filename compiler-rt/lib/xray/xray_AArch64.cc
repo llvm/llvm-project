@@ -112,6 +112,12 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
   return false;
 }
 
+bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
+                     const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  // FIXME: Implement in aarch64?
+  return false;
+}
+
 // FIXME: Maybe implement this better?
 bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
 

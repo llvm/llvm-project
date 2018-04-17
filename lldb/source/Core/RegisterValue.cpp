@@ -11,7 +11,7 @@
 
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
