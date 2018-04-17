@@ -4734,6 +4734,17 @@ Decl *Sema::ActOnMethodDeclaration(
       Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
     checkObjCMethodX86VectorTypes(*this, ObjCMethod);
 
+  // + load method cannot have availability attributes. It get called on
+  // startup, so it has to have the availability of the deployment target.
+  if (const auto *attr = ObjCMethod->getAttr<AvailabilityAttr>()) {
+    if (ObjCMethod->isClassMethod() &&
+        ObjCMethod->getSelector().getAsString() == "load") {
+      Diag(attr->getLocation(), diag::warn_availability_on_static_initializer)
+          << 0;
+      ObjCMethod->dropAttr<AvailabilityAttr>();
+    }
+  }
+
   ActOnDocumentableDecl(ObjCMethod);
 
   return ObjCMethod;

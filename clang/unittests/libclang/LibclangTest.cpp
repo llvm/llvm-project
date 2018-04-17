@@ -698,3 +698,67 @@ TEST_F(LibclangReparseTest, PreprocessorSkippedRanges) {
     clang_disposeSourceRangeList(Ranges);
   }
 }
+
+class LibclangSerializationTest : public LibclangParseTest {
+public:
+  bool SaveAndLoadTU(const std::string &Filename) {
+    unsigned options = clang_defaultSaveOptions(ClangTU);
+    if (clang_saveTranslationUnit(ClangTU, Filename.c_str(), options) !=
+        CXSaveError_None) {
+      DEBUG(llvm::dbgs() << "Saving failed\n");
+      return false;
+    }
+
+    clang_disposeTranslationUnit(ClangTU);
+
+    ClangTU = clang_createTranslationUnit(Index, Filename.c_str());
+
+    if (!ClangTU) {
+      DEBUG(llvm::dbgs() << "Loading failed\n");
+      return false;
+    }
+
+    return true;
+  }
+};
+
+TEST_F(LibclangSerializationTest, TokenKindsAreCorrectAfterLoading) {
+  // Ensure that "class" is recognized as a keyword token after serializing
+  // and reloading the AST, as it is not a keyword for the default LangOptions.
+  std::string HeaderName = "test.h";
+  WriteFile(HeaderName, "enum class Something {};");
+
+  const char *Argv[] = {"-xc++-header", "-std=c++11"};
+
+  ClangTU = clang_parseTranslationUnit(Index, HeaderName.c_str(), Argv,
+                                       sizeof(Argv) / sizeof(Argv[0]), nullptr,
+                                       0, TUFlags);
+
+  auto CheckTokenKinds = [=]() {
+    CXSourceRange Range =
+        clang_getCursorExtent(clang_getTranslationUnitCursor(ClangTU));
+
+    CXToken *Tokens;
+    unsigned int NumTokens;
+    clang_tokenize(ClangTU, Range, &Tokens, &NumTokens);
+
+    ASSERT_EQ(6u, NumTokens);
+    EXPECT_EQ(CXToken_Keyword, clang_getTokenKind(Tokens[0]));
+    EXPECT_EQ(CXToken_Keyword, clang_getTokenKind(Tokens[1]));
+    EXPECT_EQ(CXToken_Identifier, clang_getTokenKind(Tokens[2]));
+    EXPECT_EQ(CXToken_Punctuation, clang_getTokenKind(Tokens[3]));
+    EXPECT_EQ(CXToken_Punctuation, clang_getTokenKind(Tokens[4]));
+    EXPECT_EQ(CXToken_Punctuation, clang_getTokenKind(Tokens[5]));
+
+    clang_disposeTokens(ClangTU, Tokens, NumTokens);
+  };
+
+  CheckTokenKinds();
+
+  std::string ASTName = "test.ast";
+  WriteFile(ASTName, "");
+
+  ASSERT_TRUE(SaveAndLoadTU(ASTName));
+
+  CheckTokenKinds();
+}
