@@ -192,6 +192,7 @@ CodeObjectDisassembler::printFunctions(const HSACodeObject *CodeObject,
 
       Address += (*KernelCodeTOr)->kernel_code_entry_byte_offset;
     } else {
+      consumeError(ExpectedKernel.takeError());
       auto Name = *NameEr;
       MCSymbolELF *Symbol = cast<MCSymbolELF>(
           AsmStreamer->getStreamer().getContext().getOrCreateSymbol(Name));
