@@ -94,8 +94,8 @@ llvm::Optional<ParsedAST> build(llvm::StringRef BasePath,
          "BasePath must be a base file path without extension.");
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
       new vfs::InMemoryFileSystem);
-  std::string Path = (BasePath + ".cpp").str();
-  std::string Header = (BasePath + ".h").str();
+  std::string Path = testPath((BasePath + ".cpp").str());
+  std::string Header = testPath((BasePath + ".h").str());
   VFS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer(""));
   VFS->addFile(Header, 0, llvm::MemoryBuffer::getMemBuffer(Code));
   const char *Args[] = {"clang", "-xc++", "-include", Header.c_str(),

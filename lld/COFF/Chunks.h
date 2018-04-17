@@ -216,8 +216,7 @@ public:
 private:
   StringRef SectionName;
   std::vector<SectionChunk *> AssocChildren;
-  llvm::iterator_range<const coff_relocation *> Relocs;
-  size_t NumRelocs;
+  ArrayRef<coff_relocation> Relocs;
 
   // Used by the garbage collector.
   bool Live;
