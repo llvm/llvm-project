@@ -2,7 +2,7 @@
 // toolchain.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  %s
@@ -33,14 +33,23 @@
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
+// CHECK: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi/21"
+// CHECK: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi"
 // CHECK: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/arm-linux-androideabi/lib"
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
-// CHECK: "-L{{.*}}/sysroot/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target armv7a-none-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi14 \
+// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
+// RUN:   | FileCheck --check-prefix=CHECK-14 %s
+// CHECK-14: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi/14"
+// CHECK-14: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target armv7a-none-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
@@ -71,27 +80,28 @@
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
+// CHECK-ARMV7: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi/21"
+// CHECK-ARMV7: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi"
 // CHECK-ARMV7: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
-// CHECK-ARMV7: "-L{{.*}}/sysroot/usr/lib"
 //
 // Other flags that can trigger armv7 mode.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -march=armv7 \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -march=armv7a \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -march=armv7-a \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
@@ -99,7 +109,7 @@
 //
 // ARM thumb mode.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -mthumb \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
@@ -131,6 +141,8 @@
 // CHECK-THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7"
 // CHECK-THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7/thumb"
 // CHECK-THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
+// CHECK-THUMB: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi/21"
+// CHECK-THUMB: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi"
 // CHECK-THUMB: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
 // CHECK-THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7"
 // CHECK-THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7/thumb"
@@ -139,7 +151,7 @@
 //
 // ARM V7 thumb mode.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -march=armv7-a -mthumb \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
@@ -171,14 +183,15 @@
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
+// CHECK-ARMV7THUMB: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi/21"
+// CHECK-ARMV7THUMB: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi"
 // CHECK-ARMV7THUMB: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-ARMV7THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
-// CHECK-ARMV7THUMB: "-L{{.*}}/sysroot/usr/lib"
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -march=armv7-a -mthumb \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
@@ -192,14 +205,14 @@
 
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target armv7a-none-linux-androideabi -stdlib=libstdc++ \
+// RUN:     -target armv7a-none-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     -mthumb \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7THUMB %s
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target aarch64-linux-android -stdlib=libstdc++ \
+// RUN:     -target aarch64-linux-android21 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
@@ -212,11 +225,12 @@
 // CHECK-AARCH64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
 // CHECK-AARCH64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-AARCH64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.9"
+// CHECK-AARCH64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android/21"
+// CHECK-AARCH64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android"
 // CHECK-AARCH64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.9/../../../../aarch64-linux-android/lib"
-// CHECK-AARCH64: "-L{{.*}}/sysroot/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm64-linux-android -stdlib=libstdc++ \
+// RUN:     -target arm64-linux-android21 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM64 %s
@@ -229,11 +243,12 @@
 // CHECK-ARM64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
 // CHECK-ARM64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-ARM64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.9"
+// CHECK-ARM64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android/21"
+// CHECK-ARM64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android"
 // CHECK-ARM64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.9/../../../../aarch64-linux-android/lib"
-// CHECK-ARM64: "-L{{.*}}/sysroot/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target mipsel-linux-android \
+// RUN:     -target mipsel-linux-android21 \
 // RUN:     -mips32 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
@@ -246,79 +261,12 @@
 // CHECK-MIPS: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
 // CHECK-MIPS: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-MIPS: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9"
+// CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib/mipsel-linux-android/21"
+// CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib/mipsel-linux-android"
 // CHECK-MIPS: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib"
-// CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target mipsel-linux-android \
-// RUN:     -march=mips32 -mips32r2 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
-// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-MIPSR2 %s
-// CHECK-MIPSR2: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9"
-// CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android/mips-r2"
-// CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
-// CHECK-MIPSR2: "-internal-externc-isystem" "{{.*}}/sysroot/include"
-// CHECK-MIPSR2: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
-// CHECK-MIPSR2: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-MIPSR2: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/mips-r2"
-// CHECK-MIPSR2: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib/../libr2"
-// CHECK-MIPSR2: "-L{{.*}}/sysroot/usr/lib/../libr2"
-//
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target mipsel-linux-android \
-// RUN:     -mips32r6 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
-// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-MIPSR6 %s
-// CHECK-MIPSR6: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9"
-// CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android/mips-r6"
-// CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
-// CHECK-MIPSR6: "-internal-externc-isystem" "{{.*}}/sysroot/include"
-// CHECK-MIPSR6: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
-// CHECK-MIPSR6: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-MIPSR6: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/mips-r6"
-// CHECK-MIPSR6: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib/../libr6"
-// CHECK-MIPSR6: "-L{{.*}}/sysroot/usr/lib/../libr6"
-//
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target mips64el-linux-android \
-// RUN:     -march=mips32 -mips32r2 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
-// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-MIPS64-R2 %s
-// CHECK-MIPS64-R2: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-MIPS64-R2: "-internal-isystem" "{{.*}}/include/c++/4.9"
-// CHECK-MIPS64-R2: "-internal-isystem" "{{.*}}/include/mips64el-linux-android/c++/4.9/mips-r2"
-// CHECK-MIPS64-R2: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
-// CHECK-MIPS64-R2: "-internal-externc-isystem" "{{.*}}/sysroot/include"
-// CHECK-MIPS64-R2: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
-// CHECK-MIPS64-R2: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-MIPS64-R2: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/32/mips-r2"
-// CHECK-MIPS64-R2: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/../../../../mips64el-linux-android/lib/../libr2"
-// CHECK-MIPS64-R2: "-L{{.*}}/sysroot/usr/lib/../libr2"
-//
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target mips64el-linux-android \
-// RUN:     -march=mips32 -mips32r6 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
-// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-MIPS64-R6 %s
-// CHECK-MIPS64-R6: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-MIPS64-R6: "-internal-isystem" "{{.*}}/include/c++/4.9"
-// CHECK-MIPS64-R6: "-internal-isystem" "{{.*}}/include/mips64el-linux-android/c++/4.9/mips-r6"
-// CHECK-MIPS64-R6: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
-// CHECK-MIPS64-R6: "-internal-externc-isystem" "{{.*}}/sysroot/include"
-// CHECK-MIPS64-R6: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
-// CHECK-MIPS64-R6: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-MIPS64-R6: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/32/mips-r6"
-// CHECK-MIPS64-R6: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/../../../../mips64el-linux-android/lib/../libr6"
-// CHECK-MIPS64-R6: "-L{{.*}}/sysroot/usr/lib/../libr6"
-//
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target i686-linux-android \
+// RUN:     -target i686-linux-android21 \
 // RUN:     -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
@@ -332,11 +280,12 @@
 // CHECK-I686: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
 // CHECK-I686: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-I686: "-L{{.*}}/lib/gcc/i686-linux-android/4.9"
+// CHECK-I686: "-L{{.*}}/sysroot/usr/lib/i686-linux-android/21"
+// CHECK-I686: "-L{{.*}}/sysroot/usr/lib/i686-linux-android"
 // CHECK-I686: "-L{{.*}}/lib/gcc/i686-linux-android/4.9/../../../../i686-linux-android/lib"
-// CHECK-I686: "-L{{.*}}/sysroot/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target x86_64-linux-android \
+// RUN:     -target x86_64-linux-android21 \
 // RUN:     -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
@@ -350,5 +299,6 @@
 // CHECK-X86_64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
 // CHECK-X86_64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-X86_64: "-L{{.*}}/lib/gcc/x86_64-linux-android/4.9"
+// CHECK-X86_64: "-L{{.*}}/sysroot/usr/lib/x86_64-linux-android/21"
+// CHECK-X86_64: "-L{{.*}}/sysroot/usr/lib/x86_64-linux-android"
 // CHECK-X86_64: "-L{{.*}}/lib/gcc/x86_64-linux-android/4.9/../../../../x86_64-linux-android/lib"
-// CHECK-X86_64: "-L{{.*}}/sysroot/usr/lib"

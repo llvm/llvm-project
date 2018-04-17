@@ -1526,8 +1526,8 @@ vzeroupper
 # CHECK-NEXT:  1      7     1.00    *               	vpmuludq	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                    	vpor	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      6     1.00    *               	vpor	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                    	vpsadbw	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      6     1.00    *               	vpsadbw	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      2     0.50                    	vpsadbw	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      7     1.00    *               	vpsadbw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  3      2     2.00                    	vpshufb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  3      7     2.00    *               	vpshufb	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                    	vpshufd	$1, %xmm0, %xmm2

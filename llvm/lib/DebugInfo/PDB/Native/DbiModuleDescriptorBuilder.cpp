@@ -90,7 +90,7 @@ uint32_t DbiModuleDescriptorBuilder::calculateSerializedLength() const {
 }
 
 void DbiModuleDescriptorBuilder::finalize() {
-  Layout.SC.ModuleIndex = Layout.Mod;
+  Layout.SC.Imod = Layout.Mod;
   Layout.FileNameOffs = 0; // TODO: Fix this
   Layout.Flags = 0;        // TODO: Fix this
   Layout.C11Bytes = 0;

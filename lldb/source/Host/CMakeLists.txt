@@ -180,7 +180,6 @@ add_lldb_library(lldbHost
   
   LINK_LIBS
     lldbCore
-    lldbInterpreter
     lldbSymbol
     lldbTarget
     lldbUtility

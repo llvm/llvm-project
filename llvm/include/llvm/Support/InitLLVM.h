@@ -37,7 +37,7 @@ public:
   ~InitLLVM();
 
 private:
-  SpecificBumpPtrAllocator<char> Alloc;
+  BumpPtrAllocator Alloc;
   SmallVector<const char *, 0> Args;
   PrettyStackTraceProgram StackPrinter;
 };

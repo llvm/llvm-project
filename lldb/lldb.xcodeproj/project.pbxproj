@@ -97,7 +97,7 @@
 		23CB15391D66DA9300EDDDE1 /* DataExtractorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */; };
 		23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2370A37D1D66C587000E7BE6 /* GDBRemoteClientBaseTest.cpp */; };
 		23CB153B1D66DA9300EDDDE1 /* SocketTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93A1BDD332400BA9A93 /* SocketTest.cpp */; };
-		23CB153C1D66DA9300EDDDE1 /* TestArgs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93E1BDD33CE00BA9A93 /* TestArgs.cpp */; };
+		23CB153C1D66DA9300EDDDE1 /* ArgsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93E1BDD33CE00BA9A93 /* ArgsTest.cpp */; };
 		23CB153D1D66DA9300EDDDE1 /* GDBRemoteCommunicationClientTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2370A37E1D66C587000E7BE6 /* GDBRemoteCommunicationClientTest.cpp */; };
 		23CB153E1D66DA9300EDDDE1 /* PythonDataObjectsTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F94D1BDD360F00BA9A93 /* PythonDataObjectsTests.cpp */; };
 		23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */; };
@@ -1314,7 +1314,7 @@
 		2321F93A1BDD332400BA9A93 /* SocketTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SocketTest.cpp; sourceTree = "<group>"; };
 		2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolsTest.cpp; sourceTree = "<group>"; };
 		2321F93D1BDD33CE00BA9A93 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		2321F93E1BDD33CE00BA9A93 /* TestArgs.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestArgs.cpp; sourceTree = "<group>"; };
+		2321F93E1BDD33CE00BA9A93 /* ArgsTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ArgsTest.cpp; path = ../Utility/ArgsTest.cpp; sourceTree = "<group>"; };
 		2321F9401BDD340D00BA9A93 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		2321F9431BDD346100BA9A93 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringExtractorTest.cpp; sourceTree = "<group>"; };
@@ -2116,7 +2116,7 @@
 		26BC7D2D10F1B76300F91463 /* CommandObjectThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectThread.h; path = source/Commands/CommandObjectThread.h; sourceTree = "<group>"; };
 		26BC7D5010F1B77400F91463 /* Address.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Address.h; path = include/lldb/Core/Address.h; sourceTree = "<group>"; };
 		26BC7D5110F1B77400F91463 /* AddressRange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AddressRange.h; path = include/lldb/Core/AddressRange.h; sourceTree = "<group>"; };
-		26BC7D5310F1B77400F91463 /* Args.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Args.h; path = include/lldb/Interpreter/Args.h; sourceTree = "<group>"; };
+		26BC7D5310F1B77400F91463 /* Args.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Args.h; path = include/lldb/Utility/Args.h; sourceTree = "<group>"; };
 		26BC7D5410F1B77400F91463 /* Broadcaster.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Broadcaster.h; path = include/lldb/Core/Broadcaster.h; sourceTree = "<group>"; };
 		26BC7D5510F1B77400F91463 /* ClangForward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangForward.h; path = include/lldb/Core/ClangForward.h; sourceTree = "<group>"; };
 		26BC7D5610F1B77400F91463 /* Communication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Communication.h; path = include/lldb/Core/Communication.h; sourceTree = "<group>"; };
@@ -2198,7 +2198,7 @@
 		26BC7E4610F1B84700F91463 /* CommandObjectThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectThread.cpp; path = source/Commands/CommandObjectThread.cpp; sourceTree = "<group>"; };
 		26BC7E6910F1B85900F91463 /* Address.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Address.cpp; path = source/Core/Address.cpp; sourceTree = "<group>"; };
 		26BC7E6A10F1B85900F91463 /* AddressRange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AddressRange.cpp; path = source/Core/AddressRange.cpp; sourceTree = "<group>"; };
-		26BC7E6C10F1B85900F91463 /* Args.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Args.cpp; path = source/Interpreter/Args.cpp; sourceTree = "<group>"; };
+		26BC7E6C10F1B85900F91463 /* Args.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Args.cpp; path = source/Utility/Args.cpp; sourceTree = "<group>"; };
 		26BC7E6D10F1B85900F91463 /* Broadcaster.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Broadcaster.cpp; path = source/Core/Broadcaster.cpp; sourceTree = "<group>"; };
 		26BC7E6E10F1B85900F91463 /* Communication.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Communication.cpp; path = source/Core/Communication.cpp; sourceTree = "<group>"; };
 		26BC7E6F10F1B85900F91463 /* Connection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Connection.cpp; path = source/Utility/Connection.cpp; sourceTree = "<group>"; };
@@ -3450,7 +3450,7 @@
 			isa = PBXGroup;
 			children = (
 				2321F93D1BDD33CE00BA9A93 /* CMakeLists.txt */,
-				2321F93E1BDD33CE00BA9A93 /* TestArgs.cpp */,
+				2321F93E1BDD33CE00BA9A93 /* ArgsTest.cpp */,
 				9A20572B1F3B8E6200F6C293 /* TestCompletion.cpp */,
 				4C719398207D23E300FDF430 /* TestOptionArgParser.cpp */,
 			);
@@ -7372,7 +7372,7 @@
 				9A3D43ED1F3237F900EB767C /* StateTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,
 				23CB153B1D66DA9300EDDDE1 /* SocketTest.cpp in Sources */,
-				23CB153C1D66DA9300EDDDE1 /* TestArgs.cpp in Sources */,
+				23CB153C1D66DA9300EDDDE1 /* ArgsTest.cpp in Sources */,
 				9A3D43DB1F3151C400EB767C /* TildeExpressionResolverTest.cpp in Sources */,
 				9A2057291F3B8DDB00F6C293 /* TestObjectFileELF.cpp in Sources */,
 				23CB153D1D66DA9300EDDDE1 /* GDBRemoteCommunicationClientTest.cpp in Sources */,

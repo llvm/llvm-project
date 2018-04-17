@@ -21,7 +21,6 @@ namespace __sanitizer {
 // bypassing libc.
 #if !SANITIZER_WINDOWS
 #if SANITIZER_LINUX
-bool ShouldLogAfterPrintf() { return false; }
 void LogMessageOnPrintf(const char *str) {}
 #endif
 void WriteToSyslog(const char *buffer) {}

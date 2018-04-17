@@ -1117,6 +1117,15 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
     return llvm::make_unique<lto::NativeObjectStream>(std::move(OS));
   };
   lto::Config Conf;
+  if (CGOpts.SaveTempsFilePrefix != "") {
+    if (Error E = Conf.addSaveTemps(CGOpts.SaveTempsFilePrefix + ".",
+                                    /* UseInputModulePath */ false)) {
+      handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
+        errs() << "Error setting up ThinLTO save-temps: " << EIB.message()
+               << '\n';
+      });
+    }
+  }
   Conf.CPU = TOpts.CPU;
   Conf.CodeModel = getCodeModel(CGOpts);
   Conf.MAttrs = TOpts.Features;
