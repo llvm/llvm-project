@@ -182,6 +182,7 @@ defm : SKLWriteResPair<WriteVarShuffle,  [SKLPort5],  1>; // Vector shuffles.
 defm : SKLWriteResPair<WriteBlend,  [SKLPort15],  1>; // Vector blends.
 defm : SKLWriteResPair<WriteVarBlend,  [SKLPort5], 2, [2]>; // Vector variable blends.
 defm : SKLWriteResPair<WriteMPSAD,  [SKLPort0, SKLPort5], 6, [1, 2]>; // Vector MPSAD.
+defm : SKLWriteResPair<WritePSADBW, [SKLPort5], 3>; // Vector PSADBW.
 
 // Vector bitwise operations.
 // These are often used on both floating point and integer vectors.
@@ -543,10 +544,6 @@ def: InstRW<[SKLWriteResGroup7], (instregex "ADC(16|32|64)ri",
                                             "BTS(16|32|64)ri8",
                                             "BTS(16|32|64)rr",
                                             "CLAC",
-                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
-                                            "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
-                                            "JMP_1",
-                                            "JMP_4",
                                             "RORX(32|64)ri",
                                             "SAR(8|16|32|64)r1",
                                             "SAR(8|16|32|64)ri",
@@ -618,9 +615,9 @@ def SKLWriteResGroup10 : SchedWriteRes<[SKLPort0156]> {
 def: InstRW<[SKLWriteResGroup10], (instrs CBW, CWDE, CDQE)>;
 def: InstRW<[SKLWriteResGroup10], (instregex "CLC",
                                              "CMC",
-                                             "LAHF",
+                                             "LAHF", // TODO: This doesn't match Agner's data
                                              "NOOP",
-                                             "SAHF",
+                                             "SAHF", // TODO: This doesn't match Agner's data
                                              "SGDT64m",
                                              "SIDT64m",
                                              "SLDT64m",
@@ -862,7 +859,6 @@ def SKLWriteResGroup30 : SchedWriteRes<[SKLPort5]> {
 def: InstRW<[SKLWriteResGroup30], (instregex "ADD_FPrST0",
                                              "ADD_FST0r",
                                              "ADD_FrST0",
-                                             "MMX_PSADBWirr",
                                              "SUBR_FPrST0",
                                              "SUBR_FST0r",
                                              "SUBR_FrST0",
@@ -895,8 +891,7 @@ def: InstRW<[SKLWriteResGroup30], (instregex "ADD_FPrST0",
                                              "VPMOVZXBWYrr",
                                              "VPMOVZXDQYrr",
                                              "VPMOVZXWDYrr",
-                                             "VPMOVZXWQYrr",
-                                             "(V?)PSADBW(Y?)rr")>;
+                                             "VPMOVZXWQYrr")>;
 
 def SKLWriteResGroup31 : SchedWriteRes<[SKLPort0,SKLPort5]> {
   let Latency = 3;
@@ -1175,7 +1170,6 @@ def SKLWriteResGroup58 : SchedWriteRes<[SKLPort23]> {
 def: InstRW<[SKLWriteResGroup58], (instregex "MMX_MOVD64rm",
                                              "MMX_MOVD64to64rm",
                                              "MMX_MOVQ64rm",
-                                             "MOV(8|16|32|64)rm",
                                              "MOVSX(16|32|64)rm16",
                                              "MOVSX(16|32|64)rm32",
                                              "MOVSX(16|32|64)rm8",

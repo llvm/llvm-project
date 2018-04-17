@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 #include "Inputs/stdio.h"
+#include <stdint.h>
 
 // CHECK: @unit1.a = private unnamed_addr constant %struct.U1A { i16 12 }, align 2
 // CHECK-NEXT: [[STRUCT_STR_U1:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U1A {\0A\00"
@@ -93,6 +94,18 @@
 // CHECK-NEXT: [[FIELD_U15:@[0-9]+]] = private unnamed_addr constant [13 x i8] c"int [3] a : \00"
 // CHECK-NEXT: [[FORMAT_U15:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%p\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U15:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
+
+// CHECK: @unit16.a = private unnamed_addr constant %struct.U16A { i8 12 }, align 1
+// CHECK-NEXT: [[STRUCT_STR_U16:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U16A {\0A\00"
+// CHECK-NEXT: [[FIELD_U16:@[0-9]+]] = private unnamed_addr constant [13 x i8] c"uint8_t a : \00"
+// CHECK-NEXT: [[FORMAT_U16:@[0-9]+]] = private unnamed_addr constant [6 x i8] c"%hhu\0A\00"
+// CHECK-NEXT: [[END_STRUCT_U16:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
+
+// CHECK: @unit17.a = private unnamed_addr constant %struct.U17A { i8 12 }, align 1
+// CHECK-NEXT: [[STRUCT_STR_U17:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U17A {\0A\00"
+// CHECK-NEXT: [[FIELD_U17:@[0-9]+]] = private unnamed_addr constant [12 x i8] c"int8_t a : \00"
+// CHECK-NEXT: [[FORMAT_U17:@[0-9]+]] = private unnamed_addr constant [6 x i8] c"%hhd\0A\00"
+// CHECK-NEXT: [[END_STRUCT_U17:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
 int printf(const char *fmt, ...) {
     return 0;
@@ -365,6 +378,42 @@ void unit15() {
   // CHECK: [[LOAD1:%[0-9]+]] = load [3 x i32], [3 x i32]* [[RES1]],
   // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* [[FORMAT_U15]], i32 0, i32 0), [3 x i32] [[LOAD1]])
   // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[END_STRUCT_U15]], i32 0, i32 0)
+  __builtin_dump_struct(&a, &printf);
+}
+
+void unit16() {
+  struct U16A {
+    uint8_t a;
+  };
+
+  struct U16A a = {
+      .a = 12,
+  };
+
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* [[STRUCT_STR_U16]], i32 0, i32 0))
+  // CHECK: [[RES1:%[0-9]+]] = getelementptr inbounds %struct.U16A, %struct.U16A* %a, i32 0, i32 0
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* [[FIELD_U16]], i32 0, i32 0))
+  // CHECK: [[LOAD1:%[0-9]+]] = load i8, i8* [[RES1]],
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* [[FORMAT_U16]], i32 0, i32 0), i8 [[LOAD1]])
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[END_STRUCT_U16]], i32 0, i32 0)
+  __builtin_dump_struct(&a, &printf);
+}
+
+void unit17() {
+  struct U17A {
+    int8_t a;
+  };
+
+  struct U17A a = {
+      .a = 12,
+  };
+
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* [[STRUCT_STR_U17]], i32 0, i32 0))
+  // CHECK: [[RES1:%[0-9]+]] = getelementptr inbounds %struct.U17A, %struct.U17A* %a, i32 0, i32 0
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* [[FIELD_U17]], i32 0, i32 0))
+  // CHECK: [[LOAD1:%[0-9]+]] = load i8, i8* [[RES1]],
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* [[FORMAT_U17]], i32 0, i32 0), i8 [[LOAD1]])
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[END_STRUCT_U17]], i32 0, i32 0)
   __builtin_dump_struct(&a, &printf);
 }
 

@@ -1,5 +1,4 @@
 add_lldb_library(lldbInterpreter
-  Args.cpp
   CommandAlias.cpp
   CommandHistory.cpp
   CommandInterpreter.cpp

@@ -370,6 +370,7 @@ defm : JWriteResFpuPair<WriteVecShift,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecIMul,     [JFPU0, JVIMUL], 2>;
 defm : JWriteResFpuPair<WritePMULLD,      [JFPU0, JFPU01, JVIMUL, JVALU], 4, [2, 1, 2, 1], 3>;
 defm : JWriteResFpuPair<WriteMPSAD,       [JFPU0, JVIMUL], 3, [1, 2]>;
+defm : JWriteResFpuPair<WritePSADBW,      [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WriteShuffle,     [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarShuffle,  [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteBlend,       [JFPU01, JVALU], 1>;

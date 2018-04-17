@@ -19,9 +19,9 @@ _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, fmin, float, float)
 
 _CLC_DEF _CLC_OVERLOAD double fmin(double x, double y)
 {
-   x = __builtin_canonicalizef(x);
-   y = __builtin_canonicalizef(y);
-   return __builtin_fminf(x, y);
+   x = __builtin_canonicalize(x);
+   y = __builtin_canonicalize(y);
+   return __builtin_fmin(x, y);
 }
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, fmin, double, double)
 

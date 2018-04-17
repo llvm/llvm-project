@@ -949,6 +949,8 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
   if (Types.empty()) {
     Types[Context.CharTy] = "%c";
     Types[Context.BoolTy] = "%d";
+    Types[Context.SignedCharTy] = "%hhd";
+    Types[Context.UnsignedCharTy] = "%hhu";
     Types[Context.IntTy] = "%d";
     Types[Context.UnsignedIntTy] = "%u";
     Types[Context.LongTy] = "%ld";

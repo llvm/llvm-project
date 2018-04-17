@@ -30,6 +30,7 @@
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -6245,3 +6246,15 @@ Status Process::UpdateAutomaticSignalFiltering() {
   // No automatic signal filtering to speak of.
   return Status();
 }
+
+UtilityFunction *Process::GetLoadImageUtilityFunction(Platform *platform) {
+  if (platform != GetTarget().GetPlatform().get())
+    return nullptr;
+  return m_dlopen_utility_func_up.get();
+}
+
+void Process::SetLoadImageUtilityFunction(std::unique_ptr<UtilityFunction> 
+                                          utility_func_up) {
+  m_dlopen_utility_func_up.swap(utility_func_up);
+}
+

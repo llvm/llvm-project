@@ -5087,8 +5087,8 @@ define <4 x i64> @test_por(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 define <4 x i64> @test_psadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_psadbw:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
+; GENERIC-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psadbw:
@@ -5117,8 +5117,8 @@ define <4 x i64> @test_psadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ;
 ; ZNVER1-LABEL: test_psadbw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
-; ZNVER1-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; ZNVER1-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
+; ZNVER1-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8> %a0, <32 x i8> %a1)
   %2 = bitcast <4 x i64> %1 to <32 x i8>
