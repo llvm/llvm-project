@@ -154,7 +154,9 @@ def  : WriteRes<WriteFLoad,        [BWPort23]> { let Latency = 5; }
 def  : WriteRes<WriteFStore,       [BWPort237, BWPort4]>;
 def  : WriteRes<WriteFMove,        [BWPort5]>;
 
-defm : BWWriteResPair<WriteFAdd,   [BWPort1], 3>; // Floating point add/sub/compare.
+defm : BWWriteResPair<WriteFAdd,   [BWPort1], 3>; // Floating point add/sub.
+defm : BWWriteResPair<WriteFCmp,   [BWPort1], 3>; // Floating point compare.
+defm : BWWriteResPair<WriteFCom,   [BWPort1], 3>; // Floating point compare to flags.
 defm : BWWriteResPair<WriteFMul,   [BWPort0], 5>; // Floating point multiplication.
 defm : BWWriteResPair<WriteFDiv,   [BWPort0], 12>; // 10-14 cycles. // Floating point division.
 defm : BWWriteResPair<WriteFSqrt,  [BWPort0], 15>; // Floating point square root.
@@ -843,29 +845,13 @@ def: InstRW<[BWWriteResGroup27], (instregex "ADD_FPrST0",
                                             "(V?)ADDSSrr",
                                             "(V?)ADDSUBPD(Y?)rr",
                                             "(V?)ADDSUBPS(Y?)rr",
-                                            "(V?)CMPPD(Y?)rri",
-                                            "(V?)CMPPS(Y?)rri",
-                                            "(V?)CMPSDrr",
-                                            "(V?)CMPSSrr",
-                                            "(V?)COMISDrr",
-                                            "(V?)COMISSrr",
                                             "(V?)CVTDQ2PS(Y?)rr",
                                             "(V?)CVTPS2DQ(Y?)rr",
                                             "(V?)CVTTPS2DQ(Y?)rr",
-                                            "(V?)MAX(C?)PD(Y?)rr",
-                                            "(V?)MAX(C?)PS(Y?)rr",
-                                            "(V?)MAX(C?)SDrr",
-                                            "(V?)MAX(C?)SSrr",
-                                            "(V?)MIN(C?)PD(Y?)rr",
-                                            "(V?)MIN(C?)PS(Y?)rr",
-                                            "(V?)MIN(C?)SDrr",
-                                            "(V?)MIN(C?)SSrr",
                                             "(V?)SUBPD(Y?)rr",
                                             "(V?)SUBPS(Y?)rr",
                                             "(V?)SUBSDrr",
-                                            "(V?)SUBSSrr",
-                                            "(V?)UCOMISDrr",
-                                            "(V?)UCOMISSrr")>;
+                                            "(V?)SUBSSrr")>;
 
 def BWWriteResGroup27_16 : SchedWriteRes<[BWPort1, BWPort0156]> {
   let Latency = 3;
@@ -1832,29 +1818,13 @@ def: InstRW<[BWWriteResGroup91], (instregex "MMX_CVTPI2PSirm",
                                             "(V?)ADDSSrm",
                                             "(V?)ADDSUBPDrm",
                                             "(V?)ADDSUBPSrm",
-                                            "(V?)CMPPDrmi",
-                                            "(V?)CMPPSrmi",
-                                            "(V?)CMPSDrm",
-                                            "(V?)CMPSSrm",
-                                            "(V?)COMISDrm",
-                                            "(V?)COMISSrm",
                                             "(V?)CVTDQ2PSrm",
                                             "(V?)CVTPS2DQrm",
                                             "(V?)CVTTPS2DQrm",
-                                            "(V?)MAX(C?)PDrm",
-                                            "(V?)MAX(C?)PSrm",
-                                            "(V?)MAX(C?)SDrm",
-                                            "(V?)MAX(C?)SSrm",
-                                            "(V?)MIN(C?)PDrm",
-                                            "(V?)MIN(C?)PSrm",
-                                            "(V?)MIN(C?)SDrm",
-                                            "(V?)MIN(C?)SSrm",
                                             "(V?)SUBPDrm",
                                             "(V?)SUBPSrm",
                                             "(V?)SUBSDrm",
-                                            "(V?)SUBSSrm",
-                                            "(V?)UCOMISDrm",
-                                            "(V?)UCOMISSrm")>;
+                                            "(V?)SUBSSrm")>;
 
 def BWWriteResGroup91_16 : SchedWriteRes<[BWPort1, BWPort0156, BWPort23]> {
   let Latency = 8;

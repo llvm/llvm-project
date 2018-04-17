@@ -66,7 +66,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
-#include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -1990,21 +1989,15 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
   // now have to update all uses of the value to use either the original value,
   // the cloned value, or some PHI derived value.  This can require arbitrary
   // PHI insertion, of which we are prepared to do, clean these up now.
-  SSAUpdaterBulk SSAUpdate;
+  SSAUpdater SSAUpdate;
   SmallVector<Use*, 16> UsesToRename;
-
-  unsigned VarNum = 0;
   for (Instruction &I : *BB) {
-    UsesToRename.clear();
-
     // Scan all uses of this instruction to see if it is used outside of its
-    // block, and if so, record them in UsesToRename. Also, skip phi operands
-    // from PredBB - we'll remove them anyway.
+    // block, and if so, record them in UsesToRename.
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
       if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
-        if (UserPN->getIncomingBlock(U) == BB ||
-            UserPN->getIncomingBlock(U) == PredBB)
+        if (UserPN->getIncomingBlock(U) == BB)
           continue;
       } else if (User->getParent() == BB)
         continue;
@@ -2015,15 +2008,19 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
     // If there are no uses outside the block, we're done with this instruction.
     if (UsesToRename.empty())
       continue;
-    SSAUpdate.AddVariable(VarNum, I.getName(), I.getType());
 
-    // We found a use of I outside of BB - we need to rename all uses of I that
-    // are outside its block to be uses of the appropriate PHI node etc.
-    SSAUpdate.AddAvailableValue(VarNum, BB, &I);
-    SSAUpdate.AddAvailableValue(VarNum, NewBB, ValueMapping[&I]);
-    for (auto U : UsesToRename)
-      SSAUpdate.AddUse(VarNum, U);
-    VarNum++;
+    DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
+
+    // We found a use of I outside of BB.  Rename all uses of I that are outside
+    // its block to be uses of the appropriate PHI node etc.  See ValuesInBlocks
+    // with the two values we know.
+    SSAUpdate.Initialize(I.getType(), I.getName());
+    SSAUpdate.AddAvailableValue(BB, &I);
+    SSAUpdate.AddAvailableValue(NewBB, ValueMapping[&I]);
+
+    while (!UsesToRename.empty())
+      SSAUpdate.RewriteUse(*UsesToRename.pop_back_val());
+    DEBUG(dbgs() << "\n");
   }
 
   // Ok, NewBB is good to go.  Update the terminator of PredBB to jump to
@@ -2039,10 +2036,6 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
   DDT->applyUpdates({{DominatorTree::Insert, NewBB, SuccBB},
                      {DominatorTree::Insert, PredBB, NewBB},
                      {DominatorTree::Delete, PredBB, BB}});
-
-  // Apply all updates we queued with DDT and get the updated Dominator Tree.
-  DominatorTree *DT = &DDT->flush();
-  SSAUpdate.RewriteAllUses(DT);
 
   // At this point, the IR is fully up to date and consistent.  Do a quick scan
   // over the new instructions and zap any that are constants or dead.  This
