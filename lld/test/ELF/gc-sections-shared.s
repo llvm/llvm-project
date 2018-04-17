@@ -9,6 +9,11 @@
 # RUN: ld.lld --gc-sections --export-dynamic-symbol foo -o %t %t.o --as-needed %t2.so %t3.so %t4.so
 # RUN: llvm-readobj --dynamic-table --dyn-symbols %t | FileCheck %s
 
+# This test the property that we have a needed line for every undefined.
+# It would also be OK to keep bar2 and the need for %t2.so
+# At the same time, weak symbols should not cause adding DT_NEEDED;
+# this case is checked with symbol qux and %t4.so.
+
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:
@@ -46,6 +51,15 @@
 # CHECK-NEXT:     Other:
 # CHECK-NEXT:     Section: .text
 # CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: qux
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Weak
+# CHECK-NEXT:     Type:
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
 # CHECK-NOT: NEEDED
@@ -80,6 +94,15 @@
 # CHECK2-NEXT:     Value:
 # CHECK2-NEXT:     Size:
 # CHECK2-NEXT:     Binding: Global
+# CHECK2-NEXT:     Type:
+# CHECK2-NEXT:     Other:
+# CHECK2-NEXT:     Section: Undefined
+# CHECK2-NEXT:   }
+# CHECK2-NEXT:   Symbol {
+# CHECK2-NEXT:     Name: qux
+# CHECK2-NEXT:     Value:
+# CHECK2-NEXT:     Size:
+# CHECK2-NEXT:     Binding: Weak
 # CHECK2-NEXT:     Type:
 # CHECK2-NEXT:     Other:
 # CHECK2-NEXT:     Section: Undefined

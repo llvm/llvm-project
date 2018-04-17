@@ -1169,6 +1169,19 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
   return true;
 }
 
+/// Upgrade comment in call to inline asm that represents an objc retain release
+/// marker.
+void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
+
+  unsigned long Pos;
+  if (AsmStr->find("mov\tfp") == 0 &&
+      AsmStr->find("objc_retainAutoreleaseReturnValue") != std::string::npos &&
+      (Pos = AsmStr->find("# marker")) != std::string::npos) {
+    AsmStr->replace(Pos, 1, ";");
+  }
+  return;
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
