@@ -809,8 +809,7 @@
 		4CF52AF51428291E0051E832 /* SBFileSpecList.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CF52AF41428291E0051E832 /* SBFileSpecList.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
 		54067BF11DF2041B00749AA5 /* UBSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54067BEC1DF2034B00749AA5 /* UBSanRuntime.cpp */; };
-		6B8894792065AE5D002E5C59 /* CommandObjectStats.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6B8894772065AE5C002E5C59 /* CommandObjectStats.h */; };
-		6B88947A2065AE5D002E5C59 /* CommandObjectStats.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */; };
+		6BC247F6208675190070F7C5 /* CommandObjectStats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */; };
 		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
 		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
 		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
@@ -1370,8 +1369,6 @@
 			dstSubfolderSpec = 7;
 			files = (
 				940B04E41A8987680045D5F7 /* lldb-argdumper in CopyFiles */,
-				6B88947A2065AE5D002E5C59 /* CommandObjectStats.cpp in CopyFiles */,
-				6B8894792065AE5D002E5C59 /* CommandObjectStats.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -8085,6 +8082,7 @@
 				2689007D13353E2200698AC0 /* Args.cpp in Sources */,
 				2689007F13353E2200698AC0 /* CommandCompletions.cpp in Sources */,
 				AE6897281B94F6DE0018845D /* DWARFASTParserGo.cpp in Sources */,
+				6BC247F6208675190070F7C5 /* CommandObjectStats.cpp in Sources */,
 				945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */,
 				26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */,
 				AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */,
