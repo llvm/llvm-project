@@ -1881,6 +1881,10 @@ public:
     return getTypeDeclType(getBuiltinMSVaListDecl());
   }
 
+  /// Return whether a declaration to a builtin is allowed to be
+  /// overloaded/redeclared.
+  bool canBuiltinBeRedeclared(const FunctionDecl *) const;
+
   /// \brief Return a type with additional \c const, \c volatile, or
   /// \c restrict qualifiers.
   QualType getCVRQualifiedType(QualType T, unsigned CVR) const {

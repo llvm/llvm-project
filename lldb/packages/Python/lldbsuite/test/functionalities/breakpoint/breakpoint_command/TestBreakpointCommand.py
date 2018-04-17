@@ -45,6 +45,25 @@ class BreakpointCommandTestCase(TestBase):
         self.addTearDownHook(
             lambda: self.runCmd("settings clear auto-confirm"))
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    def test_delete_all_breakpoints(self):
+        """Test that deleting all breakpoints works."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_symbol(self, "main")
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.runCmd("breakpoint delete")
+        self.runCmd("process continue")
+        self.expect("process status", PROCESS_STOPPED,
+                    patterns=['Process .* exited with status = 0'])
+
+
     def breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         exe = self.getBuildArtifact("a.out")

@@ -7556,7 +7556,7 @@ This diagnostic is enabled by default.
 **Diagnostic text:**
 
 +------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`default property attribute 'assign' not appropriate for non-GC object`|
+|:warning:`warning:` |nbsp| :diagtext:`default property attribute 'assign' not appropriate for object`|
 +------------------------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------------+

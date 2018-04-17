@@ -212,4 +212,4 @@ D: Release management (x.y.0 releases)
 
 N: whitequark
 E: whitequark@whitequark.org
-D: OCaml bindings
+D: C API, OCaml bindings

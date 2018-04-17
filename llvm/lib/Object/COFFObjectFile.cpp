@@ -1147,13 +1147,10 @@ COFFObjectFile::getCOFFRelocation(const RelocationRef &Reloc) const {
   return toRel(Reloc.getRawDataRefImpl());
 }
 
-iterator_range<const coff_relocation *>
+ArrayRef<coff_relocation>
 COFFObjectFile::getRelocations(const coff_section *Sec) const {
-  const coff_relocation *I = getFirstReloc(Sec, Data, base());
-  const coff_relocation *E = I;
-  if (I)
-    E += getNumberOfRelocations(Sec, Data, base());
-  return make_range(I, E);
+  return {getFirstReloc(Sec, Data, base()),
+          getNumberOfRelocations(Sec, Data, base())};
 }
 
 #define LLVM_COFF_SWITCH_RELOC_TYPE_NAME(reloc_type)                           \
