@@ -1319,6 +1319,14 @@ private:
 
   void checkAliases();
 
+  std::map<int, llvm::TinyPtrVector<llvm::Function *>> DtorsUsingAtExit;
+
+  /// Register functions annotated with __attribute__((destructor)) using
+  /// __cxa_atexit, if it is available, or atexit otherwise.
+  void registerGlobalDtorsWithAtExit();
+
+  void emitMultiVersionFunctions();
+
   /// Emit any vtables which we deferred and still have a use for.
   void EmitDeferredVTables();
 
