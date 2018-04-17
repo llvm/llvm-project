@@ -164,9 +164,8 @@ struct AllocaInfo {
   }
 };
 
-// Data package used by RenamePass()
-class RenamePassData {
-public:
+/// Data package used by RenamePass().
+struct RenamePassData {
   using ValVector = std::vector<Value *>;
 
   RenamePassData(BasicBlock *B, BasicBlock *P, ValVector V)
