@@ -24,10 +24,24 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ssaupdaterbulk"
 
+/// Helper function for finding a block which should have a value for the given
+/// user. For PHI-nodes this block is the corresponding predecessor, for other
+/// instructions it's their parent block.
+static BasicBlock *getUserBB(Use *U) {
+  auto *User = cast<Instruction>(U->getUser());
+
+  if (auto *UserPN = dyn_cast<PHINode>(User))
+    return UserPN->getIncomingBlock(*U);
+  else
+    return User->getParent();
+}
+
 /// Add a new variable to the SSA rewriter. This needs to be called before
 /// AddAvailableValue or AddUse calls.
 void SSAUpdaterBulk::AddVariable(unsigned Var, StringRef Name, Type *Ty) {
   assert(Rewrites.find(Var) == Rewrites.end() && "Variable added twice!");
+  DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": initialized with Ty = " << *Ty
+               << ", Name = " << Name << "\n");
   RewriteInfo RI(Name, Ty);
   Rewrites[Var] = RI;
 }
@@ -36,6 +50,8 @@ void SSAUpdaterBulk::AddVariable(unsigned Var, StringRef Name, Type *Ty) {
 /// specified value.
 void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
   assert(Rewrites.find(Var) != Rewrites.end() && "Should add variable first!");
+  DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added new available value"
+               << *V << " in " << BB->getName() << "\n");
   Rewrites[Var].Defines[BB] = V;
 }
 
@@ -43,6 +59,8 @@ void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
 /// rewritten value when RewriteAllUses is called.
 void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
   assert(Rewrites.find(Var) != Rewrites.end() && "Should add variable first!");
+  DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
+               << " in " << getUserBB(U)->getName() << "\n");
   Rewrites[Var].Uses.insert(U);
 }
 
@@ -103,18 +121,6 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
   }
 }
 
-/// Helper function for finding a block which should have a value for the given
-/// user. For PHI-nodes this block is the corresponding predecessor, for other
-/// instructions it's their parent block.
-static BasicBlock *getUserBB(Use *U) {
-  auto *User = cast<Instruction>(U->getUser());
-
-  if (auto *UserPN = dyn_cast<PHINode>(User))
-    return UserPN->getIncomingBlock(*U);
-  else
-    return User->getParent();
-}
-
 /// Perform all the necessary updates, including new PHI-nodes insertion and the
 /// requested uses update.
 void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
@@ -127,6 +133,9 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     // The IDF blocks are the blocks where we need to insert new phi-nodes.
     ForwardIDFCalculator IDF(*DT);
     RewriteInfo &R = P.second;
+    DEBUG(dbgs() << "SSAUpdater: Var=" << P.first << ": rewriting "
+                 << R.Uses.size() << " use(s)\n");
+
     SmallPtrSet<BasicBlock *, 2> DefBlocks;
     for (auto Def : R.Defines)
       DefBlocks.insert(Def.first);
@@ -168,6 +177,8 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       // Notify that users of the existing value that it is being replaced.
       if (OldVal != V && OldVal->hasValueHandle())
         ValueHandleBase::ValueIsRAUWd(OldVal, V);
+      DEBUG(dbgs() << "SSAUpdater: Var=" << P.first << ": replacing" << *OldVal
+                   << " with " << *V << "\n");
       U->set(V);
     }
   }
