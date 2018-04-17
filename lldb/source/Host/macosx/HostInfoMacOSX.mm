@@ -13,7 +13,7 @@
 
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/SafeMachO.h"
 

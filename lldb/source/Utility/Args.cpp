@@ -7,24 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-#include <cstdlib>
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
-
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace lldb;
 using namespace lldb_private;
-
 
 // A helper function for argument parsing.
 // Parses the initial part of the first argument using normal double quote
@@ -182,7 +173,7 @@ Args::Args(llvm::StringRef command) { SetCommandString(command); }
 Args::Args(const Args &rhs) { *this = rhs; }
 
 Args::Args(const StringList &list) : Args() {
-  for(size_t i = 0; i < list.GetSize(); ++i)
+  for (size_t i = 0; i < list.GetSize(); ++i)
     AppendArgument(list[i]);
 }
 

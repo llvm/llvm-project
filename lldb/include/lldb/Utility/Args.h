@@ -7,27 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Command_h_
-#define liblldb_Command_h_
+#ifndef LLDB_UTILITY_ARGS_H
+#define LLDB_UTILITY_ARGS_H
 
-// C Includes
-// C++ Includes
+#include "lldb/Utility/Environment.h"
+#include "lldb/lldb-private-types.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <utility>
 #include <vector>
 
-// Other libraries and framework includes
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-// Project includes
-#include "lldb/Utility/Environment.h"
-#include "lldb/lldb-private-types.h"
-#include "lldb/lldb-types.h"
-
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Args Args.h "lldb/Interpreter/Args.h"
+/// @class Args Args.h "lldb/Utility/Args.h"
 /// @brief A command line argument class.
 ///
 /// The Args class is designed to be fed a command line. The
@@ -365,4 +360,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Command_h_
+#endif // LLDB_UTILITY_ARGS_H
