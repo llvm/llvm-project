@@ -466,6 +466,10 @@ namespace Complex {
 // CHECK-DAG: define dso_local void @"?f@Complex@@YAXU?$_Complex@H@__clang@@@Z"(
 void f(_Complex int) {}
 }
+namespace Float16 {
+// CHECK-DAG: define dso_local void @"?f@Float16@@YAXU_Float16@__clang@@@Z"(
+void f(_Float16) {}
+}
 
 namespace PR26029 {
 template <class>

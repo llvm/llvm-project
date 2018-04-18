@@ -14,6 +14,7 @@
 
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "clang/AST/NonTrivialTypeVisitor.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <array>
 
@@ -31,101 +32,6 @@ static uint64_t getFieldSize(const FieldDecl *FD, QualType FT,
 namespace {
 enum { DstIdx = 0, SrcIdx = 1 };
 const char *ValNameStr[2] = {"dst", "src"};
-
-template <class Derived, class RetTy = void> struct DestructedTypeVisitor {
-  template <class... Ts> RetTy visit(QualType FT, Ts &&... Args) {
-    return asDerived().visit(FT.isDestructedType(), FT,
-                             std::forward<Ts>(Args)...);
-  }
-
-  template <class... Ts>
-  RetTy visit(QualType::DestructionKind DK, QualType FT, Ts &&... Args) {
-    if (asDerived().getContext().getAsArrayType(FT))
-      return asDerived().visitArray(DK, FT, std::forward<Ts>(Args)...);
-
-    switch (DK) {
-    case QualType::DK_objc_strong_lifetime:
-      return asDerived().visitARCStrong(FT, std::forward<Ts>(Args)...);
-    case QualType::DK_nontrivial_c_struct:
-      return asDerived().visitStruct(FT, std::forward<Ts>(Args)...);
-    case QualType::DK_none:
-      return asDerived().visitTrivial(FT, std::forward<Ts>(Args)...);
-    case QualType::DK_cxx_destructor:
-      return asDerived().visitCXXDestructor(FT, std::forward<Ts>(Args)...);
-    case QualType::DK_objc_weak_lifetime:
-      return asDerived().visitARCWeak(FT, std::forward<Ts>(Args)...);
-    }
-
-    llvm_unreachable("unknown destruction kind");
-  }
-
-  Derived &asDerived() { return static_cast<Derived &>(*this); }
-};
-
-template <class Derived, class RetTy = void>
-struct DefaultInitializedTypeVisitor {
-  template <class... Ts> RetTy visit(QualType FT, Ts &&... Args) {
-    return asDerived().visit(FT.isNonTrivialToPrimitiveDefaultInitialize(), FT,
-                             std::forward<Ts>(Args)...);
-  }
-
-  template <class... Ts>
-  RetTy visit(QualType::PrimitiveDefaultInitializeKind PDIK, QualType FT,
-              Ts &&... Args) {
-    if (asDerived().getContext().getAsArrayType(FT))
-      return asDerived().visitArray(PDIK, FT, std::forward<Ts>(Args)...);
-
-    switch (PDIK) {
-    case QualType::PDIK_ARCStrong:
-      return asDerived().visitARCStrong(FT, std::forward<Ts>(Args)...);
-    case QualType::PDIK_ARCWeak:
-      return asDerived().visitARCWeak(FT, std::forward<Ts>(Args)...);
-    case QualType::PDIK_Struct:
-      return asDerived().visitStruct(FT, std::forward<Ts>(Args)...);
-    case QualType::PDIK_Trivial:
-      return asDerived().visitTrivial(FT, std::forward<Ts>(Args)...);
-    }
-
-    llvm_unreachable("unknown default-initialize kind");
-  }
-
-  Derived &asDerived() { return static_cast<Derived &>(*this); }
-};
-
-template <class Derived, bool IsMove, class RetTy = void>
-struct CopiedTypeVisitor {
-  template <class... Ts> RetTy visit(QualType FT, Ts &&... Args) {
-    QualType::PrimitiveCopyKind PCK =
-        IsMove ? FT.isNonTrivialToPrimitiveDestructiveMove()
-               : FT.isNonTrivialToPrimitiveCopy();
-    return asDerived().visit(PCK, FT, std::forward<Ts>(Args)...);
-  }
-
-  template <class... Ts>
-  RetTy visit(QualType::PrimitiveCopyKind PCK, QualType FT, Ts &&... Args) {
-    asDerived().preVisit(PCK, FT, std::forward<Ts>(Args)...);
-
-    if (asDerived().getContext().getAsArrayType(FT))
-      return asDerived().visitArray(PCK, FT, std::forward<Ts>(Args)...);
-
-    switch (PCK) {
-    case QualType::PCK_ARCStrong:
-      return asDerived().visitARCStrong(FT, std::forward<Ts>(Args)...);
-    case QualType::PCK_ARCWeak:
-      return asDerived().visitARCWeak(FT, std::forward<Ts>(Args)...);
-    case QualType::PCK_Struct:
-      return asDerived().visitStruct(FT, std::forward<Ts>(Args)...);
-    case QualType::PCK_Trivial:
-      return asDerived().visitTrivial(FT, std::forward<Ts>(Args)...);
-    case QualType::PCK_VolatileTrivial:
-      return asDerived().visitVolatileTrivial(FT, std::forward<Ts>(Args)...);
-    }
-
-    llvm_unreachable("unknown primitive copy kind");
-  }
-
-  Derived &asDerived() { return static_cast<Derived &>(*this); }
-};
 
 template <class Derived> struct StructVisitor {
   StructVisitor(ASTContext &Ctx) : Ctx(Ctx) {}
@@ -172,6 +78,7 @@ template <class Derived, bool IsMove>
 struct CopyStructVisitor : StructVisitor<Derived>,
                            CopiedTypeVisitor<Derived, IsMove> {
   using StructVisitor<Derived>::asDerived;
+  using Super = CopiedTypeVisitor<Derived, IsMove>;
 
   CopyStructVisitor(ASTContext &Ctx) : StructVisitor<Derived>(Ctx) {}
 
@@ -181,6 +88,20 @@ struct CopyStructVisitor : StructVisitor<Derived>,
                 Ts &&... Args) {
     if (PCK)
       asDerived().flushTrivialFields(std::forward<Ts>(Args)...);
+  }
+
+  template <class... Ts>
+  void visitWithKind(QualType::PrimitiveCopyKind PCK, QualType FT,
+                     const FieldDecl *FD, CharUnits CurStructOffsset,
+                     Ts &&... Args) {
+    if (const auto *AT = asDerived().getContext().getAsArrayType(FT)) {
+      asDerived().visitArray(PCK, AT, FT.isVolatileQualified(), FD,
+                             CurStructOffsset, std::forward<Ts>(Args)...);
+      return;
+    }
+
+    Super::visitWithKind(PCK, FT, FD, CurStructOffsset,
+                         std::forward<Ts>(Args)...);
   }
 
   template <class... Ts>
@@ -259,24 +180,24 @@ template <class Derived> struct GenFuncNameBase {
   }
 
   template <class FieldKind>
-  void visitArray(FieldKind FK, QualType QT, const FieldDecl *FD,
-                  CharUnits CurStructOffset) {
+  void visitArray(FieldKind FK, const ArrayType *AT, bool IsVolatile,
+                  const FieldDecl *FD, CharUnits CurStructOffset) {
     // String for non-volatile trivial fields is emitted when
     // flushTrivialFields is called.
     if (!FK)
-      return asDerived().visitTrivial(QT, FD, CurStructOffset);
+      return asDerived().visitTrivial(QualType(AT, 0), FD, CurStructOffset);
 
     CharUnits FieldOffset = CurStructOffset + asDerived().getFieldOffset(FD);
     ASTContext &Ctx = asDerived().getContext();
-    const auto *AT = Ctx.getAsConstantArrayType(QT);
-    unsigned NumElts = Ctx.getConstantArrayElementCount(AT);
-    QualType EltTy = Ctx.getBaseElementType(AT);
+    const ConstantArrayType *CAT = cast<ConstantArrayType>(AT);
+    unsigned NumElts = Ctx.getConstantArrayElementCount(CAT);
+    QualType EltTy = Ctx.getBaseElementType(CAT);
     CharUnits EltSize = Ctx.getTypeSizeInChars(EltTy);
     appendStr("_AB" + llvm::to_string(FieldOffset.getQuantity()) + "s" +
               llvm::to_string(EltSize.getQuantity()) + "n" +
               llvm::to_string(NumElts));
-    EltTy = QT.isVolatileQualified() ? EltTy.withVolatile() : EltTy;
-    asDerived().visit(FK, EltTy, nullptr, FieldOffset);
+    EltTy = IsVolatile ? EltTy.withVolatile() : EltTy;
+    asDerived().visitWithKind(FK, EltTy, nullptr, FieldOffset);
     appendStr("_AE");
   }
 
@@ -344,16 +265,36 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
 struct GenDefaultInitializeFuncName
     : GenUnaryFuncName<GenDefaultInitializeFuncName>,
       DefaultInitializedTypeVisitor<GenDefaultInitializeFuncName> {
+  using Super = DefaultInitializedTypeVisitor<GenDefaultInitializeFuncName>;
   GenDefaultInitializeFuncName(CharUnits DstAlignment, ASTContext &Ctx)
       : GenUnaryFuncName<GenDefaultInitializeFuncName>("__default_constructor_",
                                                        DstAlignment, Ctx) {}
+  void visitWithKind(QualType::PrimitiveDefaultInitializeKind PDIK, QualType FT,
+                     const FieldDecl *FD, CharUnits CurStructOffset) {
+    if (const auto *AT = getContext().getAsArrayType(FT)) {
+      visitArray(PDIK, AT, FT.isVolatileQualified(), FD, CurStructOffset);
+      return;
+    }
+
+    Super::visitWithKind(PDIK, FT, FD, CurStructOffset);
+  }
 };
 
 struct GenDestructorFuncName : GenUnaryFuncName<GenDestructorFuncName>,
                                DestructedTypeVisitor<GenDestructorFuncName> {
+  using Super = DestructedTypeVisitor<GenDestructorFuncName>;
   GenDestructorFuncName(CharUnits DstAlignment, ASTContext &Ctx)
       : GenUnaryFuncName<GenDestructorFuncName>("__destructor_", DstAlignment,
                                                 Ctx) {}
+  void visitWithKind(QualType::DestructionKind DK, QualType FT,
+                     const FieldDecl *FD, CharUnits CurStructOffset) {
+    if (const auto *AT = getContext().getAsArrayType(FT)) {
+      visitArray(DK, AT, FT.isVolatileQualified(), FD, CurStructOffset);
+      return;
+    }
+
+    Super::visitWithKind(DK, FT, FD, CurStructOffset);
+  }
 };
 
 // Helper function that creates CGFunctionInfo for an N-ary special function.
@@ -386,11 +327,13 @@ template <class Derived> struct GenFuncBase {
   }
 
   template <class FieldKind, size_t N>
-  void visitArray(FieldKind FK, QualType QT, const FieldDecl *FD,
-                  CharUnits CurStackOffset, std::array<Address, N> Addrs) {
+  void visitArray(FieldKind FK, const ArrayType *AT, bool IsVolatile,
+                  const FieldDecl *FD, CharUnits CurStackOffset,
+                  std::array<Address, N> Addrs) {
     // Non-volatile trivial fields are copied when flushTrivialFields is called.
     if (!FK)
-      return asDerived().visitTrivial(QT, FD, CurStackOffset, Addrs);
+      return asDerived().visitTrivial(QualType(AT, 0), FD, CurStackOffset,
+                                      Addrs);
 
     CodeGenFunction &CGF = *this->CGF;
     ASTContext &Ctx = CGF.getContext();
@@ -401,8 +344,7 @@ template <class Derived> struct GenFuncBase {
     for (unsigned I = 0; I < N; ++I)
       StartAddrs[I] = getAddrWithOffset(Addrs[I], CurStackOffset, FD);
     Address DstAddr = StartAddrs[DstIdx];
-    llvm::Value *NumElts =
-        CGF.emitArrayLength(Ctx.getAsArrayType(QT), BaseEltQT, DstAddr);
+    llvm::Value *NumElts = CGF.emitArrayLength(AT, BaseEltQT, DstAddr);
     unsigned BaseEltSize = Ctx.getTypeSizeInChars(BaseEltQT).getQuantity();
     llvm::Value *BaseEltSizeVal =
         llvm::ConstantInt::get(NumElts->getType(), BaseEltSize);
@@ -437,7 +379,7 @@ template <class Derived> struct GenFuncBase {
 
     // Visit the element of the array in the loop body.
     CGF.EmitBlock(LoopBB);
-    QualType EltQT = Ctx.getAsArrayType(QT)->getElementType();
+    QualType EltQT = AT->getElementType();
     CharUnits EltSize = Ctx.getTypeSizeInChars(EltQT);
     std::array<Address, N> NewAddrs = Addrs;
 
@@ -445,8 +387,9 @@ template <class Derived> struct GenFuncBase {
       NewAddrs[I] = Address(
           PHIs[I], StartAddrs[I].getAlignment().alignmentAtOffset(EltSize));
 
-    EltQT = QT.isVolatileQualified() ? EltQT.withVolatile() : EltQT;
-    this->asDerived().visit(EltQT, nullptr, CharUnits::Zero(), NewAddrs);
+    EltQT = IsVolatile ? EltQT.withVolatile() : EltQT;
+    this->asDerived().visitWithKind(FK, EltQT, nullptr, CharUnits::Zero(),
+                                    NewAddrs);
 
     LoopBB = CGF.Builder.GetInsertBlock();
 
@@ -624,7 +567,20 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
 struct GenDestructor : StructVisitor<GenDestructor>,
                        GenFuncBase<GenDestructor>,
                        DestructedTypeVisitor<GenDestructor> {
+  using Super = DestructedTypeVisitor<GenDestructor>;
   GenDestructor(ASTContext &Ctx) : StructVisitor<GenDestructor>(Ctx) {}
+
+  void visitWithKind(QualType::DestructionKind DK, QualType FT,
+                     const FieldDecl *FD, CharUnits CurStructOffset,
+                     std::array<Address, 1> Addrs) {
+    if (const auto *AT = getContext().getAsArrayType(FT)) {
+      visitArray(DK, AT, FT.isVolatileQualified(), FD, CurStructOffset, Addrs);
+      return;
+    }
+
+    Super::visitWithKind(DK, FT, FD, CurStructOffset, Addrs);
+  }
+
   void visitARCStrong(QualType QT, const FieldDecl *FD,
                       CharUnits CurStackOffset, std::array<Address, 1> Addrs) {
     CGF->destroyARCStrongImprecise(
@@ -648,9 +604,23 @@ struct GenDefaultInitialize
     : StructVisitor<GenDefaultInitialize>,
       GenFuncBase<GenDefaultInitialize>,
       DefaultInitializedTypeVisitor<GenDefaultInitialize> {
+  using Super = DefaultInitializedTypeVisitor<GenDefaultInitialize>;
   typedef GenFuncBase<GenDefaultInitialize> GenFuncBaseTy;
+
   GenDefaultInitialize(ASTContext &Ctx)
       : StructVisitor<GenDefaultInitialize>(Ctx) {}
+
+  void visitWithKind(QualType::PrimitiveDefaultInitializeKind PDIK, QualType FT,
+                     const FieldDecl *FD, CharUnits CurStructOffset,
+                     std::array<Address, 1> Addrs) {
+    if (const auto *AT = getContext().getAsArrayType(FT)) {
+      visitArray(PDIK, AT, FT.isVolatileQualified(), FD, CurStructOffset,
+                 Addrs);
+      return;
+    }
+
+    Super::visitWithKind(PDIK, FT, FD, CurStructOffset, Addrs);
+  }
 
   void visitARCStrong(QualType QT, const FieldDecl *FD,
                       CharUnits CurStackOffset, std::array<Address, 1> Addrs) {
@@ -665,17 +635,18 @@ struct GenDefaultInitialize
   }
 
   template <class FieldKind, size_t... Is>
-  void visitArray(FieldKind FK, QualType QT, const FieldDecl *FD,
-                  CharUnits CurStackOffset, std::array<Address, 1> Addrs) {
+  void visitArray(FieldKind FK, const ArrayType *AT, bool IsVolatile,
+                  const FieldDecl *FD, CharUnits CurStackOffset,
+                  std::array<Address, 1> Addrs) {
     if (!FK)
-      return visitTrivial(QT, FD, CurStackOffset, Addrs);
+      return visitTrivial(QualType(AT, 0), FD, CurStackOffset, Addrs);
 
     ASTContext &Ctx = getContext();
-    CharUnits Size = Ctx.getTypeSizeInChars(QT);
-    QualType EltTy = Ctx.getBaseElementType(QT);
+    CharUnits Size = Ctx.getTypeSizeInChars(QualType(AT, 0));
+    QualType EltTy = Ctx.getBaseElementType(QualType(AT, 0));
 
     if (Size < CharUnits::fromQuantity(16) || EltTy->getAs<RecordType>()) {
-      GenFuncBaseTy::visitArray(FK, QT, FD, CurStackOffset, Addrs);
+      GenFuncBaseTy::visitArray(FK, AT, IsVolatile, FD, CurStackOffset, Addrs);
       return;
     }
 
@@ -683,7 +654,7 @@ struct GenDefaultInitialize
     Address DstAddr = getAddrWithOffset(Addrs[DstIdx], CurStackOffset, FD);
     Address Loc = CGF->Builder.CreateElementBitCast(DstAddr, CGF->Int8Ty);
     CGF->Builder.CreateMemSet(Loc, CGF->Builder.getInt8(0), SizeVal,
-                              QT.isVolatileQualified());
+                              IsVolatile);
   }
 
   void callSpecialFunction(QualType FT, CharUnits Offset,

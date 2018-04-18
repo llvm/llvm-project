@@ -77,6 +77,10 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
                      options::OPT_fnoxray_always_emit_customevents, false))
       XRayAlwaysEmitCustomEvents = true;
 
+    if (Args.hasFlag(options::OPT_fxray_always_emit_typedevents,
+                     options::OPT_fnoxray_always_emit_typedevents, false))
+      XRayAlwaysEmitTypedEvents = true;
+
     if (!Args.hasFlag(options::OPT_fxray_link_deps,
                       options::OPT_fnoxray_link_deps, true))
       XRayRT = false;
@@ -173,6 +177,9 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
 
   if (XRayAlwaysEmitCustomEvents)
     CmdArgs.push_back("-fxray-always-emit-customevents");
+
+  if (XRayAlwaysEmitTypedEvents)
+    CmdArgs.push_back("-fxray-always-emit-typedevents");
 
   CmdArgs.push_back(Args.MakeArgString(Twine(XRayInstructionThresholdOption) +
                                        Twine(InstructionThreshold)));

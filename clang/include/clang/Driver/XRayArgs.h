@@ -29,6 +29,7 @@ class XRayArgs {
   bool XRayInstrument = false;
   int InstructionThreshold = 200;
   bool XRayAlwaysEmitCustomEvents = false;
+  bool XRayAlwaysEmitTypedEvents = false;
   bool XRayRT = true;
 
 public:

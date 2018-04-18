@@ -203,6 +203,9 @@ public:
   /// the summary and module symbol table (and not, e.g. any debug metadata).
   std::string ThinLinkBitcodeFile;
 
+  /// Prefix to use for -save-temps output.
+  std::string SaveTempsFilePrefix;
+
   /// Name of file passed with -fcuda-include-gpubinary option to forward to
   /// CUDA runtime back-end for incorporating them into host-side object file.
   std::string CudaGpuBinaryFileName;
