@@ -1804,6 +1804,10 @@ public:
   /// XRay custom event handling calls.
   bool AlwaysEmitXRayCustomEvents() const;
 
+  /// AlwaysEmitXRayTypedEvents - Return true if clang must unconditionally emit
+  /// XRay typed event handling calls.
+  bool AlwaysEmitXRayTypedEvents() const;
+
   /// Encode an address into a form suitable for use in a function prologue.
   llvm::Constant *EncodeAddrForUseInPrologue(llvm::Function *F,
                                              llvm::Constant *Addr);

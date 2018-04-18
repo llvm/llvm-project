@@ -572,6 +572,45 @@ getBuildId(opt::InputArgList &Args) {
   return {BuildIdKind::None, {}};
 }
 
+static void readCallGraph(MemoryBufferRef MB) {
+  // Build a map from symbol name to section
+  DenseMap<StringRef, const Symbol *> SymbolNameToSymbol;
+  for (InputFile *File : ObjectFiles)
+    for (Symbol *Sym : File->getSymbols())
+      SymbolNameToSymbol[Sym->getName()] = Sym;
+
+  for (StringRef L : args::getLines(MB)) {
+    SmallVector<StringRef, 3> Fields;
+    L.split(Fields, ' ');
+    if (Fields.size() != 3)
+      fatal("parse error");
+    uint64_t Count;
+    if (!to_integer(Fields[2], Count))
+      fatal("parse error");
+    const Symbol *FromSym = SymbolNameToSymbol.lookup(Fields[0]);
+    const Symbol *ToSym = SymbolNameToSymbol.lookup(Fields[1]);
+    if (Config->WarnSymbolOrdering) {
+      if (!FromSym)
+        warn("call graph file: no such symbol: " + Fields[0]);
+      if (!ToSym)
+        warn("call graph file: no such symbol: " + Fields[1]);
+    }
+    if (!FromSym || !ToSym || Count == 0)
+      continue;
+    warnUnorderableSymbol(FromSym);
+    warnUnorderableSymbol(ToSym);
+    const Defined *FromSymD = dyn_cast<Defined>(FromSym);
+    const Defined *ToSymD = dyn_cast<Defined>(ToSym);
+    if (!FromSymD || !ToSymD)
+      continue;
+    const auto *FromSB = dyn_cast_or_null<InputSectionBase>(FromSymD->Section);
+    const auto *ToSB = dyn_cast_or_null<InputSectionBase>(ToSymD->Section);
+    if (!FromSB || !ToSB)
+      continue;
+    Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
+  }
+}
+
 static bool getCompressDebugSections(opt::InputArgList &Args) {
   StringRef S = Args.getLastArgValue(OPT_compress_debug_sections, "none");
   if (S == "none")
@@ -1223,6 +1262,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   mergeSections();
   if (Config->ICF)
     doIcf<ELFT>();
+
+  // Read the callgraph now that we know what was gced or icfed
+  if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+      readCallGraph(*Buffer);
 
   // Write the result to the file.
   writeResult<ELFT>();

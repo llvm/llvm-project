@@ -6067,6 +6067,41 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     setValue(&I, patchableNode);
     return nullptr;
   }
+  case Intrinsic::xray_typedevent: {
+    // Here we want to make sure that the intrinsic behaves as if it has a
+    // specific calling convention, and only for x86_64.
+    // FIXME: Support other platforms later.
+    const auto &Triple = DAG.getTarget().getTargetTriple();
+    if (Triple.getArch() != Triple::x86_64 || !Triple.isOSLinux())
+      return nullptr;
+
+    SDLoc DL = getCurSDLoc();
+    SmallVector<SDValue, 8> Ops;
+
+    // We want to say that we always want the arguments in registers.
+    // It's unclear to me how manipulating the selection DAG here forces callers
+    // to provide arguments in registers instead of on the stack.
+    SDValue LogTypeId = getValue(I.getArgOperand(0));
+    SDValue LogEntryVal = getValue(I.getArgOperand(1));
+    SDValue StrSizeVal = getValue(I.getArgOperand(2));
+    SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+    SDValue Chain = getRoot();
+    Ops.push_back(LogTypeId);
+    Ops.push_back(LogEntryVal);
+    Ops.push_back(StrSizeVal);
+    Ops.push_back(Chain);
+
+    // We need to enforce the calling convention for the callsite, so that
+    // argument ordering is enforced correctly, and that register allocation can
+    // see that some registers may be assumed clobbered and have to preserve
+    // them across calls to the intrinsic.
+    MachineSDNode *MN = DAG.getMachineNode(
+        TargetOpcode::PATCHABLE_TYPED_EVENT_CALL, DL, NodeTys, Ops);
+    SDValue patchableNode = SDValue(MN, 0);
+    DAG.setRoot(patchableNode);
+    setValue(&I, patchableNode);
+    return nullptr;
+  }
   case Intrinsic::experimental_deoptimize:
     LowerDeoptimizeCall(&I);
     return nullptr;

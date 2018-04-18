@@ -491,7 +491,7 @@ static void dumpSectionContrib(LinePrinter &P, const SectionContrib &SC,
                                ArrayRef<std::string> SectionNames,
                                uint32_t FieldWidth) {
   std::string NameInsert;
-  if (SC.ISect > 0 && SC.ISect < SectionNames.size()) {
+  if (SC.ISect > 0 && SC.ISect <= SectionNames.size()) {
     StringRef SectionName = SectionNames[SC.ISect - 1];
     NameInsert = formatv("[{0}]", SectionName).str();
   } else

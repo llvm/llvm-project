@@ -284,8 +284,10 @@ GetElementPtrInst *Vectorizer::getSourceGEP(Value *Src) const {
   // in pointee type size here. Currently it will not be vectorized.
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *SrcBase = SrcPtr->stripPointerCasts();
-  if (DL.getTypeStoreSize(SrcPtr->getType()->getPointerElementType()) ==
-      DL.getTypeStoreSize(SrcBase->getType()->getPointerElementType()))
+  Type *SrcPtrType = SrcPtr->getType()->getPointerElementType();
+  Type *SrcBaseType = SrcBase->getType()->getPointerElementType();
+  if (SrcPtrType->isSized() && SrcBaseType->isSized() &&
+      DL.getTypeStoreSize(SrcPtrType) == DL.getTypeStoreSize(SrcBaseType))
     SrcPtr = SrcBase;
   return dyn_cast<GetElementPtrInst>(SrcPtr);
 }

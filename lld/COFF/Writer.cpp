@@ -121,14 +121,8 @@ private:
 
 class CVDebugRecordChunk : public Chunk {
 public:
-  CVDebugRecordChunk() {
-    PDBAbsPath = Config->PDBPath;
-    if (!PDBAbsPath.empty())
-      llvm::sys::fs::make_absolute(PDBAbsPath);
-  }
-
   size_t getSize() const override {
-    return sizeof(codeview::DebugInfo) + PDBAbsPath.size() + 1;
+    return sizeof(codeview::DebugInfo) + Config->PDBAltPath.size() + 1;
   }
 
   void writeTo(uint8_t *B) const override {
@@ -138,12 +132,11 @@ public:
 
     // variable sized field (PDB Path)
     char *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*BuildId));
-    if (!PDBAbsPath.empty())
-      memcpy(P, PDBAbsPath.data(), PDBAbsPath.size());
-    P[PDBAbsPath.size()] = '\0';
+    if (!Config->PDBAltPath.empty())
+      memcpy(P, Config->PDBAltPath.data(), Config->PDBAltPath.size());
+    P[Config->PDBAltPath.size()] = '\0';
   }
 
-  SmallString<128> PDBAbsPath;
   mutable codeview::DebugInfo *BuildId = nullptr;
 };
 
