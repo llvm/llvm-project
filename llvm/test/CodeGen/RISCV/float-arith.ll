@@ -84,7 +84,6 @@ define float @fneg_s(float %a) nounwind {
 ; RV32IF-LABEL: fneg_s:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    lui a1, 524288
-; RV32IF-NEXT:    mv a1, a1
 ; RV32IF-NEXT:    xor a0, a0, a1
 ; RV32IF-NEXT:    ret
   %1 = fsub float -0.0, %a
@@ -97,7 +96,6 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fsgnjn_s:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    lui a2, 524288
-; RV32IF-NEXT:    mv a2, a2
 ; RV32IF-NEXT:    xor a1, a1, a2
 ; RV32IF-NEXT:    fmv.w.x ft0, a1
 ; RV32IF-NEXT:    fmv.w.x ft1, a0

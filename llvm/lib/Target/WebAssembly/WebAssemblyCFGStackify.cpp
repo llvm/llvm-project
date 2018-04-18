@@ -145,6 +145,9 @@ static void PlaceBlockMarker(
            std::prev(InsertPos)->getOpcode() != WebAssembly::END_LOOP)
       --InsertPos;
   }
+  // The header block in which a 'block' mark will be inserted should have a
+  // terminator because it is branching to a non-layout successor.
+  assert(InsertPos != Header->end());
 
   // Add the BLOCK.
   MachineInstr *Begin =

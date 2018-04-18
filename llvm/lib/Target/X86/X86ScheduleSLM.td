@@ -93,7 +93,7 @@ defm : SLMWriteResPair<WriteShift, [SLM_IEC_RSV0],  1>;
 defm : SLMWriteResPair<WriteJump,  [SLM_IEC_RSV1],  1>;
 defm : SLMWriteResPair<WriteCRC32, [SLM_IEC_RSV1],  3>;
 
-defm : SLMWriteResPair<WriteCMOV,  [SLM_IEC_RSV01], 1>;
+defm : SLMWriteResPair<WriteCMOV,  [SLM_IEC_RSV01], 2, [2]>;
 def  : WriteRes<WriteSETCC, [SLM_IEC_RSV01]>;
 def  : WriteRes<WriteSETCCStore, [SLM_IEC_RSV01, SLM_MEC_RSV]> {
   // FIXME Latency and NumMicrOps?
@@ -155,6 +155,7 @@ defm : SLMWriteResPair<WriteShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
+defm : SLMWriteResPair<WritePSADBW, [SLM_FPC_RSV0],  4>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.

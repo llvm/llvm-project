@@ -183,9 +183,13 @@ HANDLE_TARGET_OPCODE(PATCHABLE_FUNCTION_EXIT)
 /// PATCHABLE_RET which specifically only works for return instructions.
 HANDLE_TARGET_OPCODE(PATCHABLE_TAIL_CALL)
 
-/// Wraps a logging call and its arguments with nop sleds. At runtime, this can be
-/// patched to insert instrumentation instructions.
+/// Wraps a logging call and its arguments with nop sleds. At runtime, this can
+/// be patched to insert instrumentation instructions.
 HANDLE_TARGET_OPCODE(PATCHABLE_EVENT_CALL)
+
+/// Wraps a typed logging call and its argument with nop sleds. At runtime, this
+/// can be patched to insert instrumentation instructions.
+HANDLE_TARGET_OPCODE(PATCHABLE_TYPED_EVENT_CALL)
 
 HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 

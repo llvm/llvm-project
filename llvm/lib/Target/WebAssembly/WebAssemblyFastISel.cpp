@@ -703,8 +703,12 @@ bool WebAssemblyFastISel::fastLowerArguments() {
   for (auto const &Arg : F->args())
     MFI->addParam(getLegalType(getSimpleType(Arg.getType())));
 
-  if (!F->getReturnType()->isVoidTy())
-    MFI->addResult(getLegalType(getSimpleType(F->getReturnType())));
+  if (!F->getReturnType()->isVoidTy()) {
+    MVT::SimpleValueType RetTy = getSimpleType(F->getReturnType());
+    if (RetTy == MVT::INVALID_SIMPLE_VALUE_TYPE)
+      return false;
+    MFI->addResult(getLegalType(RetTy));
+  }
 
   return true;
 }

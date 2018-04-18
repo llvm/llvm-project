@@ -66,6 +66,9 @@ defm as_needed: B<"as-needed",
     "Only set DT_NEEDED for shared libraries if used",
     "Always set DT_NEEDED for shared libraries">;
 
+defm call_graph_ordering_file: Eq<"call-graph-ordering-file">,
+  HelpText<"Layout sections to optimize the given callgraph">;
+
 // -chroot doesn't have a help text because it is an internal option.
 defm chroot: Eq<"chroot">;
 

@@ -384,7 +384,7 @@ defm MMX_PMAXSW  : MMXI_binop_rm_int<0xEE, "pmaxsw", int_x86_mmx_pmaxs_w,
                                      WriteVecALU, 1>;
 
 defm MMX_PSADBW  : MMXI_binop_rm_int<0xF6, "psadbw", int_x86_mmx_psad_bw,
-                                     WriteVecIMul, 1>;
+                                     WritePSADBW, 1>;
 }
 
 defm MMX_PSIGNB :  SS3I_binop_rm_int_mm<0x08, "psignb", int_x86_ssse3_psign_b,

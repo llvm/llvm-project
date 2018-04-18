@@ -111,6 +111,7 @@ defm WriteShuffle  : X86SchedWritePair; // Vector shuffles.
 defm WriteVarShuffle  : X86SchedWritePair; // Vector variable shuffles.
 defm WriteBlend  : X86SchedWritePair; // Vector blends.
 defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.
+defm WritePSADBW : X86SchedWritePair; // Vector PSADBW.
 defm WriteMPSAD : X86SchedWritePair; // Vector MPSAD.
 
 // Vector bitwise operations.

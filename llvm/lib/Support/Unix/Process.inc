@@ -172,15 +172,6 @@ Optional<std::string> Process::GetEnv(StringRef Name) {
   return std::string(Val);
 }
 
-std::error_code
-Process::GetArgumentVector(SmallVectorImpl<const char *> &ArgsOut,
-                           ArrayRef<const char *> ArgsIn,
-                           SpecificBumpPtrAllocator<char> &) {
-  ArgsOut.append(ArgsIn.begin(), ArgsIn.end());
-
-  return std::error_code();
-}
-
 namespace {
 class FDCloser {
 public:

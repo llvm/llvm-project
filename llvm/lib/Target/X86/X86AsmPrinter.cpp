@@ -372,6 +372,12 @@ static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
   unsigned Reg = MO.getReg();
   bool EmitPercent = true;
 
+  if (!X86::GR8RegClass.contains(Reg) &&
+      !X86::GR16RegClass.contains(Reg) &&
+      !X86::GR32RegClass.contains(Reg) &&
+      !X86::GR64RegClass.contains(Reg))
+    return true;
+
   switch (Mode) {
   default: return true;  // Unknown mode.
   case 'b': // Print QImode register

@@ -535,6 +535,7 @@ protected:
   bool selectExtractValue(const User *I);
   bool selectInsertValue(const User *I);
   bool selectXRayCustomEvent(const CallInst *II);
+  bool selectXRayTypedEvent(const CallInst *II);
 
 private:
   /// \brief Handle PHI nodes in successor blocks.

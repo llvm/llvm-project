@@ -15,6 +15,7 @@
 #include "RISCV.h"
 #include "InstPrinter/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCPseudoExpansion.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -77,6 +78,14 @@ void RISCVAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
+
+  if (MI->getOpcode() == RISCV::PseudoLI) {
+    const MachineOperand &DstRegOp = MI->getOperand(0);
+    const MachineOperand &ImmOp = MI->getOperand(1);
+    emitRISCVLoadImm(DstRegOp.getReg(), ImmOp.getImm(), *OutStreamer,
+                     &getSubtargetInfo());
+    return;
+  }
 
   MCInst TmpInst;
   LowerRISCVMachineInstrToMCInst(MI, TmpInst, *this);

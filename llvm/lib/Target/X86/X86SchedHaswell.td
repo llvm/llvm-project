@@ -185,6 +185,7 @@ defm : HWWriteResPair<WriteVarShuffle256,  [HWPort5],  3>;
 defm : HWWriteResPair<WriteVarBlend,  [HWPort5], 2, [2]>;
 defm : HWWriteResPair<WriteVarVecShift,  [HWPort0, HWPort5], 2, [2, 1]>;
 defm : HWWriteResPair<WriteMPSAD,  [HWPort0, HWPort5], 6, [1, 2]>;
+defm : HWWriteResPair<WritePSADBW, [HWPort0], 5>;
 
 // String instructions.
 
@@ -619,7 +620,6 @@ def HWWriteResGroup0_2 : SchedWriteRes<[HWPort23]> {
 def: InstRW<[HWWriteResGroup0_2], (instregex "MMX_MOVD64rm",
                                              "MMX_MOVD64to64rm",
                                              "MMX_MOVQ64rm",
-                                             "MOV(8|16|32|64)rm",
                                              "MOVSX(16|32|64)rm16",
                                              "MOVSX(16|32|64)rm32",
                                              "MOVSX(16|32|64)rm8",
@@ -831,10 +831,6 @@ def: InstRW<[HWWriteResGroup7], (instregex "BT(16|32|64)ri8",
                                            "BTR(16|32|64)rr",
                                            "BTS(16|32|64)ri8",
                                            "BTS(16|32|64)rr",
-                                           "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_1",
-                                           "J(A|AE|B|BE|E|G|GE|L|LE|NE|NO|NP|NS|O|P|S)_4",
-                                           "JMP_1",
-                                           "JMP_4",
                                            "RORX(32|64)ri",
                                            "SAR(8|16|32|64)r1",
                                            "SAR(8|16|32|64)ri",
@@ -964,9 +960,9 @@ def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
 def: InstRW<[HWWriteResGroup10], (instrs CBW, CWDE, CDQE)>;
 def: InstRW<[HWWriteResGroup10], (instregex "CLC",
                                             "CMC",
-                                            "LAHF",
+                                            "LAHF", // TODO: This doesn't match Agner's data
                                             "NOOP",
-                                            "SAHF",
+                                            "SAHF", // TODO: This doesn't match Agner's data
                                             "SGDT64m",
                                             "SIDT64m",
                                             "SLDT64m",
@@ -2262,7 +2258,6 @@ def: InstRW<[HWWriteResGroup89], (instregex "MMX_PMADDUBSWrr",
                                             "MMX_PMULHWirr",
                                             "MMX_PMULLWirr",
                                             "MMX_PMULUDQirr",
-                                            "MMX_PSADBWirr",
                                             "MUL_FPrST0",
                                             "MUL_FST0r",
                                             "MUL_FrST0",
@@ -2276,7 +2271,6 @@ def: InstRW<[HWWriteResGroup89], (instregex "MMX_PMADDUBSWrr",
                                             "(V?)PMULHW(Y?)rr",
                                             "(V?)PMULLW(Y?)rr",
                                             "(V?)PMULUDQ(Y?)rr",
-                                            "(V?)PSADBW(Y?)rr",
                                             "(V?)RCPPSr",
                                             "(V?)RCPSSr",
                                             "(V?)RSQRTPSr",

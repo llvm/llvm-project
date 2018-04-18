@@ -226,6 +226,7 @@ defm : ZnWriteResFpuPair<WriteVarShuffle, [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteBlend,      [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteShuffle256, [ZnFPU],   2>;
 defm : ZnWriteResFpuPair<WriteVarShuffle256, [ZnFPU],   2>;
+defm : ZnWriteResFpuPair<WritePSADBW,     [ZnFPU0],  3>;
 
 // Vector Shift Operations
 defm : ZnWriteResFpuPair<WriteVarVecShift, [ZnFPU12], 1>;

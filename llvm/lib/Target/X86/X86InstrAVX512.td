@@ -10076,7 +10076,7 @@ multiclass avx512_psadbw_packed_all<bits<8> opc, SDNode OpNode,
 }
 
 defm VPSADBW : avx512_psadbw_packed_all<0xf6, X86psadbw, "vpsadbw",
-                                        WriteMPSAD, HasBWI>, EVEX_4V, VEX_WIG;
+                                        WritePSADBW, HasBWI>, EVEX_4V, VEX_WIG;
 
 // Transforms to swizzle an immediate to enable better matching when
 // memory operand isn't in the right place.

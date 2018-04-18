@@ -440,6 +440,86 @@ static void iterateModuleSubsections(
                       });
 }
 
+static Expected<std::pair<std::unique_ptr<MappedBlockStream>,
+                          ArrayRef<llvm::object::coff_section>>>
+loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
+  if (!File.hasPDBDbiStream())
+    return make_error<StringError>(
+        "Section headers require a DBI Stream, which could not be loaded",
+        inconvertibleErrorCode());
+
+  auto &Dbi = cantFail(File.getPDBDbiStream());
+  uint32_t SI = Dbi.getDebugStreamIndex(Type);
+
+  if (SI == kInvalidStreamIndex)
+    return make_error<StringError>(
+        "PDB does not contain the requested image section header type",
+        inconvertibleErrorCode());
+
+  auto Stream = File.createIndexedStream(SI);
+  if (!Stream)
+    return make_error<StringError>("Could not load the required stream data",
+                                   inconvertibleErrorCode());
+
+  ArrayRef<object::coff_section> Headers;
+  if (Stream->getLength() % sizeof(object::coff_section) != 0)
+    return make_error<StringError>(
+        "Section header array size is not a multiple of section header size",
+        inconvertibleErrorCode());
+
+  uint32_t NumHeaders = Stream->getLength() / sizeof(object::coff_section);
+  BinaryStreamReader Reader(*Stream);
+  cantFail(Reader.readArray(Headers, NumHeaders));
+  return std::make_pair(std::move(Stream), Headers);
+}
+
+static std::vector<std::string> getSectionNames(PDBFile &File) {
+  auto ExpectedHeaders = loadSectionHeaders(File, DbgHeaderType::SectionHdr);
+  if (!ExpectedHeaders)
+    return {};
+
+  std::unique_ptr<MappedBlockStream> Stream;
+  ArrayRef<object::coff_section> Headers;
+  std::tie(Stream, Headers) = std::move(*ExpectedHeaders);
+  std::vector<std::string> Names;
+  for (const auto &H : Headers)
+    Names.push_back(H.Name);
+  return Names;
+}
+
+static void dumpSectionContrib(LinePrinter &P, const SectionContrib &SC,
+                               ArrayRef<std::string> SectionNames,
+                               uint32_t FieldWidth) {
+  std::string NameInsert;
+  if (SC.ISect > 0 && SC.ISect <= SectionNames.size()) {
+    StringRef SectionName = SectionNames[SC.ISect - 1];
+    NameInsert = formatv("[{0}]", SectionName).str();
+  } else
+    NameInsert = "[???]";
+  P.formatLine("SC{5}  | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
+               "crc = {4}",
+               formatSegmentOffset(SC.ISect, SC.Off), fmtle(SC.Size),
+               fmtle(SC.Imod), fmtle(SC.DataCrc), fmtle(SC.RelocCrc),
+               fmt_align(NameInsert, AlignStyle::Left, FieldWidth + 2));
+  AutoIndent Indent(P, FieldWidth + 2);
+  P.formatLine("      {0}",
+               formatSectionCharacteristics(P.getIndentLevel() + 6,
+                                            SC.Characteristics, 3, " | "));
+}
+
+static void dumpSectionContrib(LinePrinter &P, const SectionContrib2 &SC,
+                               ArrayRef<std::string> SectionNames,
+                               uint32_t FieldWidth) {
+  P.formatLine("SC2[{6}] | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
+               "crc = {4}, coff section = {5}",
+               formatSegmentOffset(SC.Base.ISect, SC.Base.Off),
+               fmtle(SC.Base.Size), fmtle(SC.Base.Imod), fmtle(SC.Base.DataCrc),
+               fmtle(SC.Base.RelocCrc), fmtle(SC.ISectCoff));
+  P.formatLine("      {0}",
+               formatSectionCharacteristics(P.getIndentLevel() + 6,
+                                            SC.Base.Characteristics, 3, " | "));
+}
+
 Error DumpOutputStyle::dumpModules() {
   printHeader(P, "Modules");
   AutoIndent Indent(P);
@@ -462,6 +542,10 @@ Error DumpOutputStyle::dumpModules() {
   iterateSymbolGroups(
       File, PrintScope{P, 11}, [&](uint32_t Modi, const SymbolGroup &Strings) {
         auto Desc = Modules.getModuleDescriptor(Modi);
+        if (opts::dump::DumpSectionContribs) {
+          std::vector<std::string> Sections = getSectionNames(getPdb());
+          dumpSectionContrib(P, Desc.getSectionContrib(), Sections, 0);
+        }
         P.formatLine("Obj: `{0}`: ", Desc.getObjFileName());
         P.formatLine("debug stream: {0}, # files: {1}, has ec info: {2}",
                      Desc.getModuleStreamIndex(), Desc.getNumberOfFiles(),
@@ -1435,39 +1519,6 @@ Error DumpOutputStyle::dumpSectionHeaders() {
   return Error::success();
 }
 
-static Expected<std::pair<std::unique_ptr<MappedBlockStream>,
-                          ArrayRef<llvm::object::coff_section>>>
-loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
-  if (!File.hasPDBDbiStream())
-    return make_error<StringError>(
-        "Section headers require a DBI Stream, which could not be loaded",
-        inconvertibleErrorCode());
-
-  auto &Dbi = cantFail(File.getPDBDbiStream());
-  uint32_t SI = Dbi.getDebugStreamIndex(Type);
-
-  if (SI == kInvalidStreamIndex)
-    return make_error<StringError>(
-        "PDB does not contain the requested image section header type",
-        inconvertibleErrorCode());
-
-  auto Stream = File.createIndexedStream(SI);
-  if (!Stream)
-    return make_error<StringError>("Could not load the required stream data",
-                                   inconvertibleErrorCode());
-
-  ArrayRef<object::coff_section> Headers;
-  if (Stream->getLength() % sizeof(object::coff_section) != 0)
-    return make_error<StringError>(
-        "Section header array size is not a multiple of section header size",
-        inconvertibleErrorCode());
-
-  uint32_t NumHeaders = Stream->getLength() / sizeof(object::coff_section);
-  BinaryStreamReader Reader(*Stream);
-  cantFail(Reader.readArray(Headers, NumHeaders));
-  return std::make_pair(std::move(Stream), Headers);
-}
-
 void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
   printHeader(P, Label);
 
@@ -1514,20 +1565,6 @@ void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
   return;
 }
 
-std::vector<std::string> getSectionNames(PDBFile &File) {
-  auto ExpectedHeaders = loadSectionHeaders(File, DbgHeaderType::SectionHdr);
-  if (!ExpectedHeaders)
-    return {};
-
-  std::unique_ptr<MappedBlockStream> Stream;
-  ArrayRef<object::coff_section> Headers;
-  std::tie(Stream, Headers) = std::move(*ExpectedHeaders);
-  std::vector<std::string> Names;
-  for (const auto &H : Headers)
-    Names.push_back(H.Name);
-  return Names;
-}
-
 Error DumpOutputStyle::dumpSectionContribs() {
   printHeader(P, "Section Contributions");
 
@@ -1556,33 +1593,10 @@ Error DumpOutputStyle::dumpSectionContribs() {
       MaxNameLen = (Max == Names.end() ? 0 : Max->size());
     }
     void visit(const SectionContrib &SC) override {
-      assert(SC.ISect > 0);
-      std::string NameInsert;
-      if (SC.ISect < Names.size()) {
-        StringRef SectionName = Names[SC.ISect - 1];
-        NameInsert = formatv("[{0}]", SectionName).str();
-      } else
-        NameInsert = "[???]";
-      P.formatLine("SC{5}  | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
-                   "crc = {4}",
-                   formatSegmentOffset(SC.ISect, SC.Off), fmtle(SC.Size),
-                   fmtle(SC.Imod), fmtle(SC.DataCrc), fmtle(SC.RelocCrc),
-                   fmt_align(NameInsert, AlignStyle::Left, MaxNameLen + 2));
-      AutoIndent Indent(P, MaxNameLen + 2);
-      P.formatLine("      {0}",
-                   formatSectionCharacteristics(P.getIndentLevel() + 6,
-                                                SC.Characteristics, 3, " | "));
+      dumpSectionContrib(P, SC, Names, MaxNameLen);
     }
     void visit(const SectionContrib2 &SC) override {
-      P.formatLine(
-          "SC2[{6}] | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
-          "crc = {4}, coff section = {5}",
-          formatSegmentOffset(SC.Base.ISect, SC.Base.Off), fmtle(SC.Base.Size),
-          fmtle(SC.Base.Imod), fmtle(SC.Base.DataCrc), fmtle(SC.Base.RelocCrc),
-          fmtle(SC.ISectCoff));
-      P.formatLine("      {0}", formatSectionCharacteristics(
-                                    P.getIndentLevel() + 6,
-                                    SC.Base.Characteristics, 3, " | "));
+      dumpSectionContrib(P, SC, Names, MaxNameLen);
     }
 
   private:
