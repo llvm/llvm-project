@@ -3582,7 +3582,7 @@ static PropertyDefinition g_properties[] = {
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, nullptr,
      "Automatically load Clang modules referred to by the program."},
-    {"use-all-compiler-flags", OptionValue::eTypeBoolean, false, false, nullptr,
+    {"use-all-compiler-flags", OptionValue::eTypeBoolean, false, true, nullptr,
      nullptr, "Try to use compiler flags for all modules when setting up the "
               "Swift expression parser, not just the main executable."},
     {"auto-apply-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
