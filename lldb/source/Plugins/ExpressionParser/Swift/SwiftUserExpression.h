@@ -26,7 +26,8 @@
 // Project includes
 
 namespace lldb_private {
-
+class SwiftExpressionParser;
+  
 //----------------------------------------------------------------------
 /// @class SwiftUserExpression SwiftUserExpression.h
 /// "lldb/Expression/SwiftUserExpression.h"
@@ -185,6 +186,7 @@ private:
   };
 
   PersistentVariableDelegate m_persistent_variable_delegate;
+  std::unique_ptr<SwiftExpressionParser> m_parser;
 };
 
 } // namespace lldb_private

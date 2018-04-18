@@ -18,7 +18,7 @@ func main() {
   data.append(data)
   print("break here") //% self.expect('frame variable data', substrs=['10 bytes'])
   //% self.expect('expression data', substrs=['10 bytes'])
-  //% self.expect('expression data.subdata(in: Range(uncheckedBounds: (lower: data.startIndex, upper: data.index(after: data.startIndex))))', substrs=['1 byte'])
+  //FIXME: self.expect('expression data.subdata(in: Range(uncheckedBounds: (lower: data.startIndex, upper: data.index(after: data.startIndex))))', substrs=['1 byte'])
 }
 
 main()

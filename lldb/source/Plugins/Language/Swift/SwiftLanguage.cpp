@@ -1324,8 +1324,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             if (target) {
               const bool create_on_demand = false;
               Status error;
-              SwiftASTContext *ast_ctx(
-                  target->GetScratchSwiftASTContext(error, create_on_demand));
+              SwiftASTContext *ast_ctx(target->GetScratchSwiftASTContext(
+                  error, *exe_scope, create_on_demand));
               if (ast_ctx) {
                 const bool is_mangled = true;
                 Mangled mangled(ConstString(input), is_mangled);
@@ -1383,8 +1383,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             Target *target = exe_scope->CalculateTarget().get();
             const bool create_on_demand = false;
             Status error;
-            SwiftASTContext *ast_ctx(
-                target->GetScratchSwiftASTContext(error, create_on_demand));
+            SwiftASTContext *ast_ctx(target->GetScratchSwiftASTContext(
+                error, *exe_scope, create_on_demand));
             if (ast_ctx) {
               auto iter = ast_ctx->GetModuleCache().begin(),
                    end = ast_ctx->GetModuleCache().end();
