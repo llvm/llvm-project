@@ -9,6 +9,7 @@
 
 #include "Writer.h"
 #include "AArch64ErrataFix.h"
+#include "CallGraphSort.h"
 #include "Config.h"
 #include "Filesystem.h"
 #include "LinkerScript.h"
@@ -1029,6 +1030,10 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
 // Builds section order for handling --symbol-ordering-file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   DenseMap<const InputSectionBase *, int> SectionOrder;
+  // Use the rarely used option -call-graph-ordering-file to sort sections.
+  if (!Config->CallGraphProfile.empty())
+    return computeCallGraphProfileOrder();
+
   if (Config->SymbolOrderingFile.empty())
     return SectionOrder;
 
@@ -1053,25 +1058,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
     SymbolOrderEntry &Ent = It->second;
     Ent.Present = true;
 
-    if (Config->WarnSymbolOrdering) {
-      auto *D = dyn_cast<Defined>(&Sym);
-      InputFile *File = Sym.File;
-      if (Sym.isUndefined())
-        warn(toString(File) +
-             ": unable to order undefined symbol: " + Sym.getName());
-      else if (Sym.isShared())
-        warn(toString(File) +
-             ": unable to order shared symbol: " + Sym.getName());
-      else if (D && !D->Section)
-        warn(toString(File) +
-             ": unable to order absolute symbol: " + Sym.getName());
-      else if (D && isa<OutputSection>(D->Section))
-        warn(toString(File) +
-             ": unable to order synthetic symbol: " + Sym.getName());
-      else if (D && !D->Section->Repl->Live)
-        warn(toString(File) +
-             ": unable to order discarded symbol: " + Sym.getName());
-    }
+    warnUnorderableSymbol(&Sym);
 
     if (auto *D = dyn_cast<Defined>(&Sym)) {
       if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {

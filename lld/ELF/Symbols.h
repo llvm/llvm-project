@@ -356,6 +356,8 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   if (S->Traced)
     printTraceSymbol(S);
 }
+
+void warnUnorderableSymbol(const Symbol *Sym);
 } // namespace elf
 
 std::string toString(const elf::Symbol &B);

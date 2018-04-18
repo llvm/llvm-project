@@ -13,9 +13,9 @@
 # IMPORT-NEXT: DelayImport {
 # IMPORT-NEXT:   Name: library.dll
 # IMPORT-NEXT:   Attributes: 0x1
-# IMPORT-NEXT:   ModuleHandle: 0x2000
-# IMPORT-NEXT:   ImportAddressTable: 0x2008
-# IMPORT-NEXT:   ImportNameTable: 0x3040
+# IMPORT-NEXT:   ModuleHandle: 0x3000
+# IMPORT-NEXT:   ImportAddressTable: 0x3008
+# IMPORT-NEXT:   ImportNameTable: 0x2040
 # IMPORT-NEXT:   BoundDelayImportTable: 0x0
 # IMPORT-NEXT:   UnloadDelayImportTable: 0x0
 # IMPORT-NEXT:   Import {
@@ -43,21 +43,21 @@
 # BASEREL-NEXT:   }
 # BASEREL-NEXT:   Entry {
 # BASEREL-NEXT:     Type: HIGHLOW
-# BASEREL-NEXT:     Address: 0x2008
+# BASEREL-NEXT:     Address: 0x3008
 # BASEREL-NEXT:   }
 # BASEREL-NEXT:   Entry {
 # BASEREL-NEXT:     Type: ABSOLUTE
-# BASEREL-NEXT:     Address: 0x2000
+# BASEREL-NEXT:     Address: 0x3000
 # BASEREL-NEXT:   }
 # BASEREL-NEXT: ]
 #
-# DISASM:      401018:       42 f2 08 0c     movw r12, #8200
+# DISASM:      401018:       43 f2 08 0c     movw r12, #12296
 # DISASM-NEXT: 40101c:       c0 f2 40 0c     movt    r12, #64
 # DISASM-NEXT: 401020:       2d e9 0f 48     push.w  {r0, r1, r2, r3, r11, lr}
 # DISASM-NEXT: 401024:       0d f2 10 0b     addw    r11, sp, #16
 # DISASM-NEXT: 401028:       2d ed 10 0b     vpush   {d0, d1, d2, d3, d4, d5, d6, d7}
 # DISASM-NEXT: 40102c:       61 46           mov     r1, r12
-# DISASM-NEXT: 40102e:       43 f2 00 00     movw r0, #12288
+# DISASM-NEXT: 40102e:       42 f2 00 00     movw r0, #8192
 # DISASM-NEXT: 401032:       c0 f2 40 00     movt    r0, #64
 # DISASM-NEXT: 401036:       ff f7 e3 ff     bl      #-58
 # DISASM-NEXT: 40103a:       84 46           mov     r12, r0
