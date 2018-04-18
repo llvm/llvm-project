@@ -1037,3 +1037,40 @@ Value *llvm::emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilder<> &B,
     CI->setCallingConv(Fn->getCallingConv());
   return CI;
 }
+
+Value *llvm::emitMalloc(Value *Num, IRBuilder<> &B, const DataLayout &DL,
+                        const TargetLibraryInfo *TLI) {
+  if (!TLI->has(LibFunc_malloc))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  LLVMContext &Context = B.GetInsertBlock()->getContext();
+  Value *Malloc = M->getOrInsertFunction("malloc", B.getInt8PtrTy(),
+                                         DL.getIntPtrType(Context));
+  inferLibFuncAttributes(*M->getFunction("malloc"), *TLI);
+  CallInst *CI = B.CreateCall(Malloc, Num, "malloc");
+
+  if (const Function *F = dyn_cast<Function>(Malloc->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
+                        IRBuilder<> &B, const TargetLibraryInfo &TLI) {
+  if (!TLI.has(LibFunc_calloc))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  const DataLayout &DL = M->getDataLayout();
+  IntegerType *PtrType = DL.getIntPtrType((B.GetInsertBlock()->getContext()));
+  Value *Calloc = M->getOrInsertFunction("calloc", Attrs, B.getInt8PtrTy(),
+                                         PtrType, PtrType);
+  inferLibFuncAttributes(*M->getFunction("calloc"), TLI);
+  CallInst *CI = B.CreateCall(Calloc, {Num, Size}, "calloc");
+
+  if (const auto *F = dyn_cast<Function>(Calloc->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}

@@ -811,27 +811,6 @@ Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilder<> &B) {
   return CI->getArgOperand(0);
 }
 
-// TODO: Does this belong in BuildLibCalls or should all of those similar
-// functions be moved here?
-static Value *emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
-                         IRBuilder<> &B, const TargetLibraryInfo &TLI) {
-  LibFunc Func;
-  if (!TLI.getLibFunc("calloc", Func) || !TLI.has(Func))
-    return nullptr;
-
-  Module *M = B.GetInsertBlock()->getModule();
-  const DataLayout &DL = M->getDataLayout();
-  IntegerType *PtrType = DL.getIntPtrType((B.GetInsertBlock()->getContext()));
-  Value *Calloc = M->getOrInsertFunction("calloc", Attrs, B.getInt8PtrTy(),
-                                         PtrType, PtrType);
-  CallInst *CI = B.CreateCall(Calloc, { Num, Size }, "calloc");
-
-  if (const auto *F = dyn_cast<Function>(Calloc->stripPointerCasts()))
-    CI->setCallingConv(F->getCallingConv());
-
-  return CI;
-}
-
 /// Fold memset[_chk](malloc(n), 0, n) --> calloc(1, n).
 static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
                                const TargetLibraryInfo &TLI) {
@@ -887,6 +866,13 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B) {
   Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
   B.CreateMemSet(CI->getArgOperand(0), Val, CI->getArgOperand(2), 1);
   return CI->getArgOperand(0);
+}
+
+Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilder<> &B) {
+  if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
+    return emitMalloc(CI->getArgOperand(1), B, DL, TLI);
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2080,6 +2066,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeMemMove(CI, Builder);
     case LibFunc_memset:
       return optimizeMemSet(CI, Builder);
+    case LibFunc_realloc:
+      return optimizeRealloc(CI, Builder);
     case LibFunc_wcslen:
       return optimizeWcslen(CI, Builder);
     default:

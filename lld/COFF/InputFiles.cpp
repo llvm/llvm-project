@@ -170,8 +170,8 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   // CodeView needs a linker support. We need to interpret and debug
   // info, and then write it to a separate .pdb file.
 
-  // Ignore debug info unless /debug is given.
-  if (!Config->Debug && Name.startswith(".debug"))
+  // Ignore DWARF debug info unless /debug is given.
+  if (!Config->Debug && Name.startswith(".debug_"))
     return nullptr;
 
   if (Sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)

@@ -100,6 +100,7 @@ struct Configuration {
   bool ShowTiming = false;
   unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
   std::vector<std::string> NatvisFiles;
+  llvm::SmallString<128> PDBAltPath;
   llvm::SmallString<128> PDBPath;
   std::vector<llvm::StringRef> Argv;
 

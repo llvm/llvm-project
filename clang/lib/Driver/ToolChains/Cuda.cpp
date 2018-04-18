@@ -273,6 +273,35 @@ void CudaInstallationDetector::print(raw_ostream &OS) const {
        << CudaVersionToString(Version) << "\n";
 }
 
+namespace {
+  /// Debug info kind.
+enum DebugInfoKind {
+  NoDebug,       /// No debug info.
+  LineTableOnly, /// Line tables only.
+  FullDebug      /// Full debug info.
+};
+} // anonymous namespace
+
+static DebugInfoKind mustEmitDebugInfo(const ArgList &Args) {
+  Arg *A = Args.getLastArg(options::OPT_O_Group);
+  if (Args.hasFlag(options::OPT_cuda_noopt_device_debug,
+                   options::OPT_no_cuda_noopt_device_debug,
+                   !A || A->getOption().matches(options::OPT_O0))) {
+    if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
+      const Option &Opt = A->getOption();
+      if (Opt.matches(options::OPT_gN_Group)) {
+        if (Opt.matches(options::OPT_g0) || Opt.matches(options::OPT_ggdb0))
+          return NoDebug;
+        if (Opt.matches(options::OPT_gline_tables_only) ||
+            Opt.matches(options::OPT_ggdb1))
+          return LineTableOnly;
+      }
+      return FullDebug;
+    }
+  }
+  return NoDebug;
+}
+
 void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                     const InputInfo &Output,
                                     const InputInfoList &Inputs,
@@ -304,8 +333,8 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   ArgStringList CmdArgs;
   CmdArgs.push_back(TC.getTriple().isArch64Bit() ? "-m64" : "-m32");
-  if (Args.hasFlag(options::OPT_cuda_noopt_device_debug,
-                   options::OPT_no_cuda_noopt_device_debug, false)) {
+  DebugInfoKind DIKind = mustEmitDebugInfo(Args);
+  if (DIKind == FullDebug) {
     // ptxas does not accept -g option if optimization is enabled, so
     // we ignore the compiler's -O* options if we want debug info.
     CmdArgs.push_back("-g");
@@ -341,6 +370,8 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     // to no optimizations, but ptxas's default is -O3.
     CmdArgs.push_back("-O0");
   }
+  if (DIKind == LineTableOnly)
+    CmdArgs.push_back("-lineinfo");
 
   // Pass -v to ptxas if it was passed to the driver.
   if (Args.hasArg(options::OPT_v))
@@ -410,6 +441,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(TC.getTriple().isArch64Bit() ? "-64" : "-32");
   CmdArgs.push_back(Args.MakeArgString("--create"));
   CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
+  if (mustEmitDebugInfo(Args) == FullDebug)
+    CmdArgs.push_back("-g");
 
   for (const auto& II : Inputs) {
     auto *A = II.getAction();
@@ -461,7 +494,7 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Output.getFilename());
   } else
     assert(Output.isNothing() && "Invalid output.");
-  if (Args.hasArg(options::OPT_g_Flag))
+  if (mustEmitDebugInfo(Args) == FullDebug)
     CmdArgs.push_back("-g");
 
   if (Args.hasArg(options::OPT_v))

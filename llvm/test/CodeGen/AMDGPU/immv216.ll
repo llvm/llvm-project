@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
 ; FIXME: Merge into imm.ll
@@ -117,7 +117,7 @@ define amdgpu_kernel void @store_literal_imm_v2f16(<2 x half> addrspace(1)* %out
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -135,7 +135,7 @@ define amdgpu_kernel void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.5_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -153,7 +153,7 @@ define amdgpu_kernel void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_0.5_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -171,7 +171,7 @@ define amdgpu_kernel void @add_inline_imm_neg_0.5_v2f16(<2 x half> addrspace(1)*
 
 ; GCN-LABEL: {{^}}add_inline_imm_1.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1.0{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -189,7 +189,7 @@ define amdgpu_kernel void @add_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -1.0{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -1.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -207,7 +207,7 @@ define amdgpu_kernel void @add_inline_imm_neg_1.0_v2f16(<2 x half> addrspace(1)*
 
 ; GCN-LABEL: {{^}}add_inline_imm_2.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2.0{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -225,7 +225,7 @@ define amdgpu_kernel void @add_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -2.0{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -2.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -243,7 +243,7 @@ define amdgpu_kernel void @add_inline_imm_neg_2.0_v2f16(<2 x half> addrspace(1)*
 
 ; GCN-LABEL: {{^}}add_inline_imm_4.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 4.0{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 4.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -261,7 +261,7 @@ define amdgpu_kernel void @add_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_4.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -4.0{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -4.0 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -318,7 +318,7 @@ define amdgpu_kernel void @commute_add_literal_v2f16(<2 x half> addrspace(1)* %o
 
 ; GCN-LABEL: {{^}}add_inline_imm_1_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -336,7 +336,7 @@ define amdgpu_kernel void @add_inline_imm_1_v2f16(<2 x half> addrspace(1)* %out,
 
 ; GCN-LABEL: {{^}}add_inline_imm_2_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
@@ -354,7 +354,7 @@ define amdgpu_kernel void @add_inline_imm_2_v2f16(<2 x half> addrspace(1)* %out,
 
 ; GCN-LABEL: {{^}}add_inline_imm_16_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 16{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 16 op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]

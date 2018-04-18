@@ -24,18 +24,18 @@ tx ftemplate(int n) {
   float d;
   double e;
 
-  #pragma omp target parallel reduction(+: e) map(tofrom: e)
+  #pragma omp target parallel reduction(+: e)
   {
     e += 5;
   }
 
-  #pragma omp target parallel reduction(^: c) reduction(*: d) map(tofrom: c,d)
+  #pragma omp target parallel reduction(^: c) reduction(*: d)
   {
     c ^= 2;
     d *= 33;
   }
 
-  #pragma omp target parallel reduction(|: a) reduction(max: b) map(tofrom: a,b)
+  #pragma omp target parallel reduction(|: a) reduction(max: b)
   {
     a |= 1;
     b = 99 > b ? 99 : b;

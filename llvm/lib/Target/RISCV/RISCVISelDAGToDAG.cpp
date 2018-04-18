@@ -179,62 +179,41 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
 
     SDValue Base = N->getOperand(BaseOpIdx);
 
-    // If the base is an ADDI or PseudoLI, we can either merge it or at least
-    // sink the lowest 12 bits into the load/store.
-    if (!Base.isMachineOpcode() || (Base.getMachineOpcode() != RISCV::ADDI &&
-                                    Base.getMachineOpcode() != RISCV::PseudoLI))
+    // If the base is an ADDI, we can merge it in to the load/store.
+    if (!Base.isMachineOpcode() || Base.getMachineOpcode() != RISCV::ADDI)
       continue;
 
-    SDValue ImmOperand;
-    SDValue Parent;
-    if (Base.getMachineOpcode() == RISCV::PseudoLI) {
-      ImmOperand = Base.getOperand(0);
-      auto Const = dyn_cast<ConstantSDNode>(ImmOperand);
-      if (!Const || (Const->getSExtValue() & 0xFFF) == 0)
-        continue;
+    SDValue ImmOperand = Base.getOperand(1);
 
-      int64_t Hi52 = (Const->getSExtValue() + 0x800) & ~0xFFF;
-      SDValue HiVal = CurDAG->getTargetConstant(Hi52, SDLoc(ImmOperand),
-                                                ImmOperand.getValueType());
-      Parent =
-          SDValue(CurDAG->getMachineNode(RISCV::PseudoLI, SDLoc(ImmOperand),
-                                         ImmOperand.getValueType(), HiVal),
-                  0);
-
-      int64_t Lo12 = SignExtend64<12>(Const->getSExtValue());
-      ImmOperand = CurDAG->getTargetConstant(Lo12, SDLoc(ImmOperand),
-                                             ImmOperand.getValueType());
+    if (auto Const = dyn_cast<ConstantSDNode>(ImmOperand)) {
+      ImmOperand = CurDAG->getTargetConstant(
+          Const->getSExtValue(), SDLoc(ImmOperand), ImmOperand.getValueType());
+    } else if (auto GA = dyn_cast<GlobalAddressSDNode>(ImmOperand)) {
+      ImmOperand = CurDAG->getTargetGlobalAddress(
+          GA->getGlobal(), SDLoc(ImmOperand), ImmOperand.getValueType(),
+          GA->getOffset(), GA->getTargetFlags());
     } else {
-      Parent = Base.getOperand(0);
-      ImmOperand = Base.getOperand(1);
-
-      if (auto Const = dyn_cast<ConstantSDNode>(ImmOperand)) {
-        ImmOperand =
-            CurDAG->getTargetConstant(Const->getSExtValue(), SDLoc(ImmOperand),
-                                      ImmOperand.getValueType());
-      } else if (auto GA = dyn_cast<GlobalAddressSDNode>(ImmOperand)) {
-        ImmOperand = CurDAG->getTargetGlobalAddress(
-            GA->getGlobal(), SDLoc(ImmOperand), ImmOperand.getValueType(),
-            GA->getOffset(), GA->getTargetFlags());
-      } else {
-        continue;
-      }
+      continue;
     }
 
-    DEBUG(dbgs() << "Folding add-immediate or PseudoLI into mem-op:\nBase: ");
-    DEBUG(Base.dump(CurDAG));
+    DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
+    DEBUG(Base->dump(CurDAG));
     DEBUG(dbgs() << "\nN: ");
     DEBUG(N->dump(CurDAG));
     DEBUG(dbgs() << "\n");
 
     // Modify the offset operand of the load/store.
     if (BaseOpIdx == 0) // Load
-      CurDAG->UpdateNodeOperands(N, Parent, ImmOperand, N->getOperand(2));
+      CurDAG->UpdateNodeOperands(N, Base.getOperand(0), ImmOperand,
+                                 N->getOperand(2));
     else // Store
-      CurDAG->UpdateNodeOperands(N, N->getOperand(0), Parent, ImmOperand,
-                                 N->getOperand(3));
+      CurDAG->UpdateNodeOperands(N, N->getOperand(0), Base.getOperand(0),
+                                 ImmOperand, N->getOperand(3));
+
+    // The add-immediate may now be dead, in which case remove it.
+    if (Base.getNode()->use_empty())
+      CurDAG->RemoveDeadNode(Base.getNode());
   }
-  CurDAG->RemoveDeadNodes();
 }
 
 // Remove redundant BuildPairF64+SplitF64 pairs. i.e. cases where an f64 is

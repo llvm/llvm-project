@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
@@ -96,7 +96,7 @@ define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}v_test_add_v2i16_inline_neg1:
-; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, -1{{$}}
+; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, -1 op_sel_hi:[1,0]{{$}}
 
 ; VI: v_mov_b32_e32 v[[SCONST:[0-9]+]], -1
 ; VI: flat_load_ushort [[LOAD0:v[0-9]+]]

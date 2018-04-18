@@ -312,6 +312,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 void FunctionLoweringInfo::clear() {
   MBBMap.clear();
   ValueMap.clear();
+  VirtReg2Value.clear();
   StaticAllocaMap.clear();
   LiveOutRegInfo.clear();
   VisitedBBs.clear();

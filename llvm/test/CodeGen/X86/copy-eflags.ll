@@ -30,7 +30,7 @@ define i32 @test1() nounwind {
 ; X32-NEXT:    cmpb %cl, %ah
 ; X32-NEXT:    sete d
 ; X32-NEXT:    movb %ch, a
-; X32-NEXT:    testb $-1, %dl
+; X32-NEXT:    testb %dl, %dl
 ; X32-NEXT:    jne .LBB0_2
 ; X32-NEXT:  # %bb.1: # %if.then
 ; X32-NEXT:    movsbl %al, %eax
@@ -55,7 +55,7 @@ define i32 @test1() nounwind {
 ; X64-NEXT:    cmpb %dil, %cl
 ; X64-NEXT:    sete {{.*}}(%rip)
 ; X64-NEXT:    movb %dl, {{.*}}(%rip)
-; X64-NEXT:    testb $-1, %sil
+; X64-NEXT:    testb %sil, %sil
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    pushq %rax
@@ -101,7 +101,7 @@ define i32 @test2(i32* %ptr) nounwind {
 ; X32-NEXT:    pushl $42
 ; X32-NEXT:    calll external
 ; X32-NEXT:    addl $4, %esp
-; X32-NEXT:    testb $-1, %bl
+; X32-NEXT:    testb %bl, %bl
 ; X32-NEXT:    je .LBB1_1
 ; X32-NEXT:  # %bb.2: # %else
 ; X32-NEXT:    xorl %eax, %eax
@@ -119,7 +119,7 @@ define i32 @test2(i32* %ptr) nounwind {
 ; X64-NEXT:    setne %bl
 ; X64-NEXT:    movl $42, %edi
 ; X64-NEXT:    callq external
-; X64-NEXT:    testb $-1, %bl
+; X64-NEXT:    testb %bl, %bl
 ; X64-NEXT:    je .LBB1_1
 ; X64-NEXT:  # %bb.2: # %else
 ; X64-NEXT:    xorl %eax, %eax
@@ -160,7 +160,7 @@ define void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X32-NEXT:    setne %al
 ; X32-NEXT:    incb a
 ; X32-NEXT:    sete d
-; X32-NEXT:    testb $-1, %al
+; X32-NEXT:    testb %al, %al
 ; X32-NEXT:    jne external_b # TAILCALL
 ; X32-NEXT:  # %bb.1: # %then
 ; X32-NEXT:    jmp external_a # TAILCALL
@@ -171,7 +171,7 @@ define void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    incb {{.*}}(%rip)
 ; X64-NEXT:    sete {{.*}}(%rip)
-; X64-NEXT:    testb $-1, %al
+; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    jne external_b # TAILCALL
 ; X64-NEXT:  # %bb.1: # %then
 ; X64-NEXT:    jmp external_a # TAILCALL
@@ -195,4 +195,112 @@ then:
 else:
   tail call void @external_b()
   ret void
+}
+
+; Test a function that gets special select lowering into CFG with copied EFLAGS
+; threaded across the CFG. This requires our EFLAGS copy rewriting to handle
+; cross-block rewrites in at least some narrow cases.
+define void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, i8* %ptr1, i32* %ptr2) {
+; X32-LABEL: PR37100:
+; X32:       # %bb.0: # %bb
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 20
+; X32-NEXT:    .cfi_offset %esi, -20
+; X32-NEXT:    .cfi_offset %edi, -16
+; X32-NEXT:    .cfi_offset %ebx, -12
+; X32-NEXT:    .cfi_offset %ebp, -8
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    jmp .LBB3_1
+; X32-NEXT:    .p2align 4, 0x90
+; X32-NEXT:  .LBB3_5: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    idivl %ebp
+; X32-NEXT:  .LBB3_1: # %bb1
+; X32-NEXT:    # =>This Inner Loop Header: Depth=1
+; X32-NEXT:    movsbl %cl, %eax
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    sarl $31, %edx
+; X32-NEXT:    cmpl %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    sbbl %edx, %eax
+; X32-NEXT:    setl %al
+; X32-NEXT:    setl %dl
+; X32-NEXT:    movzbl %dl, %ebp
+; X32-NEXT:    negl %ebp
+; X32-NEXT:    testb %al, %al
+; X32-NEXT:    jne .LBB3_3
+; X32-NEXT:  # %bb.2: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:    movb %ch, %cl
+; X32-NEXT:  .LBB3_3: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:    movb %cl, (%ebx)
+; X32-NEXT:    movl (%edi), %edx
+; X32-NEXT:    testb %al, %al
+; X32-NEXT:    jne .LBB3_5
+; X32-NEXT:  # %bb.4: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    jmp .LBB3_5
+;
+; X64-LABEL: PR37100:
+; X64:       # %bb.0: # %bb
+; X64-NEXT:    movq %rdx, %r10
+; X64-NEXT:    jmp .LBB3_1
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  .LBB3_5: # %bb1
+; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    idivl %esi
+; X64-NEXT:  .LBB3_1: # %bb1
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movsbq %dil, %rax
+; X64-NEXT:    xorl %esi, %esi
+; X64-NEXT:    cmpq %rax, %r10
+; X64-NEXT:    setl %sil
+; X64-NEXT:    negl %esi
+; X64-NEXT:    cmpq %rax, %r10
+; X64-NEXT:    jl .LBB3_3
+; X64-NEXT:  # %bb.2: # %bb1
+; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X64-NEXT:    movl %ecx, %edi
+; X64-NEXT:  .LBB3_3: # %bb1
+; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X64-NEXT:    movb %dil, (%r8)
+; X64-NEXT:    jl .LBB3_5
+; X64-NEXT:  # %bb.4: # %bb1
+; X64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X64-NEXT:    movl (%r9), %esi
+; X64-NEXT:    jmp .LBB3_5
+bb:
+  br label %bb1
+
+bb1:
+  %tmp = phi i8 [ %tmp8, %bb1 ], [ %arg1, %bb ]
+  %tmp2 = phi i16 [ %tmp12, %bb1 ], [ %arg2, %bb ]
+  %tmp3 = icmp sgt i16 %tmp2, 7
+  %tmp4 = select i1 %tmp3, i16 %tmp2, i16 7
+  %tmp5 = sext i8 %tmp to i64
+  %tmp6 = icmp slt i64 %arg3, %tmp5
+  %tmp7 = sext i1 %tmp6 to i32
+  %tmp8 = select i1 %tmp6, i8 %tmp, i8 %arg4
+  store volatile i8 %tmp8, i8* %ptr1
+  %tmp9 = load volatile i32, i32* %ptr2
+  %tmp10 = select i1 %tmp6, i32 %tmp7, i32 %tmp9
+  %tmp11 = srem i32 0, %tmp10
+  %tmp12 = trunc i32 %tmp11 to i16
+  br label %bb1
 }

@@ -30,8 +30,14 @@
 // RUN: %clang -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_SYSTEM_HEADERS_DEFAULT %s
 // MODULES_VALIDATE_SYSTEM_HEADERS_DEFAULT-NOT: -fmodules-validate-system-headers
 
+// RUN: %clang -fmodules -fsyntax-only -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_SYSTEM_HEADERS_DEFAULT_MOD %s
+// MODULES_VALIDATE_SYSTEM_HEADERS_DEFAULT_MOD: -fmodules-validate-system-headers
+
 // RUN: %clang -fmodules-validate-system-headers -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_SYSTEM_HEADERS %s
 // MODULES_VALIDATE_SYSTEM_HEADERS: -fmodules-validate-system-headers
+
+// RUN: %clang -fno-modules-validate-system-headers -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_SYSTEM_HEADERS_NOSYSVALID %s
+// MODULES_VALIDATE_SYSTEM_HEADERS_NOSYSVALID-NOT: -fmodules-validate-system-headers
 
 // RUN: %clang -### %s 2>&1 | FileCheck -check-prefix=MODULES_DISABLE_DIAGNOSTIC_VALIDATION_DEFAULT %s
 // MODULES_DISABLE_DIAGNOSTIC_VALIDATION_DEFAULT-NOT: -fmodules-disable-diagnostic-validation

@@ -47,6 +47,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace llvm;
 
@@ -306,7 +307,7 @@ int main(int argc, char **argv) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
   if (std::error_code EC = BufferPtr.getError()) {
-    errs() << InputFilename << ": " << EC.message() << '\n';
+    WithColor::error() << InputFilename << ": " << EC.message() << '\n';
     return 1;
   }
 
@@ -337,29 +338,31 @@ int main(int argc, char **argv) {
     return 1;
 
   if (!STI->getSchedModel().isOutOfOrder()) {
-    errs() << "error: please specify an out-of-order cpu. '" << MCPU
-           << "' is an in-order cpu.\n";
+    WithColor::error() << "please specify an out-of-order cpu. '" << MCPU
+                       << "' is an in-order cpu.\n";
     return 1;
   }
 
   if (!STI->getSchedModel().hasInstrSchedModel()) {
-    errs()
-        << "error: unable to find instruction-level scheduling information for"
+    WithColor::error()
+        << "unable to find instruction-level scheduling information for"
         << " target triple '" << TheTriple.normalize() << "' and cpu '" << MCPU
         << "'.\n";
 
     if (STI->getSchedModel().InstrItineraries)
-      errs() << "note: cpu '" << MCPU << "' provides itineraries. However, "
-             << "instruction itineraries are currently unsupported.\n";
+      WithColor::note()
+          << "cpu '" << MCPU << "' provides itineraries. However, "
+          << "instruction itineraries are currently unsupported.\n";
     return 1;
   }
 
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
   if (!IP) {
-    errs() << "error: unable to create instruction printer for target triple '"
-           << TheTriple.normalize() << "' with assembly variant "
-           << OutputAsmVariant << ".\n";
+    WithColor::error()
+        << "unable to create instruction printer for target triple '"
+        << TheTriple.normalize() << "' with assembly variant "
+        << OutputAsmVariant << ".\n";
     return 1;
   }
 
@@ -372,14 +375,14 @@ int main(int argc, char **argv) {
     return 1;
 
   if (Regions.empty()) {
-    errs() << "error: no assembly instructions found.\n";
+    WithColor::error() << "no assembly instructions found.\n";
     return 1;
   }
 
   // Now initialize the output file.
   auto OF = getOutputStream();
   if (std::error_code EC = OF.getError()) {
-    errs() << EC.message() << '\n';
+    WithColor::error() << EC.message() << '\n';
     return 1;
   }
 

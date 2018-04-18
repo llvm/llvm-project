@@ -57,7 +57,7 @@ namespace exegesis {
 void main() {
   if (OpcodeName.empty() == (OpcodeIndex == 0)) {
     llvm::report_fatal_error(
-        "please provide one and only one of 'opcode-index' or 'opcode-name' ");
+        "please provide one and only one of 'opcode-index' or 'opcode-name'");
   }
 
   llvm::InitializeNativeTarget();
@@ -67,6 +67,9 @@ void main() {
   X86Filter Filter;
 
   const LLVMState State;
+
+  if (!State.getSubtargetInfo().getSchedModel().hasExtraProcessorInfo())
+    llvm::report_fatal_error("sched model is missing extra processor info!");
 
   unsigned Opcode = OpcodeIndex;
   if (Opcode == 0) {

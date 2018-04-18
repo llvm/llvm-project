@@ -43,12 +43,6 @@ def SelectCC     : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC,
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-class ImmXLenAsmOperand<string prefix, string suffix = ""> : AsmOperandClass {
-  let Name = prefix # "ImmXLen" # suffix;
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = !strconcat("Invalid", Name);
-}
-
 class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
   let RenderMethod = "addImmOperands";
@@ -160,9 +154,7 @@ def simm21_lsb0 : Operand<OtherVT> {
 }
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
-def ixlenimm : Operand<XLenVT> {
-  let ParserMatchClass = ImmXLenAsmOperand<"">;
-}
+def ixlenimm : Operand<XLenVT>;
 
 // Standalone (codegen-only) immleaf patterns.
 def simm32 : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
@@ -426,16 +418,7 @@ def SFENCE_VMA : RVInstR<0b0001001, 0b000, OPC_SYSTEM, (outs),
 // TODO RV64I: sd
 
 def : InstAlias<"nop",           (ADDI      X0,      X0,       0)>;
-
-// Note that a size of 8 is currently correct because only 32-bit immediates
-// are emitted as PseudoLI during codegen. Emitting larger constants as
-// PseudoLI is probably not the best idea anyway given that up to
-// 8 32-bit instructions are needed to generate an arbitrary 64-bit immediate.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
-    isCodeGenOnly = 0, isAsmParserOnly = 1 in
-def PseudoLI : Pseudo<(outs GPR:$rd), (ins ixlenimm:$imm), [],
-                      "li", "$rd, $imm">;
-
+// TODO li
 def : InstAlias<"mv $rd, $rs",   (ADDI GPR:$rd, GPR:$rs,       0)>;
 def : InstAlias<"not $rd, $rs",  (XORI GPR:$rd, GPR:$rs,      -1)>;
 def : InstAlias<"neg $rd, $rs",  (SUB  GPR:$rd,      X0, GPR:$rs)>;
@@ -538,7 +521,8 @@ def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
 /// Immediates
 
 def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
-def : Pat<(simm32:$imm), (PseudoLI imm:$imm)>;
+// TODO: Add a pattern for immediates with all zeroes in the lower 12 bits.
+def : Pat<(simm32:$imm), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>;
 
 /// Simple arithmetic operations
 

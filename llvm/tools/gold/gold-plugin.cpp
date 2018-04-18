@@ -204,6 +204,10 @@ namespace options {
   // Directory to store the .dwo files.
   static std::string dwo_dir;
 
+  // Optimization remarks filename and hotness options
+  static std::string OptRemarksFilename;
+  static bool OptRemarksWithHotness = false;
+
   static void process_plugin_option(const char *opt_)
   {
     if (opt_ == nullptr)
@@ -270,6 +274,10 @@ namespace options {
       objcopy = opt.substr(strlen("objcopy="));
     } else if (opt.startswith("dwo_dir=")) {
       dwo_dir = opt.substr(strlen("dwo_dir="));
+    } else if (opt.startswith("opt-remarks-filename=")) {
+      OptRemarksFilename = opt.substr(strlen("opt-remarks-filename="));
+    } else if (opt == "opt-remarks-with-hotness") {
+      OptRemarksWithHotness = true;
     } else {
       // Save this option to pass to the code generator.
       // ParseCommandLineOptions() expects argv[0] to be program name. Lazily
@@ -881,6 +889,10 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.DwoDir = options::dwo_dir;
 
   Conf.Objcopy = options::objcopy;
+
+  // Set up optimization remarks handling.
+  Conf.RemarksFilename = options::OptRemarksFilename;
+  Conf.RemarksWithHotness = options::OptRemarksWithHotness;
 
   // Use new pass manager if set in driver
   Conf.UseNewPM = options::new_pass_manager;

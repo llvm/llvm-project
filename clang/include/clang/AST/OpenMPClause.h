@@ -124,7 +124,7 @@ public:
   Stmt *getPreInitStmt() { return PreInit; }
 
   /// Get capture region for the stmt in the clause.
-  OpenMPDirectiveKind getCaptureRegion() { return CaptureRegion; }
+  OpenMPDirectiveKind getCaptureRegion() const { return CaptureRegion; }
 
   static OMPClauseWithPreInit *get(OMPClause *C);
   static const OMPClauseWithPreInit *get(const OMPClause *C);
@@ -3288,19 +3288,19 @@ public:
 /// expressions used in OpenMP clauses.
 class OMPClauseMappableExprCommon {
 public:
-  // \brief Class that represents a component of a mappable expression. E.g.
-  // for an expression S.a, the first component is a declaration reference
-  // expression associated with 'S' and the second is a member expression
-  // associated with the field declaration 'a'. If the expression is an array
-  // subscript it may not have any associated declaration. In that case the
-  // associated declaration is set to nullptr.
+  /// Class that represents a component of a mappable expression. E.g.
+  /// for an expression S.a, the first component is a declaration reference
+  /// expression associated with 'S' and the second is a member expression
+  /// associated with the field declaration 'a'. If the expression is an array
+  /// subscript it may not have any associated declaration. In that case the
+  /// associated declaration is set to nullptr.
   class MappableComponent {
-    // \brief Expression associated with the component.
+    /// Expression associated with the component.
     Expr *AssociatedExpression = nullptr;
 
-    // \brief Declaration associated with the declaration. If the component does
-    // not have a declaration (e.g. array subscripts or section), this is set to
-    // nullptr.
+    /// Declaration associated with the declaration. If the component does
+    /// not have a declaration (e.g. array subscripts or section), this is set
+    /// to nullptr.
     ValueDecl *AssociatedDeclaration = nullptr;
 
   public:
@@ -3339,7 +3339,7 @@ protected:
   // \brief Return the total number of elements in a list of declarations. All
   // declarations are expected to be canonical.
   static unsigned
-  getUniqueDeclarationsTotalNumber(ArrayRef<ValueDecl *> Declarations);
+  getUniqueDeclarationsTotalNumber(ArrayRef<const ValueDecl *> Declarations);
 };
 
 /// \brief This represents clauses with a list of expressions that are mappable.
