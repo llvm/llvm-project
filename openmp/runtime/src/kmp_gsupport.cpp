@@ -1448,7 +1448,7 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
   kmp_tasking_flags_t *input_flags = (kmp_tasking_flags_t *)&flags;
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     buff = __kmp_str_format(
         "GOMP_taskloop: T#%%d: func:%%p data:%%p copy_func:%%p "
         "arg_size:%%ld arg_align:%%ld gomp_flags:0x%%x num_tasks:%%lu "

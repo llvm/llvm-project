@@ -191,8 +191,7 @@ void RuntimeDebugBuilder::createGPUPrinterT(PollyIRBuilder &Builder,
       if (Ty->getIntegerBitWidth() < 64)
         Val = Builder.CreateSExt(Val, Builder.getInt64Ty());
       else
-        assert(Ty->getIntegerBitWidth() &&
-               "Integer types larger 64 bit not supported");
+        llvm_unreachable("Integer types larger 64 bit not supported");
     } else if (auto PtTy = dyn_cast<PointerType>(Ty)) {
       if (PtTy->getAddressSpace() == 4) {
         // Pointers in constant address space are printed as strings
