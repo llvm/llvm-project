@@ -274,7 +274,7 @@ RAW-NEXT:   SC[.rdata]  | mod = 2, 0002:0028, size = {{[0-9]+}}, data crc = 0, r
 RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
 RAW-NEXT:   SC[.pdata]  | mod = 0, 0003:0000, size = 12, data crc = 361370162, reloc crc = 0
 RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC[???]     | mod = 0, 0004:0000, size = {{[0-9]+}}, data crc = 264583633, reloc crc = 0
+RAW-NEXT:   SC[.xdata]  | mod = 0, 0004:0000, size = {{[0-9]+}}, data crc = 264583633, reloc crc = 0
 RAW-NEXT:                 IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
 RAW-NOT: SC[
 RAW:                             Section Map

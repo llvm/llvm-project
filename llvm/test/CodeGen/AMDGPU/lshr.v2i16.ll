@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=CIVI %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=CIVI %s
 

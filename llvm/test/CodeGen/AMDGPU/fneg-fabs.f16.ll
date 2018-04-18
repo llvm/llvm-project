@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=CIVI %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GFX89 -check-prefix=GCN -check-prefix=CIVI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -enable-packed-inlinable-literals < %s | FileCheck -check-prefix=GFX89 -check-prefix=GFX9 -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX89 -check-prefix=GFX9 -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}fneg_fabs_fadd_f16:
 ; CI: v_cvt_f32_f16_e32
@@ -124,7 +124,7 @@ define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x h
 ; VI: v_mul_f16_sdwa v{{[0-9]+}}, -|v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
-; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 neg_lo:[1,0] neg_hi:[1,0]
+; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 op_sel_hi:[1,0] neg_lo:[1,0] neg_hi:[1,0]
 define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) #0 {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
@@ -147,7 +147,7 @@ define amdgpu_kernel void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* 
 
 ; GCN-LABEL: {{^}}s_fneg_multi_use_fabs_foldable_neg_v2f16:
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
-; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 neg_lo:[1,0] neg_hi:[1,0]
+; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[ABS]], 4.0 op_sel_hi:[1,0] neg_lo:[1,0] neg_hi:[1,0]
 define amdgpu_kernel void @s_fneg_multi_use_fabs_foldable_neg_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs

@@ -19,6 +19,7 @@ add_lld_library(lldELF
   Arch/SPARCV9.cpp
   Arch/X86.cpp
   Arch/X86_64.cpp
+  CallGraphSort.cpp
   Driver.cpp
   DriverUtils.cpp
   EhFrame.cpp

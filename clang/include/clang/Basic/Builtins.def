@@ -1455,6 +1455,7 @@ LANGBUILTIN(omp_is_initial_device, "i", "nc", OMP_LANG)
 
 // Builtins for XRay
 BUILTIN(__xray_customevent, "vcC*z", "")
+BUILTIN(__xray_typedevent, "vzcC*z", "")
 
 // Win64-compatible va_list functions
 BUILTIN(__builtin_ms_va_start, "vc*&.", "nt")

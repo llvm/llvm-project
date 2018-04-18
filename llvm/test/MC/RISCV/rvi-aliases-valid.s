@@ -19,6 +19,10 @@
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 
+# The following check prefixes are used in this test:
+# CHECK-INST.....Match the canonical instr (tests alias to instr. mapping)
+# CHECK-ALIAS....Match the alias (tests instr. to alias mapping)
+
 # TODO la
 # TODO lb lh lw
 # TODO sb sh sw
@@ -26,7 +30,6 @@
 # CHECK-INST: addi zero, zero, 0
 # CHECK-ALIAS: nop
 nop
-# TODO li
 # CHECK-INST: addi t6, zero, 0
 # CHECK-ALIAS: mv t6, zero
 mv x31, zero

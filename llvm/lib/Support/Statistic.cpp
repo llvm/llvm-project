@@ -94,10 +94,21 @@ static ManagedStatic<sys::SmartMutex<true> > StatLock;
 void Statistic::RegisterStatistic() {
   // If stats are enabled, inform StatInfo that this statistic should be
   // printed.
-  sys::SmartScopedLock<true> Writer(*StatLock);
+  // llvm_shutdown calls destructors while holding the ManagedStatic mutex.
+  // These destructors end up calling PrintStatistics, which takes StatLock.
+  // Since dereferencing StatInfo and StatLock can require taking the
+  // ManagedStatic mutex, doing so with StatLock held would lead to a lock
+  // order inversion. To avoid that, we dereference the ManagedStatics first,
+  // and only take StatLock afterwards.
   if (!Initialized.load(std::memory_order_relaxed)) {
+    sys::SmartMutex<true> &Lock = *StatLock;
+    StatisticInfo &SI = *StatInfo;
+    sys::SmartScopedLock<true> Writer(Lock);
+    // Check Initialized again after acquiring the lock.
+    if (Initialized.load(std::memory_order_relaxed))
+      return;
     if (Stats || Enabled)
-      StatInfo->addStatistic(this);
+      SI.addStatistic(this);
 
     // Remember we have been registered.
     Initialized.store(true, std::memory_order_release);

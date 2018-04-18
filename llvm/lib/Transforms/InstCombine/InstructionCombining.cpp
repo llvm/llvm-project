@@ -1945,14 +1945,34 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       PtrOp = BC;
   }
 
-  /// See if we can simplify:
-  ///   X = bitcast A* to B*
-  ///   Y = gep X, <...constant indices...>
-  /// into a gep of the original struct.  This is important for SROA and alias
-  /// analysis of unions.  If "A" is also a bitcast, wait for A/X to be merged.
   if (auto *BCI = dyn_cast<BitCastInst>(PtrOp)) {
     Value *SrcOp = BCI->getOperand(0);
     PointerType *SrcType = cast<PointerType>(BCI->getSrcTy());
+    Type *SrcEltType = SrcType->getElementType();
+
+    // GEP directly using the source operand if this GEP is accessing an element
+    // of a bitcasted pointer to vector or array of the same dimensions:
+    // gep (bitcast <c x ty>* X to [c x ty]*), Y, Z --> gep X, Y, Z
+    // gep (bitcast [c x ty]* X to <c x ty>*), Y, Z --> gep X, Y, Z
+    auto areMatchingArrayAndVecTypes = [](Type *ArrTy, Type *VecTy) {
+      return ArrTy->getArrayElementType() == VecTy->getVectorElementType() &&
+             ArrTy->getArrayNumElements() == VecTy->getVectorNumElements();
+    };
+    if (GEP.getNumOperands() == 3 &&
+        ((GEPEltType->isArrayTy() && SrcEltType->isVectorTy() &&
+          areMatchingArrayAndVecTypes(GEPEltType, SrcEltType)) ||
+         (GEPEltType->isVectorTy() && SrcEltType->isArrayTy() &&
+          areMatchingArrayAndVecTypes(SrcEltType, GEPEltType)))) {
+      GEP.setOperand(0, SrcOp);
+      GEP.setSourceElementType(SrcEltType);
+      return &GEP;
+    }
+
+    // See if we can simplify:
+    //   X = bitcast A* to B*
+    //   Y = gep X, <...constant indices...>
+    // into a gep of the original struct. This is important for SROA and alias
+    // analysis of unions. If "A" is also a bitcast, wait for A/X to be merged.
     unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEPType);
     APInt Offset(OffsetBits, 0);
     if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset)) {

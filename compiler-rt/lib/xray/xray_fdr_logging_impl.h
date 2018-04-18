@@ -364,6 +364,16 @@ writeFunctionRecord(int FuncId, uint32_t TSCDelta,
     (void)Once;
     return;
   }
+  case XRayEntryType::TYPED_EVENT: {
+    static bool Once = [&] {
+      Report("Internal error: patched an XRay typed event call as a function; "
+             "func id = %d\n",
+             FuncId);
+      return true;
+    }();
+    (void)Once;
+    return;
+  }
   }
 
   std::memcpy(TLD.RecordPtr, &FuncRecord, sizeof(FunctionRecord));
@@ -683,6 +693,16 @@ inline void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
     static bool Once = [&] {
       Report("Internal error: patched an XRay custom event call as a function; "
              "func id = %d",
+             FuncId);
+      return true;
+    }();
+    (void)Once;
+    return;
+  }
+  case XRayEntryType::TYPED_EVENT: {
+    static bool Once = [&] {
+      Report("Internal error: patched an XRay typed event call as a function; "
+             "func id = %d\n",
              FuncId);
       return true;
     }();

@@ -21,6 +21,7 @@ XRayInstrMask parseXRayInstrValue(StringRef Value) {
                                  .Case("all", XRayInstrKind::All)
                                  .Case("custom", XRayInstrKind::Custom)
                                  .Case("function", XRayInstrKind::Function)
+                                 .Case("typed", XRayInstrKind::Typed)
                                  .Case("none", XRayInstrKind::None)
                                  .Default(XRayInstrKind::None);
   return ParsedKind;

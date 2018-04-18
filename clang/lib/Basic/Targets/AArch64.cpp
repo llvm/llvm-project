@@ -193,6 +193,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasFullFP16)
    Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
+  if (HasDotProd)
+    Builder.defineMacro("__ARM_FEATURE_DOTPROD", "1");
+
   switch (ArchKind) {
   default:
     break;
@@ -229,6 +232,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Crypto = 0;
   Unaligned = 1;
   HasFullFP16 = 0;
+  HasDotProd = 0;
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
@@ -248,6 +252,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_2A;
     if (Feature == "+fullfp16")
       HasFullFP16 = 1;
+    if (Feature == "+dotprod")
+      HasDotProd = 1;
   }
 
   setDataLayout();
