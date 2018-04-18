@@ -837,9 +837,16 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
       if (swift::ValueDecl *value_decl =
               llvm::dyn_cast<swift::ValueDecl>(decl)) {
         auto access = swift::AccessLevel::Public;
-        if (swift::isa<swift::ClassDecl>(value_decl) ||
-            swift::isa<swift::ClassDecl>(value_decl->getDeclContext())) {
-          access = swift::AccessLevel::Open;
+
+        // We're making declarations 'public' so that they can be accessed from
+        // later expressions, but in the case of classes we also want to be able
+        // to subclass them, and override any overridable members. That is, we
+        // should use 'open' when it is possible and correct to do so, rather
+        // than just 'public'.
+        if (llvm::isa<swift::ClassDecl>(value_decl) ||
+            value_decl->isPotentiallyOverridable()) {
+          if (!value_decl->isFinal())
+            access = swift::AccessLevel::Open;
         }
 
         value_decl->overwriteAccess(access);
