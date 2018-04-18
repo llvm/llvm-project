@@ -416,7 +416,9 @@ void Dwarf5AccelTableEmitter::emitCUList() const {
   for (const auto &CU : enumerate(CompUnits)) {
     assert(CU.index() == CU.value()->getUniqueID());
     Asm->OutStreamer->AddComment("Compilation unit " + Twine(CU.index()));
-    Asm->emitDwarfSymbolReference(CU.value()->getLabelBegin());
+    const DwarfCompileUnit *MainCU =
+        DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
+    Asm->emitDwarfSymbolReference(MainCU->getLabelBegin());
   }
 }
 

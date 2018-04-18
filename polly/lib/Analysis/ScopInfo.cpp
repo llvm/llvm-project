@@ -126,6 +126,7 @@ STATISTIC(NumLoopsInScop, "Number of loops in scops");
 STATISTIC(NumBoxedLoops, "Number of boxed loops in SCoPs after ScopInfo");
 STATISTIC(NumAffineLoops, "Number of affine loops in SCoPs after ScopInfo");
 
+STATISTIC(NumScopsDepthZero, "Number of scops with maximal loop depth 0");
 STATISTIC(NumScopsDepthOne, "Number of scops with maximal loop depth 1");
 STATISTIC(NumScopsDepthTwo, "Number of scops with maximal loop depth 2");
 STATISTIC(NumScopsDepthThree, "Number of scops with maximal loop depth 3");
@@ -5001,7 +5002,9 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   MaxNumLoopsInScop =
       std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
 
-  if (Stats.MaxDepth == 1)
+  if (Stats.MaxDepth == 0)
+    NumScopsDepthZero++;
+  else if (Stats.MaxDepth == 1)
     NumScopsDepthOne++;
   else if (Stats.MaxDepth == 2)
     NumScopsDepthTwo++;

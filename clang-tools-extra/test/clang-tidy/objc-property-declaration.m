@@ -17,6 +17,8 @@
 @property(strong, nonatomic) NSString *supportURLsCamelCase;
 @property(strong, nonatomic) NSString *supportURLCamelCase;
 @property(strong, nonatomic) NSString *VCsPluralToAdd;
+@property(assign, nonatomic) int centerX;
+@property(assign, nonatomic) int enable2GBackgroundFetch;
 @end
 
 @interface Foo (Bar)

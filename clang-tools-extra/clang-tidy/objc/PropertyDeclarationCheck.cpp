@@ -39,6 +39,7 @@ enum NamingStyle {
 ///
 /// Keep this list sorted.
 constexpr llvm::StringLiteral DefaultSpecialAcronyms[] = {
+    "[2-9]G",
     "ACL",
     "API",
     "ARGB",
@@ -93,8 +94,12 @@ constexpr llvm::StringLiteral DefaultSpecialAcronyms[] = {
     "VOIP",
     "VPN",
     "VR",
+    "W",
     "WAN",
+    "X",
     "XML",
+    "Y",
+    "Z",
 };
 
 /// For now we will only fix 'CamelCase' or 'abc_CamelCase' property to

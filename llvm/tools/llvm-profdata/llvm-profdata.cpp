@@ -27,6 +27,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -35,19 +36,24 @@ using namespace llvm;
 
 enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
 
-static void warn(StringRef Prefix, Twine Message, std::string Whence = "",
+static void warn(Twine Message, std::string Whence = "",
                  std::string Hint = "") {
-  errs() << Prefix;
+  WithColor::warning();
   if (!Whence.empty())
     errs() << Whence << ": ";
   errs() << Message << "\n";
   if (!Hint.empty())
-    errs() << Hint << "\n";
+    WithColor::note() << Hint << "\n";
 }
 
 static void exitWithError(Twine Message, std::string Whence = "",
                           std::string Hint = "") {
-  warn("error: ", Message, Whence, Hint);
+  WithColor::error();
+  if (!Whence.empty())
+    errs() << Whence << ": ";
+  errs() << Message << "\n";
+  if (!Hint.empty())
+    WithColor::note() << Hint << "\n";
   ::exit(1);
 }
 
@@ -296,7 +302,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     if (isFatalError(IPE))
       exitWithError(make_error<InstrProfError>(IPE), WC->ErrWhence);
     else
-      warn("warning: ", toString(make_error<InstrProfError>(IPE)),
+      warn(toString(make_error<InstrProfError>(IPE)),
            WC->ErrWhence);
   }
 
@@ -785,7 +791,7 @@ static int show_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !ShowFunction.empty())
-    errs() << "warning: -function argument ignored: showing all functions\n";
+    WithColor::warning() << "-function argument ignored: showing all functions\n";
 
   std::vector<uint32_t> Cutoffs(DetailedSummaryCutoffs.begin(),
                                 DetailedSummaryCutoffs.end());

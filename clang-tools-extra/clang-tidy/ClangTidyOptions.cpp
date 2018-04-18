@@ -204,9 +204,12 @@ ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
 FileOptionsProvider::FileOptionsProvider(
     const ClangTidyGlobalOptions &GlobalOptions,
     const ClangTidyOptions &DefaultOptions,
-    const ClangTidyOptions &OverrideOptions)
+    const ClangTidyOptions &OverrideOptions,
+    llvm::IntrusiveRefCntPtr<vfs::FileSystem> VFS)
     : DefaultOptionsProvider(GlobalOptions, DefaultOptions),
-      OverrideOptions(OverrideOptions) {
+      OverrideOptions(OverrideOptions), FS(std::move(VFS)) {
+  if (!FS)
+    FS = vfs::getRealFileSystem();
   ConfigHandlers.emplace_back(".clang-tidy", parseConfiguration);
 }
 
@@ -224,14 +227,19 @@ FileOptionsProvider::FileOptionsProvider(
 std::vector<OptionsSource>
 FileOptionsProvider::getRawOptions(StringRef FileName) {
   DEBUG(llvm::dbgs() << "Getting options for file " << FileName << "...\n");
+  assert(FS && "FS must be set.");
+
+  llvm::SmallString<128> AbsoluteFilePath(FileName);
+  if (std::error_code ec = FS->makeAbsolute(AbsoluteFilePath))
+    return {};
 
   std::vector<OptionsSource> RawOptions =
-      DefaultOptionsProvider::getRawOptions(FileName);
+      DefaultOptionsProvider::getRawOptions(AbsoluteFilePath.str());
   OptionsSource CommandLineOptions(OverrideOptions,
                                    OptionsSourceTypeCheckCommandLineOption);
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
-  StringRef Path = llvm::sys::path::parent_path(FileName);
+  StringRef Path = llvm::sys::path::parent_path(AbsoluteFilePath.str());
   for (StringRef CurrentPath = Path; !CurrentPath.empty();
        CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
     llvm::Optional<OptionsSource> Result;

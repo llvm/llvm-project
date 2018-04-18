@@ -3254,6 +3254,13 @@ int64x1_t test_vget_high_s64(int64x2_t a) {
   return vget_high_s64(a);
 }
 
+// CHECK-LABEL: @test_vget_high_f16(
+// CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %a, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// CHECK:   ret <4 x half> [[SHUFFLE_I]]
+float16x4_t test_vget_high_f16(float16x8_t a) {
+  return vget_high_f16(a);
+}
+
 // CHECK-LABEL: @test_vget_high_f32(
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <4 x float> %a, <4 x float> %a, <2 x i32> <i32 2, i32 3>
 // CHECK:   ret <2 x float> [[SHUFFLE_I]]
@@ -3551,6 +3558,13 @@ int32x2_t test_vget_low_s32(int32x4_t a) {
 // CHECK:   ret <1 x i64> [[SHUFFLE_I]]
 int64x1_t test_vget_low_s64(int64x2_t a) {
   return vget_low_s64(a);
+}
+
+// CHECK-LABEL: @test_vget_low_f16(
+// CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <8 x half> %a, <8 x half> %a, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK:   ret <4 x half> [[SHUFFLE_I]]
+float16x4_t test_vget_low_f16(float16x8_t a) {
+  return vget_low_f16(a);
 }
 
 // CHECK-LABEL: @test_vget_low_f32(
