@@ -33,6 +33,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   unsigned Crypto;
   unsigned Unaligned;
   unsigned HasFullFP16;
+  unsigned HasDotProd;
   llvm::AArch64::ArchKind ArchKind;
 
   static const Builtin::Info BuiltinInfo[];

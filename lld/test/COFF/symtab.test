@@ -56,7 +56,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: message
 # CHECK-NEXT:     Value: 6
-# CHECK-NEXT:     Section: .text2 (5)
+# CHECK-NEXT:     Section: .text2
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: Static (0x3)
@@ -74,7 +74,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: caption
 # CHECK-NEXT:     Value: 0
-# CHECK-NEXT:     Section: .text2 (5)
+# CHECK-NEXT:     Section: .text2
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: Static (0x3)

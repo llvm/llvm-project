@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "Driver.h"
 #include "LTO.h"
+#include "PDB.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -62,6 +63,66 @@ static void errorOrWarn(const Twine &S) {
     warn(S);
   else
     error(S);
+}
+
+// Returns the name of the symbol in SC whose value is <= Addr that is closest
+// to Addr. This is generally the name of the global variable or function whose
+// definition contains Addr.
+static StringRef getSymbolName(SectionChunk *SC, uint32_t Addr) {
+  DefinedRegular *Candidate = nullptr;
+
+  for (Symbol *S : SC->File->getSymbols()) {
+    auto *D = dyn_cast_or_null<DefinedRegular>(S);
+    if (!D || D->getChunk() != SC || D->getValue() > Addr ||
+        (Candidate && D->getValue() < Candidate->getValue()))
+      continue;
+
+    Candidate = D;
+  }
+
+  if (!Candidate)
+    return "";
+  return Candidate->getName();
+}
+
+static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
+  struct Location {
+    StringRef SymName;
+    std::pair<StringRef, uint32_t> FileLine;
+  };
+  std::vector<Location> Locations;
+
+  for (Chunk *C : File->getChunks()) {
+    auto *SC = dyn_cast<SectionChunk>(C);
+    if (!SC)
+      continue;
+    for (const coff_relocation &R : SC->Relocs) {
+      if (R.SymbolTableIndex != SymIndex)
+        continue;
+      std::pair<StringRef, uint32_t> FileLine =
+          getFileLine(SC, R.VirtualAddress);
+      StringRef SymName = getSymbolName(SC, R.VirtualAddress);
+      if (!FileLine.first.empty() || !SymName.empty())
+        Locations.push_back({SymName, FileLine});
+    }
+  }
+
+  if (Locations.empty())
+    return "\n>>> referenced by " + toString(File) + "\n";
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  for (Location Loc : Locations) {
+    OS << "\n>>> referenced by ";
+    if (!Loc.FileLine.first.empty())
+      OS << Loc.FileLine.first << ":" << Loc.FileLine.second
+         << "\n>>>               ";
+    OS << toString(File);
+    if (!Loc.SymName.empty())
+      OS << ":(" << Loc.SymName << ')';
+  }
+  OS << '\n';
+  return OS.str();
 }
 
 void SymbolTable::reportRemainingUndefines() {
@@ -127,11 +188,14 @@ void SymbolTable::reportRemainingUndefines() {
   }
 
   for (ObjFile *File : ObjFile::Instances) {
+    size_t SymIndex = -1ull;
     for (Symbol *Sym : File->getSymbols()) {
+      ++SymIndex;
       if (!Sym)
         continue;
       if (Undefs.count(Sym))
-        errorOrWarn(toString(File) + ": undefined symbol: " + Sym->getName());
+        errorOrWarn("undefined symbol: " + Sym->getName() +
+                    getSymbolLocations(File, SymIndex));
       if (Config->WarnLocallyDefinedImported)
         if (Symbol *Imp = LocalImports.lookup(Sym))
           warn(toString(File) + ": locally defined symbol imported: " +

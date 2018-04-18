@@ -15,21 +15,21 @@ TEXT: Disassembly of section .text:
 TEXT-NEXT: .text:
 TEXT-NEXT: subq    $40, %rsp
 TEXT-NEXT: movq    $0, %rcx
-TEXT-NEXT: leaq    4084(%rip), %rdx
-TEXT-NEXT: leaq    4071(%rip), %r8
+TEXT-NEXT: leaq    8180(%rip), %rdx
+TEXT-NEXT: leaq    8167(%rip), %r8
 TEXT-NEXT: movl    $0, %r9d
 TEXT-NEXT: callq   60
 TEXT-NEXT: movl    $0, %ecx
 TEXT-NEXT: callq   18
 TEXT-NEXT: callq   29
-TEXT:      jmpq    *8194(%rip)
-TEXT:      jmpq    *8186(%rip)
-TEXT:      jmpq    *8178(%rip)
+TEXT:      jmpq    *4098(%rip)
+TEXT:      jmpq    *4090(%rip)
+TEXT:      jmpq    *4082(%rip)
 
 IMPORT:      Import {
 IMPORT-NEXT:   Name: std64.dll
-IMPORT-NEXT:   ImportLookupTableRVA: 0x3028
-IMPORT-NEXT:   ImportAddressTableRVA: 0x3048
+IMPORT-NEXT:   ImportLookupTableRVA: 0x2028
+IMPORT-NEXT:   ImportAddressTableRVA: 0x2048
 IMPORT-NEXT:   Symbol: ExitProcess (0)
 IMPORT-NEXT:   Symbol:  (50)
 IMPORT-NEXT:   Symbol: MessageBoxA (1)

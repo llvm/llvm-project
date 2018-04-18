@@ -96,6 +96,9 @@ CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabl
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0)
 
+///< Set when -fxray-always-emit-typedevents is enabled.
+CODEGENOPT(XRayAlwaysEmitTypedEvents , 1, 0)
+
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
 VALUE_CODEGENOPT(XRayInstructionThreshold , 32, 200)

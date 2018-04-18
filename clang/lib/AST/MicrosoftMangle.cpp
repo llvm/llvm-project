@@ -1919,6 +1919,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 
   case BuiltinType::Float16:
+    mangleArtificalTagType(TTK_Struct, "_Float16", {"__clang"});
+    break;
+
   case BuiltinType::Float128:
   case BuiltinType::Half: {
     DiagnosticsEngine &Diags = Context.getDiags();

@@ -9,6 +9,7 @@
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCPseudoExpansion.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -22,7 +23,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
+
+#include <limits>
 
 using namespace llvm;
 
@@ -41,7 +45,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
-                                  int Lower, int Upper, Twine Msg);
+                                  int64_t Lower, int64_t Upper, Twine Msg);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -54,6 +58,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
+
+  /// Helper for emitting MC instructions that have been successfully matched
+  /// by MatchAndEmitInstruction. Modifications to the emitted instructions,
+  /// like the expansion of pseudo instructions (e.g., "li"), can be performed
+  /// in this method.
+  bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
 // Auto-generated instruction matching functions
 #define GET_ASSEMBLER_HEADER
@@ -208,6 +218,18 @@ public:
     StringRef Str = SVal->getSymbol().getName();
 
     return RISCVFPRndMode::stringToRoundingMode(Str) != RISCVFPRndMode::Invalid;
+  }
+
+  bool isImmXLen() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(Imm, VK);
+    // Given only Imm, ensuring that the actually specified constant is either
+    // a signed or unsigned 64-bit number is unfortunately impossible.
+    bool IsInRange = isRV64() ? true : isInt<32>(Imm) || isUInt<32>(Imm);
+    return IsConstantImm && IsInRange && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isUImmLog2XLen() const {
@@ -583,7 +605,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 }
 
 bool RISCVAsmParser::generateImmOutOfRangeError(
-    OperandVector &Operands, uint64_t ErrorInfo, int Lower, int Upper,
+    OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
     Twine Msg = "immediate must be an integer in the range") {
   SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
@@ -599,14 +621,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   default:
     break;
-  case Match_Success: {
-    MCInst CInst;
-    bool Res = compressInst(CInst, Inst, getSTI(), Out.getContext());
-    CInst.setLoc(IDLoc);
-    Inst.setLoc(IDLoc);
-    Out.EmitInstruction((Res ? CInst : Inst), getSTI());
-    return false;
-  }
+  case Match_Success:
+    return processInstruction(Inst, IDLoc, Out);
   case Match_MissingFeature:
     return Error(IDLoc, "instruction use requires an option to be enabled");
   case Match_MnemonicFail:
@@ -623,6 +639,14 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
     return Error(ErrorLoc, "invalid operand for instruction");
   }
+  case Match_InvalidImmXLen:
+    if (isRV64()) {
+      SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+      return Error(ErrorLoc, "operand must be a constant 64-bit integer");
+    }
+    return generateImmOutOfRangeError(Operands, ErrorInfo,
+                                      std::numeric_limits<int32_t>::min(),
+                                      std::numeric_limits<uint32_t>::max());
   case Match_InvalidUImmLog2XLen:
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
@@ -965,6 +989,31 @@ bool RISCVAsmParser::classifySymbolRef(const MCExpr *Expr,
 
   // It's some symbol reference + a constant addend
   return Kind != RISCVMCExpr::VK_RISCV_Invalid;
+}
+
+bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
+                                        MCStreamer &Out) {
+  Inst.setLoc(IDLoc);
+
+  switch (Inst.getOpcode()) {
+  case RISCV::PseudoLI: {
+    auto Reg = Inst.getOperand(0).getReg();
+    int64_t Imm = Inst.getOperand(1).getImm();
+    // On RV32 the immediate here can either be a signed or an unsigned
+    // 32-bit number. Sign extension has to be performed to ensure that Imm
+    // represents the expected signed 64-bit number.
+    if (!isRV64())
+      Imm = SignExtend64<32>(Imm);
+    emitRISCVLoadImm(Reg, Imm, Out, STI);
+    return false;
+  }
+  }
+
+  MCInst CInst;
+  bool Res = compressInst(CInst, Inst, getSTI(), Out.getContext());
+  CInst.setLoc(IDLoc);
+  Out.EmitInstruction((Res ? CInst : Inst), getSTI());
+  return false;
 }
 
 bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }

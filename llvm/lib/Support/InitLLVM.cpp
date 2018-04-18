@@ -15,7 +15,12 @@
 #include "llvm/Support/Signals.h"
 #include <string>
 
+#ifdef _WIN32
+#include "Windows/WindowsSupport.h"
+#endif
+
 using namespace llvm;
+using namespace llvm::sys;
 
 InitLLVM::InitLLVM(int &Argc, const char **&Argv) : StackPrinter(Argc, Argv) {
   sys::PrintStackTraceOnErrorSignal(Argv[0]);
@@ -33,11 +38,10 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv) : StackPrinter(Argc, Argv) {
   std::string Banner = std::string(Argv[0]) + ": ";
   ExitOnError ExitOnErr(Banner);
 
-  ExitOnErr(errorCodeToError(
-      sys::Process::GetArgumentVector(Args, makeArrayRef(Argv, Argc), Alloc)));
+  ExitOnErr(errorCodeToError(windows::GetCommandLineArguments(Args, Alloc)));
 
-  // GetArgumentVector doesn't terminate the vector with a nullptr.
-  // Do it to make it compatible with the real argv.
+  // GetCommandLineArguments doesn't terminate the vector with a
+  // nullptr.  Do it to make it compatible with the real argv.
   Args.push_back(nullptr);
 
   Argc = Args.size() - 1;

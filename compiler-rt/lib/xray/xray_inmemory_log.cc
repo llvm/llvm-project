@@ -401,6 +401,7 @@ XRayLogInitStatus basicLoggingInit(size_t BufferSize, size_t BufferMax,
   __xray_set_handler(UseRealTSC ? basicLoggingHandleArg0RealTSC
                                 : basicLoggingHandleArg0EmulateTSC);
   __xray_remove_customevent_handler();
+  __xray_remove_typedevent_handler();
 
   return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }

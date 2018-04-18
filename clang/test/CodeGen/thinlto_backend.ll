@@ -1,4 +1,5 @@
-; REQUIRES: x86-registered-target
+; shell required since the windows bot does not like the "(cd ..."
+; REQUIRES: x86-registered-target, shell
 
 ; RUN: opt -module-summary -o %t1.o %s
 ; RUN: opt -module-summary -o %t2.o %S/Inputs/thinlto_backend.ll

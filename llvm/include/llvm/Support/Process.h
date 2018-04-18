@@ -90,14 +90,6 @@ public:
   static Optional<std::string> FindInEnvPath(StringRef EnvName,
                                              StringRef FileName);
 
-  /// This function returns a SmallVector containing the arguments passed from
-  /// the operating system to the program.  This function expects to be handed
-  /// the vector passed in from main.
-  static std::error_code
-  GetArgumentVector(SmallVectorImpl<const char *> &Args,
-                    ArrayRef<const char *> ArgsFromMain,
-                    SpecificBumpPtrAllocator<char> &ArgAllocator);
-
   // This functions ensures that the standard file descriptors (input, output,
   // and error) are properly mapped to a file descriptor before we use any of
   // them.  This should only be called by standalone programs, library
