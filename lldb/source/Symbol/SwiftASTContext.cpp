@@ -833,6 +833,9 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
   ir_gen_opts.DWARFVersion = swift::DWARFVersion;
+
+  // FIXME: lldb does not support resilience yet.
+  ir_gen_opts.EnableResilienceBypass = true;
 }
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
