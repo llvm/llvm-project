@@ -5,32 +5,41 @@
 define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     %eventptr = alloca i8
     %eventsize = alloca i32
+    %eventtype = alloca i16
+    store i16 6, i16* %eventtype
+    %type = load i16, i16* %eventtype
     store i32 3, i32* %eventsize
     %val = load i32, i32* %eventsize
-    call void @llvm.xray.customevent(i8* %eventptr, i32 %val)
-    ; CHECK-LABEL: Lxray_event_sled_0:
-    ; CHECK:       .byte 0xeb, 0x0f
+    call void @llvm.xray.typedevent(i16 %type, i8* %eventptr, i32 %val)
+    ; CHECK-LABEL: Lxray_typed_event_sled_0:
+    ; CHECK:       .byte 0xeb, 0x14
     ; CHECK-NEXT:  pushq %rdi
     ; CHECK-NEXT:  pushq %rsi
+    ; CHECK-NEXT:  pushq %rdx
     ; CHECK-NEXT:  movq {{.*}}, %rdi
     ; CHECK-NEXT:  movq {{.*}}, %rsi
-    ; CHECK-NEXT:  callq __xray_CustomEvent
+    ; CHECK-NEXT:  movq {{.*}}, %rdx
+    ; CHECK-NEXT:  callq __xray_TypedEvent
+    ; CHECK-NEXT:  popq %rdx
     ; CHECK-NEXT:  popq %rsi
     ; CHECK-NEXT:  popq %rdi
 
-    ; PIC-LABEL: Lxray_event_sled_0:
-    ; PIC:       .byte 0xeb, 0x0f
+    ; PIC-LABEL: Lxray_typed_event_sled_0:
+    ; PIC:       .byte 0xeb, 0x14
     ; PIC-NEXT:  pushq %rdi
     ; PIC-NEXT:  pushq %rsi
+    ; PIC-NEXT:  pushq %rdx
     ; PIC-NEXT:  movq {{.*}}, %rdi
     ; PIC-NEXT:  movq {{.*}}, %rsi
-    ; PIC-NEXT:  callq __xray_CustomEvent@PLT
+    ; PIC-NEXT:  movq {{.*}}, %rdx
+    ; PIC-NEXT:  callq __xray_TypedEvent@PLT
+    ; PIC-NEXT:  popq %rdx
     ; PIC-NEXT:  popq %rsi
     ; PIC-NEXT:  popq %rdi
     ret i32 0
 }
 ; CHECK-LABEL: xray_instr_map
 ; CHECK-LABEL: Lxray_sleds_start0:
-; CHECK:       .quad {{.*}}xray_event_sled_0
+; CHECK:       .quad {{.*}}xray_typed_event_sled_0
 
-declare void @llvm.xray.customevent(i8*, i32)
+declare void @llvm.xray.typedevent(i16, i8*, i32)

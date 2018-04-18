@@ -1001,6 +1001,21 @@ TargetLoweringBase::emitXRayCustomEvent(MachineInstr &MI,
   return MBB;
 }
 
+MachineBasicBlock *
+TargetLoweringBase::emitXRayTypedEvent(MachineInstr &MI,
+                                       MachineBasicBlock *MBB) const {
+  assert(MI.getOpcode() == TargetOpcode::PATCHABLE_TYPED_EVENT_CALL &&
+         "Called emitXRayTypedEvent on the wrong MI!");
+  auto &MF = *MI.getMF();
+  auto MIB = BuildMI(MF, MI.getDebugLoc(), MI.getDesc());
+  for (unsigned OpIdx = 0; OpIdx != MI.getNumOperands(); ++OpIdx)
+    MIB.add(MI.getOperand(OpIdx));
+
+  MBB->insert(MachineBasicBlock::iterator(MI), MIB);
+  MI.eraseFromParent();
+  return MBB;
+}
+
 /// findRepresentativeClass - Return the largest legal super-reg register class
 /// of the register class for the specified type and its associated "cost".
 // This function is in TargetLowering because it uses RegClassForVT which would

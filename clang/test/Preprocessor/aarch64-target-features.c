@@ -38,6 +38,7 @@
 // CHECK-NOT: __ARM_SIZEOF_MINIMAL_ENUM 1
 // CHECK-NOT: __ARM_SIZEOF_WCHAR_T 2
 // CHECK-NOT: __ARM_FEATURE_SVE
+// CHECK-NOT: __ARM_FEATURE_DOTPROD
 
 // RUN: %clang -target aarch64_be-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
 // CHECK-BIGENDIAN: __ARM_BIG_ENDIAN 1
@@ -88,6 +89,9 @@
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE %s
 // CHECK-SVE: __ARM_FEATURE_SVE 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
+// CHECK-DOTPROD: __ARM_FEATURE_DOTPROD 1
 
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.2a+fp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1

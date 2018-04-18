@@ -854,6 +854,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_fxray_instrument);
   Opts.XRayAlwaysEmitCustomEvents =
       Args.hasArg(OPT_fxray_always_emit_customevents);
+  Opts.XRayAlwaysEmitTypedEvents =
+      Args.hasArg(OPT_fxray_always_emit_typedevents);
   Opts.XRayInstructionThreshold =
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
 
@@ -2676,6 +2678,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // -fxray-always-emit-customevents
   Opts.XRayAlwaysEmitCustomEvents =
       Args.hasFlag(OPT_fxray_always_emit_customevents,
+                   OPT_fnoxray_always_emit_customevents, false);
+
+  // -fxray-always-emit-typedevents
+  Opts.XRayAlwaysEmitTypedEvents =
+      Args.hasFlag(OPT_fxray_always_emit_typedevents,
                    OPT_fnoxray_always_emit_customevents, false);
 
   // -fxray-{always,never}-instrument= filenames.

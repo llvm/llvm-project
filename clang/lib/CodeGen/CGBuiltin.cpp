@@ -3372,6 +3372,44 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(Builder.CreateCall(F, {Arg0Val, Arg1}));
   }
 
+  case Builtin::BI__xray_typedevent: {
+    // TODO: There should be a way to always emit events even if the current
+    // function is not instrumented. Losing events in a stream can cripple
+    // a trace.
+    if (!ShouldXRayInstrumentFunction())
+      return RValue::getIgnored();
+
+    if (!CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
+            XRayInstrKind::Typed))
+      return RValue::getIgnored();
+
+    if (const auto *XRayAttr = CurFuncDecl->getAttr<XRayInstrumentAttr>())
+      if (XRayAttr->neverXRayInstrument() && !AlwaysEmitXRayTypedEvents())
+        return RValue::getIgnored();
+
+    Function *F = CGM.getIntrinsic(Intrinsic::xray_typedevent);
+    auto FTy = F->getFunctionType();
+    auto Arg0 = EmitScalarExpr(E->getArg(0));
+    auto PTy0 = FTy->getParamType(0);
+    if (PTy0 != Arg0->getType())
+      Arg0 = Builder.CreateTruncOrBitCast(Arg0, PTy0);
+    auto Arg1 = E->getArg(1);
+    auto Arg1Val = EmitScalarExpr(Arg1);
+    auto Arg1Ty = Arg1->getType();
+    auto PTy1 = FTy->getParamType(1);
+    if (PTy1 != Arg1Val->getType()) {
+      if (Arg1Ty->isArrayType())
+        Arg1Val = EmitArrayToPointerDecay(Arg1).getPointer();
+      else
+        Arg1Val = Builder.CreatePointerCast(Arg1Val, PTy1);
+    }
+    auto Arg2 = EmitScalarExpr(E->getArg(2));
+    auto PTy2 = FTy->getParamType(2);
+    if (PTy2 != Arg2->getType())
+      Arg2 = Builder.CreateTruncOrBitCast(Arg2, PTy2);
+    return RValue::get(Builder.CreateCall(F, {Arg0, Arg1Val, Arg2}));
+  }
+
   case Builtin::BI__builtin_ms_va_start:
   case Builtin::BI__builtin_ms_va_end:
     return RValue::get(

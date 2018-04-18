@@ -112,17 +112,8 @@ void RISCVInstrInfo::movImm32(MachineBasicBlock &MBB,
                               MachineInstr::MIFlag Flag) const {
   assert(isInt<32>(Val) && "Can only materialize 32-bit constants");
 
-  // TODO: If the value can be materialized using only one instruction, only
-  // insert a single instruction.
-
-  uint64_t Hi20 = ((Val + 0x800) >> 12) & 0xfffff;
-  uint64_t Lo12 = SignExtend64<12>(Val);
-  BuildMI(MBB, MBBI, DL, get(RISCV::LUI), DstReg)
-      .addImm(Hi20)
-      .setMIFlag(Flag);
-  BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-      .addReg(DstReg, RegState::Kill)
-      .addImm(Lo12)
+  BuildMI(MBB, MBBI, DL, get(RISCV::PseudoLI), DstReg)
+      .addImm(Val)
       .setMIFlag(Flag);
 }
 

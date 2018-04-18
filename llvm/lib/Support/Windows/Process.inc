@@ -139,39 +139,38 @@ Optional<std::string> Process::GetEnv(StringRef Name) {
   return std::string(Res.data());
 }
 
-static void AllocateAndPush(const SmallVectorImpl<char> &S,
-                            SmallVectorImpl<const char *> &Vector,
-                            SpecificBumpPtrAllocator<char> &Allocator) {
-  char *Buffer = Allocator.Allocate(S.size() + 1);
-  ::memcpy(Buffer, S.data(), S.size());
-  Buffer[S.size()] = '\0';
-  Vector.push_back(Buffer);
+static const char *AllocateString(const SmallVectorImpl<char> &S,
+                                  BumpPtrAllocator &Alloc) {
+  char *Buf = reinterpret_cast<char *>(Alloc.Allocate(S.size() + 1, 1));
+  ::memcpy(Buf, S.data(), S.size());
+  Buf[S.size()] = '\0';
+  return Buf;
 }
 
 /// Convert Arg from UTF-16 to UTF-8 and push it onto Args.
-static std::error_code
-ConvertAndPushArg(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
-                  SpecificBumpPtrAllocator<char> &Allocator) {
+static std::error_code ConvertAndPushArg(const wchar_t *Arg,
+                                         SmallVectorImpl<const char *> &Args,
+                                         BumpPtrAllocator &Alloc) {
   SmallVector<char, MAX_PATH> ArgString;
   if (std::error_code ec = windows::UTF16ToUTF8(Arg, wcslen(Arg), ArgString))
     return ec;
-  AllocateAndPush(ArgString, Args, Allocator);
+  Args.push_back(AllocateString(ArgString, Alloc));
   return std::error_code();
 }
 
 /// \brief Perform wildcard expansion of Arg, or just push it into Args if it
 /// doesn't have wildcards or doesn't match any files.
-static std::error_code
-WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
-               SpecificBumpPtrAllocator<char> &Allocator) {
+static std::error_code WildcardExpand(const wchar_t *Arg,
+                                      SmallVectorImpl<const char *> &Args,
+                                      BumpPtrAllocator &Alloc) {
   if (!wcspbrk(Arg, L"*?")) {
     // Arg does not contain any wildcard characters. This is the common case.
-    return ConvertAndPushArg(Arg, Args, Allocator);
+    return ConvertAndPushArg(Arg, Args, Alloc);
   }
 
   if (wcscmp(Arg, L"/?") == 0 || wcscmp(Arg, L"-?") == 0) {
     // Don't wildcard expand /?. Always treat it as an option.
-    return ConvertAndPushArg(Arg, Args, Allocator);
+    return ConvertAndPushArg(Arg, Args, Alloc);
   }
 
   // Extract any directory part of the argument.
@@ -188,7 +187,7 @@ WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
   WIN32_FIND_DATAW FileData;
   HANDLE FindHandle = FindFirstFileW(Arg, &FileData);
   if (FindHandle == INVALID_HANDLE_VALUE) {
-    return ConvertAndPushArg(Arg, Args, Allocator);
+    return ConvertAndPushArg(Arg, Args, Alloc);
   }
 
   std::error_code ec;
@@ -201,7 +200,7 @@ WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
 
     // Append FileName to Dir, and remove it afterwards.
     llvm::sys::path::append(Dir, StringRef(FileName.data(), FileName.size()));
-    AllocateAndPush(Dir, Args, Allocator);
+    Args.push_back(AllocateString(Dir, Alloc));
     Dir.resize(DirSize);
   } while (FindNextFileW(FindHandle, &FileData));
 
@@ -209,9 +208,9 @@ WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
   return ec;
 }
 
-static std::error_code
-ExpandShortFileName(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
-                    SpecificBumpPtrAllocator<char> &Allocator) {
+static std::error_code ExpandShortFileName(const wchar_t *Arg,
+                                           SmallVectorImpl<const char *> &Args,
+                                           BumpPtrAllocator &Alloc) {
   SmallVector<wchar_t, MAX_PATH> LongPath;
   DWORD Length = GetLongPathNameW(Arg, LongPath.data(), LongPath.capacity());
   if (Length == 0)
@@ -223,13 +222,12 @@ ExpandShortFileName(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
     return mapWindowsError(ERROR_INSUFFICIENT_BUFFER);
   }
   LongPath.set_size(Length);
-  return ConvertAndPushArg(LongPath.data(), Args, Allocator);
+  return ConvertAndPushArg(LongPath.data(), Args, Alloc);
 }
 
 std::error_code
-Process::GetArgumentVector(SmallVectorImpl<const char *> &Args,
-                           ArrayRef<const char *>,
-                           SpecificBumpPtrAllocator<char> &ArgAllocator) {
+windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
+                                 BumpPtrAllocator &Alloc) {
   int ArgCount;
   wchar_t **UnicodeCommandLine =
       CommandLineToArgvW(GetCommandLineW(), &ArgCount);
@@ -249,10 +247,10 @@ Process::GetArgumentVector(SmallVectorImpl<const char *> &Args,
   // If the first argument is a shortened (8.3) name (which is possible even
   // if we got the module name), the driver will have trouble distinguishing it
   // (e.g., clang.exe v. clang++.exe), so expand it now.
-  ec = ExpandShortFileName(UnicodeCommandLine[0], Args, ArgAllocator);
+  ec = ExpandShortFileName(UnicodeCommandLine[0], Args, Alloc);
 
   for (int i = 1; i < ArgCount && !ec; ++i) {
-    ec = WildcardExpand(UnicodeCommandLine[i], Args, ArgAllocator);
+    ec = WildcardExpand(UnicodeCommandLine[i], Args, Alloc);
     if (ec)
       break;
   }

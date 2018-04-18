@@ -31,13 +31,15 @@ namespace XRayInstrKind {
 enum XRayInstrOrdinal : XRayInstrMask {
   XRIO_Function,
   XRIO_Custom,
+  XRIO_Typed,
   XRIO_Count
 };
 
 constexpr XRayInstrMask None = 0;
 constexpr XRayInstrMask Function = 1U << XRIO_Function;
 constexpr XRayInstrMask Custom = 1U << XRIO_Custom;
-constexpr XRayInstrMask All = Function | Custom;
+constexpr XRayInstrMask Typed = 1U << XRIO_Typed;
+constexpr XRayInstrMask All = Function | Custom | Typed;
 
 } // namespace XRayInstrKind
 
