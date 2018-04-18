@@ -2257,9 +2257,10 @@ class OffloadingActionBuilder final {
         assert(!GpuArchList.empty() &&
                "We should have at least one GPU architecture.");
 
-        // If the host input is not CUDA, we don't need to bother about this
-        // input.
-        if (IA->getType() != types::TY_CUDA) {
+        // If the host input is not CUDA or HIP, we don't need to bother about
+        // this input.
+        if (IA->getType() != types::TY_CUDA &&
+            IA->getType() != types::TY_HIP) {
           // The builder will ignore this input.
           IsActive = false;
           return ABRT_Inactive;
@@ -2272,9 +2273,12 @@ class OffloadingActionBuilder final {
           return ABRT_Success;
 
         // Replicate inputs for each GPU architecture.
-        for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I)
-          CudaDeviceActions.push_back(C.MakeAction<InputAction>(
-              IA->getInputArg(), types::TY_CUDA_DEVICE));
+        auto Ty = IA->getType() == types::TY_HIP ? types::TY_HIP_DEVICE
+                                                 : types::TY_CUDA_DEVICE;
+        for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
+          CudaDeviceActions.push_back(
+              C.MakeAction<InputAction>(IA->getInputArg(), Ty));
+        }
 
         return ABRT_Success;
       }

@@ -2,11 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 
-
-; RUN: llc -mtriple=riscv32 -mattr=+c -filetype=obj < %s \
-; RUN:   |llvm-objdump -d -triple=riscv32 -mattr=+c -riscv-no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IC %s
-
 define void @foo(i32 %a, i32 *%b, i1 %c) {
 ; RV32I-LABEL: foo:
 ; RV32I:       # %bb.0:
@@ -47,34 +42,6 @@ define void @foo(i32 %a, i32 *%b, i1 %c) {
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:  .LBB0_12: # %end
 ; RV32I-NEXT:    ret
-
-; RV32IC-LABEL: foo:
-; RV32IC:       c.lw a3, 0(a1)
-; RV32IC-NEXT:  beq  a3, a0, 68
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  bne  a3, a0, 62
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  blt  a3, a0, 56
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  bge  a3, a0, 50
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  bltu a3, a0, 44
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  bgeu a3, a0, 38
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  blt  a0, a3, 32
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  bge  a0, a3, 26
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  bltu a0, a3, 20
-; RV32IC-NEXT:  c.lw a3, 0(a1)
-; RV32IC-NEXT:  bgeu a0, a3, 14
-; RV32IC-NEXT:  c.lw a0, 0(a1)
-; RV32IC-NEXT:  andi a0, a2, 1
-; RV32IC-NEXT:  c.bnez a0, 4
-; RV32IC-NEXT:  c.lw a0, 0(a1)
-; RV32IC-NEXT:  c.jr ra
-
   %val1 = load volatile i32, i32* %b
   %tst1 = icmp eq i32 %val1, %a
   br i1 %tst1, label %end, label %test2

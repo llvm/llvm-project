@@ -97,13 +97,13 @@ body:             |
     JMP_1 %bb.3
   ; CHECK-NOT: $eflags =
   ;
-  ; CHECK:        TEST8ri %[[A_REG]], -1, implicit-def $eflags
+  ; CHECK:        TEST8rr %[[A_REG]], %[[A_REG]], implicit-def $eflags
   ; CHECK-NEXT:   JNE_1 %bb.1, implicit killed $eflags
   ; CHECK-SAME: {{$[[:space:]]}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: {{.*$}}
   ; CHECK-SAME: {{$[[:space:]]}}
-  ; CHECK-NEXT:   TEST8ri %[[B_REG]], -1, implicit-def $eflags
+  ; CHECK-NEXT:   TEST8rr %[[B_REG]], %[[B_REG]], implicit-def $eflags
   ; CHECK-NEXT:   JNE_1 %bb.2, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.3
   
@@ -152,13 +152,13 @@ body:             |
     JB_1 %bb.3, implicit $eflags
   ; CHECK-NOT: $eflags =
   ;
-  ; CHECK:        TEST8ri %[[A_REG]], -1, implicit-def $eflags
+  ; CHECK:        TEST8rr %[[A_REG]], %[[A_REG]], implicit-def $eflags
   ; CHECK-NEXT:   JNE_1 %bb.2, implicit killed $eflags
   ; CHECK-SAME: {{$[[:space:]]}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: {{.*$}}
   ; CHECK-SAME: {{$[[:space:]]}}
-  ; CHECK-NEXT:   TEST8ri %[[B_REG]], -1, implicit-def $eflags
+  ; CHECK-NEXT:   TEST8rr %[[B_REG]], %[[B_REG]], implicit-def $eflags
   ; CHECK-NEXT:   JNE_1 %bb.3, implicit killed $eflags
   ; CHECK-SAME: {{$[[:space:]]}}
   ; CHECK-NEXT:   bb.1:
@@ -252,13 +252,13 @@ body:             |
     %5:gr64 = CMOVE64rr %0, %1, implicit $eflags
     %6:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
   ; CHECK-NOT:     $eflags =
-  ; CHECK:         TEST8ri %[[A_REG]], -1, implicit-def $eflags
+  ; CHECK:         TEST8rr %[[A_REG]], %[[A_REG]], implicit-def $eflags
   ; CHECK-NEXT:    %3:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
-  ; CHECK-NEXT:    TEST8ri %[[B_REG]], -1, implicit-def $eflags
+  ; CHECK-NEXT:    TEST8rr %[[B_REG]], %[[B_REG]], implicit-def $eflags
   ; CHECK-NEXT:    %4:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
-  ; CHECK-NEXT:    TEST8ri %[[E_REG]], -1, implicit-def $eflags
+  ; CHECK-NEXT:    TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
   ; CHECK-NEXT:    %5:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
-  ; CHECK-NEXT:    TEST8ri %[[E_REG]], -1, implicit-def $eflags
+  ; CHECK-NEXT:    TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
   ; CHECK-NEXT:    %6:gr64 = CMOVE64rr %0, %1, implicit killed $eflags
     MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %3
     MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %4
@@ -364,7 +364,7 @@ body:             |
     %5:gr64 = MOV64ri32 42
     %6:gr64 = ADCX64rr %2, %5, implicit-def $eflags, implicit $eflags
   ; CHECK-NOT:     $eflags =
-  ; CHECK:         TEST8ri %[[E_REG]], -1, implicit-def $eflags
+  ; CHECK:         TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
   ; CHECK-NEXT:    %4:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
   ; CHECK-NEXT:    %5:gr64 = MOV64ri32 42
   ; CHECK-NEXT:    dead %{{[^:]*}}:gr8 = ADD8ri %[[CF_REG]], 255, implicit-def $eflags
@@ -403,7 +403,7 @@ body:             |
     %5:gr64 = MOV64ri32 42
     %6:gr64 = ADOX64rr %2, %5, implicit-def $eflags, implicit $eflags
   ; CHECK-NOT:     $eflags =
-  ; CHECK:         TEST8ri %[[E_REG]], -1, implicit-def $eflags
+  ; CHECK:         TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
   ; CHECK-NEXT:    %4:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
   ; CHECK-NEXT:    %5:gr64 = MOV64ri32 42
   ; CHECK-NEXT:    dead %{{[^:]*}}:gr8 = ADD8ri %[[OF_REG]], 127, implicit-def $eflags

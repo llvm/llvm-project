@@ -36,6 +36,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -98,6 +99,7 @@ private:
   const X86InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const TargetRegisterClass *PromoteRC;
+  MachineDominatorTree *MDT;
 
   CondRegArray collectCondsInRegs(MachineBasicBlock &MBB,
                                   MachineInstr &CopyDefI);
@@ -145,6 +147,7 @@ FunctionPass *llvm::createX86FlagsCopyLoweringPass() {
 char X86FlagsCopyLoweringPass::ID = 0;
 
 void X86FlagsCopyLoweringPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<MachineDominatorTree>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -342,6 +345,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TII = Subtarget.getInstrInfo();
   TRI = Subtarget.getRegisterInfo();
+  MDT = &getAnalysis<MachineDominatorTree>();
   PromoteRC = &X86::GR8RegClass;
 
   if (MF.begin() == MF.end())
@@ -416,103 +420,142 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
     // of these up front instead.
     CondRegArray CondRegs = collectCondsInRegs(TestMBB, CopyDefI);
 
-    for (auto MII = std::next(CopyI->getIterator()), MIE = MBB.instr_end();
-         MII != MIE;) {
-      MachineInstr &MI = *MII++;
-      MachineOperand *FlagUse = MI.findRegisterUseOperand(X86::EFLAGS);
-      if (!FlagUse) {
-        if (MI.findRegisterDefOperand(X86::EFLAGS)) {
-          // If EFLAGS are defined, it's as-if they were killed. We can stop
-          // scanning here.
-          //
-          // NB!!! Many instructions only modify some flags. LLVM currently
-          // models this as clobbering all flags, but if that ever changes this
-          // will need to be carefully updated to handle that more complex
-          // logic.
+    // Collect the basic blocks we need to scan. Typically this will just be
+    // a single basic block but we may have to scan multiple blocks if the
+    // EFLAGS copy lives into successors.
+    SmallVector<MachineBasicBlock *, 2> Blocks;
+    SmallPtrSet<MachineBasicBlock *, 2> VisitedBlocks;
+    Blocks.push_back(&MBB);
+    VisitedBlocks.insert(&MBB);
+
+    do {
+      MachineBasicBlock &UseMBB = *Blocks.pop_back_val();
+
+      // We currently don't do any PHI insertion and so we require that the
+      // test basic block dominates all of the use basic blocks.
+      //
+      // We could in theory do PHI insertion here if it becomes useful by just
+      // taking undef values in along every edge that we don't trace this
+      // EFLAGS copy along. This isn't as bad as fully general PHI insertion,
+      // but still seems like a great deal of complexity.
+      //
+      // Because it is theoretically possible that some earlier MI pass or
+      // other lowering transformation could induce this to happen, we do
+      // a hard check even in non-debug builds here.
+      if (&TestMBB != &UseMBB && !MDT->dominates(&TestMBB, &UseMBB)) {
+        DEBUG({
+          dbgs() << "ERROR: Encountered use that is not dominated by our test "
+                    "basic block! Rewriting this would require inserting PHI "
+                    "nodes to track the flag state across the CFG.\n\nTest "
+                    "block:\n";
+          TestMBB.dump();
+          dbgs() << "Use block:\n";
+          UseMBB.dump();
+        });
+        report_fatal_error("Cannot lower EFLAGS copy when original copy def "
+                           "does not dominate all uses.");
+      }
+
+      for (auto MII = &UseMBB == &MBB ? std::next(CopyI->getIterator())
+                                      : UseMBB.instr_begin(),
+                MIE = UseMBB.instr_end();
+           MII != MIE;) {
+        MachineInstr &MI = *MII++;
+        MachineOperand *FlagUse = MI.findRegisterUseOperand(X86::EFLAGS);
+        if (!FlagUse) {
+          if (MI.findRegisterDefOperand(X86::EFLAGS)) {
+            // If EFLAGS are defined, it's as-if they were killed. We can stop
+            // scanning here.
+            //
+            // NB!!! Many instructions only modify some flags. LLVM currently
+            // models this as clobbering all flags, but if that ever changes
+            // this will need to be carefully updated to handle that more
+            // complex logic.
+            FlagsKilled = true;
+            break;
+          }
+          continue;
+        }
+
+        DEBUG(dbgs() << "  Rewriting use: "; MI.dump());
+
+        // Check the kill flag before we rewrite as that may change it.
+        if (FlagUse->isKill())
           FlagsKilled = true;
+
+        // Once we encounter a branch, the rest of the instructions must also be
+        // branches. We can't rewrite in place here, so we handle them below.
+        //
+        // Note that we don't have to handle tail calls here, even conditional
+        // tail calls, as those are not introduced into the X86 MI until post-RA
+        // branch folding or black placement. As a consequence, we get to deal
+        // with the simpler formulation of conditional branches followed by tail
+        // calls.
+        if (X86::getCondFromBranchOpc(MI.getOpcode()) != X86::COND_INVALID) {
+          auto JmpIt = MI.getIterator();
+          do {
+            JmpIs.push_back(&*JmpIt);
+            ++JmpIt;
+          } while (JmpIt != UseMBB.instr_end() &&
+                   X86::getCondFromBranchOpc(JmpIt->getOpcode()) !=
+                       X86::COND_INVALID);
           break;
         }
-        continue;
+
+        // Otherwise we can just rewrite in-place.
+        if (X86::getCondFromCMovOpc(MI.getOpcode()) != X86::COND_INVALID) {
+          rewriteCMov(TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
+        } else if (X86::getCondFromSETOpc(MI.getOpcode()) !=
+                   X86::COND_INVALID) {
+          rewriteSetCC(TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
+        } else if (MI.getOpcode() == TargetOpcode::COPY) {
+          rewriteCopy(MI, *FlagUse, CopyDefI);
+        } else {
+          // We assume that arithmetic instructions that use flags also def
+          // them.
+          assert(MI.findRegisterDefOperand(X86::EFLAGS) &&
+                 "Expected a def of EFLAGS for this instruction!");
+
+          // NB!!! Several arithmetic instructions only *partially* update
+          // flags. Theoretically, we could generate MI code sequences that
+          // would rely on this fact and observe different flags independently.
+          // But currently LLVM models all of these instructions as clobbering
+          // all the flags in an undef way. We rely on that to simplify the
+          // logic.
+          FlagsKilled = true;
+
+          rewriteArithmetic(TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
+          break;
+        }
+
+        // If this was the last use of the flags, we're done.
+        if (FlagsKilled)
+          break;
       }
 
-      DEBUG(dbgs() << "  Rewriting use: "; MI.dump());
-
-      // Check the kill flag before we rewrite as that may change it.
-      if (FlagUse->isKill())
-        FlagsKilled = true;
-
-      // Once we encounter a branch, the rest of the instructions must also be
-      // branches. We can't rewrite in place here, so we handle them below.
-      //
-      // Note that we don't have to handle tail calls here, even conditional
-      // tail calls, as those are not introduced into the X86 MI until post-RA
-      // branch folding or black placement. As a consequence, we get to deal
-      // with the simpler formulation of conditional branches followed by tail
-      // calls.
-      if (X86::getCondFromBranchOpc(MI.getOpcode()) != X86::COND_INVALID) {
-        auto JmpIt = MI.getIterator();
-        do {
-          JmpIs.push_back(&*JmpIt);
-          ++JmpIt;
-        } while (JmpIt != MBB.instr_end() &&
-                 X86::getCondFromBranchOpc(JmpIt->getOpcode()) !=
-                     X86::COND_INVALID);
-        break;
-      }
-
-      // Otherwise we can just rewrite in-place.
-      if (X86::getCondFromCMovOpc(MI.getOpcode()) != X86::COND_INVALID) {
-        rewriteCMov(TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
-      } else if (X86::getCondFromSETOpc(MI.getOpcode()) != X86::COND_INVALID) {
-        rewriteSetCC(TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
-      } else if (MI.getOpcode() == TargetOpcode::COPY) {
-        rewriteCopy(MI, *FlagUse, CopyDefI);
-      } else {
-        // We assume that arithmetic instructions that use flags also def them.
-        assert(MI.findRegisterDefOperand(X86::EFLAGS) &&
-               "Expected a def of EFLAGS for this instruction!");
-
-        // NB!!! Several arithmetic instructions only *partially* update
-        // flags. Theoretically, we could generate MI code sequences that
-        // would rely on this fact and observe different flags independently.
-        // But currently LLVM models all of these instructions as clobbering
-        // all the flags in an undef way. We rely on that to simplify the
-        // logic.
-        FlagsKilled = true;
-
-        rewriteArithmetic(TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
-        break;
-      }
-
-      // If this was the last use of the flags, we're done.
+      // If the flags were killed, we're done with this block.
       if (FlagsKilled)
         break;
-    }
 
-    // If we didn't find a kill (or equivalent) check that the flags don't
-    // live-out of the basic block. Currently we don't support lowering copies
-    // of flags that live out in this fashion.
-    if (!FlagsKilled &&
-        llvm::any_of(MBB.successors(), [](MachineBasicBlock *SuccMBB) {
-          return SuccMBB->isLiveIn(X86::EFLAGS);
-        })) {
-      DEBUG({
-        dbgs() << "ERROR: Found a copied EFLAGS live-out from basic block:\n"
-               << "----\n";
-        MBB.dump();
-        dbgs() << "----\n"
-               << "ERROR: Cannot lower this EFLAGS copy!\n";
-      });
-      report_fatal_error(
-          "Cannot lower EFLAGS copy that lives out of a basic block!");
-    }
+      // Otherwise we need to scan successors for ones where the flags live-in
+      // and queue those up for processing.
+      for (MachineBasicBlock *SuccMBB : UseMBB.successors())
+        if (SuccMBB->isLiveIn(X86::EFLAGS) &&
+            VisitedBlocks.insert(SuccMBB).second)
+          Blocks.push_back(SuccMBB);
+    } while (!Blocks.empty());
 
     // Now rewrite the jumps that use the flags. These we handle specially
-    // because if there are multiple jumps we'll have to do surgery on the CFG.
+    // because if there are multiple jumps in a single basic block we'll have
+    // to do surgery on the CFG.
+    MachineBasicBlock *LastJmpMBB = nullptr;
     for (MachineInstr *JmpI : JmpIs) {
-      // Past the first jump we need to split the blocks apart.
-      if (JmpI != JmpIs.front())
+      // Past the first jump within a basic block we need to split the blocks
+      // apart.
+      if (JmpI->getParent() == LastJmpMBB)
         splitBlock(*JmpI->getParent(), *JmpI, *TII);
+      else
+        LastJmpMBB = JmpI->getParent();
 
       rewriteCondJmp(TestMBB, TestPos, TestLoc, *JmpI, CondRegs);
     }
@@ -593,7 +636,7 @@ void X86FlagsCopyLoweringPass::insertTest(MachineBasicBlock &MBB,
   // also allow us to select a shorter encoding of `testb %reg, %reg` when that
   // would be equivalent.
   auto TestI =
-      BuildMI(MBB, Pos, Loc, TII->get(X86::TEST8ri)).addReg(Reg).addImm(-1);
+      BuildMI(MBB, Pos, Loc, TII->get(X86::TEST8rr)).addReg(Reg).addReg(Reg);
   (void)TestI;
   DEBUG(dbgs() << "    test cond: "; TestI->dump());
   ++NumTestsInserted;

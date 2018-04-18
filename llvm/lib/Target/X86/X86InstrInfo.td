@@ -1987,28 +1987,35 @@ def XADD64rm  : RI<0xC1, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
 
 }
 
-let SchedRW = [WriteALU] in {
+let SchedRW = [WriteALU], hasSideEffects = 0 in {
+let Defs = [AL, EFLAGS], Uses = [AL] in
 def CMPXCHG8rr : I<0xB0, MRMDestReg, (outs GR8:$dst), (ins GR8:$src),
                    "cmpxchg{b}\t{$src, $dst|$dst, $src}", []>, TB;
+let Defs = [AX, EFLAGS], Uses = [AX] in
 def CMPXCHG16rr : I<0xB1, MRMDestReg, (outs GR16:$dst), (ins GR16:$src),
                     "cmpxchg{w}\t{$src, $dst|$dst, $src}", []>, TB, OpSize16;
+let Defs = [EAX, EFLAGS], Uses = [EAX] in
 def CMPXCHG32rr  : I<0xB1, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
                      "cmpxchg{l}\t{$src, $dst|$dst, $src}", []>, TB, OpSize32;
+let Defs = [RAX, EFLAGS], Uses = [RAX] in
 def CMPXCHG64rr  : RI<0xB1, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
                       "cmpxchg{q}\t{$src, $dst|$dst, $src}", []>, TB;
-} // SchedRW
+} // SchedRW, hasSideEffects
 
-let SchedRW = [WriteALULd, WriteRMW] in {
-let mayLoad = 1, mayStore = 1 in {
+let SchedRW = [WriteALULd, WriteRMW], mayLoad = 1, mayStore = 1,
+    hasSideEffects = 0 in {
+let Defs = [AL, EFLAGS], Uses = [AL] in
 def CMPXCHG8rm   : I<0xB0, MRMDestMem, (outs), (ins i8mem:$dst, GR8:$src),
                      "cmpxchg{b}\t{$src, $dst|$dst, $src}", []>, TB;
+let Defs = [AX, EFLAGS], Uses = [AX] in
 def CMPXCHG16rm  : I<0xB1, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
                      "cmpxchg{w}\t{$src, $dst|$dst, $src}", []>, TB, OpSize16;
+let Defs = [EAX, EFLAGS], Uses = [EAX] in
 def CMPXCHG32rm  : I<0xB1, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                      "cmpxchg{l}\t{$src, $dst|$dst, $src}", []>, TB, OpSize32;
+let Defs = [RAX, EFLAGS], Uses = [RAX] in
 def CMPXCHG64rm  : RI<0xB1, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                       "cmpxchg{q}\t{$src, $dst|$dst, $src}", []>, TB;
-}
 
 let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX] in
 def CMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$dst),
@@ -2018,7 +2025,7 @@ let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX] in
 def CMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$dst),
                     "cmpxchg16b\t$dst", []>,
                     TB, Requires<[HasCmpxchg16b, In64BitMode]>;
-} // SchedRW
+} // SchedRW, mayLoad, mayStore, hasSideEffects
 
 
 // Lock instruction prefix

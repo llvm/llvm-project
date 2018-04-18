@@ -238,7 +238,7 @@ define i64 @f10(i64* %foo, i64 %bar, i64 %baz) {
 ; ALL-NEXT:    lock cmpxchgq %r8, (%rcx)
 ; ALL-NEXT:    sete %bl
 ; ALL-NEXT:    callq dummy
-; ALL-NEXT:    testb $-1, %bl
+; ALL-NEXT:    testb %bl, %bl
 ; ALL-NEXT:    cmoveq %rsi, %rax
 ; ALL-NEXT:    addq $40, %rsp
 ; ALL-NEXT:    popq %rbx

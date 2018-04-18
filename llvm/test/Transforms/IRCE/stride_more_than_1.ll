@@ -4,7 +4,7 @@
 ; CHECK: irce: in function test_01: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_02: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_03: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
-; CHECK-NOT: irce: in function test_04: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
+; CHECK: irce: in function test_04: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_05: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_06: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK-NOT: irce: in function test_07: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
@@ -206,12 +206,24 @@ exit:
   ret void
 }
 
-; IV = 0; IV <s MAX_INT; IV += 7; 0 <= Len <= MAX_INT - 6. IRCE is not allowed,
-; because we cannot guarantee that IV + 7 will not exceed MAX_INT.
-; Negative test.
+; IV = 0; IV <s MAX_INT; IV += 7; 0 <= Len <= MAX_INT - 6. IRCE is allowed
+; because the branch would fail once idx.next == MAX_INT - 1 keeping the
+; access in bounds.
 define void @test_04(i32* %arr, i32* %a_len_ptr) {
+  ; CHECK:  @test_04(
+  ; CHECK:  loop:
+  ; CHECK:  [[IV:%[^ ]+]] = phi i32
+  ; CHECK:  [[IDX_NEXT:%[^ ]+]] = add i32 [[IV]], 7
 
-; CHECK:      @test_04(
+  ; CHECK:  main.exit.selector:
+  ; CHECK:  [[PSEUDO_PHI:%[^ ]+]] =  phi i32 [ [[IDX_NEXT]], %in.bounds ]
+  ; CHECK:  [[COND:%[^ ]+]] = icmp slt i32 [[PSEUDO_PHI]], 2147483647
+  ; CHECK:  br i1 [[COND]], label %main.pseudo.exit, label %exit
+
+  ; CHECK: loop.postloop:
+  ; CHECK: [[IDX_POST:%[^ ]+]] = phi i32
+  ; CHECK: [[COND_POST:%[^ ]+]] = icmp slt i32 [[IDX_POST]], %exit.mainloop.at
+  ; CHECK: br i1 [[COND_POST]], label %in.bounds.postloop, label %out.of.bounds.loopexit
 
 entry:
   %len = load i32, i32* %a_len_ptr, !range !2

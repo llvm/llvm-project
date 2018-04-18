@@ -130,11 +130,7 @@ add_python_test_target(check-lldb-single
 
 # If tests crash cause LLDB to crash, or things are otherwise unstable, or if machine-parsable
 # output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.
-add_python_test_target(check-lldb
-  ${LLDB_SOURCE_DIR}/test/dotest.py
-  "-q;${LLDB_DOTEST_ARGS}"
-  "Testing LLDB (parallel execution, with a separate subprocess per test)"
-  )
+add_custom_target(check-lldb)
 
 # Generate a wrapper for dotest.py in the bin directory.
 # We need configure_file to substitute variables.
@@ -152,6 +148,17 @@ file(GENERATE
 # Make this a custom target.
 add_custom_target(lldb-dotest)
 add_dependencies(lldb-dotest ${LLDB_TEST_DEPS})
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lit/Suite/lit.site.cfg.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg
+  )
+file(GENERATE
+  OUTPUT
+  ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg
+  INPUT
+  ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg
+  )
 
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.

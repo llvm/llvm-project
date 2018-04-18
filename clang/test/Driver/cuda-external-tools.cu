@@ -23,7 +23,7 @@
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM20,RDC %s
 
 // With debugging enabled, ptxas should be run with with no ptxas optimizations.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-noopt-device-debug -O2 -c %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-noopt-device-debug -O2 -g -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM20,DBG %s
 
 // --no-cuda-noopt-device-debug overrides --cuda-noopt-device-debug.

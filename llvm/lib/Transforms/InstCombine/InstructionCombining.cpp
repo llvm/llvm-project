@@ -2897,6 +2897,7 @@ Instruction *InstCombiner::visitLandingPadInst(LandingPadInst &LI) {
 /// block.
 static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   assert(I->hasOneUse() && "Invariants didn't hold!");
+  BasicBlock *SrcBlock = I->getParent();
 
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
   if (isa<PHINode>(I) || I->isEHPad() || I->mayHaveSideEffects() ||
@@ -2926,10 +2927,20 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
       if (Scan->mayWriteToMemory())
         return false;
   }
-
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(&*InsertPos);
   ++NumSunkInst;
+
+  // Also sink all related debug uses from the source basic block. Otherwise we
+  // get debug use before the def.
+  SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
+  findDbgUsers(DbgUsers, I);
+  for (auto *DII : DbgUsers) {
+    if (DII->getParent() == SrcBlock) {
+      DII->moveBefore(&*InsertPos);
+      DEBUG(dbgs() << "SINK: " << *DII << '\n');
+    }
+  }
   return true;
 }
 

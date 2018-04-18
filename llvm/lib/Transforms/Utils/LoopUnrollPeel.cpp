@@ -190,14 +190,25 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
     const SCEVAddRecExpr *LeftAR = cast<SCEVAddRecExpr>(LeftSCEV);
 
-    // Avoid huge SCEV computations in the loop below and make sure we only
-    // consider AddRecs of the loop we are trying to peel.
-    if (!LeftAR->isAffine() || LeftAR->getLoop() != &L)
+    // Avoid huge SCEV computations in the loop below, make sure we only
+    // consider AddRecs of the loop we are trying to peel and avoid
+    // non-monotonic predicates, as we will not be able to simplify the loop
+    // body.
+    // FIXME: For the non-monotonic predicates ICMP_EQ and ICMP_NE we can
+    //        simplify the loop, if we peel 1 additional iteration, if there
+    //        is no wrapping.
+    bool Increasing;
+    if (!LeftAR->isAffine() || LeftAR->getLoop() != &L ||
+        !SE.isMonotonicPredicate(LeftAR, Pred, Increasing))
       continue;
+    (void)Increasing;
 
-    // Check if extending DesiredPeelCount lets us evaluate Pred.
+    // Check if extending the current DesiredPeelCount lets us evaluate Pred
+    // or !Pred in the loop body statically.
+    unsigned NewPeelCount = DesiredPeelCount;
+
     const SCEV *IterVal = LeftAR->evaluateAtIteration(
-        SE.getConstant(LeftSCEV->getType(), DesiredPeelCount), SE);
+        SE.getConstant(LeftSCEV->getType(), NewPeelCount), SE);
 
     // If the original condition is not known, get the negated predicate
     // (which holds on the else branch) and check if it is known. This allows
@@ -206,11 +217,18 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
       Pred = ICmpInst::getInversePredicate(Pred);
 
     const SCEV *Step = LeftAR->getStepRecurrence(SE);
-    while (DesiredPeelCount < MaxPeelCount &&
+    while (NewPeelCount < MaxPeelCount &&
            SE.isKnownPredicate(Pred, IterVal, RightSCEV)) {
       IterVal = SE.getAddExpr(IterVal, Step);
-      DesiredPeelCount++;
+      NewPeelCount++;
     }
+
+    // Only peel the loop if the monotonic predicate !Pred becomes known in the
+    // first iteration of the loop body after peeling.
+    if (NewPeelCount > DesiredPeelCount &&
+        SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), IterVal,
+                            RightSCEV))
+      DesiredPeelCount = NewPeelCount;
   }
 
   return DesiredPeelCount;
