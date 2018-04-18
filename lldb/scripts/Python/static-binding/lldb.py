@@ -646,6 +646,10 @@ eTemplateArgumentKindTemplate = _lldb.eTemplateArgumentKindTemplate
 eTemplateArgumentKindTemplateExpansion = _lldb.eTemplateArgumentKindTemplateExpansion
 eTemplateArgumentKindExpression = _lldb.eTemplateArgumentKindExpression
 eTemplateArgumentKindPack = _lldb.eTemplateArgumentKindPack
+eTemplateArgumentKindNullPtr = _lldb.eTemplateArgumentKindNullPtr
+eNullGenericKindType = _lldb.eNullGenericKindType
+eBoundGenericKindType = _lldb.eBoundGenericKindType
+eUnboundGenericKindType = _lldb.eUnboundGenericKindType
 eTypeOptionNone = _lldb.eTypeOptionNone
 eTypeOptionCascade = _lldb.eTypeOptionCascade
 eTypeOptionSkipPointers = _lldb.eTypeOptionSkipPointers
@@ -705,8 +709,8 @@ eExpressionEvaluationParse = _lldb.eExpressionEvaluationParse
 eExpressionEvaluationIRGen = _lldb.eExpressionEvaluationIRGen
 eExpressionEvaluationExecution = _lldb.eExpressionEvaluationExecution
 eExpressionEvaluationComplete = _lldb.eExpressionEvaluationComplete
-eWatchpointKindRead = _lldb.eWatchpointKindRead
 eWatchpointKindWrite = _lldb.eWatchpointKindWrite
+eWatchpointKindRead = _lldb.eWatchpointKindRead
 eGdbSignalBadAccess = _lldb.eGdbSignalBadAccess
 eGdbSignalBadInstruction = _lldb.eGdbSignalBadInstruction
 eGdbSignalArithmetic = _lldb.eGdbSignalArithmetic
@@ -2504,6 +2508,10 @@ class SBCommandInterpreter(_object):
     def IsActive(self):
         """IsActive(self) -> bool"""
         return _lldb.SBCommandInterpreter_IsActive(self)
+
+    def WasInterrupted(self):
+        """WasInterrupted(self) -> bool"""
+        return _lldb.SBCommandInterpreter_WasInterrupted(self)
 
 SBCommandInterpreter_swigregister = _lldb.SBCommandInterpreter_swigregister
 SBCommandInterpreter_swigregister(SBCommandInterpreter)
@@ -9775,6 +9783,10 @@ class SBTarget(_object):
         """SetLaunchInfo(self, SBLaunchInfo launch_info)"""
         return _lldb.SBTarget_SetLaunchInfo(self, *args)
 
+    def GetStatistics(self):
+        """GetStatistics(self) -> SBStructuredData"""
+        return _lldb.SBTarget_GetStatistics(self)
+
     def __eq__(self, *args):
         """__eq__(self, SBTarget rhs) -> bool"""
         return _lldb.SBTarget___eq__(self, *args)
@@ -10297,7 +10309,7 @@ class SBThread(_object):
 
         Get the description strings for this thread that match what the 
         lldb driver will present, using the thread-format (stop_format==false)
-        or thread-stop-format (stop_format = true). 
+        or thread-stop-format (stop_format = true).
         """
         return _lldb.SBThread_GetDescription(self, *args)
 
