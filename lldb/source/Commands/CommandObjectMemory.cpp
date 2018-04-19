@@ -1709,8 +1709,8 @@ protected:
                                      m_cmd_name.c_str(), m_cmd_syntax.c_str());
         result.SetStatus(eReturnStatusFailed);
       } else {
-        auto load_addr_str = command[0].ref;
         if (command.GetArgumentCount() == 1) {
+          auto load_addr_str = command[0].ref;
           load_addr = Args::StringToAddress(&m_exe_ctx, load_addr_str,
                                             LLDB_INVALID_ADDRESS, &error);
           if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
