@@ -118,6 +118,62 @@ define <3 x i32> @p_constmask_vec_undef(<3 x i32> %x, <3 x i32> %y) {
 }
 
 ; ============================================================================ ;
+; Constant mask with no common bits set, but common unset bits.
+; ============================================================================ ;
+
+define i32 @p_constmask2(i32 %x, i32 %y) {
+; CHECK-LABEL: @p_constmask2(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 61440
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
+; CHECK-NEXT:    [[RET1:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    ret i32 [[RET1]]
+;
+  %and = and i32 %x, 61440
+  %and1 = and i32 %y, -65281
+  %ret = xor i32 %and, %and1
+  ret i32 %ret
+}
+
+define <2 x i32> @p_constmask2_splatvec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @p_constmask2_splatvec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 61440, i32 61440>
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -65281>
+; CHECK-NEXT:    [[RET1:%.*]] = or <2 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    ret <2 x i32> [[RET1]]
+;
+  %and = and <2 x i32> %x, <i32 61440, i32 61440>
+  %and1 = and <2 x i32> %y, <i32 -65281, i32 -65281>
+  %ret = xor <2 x i32> %and, %and1
+  ret <2 x i32> %ret
+}
+
+define <2 x i32> @p_constmask2_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @p_constmask2_vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 61440, i32 16711680>
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -16776961>
+; CHECK-NEXT:    [[RET:%.*]] = xor <2 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
+;
+  %and = and <2 x i32> %x, <i32 61440, i32 16711680>
+  %and1 = and <2 x i32> %y, <i32 -65281, i32 -16776961>
+  %ret = xor <2 x i32> %and, %and1
+  ret <2 x i32> %ret
+}
+
+define <3 x i32> @p_constmask2_vec_undef(<3 x i32> %x, <3 x i32> %y) {
+; CHECK-LABEL: @p_constmask2_vec_undef(
+; CHECK-NEXT:    [[AND:%.*]] = and <3 x i32> [[X:%.*]], <i32 61440, i32 undef, i32 61440>
+; CHECK-NEXT:    [[AND1:%.*]] = and <3 x i32> [[Y:%.*]], <i32 -65281, i32 undef, i32 -65281>
+; CHECK-NEXT:    [[RET:%.*]] = xor <3 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    ret <3 x i32> [[RET]]
+;
+  %and = and <3 x i32> %x, <i32 61440, i32 undef, i32 61440>
+  %and1 = and <3 x i32> %y, <i32 -65281, i32 undef, i32 -65281>
+  %ret = xor <3 x i32> %and, %and1
+  ret <3 x i32> %ret
+}
+
+; ============================================================================ ;
 ; Commutativity.
 ; ============================================================================ ;
 
@@ -340,7 +396,19 @@ define i32 @n3_constmask_badmask(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 65280
-  %and1 = and i32 %y, -65280 ; not -65281
+  %and1 = and i32 %y, -65280 ; not -65281, so they have one common bit
+  %ret = xor i32 %and, %and1
+  ret i32 %ret
+}
+
+define i32 @n3_constmask_samemask(i32 %x, i32 %y) {
+; CHECK-LABEL: @n3_constmask_samemask(
+; CHECK-NEXT:    [[AND2:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = and i32 [[AND2]], 65280
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %and = and i32 %x, 65280
+  %and1 = and i32 %y, 65280 ; both masks are the same
   %ret = xor i32 %and, %and1
   ret i32 %ret
 }

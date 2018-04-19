@@ -182,6 +182,18 @@ public:
                                           ->getFirstInsertionPt().getNonConst();
   }
 
+  /// Return a const iterator range over the instructions in the block, skipping
+  /// any debug instructions.
+  iterator_range<filter_iterator<BasicBlock::const_iterator,
+                                 std::function<bool(const Instruction &)>>>
+  instructionsWithoutDebug() const;
+
+  /// Return an iterator range over the instructions in the block, skipping any
+  /// debug instructions.
+  iterator_range<filter_iterator<BasicBlock::iterator,
+                                 std::function<bool(Instruction &)>>>
+  instructionsWithoutDebug();
+
   /// Unlink 'this' from the containing function, but do not delete it.
   void removeFromParent();
 

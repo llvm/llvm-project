@@ -112,11 +112,17 @@ define <2 x i64> @test_mm_adds_epi8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %arg0, <16 x i8> %arg1)
-  %bc = bitcast <16 x i8> %res to <2 x i64>
+  %1 = sext <16 x i8> %arg0 to <16 x i16>
+  %2 = sext <16 x i8> %arg1 to <16 x i16>
+  %3 = add nsw <16 x i16> %1, %2
+  %4 = icmp slt <16 x i16> %3, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
+  %5 = select <16 x i1> %4, <16 x i16> %3, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
+  %6 = icmp sgt <16 x i16> %5, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
+  %7 = select <16 x i1> %6, <16 x i16> %5, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
+  %8 = trunc <16 x i16> %7 to <16 x i8>
+  %bc = bitcast <16 x i8> %8 to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_adds_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_adds_epi16:
@@ -130,11 +136,17 @@ define <2 x i64> @test_mm_adds_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %arg0, <8 x i16> %arg1)
-  %bc = bitcast <8 x i16> %res to <2 x i64>
+  %1 = sext <8 x i16> %arg0 to <8 x i32>
+  %2 = sext <8 x i16> %arg1 to <8 x i32>
+  %3 = add nsw <8 x i32> %1, %2
+  %4 = icmp slt <8 x i32> %3, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
+  %5 = select <8 x i1> %4, <8 x i32> %3, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
+  %6 = icmp sgt <8 x i32> %5, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
+  %7 = select <8 x i1> %6, <8 x i32> %5, <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
+  %8 = trunc <8 x i32> %7 to <8 x i16>
+  %bc = bitcast <8 x i16> %8 to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_adds_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_adds_epu8:
@@ -148,11 +160,15 @@ define <2 x i64> @test_mm_adds_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %arg0, <16 x i8> %arg1)
-  %bc = bitcast <16 x i8> %res to <2 x i64>
+  %1 = zext <16 x i8> %arg0 to <16 x i16>
+  %2 = zext <16 x i8> %arg1 to <16 x i16>
+  %3 = add nsw <16 x i16> %1, %2
+  %4 = icmp ult <16 x i16> %3, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %5 = select <16 x i1> %4, <16 x i16> %3, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %6 = trunc <16 x i16> %5 to <16 x i8>
+  %bc = bitcast <16 x i8> %6 to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_adds_epu16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_adds_epu16:
@@ -166,11 +182,15 @@ define <2 x i64> @test_mm_adds_epu16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %arg0, <8 x i16> %arg1)
-  %bc = bitcast <8 x i16> %res to <2 x i64>
+  %1 = zext <8 x i16> %arg0 to <8 x i32>
+  %2 = zext <8 x i16> %arg1 to <8 x i32>
+  %3 = add nsw <8 x i32> %1, %2
+  %4 = icmp ult <8 x i32> %3, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+  %5 = select <8 x i1> %4, <8 x i32> %3, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+  %6 = trunc <8 x i32> %5 to <8 x i16>
+  %bc = bitcast <8 x i16> %6 to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x double> @test_mm_and_pd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; X32-LABEL: test_mm_and_pd:
@@ -3507,11 +3527,17 @@ define <2 x i64> @test_mm_subs_epi8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %arg0, <16 x i8> %arg1)
-  %bc = bitcast <16 x i8> %res to <2 x i64>
+  %1 = sext <16 x i8> %arg0 to <16 x i16>
+  %2 = sext <16 x i8> %arg1 to <16 x i16>
+  %3 = sub nsw <16 x i16> %1, %2
+  %4 = icmp slt <16 x i16> %3, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
+  %5 = select <16 x i1> %4, <16 x i16> %3, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
+  %6 = icmp sgt <16 x i16> %5, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
+  %7 = select <16 x i1> %6, <16 x i16> %5, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
+  %8 = trunc <16 x i16> %7 to <16 x i8>
+  %bc = bitcast <16 x i8> %8 to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_subs_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_subs_epi16:
@@ -3525,47 +3551,69 @@ define <2 x i64> @test_mm_subs_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %arg0, <8 x i16> %arg1)
-  %bc = bitcast <8 x i16> %res to <2 x i64>
+  %1 = sext <8 x i16> %arg0 to <8 x i32>
+  %2 = sext <8 x i16> %arg1 to <8 x i32>
+  %3 = sub nsw <8 x i32> %1, %2
+  %4 = icmp slt <8 x i32> %3, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
+  %5 = select <8 x i1> %4, <8 x i32> %3, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
+  %6 = icmp sgt <8 x i32> %5, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
+  %7 = select <8 x i1> %6, <8 x i32> %5, <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
+  %8 = trunc <8 x i32> %7 to <8 x i16>
+  %bc = bitcast <8 x i16> %8 to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_subs_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_subs_epu8:
 ; X32:       # %bb.0:
-; X32-NEXT:    psubusb %xmm1, %xmm0
+; X32-NEXT:    pmaxub %xmm1, %xmm0
+; X32-NEXT:    psubb %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_subs_epu8:
 ; X64:       # %bb.0:
-; X64-NEXT:    psubusb %xmm1, %xmm0
+; X64-NEXT:    pmaxub %xmm1, %xmm0
+; X64-NEXT:    psubb %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %arg0, <16 x i8> %arg1)
-  %bc = bitcast <16 x i8> %res to <2 x i64>
+  %cmp = icmp ugt <16 x i8> %arg0, %arg1
+  %sel = select <16 x i1> %cmp, <16 x i8> %arg0, <16 x i8> %arg1
+  %sub = sub <16 x i8> %sel, %arg1
+  %bc = bitcast <16 x i8> %sub to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_subs_epu16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_subs_epu16:
 ; X32:       # %bb.0:
-; X32-NEXT:    psubusw %xmm1, %xmm0
+; X32-NEXT:    movdqa .LCPI190_0, %xmm2 # xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; X32-NEXT:    movdqa %xmm1, %xmm3
+; X32-NEXT:    pxor %xmm2, %xmm3
+; X32-NEXT:    pxor %xmm2, %xmm0
+; X32-NEXT:    pmaxsw %xmm3, %xmm0
+; X32-NEXT:    pxor %xmm2, %xmm0
+; X32-NEXT:    psubw %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_subs_epu16:
 ; X64:       # %bb.0:
-; X64-NEXT:    psubusw %xmm1, %xmm0
+; X64-NEXT:    movdqa .LCPI190_0(%rip), %xmm2 # xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; X64-NEXT:    movdqa %xmm1, %xmm3
+; X64-NEXT:    pxor %xmm2, %xmm3
+; X64-NEXT:    pxor %xmm2, %xmm0
+; X64-NEXT:    pmaxsw %xmm3, %xmm0
+; X64-NEXT:    pxor %xmm2, %xmm0
+; X64-NEXT:    psubw %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %arg0, <8 x i16> %arg1)
-  %bc = bitcast <8 x i16> %res to <2 x i64>
+  %cmp = icmp ugt <8 x i16> %arg0, %arg1
+  %sel = select <8 x i1> %cmp, <8 x i16> %arg0, <8 x i16> %arg1
+  %sub = sub <8 x i16> %sel, %arg1
+  %bc = bitcast <8 x i16> %sub to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define i32 @test_mm_ucomieq_sd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; X32-LABEL: test_mm_ucomieq_sd:
