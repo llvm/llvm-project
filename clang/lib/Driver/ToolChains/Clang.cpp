@@ -2507,11 +2507,13 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
     CmdArgs.push_back("-fmodules-strict-decluse");
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
+  bool ImplicitModules = false;
   if (!Args.hasFlag(options::OPT_fimplicit_modules,
                     options::OPT_fno_implicit_modules, HaveClangModules)) {
     if (HaveModules)
       CmdArgs.push_back("-fno-implicit-modules");
   } else if (HaveModules) {
+    ImplicitModules = true;
     // -fmodule-cache-path specifies where our implicitly-built module files
     // should be written.
     SmallString<128> Path;
@@ -2618,7 +2620,11 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
                     options::OPT_fmodules_validate_once_per_build_session);
   }
 
-  Args.AddLastArg(CmdArgs, options::OPT_fmodules_validate_system_headers);
+  if (Args.hasFlag(options::OPT_fmodules_validate_system_headers,
+                   options::OPT_fno_modules_validate_system_headers,
+                   ImplicitModules))
+    CmdArgs.push_back("-fmodules-validate-system-headers");
+
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_disable_diagnostic_validation);
 }
 
@@ -4125,6 +4131,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                RawTriple.hasEnvironment())) ||
       KernelOrKext)
     CmdArgs.push_back("-fno-use-cxa-atexit");
+
+  if (Args.hasFlag(options::OPT_fregister_global_dtors_with_atexit,
+                   options::OPT_fno_register_global_dtors_with_atexit,
+                   RawTriple.isOSDarwin()))
+    CmdArgs.push_back("-fregister-global-dtors-with-atexit");
 
   // -fms-extensions=0 is default.
   if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,

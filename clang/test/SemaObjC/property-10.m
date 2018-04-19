@@ -24,7 +24,7 @@
 @property(unsafe_unretained, copy, retain) id p4_3; // expected-error {{property attributes 'unsafe_unretained' and 'copy' are mutually exclusive}}, expected-error {{property attributes 'unsafe_unretained' and 'retain' are mutually exclusive}} 
 @property(unsafe_unretained, copy, strong) id s4_3; // expected-error {{property attributes 'unsafe_unretained' and 'copy' are mutually exclusive}}, expected-error {{property attributes 'unsafe_unretained' and 'strong' are mutually exclusive}} 
 
-@property id p4; // expected-warning {{no 'assign', 'retain', or 'copy' attribute is specified - 'assign' is assumed}}, expected-warning {{default property attribute 'assign' not appropriate for non-GC object}}
+@property id p4; // expected-warning {{no 'assign', 'retain', or 'copy' attribute is specified - 'assign' is assumed}}, expected-warning {{default property attribute 'assign' not appropriate for object}}
 
 @property(nonatomic,copy) int (^includeMailboxCondition)(); 
 @property(nonatomic,copy) int (*includeMailboxCondition2)(); // expected-error {{property with 'copy' attribute must be of object type}}

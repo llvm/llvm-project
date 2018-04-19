@@ -612,6 +612,13 @@ def err_function_needs_feature
             "'%2'">;
 def warn_builtin_unknown : Warning<"use of unknown builtin %0">,
   InGroup<ImplicitFunctionDeclare>, DefaultError;
+def warn_cstruct_memaccess : Warning<
+  "%select{destination for|source of|first operand of|second operand of}0 this "
+  "%1 call is a pointer to record %2 that is not trivial to "
+  "%select{primitive-default-initialize|primitive-copy}3">,
+  InGroup<DiagGroup<"nontrivial-memaccess">>;
+def note_nontrivial_field : Note<
+  "field is non-trivial to %select{copy|default-initialize}0">;
 def warn_dyn_class_memaccess : Warning<
   "%select{destination for|source of|first operand of|second operand of}0 this "
   "%1 call is a pointer to %select{|class containing a }2dynamic class %3; "
@@ -1027,7 +1034,7 @@ def warn_objc_pointer_masking : Warning<
 def warn_objc_pointer_masking_performSelector : Warning<warn_objc_pointer_masking.Text>,
   InGroup<ObjCPointerIntrospectPerformSelector>;
 def warn_objc_property_default_assign_on_object : Warning<
-  "default property attribute 'assign' not appropriate for non-GC object">,
+  "default property attribute 'assign' not appropriate for object">,
   InGroup<ObjCPropertyNoAttribute>;
 def warn_property_attr_mismatch : Warning<
   "property attribute in class extension does not match the primary class">,
@@ -2908,6 +2915,10 @@ def warn_mismatched_availability_override_unavail : Warning<
   "%select{|overriding }1method cannot be unavailable on %0 when "
   "%select{the protocol method it implements|its overridden method}1 is "
   "available">,
+  InGroup<Availability>;
+def warn_availability_on_static_initializer : Warning<
+  "ignoring availability attribute %select{on '+load' method|"
+  "with constructor attribute|with destructor attribute}0">,
   InGroup<Availability>;
 def note_overridden_method : Note<
   "overridden method is here">;
