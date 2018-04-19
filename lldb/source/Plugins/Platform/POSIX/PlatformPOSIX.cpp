@@ -18,17 +18,22 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileCache.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
@@ -923,64 +928,263 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
   return Status();
 }
 
+UtilityFunction *
+PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx, 
+                                            Status &error)
+{
+  // Remember to prepend this with the prefix from GetLibdlFunctionDeclarations.
+  // The returned values are all in __lldb_dlopen_result for consistency.
+  // The wrapper returns a void * but doesn't use it because
+  // UtilityFunctions don't work with void returns at present.
+  static const char *dlopen_wrapper_code = R"(
+  struct __lldb_dlopen_result {
+    void *image_ptr;
+    const char *error_str;
+  };
+
+  void * __lldb_dlopen_wrapper (const char *path, 
+                                __lldb_dlopen_result *result_ptr)
+  {
+    result_ptr->image_ptr = dlopen(path, 2);
+    if (result_ptr->image_ptr == (void *) 0x0)
+      result_ptr->error_str = dlerror();
+    return nullptr;
+  }
+  )";
+
+  static const char *dlopen_wrapper_name = "__lldb_dlopen_wrapper";
+  Process *process = exe_ctx.GetProcessSP().get();
+  // Insert the dlopen shim defines into our generic expression:
+  std::string expr(GetLibdlFunctionDeclarations(process));
+  expr.append(dlopen_wrapper_code);
+  Status utility_error;
+  DiagnosticManager diagnostics;
+  
+  std::unique_ptr<UtilityFunction> dlopen_utility_func_up(process
+      ->GetTarget().GetUtilityFunctionForLanguage(expr.c_str(),
+                                                  eLanguageTypeObjC,
+                                                  dlopen_wrapper_name,
+                                                  utility_error));
+  if (utility_error.Fail()) {
+    error.SetErrorStringWithFormat("dlopen error: could not make utility"
+                                   "function: %s", utility_error.AsCString());
+    return nullptr;
+  }
+  if (!dlopen_utility_func_up->Install(diagnostics, exe_ctx)) {
+    error.SetErrorStringWithFormat("dlopen error: could not install utility"
+                                   "function: %s", 
+                                   diagnostics.GetString().c_str());
+    return nullptr;
+  }
+
+  Value value;
+  ValueList arguments;
+  FunctionCaller *do_dlopen_function = nullptr;
+  UtilityFunction *dlopen_utility_func = nullptr;
+
+  // Fetch the clang types we will need:
+  ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
+
+  CompilerType clang_void_pointer_type
+      = ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+  CompilerType clang_char_pointer_type
+        = ast->GetBasicType(eBasicTypeChar).GetPointerType();
+
+  // We are passing two arguments, the path to dlopen, and a pointer to the
+  // storage we've made for the result:
+  value.SetValueType(Value::eValueTypeScalar);
+  value.SetCompilerType(clang_void_pointer_type);
+  arguments.PushValue(value);
+  value.SetCompilerType(clang_char_pointer_type);
+  arguments.PushValue(value);
+  
+  do_dlopen_function = dlopen_utility_func_up->MakeFunctionCaller(
+      clang_void_pointer_type, arguments, exe_ctx.GetThreadSP(), utility_error);
+  if (utility_error.Fail()) {
+    error.SetErrorStringWithFormat("dlopen error: could not make function"
+                                   "caller: %s", utility_error.AsCString());
+    return nullptr;
+  }
+  
+  do_dlopen_function = dlopen_utility_func_up->GetFunctionCaller();
+  if (!do_dlopen_function) {
+    error.SetErrorString("dlopen error: could not get function caller.");
+    return nullptr;
+  }
+  
+  // We made a good utility function, so cache it in the process:
+  dlopen_utility_func = dlopen_utility_func_up.get();
+  process->SetLoadImageUtilityFunction(std::move(dlopen_utility_func_up));
+  return dlopen_utility_func;
+}
+
 uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                     const lldb_private::FileSpec &remote_file,
                                     lldb_private::Status &error) {
-  char path[PATH_MAX];
-  remote_file.GetPath(path, sizeof(path));
-
-  StreamString expr;
-  expr.Printf(R"(
-                   struct __lldb_dlopen_result { void *image_ptr; const char *error_str; } the_result;
-                   the_result.image_ptr = dlopen ("%s", 2);
-                   if (the_result.image_ptr == (void *) 0x0)
-                   {
-                       the_result.error_str = dlerror();
-                   }
-                   else
-                   {
-                       the_result.error_str = (const char *) 0x0;
-                   }
-                   the_result;
-                  )",
-              path);
-  llvm::StringRef prefix = GetLibdlFunctionDeclarations(process);
-  lldb::ValueObjectSP result_valobj_sp;
-  error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
-                                  result_valobj_sp);
-  if (error.Fail())
-    return LLDB_INVALID_IMAGE_TOKEN;
-
-  error = result_valobj_sp->GetError();
-  if (error.Fail())
-    return LLDB_INVALID_IMAGE_TOKEN;
-
-  Scalar scalar;
-  ValueObjectSP image_ptr_sp = result_valobj_sp->GetChildAtIndex(0, true);
-  if (!image_ptr_sp || !image_ptr_sp->ResolveValue(scalar)) {
-    error.SetErrorStringWithFormat("unable to load '%s'", path);
+  std::string path;
+  path = remote_file.GetPath();
+  
+  ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
+  if (!thread_sp) {
+    error.SetErrorString("dlopen error: no thread available to call dlopen.");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
+  
+  DiagnosticManager diagnostics;
+  
+  ExecutionContext exe_ctx;
+  thread_sp->CalculateExecutionContext(exe_ctx);
 
-  addr_t image_ptr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
-  if (image_ptr != 0 && image_ptr != LLDB_INVALID_ADDRESS)
-    return process->AddImageToken(image_ptr);
-
-  if (image_ptr == 0) {
-    ValueObjectSP error_str_sp = result_valobj_sp->GetChildAtIndex(1, true);
-    if (error_str_sp) {
-      DataBufferSP buffer_sp(new DataBufferHeap(10240, 0));
-      size_t num_chars =
-          error_str_sp->ReadPointedString(buffer_sp, error, 10240).first;
-      if (error.Success() && num_chars > 0)
-        error.SetErrorStringWithFormat("dlopen error: %s",
-                                       buffer_sp->GetBytes());
-      else
-        error.SetErrorStringWithFormat("dlopen failed for unknown reasons.");
-      return LLDB_INVALID_IMAGE_TOKEN;
-    }
+  Status utility_error;
+  
+  // The UtilityFunction is held in the Process.  Platforms don't track the 
+  // lifespan of the Targets that use them, we can't put this in the Platform.
+  UtilityFunction *dlopen_utility_func 
+      = process->GetLoadImageUtilityFunction(this);
+  ValueList arguments;
+  FunctionCaller *do_dlopen_function = nullptr;
+  
+  if (!dlopen_utility_func) {
+    // Make the UtilityFunction:
+    dlopen_utility_func = MakeLoadImageUtilityFunction(exe_ctx, error);
   }
-  error.SetErrorStringWithFormat("unable to load '%s'", path);
+  // If we couldn't make it, the error will be in error, so we can exit here.
+  if (!dlopen_utility_func)
+    return LLDB_INVALID_IMAGE_TOKEN;
+    
+  do_dlopen_function = dlopen_utility_func->GetFunctionCaller();
+  if (!do_dlopen_function) {
+    error.SetErrorString("dlopen error: could not get function caller.");
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  arguments = do_dlopen_function->GetArgumentValues();
+  
+  // Now insert the path we are searching for and the result structure into
+  // the target.
+  uint32_t permissions = ePermissionsReadable|ePermissionsWritable;
+  size_t path_len = path.size() + 1;
+  lldb::addr_t path_addr = process->AllocateMemory(path_len, 
+                                                   permissions,
+                                                   utility_error);
+  if (path_addr == LLDB_INVALID_ADDRESS) {
+    error.SetErrorStringWithFormat("dlopen error: could not allocate memory"
+                                    "for path: %s", utility_error.AsCString());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  
+  // Make sure we deallocate the input string memory:
+  CleanUp path_cleanup([process, path_addr] { 
+      process->DeallocateMemory(path_addr); 
+  });
+  
+  process->WriteMemory(path_addr, path.c_str(), path_len, utility_error);
+  if (utility_error.Fail()) {
+    error.SetErrorStringWithFormat("dlopen error: could not write path string:"
+                                    " %s", utility_error.AsCString());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  
+  // Make space for our return structure.  It is two pointers big: the token and
+  // the error string.
+  const uint32_t addr_size = process->GetAddressByteSize();
+  lldb::addr_t return_addr = process->CallocateMemory(2*addr_size,
+                                                      permissions,
+                                                      utility_error);
+  if (utility_error.Fail()) {
+    error.SetErrorStringWithFormat("dlopen error: could not allocate memory"
+                                    "for path: %s", utility_error.AsCString());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  
+  // Make sure we deallocate the result structure memory
+  CleanUp return_cleanup([process, return_addr] {
+      process->DeallocateMemory(return_addr);
+  });
+  
+  // Set the values into our args and write them to the target:
+  arguments.GetValueAtIndex(0)->GetScalar() = path_addr;
+  arguments.GetValueAtIndex(1)->GetScalar() = return_addr;
+  
+  lldb::addr_t func_args_addr = LLDB_INVALID_ADDRESS;
+  
+  diagnostics.Clear();
+  if (!do_dlopen_function->WriteFunctionArguments(exe_ctx, 
+                                                 func_args_addr,
+                                                 arguments,
+                                                 diagnostics)) {
+    error.SetErrorStringWithFormat("dlopen error: could not write function "
+                                   "arguments: %s", 
+                                   diagnostics.GetString().c_str());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  
+  // Make sure we clean up the args structure.  We can't reuse it because the
+  // Platform lives longer than the process and the Platforms don't get a
+  // signal to clean up cached data when a process goes away.
+  CleanUp args_cleanup([do_dlopen_function, &exe_ctx, func_args_addr] {
+    do_dlopen_function->DeallocateFunctionResults(exe_ctx, func_args_addr);
+  });
+  
+  // Now run the caller:
+  EvaluateExpressionOptions options;
+  options.SetExecutionPolicy(eExecutionPolicyAlways);
+  options.SetLanguage(eLanguageTypeC_plus_plus);
+  options.SetIgnoreBreakpoints(true);
+  options.SetUnwindOnError(true);
+  options.SetTrapExceptions(false); // dlopen can't throw exceptions, so
+                                    // don't do the work to trap them.
+  options.SetTimeout(std::chrono::seconds(2));
+  
+  Value return_value;
+  // Fetch the clang types we will need:
+  ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
+
+  CompilerType clang_void_pointer_type
+      = ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+
+  return_value.SetCompilerType(clang_void_pointer_type);
+  
+  ExpressionResults results = do_dlopen_function->ExecuteFunction(
+      exe_ctx, &func_args_addr, options, diagnostics, return_value);
+  if (results != eExpressionCompleted) {
+    error.SetErrorStringWithFormat("dlopen error: could write execute "
+                                   "dlopen wrapper function: %s", 
+                                   diagnostics.GetString().c_str());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  
+  // Read the dlopen token from the return area:
+  lldb::addr_t token = process->ReadPointerFromMemory(return_addr, 
+                                                      utility_error);
+  if (utility_error.Fail()) {
+    error.SetErrorStringWithFormat("dlopen error: could not read the return "
+                                    "struct: %s", utility_error.AsCString());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  
+  // The dlopen succeeded!
+  if (token != 0x0)
+    return process->AddImageToken(token);
+    
+  // We got an error, lets read in the error string:
+  std::string dlopen_error_str;
+  lldb::addr_t error_addr 
+    = process->ReadPointerFromMemory(return_addr + addr_size, utility_error);
+  if (utility_error.Fail()) {
+    error.SetErrorStringWithFormat("dlopen error: could not read error string: "
+                                    "%s", utility_error.AsCString());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+  
+  size_t num_chars = process->ReadCStringFromMemory(error_addr + addr_size, 
+                                                    dlopen_error_str, 
+                                                    utility_error);
+  if (utility_error.Success() && num_chars > 0)
+    error.SetErrorStringWithFormat("dlopen error: %s",
+                                   dlopen_error_str.c_str());
+  else
+    error.SetErrorStringWithFormat("dlopen failed for unknown reasons.");
+
   return LLDB_INVALID_IMAGE_TOKEN;
 }
 
