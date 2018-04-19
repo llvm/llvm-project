@@ -326,10 +326,11 @@ void Section::DumpName(Stream *s) const {
     // The top most section prints the module basename
     const char *name = NULL;
     ModuleSP module_sp(GetModule());
-    const FileSpec &file_spec = m_obj_file->GetFileSpec();
 
-    if (m_obj_file)
+    if (m_obj_file) {
+      const FileSpec &file_spec = m_obj_file->GetFileSpec();
       name = file_spec.GetFilename().AsCString();
+    }
     if ((!name || !name[0]) && module_sp)
       name = module_sp->GetFileSpec().GetFilename().AsCString();
     if (name && name[0])

@@ -7,9 +7,9 @@
 IMPORT:      DelayImport {
 IMPORT-NEXT:   Name: std64.dll
 IMPORT-NEXT:   Attributes: 0x1
-IMPORT-NEXT:   ModuleHandle: 0x2018
-IMPORT-NEXT:   ImportAddressTable: 0x2020
-IMPORT-NEXT:   ImportNameTable: 0x3040
+IMPORT-NEXT:   ModuleHandle: 0x3018
+IMPORT-NEXT:   ImportAddressTable: 0x3020
+IMPORT-NEXT:   ImportNameTable: 0x2040
 IMPORT-NEXT:   BoundDelayImportTable: 0x0
 IMPORT-NEXT:   UnloadDelayImportTable: 0x0
 IMPORT-NEXT:   Import {
@@ -29,13 +29,13 @@ IMPORT-NEXT: }
 BASEREL:      BaseReloc [
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: DIR64
-BASEREL-NEXT:     Address: 0x2020
+BASEREL-NEXT:     Address: 0x3020
 BASEREL-NEXT:   }
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: DIR64
-BASEREL-NEXT:     Address: 0x2028
+BASEREL-NEXT:     Address: 0x3028
 BASEREL-NEXT:   }
 BASEREL-NEXT:   Entry {
 BASEREL-NEXT:     Type: DIR64
-BASEREL-NEXT:     Address: 0x2030
+BASEREL-NEXT:     Address: 0x3030
 BASEREL-NEXT:   }

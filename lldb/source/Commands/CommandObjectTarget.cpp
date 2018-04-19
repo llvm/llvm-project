@@ -1388,7 +1388,8 @@ static size_t DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list) {
           strm.EOL();
         }
         ObjectFile *objfile = module->GetObjectFile();
-        objfile->Dump(&strm);
+        if (objfile)
+          objfile->Dump(&strm);
       }
     }
     strm.IndentLess();

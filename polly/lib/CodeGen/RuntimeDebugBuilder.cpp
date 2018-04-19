@@ -188,11 +188,13 @@ void RuntimeDebugBuilder::createGPUPrinterT(PollyIRBuilder &Builder,
       if (!Ty->isDoubleTy())
         Val = Builder.CreateFPExt(Val, Builder.getDoubleTy());
     } else if (Ty->isIntegerTy()) {
-      if (Ty->getIntegerBitWidth() < 64)
+      if (Ty->getIntegerBitWidth() < 64) {
         Val = Builder.CreateSExt(Val, Builder.getInt64Ty());
-      else
-        assert(Ty->getIntegerBitWidth() &&
+      } else {
+        assert(Ty->getIntegerBitWidth() == 64 &&
                "Integer types larger 64 bit not supported");
+        // fallthrough
+      }
     } else if (auto PtTy = dyn_cast<PointerType>(Ty)) {
       if (PtTy->getAddressSpace() == 4) {
         // Pointers in constant address space are printed as strings
