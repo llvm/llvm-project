@@ -164,17 +164,18 @@ struct AllocaInfo {
   }
 };
 
-// Data package used by RenamePass()
-class RenamePassData {
-public:
+/// Data package used by RenamePass().
+struct RenamePassData {
   using ValVector = std::vector<Value *>;
+  using LocationVector = std::vector<DebugLoc>;
 
-  RenamePassData(BasicBlock *B, BasicBlock *P, ValVector V)
-      : BB(B), Pred(P), Values(std::move(V)) {}
+  RenamePassData(BasicBlock *B, BasicBlock *P, ValVector V, LocationVector L)
+      : BB(B), Pred(P), Values(std::move(V)), Locations(std::move(L)) {}
 
   BasicBlock *BB;
   BasicBlock *Pred;
   ValVector Values;
+  LocationVector Locations;
 };
 
 /// \brief This assigns and keeps a per-bb relative ordering of load/store
@@ -303,6 +304,7 @@ private:
                            SmallPtrSetImpl<BasicBlock *> &LiveInBlocks);
   void RenamePass(BasicBlock *BB, BasicBlock *Pred,
                   RenamePassData::ValVector &IncVals,
+                  RenamePassData::LocationVector &IncLocs,
                   std::vector<RenamePassData> &Worklist);
   bool QueuePhiNode(BasicBlock *BB, unsigned AllocaIdx, unsigned &Version);
 };
@@ -653,15 +655,20 @@ void PromoteMem2Reg::run() {
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
     Values[i] = UndefValue::get(Allocas[i]->getAllocatedType());
 
+  // When handling debug info, treat all incoming values as if they have unknown
+  // locations until proven otherwise.
+  RenamePassData::LocationVector Locations(Allocas.size());
+
   // Walks all basic blocks in the function performing the SSA rename algorithm
   // and inserting the phi nodes we marked as necessary
   std::vector<RenamePassData> RenamePassWorkList;
-  RenamePassWorkList.emplace_back(&F.front(), nullptr, std::move(Values));
+  RenamePassWorkList.emplace_back(&F.front(), nullptr, std::move(Values),
+                                  std::move(Locations));
   do {
     RenamePassData RPD = std::move(RenamePassWorkList.back());
     RenamePassWorkList.pop_back();
     // RenamePass may add new worklist entries.
-    RenamePass(RPD.BB, RPD.Pred, RPD.Values, RenamePassWorkList);
+    RenamePass(RPD.BB, RPD.Pred, RPD.Values, RPD.Locations, RenamePassWorkList);
   } while (!RenamePassWorkList.empty());
 
   // The renamer uses the Visited set to avoid infinite loops.  Clear it now.
@@ -868,6 +875,16 @@ bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
   return true;
 }
 
+/// Update the debug location of a phi. \p ApplyMergedLoc indicates whether to
+/// create a merged location incorporating \p DL, or to set \p DL directly.
+static void updateForIncomingValueLocation(PHINode *PN, DebugLoc DL,
+                                           bool ApplyMergedLoc) {
+  if (ApplyMergedLoc)
+    PN->applyMergedLocation(PN->getDebugLoc(), DL);
+  else
+    PN->setDebugLoc(DL);
+}
+
 /// \brief Recursively traverse the CFG of the function, renaming loads and
 /// stores to the allocas which we are promoting.
 ///
@@ -875,6 +892,7 @@ bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
 /// predecessor block Pred.
 void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred,
                                 RenamePassData::ValVector &IncomingVals,
+                                RenamePassData::LocationVector &IncomingLocs,
                                 std::vector<RenamePassData> &Worklist) {
 NextIteration:
   // If we are inserting any phi nodes into this BB, they will already be in the
@@ -898,6 +916,10 @@ NextIteration:
       BasicBlock::iterator PNI = BB->begin();
       do {
         unsigned AllocaNo = PhiToAllocaMap[APN];
+
+        // Update the location of the phi node.
+        updateForIncomingValueLocation(APN, IncomingLocs[AllocaNo],
+                                       APN->getNumIncomingValues() > 0);
 
         // Add N incoming values to the PHI node.
         for (unsigned i = 0; i != NumEdges; ++i)
@@ -960,8 +982,11 @@ NextIteration:
         continue;
 
       // what value were we writing?
-      IncomingVals[ai->second] = SI->getOperand(0);
+      unsigned AllocaNo = ai->second;
+      IncomingVals[AllocaNo] = SI->getOperand(0);
+
       // Record debuginfo for the store before removing it.
+      IncomingLocs[AllocaNo] = SI->getDebugLoc();
       for (DbgInfoIntrinsic *DII : AllocaDbgDeclares[ai->second])
         ConvertDebugDeclareToDebugValue(DII, SI, DIB);
       BB->getInstList().erase(SI);
@@ -984,7 +1009,7 @@ NextIteration:
 
   for (; I != E; ++I)
     if (VisitedSuccs.insert(*I).second)
-      Worklist.emplace_back(*I, Pred, IncomingVals);
+      Worklist.emplace_back(*I, Pred, IncomingVals, IncomingLocs);
 
   goto NextIteration;
 }

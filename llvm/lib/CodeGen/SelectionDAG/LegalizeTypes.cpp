@@ -776,6 +776,8 @@ void DAGTypeLegalizer::SetPromotedInteger(SDValue Op, SDValue Result) {
   SDValue &OpEntry = PromotedIntegers[Op];
   assert(!OpEntry.getNode() && "Node is already promoted!");
   OpEntry = Result;
+
+  DAG.transferDbgValues(Op, Result);
 }
 
 void DAGTypeLegalizer::SetSoftenedFloat(SDValue Op, SDValue Result) {
