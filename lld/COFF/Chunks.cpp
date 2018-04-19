@@ -387,7 +387,7 @@ bool SectionChunk::hasData() const {
   return !(Header->Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA);
 }
 
-uint32_t SectionChunk::getPermissions() const {
+uint32_t SectionChunk::getOutputCharacteristics() const {
   return Header->Characteristics & PermMask;
 }
 
@@ -425,7 +425,7 @@ CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
   Alignment = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
 }
 
-uint32_t CommonChunk::getPermissions() const {
+uint32_t CommonChunk::getOutputCharacteristics() const {
   return IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_MEM_READ |
          IMAGE_SCN_MEM_WRITE;
 }
@@ -600,7 +600,7 @@ void MergeChunk::finalizeContents() {
   }
 }
 
-uint32_t MergeChunk::getPermissions() const {
+uint32_t MergeChunk::getOutputCharacteristics() const {
   return IMAGE_SCN_MEM_READ | IMAGE_SCN_CNT_INITIALIZED_DATA;
 }
 

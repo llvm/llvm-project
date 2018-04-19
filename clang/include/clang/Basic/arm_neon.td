@@ -531,6 +531,7 @@ def VREINTERPRET
 let ArchGuard = "defined(__ARM_FEATURE_FMA)" in {
   def VFMA : SInst<"vfma", "dddd", "fQf">;
   def VFMS : SOpInst<"vfms", "dddd", "fQf", OP_FMLS>;
+  def FMLA_N_F32 : SOpInst<"vfma_n", "ddds", "fQf", OP_FMLA_N>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -621,7 +622,7 @@ def FMLS : SOpInst<"vfms", "dddd", "dQd", OP_FMLS>;
 // MUL, MLA, MLS, FMA, FMS definitions with scalar argument
 def VMUL_N_A64 : IOpInst<"vmul_n", "dds", "Qd", OP_MUL_N>;
 
-def FMLA_N : SOpInst<"vfma_n", "ddds", "fdQfQd", OP_FMLA_N>;
+def FMLA_N : SOpInst<"vfma_n", "ddds", "dQd", OP_FMLA_N>;
 def FMLS_N : SOpInst<"vfms_n", "ddds", "fdQfQd", OP_FMLS_N>;
 
 def MLA_N : SOpInst<"vmla_n", "ddds", "Qd", OP_MLA_N>;

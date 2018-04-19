@@ -1061,8 +1061,7 @@ static ld_plugin_status allSymbolsReadHook() {
     return LDPS_OK;
 
   if (options::thinlto_index_only) {
-    if (llvm::AreStatisticsEnabled())
-      llvm::PrintStatistics();
+    llvm_shutdown();
     cleanup_hook();
     exit(0);
   }

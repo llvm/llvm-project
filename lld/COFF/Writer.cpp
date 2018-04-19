@@ -457,7 +457,7 @@ void Writer::createSections() {
     std::vector<Chunk *> &Chunks = Pair.second;
     for (Chunk *C : Chunks) {
       Sec->addChunk(C);
-      Sec->addPermissions(C->getPermissions());
+      Sec->addPermissions(C->getOutputCharacteristics());
     }
   }
 

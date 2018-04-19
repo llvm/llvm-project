@@ -99,10 +99,12 @@ class LOAD_LEFT_RIGHT_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   string Constraints = "$src = $rt";
   bit canFoldAsLoad = 1;
   InstrItinClass Itinerary = itin;
+  bit mayLoad = 1;
+  bit mayStore = 0;
 }
 
-class LWLE_DESC  : LOAD_LEFT_RIGHT_EVA_DESC_BASE<"lwle",  GPR32Opnd, II_LWLE>;
-class LWRE_DESC  : LOAD_LEFT_RIGHT_EVA_DESC_BASE<"lwre",  GPR32Opnd, II_LWRE>;
+class LWLE_DESC : LOAD_LEFT_RIGHT_EVA_DESC_BASE<"lwle", GPR32Opnd, II_LWLE>;
+class LWRE_DESC : LOAD_LEFT_RIGHT_EVA_DESC_BASE<"lwre", GPR32Opnd, II_LWRE>;
 
 class STORE_LEFT_RIGHT_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                                      InstrItinClass itin = NoItinerary> {
@@ -113,10 +115,12 @@ class STORE_LEFT_RIGHT_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
   string DecoderMethod = "DecodeMemEVA";
   string BaseOpcode = instr_asm;
   InstrItinClass Itinerary = itin;
+  bit mayLoad = 0;
+  bit mayStore = 1;
 }
 
-class SWLE_DESC  : LOAD_LEFT_RIGHT_EVA_DESC_BASE<"swle",  GPR32Opnd, II_SWLE>;
-class SWRE_DESC  : LOAD_LEFT_RIGHT_EVA_DESC_BASE<"swre",  GPR32Opnd, II_SWRE>;
+class SWLE_DESC : STORE_LEFT_RIGHT_EVA_DESC_BASE<"swle", GPR32Opnd, II_SWLE>;
+class SWRE_DESC : STORE_LEFT_RIGHT_EVA_DESC_BASE<"swre", GPR32Opnd, II_SWRE>;
 
 // Load-linked EVA, Store-conditional EVA descriptions
 class LLE_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
