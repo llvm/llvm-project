@@ -438,10 +438,13 @@ static void print_race_info(const RaceInfo_t& race) {
   }
 
   if (race.alloc_inst.acc_loc != -1) {
+    std::cerr << "  Allocation context" << std::endl;
     auto alloc_call_stack = get_call_stack(race.alloc_inst);
     for (int i = race.alloc_inst.call_stack.size() - 1; i >= 0; --i)
       std::cerr << "    " << get_info_on_call(alloc_call_stack[i])
                 << std::endl;
+  } else {
+    std::cerr << "  No allocation context available :(\n";
   }
 
   std::cerr << std::endl;
