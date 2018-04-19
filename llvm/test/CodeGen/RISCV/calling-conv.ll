@@ -85,14 +85,13 @@ define i32 @caller_scalars() nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
-; RV32I-FPELIM-NEXT:    lui a0, 262464
-; RV32I-FPELIM-NEXT:    mv a6, a0
 ; RV32I-FPELIM-NEXT:    lui a0, %hi(callee_scalars)
 ; RV32I-FPELIM-NEXT:    addi a7, a0, %lo(callee_scalars)
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 1
 ; RV32I-FPELIM-NEXT:    addi a1, zero, 2
 ; RV32I-FPELIM-NEXT:    addi a3, zero, 3
 ; RV32I-FPELIM-NEXT:    addi a4, zero, 4
+; RV32I-FPELIM-NEXT:    lui a6, 262464
 ; RV32I-FPELIM-NEXT:    mv a2, zero
 ; RV32I-FPELIM-NEXT:    mv a5, zero
 ; RV32I-FPELIM-NEXT:    jalr a7
@@ -106,14 +105,13 @@ define i32 @caller_scalars() nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    lui a0, 262464
-; RV32I-WITHFP-NEXT:    mv a6, a0
 ; RV32I-WITHFP-NEXT:    lui a0, %hi(callee_scalars)
 ; RV32I-WITHFP-NEXT:    addi a7, a0, %lo(callee_scalars)
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 1
 ; RV32I-WITHFP-NEXT:    addi a1, zero, 2
 ; RV32I-WITHFP-NEXT:    addi a3, zero, 3
 ; RV32I-WITHFP-NEXT:    addi a4, zero, 4
+; RV32I-WITHFP-NEXT:    lui a6, 262464
 ; RV32I-WITHFP-NEXT:    mv a2, zero
 ; RV32I-WITHFP-NEXT:    mv a5, zero
 ; RV32I-WITHFP-NEXT:    jalr a7
@@ -187,6 +185,8 @@ define i32 @caller_large_scalars() nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
 ; RV32I-FPELIM-NEXT:    sw ra, 44(sp)
+; RV32I-FPELIM-NEXT:    lui a0, 524272
+; RV32I-FPELIM-NEXT:    sw a0, 12(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 8(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 4(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 0(sp)
@@ -195,9 +195,6 @@ define i32 @caller_large_scalars() nounwind {
 ; RV32I-FPELIM-NEXT:    sw zero, 28(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 1
 ; RV32I-FPELIM-NEXT:    sw a0, 24(sp)
-; RV32I-FPELIM-NEXT:    lui a0, 524272
-; RV32I-FPELIM-NEXT:    mv a0, a0
-; RV32I-FPELIM-NEXT:    sw a0, 12(sp)
 ; RV32I-FPELIM-NEXT:    lui a0, %hi(callee_large_scalars)
 ; RV32I-FPELIM-NEXT:    addi a2, a0, %lo(callee_large_scalars)
 ; RV32I-FPELIM-NEXT:    addi a0, sp, 24
@@ -213,6 +210,8 @@ define i32 @caller_large_scalars() nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 44(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 40(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 48
+; RV32I-WITHFP-NEXT:    lui a0, 524272
+; RV32I-WITHFP-NEXT:    sw a0, -36(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -40(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -44(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -48(s0)
@@ -221,9 +220,6 @@ define i32 @caller_large_scalars() nounwind {
 ; RV32I-WITHFP-NEXT:    sw zero, -20(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 1
 ; RV32I-WITHFP-NEXT:    sw a0, -24(s0)
-; RV32I-WITHFP-NEXT:    lui a0, 524272
-; RV32I-WITHFP-NEXT:    mv a0, a0
-; RV32I-WITHFP-NEXT:    sw a0, -36(s0)
 ; RV32I-WITHFP-NEXT:    lui a0, %hi(callee_large_scalars)
 ; RV32I-WITHFP-NEXT:    addi a2, a0, %lo(callee_large_scalars)
 ; RV32I-WITHFP-NEXT:    addi a0, s0, -24
@@ -306,6 +302,8 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-FPELIM-NEXT:    sw a0, 4(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 9
 ; RV32I-FPELIM-NEXT:    sw a0, 0(sp)
+; RV32I-FPELIM-NEXT:    lui a0, 524272
+; RV32I-FPELIM-NEXT:    sw a0, 28(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 24(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 20(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 16(sp)
@@ -314,9 +312,6 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-FPELIM-NEXT:    sw zero, 44(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 8
 ; RV32I-FPELIM-NEXT:    sw a0, 40(sp)
-; RV32I-FPELIM-NEXT:    lui a0, 524272
-; RV32I-FPELIM-NEXT:    mv a0, a0
-; RV32I-FPELIM-NEXT:    sw a0, 28(sp)
 ; RV32I-FPELIM-NEXT:    lui a0, %hi(callee_large_scalars_exhausted_regs)
 ; RV32I-FPELIM-NEXT:    addi t0, a0, %lo(callee_large_scalars_exhausted_regs)
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 1
@@ -342,6 +337,8 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-WITHFP-NEXT:    sw a0, 4(sp)
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 9
 ; RV32I-WITHFP-NEXT:    sw a0, 0(sp)
+; RV32I-WITHFP-NEXT:    lui a0, 524272
+; RV32I-WITHFP-NEXT:    sw a0, -36(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -40(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -44(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -48(s0)
@@ -350,9 +347,6 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-WITHFP-NEXT:    sw zero, -20(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 8
 ; RV32I-WITHFP-NEXT:    sw a0, -24(s0)
-; RV32I-WITHFP-NEXT:    lui a0, 524272
-; RV32I-WITHFP-NEXT:    mv a0, a0
-; RV32I-WITHFP-NEXT:    sw a0, -36(s0)
 ; RV32I-WITHFP-NEXT:    lui a0, %hi(callee_large_scalars_exhausted_regs)
 ; RV32I-WITHFP-NEXT:    addi t0, a0, %lo(callee_large_scalars_exhausted_regs)
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 1
@@ -987,7 +981,6 @@ define fp128 @callee_large_scalar_ret() nounwind {
 ; RV32I-FPELIM-LABEL: callee_large_scalar_ret:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    lui a1, 524272
-; RV32I-FPELIM-NEXT:    mv a1, a1
 ; RV32I-FPELIM-NEXT:    sw a1, 12(a0)
 ; RV32I-FPELIM-NEXT:    sw zero, 8(a0)
 ; RV32I-FPELIM-NEXT:    sw zero, 4(a0)
@@ -1001,7 +994,6 @@ define fp128 @callee_large_scalar_ret() nounwind {
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32I-WITHFP-NEXT:    lui a1, 524272
-; RV32I-WITHFP-NEXT:    mv a1, a1
 ; RV32I-WITHFP-NEXT:    sw a1, 12(a0)
 ; RV32I-WITHFP-NEXT:    sw zero, 8(a0)
 ; RV32I-WITHFP-NEXT:    sw zero, 4(a0)

@@ -70,6 +70,17 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetProcessID(), self._linux_x86_64_pid)
         self.check_state()
 
+    def test_modules_in_mini_dump(self):
+        """Test that lldb can read the list of modules from the minidump."""
+        # target create -c linux-x86_64.dmp
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        self.process = self.target.LoadCore("linux-x86_64.dmp")
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        self.assertEqual(self.target.GetNumModules(), 9)
+        for module in self.target.modules:
+            self.assertTrue(module.IsValid())
+
     def test_thread_info_in_minidump(self):
         """Test that lldb can read the thread information from the Minidump."""
         # target create -c linux-x86_64.dmp
@@ -100,6 +111,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(thread.GetNumFrames(), 2)
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid())
+        self.assertTrue(frame.GetModule().IsValid())
         pc = frame.GetPC()
         eip = frame.FindRegister("pc")
         self.assertTrue(eip.IsValid())

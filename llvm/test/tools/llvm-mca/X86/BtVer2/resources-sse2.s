@@ -144,15 +144,6 @@ mulsd       (%rax), %xmm2
 orpd        %xmm0, %xmm2
 orpd        (%rax), %xmm2
 
-pabsb       %xmm0, %xmm2
-pabsb       (%rax), %xmm2
-
-pabsd       %xmm0, %xmm2
-pabsd       (%rax), %xmm2
-
-pabsw       %xmm0, %xmm2
-pabsw       (%rax), %xmm2
-
 packssdw    %xmm0, %xmm2
 packssdw    (%rax), %xmm2
 
@@ -483,12 +474,6 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      9     2.00    *               	mulsd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                    	orpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     1.00    *               	orpd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                    	pabsb	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *               	pabsb	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                    	pabsd	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *               	pabsd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                    	pabsw	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *               	pabsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                    	packssdw	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     1.00    *               	packssdw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                    	packsswb	%xmm0, %xmm2
@@ -658,7 +643,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 17.00  2.00    -     47.50  202.50 115.00 127.00 114.00  -     12.00  43.00  65.50  65.50  10.00
+# CHECK-NEXT: 17.00  2.00    -     47.50  202.50 112.00 124.00 111.00  -     12.00  43.00  62.50  62.50  10.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   	Instructions:
@@ -760,12 +745,6 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     2.00    -     1.00   1.00    -      -      -      -      -      -     	mulsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     	orpd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     	orpd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	pabsb	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	pabsb	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	pabsd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	pabsd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	pabsw	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	pabsw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	packssdw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	packssdw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	packsswb	%xmm0, %xmm2

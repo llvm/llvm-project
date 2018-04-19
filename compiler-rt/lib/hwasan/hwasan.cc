@@ -306,7 +306,7 @@ __attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
     }
 }
 
-void __hwasan_load(uptr p, uptr sz) {
+void __hwasan_loadN(uptr p, uptr sz) {
   CheckAddressSized<ErrorAction::Abort, AccessType::Load>(p, sz);
 }
 void __hwasan_load1(uptr p) {
@@ -325,7 +325,7 @@ void __hwasan_load16(uptr p) {
   CheckAddress<ErrorAction::Abort, AccessType::Load, 4>(p);
 }
 
-void __hwasan_load_noabort(uptr p, uptr sz) {
+void __hwasan_loadN_noabort(uptr p, uptr sz) {
   CheckAddressSized<ErrorAction::Recover, AccessType::Load>(p, sz);
 }
 void __hwasan_load1_noabort(uptr p) {
@@ -344,7 +344,7 @@ void __hwasan_load16_noabort(uptr p) {
   CheckAddress<ErrorAction::Recover, AccessType::Load, 4>(p);
 }
 
-void __hwasan_store(uptr p, uptr sz) {
+void __hwasan_storeN(uptr p, uptr sz) {
   CheckAddressSized<ErrorAction::Abort, AccessType::Store>(p, sz);
 }
 void __hwasan_store1(uptr p) {
@@ -363,7 +363,7 @@ void __hwasan_store16(uptr p) {
   CheckAddress<ErrorAction::Abort, AccessType::Store, 4>(p);
 }
 
-void __hwasan_store_noabort(uptr p, uptr sz) {
+void __hwasan_storeN_noabort(uptr p, uptr sz) {
   CheckAddressSized<ErrorAction::Recover, AccessType::Store>(p, sz);
 }
 void __hwasan_store1_noabort(uptr p) {

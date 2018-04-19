@@ -3920,7 +3920,9 @@ multiclass NVVM_WMMA_LD_G<string Geometry> {
 }
 
 multiclass NVVM_WMMA_LD {
+  defm _m32n8k16_load: NVVM_WMMA_LD_G<"m32n8k16">;
   defm _m16n16k16_load: NVVM_WMMA_LD_G<"m16n16k16">;
+  defm _m8n32k16_load: NVVM_WMMA_LD_G<"m8n32k16">;
 }
 
 defm int_nvvm_wmma: NVVM_WMMA_LD;
@@ -3947,7 +3949,7 @@ class NVVM_WMMA_STD_GLSTS<string Geometry, string Layout,
                    # !if(WithStride, ".stride", "")
                    # "." # Type>;
 
-multiclass NVVM_WMMA_STD_GLT<string Geometry, string Layout, 
+multiclass NVVM_WMMA_STD_GLT<string Geometry, string Layout,
                              string Type, LLVMType regty> {
   def _stride: NVVM_WMMA_STD_GLSTS<Geometry, Layout, Type, regty, 1>;
   def NAME:    NVVM_WMMA_STD_GLSTS<Geometry, Layout, Type, regty, 0>;
@@ -3963,7 +3965,9 @@ multiclass NVVM_WMMA_STD_G<string Geometry> {
 }
 
 multiclass NVVM_WMMA_STD {
+  defm _m32n8k16_store:  NVVM_WMMA_STD_G<"m32n8k16">;
   defm _m16n16k16_store: NVVM_WMMA_STD_G<"m16n16k16">;
+  defm _m8n32k16_store:  NVVM_WMMA_STD_G<"m8n32k16">;
 }
 
 defm int_nvvm_wmma: NVVM_WMMA_STD;
@@ -4033,7 +4037,9 @@ multiclass NVVM_WMMA_MMA_G<string Geometry> {
 }
 
 multiclass NVVM_WMMA_MMA {
+  defm _m32n8k16_mma : NVVM_WMMA_MMA_G<"m32n8k16">;
   defm _m16n16k16_mma : NVVM_WMMA_MMA_G<"m16n16k16">;
+  defm _m8n32k16_mma : NVVM_WMMA_MMA_G<"m8n32k16">;
 }
 
 defm int_nvvm_wmma : NVVM_WMMA_MMA;

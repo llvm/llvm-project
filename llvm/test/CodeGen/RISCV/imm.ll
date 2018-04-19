@@ -50,7 +50,6 @@ define i32 @pos_i32_hi20_only() nounwind {
 ; RV32I-LABEL: pos_i32_hi20_only:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    ret
   ret i32 65536
 }
@@ -59,7 +58,6 @@ define i32 @neg_i32_hi20_only() nounwind {
 ; RV32I-LABEL: neg_i32_hi20_only:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 1048560
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    ret
   ret i32 -65536
 }

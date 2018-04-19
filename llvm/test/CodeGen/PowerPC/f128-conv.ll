@@ -106,39 +106,37 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwConv2qp_testXForm(fp128* nocapture %sink,
-                                  i8* nocapture readonly %a) {
+define fp128* @sdwConv2qp_testXForm(fp128* returned %sink,
+                                    i8* nocapture readonly %a) {
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %a, i64 3
+  %add.ptr = getelementptr inbounds i8, i8* %a, i64 73333
   %0 = bitcast i8* %add.ptr to i64*
   %1 = load i64, i64* %0, align 8
   %conv = sitofp i64 %1 to fp128
   store fp128 %conv, fp128* %sink, align 16
-  ret void
+  ret fp128* %sink
 
 ; CHECK-LABEL: sdwConv2qp_testXForm
-; CHECK: addi [[REG:[0-9]+]], 4, 3
-; CHECK-NEXT: lxsd [[REG1:[0-9]+]], 0([[REG]])
-; CHECK-NEXT: xscvsdqp [[CONV:[0-9]+]], [[REG1]]
+; CHECK: lxsdx [[REG:[0-9]+]],
+; CHECK-NEXT: xscvsdqp [[CONV:[0-9]+]], [[REG]]
 ; CHECK-NEXT: stxv [[CONV]], 0(3)
 ; CHECK-NEXT: blr
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwConv2qp_testXForm(fp128* nocapture %sink,
-                                  i8* nocapture readonly %a) {
+define fp128* @udwConv2qp_testXForm(fp128* returned %sink,
+                                    i8* nocapture readonly %a) {
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %a, i64 3
+  %add.ptr = getelementptr inbounds i8, i8* %a, i64 73333
   %0 = bitcast i8* %add.ptr to i64*
   %1 = load i64, i64* %0, align 8
   %conv = uitofp i64 %1 to fp128
   store fp128 %conv, fp128* %sink, align 16
-  ret void
+  ret fp128* %sink
 
 ; CHECK-LABEL: udwConv2qp_testXForm
-; CHECK: addi [[REG:[0-9]+]], 4, 3
-; CHECK-NEXT: lxsd [[REG1:[0-9]+]], 0([[REG]])
-; CHECK-NEXT: xscvudqp [[CONV:[0-9]+]], [[REG1]]
+; CHECK: lxsdx [[REG:[0-9]+]],
+; CHECK-NEXT: xscvudqp [[CONV:[0-9]+]], [[REG]]
 ; CHECK-NEXT: stxv [[CONV]], 0(3)
 ; CHECK-NEXT: blr
 }
@@ -152,8 +150,8 @@ entry:
 
 ; CHECK-LABEL: swConv2qp
 ; CHECK-NOT: lwz
-; CHECK: mtvsrwa [[REG0:[0-9]+]], 4
-; CHECK-NEXT: xscvsdqp [[CONV:[0-9]+]], [[REG1]]
+; CHECK: mtvsrwa [[REG:[0-9]+]], 4
+; CHECK-NEXT: xscvsdqp [[CONV:[0-9]+]], [[REG]]
 ; CHECK-NEXT: stxv [[CONV]], 0(3)
 ; CHECK-NEXT: blr
 }
@@ -258,44 +256,6 @@ entry:
 ; CHECK-NEXT: add [[REG1:[0-9]+]], [[REG]], [[REG1]]
 ; CHECK-NEXT: mtvsrwz [[REG0:[0-9]+]], [[REG1]]
 ; CHECK-NEXT: xscvudqp [[CONV:[0-9]+]], [[REG0]]
-; CHECK-NEXT: stxv [[CONV]], 0(3)
-; CHECK-NEXT: blr
-}
-
-; Function Attrs: norecurse nounwind
-define void @swConv2qp_testXForm(fp128* nocapture %sink,
-                                 i8* nocapture readonly %a) {
-entry:
-  %add.ptr = getelementptr inbounds i8, i8* %a, i64 3
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = sitofp i32 %1 to fp128
-  store fp128 %conv, fp128* %sink, align 16
-  ret void
-
-; CHECK-LABEL: swConv2qp_testXForm
-; CHECK: addi [[REG:[0-9]+]], 4, 3
-; CHECK-NEXT: lxsiwax [[REG1:[0-9]+]], 0, [[REG]]
-; CHECK-NEXT: xscvsdqp [[CONV:[0-9]+]], [[REG1]]
-; CHECK-NEXT: stxv [[CONV]], 0(3)
-; CHECK-NEXT: blr
-}
-
-; Function Attrs: norecurse nounwind
-define void @uwConv2qp_testXForm(fp128* nocapture %sink,
-                                 i8* nocapture readonly %a) {
-entry:
-  %add.ptr = getelementptr inbounds i8, i8* %a, i64 3
-  %0 = bitcast i8* %add.ptr to i32*
-  %1 = load i32, i32* %0, align 4
-  %conv = uitofp i32 %1 to fp128
-  store fp128 %conv, fp128* %sink, align 16
-  ret void
-
-; CHECK-LABEL: uwConv2qp_testXForm
-; CHECK: addi [[REG:[0-9]+]], 4, 3
-; CHECK-NEXT: lxsiwzx [[REG1:[0-9]+]], 0, [[REG]]
-; CHECK-NEXT: xscvudqp [[CONV:[0-9]+]], [[REG1]]
 ; CHECK-NEXT: stxv [[CONV]], 0(3)
 ; CHECK-NEXT: blr
 }

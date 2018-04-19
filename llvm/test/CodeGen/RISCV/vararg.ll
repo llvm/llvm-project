@@ -264,10 +264,9 @@ define void @va1_caller() nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
-; RV32I-FPELIM-NEXT:    lui a0, 261888
-; RV32I-FPELIM-NEXT:    mv a3, a0
 ; RV32I-FPELIM-NEXT:    lui a0, %hi(va1)
 ; RV32I-FPELIM-NEXT:    addi a0, a0, %lo(va1)
+; RV32I-FPELIM-NEXT:    lui a3, 261888
 ; RV32I-FPELIM-NEXT:    addi a4, zero, 2
 ; RV32I-FPELIM-NEXT:    mv a2, zero
 ; RV32I-FPELIM-NEXT:    jalr a0
@@ -281,10 +280,9 @@ define void @va1_caller() nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    lui a0, 261888
-; RV32I-WITHFP-NEXT:    mv a3, a0
 ; RV32I-WITHFP-NEXT:    lui a0, %hi(va1)
 ; RV32I-WITHFP-NEXT:    addi a0, a0, %lo(va1)
+; RV32I-WITHFP-NEXT:    lui a3, 261888
 ; RV32I-WITHFP-NEXT:    addi a4, zero, 2
 ; RV32I-WITHFP-NEXT:    mv a2, zero
 ; RV32I-WITHFP-NEXT:    jalr a0
@@ -472,10 +470,9 @@ define void @va2_caller() nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
-; RV32I-FPELIM-NEXT:    lui a0, 261888
-; RV32I-FPELIM-NEXT:    mv a3, a0
 ; RV32I-FPELIM-NEXT:    lui a0, %hi(va2)
 ; RV32I-FPELIM-NEXT:    addi a0, a0, %lo(va2)
+; RV32I-FPELIM-NEXT:    lui a3, 261888
 ; RV32I-FPELIM-NEXT:    mv a2, zero
 ; RV32I-FPELIM-NEXT:    jalr a0
 ; RV32I-FPELIM-NEXT:    lw ra, 12(sp)
@@ -488,10 +485,9 @@ define void @va2_caller() nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    lui a0, 261888
-; RV32I-WITHFP-NEXT:    mv a3, a0
 ; RV32I-WITHFP-NEXT:    lui a0, %hi(va2)
 ; RV32I-WITHFP-NEXT:    addi a0, a0, %lo(va2)
+; RV32I-WITHFP-NEXT:    lui a3, 261888
 ; RV32I-WITHFP-NEXT:    mv a2, zero
 ; RV32I-WITHFP-NEXT:    jalr a0
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp)
@@ -716,13 +712,11 @@ define void @va3_caller() nounwind {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
-; RV32I-FPELIM-NEXT:    lui a0, 261888
-; RV32I-FPELIM-NEXT:    mv a2, a0
-; RV32I-FPELIM-NEXT:    lui a0, 262144
-; RV32I-FPELIM-NEXT:    mv a5, a0
 ; RV32I-FPELIM-NEXT:    lui a0, %hi(va3)
 ; RV32I-FPELIM-NEXT:    addi a3, a0, %lo(va3)
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 2
+; RV32I-FPELIM-NEXT:    lui a2, 261888
+; RV32I-FPELIM-NEXT:    lui a5, 262144
 ; RV32I-FPELIM-NEXT:    mv a1, zero
 ; RV32I-FPELIM-NEXT:    mv a4, zero
 ; RV32I-FPELIM-NEXT:    jalr a3
@@ -736,13 +730,11 @@ define void @va3_caller() nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    lui a0, 261888
-; RV32I-WITHFP-NEXT:    mv a2, a0
-; RV32I-WITHFP-NEXT:    lui a0, 262144
-; RV32I-WITHFP-NEXT:    mv a5, a0
 ; RV32I-WITHFP-NEXT:    lui a0, %hi(va3)
 ; RV32I-WITHFP-NEXT:    addi a3, a0, %lo(va3)
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 2
+; RV32I-WITHFP-NEXT:    lui a2, 261888
+; RV32I-WITHFP-NEXT:    lui a5, 262144
 ; RV32I-WITHFP-NEXT:    mv a1, zero
 ; RV32I-WITHFP-NEXT:    mv a4, zero
 ; RV32I-WITHFP-NEXT:    jalr a3

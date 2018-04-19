@@ -157,7 +157,8 @@ def simm21_lsb0 : Operand<OtherVT> {
 def ixlenimm : Operand<XLenVT>;
 
 // Standalone (codegen-only) immleaf patterns.
-def simm32 : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
+def simm32     : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
+def simm32hi20 : ImmLeaf<XLenVT, [{return isShiftedInt<20, 12>(Imm);}]>;
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
@@ -521,7 +522,7 @@ def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
 /// Immediates
 
 def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
-// TODO: Add a pattern for immediates with all zeroes in the lower 12 bits.
+def : Pat<(simm32hi20:$imm), (LUI (HI20 imm:$imm))>;
 def : Pat<(simm32:$imm), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>;
 
 /// Simple arithmetic operations
