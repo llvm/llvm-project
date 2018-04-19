@@ -2367,6 +2367,13 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!boundType.isNull()) calleeType = boundType;
   }
 
+  // FIXME: Once actually implemented, this construction context layer should
+  // include the number of the argument as well.
+  for (auto Arg: C->arguments()) {
+    findConstructionContexts(
+        ConstructionContextLayer::create(cfg->getBumpVectorContext(), C), Arg);
+  }
+
   // If this is a call to a no-return function, this stops the block here.
   bool NoReturn = getFunctionExtInfo(*calleeType).getNoReturn();
 
@@ -3162,7 +3169,13 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
       if (VarDecl *VD = F->getConditionVariable()) {
         if (Expr *Init = VD->getInit()) {
           autoCreateBlock();
-          appendStmt(Block, F->getConditionVariableDeclStmt());
+          const DeclStmt *DS = F->getConditionVariableDeclStmt();
+          assert(DS->isSingleDecl());
+          findConstructionContexts(
+              ConstructionContextLayer::create(cfg->getBumpVectorContext(),
+                                               const_cast<DeclStmt *>(DS)),
+              Init);
+          appendStmt(Block, DS);
           EntryConditionBlock = addStmt(Init);
           assert(Block == EntryConditionBlock);
           maybeAddScopeBeginForVarDecl(EntryConditionBlock, VD, C);
@@ -3487,7 +3500,13 @@ CFGBlock *CFGBuilder::VisitWhileStmt(WhileStmt *W) {
     if (VarDecl *VD = W->getConditionVariable()) {
       if (Expr *Init = VD->getInit()) {
         autoCreateBlock();
-        appendStmt(Block, W->getConditionVariableDeclStmt());
+        const DeclStmt *DS = W->getConditionVariableDeclStmt();
+        assert(DS->isSingleDecl());
+        findConstructionContexts(
+            ConstructionContextLayer::create(cfg->getBumpVectorContext(),
+                                             const_cast<DeclStmt *>(DS)),
+            Init);
+        appendStmt(Block, DS);
         EntryConditionBlock = addStmt(Init);
         assert(Block == EntryConditionBlock);
         maybeAddScopeBeginForVarDecl(EntryConditionBlock, VD, C);

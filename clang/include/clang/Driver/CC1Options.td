@@ -647,6 +647,8 @@ def disable_objc_default_synthesize_properties : Flag<["-"], "disable-objc-defau
   HelpText<"disable the default synthesis of Objective-C properties">;
 def fencode_extended_block_signature : Flag<["-"], "fencode-extended-block-signature">,
   HelpText<"enable extended encoding of block type signature">;
+def function_alignment : Separate<["-"], "function-alignment">,
+    HelpText<"default alignment for functions">;
 def pic_level : Separate<["-"], "pic-level">,
   HelpText<"Value for __PIC__">;
 def pic_is_pie : Flag<["-"], "pic-is-pie">,

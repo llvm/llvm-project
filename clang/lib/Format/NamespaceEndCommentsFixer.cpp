@@ -107,6 +107,7 @@ void updateEndComment(const FormatToken *RBraceTok, StringRef EndCommentText,
                  << llvm::toString(std::move(Err)) << "\n";
   }
 }
+} // namespace
 
 const FormatToken *
 getNamespaceToken(const AnnotatedLine *line,
@@ -131,7 +132,6 @@ getNamespaceToken(const AnnotatedLine *line,
     return nullptr;
   return NamespaceTok;
 }
-} // namespace
 
 NamespaceEndCommentsFixer::NamespaceEndCommentsFixer(const Environment &Env,
                                                      const FormatStyle &Style)

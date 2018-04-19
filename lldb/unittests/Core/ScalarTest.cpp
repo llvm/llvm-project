@@ -31,7 +31,7 @@ TEST(ScalarTest, RightShiftOperator) {
 TEST(ScalarTest, GetBytes) {
   int a = 0x01020304;
   long long b = 0x0102030405060708LL;
-  float c = 1234567.89e32;
+  float c = 1234567.89e32f;
   double d = 1234567.89e42;
   char e[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   char f[32] = {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,

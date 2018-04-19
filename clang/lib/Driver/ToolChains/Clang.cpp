@@ -3323,6 +3323,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CheckCodeGenerationOptions(D, Args);
 
+  unsigned FunctionAlignment = ParseFunctionAlignment(getToolChain(), Args);
+  assert(FunctionAlignment <= 31 && "function alignment will be truncated!");
+  if (FunctionAlignment) {
+    CmdArgs.push_back("-function-alignment");
+    CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
+  }
+
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;
   bool IsPIE;
