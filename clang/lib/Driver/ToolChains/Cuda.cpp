@@ -622,17 +622,19 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.push_back("-mlink-cuda-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
-  if (CudaInstallation.version() >= CudaVersion::CUDA_90) {
-    // CUDA-9 uses new instructions that are only available in PTX6.0
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+ptx60");
-  } else {
-    // Libdevice in CUDA-7.0 requires PTX version that's more recent
-    // than LLVM defaults to. Use PTX4.2 which is the PTX version that
-    // came with CUDA-7.0.
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+ptx42");
+  // Libdevice in CUDA-7.0 requires PTX version that's more recent than LLVM
+  // defaults to. Use PTX4.2 by default, which is the PTX version that came with
+  // CUDA-7.0.
+  const char *PtxFeature = "+ptx42";
+  if (CudaInstallation.version() >= CudaVersion::CUDA_91) {
+    // CUDA-9.1 uses new instructions that are only available in PTX6.1+
+    PtxFeature = "+ptx61";
+  } else if (CudaInstallation.version() >= CudaVersion::CUDA_90) {
+    // CUDA-9.0 uses new instructions that are only available in PTX6.0+
+    PtxFeature = "+ptx60";
   }
+  CC1Args.push_back("-target-feature");
+  CC1Args.push_back(PtxFeature);
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
     SmallVector<StringRef, 8> LibraryPaths;

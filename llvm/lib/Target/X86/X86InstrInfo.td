@@ -1934,56 +1934,69 @@ defm XCHG    : ATOMIC_SWAP<0x86, 0x87, "xchg", "atomic_swap">;
 
 // Swap between registers.
 let SchedRW = [WriteALU] in {
-let Constraints = "$val = $dst" in {
-def XCHG8rr : I<0x86, MRMSrcReg, (outs GR8:$dst), (ins GR8:$val, GR8:$src),
-                "xchg{b}\t{$val, $src|$src, $val}", []>;
-def XCHG16rr : I<0x87, MRMSrcReg, (outs GR16:$dst), (ins GR16:$val, GR16:$src),
-                 "xchg{w}\t{$val, $src|$src, $val}", []>,
+let Constraints = "$src1 = $dst1, $src2 = $dst2", hasSideEffects = 0 in {
+def XCHG8rr : I<0x86, MRMSrcReg, (outs GR8:$dst1, GR8:$dst2),
+                (ins GR8:$src1, GR8:$src2),
+                "xchg{b}\t{$src2, $src1|$src1, $src2}", []>;
+def XCHG16rr : I<0x87, MRMSrcReg, (outs GR16:$dst1, GR16:$dst2),
+                 (ins GR16:$src1, GR16:$src2),
+                 "xchg{w}\t{$src2, $src1|$src1, $src2}", []>,
                  OpSize16;
-def XCHG32rr : I<0x87, MRMSrcReg, (outs GR32:$dst), (ins GR32:$val, GR32:$src),
-                 "xchg{l}\t{$val, $src|$src, $val}", []>,
+def XCHG32rr : I<0x87, MRMSrcReg, (outs GR32:$dst1, GR32:$dst2),
+                 (ins GR32:$src1, GR32:$src2),
+                 "xchg{l}\t{$src2, $src1|$src1, $src2}", []>,
                  OpSize32;
-def XCHG64rr : RI<0x87, MRMSrcReg, (outs GR64:$dst), (ins GR64:$val,GR64:$src),
-                  "xchg{q}\t{$val, $src|$src, $val}", []>;
+def XCHG64rr : RI<0x87, MRMSrcReg, (outs GR64:$dst1, GR64:$dst2),
+                  (ins GR64:$src1 ,GR64:$src2),
+                  "xchg{q}\t{$src2, $src1|$src1, $src2}", []>;
 }
 
 // Swap between EAX and other registers.
+let Constraints = "$src = $dst", hasSideEffects = 0 in {
 let Uses = [AX], Defs = [AX] in
-def XCHG16ar : I<0x90, AddRegFrm, (outs), (ins GR16:$src),
+def XCHG16ar : I<0x90, AddRegFrm, (outs GR16:$dst), (ins GR16:$src),
                   "xchg{w}\t{$src, %ax|ax, $src}", []>, OpSize16;
 let Uses = [EAX], Defs = [EAX] in
-def XCHG32ar : I<0x90, AddRegFrm, (outs), (ins GR32:$src),
-                  "xchg{l}\t{$src, %eax|eax, $src}", []>,
-                  OpSize32;
+def XCHG32ar : I<0x90, AddRegFrm, (outs GR32:$dst), (ins GR32:$src),
+                  "xchg{l}\t{$src, %eax|eax, $src}", []>, OpSize32;
 let Uses = [RAX], Defs = [RAX] in
-def XCHG64ar : RI<0x90, AddRegFrm, (outs), (ins GR64:$src),
+def XCHG64ar : RI<0x90, AddRegFrm, (outs GR64:$dst), (ins GR64:$src),
                   "xchg{q}\t{$src, %rax|rax, $src}", []>;
+}
 } // SchedRW
 
-let SchedRW = [WriteALU] in {
-def XADD8rr : I<0xC0, MRMDestReg, (outs GR8:$dst), (ins GR8:$src),
-                "xadd{b}\t{$src, $dst|$dst, $src}", []>, TB;
-def XADD16rr : I<0xC1, MRMDestReg, (outs GR16:$dst), (ins GR16:$src),
-                 "xadd{w}\t{$src, $dst|$dst, $src}", []>, TB,
-                 OpSize16;
-def XADD32rr  : I<0xC1, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
-                 "xadd{l}\t{$src, $dst|$dst, $src}", []>, TB,
-                 OpSize32;
-def XADD64rr  : RI<0xC1, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
-                   "xadd{q}\t{$src, $dst|$dst, $src}", []>, TB;
+let hasSideEffects = 0, Constraints = "$src1 = $dst1, $src2 = $dst2",
+    Defs = [EFLAGS], SchedRW = [WriteALU] in {
+def XADD8rr : I<0xC0, MRMDestReg, (outs GR8:$dst1, GR8:$dst2),
+                (ins GR8:$src1, GR8:$src2),
+                "xadd{b}\t{$src2, $src1|$src1, $src2}", []>, TB;
+def XADD16rr : I<0xC1, MRMDestReg, (outs GR16:$dst1, GR16:$dst2),
+                 (ins GR16:$src1, GR16:$src2),
+                 "xadd{w}\t{$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
+def XADD32rr : I<0xC1, MRMDestReg, (outs GR32:$dst1, GR32:$dst2),
+                  (ins GR32:$src1, GR32:$src2),
+                 "xadd{l}\t{$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
+def XADD64rr : RI<0xC1, MRMDestReg, (outs GR64:$dst1, GR64:$dst2),
+                  (ins GR64:$src1, GR64:$src2),
+                  "xadd{q}\t{$src2, $src1|$src1, $src2}", []>, TB;
 } // SchedRW
 
-let mayLoad = 1, mayStore = 1, SchedRW = [WriteALULd, WriteRMW] in {
-def XADD8rm   : I<0xC0, MRMDestMem, (outs), (ins i8mem:$dst, GR8:$src),
-                 "xadd{b}\t{$src, $dst|$dst, $src}", []>, TB;
-def XADD16rm  : I<0xC1, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
-                 "xadd{w}\t{$src, $dst|$dst, $src}", []>, TB,
+let mayLoad = 1, mayStore = 1, hasSideEffects = 0, Constraints = "$val = $dst",
+    Defs = [EFLAGS], SchedRW = [WriteALULd, WriteRMW] in {
+def XADD8rm   : I<0xC0, MRMSrcMem, (outs GR8:$dst),
+                  (ins GR8:$val, i8mem:$ptr),
+                 "xadd{b}\t{$val, $ptr|$ptr, $val}", []>, TB;
+def XADD16rm  : I<0xC1, MRMSrcMem, (outs GR16:$dst),
+                  (ins GR16:$val, i16mem:$ptr),
+                 "xadd{w}\t{$val, $ptr|$ptr, $val}", []>, TB,
                  OpSize16;
-def XADD32rm  : I<0xC1, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
-                 "xadd{l}\t{$src, $dst|$dst, $src}", []>, TB,
+def XADD32rm  : I<0xC1, MRMSrcMem, (outs GR32:$dst),
+                  (ins GR32:$val, i32mem:$ptr),
+                 "xadd{l}\t{$val, $ptr|$ptr, $val}", []>, TB,
                  OpSize32;
-def XADD64rm  : RI<0xC1, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
-                   "xadd{q}\t{$src, $dst|$dst, $src}", []>, TB;
+def XADD64rm  : RI<0xC1, MRMSrcMem, (outs GR64:$dst),
+                   (ins GR64:$val, i64mem:$ptr),
+                   "xadd{q}\t{$val, $ptr|$ptr, $val}", []>, TB;
 
 }
 

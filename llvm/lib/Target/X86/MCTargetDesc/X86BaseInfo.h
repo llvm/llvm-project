@@ -670,6 +670,10 @@ namespace X86II {
         return 1;
       return 0;
     case 2:
+      // XCHG/XADD have two destinations and two sources.
+      if (NumOps >= 4 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
+          Desc.getOperandConstraint(3, MCOI::TIED_TO) == 1)
+        return 2;
       // Check for gather. AVX-512 has the second tied operand early. AVX2
       // has it as the last op.
       if (NumOps == 9 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
