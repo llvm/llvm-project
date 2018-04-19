@@ -693,3 +693,75 @@ void implicitConstructionConversionFromFunctionValueWithLifetimeExtension() {
 }
 
 } // end namespace implicit_constructor_conversion
+
+namespace argument_constructors {
+class D {
+public:
+  D();
+  ~D();
+};
+
+void useC(C c);
+void useCByReference(const C &c);
+void useD(D d);
+void useDByReference(const D &d);
+
+// FIXME: Find construction context for the argument.
+// CHECK: void passArgument()
+// CHECK:          1: useC
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(class C))
+// CXX11-NEXT:     3: C() (CXXConstructExpr, [B1.4], class C)
+// CXX11-NEXT:     4: [B1.3]
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, class C)
+// CXX11-NEXT:     6: [B1.2]([B1.5])
+// CXX17-NEXT:     3: C() (CXXConstructExpr, class C)
+// CXX17-NEXT:     4: [B1.2]([B1.3])
+void passArgument() {
+  useC(C());
+}
+
+// CHECK: void passArgumentByReference()
+// CHECK:          1: useCByReference
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class C &))
+// CHECK-NEXT:     3: C() (CXXConstructExpr, [B1.5], class C)
+// CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class C)
+// CHECK-NEXT:     5: [B1.4]
+// CHECK-NEXT:     6: [B1.2]([B1.5])
+void passArgumentByReference() {
+  useCByReference(C());
+}
+
+// FIXME: Find construction context for the argument.
+// CHECK: void passArgumentWithDestructor()
+// CHECK:          1: useD
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(class argument_constructors::D))
+// CXX11-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.6], class argument_constructors::D)
+// CXX11-NEXT:     4: [B1.3] (BindTemporary)
+// CXX11-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CXX11-NEXT:     6: [B1.5]
+// CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, class argument_constructors::D)
+// CXX11-NEXT:     8: [B1.7] (BindTemporary)
+// CXX11-NEXT:     9: [B1.2]([B1.8])
+// CXX11-NEXT:    10: ~argument_constructors::D() (Temporary object destructor)
+// CXX11-NEXT:    11: ~argument_constructors::D() (Temporary object destructor)
+// CXX17-NEXT:     3: argument_constructors::D() (CXXConstructExpr, class argument_constructors::D)
+// CXX17-NEXT:     4: [B1.3] (BindTemporary)
+// CXX17-NEXT:     5: [B1.2]([B1.4])
+// CXX17-NEXT:     6: ~argument_constructors::D() (Temporary object destructor)
+void passArgumentWithDestructor() {
+  useD(D());
+}
+
+// CHECK: void passArgumentWithDestructorByReference()
+// CHECK:          1: useDByReference
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class argumen
+// CHECK-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.6], class argument_c
+// CHECK-NEXT:     4: [B1.3] (BindTemporary)
+// CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CHECK-NEXT:     6: [B1.5]
+// CHECK-NEXT:     7: [B1.2]([B1.6])
+// CHECK-NEXT:     8: ~argument_constructors::D() (Temporary object destructor)
+void passArgumentWithDestructorByReference() {
+  useDByReference(D());
+}
+} // end namespace argument_constructors
