@@ -2,7 +2,7 @@
 # generates correct instructions for them.
 
 # RUN: python %s > %t.ll
-# RUN: llc < %t.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | FileCheck %t.ll
+# RUN: llc < %t.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx61 | FileCheck %t.ll
 
 from itertools import product
 from string import Template
@@ -36,13 +36,15 @@ check_f16_8 = "{{%s}}" % ", *".join(["%hh[0-9]+"] * 8)
 check_f16_4 = "{{%s}}" % ", *".join(["%hh[0-9]+"] * 4)
 check_f32_8 = "{{%s}}" % ", *".join(["%f[0-9]+"] * 8)
 
+known_geoms = ["m16n16k16", "m8n32k16", "m32n8k16"]
+
 def gen_wmma_load_tests():
   load_template = """
 declare ${ret_ty} @${intrinsic}(i8 ${as}* %src ${extra_args});
 
 ; CHECK-LABEL: .func {{.*}}test_${function}(
 define ${ret_ty} @test_${function}(i8 ${as}* %src ${extra_args}) {
-; CHECK ${instruction}
+; CHECK: ${instruction}
 ; CHECK: {${check_result}}
 ; CHECK: [%rd{{[0-9]+}}]${stride_pattern}
   %v0 = call ${ret_ty} @${intrinsic}(i8 ${as}* %src ${extra_args});
@@ -51,7 +53,7 @@ define ${ret_ty} @test_${function}(i8 ${as}* %src ${extra_args}) {
 
 ; CHECK-LABEL: .func{{.*}}test_${function}_o(
 define ${ret_ty} @test_${function}_o(i8 ${as}* %src ${extra_args}) {
-; CHECK ${instruction}
+; CHECK: ${instruction}
 ; CHECK: {${check_result}}
 ; CHECK: [%rd{{[0-9]+}}+128]${stride_pattern}
   %src1 = getelementptr i8, i8 ${as}* %src, i32 128;
@@ -60,9 +62,10 @@ define ${ret_ty} @test_${function}_o(i8 ${as}* %src ${extra_args}) {
 }
 """
   intrinsic_template = "llvm.nvvm.wmma.${geom}.load.${abc}.${layout}${stride}.${itype}.${pspace}"
-  instruction_template = "wmma.load.${abc}.sync.${geom}.${layout}${space}.${itype}"
+  instruction_template = "wmma.load.${abc}.sync.${layout}.${geom}${space}.${itype}"
 
-  for abc, layout, space, stride, itype in product(
+  for geom, abc, layout, space, stride, itype in product(
+      known_geoms,
       "abc",
       ["row","col"],
       ["",".shared",".global"],
@@ -77,7 +80,7 @@ define ${ret_ty} @test_${function}_o(i8 ${as}* %src ${extra_args}) {
         "itype" : itype,
         "pspace" : get_pspace(space),
         "as"     : "addrspace(%d)" % get_aspace(space),
-        "geom"   : "m16n16k16",
+        "geom"   : geom,
     }
 
     if itype == "f32" and abc != "c":
@@ -112,7 +115,7 @@ declare void @${intrinsic}(i8 ${as}* %src, ${args}${extra_args});
 
 ; CHECK-LABEL: .func {{.*}}test_${function}(
 define void @test_${function}(i8 ${as}* %src, ${args}${extra_args}) {
-; CHECK ${instruction} {{.*}}[%rd{{[0-9+]}}
+; CHECK: ${instruction} {{.*}}[%rd{{[0-9+]}}
 ; CHECK: {${check_args}}
 ; CHECK: ${stride_pattern}
   call void @${intrinsic}(i8 ${as}* %src, ${args} ${extra_args});
@@ -121,7 +124,7 @@ define void @test_${function}(i8 ${as}* %src, ${args}${extra_args}) {
 
 ; CHECK-LABEL: .func{{.*}}test_${function}_o(
 define void @test_${function}_o(i8 ${as}* %src, ${args}${extra_args}) {
-; CHECK ${instruction} {{.*}}[%rd{{[0-9+]}}+128]
+; CHECK: ${instruction} {{.*}}[%rd{{[0-9+]}}+128]
 ; CHECK: ${check_args}
 ; CHECK: ${stride_pattern}
   %src1 = getelementptr i8, i8 ${as}* %src, i32 128;
@@ -130,9 +133,10 @@ define void @test_${function}_o(i8 ${as}* %src, ${args}${extra_args}) {
 }
 """
   intrinsic_template = "llvm.nvvm.wmma.${geom}.store.${abc}.${layout}${stride}.${itype}.${pspace}"
-  instruction_template = "wmma.store.${abc}.sync.${geom}.${layout}${space}.${itype}"
+  instruction_template = "wmma.store.${abc}.sync.${layout}.${geom}${space}.${itype}"
 
-  for abc, layout, space, stride, itype in product(
+  for geom, abc, layout, space, stride, itype in product(
+      known_geoms,
       "d",
       ["row","col"],
       ["",".shared",".global"],
@@ -147,7 +151,7 @@ define void @test_${function}_o(i8 ${as}* %src, ${args}${extra_args}) {
         "itype" : itype,
         "pspace" : get_pspace(space),
         "as"     : "addrspace(%d)" % get_aspace(space),
-        "geom"   : "m16n16k16",
+        "geom"   : geom,
     }
 
     test_params = params
@@ -174,11 +178,11 @@ declare ${ret_ty} @${intrinsic}(
 ; CHECK-LABEL: .func {{.*}}test_${function}(
 define ${ret_ty} @test_${function}(
         ${args}) {
-; CHECK ${instruction} {{.*}}[%rd{{[0-9+]}}
-; CHECK ${check_d}
-; CHECK ${check_ab}
-; CHECK ${check_ab}
-; CHECK ${check_c}
+; CHECK: ${instruction}
+; CHECK-NEXT: ${check_d}
+; CHECK-NEXT: ${check_ab}
+; CHECK-NEXT: ${check_ab}
+; CHECK-NEXT: ${check_c}
   %r = call ${ret_ty} @${intrinsic}(
         ${args});
   ret ${ret_ty} %r;
@@ -187,7 +191,8 @@ define ${ret_ty} @test_${function}(
   intrinsic_template = "llvm.nvvm.wmma.${geom}.mma.${alayout}.${blayout}.${dtype}.${ctype}${satf}"
   instruction_template = "wmma.mma.sync.${alayout}.${blayout}.${geom}.${dtype}.${ctype}${satf}"
 
-  for alayout, blayout, ctype, dtype, satf in product(
+  for geom, alayout, blayout, ctype, dtype, satf in product(
+      known_geoms,
       ["row","col"],
       ["row","col"],
       ["f16", "f32"],
@@ -200,7 +205,7 @@ define ${ret_ty} @test_${function}(
         "ctype" : ctype,
         "dtype" : dtype,
         "satf"  : satf,
-        "geom"  : "m16n16k16",
+        "geom"  : geom,
     }
 
     test_params = params

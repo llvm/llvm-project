@@ -702,10 +702,10 @@ unsigned OMPClauseMappableExprCommon::getComponentsTotalNumber(
 }
 
 unsigned OMPClauseMappableExprCommon::getUniqueDeclarationsTotalNumber(
-    ArrayRef<ValueDecl *> Declarations) {
+    ArrayRef<const ValueDecl *> Declarations) {
   unsigned TotalNum = 0u;
   llvm::SmallPtrSet<const ValueDecl *, 8> Cache;
-  for (auto *D : Declarations) {
+  for (const ValueDecl *D : Declarations) {
     const ValueDecl *VD = D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
     if (Cache.count(VD))
       continue;

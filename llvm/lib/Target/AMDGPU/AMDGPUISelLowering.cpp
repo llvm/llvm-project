@@ -806,12 +806,11 @@ bool AMDGPUTargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
 
         if (MRI.isLiveIn(Reg)) {
           // workitem.id.x workitem.id.y workitem.id.z
+          // Any VGPR formal argument is also considered divergent
           if ((MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_X) ||
               (MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_Y) ||
-              (MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_Z)||
-              (MRI.getLiveInPhysReg(Reg) == AMDGPU::VGPR0) ||
-            (MRI.getLiveInPhysReg(Reg) == AMDGPU::VGPR1) ||
-            (MRI.getLiveInPhysReg(Reg) == AMDGPU::VGPR2))
+              (MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_Z) ||
+              (TRI.isVGPR(MRI, Reg)))
               return true;
           // Formal arguments of non-entry functions
           // are conservatively considered divergent
@@ -840,6 +839,12 @@ bool AMDGPUTargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
     case ISD::INTRINSIC_W_CHAIN:
       return AMDGPU::isIntrinsicSourceOfDivergence(
       cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
+    // In some cases intrinsics that are a source of divergence have been
+    // lowered to AMDGPUISD so we also need to check those too.
+    case AMDGPUISD::INTERP_MOV:
+    case AMDGPUISD::INTERP_P1:
+    case AMDGPUISD::INTERP_P2:
+      return true;
   }
   return false;
 }

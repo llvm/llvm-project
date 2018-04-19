@@ -1217,6 +1217,8 @@ def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagn
 def fmodules_validate_system_headers : Flag<["-"], "fmodules-validate-system-headers">,
   Group<i_Group>, Flags<[CC1Option]>,
   HelpText<"Validate the system headers that a module depends on when loading the module">;
+def fno_modules_validate_system_headers : Flag<["-"], "fno-modules-validate-system-headers">,
+  Group<i_Group>, Flags<[DriverOption]>;
 def fmodules : Flag <["-"], "fmodules">, Group<f_Group>,
   Flags<[DriverOption, CC1Option]>,
   HelpText<"Enable the 'modules' language feature">;

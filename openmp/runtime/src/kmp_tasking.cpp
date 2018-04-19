@@ -3559,6 +3559,112 @@ kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src) {
 // Parameters: dest task, src task, lastprivate flag.
 typedef void (*p_task_dup_t)(kmp_task_t *, kmp_task_t *, kmp_int32);
 
+KMP_BUILD_ASSERT(sizeof(long) == 4 || sizeof(long) == 8);
+
+// class to encapsulate manipulating loop bounds in a taskloop task.
+// this abstracts away the Intel vs GOMP taskloop interface for setting/getting
+// the loop bound variables.
+class kmp_taskloop_bounds_t {
+  kmp_task_t *task;
+  const kmp_taskdata_t *taskdata;
+  size_t lower_offset;
+  size_t upper_offset;
+
+public:
+  kmp_taskloop_bounds_t(kmp_task_t *_task, kmp_uint64 *lb, kmp_uint64 *ub)
+      : task(_task), taskdata(KMP_TASK_TO_TASKDATA(task)),
+        lower_offset((char *)lb - (char *)task),
+        upper_offset((char *)ub - (char *)task) {
+    KMP_DEBUG_ASSERT((char *)lb > (char *)_task);
+    KMP_DEBUG_ASSERT((char *)ub > (char *)_task);
+  }
+  kmp_taskloop_bounds_t(kmp_task_t *_task, const kmp_taskloop_bounds_t &bounds)
+      : task(_task), taskdata(KMP_TASK_TO_TASKDATA(_task)),
+        lower_offset(bounds.lower_offset), upper_offset(bounds.upper_offset) {}
+  size_t get_lower_offset() const { return lower_offset; }
+  size_t get_upper_offset() const { return upper_offset; }
+  kmp_uint64 get_lb() const {
+    kmp_int64 retval;
+#if defined(KMP_GOMP_COMPAT)
+    // Intel task just returns the lower bound normally
+    if (!taskdata->td_flags.native) {
+      retval = *(kmp_int64 *)((char *)task + lower_offset);
+    } else {
+      // GOMP task has to take into account the sizeof(long)
+      if (taskdata->td_size_loop_bounds == 4) {
+        kmp_int32 *lb = RCAST(kmp_int32 *, task->shareds);
+        retval = (kmp_int64)*lb;
+      } else {
+        kmp_int64 *lb = RCAST(kmp_int64 *, task->shareds);
+        retval = (kmp_int64)*lb;
+      }
+    }
+#else
+    retval = *(kmp_int64 *)((char *)task + lower_offset);
+#endif // defined(KMP_GOMP_COMPAT)
+    return retval;
+  }
+  kmp_uint64 get_ub() const {
+    kmp_int64 retval;
+#if defined(KMP_GOMP_COMPAT)
+    // Intel task just returns the upper bound normally
+    if (!taskdata->td_flags.native) {
+      retval = *(kmp_int64 *)((char *)task + upper_offset);
+    } else {
+      // GOMP task has to take into account the sizeof(long)
+      if (taskdata->td_size_loop_bounds == 4) {
+        kmp_int32 *ub = RCAST(kmp_int32 *, task->shareds) + 1;
+        retval = (kmp_int64)*ub;
+      } else {
+        kmp_int64 *ub = RCAST(kmp_int64 *, task->shareds) + 1;
+        retval = (kmp_int64)*ub;
+      }
+    }
+#else
+    retval = *(kmp_int64 *)((char *)task + upper_offset);
+#endif // defined(KMP_GOMP_COMPAT)
+    return retval;
+  }
+  void set_lb(kmp_uint64 lb) {
+#if defined(KMP_GOMP_COMPAT)
+    // Intel task just sets the lower bound normally
+    if (!taskdata->td_flags.native) {
+      *(kmp_uint64 *)((char *)task + lower_offset) = lb;
+    } else {
+      // GOMP task has to take into account the sizeof(long)
+      if (taskdata->td_size_loop_bounds == 4) {
+        kmp_uint32 *lower = RCAST(kmp_uint32 *, task->shareds);
+        *lower = (kmp_uint32)lb;
+      } else {
+        kmp_uint64 *lower = RCAST(kmp_uint64 *, task->shareds);
+        *lower = (kmp_uint64)lb;
+      }
+    }
+#else
+    *(kmp_uint64 *)((char *)task + lower_offset) = lb;
+#endif // defined(KMP_GOMP_COMPAT)
+  }
+  void set_ub(kmp_uint64 ub) {
+#if defined(KMP_GOMP_COMPAT)
+    // Intel task just sets the upper bound normally
+    if (!taskdata->td_flags.native) {
+      *(kmp_uint64 *)((char *)task + upper_offset) = ub;
+    } else {
+      // GOMP task has to take into account the sizeof(long)
+      if (taskdata->td_size_loop_bounds == 4) {
+        kmp_uint32 *upper = RCAST(kmp_uint32 *, task->shareds) + 1;
+        *upper = (kmp_uint32)ub;
+      } else {
+        kmp_uint64 *upper = RCAST(kmp_uint64 *, task->shareds) + 1;
+        *upper = (kmp_uint64)ub;
+      }
+    }
+#else
+    *(kmp_uint64 *)((char *)task + upper_offset) = ub;
+#endif // defined(KMP_GOMP_COMPAT)
+  }
+};
+
 // __kmp_taskloop_linear: Start tasks of the taskloop linearly
 //
 // loc       Source location information
@@ -3581,17 +3687,15 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
   KMP_COUNT_BLOCK(OMP_TASKLOOP);
   KMP_TIME_PARTITIONED_BLOCK(OMP_taskloop_scheduling);
   p_task_dup_t ptask_dup = (p_task_dup_t)task_dup;
-  kmp_uint64 lower = *lb; // compiler provides global bounds here
-  kmp_uint64 upper = *ub;
+  // compiler provides global bounds here
+  kmp_taskloop_bounds_t task_bounds(task, lb, ub);
+  kmp_uint64 lower = task_bounds.get_lb();
+  kmp_uint64 upper = task_bounds.get_ub();
   kmp_uint64 i;
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *current_task = thread->th.th_current_task;
   kmp_task_t *next_task;
   kmp_int32 lastpriv = 0;
-  size_t lower_offset =
-      (char *)lb - (char *)task; // remember offset of lb in the task structure
-  size_t upper_offset =
-      (char *)ub - (char *)task; // remember offset of ub in the task structure
 
   KMP_DEBUG_ASSERT(tc == num_tasks * grainsize + extras);
   KMP_DEBUG_ASSERT(num_tasks > extras);
@@ -3628,14 +3732,25 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
       }
     }
     next_task = __kmp_task_dup_alloc(thread, task); // allocate new task
+    kmp_taskdata_t *next_taskdata = KMP_TASK_TO_TASKDATA(next_task);
+    kmp_taskloop_bounds_t next_task_bounds =
+        kmp_taskloop_bounds_t(next_task, task_bounds);
+
     // adjust task-specific bounds
-    *(kmp_uint64 *)((char *)next_task + lower_offset) = lower;
-    *(kmp_uint64 *)((char *)next_task + upper_offset) = upper;
+    next_task_bounds.set_lb(lower);
+    if (next_taskdata->td_flags.native) {
+      next_task_bounds.set_ub(upper + (st > 0 ? 1 : -1));
+    } else {
+      next_task_bounds.set_ub(upper);
+    }
     if (ptask_dup != NULL) // set lastprivate flag, construct fistprivates, etc.
       ptask_dup(next_task, task, lastpriv);
-    KA_TRACE(40, ("__kmp_taskloop_linear: T#%d; task %p: lower %lld, "
-                  "upper %lld (offsets %p %p)\n",
-                  gtid, next_task, lower, upper, lower_offset, upper_offset));
+    KA_TRACE(40,
+             ("__kmp_taskloop_linear: T#%d; task #%llu: task %p: lower %lld, "
+              "upper %lld stride %lld, (offsets %p %p)\n",
+              gtid, i, next_task, lower, upper, st,
+              next_task_bounds.get_lower_offset(),
+              next_task_bounds.get_upper_offset()));
     __kmp_omp_task(gtid, next_task, true); // schedule new task
     lower = upper + st; // adjust lower bound for the next iteration
   }
@@ -3827,10 +3942,6 @@ void __kmpc_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   KMP_DEBUG_ASSERT(task != NULL);
 
-  KA_TRACE(20, ("__kmpc_taskloop: T#%d, task %p, lb %lld, ub %lld, st %lld, "
-                "grain %llu(%d), dup %p\n",
-                gtid, taskdata, *lb, *ub, st, grainsize, sched, task_dup));
-
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
   ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
@@ -3850,14 +3961,20 @@ void __kmpc_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
 
   // =========================================================================
   // calculate loop parameters
+  kmp_taskloop_bounds_t task_bounds(task, lb, ub);
   kmp_uint64 tc;
-  kmp_uint64 lower = *lb; // compiler provides global bounds here
-  kmp_uint64 upper = *ub;
+  // compiler provides global bounds here
+  kmp_uint64 lower = task_bounds.get_lb();
+  kmp_uint64 upper = task_bounds.get_ub();
   kmp_uint64 ub_glob = upper; // global upper used to calc lastprivate flag
   kmp_uint64 num_tasks = 0, extras = 0;
   kmp_uint64 num_tasks_min = __kmp_taskloop_min_tasks;
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *current_task = thread->th.th_current_task;
+
+  KA_TRACE(20, ("__kmpc_taskloop: T#%d, task %p, lb %lld, ub %lld, st %lld, "
+                "grain %llu(%d), dup %p\n",
+                gtid, taskdata, lower, upper, st, grainsize, sched, task_dup));
 
   // compute trip count
   if (st == 1) { // most common case
@@ -3917,6 +4034,7 @@ void __kmpc_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   // =========================================================================
 
   // check if clause value first
+  // Also require GOMP_taskloop to reduce to linear (taskdata->td_flags.native)
   if (if_val == 0) { // if(0) specified, mark task as serial
     taskdata->td_flags.task_serial = 1;
     taskdata->td_flags.tiedness = TASK_TIED; // AC: serial task cannot be untied
@@ -3926,7 +4044,9 @@ void __kmpc_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
     // always start serial tasks linearly
     __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, ub_glob, num_tasks,
                           grainsize, extras, tc, task_dup);
-  } else if (num_tasks > num_tasks_min) {
+    // !taskdata->td_flags.native => currently force linear spawning of tasks
+    // for GOMP_taskloop
+  } else if (num_tasks > num_tasks_min && !taskdata->td_flags.native) {
     KA_TRACE(20, ("__kmpc_taskloop: T#%d, go recursive: tc %llu, #tasks %llu"
                   "(%lld), grain %llu, extras %llu\n",
                   gtid, tc, num_tasks, num_tasks_min, grainsize, extras));

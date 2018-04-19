@@ -67,7 +67,7 @@ PerfEvent::PerfEvent(llvm::StringRef PfmEventString)
     // on Sandybridge but 8 on Haswell) so we report the missing counter without
     // crashing.
     llvm::errs() << pfm_strerror(Result) << " - cannot create event "
-                 << EventString;
+                 << EventString << "\n";
   }
   if (Fstr) {
     FullQualifiedEventString = Fstr;
@@ -109,7 +109,7 @@ int64_t Counter::read() const {
   int64_t Count = 0;
   ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
   if (ReadSize != sizeof(Count))
-    llvm::errs() << "Failed to read event counter";
+    llvm::errs() << "Failed to read event counter\n";
   return Count;
 }
 

@@ -1779,7 +1779,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
   if (getLangOpts().OpenMP && IsArrow &&
       !CurContext->isDependentContext() &&
       isa<CXXThisExpr>(Base.get()->IgnoreParenImpCasts())) {
-    if (auto *PrivateCopy = IsOpenMPCapturedDecl(Field)) {
+    if (auto *PrivateCopy = isOpenMPCapturedDecl(Field)) {
       return getOpenMPCapturedExpr(PrivateCopy, VK, OK,
                                    MemberNameInfo.getLoc());
     }

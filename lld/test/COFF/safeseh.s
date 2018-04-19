@@ -6,6 +6,7 @@
 
 # __safe_se_handler_table needs to be relocated against ImageBase.
 # check that the relocation is present.
+#
 # CHECK-NOGC-NOT: IMAGE_DLL_CHARACTERISTICS_NO_SEH
 # CHECK-NOGC: BaseReloc [
 # CHECK-NOGC:   Entry {
@@ -19,9 +20,14 @@
 # CHECK-NOGC-NEXT:   0x401006
 # CHECK-NOGC-NEXT: ]
 
-# Without the SEH table, the address is absolute, so check that we do
-# not have a relocation for it.
-# CHECK-GC-NOT: IMAGE_DLL_CHARACTERISTICS_NO_SEH
+# If we enable GC, the exception handler should be removed, and we should add
+# the DLL characteristic flag that indicates that there are no exception
+# handlers in this DLL. The exception handler table in the load config should
+# be empty and there should be no relocations for it.
+#
+# CHECK-GC: Characteristics [
+# CHECK-GC:   IMAGE_DLL_CHARACTERISTICS_NO_SEH
+# CHECK-GC: ]
 # CHECK-GC: BaseReloc [
 # CHECK-GC-NEXT: ]
 # CHECK-GC: LoadConfig [

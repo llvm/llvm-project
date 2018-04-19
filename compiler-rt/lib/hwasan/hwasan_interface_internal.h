@@ -32,7 +32,7 @@ using __sanitizer::u16;
 using __sanitizer::u8;
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __hwasan_load(uptr, uptr);
+void __hwasan_loadN(uptr, uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_load1(uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -45,7 +45,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_load16(uptr);
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __hwasan_load_noabort(uptr, uptr);
+void __hwasan_loadN_noabort(uptr, uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_load1_noabort(uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -58,7 +58,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_load16_noabort(uptr);
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __hwasan_store(uptr, uptr);
+void __hwasan_storeN(uptr, uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_store1(uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -71,7 +71,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_store16(uptr);
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __hwasan_store_noabort(uptr, uptr);
+void __hwasan_storeN_noabort(uptr, uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_store1_noabort(uptr);
 SANITIZER_INTERFACE_ATTRIBUTE

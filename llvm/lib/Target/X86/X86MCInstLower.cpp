@@ -1146,7 +1146,7 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
     OS.EmitInstruction(MCInstBuilder(Opc), STI);
     break;
   case X86::XCHG16ar:
-    OS.EmitInstruction(MCInstBuilder(Opc).addReg(X86::AX), STI);
+    OS.EmitInstruction(MCInstBuilder(Opc).addReg(X86::AX).addReg(X86::AX), STI);
     break;
   case X86::NOOPL:
   case X86::NOOPW:

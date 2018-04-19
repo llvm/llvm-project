@@ -398,14 +398,8 @@ def VCOMBINE : NoTestOpInst<"vcombine", "kdd", "csilhfUcUsUiUlPcPs", OP_CONC>;
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.21 Splitting vectors
 let InstName = "vmov" in {
-def VGET_HIGH : NoTestOpInst<"vget_high", "dk", "csilfUcUsUiUlPcPs", OP_HI>;
-def VGET_LOW  : NoTestOpInst<"vget_low", "dk", "csilfUcUsUiUlPcPs", OP_LO>;
-}
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__)" in {
-  let InstName = "vmov" in {
-  def VGET_HIGH_F16 : NoTestOpInst<"vget_high", "dk", "h", OP_HI>;
-  def VGET_LOW_F16  : NoTestOpInst<"vget_low", "dk", "h", OP_LO>;
-  }
+def VGET_HIGH : NoTestOpInst<"vget_high", "dk", "csilhfUcUsUiUlPcPs", OP_HI>;
+def VGET_LOW  : NoTestOpInst<"vget_low", "dk", "csilhfUcUsUiUlPcPs", OP_LO>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

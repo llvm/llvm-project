@@ -781,6 +781,11 @@ extern kmp_nested_proc_bind_t __kmp_nested_proc_bind;
 #if KMP_AFFINITY_SUPPORTED
 #define KMP_PLACE_ALL (-1)
 #define KMP_PLACE_UNDEFINED (-2)
+// Is KMP_AFFINITY is being used instead of OMP_PROC_BIND/OMP_PLACES?
+#define KMP_AFFINITY_NON_PROC_BIND                                             \
+  ((__kmp_nested_proc_bind.bind_types[0] == proc_bind_false ||                 \
+    __kmp_nested_proc_bind.bind_types[0] == proc_bind_intel) &&                \
+   (__kmp_affinity_num_masks > 0 || __kmp_affinity_type == affinity_balanced))
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 extern int __kmp_affinity_num_places;
@@ -2261,8 +2266,16 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMP_45_ENABLED
   kmp_task_team_t *td_task_team;
   kmp_int32 td_size_alloc; // The size of task structure, including shareds etc.
+#if defined(KMP_GOMP_COMPAT)
+  // 4 or 8 byte integers for the loop bounds in GOMP_taskloop
+  kmp_int32 td_size_loop_bounds;
+#endif
 #endif // OMP_45_ENABLED
   kmp_taskdata_t *td_last_tied; // keep tied task for task scheduling constraint
+#if defined(KMP_GOMP_COMPAT) && OMP_45_ENABLED
+  // GOMP sends in a copy function for copy constructors
+  void (*td_copy_func)(void *, void *);
+#endif
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
 #endif

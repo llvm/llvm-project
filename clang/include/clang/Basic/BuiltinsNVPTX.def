@@ -18,11 +18,18 @@
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+#pragma push_macro("SM_70")
+#define SM_70 "sm_70|sm_71"
 #pragma push_macro("SM_60")
-#define SM_60 "sm_60|sm_61|sm_62|sm_70|sm_71"
+#define SM_60 "sm_60|sm_61|sm_62|" SM_70
 
+#pragma push_macro("PTX61")
+#define PTX61 "ptx61"
 #pragma push_macro("PTX60")
-#define PTX60 "ptx60|ptx61"
+#define PTX60 "ptx60|" PTX61
+
+#pragma push_macro("AND")
+#define AND(a, b) a "," b
 
 // Special Registers
 
@@ -698,19 +705,46 @@ BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
 BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")
 
 // Builtins to support WMMA instructions on sm_70
-TARGET_BUILTIN(__hmma_m16n16k16_ld_a, "vi*iC*UiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_ld_b, "vi*iC*UiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_ld_c_f16, "vi*iC*UiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_ld_c_f32, "vf*fC*UiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_st_c_f16, "vi*i*UiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_st_c_f32, "vf*f*UiIi", "", PTX60)
+TARGET_BUILTIN(__hmma_m16n16k16_ld_a, "vi*iC*UiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_ld_b, "vi*iC*UiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_ld_c_f16, "vi*iC*UiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_ld_c_f32, "vf*fC*UiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_st_c_f16, "vi*i*UiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_st_c_f32, "vf*f*UiIi", "", AND(SM_70,PTX60))
 
-TARGET_BUILTIN(__hmma_m16n16k16_mma_f16f16, "vi*iC*iC*iC*IiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_mma_f32f16, "vf*iC*iC*iC*IiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_mma_f32f32, "vf*iC*iC*fC*IiIi", "", PTX60)
-TARGET_BUILTIN(__hmma_m16n16k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", PTX60)
+TARGET_BUILTIN(__hmma_m32n8k16_ld_a, "vi*iC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_ld_b, "vi*iC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_ld_c_f16, "vi*iC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_ld_c_f32, "vf*fC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_st_c_f16, "vi*i*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_st_c_f32, "vf*f*UiIi", "", AND(SM_70,PTX61))
+
+TARGET_BUILTIN(__hmma_m8n32k16_ld_a, "vi*iC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_ld_b, "vi*iC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_ld_c_f16, "vi*iC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_ld_c_f32, "vf*fC*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_st_c_f16, "vi*i*UiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_st_c_f32, "vf*f*UiIi", "", AND(SM_70,PTX61))
+
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f16f16, "vi*iC*iC*iC*IiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f32f16, "vf*iC*iC*iC*IiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f32f32, "vf*iC*iC*fC*IiIi", "", AND(SM_70,PTX60))
+TARGET_BUILTIN(__hmma_m16n16k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", AND(SM_70,PTX60))
+
+TARGET_BUILTIN(__hmma_m32n8k16_mma_f16f16, "vi*iC*iC*iC*IiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_mma_f32f16, "vf*iC*iC*iC*IiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_mma_f32f32, "vf*iC*iC*fC*IiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m32n8k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", AND(SM_70,PTX61))
+
+TARGET_BUILTIN(__hmma_m8n32k16_mma_f16f16, "vi*iC*iC*iC*IiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_mma_f32f16, "vf*iC*iC*iC*IiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_mma_f32f32, "vf*iC*iC*fC*IiIi", "", AND(SM_70,PTX61))
+TARGET_BUILTIN(__hmma_m8n32k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", AND(SM_70,PTX61))
 
 #undef BUILTIN
 #undef TARGET_BUILTIN
+#pragma pop_macro("AND")
 #pragma pop_macro("SM_60")
+#pragma pop_macro("SM_70")
 #pragma pop_macro("PTX60")
+#pragma pop_macro("PTX61")

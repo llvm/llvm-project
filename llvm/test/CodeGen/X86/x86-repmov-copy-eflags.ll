@@ -43,7 +43,7 @@ declare void @g(%struct.T*)
 ; CHECK:     pushl     %esi
 ; CHECK:     calll     _g
 ; CHECK:     addl     $4, %esp
-; CHECK:     testb    $-1, %[[NE_REG]]
+; CHECK:     testb    %[[NE_REG]], %[[NE_REG]]
 ; CHECK:     jne
 
 attributes #0 = { nounwind optsize }
