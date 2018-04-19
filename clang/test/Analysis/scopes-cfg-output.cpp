@@ -296,7 +296,7 @@ void test_if_jumps() {
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
 // CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, class A)
+// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], class A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
 // CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, NoOp, const class A)
@@ -395,7 +395,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
 // CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, class A)
+// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], class A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
 // CHECK-NEXT:   7: [B10.6] (ImplicitCastExpr, NoOp, const class A)
@@ -540,7 +540,7 @@ void test_do_jumps() {
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
 // CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, class A)
+// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], class A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
 // CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, NoOp, const class A)
@@ -640,7 +640,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   1: CFGScopeBegin(c)
 // CHECK-NEXT:   2: b
 // CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, class A)
+// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], class A)
 // CHECK-NEXT:   5: A c = b;
 // CHECK-NEXT:   6: c
 // CHECK-NEXT:   7: [B10.6] (ImplicitCastExpr, NoOp, const class A)

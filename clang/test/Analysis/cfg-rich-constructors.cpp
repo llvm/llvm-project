@@ -450,6 +450,85 @@ void temporaryInCondition() {
   if (C());
 }
 
+// CHECK: void temporaryInConditionVariable()
+// CHECK:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-NEXT:     2: [B2.1]
+// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
+// CXX11-NEXT:     4: C c = C();
+// CXX11-NEXT:     5: c
+// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B2.6].operator bool
+// CXX11-NEXT:     8: [B2.6]
+// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: if [B2.9]
+// CXX17-NEXT:     2: C c = C();
+// CXX17-NEXT:     3: c
+// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B2.4].operator bool
+// CXX17-NEXT:     6: [B2.4]
+// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: if [B2.7]
+void temporaryInConditionVariable() {
+  if (C c = C());
+}
+
+
+// CHECK: void temporaryInForLoopConditionVariable()
+// CHECK:        [B2]
+// CXX11-NEXT:     1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-NEXT:     2: [B2.1]
+// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
+// CXX11-NEXT:     4: C c2 = C();
+// CXX11-NEXT:     5: c2
+// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B2.6].operator bool
+// CXX11-NEXT:     8: [B2.6]
+// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: for (...; [B2.9]; )
+// CXX17-NEXT:     1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX17-NEXT:     2: C c2 = C();
+// CXX17-NEXT:     3: c2
+// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B2.4].operator bool
+// CXX17-NEXT:     6: [B2.4]
+// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: for (...; [B2.7]; )
+// CHECK:        [B3]
+// CXX11-NEXT:     1: C() (CXXConstructExpr, [B3.2], class C)
+// CXX11-NEXT:     2: [B3.1]
+// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.4], class C)
+// CXX11-NEXT:     4: C c1 = C();
+// CXX17-NEXT:     1: C() (CXXConstructExpr, [B3.2], class C)
+// CXX17-NEXT:     2: C c1 = C();
+void temporaryInForLoopConditionVariable() {
+  for (C c1 = C(); C c2 = C(); );
+}
+
+
+// FIXME: Find construction context for the loop condition variable.
+// CHECK: void temporaryInWhileLoopConditionVariable()
+// CXX11:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-NEXT:     2: [B2.1]
+// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
+// CXX11-NEXT:     4: C c = C();
+// CXX11-NEXT:     5: c
+// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B2.6].operator bool
+// CXX11-NEXT:     8: [B2.6]
+// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: while [B2.9]
+// CXX17:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX17-NEXT:     2: C c = C();
+// CXX17-NEXT:     3: c
+// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B2.4].operator bool
+// CXX17-NEXT:     6: [B2.4]
+// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: while [B2.7]
+void temporaryInWhileLoopConditionVariable() {
+  while (C c = C());
+}
+
 } // end namespace temporary_object_expr_without_dtors
 
 namespace temporary_object_expr_with_dtors {
