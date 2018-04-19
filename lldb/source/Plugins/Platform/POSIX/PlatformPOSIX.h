@@ -200,6 +200,10 @@ protected:
   EvaluateLibdlExpression(lldb_private::Process *process, const char *expr_cstr,
                           llvm::StringRef expr_prefix,
                           lldb::ValueObjectSP &result_valobj_sp);
+  
+  lldb_private::UtilityFunction *                        
+  MakeLoadImageUtilityFunction(lldb_private::ExecutionContext &exe_ctx, 
+                               lldb_private::Status &error); 
 
   virtual
   llvm::StringRef GetLibdlFunctionDeclarations(lldb_private::Process *process);
