@@ -7378,7 +7378,11 @@ class EmptyNVPTXInst : NVPTXInst<(outs), (ins), "?", []>;
 class WMMA_LOAD_GALSTOS<string Geometry, string Abc, string Layout,
                         string Space, string Type, NVPTXRegClass regclass,
                         DAGOperand SrcOp, bit WithStride>
-  : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
+  : EmptyNVPTXInst,
+    Requires<[!if(!eq(Geometry, "m16n16k16"),
+                  hasPTX60,
+                  hasPTX61),
+              hasSM70]> {
   // Pattern (created by WMMA_LOAD_INTR_HELPER below) that matches the intrinsic
   // for this function.
   PatFrag IntrMatcher = !cast<PatFrag>("INT_WMMA_"
@@ -7420,10 +7424,10 @@ class WMMA_LOAD_GALSTOS<string Geometry, string Abc, string Layout,
   let InOperandList = Ins;
   let AsmString = "wmma.load."
                   # Abc
-                  # ".sync."
-                  # Layout
-                  # ".m16n16k16"
-                  # Space 
+                  # ".sync"
+                  # "." # Layout
+                  # "." # Geometry
+                  # Space
                   # "." # Type # " \t"
                   # !if(!eq(Abc#Type, "cf16"),
                         "{{$r0, $r1, $r2, $r3}}",
@@ -7512,7 +7516,9 @@ multiclass WMMA_LOAD_G<string Geometry> {
   defm _load_c_f32: WMMA_LOAD_GAT<Geometry, "c", "f32", Float32Regs>;
 }
 
+defm INT_WMMA_m32n8k16: WMMA_LOAD_G<"m32n8k16">;
 defm INT_WMMA_m16n16k16: WMMA_LOAD_G<"m16n16k16">;
+defm INT_WMMA_m8n32k16: WMMA_LOAD_G<"m8n32k16">;
 
 //
 // wmma.store.d.sync.[row|col].m16n16k16[|.global|.shared].[f16|f32]
@@ -7520,7 +7526,11 @@ defm INT_WMMA_m16n16k16: WMMA_LOAD_G<"m16n16k16">;
 class WMMA_STORE_D_GLSTSO<string Geometry, string Layout, string Space,
                           string Type, NVPTXRegClass regclass,
                           bit WithStride, DAGOperand DstOp>
-  : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
+  : EmptyNVPTXInst,
+    Requires<[!if(!eq(Geometry, "m16n16k16"),
+                  hasPTX60,
+                  hasPTX61),
+              hasSM70]> {
   PatFrag IntrMatcher = !cast<PatFrag>("INT_WMMA"
                                        # "_" # Geometry # "_store_d"
                                        # "_" # Type
@@ -7641,11 +7651,9 @@ multiclass WMMA_STORE_D_G<string Geometry> {
   defm _store_d_f32: WMMA_STORE_D_GT<Geometry, "f32", Float32Regs>;
 }
 
-// multiclass WMMA_STORE_D {
-//   defm _m16n16k16: WMMA_STORE_D_G<"m16n16k16">;
-// }
-
+defm INT_WMMA_m32n8k16: WMMA_STORE_D_G<"m32n8k16">;
 defm INT_WMMA_m16n16k16: WMMA_STORE_D_G<"m16n16k16">;
+defm INT_WMMA_m8n32k16: WMMA_STORE_D_G<"m8n32k16">;
 
 // WMMA.MMA
 class WMMA_MMA_GABDCS<string Geometry, string ALayout, string BLayout,
@@ -7653,7 +7661,11 @@ class WMMA_MMA_GABDCS<string Geometry, string ALayout, string BLayout,
                      string CType, NVPTXRegClass c_reg,
                      NVPTXRegClass ab_reg,
                      string Satfinite = "">
-  : EmptyNVPTXInst, Requires<[hasPTX60, hasSM70]> {
+  : EmptyNVPTXInst,
+    Requires<[!if(!eq(Geometry, "m16n16k16"),
+                  hasPTX60,
+                  hasPTX61),
+              hasSM70]> {
   Intrinsic Intr = !cast<Intrinsic>("int_nvvm_wmma_"
                                     # Geometry
                                     # "_mma"
@@ -7686,7 +7698,7 @@ class WMMA_MMA_GABDCS<string Geometry, string ALayout, string BLayout,
   let AsmString = "wmma.mma.sync."
                   # ALayout
                   # "." # BLayout
-                  # ".m16n16k16"
+                  # "." # Geometry
                   # "." # DType
                   # "." # CType
                   # Satfinite # "\n\t\t"
@@ -7734,4 +7746,6 @@ multiclass WMMA_MMA_G<string Geometry> {
   defm _row: WMMA_MMA_GA<Geometry, "row">;
 }
 
+defm INT_WMMA_MMA_m32n8k16 : WMMA_MMA_G<"m32n8k16">;
 defm INT_WMMA_MMA_m16n16k16 : WMMA_MMA_G<"m16n16k16">;
+defm INT_WMMA_MMA_m8n32k16 : WMMA_MMA_G<"m8n32k16">;

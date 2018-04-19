@@ -821,7 +821,7 @@ def: InstRW<[BWWriteResGroup27], (instregex "ADD_FPrST0",
                                             "(V?)CVTTPS2DQ(Y?)rr")>;
 
 def BWWriteResGroup27_16 : SchedWriteRes<[BWPort1, BWPort0156]> {
-  let Latency = 3; // FIXME: I think this should be 4.
+  let Latency = 4;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
@@ -1017,6 +1017,7 @@ def: InstRW<[BWWriteResGroup42], (instregex "MMX_CVTPD2PIirr",
 def BWWriteResGroup42_16 : SchedWriteRes<[BWPort1,BWPort06,BWPort0156]> {
   let Latency = 4;
   let NumMicroOps = 4;
+  let ResourceCycles = [1,1,2];
 }
 def: InstRW<[BWWriteResGroup42_16], (instrs IMUL16r, MUL16r)>;
 
@@ -1765,7 +1766,6 @@ def BWWriteResGroup91 : SchedWriteRes<[BWPort1,BWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[BWWriteResGroup91], (instrs IMUL8m, MUL8m)>;
 def: InstRW<[BWWriteResGroup91], (instregex "MMX_CVTPI2PSirm",
                                             "MMX_CVTPS2PIirm",
                                             "MMX_CVTTPS2PIirm",
@@ -1786,15 +1786,16 @@ def: InstRW<[BWWriteResGroup91], (instregex "MMX_CVTPI2PSirm",
                                             "(V?)SUBSSrm")>;
 
 def BWWriteResGroup91_16 : SchedWriteRes<[BWPort1, BWPort0156, BWPort23]> {
-  let Latency = 8; // FIXME: I think this should be 9
+  let Latency = 8;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[BWWriteResGroup91_16], (instrs IMUL16rm, IMUL16rmi, IMUL16rmi8)>; // TODO: Is IMUL16rm really 3 uops?
+def: InstRW<[BWWriteResGroup91_16], (instrs IMUL16rmi, IMUL16rmi8)>;
 
-def BWWriteResGroup91_16_2 : SchedWriteRes<[BWPort1, BWPort0156, BWPort23]> {
-  let Latency = 8;
+def BWWriteResGroup91_16_2 : SchedWriteRes<[BWPort1, BWPort06, BWPort0156, BWPort23]> {
+  let Latency = 9;
   let NumMicroOps = 5;
+  let ResourceCycles = [1,1,2,1];
 }
 def: InstRW<[BWWriteResGroup91_16_2], (instrs IMUL16m, MUL16m)>;
 

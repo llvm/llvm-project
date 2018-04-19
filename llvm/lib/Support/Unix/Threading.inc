@@ -204,13 +204,11 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
 
   Name.append(buf, buf + strlen(buf));
 #elif defined(__linux__)
-#if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
 #if HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char Buffer[len] = {'\0'};  // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
     Name.append(Buffer, Buffer + strlen(Buffer));
-#endif
 #endif
 #endif
 }

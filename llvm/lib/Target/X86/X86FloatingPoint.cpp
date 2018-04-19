@@ -599,13 +599,14 @@ static int Lookup(ArrayRef<TableEntry> Table, unsigned Opcode) {
 #ifdef NDEBUG
 #define ASSERT_SORTED(TABLE)
 #else
-#define ASSERT_SORTED(TABLE)                                              \
-  { static bool TABLE##Checked = false;                                   \
-    if (!TABLE##Checked) {                                                \
-       assert(std::is_sorted(std::begin(TABLE), std::end(TABLE)) &&       \
-              "All lookup tables must be sorted for efficient access!");  \
-       TABLE##Checked = true;                                             \
-    }                                                                     \
+#define ASSERT_SORTED(TABLE)                                                   \
+  {                                                                            \
+    static std::atomic<bool> TABLE##Checked(false);                            \
+    if (!TABLE##Checked.load(std::memory_order_relaxed)) {                     \
+      assert(std::is_sorted(std::begin(TABLE), std::end(TABLE)) &&             \
+             "All lookup tables must be sorted for efficient access!");        \
+      TABLE##Checked.store(true, std::memory_order_relaxed);                   \
+    }                                                                          \
   }
 #endif
 

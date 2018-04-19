@@ -1202,28 +1202,32 @@ let Predicates = [InMicroMips] in {
                       (ROTR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, uimm5:$imm), 0>;
   def : MipsInstAlias<"syscall", (SYSCALL_MM 0), 1>;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"add", ADDi_MM>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"add", ADDi_MM>, ISA_MICROMIPS;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"addu", ADDiu_MM>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"addu", ADDiu_MM>, ISA_MICROMIPS;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi_MM>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi_MM>, ISA_MICROMIPS;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi_MM>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi_MM>, ISA_MICROMIPS;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi_MM>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi_MM>, ISA_MICROMIPS;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi_MM>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi_MM>, ISA_MICROMIPS;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu_MM>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu_MM>, ISA_MICROMIPS;
 
   def : MipsInstAlias<"not $rt, $rs",
-                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>;
+                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>,
+        ISA_MICROMIPS;
   def : MipsInstAlias<"not $rt",
-                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, ZERO), 0>;
+                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, ZERO), 0>,
+        ISA_MICROMIPS;
   def : MipsInstAlias<"bnez $rs,$offset",
-                      (BNE_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>;
+                      (BNE_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+        ISA_MICROMIPS;
   def : MipsInstAlias<"beqz $rs,$offset",
-                      (BEQ_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>;
+                      (BEQ_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+        ISA_MICROMIPS;
   def : MipsInstAlias<"seh $rd", (SEH_MM GPR32Opnd:$rd, GPR32Opnd:$rd), 0>,
                      ISA_MIPS32R2_NOT_32R6_64R6;
   def : MipsInstAlias<"seb $rd", (SEB_MM GPR32Opnd:$rd, GPR32Opnd:$rd), 0>,

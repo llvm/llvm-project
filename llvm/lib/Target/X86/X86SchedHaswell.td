@@ -1023,9 +1023,6 @@ def HWWriteResGroup12 : SchedWriteRes<[HWPort1,HWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup12], (instrs MUL8m, MUL16m,
-                                         IMUL8m, IMUL16m,
-                                         IMUL16rm, IMUL16rmi, IMUL16rmi8, IMUL32rm, IMUL32rmi, IMUL32rmi8, IMUL64rm, IMUL64rmi32, IMUL64rmi8)>;
 def: InstRW<[HWWriteResGroup12], (instregex "FCOM32m",
                                             "FCOM64m",
                                             "FCOMP32m",
@@ -1045,6 +1042,20 @@ def: InstRW<[HWWriteResGroup12], (instregex "FCOM32m",
                                             "(V?)MIN(C?)SSrm",
                                             "(V?)SUBSDrm",
                                             "(V?)SUBSSrm")>;
+
+def HWWriteResGroup12_1 : SchedWriteRes<[HWPort1,HWPort0156,HWPort23]> {
+  let Latency = 8;
+  let NumMicroOps = 3;
+  let ResourceCycles = [1,1,1];
+}
+def: InstRW<[HWWriteResGroup12_1], (instrs IMUL16rmi, IMUL16rmi8)>;
+
+def HWWriteResGroup12_2 : SchedWriteRes<[HWPort1,HWPort06,HWPort0156,HWPort23]> {
+  let Latency = 9;
+  let NumMicroOps = 5;
+  let ResourceCycles = [1,1,2,1];
+}
+def: InstRW<[HWWriteResGroup12_2], (instrs IMUL16m, MUL16m)>;
 
 def HWWriteResGroup13 : SchedWriteRes<[HWPort5,HWPort23]> {
   let Latency = 7;
@@ -1703,7 +1714,6 @@ def HWWriteResGroup50 : SchedWriteRes<[HWPort1]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup50], (instrs MUL8r, IMUL8r, IMUL16rr, IMUL32rr, IMUL32rri, IMUL32rri8, IMUL64rr, IMUL64rri32, IMUL64rri8)>;
 def: InstRW<[HWWriteResGroup50], (instregex "ADD_FPrST0",
                                             "ADD_FST0r",
                                             "ADD_FrST0",
@@ -1733,7 +1743,7 @@ def: InstRW<[HWWriteResGroup50], (instregex "ADD_FPrST0",
                                             "(V?)SUBSSrr")>;
 
 def HWWriteResGroup50_16i : SchedWriteRes<[HWPort1, HWPort0156]> {
-  let Latency = 3;
+  let Latency = 4;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
@@ -2103,9 +2113,10 @@ def HWWriteResGroup74 : SchedWriteRes<[HWPort1,HWPort6]> {
 }
 def: InstRW<[HWWriteResGroup74], (instrs IMUL64r, MUL64r, MULX64rr)>;
 
-def HWWriteResGroup74_16 : SchedWriteRes<[HWPort1, HWPort0156]> {
+def HWWriteResGroup74_16 : SchedWriteRes<[HWPort1, HWPort06, HWPort0156]> {
   let Latency = 4;
   let NumMicroOps = 4;
+  let ResourceCycles = [1,1,2];
 }
 def: InstRW<[HWWriteResGroup74_16], (instrs IMUL16r, MUL16r)>;
 

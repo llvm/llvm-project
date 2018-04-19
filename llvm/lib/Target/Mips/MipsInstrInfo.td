@@ -2555,17 +2555,17 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   defm : OneOrTwoOperandMacroImmediateAlias<"add", ADDi>, ISA_MIPS1_NOT_32R6_64R6;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"addu", ADDiu>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"addu", ADDiu>, ISA_MIPS1;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi>, GPR_32;
+  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi>, ISA_MIPS1, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi>, GPR_32;
+  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi>, ISA_MIPS1, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi>, GPR_32;
+  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi>, ISA_MIPS1, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi>, GPR_32;
+  defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi>, ISA_MIPS1, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu>, GPR_32;
+  defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu>, ISA_MIPS1, GPR_32;
 }
 def : MipsInstAlias<"mfc0 $rt, $rd", (MFC0 GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>;
 def : MipsInstAlias<"mtc0 $rt, $rd", (MTC0 COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>;

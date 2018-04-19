@@ -1650,15 +1650,13 @@ def SKXWriteResGroup31 : SchedWriteRes<[SKXPort1]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup31], (instrs IMUL16rr, IMUL32rr, IMUL32rri, IMUL32rri8, IMUL64rr, IMUL64rri32, IMUL64rri8)>;
-def: InstRW<[SKXWriteResGroup31], (instrs IMUL8r, MUL8r)>;
 def: InstRW<[SKXWriteResGroup31], (instregex "PDEP(32|64)rr",
                                              "PEXT(32|64)rr",
                                              "SHLD(16|32|64)rri8",
                                              "SHRD(16|32|64)rri8")>;
 
 def SKXWriteResGroup31_16i : SchedWriteRes<[SKXPort1, SKXPort0156]> {
-  let Latency = 3;
+  let Latency = 4;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
@@ -2438,6 +2436,7 @@ def: InstRW<[SKXWriteResGroup52], (instrs IMUL64r, MUL64r, MULX64rr)>;
 def SKXWriteResGroup52_16 : SchedWriteRes<[SKXPort1,SKXPort06,SKXPort0156]> {
   let Latency = 4;
   let NumMicroOps = 4;
+  let ResourceCycles = [1,1,2];
 }
 def: InstRW<[SKXWriteResGroup52_16], (instrs IMUL16r, MUL16r)>;
 
@@ -3702,8 +3701,6 @@ def SKXWriteResGroup118 : SchedWriteRes<[SKXPort1,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup118], (instrs IMUL32rm, IMUL32rmi, IMUL32rmi8, IMUL64rm, IMUL64rmi32, IMUL64rmi8)>;
-def: InstRW<[SKXWriteResGroup118], (instrs IMUL8m, MUL8m)>;
 def: InstRW<[SKXWriteResGroup118], (instregex "PDEP(32|64)rm",
                                               "PEXT(32|64)rm")>;
 
@@ -3714,9 +3711,10 @@ def SKXWriteResGroup118_16_1 : SchedWriteRes<[SKXPort1, SKXPort0156, SKXPort23]>
 }
 def: InstRW<[SKXWriteResGroup118_16_1], (instrs IMUL16rm, IMUL16rmi, IMUL16rmi8)>;
 
-def SKXWriteResGroup118_16_2 : SchedWriteRes<[SKXPort1, SKXPort0156, SKXPort23]> {
-  let Latency = 8;
+def SKXWriteResGroup118_16_2 : SchedWriteRes<[SKXPort1, SKXPort06, SKXPort0156, SKXPort23]> {
+  let Latency = 9;
   let NumMicroOps = 5;
+  let ResourceCycles = [1,1,2,1];
 }
 def: InstRW<[SKXWriteResGroup118_16_2], (instrs IMUL16m, MUL16m)>;
 

@@ -15,7 +15,6 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
-#include "NVPTXSection.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
@@ -3330,7 +3329,23 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_f16_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_f16_row:
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_f16_col_stride:
-  case Intrinsic::nvvm_wmma_m16n16k16_load_b_f16_row_stride: {
+  case Intrinsic::nvvm_wmma_m16n16k16_load_b_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_f16_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_f16_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_f16_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_f16_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_f16_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_f16_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_f16_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_f16_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_f16_row_stride: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v8f16;
     Info.ptrVal = I.getArgOperand(0);
@@ -3343,7 +3358,15 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_row:
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_col_stride:
-  case Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_row_stride: {
+  case Intrinsic::nvvm_wmma_m16n16k16_load_c_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f16_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f16_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f16_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f16_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f16_row_stride: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4f16;
     Info.ptrVal = I.getArgOperand(0);
@@ -3356,7 +3379,15 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_row:
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_col_stride:
-  case Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_row_stride: {
+  case Intrinsic::nvvm_wmma_m16n16k16_load_c_f32_row_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f32_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f32_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f32_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_c_f32_row_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_row_stride: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3369,7 +3400,15 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_col:
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_row:
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_col_stride:
-  case Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_row_stride: {
+  case Intrinsic::nvvm_wmma_m16n16k16_store_d_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f16_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f16_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f16_row_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f16_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f16_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f16_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f16_row_stride: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::v4f16;
     Info.ptrVal = I.getArgOperand(0);
@@ -3382,7 +3421,15 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_col:
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_row:
   case Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_col_stride:
-  case Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_row_stride: {
+  case Intrinsic::nvvm_wmma_m16n16k16_store_d_f32_row_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f32_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f32_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f32_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_store_d_f32_row_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_row_stride: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4701,31 +4748,8 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-// Pin NVPTXSection's and NVPTXTargetObjectFile's vtables to this file.
-void NVPTXSection::anchor() {}
-
-NVPTXTargetObjectFile::~NVPTXTargetObjectFile() {
-  delete static_cast<NVPTXSection *>(TextSection);
-  delete static_cast<NVPTXSection *>(DataSection);
-  delete static_cast<NVPTXSection *>(BSSSection);
-  delete static_cast<NVPTXSection *>(ReadOnlySection);
-
-  delete static_cast<NVPTXSection *>(StaticCtorSection);
-  delete static_cast<NVPTXSection *>(StaticDtorSection);
-  delete static_cast<NVPTXSection *>(LSDASection);
-  delete static_cast<NVPTXSection *>(EHFrameSection);
-  delete static_cast<NVPTXSection *>(DwarfAbbrevSection);
-  delete static_cast<NVPTXSection *>(DwarfInfoSection);
-  delete static_cast<NVPTXSection *>(DwarfLineSection);
-  delete static_cast<NVPTXSection *>(DwarfFrameSection);
-  delete static_cast<NVPTXSection *>(DwarfPubTypesSection);
-  delete static_cast<const NVPTXSection *>(DwarfDebugInlineSection);
-  delete static_cast<NVPTXSection *>(DwarfStrSection);
-  delete static_cast<NVPTXSection *>(DwarfLocSection);
-  delete static_cast<NVPTXSection *>(DwarfARangesSection);
-  delete static_cast<NVPTXSection *>(DwarfRangesSection);
-  delete static_cast<NVPTXSection *>(DwarfMacinfoSection);
-}
+// Pin NVPTXTargetObjectFile's vtables to this file.
+NVPTXTargetObjectFile::~NVPTXTargetObjectFile() {}
 
 MCSection *NVPTXTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {

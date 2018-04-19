@@ -120,6 +120,14 @@ namespace llvm {
   /// Size is an 'intptr_t', and File is a pointer to FILE.
   Value *emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilder<> &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the malloc function.
+  Value *emitMalloc(Value *Num, IRBuilder<> &B, const DataLayout &DL,
+                    const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the calloc function.
+  Value *emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
+                    IRBuilder<> &B, const TargetLibraryInfo &TLI);
 }
 
 #endif
