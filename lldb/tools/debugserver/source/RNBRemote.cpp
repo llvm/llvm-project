@@ -6091,43 +6091,14 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
       for (uint32_t i = 0; i < mh.ncmds && !os_handled; ++i) {
         const nub_size_t bytes_read =
             DNBProcessMemoryRead(pid, load_command_addr, sizeof(lc), &lc);
-        uint32_t raw_cmd = lc.cmd & ~LC_REQ_DYLD;
-        if (bytes_read != sizeof(lc))
-          break;
-        switch (raw_cmd) {
-        case LC_VERSION_MIN_IPHONEOS:
-          os_handled = true;
-          rep << "ostype:ios;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_IPHONEOS -> 'ostype:ios;'");
-          break;
 
-        case LC_VERSION_MIN_MACOSX:
+        uint32_t major_version, minor_version, patch_version;
+        auto *platform = DNBGetDeploymentInfo(pid, lc, load_command_addr,
+                                              major_version, minor_version,
+                                              patch_version);
+        if (platform) {
           os_handled = true;
-          rep << "ostype:macosx;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_MACOSX -> 'ostype:macosx;'");
-          break;
-
-#if defined(LC_VERSION_MIN_TVOS)
-        case LC_VERSION_MIN_TVOS:
-          os_handled = true;
-          rep << "ostype:tvos;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_TVOS -> 'ostype:tvos;'");
-          break;
-#endif
-
-#if defined(LC_VERSION_MIN_WATCHOS)
-        case LC_VERSION_MIN_WATCHOS:
-          os_handled = true;
-          rep << "ostype:watchos;";
-          DNBLogThreadedIf(LOG_RNB_PROC,
-                           "LC_VERSION_MIN_WATCHOS -> 'ostype:watchos;'");
-          break;
-#endif
-
-        default:
+          rep << "ostype:" << platform << ";";
           break;
         }
         load_command_addr = load_command_addr + lc.cmdsize;
@@ -6182,7 +6153,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
                            "LC_BUILD_VERSION PLATFORM_BRIDGEOS -> 'ostype:bridgeos;'");
                   break;
           }
-    }
+        }
       }
 #endif // PLATFORM_MACOS
     }
