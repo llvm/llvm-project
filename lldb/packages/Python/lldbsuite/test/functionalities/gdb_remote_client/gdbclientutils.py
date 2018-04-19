@@ -126,6 +126,8 @@ class MockGDBServerResponder:
             return self.qfThreadInfo()
         if packet == "qC":
             return self.qC()
+        if packet == "QEnableErrorStrings":
+            return self.QEnableErrorStrings()
         if packet == "?":
             return self.haltReason()
         if packet[0] == "H":
@@ -137,6 +139,9 @@ class MockGDBServerResponder:
             if data is not None:
                 return self._qXferResponse(data, has_more)
             return ""
+        if packet.startswith("vAttach;"):
+            pid = packet.partition(';')[2]
+            return self.vAttach(int(pid, 16))
         if packet[0] == "Z":
             return self.setBreakpoint(packet)
         return self.other(packet)
@@ -177,6 +182,9 @@ class MockGDBServerResponder:
     def qC(self):
         return "QC0"
 
+    def QEnableErrorStrings(self):
+        return "OK"
+
     def haltReason(self):
         # SIGINT is 2, return type is 2 digit hex string
         return "S02"
@@ -186,6 +194,9 @@ class MockGDBServerResponder:
 
     def _qXferResponse(self, data, has_more):
         return "%s%s" % ("m" if has_more else "l", escape_binary(data))
+
+    def vAttach(self, pid):
+        raise self.UnexpectedPacketException()
 
     def selectThread(self, op, thread_id):
         return "OK"

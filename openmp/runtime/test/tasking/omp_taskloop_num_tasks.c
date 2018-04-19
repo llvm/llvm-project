@@ -1,7 +1,5 @@
 // RUN: %libomp-compile-and-run
 // RUN: %libomp-compile && env KMP_TASKLOOP_MIN_TASKS=1 %libomp-run
-// UNSUPPORTED: gcc
-// We do not yet have the GOMP interface for taskloop
 /*
  * Test for taskloop
  * Method: caculate how many times the iteration space is dispatched

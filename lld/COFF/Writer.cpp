@@ -185,8 +185,7 @@ private:
   IdataContents Idata;
   DelayLoadContents DelayIdata;
   EdataContents Edata;
-  RVATableChunk *GuardFidsTable = nullptr;
-  RVATableChunk *SEHTable = nullptr;
+  bool SetNoSEHCharacteristic = false;
 
   DebugDirectoryChunk *DebugDirectory = nullptr;
   std::vector<Chunk *> DebugRecords;
@@ -828,8 +827,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_ISOLATION;
   if (Config->GuardCF != GuardCFLevel::Off)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_GUARD_CF;
-  if (Config->Machine == I386 && !SEHTable &&
-      !Symtab->findUnderscore("_load_config_used"))
+  if (SetNoSEHCharacteristic)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_SEH;
   if (Config->TerminalServerAware)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE;
@@ -934,6 +932,10 @@ void Writer::openFile(StringRef Path) {
 }
 
 void Writer::createSEHTable() {
+  // Set the no SEH characteristic on x86 binaries unless we find exception
+  // handlers.
+  SetNoSEHCharacteristic = true;
+
   SymbolRVASet Handlers;
   for (ObjFile *File : ObjFile::Instances) {
     // FIXME: We should error here instead of earlier unless /safeseh:no was
@@ -943,6 +945,12 @@ void Writer::createSEHTable() {
 
     markSymbolsForRVATable(File, File->getSXDataChunks(), Handlers);
   }
+
+  // Remove the "no SEH" characteristic if all object files were built with
+  // safeseh, we found some exception handlers, and there is a load config in
+  // the object.
+  SetNoSEHCharacteristic =
+      Handlers.empty() || !Symtab->findUnderscore("_load_config_used");
 
   maybeAddRVATable(std::move(Handlers), "__safe_se_handler_table",
                    "__safe_se_handler_count");

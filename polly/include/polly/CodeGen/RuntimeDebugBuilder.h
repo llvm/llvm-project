@@ -87,14 +87,8 @@ private:
   static void createPrinter(PollyIRBuilder &Builder, bool UseGPU,
                             std::vector<llvm::Value *> &Values,
                             llvm::ArrayRef<llvm::Value *> Array, Args... args) {
-    if (Array.size() >= 2)
-      createPrinter(Builder, Values, Array[0], " ",
-                    llvm::ArrayRef<llvm::Value *>(&Array[1], Array.size() - 1),
-                    args...);
-    else if (Array.size() == 1)
-      createPrinter(Builder, UseGPU, Values, Array[0], args...);
-    else
-      createPrinter(Builder, UseGPU, Values, args...);
+    Values.insert(Values.end(), Array.begin(), Array.end());
+    createPrinter(Builder, UseGPU, Values, args...);
   }
 
   /// Print a list of Values.

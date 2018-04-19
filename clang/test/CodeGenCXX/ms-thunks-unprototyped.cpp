@@ -24,10 +24,27 @@ struct B : virtual A {
 struct C : B { int c; };
 C c;
 
+// Do the same thing, but with an incomplete return type.
+struct B1 { virtual DoNotInstantiate<void> f() = 0; };
+struct B2 { virtual DoNotInstantiate<void> f() = 0; };
+struct S : B1, B2 { DoNotInstantiate<void> f() override; };
+S s;
+
+// CHECK: @"??_7S@@6BB2@@@" = linkonce_odr unnamed_addr constant
+// CHECK-SAME: void (%struct.S*, ...)* @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"
+
 // CHECK: @"??_7C@@6B@" = linkonce_odr unnamed_addr constant
 // CHECK-SAME: void (%struct.B*, ...)* @"?foo@B@@W7EAAXUIncomplete@@@Z"
 // CHECK-SAME: void (%struct.B*, ...)* @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"
 // CHECK-SAME: i32 (i8*, i32)* @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"
+
+
+// CHECK-LABEL: define linkonce_odr dso_local void @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"(%struct.S* %this, ...)
+// CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, i8* {{.*}}, i32 -8
+// CHECK: %[[THIS_ADJ:[^ ]*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.S*
+// CHECK: musttail call void (%struct.S*, ...) {{.*}}@"?f@S@@UEAA?AU?$DoNotInstantiate@X@@XZ"
+// CHECK-SAME: (%struct.S* %[[THIS_ADJ]], ...)
+// CHECK: ret void
 
 // The thunks should have a -8 adjustment.
 

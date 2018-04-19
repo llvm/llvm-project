@@ -308,14 +308,13 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
   Subdirs.emplace_back(getTriple().str());
   Subdirs.emplace_back(getTriple().getArchName());
   Subdirs[1] += "-w64-mingw32";
-  Twine ClangRoot =
-      llvm::sys::path::parent_path(getDriver().getInstalledDir()) +
-      llvm::sys::path::get_separator();
+  StringRef ClangRoot =
+      llvm::sys::path::parent_path(getDriver().getInstalledDir());
+  StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
-    Twine Subdir = ClangRoot + CandidateSubdir;
-    if (llvm::sys::fs::is_directory(Subdir)) {
+    if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
       Arch = CandidateSubdir;
-      return Subdir.str();
+      return (ClangRoot + Sep + CandidateSubdir).str();
     }
   }
   return make_error_code(std::errc::no_such_file_or_directory);
