@@ -82,7 +82,7 @@ entry:
 ; CHECK:       and %o0, 255, %o0
 ; CHECK:       sll %o0, %o1, %o0
 ; CHECK:       andn %g2, %o5, %g2
-; CHECK:       sethi 0, %o5
+; CHECK:       mov %g0, %o5
 ; CHECK:      [[LABEL1:\.L.*]]:
 ; CHECK:       or %g2, %o4, %g3
 ; CHECK:       or %g2, %o0, %g4
@@ -123,7 +123,7 @@ entry:
 ; CHECK:       sll %o0, %o1, %o0
 ; CHECK:       sll %o4, %o1, %o4
 ; CHECK:       andn %g2, %o5, %g2
-; CHECK:       sethi 0, %o5
+; CHECK:       mov %g0, %o5
 ; CHECK:      [[LABEL1:\.L.*]]:
 ; CHECK:       or %g2, %o0, %g3
 ; CHECK:       or %g2, %o4, %g4
@@ -235,6 +235,7 @@ entry:
 
 ; CHECK-LABEL: test_load_add_i32
 ; CHECK: membar
+; CHECK: mov %g0
 ; CHECK: mov [[U:%[gilo][0-7]]], [[V:%[gilo][0-7]]]
 ; CHECK: add [[U:%[gilo][0-7]]], %o1, [[V2:%[gilo][0-7]]]
 ; CHECK: cas [%o0], [[V]], [[V2]]

@@ -1,5 +1,4 @@
 set (FILES
-  FileSpecTest.cpp
   FileSystemTest.cpp
   HostInfoTest.cpp
   HostTest.cpp

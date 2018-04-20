@@ -1,6 +1,9 @@
 ; RUN: opt -thinlto-bc -o %t %s
 ; RUN: llvm-modextract -n 1 -o - %t | llvm-dis | FileCheck %s
 
+; The target assembly parser is required to parse the symver directives
+; REQUIRES: x86-registered-target
+
 target triple = "x86_64-unknown-linux-gnu"
 
 module asm ".symver used, used@VER"
