@@ -1,4 +1,4 @@
-//===- unittest/Tooling/RecursiveASTVisitorTestCallVisitor.cpp ------------===//
+//===- unittest/Tooling/RecursiveASTVisitorTests/CXXMemberCall.cpp --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -93,28 +93,6 @@ TEST(RecursiveASTVisitor, VisitsExplicitTemplateSpecialization) {
     "  }\n"
     "};\n"
     "template void A::g(const A& a) const;\n"));
-}
-
-class CXXOperatorCallExprTraverser
-  : public ExpectedLocationVisitor<CXXOperatorCallExprTraverser> {
-public:
-  // Use Traverse, not Visit, to check that data recursion optimization isn't
-  // bypassing the call of this function.
-  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *CE) {
-    Match(getOperatorSpelling(CE->getOperator()), CE->getExprLoc());
-    return ExpectedLocationVisitor<CXXOperatorCallExprTraverser>::
-        TraverseCXXOperatorCallExpr(CE);
-  }
-};
-
-TEST(RecursiveASTVisitor, TraversesOverloadedOperator) {
-  CXXOperatorCallExprTraverser Visitor;
-  Visitor.ExpectMatch("()", 4, 9);
-  EXPECT_TRUE(Visitor.runOver(
-    "struct A {\n"
-    "  int operator()();\n"
-    "} a;\n"
-    "int k = a();\n"));
 }
 
 } // end anonymous namespace

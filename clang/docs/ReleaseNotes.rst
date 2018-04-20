@@ -163,6 +163,18 @@ OpenMP Support in Clang
 
 - ...
 
+CUDA Support in Clang
+---------------------
+
+- Clang will now try to locate the CUDA installation next to :program:`ptxas`
+  in the `PATH` environment variable. This behavior can be turned off by passing
+  the new flag `--cuda-path-ignore-env`.
+
+- Clang now supports generating object files with relocatable device code. This
+  feature needs to be enabled with `-fcuda-rdc` and my result in performance
+  penalties compared to whole program compilation. Please note that NVIDIA's
+  :program:`nvcc` must be used for linking.
+
 Internal API Changes
 --------------------
 

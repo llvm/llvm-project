@@ -21,6 +21,11 @@
 
 # RUN: not ld.lld --fatal-warnings --warn-backrefs -o %t.exe %t2.a %t1.o 2>&1 | FileCheck %s
 # RUN: not ld.lld --fatal-warnings --warn-backrefs -o %t.exe %t2.a "-(" %t1.o "-)" 2>&1 | FileCheck %s
+# RUN: not ld.lld --fatal-warnings --warn-backrefs -o %t.exe --start-group %t2.a --end-group %t1.o 2>&1 | FileCheck %s
+
+# RUN: echo "GROUP(\"%t2.a\")" > %t3.script
+# RUN: not ld.lld --fatal-warnings --warn-backrefs -o %t.exe %t3.script %t1.o 2>&1 | FileCheck %s
+# RUN: ld.lld --fatal-warnings --warn-backrefs -o %t.exe "-(" %t3.script %t1.o "-)"
 
 # CHECK: backward reference detected: foo in {{.*}}1.o refers to {{.*}}2.a
 

@@ -647,6 +647,40 @@ multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
                           ZPRRegOp zprty>
 : sve_mem_cld_si_base<dtype, 0, asm, listty, zprty>;
 
+class sve_mem_cld_ss_base<bits<4> dtype, bit ff, dag iops, string asm,
+                          RegisterOperand VecList>
+: I<(outs VecList:$Zt), iops,
+  asm, "\t$Zt, $Pg/z, [$Rn, $Rm]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zt;
+  bits<3> Pg;
+  bits<5> Rm;
+  bits<5> Rn;
+  let Inst{31-25} = 0b1010010;
+  let Inst{24-21} = dtype;
+  let Inst{20-16} = Rm;
+  let Inst{15-14} = 0b01;
+  let Inst{13}    = ff;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+  let Uses = !if(!eq(ff, 1), [FFR], []);
+  let Defs = !if(!eq(ff, 1), [FFR], []);
+}
+
+multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
+                          ZPRRegOp zprty, RegisterOperand gprty> {
+  def "" : sve_mem_cld_ss_base<dtype, 0, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
+                               asm, listty>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
+                 (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
+}
+
+
 class sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
                      string asm, Operand immtype>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, immtype:$imm4),

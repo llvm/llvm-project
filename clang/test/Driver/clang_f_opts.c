@@ -302,8 +302,6 @@
 // RUN: -fkeep-inline-functions                                               \
 // RUN: -fno-keep-inline-functions                                            \
 // RUN: -freorder-blocks                                                      \
-// RUN: -falign-functions                                                     \
-// RUN: -falign-functions=1                                                   \
 // RUN: -ffloat-store                                                         \
 // RUN: -fgcse                                                                \
 // RUN: -fivopts                                                              \
@@ -370,8 +368,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fkeep-inline-functions' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-keep-inline-functions' is not supported
 // CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
-// CHECK-WARNING-DAG: optimization flag '-falign-functions' is not supported
-// CHECK-WARNING-DAG: optimization flag '-falign-functions=1' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ffloat-store' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fgcse' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fivopts' is not supported

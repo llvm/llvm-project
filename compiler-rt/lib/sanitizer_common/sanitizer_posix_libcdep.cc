@@ -346,11 +346,7 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
   // `open` (e.g. TSAN, ESAN), then you'll get a failure during initialization.
   // TODO(flowerhack): Fix the implementation of GetNamedMappingFd to solve
   // this problem.
-  if (fixed_addr) {
-    base_ = MmapFixedNoAccess(fixed_addr, size);
-  } else {
-    base_ = MmapNoAccess(size);
-  }
+  base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size) : MmapNoAccess(size);
   size_ = size;
   name_ = name;
   (void)os_handle_;  // unsupported
@@ -368,16 +364,14 @@ uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size) {
 }
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {
-  void* addr_as_void = reinterpret_cast<void*>(addr);
-  uptr base_as_uptr = reinterpret_cast<uptr>(base_);
-  // Only unmap at the beginning or end of the range.
-  CHECK((addr_as_void == base_) || (addr + size == base_as_uptr + size_));
   CHECK_LE(size, size_);
+  if (addr == reinterpret_cast<uptr>(base_))
+    // If we unmap the whole range, just null out the base.
+    base_ = (size == size_) ? nullptr : reinterpret_cast<void*>(addr + size);
+  else
+    CHECK_EQ(addr + size, reinterpret_cast<uptr>(base_) + size_);
+  size_ -= size;
   UnmapOrDie(reinterpret_cast<void*>(addr), size);
-  if (addr_as_void == base_) {
-    base_ = reinterpret_cast<void*>(addr + size);
-  }
-  size_ = size_ - size;
 }
 
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {

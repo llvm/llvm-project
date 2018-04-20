@@ -278,15 +278,13 @@ defm : JWriteResIntPair<WriteJump,  [JALU01], 1>;
 def : WriteRes<WriteSystem,     [JALU01]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [JALU01]> { let Latency = 100; }
 def : WriteRes<WriteFence,  [JSAGU]>;
+
 // Nops don't have dependencies, so there's no actual latency, but we set this
 // to '1' to tell the scheduler that the nop uses an ALU slot for a cycle.
 def : WriteRes<WriteNop, [JALU01]> { let Latency = 1; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Floating point. This covers both scalar and vector operations.
-// FIXME: should we bother splitting JFPU pipe + unit stages for fast instructions?
-// FIXME: Double precision latencies
-// FIXME: SS vs PS latencies
 ////////////////////////////////////////////////////////////////////////////////
 
 def  : WriteRes<WriteFLoad,        [JLAGU, JFPU01, JFPX]> { let Latency = 5; }
@@ -311,7 +309,6 @@ defm : JWriteResFpuPair<WriteFVarShuffle256, [JFPU01, JFPX],  1>; // NOTE: Doesn
 
 ////////////////////////////////////////////////////////////////////////////////
 // Conversions.
-// FIXME: integer pipes
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : JWriteResFpuPair<WriteCvtF2I,       [JFPU1, JSTC], 3>; // Float -> Integer.
@@ -344,7 +341,7 @@ def JWriteCVTF2SILd : SchedWriteRes<[JLAGU, JFPU1, JSTC, JFPA, JALU0]> {
 }
 def : InstRW<[JWriteCVTF2SILd], (instregex "(V)?CVT(T?)S(D|S)2SI(64)?rm")>;
 
-// FIXME: f+3 ST,LD+STC latency
+// FIXME: f+3 ST, LD+STC latency
 def JWriteCVTSI2F : SchedWriteRes<[JFPU1, JSTC]> {
   let Latency = 9;
   let NumMicroOps = 2;
@@ -488,10 +485,6 @@ def : InstRW<[JWriteDPPDLd], (instrs DPPDrmi, VDPPDrmi)>;
 // SSE4A instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def JWriteEXTRQ: SchedWriteRes<[JFPU01, JVALU]> {
-}
-def : InstRW<[JWriteEXTRQ], (instrs EXTRQ, EXTRQI)>;
-
 def JWriteINSERTQ: SchedWriteRes<[JFPU01, JVALU]> {
   let Latency = 2;
   let ResourceCycles = [1, 4];
@@ -502,20 +495,10 @@ def : InstRW<[JWriteINSERTQ], (instrs INSERTQ, INSERTQI)>;
 // F16C instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def JWriteCVT3: SchedWriteRes<[JFPU1, JSTC]> {
-  let Latency = 3;
-}
-def : InstRW<[JWriteCVT3], (instrs VCVTPS2PHrr, VCVTPH2PSrr)>;
-
 def JWriteCVT3St: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 3;
 }
 def : InstRW<[JWriteCVT3St], (instrs VCVTPS2PHmr)>;
-
-def JWriteCVT3Ld: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
-  let Latency = 8;
-}
-def : InstRW<[JWriteCVT3Ld], (instrs VCVTPH2PSrm)>;
 
 def JWriteCVTPS2PHY: SchedWriteRes<[JFPU1, JSTC, JFPX]> {
   let Latency = 6;

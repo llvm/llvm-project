@@ -419,7 +419,7 @@ namespace llvm {
 
   /// This pass performs outlining on machine instructions directly before
   /// printing assembly.
-  ModulePass *createMachineOutlinerPass(bool OutlineFromLinkOnceODRs = false);
+  ModulePass *createMachineOutlinerPass();
 
   /// This pass expands the experimental reduction intrinsics into sequences of
   /// shuffles.

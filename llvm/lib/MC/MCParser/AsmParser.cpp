@@ -691,7 +691,11 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
     PlatformParser.reset(createELFAsmParser());
     break;
   case MCObjectFileInfo::IsWasm:
-    llvm_unreachable("Wasm parsing not supported yet");
+    // TODO: WASM will need its own MCAsmParserExtension implementation, but
+    // for now we can re-use the ELF one, since the directives can be the
+    // same for now, and this makes the -triple=wasm32-unknown-unknown-wasm
+    // path work.
+    PlatformParser.reset(createELFAsmParser());
     break;
   }
 
@@ -1305,7 +1309,7 @@ AsmParser::applyModifierToExpr(const MCExpr *E,
 /// the End argument will be filled with the last location pointed to the '>'
 /// character.
 
-/// There is a gap between the AltMacro's documentation and the single quote implementation. 
+/// There is a gap between the AltMacro's documentation and the single quote implementation.
 /// GCC does not fully support this feature and so we will not support it.
 /// TODO: Adding single quote as a string.
 bool AsmParser::isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
@@ -2204,7 +2208,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 }
 
 // Parse and erase curly braces marking block start/end
-bool 
+bool
 AsmParser::parseCurlyBlockScope(SmallVectorImpl<AsmRewrite> &AsmStrRewrites) {
   // Identify curly brace marking block start/end
   if (Lexer.isNot(AsmToken::LCurly) && Lexer.isNot(AsmToken::RCurly))

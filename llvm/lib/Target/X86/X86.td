@@ -563,7 +563,8 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureSlowIncDec,
   FeatureSlowPMULLD,
   FeatureRDRAND,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeaturePOPCNTFalseDeps
 ]>;
 def : SilvermontProc<"silvermont">;
 def : SilvermontProc<"slm">; // Legacy alias.
@@ -607,7 +608,10 @@ def GLMFeatures : ProcessorFeatures<[], [
 ]>;
 
 class GoldmontProc<string Name> : ProcModel<Name, SLMModel,
-      GLMFeatures.Value, [ ProcIntelGLM ]>;
+      GLMFeatures.Value, [
+  ProcIntelGLM,
+  FeaturePOPCNTFalseDeps
+]>;
 def : GoldmontProc<"goldmont">;
 
 class GoldmontPlusProc<string Name> : ProcModel<Name, SLMModel,

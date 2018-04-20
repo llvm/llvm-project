@@ -207,18 +207,48 @@ createSymbolResolver(LookupFlagsFn &&LookupFlags, LookupFn &&Lookup) {
 }
 
 /// @brief Tracks responsibility for materialization.
+///
+/// An instance of this class is passed to MaterializationUnits when their
+/// materialize method is called. It allows MaterializationUnits to resolve and
+/// finalize symbols, or abandon materialization by notifying any unmaterialized
+/// symbols of an error.
 class MaterializationResponsibility {
 public:
+  /// @brief Create a MaterializationResponsibility for the given VSO and
+  ///        initial symbols.
   MaterializationResponsibility(VSO &V, SymbolFlagsMap SymbolFlags);
+
   MaterializationResponsibility(MaterializationResponsibility &&) = default;
   MaterializationResponsibility &
   operator=(MaterializationResponsibility &&) = default;
+
+  /// @brief Destruct a MaterializationResponsibility instance. In debug mode
+  ///        this asserts that all symbols being tracked have been either
+  ///        finalized or notified of an error.
   ~MaterializationResponsibility();
-  MaterializationResponsibility takeResponsibility(SymbolNameSet Symbols);
+
+  /// @brief Returns the target VSO that these symbols are being materialized
+  ///        into.
   const VSO &getTargetVSO() const { return V; }
+
+  /// @brief Resolves the given symbols. Individual calls to this method may
+  ///        resolve a subset of the symbols, but all symbols must have been
+  ///        resolved prior to calling finalize.
   void resolve(const SymbolMap &Symbols);
+
+  /// @brief Finalizes all symbols tracked by this instance.
   void finalize();
+
+  /// @brief Notify all unfinalized symbols that an error has occurred.
+  ///        This method should be called if materialization of any symbol is
+  ///        abandoned.
   void notifyMaterializationFailed();
+
+  /// @brief Transfers responsibility for the given symbols to a new
+  ///        MaterializationResponsibility class. This is useful if a
+  ///        MaterializationUnit wants to transfer responsibility for a subset
+  ///        of symbols to another MaterializationUnit or utility.
+  MaterializationResponsibility delegate(SymbolNameSet Symbols);
 
 private:
   VSO &V;
@@ -262,6 +292,7 @@ private:
 /// (since a VSO's address is fixed).
 class VSO {
   friend class ExecutionSession;
+  friend class MaterializationResponsibility;
 
 public:
   enum RelativeLinkageStrength {
@@ -316,16 +347,6 @@ public:
   /// @brief Adds the given symbols to the mapping as lazy symbols.
   Error defineLazy(std::unique_ptr<MaterializationUnit> Source);
 
-  /// @brief Add the given symbol/address mappings to the dylib, but do not
-  ///        mark the symbols as finalized yet.
-  void resolve(const SymbolMap &SymbolValues);
-
-  /// @brief Finalize the given symbols.
-  void finalize(const SymbolNameSet &SymbolsToFinalize);
-
-  /// @brief Notify the VSO that the given symbols failed to materialized.
-  void notifyMaterializationFailed(const SymbolNameSet &Names);
-
   /// @brief Look up the flags for the given symbols.
   ///
   /// Returns the flags for the give symbols, together with the set of symbols
@@ -348,6 +369,16 @@ public:
                       SymbolNameSet Symbols);
 
 private:
+  /// @brief Add the given symbol/address mappings to the dylib, but do not
+  ///        mark the symbols as finalized yet.
+  void resolve(const SymbolMap &SymbolValues);
+
+  /// @brief Finalize the given symbols.
+  void finalize(const SymbolNameSet &SymbolsToFinalize);
+
+  /// @brief Notify the VSO that the given symbols failed to materialized.
+  void notifyMaterializationFailed(const SymbolNameSet &Names);
+
   class UnmaterializedInfo {
   public:
     UnmaterializedInfo(std::unique_ptr<MaterializationUnit> MU);
@@ -389,6 +420,11 @@ private:
     // Change definition due to override. Only usable prior to materialization.
     void replaceWith(VSO &V, SymbolStringPtr Name, JITSymbolFlags Flags,
                      UnmaterializedInfoIterator NewUMII);
+
+    // Abandon old definition and move to materializing state.
+    // There is no need to call notifyMaterializing after this.
+    void replaceMaterializing(VSO &V, SymbolStringPtr Name,
+                              JITSymbolFlags NewFlags);
 
     // Notify this entry that it is being materialized.
     void notifyMaterializing();

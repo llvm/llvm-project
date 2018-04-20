@@ -79,6 +79,9 @@ const ConstructionContext *ConstructionContext::createFromLayers(
                  ParentLayer->getTriggerStmt()))) {
           return create<TemporaryObjectConstructionContext>(C, BTE, MTE);
         }
+        // This is a constructor into a function argument. Not implemented yet.
+        if (isa<CallExpr>(ParentLayer->getTriggerStmt()))
+          return nullptr;
         // This is C++17 copy-elided construction into return statement.
         if (auto *RS = dyn_cast<ReturnStmt>(ParentLayer->getTriggerStmt())) {
           assert(!RS->getRetValue()->getType().getCanonicalType()
@@ -114,6 +117,9 @@ const ConstructionContext *ConstructionContext::createFromLayers(
       assert(TopLayer->isLast());
       return create<SimpleReturnedValueConstructionContext>(C, RS);
     }
+    // This is a constructor into a function argument. Not implemented yet.
+    if (isa<CallExpr>(TopLayer->getTriggerStmt()))
+      return nullptr;
     llvm_unreachable("Unexpected construction context with statement!");
   } else if (const CXXCtorInitializer *I = TopLayer->getTriggerInit()) {
     assert(TopLayer->isLast());

@@ -68,6 +68,11 @@ N: Simon Dardis
 E: simon.dardis@mips.com
 D: MIPS Backend (lib/Target/Mips/*)
 
+N: Andrea Di Biagio
+E: andrea.dibiagio@sony.com
+E: andrea.dibiagio@gmail.com
+D: llvm-mca
+
 N: Duncan P. N. Exon Smith
 E: dexonsmith@apple.com
 D: Branch weights and BlockFrequencyInfo

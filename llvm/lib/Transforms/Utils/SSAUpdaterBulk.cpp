@@ -61,7 +61,7 @@ void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
   assert(Rewrites.find(Var) != Rewrites.end() && "Should add variable first!");
   DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
                << " in " << getUserBB(U)->getName() << "\n");
-  Rewrites[Var].Uses.insert(U);
+  Rewrites[Var].Uses.push_back(U);
 }
 
 /// Return true if the SSAUpdater already has a value for the specified variable
@@ -90,7 +90,8 @@ Value *SSAUpdaterBulk::computeValueAt(BasicBlock *BB, RewriteInfo &R,
 static void
 ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
                     const SmallPtrSetImpl<BasicBlock *> &DefBlocks,
-                    SmallPtrSetImpl<BasicBlock *> &LiveInBlocks) {
+                    SmallPtrSetImpl<BasicBlock *> &LiveInBlocks,
+                    PredIteratorCache &PredCache) {
   // To determine liveness, we must iterate through the predecessors of blocks
   // where the def is live.  Blocks are added to the worklist if we need to
   // check their predecessors.  Start with all the using blocks.
@@ -110,7 +111,7 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
     // Since the value is live into BB, it is either defined in a predecessor or
     // live into it to.  Add the preds to the worklist unless they are a
     // defining block.
-    for (BasicBlock *P : predecessors(BB)) {
+    for (BasicBlock *P : PredCache.get(BB)) {
       // The value is not live into a predecessor if it defines the value.
       if (DefBlocks.count(P))
         continue;
@@ -125,7 +126,7 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
 /// requested uses update.
 void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
                                     SmallVectorImpl<PHINode *> *InsertedPHIs) {
-  for (auto P : Rewrites) {
+  for (auto &P : Rewrites) {
     // Compute locations for new phi-nodes.
     // For that we need to initialize DefBlocks from definitions in R.Defines,
     // UsingBlocks from uses in R.Uses, then compute LiveInBlocks, and then use
@@ -137,24 +138,24 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
                  << R.Uses.size() << " use(s)\n");
 
     SmallPtrSet<BasicBlock *, 2> DefBlocks;
-    for (auto Def : R.Defines)
+    for (auto &Def : R.Defines)
       DefBlocks.insert(Def.first);
     IDF.setDefiningBlocks(DefBlocks);
 
     SmallPtrSet<BasicBlock *, 2> UsingBlocks;
-    for (auto U : R.Uses)
+    for (Use *U : R.Uses)
       UsingBlocks.insert(getUserBB(U));
 
     SmallVector<BasicBlock *, 32> IDFBlocks;
     SmallPtrSet<BasicBlock *, 32> LiveInBlocks;
-    ComputeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks);
+    ComputeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks, PredCache);
     IDF.resetLiveInBlocks();
     IDF.setLiveInBlocks(LiveInBlocks);
     IDF.calculate(IDFBlocks);
 
     // We've computed IDF, now insert new phi-nodes there.
     SmallVector<PHINode *, 4> InsertedPHIsForVar;
-    for (auto FrontierBB : IDFBlocks) {
+    for (auto *FrontierBB : IDFBlocks) {
       IRBuilder<> B(FrontierBB, FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
       R.Defines[FrontierBB] = PN;
@@ -171,9 +172,13 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     }
 
     // Rewrite actual uses with the inserted definitions.
-    for (auto U : R.Uses) {
+    SmallPtrSet<Use *, 4> ProcessedUses;
+    for (Use *U : R.Uses) {
+      if (!ProcessedUses.insert(U).second)
+        continue;
       Value *V = computeValueAt(getUserBB(U), R, DT);
       Value *OldVal = U->get();
+      assert(OldVal && "Invalid use!");
       // Notify that users of the existing value that it is being replaced.
       if (OldVal != V && OldVal->hasValueHandle())
         ValueHandleBase::ValueIsRAUWd(OldVal, V);

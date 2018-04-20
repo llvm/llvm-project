@@ -315,6 +315,9 @@ struct ElfSym {
   static Defined *MipsGp;
   static Defined *MipsGpDisp;
   static Defined *MipsLocalGp;
+
+  // __rela_iplt_end or __rel_iplt_end
+  static Defined *RelaIpltEnd;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived

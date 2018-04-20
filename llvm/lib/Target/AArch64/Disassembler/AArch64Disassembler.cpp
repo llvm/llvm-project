@@ -55,6 +55,9 @@ static DecodeStatus DecodeFPR16RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeFPR8RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const void *Decoder);
+static DecodeStatus DecodeGPR64commonRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder);
 static DecodeStatus DecodeGPR64RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const void *Decoder);
@@ -401,6 +404,17 @@ static const unsigned GPR64DecoderTable[] = {
     AArch64::X25, AArch64::X26, AArch64::X27, AArch64::X28, AArch64::FP,
     AArch64::LR,  AArch64::XZR
 };
+
+static DecodeStatus DecodeGPR64commonRegisterClass(MCInst &Inst, unsigned RegNo,
+                                                   uint64_t Addr,
+                                                   const void *Decoder) {
+  if (RegNo > 30)
+    return Fail;
+
+  unsigned Register = GPR64DecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
 
 static DecodeStatus DecodeGPR64RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Addr,

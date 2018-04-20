@@ -8,7 +8,6 @@ FileCheck patterns.
 
 import argparse
 from collections import defaultdict
-import difflib
 import glob
 import os
 import sys
@@ -313,13 +312,7 @@ def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
   if input_lines == output_lines:
     sys.stderr.write('      [unchanged]\n')
     return
-
-  diff = list(difflib.Differ().compare(input_lines, output_lines))
-  sys.stderr.write(
-    '      [{} lines total ({} added, {} removed)]\n'.format(
-      len(output_lines),
-      len([l for l in diff if l[0] == '+']),
-      len([l for l in diff if l[0] == '-'])))
+  sys.stderr.write('      [{} lines total]\n'.format(len(output_lines)))
 
   if args.verbose:
     sys.stderr.write(

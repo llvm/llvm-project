@@ -19,6 +19,7 @@
 #include "lldb/Core/State.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferLLVM.h"
@@ -31,8 +32,52 @@
 // C includes
 // C++ includes
 
+using namespace lldb;
 using namespace lldb_private;
 using namespace minidump;
+
+//------------------------------------------------------------------
+/// A placeholder module used for minidumps, where the original
+/// object files may not be available (so we can't parse the object
+/// files to extract the set of sections/segments)
+///
+/// This placeholder module has a single synthetic section (.module_image)
+/// which represents the module memory range covering the whole module.
+//------------------------------------------------------------------
+class PlaceholderModule : public Module {
+public:
+  PlaceholderModule(const FileSpec &file_spec, const ArchSpec &arch) :
+    Module(file_spec, arch) {}
+
+  // Creates a synthetic module section covering the whole module image
+  // (and sets the section load address as well)
+  void CreateImageSection(const MinidumpModule *module, Target& target) {
+    const ConstString section_name(".module_image");
+    lldb::SectionSP section_sp(new Section(
+        shared_from_this(),     // Module to which this section belongs.
+        nullptr,                // ObjectFile
+        0,                      // Section ID.
+        section_name,           // Section name.
+        eSectionTypeContainer,  // Section type.
+        module->base_of_image,  // VM address.
+        module->size_of_image,  // VM size in bytes of this section.
+        0,                      // Offset of this section in the file.
+        module->size_of_image,  // Size of the section as found in the file.
+        12,                     // Alignment of the section (log2)
+        0,                      // Flags for this section.
+        1));                    // Number of host bytes per target byte
+    section_sp->SetPermissions(ePermissionsExecutable | ePermissionsReadable);
+    GetSectionList()->AddSection(section_sp);
+    target.GetSectionLoadList().SetSectionLoadAddress(
+        section_sp, module->base_of_image);
+  }
+
+  ObjectFile *GetObjectFile() override { return nullptr; }
+
+  SectionList *GetSectionList() override {
+    return Module::GetUnifiedSectionList();
+  }
+};
 
 ConstString ProcessMinidump::GetPluginNameStatic() {
   static ConstString g_name("minidump");
@@ -276,12 +321,24 @@ void ProcessMinidump::ReadModuleList() {
       m_is_wow64 = true;
     }
 
-    const auto file_spec = FileSpec(name.getValue(), true);
+    const auto file_spec =
+        FileSpec(name.getValue(), true, GetArchitecture().GetTriple());
     ModuleSpec module_spec = file_spec;
     Status error;
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
     if (!module_sp || error.Fail()) {
-      continue;
+      // We failed to locate a matching local object file. Fortunately,
+      // the minidump format encodes enough information about each module's
+      // memory range to allow us to create placeholder modules.
+      //
+      // This enables most LLDB functionality involving address-to-module
+      // translations (ex. identifing the module for a stack frame PC) and
+      // modules/sections commands (ex. target modules list, ...)
+      auto placeholder_module =
+          std::make_shared<PlaceholderModule>(file_spec, GetArchitecture());
+      placeholder_module->CreateImageSection(module, GetTarget());
+      module_sp = placeholder_module;
+      GetTarget().GetImages().Append(module_sp);
     }
 
     if (log) {

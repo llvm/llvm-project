@@ -274,20 +274,16 @@ void UnmapOrDieVmar(void *addr, uptr size, zx_handle_t target_vmar) {
   DecreaseTotalMmap(size);
 }
 
-void ReservedAddressRange::Unmap(uptr fixed_addr, uptr size) {
-  uptr offset = fixed_addr - reinterpret_cast<uptr>(base_);
-  uptr addr = reinterpret_cast<uptr>(base_) + offset;
-  void *addr_as_void = reinterpret_cast<void *>(addr);
-  uptr base_as_uptr = reinterpret_cast<uptr>(base_);
-  // Only unmap at the beginning or end of the range.
-  CHECK((addr_as_void == base_) || (addr + size == base_as_uptr + size_));
+void ReservedAddressRange::Unmap(uptr addr, uptr size) {
   CHECK_LE(size, size_);
+  if (addr == reinterpret_cast<uptr>(base_))
+    // If we unmap the whole range, just null out the base.
+    base_ = (size == size_) ? nullptr : reinterpret_cast<void*>(addr + size);
+  else
+    CHECK_EQ(addr + size, reinterpret_cast<uptr>(base_) + size_);
+  size_ -= size;
   UnmapOrDieVmar(reinterpret_cast<void *>(addr), size,
                  static_cast<zx_handle_t>(os_handle_));
-  if (addr_as_void == base_) {
-    base_ = reinterpret_cast<void *>(addr + size);
-  }
-  size_ = size_ - size;
 }
 
 // This should never be called.

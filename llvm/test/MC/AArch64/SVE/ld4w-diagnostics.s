@@ -5,12 +5,12 @@
 // Immediate out of lower bound [-32, 28].
 
 ld4w {z12.s, z13.s, z14.s, z15.s}, p4/z, [x12, #-36, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-32, 28].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28].
 // CHECK-NEXT: ld4w {z12.s, z13.s, z14.s, z15.s}, p4/z, [x12, #-36, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld4w {z7.s, z8.s, z9.s, z10.s}, p3/z, [x1, #32, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-32, 28].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28].
 // CHECK-NEXT: ld4w {z7.s, z8.s, z9.s, z10.s}, p3/z, [x1, #32, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -19,12 +19,12 @@ ld4w {z7.s, z8.s, z9.s, z10.s}, p3/z, [x1, #32, MUL VL]
 // Immediate not a multiple of four.
 
 ld4w {z12.s, z13.s, z14.s, z15.s}, p4/z, [x12, #-7, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-32, 28].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28].
 // CHECK-NEXT: ld4w {z12.s, z13.s, z14.s, z15.s}, p4/z, [x12, #-7, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld4w {z7.s, z8.s, z9.s, z10.s}, p3/z, [x1, #5, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-32, 28].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28].
 // CHECK-NEXT: ld4w {z7.s, z8.s, z9.s, z10.s}, p3/z, [x1, #5, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

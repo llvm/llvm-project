@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.RetainCount -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.RetainCount -analyzer-inline-max-stack-depth=0 -verify %s
 
 #pragma clang arc_cf_code_audited begin
 typedef const void * CFTypeRef;
@@ -31,6 +32,19 @@ CFTypeRef SafeCFRetain(CFTypeRef cf) CF_RETURNS_RETAINED {
 // A "safe" variant of CFRelease that doesn't crash when a null pointer is
 // released. The CF_CONSUMED annotation seems reasonable here.
 void SafeCFRelease(CFTypeRef CF_CONSUMED cf) {
+  if (cf)
+    CFRelease(cf); // no-warning (when inlined)
+}
+
+// The same thing, just with a different naming style.
+CFTypeRef retainCFType(CFTypeRef cf) CF_RETURNS_RETAINED {
+  if (cf) {
+    return CFRetain(cf);
+  }
+  return cf;
+}
+
+void releaseCFType(CFTypeRef CF_CONSUMED cf) {
   if (cf)
     CFRelease(cf); // no-warning (when inlined)
 }
@@ -69,4 +83,11 @@ void falseReleaseNotOwned(CFTypeRef cf) {
   escape(cf);
   SafeCFRelease(cf);
   SafeCFRelease(cf); // no-warning after inlining this.
+}
+
+void testTheOtherNamingConvention(CFTypeRef cf) {
+  retainCFType(cf);
+  retainCFType(cf);
+  releaseCFType(cf);
+  releaseCFType(cf); // no-warning
 }

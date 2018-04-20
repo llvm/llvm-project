@@ -883,21 +883,22 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
 //===----------------------------------------------------------------------===//
 
 static bool isRetain(const FunctionDecl *FD, StringRef FName) {
-  return FName.endswith("Retain");
+  return FName.startswith_lower("retain") || FName.endswith_lower("retain");
 }
 
 static bool isRelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.endswith("Release");
+  return FName.startswith_lower("release") || FName.endswith_lower("release");
 }
 
 static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.endswith("Autorelease");
+  return FName.startswith_lower("autorelease") ||
+         FName.endswith_lower("autorelease");
 }
 
 static bool isMakeCollectable(const FunctionDecl *FD, StringRef FName) {
   // FIXME: Remove FunctionDecl parameter.
   // FIXME: Is it really okay if MakeCollectable isn't a suffix?
-  return FName.find("MakeCollectable") != StringRef::npos;
+  return FName.find_lower("MakeCollectable") != StringRef::npos;
 }
 
 static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {

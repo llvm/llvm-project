@@ -58,6 +58,8 @@ public:
   bool IsMathErrnoDefault() const override { return false; }
   bool IsObjCNonFragileABIDefault() const override { return true; }
   bool isPIEDefault() const override { return true; }
+  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const override;
 
   unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     return 2;
