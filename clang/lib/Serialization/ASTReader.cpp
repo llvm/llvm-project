@@ -4966,7 +4966,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case SUBMODULE_DEFINITION: {
-      if (Record.size() < 8) {
+      if (Record.size() < 12) {
         Error("malformed module definition");
         return Failure;
       }
@@ -4985,6 +4985,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       bool InferExplicitSubmodules = Record[Idx++];
       bool InferExportWildcard = Record[Idx++];
       bool ConfigMacrosExhaustive = Record[Idx++];
+      bool ModuleMapIsPrivate = Record[Idx++];
 
       Module *ParentModule = nullptr;
       if (Parent)
@@ -5033,6 +5034,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       CurrentModule->InferExplicitSubmodules = InferExplicitSubmodules;
       CurrentModule->InferExportWildcard = InferExportWildcard;
       CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
+      CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
