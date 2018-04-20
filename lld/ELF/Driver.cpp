@@ -987,6 +987,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       if (!InputFile::IsInGroup)
         error("stray --end-group");
       InputFile::IsInGroup = false;
+      ++InputFile::NextGroupId;
       break;
     case OPT_start_lib:
       InLib = true;
