@@ -686,9 +686,11 @@ SubtargetEmitter::EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
 
   return CostTblIndex;
 }
+
 static bool EmitPfmIssueCountersTable(const CodeGenProcModel &ProcModel,
                                       raw_ostream &OS) {
-  std::vector<const Record *> CounterDefs(ProcModel.ProcResourceDefs.size());
+  unsigned NumCounterDefs = 1 + ProcModel.ProcResourceDefs.size();
+  std::vector<const Record *> CounterDefs(NumCounterDefs);
   bool HasCounters = false;
   for (const Record *CounterDef : ProcModel.PfmIssueCounterDefs) {
     const Record *&CD = CounterDefs[ProcModel.getProcResourceIdx(
@@ -706,16 +708,19 @@ static bool EmitPfmIssueCountersTable(const CodeGenProcModel &ProcModel,
   }
   OS << "\nstatic const char* " << ProcModel.ModelName
      << "PfmIssueCounters[] = {\n";
-  for (const Record *CounterDef : CounterDefs) {
+  for (unsigned i = 0; i != NumCounterDefs; ++i) {
+    const Record *CounterDef = CounterDefs[i];
     if (CounterDef) {
       const auto PfmCounters = CounterDef->getValueAsListOfStrings("Counters");
       if (PfmCounters.empty())
         PrintFatalError(CounterDef->getLoc(), "empty counter list");
-      for (const StringRef CounterName : PfmCounters)
-        OS << "  \"" << CounterName << ",\"";
-      OS << ",  //" << CounterDef->getValueAsDef("Resource")->getName() << "\n";
+      OS << "  \"" << PfmCounters[0];
+      for (unsigned p = 1, e = PfmCounters.size(); p != e; ++p)
+        OS << ",\" \"" << PfmCounters[p];
+      OS << "\",  // #" << i << " = ";
+      OS << CounterDef->getValueAsDef("Resource")->getName() << "\n";
     } else {
-      OS << "  nullptr,\n";
+      OS << "  nullptr, // #" << i << "\n";
     }
   }
   OS << "};\n";

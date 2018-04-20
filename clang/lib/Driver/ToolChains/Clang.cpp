@@ -3323,6 +3323,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CheckCodeGenerationOptions(D, Args);
 
+  unsigned FunctionAlignment = ParseFunctionAlignment(getToolChain(), Args);
+  assert(FunctionAlignment <= 31 && "function alignment will be truncated!");
+  if (FunctionAlignment) {
+    CmdArgs.push_back("-function-alignment");
+    CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
+  }
+
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;
   bool IsPIE;
@@ -4582,31 +4589,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Setup statistics file output.
-  if (const Arg *A = Args.getLastArg(options::OPT_save_stats_EQ)) {
-    StringRef SaveStats = A->getValue();
-
-    SmallString<128> StatsFile;
-    bool DoSaveStats = false;
-    if (SaveStats == "obj") {
-      if (Output.isFilename()) {
-        StatsFile.assign(Output.getFilename());
-        llvm::sys::path::remove_filename(StatsFile);
-      }
-      DoSaveStats = true;
-    } else if (SaveStats == "cwd") {
-      DoSaveStats = true;
-    } else {
-      D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << SaveStats;
-    }
-
-    if (DoSaveStats) {
-      StringRef BaseName = llvm::sys::path::filename(Input.getBaseInput());
-      llvm::sys::path::append(StatsFile, BaseName);
-      llvm::sys::path::replace_extension(StatsFile, "stats");
-      CmdArgs.push_back(Args.MakeArgString(Twine("-stats-file=") +
-                                           StatsFile));
-    }
-  }
+  SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
+  if (!StatsFile.empty())
+    CmdArgs.push_back(Args.MakeArgString(Twine("-stats-file=") + StatsFile));
 
   // Forward -Xclang arguments to -cc1, and -mllvm arguments to the LLVM option
   // parser.

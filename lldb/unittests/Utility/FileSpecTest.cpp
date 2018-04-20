@@ -167,7 +167,7 @@ TEST(FileSpecTest, EqualDotsWindows) {
       {R"(C:\foo\bar)", R"(C:\foo\bar\.)"},
   };
 
-  for(const auto &test: tests) {
+  for (const auto &test : tests) {
     FileSpec one(test.first, false, FileSpec::ePathSyntaxWindows);
     FileSpec two(test.second, false, FileSpec::ePathSyntaxWindows);
     EXPECT_NE(one, two);
@@ -176,7 +176,6 @@ TEST(FileSpecTest, EqualDotsWindows) {
     Compare(one, two, !full_match, remove_backup_dots, match);
     Compare(one, two, !full_match, !remove_backup_dots, !match);
   }
-
 }
 
 TEST(FileSpecTest, EqualDotsPosix) {
@@ -191,7 +190,7 @@ TEST(FileSpecTest, EqualDotsPosix) {
       {R"(/foo/bar)", R"(/foo/bar/.)"},
   };
 
-  for(const auto &test: tests) {
+  for (const auto &test : tests) {
     FileSpec one(test.first, false, FileSpec::ePathSyntaxPosix);
     FileSpec two(test.second, false, FileSpec::ePathSyntaxPosix);
     EXPECT_NE(one, two);
@@ -200,7 +199,6 @@ TEST(FileSpecTest, EqualDotsPosix) {
     Compare(one, two, !full_match, remove_backup_dots, match);
     Compare(one, two, !full_match, !remove_backup_dots, !match);
   }
-
 }
 
 TEST(FileSpecTest, EqualDotsPosixRoot) {
@@ -208,10 +206,12 @@ TEST(FileSpecTest, EqualDotsPosixRoot) {
   const bool remove_backup_dots = true;
   const bool match = true;
   std::pair<const char *, const char *> tests[] = {
-      {R"(/)", R"(/..)"}, {R"(/)", R"(/.)"}, {R"(/)", R"(/foo/..)"},
+      {R"(/)", R"(/..)"},
+      {R"(/)", R"(/.)"},
+      {R"(/)", R"(/foo/..)"},
   };
 
-  for(const auto &test: tests) {
+  for (const auto &test : tests) {
     FileSpec one(test.first, false, FileSpec::ePathSyntaxPosix);
     FileSpec two(test.second, false, FileSpec::ePathSyntaxPosix);
     EXPECT_NE(one, two);

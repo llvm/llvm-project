@@ -18,6 +18,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -301,13 +302,13 @@ void splitAndWriteThinLTOBitcode(
   promoteInternals(*MergedM, M, ModuleId, CfiFunctions);
   promoteInternals(M, *MergedM, ModuleId, CfiFunctions);
 
+  auto &Ctx = MergedM->getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto V : CfiFunctions) {
     Function &F = *cast<Function>(V);
     SmallVector<MDNode *, 2> Types;
     F.getMetadata(LLVMContext::MD_type, Types);
 
-    auto &Ctx = MergedM->getContext();
     SmallVector<Metadata *, 4> Elts;
     Elts.push_back(MDString::get(Ctx, F.getName()));
     CfiFunctionLinkage Linkage;
@@ -336,7 +337,6 @@ void splitAndWriteThinLTOBitcode(
       continue;
 
     auto *F = cast<Function>(A.getAliasee());
-    auto &Ctx = MergedM->getContext();
     SmallVector<Metadata *, 4> Elts;
 
     Elts.push_back(MDString::get(Ctx, A.getName()));
@@ -352,6 +352,25 @@ void splitAndWriteThinLTOBitcode(
   if (!FunctionAliases.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
     for (auto MD : FunctionAliases)
+      NMD->addOperand(MD);
+  }
+
+  SmallVector<MDNode *, 8> Symvers;
+  ModuleSymbolTable::CollectAsmSymvers(M, [&](StringRef Name, StringRef Alias) {
+    Function *F = M.getFunction(Name);
+    if (!F || F->use_empty())
+      return;
+
+    SmallVector<Metadata *, 2> Elts;
+    Elts.push_back(MDString::get(Ctx, Name));
+    Elts.push_back(MDString::get(Ctx, Alias));
+
+    Symvers.push_back(MDTuple::get(Ctx, Elts));
+  });
+
+  if (!Symvers.empty()) {
+    NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("symvers");
+    for (auto MD : Symvers)
       NMD->addOperand(MD);
   }
 

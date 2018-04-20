@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; Verify that DWARF v5 accelerator tables work with split-dwarf.
-; RUN: %llc_dwarf -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo \
+; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo \
 ; RUN:   -accel-tables=Dwarf -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump -debug-names - <%t | FileCheck %s
 

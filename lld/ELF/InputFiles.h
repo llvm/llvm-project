@@ -118,6 +118,7 @@ public:
   // ID. For more info, see checkDependency() in SymbolTable.cpp.
   uint32_t GroupId;
   static bool IsInGroup;
+  static uint32_t NextGroupId;
 
 protected:
   InputFile(Kind K, MemoryBufferRef M);
@@ -126,8 +127,6 @@ protected:
 
 private:
   const Kind FileKind;
-
-  static uint32_t NextGroupId;
 };
 
 template <typename ELFT> class ELFFileBase : public InputFile {

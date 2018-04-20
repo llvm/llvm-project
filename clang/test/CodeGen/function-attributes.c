@@ -71,7 +71,7 @@ void f15(void) {
 
 // PR5254
 // CHECK-LABEL: define void @f16
-// CHECK: [[ALIGN:#[0-9]+]]
+// CHECK: [[SR:#[0-9]+]]
 // CHECK: {
 void __attribute__((force_align_arg_pointer)) f16(void) {
 }
@@ -112,7 +112,7 @@ void f20(void) {
 // CHECK: attributes [[NUW]] = { nounwind optsize{{.*}} }
 // CHECK: attributes [[AI]] = { alwaysinline nounwind optsize{{.*}} }
 // CHECK: attributes [[NUW_OS_RN]] = { nounwind optsize readnone{{.*}} }
-// CHECK: attributes [[ALIGN]] = { nounwind optsize alignstack=16{{.*}} }
+// CHECK: attributes [[SR]] = { nounwind optsize{{.*}} "stackrealign"{{.*}} }
 // CHECK: attributes [[RT]] = { nounwind optsize returns_twice{{.*}} }
 // CHECK: attributes [[NR]] = { noreturn optsize }
 // CHECK: attributes [[NUW_RN]] = { nounwind optsize readnone }

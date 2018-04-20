@@ -2726,8 +2726,9 @@ let Predicates = [HasCLWB], SchedRW = [WriteLoad] in
 def CLWB       : I<0xAE, MRM6m, (outs), (ins i8mem:$src), "clwb\t$src",
                    [(int_x86_clwb addr:$src)]>, PD;
 
+let Predicates = [HasCLDEMOTE], SchedRW = [WriteLoad] in
 def CLDEMOTE : I<0x1C, MRM0m, (outs), (ins i8mem:$src), "cldemote\t$src",
-                   [(int_x86_cldemote addr:$src)]>, TB, Requires<[HasCLDEMOTE]>;
+                   [(int_x86_cldemote addr:$src)]>, TB;
 
 //===----------------------------------------------------------------------===//
 // Subsystems.

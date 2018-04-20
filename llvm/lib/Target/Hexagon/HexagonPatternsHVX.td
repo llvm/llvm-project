@@ -357,6 +357,11 @@ let Predicates = [UseHVX] in {
            (V6_vpackeb (HiVec $Vss), (LoVec $Vss))>;
   def: Pat<(VecI16 (trunc HWI32:$Vss)),
            (V6_vpackeh (HiVec $Vss), (LoVec $Vss))>;
+
+  def: Pat<(VecI16 (bswap HVI16:$Vs)),
+           (V6_vdelta HvxVR:$Vs, (V6_lvsplatw (A2_tfrsi 0x01010101)))>;
+  def: Pat<(VecI32 (bswap HVI32:$Vs)),
+           (V6_vdelta HvxVR:$Vs, (V6_lvsplatw (A2_tfrsi 0x03030303)))>;
 }
 
 class HvxSel_pat<InstHexagon MI, PatFrag RegPred>

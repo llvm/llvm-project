@@ -230,7 +230,8 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   assert(FS && "FS must be set.");
 
   llvm::SmallString<128> AbsoluteFilePath(FileName);
-  if (std::error_code ec = FS->makeAbsolute(AbsoluteFilePath))
+
+  if (FS->makeAbsolute(AbsoluteFilePath))
     return {};
 
   std::vector<OptionsSource> RawOptions =

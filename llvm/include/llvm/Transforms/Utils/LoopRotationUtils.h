@@ -24,11 +24,16 @@ class ScalarEvolution;
 struct SimplifyQuery;
 class TargetTransformInfo;
 
-/// \brief Convert a loop into a loop with bottom test.
-bool LoopRotation(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
-                  const TargetTransformInfo *TTI, AssumptionCache *AC,
-                  DominatorTree *DT, ScalarEvolution *SE,
-                  const SimplifyQuery &SQ);
+/// \brief Convert a loop into a loop with bottom test. It may
+/// perform loop latch simplication as well if the flag RotationOnly
+/// is false. The flag Threshold represents the size threshold of the loop
+/// header. If the loop header's size exceeds the threshold, the loop rotation
+/// will give up. The flag IsUtilMode controls the heuristic used in the
+/// LoopRotation. If it is true, the profitability heuristic will be ignored.
+bool LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
+                  AssumptionCache *AC, DominatorTree *DT, ScalarEvolution *SE,
+                  const SimplifyQuery &SQ, bool RotationOnly,
+                  unsigned Threshold, bool IsUtilMode);
 
 } // namespace llvm
 

@@ -77,5 +77,47 @@ TEST(BasicBlockTest, PhiRange) {
   }
 }
 
+#define CHECK_ITERATORS(Range1, Range2)                                        \
+  EXPECT_EQ(std::distance(Range1.begin(), Range1.end()),                       \
+            std::distance(Range2.begin(), Range2.end()));                      \
+  for (auto Pair : zip(Range1, Range2))                                        \
+    EXPECT_EQ(&std::get<0>(Pair), std::get<1>(Pair));
+
+TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
+  LLVMContext Ctx;
+
+  Module *M = new Module("MyModule", Ctx);
+  Type *ArgTy1[] = {Type::getInt32PtrTy(Ctx)};
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), ArgTy1, false);
+  Argument *V = new Argument(Type::getInt32Ty(Ctx));
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
+
+  Value *DbgAddr = Intrinsic::getDeclaration(M, Intrinsic::dbg_addr);
+  Value *DbgDeclare =
+      Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+  Value *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
+  Value *DIV = MetadataAsValue::get(Ctx, (Metadata *)nullptr);
+  SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
+
+  BasicBlock *BB1 = BasicBlock::Create(Ctx, "", F);
+  const BasicBlock *BBConst = BB1;
+  IRBuilder<> Builder1(BB1);
+
+  AllocaInst *Var = Builder1.CreateAlloca(Builder1.getInt8Ty());
+  Builder1.CreateCall(DbgValue, Args);
+  Instruction *AddInst = cast<Instruction>(Builder1.CreateAdd(V, V));
+  Instruction *MulInst = cast<Instruction>(Builder1.CreateMul(AddInst, V));
+  Builder1.CreateCall(DbgDeclare, Args);
+  Instruction *SubInst = cast<Instruction>(Builder1.CreateSub(MulInst, V));
+  Builder1.CreateCall(DbgAddr, Args);
+
+  SmallVector<Instruction *, 4> Exp = {Var, AddInst, MulInst, SubInst};
+  CHECK_ITERATORS(BB1->instructionsWithoutDebug(), Exp);
+  CHECK_ITERATORS(BBConst->instructionsWithoutDebug(), Exp);
+
+  delete M;
+  delete V;
+}
+
 } // End anonymous namespace.
 } // End llvm namespace.

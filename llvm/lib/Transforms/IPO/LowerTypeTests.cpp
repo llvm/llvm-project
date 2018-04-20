@@ -1947,6 +1947,24 @@ bool LowerTypeTestsModule::lower() {
     }
   }
 
+  // Emit .symver directives for exported functions, if they exist.
+  if (ExportSummary) {
+    if (NamedMDNode *SymversMD = M.getNamedMetadata("symvers")) {
+      for (auto Symver : SymversMD->operands()) {
+        assert(Symver->getNumOperands() >= 2);
+        StringRef SymbolName =
+            cast<MDString>(Symver->getOperand(0))->getString();
+        StringRef Alias = cast<MDString>(Symver->getOperand(1))->getString();
+
+        if (!ExportedFunctions.count(SymbolName))
+          continue;
+
+        M.appendModuleInlineAsm(
+            (llvm::Twine(".symver ") + SymbolName + ", " + Alias).str());
+      }
+    }
+  }
+
   return true;
 }
 

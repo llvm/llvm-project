@@ -128,6 +128,11 @@ void RecordStreamer::emitELFSymverDirective(StringRef AliasName,
   SymverAliasMap[Aliasee].push_back(AliasName);
 }
 
+iterator_range<RecordStreamer::const_symver_iterator>
+RecordStreamer::symverAliases() {
+  return {SymverAliasMap.begin(), SymverAliasMap.end()};
+}
+
 void RecordStreamer::flushSymverDirectives() {
   // Mapping from mangled name to GV.
   StringMap<const GlobalValue *> MangledNameMap;

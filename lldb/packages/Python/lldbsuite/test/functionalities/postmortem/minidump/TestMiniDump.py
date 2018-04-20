@@ -49,12 +49,12 @@ class MiniDumpTestCase(TestBase):
         self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
         self.assertTrue(self.process, PROCESS_IS_VALID)
         expected_modules = [
-            r"C:\Windows\System32\MSVCP120D.dll",
-            r"C:\Windows\SysWOW64\kernel32.dll",
-            r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug\fizzbuzz.exe",
-            r"C:\Windows\System32\MSVCR120D.dll",
-            r"C:\Windows\SysWOW64\KERNELBASE.dll",
-            r"C:\Windows\SysWOW64\ntdll.dll",
+            r"C:\Windows\System32/MSVCP120D.dll",
+            r"C:\Windows\SysWOW64/kernel32.dll",
+            r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug/fizzbuzz.exe",
+            r"C:\Windows\System32/MSVCR120D.dll",
+            r"C:\Windows\SysWOW64/KERNELBASE.dll",
+            r"C:\Windows\SysWOW64/ntdll.dll",
         ]
         self.assertEqual(self.target.GetNumModules(), len(expected_modules))
         for module, expected in zip(self.target.modules, expected_modules):

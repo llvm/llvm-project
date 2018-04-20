@@ -49,8 +49,9 @@ private:
   /// \brief Add a new line and the required indent before the first Token
   /// of the \c UnwrappedLine if there was no structural parsing error.
   void formatFirstToken(const AnnotatedLine &Line,
-                        const AnnotatedLine *PreviousLine, unsigned Indent,
-                        unsigned NewlineIndent);
+                        const AnnotatedLine *PreviousLine,
+                        const SmallVectorImpl<AnnotatedLine *> &Lines,
+                        unsigned Indent, unsigned NewlineIndent);
 
   /// \brief Returns the column limit for a line, taking into account whether we
   /// need an escaped newline due to a continued preprocessor directive.

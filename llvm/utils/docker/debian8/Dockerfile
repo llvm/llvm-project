@@ -41,10 +41,13 @@ RUN mkdir /tmp/cmake-install && cd /tmp/cmake-install && \
 
 ADD checksums /tmp/checksums
 ADD scripts /tmp/scripts
-# Arguments passed to build_install_clang.sh.
-ARG buildscript_args
+
+# Checkout the source code.
+ARG checkout_args
+RUN /tmp/scripts/checkout.sh ${checkout_args}
 # Run the build. Results of the build will be available at /tmp/clang-install/.
-RUN /tmp/scripts/build_install_llvm.sh ${buildscript_args}
+ARG buildscript_args
+RUN /tmp/scripts/build_install_llvm.sh --to /tmp/clang-install ${buildscript_args}
 
 
 # Stage 2. Produce a minimal release image with build results.

@@ -259,6 +259,14 @@ OpenBSD::OpenBSD(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back("/usr/lib");
 }
 
+void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
+                                  ArgStringList &CmdArgs) const {
+  bool Profiling = Args.hasArg(options::OPT_pg);
+
+  CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+  CmdArgs.push_back(Profiling ? "-lc++abi_p" : "-lc++abi");
+}
+
 Tool *OpenBSD::buildAssembler() const {
   return new tools::openbsd::Assembler(*this);
 }
