@@ -255,21 +255,41 @@ bool APINotesManager::loadCurrentModuleAPINotes(
     if (module->IsFramework) {
       // For frameworks, we search in the "Headers" or "PrivateHeaders"
       // subdirectory.
+      //
+      // Public modules:
+      // - Headers/Foo.apinotes
+      // - PrivateHeaders/Foo_Private.apinotes
+      // Private modules:
+      // - PrivateHeaders/Bar.apinotes (except that 'Bar' probably already has
+      //   the word "Private" in it in practice)
       llvm::SmallString<128> path;
       path += module->Directory->getName();
-      unsigned pathLen = path.size();
 
-      llvm::sys::path::append(path, "Headers");
-      if (auto apinotesDir = fileMgr.getDirectory(path))
-        tryAPINotes(apinotesDir, /*wantPublic=*/true);
+      if (!module->ModuleMapIsPrivate) {
+        unsigned pathLen = path.size();
 
-      path.resize(pathLen);
+        llvm::sys::path::append(path, "Headers");
+        if (auto apinotesDir = fileMgr.getDirectory(path))
+          tryAPINotes(apinotesDir, /*wantPublic=*/true);
+
+        path.resize(pathLen);
+      }
+
       llvm::sys::path::append(path, "PrivateHeaders");
-      if (auto privateAPINotesDir = fileMgr.getDirectory(path))
-        tryAPINotes(privateAPINotesDir, /*wantPublic=*/false);
+      if (auto privateAPINotesDir = fileMgr.getDirectory(path)) {
+        tryAPINotes(privateAPINotesDir,
+                    /*wantPublic=*/module->ModuleMapIsPrivate);
+      }
     } else {
+      // Public modules:
+      // - Foo.apinotes
+      // - Foo_Private.apinotes
+      // Private modules:
+      // - Bar.apinotes (except that 'Bar' probably already has the word
+      //   "Private" in it in practice)
       tryAPINotes(module->Directory, /*wantPublic=*/true);
-      tryAPINotes(module->Directory, /*wantPublic=*/false);
+      if (!module->ModuleMapIsPrivate)
+        tryAPINotes(module->Directory, /*wantPublic=*/false);
     }
 
     if (foundAny)

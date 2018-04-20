@@ -1,0 +1,3 @@
+module PrivateLib {
+  header "PrivateLib.h"
+}
