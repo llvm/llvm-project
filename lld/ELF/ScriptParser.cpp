@@ -333,6 +333,8 @@ void ScriptParser::readGroup() {
   InputFile::IsInGroup = true;
   readInput();
   InputFile::IsInGroup = Orig;
+  if (!Orig)
+    ++InputFile::NextGroupId;
 }
 
 void ScriptParser::readInclude() {

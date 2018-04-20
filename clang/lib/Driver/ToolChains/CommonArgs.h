@@ -66,6 +66,9 @@ void AddGoldPlugin(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
 std::tuple<llvm::Reloc::Model, unsigned, bool>
 ParsePICArgs(const ToolChain &ToolChain, const llvm::opt::ArgList &Args);
 
+unsigned ParseFunctionAlignment(const ToolChain &TC,
+                                const llvm::opt::ArgList &Args);
+
 void AddAssemblerKPIC(const ToolChain &ToolChain,
                       const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);

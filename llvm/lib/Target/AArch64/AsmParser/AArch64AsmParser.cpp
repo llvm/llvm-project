@@ -85,7 +85,6 @@ private:
   AArch64CC::CondCode parseCondCodeString(StringRef Cond);
   bool parseCondCode(OperandVector &Operands, bool invertCondCode);
   unsigned matchRegisterNameAlias(StringRef Name, RegKind Kind);
-  int tryParseRegister();
   bool parseRegister(OperandVector &Operands);
   bool parseSymbolicImmVal(const MCExpr *&ImmVal);
   bool parseNeonVectorList(OperandVector &Operands);
@@ -121,7 +120,8 @@ private:
 
   /// }
 
-  OperandMatchResultTy tryParseVectorRegister(int &Reg, StringRef &Kind,
+  OperandMatchResultTy tryParseScalarRegister(unsigned &Reg);
+  OperandMatchResultTy tryParseVectorRegister(unsigned &Reg, StringRef &Kind,
                                               RegKind MatchKind);
   OperandMatchResultTy tryParseOptionalShiftExtend(OperandVector &Operands);
   OperandMatchResultTy tryParseBarrierOperand(OperandVector &Operands);
@@ -1986,9 +1986,9 @@ static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
 bool AArch64AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
   StartLoc = getLoc();
-  RegNo = tryParseRegister();
+  auto Res = tryParseScalarRegister(RegNo);
   EndLoc = SMLoc::getFromPointer(getLoc().getPointer() - 1);
-  return (RegNo == (unsigned)-1);
+  return Res != MatchOperand_Success;
 }
 
 // Matches a register name or register alias previously defined by '.req'
@@ -2009,6 +2009,15 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
     return Kind == RegKind::Scalar ? RegNum : 0;
 
   if (!RegNum) {
+    // Handle a few common aliases of registers.
+    if (auto RegNum = StringSwitch<unsigned>(Name.lower())
+                    .Case("fp", AArch64::FP)
+                    .Case("lr",  AArch64::LR)
+                    .Case("x31", AArch64::XZR)
+                    .Case("w31", AArch64::WZR)
+                    .Default(0))
+      return Kind == RegKind::Scalar ? RegNum : 0;
+
     // Check for aliases registered via .req. Canonicalize to lower case.
     // That's more consistent since register names are case insensitive, and
     // it's how the original entry was passed in from MC/MCParser/AsmParser.
@@ -2023,32 +2032,24 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
   return RegNum;
 }
 
-/// tryParseRegister - Try to parse a register name. The token must be an
+/// tryParseScalarRegister - Try to parse a register name. The token must be an
 /// Identifier when called, and if it is a register name the token is eaten and
 /// the register is added to the operand list.
-int AArch64AsmParser::tryParseRegister() {
+OperandMatchResultTy
+AArch64AsmParser::tryParseScalarRegister(unsigned &RegNum) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier))
-    return -1;
+    return MatchOperand_NoMatch;
 
   std::string lowerCase = Tok.getString().lower();
-  unsigned RegNum = matchRegisterNameAlias(lowerCase, RegKind::Scalar);
+  unsigned Reg = matchRegisterNameAlias(lowerCase, RegKind::Scalar);
+  if (Reg == 0)
+    return MatchOperand_NoMatch;
 
-  // Also handle a few aliases of registers.
-  if (RegNum == 0)
-    RegNum = StringSwitch<unsigned>(lowerCase)
-                 .Case("fp",  AArch64::FP)
-                 .Case("lr",  AArch64::LR)
-                 .Case("x31", AArch64::XZR)
-                 .Case("w31", AArch64::WZR)
-                 .Default(0);
-
-  if (RegNum == 0)
-    return -1;
-
+  RegNum = Reg;
   Parser.Lex(); // Eat identifier token.
-  return RegNum;
+  return MatchOperand_Success;
 }
 
 /// tryParseSysCROperand - Try to parse a system instruction CR operand name.
@@ -2660,7 +2661,7 @@ bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
   // Check for a vector register specifier first.
   StringRef Kind;
-  int Reg = -1;
+  unsigned Reg;
   OperandMatchResultTy Res =
       tryParseVectorRegister(Reg, Kind, RegKind::NeonVector);
   if (Res != MatchOperand_Success)
@@ -2714,7 +2715,7 @@ AArch64AsmParser::tryParseVectorIndex(OperandVector &Operands) {
 // optional kind specifier. If it is a register specifier, eat the token
 // and return it.
 OperandMatchResultTy
-AArch64AsmParser::tryParseVectorRegister(int &Reg, StringRef &Kind,
+AArch64AsmParser::tryParseVectorRegister(unsigned &Reg, StringRef &Kind,
                                          RegKind MatchKind) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -2752,7 +2753,7 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
   // Check for a SVE predicate register specifier first.
   const SMLoc S = getLoc();
   StringRef Kind;
-  int RegNum = -1;
+  unsigned RegNum;
   auto Res = tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
   if (Res != MatchOperand_Success)
     return Res;
@@ -2799,16 +2800,16 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-/// parseRegister - Parse a non-vector register operand.
+/// parseRegister - Parse a register operand.
 bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
-  // Try for a vector (neon) register.
+  // Try for a Neon vector register.
   if (!tryParseNeonVectorRegister(Operands))
     return false;
 
   // Try for a scalar register.
-  int64_t Reg = tryParseRegister();
-  if (Reg == -1)
+  unsigned Reg;
+  if (tryParseScalarRegister(Reg) != MatchOperand_Success)
     return true;
   Operands.push_back(AArch64Operand::CreateReg(Reg, RegKind::Scalar, S,
       getLoc(), getContext()));
@@ -2895,12 +2896,12 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
     return MatchOperand_NoMatch;
 
   // Wrapper around parse function
-  auto ParseVector = [this, &Parser](int &Reg, StringRef &Kind, SMLoc Loc,
+  auto ParseVector = [this, &Parser](unsigned &Reg, StringRef &Kind, SMLoc Loc,
                                      bool NoMatchIsError) {
     auto RegTok = Parser.getTok();
     auto ParseRes = tryParseVectorRegister(Reg, Kind, VectorKind);
     if (ParseRes == MatchOperand_Success) {
-      if (parseVectorKind(Kind, RegKind::NeonVector))
+      if (parseVectorKind(Kind, VectorKind))
         return ParseRes;
       llvm_unreachable("Expected a valid vector kind");
     }
@@ -2920,7 +2921,7 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
   Parser.Lex(); // Eat left bracket token.
 
   StringRef Kind;
-  int FirstReg = -1;
+  unsigned FirstReg;
   auto ParseRes = ParseVector(FirstReg, Kind, getLoc(), ExpectMatch);
 
   // Put back the original left bracket if there was no match, so that
@@ -2938,7 +2939,7 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
     SMLoc Loc = getLoc();
     StringRef NextKind;
 
-    int Reg;
+    unsigned Reg;
     ParseRes = ParseVector(Reg, NextKind, getLoc(), true);
     if (ParseRes != MatchOperand_Success)
       return ParseRes;
@@ -2962,7 +2963,7 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
     while (parseOptionalToken(AsmToken::Comma)) {
       SMLoc Loc = getLoc();
       StringRef NextKind;
-      int Reg;
+      unsigned Reg;
       ParseRes = ParseVector(Reg, NextKind, getLoc(), true);
       if (ParseRes != MatchOperand_Success)
         return ParseRes;
@@ -3018,43 +3019,35 @@ bool AArch64AsmParser::parseNeonVectorList(OperandVector &Operands) {
 
 OperandMatchResultTy
 AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
-  if (!Tok.is(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+  SMLoc StartLoc = getLoc();
 
-  unsigned RegNum = matchRegisterNameAlias(Tok.getString().lower(), RegKind::Scalar);
-
-  MCContext &Ctx = getContext();
-  const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-  if (!RI->getRegClass(AArch64::GPR64spRegClassID).contains(RegNum))
-    return MatchOperand_NoMatch;
-
-  SMLoc S = getLoc();
-  Parser.Lex(); // Eat register
+  unsigned RegNum;
+  OperandMatchResultTy Res = tryParseScalarRegister(RegNum);
+  if (Res != MatchOperand_Success)
+    return Res;
 
   if (!parseOptionalToken(AsmToken::Comma)) {
-    Operands.push_back(
-        AArch64Operand::CreateReg(RegNum, RegKind::Scalar, S, getLoc(), Ctx));
+    Operands.push_back(AArch64Operand::CreateReg(
+        RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext()));
     return MatchOperand_Success;
   }
 
   parseOptionalToken(AsmToken::Hash);
 
-  if (Parser.getTok().isNot(AsmToken::Integer)) {
+  if (getParser().getTok().isNot(AsmToken::Integer)) {
     Error(getLoc(), "index must be absent or #0");
     return MatchOperand_ParseFail;
   }
 
   const MCExpr *ImmVal;
-  if (Parser.parseExpression(ImmVal) || !isa<MCConstantExpr>(ImmVal) ||
+  if (getParser().parseExpression(ImmVal) || !isa<MCConstantExpr>(ImmVal) ||
       cast<MCConstantExpr>(ImmVal)->getValue() != 0) {
     Error(getLoc(), "index must be absent or #0");
     return MatchOperand_ParseFail;
   }
 
-  Operands.push_back(
-      AArch64Operand::CreateReg(RegNum, RegKind::Scalar, S, getLoc(), Ctx));
+  Operands.push_back(AArch64Operand::CreateReg(
+      RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext()));
   return MatchOperand_Success;
 }
 
@@ -4535,51 +4528,50 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   MCAsmParser &Parser = getParser();
   Parser.Lex(); // Eat the '.req' token.
   SMLoc SRegLoc = getLoc();
-  int RegNum = tryParseRegister();
   RegKind RegisterKind = RegKind::Scalar;
+  unsigned RegNum;
+  OperandMatchResultTy ParseRes = tryParseScalarRegister(RegNum);
 
-  if (RegNum == -1) {
+  if (ParseRes != MatchOperand_Success) {
     StringRef Kind;
     RegisterKind = RegKind::NeonVector;
-    OperandMatchResultTy Res =
-      tryParseVectorRegister(RegNum, Kind, RegKind::NeonVector);
+    ParseRes = tryParseVectorRegister(RegNum, Kind, RegKind::NeonVector);
 
-    if (Res == MatchOperand_ParseFail)
+    if (ParseRes == MatchOperand_ParseFail)
       return true;
 
-    if (Res == MatchOperand_Success && !Kind.empty())
+    if (ParseRes == MatchOperand_Success && !Kind.empty())
       return Error(SRegLoc, "vector register without type specifier expected");
   }
 
-  if (RegNum == -1) {
+  if (ParseRes != MatchOperand_Success) {
     StringRef Kind;
     RegisterKind = RegKind::SVEDataVector;
-    OperandMatchResultTy Res =
+    ParseRes =
         tryParseVectorRegister(RegNum, Kind, RegKind::SVEDataVector);
 
-    if (Res == MatchOperand_ParseFail)
+    if (ParseRes == MatchOperand_ParseFail)
       return true;
 
-    if (Res == MatchOperand_Success && !Kind.empty())
+    if (ParseRes == MatchOperand_Success && !Kind.empty())
       return Error(SRegLoc,
                    "sve vector register without type specifier expected");
   }
 
-  if (RegNum == -1) {
+  if (ParseRes != MatchOperand_Success) {
     StringRef Kind;
     RegisterKind = RegKind::SVEPredicateVector;
-    OperandMatchResultTy Res =
-        tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
+    ParseRes = tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
 
-    if (Res == MatchOperand_ParseFail)
+    if (ParseRes == MatchOperand_ParseFail)
       return true;
 
-    if (Res == MatchOperand_Success && !Kind.empty())
+    if (ParseRes == MatchOperand_Success && !Kind.empty())
       return Error(SRegLoc,
                    "sve predicate register without type specifier expected");
   }
 
-  if (RegNum == -1)
+  if (ParseRes != MatchOperand_Success)
     return Error(SRegLoc, "register name or alias expected");
 
   // Shouldn't be anything else.
@@ -4742,10 +4734,11 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  int FirstReg = tryParseRegister();
-  if (FirstReg == -1) {
+  unsigned FirstReg;
+  OperandMatchResultTy Res = tryParseScalarRegister(FirstReg);
+  if (Res != MatchOperand_Success)
     return MatchOperand_ParseFail;
-  }
+
   const MCRegisterClass &WRegClass =
       AArch64MCRegisterClasses[AArch64::GPR32RegClassID];
   const MCRegisterClass &XRegClass =
@@ -4768,19 +4761,18 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  SMLoc M = getLoc();
   if (getParser().getTok().isNot(AsmToken::Comma)) {
-    Error(M, "expected comma");
+    Error(getLoc(), "expected comma");
     return MatchOperand_ParseFail;
   }
   // Eat the comma
   getParser().Lex();
 
   SMLoc E = getLoc();
-  int SecondReg = tryParseRegister();
-  if (SecondReg ==-1) {
+  unsigned SecondReg;
+  Res = tryParseScalarRegister(SecondReg);
+  if (Res != MatchOperand_Success)
     return MatchOperand_ParseFail;
-  }
 
   if (RI->getEncodingValue(SecondReg) != FirstEncoding + 1 ||
       (isXReg && !XRegClass.contains(SecondReg)) ||
@@ -4810,7 +4802,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
   const SMLoc S = getLoc();
   // Check for a SVE vector register specifier first.
-  int RegNum = -1;
+  unsigned RegNum;
   StringRef Kind;
 
   OperandMatchResultTy Res =

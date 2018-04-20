@@ -1431,7 +1431,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       E.Name = Def->getName();
       E.Sym = Def;
       if (Def->getChunk() &&
-          !(Def->getChunk()->getPermissions() & IMAGE_SCN_MEM_EXECUTE))
+          !(Def->getChunk()->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
         E.Data = true;
       Config->Exports.push_back(E);
     });

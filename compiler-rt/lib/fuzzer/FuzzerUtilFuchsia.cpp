@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <string>
+#include <sys/select.h>
 #include <thread>
 #include <unistd.h>
 #include <zircon/errors.h>
@@ -45,8 +46,13 @@ void AlarmHandler(int Seconds) {
 }
 
 void InterruptHandler() {
+  fd_set readfds;
   // Ctrl-C sends ETX in Zircon.
-  while (getchar() != 0x03);
+  do {
+    FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
+    select(STDIN_FILENO + 1, &readfds, nullptr, nullptr, nullptr);
+  } while(!FD_ISSET(STDIN_FILENO, &readfds) || getchar() != 0x03);
   Fuzzer::StaticInterruptCallback();
 }
 

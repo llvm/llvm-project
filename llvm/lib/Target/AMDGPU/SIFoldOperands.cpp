@@ -156,7 +156,8 @@ static bool updateOperand(FoldCandidate &Fold,
 
   if (Fold.isImm()) {
     if (MI->getDesc().TSFlags & SIInstrFlags::IsPacked) {
-      // Set op_sel_hi on this operand or bail out if op_sel is already set.
+      // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
+      // already set.
       unsigned Opcode = MI->getOpcode();
       int OpNo = MI->getOperandNo(&Old);
       int ModIdx = -1;
@@ -172,7 +173,16 @@ static bool updateOperand(FoldCandidate &Fold,
       unsigned Val = Mod.getImm();
       if ((Val & SISrcMods::OP_SEL_0) || !(Val & SISrcMods::OP_SEL_1))
         return false;
-      Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+      // If upper part is all zero we do not need op_sel_hi.
+      if (!isUInt<16>(Fold.ImmToFold)) {
+        if (!(Fold.ImmToFold & 0xffff)) {
+          Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
+          Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+          Old.ChangeToImmediate(Fold.ImmToFold >> 16);
+          return true;
+        }
+        Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+      }
     }
     Old.ChangeToImmediate(Fold.ImmToFold);
     return true;

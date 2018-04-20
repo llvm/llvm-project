@@ -367,7 +367,7 @@ private:
   DenseMap<MachineBasicBlock *, std::unique_ptr<BlockWaitcntBrackets>>
       BlockWaitcntBracketsMap;
 
-  DenseSet<MachineBasicBlock *> BlockWaitcntProcessedSet;
+  std::vector<MachineBasicBlock *> BlockWaitcntProcessedSet;
 
   DenseMap<MachineLoop *, std::unique_ptr<LoopWaitcntData>> LoopWaitcntDataMap;
 
@@ -403,7 +403,8 @@ public:
   void updateEventWaitCntAfter(MachineInstr &Inst,
                                BlockWaitcntBrackets *ScoreBrackets);
   void mergeInputScoreBrackets(MachineBasicBlock &Block);
-  MachineBasicBlock *loopBottom(const MachineLoop *Loop);
+  bool isLoopBottom(const MachineLoop *Loop, const MachineBasicBlock *Block);
+  unsigned countNumBottomBlocks(const MachineLoop *Loop);
   void insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block);
   void insertWaitcntBeforeCF(MachineBasicBlock &Block, MachineInstr *Inst);
   bool isWaitcntStronger(unsigned LHS, unsigned RHS);
@@ -1568,15 +1569,29 @@ void SIInsertWaitcnts::mergeInputScoreBrackets(MachineBasicBlock &Block) {
   }
 }
 
-/// Return the "bottom" block of a loop. This differs from
-/// MachineLoop::getBottomBlock in that it works even if the loop is
-/// discontiguous.
-MachineBasicBlock *SIInsertWaitcnts::loopBottom(const MachineLoop *Loop) {
-  MachineBasicBlock *Bottom = Loop->getHeader();
-  for (MachineBasicBlock *MBB : Loop->blocks())
-    if (MBB->getNumber() > Bottom->getNumber())
-      Bottom = MBB;
-  return Bottom;
+/// Return true if the given basic block is a "bottom" block of a loop. This
+/// differs from MachineLoop::getBottomBlock in that it works even if the loop
+/// is discontiguous. This also handles multiple back-edges for the same
+/// "header" block of a loop.
+bool SIInsertWaitcnts::isLoopBottom(const MachineLoop *Loop,
+                                    const MachineBasicBlock *Block) {
+  for (MachineBasicBlock *MBB : Loop->blocks()) {
+    if (MBB == Block && MBB->isSuccessor(Loop->getHeader())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Count the number of "bottom" basic blocks of a loop.
+unsigned SIInsertWaitcnts::countNumBottomBlocks(const MachineLoop *Loop) {
+  unsigned Count = 0;
+  for (MachineBasicBlock *MBB : Loop->blocks()) {
+    if (MBB->isSuccessor(Loop->getHeader())) {
+      Count++;
+    }
+  }
+  return Count;
 }
 
 // Generate s_waitcnt instructions where needed.
@@ -1685,7 +1700,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
   // Check if we need to force convergence at loop footer.
   MachineLoop *ContainingLoop = MLI->getLoopFor(&Block);
-  if (ContainingLoop && loopBottom(ContainingLoop) == &Block) {
+  if (ContainingLoop && isLoopBottom(ContainingLoop, &Block)) {
     LoopWaitcntData *WaitcntData = LoopWaitcntDataMap[ContainingLoop].get();
     WaitcntData->print();
     DEBUG(dbgs() << '\n';);
@@ -1773,6 +1788,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   TrackedWaitcntSet.clear();
   BlockVisitedSet.clear();
   VCCZBugHandledSet.clear();
+  LoopWaitcntDataMap.clear();
 
   // Walk over the blocks in reverse post-dominator order, inserting
   // s_waitcnt where needed.
@@ -1799,21 +1815,30 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     // If we are walking into the block from before the loop, then guarantee
     // at least 1 re-walk over the loop to propagate the information, even if
     // no S_WAITCNT instructions were generated.
-    if (ContainingLoop && ContainingLoop->getHeader() == &MBB && J < I &&
-        (!BlockWaitcntProcessedSet.count(&MBB))) {
-      BlockWaitcntBracketsMap[&MBB]->setRevisitLoop(true);
-      DEBUG(dbgs() << "set-revisit: Block"
-                   << ContainingLoop->getHeader()->getNumber() << '\n';);
+    if (ContainingLoop && ContainingLoop->getHeader() == &MBB) {
+      unsigned Count = countNumBottomBlocks(ContainingLoop);
+
+      // If the loop has multiple back-edges, and so more than one "bottom"
+      // basic block, we have to guarantee a re-walk over every blocks.
+      if ((std::count(BlockWaitcntProcessedSet.begin(),
+                      BlockWaitcntProcessedSet.end(), &MBB) < Count)) {
+        BlockWaitcntBracketsMap[&MBB]->setRevisitLoop(true);
+        DEBUG(dbgs() << "set-revisit: Block"
+                     << ContainingLoop->getHeader()->getNumber() << '\n';);
+      }
     }
 
     // Walk over the instructions.
     insertWaitcntInBlock(MF, MBB);
 
     // Flag that waitcnts have been processed at least once.
-    BlockWaitcntProcessedSet.insert(&MBB);
+    BlockWaitcntProcessedSet.push_back(&MBB);
 
-    // See if we want to revisit the loop.
-    if (ContainingLoop && loopBottom(ContainingLoop) == &MBB) {
+    // See if we want to revisit the loop. If a loop has multiple back-edges,
+    // we shouldn't revisit the same "bottom" basic block.
+    if (ContainingLoop && isLoopBottom(ContainingLoop, &MBB) &&
+        std::count(BlockWaitcntProcessedSet.begin(),
+                   BlockWaitcntProcessedSet.end(), &MBB) == 1) {
       MachineBasicBlock *EntryBB = ContainingLoop->getHeader();
       BlockWaitcntBrackets *EntrySB = BlockWaitcntBracketsMap[EntryBB].get();
       if (EntrySB && EntrySB->getRevisitLoop()) {

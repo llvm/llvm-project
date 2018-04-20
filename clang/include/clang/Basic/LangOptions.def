@@ -292,6 +292,8 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest,
              "version of Clang that we should attempt to be ABI-compatible "
              "with")
 
+COMPATIBLE_VALUE_LANGOPT(FunctionAlignment, 5, 0, "Default alignment for functions")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

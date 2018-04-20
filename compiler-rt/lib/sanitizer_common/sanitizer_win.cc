@@ -247,15 +247,12 @@ uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size) {
 }
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {
-  void* addr_as_void = reinterpret_cast<void*>(addr);
-  uptr base_as_uptr = reinterpret_cast<uptr>(base_);
   // Only unmap if it covers the entire range.
-  CHECK((addr == base_as_uptr) && (size == size_));
-  UnmapOrDie(addr_as_void, size);
-  if (addr_as_void == base_) {
-    base_ = reinterpret_cast<void*>(addr + size);
-  }
-  size_ = size_ - size;
+  CHECK((addr == reinterpret_cast<uptr>(base_)) && (size == size_));
+  // We unmap the whole range, just null out the base.
+  base_ = nullptr;
+  size_ = 0;
+  UnmapOrDie(reinterpret_cast<void*>(addr), size);
 }
 
 void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size) {
@@ -276,11 +273,7 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
-  if (fixed_addr) {
-    base_ = MmapFixedNoAccess(fixed_addr, size, name);
-  } else {
-    base_ = MmapNoAccess(size);
-  }
+  base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size) : MmapNoAccess(size);
   size_ = size;
   name_ = name;
   (void)os_handle_;  // unsupported

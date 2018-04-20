@@ -27,36 +27,18 @@ enum memory_order {
   memory_order_seq_cst = 1 << 5
 };
 
-struct atomic_uint8_t {
-  typedef u8 Type;
-  volatile Type val_dont_use;
+template<typename T>
+struct atomic {
+  typedef T Type;
+  volatile Type ALIGNED(sizeof(Type)) val_dont_use;
 };
 
-struct atomic_uint16_t {
-  typedef u16 Type;
-  volatile Type val_dont_use;
-};
-
-struct atomic_sint32_t {
-  typedef s32 Type;
-  volatile Type val_dont_use;
-};
-
-struct atomic_uint32_t {
-  typedef u32 Type;
-  volatile Type val_dont_use;
-};
-
-struct atomic_uint64_t {
-  typedef u64 Type;
-  // On 32-bit platforms u64 is not necessary aligned on 8 bytes.
-  volatile ALIGNED(8) Type val_dont_use;
-};
-
-struct atomic_uintptr_t {
-  typedef uptr Type;
-  volatile Type val_dont_use;
-};
+typedef atomic<u8> atomic_uint8_t;
+typedef atomic<u16> atomic_uint16_t;
+typedef atomic<s32> atomic_sint32_t;
+typedef atomic<u32> atomic_uint32_t;
+typedef atomic<u64> atomic_uint64_t;
+typedef atomic<uptr> atomic_uintptr_t;
 
 }  // namespace __sanitizer
 

@@ -2339,6 +2339,15 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   }
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16: {
+    if (isUInt<16>(Imm)) {
+      int16_t Trunc = static_cast<int16_t>(Imm);
+      return ST.has16BitInsts() &&
+             AMDGPU::isInlinableLiteral16(Trunc, ST.hasInv2PiInlineImm());
+    }
+    if (!(Imm & 0xffff)) {
+      return ST.has16BitInsts() &&
+             AMDGPU::isInlinableLiteral16(Imm >> 16, ST.hasInv2PiInlineImm());
+    }
     uint32_t Trunc = static_cast<uint32_t>(Imm);
     return  AMDGPU::isInlinableLiteralV216(Trunc, ST.hasInv2PiInlineImm());
   }

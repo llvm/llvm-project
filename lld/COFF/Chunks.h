@@ -75,7 +75,7 @@ public:
   virtual bool hasData() const { return true; }
 
   // Returns readable/writable/executable bits.
-  virtual uint32_t getPermissions() const { return 0; }
+  virtual uint32_t getOutputCharacteristics() const { return 0; }
 
   // Returns the section name if this is a section chunk.
   // It is illegal to call this function on non-section chunks.
@@ -142,7 +142,7 @@ public:
   ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *Buf) const override;
   bool hasData() const override;
-  uint32_t getPermissions() const override;
+  uint32_t getOutputCharacteristics() const override;
   StringRef getSectionName() const override { return SectionName; }
   void getBaserels(std::vector<Baserel> *Res) override;
   bool isCOMDAT() const;
@@ -242,7 +242,7 @@ public:
   static void addSection(SectionChunk *C);
   void finalizeContents() override;
 
-  uint32_t getPermissions() const override;
+  uint32_t getOutputCharacteristics() const override;
   StringRef getSectionName() const override { return ".rdata"; }
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) const override;
@@ -260,7 +260,7 @@ public:
   CommonChunk(const COFFSymbolRef Sym);
   size_t getSize() const override { return Sym.getValue(); }
   bool hasData() const override { return false; }
-  uint32_t getPermissions() const override;
+  uint32_t getOutputCharacteristics() const override;
   StringRef getSectionName() const override { return ".bss"; }
 
 private:

@@ -2350,3 +2350,33 @@ loop_exit:
 ; CHECK-NEXT:    %[[LCSSA:.*]] = phi i32 [ %[[V]], %loop_begin ]
 ; CHECK-NEXT:    ret i32 %[[LCSSA]]
 }
+
+; Negative test: we do not switch when the loop contains unstructured control
+; flows as it would significantly complicate the process as novel loops might
+; be formed, etc.
+define void @test_no_unswitch_unstructured_cfg(i1* %ptr, i1 %cond) {
+; CHECK-LABEL: @test_no_unswitch_unstructured_cfg(
+entry:
+  br label %loop_begin
+
+loop_begin:
+  br i1 %cond, label %loop_left, label %loop_right
+
+loop_left:
+  %v1 = load i1, i1* %ptr
+  br i1 %v1, label %loop_right, label %loop_merge
+
+loop_right:
+  %v2 = load i1, i1* %ptr
+  br i1 %v2, label %loop_left, label %loop_merge
+
+loop_merge:
+  %v3 = load i1, i1* %ptr
+  br i1 %v3, label %loop_latch, label %loop_exit
+
+loop_latch:
+  br label %loop_begin
+
+loop_exit:
+  ret void
+}

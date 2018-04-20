@@ -853,7 +853,8 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   addOptionalRegular(S, InX::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 
   S = Config->IsRela ? "__rela_iplt_end" : "__rel_iplt_end";
-  addOptionalRegular(S, InX::RelaIplt, -1, STV_HIDDEN, STB_WEAK);
+  ElfSym::RelaIpltEnd =
+      addOptionalRegular(S, InX::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 }
 
 template <class ELFT>
@@ -885,6 +886,9 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
                                 : cast<InputSection>(InX::Got);
     ElfSym::GlobalOffsetTable->Section = GotSection;
   }
+
+  if (ElfSym::RelaIpltEnd)
+    ElfSym::RelaIpltEnd->Value = InX::RelaIplt->getSize();
 
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;

@@ -258,12 +258,15 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
     QualType T, QualType ExTy, const CastExpr* CastE, StmtNodeBuilder& Bldr,
     ExplodedNode* Pred) {
   // Delegate to SValBuilder to process.
-  SVal V = state->getSVal(Ex, LCtx);
-  V = svalBuilder.evalCast(V, T, ExTy);
+  SVal OrigV = state->getSVal(Ex, LCtx);
+  SVal V = svalBuilder.evalCast(OrigV, T, ExTy);
   // Negate the result if we're treating the boolean as a signed i1
   if (CastE->getCastKind() == CK_BooleanToSignedIntegral)
     V = evalMinus(V);
   state = state->BindExpr(CastE, LCtx, V);
+  if (V.isUnknown() && !OrigV.isUnknown()) {
+    state = escapeValue(state, OrigV, PSK_EscapeOther);
+  }
   Bldr.generateNode(CastE, Pred, state);
 
   return state;

@@ -792,13 +792,13 @@ let AdditionalPredicates = [NotInMicroMips] in {
                       0>, ISA_MIPS3;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi64, GPR64Opnd, imm64>,
-         GPR_64;
+         ISA_MIPS3, GPR_64;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi64, GPR64Opnd, imm64>,
-         GPR_64;
+         ISA_MIPS3, GPR_64;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi64, GPR64Opnd, imm64>,
-         GPR_64;
+         ISA_MIPS3, GPR_64;
 }
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"dneg $rt, $rs",

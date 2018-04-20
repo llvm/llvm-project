@@ -2281,8 +2281,8 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    xchgl %eax, %eax # sched: [1:0.33]
-; SANDY-NEXT:    xchgl %ecx, %eax # sched: [1:0.33]
+; SANDY-NEXT:    xchgl %eax, %eax # sched: [2:1.00]
+; SANDY-NEXT:    xchgl %ecx, %eax # sched: [2:1.00]
 ; SANDY-NEXT:    xchgl %eax, (%edx) # sched: [6:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [6:1.00]
@@ -2293,8 +2293,8 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    xchgl %eax, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    xchgl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    xchgl %eax, %eax # sched: [2:0.75]
+; HASWELL-NEXT:    xchgl %ecx, %eax # sched: [2:0.75]
 ; HASWELL-NEXT:    xchgl %eax, (%edx) # sched: [9:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
@@ -2305,8 +2305,8 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    xchgl %eax, %eax # sched: [1:0.25]
-; BROADWELL-NEXT:    xchgl %ecx, %eax # sched: [1:0.25]
+; BROADWELL-NEXT:    xchgl %eax, %eax # sched: [2:0.75]
+; BROADWELL-NEXT:    xchgl %ecx, %eax # sched: [2:0.75]
 ; BROADWELL-NEXT:    xchgl %eax, (%edx) # sched: [8:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
@@ -2317,8 +2317,8 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    xchgl %eax, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    xchgl %ecx, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    xchgl %eax, %eax # sched: [2:0.75]
+; SKYLAKE-NEXT:    xchgl %ecx, %eax # sched: [2:0.75]
 ; SKYLAKE-NEXT:    xchgl %eax, (%edx) # sched: [10:1.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
@@ -2329,8 +2329,8 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    xchgl %eax, %eax # sched: [1:0.25]
-; SKX-NEXT:    xchgl %ecx, %eax # sched: [1:0.25]
+; SKX-NEXT:    xchgl %eax, %eax # sched: [2:0.75]
+; SKX-NEXT:    xchgl %ecx, %eax # sched: [2:0.75]
 ; SKX-NEXT:    xchgl %eax, (%edx) # sched: [10:1.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]

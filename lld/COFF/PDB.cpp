@@ -1056,7 +1056,7 @@ static void addLinkerModuleSectionSymbol(pdb::DbiModuleDescriptorBuilder &Mod,
                                          BumpPtrAllocator &Allocator) {
   SectionSym Sym(SymbolRecordKind::SectionSym);
   Sym.Alignment = 12; // 2^12 = 4KB
-  Sym.Characteristics = OS.getCharacteristics();
+  Sym.Characteristics = OS.Header.Characteristics;
   Sym.Length = OS.getVirtualSize();
   Sym.Name = OS.Name;
   Sym.Rva = OS.getRVA();
@@ -1127,7 +1127,7 @@ void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
     CRC.update(CharContents);
     SC.DataCrc = CRC.getCRC();
   } else {
-    SC.Characteristics = OS->getCharacteristics();
+    SC.Characteristics = OS->Header.Characteristics;
     // FIXME: When we start creating DBI for import libraries, use those here.
     SC.Imod = LinkerModule.getModuleIndex();
   }

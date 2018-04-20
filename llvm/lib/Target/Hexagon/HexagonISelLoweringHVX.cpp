@@ -971,6 +971,32 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
     SmallVector<SDValue,8> Elems;
     for (SDValue V : Op.getNode()->ops())
       DAG.ExtractVectorElements(V, Elems);
+    // A vector of i16 will be broken up into a build_vector of i16's.
+    // This is a problem, since at the time of operation legalization,
+    // all operations are expected to be type-legalized, and i16 is not
+    // a legal type. If any of the extracted elements is not of a valid
+    // type, sign-extend it to a valid one.
+    for (unsigned i = 0, e = Elems.size(); i != e; ++i) {
+      SDValue V = Elems[i];
+      MVT Ty = ty(V);
+      if (!isTypeLegal(Ty)) {
+        EVT NTy = getTypeToTransformTo(*DAG.getContext(), Ty);
+        if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+          Elems[i] = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, NTy,
+                                 DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NTy,
+                                             V.getOperand(0), V.getOperand(1)),
+                                 DAG.getValueType(Ty));
+          continue;
+        }
+        // A few less complicated cases.
+        if (V.getOpcode() == ISD::Constant)
+          Elems[i] = DAG.getSExtOrTrunc(V, dl, NTy);
+        else if (V.isUndef())
+          Elems[i] = DAG.getUNDEF(NTy);
+        else
+          llvm_unreachable("Unexpected vector element");
+      }
+    }
     return DAG.getBuildVector(VecTy, dl, Elems);
   }
 

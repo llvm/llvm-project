@@ -321,7 +321,8 @@ void ProcessMinidump::ReadModuleList() {
       m_is_wow64 = true;
     }
 
-    const auto file_spec = FileSpec(name.getValue(), true);
+    const auto file_spec =
+        FileSpec(name.getValue(), true, GetArchitecture().GetTriple());
     ModuleSpec module_spec = file_spec;
     Status error;
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);

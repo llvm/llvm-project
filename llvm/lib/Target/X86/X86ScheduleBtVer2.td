@@ -488,10 +488,6 @@ def : InstRW<[JWriteDPPDLd], (instrs DPPDrmi, VDPPDrmi)>;
 // SSE4A instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def JWriteEXTRQ: SchedWriteRes<[JFPU01, JVALU]> {
-}
-def : InstRW<[JWriteEXTRQ], (instrs EXTRQ, EXTRQI)>;
-
 def JWriteINSERTQ: SchedWriteRes<[JFPU01, JVALU]> {
   let Latency = 2;
   let ResourceCycles = [1, 4];
@@ -502,20 +498,10 @@ def : InstRW<[JWriteINSERTQ], (instrs INSERTQ, INSERTQI)>;
 // F16C instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def JWriteCVT3: SchedWriteRes<[JFPU1, JSTC]> {
-  let Latency = 3;
-}
-def : InstRW<[JWriteCVT3], (instrs VCVTPS2PHrr, VCVTPH2PSrr)>;
-
 def JWriteCVT3St: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 3;
 }
 def : InstRW<[JWriteCVT3St], (instrs VCVTPS2PHmr)>;
-
-def JWriteCVT3Ld: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
-  let Latency = 8;
-}
-def : InstRW<[JWriteCVT3Ld], (instrs VCVTPH2PSrm)>;
 
 def JWriteCVTPS2PHY: SchedWriteRes<[JFPU1, JSTC, JFPX]> {
   let Latency = 6;

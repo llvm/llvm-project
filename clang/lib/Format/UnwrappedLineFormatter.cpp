@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NamespaceEndCommentsFixer.h"
 #include "UnwrappedLineFormatter.h"
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
@@ -1050,8 +1051,7 @@ UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
     if (ShouldFormat && TheLine.Type != LT_Invalid) {
       if (!DryRun) {
         bool LastLine = Line->First->is(tok::eof);
-        formatFirstToken(TheLine, PreviousLine,
-                         Indent,
+        formatFirstToken(TheLine, PreviousLine, Lines, Indent,
                          LastLine ? LastStartColumn : NextStartColumn + Indent);
       }
 
@@ -1095,7 +1095,7 @@ UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
                               TheLine.LeadingEmptyLinesAffected);
         // Format the first token.
         if (ReformatLeadingWhitespace)
-          formatFirstToken(TheLine, PreviousLine,
+          formatFirstToken(TheLine, PreviousLine, Lines,
                            TheLine.First->OriginalColumn,
                            TheLine.First->OriginalColumn);
         else
@@ -1117,10 +1117,10 @@ UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
   return Penalty;
 }
 
-void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
-                                              const AnnotatedLine *PreviousLine,
-                                              unsigned Indent,
-                                              unsigned NewlineIndent) {
+void UnwrappedLineFormatter::formatFirstToken(
+    const AnnotatedLine &Line, const AnnotatedLine *PreviousLine,
+    const SmallVectorImpl<AnnotatedLine *> &Lines, unsigned Indent,
+    unsigned NewlineIndent) {
   FormatToken &RootToken = *Line.First;
   if (RootToken.is(tok::eof)) {
     unsigned Newlines = std::min(RootToken.NewlinesBefore, 1u);
@@ -1134,7 +1134,9 @@ void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
   // Remove empty lines before "}" where applicable.
   if (RootToken.is(tok::r_brace) &&
       (!RootToken.Next ||
-       (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)))
+       (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)) &&
+      // Do not remove empty lines before namespace closing "}".
+      !getNamespaceToken(&Line, Lines))
     Newlines = std::min(Newlines, 1u);
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)
   if (PreviousLine == nullptr && Line.Level > 0)
