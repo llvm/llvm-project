@@ -697,6 +697,8 @@ void Writer::calculateImports() {
       continue;
     if (Sym->isWeak() && !Config->Relocatable)
       continue;
+    if (!Sym->isLive())
+      continue;
 
     DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
     ImportedSymbols.emplace_back(Sym);
@@ -825,13 +827,6 @@ void Writer::assignIndexes() {
         // Mark target type as live
         File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
         File->TypeIsUsed[Reloc.Index] = true;
-      } else if (Reloc.Type == R_WEBASSEMBLY_GLOBAL_INDEX_LEB) {
-        // Mark target global as live
-        GlobalSymbol *Sym = File->getGlobalSymbol(Reloc.Index);
-        if (auto *G = dyn_cast<DefinedGlobal>(Sym)) {
-          DEBUG(dbgs() << "marking global live: " << Sym->getName() << "\n");
-          G->Global->Live = true;
-        }
       }
     }
   };
