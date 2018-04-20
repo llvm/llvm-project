@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// All symbols are handled as SymbolBodies regardless of their types.
-// This file defines various types of SymbolBodies.
+// This file defines various types of Symbols.
 //
 //===----------------------------------------------------------------------===//
 
@@ -316,6 +315,9 @@ struct ElfSym {
   static Defined *MipsGp;
   static Defined *MipsGpDisp;
   static Defined *MipsLocalGp;
+
+  // __rela_iplt_end or __rel_iplt_end
+  static Defined *RelaIpltEnd;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived
@@ -357,6 +359,8 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   if (S->Traced)
     printTraceSymbol(S);
 }
+
+void warnUnorderableSymbol(const Symbol *Sym);
 } // namespace elf
 
 std::string toString(const elf::Symbol &B);

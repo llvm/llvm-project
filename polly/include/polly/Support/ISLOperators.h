@@ -1,4 +1,4 @@
-//===------ IslOperators.h --------------------------------------*- C++ -*-===//
+//===------ ISLOperators.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,108 +11,175 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef POLLY_ISLOPERATORS_H
+#define POLLY_ISLOPERATORS_H
+
 #include "isl/isl-noexceptions.h"
+
 namespace polly {
 
-inline isl::pw_aff operator+(isl::pw_aff A, isl::pw_aff B) { return A.add(B); }
-
-inline isl::pw_aff operator+(isl::val V, isl::pw_aff A) {
-  isl::pw_aff AV(A.domain(), V);
-  return A.add(AV);
+/// Addition
+/// @{
+inline isl::pw_aff operator+(isl::pw_aff Left, isl::pw_aff Right) {
+  return Left.add(Right);
 }
 
-inline isl::pw_aff operator+(isl::pw_aff A, isl::val V) { return V + A; }
-
-inline isl::pw_aff operator+(int i, isl::pw_aff A) {
-  isl::ctx ctx = A.get_ctx();
-  return A + isl::val(ctx, i);
+inline isl::pw_aff operator+(isl::val ValLeft, isl::pw_aff Right) {
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.add(Right);
 }
 
-inline isl::pw_aff operator+(isl::pw_aff A, int i) { return i + A; }
-
-inline isl::pw_aff operator*(isl::pw_aff A, isl::pw_aff B) { return A.mul(B); }
-
-inline isl::pw_aff operator*(isl::val V, isl::pw_aff A) {
-  isl::pw_aff AV(A.domain(), V);
-  return A.add(AV);
+inline isl::pw_aff operator+(isl::pw_aff Left, isl::val ValRight) {
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.add(Right);
 }
 
-inline isl::pw_aff operator*(isl::pw_aff A, isl::val V) { return V * A; }
-
-inline isl::pw_aff operator*(int i, isl::pw_aff A) {
-  isl::ctx ctx = A.get_ctx();
-  return A * isl::val(ctx, i);
+inline isl::pw_aff operator+(long IntLeft, isl::pw_aff Right) {
+  isl::ctx Ctx = Right.get_ctx();
+  isl::val ValLeft(Ctx, IntLeft);
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.add(Right);
 }
 
-inline isl::pw_aff operator*(isl::pw_aff A, int i) { return i * A; }
+inline isl::pw_aff operator+(isl::pw_aff Left, long IntRight) {
+  isl::ctx Ctx = Left.get_ctx();
+  isl::val ValRight(Ctx, IntRight);
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.add(Right);
+}
+/// @}
 
-inline isl::pw_aff operator-(isl::pw_aff A, isl::pw_aff B) { return A.sub(B); }
-
-inline isl::pw_aff operator-(isl::val V, isl::pw_aff A) {
-  isl::pw_aff AV(A.domain(), V);
-  return AV - A;
+/// Multiplication
+/// @{
+inline isl::pw_aff operator*(isl::pw_aff Left, isl::pw_aff Right) {
+  return Left.mul(Right);
 }
 
-inline isl::pw_aff operator-(isl::pw_aff A, isl::val V) {
-  isl::pw_aff AV(A.domain(), V);
-  return A - AV;
+inline isl::pw_aff operator*(isl::val ValLeft, isl::pw_aff Right) {
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.mul(Right);
 }
 
-inline isl::pw_aff operator-(int i, isl::pw_aff A) {
-  isl::ctx ctx = A.get_ctx();
-  return isl::val(ctx, i) - A;
+inline isl::pw_aff operator*(isl::pw_aff Left, isl::val ValRight) {
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.mul(Right);
 }
 
-inline isl::pw_aff operator-(isl::pw_aff A, int i) {
-  isl::ctx ctx = A.get_ctx();
-  return A - isl::val(ctx, i);
+inline isl::pw_aff operator*(long IntLeft, isl::pw_aff Right) {
+  isl::ctx Ctx = Right.get_ctx();
+  isl::val ValLeft(Ctx, IntLeft);
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.mul(Right);
 }
 
-inline isl::pw_aff operator/(isl::pw_aff A, isl::pw_aff B) {
-  return A.tdiv_q(B);
+inline isl::pw_aff operator*(isl::pw_aff Left, long IntRight) {
+  isl::ctx Ctx = Left.get_ctx();
+  isl::val ValRight(Ctx, IntRight);
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.mul(Right);
+}
+/// @}
+
+/// Subtraction
+/// @{
+inline isl::pw_aff operator-(isl::pw_aff Left, isl::pw_aff Right) {
+  return Left.sub(Right);
 }
 
-inline isl::pw_aff operator/(isl::val V, isl::pw_aff A) {
-  isl::pw_aff AV(A.domain(), V);
-  return AV / A;
+inline isl::pw_aff operator-(isl::val ValLeft, isl::pw_aff Right) {
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.sub(Right);
 }
 
-inline isl::pw_aff operator/(isl::pw_aff A, isl::val V) {
-  isl::pw_aff AV(A.domain(), V);
-  return A / AV;
+inline isl::pw_aff operator-(isl::pw_aff Left, isl::val ValRight) {
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.sub(Right);
 }
 
-inline isl::pw_aff operator/(int i, isl::pw_aff A) {
-  isl::ctx ctx = A.get_ctx();
-  return isl::val(ctx, i) / A;
+inline isl::pw_aff operator-(long IntLeft, isl::pw_aff Right) {
+  isl::ctx Ctx = Right.get_ctx();
+  isl::val ValLeft(Ctx, IntLeft);
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.sub(Right);
 }
 
-inline isl::pw_aff operator/(isl::pw_aff A, int i) {
-  isl::ctx ctx = A.get_ctx();
-  return A / isl::val(ctx, i);
+inline isl::pw_aff operator-(isl::pw_aff Left, long IntRight) {
+  isl::ctx Ctx = Left.get_ctx();
+  isl::val ValRight(Ctx, IntRight);
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.sub(Right);
+}
+/// @}
+
+/// Division
+///
+/// This division rounds towards zero. This follows the semantics of C/C++.
+///
+/// @{
+inline isl::pw_aff operator/(isl::pw_aff Left, isl::pw_aff Right) {
+  return Left.tdiv_q(Right);
 }
 
-inline isl::pw_aff operator%(isl::pw_aff A, isl::pw_aff B) {
-  return A.tdiv_r(B);
+inline isl::pw_aff operator/(isl::val ValLeft, isl::pw_aff Right) {
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.tdiv_q(Right);
 }
 
-inline isl::pw_aff operator%(isl::val V, isl::pw_aff A) {
-  isl::pw_aff AV(A.domain(), V);
-  return AV % A;
+inline isl::pw_aff operator/(isl::pw_aff Left, isl::val ValRight) {
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.tdiv_q(Right);
 }
 
-inline isl::pw_aff operator%(isl::pw_aff A, isl::val V) {
-  isl::pw_aff AV(A.domain(), V);
-  return A % AV;
+inline isl::pw_aff operator/(long IntLeft, isl::pw_aff Right) {
+  isl::ctx Ctx = Right.get_ctx();
+  isl::val ValLeft(Ctx, IntLeft);
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.tdiv_q(Right);
 }
 
-inline isl::pw_aff operator%(int i, isl::pw_aff A) {
-  isl::ctx ctx = A.get_ctx();
-  return isl::val(ctx, i) % A;
+inline isl::pw_aff operator/(isl::pw_aff Left, long IntRight) {
+  isl::ctx Ctx = Left.get_ctx();
+  isl::val ValRight(Ctx, IntRight);
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.tdiv_q(Right);
+}
+/// @}
+
+/// Remainder
+///
+/// This is the remainder of a division which rounds towards zero. This follows
+/// the semantics of C/C++.
+///
+/// @{
+inline isl::pw_aff operator%(isl::pw_aff Left, isl::pw_aff Right) {
+  return Left.tdiv_r(Right);
 }
 
-inline isl::pw_aff operator%(isl::pw_aff A, int i) {
-  isl::ctx ctx = A.get_ctx();
-  return A % isl::val(ctx, i);
+inline isl::pw_aff operator%(isl::val ValLeft, isl::pw_aff Right) {
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.tdiv_r(Right);
 }
+
+inline isl::pw_aff operator%(isl::pw_aff Left, isl::val ValRight) {
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.tdiv_r(Right);
+}
+
+inline isl::pw_aff operator%(long IntLeft, isl::pw_aff Right) {
+  isl::ctx Ctx = Right.get_ctx();
+  isl::val ValLeft(Ctx, IntLeft);
+  isl::pw_aff Left(Right.domain(), ValLeft);
+  return Left.tdiv_r(Right);
+}
+
+inline isl::pw_aff operator%(isl::pw_aff Left, long IntRight) {
+  isl::ctx Ctx = Left.get_ctx();
+  isl::val ValRight(Ctx, IntRight);
+  isl::pw_aff Right(Left.domain(), ValRight);
+  return Left.tdiv_r(Right);
+}
+/// @}
+
 } // namespace polly
+
+#endif // POLLY_ISLOPERATORS_H

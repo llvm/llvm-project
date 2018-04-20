@@ -33,7 +33,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
@@ -95,7 +95,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   case 'a': {
     bool success;
     bool result;
-    result = Args::StringToBoolean(option_arg, true, &success);
+    result = OptionArgParser::ToBoolean(option_arg, true, &success);
     if (!success)
       error.SetErrorStringWithFormat(
           "invalid all-threads value setting: \"%s\"",
@@ -106,7 +106,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'i': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
     if (success)
       ignore_breakpoints = tmp_value;
     else
@@ -118,7 +118,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'j': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
     if (success)
       allow_jit = tmp_value;
     else
@@ -138,7 +138,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'u': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
     if (success)
       unwind_on_error = tmp_value;
     else
@@ -153,8 +153,8 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
       m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityFull;
       break;
     }
-    m_verbosity =
-        (LanguageRuntimeDescriptionDisplayVerbosity)Args::StringToOptionEnum(
+    m_verbosity = (LanguageRuntimeDescriptionDisplayVerbosity)
+        OptionArgParser::ToOptionEnum(
             option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
     if (!error.Success())
       error.SetErrorStringWithFormat(
@@ -174,7 +174,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'X': {
     bool success;
-    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
     if (success)
       auto_apply_fixits = tmp_value ? eLazyBoolYes : eLazyBoolNo;
     else
@@ -704,11 +704,9 @@ bool CommandObjectExpression::DoExecute(const char *command,
   if (expr == nullptr)
     expr = command;
 
+  Target *target = GetSelectedOrDummyTarget();
   if (EvaluateExpression(expr, &(result.GetOutputStream()),
                          &(result.GetErrorStream()), &result)) {
-    Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
-    if (!target)
-        target = GetDummyTarget();
 
     if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();
@@ -725,9 +723,15 @@ bool CommandObjectExpression::DoExecute(const char *command,
       }
       history.AppendString(fixed_command);
     }
+    // Increment statistics to record this expression evaluation
+    // success.
+    target->IncrementStats(StatisticKind::ExpressionSuccessful);
     return true;
   }
 
+  // Increment statistics to record this expression evaluation
+  // failure.
+  target->IncrementStats(StatisticKind::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }

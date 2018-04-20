@@ -119,11 +119,12 @@
                 <b>LLDB_TEST_C_COMPILER</b> or <b>LLDB_TEST_CXX_COMPILER</b>: The test suite needs to be able to find a copy of clang.exe
                 that it can use to compile inferior programs.  Note that MSVC is not supported here, it <strong>must</strong> be a path to a
                 clang executable.  Note that using a release clang.exe is strongly recommended here, as it will make the test suite run much faster.
-                This can be a path to any recent clang.exe, including one you built yourself.
+                This can be a path to any recent clang.exe, including one you built yourself.  These variables are ignored unless the respective
+                <strong>LLDB_TEST_USE_CUSTOM_C_COMPILER</strong> and <strong>LLDB_TEST_USE_CUSTOM_CXX_COMPILER</strong> are set to ON.
               </li>
             </ul>
             Sample command line:<br/>
-            <code>cmake -G Ninja -DLLDB_TEST_DEBUG_TEST_CRASHES=1 -DPYTHON_HOME=C:\Python35 -DLLDB_TEST_C_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe ..\..\llvm</code>
+            <code>cmake -G Ninja -DLLDB_TEST_DEBUG_TEST_CRASHES=1 -DPYTHON_HOME=C:\Python35 -DLLDB_TEST_USE_CUSTOM_C_COMPILER=ON -DLLDB_TEST_C_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe ..\..\llvm</code>
             <h2>Working with both Ninja and MSVC</h2>
             <p>
               Compiling with <code>ninja</code> is both faster and simpler than compiling with MSVC, but chances are you still want

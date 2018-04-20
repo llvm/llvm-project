@@ -24,7 +24,6 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -44,6 +43,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -720,7 +720,14 @@ protected:
       m_interpreter.TruncationWarningGiven();
     }
 
-    return result.Succeeded();
+    // Increment statistics.
+    bool res = result.Succeeded();
+    Target *target = GetSelectedOrDummyTarget();
+    if (res)
+      target->IncrementStats(StatisticKind::FrameVarSuccess);
+    else
+      target->IncrementStats(StatisticKind::FrameVarFailure);
+    return res;
   }
 
 protected:

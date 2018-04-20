@@ -65,7 +65,7 @@ private:
 
 // Returns a hash value for S.
 uint32_t ICF::getHash(SectionChunk *C) {
-  return hash_combine(C->getPermissions(), C->SectionName, C->NumRelocs,
+  return hash_combine(C->getOutputCharacteristics(), C->SectionName, C->Relocs.size(),
                       C->Alignment, uint32_t(C->Header->SizeOfRawData),
                       C->Checksum, C->getContents());
 }
@@ -82,12 +82,12 @@ uint32_t ICF::getHash(SectionChunk *C) {
 // insignificant to the user program and the Visual C++ linker does this.
 bool ICF::isEligible(SectionChunk *C) {
   // Non-comdat chunks, dead chunks, and writable chunks are not elegible.
-  bool Writable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
+  bool Writable = C->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
   if (!C->isCOMDAT() || !C->isLive() || Writable)
     return false;
 
   // Code sections are eligible.
-  if (C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
+  if (C->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
   // .xdata unwind info sections are eligble.
@@ -123,7 +123,7 @@ void ICF::segregate(size_t Begin, size_t End, bool Constant) {
 // Compare "non-moving" part of two sections, namely everything
 // except relocation targets.
 bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
-  if (A->NumRelocs != B->NumRelocs)
+  if (A->Relocs.size() != B->Relocs.size())
     return false;
 
   // Compare relocations.
@@ -146,7 +146,7 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
     return false;
 
   // Compare section attributes and contents.
-  return A->getPermissions() == B->getPermissions() &&
+  return A->getOutputCharacteristics() == B->getOutputCharacteristics() &&
          A->SectionName == B->SectionName && A->Alignment == B->Alignment &&
          A->Header->SizeOfRawData == B->Header->SizeOfRawData &&
          A->Checksum == B->Checksum && A->getContents() == B->getContents();

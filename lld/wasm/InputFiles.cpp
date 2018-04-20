@@ -153,6 +153,8 @@ void ObjFile::parse() {
       CodeSection = &Section;
     else if (Section.Type == WASM_SEC_DATA)
       DataSection = &Section;
+    else if (Section.Type == WASM_SEC_CUSTOM)
+      CustomSections.emplace_back(make<InputSection>(Section, this));
   }
 
   TypeMap.resize(getWasmObj()->types().size());

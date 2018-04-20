@@ -287,20 +287,29 @@ TEST(Isl, IslValToAPInt) {
 }
 
 TEST(Isl, Operators) {
-  isl_ctx *IslCtx = isl_ctx_alloc();
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> IslCtx(isl_ctx_alloc(),
+                                                           &isl_ctx_free);
 
-  isl::val ValOne = isl::val(IslCtx, 1);
-  isl::val ValTwo = isl::val(IslCtx, 2);
-  isl::val ValThree = isl::val(IslCtx, 3);
-  isl::val ValFour = isl::val(IslCtx, 4);
+  isl::val ValOne = isl::val(IslCtx.get(), 1);
+  isl::val ValTwo = isl::val(IslCtx.get(), 2);
+  isl::val ValThree = isl::val(IslCtx.get(), 3);
+  isl::val ValFour = isl::val(IslCtx.get(), 4);
+  isl::val ValNegOne = isl::val(IslCtx.get(), -1);
+  isl::val ValNegTwo = isl::val(IslCtx.get(), -2);
+  isl::val ValNegThree = isl::val(IslCtx.get(), -3);
+  isl::val ValNegFour = isl::val(IslCtx.get(), -4);
 
-  isl::space Space = isl::space(IslCtx, 0, 0);
+  isl::space Space = isl::space(IslCtx.get(), 0, 0);
   isl::local_space LS = isl::local_space(Space);
 
   isl::pw_aff AffOne = isl::aff(LS, ValOne);
   isl::pw_aff AffTwo = isl::aff(LS, ValTwo);
   isl::pw_aff AffThree = isl::aff(LS, ValThree);
   isl::pw_aff AffFour = isl::aff(LS, ValFour);
+  isl::pw_aff AffNegOne = isl::aff(LS, ValNegOne);
+  isl::pw_aff AffNegTwo = isl::aff(LS, ValNegTwo);
+  isl::pw_aff AffNegThree = isl::aff(LS, ValNegThree);
+  isl::pw_aff AffNegFour = isl::aff(LS, ValNegFour);
 
   // Addition
   {
@@ -331,11 +340,25 @@ TEST(Isl, Operators) {
 
   // Division
   {
-    EXPECT_EQ(AffFour - AffTwo, AffTwo);
-    EXPECT_EQ(AffFour - 2, AffTwo);
-    EXPECT_EQ(4 - AffTwo, AffTwo);
+    EXPECT_EQ(AffFour / AffTwo, AffTwo);
+    EXPECT_EQ(AffFour / 2, AffTwo);
+    EXPECT_EQ(4 / AffTwo, AffTwo);
     EXPECT_EQ(AffFour / ValTwo, AffTwo);
     EXPECT_EQ(AffFour / 2, AffTwo);
+
+    // Dividend is negative (should be rounded towards zero)
+    EXPECT_EQ(AffNegFour / AffThree, AffNegOne);
+    EXPECT_EQ(AffNegFour / 3, AffNegOne);
+    EXPECT_EQ((-4) / AffThree, AffNegOne);
+    EXPECT_EQ(AffNegFour / ValThree, AffNegOne);
+    EXPECT_EQ(AffNegFour / 3, AffNegOne);
+
+    // Divisor is negative (should be rounded towards zero)
+    EXPECT_EQ(AffFour / AffNegThree, AffNegOne);
+    EXPECT_EQ(AffFour / -3, AffNegOne);
+    EXPECT_EQ(4 / AffNegThree, AffNegOne);
+    EXPECT_EQ(AffFour / ValNegThree, AffNegOne);
+    EXPECT_EQ(AffFour / -3, AffNegOne);
   }
 
   // Remainder
@@ -345,9 +368,21 @@ TEST(Isl, Operators) {
     EXPECT_EQ(3 % AffTwo, AffOne);
     EXPECT_EQ(AffThree % ValTwo, AffOne);
     EXPECT_EQ(ValThree % AffTwo, AffOne);
-  }
 
-  isl_ctx_free(IslCtx);
+    // Dividend is negative (should be rounded towards zero)
+    EXPECT_EQ(AffNegFour % AffThree, AffNegOne);
+    EXPECT_EQ(AffNegFour % 3, AffNegOne);
+    EXPECT_EQ((-4) % AffThree, AffNegOne);
+    EXPECT_EQ(AffNegFour % ValThree, AffNegOne);
+    EXPECT_EQ(AffNegFour % 3, AffNegOne);
+
+    // Divisor is negative (should be rounded towards zero)
+    EXPECT_EQ(AffFour % AffNegThree, AffOne);
+    EXPECT_EQ(AffFour % -3, AffOne);
+    EXPECT_EQ(4 % AffNegThree, AffOne);
+    EXPECT_EQ(AffFour % ValNegThree, AffOne);
+    EXPECT_EQ(AffFour % -3, AffOne);
+  }
 }
 
 TEST(Isl, Foreach) {

@@ -48,7 +48,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 
@@ -1306,7 +1306,7 @@ ObjectFile *Module::GetObjectFile() {
 }
 
 SectionList *Module::GetSectionList() {
-  // Populate m_unified_sections_ap with sections from objfile.
+  // Populate m_sections_ap with sections from objfile.
   if (!m_sections_ap) {
     ObjectFile *obj_file = GetObjectFile();
     if (obj_file != nullptr)
@@ -1325,7 +1325,6 @@ void Module::SectionFileAddressesChanged() {
 }
 
 SectionList *Module::GetUnifiedSectionList() {
-  // Populate m_unified_sections_ap with sections from objfile.
   if (!m_sections_ap)
     m_sections_ap = llvm::make_unique<SectionList>();
   return m_sections_ap.get();

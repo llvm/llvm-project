@@ -21,7 +21,7 @@
 # CHECK-NEXT:     Name: .group
 # CHECK-NEXT:     Index: 5
 # CHECK-NEXT:     Link: 8
-# CHECK-NEXT:     Info: 2
+# CHECK-NEXT:     Info: 6
 # CHECK-NEXT:     Type: COMDAT
 # CHECK-NEXT:     Signature: bbb
 # CHECK-NEXT:     Section(s) in group [

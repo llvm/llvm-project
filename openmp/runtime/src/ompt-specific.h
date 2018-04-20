@@ -1,3 +1,16 @@
+/*
+ * ompt-specific.h - header of OMPT internal functions implementation
+ */
+
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.txt for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef OMPT_SPECIFIC_H
 #define OMPT_SPECIFIC_H
 

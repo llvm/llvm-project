@@ -97,7 +97,7 @@ typedef std::pair<std::unique_ptr<MemoryBuffer>, std::error_code> MBErrPair;
 // Create a std::future that opens and maps a file using the best strategy for
 // the host platform.
 static std::future<MBErrPair> createFutureForFile(std::string Path) {
-#if LLVM_ON_WIN32
+#if _WIN32
   // On Windows, file I/O is relatively slow so it is best to do this
   // asynchronously.
   auto Strategy = std::launch::async;
@@ -936,6 +936,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (ShouldCreatePDB) {
     if (auto *Arg = Args.getLastArg(OPT_pdb))
       Config->PDBPath = Arg->getValue();
+    if (auto *Arg = Args.getLastArg(OPT_pdbaltpath))
+      Config->PDBAltPath = Arg->getValue();
     if (Args.hasArg(OPT_natvis))
       Config->NatvisFiles = Args.getAllArgValues(OPT_natvis);
   }
@@ -1101,6 +1103,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /merge
   for (auto *Arg : Args.filtered(OPT_merge))
     parseMerge(Arg->getValue());
+
+  // Add default section merging rules after user rules. User rules take
+  // precedence, but we will emit a warning if there is a conflict.
+  parseMerge(".idata=.rdata");
+  parseMerge(".didat=.rdata");
+  parseMerge(".edata=.rdata");
 
   // Handle /section
   for (auto *Arg : Args.filtered(OPT_section))
@@ -1301,10 +1309,19 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         getOutputPath((*Args.filtered(OPT_INPUT).begin())->getValue());
   }
 
-  // Put the PDB next to the image if no /pdb flag was passed.
-  if (ShouldCreatePDB && Config->PDBPath.empty()) {
-    Config->PDBPath = Config->OutputFile;
-    sys::path::replace_extension(Config->PDBPath, ".pdb");
+  if (ShouldCreatePDB) {
+    // Put the PDB next to the image if no /pdb flag was passed.
+    if (Config->PDBPath.empty()) {
+      Config->PDBPath = Config->OutputFile;
+      sys::path::replace_extension(Config->PDBPath, ".pdb");
+    }
+
+    // The embedded PDB path should be the absolute path to the PDB if no
+    // /pdbaltpath flag was passed.
+    if (Config->PDBAltPath.empty()) {
+      Config->PDBAltPath = Config->PDBPath;
+      sys::fs::make_absolute(Config->PDBAltPath);
+    }
   }
 
   // Set default image base if /base is not given.
@@ -1414,7 +1431,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       E.Name = Def->getName();
       E.Sym = Def;
       if (Def->getChunk() &&
-          !(Def->getChunk()->getPermissions() & IMAGE_SCN_MEM_EXECUTE))
+          !(Def->getChunk()->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
         E.Data = true;
       Config->Exports.push_back(E);
     });

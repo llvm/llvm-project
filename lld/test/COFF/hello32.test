@@ -57,7 +57,7 @@ HEADER-NEXT:   NumberOfRvaAndSize: 16
 HEADER-NEXT:   DataDirectory {
 HEADER-NEXT:     ExportTableRVA: 0x0
 HEADER-NEXT:     ExportTableSize: 0x0
-HEADER-NEXT:     ImportTableRVA: 0x3000
+HEADER-NEXT:     ImportTableRVA: 0x2000
 HEADER-NEXT:     ImportTableSize: 0x28
 HEADER-NEXT:     ResourceTableRVA: 0x0
 HEADER-NEXT:     ResourceTableSize: 0x0
@@ -79,7 +79,7 @@ HEADER-NEXT:     LoadConfigTableRVA: 0x0
 HEADER-NEXT:     LoadConfigTableSize: 0x0
 HEADER-NEXT:     BoundImportRVA: 0x0
 HEADER-NEXT:     BoundImportSize: 0x0
-HEADER-NEXT:     IATRVA: 0x3034
+HEADER-NEXT:     IATRVA: 0x2034
 HEADER-NEXT:     IATSize: 0xC
 HEADER-NEXT:     DelayImportDescriptorRVA: 0x0
 HEADER-NEXT:     DelayImportDescriptorSize: 0x0
@@ -114,8 +114,8 @@ IMPORTS: Arch: i386
 IMPORTS: AddressSize: 32bit
 IMPORTS: Import {
 IMPORTS:   Name: std32.dll
-IMPORTS:   ImportLookupTableRVA: 0x3028
-IMPORTS:   ImportAddressTableRVA: 0x3034
+IMPORTS:   ImportLookupTableRVA: 0x2028
+IMPORTS:   ImportAddressTableRVA: 0x2034
 IMPORTS:   Symbol: ExitProcess (0)
 IMPORTS:   Symbol: MessageBoxA (1)
 IMPORTS: }

@@ -105,5 +105,8 @@ void lld::wasm::markLive() {
         if (!C->Live)
           message("removing unused section " + toString(C));
     }
+    for (InputChunk *C : Symtab->SyntheticFunctions)
+      if (!C->Live)
+        message("removing unused section " + toString(C));
   }
 }

@@ -16,9 +16,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -26,6 +26,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -345,7 +346,7 @@ protected:
         }
       } else if (sub_command.equals_lower("increment")) {
         bool success;
-        bool increment = Args::StringToBoolean(param, false, &success);
+        bool increment = OptionArgParser::ToBoolean(param, false, &success);
         if (success) {
           Timer::SetQuiet(!increment);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

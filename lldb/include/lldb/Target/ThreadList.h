@@ -102,6 +102,8 @@ public:
 
   lldb::ThreadSP GetThreadSPForThreadPtr(Thread *thread_ptr);
 
+  lldb::ThreadSP GetBackingThread(const lldb::ThreadSP &real_thread);
+
   bool ShouldStop(Event *event_ptr);
 
   Vote ShouldReportStop(Event *event_ptr);

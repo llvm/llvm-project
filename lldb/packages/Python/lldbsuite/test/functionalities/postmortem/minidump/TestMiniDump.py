@@ -41,6 +41,26 @@ class MiniDumpTestCase(TestBase):
         stop_description = thread.GetStopDescription(256)
         self.assertTrue("0xc0000005" in stop_description)
 
+    def test_modules_in_mini_dump(self):
+        """Test that lldb can read the list of modules from the minidump."""
+        # target create -c fizzbuzz_no_heap.dmp
+        self.dbg.CreateTarget("")
+        self.target = self.dbg.GetSelectedTarget()
+        self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        expected_modules = [
+            r"C:\Windows\System32/MSVCP120D.dll",
+            r"C:\Windows\SysWOW64/kernel32.dll",
+            r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug/fizzbuzz.exe",
+            r"C:\Windows\System32/MSVCR120D.dll",
+            r"C:\Windows\SysWOW64/KERNELBASE.dll",
+            r"C:\Windows\SysWOW64/ntdll.dll",
+        ]
+        self.assertEqual(self.target.GetNumModules(), len(expected_modules))
+        for module, expected in zip(self.target.modules, expected_modules):
+            self.assertTrue(module.IsValid())
+            self.assertEqual(module.file.fullpath, expected)
+
     @expectedFailureAll(bugnumber="llvm.org/pr35193", hostoslist=["windows"])
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
@@ -58,6 +78,7 @@ class MiniDumpTestCase(TestBase):
             frame = thread.GetFrameAtIndex(i)
             self.assertTrue(frame.IsValid())
             self.assertEqual(frame.GetPC(), pc_list[i])
+            self.assertTrue(frame.GetModule().IsValid())
 
     @skipUnlessWindows # Minidump saving works only on windows
     def test_deeper_stack_in_mini_dump(self):

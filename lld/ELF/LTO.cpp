@@ -104,6 +104,11 @@ static std::unique_ptr<lto::LTO> createLTO() {
   lto::ThinBackend Backend;
   if (Config->ThinLTOJobs != -1u)
     Backend = lto::createInProcessThinBackend(Config->ThinLTOJobs);
+
+  Conf.SampleProfile = Config->LTOSampleProfile;
+  Conf.UseNewPM = Config->LTONewPassManager;
+  Conf.DebugPassManager = Config->LTODebugPassManager;
+
   return llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
                                      Config->LTOPartitions);
 }

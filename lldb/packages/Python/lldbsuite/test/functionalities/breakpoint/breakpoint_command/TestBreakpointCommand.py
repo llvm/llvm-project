@@ -45,6 +45,25 @@ class BreakpointCommandTestCase(TestBase):
         self.addTearDownHook(
             lambda: self.runCmd("settings clear auto-confirm"))
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    def test_delete_all_breakpoints(self):
+        """Test that deleting all breakpoints works."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_symbol(self, "main")
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.runCmd("breakpoint delete")
+        self.runCmd("process continue")
+        self.expect("process status", PROCESS_STOPPED,
+                    patterns=['Process .* exited with status = 0'])
+
+
     def breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         exe = self.getBuildArtifact("a.out")
@@ -62,7 +81,31 @@ class BreakpointCommandTestCase(TestBase):
         # setting breakpoint commands on two breakpoints at a time
         lldbutil.run_break_set_by_file_and_line(
             self, None, self.line, num_expected_locations=1, loc_exact=True)
-
+        # Make sure relative path source breakpoints work as expected. We test
+        # with partial paths with and without "./" prefixes.
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "breakpoint/breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./breakpoint/breakpoint_command/main.c", self.line,
+            num_expected_locations=1, loc_exact=True)
+        # Test relative breakpoints with incorrect paths and make sure we get
+        # no breakpoint locations
+        lldbutil.run_break_set_by_file_and_line(
+            self, "invalid/main.c", self.line,
+            num_expected_locations=0, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "./invalid/main.c", self.line,
+            num_expected_locations=0, loc_exact=True)
         # Now add callbacks for the breakpoints just created.
         self.runCmd(
             "breakpoint command add -s command -o 'frame variable --show-types --scope' 1 4")

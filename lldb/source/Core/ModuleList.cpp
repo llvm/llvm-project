@@ -26,7 +26,7 @@
 #include "lldb/Utility/UUID.h"    // for UUID, operator!=, operator==
 #include "lldb/lldb-defines.h"    // for LLDB_INVALID_INDEX32
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 

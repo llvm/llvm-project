@@ -832,9 +832,6 @@ void PDBLinker::addObjFile(ObjFile *File) {
     for (const DebugSubsectionRecord &SS : Subsections) {
       switch (SS.kind()) {
       case DebugSubsectionKind::StringTable: {
-        auto Data = SS.getRecordData();
-        ArrayRef<uint8_t> Buffer;
-        cantFail(Data.readLongestContiguousChunk(0, Buffer));
         assert(!CVStrTab.valid() &&
                "Encountered multiple string table subsections!");
         ExitOnErr(CVStrTab.initialize(SS.getRecordData()));
@@ -981,6 +978,23 @@ void PDBLinker::addNatvisFiles() {
   }
 }
 
+static codeview::CPUType toCodeViewMachine(COFF::MachineTypes Machine) {
+  switch (Machine) {
+  case COFF::IMAGE_FILE_MACHINE_AMD64:
+    return codeview::CPUType::X64;
+  case COFF::IMAGE_FILE_MACHINE_ARM:
+    return codeview::CPUType::ARM7;
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+    return codeview::CPUType::ARM64;
+  case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    return codeview::CPUType::ARMNT;
+  case COFF::IMAGE_FILE_MACHINE_I386:
+    return codeview::CPUType::Intel80386;
+  default:
+    llvm_unreachable("Unsupported CPU Type");
+  }
+}
+
 static void addCommonLinkerModuleSymbols(StringRef Path,
                                          pdb::DbiModuleDescriptorBuilder &Mod,
                                          BumpPtrAllocator &Allocator) {
@@ -991,7 +1005,7 @@ static void addCommonLinkerModuleSymbols(StringRef Path,
   ONS.Name = "* Linker *";
   ONS.Signature = 0;
 
-  CS.Machine = Config->is64() ? CPUType::X64 : CPUType::Intel80386;
+  CS.Machine = toCodeViewMachine(Config->Machine);
   // Interestingly, if we set the string to 0.0.0.0, then when trying to view
   // local variables WinDbg emits an error that private symbols are not present.
   // By setting this to a valid MSVC linker version string, local variables are
@@ -1042,7 +1056,7 @@ static void addLinkerModuleSectionSymbol(pdb::DbiModuleDescriptorBuilder &Mod,
                                          BumpPtrAllocator &Allocator) {
   SectionSym Sym(SymbolRecordKind::SectionSym);
   Sym.Alignment = 12; // 2^12 = 4KB
-  Sym.Characteristics = OS.getCharacteristics();
+  Sym.Characteristics = OS.Header.Characteristics;
   Sym.Length = OS.getVirtualSize();
   Sym.Name = OS.Name;
   Sym.Rva = OS.getRVA();
@@ -1088,6 +1102,12 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setAge(BuildId.PDB70.Age);
   DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
+  DbiBuilder.setMachineType(Config->Machine);
+  // Technically we are not link.exe 14.11, but there are known cases where
+  // debugging tools on Windows expect Microsoft-specific version numbers or
+  // they fail to work at all.  Since we know we produce PDBs that are
+  // compatible with LINK 14.11, we set that version number here.
+  DbiBuilder.setBuildNumber(14, 11);
 }
 
 void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
@@ -1107,7 +1127,7 @@ void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
     CRC.update(CharContents);
     SC.DataCrc = CRC.getCRC();
   } else {
-    SC.Characteristics = OS->getCharacteristics();
+    SC.Characteristics = OS->Header.Characteristics;
     // FIXME: When we start creating DBI for import libraries, use those here.
     SC.Imod = LinkerModule.getModuleIndex();
   }
@@ -1149,4 +1169,146 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
 void PDBLinker::commit() {
   // Write to a file.
   ExitOnErr(Builder.commit(Config->PDBPath));
+}
+
+static Expected<StringRef>
+getFileName(const DebugStringTableSubsectionRef &Strings,
+            const DebugChecksumsSubsectionRef &Checksums, uint32_t FileID) {
+  auto Iter = Checksums.getArray().at(FileID);
+  if (Iter == Checksums.getArray().end())
+    return make_error<CodeViewError>(cv_error_code::no_records);
+  uint32_t Offset = Iter->FileNameOffset;
+  return Strings.getString(Offset);
+}
+
+static uint32_t getSecrelReloc() {
+  switch (Config->Machine) {
+  case AMD64:
+    return COFF::IMAGE_REL_AMD64_SECREL;
+  case I386:
+    return COFF::IMAGE_REL_I386_SECREL;
+  case ARMNT:
+    return COFF::IMAGE_REL_ARM_SECREL;
+  case ARM64:
+    return COFF::IMAGE_REL_ARM64_SECREL;
+  default:
+    llvm_unreachable("unknown machine type");
+  }
+}
+
+// Try to find a line table for the given offset Addr into the given chunk C.
+// If a line table was found, the line table, the string and checksum tables
+// that are used to interpret the line table, and the offset of Addr in the line
+// table are stored in the output arguments. Returns whether a line table was
+// found.
+static bool findLineTable(const SectionChunk *C, uint32_t Addr,
+                          DebugStringTableSubsectionRef &CVStrTab,
+                          DebugChecksumsSubsectionRef &Checksums,
+                          DebugLinesSubsectionRef &Lines,
+                          uint32_t &OffsetInLinetable) {
+  ExitOnError ExitOnErr;
+  uint32_t SecrelReloc = getSecrelReloc();
+
+  for (SectionChunk *DbgC : C->File->getDebugChunks()) {
+    if (DbgC->getSectionName() != ".debug$S")
+      continue;
+
+    // Build a mapping of SECREL relocations in DbgC that refer to C.
+    DenseMap<uint32_t, uint32_t> Secrels;
+    for (const coff_relocation &R : DbgC->Relocs) {
+      if (R.Type != SecrelReloc)
+        continue;
+
+      if (auto *S = dyn_cast_or_null<DefinedRegular>(
+              C->File->getSymbols()[R.SymbolTableIndex]))
+        if (S->getChunk() == C)
+          Secrels[R.VirtualAddress] = S->getValue();
+    }
+
+    ArrayRef<uint8_t> Contents =
+        consumeDebugMagic(DbgC->getContents(), ".debug$S");
+    DebugSubsectionArray Subsections;
+    BinaryStreamReader Reader(Contents, support::little);
+    ExitOnErr(Reader.readArray(Subsections, Contents.size()));
+
+    for (const DebugSubsectionRecord &SS : Subsections) {
+      switch (SS.kind()) {
+      case DebugSubsectionKind::StringTable: {
+        assert(!CVStrTab.valid() &&
+               "Encountered multiple string table subsections!");
+        ExitOnErr(CVStrTab.initialize(SS.getRecordData()));
+        break;
+      }
+      case DebugSubsectionKind::FileChecksums:
+        assert(!Checksums.valid() &&
+               "Encountered multiple checksum subsections!");
+        ExitOnErr(Checksums.initialize(SS.getRecordData()));
+        break;
+      case DebugSubsectionKind::Lines: {
+        ArrayRef<uint8_t> Bytes;
+        auto Ref = SS.getRecordData();
+        ExitOnErr(Ref.readLongestContiguousChunk(0, Bytes));
+        size_t OffsetInDbgC = Bytes.data() - DbgC->getContents().data();
+
+        // Check whether this line table refers to C.
+        auto I = Secrels.find(OffsetInDbgC);
+        if (I == Secrels.end())
+          break;
+
+        // Check whether this line table covers Addr in C.
+        DebugLinesSubsectionRef LinesTmp;
+        ExitOnErr(LinesTmp.initialize(BinaryStreamReader(Ref)));
+        uint32_t OffsetInC = I->second + LinesTmp.header()->RelocOffset;
+        if (Addr < OffsetInC || Addr >= OffsetInC + LinesTmp.header()->CodeSize)
+          break;
+
+        assert(!Lines.header() &&
+               "Encountered multiple line tables for function!");
+        ExitOnErr(Lines.initialize(BinaryStreamReader(Ref)));
+        OffsetInLinetable = Addr - OffsetInC;
+        break;
+      }
+      default:
+        break;
+      }
+
+      if (CVStrTab.valid() && Checksums.valid() && Lines.header())
+        return true;
+    }
+  }
+
+  return false;
+}
+
+// Use CodeView line tables to resolve a file and line number for the given
+// offset into the given chunk and return them, or {"", 0} if a line table was
+// not found.
+std::pair<StringRef, uint32_t> coff::getFileLine(const SectionChunk *C,
+                                                 uint32_t Addr) {
+  ExitOnError ExitOnErr;
+
+  DebugStringTableSubsectionRef CVStrTab;
+  DebugChecksumsSubsectionRef Checksums;
+  DebugLinesSubsectionRef Lines;
+  uint32_t OffsetInLinetable;
+
+  if (!findLineTable(C, Addr, CVStrTab, Checksums, Lines, OffsetInLinetable))
+    return {"", 0};
+
+  uint32_t NameIndex;
+  uint32_t LineNumber;
+  for (LineColumnEntry &Entry : Lines) {
+    for (const LineNumberEntry &LN : Entry.LineNumbers) {
+      if (LN.Offset > OffsetInLinetable) {
+        StringRef Filename =
+            ExitOnErr(getFileName(CVStrTab, Checksums, NameIndex));
+        return {Filename, LineNumber};
+      }
+      LineInfo LI(LN.Flags);
+      NameIndex = Entry.NameIndex;
+      LineNumber = LI.getStartLine();
+    }
+  }
+  StringRef Filename = ExitOnErr(getFileName(CVStrTab, Checksums, NameIndex));
+  return {Filename, LineNumber};
 }

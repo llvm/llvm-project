@@ -56,12 +56,6 @@ using llvm::support::endian::write64le;
 
 constexpr size_t MergeNoTailSection::NumShards;
 
-uint64_t SyntheticSection::getVA() const {
-  if (OutputSection *Sec = getParent())
-    return Sec->Addr + OutSecOff;
-  return 0;
-}
-
 // Returns an LLD version string.
 static ArrayRef<uint8_t> getVersion() {
   // Check LLD_VERSION first for ease of testing.
@@ -1028,6 +1022,13 @@ void DynamicSection<ELFT>::addInSec(int32_t Tag, InputSection *Sec) {
 }
 
 template <class ELFT>
+void DynamicSection<ELFT>::addInSecRelative(int32_t Tag, InputSection *Sec) {
+  size_t TagOffset = Entries.size() * Entsize;
+  Entries.push_back(
+      {Tag, [=] { return Sec->getVA(0) - (getVA() + TagOffset); }});
+}
+
+template <class ELFT>
 void DynamicSection<ELFT>::addOutSec(int32_t Tag, OutputSection *Sec) {
   Entries.push_back({Tag, [=] { return Sec->Addr; }});
 }
@@ -1180,8 +1181,13 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     else
       addInt(DT_MIPS_GOTSYM, InX::DynSymTab->getNumSymbols());
     addInSec(DT_PLTGOT, InX::MipsGot);
-    if (InX::MipsRldMap)
-      addInSec(DT_MIPS_RLD_MAP, InX::MipsRldMap);
+    if (InX::MipsRldMap) {
+      if (!Config->Pie)
+        addInSec(DT_MIPS_RLD_MAP, InX::MipsRldMap);
+      // Store the offset to the .rld_map section
+      // relative to the address of the tag.
+      addInSecRelative(DT_MIPS_RLD_MAP_REL, InX::MipsRldMap);
+    }
   }
 
   addInt(DT_NULL, 0);
@@ -1545,16 +1551,35 @@ void SymbolTableBaseSection::finalizeContents() {
 // The ELF spec requires that all local symbols precede global symbols, so we
 // sort symbol entries in this function. (For .dynsym, we don't do that because
 // symbols for dynamic linking are inherently all globals.)
+//
+// Aside from above, we put local symbols in groups starting with the STT_FILE
+// symbol. That is convenient for purpose of identifying where are local symbols
+// coming from.
 void SymbolTableBaseSection::postThunkContents() {
   if (this->Type == SHT_DYNSYM)
     return;
-  // move all local symbols before global symbols.
-  auto It = std::stable_partition(
+
+  // Move all local symbols before global symbols.
+  auto E = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
         return S.Sym->isLocal() || S.Sym->computeBinding() == STB_LOCAL;
       });
-  size_t NumLocals = It - Symbols.begin();
+  size_t NumLocals = E - Symbols.begin();
   getParent()->Info = NumLocals + 1;
+
+  // Assign the growing unique ID for each local symbol's file.
+  DenseMap<InputFile *, unsigned> FileIDs;
+  for (auto I = Symbols.begin(); I != E; ++I)
+    FileIDs.insert({I->Sym->File, FileIDs.size()});
+
+  // Sort the local symbols to group them by file. We do not need to care about
+  // the STT_FILE symbols, they are already naturally placed first in each group.
+  // That happens because STT_FILE is always the first symbol in the object and
+  // hence precede all other local symbols we add for a file.
+  std::stable_sort(Symbols.begin(), E,
+                   [&](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+                     return FileIDs[L.Sym->File] < FileIDs[R.Sym->File];
+                   });
 }
 
 void SymbolTableBaseSection::addSymbol(Symbol *B) {

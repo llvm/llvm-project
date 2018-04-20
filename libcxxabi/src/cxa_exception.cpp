@@ -20,6 +20,7 @@
 #include "cxa_exception.hpp"
 #include "cxa_handlers.hpp"
 #include "fallback_malloc.h"
+#include "include/atomic_support.h"
 
 #if __has_feature(address_sanitizer)
 extern "C" void __asan_handle_no_return(void);
@@ -618,7 +619,7 @@ __cxa_increment_exception_refcount(void *thrown_object) throw() {
     if (thrown_object != NULL )
     {
         __cxa_exception* exception_header = cxa_exception_from_thrown_object(thrown_object);
-        __sync_add_and_fetch(&exception_header->referenceCount, 1);
+        std::__libcpp_atomic_add(&exception_header->referenceCount, size_t(1));
     }
 }
 
@@ -630,12 +631,12 @@ __cxa_increment_exception_refcount(void *thrown_object) throw() {
 
     Requires:  If thrown_object is not NULL, it is a native exception.
 */
-void
-__cxa_decrement_exception_refcount(void *thrown_object) throw() {
+_LIBCXXABI_NO_CFI
+void __cxa_decrement_exception_refcount(void *thrown_object) throw() {
     if (thrown_object != NULL )
     {
         __cxa_exception* exception_header = cxa_exception_from_thrown_object(thrown_object);
-        if (__sync_sub_and_fetch(&exception_header->referenceCount, size_t(1)) == 0)
+        if (std::__libcpp_atomic_add(&exception_header->referenceCount, size_t(-1)) == 0)
         {
             if (NULL != exception_header->exceptionDestructor)
                 exception_header->exceptionDestructor(thrown_object);

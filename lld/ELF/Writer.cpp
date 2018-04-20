@@ -9,6 +9,7 @@
 
 #include "Writer.h"
 #include "AArch64ErrataFix.h"
+#include "CallGraphSort.h"
 #include "Config.h"
 #include "Filesystem.h"
 #include "LinkerScript.h"
@@ -852,7 +853,8 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   addOptionalRegular(S, InX::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 
   S = Config->IsRela ? "__rela_iplt_end" : "__rel_iplt_end";
-  addOptionalRegular(S, InX::RelaIplt, -1, STV_HIDDEN, STB_WEAK);
+  ElfSym::RelaIpltEnd =
+      addOptionalRegular(S, InX::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 }
 
 template <class ELFT>
@@ -884,6 +886,9 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
                                 : cast<InputSection>(InX::Got);
     ElfSym::GlobalOffsetTable->Section = GotSection;
   }
+
+  if (ElfSym::RelaIpltEnd)
+    ElfSym::RelaIpltEnd->Value = InX::RelaIplt->getSize();
 
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;
@@ -1029,6 +1034,10 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
 // Builds section order for handling --symbol-ordering-file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   DenseMap<const InputSectionBase *, int> SectionOrder;
+  // Use the rarely used option -call-graph-ordering-file to sort sections.
+  if (!Config->CallGraphProfile.empty())
+    return computeCallGraphProfileOrder();
+
   if (Config->SymbolOrderingFile.empty())
     return SectionOrder;
 
@@ -1053,22 +1062,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
     SymbolOrderEntry &Ent = It->second;
     Ent.Present = true;
 
-    if (Config->WarnSymbolOrdering) {
-      auto *D = dyn_cast<Defined>(&Sym);
-      InputFile *File = Sym.File;
-      if (Sym.isUndefined())
-        warn(File->getName() +
-             ": unable to order undefined symbol: " + Sym.getName());
-      else if (Sym.isShared())
-        warn(File->getName() +
-             ": unable to order shared symbol: " + Sym.getName());
-      else if (D && !D->Section)
-        warn(File->getName() +
-             ": unable to order absolute symbol: " + Sym.getName());
-      else if (D && !D->Section->Live)
-        warn(File->getName() +
-             ": unable to order discarded symbol: " + Sym.getName());
-    }
+    warnUnorderableSymbol(&Sym);
 
     if (auto *D = dyn_cast<Defined>(&Sym)) {
       if (auto *Sec = dyn_cast_or_null<InputSectionBase>(D->Section)) {
@@ -1231,14 +1225,11 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 
   if (!Script->HasSectionsCommand) {
     // We know that all the OutputSections are contiguous in this case.
-    auto E = Script->SectionCommands.end();
-    auto I = Script->SectionCommands.begin();
     auto IsSection = [](BaseCommand *Base) { return isa<OutputSection>(Base); };
-    I = std::find_if(I, E, IsSection);
-    E = std::find_if(llvm::make_reverse_iterator(E),
-                     llvm::make_reverse_iterator(I), IsSection)
-            .base();
-    std::stable_sort(I, E, compareSections);
+    std::stable_sort(
+        llvm::find_if(Script->SectionCommands, IsSection),
+        llvm::find_if(llvm::reverse(Script->SectionCommands), IsSection).base(),
+        compareSections);
     return;
   }
 
@@ -1673,15 +1664,15 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     } while (Changed);
   }
 
+  // createThunks may have added local symbols to the static symbol table
+  applySynthetic({InX::SymTab},
+                 [](SyntheticSection *SS) { SS->postThunkContents(); });
+
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSection *Sec : OutputSections)
     Sec->finalize<ELFT>();
-
-  // createThunks may have added local symbols to the static symbol table
-  applySynthetic({InX::SymTab},
-                 [](SyntheticSection *SS) { SS->postThunkContents(); });
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end

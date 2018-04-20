@@ -20,6 +20,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/WasmTraits.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -85,6 +86,7 @@ private:
   void createElemSection();
   void createCodeSection();
   void createDataSection();
+  void createCustomSections();
 
   // Custom sections
   void createRelocSections();
@@ -110,6 +112,8 @@ private:
   std::vector<const FunctionSymbol *> IndirectFunctions;
   std::vector<const Symbol *> SymtabEntries;
   std::vector<WasmInitEntry> InitFunctions;
+
+  llvm::StringMap<std::vector<InputSection *>> CustomSectionMapping;
 
   // Elements that are used to construct the final output
   std::string Header;
@@ -292,6 +296,23 @@ void Writer::createExportSection() {
     else
       llvm_unreachable("unexpected symbol type");
     writeExport(OS, Export);
+  }
+}
+
+void Writer::createCustomSections() {
+  log("createCustomSections");
+  for (ObjFile *File : Symtab->ObjectFiles)
+    for (InputSection *Section : File->CustomSections)
+      CustomSectionMapping[Section->getName()].push_back(Section);
+
+  for (auto &Pair : CustomSectionMapping) {
+    StringRef Name = Pair.first();
+    // These custom sections are known the linker and synthesized rather than
+    // blindly copied
+    if (Name == "linking" || Name == "name" || Name.startswith("reloc."))
+      continue;
+    DEBUG(dbgs() << "createCustomSection: " << Name << "\n");
+    OutputSections.push_back(make<CustomSection>(Name, Pair.second));
   }
 }
 
@@ -513,7 +534,7 @@ void Writer::createLinkingSection() {
 void Writer::createNameSection() {
   unsigned NumNames = NumImportedFunctions;
   for (const InputFunction *F : InputFunctions)
-    if (!F->getName().empty())
+    if (!F->getName().empty() || !F->getDebugName().empty())
       ++NumNames;
 
   if (NumNames == 0)
@@ -537,8 +558,12 @@ void Writer::createNameSection() {
   for (const InputFunction *F : InputFunctions) {
     if (!F->getName().empty()) {
       writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      Optional<std::string> Name = demangleItanium(F->getName());
-      writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+      if (!F->getDebugName().empty()) {
+        writeStr(Sub.OS, F->getDebugName(), "symbol name");
+      } else {
+        Optional<std::string> Name = demangleItanium(F->getName());
+        writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+      }
     }
   }
 
@@ -647,6 +672,7 @@ void Writer::createSections() {
   createElemSection();
   createCodeSection();
   createDataSection();
+  createCustomSections();
 
   // Custom sections
   if (Config->Relocatable) {

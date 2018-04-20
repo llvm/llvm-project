@@ -180,9 +180,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
   lldb_private::CompilerType type =
       GetClangASTImporter().CopyType(m_ast, dwo_type);
 
-  // printf ("copied_qual_type: ast = %p, clang_type = %p, name =
-  // '%s'\n", m_ast, copied_qual_type.getAsOpaquePtr(),
-  // external_type->GetName().GetCString());
   if (!type)
     return TypeSP();
 
@@ -255,17 +252,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           die.GetOffset(), static_cast<void *>(context),
           context_die.GetOffset(), die.GetTagAsCString(), die.GetName());
     }
-    //
-    //        Log *log (LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
-    //        if (log && dwarf_cu)
-    //        {
-    //            StreamString s;
-    //            die->DumpLocation (this, dwarf_cu, s);
-    //            dwarf->GetObjectFile()->GetModule()->LogMessage (log,
-    //            "SymbolFileDwarf::%s %s", __FUNCTION__, s.GetData());
-    //
-    //        }
-
     Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
     TypeList *type_list = dwarf->GetTypeList();
     if (type_ptr == NULL) {
@@ -553,17 +539,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                      &decl, clang_type, resolve_state));
 
         dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-
-        //                  Type* encoding_type =
-        //                  GetUniquedTypeForDIEOffset(encoding_uid, type_sp,
-        //                  NULL, 0, 0, false);
-        //                  if (encoding_type != NULL)
-        //                  {
-        //                      if (encoding_type != DIE_IS_BEING_PARSED)
-        //                          type_sp->SetEncodingType(encoding_type);
-        //                      else
-        //                          m_indirect_fixups.push_back(type_sp.get());
-        //                  }
       } break;
 
       case DW_TAG_structure_type:
@@ -578,7 +553,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         size_t calling_convention 
                 = llvm::dwarf::CallingConvention::DW_CC_normal;
         
-        // bool struct_is_class = false;
         const size_t num_attributes = die.GetAttributes(attributes);
         if (num_attributes > 0) {
           uint32_t i;
@@ -2196,7 +2170,10 @@ static bool isOverload(clang::CXXMethodDecl *m1, clang::CXXMethodDecl *m2) {
                                  m2p.getUnqualifiedType());
     };
 
-  return !std::equal(m1Type->param_type_begin(), m1Type->param_type_end(),
+  // FIXME: In C++14 and later, we can just pass m2Type->param_type_end()
+  //        as a fourth parameter to std::equal().
+  return (m1->getNumParams() != m2->getNumParams()) ||
+         !std::equal(m1Type->param_type_begin(), m1Type->param_type_end(),
                      m2Type->param_type_begin(), compareArgTypes);
 }
 
@@ -3550,22 +3527,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
               is_artificial = form_value.Boolean();
               break;
             case DW_AT_location:
-            //                          if (form_value.BlockData())
-            //                          {
-            //                              const DWARFDataExtractor&
-            //                              debug_info_data = debug_info();
-            //                              uint32_t block_length =
-            //                              form_value.Unsigned();
-            //                              DWARFDataExtractor
-            //                              location(debug_info_data,
-            //                              form_value.BlockData() -
-            //                              debug_info_data.GetDataStart(),
-            //                              block_length);
-            //                          }
-            //                          else
-            //                          {
-            //                          }
-            //                          break;
             case DW_AT_const_value:
             case DW_AT_default_value:
             case DW_AT_description:

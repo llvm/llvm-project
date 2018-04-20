@@ -10,7 +10,6 @@
 // FIXME: (possibly) incomplete list of features that clang mangles that this
 // file does not yet support:
 //   - C++ modules TS
-//   - All C++14 and C++17 features
 
 #define _LIBCPP_NO_EXCEPTIONS
 
@@ -105,6 +104,12 @@ class OutputStream {
 public:
   OutputStream(char *StartBuf, size_t Size)
       : Buffer(StartBuf), CurrentPosition(0), BufferCapacity(Size) {}
+  OutputStream() = default;
+  void reset(char *Buffer_, size_t BufferCapacity_) {
+    CurrentPosition = 0;
+    Buffer = Buffer_;
+    BufferCapacity = BufferCapacity_;
+  }
 
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
@@ -161,6 +166,7 @@ public:
 class Node {
 public:
   enum Kind : unsigned char {
+    KNodeArrayNode,
     KDotSuffix,
     KVendorExtQualType,
     KQualType,
@@ -184,7 +190,8 @@ public:
     KSpecialName,
     KCtorVtableSpecialName,
     KQualifiedName,
-    KEmptyName,
+    KNestedName,
+    KLocalName,
     KVectorType,
     KParameterPack,
     KTemplateArgumentPack,
@@ -320,6 +327,14 @@ public:
 
       FirstElement = false;
     }
+  }
+};
+
+struct NodeArrayNode : Node {
+  NodeArray Array;
+  NodeArrayNode(NodeArray Array_) : Node(KNodeArrayNode), Array(Array_) {}
+  void printLeft(OutputStream &S) const override {
+    Array.printWithComma(S);
   }
 };
 
@@ -462,11 +477,11 @@ public:
   }
 };
 
-class AbiTagAttr final : public Node {
-  const Node* Base;
+struct AbiTagAttr : Node {
+  Node *Base;
   StringView Tag;
-public:
-  AbiTagAttr(const Node* Base_, StringView Tag_)
+
+  AbiTagAttr(Node* Base_, StringView Tag_)
       : Node(KAbiTagAttr, Base_->RHSComponentCache,
              Base_->ArrayCache, Base_->FunctionCache),
         Base(Base_), Tag(Tag_) {}
@@ -796,8 +811,8 @@ public:
 };
 
 class FunctionEncoding final : public Node {
-  const Node *Ret;
-  const Node *Name;
+  Node *Ret;
+  Node *Name;
   NodeArray Params;
   Node *Attrs;
   Qualifiers CVQuals;
@@ -811,6 +826,11 @@ public:
              /*FunctionCache=*/Cache::Yes),
         Ret(Ret_), Name(Name_), Params(Params_), Attrs(Attrs_),
         CVQuals(CVQuals_), RefQual(RefQual_) {}
+
+  Qualifiers getCVQuals() const { return CVQuals; }
+  FunctionRefQual getRefQual() const { return RefQual; }
+  NodeArray getParams() const { return Params; }
+  Node *getReturnType() const { return Ret; }
 
   bool hasRHSComponentSlow(OutputStream &) const override { return true; }
   bool hasFunctionSlow(OutputStream &) const override { return true; }
@@ -893,6 +913,36 @@ public:
   }
 };
 
+struct NestedName : Node {
+  Node *Qual;
+  Node *Name;
+
+  NestedName(Node *Qual_, Node *Name_)
+      : Node(KNestedName), Qual(Qual_), Name(Name_) {}
+
+  StringView getBaseName() const override { return Name->getBaseName(); }
+
+  void printLeft(OutputStream &S) const override {
+    Qual->print(S);
+    S += "::";
+    Name->print(S);
+  }
+};
+
+struct LocalName : Node {
+  Node *Encoding;
+  Node *Entity;
+
+  LocalName(Node *Encoding_, Node *Entity_)
+      : Node(KLocalName), Encoding(Encoding_), Entity(Entity_) {}
+
+  void printLeft(OutputStream &S) const override {
+    Encoding->print(S);
+    S += "::";
+    Entity->print(S);
+  }
+};
+
 class QualifiedName final : public Node {
   // qualifier::name
   const Node *Qualifier;
@@ -909,12 +959,6 @@ public:
     S += "::";
     Name->print(S);
   }
-};
-
-class EmptyName : public Node {
-public:
-  EmptyName() : Node(KEmptyName) {}
-  void printLeft(OutputStream &) const override {}
 };
 
 class VectorType final : public Node {
@@ -1140,12 +1184,11 @@ struct ForwardTemplateReference : Node {
   }
 };
 
-class NameWithTemplateArgs final : public Node {
+struct NameWithTemplateArgs : Node {
   // name<template_args>
   Node *Name;
   Node *TemplateArgs;
 
-public:
   NameWithTemplateArgs(Node *Name_, Node *TemplateArgs_)
       : Node(KNameWithTemplateArgs), Name(Name_), TemplateArgs(TemplateArgs_) {}
 
@@ -1172,10 +1215,9 @@ public:
   }
 };
 
-class StdQualifiedName final : public Node {
+struct StdQualifiedName : Node {
   Node *Child;
 
-public:
   StdQualifiedName(Node *Child_) : Node(KStdQualifiedName), Child(Child_) {}
 
   StringView getBaseName() const override { return Child->getBaseName(); }
@@ -1686,6 +1728,55 @@ public:
   }
 };
 
+struct FoldExpr : Expr {
+  Node *Pack, *Init;
+  StringView OperatorName;
+  bool IsLeftFold;
+
+  FoldExpr(bool IsLeftFold_, StringView OperatorName_, Node *Pack_, Node *Init_)
+      : Pack(Pack_), Init(Init_), OperatorName(OperatorName_),
+        IsLeftFold(IsLeftFold_) {}
+
+  void printLeft(OutputStream &S) const override {
+    auto PrintPack = [&] {
+      S += '(';
+      ParameterPackExpansion(Pack).print(S);
+      S += ')';
+    };
+
+    S += '(';
+
+    if (IsLeftFold) {
+      // init op ... op pack
+      if (Init != nullptr) {
+        Init->print(S);
+        S += ' ';
+        S += OperatorName;
+        S += ' ';
+      }
+      // ... op pack
+      S += "... ";
+      S += OperatorName;
+      S += ' ';
+      PrintPack();
+    } else { // !IsLeftFold
+      // pack op ...
+      PrintPack();
+      S += ' ';
+      S += OperatorName;
+      S += " ...";
+      // pack op ... op init
+      if (Init != nullptr) {
+        S += ' ';
+        S += OperatorName;
+        S += ' ';
+        Init->print(S);
+      }
+    }
+    S += ')';
+  }
+};
+
 class ThrowExpr : public Expr {
   const Node *Op;
 
@@ -1830,14 +1921,17 @@ public:
                               BlockList->Current - N);
   }
 
-  ~BumpPointerAllocator() {
+  void reset() {
     while (BlockList) {
       BlockMeta* Tmp = BlockList;
       BlockList = BlockList->Next;
       if (reinterpret_cast<char*>(Tmp) != InitialBuffer)
         delete[] reinterpret_cast<char*>(Tmp);
     }
+    BlockList = new (InitialBuffer) BlockMeta{nullptr, 0};
   }
+
+  ~BumpPointerAllocator() { reset(); }
 };
 
 template <class T, size_t N>
@@ -1985,6 +2079,18 @@ struct Db {
 
   Db(const char *First_, const char *Last_) : First(First_), Last(Last_) {}
 
+  void reset(const char *First_, const char *Last_) {
+    First = First_;
+    Last = Last_;
+    Names.clear();
+    Subs.clear();
+    TemplateParams.clear();
+    ParsingLambdaParams = false;
+    TryToParseTemplateArgs = true;
+    PermitForwardTemplateReferences = false;
+    ASTAllocator.reset();
+  }
+
   template <class T, class... Args> T *make(Args &&... args) {
     return new (ASTAllocator.allocate(sizeof(T)))
         T(std::forward<Args>(args)...);
@@ -2054,6 +2160,7 @@ struct Db {
   Node *parseNewExpr();
   Node *parseConversionExpr();
   Node *parseBracedExpr();
+  Node *parseFoldExpr();
 
   /// Parse the <type> production.
   Node *parseType();
@@ -2178,7 +2285,7 @@ Node *Db::parseLocalName(NameState *State) {
 
   if (consumeIf('s')) {
     First = parse_discriminator(First, Last);
-    return make<QualifiedName>(Encoding, make<NameType>("string literal"));
+    return make<LocalName>(Encoding, make<NameType>("string literal"));
   }
 
   if (consumeIf('d')) {
@@ -2188,14 +2295,14 @@ Node *Db::parseLocalName(NameState *State) {
     Node *N = parseName(State);
     if (N == nullptr)
       return nullptr;
-    return make<QualifiedName>(Encoding, N);
+    return make<LocalName>(Encoding, N);
   }
 
   Node *Entity = parseName(State);
   if (Entity == nullptr)
     return nullptr;
   First = parse_discriminator(First, Last);
-  return make<QualifiedName>(Encoding, Entity);
+  return make<LocalName>(Encoding, Entity);
 }
 
 // <unscoped-name> ::= <unqualified-name>
@@ -2630,6 +2737,8 @@ Node *Db::parseCtorDtorName(Node *&SoFar, NameState *State) {
 //          ::= <prefix> <data-member-prefix>
 //  extension ::= L
 //
+// <data-member-prefix> := <member source-name> [<template-args>] M
+//
 // <template-prefix> ::= <prefix> <template unqualified-name>
 //                   ::= <template-param>
 //                   ::= <substitution>
@@ -2649,7 +2758,7 @@ Node *Db::parseNestedName(NameState *State) {
 
   Node *SoFar = nullptr;
   auto PushComponent = [&](Node *Comp) {
-    if (SoFar) SoFar = make<QualifiedName>(SoFar, Comp);
+    if (SoFar) SoFar = make<NestedName>(SoFar, Comp);
     else       SoFar = Comp;
     if (State) State->EndsWithTemplateArgs = false;
   };
@@ -2659,6 +2768,13 @@ Node *Db::parseNestedName(NameState *State) {
 
   while (!consumeIf('E')) {
     consumeIf('L'); // extension
+
+    // <data-member-prefix> := <member source-name> [<template-args>] M
+    if (consumeIf('M')) {
+      if (SoFar == nullptr)
+        return nullptr;
+      continue;
+    }
 
     //          ::= <template-param>
     if (look() == 'T') {
@@ -3789,6 +3905,76 @@ Node *Db::parseBracedExpr() {
   return parseExpr();
 }
 
+// (not yet in the spec)
+// <fold-expr> ::= fL <binary-operator-name> <expression> <expression>
+//             ::= fR <binary-operator-name> <expression> <expression>
+//             ::= fl <binary-operator-name> <expression>
+//             ::= fr <binary-operator-name> <expression>
+Node *Db::parseFoldExpr() {
+  if (!consumeIf('f'))
+    return nullptr;
+
+  char FoldKind = look();
+  bool IsLeftFold, HasInitializer;
+  HasInitializer = FoldKind == 'L' || FoldKind == 'R';
+  if (FoldKind == 'l' || FoldKind == 'L')
+    IsLeftFold = true;
+  else if (FoldKind == 'r' || FoldKind == 'R')
+    IsLeftFold = false;
+  else
+    return nullptr;
+  ++First;
+
+  // FIXME: This map is duplicated in parseOperatorName and parseExpr.
+  StringView OperatorName;
+  if      (consumeIf("aa")) OperatorName = "&&";
+  else if (consumeIf("an")) OperatorName = "&";
+  else if (consumeIf("aN")) OperatorName = "&=";
+  else if (consumeIf("aS")) OperatorName = "=";
+  else if (consumeIf("cm")) OperatorName = ",";
+  else if (consumeIf("ds")) OperatorName = ".*";
+  else if (consumeIf("dv")) OperatorName = "/";
+  else if (consumeIf("dV")) OperatorName = "/=";
+  else if (consumeIf("eo")) OperatorName = "^";
+  else if (consumeIf("eO")) OperatorName = "^=";
+  else if (consumeIf("eq")) OperatorName = "==";
+  else if (consumeIf("ge")) OperatorName = ">=";
+  else if (consumeIf("gt")) OperatorName = ">";
+  else if (consumeIf("le")) OperatorName = "<=";
+  else if (consumeIf("ls")) OperatorName = "<<";
+  else if (consumeIf("lS")) OperatorName = "<<=";
+  else if (consumeIf("lt")) OperatorName = "<";
+  else if (consumeIf("mi")) OperatorName = "-";
+  else if (consumeIf("mI")) OperatorName = "-=";
+  else if (consumeIf("ml")) OperatorName = "*";
+  else if (consumeIf("mL")) OperatorName = "*=";
+  else if (consumeIf("ne")) OperatorName = "!=";
+  else if (consumeIf("oo")) OperatorName = "||";
+  else if (consumeIf("or")) OperatorName = "|";
+  else if (consumeIf("oR")) OperatorName = "|=";
+  else if (consumeIf("pl")) OperatorName = "+";
+  else if (consumeIf("pL")) OperatorName = "+=";
+  else if (consumeIf("rm")) OperatorName = "%";
+  else if (consumeIf("rM")) OperatorName = "%=";
+  else if (consumeIf("rs")) OperatorName = ">>";
+  else if (consumeIf("rS")) OperatorName = ">>=";
+  else return nullptr;
+
+  Node *Pack = parseExpr(), *Init = nullptr;
+  if (Pack == nullptr)
+    return nullptr;
+  if (HasInitializer) {
+    Init = parseExpr();
+    if (Init == nullptr)
+      return nullptr;
+  }
+
+  if (IsLeftFold && Init)
+    std::swap(Pack, Init);
+
+  return make<FoldExpr>(IsLeftFold, OperatorName, Pack, Init);
+}
+
 // <expression> ::= <unary operator-name> <expression>
 //              ::= <binary operator-name> <expression> <expression>
 //              ::= <ternary operator-name> <expression> <expression> <expression>
@@ -3821,6 +4007,7 @@ Node *Db::parseBracedExpr() {
 //              ::= ds <expression> <expression>                         # expr.*expr
 //              ::= sZ <template-param>                                  # size of a parameter pack
 //              ::= sZ <function-param>                                  # size of a function parameter pack
+//              ::= sP <template-arg>* E                                 # sizeof...(T), size of a captured template parameter pack from an alias template
 //              ::= sp <expression>                                      # pack expansion
 //              ::= tw <expression>                                      # throw expression
 //              ::= tr                                                   # throw with no operand (rethrow)
@@ -3842,8 +4029,12 @@ Node *Db::parseExpr() {
     return parseExprPrimary();
   case 'T':
     return parseTemplateParam();
-  case 'f':
-    return parseFunctionParam();
+  case 'f': {
+    // Disambiguate a fold expression from a <function-param>.
+    if (look(1) == 'p' || (look(1) == 'L' && std::isdigit(look(2))))
+      return parseFunctionParam();
+    return parseFoldExpr();
+  }
   case 'a':
     switch (First[1]) {
     case 'a':
@@ -4221,9 +4412,22 @@ Node *Db::parseExpr() {
         Node *FP = parseFunctionParam();
         if (FP == nullptr)
           return nullptr;
-        return make<EnclosingExpr>("sizeof...", FP, ")");
+        return make<EnclosingExpr>("sizeof... (", FP, ")");
       }
       return nullptr;
+    case 'P': {
+      First += 2;
+      size_t ArgsBegin = Names.size();
+      while (!consumeIf('E')) {
+        Node *Arg = parseTemplateArg();
+        if (Arg == nullptr)
+          return nullptr;
+        Names.push_back(Arg);
+      }
+      return make<EnclosingExpr>(
+          "sizeof... (", make<NodeArrayNode>(popTrailingNodeArray(ArgsBegin)),
+          ")");
+    }
     }
     return nullptr;
   case 't':
@@ -4836,6 +5040,22 @@ Node *Db::parse() {
     return nullptr;
   return Ty;
 }
+
+bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
+                            size_t InitSize) {
+  size_t BufferSize;
+  if (Buf == nullptr) {
+    Buf = static_cast<char *>(std::malloc(InitSize));
+    if (Buf == nullptr)
+      return true;
+    BufferSize = InitSize;
+  } else
+    BufferSize = *N;
+
+  S.reset(Buf, BufferSize);
+  return false;
+}
+
 }  // unnamed namespace
 
 enum {
@@ -4855,33 +5075,23 @@ __cxa_demangle(const char *MangledName, char *Buf, size_t *N, int *Status) {
     return nullptr;
   }
 
-  size_t BufSize = Buf != nullptr ? *N : 0;
   int InternalStatus = success;
-  size_t MangledNameLength = std::strlen(MangledName);
+  Db Parser(MangledName, MangledName + std::strlen(MangledName));
+  OutputStream S;
 
-  Db Parser(MangledName, MangledName + MangledNameLength);
   Node *AST = Parser.parse();
 
   if (AST == nullptr)
     InternalStatus = invalid_mangled_name;
-
-  if (InternalStatus == success) {
+  else if (initializeOutputStream(Buf, N, S, 1024))
+    InternalStatus = memory_alloc_failure;
+  else {
     assert(Parser.ForwardTemplateRefs.empty());
-
-    if (Buf == nullptr) {
-      BufSize = 1024;
-      Buf = static_cast<char*>(std::malloc(BufSize));
-    }
-
-    if (Buf) {
-      OutputStream Stream(Buf, BufSize);
-      AST->print(Stream);
-      Stream += '\0';
-      if (N != nullptr)
-        *N = Stream.getCurrentPosition();
-      Buf = Stream.getBuffer();
-    } else
-      InternalStatus = memory_alloc_failure;
+    AST->print(S);
+    S += '\0';
+    if (N != nullptr)
+      *N = S.getCurrentPosition();
+    Buf = S.getBuffer();
   }
 
   if (Status)
