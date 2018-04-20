@@ -124,7 +124,7 @@ void InputChunk::writeRelocations(raw_ostream &OS) const {
     case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-      writeUleb128(OS, Rel.Addend, "reloc addend");
+      writeSleb128(OS, Rel.Addend, "reloc addend");
       break;
     }
   }

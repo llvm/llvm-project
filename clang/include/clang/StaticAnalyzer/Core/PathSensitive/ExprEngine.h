@@ -604,6 +604,11 @@ protected:
                            const CallEvent *Call,
                            RegionAndSymbolInvalidationTraits &ITraits) override;
 
+  /// A simple wrapper when you only need to notify checkers of pointer-escape
+  /// of a single value.
+  ProgramStateRef escapeValue(ProgramStateRef State, SVal V,
+                              PointerEscapeKind K) const;
+
 public:
   // FIXME: 'tag' should be removed, and a LocationContext should be used
   // instead.

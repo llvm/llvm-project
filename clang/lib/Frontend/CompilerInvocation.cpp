@@ -2968,6 +2968,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       LangOpts.ObjCExceptions = 1;
   }
 
+  LangOpts.FunctionAlignment =
+      getLastArgIntValue(Args, OPT_function_alignment, 0, Diags);
+
   if (LangOpts.CUDA) {
     // During CUDA device-side compilation, the aux triple is the
     // triple used for host compilation.

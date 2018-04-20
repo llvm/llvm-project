@@ -469,7 +469,7 @@ void Writer::createSections() {
       return 3;
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
     // the loader cannot handle holes.
-    if (S->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE)
+    if (S->Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
       return 2;
     // .rsrc should come at the end of the non-discardable sections because its
     // size may change by the Win32 UpdateResources() function, causing
@@ -666,7 +666,7 @@ void Writer::createSymbolAndStringTable() {
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Name.size() <= COFF::NameSize)
       continue;
-    if ((Sec->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0)
+    if ((Sec->Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
     Sec->setStringTableOff(addEntryToStringTable(Sec->Name));
   }
@@ -987,7 +987,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
       if (auto *D = dyn_cast_or_null<Defined>(Ref)) {
         Chunk *RefChunk = D->getChunk();
         OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
-        if (OS && OS->getPermissions() & IMAGE_SCN_MEM_EXECUTE)
+        if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
           addSymbolToRVASet(UsedSymbols, D);
       }
     }
@@ -1117,7 +1117,7 @@ void Writer::writeSections() {
     // Fill gaps between functions in .text with INT3 instructions
     // instead of leaving as NUL bytes (which can be interpreted as
     // ADD instructions).
-    if (Sec->getPermissions() & IMAGE_SCN_CNT_CODE)
+    if (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE)
       memset(SecBuf, 0xCC, Sec->getRawSize());
     for_each(parallel::par, Sec->getChunks().begin(), Sec->getChunks().end(),
              [&](Chunk *C) { C->writeTo(SecBuf); });
@@ -1207,7 +1207,7 @@ OutputSection *Writer::findSection(StringRef Name) {
 uint32_t Writer::getSizeOfInitializedData() {
   uint32_t Res = 0;
   for (OutputSection *S : OutputSections)
-    if (S->getPermissions() & IMAGE_SCN_CNT_INITIALIZED_DATA)
+    if (S->Header.Characteristics & IMAGE_SCN_CNT_INITIALIZED_DATA)
       Res += S->getRawSize();
   return Res;
 }

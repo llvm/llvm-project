@@ -35,8 +35,6 @@ public:
   ArrayRef<Chunk *> getChunks() { return Chunks; }
   void addPermissions(uint32_t C);
   void setPermissions(uint32_t C);
-  uint32_t getPermissions() { return Header.Characteristics & PermMask; }
-  uint32_t getCharacteristics() { return Header.Characteristics; }
   uint64_t getRVA() { return Header.VirtualAddress; }
   uint64_t getFileOff() { return Header.PointerToRawData; }
   void writeHeaderTo(uint8_t *Buf);

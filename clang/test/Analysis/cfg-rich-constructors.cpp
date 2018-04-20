@@ -450,6 +450,85 @@ void temporaryInCondition() {
   if (C());
 }
 
+// CHECK: void temporaryInConditionVariable()
+// CHECK:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-NEXT:     2: [B2.1]
+// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
+// CXX11-NEXT:     4: C c = C();
+// CXX11-NEXT:     5: c
+// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B2.6].operator bool
+// CXX11-NEXT:     8: [B2.6]
+// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: if [B2.9]
+// CXX17-NEXT:     2: C c = C();
+// CXX17-NEXT:     3: c
+// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B2.4].operator bool
+// CXX17-NEXT:     6: [B2.4]
+// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: if [B2.7]
+void temporaryInConditionVariable() {
+  if (C c = C());
+}
+
+
+// CHECK: void temporaryInForLoopConditionVariable()
+// CHECK:        [B2]
+// CXX11-NEXT:     1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-NEXT:     2: [B2.1]
+// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
+// CXX11-NEXT:     4: C c2 = C();
+// CXX11-NEXT:     5: c2
+// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B2.6].operator bool
+// CXX11-NEXT:     8: [B2.6]
+// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: for (...; [B2.9]; )
+// CXX17-NEXT:     1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX17-NEXT:     2: C c2 = C();
+// CXX17-NEXT:     3: c2
+// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B2.4].operator bool
+// CXX17-NEXT:     6: [B2.4]
+// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: for (...; [B2.7]; )
+// CHECK:        [B3]
+// CXX11-NEXT:     1: C() (CXXConstructExpr, [B3.2], class C)
+// CXX11-NEXT:     2: [B3.1]
+// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.4], class C)
+// CXX11-NEXT:     4: C c1 = C();
+// CXX17-NEXT:     1: C() (CXXConstructExpr, [B3.2], class C)
+// CXX17-NEXT:     2: C c1 = C();
+void temporaryInForLoopConditionVariable() {
+  for (C c1 = C(); C c2 = C(); );
+}
+
+
+// FIXME: Find construction context for the loop condition variable.
+// CHECK: void temporaryInWhileLoopConditionVariable()
+// CXX11:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-NEXT:     2: [B2.1]
+// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
+// CXX11-NEXT:     4: C c = C();
+// CXX11-NEXT:     5: c
+// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B2.6].operator bool
+// CXX11-NEXT:     8: [B2.6]
+// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: while [B2.9]
+// CXX17:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX17-NEXT:     2: C c = C();
+// CXX17-NEXT:     3: c
+// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B2.4].operator bool
+// CXX17-NEXT:     6: [B2.4]
+// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: while [B2.7]
+void temporaryInWhileLoopConditionVariable() {
+  while (C c = C());
+}
+
 } // end namespace temporary_object_expr_without_dtors
 
 namespace temporary_object_expr_with_dtors {
@@ -693,3 +772,75 @@ void implicitConstructionConversionFromFunctionValueWithLifetimeExtension() {
 }
 
 } // end namespace implicit_constructor_conversion
+
+namespace argument_constructors {
+class D {
+public:
+  D();
+  ~D();
+};
+
+void useC(C c);
+void useCByReference(const C &c);
+void useD(D d);
+void useDByReference(const D &d);
+
+// FIXME: Find construction context for the argument.
+// CHECK: void passArgument()
+// CHECK:          1: useC
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(class C))
+// CXX11-NEXT:     3: C() (CXXConstructExpr, [B1.4], class C)
+// CXX11-NEXT:     4: [B1.3]
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, class C)
+// CXX11-NEXT:     6: [B1.2]([B1.5])
+// CXX17-NEXT:     3: C() (CXXConstructExpr, class C)
+// CXX17-NEXT:     4: [B1.2]([B1.3])
+void passArgument() {
+  useC(C());
+}
+
+// CHECK: void passArgumentByReference()
+// CHECK:          1: useCByReference
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class C &))
+// CHECK-NEXT:     3: C() (CXXConstructExpr, [B1.5], class C)
+// CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class C)
+// CHECK-NEXT:     5: [B1.4]
+// CHECK-NEXT:     6: [B1.2]([B1.5])
+void passArgumentByReference() {
+  useCByReference(C());
+}
+
+// FIXME: Find construction context for the argument.
+// CHECK: void passArgumentWithDestructor()
+// CHECK:          1: useD
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(class argument_constructors::D))
+// CXX11-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.6], class argument_constructors::D)
+// CXX11-NEXT:     4: [B1.3] (BindTemporary)
+// CXX11-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CXX11-NEXT:     6: [B1.5]
+// CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, class argument_constructors::D)
+// CXX11-NEXT:     8: [B1.7] (BindTemporary)
+// CXX11-NEXT:     9: [B1.2]([B1.8])
+// CXX11-NEXT:    10: ~argument_constructors::D() (Temporary object destructor)
+// CXX11-NEXT:    11: ~argument_constructors::D() (Temporary object destructor)
+// CXX17-NEXT:     3: argument_constructors::D() (CXXConstructExpr, class argument_constructors::D)
+// CXX17-NEXT:     4: [B1.3] (BindTemporary)
+// CXX17-NEXT:     5: [B1.2]([B1.4])
+// CXX17-NEXT:     6: ~argument_constructors::D() (Temporary object destructor)
+void passArgumentWithDestructor() {
+  useD(D());
+}
+
+// CHECK: void passArgumentWithDestructorByReference()
+// CHECK:          1: useDByReference
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class argumen
+// CHECK-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.6], class argument_c
+// CHECK-NEXT:     4: [B1.3] (BindTemporary)
+// CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CHECK-NEXT:     6: [B1.5]
+// CHECK-NEXT:     7: [B1.2]([B1.6])
+// CHECK-NEXT:     8: ~argument_constructors::D() (Temporary object destructor)
+void passArgumentWithDestructorByReference() {
+  useDByReference(D());
+}
+} // end namespace argument_constructors

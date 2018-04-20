@@ -94,7 +94,8 @@ PPC64::PPC64() {
   // use 0x10000000 as the starting address.
   DefaultImageBase = 0x10000000;
 
-  TrapInstr = 0x7fe00008;
+  TrapInstr =
+      (Config->IsLE == sys::IsLittleEndianHost) ? 0x7fe00008 : 0x0800e07f;
 }
 
 static uint32_t getEFlags(InputFile *File) {

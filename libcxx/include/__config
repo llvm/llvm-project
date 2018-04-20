@@ -944,6 +944,12 @@ template <unsigned> struct __static_assert_check {};
 #define _DECLARE_C99_LDBL_MATH 1
 #endif
 
+// If we are getting operator new from the MSVC CRT, then allocation overloads
+// for align_val_t were added in 19.12, aka VS 2017 version 15.3.
+#if defined(_LIBCPP_MSVCRT) && defined(_MSC_VER) && _MSC_VER < 1912
+#define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#endif
+
 #if defined(__APPLE__)
 #  if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
       defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)

@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <string>
+#include <sys/select.h>
 #include <thread>
 #include <unistd.h>
 #include <zircon/errors.h>

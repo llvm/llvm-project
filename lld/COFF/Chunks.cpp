@@ -162,7 +162,7 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
                                uint64_t S, uint64_t P) const {
   // Pointer to thumb code must have the LSB set.
   uint64_t SX = S;
-  if (OS && (OS->getPermissions() & IMAGE_SCN_MEM_EXECUTE))
+  if (OS && (OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE))
     SX |= 1;
   switch (Type) {
   case IMAGE_REL_ARM_ADDR32:    add32(Off, SX + Config->ImageBase); break;

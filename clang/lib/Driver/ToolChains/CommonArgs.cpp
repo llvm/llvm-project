@@ -1033,6 +1033,40 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   return std::make_tuple(RelocM, 0U, false);
 }
 
+// `-falign-functions` indicates that the functions should be aligned to a
+// 16-byte boundary.
+//
+// `-falign-functions=1` is the same as `-fno-align-functions`.
+//
+// The scalar `n` in `-falign-functions=n` must be an integral value between
+// [0, 65536].  If the value is not a power-of-two, it will be rounded up to
+// the nearest power-of-two.
+//
+// If we return `0`, the frontend will default to the backend's preferred
+// alignment.
+//
+// NOTE: icc only allows values between [0, 4096].  icc uses `-falign-functions`
+// to mean `-falign-functions=16`.  GCC defaults to the backend's preferred
+// alignment.  For unaligned functions, we default to the backend's preferred
+// alignment.
+unsigned tools::ParseFunctionAlignment(const ToolChain &TC,
+                                       const ArgList &Args) {
+  const Arg *A = Args.getLastArg(options::OPT_falign_functions,
+                                 options::OPT_falign_functions_EQ,
+                                 options::OPT_fno_align_functions);
+  if (!A || A->getOption().matches(options::OPT_fno_align_functions))
+    return 0;
+
+  if (A->getOption().matches(options::OPT_falign_functions))
+    return 0;
+
+  unsigned Value = 0;
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
+    TC.getDriver().Diag(diag::err_drv_invalid_int_value)
+        << A->getAsString(Args) << A->getValue();
+  return Value ? llvm::Log2_32_Ceil(std::min(Value, 65536u)) : Value;
+}
+
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
                              ArgStringList &CmdArgs) {
   llvm::Reloc::Model RelocationModel;

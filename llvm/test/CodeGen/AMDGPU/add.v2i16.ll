@@ -115,8 +115,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(<2 x i16> addrspace(1)* 
 }
 
 ; GCN-LABEL: {{^}}v_test_add_v2i16_inline_lo_zero_hi:
-; GFX9: s_mov_b32 [[K:s[0-9]+]], 32{{$}}
-; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, [[K]]{{$}}
+; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, 32{{$}}
 
 ; VI-NOT: v_add_u16
 ; VI: v_add_u16_e32 v{{[0-9]+}}, 32, v{{[0-9]+}}

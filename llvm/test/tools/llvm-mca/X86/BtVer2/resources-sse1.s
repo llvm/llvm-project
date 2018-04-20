@@ -131,6 +131,11 @@ pmovmskb    %xmm0, %rcx
 pmulhuw     %mm0, %mm2
 pmulhuw     (%rax), %mm2
 
+prefetcht0  (%rax)
+prefetcht1  (%rax)
+prefetcht2  (%rax)
+prefetchnta (%rax)
+
 psadbw      %mm0, %mm2
 psadbw      (%rax), %mm2
 
@@ -277,6 +282,10 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                    	pmovmskb	%xmm0, %ecx
 # CHECK-NEXT:  1      2     1.00                    	pmulhuw	%mm0, %mm2
 # CHECK-NEXT:  1      7     1.00    *               	pmulhuw	(%rax), %mm2
+# CHECK-NEXT:  1      5     1.00    *      *        	prefetcht0	(%rax)
+# CHECK-NEXT:  1      5     1.00    *      *        	prefetcht1	(%rax)
+# CHECK-NEXT:  1      5     1.00    *      *        	prefetcht2	(%rax)
+# CHECK-NEXT:  1      5     1.00    *      *        	prefetchnta	(%rax)
 # CHECK-NEXT:  1      2     0.50                    	psadbw	%mm0, %mm2
 # CHECK-NEXT:  1      7     1.00    *               	psadbw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                    	pshufw	$1, %mm0, %mm2
@@ -328,7 +337,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 15.00   -      -     46.50  183.50 50.00  62.00  54.00   -     9.00   21.00  9.50   9.50   2.00
+# CHECK-NEXT: 15.00   -      -     46.50  183.50 50.00  62.00  58.00   -     9.00   21.00  9.50   9.50   2.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   	Instructions:
@@ -420,6 +429,10 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     	pmovmskb	%xmm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   	pmulhuw	%mm0, %mm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   	pmulhuw	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     	prefetcht0	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     	prefetcht1	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     	prefetcht2	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     	prefetchnta	(%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	psadbw	%mm0, %mm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	psadbw	(%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	pshufw	$1, %mm0, %mm2
