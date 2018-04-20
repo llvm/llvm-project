@@ -40,3 +40,32 @@ ld1d { v0.2d }, p0/z, [x1, #1, MUL VL]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: ld1d { v0.2d }, p0/z, [x1, #1, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + scalar addressing modes
+
+ld1d z0.d, p0/z, [x0, x0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, x0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ld1d z0.d, p0/z, [x0, xzr]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, xzr]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ld1d z0.d, p0/z, [x0, x0, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, x0, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ld1d z0.d, p0/z, [x0, w0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, w0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ld1d z0.d, p0/z, [x0, w0, uxtw]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, w0, uxtw]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

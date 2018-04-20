@@ -41,7 +41,7 @@ class DominatorTree;
 class SSAUpdaterBulk {
   struct RewriteInfo {
     DenseMap<BasicBlock *, Value *> Defines;
-    SmallPtrSet<Use *, 4> Uses;
+    SmallVector<Use *, 4> Uses;
     StringRef Name;
     Type *Ty;
     RewriteInfo(){};

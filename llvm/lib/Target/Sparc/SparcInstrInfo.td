@@ -1599,6 +1599,9 @@ let Predicates = [HasV9] in {
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//
 
+// Zero immediate.
+def : Pat<(i32 0),
+          (ORrr (i32 G0), (i32 G0))>;
 // Small immediates.
 def : Pat<(i32 simm13:$val),
           (ORri (i32 G0), imm:$val)>;

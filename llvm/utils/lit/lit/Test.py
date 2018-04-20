@@ -373,7 +373,8 @@ class Test:
 
         xml = "<testcase classname='" + class_name + "' name='" + \
             test_name + "'"
-        xml += " time='%.2f'" % (self.result.elapsed,)
+        xml += " time='{:.2f}'".format(
+            self.result.elapsed if self.result.elapsed is not None else 0.0)
         if self.result.code.isFailure:
             xml += ">\n\t<failure >\n" + escape(self.result.output)
             xml += "\n\t</failure>\n</testcase>"

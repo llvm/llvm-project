@@ -37,14 +37,6 @@ def LeonCASA : SubtargetFeature<
   "Enable CASA instruction for LEON3 and LEON4 processors"
 >;
 
-
-def ReplaceSDIV : SubtargetFeature<
-  "replacesdiv",
-  "PerformSDIVReplace",
-  "true",
-  "AT697E erratum fix: Do not emit SDIV, emit SDIVCC instead"
->;
-          
 def InsertNOPLoad: SubtargetFeature<
   "insertnopload",
   "InsertNOPLoad",
