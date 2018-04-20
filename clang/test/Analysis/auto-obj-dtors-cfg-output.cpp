@@ -388,7 +388,8 @@ void test_if_jumps() {
 // CHECK:      [B4]
 // CHECK-NEXT:   1: a
 // CHECK-NEXT:   2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   3: [B4.2] (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3: [B4.2] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3: [B4.2] (CXXConstructExpr, [B4.4], class A)
 // CHECK-NEXT:   4: A b = a;
 // CHECK-NEXT:   5: b
 // CHECK-NEXT:   6: [B4.5] (ImplicitCastExpr, NoOp, const class A)
@@ -478,7 +479,8 @@ void test_while_implicit_scope() {
 // CHECK:      [B10]
 // CHECK-NEXT:   1: a
 // CHECK-NEXT:   2: [B10.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   3: [B10.2] (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3: [B10.2] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3: [B10.2] (CXXConstructExpr, [B10.4], class A)
 // CHECK-NEXT:   4: A b = a;
 // CHECK-NEXT:   5: b
 // CHECK-NEXT:   6: [B10.5] (ImplicitCastExpr, NoOp, const class A)
@@ -761,7 +763,8 @@ void test_switch_jumps() {
 // CHECK:      [B4]
 // CHECK-NEXT:   1: a
 // CHECK-NEXT:   2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   3: [B4.2] (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3: [B4.2] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3: [B4.2] (CXXConstructExpr, [B4.4], class A)
 // CHECK-NEXT:   4: A b = a;
 // CHECK-NEXT:   5: b
 // CHECK-NEXT:   6: [B4.5] (ImplicitCastExpr, NoOp, const class A)
@@ -851,7 +854,8 @@ void test_for_implicit_scope() {
 // CHECK:      [B10]
 // CHECK-NEXT:   1: b
 // CHECK-NEXT:   2: [B10.1] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   3: [B10.2] (CXXConstructExpr, class A)
+// WARNINGS-NEXT:   3: [B10.2] (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   3: [B10.2] (CXXConstructExpr, [B10.4], class A)
 // CHECK-NEXT:   4: A c = b;
 // CHECK-NEXT:   5: c
 // CHECK-NEXT:   6: [B10.5] (ImplicitCastExpr, NoOp, const class A)

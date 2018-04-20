@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-store=region -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-store=region -std=c++14 -verify -fblocks %s
 #import "Inputs/system-header-simulator-objc.h"
 #import "Inputs/system-header-simulator-for-malloc.h"
 
@@ -319,4 +319,14 @@ void test12365078_check_positive() {
   unichar *characters = (unichar*)malloc(12);
   NSString *string = [[NSString alloc] initWithCharactersNoCopy:characters length:12 freeWhenDone:1];
   if (string) free(characters); // expected-warning{{Attempt to free non-owned memory}}
+}
+
+void *test_reinterpret_cast_to_block() {
+  // Used to leak because the pointer was disappearing
+  // during the reinterpret_cast.
+  using BlockPtrTy = void (^)();
+  struct Block {};
+  Block* block = static_cast<Block*>(malloc(sizeof(Block)));
+  BlockPtrTy blockPtr = reinterpret_cast<BlockPtrTy>(block); // no-warning
+  return blockPtr;
 }
