@@ -1,5 +1,5 @@
-; RUN: llc -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s 
-; RUN: llc -enable-machine-outliner -enable-linkonceodr-outlining -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=ODR
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -enable-linkonceodr-outlining -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=ODR
 
 define linkonce_odr void @fish() #0 {
   ; CHECK-LABEL: _fish:

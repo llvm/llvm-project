@@ -202,10 +202,8 @@ struct PartialInlinerImpl {
       std::function<AssumptionCache &(Function &)> *GetAC,
       std::function<TargetTransformInfo &(Function &)> *GTTI,
       Optional<function_ref<BlockFrequencyInfo &(Function &)>> GBFI,
-      ProfileSummaryInfo *ProfSI,
-      std::function<OptimizationRemarkEmitter &(Function &)> *GORE)
-      : GetAssumptionCache(GetAC), GetTTI(GTTI), GetBFI(GBFI), PSI(ProfSI),
-        GetORE(GORE) {}
+      ProfileSummaryInfo *ProfSI)
+      : GetAssumptionCache(GetAC), GetTTI(GTTI), GetBFI(GBFI), PSI(ProfSI) {}
 
   bool run(Module &M);
   // Main part of the transformation that calls helper functions to find
@@ -271,7 +269,6 @@ private:
   std::function<TargetTransformInfo &(Function &)> *GetTTI;
   Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI;
   ProfileSummaryInfo *PSI;
-  std::function<OptimizationRemarkEmitter &(Function &)> *GetORE;
 
   // Return the frequency of the OutlininingBB relative to F's entry point.
   // The result is no larger than 1 and is represented using BP.
@@ -282,7 +279,8 @@ private:
   // Return true if the callee of CS should be partially inlined with
   // profit.
   bool shouldPartialInline(CallSite CS, FunctionCloner &Cloner,
-                           BlockFrequency WeightedOutliningRcost);
+                           BlockFrequency WeightedOutliningRcost,
+                           OptimizationRemarkEmitter &ORE);
 
   // Try to inline DuplicateFunction (cloned from F with call to
   // the OutlinedFunction into its callers. Return true
@@ -337,7 +335,7 @@ private:
 
   std::unique_ptr<FunctionOutliningInfo> computeOutliningInfo(Function *F);
   std::unique_ptr<FunctionOutliningMultiRegionInfo>
-  computeOutliningColdRegionsInfo(Function *F);
+  computeOutliningColdRegionsInfo(Function *F, OptimizationRemarkEmitter &ORE);
 };
 
 struct PartialInlinerLegacyPass : public ModulePass {
@@ -362,7 +360,6 @@ struct PartialInlinerLegacyPass : public ModulePass {
         &getAnalysis<TargetTransformInfoWrapperPass>();
     ProfileSummaryInfo *PSI =
         getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-    std::unique_ptr<OptimizationRemarkEmitter> UPORE;
 
     std::function<AssumptionCache &(Function &)> GetAssumptionCache =
         [&ACT](Function &F) -> AssumptionCache & {
@@ -374,14 +371,7 @@ struct PartialInlinerLegacyPass : public ModulePass {
       return TTIWP->getTTI(F);
     };
 
-    std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
-        [&UPORE](Function &F) -> OptimizationRemarkEmitter & {
-      UPORE.reset(new OptimizationRemarkEmitter(&F));
-      return *UPORE.get();
-    };
-
-    return PartialInlinerImpl(&GetAssumptionCache, &GetTTI, NoneType::None, PSI,
-                              &GetORE)
+    return PartialInlinerImpl(&GetAssumptionCache, &GetTTI, NoneType::None, PSI)
         .run(M);
   }
 };
@@ -389,7 +379,8 @@ struct PartialInlinerLegacyPass : public ModulePass {
 } // end anonymous namespace
 
 std::unique_ptr<FunctionOutliningMultiRegionInfo>
-PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F) {
+PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F,
+                                                    OptimizationRemarkEmitter &ORE) {
   BasicBlock *EntryBlock = &F->front();
 
   DominatorTree DT(*F);
@@ -402,8 +393,6 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F) {
     BFI = ScopedBFI.get();
   } else
     BFI = &(*GetBFI)(*F);
-
-  auto &ORE = (*GetORE)(*F);
 
   // Return if we don't have profiling information.
   if (!PSI->hasInstrumentationProfile())
@@ -766,7 +755,8 @@ PartialInlinerImpl::getOutliningCallBBRelativeFreq(FunctionCloner &Cloner) {
 
 bool PartialInlinerImpl::shouldPartialInline(
     CallSite CS, FunctionCloner &Cloner,
-    BlockFrequency WeightedOutliningRcost) {
+    BlockFrequency WeightedOutliningRcost,
+    OptimizationRemarkEmitter &ORE) {
   using namespace ore;
 
   Instruction *Call = CS.getInstruction();
@@ -778,7 +768,6 @@ bool PartialInlinerImpl::shouldPartialInline(
 
   Function *Caller = CS.getCaller();
   auto &CalleeTTI = (*GetTTI)(*Callee);
-  auto &ORE = (*GetORE)(*Caller);
   InlineCost IC = getInlineCost(CS, getInlineParams(), CalleeTTI,
                                 *GetAssumptionCache, GetBFI, PSI, &ORE);
 
@@ -1270,14 +1259,14 @@ std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function *F) {
   if (F->user_begin() == F->user_end())
     return {false, nullptr};
 
-  auto &ORE = (*GetORE)(*F);
+  OptimizationRemarkEmitter ORE(F);
 
   // Only try to outline cold regions if we have a profile summary, which
   // implies we have profiling information.
   if (PSI->hasProfileSummary() && F->hasProfileData() &&
       !DisableMultiRegionPartialInline) {
     std::unique_ptr<FunctionOutliningMultiRegionInfo> OMRI =
-        computeOutliningColdRegionsInfo(F);
+        computeOutliningColdRegionsInfo(F, ORE);
     if (OMRI) {
       FunctionCloner Cloner(F, OMRI.get(), ORE);
 
@@ -1357,11 +1346,11 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   // inlining the function with outlining (The inliner uses the size increase to
   // model the cost of inlining a callee).
   if (!SkipCostAnalysis && Cloner.OutlinedRegionCost < SizeCost) {
-    auto &ORE = (*GetORE)(*Cloner.OrigFunc);
+    OptimizationRemarkEmitter OrigFuncORE(Cloner.OrigFunc);
     DebugLoc DLoc;
     BasicBlock *Block;
     std::tie(DLoc, Block) = getOneDebugLoc(Cloner.ClonedFunc);
-    ORE.emit([&]() {
+    OrigFuncORE.emit([&]() {
       return OptimizationRemarkAnalysis(DEBUG_TYPE, "OutlineRegionTooSmall",
                                         DLoc, Block)
              << ore::NV("Function", Cloner.OrigFunc)
@@ -1394,11 +1383,10 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     if (IsLimitReached())
       continue;
 
-
-    if (!shouldPartialInline(CS, Cloner, WeightedRcost))
+    OptimizationRemarkEmitter CallerORE(CS.getCaller());
+    if (!shouldPartialInline(CS, Cloner, WeightedRcost, CallerORE))
       continue;
 
-    auto &ORE = (*GetORE)(*CS.getCaller());
     // Construct remark before doing the inlining, as after successful inlining
     // the callsite is removed.
     OptimizationRemark OR(DEBUG_TYPE, "PartiallyInlined", CS.getInstruction());
@@ -1413,7 +1401,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
                                          : nullptr)))
       continue;
 
-    ORE.emit(OR);
+    CallerORE.emit(OR);
 
     // Now update the entry count:
     if (CalleeEntryCountV && CallSiteToProfCountMap.count(User)) {
@@ -1436,8 +1424,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     if (CalleeEntryCount)
       Cloner.OrigFunc->setEntryCount(
           CalleeEntryCount.setCount(CalleeEntryCountV));
-    auto &ORE = (*GetORE)(*Cloner.OrigFunc);
-    ORE.emit([&]() {
+    OptimizationRemarkEmitter OrigFuncORE(Cloner.OrigFunc);
+    OrigFuncORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "PartiallyInlined", Cloner.OrigFunc)
              << "Partially inlined into at least one caller";
     });
@@ -1519,14 +1507,9 @@ PreservedAnalyses PartialInlinerPass::run(Module &M,
     return FAM.getResult<TargetIRAnalysis>(F);
   };
 
-  std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
-      [&FAM](Function &F) -> OptimizationRemarkEmitter & {
-    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  };
-
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (PartialInlinerImpl(&GetAssumptionCache, &GetTTI, {GetBFI}, PSI, &GetORE)
+  if (PartialInlinerImpl(&GetAssumptionCache, &GetTTI, {GetBFI}, PSI)
           .run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

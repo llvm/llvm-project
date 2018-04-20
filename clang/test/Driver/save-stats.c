@@ -25,4 +25,4 @@
 // CHECK-LTO: "-plugin-opt=stats-file=save-stats.stats"
 
 // RUN: %clang -target x86_64-linux-unknown -save-stats=obj -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO-OBJ
-// CHECK-LTO-OBJ: "-plugin-opt=stats-file=obj/dir/save-stats.stats"
+// CHECK-LTO-OBJ: "-plugin-opt=stats-file=obj/dir{{/|\\\\}}save-stats.stats"

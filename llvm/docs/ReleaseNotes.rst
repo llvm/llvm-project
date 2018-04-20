@@ -61,6 +61,26 @@ Non-comprehensive list of changes in this release
 * The optimization flag to merge constants (-fmerge-all-constants) is no longer
   applied by default.
 
+* Optimization of floating-point casts is improved. This may cause surprising
+  results for code that is relying on undefined behavior. Code sanitizers can
+  be used to detect affected patterns such as this:
+
+.. code-block:: c
+
+    int main() {
+      float x = 4294967296.0f;
+      x = (float)((int)x);
+      printf("junk in the ftrunc: %f\n", x);
+      return 0;
+    }
+
+.. code-block:: bash
+
+    clang -O1 ftrunc.c -fsanitize=undefined ; ./a.out 
+    ftrunc.c:5:15: runtime error: 4.29497e+09 is outside the range of representable values of type 'int'
+    junk in the ftrunc: 0.000000
+
+
 * Note..
 
 .. NOTE

@@ -148,7 +148,7 @@ LT2_header_end:
         .byte   1               # DW_LNE_end_sequence
 LT2_end:
 
-# ERR:      Unexpected line op length at offset 0x0000005e
+# ERR:      warning: unexpected line op length at offset 0x0000005e
 # ERR-SAME: expected 0x02 found 0x01
 
 # The above parsing errors still let us move to the next unit.

@@ -283,11 +283,8 @@ Error WasmObjectFile::parseNameSection(const uint8_t *Ptr, const uint8_t *End) {
           return make_error<GenericBinaryError>("Invalid name entry",
                                                 object_error::parse_failed);
         DebugNames.push_back(wasm::WasmFunctionName{Index, Name});
-        if (isDefinedFunctionIndex(Index)) {
-          // Override any existing name; the name specified by the "names"
-          // section is the Function's canonical name.
-          getDefinedFunction(Index).Name = Name;
-        }
+        if (isDefinedFunctionIndex(Index))
+          getDefinedFunction(Index).DebugName = Name;
       }
       break;
     }
@@ -409,11 +406,8 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
         unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
         FunctionType = &Signatures[FunctionTypes[FuncIndex]];
         wasm::WasmFunction &Function = Functions[FuncIndex];
-        if (Function.Name.empty()) {
-          // Use the symbol's name to set a name for the Function, but only if
-          // one hasn't already been set.
-          Function.Name = Info.Name;
-        }
+        if (Function.SymbolName.empty())
+          Function.SymbolName = Info.Name;
       } else {
         wasm::WasmImport &Import = *ImportedFunctions[Info.ElementIndex];
         FunctionType = &Signatures[Import.SigIndex];
@@ -437,11 +431,8 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
         unsigned GlobalIndex = Info.ElementIndex - NumImportedGlobals;
         wasm::WasmGlobal &Global = Globals[GlobalIndex];
         GlobalType = &Global.Type;
-        if (Global.Name.empty()) {
-          // Use the symbol's name to set a name for the Global, but only if
-          // one hasn't already been set.
-          Global.Name = Info.Name;
-        }
+        if (Global.SymbolName.empty())
+          Global.SymbolName = Info.Name;
       } else {
         wasm::WasmImport &Import = *ImportedGlobals[Info.ElementIndex];
         Info.Name = Import.Field;

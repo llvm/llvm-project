@@ -71,8 +71,7 @@ public:
                                     const MCSymbol *Sym) const;
 
   /// Emit the module-level metadata that the platform cares about.
-  virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M,
-                                  const TargetMachine &TM) const {}
+  virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M) const {}
 
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.

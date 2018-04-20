@@ -26,8 +26,10 @@ namespace wasm {
 // combined to form the final GLOBALS section.
 class InputGlobal {
 public:
-  InputGlobal(const WasmGlobal &G) : Global(G) {}
+  InputGlobal(const WasmGlobal &G, ObjFile *F)
+      : File(F), Global(G), Live(!Config->GcSections) {}
 
+  StringRef getName() const { return Global.SymbolName; }
   const WasmGlobalType &getType() const { return Global.Type; }
 
   uint32_t getGlobalIndex() const { return GlobalIndex.getValue(); }
@@ -37,15 +39,20 @@ public:
     GlobalIndex = Index;
   }
 
-  bool Live = false;
-
+  ObjFile *File;
   WasmGlobal Global;
+
+  bool Live = false;
 
 protected:
   llvm::Optional<uint32_t> GlobalIndex;
 };
 
 } // namespace wasm
+
+inline std::string toString(const wasm::InputGlobal *G) {
+  return (toString(G->File) + ":(" + G->getName() + ")").str();
+}
 
 } // namespace lld
 

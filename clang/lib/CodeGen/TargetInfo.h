@@ -301,6 +301,8 @@ public:
   /// mangled name of functions declared within an extern "C" region and marked
   /// as 'used', and having internal linkage.
   virtual bool shouldEmitStaticExternCAliases() const { return true; }
+
+  virtual void setCUDAKernelCallingConvention(llvm::Function *F) const {}
 };
 
 } // namespace CodeGen

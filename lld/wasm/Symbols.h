@@ -10,6 +10,7 @@
 #ifndef LLD_WASM_SYMBOLS_H
 #define LLD_WASM_SYMBOLS_H
 
+#include "Config.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
@@ -71,8 +72,13 @@ public:
 
   InputChunk *getChunk() const;
 
-  // Indicates that this symbol will be included in the final image.
+  // Indicates that the section or import for this symbol will be included in
+  // the final image.
   bool isLive() const;
+
+  // Marks the symbol's InputChunk as Live, so that it will be included in the
+  // final image.
+  void markLive();
 
   void setHidden(bool IsHidden);
 
@@ -85,13 +91,15 @@ public:
 
 protected:
   Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
-      : Name(Name), SymbolKind(K), Flags(Flags), File(F) {}
+      : Name(Name), SymbolKind(K), Flags(Flags), File(F),
+        Referenced(!Config->GcSections) {}
 
   StringRef Name;
   Kind SymbolKind;
   uint32_t Flags;
   InputFile *File;
   uint32_t OutputSymbolIndex = INVALID_INDEX;
+  bool Referenced = false;
 };
 
 class FunctionSymbol : public Symbol {

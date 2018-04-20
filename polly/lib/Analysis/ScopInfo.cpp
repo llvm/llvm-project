@@ -3585,6 +3585,10 @@ void Scop::removeStmtNotInDomainMap() {
 
 void Scop::simplifySCoP(bool AfterHoisting) {
   auto ShouldDelete = [AfterHoisting](ScopStmt &Stmt) -> bool {
+    // Never delete statements that contain calls to debug functions.
+    if (hasDebugCall(&Stmt))
+      return false;
+
     bool RemoveStmt = Stmt.isEmpty();
 
     // Remove read only statements only after invariant load hoisting.

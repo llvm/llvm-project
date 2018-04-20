@@ -1,7 +1,9 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -hwasan -hwasan-recover=0 -S | FileCheck %s  --check-prefixes=CHECK,ABORT
-; RUN: opt < %s -hwasan -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=CHECK,RECOVER
+; RUN: opt < %s -hwasan -hwasan-recover=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,DYNAMIC-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,DYNAMIC-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ZERO-BASED-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=1 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,ZERO-BASED-SHADOW
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -13,7 +15,9 @@ define i8 @test_load8(i8* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -38,7 +42,9 @@ define i16 @test_load16(i16* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -63,7 +69,9 @@ define i32 @test_load32(i32* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -88,7 +96,9 @@ define i64 @test_load64(i64* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -113,7 +123,9 @@ define i128 @test_load128(i128* %a) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -151,7 +163,9 @@ define void @test_store8(i8* %a, i8 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -176,7 +190,9 @@ define void @test_store16(i16* %a, i16 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -201,7 +217,9 @@ define void @test_store32(i32* %a, i32 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -226,7 +244,9 @@ define void @test_store64(i64* %a, i64 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -251,7 +271,9 @@ define void @test_store128(i128* %a, i128 %b) sanitize_hwaddress {
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = and i64 %[[A]], 72057594037927935
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
-; CHECK: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; DYNAMIC-SHADOW: %[[D_DYN:[^ ]*]] = add i64 %[[D]], %.hwasan.shadow
+; DYNAMIC-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D_DYN]] to i8*
+; ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 ; CHECK: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
@@ -320,6 +342,7 @@ entry:
 define i8 @test_load_addrspace(i8 addrspace(256)* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load_addrspace(
 ; CHECK-NEXT: entry:
+; DYNAMIC-SHADOW: %.hwasan.shadow = call i64 asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
 ; CHECK-NEXT: %[[B:[^ ]*]] = load i8, i8 addrspace(256)* %a
 ; CHECK-NEXT: ret i8 %[[B]]
 

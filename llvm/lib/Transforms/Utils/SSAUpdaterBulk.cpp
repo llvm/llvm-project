@@ -38,18 +38,19 @@ static BasicBlock *getUserBB(Use *U) {
 
 /// Add a new variable to the SSA rewriter. This needs to be called before
 /// AddAvailableValue or AddUse calls.
-void SSAUpdaterBulk::AddVariable(unsigned Var, StringRef Name, Type *Ty) {
-  assert(Rewrites.find(Var) == Rewrites.end() && "Variable added twice!");
+unsigned SSAUpdaterBulk::AddVariable(StringRef Name, Type *Ty) {
+  unsigned Var = Rewrites.size();
   DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": initialized with Ty = " << *Ty
                << ", Name = " << Name << "\n");
   RewriteInfo RI(Name, Ty);
-  Rewrites[Var] = RI;
+  Rewrites.push_back(RI);
+  return Var;
 }
 
 /// Indicate that a rewritten value is available in the specified block with the
 /// specified value.
 void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
-  assert(Rewrites.find(Var) != Rewrites.end() && "Should add variable first!");
+  assert(Var < Rewrites.size() && "Variable not found!");
   DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added new available value"
                << *V << " in " << BB->getName() << "\n");
   Rewrites[Var].Defines[BB] = V;
@@ -58,7 +59,7 @@ void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
 /// Record a use of the symbolic value. This use will be updated with a
 /// rewritten value when RewriteAllUses is called.
 void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
-  assert(Rewrites.find(Var) != Rewrites.end() && "Should add variable first!");
+  assert(Var < Rewrites.size() && "Variable not found!");
   DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
                << " in " << getUserBB(U)->getName() << "\n");
   Rewrites[Var].Uses.push_back(U);
@@ -67,7 +68,7 @@ void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
 /// Return true if the SSAUpdater already has a value for the specified variable
 /// in the specified block.
 bool SSAUpdaterBulk::HasValueForBlock(unsigned Var, BasicBlock *BB) {
-  return Rewrites.count(Var) ? Rewrites[Var].Defines.count(BB) : false;
+  return (Var < Rewrites.size()) ? Rewrites[Var].Defines.count(BB) : false;
 }
 
 // Compute value at the given block BB. We either should already know it, or we
@@ -126,16 +127,14 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
 /// requested uses update.
 void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
                                     SmallVectorImpl<PHINode *> *InsertedPHIs) {
-  for (auto &P : Rewrites) {
+  for (auto &R : Rewrites) {
     // Compute locations for new phi-nodes.
     // For that we need to initialize DefBlocks from definitions in R.Defines,
     // UsingBlocks from uses in R.Uses, then compute LiveInBlocks, and then use
     // this set for computing iterated dominance frontier (IDF).
     // The IDF blocks are the blocks where we need to insert new phi-nodes.
     ForwardIDFCalculator IDF(*DT);
-    RewriteInfo &R = P.second;
-    DEBUG(dbgs() << "SSAUpdater: Var=" << P.first << ": rewriting "
-                 << R.Uses.size() << " use(s)\n");
+    DEBUG(dbgs() << "SSAUpdater: rewriting " << R.Uses.size() << " use(s)\n");
 
     SmallPtrSet<BasicBlock *, 2> DefBlocks;
     for (auto &Def : R.Defines)
@@ -165,7 +164,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     }
 
     // Fill in arguments of the inserted PHIs.
-    for (auto PN : InsertedPHIsForVar) {
+    for (auto *PN : InsertedPHIsForVar) {
       BasicBlock *PBB = PN->getParent();
       for (BasicBlock *Pred : PredCache.get(PBB))
         PN->addIncoming(computeValueAt(Pred, R, DT), Pred);
@@ -182,8 +181,8 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       // Notify that users of the existing value that it is being replaced.
       if (OldVal != V && OldVal->hasValueHandle())
         ValueHandleBase::ValueIsRAUWd(OldVal, V);
-      DEBUG(dbgs() << "SSAUpdater: Var=" << P.first << ": replacing" << *OldVal
-                   << " with " << *V << "\n");
+      DEBUG(dbgs() << "SSAUpdater: replacing " << *OldVal << " with " << *V
+                   << "\n");
       U->set(V);
     }
   }

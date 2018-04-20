@@ -1,4 +1,4 @@
-//===-- hwasan_linux.cc -----------------------------------------------------===//
+//===-- hwasan_linux.cc -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,35 +6,39 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This file is a part of HWAddressSanitizer.
-//
-// Linux-, NetBSD- and FreeBSD-specific code.
+///
+/// \file
+/// This file is a part of HWAddressSanitizer and contains Linux-, NetBSD- and
+/// FreeBSD-specific code.
+///
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 
 #include "hwasan.h"
+#include "hwasan_dynamic_shadow.h"
+#include "hwasan_interface_internal.h"
+#include "hwasan_mapping.h"
 #include "hwasan_thread.h"
 
 #include <elf.h>
 #include <link.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <unwind.h>
-#include <sys/time.h>
-#include <sys/resource.h>
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 
 namespace __hwasan {
 
-void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
+static void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
   CHECK_EQ((beg % GetMmapGranularity()), 0);
   CHECK_EQ(((end + 1) % GetMmapGranularity()), 0);
   uptr size = end - beg + 1;
@@ -52,8 +56,11 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
 }
 
 static void ProtectGap(uptr addr, uptr size) {
+  if (!size)
+    return;
   void *res = MmapFixedNoAccess(addr, size, "shadow gap");
-  if (addr == (uptr)res) return;
+  if (addr == (uptr)res)
+    return;
   // A few pages at the start of the address space can not be protected.
   // But we really want to protect as much as possible, to prevent this memory
   // being returned as a result of a non-FIXED mmap().
@@ -63,69 +70,158 @@ static void ProtectGap(uptr addr, uptr size) {
       addr += step;
       size -= step;
       void *res = MmapFixedNoAccess(addr, size, "shadow gap");
-      if (addr == (uptr)res) return;
+      if (addr == (uptr)res)
+        return;
     }
   }
 
   Report(
-      "ERROR: Failed to protect the shadow gap. "
-      "HWASan cannot proceed correctly. ABORTING.\n");
+      "ERROR: Failed to protect shadow gap [%p, %p]. "
+      "HWASan cannot proceed correctly. ABORTING.\n", (void *)addr,
+      (void *)(addr + size));
   DumpProcessMap();
   Die();
 }
 
-// LowMem covers as much of the first 4GB as possible.
-const uptr kLowMemEnd = 1UL << 32;
-const uptr kLowShadowEnd = kLowMemEnd >> kShadowScale;
-const uptr kLowShadowStart = kLowShadowEnd >> kShadowScale;
+static uptr kLowMemStart;
+static uptr kLowMemEnd;
+static uptr kLowShadowEnd;
+static uptr kLowShadowStart;
 static uptr kHighShadowStart;
 static uptr kHighShadowEnd;
 static uptr kHighMemStart;
+static uptr kHighMemEnd;
+
+static void PrintRange(uptr start, uptr end, const char *name) {
+  Printf("|| [%p, %p] || %.*s ||\n", (void *)start, (void *)end, 10, name);
+}
+
+static void PrintAddressSpaceLayout() {
+  PrintRange(kHighMemStart, kHighMemEnd, "HighMem");
+  if (kHighShadowEnd + 1 < kHighMemStart)
+    PrintRange(kHighShadowEnd + 1, kHighMemStart - 1, "ShadowGap");
+  else
+    CHECK_EQ(kHighShadowEnd + 1, kHighMemStart);
+  PrintRange(kHighShadowStart, kHighShadowEnd, "HighShadow");
+  if (SHADOW_OFFSET) {
+    if (kLowShadowEnd + 1 < kHighShadowStart)
+      PrintRange(kLowShadowEnd + 1, kHighShadowStart - 1, "ShadowGap");
+    else
+      CHECK_EQ(kLowMemEnd + 1, kHighShadowStart);
+    PrintRange(kLowShadowStart, kLowShadowEnd, "LowShadow");
+    if (kLowMemEnd + 1 < kLowShadowStart)
+      PrintRange(kLowMemEnd + 1, kLowShadowStart - 1, "ShadowGap");
+    else
+      CHECK_EQ(kLowMemEnd + 1, kLowShadowStart);
+    PrintRange(kLowMemStart, kLowMemEnd, "LowMem");
+    CHECK_EQ(0, kLowMemStart);
+  } else {
+    if (kLowMemEnd + 1 < kHighShadowStart)
+      PrintRange(kLowMemEnd + 1, kHighShadowStart - 1, "ShadowGap");
+    else
+      CHECK_EQ(kLowMemEnd + 1, kHighShadowStart);
+    PrintRange(kLowMemStart, kLowMemEnd, "LowMem");
+    CHECK_EQ(kLowShadowEnd + 1, kLowMemStart);
+    PrintRange(kLowShadowStart, kLowShadowEnd, "LowShadow");
+    PrintRange(0, kLowShadowStart - 1, "ShadowGap");
+  }
+}
+
+static uptr GetHighMemEnd() {
+  // HighMem covers the upper part of the address space.
+  uptr max_address = GetMaxUserVirtualAddress();
+  if (SHADOW_OFFSET)
+    // Adjust max address to make sure that kHighMemEnd and kHighMemStart are
+    // properly aligned:
+    max_address |= SHADOW_GRANULARITY * GetMmapGranularity() - 1;
+  return max_address;
+}
+
+static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
+  // Set the shadow memory address to uninitialized.
+  __hwasan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
+  uptr shadow_start = SHADOW_OFFSET;
+  // Detect if a dynamic shadow address must be used and find the available
+  // location when necessary. When dynamic address is used, the macro
+  // kLowShadowBeg expands to __hwasan_shadow_memory_dynamic_address which
+  // was just set to kDefaultShadowSentinel.
+  if (shadow_start == kDefaultShadowSentinel) {
+    __hwasan_shadow_memory_dynamic_address = 0;
+    CHECK_EQ(0, SHADOW_OFFSET);
+    shadow_start = FindDynamicShadowStart(shadow_size_bytes);
+  }
+  // Update the shadow memory address (potentially) used by instrumentation.
+  __hwasan_shadow_memory_dynamic_address = shadow_start;
+}
 
 bool InitShadow() {
-  const uptr maxVirtualAddress = GetMaxUserVirtualAddress();
+  // Define the entire memory range.
+  kHighMemEnd = GetHighMemEnd();
 
-  // HighMem covers the upper part of the address space.
-  kHighShadowEnd = (maxVirtualAddress >> kShadowScale) + 1;
-  kHighShadowStart = Max(kLowMemEnd, kHighShadowEnd >> kShadowScale);
-  CHECK(kHighShadowStart < kHighShadowEnd);
+  // Determine shadow memory base offset.
+  InitializeShadowBaseAddress(MEM_TO_SHADOW_SIZE(kHighMemEnd));
 
-  kHighMemStart = kHighShadowStart << kShadowScale;
-  CHECK(kHighShadowEnd <= kHighMemStart);
-
-  if (Verbosity()) {
-    Printf("|| `[%p, %p]` || HighMem    ||\n", (void *)kHighMemStart,
-           (void *)maxVirtualAddress);
-    if (kHighMemStart > kHighShadowEnd)
-      Printf("|| `[%p, %p]` || ShadowGap2 ||\n", (void *)kHighShadowEnd,
-             (void *)kHighMemStart);
-    Printf("|| `[%p, %p]` || HighShadow ||\n", (void *)kHighShadowStart,
-           (void *)kHighShadowEnd);
-    if (kHighShadowStart > kLowMemEnd)
-      Printf("|| `[%p, %p]` || ShadowGap2 ||\n", (void *)kHighShadowEnd,
-             (void *)kHighMemStart);
-    Printf("|| `[%p, %p]` || LowMem     ||\n", (void *)kLowShadowEnd,
-           (void *)kLowMemEnd);
-    Printf("|| `[%p, %p]` || LowShadow  ||\n", (void *)kLowShadowStart,
-           (void *)kLowShadowEnd);
-    Printf("|| `[%p, %p]` || ShadowGap1 ||\n", (void *)0,
-           (void *)kLowShadowStart);
+  // Place the low memory first.
+  if (SHADOW_OFFSET) {
+    kLowMemEnd = SHADOW_OFFSET - 1;
+    kLowMemStart = 0;
+  } else {
+    // LowMem covers as much of the first 4GB as possible.
+    kLowMemEnd = (1UL << 32) - 1;
+    kLowMemStart = MEM_TO_SHADOW(kLowMemEnd) + 1;
   }
 
-  ReserveShadowMemoryRange(kLowShadowStart, kLowShadowEnd - 1, "low shadow");
-  ReserveShadowMemoryRange(kHighShadowStart, kHighShadowEnd - 1, "high shadow");
-  ProtectGap(0, kLowShadowStart);
-  if (kHighShadowStart > kLowMemEnd)
-    ProtectGap(kLowMemEnd, kHighShadowStart - kLowMemEnd);
-  if (kHighMemStart > kHighShadowEnd)
-    ProtectGap(kHighShadowEnd, kHighMemStart - kHighShadowEnd);
+  // Define the low shadow based on the already placed low memory.
+  kLowShadowEnd = MEM_TO_SHADOW(kLowMemEnd);
+  kLowShadowStart = SHADOW_OFFSET ? SHADOW_OFFSET : MEM_TO_SHADOW(kLowMemStart);
+
+  // High shadow takes whatever memory is left up there (making sure it is not
+  // interfering with low memory in the fixed case).
+  kHighShadowEnd = MEM_TO_SHADOW(kHighMemEnd);
+  kHighShadowStart = Max(kLowMemEnd, MEM_TO_SHADOW(kHighShadowEnd)) + 1;
+
+  // High memory starts where allocated shadow allows.
+  kHighMemStart = SHADOW_TO_MEM(kHighShadowStart);
+
+  // Check the sanity of the defined memory ranges (there might be gaps).
+  CHECK_EQ(kHighMemStart % GetMmapGranularity(), 0);
+  CHECK_GT(kHighMemStart, kHighShadowEnd);
+  CHECK_GT(kHighShadowEnd, kHighShadowStart);
+  CHECK_GT(kHighShadowStart, kLowMemEnd);
+  CHECK_GT(kLowMemEnd, kLowMemStart);
+  CHECK_GT(kLowShadowEnd, kLowShadowStart);
+  if (SHADOW_OFFSET)
+    CHECK_GT(kLowShadowStart, kLowMemEnd);
+  else
+    CHECK_GT(kLowMemEnd, kLowShadowStart);
+
+  if (Verbosity())
+    PrintAddressSpaceLayout();
+
+  // Reserve shadow memory.
+  ReserveShadowMemoryRange(kLowShadowStart, kLowShadowEnd, "low shadow");
+  ReserveShadowMemoryRange(kHighShadowStart, kHighShadowEnd, "high shadow");
+
+  // Protect all the gaps.
+  ProtectGap(0, Min(kLowMemStart, kLowShadowStart));
+  if (SHADOW_OFFSET) {
+    if (kLowMemEnd + 1 < kLowShadowStart)
+      ProtectGap(kLowMemEnd + 1, kLowShadowStart - kLowMemEnd - 1);
+    if (kLowShadowEnd + 1 < kHighShadowStart)
+      ProtectGap(kLowShadowEnd + 1, kHighShadowStart - kLowShadowEnd - 1);
+  } else {
+    if (kLowMemEnd + 1 < kHighShadowStart)
+      ProtectGap(kLowMemEnd + 1, kHighShadowStart - kLowMemEnd - 1);
+  }
+  if (kHighShadowEnd + 1 < kHighMemStart)
+    ProtectGap(kHighShadowEnd + 1, kHighMemStart - kHighShadowEnd - 1);
 
   return true;
 }
 
 bool MemIsApp(uptr p) {
   CHECK(GetTagFromPointer(p) == 0);
-  return p >= kHighMemStart || (p >= kLowShadowEnd && p < kLowMemEnd);
+  return p >= kHighMemStart || (p >= kLowMemStart && p <= kLowMemEnd);
 }
 
 static void HwasanAtExit(void) {
