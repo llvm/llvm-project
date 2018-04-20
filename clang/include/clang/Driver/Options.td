@@ -580,7 +580,7 @@ def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-
 def fcuda_approx_transcendentals : Flag<["-"], "fcuda-approx-transcendentals">,
   Flags<[CC1Option]>, HelpText<"Use approximate transcendental functions">;
 def fno_cuda_approx_transcendentals : Flag<["-"], "fno-cuda-approx-transcendentals">;
-def fcuda_rdc : Flag<["-"], "fcuda-rdc">, Flags<[CC1Option, HelpHidden]>,
+def fcuda_rdc : Flag<["-"], "fcuda-rdc">, Flags<[CC1Option]>,
   HelpText<"Generate relocatable device code, also known as separate compilation mode.">;
 def fno_cuda_rdc : Flag<["-"], "fno-cuda-rdc">;
 def dA : Flag<["-"], "dA">, Group<d_Group>;
@@ -1485,8 +1485,10 @@ def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">,
 def fopenmp_simd : Flag<["-"], "fopenmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
 def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
-def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
-def fno_openmp_cuda_mode : Flag<["-"], "fno-openmp-cuda-mode">, Group<f_Group>, Flags<[NoArgumentUnused]>;
+def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>,
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
+def fno_openmp_cuda_mode : Flag<["-"], "fno-openmp-cuda-mode">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>;
 def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
 def fno_escaping_block_tail_calls : Flag<["-"], "fno-escaping-block-tail-calls">, Group<f_Group>, Flags<[CC1Option]>;

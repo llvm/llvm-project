@@ -57,6 +57,7 @@ public:
   ArrayRef<WasmRelocation> getRelocations() const { return Relocations; }
 
   virtual StringRef getName() const = 0;
+  virtual StringRef getDebugName() const = 0;
   virtual uint32_t getComdat() const = 0;
   StringRef getComdatName() const;
 
@@ -99,6 +100,7 @@ public:
 
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   StringRef getName() const override { return Segment.Data.Name; }
+  StringRef getDebugName() const override { return StringRef(); }
   uint32_t getComdat() const override { return Segment.Data.Comdat; }
 
   const OutputSegment *OutputSeg = nullptr;
@@ -125,7 +127,8 @@ public:
            C->kind() == InputChunk::SyntheticFunction;
   }
 
-  StringRef getName() const override { return Function->Name; }
+  StringRef getName() const override { return Function->SymbolName; }
+  StringRef getDebugName() const override { return Function->DebugName; }
   uint32_t getComdat() const override { return Function->Comdat; }
   uint32_t getFunctionIndex() const { return FunctionIndex.getValue(); }
   bool hasFunctionIndex() const { return FunctionIndex.hasValue(); }
@@ -152,8 +155,9 @@ protected:
 
 class SyntheticFunction : public InputFunction {
 public:
-  SyntheticFunction(const WasmSignature &S, StringRef Name)
-      : InputFunction(S, nullptr, nullptr), Name(Name) {
+  SyntheticFunction(const WasmSignature &S, StringRef Name,
+                    StringRef DebugName = {})
+      : InputFunction(S, nullptr, nullptr), Name(Name), DebugName(DebugName) {
     SectionKind = InputChunk::SyntheticFunction;
   }
 
@@ -162,6 +166,7 @@ public:
   }
 
   StringRef getName() const override { return Name; }
+  StringRef getDebugName() const override { return DebugName; }
   uint32_t getComdat() const override { return UINT32_MAX; }
 
   void setBody(ArrayRef<uint8_t> Body_) { Body = Body_; }
@@ -170,6 +175,7 @@ protected:
   ArrayRef<uint8_t> data() const override { return Body; }
 
   StringRef Name;
+  StringRef DebugName;
   ArrayRef<uint8_t> Body;
 };
 
@@ -182,6 +188,7 @@ public:
   }
 
   StringRef getName() const override { return Section.Name; }
+  StringRef getDebugName() const override { return StringRef(); }
   uint32_t getComdat() const override { return UINT32_MAX; }
 
 protected:

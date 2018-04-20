@@ -534,7 +534,7 @@ void Writer::createLinkingSection() {
 void Writer::createNameSection() {
   unsigned NumNames = NumImportedFunctions;
   for (const InputFunction *F : InputFunctions)
-    if (!F->getName().empty())
+    if (!F->getName().empty() || !F->getDebugName().empty())
       ++NumNames;
 
   if (NumNames == 0)
@@ -558,8 +558,12 @@ void Writer::createNameSection() {
   for (const InputFunction *F : InputFunctions) {
     if (!F->getName().empty()) {
       writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      Optional<std::string> Name = demangleItanium(F->getName());
-      writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+      if (!F->getDebugName().empty()) {
+        writeStr(Sub.OS, F->getDebugName(), "symbol name");
+      } else {
+        Optional<std::string> Name = demangleItanium(F->getName());
+        writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+      }
     }
   }
 

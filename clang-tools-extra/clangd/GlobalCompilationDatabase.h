@@ -52,6 +52,7 @@ class DirectoryBasedGlobalCompilationDatabase
 public:
   DirectoryBasedGlobalCompilationDatabase(
       llvm::Optional<Path> CompileCommandsDir);
+  ~DirectoryBasedGlobalCompilationDatabase() override;
 
   /// Scans File's parents looking for compilation databases.
   /// Any extra flags will be added.

@@ -397,6 +397,10 @@ def VCOMBINE : NoTestOpInst<"vcombine", "kdd", "csilhfUcUsUiUlPcPs", OP_CONC>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.21 Splitting vectors
+// Note that the ARM NEON Reference 2.0 mistakenly document the vget_high_f16()
+// and vget_low_f16() intrinsics as AArch64-only. We (and GCC) support all
+// versions of these intrinsics in both AArch32 and AArch64 architectures. See
+// D45668 for more details.
 let InstName = "vmov" in {
 def VGET_HIGH : NoTestOpInst<"vget_high", "dk", "csilhfUcUsUiUlPcPs", OP_HI>;
 def VGET_LOW  : NoTestOpInst<"vget_low", "dk", "csilhfUcUsUiUlPcPs", OP_LO>;
