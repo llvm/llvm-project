@@ -38,6 +38,7 @@ inline namespace noexceptions {
     fputs("Assertion \"" #test "\" failed at " __FILE__      \
       ":" ISLPP_STRINGIZE(__LINE__) "\n  " message "\n",     \
       stderr);                                               \
+    abort();                                                 \
   } while (0)
 
 class boolean {
