@@ -339,9 +339,9 @@ static uint8_t getVisibility(uint8_t StOther) { return StOther & 3; }
 // files) form group 2. E forms group 3. I think that you can see how this
 // group assignment rule simulates the traditional linker's semantics.
 static void checkBackrefs(StringRef Name, InputFile *Old, InputFile *New) {
-  if (Config->WarnBackrefs && Old && New->GroupId < Old->GroupId)
-    warn("backward reference detected: " + Name + " in " + toString(Old) +
-         " refers to " + toString(New));
+  if (Config->WarnBackrefs && New && Old->GroupId < New->GroupId)
+    warn("backward reference detected: " + Name + " in " + toString(New) +
+         " refers to " + toString(Old));
 }
 
 template <class ELFT>
@@ -376,7 +376,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
       return S;
     }
 
-    checkBackrefs(Name, File, S->File);
+    checkBackrefs(Name, S->File, File);
     fetchLazy<ELFT>(S);
   }
   return S;

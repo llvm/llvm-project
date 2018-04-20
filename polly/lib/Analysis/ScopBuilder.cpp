@@ -559,7 +559,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   if (CI == nullptr)
     return false;
 
-  if (CI->doesNotAccessMemory() || isIgnoredIntrinsic(CI))
+  if (CI->doesNotAccessMemory() || isIgnoredIntrinsic(CI) || isDebugCall(CI))
     return true;
 
   bool ReadOnly = false;
