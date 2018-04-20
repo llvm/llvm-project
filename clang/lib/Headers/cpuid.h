@@ -177,6 +177,7 @@
 #define bit_AVX512VBMI       0x00000002
 #define bit_PKU              0x00000004
 #define bit_OSPKE            0x00000010
+#define bit_WAITPKG          0x00000020
 #define bit_AVX512VBMI2      0x00000040
 #define bit_SHSTK            0x00000080
 #define bit_GFNI             0x00000100

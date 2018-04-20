@@ -340,7 +340,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Global.Type = {WASM_TYPE_I32, true};
     Global.InitExpr.Value.Int32 = 0;
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    InputGlobal *StackPointer = make<InputGlobal>(Global);
+    Global.SymbolName = "__stack_pointer";
+    InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
     StackPointer->Live = true;
 
     static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
