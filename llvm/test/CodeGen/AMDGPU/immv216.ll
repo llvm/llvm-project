@@ -117,7 +117,7 @@ define amdgpu_kernel void @store_literal_imm_v2f16(<2 x half> addrspace(1)* %out
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.0_v2f16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0 op_sel_hi:[1,0]{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]

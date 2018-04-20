@@ -5,9 +5,9 @@
 ; changes, the tests should be changed as well.
 
 ; CHECK-LABEL: f0:
-; CHECK-DAG: r[[D00:([0-9]+:[0-9]+)]] = combine(#0,r0)
-; CHECK-DAG: r[[D01:([0-9]+:[0-9]+)]] = combine(#0,r1)
-; CHECK: p[[P00:[0-3]]] = vcmpb.gt(r[[D01]],r[[D00]])
+; CHECK-DAG: r[[D00:([0-9]+:[0-9]+)]] = vsxtbh(r0)
+; CHECK-DAG: r[[D01:([0-9]+:[0-9]+)]] = vsxtbh(r1)
+; CHECK: p[[P00:[0-3]]] = vcmph.gt(r[[D01]],r[[D00]])
 ; CHECK: r{{[0-9]+}}:[[R00:[0-9]+]] = mask(p[[P00]])
 ; CHECK: r0 = and(r[[R00]],##16843009)
 define <4 x i8> @f0(<4 x i8> %a0, <4 x i8> %a1) #0 {

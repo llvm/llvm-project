@@ -201,6 +201,9 @@ class LoadLeftRightMM<string opstr, SDNode OpNode, RegisterOperand RO,
          Itin, FrmI> {
   let DecoderMethod = "DecodeMemMMImm12";
   string Constraints = "$src = $rt";
+  let BaseOpcode = opstr;
+  bit mayLoad = 1;
+  bit mayStore = 0;
 }
 
 class StoreLeftRightMM<string opstr, SDNode OpNode, RegisterOperand RO,
@@ -209,6 +212,9 @@ class StoreLeftRightMM<string opstr, SDNode OpNode, RegisterOperand RO,
          !strconcat(opstr, "\t$rt, $addr"),
          [(OpNode RO:$rt, addrimm12:$addr)], Itin, FrmI> {
   let DecoderMethod = "DecodeMemMMImm12";
+  let BaseOpcode = opstr;
+  bit mayLoad = 0;
+  bit mayStore = 1;
 }
 
 /// A register pair used by movep instruction.
@@ -820,19 +826,25 @@ let DecoderNamespace = "MicroMips" in {
                   ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
   }
 }
-let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
-  def LWXS_MM : LoadWordIndexedScaledMM<"lwxs", GPR32Opnd>, LWXS_FM_MM<0x118>;
+let DecoderNamespace = "MicroMips" in {
+  let Predicates = [InMicroMips] in
+    def LWXS_MM : LoadWordIndexedScaledMM<"lwxs", GPR32Opnd>, LWXS_FM_MM<0x118>;
 
   /// Load and Store Instructions - unaligned
-  def LWL_MM : LoadLeftRightMM<"lwl", MipsLWL, GPR32Opnd, mem_mm_12, II_LWL>,
-               LWL_FM_MM<0x0>;
-  def LWR_MM : LoadLeftRightMM<"lwr", MipsLWR, GPR32Opnd, mem_mm_12, II_LWR>,
-               LWL_FM_MM<0x1>;
-  def SWL_MM : StoreLeftRightMM<"swl", MipsSWL, GPR32Opnd, mem_mm_12, II_SWL>,
-               LWL_FM_MM<0x8>;
-  def SWR_MM : StoreLeftRightMM<"swr", MipsSWR, GPR32Opnd, mem_mm_12, II_SWR>,
-               LWL_FM_MM<0x9>;
-
+  def LWL_MM : MMRel, LoadLeftRightMM<"lwl", MipsLWL, GPR32Opnd, mem_mm_12,
+                                      II_LWL>, LWL_FM_MM<0x0>,
+               ISA_MICROMIPS32_NOT_MIPS32R6;
+  def LWR_MM : MMRel, LoadLeftRightMM<"lwr", MipsLWR, GPR32Opnd, mem_mm_12,
+                                      II_LWR>, LWL_FM_MM<0x1>,
+               ISA_MICROMIPS32_NOT_MIPS32R6;
+  def SWL_MM : MMRel, StoreLeftRightMM<"swl", MipsSWL, GPR32Opnd, mem_mm_12,
+                                       II_SWL>, LWL_FM_MM<0x8>,
+               ISA_MICROMIPS32_NOT_MIPS32R6;
+  def SWR_MM : MMRel, StoreLeftRightMM<"swr", MipsSWR, GPR32Opnd, mem_mm_12,
+                                       II_SWR>, LWL_FM_MM<0x9>,
+               ISA_MICROMIPS32_NOT_MIPS32R6;
+}
+let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   /// Load and Store Instructions - multiple
   def SWM32_MM  : StoreMultMM<"swm32", II_SWM>, LWM_FM_MM<0xd>;
   def LWM32_MM  : LoadMultMM<"lwm32", II_LWM>, LWM_FM_MM<0x5>;

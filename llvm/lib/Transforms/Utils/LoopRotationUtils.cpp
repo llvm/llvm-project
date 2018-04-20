@@ -54,13 +54,16 @@ class LoopRotate {
   DominatorTree *DT;
   ScalarEvolution *SE;
   const SimplifyQuery &SQ;
+  bool RotationOnly;
+  bool IsUtilMode;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
              const TargetTransformInfo *TTI, AssumptionCache *AC,
-             DominatorTree *DT, ScalarEvolution *SE, const SimplifyQuery &SQ)
+             DominatorTree *DT, ScalarEvolution *SE, const SimplifyQuery &SQ,
+             bool RotationOnly, bool IsUtilMode)
       : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
-        SQ(SQ) {}
+        SQ(SQ), RotationOnly(RotationOnly), IsUtilMode(IsUtilMode) {}
   bool processLoop(Loop *L);
 
 private:
@@ -219,7 +222,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
   // Rotate if either the loop latch does *not* exit the loop, or if the loop
   // latch was just simplified. Or if we think it will be profitable.
-  if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch &&
+  if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch && IsUtilMode == false &&
       !shouldRotateLoopExitingLatch(L))
     return false;
 
@@ -604,10 +607,13 @@ bool LoopRotate::processLoop(Loop *L) {
   // Save the loop metadata.
   MDNode *LoopMD = L->getLoopID();
 
+  bool SimplifiedLatch = false;
+
   // Simplify the loop latch before attempting to rotate the header
   // upward. Rotation may not be needed if the loop tail can be folded into the
   // loop exit.
-  bool SimplifiedLatch = simplifyLoopLatch(L);
+  if (!RotationOnly)
+    SimplifiedLatch = simplifyLoopLatch(L);
 
   bool MadeChange = rotateLoop(L, SimplifiedLatch);
   assert((!MadeChange || L->isLoopExiting(L->getLoopLatch())) &&
@@ -623,11 +629,13 @@ bool LoopRotate::processLoop(Loop *L) {
 
 
 /// The utility to convert a loop into a loop with bottom test.
-bool llvm::LoopRotation(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
-                        const TargetTransformInfo *TTI, AssumptionCache *AC,
-                        DominatorTree *DT, ScalarEvolution *SE,
-                        const SimplifyQuery &SQ) {
-  LoopRotate LR(MaxHeaderSize, LI, TTI, AC, DT, SE, SQ);
+bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
+                        AssumptionCache *AC, DominatorTree *DT,
+                        ScalarEvolution *SE, const SimplifyQuery &SQ,
+                        bool RotationOnly = true,
+                        unsigned Threshold = unsigned(-1),
+                        bool IsUtilMode = true) {
+  LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, SQ, RotationOnly, IsUtilMode);
 
   return LR.processLoop(L);
 }

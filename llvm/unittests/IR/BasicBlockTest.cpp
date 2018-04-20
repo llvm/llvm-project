@@ -83,19 +83,19 @@ TEST(BasicBlockTest, PhiRange) {
   for (auto Pair : zip(Range1, Range2))                                        \
     EXPECT_EQ(&std::get<0>(Pair), std::get<1>(Pair));
 
-TEST(BasicBlockTest, TestSkipInsts) {
+TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   LLVMContext Ctx;
 
-  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  Module *M = new Module("MyModule", Ctx);
   Type *ArgTy1[] = {Type::getInt32PtrTy(Ctx)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), ArgTy1, false);
-  auto *V = new Argument(Type::getInt32Ty(Ctx));
-  Function *F = Function::Create(FT, Function::ExternalLinkage, "", M.get());
+  Argument *V = new Argument(Type::getInt32Ty(Ctx));
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
 
-  Value *DbgAddr = Intrinsic::getDeclaration(M.get(), Intrinsic::dbg_addr);
+  Value *DbgAddr = Intrinsic::getDeclaration(M, Intrinsic::dbg_addr);
   Value *DbgDeclare =
-      Intrinsic::getDeclaration(M.get(), Intrinsic::dbg_declare);
-  Value *DbgValue = Intrinsic::getDeclaration(M.get(), Intrinsic::dbg_value);
+      Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+  Value *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
   Value *DIV = MetadataAsValue::get(Ctx, (Metadata *)nullptr);
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
 
@@ -114,6 +114,9 @@ TEST(BasicBlockTest, TestSkipInsts) {
   SmallVector<Instruction *, 4> Exp = {Var, AddInst, MulInst, SubInst};
   CHECK_ITERATORS(BB1->instructionsWithoutDebug(), Exp);
   CHECK_ITERATORS(BBConst->instructionsWithoutDebug(), Exp);
+
+  delete M;
+  delete V;
 }
 
 } // End anonymous namespace.

@@ -2753,6 +2753,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
         // Clone the instruction, create an expression from it that is
         // translated back into the predecessor, and see if we have a leader.
         Instruction *ValueOp = I->clone();
+        SmallPtrSet<Value *, 4> CurrentDeps;
         if (MemAccess)
           TempToMemory.insert({ValueOp, MemAccess});
         bool SafeForPHIOfOps = true;
@@ -2764,7 +2765,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
           if (isa<PHINode>(Op)) {
             Op = Op->DoPHITranslation(PHIBlock, PredBB);
             if (Op != OrigOp && Op != I)
-              Deps.insert(Op);
+              CurrentDeps.insert(Op);
           } else if (auto *ValuePHI = RealToTemp.lookup(Op)) {
             if (getBlockForValue(ValuePHI) == PHIBlock)
               Op = ValuePHI->getIncomingValueForBlock(PredBB);
@@ -2783,8 +2784,16 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
                                     : findLeaderForInst(ValueOp, Visited,
                                                         MemAccess, I, PredBB);
         ValueOp->deleteValue();
-        if (!FoundVal)
+        if (!FoundVal) {
+          // We failed to find a leader for the current ValueOp, but this might
+          // change in case of the translated operands change.
+          if (SafeForPHIOfOps)
+            for (auto Dep : CurrentDeps)
+              addAdditionalUsers(Dep, I);
+
           return nullptr;
+        }
+        Deps.insert(CurrentDeps.begin(), CurrentDeps.end());
       } else {
         DEBUG(dbgs() << "Skipping phi of ops operand for incoming block "
                      << getBlockName(PredBB)
