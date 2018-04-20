@@ -125,9 +125,6 @@ public:
   void addSections(ArrayRef<OutputSection *> OutputSections,
                    ArrayRef<uint8_t> SectionTable);
 
-  void addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
-                         OutputSection *OS, Chunk *C);
-
   /// Write the PDB to disk.
   void commit();
 
@@ -780,6 +777,32 @@ static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
                            ".debug$S");
 }
 
+static pdb::SectionContrib createSectionContrib(const Chunk *C, uint32_t Modi) {
+  OutputSection *OS = C->getOutputSection();
+  pdb::SectionContrib SC;
+  memset(&SC, 0, sizeof(SC));
+  SC.ISect = OS->SectionIndex;
+  SC.Off = C->getRVA() - OS->getRVA();
+  SC.Size = C->getSize();
+  if (auto *SecChunk = dyn_cast<SectionChunk>(C)) {
+    SC.Characteristics = SecChunk->Header->Characteristics;
+    SC.Imod = SecChunk->File->ModuleDBI->getModuleIndex();
+    ArrayRef<uint8_t> Contents = SecChunk->getContents();
+    JamCRC CRC(0);
+    ArrayRef<char> CharContents = makeArrayRef(
+        reinterpret_cast<const char *>(Contents.data()), Contents.size());
+    CRC.update(CharContents);
+    SC.DataCrc = CRC.getCRC();
+  } else {
+    SC.Characteristics = OS->Header.Characteristics;
+    // FIXME: When we start creating DBI for import libraries, use those here.
+    SC.Imod = Modi;
+  }
+  SC.RelocCrc = 0; // FIXME
+
+  return SC;
+}
+
 void PDBLinker::addObjFile(ObjFile *File) {
   // Add a module descriptor for every object file. We need to put an absolute
   // path to the object into the PDB. If this is a plain object, we make its
@@ -793,6 +816,18 @@ void PDBLinker::addObjFile(ObjFile *File) {
 
   File->ModuleDBI = &ExitOnErr(Builder.getDbiBuilder().addModuleInfo(Name));
   File->ModuleDBI->setObjFileName(Path);
+
+  auto Chunks = File->getChunks();
+  assert(!Chunks.empty());
+  uint32_t Modi = File->ModuleDBI->getModuleIndex();
+  for (Chunk *C : Chunks) {
+    auto *SecChunk = dyn_cast<SectionChunk>(C);
+    if (!SecChunk || !SecChunk->isLive())
+      continue;
+    pdb::SectionContrib SC = createSectionContrib(SecChunk, Modi);
+    File->ModuleDBI->setFirstSectionContrib(SC);
+    break;
+  }
 
   // Before we can process symbol substreams from .debug$S, we need to process
   // type information, file checksums, and the string table.  Add type info to
@@ -1110,31 +1145,6 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
   DbiBuilder.setBuildNumber(14, 11);
 }
 
-void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
-                                  OutputSection *OS, Chunk *C) {
-  pdb::SectionContrib SC;
-  memset(&SC, 0, sizeof(SC));
-  SC.ISect = OS->SectionIndex;
-  SC.Off = C->getRVA() - OS->getRVA();
-  SC.Size = C->getSize();
-  if (auto *SecChunk = dyn_cast<SectionChunk>(C)) {
-    SC.Characteristics = SecChunk->Header->Characteristics;
-    SC.Imod = SecChunk->File->ModuleDBI->getModuleIndex();
-    ArrayRef<uint8_t> Contents = SecChunk->getContents();
-    JamCRC CRC(0);
-    ArrayRef<char> CharContents = makeArrayRef(
-        reinterpret_cast<const char *>(Contents.data()), Contents.size());
-    CRC.update(CharContents);
-    SC.DataCrc = CRC.getCRC();
-  } else {
-    SC.Characteristics = OS->Header.Characteristics;
-    // FIXME: When we start creating DBI for import libraries, use those here.
-    SC.Imod = LinkerModule.getModuleIndex();
-  }
-  SC.RelocCrc = 0; // FIXME
-  Builder.getDbiBuilder().addSectionContrib(SC);
-}
-
 void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
                             ArrayRef<uint8_t> SectionTable) {
   // It's not entirely clear what this is, but the * Linker * module uses it.
@@ -1150,8 +1160,11 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
   // Add section contributions. They must be ordered by ascending RVA.
   for (OutputSection *OS : OutputSections) {
     addLinkerModuleSectionSymbol(LinkerModule, *OS, Alloc);
-    for (Chunk *C : OS->getChunks())
-      addSectionContrib(LinkerModule, OS, C);
+    for (Chunk *C : OS->getChunks()) {
+      pdb::SectionContrib SC =
+          createSectionContrib(C, LinkerModule.getModuleIndex());
+      Builder.getDbiBuilder().addSectionContrib(SC);
+    }
   }
 
   // Add Section Map stream.

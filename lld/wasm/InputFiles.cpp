@@ -187,7 +187,7 @@ void ObjFile::parse() {
 
   // Populate `Globals`.
   for (const WasmGlobal &G : WasmObj->globals())
-    Globals.emplace_back(make<InputGlobal>(G));
+    Globals.emplace_back(make<InputGlobal>(G, this));
 
   // Populate `Symbols` based on the WasmSymbols in the object.
   Symbols.reserve(WasmObj->getNumberOfSymbols());

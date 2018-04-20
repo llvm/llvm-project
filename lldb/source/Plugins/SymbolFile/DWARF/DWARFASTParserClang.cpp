@@ -2170,7 +2170,10 @@ static bool isOverload(clang::CXXMethodDecl *m1, clang::CXXMethodDecl *m2) {
                                  m2p.getUnqualifiedType());
     };
 
-  return !std::equal(m1Type->param_type_begin(), m1Type->param_type_end(),
+  // FIXME: In C++14 and later, we can just pass m2Type->param_type_end()
+  //        as a fourth parameter to std::equal().
+  return (m1->getNumParams() != m2->getNumParams()) ||
+         !std::equal(m1Type->param_type_begin(), m1Type->param_type_end(),
                      m2Type->param_type_begin(), compareArgTypes);
 }
 

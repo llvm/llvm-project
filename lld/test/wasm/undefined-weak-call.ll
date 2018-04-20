@@ -1,5 +1,6 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld --check-signatures --no-entry %t.o -o %t.wasm
+; RUN: wasm-ld --check-signatures --no-entry --print-gc-sections %t.o \
+; RUN:     -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-GC %s
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Check that calling an undefined weak function generates an appropriate stub
@@ -11,6 +12,8 @@ declare extern_weak void @weakFunc1()
 declare extern_weak void @weakFunc2()         ; same signature
 declare extern_weak void @weakFunc3(i32 %arg) ; different
 declare extern_weak void @weakFunc4()         ; should be GC'd as not called
+
+; CHECK-GC: removing unused section {{.*}}:(weakFunc4)
 
 define i32 @callWeakFuncs() {
   call void @weakFunc1()
