@@ -2367,6 +2367,13 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!boundType.isNull()) calleeType = boundType;
   }
 
+  // FIXME: Once actually implemented, this construction context layer should
+  // include the number of the argument as well.
+  for (auto Arg: C->arguments()) {
+    findConstructionContexts(
+        ConstructionContextLayer::create(cfg->getBumpVectorContext(), C), Arg);
+  }
+
   // If this is a call to a no-return function, this stops the block here.
   bool NoReturn = getFunctionExtInfo(*calleeType).getNoReturn();
 
