@@ -10,6 +10,7 @@
  * B.P. 105 - 78153 Le Chesnay, France
  */
 
+#include <isl/id.h>
 #include <isl/space.h>
 #include <isl/constraint.h>
 #include <isl/ilp.h>
@@ -1423,7 +1424,7 @@ static int cmp_constraint(__isl_keep isl_constraint *a,
 /* Construct an isl_ast_expr that evaluates the conditions defining "bset".
  * The result is simplified in terms of build->domain.
  *
- * If "bset" is not bounded by any constraint, then we contruct
+ * If "bset" is not bounded by any constraint, then we construct
  * the expression "1", i.e., "true".
  *
  * Otherwise, we sort the constraints, putting constraints that involve

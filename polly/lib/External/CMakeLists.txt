@@ -254,6 +254,10 @@ if (POLLY_BUNDLED_ISL)
     isl/isl_version.c
     isl/isl_vertices.c
     isl/print.c
+    isl/set_to_map.c
+    isl/set_from_map.c
+    isl/uset_to_umap.c
+    isl/uset_from_umap.c
     isl/imath/gmp_compat.c
     isl/imath/imath.c
     isl/imath/imrat.c

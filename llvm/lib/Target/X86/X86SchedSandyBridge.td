@@ -587,17 +587,8 @@ def SBWriteResGroup21 : SchedWriteRes<[SBPort1]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SBWriteResGroup21], (instregex "ADD_FPrST0",
-                                            "ADD_FST0r",
-                                            "ADD_FrST0",
-                                            "MMX_CVTPI2PSirr",
+def: InstRW<[SBWriteResGroup21], (instregex "MMX_CVTPI2PSirr",
                                             "PUSHFS64",
-                                            "SUBR_FPrST0",
-                                            "SUBR_FST0r",
-                                            "SUBR_FrST0",
-                                            "SUB_FPrST0",
-                                            "SUB_FST0r",
-                                            "SUB_FrST0",
                                             "(V?)CVTDQ2PS(Y?)rr",
                                             "(V?)CVTPS2DQ(Y?)rr",
                                             "(V?)CVTTPS2DQ(Y?)rr")>;
@@ -761,10 +752,7 @@ def SBWriteResGroup30 : SchedWriteRes<[SBPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SBWriteResGroup30], (instregex "MUL_FPrST0",
-                                            "MUL_FST0r",
-                                            "MUL_FrST0",
-                                            "(V?)PCMPGTQrr")>;
+def: InstRW<[SBWriteResGroup30], (instregex "(V?)PCMPGTQrr")>;
 
 def SBWriteResGroup31 : SchedWriteRes<[SBPort23]> {
   let Latency = 5;
@@ -1806,18 +1794,6 @@ def SBWriteResGroup126 : SchedWriteRes<[SBPort0,SBFPDivider]> {
 }
 def: InstRW<[SBWriteResGroup126], (instregex "(V?)DIVPDrr",
                                              "(V?)DIVSDrr")>;
-
-def SBWriteResGroup127 : SchedWriteRes<[SBPort0]> {
-  let Latency = 24;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SBWriteResGroup127], (instregex "DIVR_FPrST0",
-                                             "DIVR_FST0r",
-                                             "DIVR_FrST0",
-                                             "DIV_FPrST0",
-                                             "DIV_FST0r",
-                                             "DIV_FrST0")>;
 
 def SBWriteResGroup128 : SchedWriteRes<[SBPort0,SBPort23,SBFPDivider]> {
   let Latency = 28;
