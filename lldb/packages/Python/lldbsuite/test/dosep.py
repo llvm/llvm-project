@@ -1278,7 +1278,7 @@ def getDefaultTimeout(platform_name):
     # https://bugs.swift.org/browse/SR-1220
     # Temporary work-around for timeout rerun issues.
     # Remove this as soon as SR-1220 is resolved.
-    return "10m"
+    return "20m"
 
     if platform_name is None:
         platform_name = sys.platform
