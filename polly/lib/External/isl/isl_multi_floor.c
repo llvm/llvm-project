@@ -20,8 +20,8 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),floor)(__isl_take MULTI(BASE) *multi)
 		return NULL;
 
 	for (i = 0; i < multi->n; ++i) {
-		multi->p[i] = FN(EL,floor)(multi->p[i]);
-		if (!multi->p[i])
+		multi->u.p[i] = FN(EL,floor)(multi->u.p[i]);
+		if (!multi->u.p[i])
 			return FN(MULTI(BASE),free)(multi);
 	}
 

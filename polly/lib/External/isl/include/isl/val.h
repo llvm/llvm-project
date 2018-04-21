@@ -128,6 +128,7 @@ __isl_export
 isl_bool isl_val_le(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
 __isl_export
 isl_bool isl_val_gt(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+isl_bool isl_val_gt_si(__isl_keep isl_val *v, long i);
 __isl_export
 isl_bool isl_val_ge(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
 __isl_export

@@ -31,7 +31,7 @@ int FN(MULTI(BASE),plain_cmp)(__isl_keep MULTI(BASE) *multi1,
 		return cmp;
 
 	for (i = 0; i < multi1->n; ++i) {
-		cmp = FN(EL,plain_cmp)(multi1->p[i], multi2->p[i]);
+		cmp = FN(EL,plain_cmp)(multi1->u.p[i], multi2->u.p[i]);
 		if (cmp != 0)
 			return cmp;
 	}

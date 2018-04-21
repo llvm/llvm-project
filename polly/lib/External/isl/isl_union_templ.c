@@ -17,11 +17,20 @@ isl_ctx *FN(UNION,get_ctx)(__isl_keep UNION *u)
 	return u ? u->space->ctx : NULL;
 }
 
-__isl_give isl_space *FN(UNION,get_space)(__isl_keep UNION *u)
+/* Return the space of "u".
+ */
+static __isl_keep isl_space *FN(UNION,peek_space)(__isl_keep UNION *u)
 {
 	if (!u)
 		return NULL;
-	return isl_space_copy(u->space);
+	return u->space;
+}
+
+/* Return a copy of the space of "u".
+ */
+__isl_give isl_space *FN(UNION,get_space)(__isl_keep UNION *u)
+{
+	return isl_space_copy(FN(UNION,peek_space)(u));
 }
 
 /* Return the number of parameters of "u", where "type"
@@ -112,21 +121,8 @@ __isl_give PART *FN(FN(UNION,extract),PARTS)(__isl_keep UNION *u,
 	__isl_take isl_space *space)
 {
 	struct isl_hash_table_entry *entry;
-	isl_bool equal_params;
 
-	if (!u || !space)
-		goto error;
-	equal_params = isl_space_has_equal_params(u->space, space);
-	if (equal_params < 0)
-		goto error;
-	if (!equal_params) {
-		space = isl_space_drop_dims(space, isl_dim_param,
-					0, isl_space_dim(space, isl_dim_param));
-		space = isl_space_align_params(space,
-					FN(UNION,get_space)(u));
-		if (!space)
-			goto error;
-	}
+	space = isl_space_replace_params(space, FN(UNION,peek_space)(u));
 
 	entry = FN(UNION,find_part_entry)(u, space, 0);
 	if (!entry)
