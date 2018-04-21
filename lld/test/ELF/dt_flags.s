@@ -2,9 +2,14 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld -shared %t -o %t.so
+
 # RUN: ld.lld -z now -z nodelete -z nodlopen -z origin -Bsymbolic %t %t.so -o %t1
-# RUN: ld.lld %t %t.so -o %t2
 # RUN: llvm-readobj -dynamic-table %t1 | FileCheck -check-prefix=FLAGS %s
+
+# RUN: ld.lld %t %t.so -o %t2
+# RUN: llvm-readobj -dynamic-table %t2 | FileCheck %s
+
+# RUN: ld.lld -z lazy %t %t.so -o %t2
 # RUN: llvm-readobj -dynamic-table %t2 | FileCheck %s
 
 # FLAGS: DynamicSection [

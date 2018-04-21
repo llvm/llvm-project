@@ -688,7 +688,7 @@ void ObjCARCOpt::OptimizeAutoreleaseRVCall(Function &F,
 namespace {
 Instruction *
 CloneCallInstForBB(CallInst &CI, BasicBlock &BB,
-                   DenseMap<BasicBlock *, ColorVector> &BlockColors) {
+                   const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   for (unsigned I = 0, E = CI.getNumOperandBundles(); I != E; ++I) {
     auto Bundle = CI.getOperandBundleAt(I);

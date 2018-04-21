@@ -1624,13 +1624,16 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilder<> &IRB) const {
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
-  M.getOrInsertGlobal("__stack_chk_guard", Type::getInt8PtrTy(M.getContext()));
+  if (!M.getNamedValue("__stack_chk_guard"))
+    new GlobalVariable(M, Type::getInt8PtrTy(M.getContext()), false,
+                       GlobalVariable::ExternalLinkage,
+                       nullptr, "__stack_chk_guard");
 }
 
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
-  return M.getGlobalVariable("__stack_chk_guard", true);
+  return M.getNamedValue("__stack_chk_guard");
 }
 
 Value *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {

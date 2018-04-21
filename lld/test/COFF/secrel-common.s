@@ -2,7 +2,7 @@
 # RUN: lld-link -entry:main -nodefaultlib %t.obj -out:%t.exe
 # RUN: llvm-readobj %t.exe -sections -section-data | FileCheck %s
 
-# Section relocations against common symbols resolve to .bss.
+# Section relocations against common symbols resolve to .bss (merged into .data).
 
 # CHECK: Sections [
 # CHECK:   Section {
@@ -15,15 +15,16 @@
 # CHECK:   }
 # CHECK:   Section {
 # CHECK:     Number: 2
-# CHECK:     Name: .bss (2E 62 73 73 00 00 00 00)
-# CHECK:     VirtualSize: 0x4
+# CHECK:     Name: .rdata (2E 72 64 61 74 61 00 00)
+# CHECK:     SectionData (
+# CHECK:       0000: 00020000 03000000 |........|
+# CHECK:     )
 # CHECK:   }
 # CHECK:   Section {
 # CHECK:     Number: 3
-# CHECK:     Name: .rdata (2E 72 64 61 74 61 00 00)
-# CHECK:     SectionData (
-# CHECK:       0000: 00000000 02000000 |........|
-# CHECK:     )
+# CHECK:     Name: .data (2E 64 61 74 61 00 00 00)
+# CHECK:     VirtualSize: 0x204
+# CHECK:     RawDataSize: 512
 # CHECK:   }
 # CHECK-NOT: Section
 # CHECK: ]
@@ -39,3 +40,6 @@ ret
 .secrel32 common_global
 .secidx common_global
 .short 0
+
+.section .data,"drw"
+.zero 512

@@ -149,6 +149,8 @@ defm : SBWriteResPair<WriteFSqrt,  [SBPort0], 14>;
 defm : SBWriteResPair<WriteCvtF2I, [SBPort1], 3>;
 defm : SBWriteResPair<WriteCvtI2F, [SBPort1], 4>;
 defm : SBWriteResPair<WriteCvtF2F, [SBPort1], 3>;
+defm : SBWriteResPair<WriteFSign,    [SBPort5], 1>;
+defm : SBWriteResPair<WriteFLogic,   [SBPort5], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFShuffle, [SBPort5],  1>;
 defm : SBWriteResPair<WriteFVarShuffle, [SBPort5],  1>;
 defm : SBWriteResPair<WriteFBlend,  [SBPort05],  1>;
@@ -160,7 +162,7 @@ def  : WriteRes<WriteVecLoad,        [SBPort23]> { let Latency = 6; }
 def  : WriteRes<WriteVecMove,        [SBPort05]>;
 
 defm : SBWriteResPair<WriteVecShift, [SBPort5], 1>;
-defm : SBWriteResPair<WriteVecLogic, [SBPort5], 1>;
+defm : SBWriteResPair<WriteVecLogic, [SBPort015], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVecALU,   [SBPort1], 3>;
 defm : SBWriteResPair<WriteVecIMul,  [SBPort0], 5>;
 defm : SBWriteResPair<WritePMULLD,   [SBPort0], 5, [1], 1, 6>; // TODO this is probably wrong for 256/512-bit for the "generic" model
@@ -451,11 +453,7 @@ def: InstRW<[SBWriteResGroup6], (instregex "MMX_MOVQ2DQrr",
                                            "MOVDQArr", //TODO: Why are these separated from their VEX equivalent
                                            "MOVDQUrr", // TODO: Why are these separated from their VEX equivalent
                                            "(V?)MOVPQI2QIrr",
-                                           "(V?)MOVZPQILo2PQIrr",
-                                           "(V?)PANDNrr",
-                                           "(V?)PANDrr",
-                                           "(V?)PORrr",
-                                           "(V?)PXORrr")>;
+                                           "(V?)MOVZPQILo2PQIrr")>;
 
 def SBWriteResGroup7 : SchedWriteRes<[SBPort0]> {
   let Latency = 2;
@@ -967,7 +965,11 @@ def SBWriteResGroup52 : SchedWriteRes<[SBPort23,SBPort015]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SBWriteResGroup52], (instregex "LODSL",
-                                            "LODSQ")>;
+                                            "LODSQ",
+                                            "MMX_PANDirm",
+                                            "MMX_PANDNirm",
+                                            "MMX_PORirm",
+                                            "MMX_PXORirm")>;
 
 def SBWriteResGroup53 : SchedWriteRes<[SBPort4,SBPort23]> {
   let Latency = 6;
@@ -1012,18 +1014,12 @@ def SBWriteResGroup56 : SchedWriteRes<[SBPort5,SBPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup56], (instregex "(V?)ANDNPDrm",
-                                            "(V?)ANDNPSrm",
-                                            "(V?)ANDPDrm",
-                                            "(V?)ANDPSrm",
-                                            "VBROADCASTF128",
+def: InstRW<[SBWriteResGroup56], (instregex "VBROADCASTF128",
                                             "(V?)INSERTPSrm",
                                             "(V?)MOVHPDrm",
                                             "(V?)MOVHPSrm",
                                             "(V?)MOVLPDrm",
                                             "(V?)MOVLPSrm",
-                                            "(V?)ORPDrm",
-                                            "(V?)ORPSrm",
                                             "VPERMILPDmi",
                                             "VPERMILPDrm",
                                             "VPERMILPSmi",
@@ -1033,9 +1029,7 @@ def: InstRW<[SBWriteResGroup56], (instregex "(V?)ANDNPDrm",
                                             "(V?)UNPCKHPDrm",
                                             "(V?)UNPCKHPSrm",
                                             "(V?)UNPCKLPDrm",
-                                            "(V?)UNPCKLPSrm",
-                                            "(V?)XORPDrm",
-                                            "(V?)XORPSrm")>;
+                                            "(V?)UNPCKLPSrm")>;
 
 def SBWriteResGroup58 : SchedWriteRes<[SBPort23,SBPort05]> {
   let Latency = 7;
@@ -1129,16 +1123,6 @@ def: InstRW<[SBWriteResGroup59], (instregex "MMX_PADDQirm",
                                             "(V?)PUNPCKLDQrm",
                                             "(V?)PUNPCKLQDQrm",
                                             "(V?)PUNPCKLWDrm")>;
-
-def SBWriteResGroup60 : SchedWriteRes<[SBPort23,SBPort015]> {
-  let Latency = 7;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[SBWriteResGroup60], (instregex "(V?)PANDNrm",
-                                            "(V?)PANDrm",
-                                            "(V?)PORrm",
-                                            "(V?)PXORrm")>;
 
 def SBWriteResGroup61 : SchedWriteRes<[SBPort0,SBPort05]> {
   let Latency = 7;
