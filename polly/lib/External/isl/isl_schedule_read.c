@@ -1,3 +1,4 @@
+#include <isl/id.h>
 #include <isl/val.h>
 #include <isl/schedule.h>
 #include <isl/stream.h>

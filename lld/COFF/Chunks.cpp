@@ -271,7 +271,8 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
     return;
   // Copy section contents from source object file to output file.
   ArrayRef<uint8_t> A = getContents();
-  memcpy(Buf + OutputSectionOff, A.data(), A.size());
+  if (!A.empty())
+    memcpy(Buf + OutputSectionOff, A.data(), A.size());
 
   // Apply relocations.
   size_t InputSize = getSize();
@@ -388,7 +389,7 @@ bool SectionChunk::hasData() const {
 }
 
 uint32_t SectionChunk::getOutputCharacteristics() const {
-  return Header->Characteristics & PermMask;
+  return Header->Characteristics & (PermMask | TypeMask);
 }
 
 bool SectionChunk::isCOMDAT() const {
