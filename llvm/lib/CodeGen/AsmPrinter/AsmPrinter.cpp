@@ -1343,7 +1343,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
 
-  TLOF.emitModuleMetadata(*OutStreamer, M, TM);
+  TLOF.emitModuleMetadata(*OutStreamer, M);
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();

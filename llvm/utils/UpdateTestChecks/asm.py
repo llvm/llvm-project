@@ -28,7 +28,7 @@ ASM_FUNCTION_ARM_RE = re.compile(
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
      r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@(?P=func)\n'
-     r'[ \t]+.cfi_startproc\n'
+     r'(?:[ \t]+.cfi_startproc\n)?'  # drop optional cfi noise 
      r'(?P<body>.*?)\n'
      # This list is incomplete
      r'.Lfunc_end[0-9]+:\n',

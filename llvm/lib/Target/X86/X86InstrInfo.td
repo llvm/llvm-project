@@ -307,6 +307,16 @@ def X86lwpins : SDNode<"X86ISD::LWPINS",
                                             SDTCisVT<2, i32>, SDTCisVT<3, i32>]>,
                        [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPSideEffect]>;
 
+def X86umwait : SDNode<"X86ISD::UMWAIT",
+                       SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisInt<1>,
+                                            SDTCisVT<2, i32>, SDTCisVT<3, i32>]>,
+                       [SDNPHasChain, SDNPSideEffect]>;
+
+def X86tpause : SDNode<"X86ISD::TPAUSE",
+                       SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisInt<1>,
+                                            SDTCisVT<2, i32>, SDTCisVT<3, i32>]>,
+                       [SDNPHasChain, SDNPSideEffect]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Operand Definitions.
 //
@@ -891,6 +901,7 @@ def HasCLFLUSHOPT : Predicate<"Subtarget->hasCLFLUSHOPT()">;
 def HasCLWB      : Predicate<"Subtarget->hasCLWB()">;
 def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
+def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
                              AssemblerPredicate<"!Mode64Bit", "Not 64-bit mode">;
@@ -2638,6 +2649,31 @@ def : InstAlias<"monitorx\t{%eax, %ecx, %edx|edx, ecx, eax}", (MONITORXrrr)>,
       Requires<[ Not64BitMode ]>;
 def : InstAlias<"monitorx\t{%rax, %rcx, %rdx|rdx, rcx, rax}", (MONITORXrrr)>,
       Requires<[ In64BitMode ]>;
+
+//===----------------------------------------------------------------------===//
+// WAITPKG Instructions
+//
+let SchedRW = [WriteSystem] in {
+  def UMONITOR16 : I<0xAE, MRM6r, (outs), (ins GR16:$src),
+                     "umonitor\t$src", [(int_x86_umonitor GR16:$src)]>,
+                     XS, AdSize16, Requires<[HasWAITPKG, Not64BitMode]>;
+  def UMONITOR32 : I<0xAE, MRM6r, (outs), (ins GR32:$src),
+                     "umonitor\t$src", [(int_x86_umonitor GR32:$src)]>,
+                     XS, AdSize32, Requires<[HasWAITPKG]>;
+  def UMONITOR64 : I<0xAE, MRM6r, (outs), (ins GR64:$src),
+                     "umonitor\t$src", [(int_x86_umonitor GR64:$src)]>,
+                     XS, AdSize64, Requires<[HasWAITPKG, In64BitMode]>;
+  let Uses = [EAX, EDX], Defs = [EFLAGS] in {
+    def UMWAIT : I<0xAE, MRM6r,
+                     (outs), (ins GR32orGR64:$src), "umwait\t$src",
+                     [(set EFLAGS, (X86umwait GR32orGR64:$src, EDX, EAX))]>,
+                     XD, Requires<[HasWAITPKG]>;
+    def TPAUSE : I<0xAE, MRM6r,
+                     (outs), (ins GR32orGR64:$src), "tpause\t$src",
+                     [(set EFLAGS, (X86tpause GR32orGR64:$src, EDX, EAX))]>,
+                     PD, Requires<[HasWAITPKG]>;
+  }
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // CLZERO Instruction

@@ -4,7 +4,6 @@ import os
 import sys
 
 import llvmbuild.componentinfo as componentinfo
-import llvmbuild.configutil as configutil
 
 from llvmbuild.util import fatal, note
 
@@ -376,7 +375,7 @@ subdirectories = %s
         f.write("""\
 //===- llvm-build generated file --------------------------------*- C++ -*-===//
 //
-// Component Library Depenedency Table
+// Component Library Dependency Table
 //
 // Automatically generated file, do not edit!
 //
@@ -761,9 +760,6 @@ def main():
                      help=(
             "If given, an alternate path to search for LLVMBuild.txt files"),
                      action="store", default=None, metavar="PATH")
-    group.add_option("", "--build-root", dest="build_root", metavar="PATH",
-                      help="Path to the build directory (if needed) [%default]",
-                      action="store", default=None)
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Output Options")
@@ -785,14 +781,6 @@ def main():
                      dest="write_cmake_exports_fragment", metavar="PATH",
                      help="Write the CMake exports information to PATH",
                      action="store", default=None)
-    group.add_option("", "--configure-target-def-file",
-                     dest="configure_target_def_files",
-                     help="""Configure the given file at SUBPATH (relative to
-the inferred or given source root, and with a '.in' suffix) by replacing certain
-substitution variables with lists of targets that support certain features (for
-example, targets with AsmPrinters) and write the result to the build root (as
-given by --build-root) at the same SUBPATH""",
-                     metavar="SUBPATH", action="append", default=None)
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Configuration Options")
@@ -862,41 +850,6 @@ given by --build-root) at the same SUBPATH""",
     if opts.write_cmake_exports_fragment:
         project_info.write_cmake_exports_fragment(opts.write_cmake_exports_fragment,
                                                   opts.optional_components)
-
-    # Configure target definition files, if requested.
-    if opts.configure_target_def_files:
-        # Verify we were given a build root.
-        if not opts.build_root:
-            parser.error("must specify --build-root when using "
-                         "--configure-target-def-file")
-
-        # Create the substitution list.
-        available_targets = [ci for ci in project_info.component_infos
-                             if ci.type_name == 'TargetGroup']
-        substitutions = [
-            ("@LLVM_ENUM_TARGETS@",
-             ' '.join('LLVM_TARGET(%s)' % ci.name
-                      for ci in available_targets)),
-            ("@LLVM_ENUM_ASM_PRINTERS@",
-             ' '.join('LLVM_ASM_PRINTER(%s)' % ci.name
-                      for ci in available_targets
-                      if ci.has_asmprinter)),
-            ("@LLVM_ENUM_ASM_PARSERS@",
-             ' '.join('LLVM_ASM_PARSER(%s)' % ci.name
-                      for ci in available_targets
-                      if ci.has_asmparser)),
-            ("@LLVM_ENUM_DISASSEMBLERS@",
-             ' '.join('LLVM_DISASSEMBLER(%s)' % ci.name
-                      for ci in available_targets
-                      if ci.has_disassembler))]
-
-        # Configure the given files.
-        for subpath in opts.configure_target_def_files:
-            inpath = os.path.join(source_root, subpath + '.in')
-            outpath = os.path.join(opts.build_root, subpath)
-            result = configutil.configure_file(inpath, outpath, substitutions)
-            if not result:
-                note("configured file %r hasn't changed" % outpath)
 
 if __name__=='__main__':
     main()

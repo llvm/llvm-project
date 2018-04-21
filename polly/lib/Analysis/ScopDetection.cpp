@@ -703,6 +703,12 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
   if (CalledFunction == nullptr)
     return false;
 
+  if (isDebugCall(&CI)) {
+    DEBUG(dbgs() << "Allow call to debug function: "
+                 << CalledFunction->getName() << '\n');
+    return true;
+  }
+
   if (AllowModrefCall) {
     switch (AA.getModRefBehavior(CalledFunction)) {
     case FMRB_UnknownModRefBehavior:

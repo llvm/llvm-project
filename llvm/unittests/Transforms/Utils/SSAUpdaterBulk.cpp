@@ -73,17 +73,17 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   // SSAUpdater should insert into %merge.
   // Intentionally don't touch %8 to see that SSAUpdater only changes
   // instructions that were explicitly specified.
-  Updater.AddVariable(0, "a", I32Ty);
-  Updater.AddAvailableValue(0, TrueBB, AddOp1);
-  Updater.AddAvailableValue(0, FalseBB, AddOp2);
-  Updater.AddUse(0, &I1->getOperandUse(0));
-  Updater.AddUse(0, &I2->getOperandUse(0));
+  unsigned VarNum = Updater.AddVariable("a", I32Ty);
+  Updater.AddAvailableValue(VarNum, TrueBB, AddOp1);
+  Updater.AddAvailableValue(VarNum, FalseBB, AddOp2);
+  Updater.AddUse(VarNum, &I1->getOperandUse(0));
+  Updater.AddUse(VarNum, &I2->getOperandUse(0));
 
-  Updater.AddVariable(1, "b", I32Ty);
-  Updater.AddAvailableValue(1, TrueBB, SubOp1);
-  Updater.AddAvailableValue(1, FalseBB, SubOp2);
-  Updater.AddUse(1, &I3->getOperandUse(0));
-  Updater.AddUse(1, &I3->getOperandUse(1));
+  VarNum = Updater.AddVariable("b", I32Ty);
+  Updater.AddAvailableValue(VarNum, TrueBB, SubOp1);
+  Updater.AddAvailableValue(VarNum, FalseBB, SubOp2);
+  Updater.AddUse(VarNum, &I3->getOperandUse(0));
+  Updater.AddUse(VarNum, &I3->getOperandUse(1));
 
   DominatorTree DT(*F);
   Updater.RewriteAllUses(&DT);
@@ -161,19 +161,19 @@ TEST(SSAUpdaterBulk, Irreducible) {
   // No other rewrites should be made.
 
   // Add use in %3.
-  Updater.AddVariable(0, "c", I32Ty);
-  Updater.AddAvailableValue(0, IfBB, AddOp1);
-  Updater.AddUse(0, &I1->getOperandUse(0));
+  unsigned VarNum = Updater.AddVariable("c", I32Ty);
+  Updater.AddAvailableValue(VarNum, IfBB, AddOp1);
+  Updater.AddUse(VarNum, &I1->getOperandUse(0));
 
   // Add use in %4.
-  Updater.AddVariable(1, "b", I32Ty);
-  Updater.AddAvailableValue(1, LoopStartBB, AddOp2);
-  Updater.AddUse(1, &I2->getOperandUse(0));
+  VarNum = Updater.AddVariable("b", I32Ty);
+  Updater.AddAvailableValue(VarNum, LoopStartBB, AddOp2);
+  Updater.AddUse(VarNum, &I2->getOperandUse(0));
 
   // Add use in the return instruction.
-  Updater.AddVariable(2, "a", I32Ty);
-  Updater.AddAvailableValue(2, &F->getEntryBlock(), FirstArg);
-  Updater.AddUse(2, &Return->getOperandUse(0));
+  VarNum = Updater.AddVariable("a", I32Ty);
+  Updater.AddAvailableValue(VarNum, &F->getEntryBlock(), FirstArg);
+  Updater.AddUse(VarNum, &Return->getOperandUse(0));
 
   // Save all inserted phis into a vector.
   SmallVector<PHINode *, 8> Inserted;

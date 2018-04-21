@@ -919,13 +919,16 @@ static bool isPermutation(ArrayRef<int> Mask) {
 }
 
 bool HvxSelector::selectVectorConstants(SDNode *N) {
-  // Constant vectors are generated as loads from constant pools or
-  // as VSPLATs of a constant value.
-  // Since they are generated during the selection process, the main
-  // selection algorithm is not aware of them. Select them directly
-  // here.
+  // Constant vectors are generated as loads from constant pools or as
+  // splats of a constant value. Since they are generated during the
+  // selection process, the main selection algorithm is not aware of them.
+  // Select them directly here.
   SmallVector<SDNode*,4> Nodes;
   SetVector<SDNode*> WorkQ;
+
+  // The one-use test for VSPLATW's operand may fail due to dead nodes
+  // left over in the DAG.
+  DAG.RemoveDeadNodes();
 
   // The DAG can change (due to CSE) during selection, so cache all the
   // unselected nodes first to avoid traversing a mutating DAG.
@@ -933,22 +936,23 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
   auto IsNodeToSelect = [] (SDNode *N) {
     if (N->isMachineOpcode())
       return false;
-    unsigned Opc = N->getOpcode();
-    if (Opc == HexagonISD::VSPLAT || Opc == HexagonISD::VZERO)
-      return true;
-    if (Opc == ISD::BITCAST) {
-      // Only select bitcasts of VSPLATs.
-      if (N->getOperand(0).getOpcode() == HexagonISD::VSPLAT)
+    switch (N->getOpcode()) {
+      case HexagonISD::VZERO:
+      case HexagonISD::VSPLATW:
         return true;
+      case ISD::LOAD: {
+        SDValue Addr = cast<LoadSDNode>(N)->getBasePtr();
+        unsigned AddrOpc = Addr.getOpcode();
+        if (AddrOpc == HexagonISD::AT_PCREL || AddrOpc == HexagonISD::CP)
+          if (Addr.getOperand(0).getOpcode() == ISD::TargetConstantPool)
+            return true;
+      }
+      break;
     }
-    if (Opc == ISD::LOAD) {
-      SDValue Addr = cast<LoadSDNode>(N)->getBasePtr();
-      unsigned AddrOpc = Addr.getOpcode();
-      if (AddrOpc == HexagonISD::AT_PCREL || AddrOpc == HexagonISD::CP)
-        if (Addr.getOperand(0).getOpcode() == ISD::TargetConstantPool)
-          return true;
-    }
-    return false;
+    // Make sure to select the operand of VSPLATW.
+    bool IsSplatOp = N->hasOneUse() &&
+                     N->use_begin()->getOpcode() == HexagonISD::VSPLATW;
+    return IsSplatOp;
   };
 
   WorkQ.insert(N);

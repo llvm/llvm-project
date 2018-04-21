@@ -370,6 +370,9 @@ protected:
   /// Processor support RDPID instruction
   bool HasRDPID;
 
+  /// Processor supports WaitPKG instructions
+  bool HasWAITPKG;
+
   /// Use a retpoline thunk rather than indirect calls to block speculative
   /// execution.
   bool UseRetpoline;
@@ -628,6 +631,7 @@ public:
   bool hasCLWB() const { return HasCLWB; }
   bool hasWBNOINVD() const { return HasWBNOINVD; }
   bool hasRDPID() const { return HasRDPID; }
+  bool hasWAITPKG() const { return HasWAITPKG; }
   bool useRetpoline() const { return UseRetpoline; }
   bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
 

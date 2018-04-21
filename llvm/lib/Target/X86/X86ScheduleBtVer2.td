@@ -300,6 +300,8 @@ defm : JWriteResFpuPair<WriteFRcp,         [JFPU1, JFPM],  2>;
 defm : JWriteResFpuPair<WriteFRsqrt,       [JFPU1, JFPM],  2>;
 defm : JWriteResFpuPair<WriteFDiv,         [JFPU1, JFPM], 19, [1, 19]>;
 defm : JWriteResFpuPair<WriteFSqrt,        [JFPU1, JFPM], 21, [1, 21]>;
+defm : JWriteResFpuPair<WriteFSign,        [JFPU1, JFPM],  2>;
+defm : JWriteResFpuPair<WriteFLogic,      [JFPU01, JFPX],  1>;
 defm : JWriteResFpuPair<WriteFShuffle,    [JFPU01, JFPX],  1>;
 defm : JWriteResFpuPair<WriteFVarShuffle, [JFPU01, JFPX],  2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteFBlend,      [JFPU01, JFPX],  1>;
@@ -531,25 +533,6 @@ def : InstRW<[JWriteCVTPH2PSYLd], (instrs VCVTPH2PSYrm)>;
 ////////////////////////////////////////////////////////////////////////////////
 // AVX instructions.
 ////////////////////////////////////////////////////////////////////////////////
-
-def JWriteFLogic: SchedWriteRes<[JFPU01, JFPX]> {
-}
-def : InstRW<[JWriteFLogic], (instrs ORPDrr, ORPSrr, VORPDrr, VORPSrr,
-                                     XORPDrr, XORPSrr, VXORPDrr, VXORPSrr,
-                                     ANDPDrr, ANDPSrr, VANDPDrr, VANDPSrr,
-                                     ANDNPDrr, ANDNPSrr, VANDNPDrr, VANDNPSrr)>;
-
-def JWriteFLogicLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
-  let Latency = 6;
-}
-def : InstRW<[JWriteFLogicLd, ReadAfterLd], (instrs ORPDrm, ORPSrm,
-                                                    VORPDrm, VORPSrm,
-                                                    XORPDrm, XORPSrm,
-                                                    VXORPDrm, VXORPSrm,
-                                                    ANDPDrm, ANDPSrm,
-                                                    VANDPDrm, VANDPSrm,
-                                                    ANDNPDrm, ANDNPSrm,
-                                                    VANDNPDrm, VANDNPSrm)>;
 
 def JWriteFLogicY: SchedWriteRes<[JFPU01, JFPX]> {
   let ResourceCycles = [2, 2];

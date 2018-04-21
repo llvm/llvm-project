@@ -96,4 +96,8 @@
 #include <cldemoteintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__WAITPKG__)
+#include <waitpkgintrin.h>
+#endif
+
 #endif /* __X86INTRIN_H */

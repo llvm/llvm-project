@@ -353,9 +353,9 @@ void DynamicRelocationSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
-void SectionWithStrTab::removeSectionReferences(const SectionBase *Sec) {
-  if (StrTab == Sec) {
-    error("String table " + StrTab->Name +
+void Section::removeSectionReferences(const SectionBase *Sec) {
+  if (LinkSection == Sec) {
+    error("Section " + LinkSection->Name +
           " cannot be removed because it is "
           "referenced by the section " +
           this->Name);
@@ -367,22 +367,17 @@ void GroupSection::finalize() {
   this->Link = SymTab->Index;
 }
 
-bool SectionWithStrTab::classof(const SectionBase *S) {
-  return isa<DynamicSymbolTableSection>(S) || isa<DynamicSection>(S);
+void Section::initialize(SectionTableRef SecTable) {
+  if (Link != ELF::SHN_UNDEF)
+    LinkSection =
+        SecTable.getSection(Link, "Link field value " + Twine(Link) +
+                                      " in section " + Name + " is invalid");
 }
 
-void SectionWithStrTab::initialize(SectionTableRef SecTable) {
-  auto StrTab =
-      SecTable.getSection(Link, "Link field value " + Twine(Link) +
-                                    " in section " + Name + " is invalid");
-  if (StrTab->Type != SHT_STRTAB) {
-    error("Link field value " + Twine(Link) + " in section " + Name +
-          " is not a string table");
-  }
-  setStrTab(StrTab);
+void Section::finalize() {
+  if (LinkSection)
+    this->Link = LinkSection->Index;
 }
-
-void SectionWithStrTab::finalize() { this->Link = StrTab->Index; }
 
 void GnuDebugLinkSection::init(StringRef File, StringRef Data) {
   FileName = sys::path::filename(File);

@@ -973,3 +973,11 @@ data32 lgdt 4(%eax)
 // CHECK: wbnoinvd
 // CHECK:  encoding: [0xf3,0x0f,0x09]
 wbnoinvd
+
+// CHECK: umonitor %ax
+// CHECK:  encoding: [0xf3,0x0f,0xae,0xf0]
+umonitor %ax
+
+// CHECK: umonitor %eax
+// CHECK:  encoding: [0x67,0xf3,0x0f,0xae,0xf0]
+umonitor %eax

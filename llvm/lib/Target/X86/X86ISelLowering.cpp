@@ -21393,17 +21393,35 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return SDValue();
     }
     case Intrinsic::x86_lwpins32:
-    case Intrinsic::x86_lwpins64: {
+    case Intrinsic::x86_lwpins64:
+    case Intrinsic::x86_umwait:
+    case Intrinsic::x86_tpause: {
       SDLoc dl(Op);
       SDValue Chain = Op->getOperand(0);
       SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
-      SDValue LwpIns =
-          DAG.getNode(X86ISD::LWPINS, dl, VTs, Chain, Op->getOperand(2),
+      unsigned Opcode;
+
+      switch (IntNo) {
+      default: llvm_unreachable("Impossible intrinsic");
+      case Intrinsic::x86_umwait:
+        Opcode = X86ISD::UMWAIT;
+        break;
+      case Intrinsic::x86_tpause:
+        Opcode = X86ISD::TPAUSE;
+        break;
+      case Intrinsic::x86_lwpins32:
+      case Intrinsic::x86_lwpins64:
+        Opcode = X86ISD::LWPINS;
+        break;
+      }
+
+      SDValue Operation =
+          DAG.getNode(Opcode, dl, VTs, Chain, Op->getOperand(2),
                       Op->getOperand(3), Op->getOperand(4));
-      SDValue SetCC = getSETCC(X86::COND_B, LwpIns.getValue(0), dl, DAG);
+      SDValue SetCC = getSETCC(X86::COND_B, Operation.getValue(0), dl, DAG);
       SDValue Result = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i8, SetCC);
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), Result,
-                         LwpIns.getValue(1));
+                         Operation.getValue(1));
     }
     }
     return SDValue();
@@ -25846,6 +25864,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::GF2P8AFFINEINVQB:   return "X86ISD::GF2P8AFFINEINVQB";
   case X86ISD::NT_CALL:            return "X86ISD::NT_CALL";
   case X86ISD::NT_BRIND:           return "X86ISD::NT_BRIND";
+  case X86ISD::UMWAIT:             return "X86ISD::UMWAIT";
+  case X86ISD::TPAUSE:             return "X86ISD::TPAUSE";
   }
   return nullptr;
 }

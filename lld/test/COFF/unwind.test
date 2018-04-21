@@ -12,16 +12,16 @@
 # FIXME: llvm-readobj currently does not understand files with .pdata merged
 # into .rdata. But we can at least check that the section headers look correct.
 #
-# HEADER-MERGE: ExceptionTableRVA: 0x2000
+# HEADER-MERGE: ExceptionTableRVA: 0x2004
 # HEADER-MERGE-NEXT: ExceptionTableSize: 0x30
 # HEADER-MERGE: Name: .rdata
-# HEADER-MERGE-NEXT: VirtualSize: 0x34
+# HEADER-MERGE-NEXT: VirtualSize: 0x78
 # HEADER-MERGE-NEXT: VirtualAddress: 0x2000
 #
 # UNWIND: Function Table:
 # UNWIND:   Start Address: 0x1000
 # UNWIND:   End Address: 0x101b
-# UNWIND:   Unwind Info Address: 0x4000
+# UNWIND:   Unwind Info Address: 0x2004
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 1 UNW_ExceptionHandler
 # UNWIND:     Size of prolog: 18
@@ -38,7 +38,7 @@
 # UNWIND: Function Table:
 # UNWIND:   Start Address: 0x1012
 # UNWIND:   End Address: 0x1012
-# UNWIND:   Unwind Info Address: 0x401c
+# UNWIND:   Unwind Info Address: 0x2020
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 4 UNW_ChainInfo
 # UNWIND:     Size of prolog: 0
@@ -47,7 +47,7 @@
 # UNWIND: Function Table:
 # UNWIND:   Start Address: 0x101b
 # UNWIND:   End Address: 0x101c
-# UNWIND:   Unwind Info Address: 0x402c
+# UNWIND:   Unwind Info Address: 0x2030
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 0
 # UNWIND:     Size of prolog: 0
@@ -56,7 +56,7 @@
 # UNWIND: Function Table:
 # UNWIND:   Start Address: 0x101c
 # UNWIND:   End Address: 0x1039
-# UNWIND:   Unwind Info Address: 0x4034
+# UNWIND:   Unwind Info Address: 0x2038
 # UNWIND:     Version: 1
 # UNWIND:     Flags: 0
 # UNWIND:     Size of prolog: 14

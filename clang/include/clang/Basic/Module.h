@@ -258,6 +258,10 @@ public:
   /// and headers from used modules.
   unsigned NoUndeclaredIncludes : 1;
 
+  /// \brief Whether this module came from a "private" module map, found next
+  /// to a regular (public) module map.
+  unsigned ModuleMapIsPrivate : 1;
+
   /// \brief Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {
