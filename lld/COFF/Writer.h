@@ -30,8 +30,11 @@ void writeResult();
 // non-overlapping file offsets and RVAs.
 class OutputSection {
 public:
-  OutputSection(llvm::StringRef N) : Name(N), Header({}) {}
+  OutputSection(llvm::StringRef N, uint32_t Chars) : Name(N) {
+    Header.Characteristics = Chars;
+  }
   void addChunk(Chunk *C);
+  void merge(OutputSection *Other);
   ArrayRef<Chunk *> getChunks() { return Chunks; }
   void addPermissions(uint32_t C);
   void setPermissions(uint32_t C);
@@ -57,7 +60,7 @@ public:
   uint32_t SectionIndex = 0;
 
   llvm::StringRef Name;
-  llvm::object::coff_section Header;
+  llvm::object::coff_section Header = {};
 
 private:
   uint32_t StringTableOff = 0;

@@ -270,6 +270,17 @@ be used as an alternative.
 
 =back
 
+=head3 Changes since isl-0.19
+
+=over
+
+=item * Zero-dimensional objects of type C<isl_multi_pw_aff> or
+C<isl_multi_union_pw_aff> can now keep track of an explicit domain.
+This explicit domain, if present, is taken into account
+by various operations that take such objects as input.
+
+=back
+
 =head1 License
 
 C<isl> is released under the MIT license.
@@ -733,9 +744,10 @@ For integer C<isl_val>s we additionally have the following binary property.
 		__isl_keep isl_val *v2);
 
 An C<isl_val> can also be compared to an integer using the following
-function.  The result is undefined for NaN.
+functions.  The result of C<isl_val_cmp_si> undefined for NaN.
 
 	#include <isl/val.h>
+	isl_bool isl_val_gt_si(__isl_keep isl_val *v, long i);
 	int isl_val_cmp_si(__isl_keep isl_val *v, long i);
 
 The following unary operations are available on C<isl_val>s.
@@ -2749,6 +2761,10 @@ Objects of the value type do not have an associated space.
 The space of a multiple value is therefore always a set space.
 Similarly, the space of a multiple union piecewise
 affine expression is always a set space.
+If the base expressions are not total, then
+a corresponding zero-dimensional multiple expression may
+have an explicit domain that keeps track of the domain
+outside of any base expressions.
 
 The multiple expression types defined by C<isl>
 are C<isl_multi_val>, C<isl_multi_aff>, C<isl_multi_pw_aff>,
@@ -2969,10 +2985,7 @@ while there is only a single multiple expression in
 an C<isl_multi_union_pw_aff>, which can therefore only live
 in a single space.  This means that not every
 C<isl_union_pw_multi_aff> can be converted to
-an C<isl_multi_union_pw_aff>.  Conversely, a zero-dimensional
-C<isl_multi_union_pw_aff> carries no information
-about any possible domain and therefore cannot be converted
-to an C<isl_union_pw_multi_aff>.  Moreover, the elements
+an C<isl_multi_union_pw_aff>.  Conversely, the elements
 of an C<isl_multi_union_pw_aff> may be defined over different domains,
 while each multiple expression inside an C<isl_union_pw_multi_aff>
 has a single domain.  The conversion of an C<isl_union_pw_multi_aff>
@@ -3973,18 +3986,26 @@ can be found then assign C<1> to C<*modulo> and C<1> to C<*residue>.
 	__isl_give isl_val *isl_set_get_stride(
 		__isl_keep isl_set *set, int pos);
 
+	#include <isl/map.h>
+	__isl_give isl_stride_info *
+	isl_map_get_range_stride_info(
+		__isl_keep isl_map *map, int pos);
+
 Check if the values of the given set dimension are equal to
 some affine expression of the other dimensions (the offset)
+modulo some integer stride or
+check if the values of the given output dimensions are equal to
+some affine expression of the input dimensions (the offset)
 modulo some integer stride.
 If no more specific information can be found, then the stride
 is taken to be one and the offset is taken to be the zero expression.
-The function C<isl_set_get_stride_info> performs the same
-computation but only returns the stride.
-Otherwise,
+The function C<isl_set_get_stride> performs the same
+computation as C<isl_set_get_stride_info> but only returns the stride.
+For the other functions,
 the stride and offset can be extracted from the returned object
 using the following functions.
 
-	#include <isl/set.h>
+	#include <isl/stride_info.h>
 	__isl_give isl_val *isl_stride_info_get_stride(
 		__isl_keep isl_stride_info *si);
 	__isl_give isl_aff *isl_stride_info_get_offset(
@@ -3992,7 +4013,7 @@ using the following functions.
 
 The stride info object can be released using the following function.
 
-	#include <isl/set.h>
+	#include <isl/stride_info.h>
 	__isl_null isl_stride_info *isl_stride_info_free(
 		__isl_take isl_stride_info *si);
 
@@ -4569,8 +4590,9 @@ parameters.
 	__isl_give isl_set *isl_pw_aff_params(
 		__isl_take isl_pw_aff *pwa);
 
-The function C<isl_multi_union_pw_aff_domain> requires its
-input to have at least one set dimension.
+If no explicit domain was set on a zero-dimensional input to
+C<isl_multi_union_pw_aff_domain>, then this function will
+return a parameter set.
 
 	#include <isl/polynomial.h>
 	__isl_give isl_qpolynomial *
@@ -5738,6 +5760,14 @@ elements in the argument.
 
 The following functions evaluate a function in a point.
 
+	#include <isl/aff.h>
+	__isl_give isl_val *isl_aff_eval(
+		__isl_take isl_aff *aff,
+		__isl_take isl_point *pnt);
+	__isl_give isl_val *isl_pw_aff_eval(
+		__isl_take isl_pw_aff *pa,
+		__isl_take isl_point *pnt);
+
 	#include <isl/polynomial.h>
 	__isl_give isl_val *isl_pw_qpolynomial_eval(
 		__isl_take isl_pw_qpolynomial *pwqp,
@@ -5751,6 +5781,11 @@ The following functions evaluate a function in a point.
 	__isl_give isl_val *isl_union_pw_qpolynomial_fold_eval(
 		__isl_take isl_union_pw_qpolynomial_fold *upwf,
 		__isl_take isl_point *pnt);
+
+These functions return NaN when evaluated at a void point.
+Note that C<isl_pw_aff_eval> returns NaN when the function is evaluated outside
+its definition domain, while C<isl_pw_qpolynomial_eval> returns zero
+when the function is evaluated outside its explicit domain.
 
 =item * Dimension manipulation
 
@@ -10649,7 +10684,8 @@ range of the schedule.
 The range of the options can consist of elements in one or more spaces,
 the names of which determine the effect of the option.
 The values of the range typically also refer to the schedule dimension
-to which the option applies.  In case of nested AST generation
+to which the option applies, with value C<0> representing
+the outermost schedule dimension.  In case of nested AST generation
 (see L</"Nested AST Generation">), these values refer to the position
 of the schedule dimension within the innermost AST generation.
 The constraints on the domain elements of

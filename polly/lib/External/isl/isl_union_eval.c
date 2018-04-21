@@ -10,6 +10,20 @@
 
 #include <isl_union_macro.h>
 
+/* Evaluate "u" in the void point "pnt".
+ * In particular, return the value NaN.
+ */
+static __isl_give isl_val *FN(UNION,eval_void)(__isl_take UNION *u,
+	__isl_take isl_point *pnt)
+{
+	isl_ctx *ctx;
+
+	ctx = isl_point_get_ctx(pnt);
+	FN(UNION,free)(u);
+	isl_point_free(pnt);
+	return isl_val_nan(ctx);
+}
+
 /* Is the domain space of "entry" equal to "space"?
  */
 static int FN(UNION,has_domain_space)(const void *entry, const void *val)
@@ -29,11 +43,17 @@ __isl_give isl_val *FN(UNION,eval)(__isl_take UNION *u,
 {
 	uint32_t hash;
 	struct isl_hash_table_entry *entry;
+	isl_bool is_void;
 	isl_space *space;
 	isl_val *v;
 
 	if (!u || !pnt)
 		goto error;
+	is_void = isl_point_is_void(pnt);
+	if (is_void < 0)
+		goto error;
+	if (is_void)
+		return FN(UNION,eval_void)(u, pnt);
 
 	space = isl_space_copy(pnt->dim);
 	if (!space)

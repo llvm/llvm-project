@@ -255,6 +255,8 @@ def FeatureWBNOINVD    : SubtargetFeature<"wbnoinvd", "HasWBNOINVD", "true",
                                       "Write Back No Invalidate">;
 def FeatureRDPID : SubtargetFeature<"rdpid", "HasRDPID", "true",
                                     "Support RDPID instructions">;
+def FeatureWAITPKG  : SubtargetFeature<"waitpkg", "HasWAITPKG", "true",
+                                      "Wait and pause enhancements">;
 // On some processors, instructions that implicitly take two memory operands are
 // slow. In practice, this means that CALL, PUSH, and POP with memory operands
 // should be avoided in favor of a MOV + register CALL/PUSH/POP.
@@ -628,7 +630,8 @@ class TremontProc<string Name> : ProcModel<Name, SLMModel,
   FeatureCLDEMOTE,
   FeatureGFNI,
   FeatureRDPID,
-  FeatureSGX
+  FeatureSGX,
+  FeatureWAITPKG
 ]>;
 def : TremontProc<"tremont">;
 

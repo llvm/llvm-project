@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple i686-linux-gnu %s -o - | \
 # RUN: llvm-dwarfdump -debug-line - 2>&1 | FileCheck %s
 
-# CHECK: Mismatching address size at offset 0x{{[0-9a-f]+}}
+# CHECK:      warning: mismatching address size at offset 0x{{[0-9a-f]+}}
 # CHECK-SAME: expected 0x08 found 0x04
 	.text
 	.file	"reduced.c"

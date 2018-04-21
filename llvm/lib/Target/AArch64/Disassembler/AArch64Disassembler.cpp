@@ -55,7 +55,6 @@ static DecodeStatus DecodeFPR16RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeFPR8RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const void *Decoder);
-LLVM_ATTRIBUTE_UNUSED
 static DecodeStatus DecodeGPR64commonRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const void *Decoder);

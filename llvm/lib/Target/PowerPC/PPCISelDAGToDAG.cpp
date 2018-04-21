@@ -327,6 +327,7 @@ private:
 
     bool isOffsetMultipleOf(SDNode *N, unsigned Val) const;
     void transferMemOperands(SDNode *N, SDNode *Result);
+    MachineSDNode *flipSignBit(const SDValue &N, SDNode **SignBit = nullptr);
   };
 
 } // end anonymous namespace
@@ -3970,6 +3971,51 @@ void PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
   cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
 }
 
+/// This method returns a node after flipping the MSB of each element
+/// of vector integer type. Additionally, if SignBitVec is non-null,
+/// this method sets a node with one at MSB of all elements
+/// and zero at other bits in SignBitVec.
+MachineSDNode *
+PPCDAGToDAGISel::flipSignBit(const SDValue &N, SDNode **SignBitVec) {
+  SDLoc dl(N);
+  EVT VecVT = N.getValueType();
+  if (VecVT == MVT::v4i32) {
+    if (SignBitVec) {
+      SDNode *ZV = CurDAG->getMachineNode(PPC::V_SET0, dl, MVT::v4i32);
+      *SignBitVec = CurDAG->getMachineNode(PPC::XVNEGSP, dl, VecVT,
+                                        SDValue(ZV, 0));
+    }
+    return CurDAG->getMachineNode(PPC::XVNEGSP, dl, VecVT, N);
+  }
+  else if (VecVT == MVT::v8i16) {
+    SDNode *Hi = CurDAG->getMachineNode(PPC::LIS, dl, MVT::i32,
+                                     getI32Imm(0x8000, dl));
+    SDNode *ScaImm = CurDAG->getMachineNode(PPC::ORI, dl, MVT::i32,
+                                         SDValue(Hi, 0),
+                                         getI32Imm(0x8000, dl));
+    SDNode *VecImm = CurDAG->getMachineNode(PPC::MTVSRWS, dl, VecVT,
+                                         SDValue(ScaImm, 0));
+    /*
+    Alternatively, we can do this as follow to use VRF instead of GPR.
+      vspltish 5, 1
+      vspltish 6, 15
+      vslh 5, 6, 5
+    */
+    if (SignBitVec) *SignBitVec = VecImm;
+    return CurDAG->getMachineNode(PPC::VADDUHM, dl, VecVT, N,
+                                  SDValue(VecImm, 0));
+  }
+  else if (VecVT == MVT::v16i8) {
+    SDNode *VecImm = CurDAG->getMachineNode(PPC::XXSPLTIB, dl, MVT::i32,
+                                         getI32Imm(0x80, dl));
+    if (SignBitVec) *SignBitVec = VecImm;
+    return CurDAG->getMachineNode(PPC::VADDUBM, dl, VecVT, N,
+                                  SDValue(VecImm, 0));
+  }
+  else
+    llvm_unreachable("Unsupported vector data type for flipSignBit");
+}
+
 // Select - Convert the specified operand from a target-independent to a
 // target-specific node if it hasn't already been changed.
 void PPCDAGToDAGISel::Select(SDNode *N) {
@@ -4782,6 +4828,55 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                                             SDValue(Tmp2, 0)));
       return;
     }
+  }
+  case ISD::ABS: {
+    assert(PPCSubTarget->hasP9Vector() && "ABS is supported with P9 Vector");
+
+    // For vector absolute difference, we use VABSDUW instruction of POWER9.
+    // Since VABSDU instructions are for unsigned integers, we need adjustment
+    // for signed integers.
+    // For abs(sub(a, b)), we generate VABSDUW(a+0x80000000, b+0x80000000).
+    // Otherwise, abs(sub(-1, 0)) returns 0xFFFFFFFF(=-1) instead of 1.
+    // For abs(a), we generate VABSDUW(a+0x80000000, 0x80000000).
+    EVT VecVT = N->getOperand(0).getValueType();
+    SDNode *AbsOp = nullptr;
+    unsigned AbsOpcode;
+
+    if (VecVT == MVT::v4i32)
+      AbsOpcode = PPC::VABSDUW;
+    else if (VecVT == MVT::v8i16)
+      AbsOpcode = PPC::VABSDUH;
+    else if (VecVT == MVT::v16i8)
+      AbsOpcode = PPC::VABSDUB;
+    else
+      llvm_unreachable("Unsupported vector data type for ISD::ABS");
+
+    // Even for signed integers, we can skip adjustment if all values are
+    // known to be positive (as signed integer) due to zero-extended inputs.
+    if (N->getOperand(0).getOpcode() == ISD::SUB &&
+        N->getOperand(0)->getOperand(0).getOpcode() == ISD::ZERO_EXTEND &&
+        N->getOperand(0)->getOperand(1).getOpcode() == ISD::ZERO_EXTEND) {
+      AbsOp = CurDAG->getMachineNode(AbsOpcode, dl, VecVT,
+                                     SDValue(N->getOperand(0)->getOperand(0)),
+                                     SDValue(N->getOperand(0)->getOperand(1)));
+      ReplaceNode(N, AbsOp);
+      return;
+    }
+    if (N->getOperand(0).getOpcode() == ISD::SUB) {
+      SDValue SubVal = N->getOperand(0);
+      SDNode *Op0 = flipSignBit(SubVal->getOperand(0));
+      SDNode *Op1 = flipSignBit(SubVal->getOperand(1));
+      AbsOp = CurDAG->getMachineNode(AbsOpcode, dl, VecVT,
+                                     SDValue(Op0, 0), SDValue(Op1, 0));
+    }
+    else {
+      SDNode *Op1 = nullptr;
+      SDNode *Op0 = flipSignBit(N->getOperand(0), &Op1);
+      AbsOp = CurDAG->getMachineNode(AbsOpcode, dl, VecVT, SDValue(Op0, 0),
+                                     SDValue(Op1, 0));
+    }
+    ReplaceNode(N, AbsOp);
+    return;
   }
   }
 

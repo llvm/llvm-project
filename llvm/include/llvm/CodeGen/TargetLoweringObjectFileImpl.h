@@ -42,8 +42,7 @@ public:
   ~TargetLoweringObjectFileELF() override = default;
 
   /// Emit Obj-C garbage collection and linker options.
-  void emitModuleMetadata(MCStreamer &Streamer, Module &M,
-                          const TargetMachine &TM) const override;
+  void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
   void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &TM,
                             const MCSymbol *Sym) const override;
@@ -98,8 +97,7 @@ public:
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
   /// Emit the module flags that specify the garbage collection information.
-  void emitModuleMetadata(MCStreamer &Streamer, Module &M,
-                          const TargetMachine &TM) const override;
+  void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
@@ -153,8 +151,7 @@ public:
                                     const TargetMachine &TM) const override;
 
   /// Emit Obj-C garbage collection and linker options.
-  void emitModuleMetadata(MCStreamer &Streamer, Module &M,
-                          const TargetMachine &TM) const override;
+  void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
   MCSection *getStaticCtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;

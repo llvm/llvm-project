@@ -54,3 +54,21 @@ ld1sh   { z21.d }, p5/z, [x10, #5, mul vl]
 // CHECK-ENCODING: [0x55,0xb5,0x05,0xa5]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 55 b5 05 a5 <unknown>
+
+ld1sh    { z21.s }, p5/z, [sp, x21, lsl #1]
+// CHECK-INST: ld1sh    { z21.s }, p5/z, [sp, x21, lsl #1]
+// CHECK-ENCODING: [0xf5,0x57,0x35,0xa5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: f5 57 35 a5 <unknown>
+
+ld1sh    { z21.s }, p5/z, [x10, x21, lsl #1]
+// CHECK-INST: ld1sh    { z21.s }, p5/z, [x10, x21, lsl #1]
+// CHECK-ENCODING: [0x55,0x55,0x35,0xa5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 55 55 35 a5 <unknown>
+
+ld1sh    { z23.d }, p3/z, [x13, x8, lsl #1]
+// CHECK-INST: ld1sh    { z23.d }, p3/z, [x13, x8, lsl #1]
+// CHECK-ENCODING: [0xb7,0x4d,0x08,0xa5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 4d 08 a5 <unknown>

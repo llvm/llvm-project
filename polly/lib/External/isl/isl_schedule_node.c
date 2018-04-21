@@ -11,6 +11,7 @@
  * B.P. 105 - 78153 Le Chesnay, France
  */
 
+#include <isl/id.h>
 #include <isl/val.h>
 #include <isl/space.h>
 #include <isl/set.h>

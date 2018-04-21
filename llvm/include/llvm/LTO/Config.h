@@ -88,6 +88,9 @@ struct Config {
   /// Whether to emit the pass manager debuggging informations.
   bool DebugPassManager = false;
 
+  /// Statistics output file path.
+  std::string StatsFile;
+
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;
 

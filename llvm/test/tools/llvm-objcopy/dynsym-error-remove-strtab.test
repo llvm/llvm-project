@@ -1,3 +1,3 @@
 # RUN: not llvm-objcopy -R .dynstr %p/Inputs/dynsym.so %t 2>&1 >/dev/null | FileCheck %s
 
-# CHECK: String table .dynstr cannot be removed because it is referenced by the section .dynsym
+# CHECK: Section .dynstr cannot be removed because it is referenced by the section .dynsym

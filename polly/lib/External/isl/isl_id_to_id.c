@@ -1,4 +1,5 @@
 #include <isl/id_to_id.h>
+#include <isl/id.h>
 
 #define isl_id_is_equal(id1,id2)	id1 == id2
 

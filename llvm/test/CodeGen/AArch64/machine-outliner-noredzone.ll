@@ -1,5 +1,6 @@
-; RUN: llc -enable-machine-outliner %s -o - | FileCheck %s
-; RUN: llc -enable-machine-outliner -aarch64-redzone %s -o - | FileCheck %s -check-prefix=REDZONE
+; XFAIL: *
+; RUN: llc -verify-machineinstrs -enable-machine-outliner %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -aarch64-redzone %s -o - | FileCheck %s -check-prefix=REDZONE
 
 ; Ensure that the MachineOutliner does not fire on functions which use a
 ; redzone. We don't care about what's actually outlined here. We just want to

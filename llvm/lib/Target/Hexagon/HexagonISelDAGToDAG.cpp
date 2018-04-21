@@ -758,22 +758,6 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   ReplaceNode(N, R);
 }
 
-
-void HexagonDAGToDAGISel::SelectBitcast(SDNode *N) {
-  EVT SVT = N->getOperand(0).getValueType();
-  EVT DVT = N->getValueType(0);
-  if (!SVT.isVector() || !DVT.isVector() ||
-      SVT.getVectorElementType() == MVT::i1 ||
-      DVT.getVectorElementType() == MVT::i1 ||
-      SVT.getSizeInBits() != DVT.getSizeInBits()) {
-    SelectCode(N);
-    return;
-  }
-
-  ReplaceUses(SDValue(N, 0), N->getOperand(0));
-  CurDAG->RemoveDeadNode(N);
-}
-
 void HexagonDAGToDAGISel::SelectVAlign(SDNode *N) {
   MVT ResTy = N->getValueType(0).getSimpleVT();
   if (HST->isHVXVectorType(ResTy, true))
@@ -882,7 +866,6 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case ISD::Constant:             return SelectConstant(N);
   case ISD::ConstantFP:           return SelectConstantFP(N);
   case ISD::FrameIndex:           return SelectFrameIndex(N);
-  case ISD::BITCAST:              return SelectBitcast(N);
   case ISD::SHL:                  return SelectSHL(N);
   case ISD::LOAD:                 return SelectLoad(N);
   case ISD::STORE:                return SelectStore(N);

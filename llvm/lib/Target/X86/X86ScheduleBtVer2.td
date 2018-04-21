@@ -278,15 +278,13 @@ defm : JWriteResIntPair<WriteJump,  [JALU01], 1>;
 def : WriteRes<WriteSystem,     [JALU01]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [JALU01]> { let Latency = 100; }
 def : WriteRes<WriteFence,  [JSAGU]>;
+
 // Nops don't have dependencies, so there's no actual latency, but we set this
 // to '1' to tell the scheduler that the nop uses an ALU slot for a cycle.
 def : WriteRes<WriteNop, [JALU01]> { let Latency = 1; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Floating point. This covers both scalar and vector operations.
-// FIXME: should we bother splitting JFPU pipe + unit stages for fast instructions?
-// FIXME: Double precision latencies
-// FIXME: SS vs PS latencies
 ////////////////////////////////////////////////////////////////////////////////
 
 def  : WriteRes<WriteFLoad,        [JLAGU, JFPU01, JFPX]> { let Latency = 5; }
@@ -302,6 +300,8 @@ defm : JWriteResFpuPair<WriteFRcp,         [JFPU1, JFPM],  2>;
 defm : JWriteResFpuPair<WriteFRsqrt,       [JFPU1, JFPM],  2>;
 defm : JWriteResFpuPair<WriteFDiv,         [JFPU1, JFPM], 19, [1, 19]>;
 defm : JWriteResFpuPair<WriteFSqrt,        [JFPU1, JFPM], 21, [1, 21]>;
+defm : JWriteResFpuPair<WriteFSign,        [JFPU1, JFPM],  2>;
+defm : JWriteResFpuPair<WriteFLogic,      [JFPU01, JFPX],  1>;
 defm : JWriteResFpuPair<WriteFShuffle,    [JFPU01, JFPX],  1>;
 defm : JWriteResFpuPair<WriteFVarShuffle, [JFPU01, JFPX],  2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteFBlend,      [JFPU01, JFPX],  1>;
@@ -311,7 +311,6 @@ defm : JWriteResFpuPair<WriteFVarShuffle256, [JFPU01, JFPX],  1>; // NOTE: Doesn
 
 ////////////////////////////////////////////////////////////////////////////////
 // Conversions.
-// FIXME: integer pipes
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : JWriteResFpuPair<WriteCvtF2I,       [JFPU1, JSTC], 3>; // Float -> Integer.
@@ -344,7 +343,7 @@ def JWriteCVTF2SILd : SchedWriteRes<[JLAGU, JFPU1, JSTC, JFPA, JALU0]> {
 }
 def : InstRW<[JWriteCVTF2SILd], (instregex "(V)?CVT(T?)S(D|S)2SI(64)?rm")>;
 
-// FIXME: f+3 ST,LD+STC latency
+// FIXME: f+3 ST, LD+STC latency
 def JWriteCVTSI2F : SchedWriteRes<[JFPU1, JSTC]> {
   let Latency = 9;
   let NumMicroOps = 2;
@@ -534,25 +533,6 @@ def : InstRW<[JWriteCVTPH2PSYLd], (instrs VCVTPH2PSYrm)>;
 ////////////////////////////////////////////////////////////////////////////////
 // AVX instructions.
 ////////////////////////////////////////////////////////////////////////////////
-
-def JWriteFLogic: SchedWriteRes<[JFPU01, JFPX]> {
-}
-def : InstRW<[JWriteFLogic], (instrs ORPDrr, ORPSrr, VORPDrr, VORPSrr,
-                                     XORPDrr, XORPSrr, VXORPDrr, VXORPSrr,
-                                     ANDPDrr, ANDPSrr, VANDPDrr, VANDPSrr,
-                                     ANDNPDrr, ANDNPSrr, VANDNPDrr, VANDNPSrr)>;
-
-def JWriteFLogicLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
-  let Latency = 6;
-}
-def : InstRW<[JWriteFLogicLd, ReadAfterLd], (instrs ORPDrm, ORPSrm,
-                                                    VORPDrm, VORPSrm,
-                                                    XORPDrm, XORPSrm,
-                                                    VXORPDrm, VXORPSrm,
-                                                    ANDPDrm, ANDPSrm,
-                                                    VANDPDrm, VANDPSrm,
-                                                    ANDNPDrm, ANDNPSrm,
-                                                    VANDNPDrm, VANDNPSrm)>;
 
 def JWriteFLogicY: SchedWriteRes<[JFPU01, JFPX]> {
   let ResourceCycles = [2, 2];
