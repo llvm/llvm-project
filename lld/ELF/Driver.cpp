@@ -313,6 +313,17 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
+static bool getZFlag(opt::InputArgList &Args, StringRef K1, StringRef K2,
+                     bool Default) {
+  for (auto *Arg : Args.filtered_reverse(OPT_z)) {
+    if (K1 == Arg->getValue())
+      return true;
+    if (K2 == Arg->getValue())
+      return false;
+  }
+  return Default;
+}
+
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -748,19 +759,19 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   Config->WarnSymbolOrdering =
       Args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
-  Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
-  Config->ZExecstack = hasZOption(Args, "execstack");
+  Config->ZCombreloc = getZFlag(Args, "combreloc", "nocombreloc", true);
+  Config->ZCopyreloc = getZFlag(Args, "copyreloc", "nocopyreloc", true);
+  Config->ZExecstack = getZFlag(Args, "execstack", "noexecstack", false);
   Config->ZHazardplt = hasZOption(Args, "hazardplt");
-  Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNodlopen = hasZOption(Args, "nodlopen");
-  Config->ZNow = hasZOption(Args, "now");
+  Config->ZNow = getZFlag(Args, "now", "lazy", false);
   Config->ZOrigin = hasZOption(Args, "origin");
-  Config->ZRelro = !hasZOption(Args, "norelro");
+  Config->ZRelro = getZFlag(Args, "relro", "norelro", true);
   Config->ZRetpolineplt = hasZOption(Args, "retpolineplt");
   Config->ZRodynamic = hasZOption(Args, "rodynamic");
   Config->ZStackSize = args::getZOptionValue(Args, OPT_z, "stack-size", 0);
-  Config->ZText = !hasZOption(Args, "notext");
+  Config->ZText = getZFlag(Args, "text", "notext", true);
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   // Parse LTO plugin-related options for compatibility with gold.

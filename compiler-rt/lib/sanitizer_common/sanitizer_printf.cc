@@ -105,8 +105,6 @@ static int AppendString(char **buff, const char *buff_end, int precision,
       break;
     result += AppendChar(buff, buff_end, *s);
   }
-  while (result < precision)
-    result += AppendChar(buff, buff_end, ' ');
   return result;
 }
 

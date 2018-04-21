@@ -146,13 +146,8 @@ TEST(Printf, Precision) {
   EXPECT_EQ(3U, len);
   EXPECT_STREQ("123", buf);
   len = internal_snprintf(buf, sizeof(buf), "%.*s", 6, "12345");
-  EXPECT_EQ(6U, len);
-  EXPECT_STREQ("12345 ", buf);
-  // CHeck that precision does not overflow the smaller buffer, although
-  // 10 chars is requested, it stops at the buffer size, 8.
-  len = internal_snprintf(buf, 8, "%.*s", 10, "12345");
-  EXPECT_EQ(10U, len);  // The required size reported.
-  EXPECT_STREQ("12345  ", buf);
+  EXPECT_EQ(5U, len);
+  EXPECT_STREQ("12345", buf);
 }
 
 }  // namespace __sanitizer

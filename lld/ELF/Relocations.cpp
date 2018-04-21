@@ -843,7 +843,7 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
     // Produce a copy relocation.
     auto &SS = cast<SharedSymbol>(Sym);
     if (!SS.CopyRelSec) {
-      if (Config->ZNocopyreloc)
+      if (!Config->ZCopyreloc)
         error("unresolvable relocation " + toString(Type) +
               " against symbol '" + toString(SS) +
               "'; recompile with -fPIC or remove '-z nocopyreloc'" +

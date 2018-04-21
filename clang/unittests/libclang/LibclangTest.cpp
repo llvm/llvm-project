@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-c/Index.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -490,11 +491,11 @@ TEST_F(LibclangReparseTest, FileName) {
   CXFile cxf = clang_getFile(ClangTU, CppName.c_str());
 
   CXString cxname = clang_getFileName(cxf);
-  ASSERT_TRUE(strstr(clang_getCString(cxname), CppName.c_str()));
+  ASSERT_STREQ(clang_getCString(cxname), CppName.c_str());
   clang_disposeString(cxname);
 
   cxname = clang_File_tryGetRealPathName(cxf);
-  ASSERT_TRUE(strstr(clang_getCString(cxname), CppName.c_str()));
+  ASSERT_TRUE(llvm::StringRef(clang_getCString(cxname)).endswith("main.cpp"));
   clang_disposeString(cxname);
 }
 

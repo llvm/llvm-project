@@ -141,6 +141,11 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
         set(CUDA_PTX_VERSION ptx42)
       endif()
  
+      set(BC_DEBUG -DOMPTARGET_NVPTX_DEBUG=0)
+      if(${LIBOMPTARGET_NVPTX_DEBUG})
+        set(BC_DEBUG -DOMPTARGET_NVPTX_DEBUG=-1)
+      endif()
+
       # Set flags for Clang cuda compilation.  Only Clang is supported because there is
       # no other compiler capable of generating bitcode from cuda sources.
       set(CUDA_FLAGS
@@ -149,7 +154,8 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
           -Xclang -target-feature
           -Xclang +${CUDA_PTX_VERSION}
           --cuda-device-only
-          -DOMPTARGET_NVPTX_TEST=0 -DOMPTARGET_NVPTX_DEBUG=0
+          -DOMPTARGET_NVPTX_TEST=0
+          ${BC_DEBUG}
       )
 
       # CUDA 9 header files use the nv_weak attribute which clang is not yet prepared

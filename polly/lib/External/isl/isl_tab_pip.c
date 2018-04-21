@@ -5765,7 +5765,7 @@ static int need_substitution(__isl_keep isl_multi_aff *maff)
 	pos = isl_multi_aff_dim(maff, isl_dim_in) - 1;
 
 	for (i = 0; i < maff->n; ++i)
-		if (isl_aff_involves_dims(maff->p[i], isl_dim_in, pos, 1))
+		if (isl_aff_involves_dims(maff->u.p[i], isl_dim_in, pos, 1))
 			return 1;
 
 	return 0;

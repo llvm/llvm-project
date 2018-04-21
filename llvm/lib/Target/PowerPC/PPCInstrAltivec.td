@@ -1504,18 +1504,4 @@ def VABSDUW : VXForm_1<1155, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                        "vabsduw $vD, $vA, $vB", IIC_VecGeneral,
                        [(set v4i32:$vD, (int_ppc_altivec_vabsduw v4i32:$vA, v4i32:$vB))]>;
 
-def : Pat<(v16i8:$vD (abs v16i8:$vA)),
-          (v16i8 (VABSDUB $vA, (v16i8 (V_SET0B))))>;
-def : Pat<(v8i16:$vD (abs v8i16:$vA)),
-          (v8i16 (VABSDUH $vA, (v8i16 (V_SET0H))))>;
-def : Pat<(v4i32:$vD (abs v4i32:$vA)),
-          (v4i32 (VABSDUW $vA, (v4i32 (V_SET0))))>;
-
-def : Pat<(v16i8:$vD (abs (sub v16i8:$vA, v16i8:$vB))),
-          (v16i8 (VABSDUB $vA, $vB))>;
-def : Pat<(v8i16:$vD (abs (sub v8i16:$vA, v8i16:$vB))),
-          (v8i16 (VABSDUH $vA, $vB))>;
-def : Pat<(v4i32:$vD (abs (sub v4i32:$vA, v4i32:$vB))),
-          (v4i32 (VABSDUW $vA, $vB))>;
-
 } // end HasP9Altivec

@@ -1140,6 +1140,13 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
   bool IsLoad = MI.mayLoad();
   bool IsStore = MI.mayStore();
 
+  // Fixed stack slots have negative indexes, and they cannot be used
+  // with TRI::stackSlot2Index and TRI::index2StackSlot. This is somewhat
+  // unfortunate, but should not be a frequent thing.
+  for (MachineOperand &Op : MI.operands())
+    if (Op.isFI() && Op.getIndex() < 0)
+      return;
+
   if (IsLoad || IsStore) {
     unsigned AM = HII->getAddrMode(MI);
     switch (AM) {

@@ -8,7 +8,8 @@
  */
 
 #include <isl/val.h>
-#include <isl/aff.h>
+#include <isl_map_private.h>
+#include <isl_aff_private.h>
 #include <isl/constraint.h>
 #include <isl/set.h>
 
@@ -208,9 +209,13 @@ static isl_stat detect_stride(__isl_take isl_constraint *c, void *user)
 	isl_ctx *ctx;
 	isl_stat r = isl_stat_ok;
 	isl_val *v, *stride, *m;
+	isl_bool is_eq, relevant, has_stride;
 
-	if (!isl_constraint_is_equality(c) ||
-	    !isl_constraint_involves_dims(c, isl_dim_set, data->pos, 1)) {
+	is_eq = isl_constraint_is_equality(c);
+	relevant = isl_constraint_involves_dims(c, isl_dim_set, data->pos, 1);
+	if (is_eq < 0 || relevant < 0)
+		goto error;
+	if (!is_eq || !relevant) {
 		isl_constraint_free(c);
 		return isl_stat_ok;
 	}
@@ -228,7 +233,8 @@ static isl_stat detect_stride(__isl_take isl_constraint *c, void *user)
 	stride = isl_val_div(stride, isl_val_copy(m));
 	v = isl_val_div(v, isl_val_copy(m));
 
-	if (!isl_val_is_zero(stride) && !isl_val_is_one(stride)) {
+	has_stride = isl_val_gt_si(stride, 1);
+	if (has_stride >= 0 && has_stride) {
 		isl_aff *aff;
 		isl_val *gcd, *a, *b;
 
@@ -252,7 +258,12 @@ static isl_stat detect_stride(__isl_take isl_constraint *c, void *user)
 	}
 
 	isl_constraint_free(c);
+	if (has_stride < 0)
+		return isl_stat_error;
 	return r;
+error:
+	isl_constraint_free(c);
+	return isl_stat_error;
 }
 
 /* Check if the constraints in "set" imply any stride on set dimension "pos" and
@@ -321,4 +332,33 @@ __isl_give isl_val *isl_set_get_stride(__isl_keep isl_set *set, int pos)
 	set_detect_stride(set, pos, &data);
 
 	return data.stride;
+}
+
+/* Check if the constraints in "map" imply any stride on output dimension "pos",
+ * independently of any other output dimensions, and
+ * return the results in the form of an offset and a stride.
+ *
+ * Convert the input to a set with only the input dimensions and
+ * the single output dimension such that it be passed to
+ * isl_set_get_stride_info and convert the result back to
+ * an expression defined over the domain of "map".
+ */
+__isl_give isl_stride_info *isl_map_get_range_stride_info(
+	__isl_keep isl_map *map, int pos)
+{
+	isl_stride_info *si;
+	isl_set *set;
+
+	map = isl_map_copy(map);
+	map = isl_map_project_onto(map, isl_dim_out, pos, 1);
+	pos = isl_map_dim(map, isl_dim_in);
+	set = isl_map_wrap(map);
+	si = isl_set_get_stride_info(set, pos);
+	isl_set_free(set);
+	if (!si)
+		return NULL;
+	si->offset = isl_aff_domain_factor_domain(si->offset);
+	if (!si->offset)
+		return isl_stride_info_free(si);
+	return si;
 }

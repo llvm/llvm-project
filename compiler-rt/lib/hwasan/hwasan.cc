@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hwasan.h"
+#include "hwasan_mapping.h"
 #include "hwasan_thread.h"
 #include "hwasan_poisoning.h"
 #include "sanitizer_common/sanitizer_atomic.h"
@@ -157,6 +158,8 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
 
 using namespace __hwasan;
 
+uptr __hwasan_shadow_memory_dynamic_address;  // Global interface symbol.
+
 void __hwasan_init() {
   CHECK(!hwasan_init_is_running);
   if (hwasan_inited) return;
@@ -179,11 +182,13 @@ void __hwasan_init() {
 
   DisableCoreDumperIfNecessary();
   if (!InitShadow()) {
-    Printf("FATAL: HWAddressSanitizer can not mmap the shadow memory.\n");
-    Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
-    Printf("FATAL: Disabling ASLR is known to cause this error.\n");
-    Printf("FATAL: If running under GDB, try "
-           "'set disable-randomization off'.\n");
+    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
+    if (HWASAN_FIXED_MAPPING) {
+      Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
+      Printf("FATAL: Disabling ASLR is known to cause this error.\n");
+      Printf("FATAL: If running under GDB, try "
+             "'set disable-randomization off'.\n");
+    }
     DumpProcessMap();
     Die();
   }
