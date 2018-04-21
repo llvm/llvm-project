@@ -151,6 +151,7 @@ private:
   void createMiscChunks();
   void createImportTables();
   void createExportTable();
+  void mergeSections();
   void assignAddresses();
   void removeEmptySections();
   void createSymbolAndStringTable();
@@ -201,6 +202,7 @@ private:
   OutputSection *TextSec;
   OutputSection *RdataSec;
   OutputSection *DataSec;
+  OutputSection *PdataSec;
   OutputSection *IdataSec;
   OutputSection *EdataSec;
   OutputSection *DidatSec;
@@ -234,12 +236,16 @@ void OutputSection::addChunk(Chunk *C) {
   C->setOutputSection(this);
 }
 
-void OutputSection::addPermissions(uint32_t C) {
-  Header.Characteristics |= C & PermMask;
+void OutputSection::setPermissions(uint32_t C) {
+  Header.Characteristics &= ~PermMask;
+  Header.Characteristics |= C;
 }
 
-void OutputSection::setPermissions(uint32_t C) {
-  Header.Characteristics = C & PermMask;
+void OutputSection::merge(OutputSection *Other) {
+  for (Chunk *C : Other->Chunks)
+    C->setOutputSection(this);
+  Chunks.insert(Chunks.end(), Other->Chunks.begin(), Other->Chunks.end());
+  Other->Chunks.clear();
 }
 
 // Write the section header to a given buffer.
@@ -329,6 +335,7 @@ void Writer::run() {
   createMiscChunks();
   createImportTables();
   createExportTable();
+  mergeSections();
   assignAddresses();
   removeEmptySections();
   setSectionPermissions();
@@ -399,17 +406,13 @@ void Writer::createSections() {
   const uint32_t W = IMAGE_SCN_MEM_WRITE;
   const uint32_t X = IMAGE_SCN_MEM_EXECUTE;
 
-  SmallDenseMap<StringRef, OutputSection *> Sections;
-  auto CreateSection = [&](StringRef Name, uint32_t Perms) {
-    auto I = Config->Merge.find(Name);
-    if (I != Config->Merge.end())
-      Name = I->second;
-    OutputSection *&Sec = Sections[Name];
+  SmallDenseMap<std::pair<StringRef, uint32_t>, OutputSection *> Sections;
+  auto CreateSection = [&](StringRef Name, uint32_t OutChars) {
+    OutputSection *&Sec = Sections[{Name, OutChars}];
     if (!Sec) {
-      Sec = make<OutputSection>(Name);
+      Sec = make<OutputSection>(Name, OutChars);
       OutputSections.push_back(Sec);
     }
-    Sec->addPermissions(Perms);
     return Sec;
   };
 
@@ -418,15 +421,15 @@ void Writer::createSections() {
   CreateSection(".bss", BSS | R | W);
   RdataSec = CreateSection(".rdata", DATA | R);
   DataSec = CreateSection(".data", DATA | R | W);
-  CreateSection(".pdata", DATA | R);
+  PdataSec = CreateSection(".pdata", DATA | R);
   IdataSec = CreateSection(".idata", DATA | R);
   EdataSec = CreateSection(".edata", DATA | R);
   DidatSec = CreateSection(".didat", DATA | R);
   RsrcSec = CreateSection(".rsrc", DATA | R);
   RelocSec = CreateSection(".reloc", DATA | DISCARDABLE | R);
 
-  // Then bin chunks by name.
-  std::map<StringRef, std::vector<Chunk *>> Map;
+  // Then bin chunks by name and output characteristics.
+  std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;
   for (Chunk *C : Symtab->getChunks()) {
     auto *SC = dyn_cast<SectionChunk>(C);
     if (SC && !SC->isLive()) {
@@ -434,7 +437,7 @@ void Writer::createSections() {
         SC->printDiscardedMessage();
       continue;
     }
-    Map[C->getSectionName()].push_back(C);
+    Map[{C->getSectionName(), C->getOutputCharacteristics()}].push_back(C);
   }
 
   // Process an /order option.
@@ -447,18 +450,20 @@ void Writer::createSections() {
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
   for (auto Pair : Map) {
-    StringRef Name = getOutputSectionName(Pair.first);
-    if (Name == ".pdata") {
-      if (!FirstPdata)
-        FirstPdata = Pair.second.front();
-      LastPdata = Pair.second.back();
-    }
-    OutputSection *Sec = CreateSection(Name, 0);
+    StringRef Name = getOutputSectionName(Pair.first.first);
+    uint32_t OutChars = Pair.first.second;
+
+    // In link.exe, there is a special case for the I386 target where .CRT
+    // sections are treated as if they have output characteristics DATA | R if
+    // their characteristics are DATA | R | W. This implements the same special
+    // case for all architectures.
+    if (Name == ".CRT")
+      OutChars = DATA | R;
+
+    OutputSection *Sec = CreateSection(Name, OutChars);
     std::vector<Chunk *> &Chunks = Pair.second;
-    for (Chunk *C : Chunks) {
+    for (Chunk *C : Chunks)
       Sec->addChunk(C);
-      Sec->addPermissions(C->getOutputCharacteristics());
-    }
   }
 
   // Finally, move some output sections to the end.
@@ -694,6 +699,37 @@ void Writer::createSymbolAndStringTable() {
   FileOff += OutputSymtab.size() * sizeof(coff_symbol16);
   FileOff += 4 + Strtab.size();
   FileSize = alignTo(FileOff, SectorSize);
+}
+
+void Writer::mergeSections() {
+  if (!PdataSec->getChunks().empty()) {
+    FirstPdata = PdataSec->getChunks().front();
+    LastPdata = PdataSec->getChunks().back();
+  }
+
+  for (auto &P : Config->Merge) {
+    StringRef ToName = P.second;
+    if (P.first == ToName)
+      continue;
+    StringSet<> Names;
+    while (1) {
+      if (!Names.insert(ToName).second)
+        fatal("/merge: cycle found for section '" + P.first + "'");
+      auto I = Config->Merge.find(ToName);
+      if (I == Config->Merge.end())
+        break;
+      ToName = I->second;
+    }
+    OutputSection *From = findSection(P.first);
+    OutputSection *To = findSection(ToName);
+    if (!From)
+      continue;
+    if (!To) {
+      From->Name = ToName;
+      continue;
+    }
+    To->merge(From);
+  }
 }
 
 // Visits all sections to assign incremental, non-overlapping RVAs and
@@ -1100,8 +1136,9 @@ void Writer::setSectionPermissions() {
   for (auto &P : Config->Section) {
     StringRef Name = P.first;
     uint32_t Perm = P.second;
-    if (auto *Sec = findSection(Name))
-      Sec->setPermissions(Perm);
+    for (OutputSection *Sec : OutputSections)
+      if (Sec->Name == Name)
+        Sec->setPermissions(Perm);
   }
 }
 

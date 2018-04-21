@@ -171,6 +171,7 @@ def GPR64sponly : RegisterClass<"AArch64", [i64], 64, (add SP)>;
 def GPR64spPlus0Operand : AsmOperandClass {
   let Name = "GPR64sp0";
   let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isGPR64<AArch64::GPR64spRegClassID>";
   let ParserMethod = "tryParseGPR64sp0Operand";
 }
 
@@ -931,4 +932,25 @@ def ZZZZ_s : RegisterOperand<ZPR4, "printTypedVectorList<0,'s'>"> {
 
 def ZZZZ_d : RegisterOperand<ZPR4, "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 4>;
+}
+
+class GPR64ShiftExtendAsmOperand <string AsmOperandName, int Scale, string RegClass> : AsmOperandClass {
+  let Name = AsmOperandName # Scale;
+  let PredicateMethod = "isGPR64WithShiftExtend<AArch64::"#RegClass#"RegClassID, " # Scale # ">";
+  let DiagnosticType = "Invalid" # AsmOperandName # Scale;
+  let RenderMethod = "addRegOperands";
+  let ParserMethod = "tryParseGPROperand<true>";
+}
+
+class GPR64ExtendRegisterOperand<string Name, int Scale, RegisterClass RegClass> : RegisterOperand<RegClass>{
+  let ParserMatchClass = !cast<AsmOperandClass>(Name);
+  let PrintMethod = "printRegWithShiftExtend<false, " # Scale # ", 'x'>";
+}
+
+foreach Scale = [8, 16, 32, 64] in {
+  def GPR64shiftedAsmOpnd # Scale : GPR64ShiftExtendAsmOperand<"GPR64shifted", Scale, "GPR64">;
+  def GPR64shifted # Scale : GPR64ExtendRegisterOperand<"GPR64shiftedAsmOpnd" # Scale, Scale, GPR64>;
+
+  def GPR64NoXZRshiftedAsmOpnd # Scale : GPR64ShiftExtendAsmOperand<"GPR64NoXZRshifted", Scale, "GPR64common">;
+  def GPR64NoXZRshifted # Scale : GPR64ExtendRegisterOperand<"GPR64NoXZRshiftedAsmOpnd" # Scale, Scale, GPR64common>;
 }

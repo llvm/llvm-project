@@ -7,9 +7,9 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512BW
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512DQ
 ;
-; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SLM
-; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,GLM
-; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=slm | FileCheck %s --check-prefixes=SLM
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=goldmont | FileCheck %s --check-prefixes=GLM
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=btver2 | FileCheck %s --check-prefixes=BTVER2
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
@@ -166,6 +166,25 @@ define i32 @add(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = add <32 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = add <64 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; BTVER2-LABEL: 'add'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = add i64 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = add <2 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = add <4 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = add <8 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = add i32 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = add <4 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = add <8 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = add <16 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = add i16 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = add <8 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = add <16 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = add <32 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = add i8 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = add <16 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = add <32 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = add <64 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = add i64 undef, undef
   %V2I64 = add <2 x i64> undef, undef
@@ -343,6 +362,25 @@ define i32 @sub(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = sub <64 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; BTVER2-LABEL: 'sub'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sub i64 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = sub <2 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = sub <4 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = sub <8 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sub i32 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = sub <4 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = sub <8 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = sub <16 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sub i16 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = sub <8 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = sub <16 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = sub <32 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = sub i8 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = sub <16 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = sub <32 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = sub <64 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
   %I64 = sub i64 undef, undef
   %V2I64 = sub <2 x i64> undef, undef
   %V4I64 = sub <4 x i64> undef, undef
@@ -499,6 +537,25 @@ define i32 @or(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = or <32 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = or <64 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; BTVER2-LABEL: 'or'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = or i64 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = or <2 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = or <4 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = or <8 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = or i32 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = or <4 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = or <8 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = or <16 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = or i16 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = or <8 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = or <16 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = or <32 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = or i8 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = or <16 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = or <32 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = or <64 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = or i64 undef, undef
   %V2I64 = or <2 x i64> undef, undef
@@ -657,6 +714,25 @@ define i32 @xor(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = xor <64 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; BTVER2-LABEL: 'xor'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = xor i64 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = xor <2 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = xor <4 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = xor <8 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = xor i32 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = xor <4 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = xor <8 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = xor <16 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = xor i16 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = xor <8 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = xor <16 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = xor <32 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = xor i8 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = xor <16 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = xor <32 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = xor <64 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
   %I64 = xor i64 undef, undef
   %V2I64 = xor <2 x i64> undef, undef
   %V4I64 = xor <4 x i64> undef, undef
@@ -813,6 +889,25 @@ define i32 @and(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = and <32 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = and <64 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; BTVER2-LABEL: 'and'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = and i64 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = and <2 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = and <4 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = and <8 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = and i32 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = and <4 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = and <8 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = and <16 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = and i16 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = and <8 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = and <16 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = and <32 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = and i8 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = and <16 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = and <32 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = and <64 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = and i64 undef, undef
   %V2I64 = and <2 x i64> undef, undef
@@ -1009,6 +1104,25 @@ define i32 @mul(i32 %arg) {
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V64I8 = mul <64 x i8> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; BTVER2-LABEL: 'mul'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = mul <2 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = mul <4 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = mul <8 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = mul <4 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = mul <8 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = mul <16 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = mul i16 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = mul <8 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = mul <16 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = mul <32 x i16> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = mul i8 undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I8 = mul <16 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V32I8 = mul <32 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V64I8 = mul <64 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
   %I64 = mul i64 undef, undef
   %V2I64 = mul <2 x i64> undef, undef
   %V4I64 = mul <4 x i64> undef, undef
@@ -1063,6 +1177,10 @@ define void @mul_2i32() {
 ; GLM-LABEL: 'mul_2i32'
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; BTVER2-LABEL: 'mul_2i32'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A0 = mul <2 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %A0 = mul <2 x i32> undef, undef
 

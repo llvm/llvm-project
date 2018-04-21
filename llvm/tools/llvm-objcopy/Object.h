@@ -259,11 +259,15 @@ class Section : public SectionBase {
   MAKE_SEC_WRITER_FRIEND
 
   ArrayRef<uint8_t> Contents;
+  SectionBase *LinkSection = nullptr;
 
 public:
   explicit Section(ArrayRef<uint8_t> Data) : Contents(Data) {}
 
   void accept(SectionVisitor &Visitor) const override;
+  void removeSectionReferences(const SectionBase *Sec) override;
+  void initialize(SectionTableRef SecTable) override;
+  void finalize() override;
 };
 
 class OwnedDataSection : public SectionBase {
@@ -456,7 +460,7 @@ public:
   void setFlagWord(ELF::Elf32_Word W) { FlagWord = W; }
   void addMember(SectionBase *Sec) { GroupMembers.push_back(Sec); }
 
-  void initialize(SectionTableRef SecTable) override {};
+  void initialize(SectionTableRef SecTable) override{};
   void accept(SectionVisitor &) const override;
   void finalize() override;
 
@@ -465,31 +469,18 @@ public:
   }
 };
 
-class SectionWithStrTab : public Section {
-  const SectionBase *StrTab = nullptr;
-  void setStrTab(const SectionBase *StringTable) { StrTab = StringTable; }
-
+class DynamicSymbolTableSection : public Section {
 public:
-  explicit SectionWithStrTab(ArrayRef<uint8_t> Data) : Section(Data) {}
-  void removeSectionReferences(const SectionBase *Sec) override;
-  void initialize(SectionTableRef SecTable) override;
-  void finalize() override;
-  static bool classof(const SectionBase *S);
-};
-
-class DynamicSymbolTableSection : public SectionWithStrTab {
-public:
-  explicit DynamicSymbolTableSection(ArrayRef<uint8_t> Data)
-      : SectionWithStrTab(Data) {}
+  explicit DynamicSymbolTableSection(ArrayRef<uint8_t> Data) : Section(Data) {}
 
   static bool classof(const SectionBase *S) {
     return S->Type == ELF::SHT_DYNSYM;
   }
 };
 
-class DynamicSection : public SectionWithStrTab {
+class DynamicSection : public Section {
 public:
-  explicit DynamicSection(ArrayRef<uint8_t> Data) : SectionWithStrTab(Data) {}
+  explicit DynamicSection(ArrayRef<uint8_t> Data) : Section(Data) {}
 
   static bool classof(const SectionBase *S) {
     return S->Type == ELF::SHT_DYNAMIC;

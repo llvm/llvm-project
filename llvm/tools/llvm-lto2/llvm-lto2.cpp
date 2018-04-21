@@ -113,6 +113,9 @@ static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
                      cl::desc("Print pass management debugging information"));
 
+static cl::opt<std::string>
+    StatsFile("stats-file", cl::desc("Filename to write statistics to"));
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -240,6 +243,7 @@ static int run(int argc, char **argv) {
 
   Conf.OverrideTriple = OverrideTriple;
   Conf.DefaultTriple = DefaultTriple;
+  Conf.StatsFile = StatsFile;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)

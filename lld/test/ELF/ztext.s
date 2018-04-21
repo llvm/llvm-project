@@ -2,12 +2,17 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/ztext.s -o %t2.o
 # RUN: ld.lld %t2.o -o %t2.so -shared
+
 # RUN: ld.lld -z notext %t.o %t2.so -o %t -shared
 # RUN: llvm-readobj  -dynamic-table -r %t | FileCheck %s
 # RUN: ld.lld -z notext %t.o %t2.so -o %t2 -pie
 # RUN: llvm-readobj  -dynamic-table -r %t2 | FileCheck %s
 # RUN: ld.lld -z notext %t.o %t2.so -o %t3
 # RUN: llvm-readobj  -dynamic-table -r %t3 | FileCheck --check-prefix=STATIC %s
+
+# RUN: not ld.lld %t.o %t2.so -o %t -shared 2>&1 | FileCheck --check-prefix=ERR %s
+# RUN: not ld.lld -z text %t.o %t2.so -o %t -shared 2>&1 | FileCheck --check-prefix=ERR %s
+# ERR: error: can't create dynamic relocation
 
 # If the preference is to have text relocations, don't create plt of copy relocations.
 

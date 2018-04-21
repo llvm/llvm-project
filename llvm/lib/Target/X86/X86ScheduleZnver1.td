@@ -202,6 +202,8 @@ defm : ZnWriteResFpuPair<WriteCvtI2F,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtF2F,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtF2I,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 15>;
+defm : ZnWriteResFpuPair<WriteFSign,     [ZnFPU3],  2>;
+defm : ZnWriteResFpuPair<WriteFLogic,    [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteFShuffle,  [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFVarShuffle, [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFMul,      [ZnFPU0],  5>;
@@ -778,10 +780,6 @@ def : InstRW<[WriteMicrocoded], (instregex "FRSTORm")>;
 
 //-- Arithmetic instructions --//
 
-def ZnWriteFPU3Lat2 : SchedWriteRes<[ZnFPU3]> {
-  let Latency = 2;
-}
-
 def ZnWriteFPU3Lat1 : SchedWriteRes<[ZnFPU3]> ;
 
 def ZnWriteFPU0Lat1 : SchedWriteRes<[ZnFPU0]> ;
@@ -789,9 +787,6 @@ def ZnWriteFPU0Lat1 : SchedWriteRes<[ZnFPU0]> ;
 def ZnWriteFPU0Lat1Ld : SchedWriteRes<[ZnAGU, ZnFPU0]> {
   let Latency = 8;
 }
-
-// FABS.
-def : InstRW<[ZnWriteFPU3Lat2], (instregex "ABS_F")>;
 
 // FCHS.
 def : InstRW<[ZnWriteFPU3Lat1], (instregex "CHS_F")>;
@@ -1671,15 +1666,6 @@ def ZnWriteRSQRTPSYLd : SchedWriteRes<[ZnAGU, ZnFPU01]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[ZnWriteRSQRTPSYLd], (instregex "VRSQRTPSYm")>;
-
-//-- Logic instructions --//
-
-// AND, ANDN, OR, XOR PS/PD.
-// x,x / v,v,v.
-def : InstRW<[WriteVecLogic], (instregex "(V?)(AND|ANDN|OR|XOR)P(S|D)(Y?)rr")>;
-// x,m / v,v,m.
-def : InstRW<[WriteVecLogicLd],
-                         (instregex "(V?)(AND|ANDN|OR|XOR)P(S|D)(Y?)rm")>;
 
 //-- Other instructions --//
 

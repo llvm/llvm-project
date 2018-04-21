@@ -6282,3 +6282,14 @@ let TargetPrefix = "x86" in {
   def int_x86_cldemote : GCCBuiltin<"__builtin_ia32_cldemote">,
       Intrinsic<[], [llvm_ptr_ty], []>;
 }
+
+//===----------------------------------------------------------------------===//
+// Wait and pause enhancements
+let TargetPrefix = "x86" in {
+  def int_x86_umonitor : GCCBuiltin<"__builtin_ia32_umonitor">,
+              Intrinsic<[], [llvm_ptr_ty], []>;
+  def int_x86_umwait : GCCBuiltin<"__builtin_ia32_umwait">,
+              Intrinsic<[llvm_i8_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+  def int_x86_tpause : GCCBuiltin<"__builtin_ia32_tpause">,
+              Intrinsic<[llvm_i8_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+}

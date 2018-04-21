@@ -554,9 +554,10 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
         if (DebugLineData.getAddressSize() == 0)
           DebugLineData.setAddressSize(Len - 1);
         else if (DebugLineData.getAddressSize() != Len - 1) {
-          fprintf(stderr, "Mismatching address size at offset 0x%8.8" PRIx32
-                  " expected 0x%2.2" PRIx8 " found 0x%2.2" PRIx64 "\n",
-                  ExtOffset, DebugLineData.getAddressSize(), Len - 1);
+          WithColor::warning()
+              << format("mismatching address size at offset 0x%8.8" PRIx32
+                        " expected 0x%2.2" PRIx8 " found 0x%2.2" PRIx64 "\n",
+                        ExtOffset, DebugLineData.getAddressSize(), Len - 1);
           // Skip the rest of the line-number program.
           *OffsetPtr = EndOffset;
           return false;
@@ -621,9 +622,10 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
       // Make sure the stated and parsed lengths are the same.
       // Otherwise we have an unparseable line-number program.
       if (*OffsetPtr - ExtOffset != Len) {
-        fprintf(stderr, "Unexpected line op length at offset 0x%8.8" PRIx32
-                " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx32 "\n",
-                ExtOffset, Len, *OffsetPtr - ExtOffset);
+        WithColor::warning()
+            << format("unexpected line op length at offset 0x%8.8" PRIx32
+                      " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx32 "\n",
+                      ExtOffset, Len, *OffsetPtr - ExtOffset);
         // Skip the rest of the line-number program.
         *OffsetPtr = EndOffset;
         return false;

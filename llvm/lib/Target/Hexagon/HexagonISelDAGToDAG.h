@@ -102,7 +102,6 @@ public:
   void SelectIntrinsicWOChain(SDNode *N);
   void SelectConstant(SDNode *N);
   void SelectConstantFP(SDNode *N);
-  void SelectBitcast(SDNode *N);
   void SelectV65Gather(SDNode *N);
   void SelectV65GatherPred(SDNode *N);
   void SelectHVXDualOutput(SDNode *N);

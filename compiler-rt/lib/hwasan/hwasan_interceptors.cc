@@ -17,6 +17,7 @@
 
 #include "interception/interception.h"
 #include "hwasan.h"
+#include "hwasan_mapping.h"
 #include "hwasan_thread.h"
 #include "hwasan_poisoning.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"

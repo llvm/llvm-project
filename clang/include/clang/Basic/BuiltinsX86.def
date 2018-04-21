@@ -1880,6 +1880,11 @@ TARGET_BUILTIN(__builtin_ia32_selectpd_512, "V8dUcV8dV8d", "", "")
 TARGET_BUILTIN(__builtin_ia32_monitorx, "vv*UiUi", "", "mwaitx")
 TARGET_BUILTIN(__builtin_ia32_mwaitx, "vUiUiUi", "", "mwaitx")
 
+// WAITPKG
+TARGET_BUILTIN(__builtin_ia32_umonitor, "vv*", "", "waitpkg")
+TARGET_BUILTIN(__builtin_ia32_umwait, "UcUiUiUi", "", "waitpkg")
+TARGET_BUILTIN(__builtin_ia32_tpause, "UcUiUiUi", "", "waitpkg")
+
 // CLZERO
 TARGET_BUILTIN(__builtin_ia32_clzero, "vv*", "", "clzero")
 

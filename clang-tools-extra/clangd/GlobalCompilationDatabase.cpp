@@ -18,9 +18,15 @@ namespace clangd {
 
 tooling::CompileCommand
 GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
+  std::vector<std::string> Argv = {"clang"};
+  // Clang treats .h files as C by default, resulting in unhelpful diagnostics.
+  // Parsing as Objective C++ is friendly to more cases.
+  if (llvm::sys::path::extension(File) == ".h")
+    Argv.push_back("-xobjective-c++-header");
+  Argv.push_back(File);
   return tooling::CompileCommand(llvm::sys::path::parent_path(File),
                                  llvm::sys::path::filename(File),
-                                 {"clang", File.str()},
+                                 std::move(Argv),
                                  /*Output=*/"");
 }
 
@@ -28,6 +34,9 @@ DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(
         llvm::Optional<Path> CompileCommandsDir)
     : CompileCommandsDir(std::move(CompileCommandsDir)) {}
+
+DirectoryBasedGlobalCompilationDatabase::
+    ~DirectoryBasedGlobalCompilationDatabase() = default;
 
 llvm::Optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {

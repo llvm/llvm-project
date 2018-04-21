@@ -38,18 +38,19 @@ static BasicBlock *getUserBB(Use *U) {
 
 /// Add a new variable to the SSA rewriter. This needs to be called before
 /// AddAvailableValue or AddUse calls.
-void SSAUpdaterBulk::AddVariable(unsigned Var, StringRef Name, Type *Ty) {
-  assert(Rewrites.find(Var) == Rewrites.end() && "Variable added twice!");
+unsigned SSAUpdaterBulk::AddVariable(StringRef Name, Type *Ty) {
+  unsigned Var = Rewrites.size();
   DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": initialized with Ty = " << *Ty
                << ", Name = " << Name << "\n");
   RewriteInfo RI(Name, Ty);
-  Rewrites[Var] = RI;
+  Rewrites.push_back(RI);
+  return Var;
 }
 
 /// Indicate that a rewritten value is available in the specified block with the
 /// specified value.
 void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
-  assert(Rewrites.find(Var) != Rewrites.end() && "Should add variable first!");
+  assert(Var < Rewrites.size() && "Variable not found!");
   DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added new available value"
                << *V << " in " << BB->getName() << "\n");
   Rewrites[Var].Defines[BB] = V;
@@ -58,16 +59,16 @@ void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
 /// Record a use of the symbolic value. This use will be updated with a
 /// rewritten value when RewriteAllUses is called.
 void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
-  assert(Rewrites.find(Var) != Rewrites.end() && "Should add variable first!");
+  assert(Var < Rewrites.size() && "Variable not found!");
   DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
                << " in " << getUserBB(U)->getName() << "\n");
-  Rewrites[Var].Uses.insert(U);
+  Rewrites[Var].Uses.push_back(U);
 }
 
 /// Return true if the SSAUpdater already has a value for the specified variable
 /// in the specified block.
 bool SSAUpdaterBulk::HasValueForBlock(unsigned Var, BasicBlock *BB) {
-  return Rewrites.count(Var) ? Rewrites[Var].Defines.count(BB) : false;
+  return (Var < Rewrites.size()) ? Rewrites[Var].Defines.count(BB) : false;
 }
 
 // Compute value at the given block BB. We either should already know it, or we
@@ -90,7 +91,8 @@ Value *SSAUpdaterBulk::computeValueAt(BasicBlock *BB, RewriteInfo &R,
 static void
 ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
                     const SmallPtrSetImpl<BasicBlock *> &DefBlocks,
-                    SmallPtrSetImpl<BasicBlock *> &LiveInBlocks) {
+                    SmallPtrSetImpl<BasicBlock *> &LiveInBlocks,
+                    PredIteratorCache &PredCache) {
   // To determine liveness, we must iterate through the predecessors of blocks
   // where the def is live.  Blocks are added to the worklist if we need to
   // check their predecessors.  Start with all the using blocks.
@@ -110,7 +112,7 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
     // Since the value is live into BB, it is either defined in a predecessor or
     // live into it to.  Add the preds to the worklist unless they are a
     // defining block.
-    for (BasicBlock *P : predecessors(BB)) {
+    for (BasicBlock *P : PredCache.get(BB)) {
       // The value is not live into a predecessor if it defines the value.
       if (DefBlocks.count(P))
         continue;
@@ -125,36 +127,34 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
 /// requested uses update.
 void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
                                     SmallVectorImpl<PHINode *> *InsertedPHIs) {
-  for (auto P : Rewrites) {
+  for (auto &R : Rewrites) {
     // Compute locations for new phi-nodes.
     // For that we need to initialize DefBlocks from definitions in R.Defines,
     // UsingBlocks from uses in R.Uses, then compute LiveInBlocks, and then use
     // this set for computing iterated dominance frontier (IDF).
     // The IDF blocks are the blocks where we need to insert new phi-nodes.
     ForwardIDFCalculator IDF(*DT);
-    RewriteInfo &R = P.second;
-    DEBUG(dbgs() << "SSAUpdater: Var=" << P.first << ": rewriting "
-                 << R.Uses.size() << " use(s)\n");
+    DEBUG(dbgs() << "SSAUpdater: rewriting " << R.Uses.size() << " use(s)\n");
 
     SmallPtrSet<BasicBlock *, 2> DefBlocks;
-    for (auto Def : R.Defines)
+    for (auto &Def : R.Defines)
       DefBlocks.insert(Def.first);
     IDF.setDefiningBlocks(DefBlocks);
 
     SmallPtrSet<BasicBlock *, 2> UsingBlocks;
-    for (auto U : R.Uses)
+    for (Use *U : R.Uses)
       UsingBlocks.insert(getUserBB(U));
 
     SmallVector<BasicBlock *, 32> IDFBlocks;
     SmallPtrSet<BasicBlock *, 32> LiveInBlocks;
-    ComputeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks);
+    ComputeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks, PredCache);
     IDF.resetLiveInBlocks();
     IDF.setLiveInBlocks(LiveInBlocks);
     IDF.calculate(IDFBlocks);
 
     // We've computed IDF, now insert new phi-nodes there.
     SmallVector<PHINode *, 4> InsertedPHIsForVar;
-    for (auto FrontierBB : IDFBlocks) {
+    for (auto *FrontierBB : IDFBlocks) {
       IRBuilder<> B(FrontierBB, FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
       R.Defines[FrontierBB] = PN;
@@ -164,21 +164,25 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     }
 
     // Fill in arguments of the inserted PHIs.
-    for (auto PN : InsertedPHIsForVar) {
+    for (auto *PN : InsertedPHIsForVar) {
       BasicBlock *PBB = PN->getParent();
       for (BasicBlock *Pred : PredCache.get(PBB))
         PN->addIncoming(computeValueAt(Pred, R, DT), Pred);
     }
 
     // Rewrite actual uses with the inserted definitions.
-    for (auto U : R.Uses) {
+    SmallPtrSet<Use *, 4> ProcessedUses;
+    for (Use *U : R.Uses) {
+      if (!ProcessedUses.insert(U).second)
+        continue;
       Value *V = computeValueAt(getUserBB(U), R, DT);
       Value *OldVal = U->get();
+      assert(OldVal && "Invalid use!");
       // Notify that users of the existing value that it is being replaced.
       if (OldVal != V && OldVal->hasValueHandle())
         ValueHandleBase::ValueIsRAUWd(OldVal, V);
-      DEBUG(dbgs() << "SSAUpdater: Var=" << P.first << ": replacing" << *OldVal
-                   << " with " << *V << "\n");
+      DEBUG(dbgs() << "SSAUpdater: replacing " << *OldVal << " with " << *V
+                   << "\n");
       U->set(V);
     }
   }

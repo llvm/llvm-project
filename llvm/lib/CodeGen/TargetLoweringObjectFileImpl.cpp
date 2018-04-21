@@ -91,8 +91,8 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //                                  ELF
 //===----------------------------------------------------------------------===//
 
-void TargetLoweringObjectFileELF::emitModuleMetadata(
-    MCStreamer &Streamer, Module &M, const TargetMachine &TM) const {
+void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
+                                                     Module &M) const {
   auto &C = getContext();
 
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -634,8 +634,8 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
   }
 }
 
-void TargetLoweringObjectFileMachO::emitModuleMetadata(
-    MCStreamer &Streamer, Module &M, const TargetMachine &TM) const {
+void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
+                                                       Module &M) const {
   // Emit the linker options if present.
   if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     for (const auto &Option : LinkerOptions->operands()) {
@@ -1168,8 +1168,8 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
                                      COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
 }
 
-void TargetLoweringObjectFileCOFF::emitModuleMetadata(
-    MCStreamer &Streamer, Module &M, const TargetMachine &TM) const {
+void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
+                                                      Module &M) const {
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     // Emit the linker options to the linker .drectve section.  According to the
     // spec, this section is a space-separated string containing flags for

@@ -10752,3 +10752,19 @@ btcl $4, (%eax)
 // CHECK: cldemote 3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0x0f,0x1c,0x84,0xcb,0xef,0xbe,0xad,0xde]
         	cldemote 0xdeadbeef(%ebx,%ecx,8)
+
+// CHECK: umonitor %eax
+// CHECK:  encoding: [0xf3,0x0f,0xae,0xf0]
+	umonitor %eax
+
+// CHECK: umonitor %ax
+// CHECK:  encoding: [0x67,0xf3,0x0f,0xae,0xf0]
+	umonitor %ax
+
+// CHECK: umwait %eax
+// CHECK:  encoding: [0xf2,0x0f,0xae,0xf0]
+	umwait %eax
+
+// CHECK: tpause %eax
+// CHECK:  encoding: [0x66,0x0f,0xae,0xf0]
+	tpause %eax

@@ -367,9 +367,7 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
     auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());
     if (IdxN && IdxN->isNullValue())
       return getZero(dl, VecTy, DAG);
-    MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
-    SDValue SV = DAG.getNode(HexagonISD::VSPLAT, dl, WordTy, SplatV);
-    return DAG.getBitcast(VecTy, SV);
+    return DAG.getNode(HexagonISD::VSPLATW, dl, VecTy, SplatV);
   }
 
   // Delay recognizing constant vectors until here, so that we can generate

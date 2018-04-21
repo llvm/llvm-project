@@ -19,10 +19,13 @@ LABEL maintainer "Maintainer <maintainer@email>"
 
 ADD checksums /tmp/checksums
 ADD scripts /tmp/scripts
-# Arguments passed to build_install_clang.sh.
+
+# Checkout the source code.
+ARG checkout_args
+RUN /tmp/scripts/checkout.sh ${checkout_args}
+# Run the build. Results of the build will be available at /tmp/clang-install/.
 ARG buildscript_args
-# Run the build. Results of the build will be available as /tmp/clang-install.
-RUN /tmp/scripts/build_install_llvm.sh ${buildscript_args}
+RUN /tmp/scripts/build_install_llvm.sh --to /tmp/clang-install ${buildscript_args}
 
 
 # Stage 2. Produce a minimal release image with build results.

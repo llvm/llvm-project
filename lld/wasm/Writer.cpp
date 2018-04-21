@@ -534,7 +534,7 @@ void Writer::createLinkingSection() {
 void Writer::createNameSection() {
   unsigned NumNames = NumImportedFunctions;
   for (const InputFunction *F : InputFunctions)
-    if (!F->getName().empty())
+    if (!F->getName().empty() || !F->getDebugName().empty())
       ++NumNames;
 
   if (NumNames == 0)
@@ -558,8 +558,12 @@ void Writer::createNameSection() {
   for (const InputFunction *F : InputFunctions) {
     if (!F->getName().empty()) {
       writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      Optional<std::string> Name = demangleItanium(F->getName());
-      writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+      if (!F->getDebugName().empty()) {
+        writeStr(Sub.OS, F->getDebugName(), "symbol name");
+      } else {
+        Optional<std::string> Name = demangleItanium(F->getName());
+        writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+      }
     }
   }
 
@@ -693,6 +697,8 @@ void Writer::calculateImports() {
       continue;
     if (Sym->isWeak() && !Config->Relocatable)
       continue;
+    if (!Sym->isLive())
+      continue;
 
     DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
     ImportedSymbols.emplace_back(Sym);
@@ -821,13 +827,6 @@ void Writer::assignIndexes() {
         // Mark target type as live
         File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
         File->TypeIsUsed[Reloc.Index] = true;
-      } else if (Reloc.Type == R_WEBASSEMBLY_GLOBAL_INDEX_LEB) {
-        // Mark target global as live
-        GlobalSymbol *Sym = File->getGlobalSymbol(Reloc.Index);
-        if (auto *G = dyn_cast<DefinedGlobal>(Sym)) {
-          DEBUG(dbgs() << "marking global live: " << Sym->getName() << "\n");
-          G->Global->Live = true;
-        }
       }
     }
   };

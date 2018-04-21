@@ -210,6 +210,8 @@ defm : AtomWriteResPair<WriteFRcp,           [AtomPort0],  [AtomPort0],  4,  4, 
 defm : AtomWriteResPair<WriteFRsqrt,         [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
 defm : AtomWriteResPair<WriteFDiv,          [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
 defm : AtomWriteResPair<WriteFSqrt,         [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
+defm : AtomWriteResPair<WriteFSign,          [AtomPort1],  [AtomPort1]>;
+defm : AtomWriteResPair<WriteFLogic,        [AtomPort01],  [AtomPort0]>;
 defm : AtomWriteResPair<WriteFShuffle,       [AtomPort0],  [AtomPort0]>;
 defm : AtomWriteResPair<WriteFVarShuffle,    [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteFMA,            [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
@@ -351,8 +353,7 @@ def AtomWrite1_1 : SchedWriteRes<[AtomPort1]> {
   let ResourceCycles = [1];
 }
 def : InstRW<[AtomWrite1_1], (instrs FCOMPP)>;
-def : InstRW<[AtomWrite1_1], (instregex "ABS_F", "CHS_F",
-                                        "UCOM_F(P|PP)?r",
+def : InstRW<[AtomWrite1_1], (instregex "UCOM_F(P|PP)?r",
                                         "BT(C|R|S)?(16|32|64)(rr|ri8)")>;
 
 def AtomWrite1_5 : SchedWriteRes<[AtomPort1]> {

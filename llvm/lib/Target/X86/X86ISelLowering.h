@@ -594,6 +594,9 @@ namespace llvm {
       // LWP insert record.
       LWPINS,
 
+      // User level wait
+      UMWAIT, TPAUSE,
+
       // Compare and swap.
       LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
       LCMPXCHG8_DAG,

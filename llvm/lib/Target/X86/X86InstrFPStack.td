@@ -309,7 +309,7 @@ def _F     : FPI<0xD9, fp, (outs), (ins), asmstring>;
 
 let Defs = [FPSW] in {
 
-let SchedRW = [WriteVecLogic] in {
+let SchedRW = [WriteFSign] in {
 defm CHS : FPUnary<fneg, MRM_E0, "fchs">;
 defm ABS : FPUnary<fabs, MRM_E1, "fabs">;
 }

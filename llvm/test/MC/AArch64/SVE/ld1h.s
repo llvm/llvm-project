@@ -78,3 +78,27 @@ ld1h    { z21.d }, p5/z, [x10, #5, mul vl]
 // CHECK-ENCODING: [0x55,0xb5,0xe5,0xa4]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 55 b5 e5 a4 <unknown>
+
+ld1h    { z5.h }, p3/z, [sp, x16, lsl #1]
+// CHECK-INST: ld1h    { z5.h }, p3/z, [sp, x16, lsl #1]
+// CHECK-ENCODING: [0xe5,0x4f,0xb0,0xa4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e5 4f b0 a4 <unknown>
+
+ld1h    { z5.h }, p3/z, [x17, x16, lsl #1]
+// CHECK-INST: ld1h    { z5.h }, p3/z, [x17, x16, lsl #1]
+// CHECK-ENCODING: [0x25,0x4e,0xb0,0xa4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 25 4e b0 a4 <unknown>
+
+ld1h    { z21.s }, p5/z, [x10, x21, lsl #1]
+// CHECK-INST: ld1h    { z21.s }, p5/z, [x10, x21, lsl #1]
+// CHECK-ENCODING: [0x55,0x55,0xd5,0xa4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 55 55 d5 a4 <unknown>
+
+ld1h    { z23.d }, p3/z, [x13, x8, lsl #1]
+// CHECK-INST: ld1h    { z23.d }, p3/z, [x13, x8, lsl #1]
+// CHECK-ENCODING: [0xb7,0x4d,0xe8,0xa4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 4d e8 a4 <unknown>

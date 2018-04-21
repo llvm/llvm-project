@@ -3294,6 +3294,13 @@ unsigned SIInstrInfo::readlaneVGPRToSGPR(unsigned SrcReg, MachineInstr &UseMI,
   unsigned DstReg = MRI.createVirtualRegister(SRC);
   unsigned SubRegs = RI.getRegSizeInBits(*VRC) / 32;
 
+  if (SubRegs == 1) {
+    BuildMI(*UseMI.getParent(), UseMI, UseMI.getDebugLoc(),
+            get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+        .addReg(SrcReg);
+    return DstReg;
+  }
+
   SmallVector<unsigned, 8> SRegs;
   for (unsigned i = 0; i < SubRegs; ++i) {
     unsigned SGPR = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
@@ -3468,6 +3475,14 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI) const {
       MachineOperand &Op = MI.getOperand(1);
       legalizeGenericOperand(*MBB, MI, DstRC, Op, MRI, MI.getDebugLoc());
     }
+    return;
+  }
+
+  // Legalize SI_INIT_M0
+  if (MI.getOpcode() == AMDGPU::SI_INIT_M0) {
+    MachineOperand &Src = MI.getOperand(0);
+    if (Src.isReg() && RI.hasVGPRs(MRI.getRegClass(Src.getReg())))
+      Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
     return;
   }
 
