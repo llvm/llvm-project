@@ -144,3 +144,8 @@
 // RUN: %clang -target i386-linux-gnu -mretpoline -mno-retpoline-external-thunk %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-RETPOLINE-EXTERNAL-THUNK %s
 // RETPOLINE-EXTERNAL-THUNK: "-target-feature" "+retpoline-external-thunk"
 // NO-RETPOLINE-EXTERNAL-THUNK: "-target-feature" "-retpoline-external-thunk"
+
+// RUN: %clang -target i386-linux-gnu -mwaitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=WAITPKG %s
+// RUN: %clang -target i386-linux-gnu -mno-waitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-WAITPKG %s
+// WAITPKG: "-target-feature" "+waitpkg"
+// NO-WAITPKG: "-target-feature" "-waitpkg"

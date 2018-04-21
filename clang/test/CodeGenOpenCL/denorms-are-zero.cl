@@ -7,10 +7,10 @@
 // For all targets 'denorms-are-zero' attribute is set to 'true'
 // if '-cl-denorms-are-zero' was specified and  to 'false' otherwise.
 
-// CHECK-LABEL: define void @f()
+// CHECK-LABEL: define {{(dso_local )?}}void @f()
 // CHECK: attributes #{{[0-9]*}} = {{{[^}]*}} "denorms-are-zero"="false"
 //
-// DENORM-ZERO-LABEL: define void @f()
+// DENORM-ZERO-LABEL: define {{(dso_local )?}}void @f()
 // DENORM-ZERO: attributes #{{[0-9]*}} = {{{[^}]*}} "denorms-are-zero"="true"
 
 // For amdgcn target cpu fiji, fp32 should be flushed since fiji does not support fp32 denormals, unless +fp32-denormals is

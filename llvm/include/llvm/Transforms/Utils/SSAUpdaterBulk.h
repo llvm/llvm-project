@@ -47,7 +47,7 @@ class SSAUpdaterBulk {
     RewriteInfo(){};
     RewriteInfo(StringRef &N, Type *T) : Name(N), Ty(T){};
   };
-  DenseMap<unsigned, RewriteInfo> Rewrites;
+  SmallVector<RewriteInfo, 4> Rewrites;
 
   PredIteratorCache PredCache;
 
@@ -60,8 +60,9 @@ public:
   ~SSAUpdaterBulk(){};
 
   /// Add a new variable to the SSA rewriter. This needs to be called before
-  /// AddAvailableValue or AddUse calls.
-  void AddVariable(unsigned Var, StringRef Name, Type *Ty);
+  /// AddAvailableValue or AddUse calls. The return value is the variable ID,
+  /// which needs to be passed to AddAvailableValue and AddUse.
+  unsigned AddVariable(StringRef Name, Type *Ty);
 
   /// Indicate that a rewritten value is available in the specified block with
   /// the specified value.

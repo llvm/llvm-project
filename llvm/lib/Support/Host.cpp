@@ -1250,6 +1250,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["prefetchwt1"]     = HasLeaf7 && ((ECX >>  0) & 1);
   Features["avx512vbmi"]      = HasLeaf7 && ((ECX >>  1) & 1) && HasAVX512Save;
   Features["pku"]             = HasLeaf7 && ((ECX >>  4) & 1);
+  Features["waitpkg"]         = HasLeaf7 && ((ECX >>  5) & 1);
   Features["avx512vbmi2"]     = HasLeaf7 && ((ECX >>  6) & 1) && HasAVX512Save;
   Features["shstk"]           = HasLeaf7 && ((ECX >>  7) & 1);
   Features["gfni"]            = HasLeaf7 && ((ECX >>  8) & 1);

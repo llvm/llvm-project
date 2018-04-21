@@ -74,7 +74,7 @@ struct WasmGlobal {
   uint32_t Index;
   WasmGlobalType Type;
   WasmInitExpr InitExpr;
-  StringRef Name; // from the "linking" or "names" section
+  StringRef SymbolName; // from the "linking" section
 };
 
 struct WasmImport {
@@ -100,7 +100,8 @@ struct WasmFunction {
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;
   uint32_t Size;
-  StringRef Name; // from the "linking" or "names" section
+  StringRef SymbolName; // from the "linking" section
+  StringRef DebugName; // from the "name" section
   uint32_t Comdat; // from the "comdat info" section
 };
 
@@ -108,7 +109,7 @@ struct WasmDataSegment {
   uint32_t MemoryIndex;
   WasmInitExpr Offset;
   ArrayRef<uint8_t> Content;
-  StringRef Name;
+  StringRef Name; // from the "segment info" section
   uint32_t Alignment;
   uint32_t Flags;
   uint32_t Comdat; // from the "comdat info" section
@@ -145,7 +146,7 @@ struct WasmSymbolInfo {
   uint8_t Kind;
   uint32_t Flags;
   union {
-    // For function or global symbols, the index in function of global index
+    // For function or global symbols, the index in function or global index
     // space.
     uint32_t ElementIndex;
     // For a data symbols, the address of the data relative to segment.

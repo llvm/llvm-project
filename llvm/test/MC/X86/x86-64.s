@@ -1571,6 +1571,34 @@ cldemote 4(%rax)
 // CHECK:  encoding: [0x0f,0x1c,0x84,0xcb,0xef,0xbe,0xad,0xde]
 cldemote 0xdeadbeef(%rbx,%rcx,8)
 
+// CHECK: umonitor %r13
+// CHECK:  encoding: [0xf3,0x41,0x0f,0xae,0xf5]
+umonitor %r13
+
+// CHECK: umonitor %rax
+// CHECK:  encoding: [0xf3,0x0f,0xae,0xf0]
+umonitor %rax
+
+// CHECK: umonitor %eax
+// CHECK:  encoding: [0x67,0xf3,0x0f,0xae,0xf0]
+umonitor %eax
+
+// CHECK: umwait %r15
+// CHECK:  encoding: [0xf2,0x41,0x0f,0xae,0xf7]
+umwait %r15
+
+// CHECK: umwait %ebx
+// CHECK:  encoding: [0xf2,0x0f,0xae,0xf3]
+umwait %ebx
+
+// CHECK: tpause %r15
+// CHECK:  encoding: [0x66,0x41,0x0f,0xae,0xf7]
+tpause %r15
+
+// CHECK: tpause %ebx
+// CHECK:  encoding: [0x66,0x0f,0xae,0xf3]
+tpause %ebx
+
 //  __asm __volatile(
 //    "pushf        \n\t"
 //    "popf       \n\t"

@@ -35,6 +35,10 @@
 # RUN: not ld.lld --fatal-warnings --end-group 2>&1 | FileCheck -check-prefix=END %s
 # END: stray --end-group
 
+# RUN: echo ".globl bar; bar:" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t3.o
+# RUN: echo ".globl foo; foo: call bar" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t4.o
+# RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o --start-lib %t3.o %t4.o --end-lib
+
 .globl _start, foo
 _start:
   call foo

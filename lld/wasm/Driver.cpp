@@ -240,10 +240,11 @@ static void handleWeakUndefines() {
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
     Optional<std::string> SymName = demangleItanium(Sym->getName());
-    StringRef StubName =
+    StringRef DebugName =
         Saver.save("undefined function " +
                    (SymName ? StringRef(*SymName) : Sym->getName()));
-    SyntheticFunction *Func = make<SyntheticFunction>(Sig, StubName);
+    SyntheticFunction *Func =
+        make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
     Func->setBody(UnreachableFn);
     // Ensure it compares equal to the null pointer, and so that table relocs
     // don't pull in the stub body (only call-operand relocs should do that).
@@ -339,7 +340,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Global.Type = {WASM_TYPE_I32, true};
     Global.InitExpr.Value.Int32 = 0;
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    InputGlobal *StackPointer = make<InputGlobal>(Global);
+    Global.SymbolName = "__stack_pointer";
+    InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
     StackPointer->Live = true;
 
     static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};

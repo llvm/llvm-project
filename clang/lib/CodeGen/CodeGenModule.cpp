@@ -3626,6 +3626,9 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   MaybeHandleStaticInExternC(D, Fn);
 
+  if (D->hasAttr<CUDAGlobalAttr>())
+    getTargetCodeGenInfo().setCUDAKernelCallingConvention(Fn);
+
   maybeSetTrivialComdat(*D, *Fn);
 
   CodeGenFunction(*this).GenerateCode(D, Fn, FI);

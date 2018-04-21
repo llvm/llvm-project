@@ -1891,20 +1891,23 @@ void ModuleMapParser::parseModuleDecl() {
     ActiveModule->NoUndeclaredIncludes = true;
   ActiveModule->Directory = Directory;
 
+  StringRef MapFileName(ModuleMapFile->getName());
+  if (MapFileName.endswith("module.private.modulemap") ||
+      MapFileName.endswith("module_private.map")) {
+    ActiveModule->ModuleMapIsPrivate = true;
+  }
 
   // Private modules named as FooPrivate, Foo.Private or similar are likely a
   // user error; provide warnings, notes and fixits to direct users to use
   // Foo_Private instead.
   SourceLocation StartLoc =
       SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
-  StringRef MapFileName(ModuleMapFile->getName());
   if (Map.HeaderInfo.getHeaderSearchOpts().ImplicitModuleMaps &&
       !Diags.isIgnored(diag::warn_mmap_mismatched_private_submodule,
                        StartLoc) &&
       !Diags.isIgnored(diag::warn_mmap_mismatched_private_module_name,
                        StartLoc) &&
-      (MapFileName.endswith("module.private.modulemap") ||
-       MapFileName.endswith("module_private.map")))
+      ActiveModule->ModuleMapIsPrivate)
     diagnosePrivateModules(Map, Diags, ActiveModule, LastInlineParentLoc);
 
   bool Done = false;
