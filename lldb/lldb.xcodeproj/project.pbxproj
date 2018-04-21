@@ -5314,6 +5314,8 @@
 		26BC7D0D10F1B71D00F91463 /* Commands */ = {
 			isa = PBXGroup;
 			children = (
+				6B8894782065AE5C002E5C59 /* CommandObjectStats.cpp */,
+				6B8894772065AE5C002E5C59 /* CommandObjectStats.h */,
 				4CA9637A11B6E99A00780E28 /* CommandObjectApropos.h */,
 				4CA9637911B6E99A00780E28 /* CommandObjectApropos.cpp */,
 				26BC7D1410F1B76300F91463 /* CommandObjectBreakpoint.h */,
@@ -8140,6 +8142,7 @@
 				2689007D13353E2200698AC0 /* Args.cpp in Sources */,
 				2689007F13353E2200698AC0 /* CommandCompletions.cpp in Sources */,
 				AE6897281B94F6DE0018845D /* DWARFASTParserGo.cpp in Sources */,
+				6BC247F6208675190070F7C5 /* CommandObjectStats.cpp in Sources */,
 				945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */,
 				26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */,
 				AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */,
@@ -9479,12 +9482,7 @@
 					"-v",
 					"-Wl,-v",
 				);
-<<<<<<< HEAD
-				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-=======
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
->>>>>>> 53113aaa3194cd8dbfa106ad9460e124db6f2570
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
@@ -10086,8 +10084,8 @@
 					LLDB_CONFIGURATION_BUILD_AND_INTEGRATION,
 				);
 				HEADER_SEARCH_PATHS = (
-					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
-					"$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/include -I $(LLVM_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLDB_PATH_TO_LLVM_BUILD)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
@@ -10130,6 +10128,10 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+				);
 				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
@@ -10166,8 +10168,8 @@
 					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
 				HEADER_SEARCH_PATHS = (
-					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
-					"$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLDB_PATH_TO_LLVM_BUILD)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";

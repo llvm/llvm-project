@@ -832,6 +832,7 @@ def skipUnlessSwiftThreadSanitizer(func):
         return None
     return skipTestIfFn(is_swift_compiler_with_thread_sanitizer)(func)
 
+
 def skipIfXmlSupportMissing(func):
     config = lldb.SBDebugger.GetBuildConfiguration()
     xml = config.GetValueForKey("xml")
@@ -839,6 +840,7 @@ def skipIfXmlSupportMissing(func):
     fail_value = True # More likely to notice if something goes wrong
     have_xml = xml.GetValueForKey("value").GetBooleanValue(fail_value)
     return unittest2.skipIf(not have_xml, "requires xml support")(func)
+
 
 # Call sysctl on darwin to see if a specified hardware feature is available on this machine.
 def skipUnlessFeature(feature):

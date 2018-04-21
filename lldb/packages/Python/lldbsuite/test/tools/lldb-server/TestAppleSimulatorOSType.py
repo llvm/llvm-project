@@ -13,6 +13,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @decorators.skipIfOutOfTreeDebugserver
     def check_simulator_ostype(self, sdk, platform_names, arch='x86_64'):
         sim_devices_str = subprocess.check_output(['xcrun', 'simctl', 'list',
                                                    '-j', 'devices'])

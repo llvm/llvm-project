@@ -833,6 +833,9 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
   ir_gen_opts.DWARFVersion = swift::DWARFVersion;
+
+  // FIXME: lldb does not support resilience yet.
+  ir_gen_opts.EnableResilienceBypass = true;
 }
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
@@ -1382,6 +1385,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     PlatformSP platform_sp(target.GetPlatform());
     uint32_t major, minor, update;
     if (platform_sp &&
+        !target.GetArchitecture().GetTriple().hasEnvironment() &&
         platform_sp->GetOSVersion(major, minor, update,
                                   target.GetProcessSP().get())) {
       StreamString full_triple_name;

@@ -72,10 +72,10 @@ func returnInt() -> Int64 {
     return -123 // Set breakpoint here
 }
 func returnFloat() -> Float {
-    return Float(1.25) // Set breakpoint here
+    return Float(1.25) // Set float breakpoint here
 }
 func returnDouble() -> Double {
-    return 2.125 // Set breakpoint here
+    return 2.125 // Set float breakpoint here
 }
 func returnClass () -> Foo {
     return Foo() // Set breakpoint here

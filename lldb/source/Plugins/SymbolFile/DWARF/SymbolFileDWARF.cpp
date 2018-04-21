@@ -950,7 +950,7 @@ bool SymbolFileDWARF::ParseImportedModules(
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (dwarf_cu) {
     if (IsSwiftLanguage(sc.comp_unit->GetLanguage())) {
-      const DWARFDIE cu_die = dwarf_cu->GetCompileUnitDIEOnly();
+      const DWARFDIE cu_die = dwarf_cu->GetUnitDIEOnly();
       bool found_one = false;
 
       if (cu_die) {
@@ -3672,7 +3672,7 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
       DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
 
       if (dwarf_cu) {
-        const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
+        const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
         if (die) {
           const char *flags =
               die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
@@ -3691,7 +3691,7 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
         DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
-          const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
+          const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
           if (die) {
             const char *flags =
                 die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
@@ -3722,7 +3722,7 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
       DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
 
       if (dwarf_cu) {
-        const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
+        const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
         if (die) {
           const char *flags =
               die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
@@ -3743,7 +3743,7 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
         DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
-          const DWARFDIE die = dwarf_cu->GetCompileUnitDIEOnly();
+          const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
           if (die) {
             const char *flags =
                 die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);

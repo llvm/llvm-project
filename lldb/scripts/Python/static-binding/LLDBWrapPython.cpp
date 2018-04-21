@@ -55384,6 +55384,32 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBTarget_GetStatistics(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTarget *arg1 = (lldb::SBTarget *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  lldb::SBStructuredData result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBTarget_GetStatistics",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_GetStatistics" "', argument " "1"" of type '" "lldb::SBTarget *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetStatistics();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBStructuredData(static_cast< const lldb::SBStructuredData& >(result))), SWIGTYPE_p_lldb__SBStructuredData, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBTarget___eq__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBTarget *arg1 = (lldb::SBTarget *) 0 ;
@@ -76839,6 +76865,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBTarget_GetStackRedZoneSize", _wrap_SBTarget_GetStackRedZoneSize, METH_VARARGS, (char *)"SBTarget_GetStackRedZoneSize(SBTarget self) -> addr_t"},
 	 { (char *)"SBTarget_GetLaunchInfo", _wrap_SBTarget_GetLaunchInfo, METH_VARARGS, (char *)"SBTarget_GetLaunchInfo(SBTarget self) -> SBLaunchInfo"},
 	 { (char *)"SBTarget_SetLaunchInfo", _wrap_SBTarget_SetLaunchInfo, METH_VARARGS, (char *)"SBTarget_SetLaunchInfo(SBTarget self, SBLaunchInfo launch_info)"},
+	 { (char *)"SBTarget_GetStatistics", _wrap_SBTarget_GetStatistics, METH_VARARGS, (char *)"SBTarget_GetStatistics(SBTarget self) -> SBStructuredData"},
 	 { (char *)"SBTarget___eq__", _wrap_SBTarget___eq__, METH_VARARGS, (char *)"SBTarget___eq__(SBTarget self, SBTarget rhs) -> bool"},
 	 { (char *)"SBTarget___ne__", _wrap_SBTarget___ne__, METH_VARARGS, (char *)"SBTarget___ne__(SBTarget self, SBTarget rhs) -> bool"},
 	 { (char *)"SBTarget_EvaluateExpression", _wrap_SBTarget_EvaluateExpression, METH_VARARGS, (char *)"\n"

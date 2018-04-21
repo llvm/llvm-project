@@ -106,9 +106,10 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
     PersistentExpressionState *persistent_expression_state;
     auto target = thread.CalculateTarget();
     if (lang == lldb::eLanguageTypeSwift)
+      persistent_expression_state = 
         target->GetSwiftPersistentExpressionState(thread);
     else
-       persistent_expression_state =
+      persistent_expression_state =
          target->GetPersistentExpressionStateForLanguage(lang);
     
     if (!persistent_expression_state)

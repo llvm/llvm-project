@@ -1857,8 +1857,6 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     log->PutCString(s.c_str());
   }
 
-  swift::performSILLinking(sil_module.get());
-
   if (m_swift_ast_context->HasErrors()) {
     DiagnoseSwiftASTContextError();
     return 1;
