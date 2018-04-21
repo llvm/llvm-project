@@ -9,6 +9,7 @@
 
 #include <string.h>
 
+#include <isl/id.h>
 #include <isl/val.h>
 #include <isl_ast_private.h>
 

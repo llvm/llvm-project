@@ -585,6 +585,15 @@ error:
 	return NULL;
 }
 
+/* Add "n" elements at the end of "vec".
+ */
+__isl_give isl_vec *isl_vec_add_els(__isl_take isl_vec *vec, unsigned n)
+{
+	if (!vec)
+		return NULL;
+	return isl_vec_insert_els(vec, vec->size, n);
+}
+
 __isl_give isl_vec *isl_vec_insert_zero_els(__isl_take isl_vec *vec,
 	unsigned pos, unsigned n)
 {

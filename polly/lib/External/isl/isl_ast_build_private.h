@@ -50,7 +50,7 @@
  *
  * "strides" contains the stride of each loop.  The number of elements
  * is equal to the number of dimensions in "domain".
- * "offsets" constains the offsets of strided loops.  If s is the stride
+ * "offsets" contains the offsets of strided loops.  If s is the stride
  * for a given dimension and f is the corresponding offset, then the
  * dimension takes on values
  *
@@ -133,7 +133,7 @@
  * an AST from a schedule tree.  It may be NULL if we are not generating
  * an AST from a schedule tree or if we are not inside a band node.
  *
- * "loop_type" originally constains loop AST generation types for
+ * "loop_type" originally contains loop AST generation types for
  * the "n" members of "node" and it is updated (along with "n") when
  * a schedule dimension is inserted.
  * It is NULL if "node" is NULL.

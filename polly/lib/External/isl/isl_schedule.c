@@ -589,7 +589,7 @@ static __isl_give isl_schedule_tree *insert_filter_in_child_of_type(
  * with two filters corresponding to the domains of the input schedules.
  * If one (or both) of the top-level nodes of the two schedules is itself
  * of type "type", then the filter is pushed into the children of that
- * node and the sequence of set is flattened.
+ * node and the sequence or set is flattened.
  */
 __isl_give isl_schedule *isl_schedule_pair(enum isl_schedule_node_type type,
 	__isl_take isl_schedule *schedule1, __isl_take isl_schedule *schedule2)

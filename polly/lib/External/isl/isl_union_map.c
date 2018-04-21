@@ -13,12 +13,11 @@
  * B.P. 105 - 78153 Le Chesnay, France
  */
 
-#define ISL_DIM_H
 #include <isl_map_private.h>
 #include <isl_union_map_private.h>
 #include <isl/ctx.h>
 #include <isl/hash.h>
-#include <isl/aff.h>
+#include <isl_aff_private.h>
 #include <isl/map.h>
 #include <isl/set.h>
 #include <isl_space_private.h>
@@ -29,6 +28,7 @@
 #include <set_to_map.c>
 #include <set_from_map.c>
 #include <uset_to_umap.c>
+#include <uset_from_umap.c>
 
 /* Return the number of parameters of "umap", where "type"
  * is required to be set to isl_dim_param.
@@ -86,6 +86,15 @@ isl_bool isl_union_set_is_params(__isl_keep isl_union_set *uset)
 	params = isl_set_is_params(set);
 	isl_set_free(set);
 	return params;
+}
+
+/* Is this union map actually a parameter domain?
+ * Users should never call this function.  Outside of isl,
+ * a union map can never be a parameter domain.
+ */
+isl_bool isl_union_map_is_params(__isl_keep isl_union_map *umap)
+{
+	return isl_union_set_is_params(uset_from_umap(umap));
 }
 
 static __isl_give isl_union_map *isl_union_map_alloc(
@@ -3783,6 +3792,85 @@ __isl_give isl_union_map *isl_union_map_reset_range_space(
 	return data.res;
 }
 
+/* Check that "umap" and "space" have the same number of parameters.
+ */
+static isl_stat check_union_map_space_equal_dim(__isl_keep isl_union_map *umap,
+	__isl_keep isl_space *space)
+{
+	unsigned dim1, dim2;
+
+	if (!umap || !space)
+		return isl_stat_error;
+	dim1 = isl_union_map_dim(umap, isl_dim_param);
+	dim2 = isl_space_dim(space, isl_dim_param);
+	if (dim1 == dim2)
+		return isl_stat_ok;
+	isl_die(isl_union_map_get_ctx(umap), isl_error_invalid,
+		"number of parameters does not match", return isl_stat_error);
+}
+
+/* Internal data structure for isl_union_map_reset_equal_dim_space.
+ * "space" is the target space.
+ * "res" collects the results.
+ */
+struct isl_union_map_reset_params_data {
+	isl_space *space;
+	isl_union_map *res;
+};
+
+/* Replace the parameters of "map" by those of data->space and
+ * add the result to data->res.
+ */
+static isl_stat reset_params(__isl_take isl_map *map, void *user)
+{
+	struct isl_union_map_reset_params_data *data = user;
+	isl_space *space;
+
+	space = isl_map_get_space(map);
+	space = isl_space_replace_params(space, data->space);
+	map = isl_map_reset_equal_dim_space(map, space);
+	data->res = isl_union_map_add_map(data->res, map);
+
+	return data->res ? isl_stat_ok : isl_stat_error;
+}
+
+/* Replace the space of "umap" by "space", without modifying
+ * the dimension of "umap", i.e., the number of parameters of "umap".
+ *
+ * Since the hash values of the maps in the union map depend
+ * on the parameters, a new union map needs to be constructed.
+ */
+__isl_give isl_union_map *isl_union_map_reset_equal_dim_space(
+	__isl_take isl_union_map *umap, __isl_take isl_space *space)
+{
+	struct isl_union_map_reset_params_data data = { space };
+	isl_bool equal;
+	isl_space *umap_space;
+
+	umap_space = isl_union_map_peek_space(umap);
+	equal = isl_space_is_equal(umap_space, space);
+	if (equal < 0)
+		goto error;
+	if (equal) {
+		isl_space_free(space);
+		return umap;
+	}
+	if (check_union_map_space_equal_dim(umap, space) < 0)
+		goto error;
+
+	data.res = isl_union_map_empty(isl_space_copy(space));
+	if (isl_union_map_foreach_map(umap, &reset_params, &data) < 0)
+		data.res = isl_union_map_free(data.res);
+
+	isl_space_free(space);
+	isl_union_map_free(umap);
+	return data.res;
+error:
+	isl_union_map_free(umap);
+	isl_space_free(space);
+	return NULL;
+}
+
 /* Internal data structure for isl_union_map_order_at_multi_union_pw_aff.
  * "mupa" is the function from which the isl_multi_pw_affs are extracted.
  * "order" is applied to the extracted isl_multi_pw_affs that correspond
@@ -3818,6 +3906,41 @@ static isl_stat order_at(__isl_take isl_map *map, void *user)
 	return data->res ? isl_stat_ok : isl_stat_error;
 }
 
+/* If "mupa" has a non-trivial explicit domain, then intersect
+ * domain and range of "umap" with this explicit domain.
+ * If the explicit domain only describes constraints on the parameters,
+ * then the intersection only needs to be performed once.
+ */
+static __isl_give isl_union_map *intersect_explicit_domain(
+	__isl_take isl_union_map *umap, __isl_keep isl_multi_union_pw_aff *mupa)
+{
+	isl_bool non_trivial, is_params;
+	isl_union_set *dom;
+
+	non_trivial = isl_multi_union_pw_aff_has_non_trivial_domain(mupa);
+	if (non_trivial < 0)
+		return isl_union_map_free(umap);
+	if (!non_trivial)
+		return umap;
+	mupa = isl_multi_union_pw_aff_copy(mupa);
+	dom = isl_multi_union_pw_aff_domain(mupa);
+	is_params = isl_union_set_is_params(dom);
+	if (is_params < 0) {
+		isl_union_set_free(dom);
+		return isl_union_map_free(umap);
+	}
+	if (is_params) {
+		isl_set *set;
+
+		set = isl_union_set_params(dom);
+		umap = isl_union_map_intersect_params(umap, set);
+		return umap;
+	}
+	umap = isl_union_map_intersect_domain(umap, isl_union_set_copy(dom));
+	umap = isl_union_map_intersect_range(umap, dom);
+	return umap;
+}
+
 /* Intersect each map in "umap" with the result of calling "order"
  * on the functions is "mupa" that apply to the domain and the range
  * of the map.
@@ -3833,6 +3956,7 @@ static __isl_give isl_union_map *isl_union_map_order_at_multi_union_pw_aff(
 				isl_multi_union_pw_aff_get_space(mupa));
 	mupa = isl_multi_union_pw_aff_align_params(mupa,
 				isl_union_map_get_space(umap));
+	umap = intersect_explicit_domain(umap, mupa);
 	data.mupa = mupa;
 	data.order = order;
 	data.res = isl_union_map_empty(isl_union_map_get_space(umap));
