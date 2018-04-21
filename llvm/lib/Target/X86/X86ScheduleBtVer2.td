@@ -254,6 +254,11 @@ def : WriteRes<WriteLoad,  [JLAGU]> { let Latency = 5; }
 def : WriteRes<WriteStore, [JSAGU]>;
 def : WriteRes<WriteMove,  [JALU01]>;
 
+// Load/store MXCSR.
+// FIXME: These are copy and pasted from WriteLoad/Store.
+def : WriteRes<WriteLDMXCSR, [JLAGU]> { let Latency = 5; }
+def : WriteRes<WriteSTMXCSR, [JSAGU]>;
+
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
 

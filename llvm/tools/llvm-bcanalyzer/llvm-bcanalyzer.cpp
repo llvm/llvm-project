@@ -37,6 +37,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -444,7 +445,7 @@ static std::map<unsigned, PerBlockIDStats> BlockIDStats;
 /// ReportError - All bitcode analysis errors go through this function, making this a
 /// good place to breakpoint if debugging.
 static bool ReportError(const Twine &Err) {
-  errs() << Err << "\n";
+  WithColor::error() << Err << "\n";
   return true;
 }
 

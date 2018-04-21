@@ -267,6 +267,8 @@ let Latency = 100 in {
   def : WriteRes<WritePCmpEStrMLd, []>;
   def : WriteRes<WritePCmpIStrI, []>;
   def : WriteRes<WritePCmpIStrILd, []>;
+  def : WriteRes<WriteLDMXCSR, []>;
+  def : WriteRes<WriteSTMXCSR, []>;
   }
 
 //=== Regex based InstRW ===//
@@ -1668,11 +1670,5 @@ def : InstRW<[WriteMicrocoded], (instregex "VZEROUPPER")>;
 
 // VZEROALL.
 def : InstRW<[WriteMicrocoded], (instregex "VZEROALL")>;
-
-// LDMXCSR.
-def : InstRW<[WriteMicrocoded], (instregex "(V)?LDMXCSR")>;
-
-// STMXCSR.
-def : InstRW<[WriteMicrocoded], (instregex "(V)?STMXCSR")>;
 
 } // SchedModel
