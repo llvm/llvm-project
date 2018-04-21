@@ -12,13 +12,14 @@ config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.dotest_path = "@LLDB_SOURCE_DIR@/test/dotest.py"
-config.dotest_args_str = "@LLDB_DOTEST_ARGS@"
+config.dotest_args_str = "@LLDB_DOTEST_ARGS_STR@"
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
 try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
     config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
+    config.dotest_args_str = config.dotest_args_str % lit_config.params
     config.llvm_build_mode = config.llvm_build_mode % lit_config.params
 except KeyError as e:
     key, = e.args

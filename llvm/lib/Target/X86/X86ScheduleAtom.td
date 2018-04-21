@@ -290,6 +290,13 @@ defm : AtomWriteResPair<WritePHAdd, [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
 defm : AtomWriteResPair<WriteCLMul, [AtomPort01], [AtomPort01]>; // NOTE: Doesn't exist on Atom.
 
 ////////////////////////////////////////////////////////////////////////////////
+// Load/store MXCSR.
+////////////////////////////////////////////////////////////////////////////////
+
+def : WriteRes<WriteLDMXCSR, [AtomPort01]> { let Latency = 5; let ResourceCycles = [5]; }
+def : WriteRes<WriteSTMXCSR, [AtomPort01]> { let Latency = 15; let ResourceCycles = [15]; }
+
+////////////////////////////////////////////////////////////////////////////////
 // Special Cases.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -452,7 +459,7 @@ def AtomWrite01_5 : SchedWriteRes<[AtomPort01]> {
   let Latency = 5;
   let ResourceCycles = [5];
 }
-def : InstRW<[AtomWrite01_5], (instrs FLDCW16m, LDMXCSR,
+def : InstRW<[AtomWrite01_5], (instrs FLDCW16m,
                                       MMX_EMMS)>;
 def : InstRW<[AtomWrite01_5], (instregex "ST_FP80m",
                                          "MMX_PH(ADD|SUB)S?Wrr")>;
@@ -558,8 +565,7 @@ def AtomWrite01_15 : SchedWriteRes<[AtomPort01]> {
   let Latency = 15;
   let ResourceCycles = [15];
 }
-def : InstRW<[AtomWrite01_15], (instrs CMPXCHG16rr, CMPXCHG32rr, CMPXCHG64rr,
-                                       STMXCSR)>;
+def : InstRW<[AtomWrite01_15], (instrs CMPXCHG16rr, CMPXCHG32rr, CMPXCHG64rr)>;
 
 def AtomWrite01_17 : SchedWriteRes<[AtomPort01]> {
   let Latency = 17;

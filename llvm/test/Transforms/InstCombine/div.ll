@@ -21,15 +21,6 @@ define i32 @test2(i32 %A) {
   ret i32 %B
 }
 
-define i32 @test3(i32 %A) {
-        ; => 0, don't need to keep traps
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    ret i32 0
-;
-  %B = sdiv i32 0, %A             ; <i32> [#uses=1]
-  ret i32 %B
-}
-
 define i32 @test4(i32 %A) {
         ; 0-A
 ; CHECK-LABEL: @test4(

@@ -32,6 +32,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include <system_error>
 using namespace llvm;
 
@@ -127,10 +128,10 @@ struct LLVMDisDiagnosticHandler : public DiagnosticHandler {
     raw_ostream &OS = errs();
     OS << Prefix << ": ";
     switch (DI.getSeverity()) {
-      case DS_Error: OS << "error: "; break;
-      case DS_Warning: OS << "warning: "; break;
+      case DS_Error: WithColor::error(OS); break;
+      case DS_Warning: WithColor::warning(OS); break;
       case DS_Remark: OS << "remark: "; break;
-      case DS_Note: OS << "note: "; break;
+      case DS_Note: WithColor::note(OS); break;
     }
 
     DiagnosticPrinterRawOStream DP(OS);

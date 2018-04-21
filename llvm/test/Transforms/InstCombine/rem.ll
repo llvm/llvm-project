@@ -150,14 +150,6 @@ define i32 @test1(i32 %A) {
   ret i32 %B
 }
 
-define i32 @test2(i32 %A) {	; 0 % X = 0, we don't need to preserve traps
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret i32 0
-;
-  %B = srem i32 0, %A
-  ret i32 %B
-}
-
 define i32 @test3(i32 %A) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[B:%.*]] = and i32 %A, 7
