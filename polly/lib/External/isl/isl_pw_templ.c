@@ -11,6 +11,7 @@
  * and Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
  */
 
+#include <isl/id.h>
 #include <isl/aff.h>
 #include <isl_sort.h>
 #include <isl_val_private.h>
@@ -696,46 +697,6 @@ __isl_give PW *FN(PW,neg)(__isl_take PW *pw)
 __isl_give PW *FN(PW,sub)(__isl_take PW *pw1, __isl_take PW *pw2)
 {
 	return FN(PW,add)(pw1, FN(PW,neg)(pw2));
-}
-#endif
-
-#ifndef NO_EVAL
-__isl_give isl_val *FN(PW,eval)(__isl_take PW *pw, __isl_take isl_point *pnt)
-{
-	int i;
-	int found = 0;
-	isl_ctx *ctx;
-	isl_space *pnt_dim = NULL;
-	isl_val *v;
-
-	if (!pw || !pnt)
-		goto error;
-	ctx = isl_point_get_ctx(pnt);
-	pnt_dim = isl_point_get_space(pnt);
-	isl_assert(ctx, isl_space_is_domain_internal(pnt_dim, pw->dim),
-		    goto error);
-
-	for (i = 0; i < pw->n; ++i) {
-		found = isl_set_contains_point(pw->p[i].set, pnt);
-		if (found < 0)
-			goto error;
-		if (found)
-			break;
-	}
-	if (found)
-		v = FN(EL,eval)(FN(EL,copy)(pw->p[i].FIELD),
-					    isl_point_copy(pnt));
-	else
-		v = isl_val_zero(ctx);
-	FN(PW,free)(pw);
-	isl_space_free(pnt_dim);
-	isl_point_free(pnt);
-	return v;
-error:
-	FN(PW,free)(pw);
-	isl_space_free(pnt_dim);
-	isl_point_free(pnt);
-	return NULL;
 }
 #endif
 

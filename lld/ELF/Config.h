@@ -163,9 +163,9 @@ struct Configuration {
   bool WarnSymbolOrdering;
   bool WriteAddends;
   bool ZCombreloc;
+  bool ZCopyreloc;
   bool ZExecstack;
   bool ZHazardplt;
-  bool ZNocopyreloc;
   bool ZNodelete;
   bool ZNodlopen;
   bool ZNow;

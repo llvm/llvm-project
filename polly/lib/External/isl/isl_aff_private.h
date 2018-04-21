@@ -41,6 +41,11 @@ struct isl_pw_aff {
 	struct isl_pw_aff_piece p[1];
 };
 
+#undef PW
+#define PW isl_pw_aff
+
+#include <isl_pw_templ.h>
+
 #undef EL
 #define EL isl_pw_aff
 
@@ -62,6 +67,11 @@ struct isl_pw_multi_aff {
 	struct isl_pw_multi_aff_piece p[1];
 };
 
+#undef PW
+#define PW isl_pw_multi_aff
+
+#include <isl_pw_templ.h>
+
 __isl_give isl_aff *isl_aff_alloc_vec(__isl_take isl_local_space *ls,
 	__isl_take isl_vec *v);
 __isl_give isl_aff *isl_aff_alloc(__isl_take isl_local_space *ls);
@@ -77,6 +87,8 @@ __isl_give isl_aff *isl_aff_set_constant(__isl_take isl_aff *aff, isl_int v);
 __isl_give isl_aff *isl_aff_set_coefficient(__isl_take isl_aff *aff,
 	enum isl_dim_type type, int pos, isl_int v);
 __isl_give isl_aff *isl_aff_add_constant(__isl_take isl_aff *aff, isl_int v);
+
+__isl_give isl_aff *isl_aff_domain_factor_domain(__isl_take isl_aff *aff);
 
 int isl_aff_plain_cmp(__isl_keep isl_aff *aff1, __isl_keep isl_aff *aff2);
 
@@ -159,8 +171,13 @@ __isl_give isl_basic_set *isl_aff_pos_basic_set(__isl_take isl_aff *aff);
 
 #undef BASE
 #define BASE pw_aff
+#undef DOMBASE
+#define DOMBASE set
+#define EXPLICIT_DOMAIN
 
 #include <isl_multi_templ.h>
+
+#undef EXPLICIT_DOMAIN
 
 #undef EL
 #define EL isl_union_pw_aff
@@ -169,8 +186,13 @@ __isl_give isl_basic_set *isl_aff_pos_basic_set(__isl_take isl_aff *aff);
 
 #undef BASE
 #define BASE union_pw_aff
+#undef DOMBASE
+#define DOMBASE union_set
+#define EXPLICIT_DOMAIN
 
 #include <isl_multi_templ.h>
+
+#undef EXPLICIT_DOMAIN
 
 #undef EL
 #define EL isl_union_pw_multi_aff

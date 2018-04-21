@@ -818,7 +818,6 @@ void PDBLinker::addObjFile(ObjFile *File) {
   File->ModuleDBI->setObjFileName(Path);
 
   auto Chunks = File->getChunks();
-  assert(!Chunks.empty());
   uint32_t Modi = File->ModuleDBI->getModuleIndex();
   for (Chunk *C : Chunks) {
     auto *SecChunk = dyn_cast<SectionChunk>(C);

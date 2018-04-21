@@ -34,8 +34,8 @@ __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),apply_aligned),APPLY_DOMBASE)(
 		goto error;
 
 	for (i = 0; i < multi->n; ++i) {
-		multi->p[i] = fn(multi->p[i], FN(APPLY_DOM,copy)(set));
-		if (!multi->p[i])
+		multi->u.p[i] = fn(multi->u.p[i], FN(APPLY_DOM,copy)(set));
+		if (!multi->u.p[i])
 			goto error;
 	}
 

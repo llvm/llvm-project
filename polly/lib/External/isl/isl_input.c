@@ -2581,6 +2581,43 @@ static struct isl_obj schedule_read(__isl_keep isl_stream *s)
 	return obj;
 }
 
+/* Read a disjunction of object bodies from "s".
+ * That is, read the inside of the braces, but not the braces themselves.
+ * "v" contains a description of the identifiers parsed so far.
+ * "map" contains information about the parameters.
+ */
+static struct isl_obj obj_read_disjuncts(__isl_keep isl_stream *s,
+	struct vars *v, __isl_keep isl_map *map)
+{
+	struct isl_obj obj = { isl_obj_set, NULL };
+
+	if (isl_stream_next_token_is(s, '}')) {
+		obj.type = isl_obj_union_set;
+		obj.v = isl_union_set_empty(isl_map_get_space(map));
+		return obj;
+	}
+
+	for (;;) {
+		struct isl_obj o;
+		o = obj_read_body(s, isl_map_copy(map), v);
+		if (o.type == isl_obj_none || !o.v)
+			return o;
+		if (!obj.v)
+			obj = o;
+		else {
+			obj = obj_add(s, obj, o);
+			if (obj.type == isl_obj_none || !obj.v)
+				return obj;
+		}
+		if (!isl_stream_eat_if_available(s, ';'))
+			break;
+		if (isl_stream_next_token_is(s, '}'))
+			break;
+	}
+
+	return obj;
+}
+
 static struct isl_obj obj_read(__isl_keep isl_stream *s)
 {
 	isl_map *map = NULL;
@@ -2662,37 +2699,14 @@ static struct isl_obj obj_read(__isl_keep isl_stream *s)
 		map = read_map_tuple(s, map, isl_dim_param, v, 0, 1);
 		if (!map)
 			goto error;
-	} else if (tok->type == '}') {
-		obj.type = isl_obj_union_set;
-		obj.v = isl_union_set_empty(isl_map_get_space(map));
-		isl_token_free(tok);
-		goto done;
 	} else
 		isl_stream_push_token(s, tok);
 
-	for (;;) {
-		struct isl_obj o;
-		tok = NULL;
-		o = obj_read_body(s, isl_map_copy(map), v);
-		if (o.type == isl_obj_none || !o.v)
-			goto error;
-		if (!obj.v)
-			obj = o;
-		else {
-			obj = obj_add(s, obj, o);
-			if (obj.type == isl_obj_none || !obj.v)
-				goto error;
-		}
-		tok = isl_stream_next_token(s);
-		if (!tok || tok->type != ';')
-			break;
-		isl_token_free(tok);
-		if (isl_stream_next_token_is(s, '}')) {
-			tok = isl_stream_next_token(s);
-			break;
-		}
-	}
+	obj = obj_read_disjuncts(s, v, map);
+	if (obj.type == isl_obj_none || !obj.v)
+		goto error;
 
+	tok = isl_stream_next_token(s);
 	if (tok && tok->type == '}') {
 		isl_token_free(tok);
 	} else {
@@ -2701,7 +2715,7 @@ static struct isl_obj obj_read(__isl_keep isl_stream *s)
 			isl_token_free(tok);
 		goto error;
 	}
-done:
+
 	vars_free(v);
 	isl_map_free(map);
 
@@ -2782,22 +2796,36 @@ error:
 	return NULL;
 }
 
-__isl_give isl_union_set *isl_stream_read_union_set(__isl_keep isl_stream *s)
+/* Extract an isl_union_set from "obj".
+ * This only works if the object was detected as either a set
+ * (in which case it is converted to a union set) or a union set.
+ */
+static __isl_give isl_union_set *extract_union_set(isl_ctx *ctx,
+	struct isl_obj obj)
 {
-	struct isl_obj obj;
-
-	obj = obj_read(s);
 	if (obj.type == isl_obj_set) {
 		obj.type = isl_obj_union_set;
 		obj.v = isl_union_set_from_set(obj.v);
 	}
 	if (obj.v)
-		isl_assert(s->ctx, obj.type == isl_obj_union_set, goto error);
+		isl_assert(ctx, obj.type == isl_obj_union_set, goto error);
 
 	return obj.v;
 error:
 	obj.type->free(obj.v);
 	return NULL;
+}
+
+/* Read an isl_union_set from "s".
+ * First read a generic object and then try and extract
+ * an isl_union_set from that.
+ */
+__isl_give isl_union_set *isl_stream_read_union_set(__isl_keep isl_stream *s)
+{
+	struct isl_obj obj;
+
+	obj = obj_read(s);
+	return extract_union_set(s->ctx, obj);
 }
 
 static __isl_give isl_basic_map *basic_map_read(__isl_keep isl_stream *s)
@@ -3695,6 +3723,9 @@ __isl_give isl_multi_aff *isl_multi_aff_read_from_str(isl_ctx *ctx,
  * The input format is similar to that of map, except that any conditions
  * on the domains should be specified inside the tuple since each
  * piecewise affine expression may have a different domain.
+ * However, additional, shared conditions can also be specified.
+ * This is especially useful for setting the explicit domain
+ * of a zero-dimensional isl_multi_pw_aff.
  *
  * Since we do not know in advance if the isl_multi_pw_aff lives
  * in a set or a map space, we first read the first tuple and check
@@ -3736,6 +3767,9 @@ __isl_give isl_multi_pw_aff *isl_stream_read_multi_pw_aff(
 		if (!tuple)
 			goto error;
 	}
+
+	if (isl_stream_eat_if_available(s, ':'))
+		dom = read_formula(s, v, dom, 0);
 
 	if (isl_stream_eat(s, '}'))
 		goto error;
@@ -3942,6 +3976,106 @@ static int next_is_param_tuple(__isl_keep isl_stream *s)
 	return is_tuple;
 }
 
+/* Read the core of a body of an isl_multi_union_pw_aff from "s",
+ * i.e., everything except the parameter specification and
+ * without shared domain constraints.
+ * "v" contains a description of the identifiers parsed so far.
+ * The parameters, if any, are specified by "space".
+ *
+ * The body is of the form
+ *
+ *	[{ [..] : ... ; [..] : ... }, { [..] : ... ; [..] : ... }]
+ *
+ * Read the tuple, collecting the individual isl_union_pw_aff
+ * elements in a list and construct the result from the tuple space and
+ * the list.
+ */
+static __isl_give isl_multi_union_pw_aff *read_multi_union_pw_aff_body_core(
+	__isl_keep isl_stream *s, struct vars *v, __isl_take isl_space *space)
+{
+	isl_union_pw_aff_list *list;
+	isl_multi_union_pw_aff *mupa;
+
+	list = isl_union_pw_aff_list_alloc(s->ctx, 0);
+	space = read_tuple_space(s, v, space, 1, 0,
+				&read_union_pw_aff_el, &list);
+	mupa = isl_multi_union_pw_aff_from_union_pw_aff_list(space, list);
+
+	return mupa;
+}
+
+/* Read the body of an isl_union_set from "s",
+ * i.e., everything except the parameter specification.
+ * "v" contains a description of the identifiers parsed so far.
+ * The parameters, if any, are specified by "space".
+ *
+ * First read a generic disjunction of object bodies and then try and extract
+ * an isl_union_set from that.
+ */
+static __isl_give isl_union_set *read_union_set_body(__isl_keep isl_stream *s,
+	struct vars *v, __isl_take isl_space *space)
+{
+	struct isl_obj obj = { isl_obj_set, NULL };
+	isl_map *map;
+
+	map = isl_set_universe(space);
+	if (isl_stream_eat(s, '{') < 0)
+		goto error;
+	obj = obj_read_disjuncts(s, v, map);
+	if (isl_stream_eat(s, '}') < 0)
+		goto error;
+	isl_map_free(map);
+
+	return extract_union_set(s->ctx, obj);
+error:
+	obj.type->free(obj.v);
+	isl_map_free(map);
+	return NULL;
+}
+
+/* Read the body of an isl_multi_union_pw_aff from "s",
+ * i.e., everything except the parameter specification.
+ * "v" contains a description of the identifiers parsed so far.
+ * The parameters, if any, are specified by "space".
+ *
+ * In particular, handle the special case with shared domain constraints.
+ * These are specified as
+ *
+ *	([...] : ...)
+ *
+ * and are especially useful for setting the explicit domain
+ * of a zero-dimensional isl_multi_union_pw_aff.
+ * The core isl_multi_union_pw_aff body ([...]) is read by
+ * read_multi_union_pw_aff_body_core.
+ */
+static __isl_give isl_multi_union_pw_aff *read_multi_union_pw_aff_body(
+	__isl_keep isl_stream *s, struct vars *v, __isl_take isl_space *space)
+{
+	isl_multi_union_pw_aff *mupa;
+
+	if (!isl_stream_next_token_is(s, '('))
+		return read_multi_union_pw_aff_body_core(s, v, space);
+
+	if (isl_stream_eat(s, '(') < 0)
+		goto error;
+	mupa = read_multi_union_pw_aff_body_core(s, v, isl_space_copy(space));
+	if (isl_stream_eat_if_available(s, ':')) {
+		isl_union_set *dom;
+
+		dom = read_union_set_body(s, v, space);
+		mupa = isl_multi_union_pw_aff_intersect_domain(mupa, dom);
+	} else {
+		isl_space_free(space);
+	}
+	if (isl_stream_eat(s, ')') < 0)
+		return isl_multi_union_pw_aff_free(mupa);
+
+	return mupa;
+error:
+	isl_space_free(space);
+	return NULL;
+}
+
 /* Read an isl_multi_union_pw_aff from "s".
  *
  * The input has the form
@@ -3952,20 +4086,28 @@ static int next_is_param_tuple(__isl_keep isl_stream *s)
  *
  *	[..] -> [{ [..] : ... ; [..] : ... }, { [..] : ... ; [..] : ... }]
  *
+ * Additionally, a shared domain may be specified as
+ *
+ *	([..] : ...)
+ *
+ * or
+ *
+ *	[..] -> ([..] : ...)
+ *
+ * The first case is handled by the caller, the second case
+ * is handled by read_multi_union_pw_aff_body.
+ *
  * We first check for the special case of an empty tuple "[]".
  * Then we check if there are any parameters.
- * Finally, we read the tuple, collecting the individual isl_union_pw_aff
- * elements in a list and construct the result from the tuple space and
- * the list.
+ * Finally, read the tuple and construct the result.
  */
-__isl_give isl_multi_union_pw_aff *isl_stream_read_multi_union_pw_aff(
+static __isl_give isl_multi_union_pw_aff *read_multi_union_pw_aff_core(
 	__isl_keep isl_stream *s)
 {
 	struct vars *v;
 	isl_set *dom = NULL;
 	isl_space *space;
 	isl_multi_union_pw_aff *mupa = NULL;
-	isl_union_pw_aff_list *list;
 
 	if (next_is_empty_tuple(s)) {
 		if (isl_stream_eat(s, '['))
@@ -3988,10 +4130,7 @@ __isl_give isl_multi_union_pw_aff *isl_stream_read_multi_union_pw_aff(
 	}
 	space = isl_set_get_space(dom);
 	isl_set_free(dom);
-	list = isl_union_pw_aff_list_alloc(s->ctx, 0);
-	space = read_tuple_space(s, v, space, 1, 0,
-				&read_union_pw_aff_el, &list);
-	mupa = isl_multi_union_pw_aff_from_union_pw_aff_list(space, list);
+	mupa = read_multi_union_pw_aff_body(s, v, space);
 
 	vars_free(v);
 
@@ -4001,6 +4140,40 @@ error:
 	isl_set_free(dom);
 	isl_multi_union_pw_aff_free(mupa);
 	return NULL;
+}
+
+/* Read an isl_multi_union_pw_aff from "s".
+ *
+ * In particular, handle the special case with shared domain constraints.
+ * These are specified as
+ *
+ *	([...] : ...)
+ *
+ * and are especially useful for setting the explicit domain
+ * of a zero-dimensional isl_multi_union_pw_aff.
+ * The core isl_multi_union_pw_aff ([...]) is read by
+ * read_multi_union_pw_aff_core.
+ */
+__isl_give isl_multi_union_pw_aff *isl_stream_read_multi_union_pw_aff(
+	__isl_keep isl_stream *s)
+{
+	isl_multi_union_pw_aff *mupa;
+
+	if (!isl_stream_next_token_is(s, '('))
+		return read_multi_union_pw_aff_core(s);
+
+	if (isl_stream_eat(s, '(') < 0)
+		return NULL;
+	mupa = read_multi_union_pw_aff_core(s);
+	if (isl_stream_eat_if_available(s, ':')) {
+		isl_union_set *dom;
+
+		dom = isl_stream_read_union_set(s);
+		mupa = isl_multi_union_pw_aff_intersect_domain(mupa, dom);
+	}
+	if (isl_stream_eat(s, ')') < 0)
+		return isl_multi_union_pw_aff_free(mupa);
+	return mupa;
 }
 
 /* Read an isl_multi_union_pw_aff from "str".

@@ -18,6 +18,7 @@
 #include <isl/local_space.h>
 #include <isl/val.h>
 #include <isl/stdint.h>
+#include <isl/stride_info.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -427,12 +428,6 @@ __isl_give isl_set *isl_set_gist_params(__isl_take isl_set *set,
 isl_stat isl_set_dim_residue_class_val(__isl_keep isl_set *set,
 	int pos, __isl_give isl_val **modulo, __isl_give isl_val **residue);
 
-struct isl_stride_info;
-typedef struct isl_stride_info isl_stride_info;
-__isl_give isl_val *isl_stride_info_get_stride(__isl_keep isl_stride_info *si);
-__isl_give isl_aff *isl_stride_info_get_offset(__isl_keep isl_stride_info *si);
-__isl_null isl_stride_info *isl_stride_info_free(
-	__isl_take isl_stride_info *si);
 __isl_give isl_stride_info *isl_set_get_stride_info(__isl_keep isl_set *set,
 	int pos);
 __isl_export
