@@ -4710,10 +4710,10 @@ let isCommutable = 0 in {
                                        WriteVecALU>, VEX_4V, VEX_L, VEX_WIG;
   defm VPHADDSW  : SS3I_binop_rm_int_y<0x03, "vphaddsw",
                                        int_x86_avx2_phadd_sw,
-                                       WriteVecALU>, VEX_4V, VEX_L, VEX_WIG;
+                                       WritePHAdd>, VEX_4V, VEX_L, VEX_WIG;
   defm VPHSUBSW  : SS3I_binop_rm_int_y<0x07, "vphsubsw",
                                        int_x86_avx2_phsub_sw,
-                                       WriteVecALU>, VEX_4V, VEX_L, VEX_WIG;
+                                       WritePHAdd>, VEX_4V, VEX_L, VEX_WIG;
 }
 }
 

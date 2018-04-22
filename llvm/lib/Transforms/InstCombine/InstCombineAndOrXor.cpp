@@ -1699,7 +1699,6 @@ static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
       return false;
 
     // One element must be all ones, and the other must be all zeros.
-    // FIXME: Allow undef elements.
     if (!((match(EltC1, m_Zero()) && match(EltC2, m_AllOnes())) ||
           (match(EltC2, m_Zero()) && match(EltC1, m_AllOnes()))))
       return false;
