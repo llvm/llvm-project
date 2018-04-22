@@ -303,6 +303,10 @@ def : WriteRes<WriteMicrocoded, [BWPort0156]> { let Latency = 100; } // def Writ
 // Fence instructions.
 def : WriteRes<WriteFence,  [BWPort23, BWPort4]>;
 
+// Load/store MXCSR.
+def : WriteRes<WriteLDMXCSR, [BWPort0,BWPort23,BWPort0156]> { let Latency = 7; let NumMicroOps = 3; let ResourceCycles = [1,1,1]; }
+def : WriteRes<WriteSTMXCSR, [BWPort4,BWPort5,BWPort237]> { let Latency = 2; let NumMicroOps = 3; let ResourceCycles = [1,1,1]; }
+
 // Nop, not very useful expect it provides a model for nops!
 def : WriteRes<WriteNop, []>;
 
@@ -324,16 +328,8 @@ def: InstRW<[BWWriteResGroup1], (instregex "MMX_MOVD64from64rr",
                                            "MMX_MOVD64grr",
                                            "(V?)MOVPDI2DIrr",
                                            "(V?)MOVPQIto64rr",
-                                           "(V?)PSLLD(Y?)ri",
-                                           "(V?)PSLLQ(Y?)ri",
                                            "VPSLLVQ(Y?)rr",
-                                           "(V?)PSLLW(Y?)ri",
-                                           "(V?)PSRAD(Y?)ri",
-                                           "(V?)PSRAW(Y?)ri",
-                                           "(V?)PSRLD(Y?)ri",
-                                           "(V?)PSRLQ(Y?)ri",
                                            "VPSRLVQ(Y?)rr",
-                                           "(V?)PSRLW(Y?)ri",
                                            "VTESTPD(Y?)rr",
                                            "VTESTPS(Y?)rr")>;
 
@@ -355,60 +351,11 @@ def BWWriteResGroup3 : SchedWriteRes<[BWPort5]> {
 def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVD64rr",
                                            "MMX_MOVD64to64rr",
                                            "MMX_MOVQ2DQrr",
-                                           "VBROADCASTSSrr",
-                                           "(V?)INSERTPSrr",
                                            "(V?)MOV64toPQIrr",
-                                           "(V?)MOVAPD(Y?)rr",
-                                           "(V?)MOVAPS(Y?)rr",
-                                           "(V?)MOVDDUP(Y?)rr",
                                            "(V?)MOVDI2PDIrr",
-                                           "(V?)MOVHLPSrr",
-                                           "(V?)MOVLHPSrr",
-                                           "(V?)MOVSDrr",
-                                           "(V?)MOVSHDUP(Y?)rr",
-                                           "(V?)MOVSLDUP(Y?)rr",
-                                           "(V?)MOVSSrr",
-                                           "(V?)MOVUPD(Y?)rr",
-                                           "(V?)MOVUPS(Y?)rr",
-                                           "(V?)ORPD(Y?)rr",
-                                           "(V?)ORPS(Y?)rr",
-                                           "(V?)PALIGNR(Y?)rri",
                                            "(V?)PBLENDW(Y?)rri",
-                                           "VPBROADCASTDrr",
-                                           "VPBROADCASTQrr",
-                                           "VPERMILPD(Y?)ri",
-                                           "VPERMILPS(Y?)ri",
-                                           "(V?)PMOVSXBDrr",
-                                           "(V?)PMOVSXBQrr",
-                                           "(V?)PMOVSXBWrr",
-                                           "(V?)PMOVSXDQrr",
-                                           "(V?)PMOVSXWDrr",
-                                           "(V?)PMOVSXWQrr",
-                                           "(V?)PMOVZXBDrr",
-                                           "(V?)PMOVZXBQrr",
-                                           "(V?)PMOVZXBWrr",
-                                           "(V?)PMOVZXDQrr",
-                                           "(V?)PMOVZXWDrr",
-                                           "(V?)PMOVZXWQrr",
-                                           "(V?)PSHUFD(Y?)ri",
-                                           "(V?)PSHUFHW(Y?)ri",
-                                           "(V?)PSHUFLW(Y?)ri",
                                            "(V?)PSLLDQ(Y?)ri",
-                                           "(V?)PSRLDQ(Y?)ri",
-                                           "(V?)PUNPCKHBW(Y?)rr",
-                                           "(V?)PUNPCKHDQ(Y?)rr",
-                                           "(V?)PUNPCKHQDQ(Y?)rr",
-                                           "(V?)PUNPCKHWD(Y?)rr",
-                                           "(V?)PUNPCKLBW(Y?)rr",
-                                           "(V?)PUNPCKLDQ(Y?)rr",
-                                           "(V?)PUNPCKLQDQ(Y?)rr",
-                                           "(V?)PUNPCKLWD(Y?)rr",
-                                           "(V?)SHUFPD(Y?)rri",
-                                           "(V?)SHUFPS(Y?)rri",
-                                           "(V?)UNPCKHPD(Y?)rr",
-                                           "(V?)UNPCKHPS(Y?)rr",
-                                           "(V?)UNPCKLPD(Y?)rr",
-                                           "(V?)UNPCKLPS(Y?)rr")>;
+                                           "(V?)PSRLDQ(Y?)ri")>;
 
 def BWWriteResGroup4 : SchedWriteRes<[BWPort6]> {
   let Latency = 1;
@@ -457,50 +404,7 @@ def: InstRW<[BWWriteResGroup7], (instregex "ANDN(32|64)rr",
                                            "BLSI(32|64)rr",
                                            "BLSMSK(32|64)rr",
                                            "BLSR(32|64)rr",
-                                           "LEA(16|32|64)(_32)?r",
-                                           "(V?)PABSB(Y?)rr",
-                                           "(V?)PABSD(Y?)rr",
-                                           "(V?)PABSW(Y?)rr",
-                                           "(V?)PADDB(Y?)rr",
-                                           "(V?)PADDD(Y?)rr",
-                                           "(V?)PADDQ(Y?)rr",
-                                           "(V?)PADDSB(Y?)rr",
-                                           "(V?)PADDSW(Y?)rr",
-                                           "(V?)PADDUSB(Y?)rr",
-                                           "(V?)PADDUSW(Y?)rr",
-                                           "(V?)PADDW(Y?)rr",
-                                           "(V?)PAVGB(Y?)rr",
-                                           "(V?)PAVGW(Y?)rr",
-                                           "(V?)PCMPEQB(Y?)rr",
-                                           "(V?)PCMPEQD(Y?)rr",
-                                           "(V?)PCMPEQQ(Y?)rr",
-                                           "(V?)PCMPEQW(Y?)rr",
-                                           "(V?)PCMPGTB(Y?)rr",
-                                           "(V?)PCMPGTD(Y?)rr",
-                                           "(V?)PCMPGTW(Y?)rr",
-                                           "(V?)PMAXSB(Y?)rr",
-                                           "(V?)PMAXSD(Y?)rr",
-                                           "(V?)PMAXSW(Y?)rr",
-                                           "(V?)PMAXUB(Y?)rr",
-                                           "(V?)PMAXUD(Y?)rr",
-                                           "(V?)PMAXUW(Y?)rr",
-                                           "(V?)PMINSB(Y?)rr",
-                                           "(V?)PMINSD(Y?)rr",
-                                           "(V?)PMINSW(Y?)rr",
-                                           "(V?)PMINUB(Y?)rr",
-                                           "(V?)PMINUD(Y?)rr",
-                                           "(V?)PMINUW(Y?)rr",
-                                           "(V?)PSIGNB(Y?)rr",
-                                           "(V?)PSIGND(Y?)rr",
-                                           "(V?)PSIGNW(Y?)rr",
-                                           "(V?)PSUBB(Y?)rr",
-                                           "(V?)PSUBD(Y?)rr",
-                                           "(V?)PSUBQ(Y?)rr",
-                                           "(V?)PSUBSB(Y?)rr",
-                                           "(V?)PSUBSW(Y?)rr",
-                                           "(V?)PSUBUSB(Y?)rr",
-                                           "(V?)PSUBUSW(Y?)rr",
-                                           "(V?)PSUBW(Y?)rr")>;
+                                           "LEA(16|32|64)(_32)?r")>;
 
 def BWWriteResGroup8 : SchedWriteRes<[BWPort015]> {
   let Latency = 1;
@@ -508,12 +412,6 @@ def BWWriteResGroup8 : SchedWriteRes<[BWPort015]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[BWWriteResGroup8], (instregex "MMX_MOVQ64rr",
-                                           "(V?)BLENDPD(Y?)rri",
-                                           "(V?)BLENDPS(Y?)rri",
-                                           "(V?)MOVDQA(Y?)rr",
-                                           "(V?)MOVDQU(Y?)rr",
-                                           "(V?)MOVPQI2QIrr",
-                                           "VMOVZPQILo2PQIrr",
                                            "VPBLENDD(Y?)rri")>;
 
 def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
@@ -693,8 +591,7 @@ def: InstRW<[BWWriteResGroup21], (instregex "(V?)EXTRACTPSmr",
                                             "(V?)PEXTRBmr",
                                             "(V?)PEXTRDmr",
                                             "(V?)PEXTRQmr",
-                                            "(V?)PEXTRWmr",
-                                            "(V?)STMXCSR")>;
+                                            "(V?)PEXTRWmr")>;
 
 def BWWriteResGroup22 : SchedWriteRes<[BWPort4,BWPort6,BWPort237]> {
   let Latency = 2;
@@ -733,9 +630,7 @@ def: InstRW<[BWWriteResGroup27], (instregex "MMX_CVTPI2PSirr",
                                             "PEXT(32|64)rr",
                                             "SHLD(16|32|64)rri8",
                                             "SHRD(16|32|64)rri8",
-                                            "(V?)CVTDQ2PS(Y?)rr",
-                                            "(V?)CVTPS2DQ(Y?)rr",
-                                            "(V?)CVTTPS2DQ(Y?)rr")>;
+                                            "(V?)CVTDQ2PS(Y?)rr")>;
 
 def BWWriteResGroup27_16 : SchedWriteRes<[BWPort1, BWPort0156]> {
   let Latency = 4;
@@ -749,20 +644,8 @@ def BWWriteResGroup28 : SchedWriteRes<[BWPort5]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup28], (instregex "VBROADCASTSDYrr",
-                                            "VBROADCASTSSYrr",
-                                            "VEXTRACTF128rr",
-                                            "VEXTRACTI128rr",
-                                            "VINSERTF128rr",
-                                            "VINSERTI128rr",
-                                            "VPBROADCASTB(Y?)rr",
-                                            "VPBROADCASTDYrr",
-                                            "VPBROADCASTQYrr",
-                                            "VPBROADCASTW(Y?)rr",
-                                            "VPERM2F128rr",
-                                            "VPERM2I128rr",
-                                            "VPERMPDYri",
-                                            "VPERMQYri",
+def: InstRW<[BWWriteResGroup28], (instregex "VPBROADCASTBrr",
+                                            "VPBROADCASTWrr",
                                             "VPMOVSXBDYrr",
                                             "VPMOVSXBQYrr",
                                             "VPMOVSXBWYrr",
@@ -975,20 +858,7 @@ def BWWriteResGroup47 : SchedWriteRes<[BWPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup47], (instregex "(V?)PCMPGTQ(Y?)rr",
-                                            "(V?)PHMINPOSUWrr",
-                                            "(V?)PMADDUBSW(Y?)rr",
-                                            "(V?)PMADDWD(Y?)rr",
-                                            "(V?)PMULDQ(Y?)rr",
-                                            "(V?)PMULHRSW(Y?)rr",
-                                            "(V?)PMULHUW(Y?)rr",
-                                            "(V?)PMULHW(Y?)rr",
-                                            "(V?)PMULLW(Y?)rr",
-                                            "(V?)PMULUDQ(Y?)rr",
-                                            "(V?)RCPPSr",
-                                            "(V?)RCPSSr",
-                                            "(V?)RSQRTPSr",
-                                            "(V?)RSQRTSSr")>;
+def: InstRW<[BWWriteResGroup47], (instregex "(V?)PCMPGTQ(Y?)rr")>;
 
 def BWWriteResGroup49 : SchedWriteRes<[BWPort23]> {
   let Latency = 5;
@@ -1000,27 +870,10 @@ def: InstRW<[BWWriteResGroup49], (instregex "MOVSX(16|32|64)rm16",
                                             "MOVSX(16|32|64)rm8",
                                             "MOVZX(16|32|64)rm16",
                                             "MOVZX(16|32|64)rm8",
-                                            "PREFETCHNTA",
-                                            "PREFETCHT0",
-                                            "PREFETCHT1",
-                                            "PREFETCHT2",
                                             "VBROADCASTSSrm",
-                                            "(V?)LDDQUrm",
-                                            "(V?)MOV64toPQIrm",
-                                            "(V?)MOVAPDrm",
-                                            "(V?)MOVAPSrm",
                                             "(V?)MOVDDUPrm",
-                                            "(V?)MOVDI2PDIrm",
-                                            "(V?)MOVDQArm",
-                                            "(V?)MOVDQUrm",
-                                            "(V?)MOVNTDQArm",
-                                            "(V?)MOVQI2PQIrm",
-                                            "(V?)MOVSDrm",
                                             "(V?)MOVSHDUPrm",
                                             "(V?)MOVSLDUPrm",
-                                            "(V?)MOVSSrm",
-                                            "(V?)MOVUPDrm",
-                                            "(V?)MOVUPSrm",
                                             "VPBROADCASTDrm",
                                             "VPBROADCASTQrm")>;
 
@@ -1182,18 +1035,6 @@ def: InstRW<[BWWriteResGroup61], (instregex "MMX_PALIGNRrmi",
                                             "(V?)PINSRDrm",
                                             "(V?)PINSRQrm",
                                             "(V?)PINSRWrm",
-                                            "(V?)PMOVSXBDrm",
-                                            "(V?)PMOVSXBQrm",
-                                            "(V?)PMOVSXBWrm",
-                                            "(V?)PMOVSXDQrm",
-                                            "(V?)PMOVSXWDrm",
-                                            "(V?)PMOVSXWQrm",
-                                            "(V?)PMOVZXBDrm",
-                                            "(V?)PMOVZXBQrm",
-                                            "(V?)PMOVZXBWrm",
-                                            "(V?)PMOVZXDQrm",
-                                            "(V?)PMOVZXWDrm",
-                                            "(V?)PMOVZXWQrm",
                                             "(V?)PSHUFBrm",
                                             "(V?)PSHUFDmi",
                                             "(V?)PSHUFHWmi",
@@ -1559,13 +1400,6 @@ def BWWriteResGroup82 : SchedWriteRes<[BWPort0,BWPort01,BWPort23]> {
 }
 def: InstRW<[BWWriteResGroup82], (instregex "FLDCW16m")>;
 
-def BWWriteResGroup83 : SchedWriteRes<[BWPort0,BWPort23,BWPort0156]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[BWWriteResGroup83], (instregex "(V?)LDMXCSR")>;
-
 def BWWriteResGroup84 : SchedWriteRes<[BWPort6,BWPort23,BWPort0156]> {
   let Latency = 7;
   let NumMicroOps = 3;
@@ -1913,12 +1747,6 @@ def: InstRW<[BWWriteResGroup115], (instregex "MMX_PMADDUBSWrm",
                                              "(V?)PHMINPOSUWrm",
                                              "(V?)PMADDUBSWrm",
                                              "(V?)PMADDWDrm",
-                                             "(V?)PMULDQrm",
-                                             "(V?)PMULHRSWrm",
-                                             "(V?)PMULHUWrm",
-                                             "(V?)PMULHWrm",
-                                             "(V?)PMULLWrm",
-                                             "(V?)PMULUDQrm",
                                              "(V?)PSADBWrm",
                                              "(V?)RCPPSm",
                                              "(V?)RCPSSm",
