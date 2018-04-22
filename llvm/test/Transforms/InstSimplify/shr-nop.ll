@@ -193,14 +193,6 @@ define i1 @ashr_ne_first_zero(i8 %a) {
   ret i1 %cmp
 }
 
-define <3 x i8> @ashr_all_ones_vec_with_undef_elts(<3 x i8> %x, <3 x i8> %y) {
-; CHECK-LABEL: @ashr_all_ones_vec_with_undef_elts(
-; CHECK-NEXT:    ret <3 x i8> <i8 -1, i8 -1, i8 -1>
-;
-  %sh = ashr <3 x i8> <i8 undef, i8 -1, i8 undef>, %y
-  ret <3 x i8> %sh
-}
-
 define i1 @ashr_eq_both_minus1(i8 %a) {
 ; CHECK-LABEL: @ashr_eq_both_minus1(
 ; CHECK-NEXT:    ret i1 true

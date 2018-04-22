@@ -3104,7 +3104,7 @@ let SchedRW = [WriteFence] in {
 def SFENCE : I<0xAE, MRM_F8, (outs), (ins), "sfence", [(int_x86_sse_sfence)]>,
                PS, Requires<[HasSSE1]>;
 def LFENCE : I<0xAE, MRM_E8, (outs), (ins), "lfence", [(int_x86_sse2_lfence)]>,
-               TB, Requires<[HasSSE2]>;
+               PS, Requires<[HasSSE2]>;
 def MFENCE : I<0xAE, MRM_F0, (outs), (ins), "mfence", [(int_x86_sse2_mfence)]>,
                PS, Requires<[HasMFence]>;
 } // SchedRW
@@ -3117,17 +3117,17 @@ def : Pat<(X86MFence), (MFENCE)>;
 
 def VLDMXCSR : VPSI<0xAE, MRM2m, (outs), (ins i32mem:$src),
                "ldmxcsr\t$src", [(int_x86_sse_ldmxcsr addr:$src)]>,
-               VEX, Sched<[WriteLoad]>, VEX_WIG;
+               VEX, Sched<[WriteLDMXCSR]>, VEX_WIG;
 def VSTMXCSR : VPSI<0xAE, MRM3m, (outs), (ins i32mem:$dst),
                "stmxcsr\t$dst", [(int_x86_sse_stmxcsr addr:$dst)]>,
-               VEX, Sched<[WriteStore]>, VEX_WIG;
+               VEX, Sched<[WriteSTMXCSR]>, VEX_WIG;
 
 def LDMXCSR : I<0xAE, MRM2m, (outs), (ins i32mem:$src),
               "ldmxcsr\t$src", [(int_x86_sse_ldmxcsr addr:$src)]>,
-              TB, Sched<[WriteLoad]>;
+              TB, Sched<[WriteLDMXCSR]>;
 def STMXCSR : I<0xAE, MRM3m, (outs), (ins i32mem:$dst),
               "stmxcsr\t$dst", [(int_x86_sse_stmxcsr addr:$dst)]>,
-              TB, Sched<[WriteStore]>;
+              TB, Sched<[WriteSTMXCSR]>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Move Aligned/Unaligned Packed Integer Instructions
@@ -7033,12 +7033,12 @@ let hasSideEffects = 0, ExeDomain = SSEPackedSingle in {
 def VINSERTF128rr : AVXAIi8<0x18, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR128:$src2, u8imm:$src3),
           "vinsertf128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          []>, Sched<[WriteFShuffle]>, VEX_4V, VEX_L;
+          []>, Sched<[WriteFShuffle256]>, VEX_4V, VEX_L;
 let mayLoad = 1 in
 def VINSERTF128rm : AVXAIi8<0x18, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f128mem:$src2, u8imm:$src3),
           "vinsertf128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          []>, Sched<[WriteFShuffleLd, ReadAfterLd]>, VEX_4V, VEX_L;
+          []>, Sched<[WriteFShuffle256Ld, ReadAfterLd]>, VEX_4V, VEX_L;
 }
 
 // To create a 256-bit all ones value, we should produce VCMPTRUEPS
@@ -7212,13 +7212,13 @@ def VPERM2F128rr : AVXAIi8<0x06, MRMSrcReg, (outs VR256:$dst),
           "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
           [(set VR256:$dst, (v4f64 (X86VPerm2x128 VR256:$src1, VR256:$src2,
                               (i8 imm:$src3))))]>, VEX_4V, VEX_L,
-          Sched<[WriteFShuffle]>;
+          Sched<[WriteFShuffle256]>;
 def VPERM2F128rm : AVXAIi8<0x06, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f256mem:$src2, u8imm:$src3),
           "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
           [(set VR256:$dst, (X86VPerm2x128 VR256:$src1, (loadv4f64 addr:$src2),
                              (i8 imm:$src3)))]>, VEX_4V, VEX_L,
-          Sched<[WriteFShuffleLd, ReadAfterLd]>;
+          Sched<[WriteFShuffle256Ld, ReadAfterLd]>;
 }
 
 // Immediate transform to help with commuting.

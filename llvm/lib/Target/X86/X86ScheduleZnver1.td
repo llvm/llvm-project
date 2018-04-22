@@ -267,6 +267,8 @@ let Latency = 100 in {
   def : WriteRes<WritePCmpEStrMLd, []>;
   def : WriteRes<WritePCmpIStrI, []>;
   def : WriteRes<WritePCmpIStrILd, []>;
+  def : WriteRes<WriteLDMXCSR, []>;
+  def : WriteRes<WriteSTMXCSR, []>;
   }
 
 //=== Regex based InstRW ===//
@@ -894,17 +896,8 @@ def : InstRW<[ZnWriteFPU2], (instregex "VMOV64toPQIrr")>;
 def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVQ64rr")>;
 
 // (V)MOVDQA/U.
-// x <- x.
-def : InstRW<[ZnWriteFPU], (instregex "MOVDQ(A|U)rr", "VMOVDQ(A|U)rr")>;
-
 // y <- y.
 def : InstRW<[ZnWriteFPUY], (instregex "VMOVDQ(A|U)Yrr")>;
-
-// MOVDQ2Q.
-def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVDQ2Qrr")>;
-
-// MOVQ2DQ.
-def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVQ2DQrr")>;
 
 // PACKSSWB/DW.
 // mm <- mm.
@@ -1674,11 +1667,5 @@ def : InstRW<[WriteMicrocoded], (instregex "VZEROUPPER")>;
 
 // VZEROALL.
 def : InstRW<[WriteMicrocoded], (instregex "VZEROALL")>;
-
-// LDMXCSR.
-def : InstRW<[WriteMicrocoded], (instregex "(V)?LDMXCSR")>;
-
-// STMXCSR.
-def : InstRW<[WriteMicrocoded], (instregex "(V)?STMXCSR")>;
 
 } // SchedModel

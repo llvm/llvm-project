@@ -290,6 +290,13 @@ defm : AtomWriteResPair<WritePHAdd, [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
 defm : AtomWriteResPair<WriteCLMul, [AtomPort01], [AtomPort01]>; // NOTE: Doesn't exist on Atom.
 
 ////////////////////////////////////////////////////////////////////////////////
+// Load/store MXCSR.
+////////////////////////////////////////////////////////////////////////////////
+
+def : WriteRes<WriteLDMXCSR, [AtomPort01]> { let Latency = 5; let ResourceCycles = [5]; }
+def : WriteRes<WriteSTMXCSR, [AtomPort01]> { let Latency = 15; let ResourceCycles = [15]; }
+
+////////////////////////////////////////////////////////////////////////////////
 // Special Cases.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -303,8 +310,8 @@ def : InstRW<[AtomWrite0_1], (instrs FXAM,
                                      DEC8m, DEC16m, DEC32m, DEC64m,
                                      INC8m, INC16m, INC32m, INC64m,
                                      MOVSX64rr32,
-                                     MMX_MOVD64rr, MMX_MOVD64mr,
-                                     MMX_MOVD64to64rr, MMX_MOVD64to64rm,
+                                     MMX_MOVD64rr,
+                                     MMX_MOVD64to64rr,
                                      MMX_PSHUFBrr, MMX_PSHUFBrm,
                                      MOVDI2PDIrr, MOVDI2PDIrm,
                                      MOV64toPQIrr, MOV64toPQIrm,
@@ -315,11 +322,10 @@ def : InstRW<[AtomWrite0_1], (instregex "(ADC|ADD|AND|NEG|NOT|OR|SBB|SUB|XOR)(8|
                                         "(RCL|RCR|ROL|ROR|SAR|SHL|SHR)(8|16|32|64)m",
                                         "MOV(S|Z)X(32|64)(rr|rm)(8|8_NOREX|16)",
                                         "LD_F(P)?(16|32|64)?(m|rr)",
-                                        "MMX_MASKMOVQ(64)?",
                                         "MMX_PAVG(B|W)irm",
                                         "MMX_P(MAX|MIN)(UB|SW)irm",
                                         "MMX_PSIGN(B|D|W)rm")>;
-                                        
+
 def AtomWrite0_3 : SchedWriteRes<[AtomPort0]> {
   let Latency = 3;
   let ResourceCycles = [3];
@@ -396,9 +402,6 @@ def : InstRW<[AtomWrite01_1], (instrs FDECSTP, FFREE, FFREEP, FINCSTP, LD_F0, WA
                                       MOVSSrr, MOVSSrr_REV,
                                       PSLLDQri, PSRLDQri)>;
 def : InstRW<[AtomWrite01_1], (instregex "(MMX_)?PS(LL|RA|RL)(D|Q|W)ri",
-                                         "MMX_PAVG(B|W)irr",
-                                         "MMX_P(MAX|MIN)(UB|SW)irr",
-                                         "MMX_PSIGN(B|D|W)rr",
                                          "MMX_PACK(SSDW|SSWB|USWB)irr",
                                          "MMX_PUNPCKH(BW|DQ|WD)irr")>;
 
@@ -456,7 +459,7 @@ def AtomWrite01_5 : SchedWriteRes<[AtomPort01]> {
   let Latency = 5;
   let ResourceCycles = [5];
 }
-def : InstRW<[AtomWrite01_5], (instrs FLDCW16m, LDMXCSR,
+def : InstRW<[AtomWrite01_5], (instrs FLDCW16m,
                                       MMX_EMMS)>;
 def : InstRW<[AtomWrite01_5], (instregex "ST_FP80m",
                                          "MMX_PH(ADD|SUB)S?Wrr")>;
@@ -562,8 +565,7 @@ def AtomWrite01_15 : SchedWriteRes<[AtomPort01]> {
   let Latency = 15;
   let ResourceCycles = [15];
 }
-def : InstRW<[AtomWrite01_15], (instrs CMPXCHG16rr, CMPXCHG32rr, CMPXCHG64rr,
-                                       STMXCSR)>;
+def : InstRW<[AtomWrite01_15], (instrs CMPXCHG16rr, CMPXCHG32rr, CMPXCHG64rr)>;
 
 def AtomWrite01_17 : SchedWriteRes<[AtomPort01]> {
   let Latency = 17;

@@ -25,6 +25,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -273,8 +274,8 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
       MemoryBuffer::getFileOrSTDIN(InputFileName);
   if (std::error_code EC = Buf.getError()) {
-    errs() << "error: Can't open file " << InputFileName << ": " <<
-              EC.message() << "\n";
+    WithColor::error() << "Can't open file " << InputFileName << ": "
+                       << EC.message() << "\n";
     return false;
   }
 
@@ -282,7 +283,7 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
   yaml::Stream Stream(Buf.get()->getBuffer(), SM);
   collectLocationInfo(Stream, LocationInfo);
 
-  return true; 
+  return true;
 }
 
 static bool writeReport(LocationInfoTy &LocationInfo) {
@@ -290,8 +291,8 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
   llvm::raw_fd_ostream OS(OutputFileName, EC,
               llvm::sys::fs::F_Text);
   if (EC) {
-    errs() << "error: Can't open file " << OutputFileName << ": " <<
-              EC.message() << "\n";
+    WithColor::error() << "Can't open file " << OutputFileName << ": "
+                       << EC.message() << "\n";
     return false;
   }
 
@@ -300,8 +301,8 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
     SmallString<128> FileName(FI.first);
     if (!InputRelDir.empty()) {
       if (std::error_code EC = sys::fs::make_absolute(InputRelDir, FileName)) {
-        errs() << "error: Can't resolve file path to " << FileName << ": " <<
-                  EC.message() << "\n";
+        WithColor::error() << "Can't resolve file path to " << FileName << ": "
+                           << EC.message() << "\n";
         return false;
       }
     }
@@ -311,8 +312,8 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
         MemoryBuffer::getFile(FileName);
     if (std::error_code EC = Buf.getError()) {
-      errs() << "error: Can't open file " << FileName << ": " <<
-                EC.message() << "\n";
+      WithColor::error() << "Can't open file " << FileName << ": "
+                         << EC.message() << "\n";
       return false;
     }
 
@@ -396,7 +397,7 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
 
             if (!Printed)
               OS << FuncName;
-          } 
+          }
 
           OS << ":\n";
         }
@@ -522,8 +523,7 @@ int main(int argc, const char **argv) {
   if (!readLocationInfo(LocationInfo))
     return 1;
   if (!writeReport(LocationInfo))
-    return 1; 
+    return 1;
 
   return 0;
 }
-
