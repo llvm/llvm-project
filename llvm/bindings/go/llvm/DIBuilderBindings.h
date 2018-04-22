@@ -28,16 +28,6 @@ extern "C" {
 
 typedef struct LLVMOpaqueDIBuilder *LLVMDIBuilderRef;
 
-LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
-    LLVMDIBuilderRef D, LLVMMetadataRef Scope, const char *Name,
-    LLVMMetadataRef File, unsigned Line, LLVMMetadataRef Ty, int AlwaysPreserve,
-    unsigned Flags, uint32_t AlignInBits);
-
-LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
-    LLVMDIBuilderRef D, LLVMMetadataRef Scope, const char *Name, unsigned ArgNo,
-    LLVMMetadataRef File, unsigned Line, LLVMMetadataRef Ty, int AlwaysPreserve,
-    unsigned Flags);
-
 LLVMMetadataRef LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef D,
                                            LLVMMetadataRef Ty, const char *Name,
                                            LLVMMetadataRef File, unsigned Line,
@@ -53,15 +43,6 @@ LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef D,
 LLVMMetadataRef LLVMDIBuilderGetOrCreateTypeArray(LLVMDIBuilderRef D,
                                                   LLVMMetadataRef *Data,
                                                   size_t Length);
-
-LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Dref,
-                                              int64_t *Addr, size_t Length);
-
-LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(LLVMDIBuilderRef D,
-                                             LLVMValueRef Storage,
-                                             LLVMMetadataRef VarInfo,
-                                             LLVMMetadataRef Expr,
-                                             LLVMBasicBlockRef Block);
 
 LLVMValueRef LLVMDIBuilderInsertValueAtEnd(LLVMDIBuilderRef D, LLVMValueRef Val,
                                            LLVMMetadataRef VarInfo,

@@ -3,10 +3,7 @@
 
 ; This is related to https://bugs.llvm.org/show_bug.cgi?id=36682
 
-; FIXME: *all* of these are true tests.
 ; In *all* of these, uitofp and bitcast should be instcombine'd out.
-
-; FIXME: icmp eq/ne does not ignore undef elements in vectors.
 
 define i1 @i32_cast_cmp_eq_int_0_uitofp_float(i32 %i) {
 ; CHECK-LABEL: @i32_cast_cmp_eq_int_0_uitofp_float(
@@ -32,9 +29,7 @@ define <2 x i1> @i32_cast_cmp_eq_int_0_uitofp_float_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_eq_int_0_uitofp_float_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_eq_int_0_uitofp_float_vec_undef(
-; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i32> [[I:%.*]] to <3 x float>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <3 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i32> [[B]], <i32 0, i32 undef, i32 0>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = uitofp <3 x i32> %i to <3 x float>
@@ -67,9 +62,7 @@ define <2 x i1> @i32_cast_cmp_ne_int_0_uitofp_float_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_ne_int_0_uitofp_float_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_ne_int_0_uitofp_float_vec_undef(
-; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i32> [[I:%.*]] to <3 x float>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <3 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <3 x i32> [[B]], <i32 0, i32 undef, i32 0>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = uitofp <3 x i32> %i to <3 x float>
@@ -102,9 +95,7 @@ define <2 x i1> @i32_cast_cmp_eq_int_0_uitofp_double_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_eq_int_0_uitofp_double_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_eq_int_0_uitofp_double_vec_undef(
-; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i32> [[I:%.*]] to <3 x double>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x double> [[F]] to <3 x i64>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i64> [[B]], <i64 0, i64 undef, i64 0>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = uitofp <3 x i32> %i to <3 x double>
@@ -137,9 +128,7 @@ define <2 x i1> @i32_cast_cmp_ne_int_0_uitofp_double_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_ne_int_0_uitofp_double_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_ne_int_0_uitofp_double_vec_undef(
-; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i32> [[I:%.*]] to <3 x double>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x double> [[F]] to <3 x i64>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <3 x i64> [[B]], <i64 0, i64 undef, i64 0>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = uitofp <3 x i32> %i to <3 x double>
@@ -172,9 +161,7 @@ define <2 x i1> @i32_cast_cmp_eq_int_0_uitofp_half_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_eq_int_0_uitofp_half_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_eq_int_0_uitofp_half_vec_undef(
-; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i32> [[I:%.*]] to <3 x half>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x half> [[F]] to <3 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i16> [[B]], <i16 0, i16 undef, i16 0>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = uitofp <3 x i32> %i to <3 x half>
@@ -207,9 +194,7 @@ define <2 x i1> @i32_cast_cmp_ne_int_0_uitofp_half_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_ne_int_0_uitofp_half_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_ne_int_0_uitofp_half_vec_undef(
-; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i32> [[I:%.*]] to <3 x half>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x half> [[F]] to <3 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <3 x i16> [[B]], <i16 0, i16 undef, i16 0>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = uitofp <3 x i32> %i to <3 x half>

@@ -186,7 +186,7 @@ entry:
 define <8 x double> @mulpd512fold(<8 x double> %y) {
 ; GENERIC-LABEL: mulpd512fold:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    vmulpd {{.*}}(%rip), %zmm0, %zmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vmulpd {{.*}}(%rip), %zmm0, %zmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mulpd512fold:
@@ -216,7 +216,7 @@ entry:
 define <16 x float> @mulps512fold(<16 x float> %y) {
 ; GENERIC-LABEL: mulps512fold:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    vmulps {{.*}}(%rip), %zmm0, %zmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vmulps {{.*}}(%rip), %zmm0, %zmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mulps512fold:
@@ -4918,7 +4918,7 @@ define double @test_x86_fmsub_231_m(double %a0, double %a1, double * %a2_ptr) {
 define <16 x float> @test231_br(<16 x float> %a1, <16 x float> %a2) nounwind {
 ; GENERIC-LABEL: test231_br:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmulps {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vmulps {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    vaddps %zmm1, %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4955,7 +4955,7 @@ define <16 x float> @test_x86_fmadd132_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $7, %xmm2, %xmm2 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %xmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vmulps (%rdi), %zmm0, %zmm2 # sched: [10:1.00]
+; GENERIC-NEXT:    vmulps (%rdi), %zmm0, %zmm2 # sched: [11:1.00]
 ; GENERIC-NEXT:    vaddps %zmm1, %zmm2, %zmm0 {%k1} # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4979,7 +4979,7 @@ define <16 x float> @test_x86_fmadd231_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $7, %xmm2, %xmm2 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %xmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vmulps (%rdi), %zmm0, %zmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vmulps (%rdi), %zmm0, %zmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    vaddps %zmm1, %zmm0, %zmm1 {%k1} # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
