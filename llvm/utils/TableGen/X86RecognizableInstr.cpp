@@ -552,7 +552,6 @@ void RecognizableInstr::emitInstructionSpecifier() {
     HANDLE_OPERAND(rmRegister)
     HANDLE_OPTIONAL(immediate)
     HANDLE_OPTIONAL(immediate) // above might be a register in 7:4
-    HANDLE_OPTIONAL(immediate)
     break;
   case X86Local::MRMSrcReg4VOp3:
     assert(numPhysicalOperands == 3 &&

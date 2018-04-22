@@ -608,8 +608,8 @@ declare <4 x i64> @llvm.x86.avx2.movntdqa(i8*) nounwind readonly
 define <16 x i16> @test_mpsadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; GENERIC-LABEL: test_mpsadbw:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmpsadbw $7, %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vmpsadbw $7, %ymm1, %ymm0, %ymm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [13:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_mpsadbw:
