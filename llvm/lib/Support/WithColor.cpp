@@ -66,17 +66,20 @@ raw_ostream &WithColor::warning() { return warning(errs()); }
 raw_ostream &WithColor::note() { return note(errs()); }
 
 raw_ostream &WithColor::error(raw_ostream &OS, StringRef Prefix) {
-  OS << Prefix;
+  if (!Prefix.empty())
+    OS << Prefix << ": ";
   return WithColor(OS, HighlightColor::Error).get() << "error: ";
 }
 
 raw_ostream &WithColor::warning(raw_ostream &OS, StringRef Prefix) {
-  OS << Prefix;
+  if (!Prefix.empty())
+    OS << Prefix << ": ";
   return WithColor(OS, HighlightColor::Warning).get() << "warning: ";
 }
 
 raw_ostream &WithColor::note(raw_ostream &OS, StringRef Prefix) {
-  OS << Prefix;
+  if (!Prefix.empty())
+    OS << Prefix << ": ";
   return WithColor(OS, HighlightColor::Note).get() << "note: ";
 }
 

@@ -616,13 +616,11 @@ define <3 x i1> @i32_cast_cmp_ne_int_0_sitofp_double_vec(<3 x i32> %i) {
   ret <3 x i1> %cmp
 }
 
-; FIXME: Vector zero constant with undef is not matched.
+; TODO: Can we propagate the constant vector with undef element?
 
 define <3 x i1> @i32_cast_cmp_eq_int_0_sitofp_float_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_eq_int_0_sitofp_float_vec_undef(
-; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i32> [[I:%.*]] to <3 x float>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <3 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i32> [[B]], <i32 0, i32 undef, i32 0>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <3 x i32> [[I:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %f = sitofp <3 x i32> %i to  <3 x float>

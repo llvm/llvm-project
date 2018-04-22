@@ -48,6 +48,7 @@ int llvm_test_dibuilder(void) {
   LLVMTypeRef FooParamTys[] = { LLVMInt64Type(), LLVMInt64Type() };
   LLVMTypeRef FooFuncTy = LLVMFunctionType(LLVMInt64Type(), FooParamTys, 2, 0);
   LLVMValueRef FooFunction = LLVMAddFunction(M, "foo", FooFuncTy);
+  LLVMBasicBlockRef FooEntryBlock = LLVMAppendBasicBlock(FooFunction, "entry");
 
   LLVMMetadataRef ParamTypes[] = {Int64Ty, Int64Ty};
   LLVMMetadataRef FunctionTy =
@@ -56,6 +57,23 @@ int llvm_test_dibuilder(void) {
     LLVMDIBuilderCreateFunction(DIB, File, "foo", 3, "foo", 3,
                                 File, 42, FunctionTy, true, true,
                                 42, 0, false);
+  LLVMMetadataRef FooParamLocation =
+    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 42, 0,
+                                     FunctionMetadata, NULL);
+  LLVMMetadataRef FooParamExpression =
+    LLVMDIBuilderCreateExpression(DIB, NULL, 0);
+  LLVMMetadataRef FooParamVar1 =
+    LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "a", 1, 1, File,
+                                         42, Int64Ty, true, 0);
+  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
+                                  FooParamVar1, FooParamExpression,
+                                  FooParamLocation, FooEntryBlock);
+  LLVMMetadataRef FooParamVar2 =
+    LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "b", 1, 2, File,
+                                         42, Int64Ty, true, 0);
+  LLVMDIBuilderInsertDeclareAtEnd(DIB, LLVMConstInt(LLVMInt64Type(), 0, false),
+                                  FooParamVar2, FooParamExpression,
+                                  FooParamLocation, FooEntryBlock);
   LLVMSetSubprogram(FooFunction, FunctionMetadata);
 
   LLVMMetadataRef FooLexicalBlock =

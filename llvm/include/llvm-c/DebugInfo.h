@@ -611,6 +611,80 @@ LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
                                   LLVMMetadataRef Type);
 
 /**
+ * Create a new descriptor for the specified variable which has a complex
+ * address expression for its address.
+ * \param Builder     The DIBuilder.
+ * \param Addr        An array of complex address operations.
+ * \param Length      Length of the address operation array.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
+                                              int64_t *Addr, size_t Length);
+
+/**
+ * Insert a new llvm.dbg.declare intrinsic call before the given instruction.
+ * \param Builder     The DIBuilder.
+ * \param Storage     The storage of the variable to declare.
+ * \param VarInfo     The variable's debug info descriptor.
+ * \param Expr        A complex location expression for the variable.
+ * \param DebugLoc    Debug info location.
+ * \param Instr       Instruction acting as a location for the new intrinsic.
+ */
+LLVMValueRef LLVMDIBuilderInsertDeclareBefore(
+  LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
+  LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
+
+/**
+ * Insert a new llvm.dbg.declare intrinsic call at the end of the given basic
+ * block. If the basic block has a terminator instruction, the intrinsic is
+ * inserted before that terminator instruction.
+ * \param Builder     The DIBuilder.
+ * \param Storage     The storage of the variable to declare.
+ * \param VarInfo     The variable's debug info descriptor.
+ * \param Expr        A complex location expression for the variable.
+ * \param DebugLoc    Debug info location.
+ * \param Block       Basic block acting as a location for the new intrinsic.
+ */
+LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
+
+/**
+ * Create a new descriptor for a local auto variable.
+ * \param Builder         The DIBuilder.
+ * \param Scope           The local scope the variable is declared in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
+ * \param Ty              Metadata describing the type of the variable.
+ * \param AlwaysPreserve  If true, this descriptor will survive optimizations.
+ * \param Flags           Flags.
+ * \param AlignInBits     Variable alignment.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
+    LLVMBool AlwaysPreserve, LLVMDIFlags Flags, uint32_t AlignInBits);
+
+/**
+ * Create a new descriptor for a function parameter variable.
+ * \param Builder         The DIBuilder.
+ * \param Scope           The local scope the variable is declared in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param ArgNo           Unique argument number for this variable; starts at 1.
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
+ * \param Ty              Metadata describing the type of the variable.
+ * \param AlwaysPreserve  If true, this descriptor will survive optimizations.
+ * \param Flags           Flags.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned ArgNo, LLVMMetadataRef File, unsigned LineNo,
+    LLVMMetadataRef Ty, LLVMBool AlwaysPreserve, LLVMDIFlags Flags);
+
+/**
  * Get the metadata of the subprogram attached to a function.
  *
  * @see llvm::Function::getSubprogram()

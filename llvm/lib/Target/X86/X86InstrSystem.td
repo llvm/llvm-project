@@ -171,7 +171,7 @@ def MOV64rs : RI<0x8C, MRMDestReg, (outs GR64:$dst), (ins SEGMENT_REG:$src),
                  "mov{q}\t{$src, $dst|$dst, $src}", []>;
 let mayStore = 1 in {
 def MOV16ms : I<0x8C, MRMDestMem, (outs), (ins i16mem:$dst, SEGMENT_REG:$src),
-                "mov{w}\t{$src, $dst|$dst, $src}", []>, OpSizeIgnore;
+                "mov{w}\t{$src, $dst|$dst, $src}", []>;
 }
 def MOV16sr : I<0x8E, MRMSrcReg, (outs SEGMENT_REG:$dst), (ins GR16:$src),
                 "mov{w}\t{$src, $dst|$dst, $src}", []>, OpSize16;
@@ -181,7 +181,7 @@ def MOV64sr : RI<0x8E, MRMSrcReg, (outs SEGMENT_REG:$dst), (ins GR64:$src),
                  "mov{q}\t{$src, $dst|$dst, $src}", []>;
 let mayLoad = 1 in {
 def MOV16sm : I<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i16mem:$src),
-                "mov{w}\t{$src, $dst|$dst, $src}", []>, OpSizeIgnore;
+                "mov{w}\t{$src, $dst|$dst, $src}", []>;
 }
 } // SchedRW
 

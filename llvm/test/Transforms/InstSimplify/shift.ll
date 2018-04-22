@@ -17,6 +17,14 @@ define i41 @shl_0(i41 %X) {
   ret i41 %B
 }
 
+define <2 x i41> @shl_0_vec_undef_elt(<2 x i41> %X) {
+; CHECK-LABEL: @shl_0_vec_undef_elt(
+; CHECK-NEXT:    ret <2 x i41> zeroinitializer
+;
+  %B = shl <2 x i41> <i41 0, i41 undef>, %X
+  ret <2 x i41> %B
+}
+
 define i41 @ashr_by_0(i41 %A) {
 ; CHECK-LABEL: @ashr_by_0(
 ; CHECK-NEXT:    ret i41 [[A:%.*]]
@@ -31,6 +39,14 @@ define i39 @ashr_0(i39 %X) {
 ;
   %B = ashr i39 0, %X
   ret i39 %B
+}
+
+define <2 x i141> @ashr_0_vec_undef_elt(<2 x i141> %X) {
+; CHECK-LABEL: @ashr_0_vec_undef_elt(
+; CHECK-NEXT:    ret <2 x i141> zeroinitializer
+;
+  %B = shl <2 x i141> <i141 undef, i141 0>, %X
+  ret <2 x i141> %B
 }
 
 define i55 @lshr_by_bitwidth(i55 %A) {

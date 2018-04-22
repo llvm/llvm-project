@@ -3104,7 +3104,7 @@ let SchedRW = [WriteFence] in {
 def SFENCE : I<0xAE, MRM_F8, (outs), (ins), "sfence", [(int_x86_sse_sfence)]>,
                PS, Requires<[HasSSE1]>;
 def LFENCE : I<0xAE, MRM_E8, (outs), (ins), "lfence", [(int_x86_sse2_lfence)]>,
-               TB, Requires<[HasSSE2]>;
+               PS, Requires<[HasSSE2]>;
 def MFENCE : I<0xAE, MRM_F0, (outs), (ins), "mfence", [(int_x86_sse2_mfence)]>,
                PS, Requires<[HasMFence]>;
 } // SchedRW
@@ -4710,10 +4710,10 @@ let isCommutable = 0 in {
                                        WriteVecALU>, VEX_4V, VEX_L, VEX_WIG;
   defm VPHADDSW  : SS3I_binop_rm_int_y<0x03, "vphaddsw",
                                        int_x86_avx2_phadd_sw,
-                                       WriteVecALU>, VEX_4V, VEX_L, VEX_WIG;
+                                       WritePHAdd>, VEX_4V, VEX_L, VEX_WIG;
   defm VPHSUBSW  : SS3I_binop_rm_int_y<0x07, "vphsubsw",
                                        int_x86_avx2_phsub_sw,
-                                       WriteVecALU>, VEX_4V, VEX_L, VEX_WIG;
+                                       WritePHAdd>, VEX_4V, VEX_L, VEX_WIG;
 }
 }
 

@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -52,7 +53,12 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   if ((TSFlags & X86II::NOTRACK) || (Flags & X86::IP_HAS_NOTRACK))
     OS << "\tnotrack\t";
 
-  printInstruction(MI, OS);
+  // In 16-bit mode, print data16 as data32.
+  if (MI->getOpcode() == X86::DATA16_PREFIX &&
+      STI.getFeatureBits()[X86::Mode16Bit]) {
+    OS << "\tdata32";
+  } else
+    printInstruction(MI, OS);
 
   // Next always print the annotation.
   printAnnotation(OS, Annot);
