@@ -2063,12 +2063,7 @@ def REX64_PREFIX : I<0x48, RawFrm, (outs),  (ins), "rex64", []>,
                      Requires<[In64BitMode]>;
 
 // Data16 instruction prefix
-def DATA16_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data16", []>,
-                     Requires<[Not16BitMode]>;
-
-// Data instruction prefix
-def DATA32_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data32", []>,
-                     Requires<[In16BitMode]>;
+def DATA16_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data16", []>;
 } // SchedRW
 
 // Repeat string operation instruction prefixes

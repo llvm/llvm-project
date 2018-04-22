@@ -109,7 +109,6 @@ namespace readability {
     m(TemplateParameter) \
     m(TypeAlias) \
     m(MacroDefinition) \
-    m(ObjcIvar) \
 
 enum StyleKind {
 #define ENUMERATE(v) SK_ ## v,
@@ -385,9 +384,6 @@ static StyleKind findStyleKind(
     const NamedDecl *D,
     const std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
         &NamingStyles) {
-  if (isa<ObjCIvarDecl>(D) && NamingStyles[SK_ObjcIvar])
-    return SK_ObjcIvar;
-
   if (isa<TypedefDecl>(D) && NamingStyles[SK_Typedef])
     return SK_Typedef;
 

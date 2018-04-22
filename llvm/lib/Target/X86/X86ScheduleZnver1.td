@@ -896,9 +896,6 @@ def : InstRW<[ZnWriteFPU2], (instregex "VMOV64toPQIrr")>;
 def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVQ64rr")>;
 
 // (V)MOVDQA/U.
-// x <- x.
-def : InstRW<[ZnWriteFPU], (instregex "MOVDQ(A|U)rr", "VMOVDQ(A|U)rr")>;
-
 // y <- y.
 def : InstRW<[ZnWriteFPUY], (instregex "VMOVDQ(A|U)Yrr")>;
 

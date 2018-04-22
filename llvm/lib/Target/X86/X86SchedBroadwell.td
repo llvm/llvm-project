@@ -352,11 +352,7 @@ def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVD64rr",
                                            "MMX_MOVD64to64rr",
                                            "MMX_MOVQ2DQrr",
                                            "(V?)MOV64toPQIrr",
-                                           "(V?)MOVAPD(Y?)rr",
-                                           "(V?)MOVAPS(Y?)rr",
                                            "(V?)MOVDI2PDIrr",
-                                           "(V?)MOVUPD(Y?)rr",
-                                           "(V?)MOVUPS(Y?)rr",
                                            "(V?)PBLENDW(Y?)rri",
                                            "(V?)PSLLDQ(Y?)ri",
                                            "(V?)PSRLDQ(Y?)ri")>;
@@ -416,10 +412,6 @@ def BWWriteResGroup8 : SchedWriteRes<[BWPort015]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[BWWriteResGroup8], (instregex "MMX_MOVQ64rr",
-                                           "(V?)MOVDQA(Y?)rr",
-                                           "(V?)MOVDQU(Y?)rr",
-                                           "(V?)MOVPQI2QIrr",
-                                           "VMOVZPQILo2PQIrr",
                                            "VPBLENDD(Y?)rri")>;
 
 def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
@@ -638,9 +630,7 @@ def: InstRW<[BWWriteResGroup27], (instregex "MMX_CVTPI2PSirr",
                                             "PEXT(32|64)rr",
                                             "SHLD(16|32|64)rri8",
                                             "SHRD(16|32|64)rri8",
-                                            "(V?)CVTDQ2PS(Y?)rr",
-                                            "(V?)CVTPS2DQ(Y?)rr",
-                                            "(V?)CVTTPS2DQ(Y?)rr")>;
+                                            "(V?)CVTDQ2PS(Y?)rr")>;
 
 def BWWriteResGroup27_16 : SchedWriteRes<[BWPort1, BWPort0156]> {
   let Latency = 4;
@@ -880,27 +870,10 @@ def: InstRW<[BWWriteResGroup49], (instregex "MOVSX(16|32|64)rm16",
                                             "MOVSX(16|32|64)rm8",
                                             "MOVZX(16|32|64)rm16",
                                             "MOVZX(16|32|64)rm8",
-                                            "PREFETCHNTA",
-                                            "PREFETCHT0",
-                                            "PREFETCHT1",
-                                            "PREFETCHT2",
                                             "VBROADCASTSSrm",
-                                            "(V?)LDDQUrm",
-                                            "(V?)MOV64toPQIrm",
-                                            "(V?)MOVAPDrm",
-                                            "(V?)MOVAPSrm",
                                             "(V?)MOVDDUPrm",
-                                            "(V?)MOVDI2PDIrm",
-                                            "(V?)MOVDQArm",
-                                            "(V?)MOVDQUrm",
-                                            "(V?)MOVNTDQArm",
-                                            "(V?)MOVQI2PQIrm",
-                                            "(V?)MOVSDrm",
                                             "(V?)MOVSHDUPrm",
                                             "(V?)MOVSLDUPrm",
-                                            "(V?)MOVSSrm",
-                                            "(V?)MOVUPDrm",
-                                            "(V?)MOVUPSrm",
                                             "VPBROADCASTDrm",
                                             "VPBROADCASTQrm")>;
 

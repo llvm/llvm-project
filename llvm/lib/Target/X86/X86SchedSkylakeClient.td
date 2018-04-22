@@ -497,15 +497,7 @@ def SKLWriteResGroup9 : SchedWriteRes<[SKLPort015]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKLWriteResGroup9], (instregex "(V?)MOVAPD(Y?)rr",
-                                            "(V?)MOVAPS(Y?)rr",
-                                            "(V?)MOVDQA(Y?)rr",
-                                            "(V?)MOVDQU(Y?)rr",
-                                            "(V?)MOVPQI2QIrr",
-                                            "(V?)MOVUPD(Y?)rr",
-                                            "(V?)MOVUPS(Y?)rr",
-                                            "(V?)MOVZPQILo2PQIrr",
-                                            "(V?)PADDB(Y?)rr",
+def: InstRW<[SKLWriteResGroup9], (instregex "(V?)PADDB(Y?)rr",
                                             "(V?)PADDD(Y?)rr",
                                             "(V?)PADDQ(Y?)rr",
                                             "(V?)PADDW(Y?)rr",
@@ -1053,16 +1045,7 @@ def: InstRW<[SKLWriteResGroup58], (instregex "MOVSX(16|32|64)rm16",
                                              "MOVSX(16|32|64)rm8",
                                              "MOVZX(16|32|64)rm16",
                                              "MOVZX(16|32|64)rm8",
-                                             "PREFETCHNTA",
-                                             "PREFETCHT0",
-                                             "PREFETCHT1",
-                                             "PREFETCHT2",
-                                             "(V?)MOV64toPQIrm",
-                                             "(V?)MOVDDUPrm",
-                                             "(V?)MOVDI2PDIrm",
-                                             "(V?)MOVQI2PQIrm",
-                                             "(V?)MOVSDrm",
-                                             "(V?)MOVSSrm")>;
+                                             "(V?)MOVDDUPrm")>; // TODO: Should this be SKLWriteResGroup67?
 
 def SKLWriteResGroup59 : SchedWriteRes<[SKLPort0,SKLPort5]> {
   let Latency = 5;
@@ -1135,16 +1118,8 @@ def SKLWriteResGroup67 : SchedWriteRes<[SKLPort23]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SKLWriteResGroup67], (instregex "VBROADCASTSSrm",
-                                             "(V?)LDDQUrm",
-                                             "(V?)MOVAPDrm",
-                                             "(V?)MOVAPSrm",
-                                             "(V?)MOVDQArm",
-                                             "(V?)MOVDQUrm",
-                                             "(V?)MOVNTDQArm",
                                              "(V?)MOVSHDUPrm",
                                              "(V?)MOVSLDUPrm",
-                                             "(V?)MOVUPDrm",
-                                             "(V?)MOVUPSrm",
                                              "VPBROADCASTDrm",
                                              "VPBROADCASTQrm")>;
 
