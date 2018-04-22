@@ -186,7 +186,7 @@ defm : HWWriteResPair<WriteShuffle256,  [HWPort5],  3>;
 defm : HWWriteResPair<WriteVarShuffle256,  [HWPort5],  3>;
 defm : HWWriteResPair<WriteVarBlend,  [HWPort5], 2, [2]>;
 defm : HWWriteResPair<WriteVarVecShift,  [HWPort0, HWPort5], 2, [2, 1]>;
-defm : HWWriteResPair<WriteMPSAD,  [HWPort0, HWPort5], 6, [1, 2]>;
+defm : HWWriteResPair<WriteMPSAD,  [HWPort0, HWPort5], 7, [1, 2], 3, 6>;
 defm : HWWriteResPair<WritePSADBW, [HWPort0], 5>;
 
 // String instructions.
@@ -2226,20 +2226,6 @@ def HWWriteResGroup109 : SchedWriteRes<[HWPort1,HWPort23,HWPort237,HWPort06,HWPo
 }
 def: InstRW<[HWWriteResGroup109], (instregex "SHLD(16|32|64)mrCL",
                                              "SHRD(16|32|64)mrCL")>;
-
-def HWWriteResGroup112 : SchedWriteRes<[HWPort0,HWPort5]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,2];
-}
-def: InstRW<[HWWriteResGroup112], (instregex "(V?)MPSADBW(Y?)rri")>;
-
-def HWWriteResGroup113 : SchedWriteRes<[HWPort0,HWPort5,HWPort23]> {
-  let Latency = 13;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,2,1];
-}
-def: InstRW<[HWWriteResGroup113], (instregex "(V?)MPSADBWrmi")>;
 
 def HWWriteResGroup113_1 : SchedWriteRes<[HWPort0,HWPort5,HWPort23]> {
   let Latency = 14;

@@ -184,7 +184,7 @@ defm : SKLWriteResPair<WriteShuffle,  [SKLPort5],  1>; // Vector shuffles.
 defm : SKLWriteResPair<WriteVarShuffle,  [SKLPort5],  1>; // Vector shuffles.
 defm : SKLWriteResPair<WriteBlend,  [SKLPort15],  1>; // Vector blends.
 defm : SKLWriteResPair<WriteVarBlend,  [SKLPort5], 2, [2]>; // Vector variable blends.
-defm : SKLWriteResPair<WriteMPSAD,  [SKLPort0, SKLPort5], 6, [1, 2]>; // Vector MPSAD.
+defm : SKLWriteResPair<WriteMPSAD,  [SKLPort5], 4, [2], 2, 6>; // Vector MPSAD.
 defm : SKLWriteResPair<WritePSADBW, [SKLPort5], 3>; // Vector PSADBW.
 
 // Conversion between integer and float.
@@ -957,13 +957,6 @@ def: InstRW<[SKLWriteResGroup48], (instregex "(V?)ADDPD(Y?)rr",
                                              "(V?)SUBPS(Y?)rr",
                                              "(V?)SUBSDrr",
                                              "(V?)SUBSSrr")>;
-
-def SKLWriteResGroup50 : SchedWriteRes<[SKLPort5]> {
-  let Latency = 4;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def: InstRW<[SKLWriteResGroup50], (instregex "(V?)MPSADBW(Y?)rri")>;
 
 def SKLWriteResGroup51 : SchedWriteRes<[SKLPort1,SKLPort5]> {
   let Latency = 4;
@@ -1992,13 +1985,6 @@ def: InstRW<[SKLWriteResGroup134], (instregex "(V?)ADDPDrm",
                                               "(V?)SUBPSrm")>;
 def: InstRW<[SKLWriteResGroup134],
             (instregex "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)m")>;
-
-def SKLWriteResGroup137 : SchedWriteRes<[SKLPort5,SKLPort23]> {
-  let Latency = 10;
-  let NumMicroOps = 3;
-  let ResourceCycles = [2,1];
-}
-def: InstRW<[SKLWriteResGroup137], (instregex "(V?)MPSADBWrmi")>;
 
 def SKLWriteResGroup138 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23]> {
   let Latency = 10;

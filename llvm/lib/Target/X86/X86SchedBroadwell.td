@@ -187,7 +187,7 @@ defm : BWWriteResPair<WriteShuffle,  [BWPort5],  1>; // Vector shuffles.
 defm : BWWriteResPair<WriteVarShuffle, [BWPort5],  1>; // Vector variable shuffles.
 defm : BWWriteResPair<WriteBlend,  [BWPort15],  1>; // Vector blends.
 defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2]>; // Vector variable blends.
-defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 6, [1, 2]>; // Vector MPSAD.
+defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 7, [1, 2], 3, 5>; // Vector MPSAD.
 defm : BWWriteResPair<WritePSADBW,  [BWPort0],   5>; // Vector PSADBW.
 
 // Conversion between integer and float.
@@ -1335,13 +1335,6 @@ def: InstRW<[BWWriteResGroup77], (instregex "VBLENDPDYrmi",
                                             "VPORYrm",
                                             "VPXORYrm")>;
 
-def BWWriteResGroup78 : SchedWriteRes<[BWPort0,BWPort5]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,2];
-}
-def: InstRW<[BWWriteResGroup78], (instregex "(V?)MPSADBW(Y?)rri")>;
-
 def BWWriteResGroup79 : SchedWriteRes<[BWPort5,BWPort23]> {
   let Latency = 7;
   let NumMicroOps = 3;
@@ -1922,13 +1915,6 @@ def: InstRW<[BWWriteResGroup135], (instregex "ADD_FI16m",
                                              "SUB_FI32m",
                                              "VROUNDPDYm",
                                              "VROUNDPSYm")>;
-
-def BWWriteResGroup136 : SchedWriteRes<[BWPort0,BWPort5,BWPort23]> {
-  let Latency = 12;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,2,1];
-}
-def: InstRW<[BWWriteResGroup136], (instregex "(V?)MPSADBWrmi")>;
 
 def BWWriteResGroup137 : SchedWriteRes<[BWPort0,BWFPDivider]> {
   let Latency = 11;

@@ -184,8 +184,8 @@ defm : SKXWriteResPair<WriteShuffle,  [SKXPort5],  1>; // Vector shuffles.
 defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5],  1>; // Vector variable shuffles.
 defm : SKXWriteResPair<WriteBlend,  [SKXPort15],  1>; // Vector blends.
 defm : SKXWriteResPair<WriteVarBlend,  [SKXPort5], 2, [2]>; // Vector variable blends.
-defm : SKXWriteResPair<WriteMPSAD,  [SKXPort0, SKXPort5], 6, [1, 2]>; // Vector MPSAD.
-defm : SKXWriteResPair<WritePSADBW, [SKXPort5], 3>; // Vector PSADBW.
+defm : SKXWriteResPair<WriteMPSAD,  [SKXPort5], 4, [2], 2, 6>; // Vector MPSAD.
+defm : SKXWriteResPair<WritePSADBW, [SKXPort5], 3, [1,1], 1, 6>; // Vector PSADBW.
 
 // Conversion between integer and float.
 defm : SKXWriteResPair<WriteCvtF2I, [SKXPort1], 3>; // Float -> Integer.
@@ -1869,15 +1869,12 @@ def SKXWriteResGroup51 : SchedWriteRes<[SKXPort5]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup51], (instregex "MPSADBWrri",
-                                             "VEXPANDPDZ128rr",
+def: InstRW<[SKXWriteResGroup51], (instregex "VEXPANDPDZ128rr",
                                              "VEXPANDPDZ256rr",
                                              "VEXPANDPDZrr",
                                              "VEXPANDPSZ128rr",
                                              "VEXPANDPSZ256rr",
                                              "VEXPANDPSZrr",
-                                             "VMPSADBWYrri",
-                                             "VMPSADBWrri",
                                              "VPEXPANDDZ128rr",
                                              "VPEXPANDDZ256rr",
                                              "VPEXPANDDZrr",
@@ -3702,7 +3699,6 @@ def SKXWriteResGroup136 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SKXWriteResGroup136], (instregex "PCMPGTQrm",
-                                              "PSADBWrm",
                                               "VALIGNDZ128rm(b?)i",
                                               "VALIGNQZ128rm(b?)i",
                                               "VCMPPDZ128rm(b?)i",
@@ -3757,7 +3753,6 @@ def: InstRW<[SKXWriteResGroup136], (instregex "PCMPGTQrm",
                                               "VPMOVZXWDZ128rm(b?)",
                                               "VPMOVZXWQZ128rm(b?)",
                                               "VPSADBWZ128rm(b?)",
-                                              "VPSADBWrm",
                                               "VPTESTMBZ128rm(b?)",
                                               "VPTESTMDZ128rm(b?)",
                                               "VPTESTMQZ128rm(b?)",
@@ -4179,10 +4174,8 @@ def SKXWriteResGroup151 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKXWriteResGroup151], (instregex "MPSADBWrmi",
-                                              "VEXPANDPDZ128rm(b?)",
+def: InstRW<[SKXWriteResGroup151], (instregex "VEXPANDPDZ128rm(b?)",
                                               "VEXPANDPSZ128rm(b?)",
-                                              "VMPSADBWrmi",
                                               "VPEXPANDDZ128rm(b?)",
                                               "VPEXPANDQZ128rm(b?)")>;
 
