@@ -881,7 +881,7 @@ static BasicBlock *buildClonedLoopBlocks(
           cast_or_null<BasicBlock>(VMap.lookup(ContinueSuccBB)))
     ClonedContinueSuccBB->removePredecessor(ClonedParentBB,
                                             /*DontDeleteUselessPHIs*/ true);
-  // Replace the cloned branch with an unconditional branch to the cloneed
+  // Replace the cloned branch with an unconditional branch to the cloned
   // unswitched successor.
   auto *ClonedSuccBB = cast<BasicBlock>(VMap.lookup(UnswitchedSuccBB));
   ClonedParentBB->getTerminator()->eraseFromParent();

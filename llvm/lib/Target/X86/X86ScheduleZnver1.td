@@ -532,12 +532,6 @@ def : InstRW<[WriteALULd],
              (instregex "(AND|OR|XOR)(8|16|32|64)m(r|i)",
               "(AND|OR|XOR)(8|16|32|64)mi8", "(AND|OR|XOR)64mi32")>;
 
-// ANDN.
-// r,r.
-def : InstRW<[WriteALU], (instregex "ANDN(32|64)rr")>;
-// r,m.
-def : InstRW<[WriteALULd, ReadAfterLd], (instregex "ANDN(32|64)rm")>;
-
 // Define ALU latency variants
 def ZnWriteALULat2 : SchedWriteRes<[ZnALU]> {
   let Latency = 2;
