@@ -177,6 +177,72 @@ TEST_F(FormatTestSelective, FormatsCommentsLocally) {
                    0, 0));
 }
 
+TEST_F(FormatTestSelective, ContinueReindenting) {
+  // When we change an indent, we continue formatting as long as following
+  // lines are not indented correctly.
+  EXPECT_EQ("int   i;\n"
+            "int b;\n"
+            "int c;\n"
+            "int d;\n"
+            "int e;\n"
+            "  int f;\n",
+            format("int   i;\n"
+                   "  int b;\n"
+                   " int   c;\n"
+                   "  int d;\n"
+                   "int e;\n"
+                   "  int f;\n",
+                   11, 0));
+}
+
+TEST_F(FormatTestSelective, ReindentClosingBrace) {
+  EXPECT_EQ("int   i;\n"
+            "int f() {\n"
+            "  int a;\n"
+            "  int b;\n"
+            "}\n"
+            " int c;\n",
+            format("int   i;\n"
+                   "  int f(){\n"
+                   "int a;\n"
+                   "int b;\n"
+                   "  }\n"
+                   " int c;\n",
+                   11, 0));
+  EXPECT_EQ("void f() {\n"
+            "  if (foo) {\n"
+            "    b();\n"
+            "  } else {\n"
+            "    c();\n"
+            "  }\n"
+            "int d;\n"
+            "}\n",
+            format("void f() {\n"
+                   "  if (foo) {\n"
+                   "b();\n"
+                   "}else{\n"
+                   "c();\n"
+                   "}\n"
+                   "int d;\n"
+                   "}\n",
+                   13, 0));
+  EXPECT_EQ("int i = []() {\n"
+            "  class C {\n"
+            "    int a;\n"
+            "    int b;\n"
+            "  };\n"
+            "  int c;\n"
+            "};\n",
+            format("int i = []() {\n"
+                   "  class C{\n"
+                   "int a;\n"
+                   "int b;\n"
+                   "};\n"
+                   "int c;\n"
+                   "  };\n",
+                   17, 0));
+}
+
 TEST_F(FormatTestSelective, IndividualStatementsOfNestedBlocks) {
   EXPECT_EQ("DEBUG({\n"
             "  int i;\n"
@@ -503,7 +569,7 @@ TEST_F(FormatTestSelective, StopFormattingWhenLeavingScope) {
       "  if (a) {\n"
       "    g();\n"
       "    h();\n"
-      "}\n"
+      "  }\n"
       "\n"
       "void g() {\n"
       "}",

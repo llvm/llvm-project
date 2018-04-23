@@ -7111,6 +7111,9 @@ def warn_atomic_op_has_invalid_memory_order : Warning<
   InGroup<DiagGroup<"atomic-memory-ordering">>;
 def err_atomic_op_has_invalid_synch_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;
+def warn_atomic_op_misaligned : Warning<
+  "misaligned or large atomic operation may incur significant performance penalty">,
+  InGroup<DiagGroup<"atomic-alignment">>;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to overflow builtin must be an integer (%0 invalid)">;

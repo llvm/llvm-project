@@ -126,7 +126,7 @@ namespace clang {
           Gen(CreateLLVMCodeGen(Diags, InFile, HeaderSearchOpts, PPOpts,
                                 CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)) {
-      llvm::TimePassesIsEnabled = TimePasses;
+      FrontendTimesIsEnabled = TimePasses;
     }
     llvm::Module *getModule() const { return Gen->GetModule(); }
     std::unique_ptr<llvm::Module> takeModule() {
@@ -144,12 +144,12 @@ namespace clang {
 
       Context = &Ctx;
 
-      if (llvm::TimePassesIsEnabled)
+      if (FrontendTimesIsEnabled)
         LLVMIRGeneration.startTimer();
 
       Gen->Initialize(Ctx);
 
-      if (llvm::TimePassesIsEnabled)
+      if (FrontendTimesIsEnabled)
         LLVMIRGeneration.stopTimer();
     }
 
@@ -159,7 +159,7 @@ namespace clang {
                                      "LLVM IR generation of declaration");
 
       // Recurse.
-      if (llvm::TimePassesIsEnabled) {
+      if (FrontendTimesIsEnabled) {
         LLVMIRGenerationRefCount += 1;
         if (LLVMIRGenerationRefCount == 1)
           LLVMIRGeneration.startTimer();
@@ -167,7 +167,7 @@ namespace clang {
 
       Gen->HandleTopLevelDecl(D);
 
-      if (llvm::TimePassesIsEnabled) {
+      if (FrontendTimesIsEnabled) {
         LLVMIRGenerationRefCount -= 1;
         if (LLVMIRGenerationRefCount == 0)
           LLVMIRGeneration.stopTimer();
@@ -180,12 +180,12 @@ namespace clang {
       PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
                                      Context->getSourceManager(),
                                      "LLVM IR generation of inline function");
-      if (llvm::TimePassesIsEnabled)
+      if (FrontendTimesIsEnabled)
         LLVMIRGeneration.startTimer();
 
       Gen->HandleInlineFunctionDefinition(D);
 
-      if (llvm::TimePassesIsEnabled)
+      if (FrontendTimesIsEnabled)
         LLVMIRGeneration.stopTimer();
     }
 
@@ -227,7 +227,7 @@ namespace clang {
     void HandleTranslationUnit(ASTContext &C) override {
       {
         PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-        if (llvm::TimePassesIsEnabled) {
+        if (FrontendTimesIsEnabled) {
           LLVMIRGenerationRefCount += 1;
           if (LLVMIRGenerationRefCount == 1)
             LLVMIRGeneration.startTimer();
@@ -235,7 +235,7 @@ namespace clang {
 
         Gen->HandleTranslationUnit(C);
 
-        if (llvm::TimePassesIsEnabled) {
+        if (FrontendTimesIsEnabled) {
           LLVMIRGenerationRefCount -= 1;
           if (LLVMIRGenerationRefCount == 0)
             LLVMIRGeneration.stopTimer();

@@ -6620,6 +6620,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
   }
 }
 
+void ScalarEvolution::forgetTopmostLoop(const Loop *L) {
+  while (Loop *Parent = L->getParentLoop())
+    L = Parent;
+  forgetLoop(L);
+}
+
 void ScalarEvolution::forgetValue(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return;

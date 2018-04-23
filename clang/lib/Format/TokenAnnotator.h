@@ -40,6 +40,7 @@ public:
   AnnotatedLine(const UnwrappedLine &Line)
       : First(Line.Tokens.front().Tok), Level(Line.Level),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
+        MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
         InPPDirective(Line.InPPDirective),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
@@ -112,6 +113,7 @@ public:
   LineType Type;
   unsigned Level;
   size_t MatchingOpeningBlockLineIndex;
+  size_t MatchingClosingBlockLineIndex;
   bool InPPDirective;
   bool MustBeDeclaration;
   bool MightBeFunctionDecl;
@@ -159,7 +161,7 @@ private:
   bool spaceRequiredBetween(const AnnotatedLine &Line, const FormatToken &Left,
                             const FormatToken &Right);
 
-  bool spaceRequiredBefore(const AnnotatedLine &Line, const FormatToken &Tok);
+  bool spaceRequiredBefore(const AnnotatedLine &Line, const FormatToken &Right);
 
   bool mustBreakBefore(const AnnotatedLine &Line, const FormatToken &Right);
 

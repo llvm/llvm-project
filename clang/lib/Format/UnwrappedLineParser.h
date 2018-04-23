@@ -53,7 +53,11 @@ struct UnwrappedLine {
   /// \c MatchingOpeningBlockLineIndex stores the index of the corresponding
   /// opening line. Otherwise, \c MatchingOpeningBlockLineIndex must be
   /// \c kInvalidIndex.
-  size_t MatchingOpeningBlockLineIndex;
+  size_t MatchingOpeningBlockLineIndex = kInvalidIndex;
+
+  /// \brief If this \c UnwrappedLine opens a block, stores the index of the
+  /// line with the corresponding closing brace.
+  size_t MatchingClosingBlockLineIndex = kInvalidIndex;
 
   static const size_t kInvalidIndex = -1;
 

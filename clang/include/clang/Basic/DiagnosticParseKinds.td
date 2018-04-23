@@ -1073,6 +1073,10 @@ def err_opencl_taking_function_address_parser : Error<
 def err_opencl_logical_exclusive_or : Error<
   "^^ is a reserved operator in OpenCL">;
 
+// OpenCL C++.
+def err_openclcxx_virtual_function : Error<
+  "virtual functions are not supported in OpenCL C++">;
+
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
   "unexpected '#pragma omp ...' in program">, InGroup<SourceUsesOpenMP>, DefaultIgnore;
