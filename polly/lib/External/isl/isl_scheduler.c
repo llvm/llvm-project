@@ -20,6 +20,7 @@
 #include <isl_space_private.h>
 #include <isl_aff_private.h>
 #include <isl/hash.h>
+#include <isl/id.h>
 #include <isl/constraint.h>
 #include <isl/schedule.h>
 #include <isl_schedule_constraints.h>

@@ -699,7 +699,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
-    if (TRI->isPhysicalRegister(Src1->getReg()) ||
+    if (TRI->isPhysicalRegister(ValSrc->getReg()) ||
         TRI->isPhysicalRegister(Dst->getReg()))
       break;
 

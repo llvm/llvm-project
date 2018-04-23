@@ -23,12 +23,12 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),coalesce)(__isl_take MULTI(BASE) *multi)
 		return NULL;
 
 	for (i = 0; i < multi->n; ++i) {
-		EL *el = FN(EL,copy)(multi->p[i]);
+		EL *el = FN(EL,copy)(multi->u.p[i]);
 		el = FN(EL,coalesce)(el);
 		if (!el)
 			return FN(MULTI(BASE),free)(multi);
-		FN(EL,free)(multi->p[i]);
-		multi->p[i] = el;
+		FN(EL,free)(multi->u.p[i]);
+		multi->u.p[i] = el;
 	}
 
 	return multi;

@@ -9,6 +9,7 @@
 
 #include "ClangdServer.h"
 #include "CodeComplete.h"
+#include "FindSymbols.h"
 #include "Headers.h"
 #include "SourceCode.h"
 #include "XRefs.h"
@@ -497,6 +498,11 @@ void ClangdServer::consumeDiagnostics(PathRef File, DocVersion Version,
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
   // FIXME: Do nothing for now. This will be used for indexing and potentially
   // invalidating other caches.
+}
+
+void ClangdServer::workspaceSymbols(
+    StringRef Query, int Limit, Callback<std::vector<SymbolInformation>> CB) {
+  CB(clangd::getWorkspaceSymbols(Query, Limit, Index));
 }
 
 std::vector<std::pair<Path, std::size_t>>

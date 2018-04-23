@@ -10,6 +10,8 @@
 #ifndef LLVM_SUPPORT_WITHCOLOR_H
 #define LLVM_SUPPORT_WITHCOLOR_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 
 class raw_ostream;
@@ -50,11 +52,11 @@ public:
   static raw_ostream &note();
 
   /// Convenience method for printing "error: " to the given stream.
-  static raw_ostream &error(raw_ostream &OS);
+  static raw_ostream &error(raw_ostream &OS, StringRef Prefix = "");
   /// Convenience method for printing "warning: " to the given stream.
-  static raw_ostream &warning(raw_ostream &OS);
+  static raw_ostream &warning(raw_ostream &OS, StringRef Prefix = "");
   /// Convenience method for printing "note: " to the given stream.
-  static raw_ostream &note(raw_ostream &OS);
+  static raw_ostream &note(raw_ostream &OS, StringRef Prefix = "");
 };
 
 } // end namespace llvm

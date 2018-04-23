@@ -429,6 +429,18 @@ class TestCursor(unittest.TestCase):
         t = foo.result_type
         self.assertEqual(t.kind, TypeKind.INT)
 
+    def test_result_type_objc_method_decl(self):
+        code = """\
+        @interface Interface : NSObject
+        -(void)voidMethod;
+        @end
+        """
+        tu = get_tu(code, lang='objc')
+        cursor = get_cursor(tu, 'voidMethod')
+        result_type = cursor.result_type
+        self.assertEqual(cursor.kind, CursorKind.OBJC_INSTANCE_METHOD_DECL)
+        self.assertEqual(result_type.kind, TypeKind.VOID)
+
     def test_availability(self):
         tu = get_tu('class A { A(A const&) = delete; };', lang='cpp')
 

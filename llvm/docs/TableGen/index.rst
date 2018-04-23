@@ -224,7 +224,7 @@ definitions of a particular class, such as "Instruction".
 
  class ProcNoItin<string Name, list<SubtargetFeature> Features>
        : Processor<Name, NoItineraries, Features>;
-  
+
 Here, the class ProcNoItin, receiving parameters `Name` of type `string` and
 a list of target features is specializing the class Processor by passing the
 arguments down as well as hard-coding NoItineraries.

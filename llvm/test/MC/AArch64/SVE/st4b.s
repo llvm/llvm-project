@@ -1,0 +1,26 @@
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sve < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
+// RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
+// RUN:        | llvm-objdump -d -mattr=+sve - | FileCheck %s --check-prefix=CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
+// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+
+st4b    { z0.b, z1.b, z2.b, z3.b }, p0, [x0]
+// CHECK-INST: st4b    { z0.b, z1.b, z2.b, z3.b }, p0, [x0]
+// CHECK-ENCODING: [0x00,0xe0,0x70,0xe4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 e0 70 e4 <unknown>
+
+st4b    { z23.b, z24.b, z25.b, z26.b }, p3, [x13, #-32, mul vl]
+// CHECK-INST: st4b    { z23.b, z24.b, z25.b, z26.b }, p3, [x13, #-32, mul vl]
+// CHECK-ENCODING: [0xb7,0xed,0x78,0xe4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 ed 78 e4 <unknown>
+
+st4b    { z21.b, z22.b, z23.b, z24.b }, p5, [x10, #20, mul vl]
+// CHECK-INST: st4b    { z21.b, z22.b, z23.b, z24.b }, p5, [x10, #20, mul vl]
+// CHECK-ENCODING: [0x55,0xf5,0x75,0xe4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 55 f5 75 e4 <unknown>

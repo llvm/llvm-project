@@ -84,6 +84,11 @@ def : WriteRes<WriteLoad,  [SLM_MEC_RSV]> { let Latency = 3; }
 def : WriteRes<WriteMove,  [SLM_IEC_RSV01]>;
 def : WriteRes<WriteZero,  []>;
 
+// Load/store MXCSR.
+// FIXME: These are probably wrong. They are copy pasted from WriteStore/Load.
+def : WriteRes<WriteSTMXCSR, [SLM_IEC_RSV01, SLM_MEC_RSV]>;
+def : WriteRes<WriteLDMXCSR,  [SLM_MEC_RSV]> { let Latency = 3; }
+
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
 

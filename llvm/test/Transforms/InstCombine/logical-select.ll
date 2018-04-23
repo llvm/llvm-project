@@ -479,6 +479,19 @@ define <4 x i32> @vec_not_sel_consts(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %or
 }
 
+define <4 x i32> @vec_not_sel_consts_undef_elts(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @vec_not_sel_consts_undef_elts(
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> [[A:%.*]], <i32 -1, i32 undef, i32 0, i32 0>
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[B:%.*]], <i32 0, i32 -1, i32 0, i32 undef>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %and1 = and <4 x i32> %a, <i32 -1, i32 undef, i32 0, i32 0>
+  %and2 = and <4 x i32> %b, <i32 0, i32 -1, i32 0, i32 undef>
+  %or = or <4 x i32> %and1, %and2
+  ret <4 x i32> %or
+}
+
 ; The inverted constants may be operands of xor instructions.
 
 define <4 x i32> @vec_sel_xor(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c) {

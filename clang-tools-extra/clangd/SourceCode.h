@@ -49,6 +49,11 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc);
 // Note that clang also uses closed source ranges, which this can't handle!
 Range halfOpenToRange(const SourceManager &SM, CharSourceRange R);
 
+/// From "a::b::c", return {"a::b::", "c"}. Scope is empty if there's no
+/// qualifier.
+std::pair<llvm::StringRef, llvm::StringRef>
+splitQualifiedName(llvm::StringRef QName);
+
 } // namespace clangd
 } // namespace clang
 #endif

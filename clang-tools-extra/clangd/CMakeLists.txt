@@ -19,6 +19,7 @@ add_clang_library(clangDaemon
   Context.cpp
   Diagnostics.cpp
   DraftStore.cpp
+  FindSymbols.cpp
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   Headers.cpp

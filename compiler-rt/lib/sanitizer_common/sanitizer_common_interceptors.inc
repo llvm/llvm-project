@@ -6537,6 +6537,7 @@ INTERCEPTOR(wchar_t *, wcsncat, wchar_t *dst, const wchar_t *src, SIZE_T n) {
 #define INIT_WCSCAT
 #endif
 
+#if SANITIZER_INTERCEPT_STRXFRM
 static SIZE_T RealStrLen(const char *str) { return REAL(strlen)(str); }
 
 static SIZE_T RealStrLen(const wchar_t *str) { return REAL(wcslen)(str); }
@@ -6553,7 +6554,6 @@ static SIZE_T RealStrLen(const wchar_t *str) { return REAL(wcslen)(str); }
     return res;                                                            \
   }
 
-#if SANITIZER_INTERCEPT_STRXFRM
 INTERCEPTOR(SIZE_T, strxfrm, char *dest, const char *src, SIZE_T len) {
   STRXFRM_INTERCEPTOR_IMPL(strxfrm, dest, src, len);
 }

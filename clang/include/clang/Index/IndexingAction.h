@@ -46,17 +46,14 @@ createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                      IndexingOptions Opts,
                      std::unique_ptr<FrontendAction> WrappedAction);
 
-void indexASTUnit(ASTUnit &Unit,
-                  std::shared_ptr<IndexDataConsumer> DataConsumer,
+void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
                   IndexingOptions Opts);
 
 void indexTopLevelDecls(ASTContext &Ctx, ArrayRef<const Decl *> Decls,
-                        std::shared_ptr<IndexDataConsumer> DataConsumer,
-                        IndexingOptions Opts);
+                        IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
-                     std::shared_ptr<IndexDataConsumer> DataConsumer,
-                     IndexingOptions Opts);
+                     IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 } // namespace index
 } // namespace clang

@@ -19,20 +19,12 @@ namespace format {
 
 class FormatTestTextProto : public ::testing::Test {
 protected:
-  enum StatusCheck { SC_ExpectComplete, SC_ExpectIncomplete };
-
   static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style,
-                            StatusCheck CheckComplete = SC_ExpectComplete) {
+                            unsigned Length, const FormatStyle &Style) {
     DEBUG(llvm::errs() << "---\n");
     DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
-    FormattingAttemptStatus Status;
-    tooling::Replacements Replaces =
-        reformat(Style, Code, Ranges, "<stdin>", &Status);
-    bool ExpectedCompleteFormat = CheckComplete == SC_ExpectComplete;
-    EXPECT_EQ(ExpectedCompleteFormat, Status.FormatComplete)
-        << Code << "\n\n";
+    tooling::Replacements Replaces = reformat(Style, Code, Ranges);
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
@@ -52,12 +44,6 @@ protected:
     FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
     Style.ColumnLimit = 60; // To make writing tests easier.
     verifyFormat(Code, Style);
-  }
-
-  static void verifyIncompleteFormat(llvm::StringRef Code) {
-    FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-    EXPECT_EQ(Code.str(),
-              format(Code, 0, Code.size(), Style, SC_ExpectIncomplete));
   }
 };
 
@@ -507,39 +493,6 @@ TEST_F(FormatTestTextProto, PutsMultipleEntriesInExtensionsOnNewlines) {
                "    key: value\n"
                "  }\n"
                "}", Style);
-}
-
-TEST_F(FormatTestTextProto, IncompleteFormat) {
-  verifyIncompleteFormat("data {");
-  verifyIncompleteFormat("data <");
-  verifyIncompleteFormat("data [");
-  verifyIncompleteFormat("data: {");
-  verifyIncompleteFormat("data: <");
-  verifyIncompleteFormat("data: [");
-  verifyIncompleteFormat("key:");
-  verifyIncompleteFormat("key:}");
-  verifyIncompleteFormat("key: ]");
-  verifyIncompleteFormat("key: >");
-  verifyIncompleteFormat(": value");
-  verifyIncompleteFormat(": {}");
-  verifyIncompleteFormat(": <>");
-  verifyIncompleteFormat(": []");
-  verifyIncompleteFormat("}\n"
-                         "key: value");
-  verifyIncompleteFormat("]\n"
-                         "key: value");
-  verifyIncompleteFormat("> key: value");
-  verifyIncompleteFormat("data { key: {");
-  verifyIncompleteFormat("data < key: [");
-  verifyIncompleteFormat("data [ key: {");
-  verifyIncompleteFormat("> key: value {");
-  verifyIncompleteFormat("> key: [");
-  verifyIncompleteFormat("}\n"
-                         "key: {");
-  verifyIncompleteFormat("data { key: 1 id:");
-  verifyIncompleteFormat("}\n"
-                         "key {");
-  verifyIncompleteFormat("> <");
 }
 
 } // end namespace tooling

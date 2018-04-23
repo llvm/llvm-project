@@ -294,7 +294,7 @@ given values.
    leave it out.
 
 .. productionlist::
-   SimpleValue: "(" `DagArg` `DagArgList` ")"
+   SimpleValue: "(" `DagArg` [`DagArgList`] ")"
    DagArgList: `DagArg` ("," `DagArg`)*
    DagArg: `Value` [":" `TokVarName`] | `TokVarName`
 
@@ -325,7 +325,7 @@ It is after parsing the base class list that the "let stack" is applied.
    Body: ";" | "{" BodyList "}"
    BodyList: BodyItem*
    BodyItem: `Declaration` ";"
-           :| "let" `TokIdentifier` [`RangeList`] "=" `Value` ";"
+           :| "let" `TokIdentifier` [ "{" `RangeList` "}" ] "=" `Value` ";"
 
 The ``let`` form allows overriding the value of an inherited field.
 
@@ -353,7 +353,7 @@ a ``foreach``.
 --------
 
 .. productionlist::
-   Defm: "defm" `TokIdentifier` ":" `BaseClassListNE` ";"
+   Defm: "defm" [`TokIdentifier`] ":" `BaseClassListNE` ";"
 
 Note that in the :token:`BaseClassList`, all of the ``multiclass``'s must
 precede any ``class``'s that appear.

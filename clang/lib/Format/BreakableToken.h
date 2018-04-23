@@ -242,7 +242,7 @@ public:
                          encoding::Encoding Encoding, const FormatStyle &Style);
 
   Split getSplit(unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
-                 unsigned ReflowColumn,
+                 unsigned ContentStartColumn,
                  llvm::Regex &CommentPragmasRegex) const override;
   void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
                    WhitespaceManager &Whitespaces) const override;
@@ -284,7 +284,7 @@ public:
   bool supportsReflow() const override { return true; }
   unsigned getLineCount() const override;
   Split getSplit(unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
-                 unsigned ReflowColumn,
+                 unsigned ContentStartColumn,
                  llvm::Regex &CommentPragmasRegex) const override;
   void compressWhitespace(unsigned LineIndex, unsigned TailOffset, Split Split,
                           WhitespaceManager &Whitespaces) const override;

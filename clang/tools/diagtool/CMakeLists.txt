@@ -17,9 +17,3 @@ target_link_libraries(diagtool
   clangBasic
   clangFrontend
   )
-
-if(UNIX)
-  set(CLANGXX_LINK_OR_COPY create_symlink)
-else()
-  set(CLANGXX_LINK_OR_COPY copy)
-endif()

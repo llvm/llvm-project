@@ -343,6 +343,22 @@ public:
                                                  BugReport &BR) override;
 };
 
+/// The bug visitor prints a diagnostic message at the location where a given
+/// variable was tainted.
+class TaintBugVisitor final : public BugReporterVisitorImpl<TaintBugVisitor> {
+private:
+  const SVal V;
+
+public:
+  TaintBugVisitor(const SVal V) : V(V) {}
+  void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
+
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                 const ExplodedNode *PrevN,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override;
+};
+
 namespace bugreporter {
 
 /// Attempts to add visitors to trace a null or undefined value back to its

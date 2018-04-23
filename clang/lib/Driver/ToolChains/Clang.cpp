@@ -4408,6 +4408,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (!Args.hasFlag(options::OPT_Qy, options::OPT_Qn, true))
+    CmdArgs.push_back("-Qn");
+
   // -fcommon is the default unless compiling kernel code or the target says so
   bool NoCommonDefault = KernelOrKext || isNoCommonDefault(RawTriple);
   if (!Args.hasFlag(options::OPT_fcommon, options::OPT_fno_common,

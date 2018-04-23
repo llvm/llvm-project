@@ -65,6 +65,7 @@ __isl_give isl_vec *isl_vec_read_from_file(isl_ctx *ctx, FILE *input);
 
 __isl_give isl_vec *isl_vec_drop_els(__isl_take isl_vec *vec,
 	unsigned pos, unsigned n);
+__isl_give isl_vec *isl_vec_add_els(__isl_take isl_vec *vec, unsigned n);
 __isl_give isl_vec *isl_vec_insert_els(__isl_take isl_vec *vec,
 	unsigned pos, unsigned n);
 __isl_give isl_vec *isl_vec_insert_zero_els(__isl_take isl_vec *vec,

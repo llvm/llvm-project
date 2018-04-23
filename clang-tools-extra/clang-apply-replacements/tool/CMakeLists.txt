@@ -2,7 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(clang-apply-replacements
+add_clang_tool(clang-apply-replacements
   ClangApplyReplacementsMain.cpp
   )
 target_link_libraries(clang-apply-replacements

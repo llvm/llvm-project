@@ -642,7 +642,7 @@ public:
   void setEmulatedTLS(bool EmulatedTLS) {
     this->EmulatedTLS = EmulatedTLS;
   }
-  
+
   TargetMachine *selectTarget();
 
   /// selectTarget - Pick a target either via -march or by guessing the native

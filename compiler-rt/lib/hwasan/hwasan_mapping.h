@@ -53,7 +53,11 @@ static constexpr __sanitizer::u64 kDefaultShadowSentinel = ~(__sanitizer::u64)0;
 constexpr __sanitizer::uptr kShadowScale = 4;
 constexpr __sanitizer::uptr kShadowAlignment = 1ULL << kShadowScale;
 
-#define HWASAN_FIXED_MAPPING 0
+#if defined(__x86_64__)
+# define HWASAN_FIXED_MAPPING 1
+#else
+# define HWASAN_FIXED_MAPPING 0
+#endif
 
 #if HWASAN_FIXED_MAPPING
 # define SHADOW_OFFSET (0)

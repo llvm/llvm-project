@@ -1,4 +1,5 @@
 #include <isl/id_to_pw_aff.h>
+#include <isl/id.h>
 #include <isl/aff.h>
 
 #define isl_id_is_equal(id1,id2)	id1 == id2
