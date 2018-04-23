@@ -234,6 +234,12 @@ template <typename T> void BuryPointer(std::unique_ptr<T> Ptr) {
   BuryPointer(Ptr.release());
 }
 
+// Frontend timing utils
+
+/// If the user specifies the -ftime-report argument on an Clang command line
+/// then the value of this boolean will be true, otherwise false.
+extern bool FrontendTimesIsEnabled;
+
 } // namespace clang
 
 #endif // LLVM_CLANG_FRONTEND_UTILS_H

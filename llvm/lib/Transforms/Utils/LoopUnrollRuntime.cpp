@@ -878,10 +878,9 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                   NewPreHeader, VMap, DT, LI, PreserveLCSSA);
   }
 
-  // If this loop is nested, then the loop unroller changes the code in the
-  // parent loop, so the Scalar Evolution pass needs to be run again.
-  if (Loop *ParentLoop = L->getParentLoop())
-    SE->forgetLoop(ParentLoop);
+  // If this loop is nested, then the loop unroller changes the code in the any
+  // of its parent loops, so the Scalar Evolution pass needs to be run again.
+  SE->forgetTopmostLoop(L);
 
   // Canonicalize to LoopSimplifyForm both original and remainder loops. We
   // cannot rely on the LoopUnrollPass to do this because it only does

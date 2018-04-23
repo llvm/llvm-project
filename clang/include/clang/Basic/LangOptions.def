@@ -189,6 +189,7 @@ LANGOPT(ShortEnums        , 1, 0, "short enum types")
 
 LANGOPT(OpenCL            , 1, 0, "OpenCL")
 LANGOPT(OpenCLVersion     , 32, 0, "OpenCL C version")
+LANGOPT(OpenCLCPlusPlus   , 1, 0, "OpenCL C++")
 LANGOPT(OpenCLCPlusPlusVersion     , 32, 0, "OpenCL C++ version")
 LANGOPT(NativeHalfType    , 1, 0, "Native half type support")
 LANGOPT(NativeHalfArgsAndReturns, 1, 0, "Native half args and returns")

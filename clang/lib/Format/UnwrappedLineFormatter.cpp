@@ -252,9 +252,9 @@ private:
     if (Style.CompactNamespaces) {
       if (isNamespaceDeclaration(TheLine)) {
         int i = 0;
-        unsigned closingLine = TheLine->MatchingOpeningBlockLineIndex - 1;
+        unsigned closingLine = TheLine->MatchingClosingBlockLineIndex - 1;
         for (; I + 1 + i != E && isNamespaceDeclaration(I[i + 1]) &&
-               closingLine == I[i + 1]->MatchingOpeningBlockLineIndex &&
+               closingLine == I[i + 1]->MatchingClosingBlockLineIndex &&
                I[i + 1]->Last->TotalLength < Limit;
              i++, closingLine--) {
           // No extra indent for compacted namespaces
@@ -1033,9 +1033,12 @@ UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
     // scope was added. However, we need to carefully stop doing this when we
     // exit the scope of affected lines to prevent indenting a the entire
     // remaining file if it currently missing a closing brace.
+    bool PreviousRBrace =
+        PreviousLine && PreviousLine->startsWith(tok::r_brace);
     bool ContinueFormatting =
         TheLine.Level > RangeMinLevel ||
-        (TheLine.Level == RangeMinLevel && !TheLine.startsWith(tok::r_brace));
+        (TheLine.Level == RangeMinLevel && !PreviousRBrace &&
+         !TheLine.startsWith(tok::r_brace));
 
     bool FixIndentation = (FixBadIndentation || ContinueFormatting) &&
                           Indent != TheLine.First->OriginalColumn;

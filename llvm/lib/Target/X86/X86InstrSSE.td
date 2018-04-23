@@ -2036,11 +2036,11 @@ defm VCMPPD : sse12_cmp_packed<VR128, f128mem, AVXCC, v2f64,
 defm VCMPPSY : sse12_cmp_packed<VR256, f256mem, AVXCC, v8f32,
                "cmp${cc}ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                "cmpps\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-               WriteFCmp, SSEPackedSingle, loadv8f32>, PS, VEX_4V, VEX_L;
+               WriteFCmp, SSEPackedSingle, loadv8f32>, PS, VEX_4V, VEX_L, VEX_WIG;
 defm VCMPPDY : sse12_cmp_packed<VR256, f256mem, AVXCC, v4f64,
                "cmp${cc}pd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                "cmppd\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-               WriteFCmp, SSEPackedDouble, loadv4f64>, PD, VEX_4V, VEX_L;
+               WriteFCmp, SSEPackedDouble, loadv4f64>, PD, VEX_4V, VEX_L, VEX_WIG;
 let Constraints = "$src1 = $dst" in {
   defm CMPPS : sse12_cmp_packed<VR128, f128mem, SSECC, v4f32,
                  "cmp${cc}ps\t{$src2, $dst|$dst, $src2}",
