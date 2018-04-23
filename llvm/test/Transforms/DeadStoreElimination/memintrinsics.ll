@@ -54,10 +54,6 @@ declare void @llvm.memset.element.unordered.atomic.p0i16.i16(i16* nocapture, i8,
 
 define void @test4() {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[A:%.*]] = alloca i16, i16 1024, align 2
-; CHECK-NEXT:    [[B:%.*]] = alloca i16, i16 1024, align 2
-; CHECK-NEXT:    store atomic i16 0, i16* [[B]] unordered, align 2
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0i16.p0i16.i16(i16* align 2 [[A]], i16* align 2 [[B]], i16 1024, i32 2)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i16, i16 1024, align 2
@@ -73,10 +69,6 @@ define void @test4() {
 
 define void @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[A:%.*]] = alloca i16, i16 1024, align 2
-; CHECK-NEXT:    [[B:%.*]] = alloca i16, i16 1024, align 2
-; CHECK-NEXT:    store atomic i16 0, i16* [[B]] unordered, align 2
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0i16.p0i16.i16(i16* align 2 [[A]], i16* align 2 [[B]], i16 1024, i32 2)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i16, i16 1024, align 2
@@ -92,8 +84,6 @@ define void @test5() {
 
 define void @test6() {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[A:%.*]] = alloca i16, i16 1024, align 2
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0i16.i16(i16* align 2 [[A]], i8 0, i16 1024, i32 2)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i16, i16 1024, align 2

@@ -658,6 +658,10 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   if (SpillToSMEM && OnlyToVGPR)
     return false;
 
+  assert(SpillToVGPR || (SuperReg != MFI->getStackPtrOffsetReg() &&
+                         SuperReg != MFI->getFrameOffsetReg() &&
+                         SuperReg != MFI->getScratchWaveOffsetReg()));
+
   assert(SuperReg != AMDGPU::M0 && "m0 should never spill");
 
   unsigned OffsetReg = AMDGPU::M0;

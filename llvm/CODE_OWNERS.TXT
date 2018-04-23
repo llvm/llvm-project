@@ -61,7 +61,7 @@ E: peter@pcc.me.uk
 D: llgo, libLTO (lib/LTO/* tools/lto/*), LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
 
 N: Quentin Colombet
-E: qcolombet@apple.com
+E: quentin.colombet@gmail.com
 D: Loop Strength Reduction, Register allocators
 
 N: Simon Dardis

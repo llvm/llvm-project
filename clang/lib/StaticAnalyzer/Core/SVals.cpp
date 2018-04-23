@@ -300,13 +300,9 @@ void SVal::dumpToStream(raw_ostream &os) const {
 void NonLoc::dumpToStream(raw_ostream &os) const {
   switch (getSubKind()) {
     case nonloc::ConcreteIntKind: {
-      const nonloc::ConcreteInt& C = castAs<nonloc::ConcreteInt>();
-      if (C.getValue().isUnsigned())
-        os << C.getValue().getZExtValue();
-      else
-        os << C.getValue().getSExtValue();
-      os << ' ' << (C.getValue().isUnsigned() ? 'U' : 'S')
-         << C.getValue().getBitWidth() << 'b';
+      const auto &Value = castAs<nonloc::ConcreteInt>().getValue();
+      os << Value << ' ' << (Value.isSigned() ? 'S' : 'U')
+         << Value.getBitWidth() << 'b';
       break;
     }
     case nonloc::SymbolValKind:

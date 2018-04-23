@@ -178,9 +178,6 @@ template <class IntrusiveListT, class TraitsT>
 class iplist_impl : public TraitsT, IntrusiveListT {
   typedef IntrusiveListT base_list_type;
 
-protected:
-  typedef iplist_impl iplist_impl_type;
-
 public:
   typedef typename base_list_type::pointer pointer;
   typedef typename base_list_type::const_pointer const_pointer;
@@ -402,7 +399,7 @@ public:
 template <class T, class... Options>
 class iplist
     : public iplist_impl<simple_ilist<T, Options...>, ilist_traits<T>> {
-  typedef typename iplist::iplist_impl_type iplist_impl_type;
+  using iplist_impl_type = typename iplist::iplist_impl;
 
 public:
   iplist() = default;

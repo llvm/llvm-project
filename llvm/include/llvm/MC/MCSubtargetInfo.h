@@ -27,7 +27,6 @@
 
 namespace llvm {
 
-class MachineInstr;
 class MCInst;
 
 //===----------------------------------------------------------------------===//
@@ -167,10 +166,6 @@ public:
   }
 
   /// Returns string representation of scheduler comment
-  virtual std::string getSchedInfoStr(const MachineInstr &MI) const {
-    return {};
-  }
-
   virtual std::string getSchedInfoStr(MCInst const &MCI) const {
     return {};
   }

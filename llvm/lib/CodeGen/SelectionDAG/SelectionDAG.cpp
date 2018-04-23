@@ -5630,6 +5630,47 @@ SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
   return CallResult.second;
 }
 
+SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
+                                      SDValue Dst, unsigned DstAlign,
+                                      SDValue Src, unsigned SrcAlign,
+                                      SDValue Size, Type *SizeTy,
+                                      unsigned ElemSz, bool isTailCall,
+                                      MachinePointerInfo DstPtrInfo,
+                                      MachinePointerInfo SrcPtrInfo) {
+  // Emit a library call.
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
+  Entry.Node = Dst;
+  Args.push_back(Entry);
+
+  Entry.Node = Src;
+  Args.push_back(Entry);
+
+  Entry.Ty = SizeTy;
+  Entry.Node = Size;
+  Args.push_back(Entry);
+
+  RTLIB::Libcall LibraryCall =
+      RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
+  if (LibraryCall == RTLIB::UNKNOWN_LIBCALL)
+    report_fatal_error("Unsupported element size");
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(TLI->getLibcallCallingConv(LibraryCall),
+                    Type::getVoidTy(*getContext()),
+                    getExternalSymbol(TLI->getLibcallName(LibraryCall),
+                                      TLI->getPointerTy(getDataLayout())),
+                    std::move(Args))
+      .setDiscardResult()
+      .setTailCall(isTailCall);
+
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
+  return CallResult.second;
+}
+
 SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                  SDValue Src, SDValue Size, unsigned Align,
                                  bool isVol, bool isTailCall,
@@ -5688,6 +5729,47 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
       .setTailCall(isTailCall);
 
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
+  return CallResult.second;
+}
+
+SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
+                                       SDValue Dst, unsigned DstAlign,
+                                       SDValue Src, unsigned SrcAlign,
+                                       SDValue Size, Type *SizeTy,
+                                       unsigned ElemSz, bool isTailCall,
+                                       MachinePointerInfo DstPtrInfo,
+                                       MachinePointerInfo SrcPtrInfo) {
+  // Emit a library call.
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
+  Entry.Node = Dst;
+  Args.push_back(Entry);
+
+  Entry.Node = Src;
+  Args.push_back(Entry);
+
+  Entry.Ty = SizeTy;
+  Entry.Node = Size;
+  Args.push_back(Entry);
+
+  RTLIB::Libcall LibraryCall =
+      RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
+  if (LibraryCall == RTLIB::UNKNOWN_LIBCALL)
+    report_fatal_error("Unsupported element size");
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(TLI->getLibcallCallingConv(LibraryCall),
+                    Type::getVoidTy(*getContext()),
+                    getExternalSymbol(TLI->getLibcallName(LibraryCall),
+                                      TLI->getPointerTy(getDataLayout())),
+                    std::move(Args))
+      .setDiscardResult()
+      .setTailCall(isTailCall);
+
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
 }
 
@@ -5750,6 +5832,46 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
       .setTailCall(isTailCall);
 
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
+  return CallResult.second;
+}
+
+SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
+                                      SDValue Dst, unsigned DstAlign,
+                                      SDValue Value, SDValue Size, Type *SizeTy,
+                                      unsigned ElemSz, bool isTailCall,
+                                      MachinePointerInfo DstPtrInfo) {
+  // Emit a library call.
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
+  Entry.Node = Dst;
+  Args.push_back(Entry);
+
+  Entry.Ty = Type::getInt8Ty(*getContext());
+  Entry.Node = Value;
+  Args.push_back(Entry);
+
+  Entry.Ty = SizeTy;
+  Entry.Node = Size;
+  Args.push_back(Entry);
+
+  RTLIB::Libcall LibraryCall =
+      RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(ElemSz);
+  if (LibraryCall == RTLIB::UNKNOWN_LIBCALL)
+    report_fatal_error("Unsupported element size");
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(TLI->getLibcallCallingConv(LibraryCall),
+                    Type::getVoidTy(*getContext()),
+                    getExternalSymbol(TLI->getLibcallName(LibraryCall),
+                                      TLI->getPointerTy(getDataLayout())),
+                    std::move(Args))
+      .setDiscardResult()
+      .setTailCall(isTailCall);
+
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
 }
 

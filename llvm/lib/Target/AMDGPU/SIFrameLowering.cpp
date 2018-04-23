@@ -691,6 +691,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
         if (TII->isSGPRSpill(MI)) {
           int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
+          assert(MFI.getStackID(FI) == SIStackID::SGPR_SPILL);
           if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
             bool Spilled = TRI.eliminateSGPRToVGPRSpillFrameIndex(MI, FI, RS);
             (void)Spilled;

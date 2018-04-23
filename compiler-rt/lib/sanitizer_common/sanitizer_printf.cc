@@ -95,22 +95,31 @@ static int AppendSignedDecimal(char **buff, const char *buff_end, s64 num,
                       false /* uppercase */);
 }
 
-static int AppendString(char **buff, const char *buff_end, int precision,
-                        const char *s) {
+
+// Use the fact that explicitly requesting 0 width (%0s) results in UB and
+// interpret width == 0 as "no width requested":
+// width == 0 - no width requested
+// width  < 0 - left-justify s within and pad it to -width chars, if necessary
+// width  > 0 - right-justify s, not implemented yet
+static int AppendString(char **buff, const char *buff_end, int width,
+                        int max_chars, const char *s) {
   if (!s)
     s = "<null>";
   int result = 0;
   for (; *s; s++) {
-    if (precision >= 0 && result >= precision)
+    if (max_chars >= 0 && result >= max_chars)
       break;
     result += AppendChar(buff, buff_end, *s);
   }
+  // Only the left justified strings are supported.
+  while (width < -result)
+    result += AppendChar(buff, buff_end, ' ');
   return result;
 }
 
 static int AppendPointer(char **buff, const char *buff_end, u64 ptr_value) {
   int result = 0;
-  result += AppendString(buff, buff_end, -1, "0x");
+  result += AppendString(buff, buff_end, 0, -1, "0x");
   result += AppendUnsigned(buff, buff_end, ptr_value, 16,
                            SANITIZER_POINTER_FORMAT_LENGTH,
                            true /* pad_with_zero */, false /* uppercase */);
@@ -120,8 +129,8 @@ static int AppendPointer(char **buff, const char *buff_end, u64 ptr_value) {
 int VSNPrintf(char *buff, int buff_length,
               const char *format, va_list args) {
   static const char *kPrintfFormatsHelp =
-      "Supported Printf formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; %(\\.\\*)?s; "
-      "%c\n";
+      "Supported Printf formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
+      "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
   RAW_CHECK(format);
   RAW_CHECK(buff_length > 0);
   const char *buff_end = &buff[buff_length - 1];
@@ -133,6 +142,9 @@ int VSNPrintf(char *buff, int buff_length,
       continue;
     }
     cur++;
+    bool left_justified = *cur == '-';
+    if (left_justified)
+      cur++;
     bool have_width = (*cur >= '0' && *cur <= '9');
     bool pad_with_zero = (*cur == '0');
     int width = 0;
@@ -153,9 +165,10 @@ int VSNPrintf(char *buff, int buff_length,
     cur += have_ll * 2;
     s64 dval;
     u64 uval;
-    bool have_flags = have_width | have_z | have_ll;
-    // Only %s supports precision for now
-    CHECK(!(precision >= 0 && *cur != 's'));
+    const bool have_length = have_z || have_ll;
+    const bool have_flags = have_width || have_length;
+    // At the moment only %s supports precision and left-justification.
+    CHECK(!((precision >= 0 || left_justified) && *cur != 's'));
     switch (*cur) {
       case 'd': {
         dval = have_ll ? va_arg(args, s64)
@@ -182,8 +195,11 @@ int VSNPrintf(char *buff, int buff_length,
         break;
       }
       case 's': {
-        RAW_CHECK_MSG(!have_flags, kPrintfFormatsHelp);
-        result += AppendString(&buff, buff_end, precision, va_arg(args, char*));
+        RAW_CHECK_MSG(!have_length, kPrintfFormatsHelp);
+        // Only left-justified width is supported.
+        CHECK(!have_width || left_justified);
+        result += AppendString(&buff, buff_end, left_justified ? -width : width,
+                               precision, va_arg(args, char*));
         break;
       }
       case 'c': {

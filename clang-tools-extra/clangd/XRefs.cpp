@@ -182,9 +182,9 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   if (!Result.empty())
     return Result;
 
-  auto DeclMacrosFinder = std::make_shared<DeclarationAndMacrosFinder>(
-      llvm::errs(), SourceLocationBeg, AST.getASTContext(),
-      AST.getPreprocessor());
+  DeclarationAndMacrosFinder DeclMacrosFinder(llvm::errs(), SourceLocationBeg,
+                                              AST.getASTContext(),
+                                              AST.getPreprocessor());
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -193,8 +193,8 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   indexTopLevelDecls(AST.getASTContext(), AST.getTopLevelDecls(),
                      DeclMacrosFinder, IndexOpts);
 
-  std::vector<const Decl *> Decls = DeclMacrosFinder->takeDecls();
-  std::vector<MacroDecl> MacroInfos = DeclMacrosFinder->takeMacroInfos();
+  std::vector<const Decl *> Decls = DeclMacrosFinder.takeDecls();
+  std::vector<MacroDecl> MacroInfos = DeclMacrosFinder.takeMacroInfos();
 
   for (auto D : Decls) {
     auto Loc = findNameLoc(D);
@@ -286,9 +286,9 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
 
   SourceLocation SourceLocationBeg = getBeginningOfIdentifier(AST, Pos, FE);
 
-  auto DeclMacrosFinder = std::make_shared<DeclarationAndMacrosFinder>(
-      llvm::errs(), SourceLocationBeg, AST.getASTContext(),
-      AST.getPreprocessor());
+  DeclarationAndMacrosFinder DeclMacrosFinder(llvm::errs(), SourceLocationBeg,
+                                              AST.getASTContext(),
+                                              AST.getPreprocessor());
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -298,15 +298,15 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   indexTopLevelDecls(AST.getASTContext(), AST.getTopLevelDecls(),
                      DeclMacrosFinder, IndexOpts);
 
-  std::vector<const Decl *> SelectedDecls = DeclMacrosFinder->takeDecls();
+  std::vector<const Decl *> SelectedDecls = DeclMacrosFinder.takeDecls();
 
-  auto DocHighlightsFinder = std::make_shared<DocumentHighlightsFinder>(
+  DocumentHighlightsFinder DocHighlightsFinder(
       llvm::errs(), AST.getASTContext(), AST.getPreprocessor(), SelectedDecls);
 
   indexTopLevelDecls(AST.getASTContext(), AST.getTopLevelDecls(),
                      DocHighlightsFinder, IndexOpts);
 
-  return DocHighlightsFinder->takeHighlights();
+  return DocHighlightsFinder.takeHighlights();
 }
 
 static PrintingPolicy PrintingPolicyForDecls(PrintingPolicy Base) {
@@ -418,9 +418,9 @@ Hover getHover(ParsedAST &AST, Position Pos) {
     return Hover();
 
   SourceLocation SourceLocationBeg = getBeginningOfIdentifier(AST, Pos, FE);
-  auto DeclMacrosFinder = std::make_shared<DeclarationAndMacrosFinder>(
-      llvm::errs(), SourceLocationBeg, AST.getASTContext(),
-      AST.getPreprocessor());
+  DeclarationAndMacrosFinder DeclMacrosFinder(llvm::errs(), SourceLocationBeg,
+                                              AST.getASTContext(),
+                                              AST.getPreprocessor());
 
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
@@ -430,11 +430,11 @@ Hover getHover(ParsedAST &AST, Position Pos) {
   indexTopLevelDecls(AST.getASTContext(), AST.getTopLevelDecls(),
                      DeclMacrosFinder, IndexOpts);
 
-  std::vector<MacroDecl> Macros = DeclMacrosFinder->takeMacroInfos();
+  std::vector<MacroDecl> Macros = DeclMacrosFinder.takeMacroInfos();
   if (!Macros.empty())
     return getHoverContents(Macros[0].Name);
 
-  std::vector<const Decl *> Decls = DeclMacrosFinder->takeDecls();
+  std::vector<const Decl *> Decls = DeclMacrosFinder.takeDecls();
   if (!Decls.empty())
     return getHoverContents(Decls[0]);
 

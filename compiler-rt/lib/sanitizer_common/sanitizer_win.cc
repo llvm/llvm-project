@@ -492,7 +492,7 @@ void SleepForMillis(int millis) {
 }
 
 u64 NanoTime() {
-  static LARGE_INTEGER frequency = {0};
+  static LARGE_INTEGER frequency = {};
   LARGE_INTEGER counter;
   if (UNLIKELY(frequency.QuadPart == 0)) {
     QueryPerformanceFrequency(&frequency);
@@ -1059,7 +1059,7 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
 }
 
 u32 GetNumberOfCPUs() {
-  SYSTEM_INFO sysinfo = {0};
+  SYSTEM_INFO sysinfo = {};
   GetNativeSystemInfo(&sysinfo);
   return sysinfo.dwNumberOfProcessors;
 }
