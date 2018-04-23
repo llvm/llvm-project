@@ -157,6 +157,10 @@ public:
   /// Get code hover for a given position.
   void findHover(PathRef File, Position Pos, Callback<Hover> CB);
 
+  /// Retrieve the top symbols from the workspace matching a query.
+  void workspaceSymbols(StringRef Query, int Limit,
+                        Callback<std::vector<SymbolInformation>> CB);
+
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
                                                     PathRef File, Range Rng);

@@ -41,6 +41,9 @@ runRename(ClangdServer &Server, PathRef File, Position Pos, StringRef NewName);
 
 std::string runDumpAST(ClangdServer &Server, PathRef File);
 
+llvm::Expected<std::vector<SymbolInformation>>
+runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit);
+
 } // namespace clangd
 } // namespace clang
 
