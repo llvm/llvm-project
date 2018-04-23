@@ -10,7 +10,7 @@
 .text
 .Lfoo:
   bl weakfunc
+  nop
 // CHECK-NOT: R_PPC64_REL24
 
 .weak weakfunc
-
