@@ -1,7 +1,7 @@
 import Dispatch
 
 // The dispatch clang module is either imported as Objective-C or as C
-// with blocks, and both varints should work in LLDB's expression evaluator.
+// with blocks, and both variants should work in LLDB's expression evaluator.
 
 func main() {
   let label = "lldbtest"
