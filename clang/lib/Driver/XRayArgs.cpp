@@ -163,7 +163,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       }
 
     // Then we want to sort and unique the modes we've collected.
-    std::sort(Modes.begin(), Modes.end());
+    llvm::sort(Modes.begin(), Modes.end());
     Modes.erase(std::unique(Modes.begin(), Modes.end()), Modes.end());
   }
 }
