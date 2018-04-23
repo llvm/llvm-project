@@ -1740,6 +1740,12 @@ bool SwiftASTContext::SetTriple(const char *triple_cstr, Module *module) {
                     this, triple_cstr, triple.c_str(),
                     m_target_wp.lock() ? " (target)" : "");
       m_compiler_invocation_ap->setTargetTriple(triple);
+
+      // Every time the triple is changed the LangOpts must be
+      // updated too, because Swift default-initializes the
+      // EnableObjCInterop flag based on the triple.
+      GetLanguageOptions().EnableObjCInterop = llvm_triple.isOSDarwin();
+
       return true;
     } else {
       if (log)
