@@ -5,7 +5,7 @@
 // REQUIRES: ppc
 
 # A tail call to an external function without a nop should issue an error.
-// CHECK: error: call lacks nop, can't restore toc
+// CHECK: call lacks nop, can't restore toc
     .text
     .abiversion 2
 
