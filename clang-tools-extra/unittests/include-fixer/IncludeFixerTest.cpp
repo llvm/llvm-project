@@ -196,7 +196,8 @@ TEST(IncludeFixer, ScopedNamespaceSymbols) {
             runIncludeFixer("namespace a {\nb::bar b;\n}"));
   EXPECT_EQ("#include \"bar.h\"\nnamespace A {\na::b::bar b;\n}",
             runIncludeFixer("namespace A {\na::b::bar b;\n}"));
-  EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nvoid func() { b::bar b; }\n}",
+  EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nvoid func() { b::bar b; }\n} "
+            "// namespace a",
             runIncludeFixer("namespace a {\nvoid func() { b::bar b; }\n}"));
   EXPECT_EQ("namespace A { c::b::bar b; }\n",
             runIncludeFixer("namespace A { c::b::bar b; }\n"));
@@ -258,7 +259,8 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
             runIncludeFixer("namespace a {\nb::bar b;\n}\n"));
   EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nb::bar b;\n}\n",
             runIncludeFixer("namespace a {\nbar b;\n}\n"));
-  EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nnamespace b{\nbar b;\n}\n}\n",
+  EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nnamespace b{\nbar b;\n}\n} "
+            "// namespace a\n",
             runIncludeFixer("namespace a {\nnamespace b{\nbar b;\n}\n}\n"));
   EXPECT_EQ("c::b::bar b;\n",
             runIncludeFixer("c::b::bar b;\n"));
@@ -268,12 +270,12 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
             runIncludeFixer("namespace c {\nbar b;\n}\n"));
 
   // Test common qualifers reduction.
-  EXPECT_EQ(
-      "#include \"bar.h\"\nnamespace a {\nnamespace d {\nb::bar b;\n}\n}\n",
-      runIncludeFixer("namespace a {\nnamespace d {\nbar b;\n}\n}\n"));
-  EXPECT_EQ(
-      "#include \"bar.h\"\nnamespace d {\nnamespace a {\na::b::bar b;\n}\n}\n",
-      runIncludeFixer("namespace d {\nnamespace a {\nbar b;\n}\n}\n"));
+  EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nnamespace d {\nb::bar b;\n}\n} "
+            "// namespace a\n",
+            runIncludeFixer("namespace a {\nnamespace d {\nbar b;\n}\n}\n"));
+  EXPECT_EQ("#include \"bar.h\"\nnamespace d {\nnamespace a {\na::b::bar "
+            "b;\n}\n} // namespace d\n",
+            runIncludeFixer("namespace d {\nnamespace a {\nbar b;\n}\n}\n"));
 
   // Test nested classes.
   EXPECT_EQ("#include \"bar.h\"\nnamespace d {\na::b::bar::t b;\n}\n",

@@ -93,10 +93,6 @@ private:
   WithContext RestoreCtx;
 };
 
-/// Returns mutable span metadata if this span is interested.
-/// Prefer to use SPAN_ATTACH rather than accessing this directly.
-json::obj *spanArgs();
-
 /// Attach a key-value pair to a Span event.
 /// This is not threadsafe when used with the same Span.
 #define SPAN_ATTACH(S, Name, Expr)                                             \

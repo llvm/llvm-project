@@ -160,6 +160,9 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
     case Intrinsic::memset:
     case Intrinsic::memmove:
     case Intrinsic::memcpy:
+    case Intrinsic::memcpy_element_unordered_atomic:
+    case Intrinsic::memmove_element_unordered_atomic:
+    case Intrinsic::memset_element_unordered_atomic:
     case Intrinsic::init_trampoline:
     case Intrinsic::lifetime_end:
       return true;
@@ -189,7 +192,7 @@ static MemoryLocation getLocForWrite(Instruction *Inst) {
   if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
     return MemoryLocation::get(SI);
 
-  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(Inst)) {
+  if (auto *MI = dyn_cast<AnyMemIntrinsic>(Inst)) {
     // memcpy/memmove/memset.
     MemoryLocation Loc = MemoryLocation::getForDest(MI);
     return Loc;
@@ -222,7 +225,7 @@ static MemoryLocation getLocForRead(Instruction *Inst,
 
   // The only instructions that both read and write are the mem transfer
   // instructions (memcpy/memmove).
-  if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(Inst))
+  if (auto *MTI = dyn_cast<AnyMemTransferInst>(Inst))
     return MemoryLocation::getForSource(MTI);
   return MemoryLocation();
 }
@@ -249,6 +252,10 @@ static bool isRemovable(Instruction *I) {
     case Intrinsic::memcpy:
       // Don't remove volatile memory intrinsics.
       return !cast<MemIntrinsic>(II)->isVolatile();
+    case Intrinsic::memcpy_element_unordered_atomic:
+    case Intrinsic::memmove_element_unordered_atomic:
+    case Intrinsic::memset_element_unordered_atomic:
+      return true;
     }
   }
 
@@ -273,6 +280,7 @@ static bool isShortenableAtTheEnd(Instruction *I) {
       case Intrinsic::memcpy:
         // Do shorten memory intrinsics.
         // FIXME: Add memmove if it's also safe to transform.
+        // TODO: Add atomic memcpy/memset
         return true;
     }
   }
@@ -287,6 +295,7 @@ static bool isShortenableAtTheEnd(Instruction *I) {
 static bool isShortenableAtTheBeginning(Instruction *I) {
   // FIXME: Handle only memset for now. Supporting memcpy/memmove should be
   // easily done by offsetting the source address.
+  // TODO: Handle atomic memory intrinsics
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
   return II && II->getIntrinsicID() == Intrinsic::memset;
 }
@@ -534,7 +543,7 @@ static bool isPossibleSelfRead(Instruction *Inst,
   if (AA.isNoAlias(InstReadLoc, InstStoreLoc))
     return false;
 
-  if (isa<MemCpyInst>(Inst)) {
+  if (isa<AnyMemCpyInst>(Inst)) {
     // LLVM's memcpy overlap semantics are not fully fleshed out (see PR11763)
     // but in practice memcpy(A <- B) either means that A and B are disjoint or
     // are equal (i.e. there are not partial overlaps).  Given that, if we have:
@@ -856,8 +865,6 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
       LoadedLoc = MemoryLocation::get(L);
     } else if (VAArgInst *V = dyn_cast<VAArgInst>(BBI)) {
       LoadedLoc = MemoryLocation::get(V);
-    } else if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(BBI)) {
-      LoadedLoc = MemoryLocation::getForSource(MTI);
     } else if (!BBI->mayReadFromMemory()) {
       // Instruction doesn't read memory.  Note that stores that weren't removed
       // above will hit this case.

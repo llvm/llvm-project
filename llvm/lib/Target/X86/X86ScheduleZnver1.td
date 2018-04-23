@@ -763,7 +763,7 @@ def : InstRW<[WriteMicrocoded], (instregex "FLDCW16m")>;
 def : InstRW<[WriteMicrocoded], (instregex "FNSTCW16m")>;
 
 // FINCSTP FDECSTP.
-def : InstRW<[ZnWriteFPU3], (instregex "FINCSTP", "FDECSTP")>;
+def : InstRW<[ZnWriteFPU3], (instrs FINCSTP, FDECSTP)>;
 
 // FFREE.
 def : InstRW<[ZnWriteFPU3], (instregex "FFREE")>;
@@ -822,7 +822,7 @@ def : InstRW<[ZnWriteFPU03], (instregex "FICOM(16|32)m", "FICOMP(16|32)m")>;
 def : InstRW<[ZnWriteFPU0Lat1], (instregex "TST_F")>;
 
 // FXAM.
-def : InstRW<[ZnWriteFPU3Lat1], (instregex "FXAM")>;
+def : InstRW<[ZnWriteFPU3Lat1], (instrs FXAM)>;
 
 // FPREM.
 def : InstRW<[WriteMicrocoded], (instrs FPREM)>;
@@ -831,25 +831,25 @@ def : InstRW<[WriteMicrocoded], (instrs FPREM)>;
 def : InstRW<[WriteMicrocoded], (instrs FPREM1)>;
 
 // FRNDINT.
-def : InstRW<[WriteMicrocoded], (instregex "FRNDINT")>;
+def : InstRW<[WriteMicrocoded], (instrs FRNDINT)>;
 
 // FSCALE.
-def : InstRW<[WriteMicrocoded], (instregex "FSCALE")>;
+def : InstRW<[WriteMicrocoded], (instrs FSCALE)>;
 
 // FXTRACT.
-def : InstRW<[WriteMicrocoded], (instregex "FXTRACT")>;
+def : InstRW<[WriteMicrocoded], (instrs FXTRACT)>;
 
 // FNOP.
-def : InstRW<[ZnWriteFPU0Lat1], (instregex "FNOP")>;
+def : InstRW<[ZnWriteFPU0Lat1], (instrs FNOP)>;
 
 // WAIT.
-def : InstRW<[ZnWriteFPU0Lat1], (instregex "WAIT")>;
+def : InstRW<[ZnWriteFPU0Lat1], (instrs WAIT)>;
 
 // FNCLEX.
-def : InstRW<[WriteMicrocoded], (instregex "FNCLEX")>;
+def : InstRW<[WriteMicrocoded], (instrs FNCLEX)>;
 
 // FNINIT.
-def : InstRW<[WriteMicrocoded], (instregex "FNINIT")>;
+def : InstRW<[WriteMicrocoded], (instrs FNINIT)>;
 
 //=== Integer MMX and XMM Instructions ===//
 //-- Move instructions --//

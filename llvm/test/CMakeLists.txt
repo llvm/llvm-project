@@ -48,11 +48,11 @@ set(LLVM_TEST_DEPENDS
           llvm-c-test
           llvm-cat
           llvm-cfi-verify
-          llvm-cxxfilt
           llvm-config
           llvm-cov
-          llvm-cxxdump
           llvm-cvtres
+          llvm-cxxdump
+          llvm-cxxfilt
           llvm-diff
           llvm-dis
           llvm-dlltool
@@ -61,7 +61,6 @@ set(LLVM_TEST_DEPENDS
           llvm-dwp
           llvm-extract
           llvm-isel-fuzzer
-          llvm-opt-fuzzer
           llvm-lib
           llvm-link
           llvm-lto2
@@ -72,6 +71,7 @@ set(LLVM_TEST_DEPENDS
           llvm-nm
           llvm-objcopy
           llvm-objdump
+          llvm-opt-fuzzer
           llvm-opt-report
           llvm-pdbutil
           llvm-profdata

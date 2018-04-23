@@ -712,6 +712,10 @@ multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
 }
 
 
+multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,
+                            ZPRRegOp zprty>
+: sve_mem_cld_si_base<dtype, 1, asm, listty, zprty>;
+
 class sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
                      string asm, Operand immtype>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, immtype:$imm4),

@@ -146,7 +146,7 @@ public:
 
   template <class Type> Context derive(Type &&Value) && {
     static Key<typename std::decay<Type>::type> Private;
-    return std::move(this)->derive(Private, std::forward<Type>(Value));
+    return std::move(*this).derive(Private, std::forward<Type>(Value));
   }
 
   /// Clone this context object.

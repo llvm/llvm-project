@@ -249,7 +249,7 @@ public:
   virtual bool enableSubRegLiveness() const { return false; }
 
   /// Returns string representation of scheduler comment
-  std::string getSchedInfoStr(const MachineInstr &MI) const override;
+  std::string getSchedInfoStr(const MachineInstr &MI) const;
   std::string getSchedInfoStr(MCInst const &MCI) const override;
 
   /// This is called after a .mir file was loaded.

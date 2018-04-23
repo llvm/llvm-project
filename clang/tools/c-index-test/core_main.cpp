@@ -195,7 +195,7 @@ static bool printSourceSymbols(ArrayRef<const char *> Args,
     if (auto Reader = Unit->getASTReader()) {
       Reader->getModuleManager().visit([&](serialization::ModuleFile &Mod) -> bool {
         OS << "==== Module " << Mod.ModuleName << " ====\n";
-        indexModuleFile(Mod, *Reader, DataConsumer, IndexOpts);
+        indexModuleFile(Mod, *Reader, *DataConsumer, IndexOpts);
         dumpModuleFileInputs(Mod, *Reader, OS);
         return true; // skip module dependencies.
       });
@@ -231,7 +231,7 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
     return true;
   }
 
-  auto DataConsumer = std::make_shared<PrintIndexDataConsumer>(outs());
+  PrintIndexDataConsumer DataConsumer(outs());
   IndexingOptions IndexOpts;
   indexASTUnit(*AU, DataConsumer, IndexOpts);
 

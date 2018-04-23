@@ -513,7 +513,7 @@ def : InstRW<[HWWrite3P01], (instregex "COM_FIr", "COM_FIPr", "UCOM_FIr",
 def : InstRW<[HWWriteP1], (instregex "TST_F")>;
 
 // FXAM.
-def : InstRW<[HWWrite2P1], (instregex "FXAM")>;
+def : InstRW<[HWWrite2P1], (instrs FXAM)>;
 
 // FPREM.
 def HWWriteFPREM : SchedWriteRes<[]> {
@@ -534,7 +534,7 @@ def HWWriteFRNDINT : SchedWriteRes<[]> {
   let Latency = 11;
   let NumMicroOps = 17;
 }
-def : InstRW<[HWWriteFRNDINT], (instregex "FRNDINT")>;
+def : InstRW<[HWWriteFRNDINT], (instrs FRNDINT)>;
 
 //-- Math instructions --//
 
@@ -543,14 +543,14 @@ def HWWriteFSCALE : SchedWriteRes<[]> {
   let Latency = 75; // 49-125
   let NumMicroOps = 50; // 25-75
 }
-def : InstRW<[HWWriteFSCALE], (instregex "FSCALE")>;
+def : InstRW<[HWWriteFSCALE], (instrs FSCALE)>;
 
 // FXTRACT.
 def HWWriteFXTRACT : SchedWriteRes<[]> {
   let Latency = 15;
   let NumMicroOps = 17;
 }
-def : InstRW<[HWWriteFXTRACT], (instregex "FXTRACT")>;
+def : InstRW<[HWWriteFXTRACT], (instrs FXTRACT)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.
@@ -710,8 +710,7 @@ def HWWriteResGroup6 : SchedWriteRes<[HWPort01]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup6], (instregex "FINCSTP",
-                                           "FNOP")>;
+def: InstRW<[HWWriteResGroup6], (instrs FINCSTP, FNOP)>;
 
 def HWWriteResGroup7 : SchedWriteRes<[HWPort06]> {
   let Latency = 1;
@@ -781,15 +780,7 @@ def HWWriteResGroup11 : SchedWriteRes<[HWPort0,HWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup11], (instregex "MMX_PSLLDrm",
-                                            "MMX_PSLLQrm",
-                                            "MMX_PSLLWrm",
-                                            "MMX_PSRADrm",
-                                            "MMX_PSRAWrm",
-                                            "MMX_PSRLDrm",
-                                            "MMX_PSRLQrm",
-                                            "MMX_PSRLWrm",
-                                            "VCVTPH2PSrm",
+def: InstRW<[HWWriteResGroup11], (instregex "VCVTPH2PSrm",
                                             "(V?)CVTPS2PDrm")>;
 
 def HWWriteResGroup11_1 : SchedWriteRes<[HWPort0,HWPort23]> {
@@ -944,16 +935,7 @@ def HWWriteResGroup13_2 : SchedWriteRes<[HWPort5,HWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup13_2], (instregex "MMX_PALIGNRrmi",
-                                              "MMX_PINSRWrm",
-                                              "MMX_PSHUFBrm",
-                                              "MMX_PUNPCKHBWirm",
-                                              "MMX_PUNPCKHDQirm",
-                                              "MMX_PUNPCKHWDirm",
-                                              "MMX_PUNPCKLBWirm",
-                                              "MMX_PUNPCKLDQirm",
-                                              "MMX_PUNPCKLWDirm",
-                                              "(V?)MOVHPDrm",
+def: InstRW<[HWWriteResGroup13_2], (instregex "(V?)MOVHPDrm",
                                               "(V?)MOVHPSrm",
                                               "(V?)MOVLPDrm",
                                               "(V?)MOVLPSrm",
@@ -990,18 +972,6 @@ def: InstRW<[HWWriteResGroup16], (instregex "ANDN(32|64)rm",
                                             "BLSI(32|64)rm",
                                             "BLSMSK(32|64)rm",
                                             "BLSR(32|64)rm",
-                                            "MMX_PADD(B|D|Q|W)irm",
-                                            "MMX_PADDS(B|W)irm",
-                                            "MMX_PADDUS(B|W)irm",
-                                            "MMX_PAVG(B|W)irm",
-                                            "MMX_PCMPEQ(B|D|W)irm",
-                                            "MMX_PCMPGT(B|D|W)irm",
-                                            "MMX_P(MAX|MIN)SWirm",
-                                            "MMX_P(MAX|MIN)UBirm",
-                                            "MMX_PSIGN(B|D|W)rm",
-                                            "MMX_PSUB(B|D|Q|W)irm",
-                                            "MMX_PSUBS(B|W)irm",
-                                            "MMX_PSUBUS(B|W)irm",
                                             "MOVBE(16|32|64)rm")>;
 
 def HWWriteResGroup16_1 : SchedWriteRes<[HWPort23,HWPort15]> {
@@ -1233,7 +1203,7 @@ def HWWriteResGroup28 : SchedWriteRes<[HWPort01]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[HWWriteResGroup28], (instregex "FDECSTP")>;
+def: InstRW<[HWWriteResGroup28], (instrs FDECSTP)>;
 
 def HWWriteResGroup29 : SchedWriteRes<[HWPort06]> {
   let Latency = 2;
@@ -1252,7 +1222,7 @@ def HWWriteResGroup30 : SchedWriteRes<[HWPort0156]> {
 }
 def: InstRW<[HWWriteResGroup30], (instregex "LFENCE")>;
 def: InstRW<[HWWriteResGroup30], (instregex "MFENCE")>;
-def: InstRW<[HWWriteResGroup30], (instregex "WAIT")>;
+def: InstRW<[HWWriteResGroup30], (instrs WAIT)>;
 def: InstRW<[HWWriteResGroup30], (instregex "XGETBV")>;
 
 def HWWriteResGroup31 : SchedWriteRes<[HWPort0,HWPort5]> {
@@ -1874,7 +1844,7 @@ def HWWriteResGroup81 : SchedWriteRes<[HWPort0156]> {
   let NumMicroOps = 4;
   let ResourceCycles = [4];
 }
-def: InstRW<[HWWriteResGroup81], (instregex "FNCLEX")>;
+def: InstRW<[HWWriteResGroup81], (instrs FNCLEX)>;
 
 def HWWriteResGroup82 : SchedWriteRes<[HWPort015,HWPort0156]> {
   let Latency = 4;
@@ -1953,15 +1923,7 @@ def HWWriteResGroup91 : SchedWriteRes<[HWPort0,HWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup91], (instregex "MMX_PMADDUBSWrm",
-                                            "MMX_PMADDWDirm",
-                                            "MMX_PMULHRSWrm",
-                                            "MMX_PMULHUWirm",
-                                            "MMX_PMULHWirm",
-                                            "MMX_PMULLWirm",
-                                            "MMX_PMULUDQirm",
-                                            "MMX_PSADBWirm",
-                                            "(V?)RCPSSm",
+def: InstRW<[HWWriteResGroup91], (instregex "(V?)RCPSSm",
                                             "(V?)RSQRTSSm")>;
 
 def HWWriteResGroup91_1 : SchedWriteRes<[HWPort0,HWPort23,HWFPDivider]> {
@@ -2609,7 +2571,7 @@ def HWWriteResGroup180 : SchedWriteRes<[HWPort5,HWPort01,HWPort0156]> {
   let NumMicroOps = 15;
   let ResourceCycles = [6,3,6];
 }
-def: InstRW<[HWWriteResGroup180], (instregex "FNINIT")>;
+def: InstRW<[HWWriteResGroup180], (instrs FNINIT)>;
 
 def HWWriteResGroup181 : SchedWriteRes<[HWPort0,HWPort1,HWPort5,HWPort6,HWPort01,HWPort0156]> {
   let Latency = 98;

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr727 { // dr727: 7
+namespace dr727 { // dr727: partial
   struct A {
     template<typename T> struct C; // expected-note 6{{here}}
     template<typename T> void f(); // expected-note {{here}}
@@ -47,6 +47,33 @@ namespace dr727 { // dr727: 7
 
     template<typename T> struct A::C<T*****>; // expected-error {{not in class 'A' or an enclosing namespace}}
     template<typename T> int A::N<T*****>; // expected-error {{not in class 'A' or an enclosing namespace}}
+  }
+
+  template<typename>
+  struct D {
+    template<typename T> struct C { typename T::error e; }; // expected-error {{no members}}
+    template<typename T> void f() { T::error; } // expected-error {{no members}}
+    template<typename T> static const int N = T::error; // expected-error 2{{no members}} expected-error 0-1{{C++14}}
+
+    template<> struct C<int> {};
+    template<> void f<int>() {}
+    template<> static const int N<int>;
+
+    template<typename T> struct C<T*> {};
+    template<typename T> static const int N<T*>;
+  };
+
+  void d(D<int> di) {
+    D<int>::C<int>();
+    di.f<int>();
+    int a = D<int>::N<int>; // FIXME: expected-note {{instantiation of}}
+
+    D<int>::C<int*>();
+    int b = D<int>::N<int*>;
+
+    D<int>::C<float>(); // expected-note {{instantiation of}}
+    di.f<float>(); // expected-note {{instantiation of}}
+    int c = D<int>::N<float>; // expected-note {{instantiation of}}
   }
 }
 

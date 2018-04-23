@@ -33,17 +33,6 @@ LLVMMetadataRef LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef D,
                                            LLVMMetadataRef File, unsigned Line,
                                            LLVMMetadataRef Context);
 
-LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef D, int64_t Lo,
-                                                 int64_t Count);
-
-LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef D,
-                                              LLVMMetadataRef *Data,
-                                              size_t Length);
-
-LLVMMetadataRef LLVMDIBuilderGetOrCreateTypeArray(LLVMDIBuilderRef D,
-                                                  LLVMMetadataRef *Data,
-                                                  size_t Length);
-
 LLVMValueRef LLVMDIBuilderInsertValueAtEnd(LLVMDIBuilderRef D, LLVMValueRef Val,
                                            LLVMMetadataRef VarInfo,
                                            LLVMMetadataRef Expr,

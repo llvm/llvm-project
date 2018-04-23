@@ -29,32 +29,6 @@ LLVMMetadataRef LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef Dref,
                                Context ? unwrap<DIScope>(Context) : nullptr));
 }
 
-LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Dref,
-                                                 int64_t Lo, int64_t Count) {
-  DIBuilder *D = unwrap(Dref);
-  return wrap(D->getOrCreateSubrange(Lo, Count));
-}
-
-LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef Dref,
-                                              LLVMMetadataRef *Data,
-                                              size_t Length) {
-  DIBuilder *D = unwrap(Dref);
-  Metadata **DataValue = unwrap(Data);
-  ArrayRef<Metadata *> Elements(DataValue, Length);
-  DINodeArray A = D->getOrCreateArray(Elements);
-  return wrap(A.get());
-}
-
-LLVMMetadataRef LLVMDIBuilderGetOrCreateTypeArray(LLVMDIBuilderRef Dref,
-                                                  LLVMMetadataRef *Data,
-                                                  size_t Length) {
-  DIBuilder *D = unwrap(Dref);
-  Metadata **DataValue = unwrap(Data);
-  ArrayRef<Metadata *> Elements(DataValue, Length);
-  DITypeRefArray A = D->getOrCreateTypeArray(Elements);
-  return wrap(A.get());
-}
-
 LLVMValueRef LLVMDIBuilderInsertValueAtEnd(LLVMDIBuilderRef Dref,
                                            LLVMValueRef Val,
                                            LLVMMetadataRef VarInfo,
