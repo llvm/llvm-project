@@ -151,8 +151,8 @@ struct _Wrap_alloc {
 _Wrap_alloc<int>::rebind<int> w;
 
 // CHECK: Miscellaneous Ungrouped Timers
-// CHECK: LLVM IR Generation Time
-// CHECK: Code Generation Time
+// CHECK-DAG: LLVM IR Generation Time
+// CHECK-DAG: Code Generation Time
 // CHECK: Total
 // CHECK: Clang front-end time report
 // CHECK: Clang front-end timer

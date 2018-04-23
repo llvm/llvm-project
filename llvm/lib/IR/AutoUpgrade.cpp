@@ -1255,8 +1255,7 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
 /// Upgrade comment in call to inline asm that represents an objc retain release
 /// marker.
 void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
-
-  unsigned long Pos;
+  size_t Pos;
   if (AsmStr->find("mov\tfp") == 0 &&
       AsmStr->find("objc_retainAutoreleaseReturnValue") != std::string::npos &&
       (Pos = AsmStr->find("# marker")) != std::string::npos) {

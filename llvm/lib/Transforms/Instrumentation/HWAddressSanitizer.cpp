@@ -744,7 +744,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple) {
 
   Scale = kDefaultShadowScale;
 
-  if (ClEnableKhwasan || ClInstrumentWithCalls)
+  if (ClEnableKhwasan || ClInstrumentWithCalls || IsX86_64)
     Offset = 0;
   else
     Offset = kDynamicShadowSentinel;

@@ -532,3 +532,32 @@ End:
 
 declare void @dummy(i32*, i32)
 declare void @dummy2(i32, i32)
+
+; Make sure we remove the non-nullness on constant paramater.
+;
+;CHECK-LABEL: @caller2
+;CHECK-LABEL: Top1.split:
+;CHECK: call i32 @callee(i32* inttoptr (i64 4643 to i32*)
+define void @caller2(i32 %c, i32* %a_elt, i32* %b_elt) {
+entry:
+  br label %Top0
+
+Top0:
+  %tobool1 = icmp eq i32* %a_elt, inttoptr (i64 4643 to  i32*) 
+  br i1 %tobool1, label %Top1, label %NextCond
+
+Top1:
+  %tobool2 = icmp ne i32* %a_elt, null
+  br i1 %tobool2, label %CallSiteBB, label %NextCond
+
+NextCond:
+  %cmp = icmp ne i32* %b_elt, null
+  br i1 %cmp, label %CallSiteBB, label %End
+
+CallSiteBB:
+  call i32 @callee(i32* %a_elt, i32 %c, i32 %c)
+  br label %End
+
+End:
+  ret void
+}

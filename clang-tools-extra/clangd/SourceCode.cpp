@@ -76,5 +76,13 @@ Range halfOpenToRange(const SourceManager &SM, CharSourceRange R) {
   return {Begin, End};
 }
 
+std::pair<llvm::StringRef, llvm::StringRef>
+splitQualifiedName(llvm::StringRef QName) {
+  size_t Pos = QName.rfind("::");
+  if (Pos == llvm::StringRef::npos)
+    return {StringRef(), QName};
+  return {QName.substr(0, Pos + 2), QName.substr(Pos + 2)};
+}
+
 } // namespace clangd
 } // namespace clang

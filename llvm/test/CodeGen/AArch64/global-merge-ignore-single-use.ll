@@ -38,9 +38,9 @@ define void @f2(i32 %a1, i32 %a2, i32 %a3) #0 {
 
 ; CHECK-LABEL: f3:
 define void @f3(i32 %a1, i32 %a2) #0 {
-; CHECK-NEXT: adrp x8, [[SET]]@PAGE
-; CHECK-NEXT: add x8, x8, [[SET]]@PAGEOFF
-; CHECK-NEXT: stp w0, w1, [x8, #12]
+; CHECK-NEXT: adrp x8, [[SET]]@PAGE+12
+; CHECK-NEXT: add x8, x8, [[SET]]@PAGEOFF+12
+; CHECK-NEXT: stp w0, w1, [x8]
 ; CHECK-NEXT: ret
   store i32 %a1, i32* @m2, align 4
   store i32 %a2, i32* @n2, align 4
