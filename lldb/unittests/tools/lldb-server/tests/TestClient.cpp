@@ -29,6 +29,7 @@ using namespace llgs_tests;
 
 TestClient::TestClient(std::unique_ptr<Connection> Conn) {
   SetConnection(Conn.release());
+  SetPacketTimeout(std::chrono::seconds(10));
 
   SendAck(); // Send this as a handshake.
 }
