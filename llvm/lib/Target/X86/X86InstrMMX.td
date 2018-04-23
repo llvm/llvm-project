@@ -339,11 +339,11 @@ defm MMX_PSUBUSW : MMXI_binop_rm_int<0xD9, "psubusw", int_x86_mmx_psubus_w,
                                    WriteVecALU>;
 
 defm MMX_PHSUBW  : SS3I_binop_rm_int_mm<0x05, "phsubw", int_x86_ssse3_phsub_w,
-                                   WriteVecALU>;
+                                        WritePHAdd>;
 defm MMX_PHSUBD  : SS3I_binop_rm_int_mm<0x06, "phsubd", int_x86_ssse3_phsub_d,
-                                   WriteVecALU>;
+                                        WritePHAdd>;
 defm MMX_PHSUBSW : SS3I_binop_rm_int_mm<0x07, "phsubsw",int_x86_ssse3_phsub_sw,
-                                   WriteVecALU>;
+                                        WritePHAdd>;
 
 // -- Multiplication
 defm MMX_PMULLW  : MMXI_binop_rm_int<0xD5, "pmullw", int_x86_mmx_pmull_w,

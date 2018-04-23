@@ -36,8 +36,7 @@ define <16 x i8> @mul_by_0_vec(<16 x i8> %a) {
 
 define <2 x i8> @mul_by_0_vec_undef_elt(<2 x i8> %a) {
 ; CHECK-LABEL: @mul_by_0_vec_undef_elt(
-; CHECK-NEXT:    [[B:%.*]] = mul <2 x i8> [[A:%.*]], <i8 undef, i8 0>
-; CHECK-NEXT:    ret <2 x i8> [[B]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %b = mul <2 x i8> %a, <i8 undef, i8 0>
   ret <2 x i8> %b

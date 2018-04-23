@@ -532,12 +532,6 @@ def : InstRW<[WriteALULd],
              (instregex "(AND|OR|XOR)(8|16|32|64)m(r|i)",
               "(AND|OR|XOR)(8|16|32|64)mi8", "(AND|OR|XOR)64mi32")>;
 
-// ANDN.
-// r,r.
-def : InstRW<[WriteALU], (instregex "ANDN(32|64)rr")>;
-// r,m.
-def : InstRW<[WriteALULd, ReadAfterLd], (instregex "ANDN(32|64)rm")>;
-
 // Define ALU latency variants
 def ZnWriteALULat2 : SchedWriteRes<[ZnALU]> {
   let Latency = 2;
@@ -1247,12 +1241,6 @@ def ZnWriteCVTPD2PSLd: SchedWriteRes<[ZnAGU,ZnFPU03]> {
 // x,m128.
 def : InstRW<[ZnWriteCVTPD2PSLd], (instregex "(V?)CVTPD2PS(X?)rm")>;
 
-// x,y.
-def ZnWriteCVTPD2PSYr : SchedWriteRes<[ZnFPU3]> {
-  let Latency = 5;
-}
-def : InstRW<[ZnWriteCVTPD2PSYr], (instregex "(V?)CVTPD2PSYrr")>;
-
 // x,m256.
 def ZnWriteCVTPD2PSYLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
   let Latency = 11;
@@ -1351,9 +1339,6 @@ def : InstRW<[ZnWriteCVTPS2PIr], (instregex "MMX_CVT(T?)PD2PIirr")>;
 def ZnWriteCVSTSI2SSr: SchedWriteRes<[ZnFPU3]> {
   let Latency = 5;
 }
-// CVSTSI2SS.
-// x,r32.
-def : InstRW<[ZnWriteCVSTSI2SSr], (instregex "(V?)CVTSI2SS(64)?rr")>;
 
 // same as CVTPD2DQr
 // CVT(T)SS2SI.

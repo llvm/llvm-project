@@ -881,7 +881,7 @@ static BasicBlock *buildClonedLoopBlocks(
           cast_or_null<BasicBlock>(VMap.lookup(ContinueSuccBB)))
     ClonedContinueSuccBB->removePredecessor(ClonedParentBB,
                                             /*DontDeleteUselessPHIs*/ true);
-  // Replace the cloned branch with an unconditional branch to the cloneed
+  // Replace the cloned branch with an unconditional branch to the cloned
   // unswitched successor.
   auto *ClonedSuccBB = cast<BasicBlock>(VMap.lookup(UnswitchedSuccBB));
   ClonedParentBB->getTerminator()->eraseFromParent();
@@ -1364,9 +1364,10 @@ static SmallPtrSet<const BasicBlock *, 16> recomputeLoopBlockSet(Loop &L,
           continue;
 
         // Insert all of the blocks (other than those already present) into
-        // the loop set. The only block we expect to already be in the set is
-        // the one we used to find this loop as we immediately handle the
-        // others the first time we encounter the loop.
+        // the loop set. We expect at least the block that led us to find the
+        // inner loop to be in the block set, but we may also have other loop
+        // blocks if they were already enqueued as predecessors of some other
+        // outer loop block.
         for (auto *InnerBB : InnerL->blocks()) {
           if (InnerBB == BB) {
             assert(LoopBlockSet.count(InnerBB) &&
@@ -1374,9 +1375,7 @@ static SmallPtrSet<const BasicBlock *, 16> recomputeLoopBlockSet(Loop &L,
             continue;
           }
 
-          bool Inserted = LoopBlockSet.insert(InnerBB).second;
-          (void)Inserted;
-          assert(Inserted && "Should only insert an inner loop once!");
+          LoopBlockSet.insert(InnerBB);
         }
 
         // Add the preheader to the worklist so we will continue past the

@@ -996,6 +996,50 @@ LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
     Elts, map_from_llvmDIFlags(Flags)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
+                                              int64_t *Addr, size_t Length) {
+  return wrap(unwrap(Builder)->createExpression(ArrayRef<int64_t>(Addr,
+                                                                  Length)));
+}
+
+LLVMValueRef LLVMDIBuilderInsertDeclareBefore(
+  LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
+  LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
+  return wrap(unwrap(Builder)->insertDeclare(
+                  unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
+                  unwrap<Instruction>(Instr)));
+}
+
+LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
+  return wrap(unwrap(Builder)->insertDeclare(
+                  unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
+                  unwrap(Block)));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
+    LLVMBool AlwaysPreserve, LLVMDIFlags Flags, uint32_t AlignInBits) {
+  return wrap(unwrap(Builder)->createAutoVariable(
+                  unwrap<DIScope>(Scope), {Name, NameLen}, unwrap<DIFile>(File),
+                  LineNo, unwrap<DIType>(Ty), AlwaysPreserve,
+                  map_from_llvmDIFlags(Flags), AlignInBits));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned ArgNo, LLVMMetadataRef File, unsigned LineNo,
+    LLVMMetadataRef Ty, LLVMBool AlwaysPreserve, LLVMDIFlags Flags) {
+  return wrap(unwrap(Builder)->createParameterVariable(
+                  unwrap<DIScope>(Scope), Name, ArgNo, unwrap<DIFile>(File),
+                  LineNo, unwrap<DIType>(Ty), AlwaysPreserve,
+                  map_from_llvmDIFlags(Flags)));
+}
+
 LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func) {
   return wrap(unwrap<Function>(Func)->getSubprogram());
 }

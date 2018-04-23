@@ -239,12 +239,12 @@ func (d *DIBuilder) CreateAutoVariable(scope Metadata, v DIAutoVariable) Metadat
 	result := C.LLVMDIBuilderCreateAutoVariable(
 		d.ref,
 		scope.C,
-		name,
+		name, C.size_t(len(v.Name)),
 		v.File.C,
 		C.unsigned(v.Line),
 		v.Type.C,
-		boolToCInt(v.AlwaysPreserve),
-		C.unsigned(v.Flags),
+		C.LLVMBool(boolToCInt(v.AlwaysPreserve)),
+		C.LLVMDIFlags(v.Flags),
 		C.uint32_t(v.AlignInBits),
 	)
 	return Metadata{C: result}
@@ -271,13 +271,13 @@ func (d *DIBuilder) CreateParameterVariable(scope Metadata, v DIParameterVariabl
 	result := C.LLVMDIBuilderCreateParameterVariable(
 		d.ref,
 		scope.C,
-		name,
+		name, C.size_t(len(v.Name)),
 		C.unsigned(v.ArgNo),
 		v.File.C,
 		C.unsigned(v.Line),
 		v.Type.C,
-		boolToCInt(v.AlwaysPreserve),
-		C.unsigned(v.Flags),
+		C.LLVMBool(boolToCInt(v.AlwaysPreserve)),
+		C.LLVMDIFlags(v.Flags),
 	)
 	return Metadata{C: result}
 }
@@ -564,7 +564,7 @@ func (d *DIBuilder) CreateExpression(addr []int64) Metadata {
 // InsertDeclareAtEnd inserts a call to llvm.dbg.declare at the end of the
 // specified basic block for the given value and associated debug metadata.
 func (d *DIBuilder) InsertDeclareAtEnd(v Value, diVarInfo, expr Metadata, bb BasicBlock) Value {
-	result := C.LLVMDIBuilderInsertDeclareAtEnd(d.ref, v.C, diVarInfo.C, expr.C, bb.C)
+	result := C.LLVMDIBuilderInsertDeclareAtEnd(d.ref, v.C, diVarInfo.C, expr.C, nil, bb.C)
 	return Value{C: result}
 }
 

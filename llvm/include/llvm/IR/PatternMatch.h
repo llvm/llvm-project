@@ -132,18 +132,6 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
   return match_combine_and<LTy, RTy>(L, R);
 }
 
-struct match_zero {
-  template <typename ITy> bool match(ITy *V) {
-    if (const auto *C = dyn_cast<Constant>(V))
-      return C->isNullValue();
-    return false;
-  }
-};
-
-/// Match an arbitrary zero/null constant. This includes
-/// zero_initializer for vectors and ConstantPointerNull for pointers.
-inline match_zero m_Zero() { return match_zero(); }
-
 struct apint_match {
   const APInt *&Res;
 
@@ -363,6 +351,27 @@ struct is_one {
 /// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_one> m_One() {
   return cst_pred_ty<is_one>();
+}
+
+struct is_zero_int {
+  bool isValue(const APInt &C) { return C.isNullValue(); }
+};
+/// Match an integer 0 or a vector with all elements equal to 0.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_zero_int> m_ZeroInt() {
+  return cst_pred_ty<is_zero_int>();
+}
+
+struct is_zero {
+  template <typename ITy> bool match(ITy *V) {
+    auto *C = dyn_cast<Constant>(V);
+    return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
+  }
+};
+/// Match any null constant or a vector with all elements equal to 0.
+/// For vectors, this includes constants with undefined elements.
+inline is_zero m_Zero() {
+  return is_zero();
 }
 
 struct is_power2 {
