@@ -278,7 +278,7 @@ static llvm::Optional<std::string> readDelimitedMessage(std::istream &In,
       continue;
 
     // found a delimiter
-    if (LineRef.find_first_not_of('-') == llvm::StringRef::npos)
+    if (LineRef.rtrim() == "---")
       break;
 
     JSON += Line;
