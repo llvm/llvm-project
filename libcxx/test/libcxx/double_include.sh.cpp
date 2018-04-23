@@ -151,6 +151,7 @@
 #include <experimental/memory_resource>
 #include <experimental/propagate_const>
 #include <experimental/regex>
+#include <experimental/simd>
 #include <experimental/set>
 #include <experimental/string>
 #include <experimental/type_traits>

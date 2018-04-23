@@ -550,6 +550,10 @@ module std [system] {
       header "experimental/regex"
       export *
     }
+    module simd {
+      header "experimental/simd"
+      export *
+    }
     module set {
       header "experimental/set"
       export *
