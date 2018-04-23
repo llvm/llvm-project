@@ -141,8 +141,7 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
     TokenAnnotator &Annotator, SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
     FormatTokenLexer &Tokens) {
   const SourceManager &SourceMgr = Env.getSourceManager();
-  AffectedRangeMgr.computeAffectedLines(AnnotatedLines.begin(),
-                                        AnnotatedLines.end());
+  AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
   tooling::Replacements Fixes;
   std::string AllNamespaceNames = "";
   size_t StartLineIndex = SIZE_MAX;
