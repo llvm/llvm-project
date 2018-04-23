@@ -1,0 +1,10 @@
+// Test that we can define and use zero-sized struct in the repl.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+struct Patatino {}
+let tinky = Patatino()
+CHECK: tinky: Patatino = {}
+
+tinky
+CHECK: $R0: Patatino = {}

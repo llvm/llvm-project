@@ -1318,9 +1318,21 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
     Status error;
 
-    offset = materializer.AddPersistentVariable(
-        variable_metadata->m_persistent_variable_sp,
-        &user_expression.GetPersistentVariableDelegate(), error);
+    // When trying to materialize variables in the REPL, check whether
+    // this is possibly a zero-sized type and call the correct function which
+    // correctly handles zero-sized types. Unfortunately we currently have
+    // this check scattered in several places in the codebase, we should at
+    // some point centralize it.
+    if (repl && SwiftASTContext::IsPossibleZeroSizeType(variable.GetType())) {
+      auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
+      offset = repl_mat.AddREPLResultVariable(
+          variable.GetType(), variable.GetDecl(),
+          &user_expression.GetPersistentVariableDelegate(), error);
+    } else {
+      offset = materializer.AddPersistentVariable(
+          variable_metadata->m_persistent_variable_sp,
+          &user_expression.GetPersistentVariableDelegate(), error);
+    }
 
     if (!error.Success()) {
       diagnostic_manager.Printf(eDiagnosticSeverityError,
