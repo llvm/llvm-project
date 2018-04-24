@@ -53,6 +53,8 @@ namespace StrcmpEtc {
   static_assert(__builtin_strcmp("abab", "abaa") == 1);
   static_assert(__builtin_strcmp("ababa", "abab") == 1);
   static_assert(__builtin_strcmp("abab", "ababa") == -1);
+  static_assert(__builtin_strcmp("a\203", "a") == 1);
+  static_assert(__builtin_strcmp("a\203", "a\003") == 1);
   static_assert(__builtin_strcmp("abab\0banana", "abab") == 0);
   static_assert(__builtin_strcmp("abab", "abab\0banana") == 0);
   static_assert(__builtin_strcmp("abab\0banana", "abab\0canada") == 0);
@@ -78,6 +80,8 @@ namespace StrcmpEtc {
 
   static_assert(__builtin_memcmp("abaa", "abba", 3) == -1);
   static_assert(__builtin_memcmp("abaa", "abba", 2) == 0);
+  static_assert(__builtin_memcmp("a\203", "a", 2) == 1);
+  static_assert(__builtin_memcmp("a\203", "a\003", 2) == 1);
   static_assert(__builtin_memcmp(0, 0, 0) == 0);
   static_assert(__builtin_memcmp("abab\0banana", "abab\0banana", 100) == 0); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
   static_assert(__builtin_memcmp("abab\0banana", "abab\0canada", 100) == -1); // FIXME: Should we reject this?
@@ -102,6 +106,9 @@ namespace WcscmpEtc {
   static_assert(__builtin_wcscmp(L"abab\0banana", L"abab") == 0);
   static_assert(__builtin_wcscmp(L"abab", L"abab\0banana") == 0);
   static_assert(__builtin_wcscmp(L"abab\0banana", L"abab\0canada") == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wcscmp(L"a\x83838383", L"a") == (wchar_t)-1U >> 31);
+#endif
   static_assert(__builtin_wcscmp(0, L"abab") == 0); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
   static_assert(__builtin_wcscmp(L"abab", 0) == 0); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
 
@@ -116,6 +123,10 @@ namespace WcscmpEtc {
   static_assert(__builtin_wcsncmp(L"abaa", L"abba", 0) == 0);
   static_assert(__builtin_wcsncmp(0, 0, 0) == 0);
   static_assert(__builtin_wcsncmp(L"abab\0banana", L"abab\0canada", 100) == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wcsncmp(L"a\x83838383", L"aa", 2) ==
+                (wchar_t)-1U >> 31);
+#endif
 
   static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar, 6) == -1);
   static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar, 7) == -1); // FIXME: Should we reject this?
@@ -125,6 +136,10 @@ namespace WcscmpEtc {
   static_assert(__builtin_wmemcmp(L"abaa", L"abba", 3) == -1);
   static_assert(__builtin_wmemcmp(L"abaa", L"abba", 2) == 0);
   static_assert(__builtin_wmemcmp(0, 0, 0) == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wmemcmp(L"a\x83838383", L"aa", 2) ==
+                (wchar_t)-1U >> 31);
+#endif
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0banana", 100) == 0); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 100) == -1); // FIXME: Should we reject this?
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 7) == -1);

@@ -36,9 +36,17 @@ Treat source input files as Objective-C inputs
 
 Treat source input files as Objective-C++ inputs
 
+.. option:: -Qn
+
+Do not emit metadata containing compiler name and version
+
 .. option:: -Qunused-arguments
 
 Don't emit warning for unused driver arguments
+
+.. option:: -Qy
+
+Emit metadata containing compiler name and version
 
 .. option:: -Wa,<arg>,<arg2>...
 
@@ -201,6 +209,10 @@ Use approximate transcendental functions
 .. option:: -fcuda-flush-denormals-to-zero, -fno-cuda-flush-denormals-to-zero
 
 Flush denormal floating point values to zero in CUDA device mode.
+
+.. option:: -fcuda-rdc, -fno-cuda-rdc
+
+Generate relocatable device code, also known as separate compilation mode.
 
 .. option:: -ffixed-r19
 
@@ -2539,6 +2551,8 @@ X86
 .. option:: -mvaes, -mno-vaes
 
 .. option:: -mvpclmulqdq, -mno-vpclmulqdq
+
+.. option:: -mwaitpkg, -mno-waitpkg
 
 .. option:: -mwbnoinvd, -mno-wbnoinvd
 

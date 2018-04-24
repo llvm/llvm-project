@@ -161,7 +161,7 @@ private:
   bool spaceRequiredBetween(const AnnotatedLine &Line, const FormatToken &Left,
                             const FormatToken &Right);
 
-  bool spaceRequiredBefore(const AnnotatedLine &Line, const FormatToken &Tok);
+  bool spaceRequiredBefore(const AnnotatedLine &Line, const FormatToken &Right);
 
   bool mustBreakBefore(const AnnotatedLine &Line, const FormatToken &Right);
 

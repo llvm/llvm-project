@@ -319,7 +319,6 @@ TARGET_BUILTIN(__builtin_ia32_maskmovdqu, "vV16cV16cc*", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_movmskpd, "iV2d", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_pmovmskb128, "iV16c", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_movnti, "vi*i", "", "sse2")
-TARGET_BUILTIN(__builtin_ia32_movnti64, "vLLi*LLi", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_psadbw128, "V2LLiV16cV16c", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_sqrtpd, "V2dV2d", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_sqrtsd, "V2dV2d", "", "sse2")
@@ -643,13 +642,6 @@ TARGET_BUILTIN(__builtin_ia32_vcvtph2ps256, "V8fV8s", "", "f16c")
 // RDRAND
 TARGET_BUILTIN(__builtin_ia32_rdrand16_step, "UiUs*", "", "rdrnd")
 TARGET_BUILTIN(__builtin_ia32_rdrand32_step, "UiUi*", "", "rdrnd")
-TARGET_BUILTIN(__builtin_ia32_rdrand64_step, "UiULLi*", "", "rdrnd")
-
-// FSGSBASE
-TARGET_BUILTIN(__builtin_ia32_rdfsbase32, "Ui", "", "fsgsbase")
-TARGET_BUILTIN(__builtin_ia32_rdgsbase32, "Ui", "", "fsgsbase")
-TARGET_BUILTIN(__builtin_ia32_wrfsbase32, "vUi", "", "fsgsbase")
-TARGET_BUILTIN(__builtin_ia32_wrgsbase32, "vUi", "", "fsgsbase")
 
 // FXSR
 TARGET_BUILTIN(__builtin_ia32_fxrstor, "vv*", "", "fxsr")

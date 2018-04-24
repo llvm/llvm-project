@@ -1594,21 +1594,29 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
   GoodVersion.MajorStr = First.first.str();
   if (First.second.empty())
     return GoodVersion;
-  if (Second.first.getAsInteger(10, GoodVersion.Minor) || GoodVersion.Minor < 0)
+  StringRef MinorStr = Second.first;
+  if (Second.second.empty()) {
+    if (size_t EndNumber = MinorStr.find_first_not_of("0123456789")) {
+      GoodVersion.PatchSuffix = MinorStr.substr(EndNumber);
+      MinorStr = MinorStr.slice(0, EndNumber);
+    }
+  }
+  if (MinorStr.getAsInteger(10, GoodVersion.Minor) || GoodVersion.Minor < 0)
     return BadVersion;
-  GoodVersion.MinorStr = Second.first.str();
+  GoodVersion.MinorStr = MinorStr.str();
 
   // First look for a number prefix and parse that if present. Otherwise just
   // stash the entire patch string in the suffix, and leave the number
   // unspecified. This covers versions strings such as:
   //   5        (handled above)
   //   4.4
+  //   4.4-patched
   //   4.4.0
   //   4.4.x
   //   4.4.2-rc4
   //   4.4.x-patched
   // And retains any patch number it finds.
-  StringRef PatchText = GoodVersion.PatchSuffix = Second.second.str();
+  StringRef PatchText = Second.second.str();
   if (!PatchText.empty()) {
     if (size_t EndNumber = PatchText.find_first_not_of("0123456789")) {
       // Try to parse the number and any suffix.

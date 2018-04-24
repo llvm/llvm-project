@@ -5368,7 +5368,6 @@ _mm256_maskz_set1_epi32( __mmask8 __M, int __A)
 }
 
 
-#ifdef __x86_64__
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_mask_set1_epi64 (__m128i __O, __mmask8 __M, long long __A)
 {
@@ -5400,8 +5399,6 @@ _mm256_maskz_set1_epi64 (__mmask8 __M, long long __A)
                                                (__v4di) _mm256_set1_epi64x(__A),
                                                (__v4di) _mm256_setzero_si256());
 }
-  
-#endif
 
 #define _mm_fixupimm_pd(A, B, C, imm) __extension__ ({ \
   (__m128d)__builtin_ia32_fixupimmpd128_mask((__v2df)(__m128d)(A), \

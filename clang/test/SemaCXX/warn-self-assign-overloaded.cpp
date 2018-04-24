@@ -4,6 +4,12 @@
 // RUN: %clang_cc1 -fsyntax-only -Wself-assign -DV2 -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wself-assign -DV3 -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wself-assign -DV4 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-self-assign -Wself-assign-overloaded -DDUMMY -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-self-assign -Wself-assign-overloaded -DV0 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-self-assign -Wself-assign-overloaded -DV1 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-self-assign -Wself-assign-overloaded -DV2 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-self-assign -Wself-assign-overloaded -DV3 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-self-assign -Wself-assign-overloaded -DV4 -verify %s
 
 #ifdef DUMMY
 struct S {};

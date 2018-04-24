@@ -110,11 +110,11 @@ void updateEndComment(const FormatToken *RBraceTok, StringRef EndCommentText,
 } // namespace
 
 const FormatToken *
-getNamespaceToken(const AnnotatedLine *line,
+getNamespaceToken(const AnnotatedLine *Line,
                   const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
-  if (!line->Affected || line->InPPDirective || !line->startsWith(tok::r_brace))
+  if (!Line->Affected || Line->InPPDirective || !Line->startsWith(tok::r_brace))
     return nullptr;
-  size_t StartLineIndex = line->MatchingOpeningBlockLineIndex;
+  size_t StartLineIndex = Line->MatchingOpeningBlockLineIndex;
   if (StartLineIndex == UnwrappedLine::kInvalidIndex)
     return nullptr;
   assert(StartLineIndex < AnnotatedLines.size());

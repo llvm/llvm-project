@@ -64,17 +64,14 @@ createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                      IndexingOptions Opts,
                      std::unique_ptr<FrontendAction> WrappedAction);
 
-void indexASTUnit(ASTUnit &Unit,
-                  std::shared_ptr<IndexDataConsumer> DataConsumer,
+void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
                   IndexingOptions Opts);
 
 void indexTopLevelDecls(ASTContext &Ctx, ArrayRef<const Decl *> Decls,
-                        std::shared_ptr<IndexDataConsumer> DataConsumer,
-                        IndexingOptions Opts);
+                        IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
-                     std::shared_ptr<IndexDataConsumer> DataConsumer,
-                     IndexingOptions Opts);
+                     IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 /// \param WrappedAction another frontend action to wrap over or null.
 std::unique_ptr<FrontendAction>
