@@ -469,6 +469,7 @@ define <64 x i16> @test_mask_adds_epi16_rr_1024(<64 x i16> %a, <64 x i16> %b) {
 ; AVX512F-32-NEXT:    vpaddsw 8(%ebp), %zmm1, %zmm1
 ; AVX512F-32-NEXT:    movl %ebp, %esp
 ; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX512F-32-NEXT:    retl
   %1 = sext <64 x i16> %a to <64 x i32>
   %2 = sext <64 x i16> %b to <64 x i32>
@@ -653,6 +654,7 @@ define <64 x i16> @test_mask_subs_epi16_rr_1024(<64 x i16> %a, <64 x i16> %b) {
 ; AVX512F-32-NEXT:    vpsubsw 8(%ebp), %zmm1, %zmm1
 ; AVX512F-32-NEXT:    movl %ebp, %esp
 ; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX512F-32-NEXT:    retl
   %1 = sext <64 x i16> %a to <64 x i32>
   %2 = sext <64 x i16> %b to <64 x i32>
@@ -825,6 +827,7 @@ define <64 x i16> @test_mask_adds_epu16_rr_1024(<64 x i16> %a, <64 x i16> %b) {
 ; AVX512F-32-NEXT:    vpaddusw 8(%ebp), %zmm1, %zmm1
 ; AVX512F-32-NEXT:    movl %ebp, %esp
 ; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX512F-32-NEXT:    retl
   %1 = zext <64 x i16> %a to <64 x i32>
   %2 = zext <64 x i16> %b to <64 x i32>
@@ -977,6 +980,7 @@ define <64 x i16> @test_mask_subs_epu16_rr_1024(<64 x i16> %a, <64 x i16> %b) {
 ; AVX512F-32-NEXT:    vpsubusw 8(%ebp), %zmm1, %zmm1
 ; AVX512F-32-NEXT:    movl %ebp, %esp
 ; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX512F-32-NEXT:    retl
   %cmp = icmp ugt <64 x i16> %a, %b
   %sel = select <64 x i1> %cmp, <64 x i16> %a, <64 x i16> %b

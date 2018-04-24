@@ -17,6 +17,9 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -39,6 +42,39 @@
 using namespace llvm;
 using namespace object;
 using namespace ELF;
+
+namespace {
+
+enum ID {
+  OBJCOPY_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OBJCOPY_##ID,
+#include "Opts.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#include "Opts.inc"
+#undef PREFIX
+
+static const opt::OptTable::Info ObjcopyInfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {PREFIX,          NAME,         HELPTEXT,                                    \
+   METAVAR,         OBJCOPY_##ID, opt::Option::KIND##Class,                    \
+   PARAM,           FLAGS,        OBJCOPY_##GROUP,                             \
+   OBJCOPY_##ALIAS, ALIASARGS,    VALUES},
+#include "Opts.inc"
+#undef OPTION
+};
+
+class ObjcopyOptTable : public opt::OptTable {
+public:
+  ObjcopyOptTable() : OptTable(ObjcopyInfoTable, true) {}
+};
+
+} // namespace
 
 // The name this program was invoked as.
 static StringRef ToolName;
@@ -69,60 +105,28 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 
 } // end namespace llvm
 
-static cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input>"));
-static cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("[ <output> ]"));
+struct CopyConfig {
+  StringRef OutputFilename;
+  StringRef InputFilename;
+  StringRef OutputFormat;
+  StringRef InputFormat;
+  StringRef BinaryArch;
 
-static cl::opt<std::string>
-    OutputFormat("O", cl::desc("Set output format to one of the following:"
-                               "\n\tbinary"));
-static cl::list<std::string> ToRemove("remove-section",
-                                      cl::desc("Remove <section>"),
-                                      cl::value_desc("section"));
-static cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
-                           cl::aliasopt(ToRemove));
-static cl::opt<bool> StripAll(
-    "strip-all",
-    cl::desc(
-        "Removes non-allocated sections other than .gnu.warning* sections"));
-static cl::opt<bool>
-    StripAllGNU("strip-all-gnu",
-                cl::desc("Removes symbol, relocation, and debug information"));
-static cl::list<std::string> Keep("keep", cl::desc("Keep <section>"),
-                                  cl::value_desc("section"));
-static cl::list<std::string> OnlyKeep("only-keep",
-                                      cl::desc("Remove all but <section>"),
-                                      cl::value_desc("section"));
-static cl::alias OnlyKeepA("j", cl::desc("Alias for only-keep"),
-                           cl::aliasopt(OnlyKeep));
-static cl::opt<bool> StripDebug("strip-debug",
-                                cl::desc("Removes all debug information"));
-static cl::opt<bool> StripSections("strip-sections",
-                                   cl::desc("Remove all section headers"));
-static cl::opt<bool>
-    StripNonAlloc("strip-non-alloc",
-                  cl::desc("Remove all non-allocated sections"));
-static cl::opt<bool>
-    StripDWO("strip-dwo", cl::desc("Remove all DWARF .dwo sections from file"));
-static cl::opt<bool> ExtractDWO(
-    "extract-dwo",
-    cl::desc("Remove all sections that are not DWARF .dwo sections from file"));
-static cl::opt<std::string>
-    SplitDWO("split-dwo",
-             cl::desc("Equivalent to extract-dwo on the input file to "
-                      "<dwo-file>, then strip-dwo on the input file"),
-             cl::value_desc("dwo-file"));
-static cl::list<std::string> AddSection(
-    "add-section",
-    cl::desc("Make a section named <section> with the contents of <file>."),
-    cl::value_desc("section=file"));
-static cl::opt<bool> LocalizeHidden(
-    "localize-hidden",
-    cl::desc(
-        "Mark all symbols that have hidden or internal visibility as local"));
-static cl::opt<std::string>
-    AddGnuDebugLink("add-gnu-debuglink",
-                    cl::desc("adds a .gnu_debuglink for <debug-file>"),
-                    cl::value_desc("debug-file"));
+  StringRef SplitDWO;
+  StringRef AddGnuDebugLink;
+  std::vector<StringRef> ToRemove;
+  std::vector<StringRef> Keep;
+  std::vector<StringRef> OnlyKeep;
+  std::vector<StringRef> AddSection;
+  bool StripAll;
+  bool StripAllGNU;
+  bool StripDebug;
+  bool StripSections;
+  bool StripNonAlloc;
+  bool StripDWO;
+  bool ExtractDWO;
+  bool LocalizeHidden;
+};
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
@@ -137,31 +141,35 @@ bool OnlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !IsDWOSection(Sec);
 }
 
-static ElfType OutputElfType;
-
-std::unique_ptr<Writer> CreateWriter(Object &Obj, StringRef File) {
-  if (OutputFormat == "binary") {
-    return llvm::make_unique<BinaryWriter>(OutputFilename, Obj);
+std::unique_ptr<Writer> CreateWriter(const CopyConfig &Config, Object &Obj,
+                                     StringRef File, ElfType OutputElfType) {
+  if (Config.OutputFormat == "binary") {
+    return llvm::make_unique<BinaryWriter>(File, Obj);
   }
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
   switch (OutputElfType) {
   case ELFT_ELF32LE:
-    return llvm::make_unique<ELFWriter<ELF32LE>>(File, Obj, !StripSections);
+    return llvm::make_unique<ELFWriter<ELF32LE>>(File, Obj,
+                                                 !Config.StripSections);
   case ELFT_ELF64LE:
-    return llvm::make_unique<ELFWriter<ELF64LE>>(File, Obj, !StripSections);
+    return llvm::make_unique<ELFWriter<ELF64LE>>(File, Obj,
+                                                 !Config.StripSections);
   case ELFT_ELF32BE:
-    return llvm::make_unique<ELFWriter<ELF32BE>>(File, Obj, !StripSections);
+    return llvm::make_unique<ELFWriter<ELF32BE>>(File, Obj,
+                                                 !Config.StripSections);
   case ELFT_ELF64BE:
-    return llvm::make_unique<ELFWriter<ELF64BE>>(File, Obj, !StripSections);
+    return llvm::make_unique<ELFWriter<ELF64BE>>(File, Obj,
+                                                 !Config.StripSections);
   }
   llvm_unreachable("Invalid output format");
 }
 
-void SplitDWOToFile(const Reader &Reader, StringRef File) {
+void SplitDWOToFile(const CopyConfig &Config, const Reader &Reader,
+                    StringRef File, ElfType OutputElfType) {
   auto DWOFile = Reader.create();
   DWOFile->removeSections(
       [&](const SectionBase &Sec) { return OnlyKeepDWOPred(*DWOFile, Sec); });
-  auto Writer = CreateWriter(*DWOFile, File);
+  auto Writer = CreateWriter(Config, *DWOFile, File, OutputElfType);
   Writer->finalize();
   Writer->write();
 }
@@ -173,15 +181,16 @@ void SplitDWOToFile(const Reader &Reader, StringRef File) {
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-void HandleArgs(Object &Obj, const Reader &Reader) {
+void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
+                ElfType OutputElfType) {
 
-  if (!SplitDWO.empty()) {
-    SplitDWOToFile(Reader, SplitDWO);
+  if (!Config.SplitDWO.empty()) {
+    SplitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType);
   }
 
   // Localize:
 
-  if (LocalizeHidden) {
+  if (Config.LocalizeHidden) {
     Obj.SymbolTable->localize([](const Symbol &Sym) {
       return Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL;
     });
@@ -191,24 +200,24 @@ void HandleArgs(Object &Obj, const Reader &Reader) {
 
   // Removes:
 
-  if (!ToRemove.empty()) {
-    RemovePred = [&](const SectionBase &Sec) {
-      return std::find(std::begin(ToRemove), std::end(ToRemove), Sec.Name) !=
-             std::end(ToRemove);
+  if (!Config.ToRemove.empty()) {
+    RemovePred = [&Config](const SectionBase &Sec) {
+      return std::find(std::begin(Config.ToRemove), std::end(Config.ToRemove),
+                       Sec.Name) != std::end(Config.ToRemove);
     };
   }
 
-  if (StripDWO || !SplitDWO.empty())
+  if (Config.StripDWO || !Config.SplitDWO.empty())
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return IsDWOSection(Sec) || RemovePred(Sec);
     };
 
-  if (ExtractDWO)
+  if (Config.ExtractDWO)
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       return OnlyKeepDWOPred(Obj, Sec) || RemovePred(Sec);
     };
 
-  if (StripAllGNU)
+  if (Config.StripAllGNU)
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -226,19 +235,19 @@ void HandleArgs(Object &Obj, const Reader &Reader) {
       return Sec.Name.startswith(".debug");
     };
 
-  if (StripSections) {
+  if (Config.StripSections) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return RemovePred(Sec) || (Sec.Flags & SHF_ALLOC) == 0;
     };
   }
 
-  if (StripDebug) {
+  if (Config.StripDebug) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return RemovePred(Sec) || Sec.Name.startswith(".debug");
     };
   }
 
-  if (StripNonAlloc)
+  if (Config.StripNonAlloc)
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -247,7 +256,7 @@ void HandleArgs(Object &Obj, const Reader &Reader) {
       return (Sec.Flags & SHF_ALLOC) == 0;
     };
 
-  if (StripAll)
+  if (Config.StripAll)
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -260,11 +269,11 @@ void HandleArgs(Object &Obj, const Reader &Reader) {
 
   // Explicit copies:
 
-  if (!OnlyKeep.empty()) {
-    RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
+  if (!Config.OnlyKeep.empty()) {
+    RemovePred = [&Config, RemovePred, &Obj](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (std::find(std::begin(OnlyKeep), std::end(OnlyKeep), Sec.Name) !=
-          std::end(OnlyKeep))
+      if (std::find(std::begin(Config.OnlyKeep), std::end(Config.OnlyKeep),
+                    Sec.Name) != std::end(Config.OnlyKeep))
         return false;
 
       // Allow all implicit removes.
@@ -282,11 +291,11 @@ void HandleArgs(Object &Obj, const Reader &Reader) {
     };
   }
 
-  if (!Keep.empty()) {
-    RemovePred = [RemovePred](const SectionBase &Sec) {
+  if (!Config.Keep.empty()) {
+    RemovePred = [Config, RemovePred](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (std::find(std::begin(Keep), std::end(Keep), Sec.Name) !=
-          std::end(Keep))
+      if (std::find(std::begin(Config.Keep), std::end(Config.Keep), Sec.Name) !=
+          std::end(Config.Keep))
         return false;
       // Otherwise defer to RemovePred.
       return RemovePred(Sec);
@@ -295,9 +304,9 @@ void HandleArgs(Object &Obj, const Reader &Reader) {
 
   Obj.removeSections(RemovePred);
 
-  if (!AddSection.empty()) {
-    for (const auto &Flag : AddSection) {
-      auto SecPair = StringRef(Flag).split("=");
+  if (!Config.AddSection.empty()) {
+    for (const auto &Flag : Config.AddSection) {
+      auto SecPair = Flag.split("=");
       auto SecName = SecPair.first;
       auto File = SecPair.second;
       auto BufOrErr = MemoryBuffer::getFile(File);
@@ -311,34 +320,92 @@ void HandleArgs(Object &Obj, const Reader &Reader) {
     }
   }
 
-  if (!AddGnuDebugLink.empty()) {
-    Obj.addSection<GnuDebugLinkSection>(StringRef(AddGnuDebugLink));
+  if (!Config.AddGnuDebugLink.empty()) {
+    Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
   }
 }
 
-std::unique_ptr<Reader> CreateReader() {
+std::unique_ptr<Reader> CreateReader(StringRef InputFilename,
+                                     ElfType &OutputElfType) {
   // Right now we can only read ELF files so there's only one reader;
-  auto Out = llvm::make_unique<ELFReader>(StringRef(InputFilename));
+  auto Out = llvm::make_unique<ELFReader>(InputFilename);
   // We need to set the default ElfType for output.
   OutputElfType = Out->getElfType();
   return std::move(Out);
 }
 
-int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
-  cl::ParseCommandLineOptions(argc, argv, "llvm objcopy utility\n");
-  ToolName = argv[0];
-  if (InputFilename.empty()) {
-    cl::PrintHelpMessage();
-    return 2;
-  }
-
-  auto Reader = CreateReader();
+void ExecuteElfObjcopy(const CopyConfig &Config) {
+  ElfType OutputElfType;
+  auto Reader = CreateReader(Config.InputFilename, OutputElfType);
   auto Obj = Reader->create();
-  StringRef Output =
-      OutputFilename.getNumOccurrences() ? OutputFilename : InputFilename;
-  auto Writer = CreateWriter(*Obj, Output);
-  HandleArgs(*Obj, *Reader);
+  auto Writer =
+      CreateWriter(Config, *Obj, Config.OutputFilename, OutputElfType);
+  HandleArgs(Config, *Obj, *Reader, OutputElfType);
   Writer->finalize();
   Writer->write();
+}
+
+// ParseObjcopyOptions returns the config and sets the input arguments. If a
+// help flag is set then ParseObjcopyOptions will print the help messege and
+// exit.
+CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
+  ObjcopyOptTable T;
+  unsigned MissingArgumentIndex, MissingArgumentCount;
+  llvm::opt::InputArgList InputArgs =
+      T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (InputArgs.size() == 0 || InputArgs.hasArg(OBJCOPY_help)) {
+    T.PrintHelp(outs(), "llvm-objcopy <input> [ <output> ]", "objcopy tool");
+    exit(0);
+  }
+
+  SmallVector<const char *, 2> Positional;
+
+  for (auto Arg : InputArgs.filtered(OBJCOPY_UNKNOWN))
+    error("unknown argument '" + Arg->getAsString(InputArgs) + "'");
+
+  for (auto Arg : InputArgs.filtered(OBJCOPY_INPUT))
+    Positional.push_back(Arg->getValue());
+
+  if (Positional.empty())
+    error("No input file specified");
+
+  if (Positional.size() > 2)
+    error("Too many positional arguments");
+
+  CopyConfig Config;
+  Config.InputFilename = Positional[0];
+  Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
+  Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_input_target);
+  Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_output_target);
+  Config.BinaryArch = InputArgs.getLastArgValue(OBJCOPY_binary_architecture);
+
+  Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+  Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
+    Config.ToRemove.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_keep))
+    Config.Keep.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_only_keep))
+    Config.OnlyKeep.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_add_section))
+    Config.AddSection.push_back(Arg->getValue());
+  Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
+  Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
+  Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);
+  Config.StripDWO = InputArgs.hasArg(OBJCOPY_strip_dwo);
+  Config.StripSections = InputArgs.hasArg(OBJCOPY_strip_sections);
+  Config.StripNonAlloc = InputArgs.hasArg(OBJCOPY_strip_non_alloc);
+  Config.ExtractDWO = InputArgs.hasArg(OBJCOPY_extract_dwo);
+  Config.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
+
+  return Config;
+}
+
+int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
+  ToolName = argv[0];
+
+  CopyConfig Config = ParseObjcopyOptions(makeArrayRef(argv + 1, argc));
+  ExecuteElfObjcopy(Config);
 }

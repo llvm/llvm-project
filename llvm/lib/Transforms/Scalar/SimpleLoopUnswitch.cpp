@@ -1333,13 +1333,14 @@ static SmallPtrSet<const BasicBlock *, 16> recomputeLoopBlockSet(Loop &L,
   if (LoopBlockSet.empty())
     return LoopBlockSet;
 
-  // Add the loop header to the set.
-  LoopBlockSet.insert(Header);
-
   // We found backedges, recurse through them to identify the loop blocks.
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
     assert(LoopBlockSet.count(BB) && "Didn't put block into the loop set!");
+
+    // No need to walk past the header.
+    if (BB == Header)
+      continue;
 
     // Because we know the inner loop structure remains valid we can use the
     // loop structure to jump immediately across the entire nested loop.
@@ -1387,6 +1388,8 @@ static SmallPtrSet<const BasicBlock *, 16> recomputeLoopBlockSet(Loop &L,
       if (L.contains(Pred) && LoopBlockSet.insert(Pred).second)
         Worklist.push_back(Pred);
   }
+
+  assert(LoopBlockSet.count(Header) && "Cannot fail to add the header!");
 
   // We've found all the blocks participating in the loop, return our completed
   // set.
@@ -1792,9 +1795,12 @@ static bool unswitchInvariantBranch(
   // unnecessary loops.
   auto UpdateLCSSA = [&](Loop &UpdateL) {
 #ifndef NDEBUG
-    for (Loop *ChildL : UpdateL)
+    UpdateL.verifyLoop();
+    for (Loop *ChildL : UpdateL) {
+      ChildL->verifyLoop();
       assert(ChildL->isRecursivelyLCSSAForm(DT, LI) &&
              "Perturbed a child loop's LCSSA form!");
+    }
 #endif
     formLCSSA(UpdateL, DT, &LI, nullptr);
   };

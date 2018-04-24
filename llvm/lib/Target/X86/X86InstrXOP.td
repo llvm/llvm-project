@@ -157,7 +157,8 @@ let ExeDomain = SSEPackedInt in {
 }
 
 // Instruction where second source can be memory, but third must be register
-multiclass xop4opm2<bits<8> opc, string OpcodeStr, Intrinsic Int> {
+multiclass xop4opm2<bits<8> opc, string OpcodeStr, Intrinsic Int,
+                    X86FoldableSchedWrite sched> {
   let isCommutable = 1 in
   def rr : IXOPi8Reg<opc, MRMSrcReg, (outs VR128:$dst),
            (ins VR128:$src1, VR128:$src2, VR128:$src3),
@@ -165,29 +166,41 @@ multiclass xop4opm2<bits<8> opc, string OpcodeStr, Intrinsic Int> {
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
               (Int VR128:$src1, VR128:$src2, VR128:$src3))]>, XOP_4V,
-           Sched<[WriteVecIMul]>;
+           Sched<[sched]>;
   def rm : IXOPi8Reg<opc, MRMSrcMem, (outs VR128:$dst),
            (ins VR128:$src1, i128mem:$src2, VR128:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
               (Int VR128:$src1, (bitconvert (loadv2i64 addr:$src2)),
-              VR128:$src3))]>, XOP_4V, Sched<[WriteVecIMulLd, ReadAfterLd]>;
+              VR128:$src3))]>, XOP_4V, Sched<[sched.Folded, ReadAfterLd]>;
 }
 
 let ExeDomain = SSEPackedInt in {
-  defm VPMADCSWD  : xop4opm2<0xB6, "vpmadcswd", int_x86_xop_vpmadcswd>;
-  defm VPMADCSSWD : xop4opm2<0xA6, "vpmadcsswd", int_x86_xop_vpmadcsswd>;
-  defm VPMACSWW   : xop4opm2<0x95, "vpmacsww", int_x86_xop_vpmacsww>;
-  defm VPMACSWD   : xop4opm2<0x96, "vpmacswd", int_x86_xop_vpmacswd>;
-  defm VPMACSSWW  : xop4opm2<0x85, "vpmacssww", int_x86_xop_vpmacssww>;
-  defm VPMACSSWD  : xop4opm2<0x86, "vpmacsswd", int_x86_xop_vpmacsswd>;
-  defm VPMACSSDQL : xop4opm2<0x87, "vpmacssdql", int_x86_xop_vpmacssdql>;
-  defm VPMACSSDQH : xop4opm2<0x8F, "vpmacssdqh", int_x86_xop_vpmacssdqh>;
-  defm VPMACSSDD  : xop4opm2<0x8E, "vpmacssdd", int_x86_xop_vpmacssdd>;
-  defm VPMACSDQL  : xop4opm2<0x97, "vpmacsdql", int_x86_xop_vpmacsdql>;
-  defm VPMACSDQH  : xop4opm2<0x9F, "vpmacsdqh", int_x86_xop_vpmacsdqh>;
-  defm VPMACSDD   : xop4opm2<0x9E, "vpmacsdd", int_x86_xop_vpmacsdd>;
+  defm VPMADCSWD  : xop4opm2<0xB6, "vpmadcswd",
+                             int_x86_xop_vpmadcswd, WriteVecIMul>;
+  defm VPMADCSSWD : xop4opm2<0xA6, "vpmadcsswd",
+                             int_x86_xop_vpmadcsswd, WriteVecIMul>;
+  defm VPMACSWW   : xop4opm2<0x95, "vpmacsww",
+                             int_x86_xop_vpmacsww, WriteVecIMul>;
+  defm VPMACSWD   : xop4opm2<0x96, "vpmacswd",
+                             int_x86_xop_vpmacswd, WriteVecIMul>;
+  defm VPMACSSWW  : xop4opm2<0x85, "vpmacssww",
+                             int_x86_xop_vpmacssww, WriteVecIMul>;
+  defm VPMACSSWD  : xop4opm2<0x86, "vpmacsswd",
+                             int_x86_xop_vpmacsswd, WriteVecIMul>;
+  defm VPMACSSDQL : xop4opm2<0x87, "vpmacssdql",
+                             int_x86_xop_vpmacssdql, WritePMULLD>;
+  defm VPMACSSDQH : xop4opm2<0x8F, "vpmacssdqh",
+                             int_x86_xop_vpmacssdqh, WritePMULLD>;
+  defm VPMACSSDD  : xop4opm2<0x8E, "vpmacssdd",
+                             int_x86_xop_vpmacssdd, WritePMULLD>;
+  defm VPMACSDQL  : xop4opm2<0x97, "vpmacsdql",
+                             int_x86_xop_vpmacsdql, WritePMULLD>;
+  defm VPMACSDQH  : xop4opm2<0x9F, "vpmacsdqh",
+                             int_x86_xop_vpmacsdqh, WritePMULLD>;
+  defm VPMACSDD   : xop4opm2<0x9E, "vpmacsdd",
+                             int_x86_xop_vpmacsdd, WritePMULLD>;
 }
 
 // IFMA patterns - for cases where we can safely ignore the overflow bits from

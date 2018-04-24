@@ -26,6 +26,14 @@
 //    of vectorization. It decides on the optimal vector width, which
 //    can be one, if vectorization is not profitable.
 //
+// There is a development effort going on to migrate loop vectorizer to the
+// VPlan infrastructure and to introduce outer loop vectorization support (see
+// docs/Proposal/VectorizationPlan.rst and
+// http://lists.llvm.org/pipermail/llvm-dev/2017-December/119523.html). For this
+// purpose, we temporarily introduced the VPlan-native vectorization path: an
+// alternative vectorization path that is natively implemented on top of the
+// VPlan infrastructure. See EnableVPlanNativePath for enabling.
+//
 //===----------------------------------------------------------------------===//
 //
 // The reduction-variable vectorization is based on the paper:
@@ -250,6 +258,11 @@ static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
     "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum number of SCEV checks allowed with a "
              "vectorize(enable) pragma"));
+
+static cl::opt<bool> EnableVPlanNativePath(
+    "enable-vplan-native-path", cl::init(false), cl::Hidden,
+    cl::desc("Enable VPlan-native vectorization path with "
+             "support for outer loop vectorization."));
 
 /// Create an analysis remark that explains why vectorization failed
 ///
@@ -1519,7 +1532,7 @@ public:
       std::function<const LoopAccessInfo &(Loop &)> *GetLAA, LoopInfo *LI,
       OptimizationRemarkEmitter *ORE, LoopVectorizationRequirements *R,
       LoopVectorizeHints *H, DemandedBits *DB, AssumptionCache *AC)
-      : TheLoop(L), PSE(PSE), TLI(TLI), DT(DT), GetLAA(GetLAA),
+      : TheLoop(L), LI(LI), PSE(PSE), TLI(TLI), DT(DT), GetLAA(GetLAA),
         ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC) {}
 
   /// ReductionList contains the reduction descriptors for all
@@ -1621,6 +1634,15 @@ public:
   bool hasFunNoNaNAttr() const { return HasFunNoNaNAttr; }
 
 private:
+  /// Return true if the pre-header, exiting and latch blocks of \p Lp and all
+  /// its nested loops are considered legal for vectorization. These legal
+  /// checks are common for inner and outer loop vectorization.
+  bool canVectorizeLoopNestCFG(Loop *Lp);
+
+  /// Return true if the pre-header, exiting and latch blocks of \p Lp
+  /// (non-recursive) are considered legal for vectorization.
+  bool canVectorizeLoopCFG(Loop *Lp);
+
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count
   /// and we only need to check individual instructions.
@@ -1635,6 +1657,10 @@ private:
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
   bool canVectorizeWithIfConvert();
+
+  /// Return true if we can vectorize this outer loop. The method performs
+  /// specific checks for outer loop vectorization.
+  bool canVectorizeOuterLoop();
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed. \p SafePtrs is a list of addresses that are known to be legal
@@ -1671,6 +1697,9 @@ private:
 
   /// The loop that we evaluate.
   Loop *TheLoop;
+
+  /// Loop Info analysis.
+  LoopInfo *LI;
 
   /// A wrapper around ScalarEvolution used to add runtime SCEV checks.
   /// Applies dynamic knowledge to simplify SCEV expressions in the context
@@ -2275,17 +2304,73 @@ private:
 
 } // end anonymous namespace
 
-static void addAcyclicInnerLoop(Loop &L, LoopInfo &LI,
-                                SmallVectorImpl<Loop *> &V) {
-  if (L.empty()) {
+// Return true if \p OuterLp is an outer loop annotated with hints for explicit
+// vectorization. The loop needs to be annotated with #pragma omp simd
+// simdlen(#) or #pragma clang vectorize(enable) vectorize_width(#). If the
+// vector length information is not provided, vectorization is not considered
+// explicit. Interleave hints are not allowed either. These limitations will be
+// relaxed in the future.
+// Please, note that we are currently forced to abuse the pragma 'clang
+// vectorize' semantics. This pragma provides *auto-vectorization hints*
+// (i.e., LV must check that vectorization is legal) whereas pragma 'omp simd'
+// provides *explicit vectorization hints* (LV can bypass legal checks and
+// assume that vectorization is legal). However, both hints are implemented
+// using the same metadata (llvm.loop.vectorize, processed by
+// LoopVectorizeHints). This will be fixed in the future when the native IR
+// representation for pragma 'omp simd' is introduced.
+static bool isExplicitVecOuterLoop(Loop *OuterLp,
+                                   OptimizationRemarkEmitter *ORE) {
+  assert(!OuterLp->empty() && "This is not an outer loop");
+  LoopVectorizeHints Hints(OuterLp, true /*DisableInterleaving*/, *ORE);
+
+  // Only outer loops with an explicit vectorization hint are supported.
+  // Unannotated outer loops are ignored.
+  if (Hints.getForce() == LoopVectorizeHints::FK_Undefined)
+    return false;
+
+  Function *Fn = OuterLp->getHeader()->getParent();
+  if (!Hints.allowVectorization(Fn, OuterLp, false /*AlwaysVectorize*/)) {
+    DEBUG(dbgs() << "LV: Loop hints prevent outer loop vectorization.\n");
+    return false;
+  }
+
+  if (!Hints.getWidth()) {
+    DEBUG(dbgs() << "LV: Not vectorizing: No user vector width.\n");
+    emitMissedWarning(Fn, OuterLp, Hints, ORE);
+    return false;
+  }
+
+  if (Hints.getInterleave() > 1) {
+    // TODO: Interleave support is future work.
+    DEBUG(dbgs() << "LV: Not vectorizing: Interleave is not supported for "
+                    "outer loops.\n");
+    emitMissedWarning(Fn, OuterLp, Hints, ORE);
+    return false;
+  }
+
+  return true;
+}
+
+static void collectSupportedLoops(Loop &L, LoopInfo *LI,
+                                  OptimizationRemarkEmitter *ORE,
+                                  SmallVectorImpl<Loop *> &V) {
+  // Collect inner loops and outer loops without irreducible control flow. For
+  // now, only collect outer loops that have explicit vectorization hints.
+  if (L.empty() || (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
     LoopBlocksRPO RPOT(&L);
-    RPOT.perform(&LI);
-    if (!containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
+    RPOT.perform(LI);
+    if (!containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI)) {
       V.push_back(&L);
-    return;
+      // TODO: Collect inner loops inside marked outer loops in case
+      // vectorization fails for the outer loop. Do not invoke
+      // 'containsIrreducibleCFG' again for inner loops when the outer loop is
+      // already known to be reducible. We can use an inherited attribute for
+      // that.
+      return;
+    }
   }
   for (Loop *InnerL : L)
-    addAcyclicInnerLoop(*InnerL, LI, V);
+    collectSupportedLoops(*InnerL, LI, ORE, V);
 }
 
 namespace {
@@ -4832,15 +4917,24 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   return true;
 }
 
-bool LoopVectorizationLegality::canVectorize() {
+// Helper function to canVectorizeLoopNestCFG.
+bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp) {
+  assert((EnableVPlanNativePath || Lp->empty()) &&
+         "VPlan-native path is not enabled.");
+
+  // TODO: ORE should be improved to show more accurate information when an
+  // outer loop can't be vectorized because a nested loop is not understood or
+  // legal. Something like: "outer_loop_location: loop not vectorized:
+  // (inner_loop_location) loop control flow is not understood by vectorizer".
+
   // Store the result and return it at the end instead of exiting early, in case
   // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
   bool Result = true;
-
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
-  if (!TheLoop->getLoopPreheader()) {
+  if (!Lp->getLoopPreheader()) {
     DEBUG(dbgs() << "LV: Loop doesn't have a legal pre-header.\n");
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
@@ -4850,21 +4944,8 @@ bool LoopVectorizationLegality::canVectorize() {
       return false;
   }
 
-  // FIXME: The code is currently dead, since the loop gets sent to
-  // LoopVectorizationLegality is already an innermost loop.
-  //
-  // We can only vectorize innermost loops.
-  if (!TheLoop->empty()) {
-    ORE->emit(createMissedAnalysis("NotInnermostLoop")
-              << "loop is not the innermost loop");
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
-  }
-
   // We must have a single backedge.
-  if (TheLoop->getNumBackEdges() != 1) {
+  if (Lp->getNumBackEdges() != 1) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
     if (DoExtraAnalysis)
@@ -4874,7 +4955,7 @@ bool LoopVectorizationLegality::canVectorize() {
   }
 
   // We must have a single exiting block.
-  if (!TheLoop->getExitingBlock()) {
+  if (!Lp->getExitingBlock()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
     if (DoExtraAnalysis)
@@ -4886,9 +4967,52 @@ bool LoopVectorizationLegality::canVectorize() {
   // We only handle bottom-tested loops, i.e. loop in which the condition is
   // checked at the end of each iteration. With that we can assume that all
   // instructions in the loop are executed the same number of times.
-  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
+  if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
+  return Result;
+}
+
+bool LoopVectorizationLegality::canVectorizeLoopNestCFG(Loop *Lp) {
+  // Store the result and return it at the end instead of exiting early, in case
+  // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
+  bool Result = true;
+  bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  if (!canVectorizeLoopCFG(Lp)) {
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
+  // Recursively check whether the loop control flow of nested loops is
+  // understood.
+  for (Loop *SubLp : *Lp)
+    if (!canVectorizeLoopNestCFG(SubLp)) {
+      if (DoExtraAnalysis)
+        Result = false;
+      else
+        return false;
+    }
+
+  return Result;
+}
+
+bool LoopVectorizationLegality::canVectorize() {
+  // Store the result and return it at the end instead of exiting early, in case
+  // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
+  bool Result = true;
+
+  bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  // Check whether the loop-related control flow in the loop nest is expected by
+  // vectorizer.
+  if (!canVectorizeLoopNestCFG(TheLoop)) {
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -4899,6 +5023,23 @@ bool LoopVectorizationLegality::canVectorize() {
   DEBUG(dbgs() << "LV: Found a loop: " << TheLoop->getHeader()->getName()
                << '\n');
 
+  // Specific checks for outer loops. We skip the remaining legal checks at this
+  // point because they don't support outer loops.
+  if (!TheLoop->empty()) {
+    assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
+
+    if (!canVectorizeOuterLoop()) {
+      DEBUG(dbgs() << "LV: Not vectorizing: Unsupported outer loop.\n");
+      // TODO: Implement DoExtraAnalysis when subsequent legal checks support
+      // outer loops.
+      return false;
+    }
+
+    DEBUG(dbgs() << "LV: We can vectorize this outer loop!\n");
+    return Result;
+  }
+
+  assert(TheLoop->empty() && "Inner loop expected.");
   // Check if we can if-convert non-single-bb loops.
   unsigned NumBlocks = TheLoop->getNumBlocks();
   if (NumBlocks != 1 && !canVectorizeWithIfConvert()) {
@@ -4952,6 +5093,140 @@ bool LoopVectorizationLegality::canVectorize() {
   // we can vectorize, and at this point we don't have any other mem analysis
   // which may limit our maximum vectorization factor, so just return true with
   // no restrictions.
+  return Result;
+}
+
+// Return true if the inner loop \p Lp is uniform with regard to the outer loop
+// \p OuterLp (i.e., if the outer loop is vectorized, all the vector lanes
+// executing the inner loop will execute the same iterations). This check is
+// very constrained for now but it will be relaxed in the future. \p Lp is
+// considered uniform if it meets all the following conditions:
+//   1) it has a canonical IV (starting from 0 and with stride 1),
+//   2) its latch terminator is a conditional branch and,
+//   3) its latch condition is a compare instruction whose operands are the
+//      canonical IV and an OuterLp invariant.
+// This check doesn't take into account the uniformity of other conditions not
+// related to the loop latch because they don't affect the loop uniformity.
+//
+// NOTE: We decided to keep all these checks and its associated documentation
+// together so that we can easily have a picture of the current supported loop
+// nests. However, some of the current checks don't depend on \p OuterLp and
+// would be redundantly executed for each \p Lp if we invoked this function for
+// different candidate outer loops. This is not the case for now because we
+// don't currently have the infrastructure to evaluate multiple candidate outer
+// loops and \p OuterLp will be a fixed parameter while we only support explicit
+// outer loop vectorization. It's also very likely that these checks go away
+// before introducing the aforementioned infrastructure. However, if this is not
+// the case, we should move the \p OuterLp independent checks to a separate
+// function that is only executed once for each \p Lp.
+static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
+  assert(Lp->getLoopLatch() && "Expected loop with a single latch.");
+
+  // If Lp is the outer loop, it's uniform by definition.
+  if (Lp == OuterLp)
+    return true;
+  assert(OuterLp->contains(Lp) && "OuterLp must contain Lp.");
+
+  // 1.
+  PHINode *IV = Lp->getCanonicalInductionVariable();
+  if (!IV) {
+    DEBUG(dbgs() << "LV: Canonical IV not found.\n");
+    return false;
+  }
+
+  // 2.
+  BasicBlock *Latch = Lp->getLoopLatch();
+  auto *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
+  if (!LatchBr || LatchBr->isUnconditional()) {
+    DEBUG(dbgs() << "LV: Unsupported loop latch branch.\n");
+    return false;
+  }
+
+  // 3.
+  auto *LatchCmp = dyn_cast<CmpInst>(LatchBr->getCondition());
+  if (!LatchCmp) {
+    DEBUG(dbgs() << "LV: Loop latch condition is not a compare instruction.\n");
+    return false;
+  }
+
+  Value *CondOp0 = LatchCmp->getOperand(0);
+  Value *CondOp1 = LatchCmp->getOperand(1);
+  Value *IVUpdate = IV->getIncomingValueForBlock(Latch);
+  if (!(CondOp0 == IVUpdate && OuterLp->isLoopInvariant(CondOp1)) &&
+      !(CondOp1 == IVUpdate && OuterLp->isLoopInvariant(CondOp0))) {
+    DEBUG(dbgs() << "LV: Loop latch condition is not uniform.\n");
+    return false;
+  }
+
+  return true;
+}
+
+// Return true if \p Lp and all its nested loops are uniform with regard to \p
+// OuterLp.
+static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
+  if (!isUniformLoop(Lp, OuterLp))
+    return false;
+
+  // Check if nested loops are uniform.
+  for (Loop *SubLp : *Lp)
+    if (!isUniformLoopNest(SubLp, OuterLp))
+      return false;
+
+  return true;
+}
+
+bool LoopVectorizationLegality::canVectorizeOuterLoop() {
+  assert(!TheLoop->empty() && "We are not vectorizing an outer loop.");
+  // Store the result and return it at the end instead of exiting early, in case
+  // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
+  bool Result = true;
+  bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    // Check whether the BB terminator is a BranchInst. Any other terminator is
+    // not supported yet.
+    auto *Br = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!Br) {
+      DEBUG(dbgs() << "LV: Unsupported basic block terminator.\n");
+      ORE->emit(createMissedAnalysis("CFGNotUnderstood")
+                << "loop control flow is not understood by vectorizer");
+      if (DoExtraAnalysis)
+        Result = false;
+      else
+        return false;
+    }
+
+    // Check whether the BranchInst is a supported one. Only unconditional
+    // branches, conditional branches with an outer loop invariant condition or
+    // backedges are supported.
+    if (Br && Br->isConditional() &&
+        !TheLoop->isLoopInvariant(Br->getCondition()) &&
+        !LI->isLoopHeader(Br->getSuccessor(0)) &&
+        !LI->isLoopHeader(Br->getSuccessor(1))) {
+      DEBUG(dbgs() << "LV: Unsupported conditional branch.\n");
+      ORE->emit(createMissedAnalysis("CFGNotUnderstood")
+                << "loop control flow is not understood by vectorizer");
+      if (DoExtraAnalysis)
+        Result = false;
+      else
+        return false;
+    }
+  }
+
+  // Check whether inner loops are uniform. At this point, we only support
+  // simple outer loops scenarios with uniform nested loops.
+  if (!isUniformLoopNest(TheLoop /*loop nest*/,
+                         TheLoop /*context outer loop*/)) {
+    DEBUG(dbgs()
+          << "LV: Not vectorizing: Outer loop contains divergent loops.\n");
+    ORE->emit(createMissedAnalysis("CFGNotUnderstood")
+              << "loop control flow is not understood by vectorizer");
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
   return Result;
 }
 
@@ -7406,7 +7681,33 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 }
 
 VectorizationFactor
+LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
+                                                unsigned UserVF) {
+  // Width 1 means no vectorize, cost 0 means uncomputed cost.
+  const VectorizationFactor NoVectorization = {1U, 0U};
+
+  // Outer loop handling: They may require CFG and instruction level
+  // transformations before even evaluating whether vectorization is profitable.
+  // Since we cannot modify the incoming IR, we need to build VPlan upfront in
+  // the vectorization pipeline.
+  if (!OrigLoop->empty()) {
+    assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
+    assert(UserVF && "Expected UserVF for outer loop vectorization.");
+    assert(isPowerOf2_32(UserVF) && "VF needs to be a power of two");
+    DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+    buildVPlans(UserVF, UserVF);
+
+    return {UserVF, 0};
+  }
+
+  DEBUG(dbgs() << "LV: Not vectorizing. Inner loops aren't supported in the "
+                  "VPlan-native path.\n");
+  return NoVectorization;
+}
+
+VectorizationFactor
 LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
+  assert(OrigLoop->empty() && "Inner loop expected.");
   // Width 1 means no vectorize, cost 0 means uncomputed cost.
   const VectorizationFactor NoVectorization = {1U, 0U};
   Optional<unsigned> MaybeMaxVF = CM.computeMaxVF(OptForSize);
@@ -7969,6 +8270,19 @@ LoopVectorizationPlanner::createReplicateRegion(Instruction *Instr,
 LoopVectorizationPlanner::VPlanPtr
 LoopVectorizationPlanner::buildVPlan(VFRange &Range,
                                      const SmallPtrSetImpl<Value *> &NeedDef) {
+  // Outer loop handling: They may require CFG and instruction level
+  // transformations before even evaluating whether vectorization is profitable.
+  // Since we cannot modify the incoming IR, we need to build VPlan upfront in
+  // the vectorization pipeline.
+  if (!OrigLoop->empty()) {
+    assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
+
+    // Create new empty VPlan
+    auto Plan = llvm::make_unique<VPlan>();
+    return Plan;
+  }
+
+  assert(OrigLoop->empty() && "Inner loop expected.");
   EdgeMaskCache.clear();
   BlockMaskCache.clear();
   DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
@@ -8298,8 +8612,45 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   State.ILV->vectorizeMemoryInstruction(&Instr, &MaskValues);
 }
 
+// Process the loop in the VPlan-native vectorization path. This path builds
+// VPlan upfront in the vectorization pipeline, which allows to apply
+// VPlan-to-VPlan transformations from the very beginning without modifying the
+// input LLVM IR.
+static bool processLoopInVPlanNativePath(
+    Loop *L, PredicatedScalarEvolution &PSE, LoopInfo *LI, DominatorTree *DT,
+    LoopVectorizationLegality *LVL, TargetTransformInfo *TTI,
+    TargetLibraryInfo *TLI, DemandedBits *DB, AssumptionCache *AC,
+    OptimizationRemarkEmitter *ORE, LoopVectorizeHints &Hints) {
+
+  assert(EnableVPlanNativePath && "VPlan-native path is disabled.");
+  Function *F = L->getHeader()->getParent();
+  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
+  LoopVectorizationCostModel CM(L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
+                                &Hints, IAI);
+  // Use the planner for outer loop vectorization.
+  // TODO: CM is not used at this point inside the planner. Turn CM into an
+  // optional argument if we don't need it in the future.
+  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM);
+
+  // Get user vectorization factor.
+  unsigned UserVF = Hints.getWidth();
+
+  // Check the function attributes to find out if this function should be
+  // optimized for size.
+  bool OptForSize =
+      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
+
+  // Plan how to best vectorize, return the best VF and its cost.
+  LVP.planInVPlanNativePath(OptForSize, UserVF);
+
+  // Returning false. We are currently not generating vector code in the VPlan
+  // native path.
+  return false;
+}
+
 bool LoopVectorizePass::processLoop(Loop *L) {
-  assert(L->empty() && "Only process inner loops.");
+  assert((EnableVPlanNativePath || L->empty()) &&
+         "VPlan-native path is not enabled. Only process inner loops.");
 
 #ifndef NDEBUG
   const std::string DebugLocStr = getDebugLocString(L);
@@ -8354,6 +8705,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool OptForSize =
       Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
 
+  // Entrance to the VPlan-native vectorization path. Outer loops are processed
+  // here. They may require CFG and instruction level transformations before
+  // even evaluating whether vectorization is profitable. Since we cannot modify
+  // the incoming IR, we need to build VPlan upfront in the vectorization
+  // pipeline.
+  if (!L->empty())
+    return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
+                                        ORE, Hints);
+
+  assert(L->empty() && "Inner loop expected.");
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
   // Prefer constant trip counts over profile data, over upper bound estimate.
@@ -8630,7 +8991,7 @@ bool LoopVectorizePass::runImpl(
   SmallVector<Loop *, 8> Worklist;
 
   for (Loop *L : *LI)
-    addAcyclicInnerLoop(*L, *LI, Worklist);
+    collectSupportedLoops(*L, LI, ORE, Worklist);
 
   LoopsAnalyzed += Worklist.size();
 

@@ -19,7 +19,7 @@
 
 #if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_MAC && \
     !SANITIZER_NETBSD && !SANITIZER_OPENBSD && !SANITIZER_WINDOWS && \
-    !SANITIZER_FUCHSIA && SANITIZER_SOLARIS
+    !SANITIZER_FUCHSIA && !SANITIZER_SOLARIS
 # error "Interception doesn't work on this operating system."
 #endif
 

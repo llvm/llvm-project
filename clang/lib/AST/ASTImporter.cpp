@@ -1088,6 +1088,17 @@ void ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     Importer.Import(From);
 }
 
+static void setTypedefNameForAnonDecl(TagDecl *From, TagDecl *To,
+                               ASTImporter &Importer) {
+  if (TypedefNameDecl *FromTypedef = From->getTypedefNameForAnonDecl()) {
+    auto *ToTypedef =
+      cast_or_null<TypedefNameDecl>(Importer.Import(FromTypedef));
+    assert (ToTypedef && "Failed to import typedef of an anonymous structure");
+
+    To->setTypedefNameForAnonDecl(ToTypedef);
+  }
+}
+
 bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To, 
                                        ImportDefinitionKind Kind) {
   if (To->getDefinition() || To->isBeingDefined()) {
@@ -1098,6 +1109,8 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
   }
   
   To->startDefinition();
+
+  setTypedefNameForAnonDecl(From, To, Importer);
   
   // Add base classes.
   if (auto *ToCXX = dyn_cast<CXXRecordDecl>(To)) {
@@ -1228,6 +1241,8 @@ bool ASTNodeImporter::ImportDefinition(EnumDecl *From, EnumDecl *To,
   }
   
   To->startDefinition();
+
+  setTypedefNameForAnonDecl(From, To, Importer);
 
   QualType T = Importer.Import(Importer.getFromContext().getTypeDeclType(From));
   if (T.isNull())
@@ -1706,6 +1721,11 @@ Decl *ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
   QualType T = Importer.Import(D->getUnderlyingType());
   if (T.isNull())
     return nullptr;
+
+  // Some nodes (like anonymous tags referred by typedefs) are allowed to
+  // import their enclosing typedef directly. Check if this is the case.
+  if (Decl *AlreadyImported = Importer.GetAlreadyImportedOrNull(D))
+    return AlreadyImported;
 
   // Create the new typedef node.
   TypeSourceInfo *TInfo = Importer.Import(D->getTypeSourceInfo());
@@ -6576,29 +6596,7 @@ Decl *ASTImporter::Import(Decl *FromD) {
 
   // Record the imported declaration.
   ImportedDecls[FromD] = ToD;
-  
-  if (auto *FromTag = dyn_cast<TagDecl>(FromD)) {
-    // Keep track of anonymous tags that have an associated typedef.
-    if (FromTag->getTypedefNameForAnonDecl())
-      AnonTagsWithPendingTypedefs.push_back(FromTag);
-  } else if (auto *FromTypedef = dyn_cast<TypedefNameDecl>(FromD)) {
-    // When we've finished transforming a typedef, see whether it was the
-    // typedef for an anonymous tag.
-    for (SmallVectorImpl<TagDecl *>::iterator
-               FromTag = AnonTagsWithPendingTypedefs.begin(), 
-            FromTagEnd = AnonTagsWithPendingTypedefs.end();
-         FromTag != FromTagEnd; ++FromTag) {
-      if ((*FromTag)->getTypedefNameForAnonDecl() == FromTypedef) {
-        if (auto *ToTag = cast_or_null<TagDecl>(Import(*FromTag))) {
-          // We found the typedef for an anonymous tag; link them.
-          ToTag->setTypedefNameForAnonDecl(cast<TypedefNameDecl>(ToD));
-          AnonTagsWithPendingTypedefs.erase(FromTag);
-          break;
-        }
-      }
-    }
-  }
-  
+
   return ToD;
 }
 

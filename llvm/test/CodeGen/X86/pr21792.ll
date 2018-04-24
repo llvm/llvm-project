@@ -24,6 +24,7 @@ define void @func(<4 x float> %vx) {
 ; CHECK-NEXT:    leaq stuff+8(%rax), %r9
 ; CHECK-NEXT:    callq toto
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %tmp2 = bitcast <4 x float> %vx to <2 x i64>

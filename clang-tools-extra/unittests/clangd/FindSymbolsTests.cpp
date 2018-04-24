@@ -53,7 +53,7 @@ protected:
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server;
-  int Limit;
+  int Limit = 0;
 
   std::vector<SymbolInformation> getSymbols(StringRef Query) {
     EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";

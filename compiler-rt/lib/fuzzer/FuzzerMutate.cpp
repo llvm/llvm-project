@@ -339,7 +339,9 @@ size_t MutationDispatcher::InsertPartOf(const uint8_t *From, size_t FromSize,
 size_t MutationDispatcher::Mutate_CopyPart(uint8_t *Data, size_t Size,
                                            size_t MaxSize) {
   if (Size > MaxSize || Size == 0) return 0;
-  if (Rand.RandBool())
+  // If Size == MaxSize, `InsertPartOf(...)` will
+  // fail so there's no point using it in this case.
+  if (Size == MaxSize || Rand.RandBool())
     return CopyPartOf(Data, Size, Data, Size);
   else
     return InsertPartOf(Data, Size, Data, Size, MaxSize);

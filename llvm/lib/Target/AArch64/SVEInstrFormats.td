@@ -711,6 +711,20 @@ multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
 }
 
+multiclass sve_mem_cldff_ss<bits<4> dtype, string asm, RegisterOperand listty,
+                            ZPRRegOp zprty, RegisterOperand gprty> {
+  def _REAL : sve_mem_cld_ss_base<dtype, 1, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
+                                  asm, listty>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
+                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                 (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, XZR), 1>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, XZR), 0>;
+}
 
 multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,
                             ZPRRegOp zprty>

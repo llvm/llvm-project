@@ -21,8 +21,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef _POPCNTINTRIN_H
-#define _POPCNTINTRIN_H
+#ifndef __POPCNTINTRIN_H
+#define __POPCNTINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("popcnt")))
@@ -95,4 +95,4 @@ _popcnt64(long long __A)
 
 #undef __DEFAULT_FN_ATTRS
 
-#endif /* _POPCNTINTRIN_H */
+#endif /* __POPCNTINTRIN_H */

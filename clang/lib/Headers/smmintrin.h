@@ -21,8 +21,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef _SMMINTRIN_H
-#define _SMMINTRIN_H
+#ifndef __SMMINTRIN_H
+#define __SMMINTRIN_H
 
 #include <tmmintrin.h>
 
@@ -2462,4 +2462,4 @@ _mm_crc32_u64(unsigned long long __C, unsigned long long __D)
 #include <popcntintrin.h>
 #endif
 
-#endif /* _SMMINTRIN_H */
+#endif /* __SMMINTRIN_H */

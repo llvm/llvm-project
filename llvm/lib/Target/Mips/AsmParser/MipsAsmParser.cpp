@@ -6029,8 +6029,15 @@ MipsAsmParser::matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S) {
     return ResTy;
   } else if (Token.is(AsmToken::Integer)) {
     DEBUG(dbgs() << ".. integer\n");
+    int64_t RegNum = Token.getIntVal();
+    if (RegNum < 0 || RegNum > 31) {
+      // Show the error, but treat invalid register
+      // number as a normal one to continue parsing
+      // and catch other possible errors.
+      Error(getLexer().getLoc(), "invalid register number");
+    }
     Operands.push_back(MipsOperand::createNumericReg(
-        Token.getIntVal(), Token.getString(), getContext().getRegisterInfo(), S,
+        RegNum, Token.getString(), getContext().getRegisterInfo(), S,
         Token.getLoc(), *this));
     return MatchOperand_Success;
   }

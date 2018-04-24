@@ -307,6 +307,7 @@ define i64 @test5(i64 %a) {
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    subl %esi, %edx
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
 	%tmp3 = mul i64 %a, -31
@@ -362,6 +363,7 @@ define i64 @test7(i64 %a) {
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    subl %esi, %edx
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
 	%tmp3 = mul i64 %a, -33
@@ -390,6 +392,7 @@ define i64 @testOverflow(i64 %a) {
 ; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
 	%tmp3 = mul i64 %a, 9223372036854775807

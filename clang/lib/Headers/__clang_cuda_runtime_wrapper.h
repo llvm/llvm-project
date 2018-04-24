@@ -62,7 +62,7 @@
 #include "cuda.h"
 #if !defined(CUDA_VERSION)
 #error "cuda.h did not define CUDA_VERSION"
-#elif CUDA_VERSION < 7000 || CUDA_VERSION > 9010
+#elif CUDA_VERSION < 7000 || CUDA_VERSION > 9020
 #error "Unsupported CUDA version!"
 #endif
 
@@ -199,6 +199,11 @@ inline __host__ double __signbitd(double x) {
 #endif
 
 #if CUDA_VERSION >= 9000
+// CUDA-9.2 needs host-side memcpy for some host functions in
+// device_functions.hpp
+#if CUDA_VERSION >= 9020
+#include <string.h>
+#endif
 #include "crt/math_functions.hpp"
 #else
 #include "math_functions.hpp"

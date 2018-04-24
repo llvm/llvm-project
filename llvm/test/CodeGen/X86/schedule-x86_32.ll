@@ -476,6 +476,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; GENERIC-NEXT:    bound %ecx, (%edx)
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    popl %esi
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
 ; GENERIC-NEXT:    retl
 ;
 ; ATOM-LABEL: test_bound:
@@ -492,6 +493,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; ATOM-NEXT:    bound %ecx, (%edx) # sched: [11:5.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    popl %esi # sched: [1:1.00]
+; ATOM-NEXT:    .cfi_def_cfa_offset 4
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_bound:
@@ -508,6 +510,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SLM-NEXT:    bound %ecx, (%edx) # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    popl %esi # sched: [3:1.00]
+; SLM-NEXT:    .cfi_def_cfa_offset 4
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_bound:
@@ -524,6 +527,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SANDY-NEXT:    bound %ecx, (%edx) # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    popl %esi # sched: [6:0.50]
+; SANDY-NEXT:    .cfi_def_cfa_offset 4
 ; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_bound:
@@ -540,6 +544,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; HASWELL-NEXT:    bound %ecx, (%edx) # sched: [1:?]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    popl %esi # sched: [6:0.50]
+; HASWELL-NEXT:    .cfi_def_cfa_offset 4
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_bound:
@@ -556,6 +561,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; BROADWELL-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    popl %esi # sched: [6:0.50]
+; BROADWELL-NEXT:    .cfi_def_cfa_offset 4
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKYLAKE-LABEL: test_bound:
@@ -572,6 +578,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SKYLAKE-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    popl %esi # sched: [6:0.50]
+; SKYLAKE-NEXT:    .cfi_def_cfa_offset 4
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_bound:
@@ -588,6 +595,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; SKX-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    popl %esi # sched: [6:0.50]
+; SKX-NEXT:    .cfi_def_cfa_offset 4
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
 ; BTVER2-LABEL: test_bound:
@@ -604,6 +612,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; BTVER2-NEXT:    bound %ecx, (%edx) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    popl %esi # sched: [5:1.00]
+; BTVER2-NEXT:    .cfi_def_cfa_offset 4
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_bound:
@@ -620,6 +629,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; ZNVER1-NEXT:    bound %ecx, (%edx) # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    popl %esi # sched: [8:0.50]
+; ZNVER1-NEXT:    .cfi_def_cfa_offset 4
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   call void asm sideeffect "bound $0, $1 \0A\09 bound $2, $3", "r,*m,r,*m"(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3)
   ret void

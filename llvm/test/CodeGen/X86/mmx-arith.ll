@@ -80,6 +80,7 @@ define void @test0(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    emms
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test0:
@@ -415,6 +416,7 @@ define void @test2(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    emms
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:

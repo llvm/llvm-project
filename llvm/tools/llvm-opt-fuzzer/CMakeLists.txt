@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   Coroutines
   IPO
   IRReader
+  AggressiveInstCombine
   InstCombine
   Instrumentation
   FuzzMutate

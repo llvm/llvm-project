@@ -90,8 +90,9 @@ static SymbolMapTy getSectionSyms(ArrayRef<Symbol *> Syms) {
   // in the input files.
   for (auto &It : Ret) {
     SmallVectorImpl<Symbol *> &V = It.second;
-    std::sort(V.begin(), V.end(),
-              [](Symbol *A, Symbol *B) { return A->getVA() < B->getVA(); });
+    std::stable_sort(V.begin(), V.end(), [](Symbol *A, Symbol *B) {
+      return A->getVA() < B->getVA();
+    });
   }
   return Ret;
 }

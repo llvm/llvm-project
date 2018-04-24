@@ -1112,7 +1112,8 @@ static bool isProfitableForVectorization(unsigned InnerLoopId,
   }
   // If outer loop has dependence and inner loop is loop independent then it is
   // profitable to interchange to enable parallelism.
-  return true;
+  // If there are no dependences, interchanging will not improve anything.
+  return !DepMatrix.empty();
 }
 
 bool LoopInterchangeProfitability::isProfitable(unsigned InnerLoopId,
