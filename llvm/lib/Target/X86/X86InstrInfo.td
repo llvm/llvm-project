@@ -1326,9 +1326,13 @@ def PUSHA16  : I<0x60, RawFrm, (outs), (ins), "pushaw", []>,
 }
 
 let Constraints = "$src = $dst", SchedRW = [WriteALU] in {
+// This instruction is a consequence of BSWAP32r observing operand size. The
+// encoding is valid, but the behavior is undefined.
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+def BSWAP16r_BAD : I<0xC8, AddRegFrm, (outs GR16:$dst), (ins GR16:$src),
+                     "bswap{w}\t$dst", []>, OpSize16, TB;
 // GR32 = bswap GR32
-def BSWAP32r : I<0xC8, AddRegFrm,
-                 (outs GR32:$dst), (ins GR32:$src),
+def BSWAP32r : I<0xC8, AddRegFrm, (outs GR32:$dst), (ins GR32:$src),
                  "bswap{l}\t$dst",
                  [(set GR32:$dst, (bswap GR32:$src))]>, OpSize32, TB;
 

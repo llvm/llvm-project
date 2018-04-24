@@ -8046,14 +8046,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                        BuiltinOp != Builtin::BIwmemcmp &&
                        BuiltinOp != Builtin::BI__builtin_memcmp &&
                        BuiltinOp != Builtin::BI__builtin_wmemcmp);
+    bool IsWide = BuiltinOp == Builtin::BIwcscmp ||
+                  BuiltinOp == Builtin::BIwcsncmp ||
+                  BuiltinOp == Builtin::BIwmemcmp ||
+                  BuiltinOp == Builtin::BI__builtin_wcscmp ||
+                  BuiltinOp == Builtin::BI__builtin_wcsncmp ||
+                  BuiltinOp == Builtin::BI__builtin_wmemcmp;
     for (; MaxLength; --MaxLength) {
       APValue Char1, Char2;
       if (!handleLValueToRValueConversion(Info, E, CharTy, String1, Char1) ||
           !handleLValueToRValueConversion(Info, E, CharTy, String2, Char2) ||
           !Char1.isInt() || !Char2.isInt())
         return false;
-      if (Char1.getInt() != Char2.getInt())
-        return Success(Char1.getInt() < Char2.getInt() ? -1 : 1, E);
+      if (Char1.getInt() != Char2.getInt()) {
+        if (IsWide) // wmemcmp compares with wchar_t signedness.
+          return Success(Char1.getInt() < Char2.getInt() ? -1 : 1, E);
+        // memcmp always compares unsigned chars.
+        return Success(Char1.getInt().ult(Char2.getInt()) ? -1 : 1, E);
+      }
       if (StopAtNull && !Char1.getInt())
         return Success(0, E);
       assert(!(StopAtNull && !Char2.getInt()));

@@ -62,8 +62,9 @@ Improvements to Clang's diagnostics
 - ``-Wself-assign`` and ``-Wself-assign-field`` were extended to diagnose
   self-assignment operations using overloaded operators (i.e. classes).
   If you are doing such an assignment intentionally, e.g. in a unit test for
-  a data structure, the warning can be suppressed by adding ``*&`` to the
-  right-hand side or casting it to the appropriate reference type.
+  a data structure, the first warning can be disabled by passing
+  ``-Wno-self-assign-overloaded``, also the warning can be suppressed by adding
+  ``*&`` to the right-hand side or casting it to the appropriate reference type.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
