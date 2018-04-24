@@ -18,7 +18,6 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -752,13 +751,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   Address Dest = Address::invalid();
   Address Ptr = EmitPointerWithAlignment(E->getPtr());
 
-  if (E->getOp() == AtomicExpr::AO__c11_atomic_init ||
-      E->getOp() == AtomicExpr::AO__opencl_atomic_init) {
-    LValue lvalue = MakeAddrLValue(Ptr, AtomicTy);
-    EmitAtomicInit(E->getVal1(), lvalue);
-    return RValue::get(nullptr);
-  }
-
   CharUnits sizeChars, alignChars;
   std::tie(sizeChars, alignChars) = getContext().getTypeInfoInChars(AtomicTy);
   uint64_t Size = sizeChars.getQuantity();
@@ -766,8 +758,12 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool UseLibcall = ((Ptr.getAlignment() % sizeChars) != 0 ||
                      getContext().toBits(sizeChars) > MaxInlineWidthInBits);
 
-  if (UseLibcall)
-    CGM.getDiags().Report(E->getLocStart(), diag::warn_atomic_op_misaligned);
+  if (E->getOp() == AtomicExpr::AO__c11_atomic_init ||
+      E->getOp() == AtomicExpr::AO__opencl_atomic_init) {
+    LValue lvalue = MakeAddrLValue(Ptr, AtomicTy);
+    EmitAtomicInit(E->getVal1(), lvalue);
+    return RValue::get(nullptr);
+  }
 
   llvm::Value *Order = EmitScalarExpr(E->getOrder());
   llvm::Value *Scope =
