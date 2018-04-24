@@ -208,7 +208,6 @@ namespace {
 
     void removeBlock(MachineBasicBlock *B);
     void eliminatePhis(MachineBasicBlock *B);
-    void replacePhiEdges(MachineBasicBlock *OldB, MachineBasicBlock *NewB);
     void mergeBlocks(MachineBasicBlock *PredB, MachineBasicBlock *SuccB);
     void simplifyFlowGraph(const FlowPattern &FP);
 
@@ -1003,20 +1002,6 @@ void HexagonEarlyIfConversion::eliminatePhis(MachineBasicBlock *B) {
     }
     MRI->replaceRegWith(DefR, NewR);
     B->erase(I);
-  }
-}
-
-void HexagonEarlyIfConversion::replacePhiEdges(MachineBasicBlock *OldB,
-      MachineBasicBlock *NewB) {
-  for (auto I = OldB->succ_begin(), E = OldB->succ_end(); I != E; ++I) {
-    MachineBasicBlock *SB = *I;
-    MachineBasicBlock::iterator P, N = SB->getFirstNonPHI();
-    for (P = SB->begin(); P != N; ++P) {
-      MachineInstr &PN = *P;
-      for (MachineOperand &MO : PN.operands())
-        if (MO.isMBB() && MO.getMBB() == OldB)
-          MO.setMBB(NewB);
-    }
   }
 }
 

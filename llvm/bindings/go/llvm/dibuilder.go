@@ -571,7 +571,7 @@ func (d *DIBuilder) InsertDeclareAtEnd(v Value, diVarInfo, expr Metadata, bb Bas
 // InsertValueAtEnd inserts a call to llvm.dbg.value at the end of the
 // specified basic block for the given value and associated debug metadata.
 func (d *DIBuilder) InsertValueAtEnd(v Value, diVarInfo, expr Metadata, bb BasicBlock) Value {
-	result := C.LLVMDIBuilderInsertValueAtEnd(d.ref, v.C, diVarInfo.C, expr.C, bb.C)
+	result := C.LLVMDIBuilderInsertDbgValueAtEnd(d.ref, v.C, diVarInfo.C, expr.C, nil, bb.C)
 	return Value{C: result}
 }
 

@@ -30,7 +30,9 @@ define i8** @japi1_convert_690(i8**, i8***, i32) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
 ; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    addl $16, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 top:
   %3 = alloca i8***

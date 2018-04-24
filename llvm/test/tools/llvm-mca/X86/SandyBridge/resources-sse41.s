@@ -188,7 +188,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  4      5     1.00           *        	pextrd	$1, %xmm0, (%rax)
 # CHECK-NEXT:  2      3     1.00                    	pextrq	$1, %xmm0, %rcx
 # CHECK-NEXT:  4      5     1.00           *        	pextrq	$1, %xmm0, (%rax)
-# CHECK-NEXT:  3      6     1.00           *        	pextrw	$1, %xmm0, (%rax)
+# CHECK-NEXT:  3      5     1.00           *        	pextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      5     1.00                    	phminposuw	%xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *               	phminposuw	(%rax), %xmm2
 # CHECK-NEXT:  2      2     1.00                    	pinsrb	$1, %eax, %xmm1
@@ -264,7 +264,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     26.00  47.00  5.00   53.00  25.00  25.00
+# CHECK-NEXT:  -      -     26.00  47.50  5.00   52.50  24.50  24.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  	Instructions:
@@ -301,7 +301,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00   0.50   1.00   0.50   0.50   0.50   	pextrd	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -     1.00   0.50    -     0.50    -      -     	pextrq	$1, %xmm0, %rcx
 # CHECK-NEXT:  -      -     1.00   0.50   1.00   0.50   0.50   0.50   	pextrq	$1, %xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -     1.00   1.00   1.00   1.00   	pextrw	$1, %xmm0, (%rax)
+# CHECK-NEXT:  -      -      -     0.50   1.00   0.50   0.50   0.50   	pextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	phminposuw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   	phminposuw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50    -     1.50    -      -     	pinsrb	$1, %eax, %xmm1

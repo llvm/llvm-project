@@ -854,10 +854,15 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; CHECK-NEXT:    movups (%rbx), %xmm0
 ; CHECK-NEXT:    movups %xmm0, (%r12)
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; DISABLED-LABEL: test_limit_all:
@@ -896,10 +901,15 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; DISABLED-NEXT:    movups (%rbx), %xmm0
 ; DISABLED-NEXT:    movups %xmm0, (%r12)
 ; DISABLED-NEXT:    popq %rbx
+; DISABLED-NEXT:    .cfi_def_cfa_offset 40
 ; DISABLED-NEXT:    popq %r12
+; DISABLED-NEXT:    .cfi_def_cfa_offset 32
 ; DISABLED-NEXT:    popq %r14
+; DISABLED-NEXT:    .cfi_def_cfa_offset 24
 ; DISABLED-NEXT:    popq %r15
+; DISABLED-NEXT:    .cfi_def_cfa_offset 16
 ; DISABLED-NEXT:    popq %rbp
+; DISABLED-NEXT:    .cfi_def_cfa_offset 8
 ; DISABLED-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: test_limit_all:
@@ -938,10 +948,15 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; CHECK-AVX2-NEXT:    vmovups (%rbx), %xmm0
 ; CHECK-AVX2-NEXT:    vmovups %xmm0, (%r12)
 ; CHECK-AVX2-NEXT:    popq %rbx
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-AVX2-NEXT:    popq %r12
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-AVX2-NEXT:    popq %r14
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-AVX2-NEXT:    popq %r15
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-AVX2-NEXT:    popq %rbp
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: test_limit_all:
@@ -980,10 +995,15 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; CHECK-AVX512-NEXT:    vmovups (%rbx), %xmm0
 ; CHECK-AVX512-NEXT:    vmovups %xmm0, (%r12)
 ; CHECK-AVX512-NEXT:    popq %rbx
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-AVX512-NEXT:    popq %r12
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-AVX512-NEXT:    popq %r14
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-AVX512-NEXT:    popq %r15
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-AVX512-NEXT:    popq %rbp
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-AVX512-NEXT:    retq
 entry:
   %d = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 3
@@ -1047,10 +1067,15 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; CHECK-NEXT:    movl 12(%rbx), %eax
 ; CHECK-NEXT:    movl %eax, 12(%r14)
 ; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; DISABLED-LABEL: test_limit_one_pred:
@@ -1086,10 +1111,15 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; DISABLED-NEXT:    movups (%rbx), %xmm0
 ; DISABLED-NEXT:    movups %xmm0, (%r12)
 ; DISABLED-NEXT:    addq $8, %rsp
+; DISABLED-NEXT:    .cfi_def_cfa_offset 40
 ; DISABLED-NEXT:    popq %rbx
+; DISABLED-NEXT:    .cfi_def_cfa_offset 32
 ; DISABLED-NEXT:    popq %r12
+; DISABLED-NEXT:    .cfi_def_cfa_offset 24
 ; DISABLED-NEXT:    popq %r14
+; DISABLED-NEXT:    .cfi_def_cfa_offset 16
 ; DISABLED-NEXT:    popq %r15
+; DISABLED-NEXT:    .cfi_def_cfa_offset 8
 ; DISABLED-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: test_limit_one_pred:
@@ -1129,10 +1159,15 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; CHECK-AVX2-NEXT:    movl 12(%rbx), %eax
 ; CHECK-AVX2-NEXT:    movl %eax, 12(%r14)
 ; CHECK-AVX2-NEXT:    addq $8, %rsp
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-AVX2-NEXT:    popq %rbx
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-AVX2-NEXT:    popq %r12
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-AVX2-NEXT:    popq %r14
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-AVX2-NEXT:    popq %r15
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: test_limit_one_pred:
@@ -1172,10 +1207,15 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; CHECK-AVX512-NEXT:    movl 12(%rbx), %eax
 ; CHECK-AVX512-NEXT:    movl %eax, 12(%r14)
 ; CHECK-AVX512-NEXT:    addq $8, %rsp
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-AVX512-NEXT:    popq %rbx
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-AVX512-NEXT:    popq %r12
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-AVX512-NEXT:    popq %r14
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-AVX512-NEXT:    popq %r15
+; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-AVX512-NEXT:    retq
 entry:
   %d = getelementptr inbounds %struct.S, %struct.S* %s1, i64 0, i32 3

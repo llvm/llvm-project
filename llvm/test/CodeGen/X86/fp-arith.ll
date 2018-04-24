@@ -16,6 +16,7 @@ define x86_fp80 @fiadd_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fiadds {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fiadd_fp80_i16:
@@ -41,6 +42,7 @@ define x86_fp80 @fiadd_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fiadds {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fiadd_fp80_i16_ld:
@@ -66,6 +68,7 @@ define x86_fp80 @fiadd_fp80_i32(x86_fp80 %a0, i32 %a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fiaddl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fiadd_fp80_i32:
@@ -90,6 +93,7 @@ define x86_fp80 @fiadd_fp80_i32_ld(x86_fp80 %a0, i32 *%a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fiaddl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fiadd_fp80_i32_ld:
@@ -119,6 +123,7 @@ define x86_fp80 @fisub_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fisubs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisub_fp80_i16:
@@ -144,6 +149,7 @@ define x86_fp80 @fisub_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fisubs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisub_fp80_i16_ld:
@@ -169,6 +175,7 @@ define x86_fp80 @fisub_fp80_i32(x86_fp80 %a0, i32 %a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fisubl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisub_fp80_i32:
@@ -193,6 +200,7 @@ define x86_fp80 @fisub_fp80_i32_ld(x86_fp80 %a0, i32 *%a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fisubl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisub_fp80_i32_ld:
@@ -222,6 +230,7 @@ define x86_fp80 @fisubr_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fisubrs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisubr_fp80_i16:
@@ -247,6 +256,7 @@ define x86_fp80 @fisubr_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fisubrs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisubr_fp80_i16_ld:
@@ -272,6 +282,7 @@ define x86_fp80 @fisubr_fp80_i32(x86_fp80 %a0, i32 %a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fisubrl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisubr_fp80_i32:
@@ -296,6 +307,7 @@ define x86_fp80 @fisubr_fp80_i32_ld(x86_fp80 %a0, i32 *%a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fisubrl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fisubr_fp80_i32_ld:
@@ -325,6 +337,7 @@ define x86_fp80 @fimul_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fimuls {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fimul_fp80_i16:
@@ -350,6 +363,7 @@ define x86_fp80 @fimul_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fimuls {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fimul_fp80_i16_ld:
@@ -375,6 +389,7 @@ define x86_fp80 @fimul_fp80_i32(x86_fp80 %a0, i32 %a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fimull (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fimul_fp80_i32:
@@ -399,6 +414,7 @@ define x86_fp80 @fimul_fp80_i32_ld(x86_fp80 %a0, i32 *%a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fimull (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fimul_fp80_i32_ld:
@@ -428,6 +444,7 @@ define x86_fp80 @fidiv_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fidivs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidiv_fp80_i16:
@@ -453,6 +470,7 @@ define x86_fp80 @fidiv_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fidivs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidiv_fp80_i16_ld:
@@ -478,6 +496,7 @@ define x86_fp80 @fidiv_fp80_i32(x86_fp80 %a0, i32 %a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fidivl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidiv_fp80_i32:
@@ -502,6 +521,7 @@ define x86_fp80 @fidiv_fp80_i32_ld(x86_fp80 %a0, i32 *%a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fidivl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidiv_fp80_i32_ld:
@@ -531,6 +551,7 @@ define x86_fp80 @fidivr_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fidivrs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidivr_fp80_i16:
@@ -556,6 +577,7 @@ define x86_fp80 @fidivr_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fidivrs {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidivr_fp80_i16_ld:
@@ -581,6 +603,7 @@ define x86_fp80 @fidivr_fp80_i32(x86_fp80 %a0, i32 %a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fidivrl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidivr_fp80_i32:
@@ -605,6 +628,7 @@ define x86_fp80 @fidivr_fp80_i32_ld(x86_fp80 %a0, i32 *%a1) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fidivrl (%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fidivr_fp80_i32_ld:

@@ -71,9 +71,10 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::init("generic"));
 
-static cl::opt<unsigned>
+static cl::opt<int>
     OutputAsmVariant("output-asm-variant",
-                     cl::desc("Syntax variant to use for output printing"));
+                     cl::desc("Syntax variant to use for output printing"),
+                     cl::init(-1));
 
 static cl::opt<unsigned> Iterations("iterations",
                                     cl::desc("Number of iterations to run"),
@@ -356,16 +357,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
-  if (!IP) {
-    WithColor::error()
-        << "unable to create instruction printer for target triple '"
-        << TheTriple.normalize() << "' with assembly variant "
-        << OutputAsmVariant << ".\n";
-    return 1;
-  }
-
   std::unique_ptr<MCAsmParser> P(createMCAsmParser(SrcMgr, Ctx, Str, *MAI));
   MCAsmLexer &Lexer = P->getLexer();
   MCACommentConsumer CC(Regions);
@@ -383,6 +374,19 @@ int main(int argc, char **argv) {
   auto OF = getOutputStream();
   if (std::error_code EC = OF.getError()) {
     WithColor::error() << EC.message() << '\n';
+    return 1;
+  }
+
+  unsigned AssemblerDialect = P->getAssemblerDialect();
+  if (OutputAsmVariant >= 0)
+    AssemblerDialect = static_cast<unsigned>(OutputAsmVariant);
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TripleName), AssemblerDialect, *MAI, *MCII, *MRI));
+  if (!IP) {
+    WithColor::error()
+        << "unable to create instruction printer for target triple '"
+        << TheTriple.normalize() << "' with assembly variant "
+        << AssemblerDialect << ".\n";
     return 1;
   }
 

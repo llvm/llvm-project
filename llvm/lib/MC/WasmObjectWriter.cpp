@@ -50,6 +50,7 @@ struct SectionBookkeeping {
   uint64_t SizeOffset;
   // Where the contents of the section starts (after the header).
   uint64_t ContentsOffset;
+  uint32_t Index;
 };
 
 // The signature of a wasm function, in a struct capable of being used as a
@@ -188,9 +189,11 @@ class WasmObjectWriter : public MCObjectWriter {
 
   // Relocations for fixing up references in the code section.
   std::vector<WasmRelocationEntry> CodeRelocations;
+  uint32_t CodeSectionIndex;
 
   // Relocations for fixing up references in the data section.
   std::vector<WasmRelocationEntry> DataRelocations;
+  uint32_t DataSectionIndex;
 
   // Index values to use for fixing up call_indirect type indices.
   // Maps function symbols to the index of the type of the function
@@ -213,6 +216,7 @@ class WasmObjectWriter : public MCObjectWriter {
   std::vector<WasmCustomSection> CustomSections;
   unsigned NumFunctionImports = 0;
   unsigned NumGlobalImports = 0;
+  uint32_t SectionCount;
 
   // TargetObjectWriter wrappers.
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
@@ -280,8 +284,8 @@ private:
   void writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
                         ArrayRef<WasmFunction> Functions);
   void writeDataSection();
-  void writeCodeRelocSection();
-  void writeDataRelocSection();
+  void writeRelocSection(uint32_t SectionIndex, StringRef Name,
+                         ArrayRef<WasmRelocationEntry> Relocations);
   void writeLinkingMetaDataSection(
       ArrayRef<wasm::WasmSymbolInfo> SymbolInfos,
       ArrayRef<std::pair<uint16_t, uint32_t>> InitFuncs,
@@ -292,10 +296,9 @@ private:
   void applyRelocations(ArrayRef<WasmRelocationEntry> Relocations,
                         uint64_t ContentsOffset);
 
-  void writeRelocations(ArrayRef<WasmRelocationEntry> Relocations);
   uint32_t getRelocationIndexValue(const WasmRelocationEntry &RelEntry);
-  uint32_t getFunctionType(const MCSymbolWasm& Symbol);
-  uint32_t registerFunctionType(const MCSymbolWasm& Symbol);
+  uint32_t getFunctionType(const MCSymbolWasm &Symbol);
+  uint32_t registerFunctionType(const MCSymbolWasm &Symbol);
 };
 
 } // end anonymous namespace
@@ -316,6 +319,7 @@ void WasmObjectWriter::startSection(SectionBookkeeping &Section,
 
   // The position where the section starts, for measuring its size.
   Section.ContentsOffset = getStream().tell();
+  Section.Index = SectionCount++;
 }
 
 void WasmObjectWriter::startCustomSection(SectionBookkeeping &Section,
@@ -622,25 +626,6 @@ void WasmObjectWriter::applyRelocations(
   }
 }
 
-// Write out the portions of the relocation records that the linker will
-// need to handle.
-void WasmObjectWriter::writeRelocations(
-    ArrayRef<WasmRelocationEntry> Relocations) {
-  raw_pwrite_stream &Stream = getStream();
-  for (const WasmRelocationEntry& RelEntry : Relocations) {
-
-    uint64_t Offset = RelEntry.Offset +
-                      RelEntry.FixupSection->getSectionOffset();
-    uint32_t Index = getRelocationIndexValue(RelEntry);
-
-    write8(RelEntry.Type);
-    encodeULEB128(Offset, Stream);
-    encodeULEB128(Index, Stream);
-    if (RelEntry.hasAddend())
-      encodeSLEB128(RelEntry.Addend, Stream);
-  }
-}
-
 void WasmObjectWriter::writeTypeSection(
     ArrayRef<WasmFunctionType> FunctionTypes) {
   if (FunctionTypes.empty())
@@ -787,6 +772,7 @@ void WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
 
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_CODE);
+  CodeSectionIndex = Section.Index;
 
   encodeULEB128(Functions.size(), getStream());
 
@@ -814,6 +800,7 @@ void WasmObjectWriter::writeDataSection() {
 
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_DATA);
+  DataSectionIndex = Section.Index;
 
   encodeULEB128(DataSegments.size(), getStream()); // count
 
@@ -833,38 +820,33 @@ void WasmObjectWriter::writeDataSection() {
   endSection(Section);
 }
 
-void WasmObjectWriter::writeCodeRelocSection() {
+void WasmObjectWriter::writeRelocSection(
+    uint32_t SectionIndex, StringRef Name,
+    ArrayRef<WasmRelocationEntry> Relocations) {
   // See: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
   // for descriptions of the reloc sections.
 
-  if (CodeRelocations.empty())
+  if (Relocations.empty())
     return;
 
   SectionBookkeeping Section;
-  startCustomSection(Section, "reloc.CODE");
+  startCustomSection(Section, std::string("reloc.") + Name.str());
 
-  encodeULEB128(wasm::WASM_SEC_CODE, getStream());
-  encodeULEB128(CodeRelocations.size(), getStream());
+  raw_pwrite_stream &Stream = getStream();
 
-  writeRelocations(CodeRelocations);
+  encodeULEB128(SectionIndex, Stream);
+  encodeULEB128(Relocations.size(), Stream);
+  for (const WasmRelocationEntry& RelEntry : Relocations) {
+    uint64_t Offset = RelEntry.Offset +
+                      RelEntry.FixupSection->getSectionOffset();
+    uint32_t Index = getRelocationIndexValue(RelEntry);
 
-  endSection(Section);
-}
-
-void WasmObjectWriter::writeDataRelocSection() {
-  // See: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
-  // for descriptions of the reloc sections.
-
-  if (DataRelocations.empty())
-    return;
-
-  SectionBookkeeping Section;
-  startCustomSection(Section, "reloc.DATA");
-
-  encodeULEB128(wasm::WASM_SEC_DATA, getStream());
-  encodeULEB128(DataRelocations.size(), getStream());
-
-  writeRelocations(DataRelocations);
+    write8(RelEntry.Type);
+    encodeULEB128(Offset, Stream);
+    encodeULEB128(Index, Stream);
+    if (RelEntry.hasAddend())
+      encodeSLEB128(RelEntry.Addend, Stream);
+  }
 
   endSection(Section);
 }
@@ -1350,8 +1332,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeDataSection();
   writeUserCustomSections(CustomSections);
   writeLinkingMetaDataSection(SymbolInfos, InitFuncs, Comdats);
-  writeCodeRelocSection();
-  writeDataRelocSection();
+  writeRelocSection(CodeSectionIndex, "CODE", CodeRelocations);
+  writeRelocSection(DataSectionIndex, "DATA", DataRelocations);
 
   // TODO: Translate the .comment section to the output.
   // TODO: Translate debug sections to the output.

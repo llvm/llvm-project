@@ -227,6 +227,7 @@ defm : AtomWriteResPair<WriteFVarShuffle256, [AtomPort0],  [AtomPort0]>; // NOTE
 defm : AtomWriteResPair<WriteCvtF2I, [AtomPort01], [AtomPort01], 8, 9, [8], [9]>; // Float -> Integer.
 defm : AtomWriteResPair<WriteCvtI2F, [AtomPort01], [AtomPort01], 6, 7, [6], [7]>; // Integer -> Float.
 defm : AtomWriteResPair<WriteCvtF2F, [AtomPort01], [AtomPort01], 6, 7, [6], [7]>; // Float -> Float size conversion.
+def  : WriteRes<WriteCvtF2FSt, [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector integer operations.
@@ -250,6 +251,14 @@ defm : AtomWriteResPair<WriteVarBlend,      [AtomPort0],  [AtomPort0]>; // NOTE:
 defm : AtomWriteResPair<WriteShuffle256,    [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteVarShuffle256, [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteVarVecShift,   [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
+
+////////////////////////////////////////////////////////////////////////////////
+// Vector insert/extract operations.
+////////////////////////////////////////////////////////////////////////////////
+
+defm : AtomWriteResPair<WriteVecInsert,     [AtomPort0],  [AtomPort0], 1, 1>;
+def  : WriteRes<WriteVecExtract,   [AtomPort0]>;
+def  : WriteRes<WriteVecExtractSt, [AtomPort0]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE42 String instructions.

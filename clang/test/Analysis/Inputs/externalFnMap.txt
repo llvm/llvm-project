@@ -11,3 +11,4 @@ c:@F@h#I# ctu-other.cpp.ast
 c:@F@h_chain#I# ctu-chain.cpp.ast
 c:@N@chns@S@chcls@F@chf4#I# ctu-chain.cpp.ast
 c:@N@chns@F@chf2#I# ctu-chain.cpp.ast
+c:@F@fun_using_anon_struct#I# ctu-other.cpp.ast

@@ -144,6 +144,10 @@ public:
   /// Plan how to best vectorize, return the best VF and its cost.
   VectorizationFactor plan(bool OptForSize, unsigned UserVF);
 
+  /// Use the VPlan-native path to plan how to best vectorize, return the best
+  /// VF and its cost.
+  VectorizationFactor planInVPlanNativePath(bool OptForSize, unsigned UserVF);
+
   /// Finalize the best decision and dispose of all other VPlans.
   void setBestPlan(unsigned VF, unsigned UF);
 

@@ -1732,14 +1732,11 @@ class LLDBTestCaseFactory(type):
         for attrname, attrvalue in attrs.items():
             if attrname.startswith("test") and not getattr(
                     attrvalue, "__no_debug_info_test__", False):
-                target_platform = lldb.DBG.GetSelectedPlatform(
-                ).GetTriple().split('-')[2]
 
                 # If any debug info categories were explicitly tagged, assume that list to be
                 # authoritative.  If none were specified, try with all debug
                 # info formats.
-                all_dbginfo_categories = set(
-                    test_categories.debug_info_categories) - set(configuration.skipCategories)
+                all_dbginfo_categories = set(test_categories.debug_info_categories)
                 categories = set(
                     getattr(
                         attrvalue,
@@ -1748,49 +1745,16 @@ class LLDBTestCaseFactory(type):
                 if not categories:
                     categories = all_dbginfo_categories
 
-                supported_categories = [
-                    x for x in categories if test_categories.is_supported_on_platform(
-                        x, target_platform, configuration.compiler)]
-                
-                if "dsym" in supported_categories:
-                    @decorators.add_test_categories(["dsym"])
+                for cat in categories:
+                    @decorators.add_test_categories([cat])
                     @wraps(attrvalue)
-                    def dsym_test_method(self, attrvalue=attrvalue):
+                    def test_method(self, attrvalue=attrvalue):
                         return attrvalue(self)
-                    dsym_method_name = attrname + "_dsym"
-                    dsym_test_method.__name__ = dsym_method_name
-                    dsym_test_method.debug_info = "dsym"
-                    newattrs[dsym_method_name] = dsym_test_method
 
-                if "dwarf" in supported_categories:
-                    @decorators.add_test_categories(["dwarf"])
-                    @wraps(attrvalue)
-                    def dwarf_test_method(self, attrvalue=attrvalue):
-                        return attrvalue(self)
-                    dwarf_method_name = attrname + "_dwarf"
-                    dwarf_test_method.__name__ = dwarf_method_name
-                    dwarf_test_method.debug_info = "dwarf"
-                    newattrs[dwarf_method_name] = dwarf_test_method
-
-                if "dwo" in supported_categories:
-                    @decorators.add_test_categories(["dwo"])
-                    @wraps(attrvalue)
-                    def dwo_test_method(self, attrvalue=attrvalue):
-                        return attrvalue(self)
-                    dwo_method_name = attrname + "_dwo"
-                    dwo_test_method.__name__ = dwo_method_name
-                    dwo_test_method.debug_info = "dwo"
-                    newattrs[dwo_method_name] = dwo_test_method
-
-                if "gmodules" in supported_categories:
-                    @decorators.add_test_categories(["gmodules"])
-                    @wraps(attrvalue)
-                    def gmodules_test_method(self, attrvalue=attrvalue):
-                        return attrvalue(self)
-                    gmodules_method_name = attrname + "_gmodules"
-                    gmodules_test_method.__name__ = gmodules_method_name
-                    gmodules_test_method.debug_info = "gmodules"
-                    newattrs[gmodules_method_name] = gmodules_test_method
+                    method_name = attrname + "_" + cat
+                    test_method.__name__ = method_name
+                    test_method.debug_info = cat
+                    newattrs[method_name] = test_method
 
             else:
                 newattrs[attrname] = attrvalue

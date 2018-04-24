@@ -434,6 +434,9 @@ namespace llvm {
   // This pass expands indirectbr instructions.
   FunctionPass *createIndirectBrExpandPass();
 
+  /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
+  FunctionPass *createCFIInstrInserter();
+
 } // End llvm namespace
 
 #endif

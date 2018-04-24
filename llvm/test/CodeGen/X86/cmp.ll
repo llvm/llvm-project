@@ -247,10 +247,13 @@ define i32 @test12() ssp uwtable {
 ; CHECK-NEXT:  # %bb.1: # %T
 ; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
 ; CHECK-NEXT:    popq %rcx # encoding: [0x59]
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ; CHECK-NEXT:  .LBB12_2: # %F
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
 ; CHECK-NEXT:    popq %rcx # encoding: [0x59]
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %tmp1 = call zeroext i1 @test12b()

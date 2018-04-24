@@ -1112,7 +1112,8 @@ static bool isProfitableForVectorization(unsigned InnerLoopId,
   }
   // If outer loop has dependence and inner loop is loop independent then it is
   // profitable to interchange to enable parallelism.
-  return true;
+  // If there are no dependences, interchanging will not improve anything.
+  return !DepMatrix.empty();
 }
 
 bool LoopInterchangeProfitability::isProfitable(unsigned InnerLoopId,
@@ -1220,6 +1221,9 @@ void LoopInterchangeTransform::restructureLoops(
   BasicBlock *OuterHeader = NewOuter->getHeader();
   BasicBlock *OuterLatch = NewOuter->getLoopLatch();
   for (BasicBlock *BB : OrigInnerBBs) {
+    // Nothing will change for BBs in child loops.
+    if (LI->getLoopFor(BB) != NewOuter)
+      continue;
     // Remove the new outer loop header and latch from the new inner loop.
     if (BB == OuterHeader || BB == OuterLatch)
       NewInner->removeBlockFromLoop(BB);

@@ -119,10 +119,15 @@ define <2 x i256> @test_srl(<2 x i256> %In) {
 ; X32-NEXT:    movl $0, 4(%eax)
 ; X32-NEXT:    movl $0, (%eax)
 ; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 20
 ; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 12
 ; X32-NEXT:    popl %ebx
+; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_srl:
@@ -206,10 +211,15 @@ define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X32-NEXT:    movl %ecx, 4(%eax)
 ; X32-NEXT:    movl %ecx, (%eax)
 ; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    .cfi_def_cfa_offset 20
 ; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    popl %edi
+; X32-NEXT:    .cfi_def_cfa_offset 12
 ; X32-NEXT:    popl %ebx
+; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_sra:

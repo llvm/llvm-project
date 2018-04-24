@@ -321,6 +321,7 @@ defm : JWriteResFpuPair<WriteFVarShuffle256, [JFPU01, JFPX],  1>; // NOTE: Doesn
 defm : JWriteResFpuPair<WriteCvtF2I,       [JFPU1, JSTC], 3>; // Float -> Integer.
 defm : JWriteResFpuPair<WriteCvtI2F,       [JFPU1, JSTC], 3>; // Integer -> Float.
 defm : JWriteResFpuPair<WriteCvtF2F,       [JFPU1, JSTC], 3>; // Float -> Float size conversion.
+def  : WriteRes<WriteCvtF2FSt, [JFPU1, JSTC, JSAGU]> { let Latency = 4; }
 
 def JWriteCVTF2F : SchedWriteRes<[JFPU1, JSTC]> {
   let Latency = 7;
@@ -385,23 +386,12 @@ defm : JWriteResFpuPair<WriteVarShuffle256, [JFPU01, JVALU], 1>; // NOTE: Doesn'
 defm : JWriteResFpuPair<WriteVarVecShift, [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
 
 ////////////////////////////////////////////////////////////////////////////////
-// Vector Extraction instructions.
+// Vector insert/extract operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-def JWritePEXTR : SchedWriteRes<[JFPU0, JFPA, JALU0]> { let Latency = 3; }
-def : InstRW<[JWritePEXTR], (instrs MMX_PEXTRWrr,
-                                    EXTRACTPSrr, VEXTRACTPSrr,
-                                    PEXTRBrr, VPEXTRBrr,
-                                    PEXTRDrr, VPEXTRDrr,
-                                    PEXTRQrr, VPEXTRQrr,
-                                    PEXTRWrr, VPEXTRWrr, PEXTRWrr_REV, VPEXTRWrr_REV)>;
-
-def JWritePEXTRSt : SchedWriteRes<[JFPU1, JSTC, JSAGU]> { let Latency = 3; }
-def : InstRW<[JWritePEXTRSt], (instrs EXTRACTPSmr, VEXTRACTPSmr,
-                                      PEXTRBmr, VPEXTRBmr,
-                                      PEXTRDmr, VPEXTRDmr,
-                                      PEXTRQmr, VPEXTRQmr,
-                                      PEXTRWmr, VPEXTRWmr)>;
+defm : JWriteResFpuPair<WriteVecInsert,   [JFPU01, JVALU], 1>;
+def  : WriteRes<WriteVecExtract,     [JFPU0, JFPA, JALU0]> { let Latency = 3; }
+def  : WriteRes<WriteVecExtractSt,   [JFPU1, JSTC, JSAGU]> { let Latency = 3; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE42 String instructions.
@@ -502,11 +492,6 @@ def : InstRW<[JWriteINSERTQ], (instrs INSERTQ, INSERTQI)>;
 // F16C instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def JWriteCVT3St: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
-  let Latency = 3;
-}
-def : InstRW<[JWriteCVT3St], (instrs VCVTPS2PHmr)>;
-
 def JWriteCVTPS2PHY: SchedWriteRes<[JFPU1, JSTC, JFPX]> {
   let Latency = 6;
   let ResourceCycles = [2, 2, 2];
@@ -515,7 +500,7 @@ def JWriteCVTPS2PHY: SchedWriteRes<[JFPU1, JSTC, JFPX]> {
 def : InstRW<[JWriteCVTPS2PHY], (instrs VCVTPS2PHYrr)>;
 
 def JWriteCVTPS2PHYSt: SchedWriteRes<[JFPU1, JSTC, JFPX, JSAGU]> {
-  let Latency = 11;
+  let Latency = 7;
   let ResourceCycles = [2, 2, 2, 1];
   let NumMicroOps = 3;
 }

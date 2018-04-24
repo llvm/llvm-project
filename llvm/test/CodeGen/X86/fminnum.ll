@@ -76,6 +76,7 @@ define x86_fp80 @test_fminl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fstpt (%rsp)
 ; CHECK-NEXT:    callq fminl
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %z = call x86_fp80 @fminl(x86_fp80 %x, x86_fp80 %y) readnone
   ret x86_fp80 %z
@@ -138,6 +139,7 @@ define x86_fp80 @test_intrinsic_fminl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fstpt (%rsp)
 ; CHECK-NEXT:    callq fminl
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %z = call x86_fp80 @llvm.minnum.f80(x86_fp80 %x, x86_fp80 %y) readnone
   ret x86_fp80 %z

@@ -545,3 +545,22 @@ define i8 @do_not_assume_sel_cond(i1 %cond, i8 %x, i8 %y) {
   ret i8 %sel
 }
 
+define i32* @select_icmp_eq_0_gep_operand(i32* %base, i64 %n) {
+; CHECK-LABEL: @select_icmp_eq_0_gep_operand(
+; CHECK-NEXT: [[GEP:%.*]] = getelementptr
+; CHECK-NEXT: ret i32* [[GEP]]
+  %cond = icmp eq i64 %n, 0
+  %gep = getelementptr i32, i32* %base, i64 %n
+  %r = select i1 %cond, i32* %base, i32* %gep
+  ret i32* %r
+}
+
+define i32* @select_icmp_ne_0_gep_operand(i32* %base, i64 %n) {
+; CHECK-LABEL: @select_icmp_ne_0_gep_operand(
+; CHECK-NEXT: [[GEP:%.*]] = getelementptr
+; CHECK-NEXT: ret i32* [[GEP]]
+  %cond = icmp ne i64 %n, 0
+  %gep = getelementptr i32, i32* %base, i64 %n
+  %r = select i1 %cond, i32* %gep, i32* %base
+  ret i32* %r
+}

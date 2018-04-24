@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=arm64-unknown-linux-gnu -debug-only=tailduplication %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LINUX
 ; RUN: llc -mtriple=arm64-apple-darwin -debug-only=tailduplication %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=DARWIN
 
-; ModuleID = 'taildup-cfi.c'
-source_filename = "taildup-cfi.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @g = common local_unnamed_addr global i32 0, align 4

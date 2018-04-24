@@ -96,8 +96,21 @@ int llvm::TableGenMain(char *argv0, TableGenMainFn *MainFn) {
   if (Parser.ParseFile())
     return 1;
 
+  // Write output to memory.
+  std::string OutString;
+  raw_string_ostream Out(OutString);
+  if (MainFn(Out, Records))
+    return 1;
+
+  // Only updates the real output file if there are any differences.
+  // This prevents recompilation of all the files depending on it if there
+  // aren't any.
+  if (auto ExistingOrErr = MemoryBuffer::getFile(OutputFilename))
+    if (std::move(ExistingOrErr.get())->getBuffer() == Out.str())
+      return 0;
+
   std::error_code EC;
-  ToolOutputFile Out(OutputFilename, EC, sys::fs::F_Text);
+  ToolOutputFile OutFile(OutputFilename, EC, sys::fs::F_Text);
   if (EC)
     return reportError(argv0, "error opening " + OutputFilename + ":" +
                                   EC.message() + "\n");
@@ -105,14 +118,12 @@ int llvm::TableGenMain(char *argv0, TableGenMainFn *MainFn) {
     if (int Ret = createDependencyFile(Parser, argv0))
       return Ret;
   }
-
-  if (MainFn(Out.os(), Records))
-    return 1;
+  OutFile.os() << Out.str();
 
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
 
   // Declare success.
-  Out.keep();
+  OutFile.keep();
   return 0;
 }

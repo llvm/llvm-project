@@ -1645,20 +1645,24 @@ FinishIdentifier:
     // Fill in Result.IdentifierInfo and update the token kind,
     // looking up the identifier in the identifier table.
     IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
+    // Note that we have to call PP->LookUpIdentifierInfo() even for code
+    // completion, it writes IdentifierInfo into Result, and callers rely on it.
+
+    // If the completion point is at the end of an identifier, we want to treat
+    // the identifier as incomplete even if it resolves to a macro or a keyword.
+    // This allows e.g. 'class^' to complete to 'classifier'.
+    if (isCodeCompletionPoint(CurPtr)) {
+      // Return the code-completion token.
+      Result.setKind(tok::code_completion);
+      cutOffLexing();
+      return true;
+    }
 
     // Finally, now that we know we have an identifier, pass this off to the
     // preprocessor, which may macro expand it or something.
     if (II->isHandleIdentifierCase())
       return PP->HandleIdentifier(Result);
 
-    if (II->getTokenID() == tok::identifier && isCodeCompletionPoint(CurPtr)
-        && II->getPPKeywordID() == tok::pp_not_keyword
-        && II->getObjCKeywordID() == tok::objc_not_keyword) {
-      // Return the code-completion token.
-      Result.setKind(tok::code_completion);
-      cutOffLexing();
-      return true;
-    }
     return true;
   }
 

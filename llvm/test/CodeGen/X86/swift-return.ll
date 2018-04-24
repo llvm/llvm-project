@@ -18,6 +18,7 @@ define i16 @test(i32 %key) {
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test:
@@ -32,6 +33,7 @@ define i16 @test(i32 %key) {
 ; CHECK-O0-NEXT:    addl %ecx, %edi
 ; CHECK-O0-NEXT:    movw %di, %ax
 ; CHECK-O0-NEXT:    popq %rcx
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca i32, align 4
@@ -66,6 +68,7 @@ define i32 @test2(i32 %key) #0 {
 ; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test2:
@@ -87,6 +90,7 @@ define i32 @test2(i32 %key) #0 {
 ; CHECK-O0-NEXT:    addl %edi, %esi
 ; CHECK-O0-NEXT:    movl %esi, %eax
 ; CHECK-O0-NEXT:    addq $24, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca i32, align 4
@@ -148,6 +152,7 @@ define i32 @test3(i32 %key) #0 {
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    addl %r8d, %eax
 ; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test3:
@@ -161,6 +166,7 @@ define i32 @test3(i32 %key) #0 {
 ; CHECK-O0-NEXT:    addl %ecx, %eax
 ; CHECK-O0-NEXT:    addl %r8d, %eax
 ; CHECK-O0-NEXT:    popq %rcx
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca i32, align 4
@@ -194,6 +200,7 @@ define float @test4(float %key) #0 {
 ; CHECK-NEXT:    addss %xmm2, %xmm0
 ; CHECK-NEXT:    addss %xmm3, %xmm0
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test4:
@@ -207,6 +214,7 @@ define float @test4(float %key) #0 {
 ; CHECK-O0-NEXT:    addss %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addss %xmm3, %xmm0
 ; CHECK-O0-NEXT:    popq %rax
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %key.addr = alloca float, align 4
@@ -246,6 +254,7 @@ define void @consume_i1_ret() {
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: consume_i1_ret:
@@ -266,6 +275,7 @@ define void @consume_i1_ret() {
 ; CHECK-O0-NEXT:    movzbl %r8b, %esi
 ; CHECK-O0-NEXT:    movl %esi, var
 ; CHECK-O0-NEXT:    popq %rax
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
   %call = call swiftcc { i1, i1, i1, i1 } @produce_i1_ret()
   %v3 = extractvalue { i1, i1, i1, i1 } %call, 0
@@ -309,6 +319,7 @@ define swiftcc double @test5() #0 {
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:    addsd %xmm3, %xmm0
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test5:
@@ -320,6 +331,7 @@ define swiftcc double @test5() #0 {
 ; CHECK-O0-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm3, %xmm0
 ; CHECK-O0-NEXT:    popq %rax
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %call = call swiftcc { double, double, double, double } @gen5()
@@ -351,6 +363,7 @@ define swiftcc { double, i64 } @test6() #0 {
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    addq %r8, %rax
 ; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test6:
@@ -365,6 +378,7 @@ define swiftcc { double, i64 } @test6() #0 {
 ; CHECK-O0-NEXT:    addq %rcx, %rax
 ; CHECK-O0-NEXT:    addq %r8, %rax
 ; CHECK-O0-NEXT:    popq %rcx
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %call = call swiftcc { double, double, double, double, i64, i64, i64, i64 } @gen6()
@@ -510,6 +524,7 @@ define swiftcc <4 x float> @test11() #0 {
 ; CHECK-NEXT:    addps %xmm2, %xmm0
 ; CHECK-NEXT:    addps %xmm3, %xmm0
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test11:
@@ -521,6 +536,7 @@ define swiftcc <4 x float> @test11() #0 {
 ; CHECK-O0-NEXT:    addps %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addps %xmm3, %xmm0
 ; CHECK-O0-NEXT:    popq %rax
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %call = call swiftcc { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @gen11()
@@ -548,6 +564,7 @@ define swiftcc { <4 x float>, float } @test12() #0 {
 ; CHECK-NEXT:    addps %xmm2, %xmm0
 ; CHECK-NEXT:    movaps %xmm3, %xmm1
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test12:
@@ -559,6 +576,7 @@ define swiftcc { <4 x float>, float } @test12() #0 {
 ; CHECK-O0-NEXT:    addps %xmm2, %xmm0
 ; CHECK-O0-NEXT:    movaps %xmm3, %xmm1
 ; CHECK-O0-NEXT:    popq %rax
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:
   %call = call swiftcc { <4 x float>, <4 x float>, <4 x float>, float } @gen12()

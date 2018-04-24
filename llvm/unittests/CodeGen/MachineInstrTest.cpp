@@ -255,7 +255,11 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
                       0, nullptr, nullptr, &OpInfo, 0, nullptr};
 
   LLVMContext Ctx;
-  DILocation *DIL = DILocation::get(Ctx, 1, 5, (Metadata *)nullptr, nullptr);
+  DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
+  DISubprogram *DIS = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", DIF, 0, nullptr, false, false, 0, nullptr, 0, 0, 0,
+      DINode::FlagZero, false, nullptr);
+  DILocation *DIL = DILocation::get(Ctx, 1, 5, DIS);
   DebugLoc DL(DIL);
   MachineInstr *MI = MF->CreateMachineInstr(MCID, DL);
   MI->addOperand(*MF, MachineOperand::CreateReg(0, /*isDef*/ true));
@@ -265,6 +269,8 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   MI->print(OS);
   ASSERT_TRUE(
       StringRef(OS.str()).startswith("$noreg = UNKNOWN debug-location "));
+  ASSERT_TRUE(
+      StringRef(OS.str()).endswith("filename:1:5"));
 }
 
 } // end namespace

@@ -495,4 +495,10 @@ void X86PassConfig::addPreEmitPass() {
 
 void X86PassConfig::addPreEmitPass2() {
   addPass(createX86RetpolineThunksPass());
+  // Verify basic block incoming and outgoing cfa offset and register values and
+  // correct CFA calculation rule where needed by inserting appropriate CFI
+  // instructions.
+  const Triple &TT = TM->getTargetTriple();
+  if (!TT.isOSDarwin() && !TT.isOSWindows())
+    addPass(createCFIInstrInserter());
 }

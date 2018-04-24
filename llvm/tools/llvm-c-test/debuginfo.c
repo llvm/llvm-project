@@ -36,11 +36,17 @@ int llvm_test_dibuilder(void) {
                               "/test/include/llvm-c-test.h", 27,
                               "", 0);
 
-  LLVMMetadataRef NameSpace =
-    LLVMDIBuilderCreateNameSpace(DIB, Module, "NameSpace", 9, false);
-
   LLVMMetadataRef Int64Ty =
     LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0);
+  LLVMMetadataRef GlobalVarValueExpr =
+    LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "global", 6,
+                                              "", 0, File, 1, Int64Ty,
+                                              true, GlobalVarValueExpr,
+                                              NULL, 0);
+
+  LLVMMetadataRef NameSpace =
+    LLVMDIBuilderCreateNameSpace(DIB, Module, "NameSpace", 9, false);
 
   LLVMMetadataRef StructDbgElts[] = {Int64Ty, Int64Ty, Int64Ty};
   LLVMMetadataRef StructDbgTy =
@@ -109,14 +115,19 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooLexicalBlock =
     LLVMDIBuilderCreateLexicalBlock(DIB, FunctionMetadata, File, 42, 0);
 
-  LLVMValueRef InnerFooFunction =
-    LLVMAddFunction(M, "foo_inner_scope", FooFuncTy);
-  LLVMMetadataRef InnerFunctionMetadata =
-    LLVMDIBuilderCreateFunction(DIB, FooLexicalBlock, "foo_inner_scope", 15,
-                                "foo_inner_scope", 15,
-                                File, 42, FunctionTy, true, true,
-                                42, 0, false);
-  LLVMSetSubprogram(InnerFooFunction, InnerFunctionMetadata);
+  LLVMBasicBlockRef FooVarBlock = LLVMAppendBasicBlock(FooFunction, "vars");
+  LLVMMetadataRef FooVarsLocation =
+    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 43, 0,
+                                     FunctionMetadata, NULL);
+  LLVMMetadataRef FooVar1 =
+    LLVMDIBuilderCreateAutoVariable(DIB, FooLexicalBlock, "d", 1, File,
+                                    43, Int64Ty, true, 0, 0);
+  LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
+  LLVMMetadataRef FooVarValueExpr =
+    LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
+
+  LLVMDIBuilderInsertDbgValueAtEnd(DIB, FooVal1, FooVar1, FooVarValueExpr,
+                                   FooVarsLocation, FooVarBlock);
 
   LLVMDIBuilderFinalize(DIB);
 

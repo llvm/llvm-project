@@ -21,8 +21,8 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aggressive-instcombine"
@@ -111,6 +111,19 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",
                     "Combine pattern based expressions", false, false)
 
+// Initialization Routines
+void llvm::initializeAggressiveInstCombine(PassRegistry &Registry) {
+  initializeAggressiveInstCombinerLegacyPassPass(Registry);
+}
+
+void LLVMInitializeAggressiveInstCombiner(LLVMPassRegistryRef R) {
+  initializeAggressiveInstCombinerLegacyPassPass(*unwrap(R));
+}
+
 FunctionPass *llvm::createAggressiveInstCombinerPass() {
   return new AggressiveInstCombinerLegacyPass();
+}
+
+void LLVMAddAggressiveInstCombinerPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createAggressiveInstCombinerPass());
 }

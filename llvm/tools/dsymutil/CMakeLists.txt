@@ -25,8 +25,3 @@ add_llvm_tool(dsymutil
 if(APPLE)
   target_link_libraries(dsymutil PRIVATE "-framework CoreFoundation")
 endif(APPLE)
-
-if(LLVM_INSTALL_CCTOOLS_SYMLINKS)
-  add_llvm_tool_symlink(llvm-dsymutil dsymutil)
-endif()
-

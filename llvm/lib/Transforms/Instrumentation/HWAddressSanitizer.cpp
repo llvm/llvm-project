@@ -737,19 +737,17 @@ bool HWAddressSanitizer::runOnFunction(Function &F) {
 
 void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple) {
   const bool IsAndroid = TargetTriple.isAndroid();
-  const bool IsLinux = TargetTriple.isOSLinux();
-  const bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
   const bool IsAndroidWithIfuncSupport =
       IsAndroid && !TargetTriple.isAndroidVersionLT(21);
 
   Scale = kDefaultShadowScale;
 
-  if (ClEnableKhwasan || ClInstrumentWithCalls || IsX86_64)
+  if (ClEnableKhwasan || ClInstrumentWithCalls || !IsAndroidWithIfuncSupport)
     Offset = 0;
   else
     Offset = kDynamicShadowSentinel;
   if (ClMappingOffset.getNumOccurrences() > 0)
     Offset = ClMappingOffset;
 
-  InGlobal = (IsX86_64 && IsLinux) || IsAndroidWithIfuncSupport;
+  InGlobal = IsAndroidWithIfuncSupport;
 }
