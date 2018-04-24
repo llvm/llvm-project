@@ -5,7 +5,7 @@
 // REQUIRES: ppc
 
 # Calling external function bar needs a nop
-// CHECK: error: call lacks nop, can't restore toc
+// CHECK: call lacks nop, can't restore toc
     .text
     .abiversion 2
 
