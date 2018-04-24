@@ -20,8 +20,8 @@
  *
  *===-----------------------------------------------------------------------===
  */
-#ifndef _WMMINTRIN_PCLMUL_H
-#define _WMMINTRIN_PCLMUL_H
+#ifndef __WMMINTRIN_PCLMUL_H
+#define __WMMINTRIN_PCLMUL_H
 
 /// \brief Multiplies two 64-bit integer values, which are selected from source
 ///    operands using the immediate-value operand. The multiplication is a
@@ -54,4 +54,4 @@
   ((__m128i)__builtin_ia32_pclmulqdq128((__v2di)(__m128i)(__X), \
                                         (__v2di)(__m128i)(__Y), (char)(__I)))
 
-#endif /* _WMMINTRIN_PCLMUL_H */
+#endif /* __WMMINTRIN_PCLMUL_H */

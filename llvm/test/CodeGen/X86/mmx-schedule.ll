@@ -2978,7 +2978,7 @@ declare x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx, x86_mmx) nounwind readnone
 define i32 @test_pextrw(x86_mmx %a0) optsize {
 ; GENERIC-LABEL: test_pextrw:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    pextrw $0, %mm0, %eax # sched: [1:1.00]
+; GENERIC-NEXT:    pextrw $0, %mm0, %eax # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_pextrw:
@@ -2993,7 +2993,7 @@ define i32 @test_pextrw(x86_mmx %a0) optsize {
 ;
 ; SANDY-LABEL: test_pextrw:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    pextrw $0, %mm0, %eax # sched: [1:1.00]
+; SANDY-NEXT:    pextrw $0, %mm0, %eax # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pextrw:
@@ -3501,9 +3501,9 @@ declare x86_mmx @llvm.x86.ssse3.phsub.w(x86_mmx, x86_mmx) nounwind readnone
 define i64 @test_pinsrw(x86_mmx %a0, i32 %a1, i16* %a2) optsize {
 ; GENERIC-LABEL: test_pinsrw:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    pinsrw $0, %edi, %mm0 # sched: [1:1.00]
+; GENERIC-NEXT:    pinsrw $0, %edi, %mm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    movswl (%rsi), %eax # sched: [5:0.50]
-; GENERIC-NEXT:    pinsrw $1, %eax, %mm0 # sched: [1:1.00]
+; GENERIC-NEXT:    pinsrw $1, %eax, %mm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -3525,9 +3525,9 @@ define i64 @test_pinsrw(x86_mmx %a0, i32 %a1, i16* %a2) optsize {
 ;
 ; SANDY-LABEL: test_pinsrw:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    pinsrw $0, %edi, %mm0 # sched: [1:1.00]
+; SANDY-NEXT:    pinsrw $0, %edi, %mm0 # sched: [2:1.00]
 ; SANDY-NEXT:    movswl (%rsi), %eax # sched: [5:0.50]
-; SANDY-NEXT:    pinsrw $1, %eax, %mm0 # sched: [1:1.00]
+; SANDY-NEXT:    pinsrw $1, %eax, %mm0 # sched: [2:1.00]
 ; SANDY-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;

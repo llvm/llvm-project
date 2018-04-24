@@ -88,23 +88,6 @@ TEST(SanitizerCommon, MmapAlignedOrDieOnFatalError) {
   }
 }
 
-#if SANITIZER_LINUX
-TEST(SanitizerCommon, SanitizerSetThreadName) {
-  const char *names[] = {
-    "0123456789012",
-    "01234567890123",
-    "012345678901234",  // Larger names will be truncated on linux.
-  };
-
-  for (size_t i = 0; i < ARRAY_SIZE(names); i++) {
-    EXPECT_TRUE(SanitizerSetThreadName(names[i]));
-    char buff[100];
-    EXPECT_TRUE(SanitizerGetThreadName(buff, sizeof(buff) - 1));
-    EXPECT_EQ(0, internal_strcmp(buff, names[i]));
-  }
-}
-#endif
-
 TEST(SanitizerCommon, InternalMmapVector) {
   InternalMmapVector<uptr> vector(1);
   for (uptr i = 0; i < 100; i++) {

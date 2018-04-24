@@ -233,33 +233,13 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
   assert(ReadyQueue.find(Idx) == ReadyQueue.end());
   assert(IssuedQueue.find(Idx) == IssuedQueue.end());
 
-  // Special case where MCIS is a zero-latency instruction.  A zero-latency
-  // instruction doesn't consume any scheduler resources.  That is because it
-  // doesn't need to be executed.  Most of the times, zero latency instructions
-  // are removed at register renaming stage. For example, register-register
-  // moves can be removed at register renaming stage by creating new aliases.
-  // Zero-idiom instruction (for example: a `xor reg, reg`) can also be
-  // eliminated at register renaming stage, since we know in advance that those
-  // clear their output register.
-  if (MCIS.isZeroLatency()) {
-    assert(MCIS.isReady() && "data dependent zero-latency instruction?");
-    notifyInstructionReady(Idx);
-    MCIS.execute();
-    notifyInstructionIssued(Idx, {});
-    assert(MCIS.isExecuted() && "Unexpected non-zero latency!");
-    notifyInstructionExecuted(Idx);
-    return;
-  }
-
+  // Reserve a slot in each buffered resource. Also, mark units with
+  // BufferSize=0 as reserved. Resources with a buffer size of zero will only
+  // be released after MCIS is issued, and all the ResourceCycles for those
+  // units have been consumed.
   const InstrDesc &Desc = MCIS.getDesc();
-  if (!Desc.Buffers.empty()) {
-    // Reserve a slot in each buffered resource. Also, mark units with
-    // BufferSize=0 as reserved. Resources with a buffer size of zero will only
-    // be released after MCIS is issued, and all the ResourceCycles for those
-    // units have been consumed.
-    Resources->reserveBuffers(Desc.Buffers);
-    notifyReservedBuffers(Desc.Buffers);
-  }
+  reserveBuffers(Desc.Buffers);
+  notifyReservedBuffers(Desc.Buffers);
 
   // If necessary, reserve queue entries in the load-store unit (LSU).
   bool Reserved = LSU->reserve(Idx, Desc);
@@ -270,18 +250,28 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
   }
   notifyInstructionReady(Idx);
 
-  // Special case where the instruction is ready, and it uses an in-order
-  // dispatch/issue processor resource. The instruction is issued immediately to
-  // the pipelines. Any other in-order buffered resources (i.e. BufferSize=1)
-  // are consumed.
-  if (Resources->mustIssueImmediately(Desc)) {
-    DEBUG(dbgs() << "[SCHEDULER] Instruction " << Idx
-                 << " issued immediately\n");
-    return issueInstruction(Idx, MCIS);
+  // Don't add a zero-latency instruction to the Wait or Ready queue.
+  // A zero-latency instruction doesn't consume any scheduler resources. That is
+  // because it doesn't need to be executed, and it is often removed at register
+  // renaming stage. For example, register-register moves are often optimized at
+  // register renaming stage by simply updating register aliases. On some
+  // targets, zero-idiom instructions (for example: a xor that clears the value
+  // of a register) are treated speacially, and are often eliminated at register
+  // renaming stage.
+
+  // Instructions that use an in-order dispatch/issue processor resource must be
+  // issued immediately to the pipeline(s). Any other in-order buffered
+  // resources (i.e. BufferSize=1) is consumed.
+
+  if (!MCIS.isZeroLatency() && !Resources->mustIssueImmediately(Desc)) {
+    DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx << " to the Ready Queue\n");
+    ReadyQueue[Idx] = &MCIS;
+    return;
   }
 
-  DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx << " to the Ready Queue\n");
-  ReadyQueue[Idx] = &MCIS;
+  DEBUG(dbgs() << "[SCHEDULER] Instruction " << Idx << " issued immediately\n");
+  // Release buffered resources and issue MCIS to the underlying pipelines.
+  issueInstruction(Idx, MCIS);
 }
 
 void Scheduler::cycleEvent() {
@@ -291,16 +281,33 @@ void Scheduler::cycleEvent() {
   for (const ResourceRef &RR : ResourcesFreed)
     notifyResourceAvailable(RR);
 
-  updateIssuedQueue();
-  updatePendingQueue();
+  SmallVector<unsigned, 4> InstructionIDs;
+  updateIssuedQueue(InstructionIDs);
+  for (unsigned Idx : InstructionIDs)
+    notifyInstructionExecuted(Idx);
+  InstructionIDs.clear();
 
-  while (issue()) {
+  updatePendingQueue(InstructionIDs);
+  for (unsigned Idx : InstructionIDs)
+    notifyInstructionReady(Idx);
+  InstructionIDs.clear();
+
+  std::pair<unsigned, Instruction *> Inst = select();
+  while (Inst.second) {
+    issueInstruction(Inst.first, *Inst.second);
+
     // Instructions that have been issued during this cycle might have unblocked
     // other dependent instructions. Dependent instructions may be issued during
     // this same cycle if operands have ReadAdvance entries.  Promote those
     // instructions to the ReadyQueue and tell to the caller that we need
     // another round of 'issue()'.
-    promoteToReadyQueue();
+    promoteToReadyQueue(InstructionIDs);
+    for (unsigned Idx : InstructionIDs)
+      notifyInstructionReady(Idx);
+    InstructionIDs.clear();
+
+    // Select the next instruction to issue.
+    Inst = select();
   }
 }
 
@@ -336,39 +343,38 @@ bool Scheduler::canBeDispatched(unsigned Index, const InstrDesc &Desc) const {
   return false;
 }
 
-void Scheduler::issueInstruction(unsigned InstrIndex, Instruction &IS) {
+void Scheduler::issueInstructionImpl(
+    unsigned InstrIndex, Instruction &IS,
+    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources) {
   const InstrDesc &D = IS.getDesc();
-
-  if (!D.Buffers.empty()) {
-    Resources->releaseBuffers(D.Buffers);
-    notifyReleasedBuffers(D.Buffers);
-  }
 
   // Issue the instruction and collect all the consumed resources
   // into a vector. That vector is then used to notify the listener.
-  // Most instructions consume very few resurces (typically one or
-  // two resources). We use a small vector here, and conservatively
-  // initialize its capacity to 4. This should address the majority of
-  // the cases.
-  SmallVector<std::pair<ResourceRef, double>, 4> UsedResources;
   Resources->issueInstruction(InstrIndex, D, UsedResources);
+
   // Notify the instruction that it started executing.
   // This updates the internal state of each write.
   IS.execute();
 
-  notifyInstructionIssued(InstrIndex, UsedResources);
-  if (D.MaxLatency) {
-    assert(IS.isExecuting() && "A zero latency instruction?");
+  if (IS.isExecuting())
     IssuedQueue[InstrIndex] = &IS;
-    return;
-  }
-
-  // A zero latency instruction which reads and/or updates registers.
-  assert(IS.isExecuted() && "Instruction still executing!");
-  notifyInstructionExecuted(InstrIndex);
 }
 
-void Scheduler::promoteToReadyQueue() {
+void Scheduler::issueInstruction(unsigned InstrIndex, Instruction &IS) {
+  // Release buffered resources.
+  const InstrDesc &Desc = IS.getDesc();
+  releaseBuffers(Desc.Buffers);
+  notifyReleasedBuffers(Desc.Buffers);
+
+  // Issue IS to the underlying pipelines and notify listeners.
+  SmallVector<std::pair<ResourceRef, double>, 4> Pipes;
+  issueInstructionImpl(InstrIndex, IS, Pipes);
+  notifyInstructionIssued(InstrIndex, Pipes);
+  if (IS.isExecuted())
+    notifyInstructionExecuted(InstrIndex);
+}
+
+void Scheduler::promoteToReadyQueue(SmallVectorImpl<unsigned> &Ready) {
   // Scan the set of waiting instructions and promote them to the
   // ready queue if operands are all ready.
   for (auto I = WaitQueue.begin(), E = WaitQueue.end(); I != E;) {
@@ -387,7 +393,7 @@ void Scheduler::promoteToReadyQueue() {
       continue;
     }
 
-    notifyInstructionReady(IID);
+    Ready.emplace_back(IID);
     ReadyQueue[IID] = &Inst;
     auto ToRemove = I;
     ++I;
@@ -395,7 +401,7 @@ void Scheduler::promoteToReadyQueue() {
   }
 }
 
-bool Scheduler::issue() {
+std::pair<unsigned, Instruction *> Scheduler::select() {
   // Give priority to older instructions in the ReadyQueue. Since the ready
   // queue is ordered by key, this will always prioritize older instructions.
   const auto It = std::find_if(ReadyQueue.begin(), ReadyQueue.end(),
@@ -406,29 +412,28 @@ bool Scheduler::issue() {
                                });
 
   if (It == ReadyQueue.end())
-    return false;
+    return {0, nullptr};
 
-  // We found an instruction. Issue it, and update the ready queue.
-  const QueueEntryTy &Entry = *It;
-  issueInstruction(Entry.first, *Entry.second);
-  ReadyQueue.erase(Entry.first);
-  return true;
+  // We found an instruction to issue.
+  const QueueEntryTy Entry = *It;
+  ReadyQueue.erase(It);
+  return Entry;
 }
 
-void Scheduler::updatePendingQueue() {
+void Scheduler::updatePendingQueue(SmallVectorImpl<unsigned> &Ready) {
   // Notify to instructions in the pending queue that a new cycle just
   // started.
   for (QueueEntryTy Entry : WaitQueue)
     Entry.second->cycleEvent();
-  promoteToReadyQueue();
+  promoteToReadyQueue(Ready);
 }
 
-void Scheduler::updateIssuedQueue() {
+void Scheduler::updateIssuedQueue(SmallVectorImpl<unsigned> &Executed) {
   for (auto I = IssuedQueue.begin(), E = IssuedQueue.end(); I != E;) {
     const QueueEntryTy Entry = *I;
     Entry.second->cycleEvent();
     if (Entry.second->isExecuted()) {
-      notifyInstructionExecuted(Entry.first);
+      Executed.push_back(Entry.first);
       auto ToRemove = I;
       ++I;
       IssuedQueue.erase(ToRemove);
@@ -474,6 +479,9 @@ void Scheduler::notifyResourceAvailable(const ResourceRef &RR) {
 }
 
 void Scheduler::notifyReservedBuffers(ArrayRef<uint64_t> Buffers) {
+  if (Buffers.empty())
+    return;
+
   SmallVector<unsigned, 4> BufferIDs(Buffers.begin(), Buffers.end());
   std::transform(
       Buffers.begin(), Buffers.end(), BufferIDs.begin(),
@@ -482,6 +490,9 @@ void Scheduler::notifyReservedBuffers(ArrayRef<uint64_t> Buffers) {
 }
 
 void Scheduler::notifyReleasedBuffers(ArrayRef<uint64_t> Buffers) {
+  if (Buffers.empty())
+    return;
+
   SmallVector<unsigned, 4> BufferIDs(Buffers.begin(), Buffers.end());
   std::transform(
       Buffers.begin(), Buffers.end(), BufferIDs.begin(),

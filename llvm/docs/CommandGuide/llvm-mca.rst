@@ -52,7 +52,7 @@ assembly text:
     __asm volatile("# LLVM-MCA-BEGIN foo");
     a += 42;
     __asm volatile("# LLVM-MCA-END");
-    a \*= b;
+    a *= b;
     return a;
   }
 

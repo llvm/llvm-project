@@ -1161,7 +1161,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
   if (!BugpointIsInterrupted) {
     outs() << "\n*** Attempting to perform final cleanups: ";
     std::unique_ptr<Module> M = CloneModule(BD.getProgram());
-    M = BD.performFinalCleanups(M.release(), true);
+    M = BD.performFinalCleanups(std::move(M), true);
 
     // Find out if the pass still crashes on the cleaned up program...
     if (M && TestFn(BD, M.get()))

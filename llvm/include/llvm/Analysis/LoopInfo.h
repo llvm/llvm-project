@@ -178,6 +178,12 @@ public:
     return DenseBlockSet;
   }
 
+  /// Return a direct, immutable handle to the blocks set.
+  const SmallPtrSetImpl<const BlockT *> &getBlocksSet() const {
+    assert(!isInvalid() && "Loop not in a valid state!");
+    return DenseBlockSet;
+  }
+
   /// Return true if this loop is no longer valid.  The only valid use of this
   /// helper is "assert(L.isInvalid())" or equivalent, since IsInvalid is set to
   /// true by the destructor.  In other words, if this accessor returns true,

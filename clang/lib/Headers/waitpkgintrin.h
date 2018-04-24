@@ -24,8 +24,8 @@
 #error "Never use <waitpkgintrin.h> directly; include <x86intrin.h> instead."
 #endif
 
-#ifndef _WAITPKGINTRIN_H
-#define _WAITPKGINTRIN_H
+#ifndef __WAITPKGINTRIN_H
+#define __WAITPKGINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS \
@@ -53,4 +53,4 @@ _tpause (unsigned int __control, unsigned long long __counter)
 
 #undef __DEFAULT_FN_ATTRS
 
-#endif /* _WAITPKGINTRIN_H */
+#endif /* __WAITPKGINTRIN_H */

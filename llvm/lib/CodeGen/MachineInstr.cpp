@@ -1469,10 +1469,23 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     return;
 
   bool HaveSemi = false;
+
   // Print debug location information.
+  if (const DebugLoc &DL = getDebugLoc()) {
+    if (!HaveSemi) {
+      OS << ';';
+      HaveSemi = true;
+    }
+    OS << ' ';
+    DL.print(OS);
+  }
+
+  // Print extra comments for DEBUG_VALUE.
   if (isDebugValue() && getOperand(e - 2).isMetadata()) {
-    if (!HaveSemi)
+    if (!HaveSemi) {
       OS << ";";
+      HaveSemi = true;
+    }
     auto *DV = cast<DILocalVariable>(getOperand(e - 2).getMetadata());
     OS << " line no:" <<  DV->getLine();
     if (auto *InlinedAt = debugLoc->getInlinedAt()) {

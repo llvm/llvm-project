@@ -12,8 +12,8 @@ vfmadd213ps (%rdi), %xmm1, %xmm2
 # HASWELL:      [0,0]	DeeeER    .    ..	vaddps	%xmm0, %xmm0, %xmm1
 # HASWELL-NEXT: [0,1]	D===eeeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
 
-# BDWELL:       [0,0]	DeeeER    .    .	vaddps	%xmm0, %xmm0, %xmm1
-# BDWELL-NEXT:  [0,1]	D===eeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
+# BDWELL:       [0,0]	DeeeER    . .	vaddps	%xmm0, %xmm0, %xmm1
+# BDWELL-NEXT:  [0,1]	DeeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
 
 # SKYLAKE:      [0,0]	DeeeeER   .    ..	vaddps	%xmm0, %xmm0, %xmm1
 # SKYLAKE-NEXT: [0,1]	D====eeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2

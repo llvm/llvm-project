@@ -2508,3 +2508,57 @@ loop1.exit:
   call void @g()
   ret void
 }
+
+; Test that when we are unswitching and need to rebuild the loop block set we
+; correctly skip past inner loops. We want to use the inner loop to efficiently
+; skip whole subregions of the outer loop blocks but just because the header of
+; the outer loop is also the preheader of an inner loop shouldn't confuse this
+; walk.
+define void @test23(i1 %arg, i1* %ptr) {
+; CHECK-LABEL: define void @test23(
+entry:
+  br label %outer.header
+; CHECK:       entry:
+; CHECK-NEXT:    br i1 %arg,
+;
+; Just verify that we unswitched the correct bits. We should call `@f` twice in
+; one unswitch and `@f` and then `@g` in the other.
+; CHECK:         call void
+; CHECK-SAME:              @f
+; CHECK:         call void
+; CHECK-SAME:              @f
+;
+; CHECK:         call void
+; CHECK-SAME:              @f
+; CHECK:         call void
+; CHECK-SAME:              @g
+
+outer.header:
+  br label %inner.header
+
+inner.header:
+  call void @f()
+  br label %inner.latch
+
+inner.latch:
+  %inner.cond = load i1, i1* %ptr
+  br i1 %inner.cond, label %inner.header, label %outer.body
+
+outer.body:
+  br i1 %arg, label %outer.body.left, label %outer.body.right
+
+outer.body.left:
+  call void @f()
+  br label %outer.latch
+
+outer.body.right:
+  call void @g()
+  br label %outer.latch
+
+outer.latch:
+  %outer.cond = load i1, i1* %ptr
+  br i1 %outer.cond, label %outer.header, label %exit
+
+exit:
+  ret void
+}

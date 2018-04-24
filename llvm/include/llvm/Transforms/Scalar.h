@@ -80,7 +80,6 @@ FunctionPass *createDeadStoreEliminationPass();
 // values.
 FunctionPass *createCallSiteSplittingPass();
 
-
 //===----------------------------------------------------------------------===//
 //
 // AggressiveDCE - This pass uses the SSA based Aggressive DCE algorithm.  This
@@ -88,7 +87,6 @@ FunctionPass *createCallSiteSplittingPass();
 // it more successful are removing non-obviously dead instructions.
 //
 FunctionPass *createAggressiveDCEPass();
-
 
 //===----------------------------------------------------------------------===//
 //
@@ -125,13 +123,6 @@ Pass *createInductiveRangeCheckEliminationPass();
 // use a single canonical induction variable per loop.
 //
 Pass *createIndVarSimplifyPass();
-
-//===----------------------------------------------------------------------===//
-//
-// AggressiveInstCombiner - Combine expression patterns to form expressions with
-// fewer, simple instructions. This pass does not modify the CFG.
-//
-FunctionPass *createAggressiveInstCombinerPass();
 
 //===----------------------------------------------------------------------===//
 //

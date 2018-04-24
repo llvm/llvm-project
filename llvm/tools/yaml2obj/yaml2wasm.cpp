@@ -27,7 +27,8 @@ public:
   int writeWasm(raw_ostream &OS);
 
 private:
-  int writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec);
+  int writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
+                        uint32_t SectionIndex);
 
   int writeSectionContent(raw_ostream &OS, WasmYAML::CustomSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::TypeSection &Section);
@@ -420,8 +421,8 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
   return 0;
 }
 
-int WasmWriter::writeRelocSection(raw_ostream &OS,
-                                  WasmYAML::Section &Sec) {
+int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
+                                  uint32_t SectionIndex) {
   StringRef Name;
   switch (Sec.Type) {
     case wasm::WASM_SEC_CODE:
@@ -436,7 +437,7 @@ int WasmWriter::writeRelocSection(raw_ostream &OS,
   }
 
   writeStringRef(Name, OS);
-  writeUint8(OS, Sec.Type);
+  encodeULEB128(SectionIndex, OS);
   encodeULEB128(Sec.Relocations.size(), OS);
 
   for (auto Reloc: Sec.Relocations) {
@@ -522,14 +523,17 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
   }
 
   // write reloc sections for any section that have relocations
+  uint32_t SectionIndex = 0;
   for (const std::unique_ptr<WasmYAML::Section> &Sec : Obj.Sections) {
-    if (Sec->Relocations.empty())
+    if (Sec->Relocations.empty()) {
+      SectionIndex++;
       continue;
+    }
 
     writeUint8(OS, wasm::WASM_SEC_CUSTOM);
     std::string OutString;
     raw_string_ostream StringStream(OutString);
-    writeRelocSection(StringStream, *Sec);
+    writeRelocSection(StringStream, *Sec, SectionIndex++);
     StringStream.flush();
 
     encodeULEB128(OutString.size(), OS);

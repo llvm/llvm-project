@@ -2725,6 +2725,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const int OpIndices[] = { Src0Idx, Src1Idx, Src2Idx };
 
     unsigned ConstantBusCount = 0;
+    unsigned LiteralCount = 0;
 
     if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1)
       ++ConstantBusCount;
@@ -2744,11 +2745,17 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
           SGPRUsed = MO.getReg();
         } else {
           ++ConstantBusCount;
+          ++LiteralCount;
         }
       }
     }
     if (ConstantBusCount > 1) {
       ErrInfo = "VOP* instruction uses the constant bus more than once";
+      return false;
+    }
+
+    if (isVOP3(MI) && LiteralCount) {
+      ErrInfo = "VOP3 instruction uses literal";
       return false;
     }
   }

@@ -85,6 +85,8 @@ OUTPUT OPTIONS
  Echo all commands to stdout, as they are being executed.
  This can be valuable for debugging test failures, as the last echoed command
  will be the one which has failed.
+ To help you find the source RUN line, :program:`lit` inserts a no-op ``:``
+ command with argument ``'RUN: at line N'`` before each command pipeline.
  This option implies ``--verbose``.
 
 .. option:: -a, --show-all

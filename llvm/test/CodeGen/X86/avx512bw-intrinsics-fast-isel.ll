@@ -25,6 +25,7 @@ define i64 @test_mm512_kunpackd(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X32-NEXT:    kmovd %k0, %edx
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -73,6 +74,7 @@ define i32 @test_mm512_kunpackw(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X32-NEXT:    kmovd %k0, %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;

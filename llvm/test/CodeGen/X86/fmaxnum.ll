@@ -84,6 +84,7 @@ define x86_fp80 @test_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fstpt (%rsp)
 ; CHECK-NEXT:    callq fmaxl
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %z = call x86_fp80 @fmaxl(x86_fp80 %x, x86_fp80 %y) readnone
   ret x86_fp80 %z
@@ -146,6 +147,7 @@ define x86_fp80 @test_intrinsic_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fstpt (%rsp)
 ; CHECK-NEXT:    callq fmaxl
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %z = call x86_fp80 @llvm.maxnum.f80(x86_fp80 %x, x86_fp80 %y) readnone
   ret x86_fp80 %z

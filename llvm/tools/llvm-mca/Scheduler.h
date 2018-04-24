@@ -430,18 +430,21 @@ class Scheduler {
   // Notify the Backend that buffered resources were freed.
   void notifyReleasedBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
-  /// Issue the next instruction from the ReadyQueue. This method gives priority
-  /// to older instructions.
-  bool issue();
+  /// Select the next instruction to issue from the ReadyQueue.
+  /// This method gives priority to older instructions.
+  std::pair<unsigned, Instruction *> select();
 
   /// Move instructions from the WaitQueue to the ReadyQueue if input operands
   /// are all available.
-  void promoteToReadyQueue();
+  void promoteToReadyQueue(llvm::SmallVectorImpl<unsigned> &Ready);
 
   /// Issue an instruction without updating the ready queue.
-  void issueInstruction(unsigned Index, Instruction &IS);
-  void updatePendingQueue();
-  void updateIssuedQueue();
+  void issueInstructionImpl(
+      unsigned Index, Instruction &IS,
+      llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes);
+
+  void updatePendingQueue(llvm::SmallVectorImpl<unsigned> &Ready);
+  void updateIssuedQueue(llvm::SmallVectorImpl<unsigned> &Executed);
 
 public:
   Scheduler(Backend *B, const llvm::MCSchedModel &Model, unsigned LoadQueueSize,
@@ -462,6 +465,20 @@ public:
   /// Otherwise, a generic HWStallEvent is notified to the listeners.
   bool canBeDispatched(unsigned Idx, const InstrDesc &Desc) const;
   void scheduleInstruction(unsigned Idx, Instruction &MCIS);
+
+
+  /// Issue an instruction.
+  void issueInstruction(unsigned Index, Instruction &IS);
+
+  /// Reserve one entry in each buffered resource.
+  void reserveBuffers(llvm::ArrayRef<uint64_t> Buffers) {
+    Resources->reserveBuffers(Buffers);
+  }
+
+  /// Release buffer entries previously allocated by method reserveBuffers.
+  void releaseBuffers(llvm::ArrayRef<uint64_t> Buffers) {
+    Resources->releaseBuffers(Buffers);
+  }
 
   void cycleEvent();
 

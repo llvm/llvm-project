@@ -596,7 +596,6 @@ LLVMDIBuilderCreateNullPtrType(LLVMDIBuilderRef Builder);
  *                            Objective-C.
  * \param SizeInBits          Member size.
  * \param AlignInBits         Member alignment.
- * \param Flags               Flags.
  * \param UniqueIdentifier    A unique identifier for the type.
  * \param UniqueIdentifierLen Length of the unique identifier.
  */
@@ -770,8 +769,6 @@ LLVMDIBuilderCreateGlobalVariableExpression(LLVMDIBuilderRef Builder,
  * \param Ty          Variable Type.
  * \param LocalToUnit Boolean flag indicate whether this variable is
  *                    externally visible or not.
- * \param Expr        The location of the global relative to the attached
- *                    GlobalVariable.
  * \param Decl        Reference to the corresponding declaration.
  * \param AlignInBits Variable alignment(or 0 if no alignment attr was
  *                    specified)

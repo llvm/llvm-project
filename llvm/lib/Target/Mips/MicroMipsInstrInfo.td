@@ -959,7 +959,8 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                                              GPR32Opnd>, BGEZAL_FM_MM<0x11>;
 }
 def B_MM    : UncondBranch<BEQ_MM, brtarget_mm>, IsBranch, ISA_MICROMIPS;
-let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
+let DecoderNamespace = "MicroMips" in {
+  let Predicates = [InMicroMips] in {
 
   /// Control Instructions
   def SYNC_MM    : MMRel, SYNC_FT<"sync">, SYNC_FM_MM;
@@ -973,18 +974,22 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                    ISA_MIPS32R2;
   def DI_MM      : MMRel, DEI_FT<"di", GPR32Opnd, II_DI>, EI_FM_MM<0x11d>,
                    ISA_MIPS32R2;
+  }
 
   /// Trap Instructions
-  def TEQ_MM  : MMRel, TEQ_FT<"teq", GPR32Opnd, uimm4, II_TEQ>, TEQ_FM_MM<0x0>;
-  def TGE_MM  : MMRel, TEQ_FT<"tge", GPR32Opnd, uimm4, II_TGE>, TEQ_FM_MM<0x08>;
+  def TEQ_MM  : MMRel, TEQ_FT<"teq", GPR32Opnd, uimm4, II_TEQ>, TEQ_FM_MM<0x0>,
+                ISA_MICROMIPS;
+  def TGE_MM  : MMRel, TEQ_FT<"tge", GPR32Opnd, uimm4, II_TGE>, TEQ_FM_MM<0x08>,
+                ISA_MICROMIPS;
   def TGEU_MM : MMRel, TEQ_FT<"tgeu", GPR32Opnd, uimm4, II_TGEU>,
-                TEQ_FM_MM<0x10>;
-  def TLT_MM  : MMRel, TEQ_FT<"tlt", GPR32Opnd, uimm4, II_TLT>, TEQ_FM_MM<0x20>;
+                TEQ_FM_MM<0x10>, ISA_MICROMIPS;
+  def TLT_MM  : MMRel, TEQ_FT<"tlt", GPR32Opnd, uimm4, II_TLT>, TEQ_FM_MM<0x20>,
+                ISA_MICROMIPS;
   def TLTU_MM : MMRel, TEQ_FT<"tltu", GPR32Opnd, uimm4, II_TLTU>,
-                TEQ_FM_MM<0x28>;
-  def TNE_MM  : MMRel, TEQ_FT<"tne", GPR32Opnd, uimm4, II_TNE>, TEQ_FM_MM<0x30>;
-}
-let DecoderNamespace = "MicroMips" in {
+                TEQ_FM_MM<0x28>, ISA_MICROMIPS;
+  def TNE_MM  : MMRel, TEQ_FT<"tne", GPR32Opnd, uimm4, II_TNE>, TEQ_FM_MM<0x30>,
+                ISA_MICROMIPS;
+
   def TEQI_MM  : MMRel, TEQI_FT<"teqi", GPR32Opnd, II_TEQI>, TEQI_FM_MM<0x0e>,
                  ISA_MICROMIPS32_NOT_MIPS32R6;
   def TGEI_MM  : MMRel, TEQI_FT<"tgei", GPR32Opnd, II_TGEI>, TEQI_FM_MM<0x09>,
@@ -1123,6 +1128,9 @@ let Predicates = [InMicroMips] in {
   def : MipsPat<(subc GPR32:$lhs, GPR32:$rhs),
                 (SUBu_MM GPR32:$lhs, GPR32:$rhs)>;
 }
+
+def : MipsPat<(bswap GPR32:$rt), (ROTR_MM (WSBH_MM GPR32:$rt), 16)>,
+      ISA_MICROMIPS;
 
 def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
               (TAILCALL_MM tglobaladdr:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;

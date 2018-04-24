@@ -41,7 +41,10 @@ class LLDBTest(TestFormat):
             return (lit.Test.UNSUPPORTED, 'Test is unsupported')
 
         testPath, testFile = os.path.split(test.getSourcePath())
-        cmd = self.dotest_cmd + [testPath, '-p', testFile]
+        # On Windows, the system does not always correctly interpret shebang lines.
+        # To make sure we can execute the tests, add python exe as the first parameter
+        # of the command.
+        cmd = [sys.executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
         try:
             out, err, exitCode = lit.util.executeCommand(

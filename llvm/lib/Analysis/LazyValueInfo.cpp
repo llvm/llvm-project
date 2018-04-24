@@ -1843,7 +1843,7 @@ void LazyValueInfoAnnotatedWriter::emitBasicBlockStartAnnot(
 
 // This function prints the LVI analysis for the instruction I at the beginning
 // of various basic blocks. It relies on calculated values that are stored in
-// the LazyValueInfoCache, and in the absence of cached values, recalculte the
+// the LazyValueInfoCache, and in the absence of cached values, recalculate the
 // LazyValueInfo for `I`, and print that info.
 void LazyValueInfoAnnotatedWriter::emitInstructionAnnot(
     const Instruction *I, formatted_raw_ostream &OS) {
