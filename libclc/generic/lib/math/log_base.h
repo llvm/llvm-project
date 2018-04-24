@@ -92,14 +92,12 @@ log(float x)
     const float LOG2E_HEAD = 0x1.700000p+0f; // 1.4375
     const float LOG2E_TAIL = 0x1.547652p-8f; // 0.00519504072
 #elif defined(COMPILING_LOG10)
-    USE_TABLE(float2, p_log, LOG10_TBL);
     const float LOG10E = 0x1.bcb7b2p-2f;        // 0.43429448190325182
     const float LOG10E_HEAD = 0x1.bc0000p-2f;   // 0.43359375
     const float LOG10E_TAIL = 0x1.6f62a4p-11f;  // 0.0007007319
     const float LOG10_2_HEAD = 0x1.340000p-2f;  // 0.30078125
     const float LOG10_2_TAIL = 0x1.04d426p-12f; // 0.000248745637
 #else
-    USE_TABLE(float2, p_log, LOGE_TBL);
     const float LOG2_HEAD = 0x1.62e000p-1f;  // 0.693115234
     const float LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
 #endif
@@ -158,11 +156,11 @@ log(float x)
     z1 = tv.s0 + mf;
     z2 = mad(poly, -LOG2E, tv.s1);
 #elif defined(COMPILING_LOG10)
-    float2 tv = p_log[indx];
+    float2 tv = USE_TABLE(log10_tbl, indx);
     z1 = mad(mf, LOG10_2_HEAD, tv.s0);
     z2 = mad(poly, -LOG10E, mf*LOG10_2_TAIL) + tv.s1;
 #else
-    float2 tv = p_log[indx];
+    float2 tv = USE_TABLE(log_tbl, indx);
     z1 = mad(mf, LOG2_HEAD, tv.s0);
     z2 = mad(mf, LOG2_TAIL, -poly) + tv.s1;
 #endif

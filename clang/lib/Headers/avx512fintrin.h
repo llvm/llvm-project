@@ -330,7 +330,6 @@ _mm512_set1_epi64(long long __d)
   return (__m512i)(__v8di){ __d, __d, __d, __d, __d, __d, __d, __d };
 }
 
-#ifdef __x86_64__
 static __inline __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_set1_epi64(__mmask8 __M, long long __A)
 {
@@ -338,7 +337,6 @@ _mm512_maskz_set1_epi64(__mmask8 __M, long long __A)
                                              (__v8di)_mm512_set1_epi64(__A),
                                              (__v8di)_mm512_setzero_si512());
 }
-#endif
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
 _mm512_broadcastss_ps(__m128 __A)
@@ -9575,7 +9573,6 @@ _mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
                                               (__v16si) __O);
 }
 
-#ifdef __x86_64__
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
 {
@@ -9583,7 +9580,6 @@ _mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
                                               (__v8di) _mm512_set1_epi64(__A),
                                               (__v8di) __O);
 }
-#endif
 
 static  __inline __m512i __DEFAULT_FN_ATTRS
 _mm512_set_epi8 (char __e63, char __e62, char __e61, char __e60, char __e59,

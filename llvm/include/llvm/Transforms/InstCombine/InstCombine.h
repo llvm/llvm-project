@@ -10,8 +10,7 @@
 ///
 /// This file provides the primary interface to the instcombine pass. This pass
 /// is suitable for use in the new pass manager. For a pass that works with the
-/// legacy pass manager, please look for \c createInstructionCombiningPass() in
-/// Scalar.h.
+/// legacy pass manager, use \c createInstructionCombiningPass().
 ///
 //===----------------------------------------------------------------------===//
 
@@ -56,6 +55,20 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 };
+
+//===----------------------------------------------------------------------===//
+//
+// InstructionCombining - Combine instructions to form fewer, simple
+// instructions. This pass does not modify the CFG, and has a tendency to make
+// instructions dead, so a subsequent DCE pass is useful.
+//
+// This pass combines things like:
+//    %Y = add int 1, %X
+//    %Z = add int 1, %Y
+// into:
+//    %Z = add int 2, %X
+//
+FunctionPass *createInstructionCombiningPass(bool ExpensiveCombines = true);
 }
 
 #endif

@@ -2435,3 +2435,76 @@ bb23:
   %tmp1.3 = phi i32 [ %tmp1.2.lcssa, %bb19 ], [ %tmp1.1, %bb7 ]
   br label %bb3
 }
+
+; A test reduced out of 400.perlbench that when unswitching the `%stop`
+; condition clones a loop nest outside of a containing loop. This excercises a
+; different cloning path from our other test cases and in turn verifying the
+; resulting structure can catch any failures to correctly clone these nested
+; loops.
+declare void @f()
+declare void @g()
+declare i32 @h(i32 %arg)
+define void @test22(i32 %arg) {
+; CHECK-LABEL: define void @test22(
+entry:
+  br label %loop1.header
+
+loop1.header:
+  %stop = phi i1 [ true, %loop1.latch ], [ false, %entry ]
+  %i = phi i32 [ %i.lcssa, %loop1.latch ], [ %arg, %entry ]
+; CHECK:         %[[I:.*]] = phi i32 [ %{{.*}}, %loop1.latch ], [ %arg, %entry ]
+  br i1 %stop, label %loop1.exit, label %loop1.body.loop2.ph
+; CHECK:         br i1 %stop, label %loop1.exit, label %loop1.body.loop2.ph
+
+loop1.body.loop2.ph:
+  br label %loop2.header
+; Just check that the we unswitched the key condition and that leads to the
+; inner loop header.
+;
+; CHECK:       loop1.body.loop2.ph:
+; CHECK-NEXT:    br i1 %stop, label %[[SPLIT_US:.*]], label %[[SPLIT:.*]]
+;
+; CHECK:       [[SPLIT_US]]:
+; CHECK-NEXT:    br label %[[LOOP2_HEADER_US:.*]]
+;
+; CHECK:       [[LOOP2_HEADER_US]]:
+; CHECK-NEXT:    %{{.*}} = phi i32 [ %[[I]], %[[SPLIT_US]] ]
+;
+; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    br label %[[LOOP2_HEADER:.*]]
+;
+; CHECK:       [[LOOP2_HEADER]]:
+; CHECK-NEXT:    %{{.*}} = phi i32 [ %[[I]], %[[SPLIT]] ]
+
+loop2.header:
+  %i.inner = phi i32 [ %i, %loop1.body.loop2.ph ], [ %i.next, %loop2.latch ]
+  br label %loop3.header
+
+loop3.header:
+  %sw = call i32 @h(i32 %i.inner)
+  switch i32 %sw, label %loop3.exit [
+    i32 32, label %loop3.header
+    i32 59, label %loop2.latch
+    i32 36, label %loop1.latch
+  ]
+
+loop2.latch:
+  %i.next = add i32 %i.inner, 1
+  br i1 %stop, label %loop2.exit, label %loop2.header
+
+loop1.latch:
+  %i.lcssa = phi i32 [ %i.inner, %loop3.header ]
+  br label %loop1.header
+
+loop3.exit:
+  call void @f()
+  ret void
+
+loop2.exit:
+  call void @g()
+  ret void
+
+loop1.exit:
+  call void @g()
+  ret void
+}

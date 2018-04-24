@@ -913,11 +913,8 @@ static Loop *cloneLoopNest(Loop &OrigRootL, Loop *RootParentL,
     for (auto *BB : OrigL.blocks()) {
       auto *ClonedBB = cast<BasicBlock>(VMap.lookup(BB));
       ClonedL.addBlockEntry(ClonedBB);
-      if (LI.getLoopFor(BB) == &OrigL) {
-        assert(!LI.getLoopFor(ClonedBB) &&
-               "Should not have an existing loop for this block!");
+      if (LI.getLoopFor(BB) == &OrigL)
         LI.changeLoopFor(ClonedBB, &ClonedL);
-      }
     }
   };
 

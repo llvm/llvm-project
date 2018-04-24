@@ -53,10 +53,10 @@ static constexpr __sanitizer::u64 kDefaultShadowSentinel = ~(__sanitizer::u64)0;
 constexpr __sanitizer::uptr kShadowScale = 4;
 constexpr __sanitizer::uptr kShadowAlignment = 1ULL << kShadowScale;
 
-#if defined(__x86_64__)
-# define HWASAN_FIXED_MAPPING 1
-#else
+#if SANITIZER_ANDROID
 # define HWASAN_FIXED_MAPPING 0
+#else
+# define HWASAN_FIXED_MAPPING 1
 #endif
 
 #if HWASAN_FIXED_MAPPING

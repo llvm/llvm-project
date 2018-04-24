@@ -37,6 +37,9 @@ void initializeVectorization(PassRegistry&);
 /// Initialize all passes linked into the InstCombine library.
 void initializeInstCombine(PassRegistry&);
 
+/// Initialize all passes linked into the AggressiveInstCombine library.
+void initializeAggressiveInstCombine(PassRegistry&);
+
 /// Initialize all passes linked into the IPO library.
 void initializeIPO(PassRegistry&);
 

@@ -717,6 +717,78 @@ LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
                                               int64_t *Addr, size_t Length);
 
 /**
+ * Create a new descriptor for the specified variable that does not have an
+ * address, but does have a constant value.
+ * \param Builder     The DIBuilder.
+ * \param Value       The constant value.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateConstantValueExpression(LLVMDIBuilderRef Builder,
+                                           int64_t Value);
+
+/**
+ * Create a new descriptor for the specified variable.
+ * \param Scope       Variable scope.
+ * \param Name        Name of the variable.
+ * \param NameLen     The length of the C string passed to \c Name.
+ * \param Linkage     Mangled  name of the variable.
+ * \param LinkLen     The length of the C string passed to \c Linkage.
+ * \param File        File where this variable is defined.
+ * \param LineNo      Line number.
+ * \param Ty          Variable Type.
+ * \param LocalToUnit Boolean flag indicate whether this variable is
+ *                    externally visible or not.
+ * \param Expr        The location of the global relative to the attached
+ *                    GlobalVariable.
+ * \param Decl        Reference to the corresponding declaration.
+ * \param AlignInBits Variable alignment(or 0 if no alignment attr was
+ *                    specified)
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateGlobalVariableExpression(LLVMDIBuilderRef Builder,
+                                            LLVMMetadataRef Scope,
+                                            const char *Name, size_t NameLen,
+                                            const char *Linkage, size_t LinkLen,
+                                            LLVMMetadataRef File,
+                                            unsigned LineNo,
+                                            LLVMMetadataRef Ty,
+                                            LLVMBool LocalToUnit,
+                                            LLVMMetadataRef Expr,
+                                            LLVMMetadataRef Decl,
+                                            uint32_t AlignInBits);
+
+/**
+ * Create a new descriptor for the specified global variable that is temporary
+ * and meant to be RAUWed.
+ * \param Scope       Variable scope.
+ * \param Name        Name of the variable.
+ * \param NameLen     The length of the C string passed to \c Name.
+ * \param Linkage     Mangled  name of the variable.
+ * \param LnkLen      The length of the C string passed to \c Linkage.
+ * \param File        File where this variable is defined.
+ * \param LineNo      Line number.
+ * \param Ty          Variable Type.
+ * \param LocalToUnit Boolean flag indicate whether this variable is
+ *                    externally visible or not.
+ * \param Expr        The location of the global relative to the attached
+ *                    GlobalVariable.
+ * \param Decl        Reference to the corresponding declaration.
+ * \param AlignInBits Variable alignment(or 0 if no alignment attr was
+ *                    specified)
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateTempGlobalVariableFwdDecl(LLVMDIBuilderRef Builder,
+                                             LLVMMetadataRef Scope,
+                                             const char *Name, size_t NameLen,
+                                             const char *Linkage, size_t LnkLen,
+                                             LLVMMetadataRef File,
+                                             unsigned LineNo,
+                                             LLVMMetadataRef Ty,
+                                             LLVMBool LocalToUnit,
+                                             LLVMMetadataRef Decl,
+                                             uint32_t AlignInBits);
+
+/**
  * Insert a new llvm.dbg.declare intrinsic call before the given instruction.
  * \param Builder     The DIBuilder.
  * \param Storage     The storage of the variable to declare.
@@ -743,6 +815,40 @@ LLVMValueRef LLVMDIBuilderInsertDeclareBefore(
 LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
+
+/**
+ * Insert a new llvm.dbg.value intrinsic call before the given instruction.
+ * \param Builder     The DIBuilder.
+ * \param Val         The value of the variable.
+ * \param VarInfo     The variable's debug info descriptor.
+ * \param Expr        A complex location expression for the variable.
+ * \param DebugLoc    Debug info location.
+ * \param Instr       Instruction acting as a location for the new intrinsic.
+ */
+LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder,
+                                               LLVMValueRef Val,
+                                               LLVMMetadataRef VarInfo,
+                                               LLVMMetadataRef Expr,
+                                               LLVMMetadataRef DebugLoc,
+                                               LLVMValueRef Instr);
+
+/**
+ * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
+ * block. If the basic block has a terminator instruction, the intrinsic is
+ * inserted before that terminator instruction.
+ * \param Builder     The DIBuilder.
+ * \param Val         The value of the variable.
+ * \param VarInfo     The variable's debug info descriptor.
+ * \param Expr        A complex location expression for the variable.
+ * \param DebugLoc    Debug info location.
+ * \param Block       Basic block acting as a location for the new intrinsic.
+ */
+LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
+                                              LLVMValueRef Val,
+                                              LLVMMetadataRef VarInfo,
+                                              LLVMMetadataRef Expr,
+                                              LLVMMetadataRef DebugLoc,
+                                              LLVMBasicBlockRef Block);
 
 /**
  * Create a new descriptor for a local auto variable.
