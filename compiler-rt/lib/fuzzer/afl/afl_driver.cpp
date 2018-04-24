@@ -138,6 +138,17 @@ static const int kNumExtraStats = 2;
 static const char *kExtraStatsFormatString = "peak_rss_mb            : %u\n"
                                              "slowest_unit_time_sec  : %u\n";
 
+// Experimental feature to use afl_driver without AFL's deferred mode.
+// Needs to run before __afl_auto_init.
+__attribute__((constructor(0))) void __decide_deferred_forkserver(void) {
+  if (getenv("AFL_DRIVER_DONT_DEFER")) {
+    if (unsetenv("__AFL_DEFER_FORKSRV")) {
+      perror("Failed to unset __AFL_DEFER_FORKSRV");
+      abort();
+    }
+  }
+}
+
 // Copied from FuzzerUtil.cpp.
 size_t GetPeakRSSMb() {
   struct rusage usage;
@@ -315,7 +326,8 @@ int main(int argc, char **argv) {
   maybe_duplicate_stderr();
   maybe_initialize_extra_stats();
 
-  __afl_manual_init();
+  if (!getenv("AFL_DRIVER_DONT_DEFER"))
+    __afl_manual_init();
 
   int N = 1000;
   if (argc == 2 && argv[1][0] == '-')

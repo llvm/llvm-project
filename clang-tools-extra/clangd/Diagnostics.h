@@ -85,16 +85,11 @@ public:
                         const clang::Diagnostic &Info) override;
 
 private:
-  bool shouldIgnore(DiagnosticsEngine::Level DiagLevel,
-                    const clang::Diagnostic &Info);
-
   void flushLastDiag();
 
   std::vector<Diag> Output;
   llvm::Optional<LangOptions> LangOpts;
   llvm::Optional<Diag> LastDiag;
-  /// Is any diag or note from LastDiag in the main file?
-  bool LastDiagMentionsMainFile = false;
 };
 
 } // namespace clangd

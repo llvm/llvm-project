@@ -740,9 +740,13 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
       break;
     case R_PPC_PLT_OPD:
       // Patch a nop (0x60000000) to a ld.
-      if (BufLoc + 8 <= BufEnd && read32be(BufLoc + 4) == 0x60000000)
-        write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
-      LLVM_FALLTHROUGH;
+      if (BufLoc + 8 > BufEnd || read32(BufLoc + 4) != 0x60000000) {
+        error(getErrorLocation(BufLoc) + "call lacks nop, can't restore toc");
+        break;
+      }
+      write32(BufLoc + 4, 0xe8410018); // ld %r2, 24(%r1)
+      Target->relocateOne(BufLoc, Type, TargetVA);
+      break;
     default:
       Target->relocateOne(BufLoc, Type, TargetVA);
       break;

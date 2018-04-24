@@ -17,7 +17,10 @@
 # include <cpuid.h>
 #elif defined(__arm__) || defined(__aarch64__)
 # include "sanitizer_common/sanitizer_getauxval.h"
-# if SANITIZER_POSIX
+# if SANITIZER_FUCHSIA
+#  include <zircon/syscalls.h>
+#  include <zircon/features.h>
+# elif SANITIZER_POSIX
 #  include "sanitizer_common/sanitizer_posix.h"
 #  include <fcntl.h>
 # endif
@@ -110,9 +113,17 @@ INLINE bool areBionicGlobalsInitialized() {
 }
 
 bool hasHardwareCRC32() {
+#if SANITIZER_FUCHSIA
+  u32 HWCap;
+  zx_status_t Status = zx_system_get_features(ZX_FEATURE_KIND_CPU, &HWCap);
+  if (Status != ZX_OK || (HWCap & ZX_ARM64_FEATURE_ISA_CRC32) == 0)
+    return false;
+  return true;
+#else
   if (&getauxval && areBionicGlobalsInitialized())
     return !!(getauxval(AT_HWCAP) & HWCAP_CRC32);
   return hasHardwareCRC32ARMPosix();
+#endif  // SANITIZER_FUCHSIA
 }
 #else
 bool hasHardwareCRC32() { return false; }

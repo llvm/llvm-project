@@ -28,8 +28,8 @@ std::unique_ptr<SymbolSlab> indexAST(ASTContext &Ctx,
   CollectorOpts.CollectIncludePath = false;
   CollectorOpts.CountReferences = false;
 
-  auto Collector = std::make_shared<SymbolCollector>(std::move(CollectorOpts));
-  Collector->setPreprocessor(std::move(PP));
+  SymbolCollector Collector(std::move(CollectorOpts));
+  Collector.setPreprocessor(std::move(PP));
   index::IndexingOptions IndexOpts;
   // We only need declarations, because we don't count references.
   IndexOpts.SystemSymbolFilter =
@@ -38,7 +38,7 @@ std::unique_ptr<SymbolSlab> indexAST(ASTContext &Ctx,
 
   index::indexTopLevelDecls(Ctx, Decls, Collector, IndexOpts);
   auto Symbols = llvm::make_unique<SymbolSlab>();
-  *Symbols = Collector->takeSymbols();
+  *Symbols = Collector.takeSymbols();
   return Symbols;
 }
 

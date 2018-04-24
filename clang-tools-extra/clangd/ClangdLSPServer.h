@@ -12,6 +12,7 @@
 
 #include "ClangdServer.h"
 #include "DraftStore.h"
+#include "FindSymbols.h"
 #include "GlobalCompilationDatabase.h"
 #include "Path.h"
 #include "Protocol.h"
@@ -69,6 +70,7 @@ private:
   void onDocumentHighlight(TextDocumentPositionParams &Params) override;
   void onFileEvent(DidChangeWatchedFilesParams &Params) override;
   void onCommand(ExecuteCommandParams &Params) override;
+  void onWorkspaceSymbol(WorkspaceSymbolParams &Params) override;
   void onRename(RenameParams &Parames) override;
   void onHover(TextDocumentPositionParams &Params) override;
   void onChangeConfiguration(DidChangeConfigurationParams &Params) override;
@@ -102,6 +104,8 @@ private:
   RealFileSystemProvider FSProvider;
   /// Options used for code completion
   clangd::CodeCompleteOptions CCOpts;
+  /// The supported kinds of the client.
+  SymbolKindBitset SupportedSymbolKinds;
 
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;

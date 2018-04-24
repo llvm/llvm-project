@@ -110,5 +110,12 @@ std::string runDumpAST(ClangdServer &Server, PathRef File) {
   return std::move(*Result);
 }
 
+llvm::Expected<std::vector<SymbolInformation>>
+runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit) {
+  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
+  Server.workspaceSymbols(Query, Limit, capture(Result));
+  return std::move(*Result);
+}
+
 } // namespace clangd
 } // namespace clang
