@@ -320,10 +320,7 @@ def : InstRW<[AtomWrite0_1], (instrs FXAM,
 def : InstRW<[AtomWrite0_1], (instregex "(ADC|ADD|AND|NEG|NOT|OR|SBB|SUB|XOR)(8|16|32|64)m",
                                         "(RCL|RCR|ROL|ROR|SAR|SHL|SHR)(8|16|32|64)m",
                                         "MOV(S|Z)X(32|64)rr(8|8_NOREX|16)",
-                                        "LD_F(P)?(16|32|64)?(m|rr)",
-                                        "MMX_PAVG(B|W)irm",
-                                        "MMX_P(MAX|MIN)(UB|SW)irm",
-                                        "MMX_PSIGN(B|D|W)rm")>;
+                                        "LD_F(P)?(16|32|64)?(m|rr)")>;
 
 def AtomWrite0_3 : SchedWriteRes<[AtomPort0]> {
   let Latency = 3;

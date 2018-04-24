@@ -21,6 +21,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 
 #ifdef LLVM_ON_WIN32
 #include "llvm/ADT/ArrayRef.h"
@@ -78,6 +79,7 @@ TEST(Support, Path) {
   paths.push_back("foo/bar");
   paths.push_back("/foo/bar");
   paths.push_back("//net");
+  paths.push_back("//net/");
   paths.push_back("//net/foo");
   paths.push_back("///foo///");
   paths.push_back("///foo///bar");
@@ -108,27 +110,30 @@ TEST(Support, Path) {
   paths.push_back("c:\\foo/");
   paths.push_back("c:/foo\\bar");
 
-  SmallVector<StringRef, 5> ComponentStack;
   for (SmallVector<StringRef, 40>::const_iterator i = paths.begin(),
                                                   e = paths.end();
                                                   i != e;
                                                   ++i) {
+    SCOPED_TRACE(*i);
+    SmallVector<StringRef, 5> ComponentStack;
     for (sys::path::const_iterator ci = sys::path::begin(*i),
                                    ce = sys::path::end(*i);
                                    ci != ce;
                                    ++ci) {
-      ASSERT_FALSE(ci->empty());
+      EXPECT_FALSE(ci->empty());
       ComponentStack.push_back(*ci);
     }
 
+    SmallVector<StringRef, 5> ReverseComponentStack;
     for (sys::path::reverse_iterator ci = sys::path::rbegin(*i),
                                      ce = sys::path::rend(*i);
                                      ci != ce;
                                      ++ci) {
-      ASSERT_TRUE(*ci == ComponentStack.back());
-      ComponentStack.pop_back();
+      EXPECT_FALSE(ci->empty());
+      ReverseComponentStack.push_back(*ci);
     }
-    ASSERT_TRUE(ComponentStack.empty());
+    std::reverse(ReverseComponentStack.begin(), ReverseComponentStack.end());
+    EXPECT_THAT(ComponentStack, testing::ContainerEq(ReverseComponentStack));
 
     // Crash test most of the API - since we're iterating over all of our paths
     // here there isn't really anything reasonable to assert on in the results.
@@ -171,115 +176,56 @@ TEST(Support, Path) {
   ASSERT_EQ("/root/foo.cpp", Relative);
 }
 
-TEST(Support, RelativePathIterator) {
-  SmallString<64> Path(StringRef("c/d/e/foo.txt"));
-  typedef SmallVector<StringRef, 4> PathComponents;
-  PathComponents ExpectedPathComponents;
-  PathComponents ActualPathComponents;
+TEST(Support, FilenameParent) {
+  EXPECT_EQ("/", path::filename("/"));
+  EXPECT_EQ("", path::parent_path("/"));
 
-  StringRef(Path).split(ExpectedPathComponents, '/');
+  EXPECT_EQ("\\", path::filename("c:\\", path::Style::windows));
+  EXPECT_EQ("c:", path::parent_path("c:\\", path::Style::windows));
 
-  for (path::const_iterator I = path::begin(Path), E = path::end(Path); I != E;
-       ++I) {
-    ActualPathComponents.push_back(*I);
-  }
+  EXPECT_EQ("bar", path::filename("/foo/bar"));
+  EXPECT_EQ("/foo", path::parent_path("/foo/bar"));
 
-  ASSERT_EQ(ExpectedPathComponents.size(), ActualPathComponents.size());
+  EXPECT_EQ("foo", path::filename("/foo"));
+  EXPECT_EQ("/", path::parent_path("/foo"));
 
-  for (size_t i = 0; i <ExpectedPathComponents.size(); ++i) {
-    EXPECT_EQ(ExpectedPathComponents[i].str(), ActualPathComponents[i].str());
-  }
+  EXPECT_EQ("foo", path::filename("foo"));
+  EXPECT_EQ("", path::parent_path("foo"));
+
+  EXPECT_EQ(".", path::filename("foo/"));
+  EXPECT_EQ("foo", path::parent_path("foo/"));
+
+  EXPECT_EQ("//net", path::filename("//net"));
+  EXPECT_EQ("", path::parent_path("//net"));
+
+  EXPECT_EQ("/", path::filename("//net/"));
+  EXPECT_EQ("//net", path::parent_path("//net/"));
+
+  EXPECT_EQ("foo", path::filename("//net/foo"));
+  EXPECT_EQ("//net/", path::parent_path("//net/foo"));
 }
 
-TEST(Support, RelativePathDotIterator) {
-  SmallString<64> Path(StringRef(".c/.d/../."));
-  typedef SmallVector<StringRef, 4> PathComponents;
-  PathComponents ExpectedPathComponents;
-  PathComponents ActualPathComponents;
-
-  StringRef(Path).split(ExpectedPathComponents, '/');
-
-  for (path::const_iterator I = path::begin(Path), E = path::end(Path); I != E;
-       ++I) {
-    ActualPathComponents.push_back(*I);
-  }
-
-  ASSERT_EQ(ExpectedPathComponents.size(), ActualPathComponents.size());
-
-  for (size_t i = 0; i <ExpectedPathComponents.size(); ++i) {
-    EXPECT_EQ(ExpectedPathComponents[i].str(), ActualPathComponents[i].str());
-  }
+static std::vector<StringRef>
+GetComponents(StringRef Path, path::Style S = path::Style::native) {
+  return {path::begin(Path, S), path::end(Path)};
 }
 
-TEST(Support, AbsolutePathIterator) {
-  SmallString<64> Path(StringRef("/c/d/e/foo.txt"));
-  typedef SmallVector<StringRef, 4> PathComponents;
-  PathComponents ExpectedPathComponents;
-  PathComponents ActualPathComponents;
-
-  StringRef(Path).split(ExpectedPathComponents, '/');
-
-  // The root path will also be a component when iterating
-  ExpectedPathComponents[0] = "/";
-
-  for (path::const_iterator I = path::begin(Path), E = path::end(Path); I != E;
-       ++I) {
-    ActualPathComponents.push_back(*I);
-  }
-
-  ASSERT_EQ(ExpectedPathComponents.size(), ActualPathComponents.size());
-
-  for (size_t i = 0; i <ExpectedPathComponents.size(); ++i) {
-    EXPECT_EQ(ExpectedPathComponents[i].str(), ActualPathComponents[i].str());
-  }
-}
-
-TEST(Support, AbsolutePathDotIterator) {
-  SmallString<64> Path(StringRef("/.c/.d/../."));
-  typedef SmallVector<StringRef, 4> PathComponents;
-  PathComponents ExpectedPathComponents;
-  PathComponents ActualPathComponents;
-
-  StringRef(Path).split(ExpectedPathComponents, '/');
-
-  // The root path will also be a component when iterating
-  ExpectedPathComponents[0] = "/";
-
-  for (path::const_iterator I = path::begin(Path), E = path::end(Path); I != E;
-       ++I) {
-    ActualPathComponents.push_back(*I);
-  }
-
-  ASSERT_EQ(ExpectedPathComponents.size(), ActualPathComponents.size());
-
-  for (size_t i = 0; i <ExpectedPathComponents.size(); ++i) {
-    EXPECT_EQ(ExpectedPathComponents[i].str(), ActualPathComponents[i].str());
-  }
-}
-
-TEST(Support, AbsolutePathIteratorWin32) {
-  SmallString<64> Path(StringRef("c:\\c\\e\\foo.txt"));
-  typedef SmallVector<StringRef, 4> PathComponents;
-  PathComponents ExpectedPathComponents;
-  PathComponents ActualPathComponents;
-
-  StringRef(Path).split(ExpectedPathComponents, "\\");
-
-  // The root path (which comes after the drive name) will also be a component
-  // when iterating.
-  ExpectedPathComponents.insert(ExpectedPathComponents.begin()+1, "\\");
-
-  for (path::const_iterator I = path::begin(Path, path::Style::windows),
-                            E = path::end(Path);
-       I != E; ++I) {
-    ActualPathComponents.push_back(*I);
-  }
-
-  ASSERT_EQ(ExpectedPathComponents.size(), ActualPathComponents.size());
-
-  for (size_t i = 0; i <ExpectedPathComponents.size(); ++i) {
-    EXPECT_EQ(ExpectedPathComponents[i].str(), ActualPathComponents[i].str());
-  }
+TEST(Support, PathIterator) {
+  EXPECT_THAT(GetComponents("/foo"), testing::ElementsAre("/", "foo"));
+  EXPECT_THAT(GetComponents("/"), testing::ElementsAre("/"));
+  EXPECT_THAT(GetComponents("c/d/e/foo.txt"),
+              testing::ElementsAre("c", "d", "e", "foo.txt"));
+  EXPECT_THAT(GetComponents(".c/.d/../."),
+              testing::ElementsAre(".c", ".d", "..", "."));
+  EXPECT_THAT(GetComponents("/c/d/e/foo.txt"),
+              testing::ElementsAre("/", "c", "d", "e", "foo.txt"));
+  EXPECT_THAT(GetComponents("/.c/.d/../."),
+              testing::ElementsAre("/", ".c", ".d", "..", "."));
+  EXPECT_THAT(GetComponents("c:\\c\\e\\foo.txt", path::Style::windows),
+              testing::ElementsAre("c:", "\\", "c", "e", "foo.txt"));
+  EXPECT_THAT(GetComponents("//net/"), testing::ElementsAre("//net", "/"));
+  EXPECT_THAT(GetComponents("//net/c/foo.txt"),
+              testing::ElementsAre("//net", "/", "c", "foo.txt"));
 }
 
 TEST(Support, AbsolutePathIteratorEnd) {
@@ -288,9 +234,12 @@ TEST(Support, AbsolutePathIteratorEnd) {
   Paths.emplace_back("/foo/", path::Style::native);
   Paths.emplace_back("/foo//", path::Style::native);
   Paths.emplace_back("//net//", path::Style::native);
+  Paths.emplace_back("//net/foo/", path::Style::native);
+  Paths.emplace_back("c:\\foo\\", path::Style::windows);
   Paths.emplace_back("c:\\\\", path::Style::windows);
 
   for (auto &Path : Paths) {
+    SCOPED_TRACE(Path.first);
     StringRef LastComponent = *path::rbegin(Path.first, Path.second);
     EXPECT_EQ(".", LastComponent);
   }
@@ -301,6 +250,7 @@ TEST(Support, AbsolutePathIteratorEnd) {
   RootPaths.emplace_back("c:\\", path::Style::windows);
 
   for (auto &Path : RootPaths) {
+    SCOPED_TRACE(Path.first);
     StringRef LastComponent = *path::rbegin(Path.first, Path.second);
     EXPECT_EQ(1u, LastComponent.size());
     EXPECT_TRUE(path::is_separator(LastComponent[0], Path.second));

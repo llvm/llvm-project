@@ -259,9 +259,12 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     return false;
 
   // Anything ScalarEvolution may know about this loop or the PHI nodes
-  // in its header will soon be invalidated.
+  // in its header will soon be invalidated. We should also invalidate
+  // all outer loops because insertion and deletion of blocks that happens
+  // during the rotation may violate invariants related to backedge taken
+  // infos in them.
   if (SE)
-    SE->forgetLoop(L);
+    SE->forgetTopmostLoop(L);
 
   DEBUG(dbgs() << "LoopRotation: rotating "; L->dump());
 

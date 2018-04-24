@@ -120,7 +120,7 @@ def  : WriteRes<WriteSETCCStore, [SBPort05,SBPort4,SBPort23]> {
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
 // the port to read all inputs. We don't model that.
-def : WriteRes<WriteLEA, [SBPort15]>;
+def : WriteRes<WriteLEA, [SBPort01]>;
 
 // Bit counts.
 defm : SBWriteResPair<WriteBitScan, [SBPort1], 3, [1], 1, 5>;
@@ -328,11 +328,9 @@ def SBWriteResGroup2 : SchedWriteRes<[SBPort5]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
+def: InstRW<[SBWriteResGroup2], (instrs FDECSTP, FINCSTP, FNOP)>;
 def: InstRW<[SBWriteResGroup2], (instrs LOOP, LOOPE, LOOPNE)>; // FIXME: This seems wrong compared to other Intel CPUs.
-def: InstRW<[SBWriteResGroup2], (instregex "FDECSTP",
-                                           "FFREE",
-                                           "FINCSTP",
-                                           "FNOP",
+def: InstRW<[SBWriteResGroup2], (instregex "FFREE",
                                            "LD_Frr",
                                            "RETQ",
                                            "ST_FPrr",
@@ -342,13 +340,6 @@ def: InstRW<[SBWriteResGroup2], (instregex "FDECSTP",
                                            "VPERM2F128rr",
                                            "(V?)MOV64toPQIrr",
                                            "(V?)MOVDI2PDIrr")>;
-
-def SBWriteResGroup3 : SchedWriteRes<[SBPort01]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SBWriteResGroup3], (instregex "LEA(16|32|64)(_32)?r")>;
 
 def SBWriteResGroup4 : SchedWriteRes<[SBPort05]> {
   let Latency = 1;
@@ -826,7 +817,7 @@ def SBWriteResGroup41 : SchedWriteRes<[SBPort5,SBPort015]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SBWriteResGroup41], (instregex "FNINIT")>;
+def: InstRW<[SBWriteResGroup41], (instrs FNINIT)>;
 
 def SBWriteResGroup42 : SchedWriteRes<[SBPort05,SBPort015]> {
   let Latency = 5;
@@ -904,7 +895,6 @@ def SBWriteResGroup51 : SchedWriteRes<[SBPort23,SBPort15]> {
 }
 def: InstRW<[SBWriteResGroup51], (instregex "MMX_PABS(B|D|W)rm",
                                             "MMX_PALIGNRrmi",
-                                            "MMX_PSHUFBrm",
                                             "MMX_PSIGN(B|D|W)rm")>;
 
 def SBWriteResGroup52 : SchedWriteRes<[SBPort23,SBPort015]> {

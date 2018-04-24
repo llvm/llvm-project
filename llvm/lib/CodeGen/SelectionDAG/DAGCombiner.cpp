@@ -414,6 +414,7 @@ namespace {
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
+    SDValue unfoldMaskedMerge(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                           const SDLoc &DL, bool foldBooleans);
     SDValue rebuildSetCC(SDValue N);
@@ -5361,6 +5362,68 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   return NeedsBswap ? DAG.getNode(ISD::BSWAP, SDLoc(N), VT, NewLoad) : NewLoad;
 }
 
+// If the target has andn, bsl, or a similar bit-select instruction,
+// we want to unfold masked merge, with canonical pattern of:
+//   |        A  |  |B|
+//   ((x ^ y) & m) ^ y
+//    |  D  |
+// Into:
+//   (x & m) | (y & ~m)
+SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
+  assert(N->getOpcode() == ISD::XOR);
+
+  EVT VT = N->getValueType(0);
+
+  // FIXME
+  if (VT.isVector())
+    return SDValue();
+
+  // There are 3 commutable operators in the pattern,
+  // so we have to deal with 8 possible variants of the basic pattern.
+  SDValue X, Y, M;
+  auto matchAndXor = [&X, &Y, &M](SDValue And, unsigned XorIdx, SDValue Other) {
+    if (And.getOpcode() != ISD::AND || !And.hasOneUse())
+      return false;
+    if (And.getOperand(XorIdx).getOpcode() != ISD::XOR ||
+        !And.getOperand(XorIdx).hasOneUse())
+      return false;
+    SDValue Xor0 = And.getOperand(XorIdx).getOperand(0);
+    SDValue Xor1 = And.getOperand(XorIdx).getOperand(1);
+    if (Other == Xor0)
+      std::swap(Xor0, Xor1);
+    if (Other != Xor1)
+      return false;
+    X = Xor0;
+    Y = Xor1;
+    M = And.getOperand(XorIdx ? 0 : 1);
+    return true;
+  };
+
+  SDValue A = N->getOperand(0);
+  SDValue B = N->getOperand(1);
+  if (!matchAndXor(A, 0, B) && !matchAndXor(A, 1, B) && !matchAndXor(B, 0, A) &&
+      !matchAndXor(B, 1, A))
+    return SDValue();
+
+  // Don't do anything if the mask is constant. This should not be reachable.
+  // InstCombine should have already unfolded this pattern, and DAGCombiner
+  // probably shouldn't produce it, too.
+  if (isa<ConstantSDNode>(M.getNode()))
+    return SDValue();
+
+  // We can transform if the target has AndNot
+  if (!TLI.hasAndNot(M))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  SDValue LHS = DAG.getNode(ISD::AND, DL, VT, X, M);
+  SDValue NotM = DAG.getNOT(DL, M, VT);
+  SDValue RHS = DAG.getNode(ISD::AND, DL, VT, Y, NotM);
+
+  return DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
+}
+
 SDValue DAGCombiner::visitXOR(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -5515,6 +5578,10 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if (N0.getOpcode() == N1.getOpcode())
     if (SDValue Tmp = SimplifyBinOpWithSameOpcodeHands(N))
       return Tmp;
+
+  // Unfold  ((x ^ y) & m) ^ y  into  (x & m) | (y & ~m)  if profitable
+  if (SDValue MM = unfoldMaskedMerge(N))
+    return MM;
 
   // Simplify the expression using non-local knowledge.
   if (SimplifyDemandedBits(SDValue(N, 0)))

@@ -764,6 +764,12 @@ public:
   /// loop bodies.
   void forgetLoop(const Loop *L);
 
+  // This method invokes forgetLoop for the outermost loop of the given loop
+  // \p L, making ScalarEvolution forget about all this subtree. This needs to
+  // be done whenever we make a transform that may affect the parameters of the
+  // outer loop, such as exit counts for branches.
+  void forgetTopmostLoop(const Loop *L);
+
   /// This method should be called by the client when it has changed a value
   /// in a way that may effect its value, or which may disconnect it from a
   /// def-use chain linking it to a loop.

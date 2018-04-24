@@ -1220,6 +1220,9 @@ void LoopInterchangeTransform::restructureLoops(
   BasicBlock *OuterHeader = NewOuter->getHeader();
   BasicBlock *OuterLatch = NewOuter->getLoopLatch();
   for (BasicBlock *BB : OrigInnerBBs) {
+    // Nothing will change for BBs in child loops.
+    if (LI->getLoopFor(BB) != NewOuter)
+      continue;
     // Remove the new outer loop header and latch from the new inner loop.
     if (BB == OuterHeader || BB == OuterLatch)
       NewInner->removeBlockFromLoop(BB);

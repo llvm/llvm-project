@@ -27,6 +27,10 @@ class LoadInst;
 class StoreInst;
 class MemTransferInst;
 class MemIntrinsic;
+class AtomicMemTransferInst;
+class AtomicMemIntrinsic;
+class AnyMemTransferInst;
+class AnyMemIntrinsic;
 class TargetLibraryInfo;
 
 /// Representation for a specific memory location.
@@ -90,10 +94,14 @@ public:
 
   /// Return a location representing the source of a memory transfer.
   static MemoryLocation getForSource(const MemTransferInst *MTI);
+  static MemoryLocation getForSource(const AtomicMemTransferInst *MTI);
+  static MemoryLocation getForSource(const AnyMemTransferInst *MTI);
 
   /// Return a location representing the destination of a memory set or
   /// transfer.
   static MemoryLocation getForDest(const MemIntrinsic *MI);
+  static MemoryLocation getForDest(const AtomicMemIntrinsic *MI);
+  static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
 
   /// Return a location representing a particular argument of a call.
   static MemoryLocation getForArgument(ImmutableCallSite CS, unsigned ArgIdx,
