@@ -263,8 +263,8 @@ public:
 // symbol.
 class LazyArchive : public Symbol {
 public:
-  LazyArchive(InputFile &File, const llvm::object::Archive::Symbol S,
-              uint8_t Type)
+  LazyArchive(InputFile &File, uint8_t Type,
+              const llvm::object::Archive::Symbol S)
       : Symbol(LazyArchiveKind, &File, S.getName(), llvm::ELF::STB_GLOBAL,
                llvm::ELF::STV_DEFAULT, Type),
         Sym(S) {}
@@ -281,7 +281,7 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Symbol {
 public:
-  LazyObject(InputFile &File, StringRef Name, uint8_t Type)
+  LazyObject(InputFile &File, uint8_t Type, StringRef Name)
       : Symbol(LazyObjectKind, &File, Name, llvm::ELF::STB_GLOBAL,
                llvm::ELF::STV_DEFAULT, Type) {}
 

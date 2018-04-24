@@ -219,10 +219,10 @@ void CallGraphSort::groupClusters() {
   });
 
   // Sort by density.
-  std::sort(Clusters.begin(), Clusters.end(),
-            [](const Cluster &A, const Cluster &B) {
-              return A.getDensity() > B.getDensity();
-            });
+  std::stable_sort(Clusters.begin(), Clusters.end(),
+                   [](const Cluster &A, const Cluster &B) {
+                     return A.getDensity() > B.getDensity();
+                   });
 }
 
 DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
