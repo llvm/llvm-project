@@ -380,7 +380,7 @@ void Writer::createRelocSections() {
 
     SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, Name);
     raw_ostream &OS = Section->getStream();
-    writeUleb128(OS, OSec->Type, "reloc section");
+    writeUleb128(OS, i, "reloc section");
     writeUleb128(OS, Count, "reloc count");
     OSec->writeRelocations(OS);
   }

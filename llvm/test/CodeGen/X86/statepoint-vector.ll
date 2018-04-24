@@ -15,6 +15,7 @@ define <2 x i8 addrspace(1)*> @test(<2 x i8 addrspace(1)*> %obj) gc "statepoint-
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0, <2 x i8 addrspace(1)*> %obj)
@@ -37,6 +38,7 @@ define <2 x i8 addrspace(1)*> @test2(<2 x i8 addrspace(1)*> %obj, i64 %offset) g
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %derived = getelementptr i8, <2 x i8 addrspace(1)*> %obj, i64 %offset
@@ -65,6 +67,7 @@ define <2 x i64 addrspace(1)*> @test3(i1 %cnd, <2 x i64 addrspace(1)*>* %ptr) gc
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   br i1 %cnd, label %taken, label %untaken
@@ -101,6 +104,7 @@ define <2 x i8 addrspace(1)*> @test4() gc "statepoint-example" {
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0, <2 x i8 addrspace(1)*> zeroinitializer)
@@ -119,6 +123,7 @@ define void @test5() gc "statepoint-example" {
 ; CHECK-NEXT:    callq do_safepoint
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 1, i128 0)

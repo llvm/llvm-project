@@ -511,12 +511,8 @@ LoopUnrollResult llvm::UnrollLoop(
   // and if something changes inside them then any of outer loops may also
   // change. When we forget outermost loop, we also forget all contained loops
   // and this is what we need here.
-  if (SE) {
-    const Loop *CurrL = L;
-    while (const Loop *ParentL = CurrL->getParentLoop())
-      CurrL = ParentL;
-    SE->forgetLoop(CurrL);
-  }
+  if (SE)
+    SE->forgetTopmostLoop(L);
 
   bool ContinueOnTrue = L->contains(BI->getSuccessor(0));
   BasicBlock *LoopExit = BI->getSuccessor(ContinueOnTrue);

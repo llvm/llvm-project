@@ -674,12 +674,6 @@ ReprocessLoop:
   if (Changed && SE)
     SE->forgetTopmostLoop(L);
 
-#ifndef NDEBUG
-  // Make sure that after all our transforms SE is correct.
-  if (SE)
-    SE->verify();
-#endif
-
   return Changed;
 }
 

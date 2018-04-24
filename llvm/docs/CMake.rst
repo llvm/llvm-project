@@ -228,10 +228,6 @@ LLVM-specific variables
   Install symlinks from the binutils tool names to the corresponding LLVM tools.
   For example, ar will be symlinked to llvm-ar.
 
-**LLVM_INSTALL_CCTOOLS_SYMLINKS**:BOOL
-  Install symliks from the cctools tool names to the corresponding LLVM tools.
-  For example, dsymutil will be symlinked to llvm-dsymutil.
-
 **LLVM_BUILD_EXAMPLES**:BOOL
   Build LLVM examples. Defaults to OFF. Targets for building each example are
   generated in any case. See documentation for *LLVM_BUILD_TOOLS* above for more

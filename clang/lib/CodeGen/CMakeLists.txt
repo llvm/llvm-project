@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   Coverage
   IPO
   IRReader
+  AggressiveInstCombine
   InstCombine
   Instrumentation
   LTO

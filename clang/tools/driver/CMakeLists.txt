@@ -4,6 +4,7 @@ set( LLVM_LINK_COMPONENTS
   CodeGen
   Core
   IPO
+  AggressiveInstCombine
   InstCombine
   Instrumentation
   MC

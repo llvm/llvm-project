@@ -1903,7 +1903,7 @@ define i32 @test_pextrw(<8 x i16> %a0, i16 *%a1) {
 ; GENERIC-LABEL: test_pextrw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pextrw $3, %xmm0, %eax # sched: [3:1.00]
-; GENERIC-NEXT:    pextrw $1, %xmm0, (%rdi) # sched: [6:1.00]
+; GENERIC-NEXT:    pextrw $1, %xmm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pextrw:
@@ -1915,7 +1915,7 @@ define i32 @test_pextrw(<8 x i16> %a0, i16 *%a1) {
 ; SANDY-SSE-LABEL: test_pextrw:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    pextrw $3, %xmm0, %eax # sched: [3:1.00]
-; SANDY-SSE-NEXT:    pextrw $1, %xmm0, (%rdi) # sched: [6:1.00]
+; SANDY-SSE-NEXT:    pextrw $1, %xmm0, (%rdi) # sched: [5:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_pextrw:

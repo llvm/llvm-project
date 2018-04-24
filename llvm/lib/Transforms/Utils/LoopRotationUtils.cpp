@@ -479,12 +479,6 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
   DEBUG(dbgs() << "LoopRotation: into "; L->dump());
 
-#ifndef NDEBUG
-  // Make sure that after all our transforms SE is correct.
-  if (SE)
-    SE->verify();
-#endif
-
   ++NumRotated;
   return true;
 }

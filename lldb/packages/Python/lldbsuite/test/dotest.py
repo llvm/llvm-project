@@ -1104,6 +1104,22 @@ def checkLibcxxSupport():
     print("Libc++ tests will not be run because: " + reason)
     configuration.skipCategories.append("libc++")
 
+def checkDebugInfoSupport():
+    import lldb
+
+    platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    compiler = configuration.compiler
+    skipped = []
+    for cat in test_categories.debug_info_categories:
+        if cat in configuration.categoriesList:
+            continue # Category explicitly requested, let it run.
+        if test_categories.is_supported_on_platform(cat, platform, compiler):
+            continue
+        configuration.skipCategories.append(cat)
+        skipped.append(cat)
+    if skipped:
+        print("Skipping following debug info categories:", skipped)
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -1212,6 +1228,7 @@ def run_suite():
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
 
     checkLibcxxSupport()
+    checkDebugInfoSupport()
 
     # Don't do debugserver tests on everything except OS X.
     configuration.dont_do_debugserver_test = "linux" in target_platform or "freebsd" in target_platform or "windows" in target_platform

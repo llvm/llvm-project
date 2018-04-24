@@ -24,8 +24,8 @@
 #error "Never use <clzerointrin.h> directly; include <x86intrin.h> instead."
 #endif
 
-#ifndef _CLZEROINTRIN_H
-#define _CLZEROINTRIN_H
+#ifndef __CLZEROINTRIN_H
+#define __CLZEROINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS \
@@ -47,4 +47,4 @@ _mm_clzero (void * __line)
 
 #undef __DEFAULT_FN_ATTRS 
 
-#endif /* _CLZEROINTRIN_H */
+#endif /* __CLZEROINTRIN_H */

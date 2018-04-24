@@ -37,7 +37,9 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; GNUX32-LABEL: foo:
@@ -69,7 +71,9 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; GNUX32-NEXT:    addq %rcx, %rax
 ; GNUX32-NEXT:    addq %rdx, %rax
 ; GNUX32-NEXT:    popq %rbx
+; GNUX32-NEXT:    .cfi_def_cfa_offset 16
 ; GNUX32-NEXT:    popq %rbp
+; GNUX32-NEXT:    .cfi_def_cfa_offset 8
 ; GNUX32-NEXT:    retq
   %sa = lshr i64 %a, 8
   %A = and i64 %sa, 255

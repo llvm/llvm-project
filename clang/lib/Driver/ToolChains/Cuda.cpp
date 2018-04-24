@@ -57,6 +57,8 @@ static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
     return CudaVersion::CUDA_90;
   if (Major == 9 && Minor == 1)
     return CudaVersion::CUDA_91;
+  if (Major == 9 && Minor == 2)
+    return CudaVersion::CUDA_92;
   return CudaVersion::UNKNOWN;
 }
 

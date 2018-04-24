@@ -1801,6 +1801,7 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX1-NEXT:    vmovaps %ymm6, 32(%rdi)
 ; AVX1-NEXT:    vmovaps %ymm8, (%rdi)
 ; AVX1-NEXT:    addq $24, %rsp
+; AVX1-NEXT:    .cfi_def_cfa_offset 8
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

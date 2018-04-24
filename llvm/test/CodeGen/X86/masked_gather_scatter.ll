@@ -1733,6 +1733,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; KNL_32-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; KNL_32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL_32-NEXT:    addl $12, %esp
+; KNL_32-NEXT:    .cfi_def_cfa_offset 4
 ; KNL_32-NEXT:    vzeroupper
 ; KNL_32-NEXT:    retl
 ;
@@ -1808,6 +1809,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX_32-NEXT:  .LBB31_6: # %else5
 ; SKX_32-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
 ; SKX_32-NEXT:    addl $12, %esp
+; SKX_32-NEXT:    .cfi_def_cfa_offset 4
 ; SKX_32-NEXT:    retl
 
   %sext_ind = sext <3 x i32> %ind to <3 x i64>
@@ -1934,6 +1936,7 @@ define <16 x i64> @test_gather_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i
 ; KNL_32-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
+; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test_gather_16i64:
@@ -1968,6 +1971,7 @@ define <16 x i64> @test_gather_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i
 ; SKX_32-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
+; SKX_32-NEXT:    .cfi_def_cfa %esp, 4
 ; SKX_32-NEXT:    retl
   %res = call <16 x i64> @llvm.masked.gather.v16i64.v16p0i64(<16 x i64*> %ptrs, i32 4, <16 x i1> %mask, <16 x i64> %src0)
   ret <16 x i64> %res
@@ -2051,6 +2055,7 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; KNL_32-NEXT:    vmovapd %zmm2, %zmm0
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
+; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test_gather_16f64:
@@ -2085,6 +2090,7 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; SKX_32-NEXT:    vmovapd %zmm2, %zmm0
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
+; SKX_32-NEXT:    .cfi_def_cfa %esp, 4
 ; SKX_32-NEXT:    retl
   %res = call <16 x double> @llvm.masked.gather.v16f64.v16p0f64(<16 x double*> %ptrs, i32 4, <16 x i1> %mask, <16 x double> %src0)
   ret <16 x double> %res
@@ -2166,6 +2172,7 @@ define void @test_scatter_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %
 ; KNL_32-NEXT:    vpscatterdq %zmm1, (,%ymm0) {%k2}
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
+; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
 ; KNL_32-NEXT:    vzeroupper
 ; KNL_32-NEXT:    retl
 ;
@@ -2199,6 +2206,7 @@ define void @test_scatter_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %
 ; SKX_32-NEXT:    vpscatterdq %zmm1, (,%ymm0) {%k2}
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
+; SKX_32-NEXT:    .cfi_def_cfa %esp, 4
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
   call void @llvm.masked.scatter.v16i64.v16p0i64(<16 x i64> %src0, <16 x i64*> %ptrs, i32 4, <16 x i1> %mask)
@@ -2282,6 +2290,7 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; KNL_32-NEXT:    vscatterdpd %zmm1, (,%ymm0) {%k2}
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
+; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
 ; KNL_32-NEXT:    vzeroupper
 ; KNL_32-NEXT:    retl
 ;
@@ -2315,6 +2324,7 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; SKX_32-NEXT:    vscatterdpd %zmm1, (,%ymm0) {%k2}
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
+; SKX_32-NEXT:    .cfi_def_cfa %esp, 4
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
   call void @llvm.masked.scatter.v16f64.v16p0f64(<16 x double> %src0, <16 x double*> %ptrs, i32 4, <16 x i1> %mask)
@@ -2354,6 +2364,7 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
+; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test_pr28312:
@@ -2381,6 +2392,7 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; SKX_32-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
+; SKX_32-NEXT:    .cfi_def_cfa %esp, 4
 ; SKX_32-NEXT:    retl
   %g1 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
   %g2 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
@@ -2795,6 +2807,7 @@ define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <1
 ; KNL_32-NEXT:    vmovapd %zmm3, %zmm1
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
+; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test_gather_setcc_split:
@@ -2830,6 +2843,7 @@ define <16 x double> @test_gather_setcc_split(double* %base, <16 x i32> %ind, <1
 ; SKX_32-NEXT:    vmovapd %zmm3, %zmm1
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
+; SKX_32-NEXT:    .cfi_def_cfa %esp, 4
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr double, double *%base, <16 x i64> %sext_ind
@@ -2870,6 +2884,7 @@ define void @test_scatter_setcc_split(double* %base, <16 x i32> %ind, <16 x i32>
 ; KNL_32-NEXT:    vscatterdpd %zmm2, (%eax,%ymm0,8) {%k1}
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
+; KNL_32-NEXT:    .cfi_def_cfa %esp, 4
 ; KNL_32-NEXT:    vzeroupper
 ; KNL_32-NEXT:    retl
 ;
@@ -2903,6 +2918,7 @@ define void @test_scatter_setcc_split(double* %base, <16 x i32> %ind, <16 x i32>
 ; SKX_32-NEXT:    vscatterdpd %zmm2, (%eax,%ymm0,8) {%k1}
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp
+; SKX_32-NEXT:    .cfi_def_cfa %esp, 4
 ; SKX_32-NEXT:    vzeroupper
 ; SKX_32-NEXT:    retl
   %sext_ind = sext <16 x i32> %ind to <16 x i64>

@@ -63,6 +63,9 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "fma4intrin.h"
     textual header "mwaitxintrin.h"
     textual header "clzerointrin.h"
+    textual header "wbnoinvdintrin.h"
+    textual header "cldemoteintrin.h"
+    textual header "waitpkgintrin.h"
 
     explicit module mm_malloc {
       requires !freestanding

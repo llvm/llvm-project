@@ -22,6 +22,7 @@ define i64 @test_psubb() {
 ; CHECK-NEXT:    psubb %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call { i64, double } @getFirstParam()
@@ -55,6 +56,7 @@ define i64 @test_psubw() {
 ; CHECK-NEXT:    psubw %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call { i64, double } @getFirstParam()
@@ -88,6 +90,7 @@ define i64 @test_psubd() {
 ; CHECK-NEXT:    psubd %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call { i64, double } @getFirstParam()
@@ -121,6 +124,7 @@ define i64 @test_psubsb() {
 ; CHECK-NEXT:    psubsb %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call { i64, double } @getFirstParam()
@@ -154,6 +158,7 @@ define i64 @test_psubswv() {
 ; CHECK-NEXT:    psubsw %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call { i64, double } @getFirstParam()
@@ -187,6 +192,7 @@ define i64 @test_psubusbv() {
 ; CHECK-NEXT:    psubusb %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call { i64, double } @getFirstParam()
@@ -220,6 +226,7 @@ define i64 @test_psubuswv() {
 ; CHECK-NEXT:    psubusw %mm1, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %call = tail call { i64, double } @getFirstParam()

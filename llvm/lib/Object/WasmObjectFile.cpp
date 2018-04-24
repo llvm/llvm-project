@@ -524,38 +524,15 @@ Error WasmObjectFile::parseLinkingSectionComdat(const uint8_t *&Ptr,
   return Error::success();
 }
 
-WasmSection* WasmObjectFile::findCustomSectionByName(StringRef Name) {
-  for (WasmSection& Section : Sections) {
-    if (Section.Type == wasm::WASM_SEC_CUSTOM && Section.Name == Name)
-      return &Section;
-  }
-  return nullptr;
-}
-
-WasmSection* WasmObjectFile::findSectionByType(uint32_t Type) {
-  assert(Type != wasm::WASM_SEC_CUSTOM);
-  for (WasmSection& Section : Sections) {
-    if (Section.Type == Type)
-      return &Section;
-  }
-  return nullptr;
-}
-
 Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
                                         const uint8_t *End) {
-  uint8_t SectionCode = readUint8(Ptr);
-  WasmSection* Section = nullptr;
-  if (SectionCode == wasm::WASM_SEC_CUSTOM) {
-    StringRef Name = readString(Ptr);
-    Section = findCustomSectionByName(Name);
-  } else {
-    Section = findSectionByType(SectionCode);
-  }
-  if (!Section)
-    return make_error<GenericBinaryError>("Invalid section code",
+  uint32_t SectionIndex = readVaruint32(Ptr);
+  if (SectionIndex >= Sections.size())
+    return make_error<GenericBinaryError>("Invalid section index",
                                           object_error::parse_failed);
+  WasmSection& Section = Sections[SectionIndex];
   uint32_t RelocCount = readVaruint32(Ptr);
-  uint32_t EndOffset = Section->Content.size();
+  uint32_t EndOffset = Section.Content.size();
   while (RelocCount--) {
     wasm::WasmRelocation Reloc = {};
     Reloc.Type = readVaruint32(Ptr);
@@ -604,7 +581,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
       return make_error<GenericBinaryError>("Bad relocation offset",
                                             object_error::parse_failed);
 
-    Section->Relocations.push_back(Reloc);
+    Section.Relocations.push_back(Reloc);
   }
   if (Ptr != End)
     return make_error<GenericBinaryError>("Reloc section ended prematurely",
