@@ -362,7 +362,7 @@ int __xray_set_customevent_handler(void (*entry)(void *, size_t))
 }
 
 int __xray_set_typedevent_handler(void (*entry)(
-    uint16_t, const void *, size_t)) noexcept XRAY_NEVER_INSTRUMENT {
+    uint16_t, const void *, size_t)) XRAY_NEVER_INSTRUMENT {
   if (__sanitizer::atomic_load(&XRayInitialized,
                                __sanitizer::memory_order_acquire)) {
     __sanitizer::atomic_store(&__xray::XRayPatchedTypedEvent,
@@ -381,12 +381,12 @@ int __xray_remove_customevent_handler() XRAY_NEVER_INSTRUMENT {
   return __xray_set_customevent_handler(nullptr);
 }
 
-int __xray_remove_typedevent_handler() noexcept XRAY_NEVER_INSTRUMENT {
+int __xray_remove_typedevent_handler() XRAY_NEVER_INSTRUMENT {
   return __xray_set_typedevent_handler(nullptr);
 }
 
 uint16_t __xray_register_event_type(
-    const char *const event_type) noexcept XRAY_NEVER_INSTRUMENT {
+    const char *const event_type) XRAY_NEVER_INSTRUMENT {
   TypeDescriptorMapType::Handle h(&TypeDescriptorAddressMap, (uptr)event_type);
   if (h.created()) {
     h->type_id = __sanitizer::atomic_fetch_add(
