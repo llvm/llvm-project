@@ -1391,10 +1391,19 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
 bool MemCpyOptPass::iterateOnFunction(Function &F) {
   bool MadeChange = false;
 
+  DominatorTree &DT = LookupDomTree();
+
   // Walk all instruction in the function.
   for (BasicBlock &BB : F) {
+    // Skip unreachable blocks. For example processStore assumes that an
+    // instruction in a BB can't be dominated by a later instruction in the
+    // same BB (which is a scenario that can happen for an unreachable BB that
+    // has itself as a predecessor).
+    if (!DT.isReachableFromEntry(&BB))
+      continue;
+
     for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
-      // Avoid invalidating the iterator.
+        // Avoid invalidating the iterator.
       Instruction *I = &*BI++;
 
       bool RepeatInstruction = false;

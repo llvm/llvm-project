@@ -9,6 +9,9 @@
 
 // UNSUPPORTED: c++98, c++03
 
+// See GCC PR63723.
+// UNSUPPORTED: gcc-4.9
+
 // <experimental/simd>
 //
 // [simd.class]

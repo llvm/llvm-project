@@ -120,7 +120,7 @@ def  : WriteRes<WriteSETCCStore, [SBPort05,SBPort4,SBPort23]> {
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
 // the port to read all inputs. We don't model that.
-def : WriteRes<WriteLEA, [SBPort15]>;
+def : WriteRes<WriteLEA, [SBPort01]>;
 
 // Bit counts.
 defm : SBWriteResPair<WriteBitScan, [SBPort1], 3, [1], 1, 5>;
@@ -340,13 +340,6 @@ def: InstRW<[SBWriteResGroup2], (instregex "FFREE",
                                            "VPERM2F128rr",
                                            "(V?)MOV64toPQIrr",
                                            "(V?)MOVDI2PDIrr")>;
-
-def SBWriteResGroup3 : SchedWriteRes<[SBPort01]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SBWriteResGroup3], (instregex "LEA(16|32|64)(_32)?r")>;
 
 def SBWriteResGroup4 : SchedWriteRes<[SBPort05]> {
   let Latency = 1;

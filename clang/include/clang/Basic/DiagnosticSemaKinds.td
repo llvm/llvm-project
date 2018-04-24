@@ -5612,9 +5612,12 @@ def warn_addition_in_bitshift : Warning<
   "operator '%0' has lower precedence than '%1'; "
   "'%1' will be evaluated first">, InGroup<ShiftOpParentheses>;
 
-def warn_self_assignment : Warning<
+def warn_self_assignment_builtin : Warning<
   "explicitly assigning value of variable of type %0 to itself">,
   InGroup<SelfAssignment>, DefaultIgnore;
+def warn_self_assignment_overloaded : Warning<
+  "explicitly assigning value of variable of type %0 to itself">,
+  InGroup<SelfAssignmentOverloaded>, DefaultIgnore;
 def warn_self_move : Warning<
   "explicitly moving variable of type %0 to itself">,
   InGroup<SelfMove>, DefaultIgnore;

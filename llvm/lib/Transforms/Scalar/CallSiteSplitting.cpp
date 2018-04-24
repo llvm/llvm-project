@@ -97,8 +97,12 @@ static void setConstantInArgument(CallSite CS, Value *Op,
                                   Constant *ConstValue) {
   unsigned ArgNo = 0;
   for (auto &I : CS.args()) {
-    if (&*I == Op)
+    if (&*I == Op) {
+      // It is possible we have already added the non-null attribute to the
+      // parameter by using an earlier constraining condition.
+      CS.removeParamAttr(ArgNo, Attribute::NonNull);
       CS.setArgument(ArgNo, ConstValue);
+    }
     ++ArgNo;
   }
 }

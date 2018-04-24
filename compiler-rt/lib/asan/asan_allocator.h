@@ -125,7 +125,7 @@ const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
 # elif defined(__powerpc64__)
-const uptr kAllocatorSpace =  0xa0000000000ULL;
+const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
 # elif defined(__aarch64__) && SANITIZER_ANDROID

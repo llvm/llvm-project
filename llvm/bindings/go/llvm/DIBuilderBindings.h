@@ -33,11 +33,6 @@ LLVMMetadataRef LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef D,
                                            LLVMMetadataRef File, unsigned Line,
                                            LLVMMetadataRef Context);
 
-LLVMValueRef LLVMDIBuilderInsertValueAtEnd(LLVMDIBuilderRef D, LLVMValueRef Val,
-                                           LLVMMetadataRef VarInfo,
-                                           LLVMMetadataRef Expr,
-                                           LLVMBasicBlockRef Block);
-
 #ifdef __cplusplus
 } // extern "C"
 #endif

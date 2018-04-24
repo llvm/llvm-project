@@ -36,7 +36,8 @@
 # CHECK-NEXT:          ","
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "textDocumentSync": 2
+# CHECK-NEXT:      "textDocumentSync": 2,
+# CHECK-NEXT:      "workspaceSymbolProvider": true
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 ---

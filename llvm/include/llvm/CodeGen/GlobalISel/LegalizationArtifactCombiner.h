@@ -139,9 +139,9 @@ public:
       return false;
 
     unsigned NumDefs = MI.getNumOperands() - 1;
-    unsigned SrcReg = MI.getOperand(NumDefs).getReg();
-    MachineInstr *MergeI = MRI.getVRegDef(SrcReg);
-    if (!MergeI || (MergeI->getOpcode() != TargetOpcode::G_MERGE_VALUES))
+    MachineInstr *MergeI = getOpcodeDef(TargetOpcode::G_MERGE_VALUES,
+                                        MI.getOperand(NumDefs).getReg(), MRI);
+    if (!MergeI)
       return false;
 
     const unsigned NumMergeRegs = MergeI->getNumOperands() - 1;
@@ -253,11 +253,8 @@ private:
     // and as a result, %3, %2, %1 are dead.
     MachineInstr *PrevMI = &MI;
     while (PrevMI != &DefMI) {
-      // If we're dealing with G_UNMERGE_VALUES, tryCombineMerges doesn't really try
-      // to fold copies in between and we can ignore them here.
-      if (PrevMI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES)
-        break;
-      unsigned PrevRegSrc = PrevMI->getOperand(1).getReg();
+      unsigned PrevRegSrc =
+          PrevMI->getOperand(PrevMI->getNumOperands() - 1).getReg();
       MachineInstr *TmpDef = MRI.getVRegDef(PrevRegSrc);
       if (MRI.hasOneUse(PrevRegSrc)) {
         if (TmpDef != &DefMI) {
@@ -269,9 +266,7 @@ private:
         break;
       PrevMI = TmpDef;
     }
-    if ((PrevMI == &DefMI ||
-         DefMI.getOpcode() == TargetOpcode::G_MERGE_VALUES) &&
-        MRI.hasOneUse(DefMI.getOperand(0).getReg()))
+    if (PrevMI == &DefMI && MRI.hasOneUse(DefMI.getOperand(0).getReg()))
       DeadInsts.push_back(&DefMI);
   }
 

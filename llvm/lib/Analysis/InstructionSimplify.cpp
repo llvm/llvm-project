@@ -62,6 +62,8 @@ static Value *SimplifyOrInst(Value *, Value *, const SimplifyQuery &, unsigned);
 static Value *SimplifyXorInst(Value *, Value *, const SimplifyQuery &, unsigned);
 static Value *SimplifyCastInst(unsigned, Value *, Type *,
                                const SimplifyQuery &, unsigned);
+static Value *SimplifyGEPInst(Type *, ArrayRef<Value *>, const SimplifyQuery &,
+                              unsigned);
 
 /// For a boolean type or a vector of boolean type, return false or a vector
 /// with every element false.
@@ -3525,6 +3527,17 @@ static const Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       if (C->getOperand(1) == Op)
         return SimplifyCmpInst(C->getPredicate(), C->getOperand(0), RepOp, Q,
                                MaxRecurse - 1);
+    }
+  }
+
+  // Same for GEPs.
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    if (MaxRecurse) {
+      SmallVector<Value *, 8> NewOps(GEP->getNumOperands());
+      transform(GEP->operands(), NewOps.begin(),
+                [&](Value *V) { return V == Op ? RepOp : V; });
+      return SimplifyGEPInst(GEP->getSourceElementType(), NewOps, Q,
+                             MaxRecurse - 1);
     }
   }
 
