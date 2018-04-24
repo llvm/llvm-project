@@ -4132,11 +4132,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       KernelOrKext)
     CmdArgs.push_back("-fno-use-cxa-atexit");
 
-  if (Args.hasFlag(options::OPT_fregister_global_dtors_with_atexit,
-                   options::OPT_fno_register_global_dtors_with_atexit,
-                   RawTriple.isOSDarwin()))
-    CmdArgs.push_back("-fregister-global-dtors-with-atexit");
-
   // -fms-extensions=0 is default.
   if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
                    IsWindowsMSVC))

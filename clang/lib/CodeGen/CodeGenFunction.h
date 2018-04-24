@@ -3621,9 +3621,6 @@ public:
   void registerGlobalDtorWithAtExit(const VarDecl &D, llvm::Constant *fn,
                                     llvm::Constant *addr);
 
-  /// Call atexit() with function dtorStub.
-  void registerGlobalDtorWithAtExit(llvm::Constant *dtorStub);
-
   /// Emit code in this function to perform a guarded variable
   /// initialization.  Guarded initializations are used when it's not
   /// possible to prove that an initialization will be done exactly
