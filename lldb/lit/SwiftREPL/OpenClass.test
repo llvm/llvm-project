@@ -1,0 +1,28 @@
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+
+class Foo {
+  // Don't make any of these 'open'.
+  typealias X = Int
+  init() {}
+  let value = 1
+  final func foo() -> Int { return 2 }
+}
+
+Foo.X()
+// CHECK: $R0: Foo.X = 0
+Foo().value
+// CHECK-NEXT: $R1: Int = 1
+Foo().foo()
+// CHECK-NEXT: $R2: Int = 2
+
+class Bar: Foo {}
+
+Bar().foo()
+// CHECK-NEXT: $R3: Int = 2
+
+class Baz: Foo {
+  // Make sure 'foo' is still final'
+  override func foo() -> Int { return 4 }
+}
+
+// CHECK: error: overriding non-open instance method outside of its defining module
