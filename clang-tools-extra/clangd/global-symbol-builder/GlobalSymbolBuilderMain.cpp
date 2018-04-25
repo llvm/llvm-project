@@ -78,10 +78,7 @@ public:
 
         auto Symbols = Collector->takeSymbols();
         for (const auto &Sym : Symbols) {
-          std::string IDStr;
-          llvm::raw_string_ostream OS(IDStr);
-          OS << Sym.ID;
-          Ctx->reportResult(OS.str(), SymbolToYAML(Sym));
+          Ctx->reportResult(Sym.ID.str(), SymbolToYAML(Sym));
         }
       }
 
