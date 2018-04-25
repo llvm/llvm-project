@@ -103,6 +103,19 @@ void RuntimeDebugBuilder::createPrinter(PollyIRBuilder &Builder, bool IsGPU,
     createCPUPrinterT(Builder, Values);
 }
 
+bool RuntimeDebugBuilder::isPrintable(Type *Ty) {
+  if (Ty->isFloatingPointTy())
+    return true;
+
+  if (Ty->isIntegerTy())
+    return Ty->getIntegerBitWidth() <= 64;
+
+  if (isa<PointerType>(Ty))
+    return true;
+
+  return false;
+}
+
 static std::tuple<std::string, std::vector<Value *>>
 prepareValuesForPrinting(PollyIRBuilder &Builder, ArrayRef<Value *> Values) {
   std::string FormatString;
