@@ -26,36 +26,6 @@ llvm::Optional<std::string> demangleMSVC(llvm::StringRef S);
 std::vector<uint8_t> parseHex(llvm::StringRef S);
 bool isValidCIdentifier(llvm::StringRef S);
 
-// This is a lazy version of StringRef. String size is computed lazily
-// when it is needed. It is more efficient than StringRef to instantiate
-// if you have a string whose size is unknown.
-//
-// COFF and ELF string tables contain a lot of null-terminated strings.
-// Most of them are not necessary for the linker because they are names
-// of local symbols and the linker doesn't use local symbol names for
-// name resolution. So, we use this class to represents strings read
-// from string tables.
-class StringRefZ {
-public:
-  StringRefZ() : Start(nullptr), Size(0) {}
-  StringRefZ(const char *S, size_t Size) : Start(S), Size(Size) {}
-
-  /*implicit*/ StringRefZ(const char *S) : Start(S), Size(-1) {}
-
-  /*implicit*/ StringRefZ(llvm::StringRef S)
-      : Start(S.data()), Size(S.size()) {}
-
-  operator llvm::StringRef() const {
-    if (Size == (size_t)-1)
-      Size = strlen(Start);
-    return {Start, Size};
-  }
-
-private:
-  const char *Start;
-  mutable size_t Size;
-};
-
 // This class represents multiple glob patterns.
 class StringMatcher {
 public:

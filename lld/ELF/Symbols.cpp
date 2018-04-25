@@ -109,8 +109,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     return 0;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
-    assert(Sym.IsUsedInRegularObj && "lazy symbol reached writer");
-    return 0;
+    llvm_unreachable("lazy symbol reached writer");
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -178,7 +177,7 @@ void Symbol::parseSymbolVersion() {
     return;
 
   // Truncate the symbol name so that it doesn't include the version string.
-  Name = {S.data(), Pos};
+  NameSize = Pos;
 
   // If this is not in this DSO, it is not a definition.
   if (!isDefined())
