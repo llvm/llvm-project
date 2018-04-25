@@ -119,6 +119,9 @@ hash_code hash_value(const std::pair<T, U> &arg);
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
 
+/// \brief Compute a hash_code for a tuple.
+template <typename ...Ts>
+hash_code hash_value(const std::tuple<Ts...> &arg);
 
 /// \brief Override the execution seed with a fixed value.
 ///
