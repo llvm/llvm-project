@@ -364,8 +364,8 @@ void Writer::createRelocSections() {
   log("createRelocSections");
   // Don't use iterator here since we are adding to OutputSection
   size_t OrigSize = OutputSections.size();
-  for (size_t i = 0; i < OrigSize; i++) {
-    OutputSection *OSec = OutputSections[i];
+  for (size_t I = 0; I < OrigSize; I++) {
+    OutputSection *OSec = OutputSections[I];
     uint32_t Count = OSec->numRelocations();
     if (!Count)
       continue;
@@ -380,7 +380,7 @@ void Writer::createRelocSections() {
 
     SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, Name);
     raw_ostream &OS = Section->getStream();
-    writeUleb128(OS, i, "reloc section");
+    writeUleb128(OS, I, "reloc section");
     writeUleb128(OS, Count, "reloc count");
     OSec->writeRelocations(OS);
   }
