@@ -296,9 +296,13 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       expr_options.SetPoundLine(m_repl_source_path.c_str(),
                                 m_code.GetSize() + 1);
 
-      // We don't want other threads to interfere and block the thread
-      // it's currently running. This is needed to get, e.g. sleep() to
-      // work reliably in the REPL.
+      // There is no point in trying to run REPL expressions on just the
+      // current thread of the program, since the REPL tracks the states of
+      // individual threads as you would in a regular debugging session.
+      // Interrupting the process to switch from one thread to many has
+      // observable effects (for instance it causes anything waiting in the
+      // kernel to be interrupted). Since we aren't getting any benefit from
+      // doing this in the REPL, let's not.
       expr_options.SetStopOthers(false);
 
       if (m_command_options.timeout > 0)
