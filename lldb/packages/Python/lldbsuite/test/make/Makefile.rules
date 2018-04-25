@@ -36,13 +36,13 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 #----------------------------------------------------------------------
 # If OS is not defined, use 'uname -s' to determine the OS name.
 #
-# uname on Windows gives "windows32", but most environments standardize
-# on "Windows_NT", so we'll make it consistent here.  When running
-# tests from Visual Studio, the environment variable isn't inherited
-# all the way down to the process spawned for make.
+# uname on Windows gives "windows32" or "server version windows32", but most
+# environments standardize on "Windows_NT", so we'll make it consistent here.
+# When running tests from Visual Studio, the environment variable isn't
+# inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
 HOST_OS = $(shell uname -s)
-ifeq "$(HOST_OS)" "windows32"
+ifneq (,$(findstring windows32,$(HOST_OS)))
 	HOST_OS = Windows_NT
 endif
 ifeq "$(OS)" ""

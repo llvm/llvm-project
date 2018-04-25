@@ -229,17 +229,6 @@ def ApplyDecoratorsToFunction(func, decorators):
         tmp = decorators(tmp)
     return tmp
 
-def isEnabled(debug_flavor, target_platform, configuration, decorators):
-    # If the platform is unsupported, skip the test.
-    if not test_categories.is_supported_on_platform(debug_flavor,
-            target_platform, configuration.compiler):
-        return False
-
-    # If the debug flavor is skipped, skip the test.
-    if debug_flavor in configuration.skipCategories:
-        return False
-    return True
-
 def MakeInlineTest(__file, __globals, decorators=None):
     # Adjust the filename if it ends in .pyc.  We want filenames to
     # reflect the source python file, not the compiled variant.
@@ -256,19 +245,14 @@ def MakeInlineTest(__file, __globals, decorators=None):
     test = type(test_name, (InlineTest,), {'using_dsym': None})
     test.name = test_name
 
-    target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-    if isEnabled("dsym", target_platform, configuration, decorators):
-        test.test_with_dsym = ApplyDecoratorsToFunction(
-            test._InlineTest__test_with_dsym, decorators)
-    if isEnabled("dwarf", target_platform, configuration, decorators):
-        test.test_with_dwarf = ApplyDecoratorsToFunction(
-            test._InlineTest__test_with_dwarf, decorators)
-    if isEnabled("dwo", target_platform, configuration, decorators):
-        test.test_with_dwo = ApplyDecoratorsToFunction(
-            test._InlineTest__test_with_dwo, decorators)
-    if isEnabled("gmodules", target_platform, configuration, decorators):
-        test.test_with_gmodules = ApplyDecoratorsToFunction(
-            test._InlineTest__test_with_gmodules, decorators)
+    test.test_with_dsym = ApplyDecoratorsToFunction(
+        test._InlineTest__test_with_dsym, decorators)
+    test.test_with_dwarf = ApplyDecoratorsToFunction(
+        test._InlineTest__test_with_dwarf, decorators)
+    test.test_with_dwo = ApplyDecoratorsToFunction(
+        test._InlineTest__test_with_dwo, decorators)
+    test.test_with_gmodules = ApplyDecoratorsToFunction(
+        test._InlineTest__test_with_gmodules, decorators)
 
     # Add the test case to the globals, and hide InlineTest
     __globals.update({test_name: test})

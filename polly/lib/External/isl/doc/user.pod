@@ -4056,6 +4056,9 @@ the following functions can be used.
 	isl_bool isl_multi_aff_involves_dims(
 		__isl_keep isl_multi_aff *ma,
 		enum isl_dim_type type, unsigned first, unsigned n);
+	isl_bool isl_pw_multi_aff_involves_dims(
+		__isl_keep isl_pw_multi_aff *pma,
+		enum isl_dim_type type, unsigned first, unsigned n);
 	isl_bool isl_multi_pw_aff_involves_dims(
 		__isl_keep isl_multi_pw_aff *mpa,
 		enum isl_dim_type type, unsigned first, unsigned n);
@@ -5679,6 +5682,40 @@ All parameters need to be named.
 	__isl_give isl_qpolynomial *isl_qpolynomial_align_params(
 		__isl_take isl_qpolynomial *qp,
 		__isl_take isl_space *model);
+
+=item * Drop unused parameters
+
+Drop parameters that are not referenced by the isl object.
+All parameters need to be named.
+
+	#include <isl/set.h>
+	__isl_give isl_basic_set *
+	isl_basic_set_drop_unused_params(
+		__isl_take isl_basic_set *bset);
+	__isl_give isl_set *isl_set_drop_unused_params(
+		__isl_take isl_set *set);
+
+	#include <isl/map.h>
+	__isl_give isl_basic_map *
+	isl_basic_map_drop_unused_params(
+		__isl_take isl_basic_map *bmap);
+	__isl_give isl_map *isl_map_drop_unused_params(
+		__isl_take isl_map *map);
+
+	#include <isl/aff.h>
+	__isl_give isl_pw_aff *isl_pw_aff_drop_unused_params(
+		__isl_take isl_pw_aff *pa);
+	__isl_give isl_pw_multi_aff *
+	isl_pw_multi_aff_drop_unused_params(
+		__isl_take isl_pw_multi_aff *pma);
+
+	#include <isl/polynomial.h>
+	__isl_give isl_pw_qpolynomial *
+	isl_pw_qpolynomial_drop_unused_params(
+		__isl_take isl_pw_qpolynomial *pwqp);
+	__isl_give isl_pw_qpolynomial_fold *
+	isl_pw_qpolynomial_fold_drop_unused_params(
+		__isl_take isl_pw_qpolynomial_fold *pwf);
 
 =item * Unary Arithmetic Operations
 

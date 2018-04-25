@@ -75,7 +75,6 @@ enum SectionsCommandKind {
   AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  AssertKind, // ASSERT(expr)
   ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
 };
 
@@ -175,15 +174,6 @@ struct InputSectionDescription : BaseCommand {
   // they were created in. This is used to insert newly created ThunkSections
   // into Sections at the end of a createThunks() pass.
   std::vector<std::pair<ThunkSection *, uint32_t>> ThunkSections;
-};
-
-// Represents an ASSERT().
-struct AssertCommand : BaseCommand {
-  AssertCommand(Expr E) : BaseCommand(AssertKind), Expression(E) {}
-
-  static bool classof(const BaseCommand *C) { return C->Kind == AssertKind; }
-
-  Expr Expression;
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
