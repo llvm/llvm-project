@@ -93,6 +93,7 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-NEXT:    leal (%eax,%edx,4), %eax
 ; X32-NEXT:    leal (%eax,%esi,8), %eax
 ; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X32-SSE2-LABEL: PR15215_good:
@@ -115,6 +116,7 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-SSE2-NEXT:    leal (%eax,%edx,4), %eax
 ; X32-SSE2-NEXT:    leal (%eax,%esi,8), %eax
 ; X32-SSE2-NEXT:    popl %esi
+; X32-SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; X32-SSE2-NEXT:    retl
 ;
 ; X32-AVX2-LABEL: PR15215_good:
@@ -134,6 +136,7 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-AVX2-NEXT:    leal (%eax,%edx,4), %eax
 ; X32-AVX2-NEXT:    leal (%eax,%esi,8), %eax
 ; X32-AVX2-NEXT:    popl %esi
+; X32-AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-LABEL: PR15215_good:

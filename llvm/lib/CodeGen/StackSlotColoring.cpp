@@ -418,7 +418,9 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
     unsigned LoadReg = 0;
     unsigned StoreReg = 0;
-    if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS)))
+    unsigned LoadSize = 0;
+    unsigned StoreSize = 0;
+    if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS, LoadSize)))
       continue;
     // Skip the ...pseudo debugging... instructions between a load and store.
     while ((NextMI != E) && NextMI->isDebugValue()) {
@@ -426,9 +428,11 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
       ++I;
     }
     if (NextMI == E) continue;
-    if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS)))
+    if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
       continue;
-    if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1) continue;
+    if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
+        LoadSize != StoreSize)
+      continue;
 
     ++NumDead;
     changed = true;

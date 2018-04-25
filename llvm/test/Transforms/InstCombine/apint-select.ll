@@ -116,29 +116,3 @@ define i1023 @test4(i1023 %X) {
   ret i1023 %V
 }
 
-;; ((X & 27) ? 27 : 0)
-
-define i41 @test5(i41 %X) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[Y:%.*]] = and i41 %X, 32
-; CHECK-NEXT:    ret i41 [[Y]]
-;
-  %Y = and i41 %X, 32
-  %t = icmp ne i41 %Y, 0
-  %V = select i1 %t, i41 32, i41 0
-  ret i41 %V
-}
-
-;; ((X & 27) ? 27 : 0)
-
-define i1023 @test6(i1023 %X) {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[Y:%.*]] = and i1023 %X, 64
-; CHECK-NEXT:    ret i1023 [[Y]]
-;
-  %Y = and i1023 %X, 64
-  %t = icmp ne i1023 %Y, 0
-  %V = select i1 %t, i1023 64, i1023 0
-  ret i1023 %V
-}
-

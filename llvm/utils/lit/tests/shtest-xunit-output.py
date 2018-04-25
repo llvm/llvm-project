@@ -1,4 +1,4 @@
-# RUN: not %{lit} -j 1 -v %{inputs}/shtest-format - --xunit-xml-output %t.xml
+# RUN: not %{lit} -j 1 -v %{inputs}/shtest-format --xunit-xml-output %t.xml
 # RUN: FileCheck < %t.xml %s
 
 # CHECK: <?xml version="1.0" encoding="UTF-8" ?>

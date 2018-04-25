@@ -562,20 +562,28 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
       if (BarrierMemoryInstr && OBB.dominates(BarrierMemoryInstr, MemInstr))
         break;
 
-      if (isa<LoadInst>(MemInstr) && isa<LoadInst>(ChainInstr))
+      auto *MemLoad = dyn_cast<LoadInst>(MemInstr);
+      auto *ChainLoad = dyn_cast<LoadInst>(ChainInstr);
+      if (MemLoad && ChainLoad)
         continue;
+
+      // We can ignore the alias if the we have a load store pair and the load
+      // is known to be invariant. The load cannot be clobbered by the store.
+      auto IsInvariantLoad = [](const LoadInst *LI) -> bool {
+        return LI->getMetadata(LLVMContext::MD_invariant_load);
+      };
 
       // We can ignore the alias as long as the load comes before the store,
       // because that means we won't be moving the load past the store to
       // vectorize it (the vectorized load is inserted at the location of the
       // first load in the chain).
-      if (isa<StoreInst>(MemInstr) && isa<LoadInst>(ChainInstr) &&
-          OBB.dominates(ChainInstr, MemInstr))
+      if (isa<StoreInst>(MemInstr) && ChainLoad &&
+          (IsInvariantLoad(ChainLoad) || OBB.dominates(ChainLoad, MemInstr)))
         continue;
 
       // Same case, but in reverse.
-      if (isa<LoadInst>(MemInstr) && isa<StoreInst>(ChainInstr) &&
-          OBB.dominates(MemInstr, ChainInstr))
+      if (MemLoad && isa<StoreInst>(ChainInstr) &&
+          (IsInvariantLoad(MemLoad) || OBB.dominates(MemLoad, ChainInstr)))
         continue;
 
       if (!AA.isNoAlias(MemoryLocation::get(MemInstr),

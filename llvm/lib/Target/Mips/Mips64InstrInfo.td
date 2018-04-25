@@ -728,7 +728,7 @@ def : MipsPat<(i64 (sext_inreg GPR64:$src, i32)),
               (SLL64_64 GPR64:$src)>;
 
 // bswap MipsPattern
-def : MipsPat<(bswap GPR64:$rt), (DSHD (DSBH GPR64:$rt))>;
+def : MipsPat<(bswap GPR64:$rt), (DSHD (DSBH GPR64:$rt))>, ISA_MIPS64R2;
 
 // Carry pattern
 let AdditionalPredicates = [NotInMicroMips] in {

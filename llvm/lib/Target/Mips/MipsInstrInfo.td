@@ -2054,26 +2054,32 @@ let DecoderNamespace = "COP3_" in {
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def TEQ : MMRel, TEQ_FT<"teq", GPR32Opnd, uimm10, II_TEQ>, TEQ_FM<0x34>, ISA_MIPS2;
-  def TGE : MMRel, TEQ_FT<"tge", GPR32Opnd, uimm10, II_TGE>, TEQ_FM<0x30>, ISA_MIPS2;
-  def TGEU : MMRel, TEQ_FT<"tgeu", GPR32Opnd, uimm10, II_TGEU>, TEQ_FM<0x31>, ISA_MIPS2;
-  def TLT : MMRel, TEQ_FT<"tlt", GPR32Opnd, uimm10, II_TLT>, TEQ_FM<0x32>, ISA_MIPS2;
-  def TLTU : MMRel, TEQ_FT<"tltu", GPR32Opnd, uimm10, II_TLTU>, TEQ_FM<0x33>, ISA_MIPS2;
-  def TNE : MMRel, TEQ_FT<"tne", GPR32Opnd, uimm10, II_TNE>, TEQ_FM<0x36>, ISA_MIPS2;
-}
+  def TEQ : MMRel, TEQ_FT<"teq", GPR32Opnd, uimm10, II_TEQ>, TEQ_FM<0x34>,
+            ISA_MIPS2;
+  def TGE : MMRel, TEQ_FT<"tge", GPR32Opnd, uimm10, II_TGE>, TEQ_FM<0x30>,
+            ISA_MIPS2;
+  def TGEU : MMRel, TEQ_FT<"tgeu", GPR32Opnd, uimm10, II_TGEU>, TEQ_FM<0x31>,
+             ISA_MIPS2;
+  def TLT : MMRel, TEQ_FT<"tlt", GPR32Opnd, uimm10, II_TLT>, TEQ_FM<0x32>,
+            ISA_MIPS2;
+  def TLTU : MMRel, TEQ_FT<"tltu", GPR32Opnd, uimm10, II_TLTU>, TEQ_FM<0x33>,
+            ISA_MIPS2;
+  def TNE : MMRel, TEQ_FT<"tne", GPR32Opnd, uimm10, II_TNE>, TEQ_FM<0x36>,
+            ISA_MIPS2;
 
-def TEQI : MMRel, TEQI_FT<"teqi", GPR32Opnd, II_TEQI>, TEQI_FM<0xc>,
-           ISA_MIPS2_NOT_32R6_64R6;
-def TGEI : MMRel, TEQI_FT<"tgei", GPR32Opnd, II_TGEI>, TEQI_FM<0x8>,
-           ISA_MIPS2_NOT_32R6_64R6;
-def TGEIU : MMRel, TEQI_FT<"tgeiu", GPR32Opnd, II_TGEIU>, TEQI_FM<0x9>,
-           ISA_MIPS2_NOT_32R6_64R6;
-def TLTI : MMRel, TEQI_FT<"tlti", GPR32Opnd, II_TLTI>, TEQI_FM<0xa>,
-           ISA_MIPS2_NOT_32R6_64R6;
-def TTLTIU : MMRel, TEQI_FT<"tltiu", GPR32Opnd, II_TTLTIU>, TEQI_FM<0xb>,
-           ISA_MIPS2_NOT_32R6_64R6;
-def TNEI : MMRel, TEQI_FT<"tnei", GPR32Opnd, II_TNEI>, TEQI_FM<0xe>,
-           ISA_MIPS2_NOT_32R6_64R6;
+  def TEQI : MMRel, TEQI_FT<"teqi", GPR32Opnd, II_TEQI>, TEQI_FM<0xc>,
+             ISA_MIPS2_NOT_32R6_64R6;
+  def TGEI : MMRel, TEQI_FT<"tgei", GPR32Opnd, II_TGEI>, TEQI_FM<0x8>,
+             ISA_MIPS2_NOT_32R6_64R6;
+  def TGEIU : MMRel, TEQI_FT<"tgeiu", GPR32Opnd, II_TGEIU>, TEQI_FM<0x9>,
+              ISA_MIPS2_NOT_32R6_64R6;
+  def TLTI : MMRel, TEQI_FT<"tlti", GPR32Opnd, II_TLTI>, TEQI_FM<0xa>,
+             ISA_MIPS2_NOT_32R6_64R6;
+  def TTLTIU : MMRel, TEQI_FT<"tltiu", GPR32Opnd, II_TTLTIU>, TEQI_FM<0xb>,
+               ISA_MIPS2_NOT_32R6_64R6;
+  def TNEI : MMRel, TEQI_FT<"tnei", GPR32Opnd, II_TNEI>, TEQI_FM<0xe>,
+             ISA_MIPS2_NOT_32R6_64R6;
+}
 
 let AdditionalPredicates = [NotInMicroMips] in {
 def BREAK : MMRel, StdMMR6Rel, BRK_FT<"break">, BRK_FM<0xd>;
@@ -3030,10 +3036,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
   defm : SetgtPats<GPR32, SLT, SLTu>;
   defm : SetgePats<GPR32, XORi, SLT, SLTu>;
   defm : SetgeImmPats<GPR32, XORi, SLTi, SLTiu>;
-}
 
-// bswap pattern
-def : MipsPat<(bswap GPR32:$rt), (ROTR (WSBH GPR32:$rt), 16)>;
+  // bswap pattern
+  def : MipsPat<(bswap GPR32:$rt), (ROTR (WSBH GPR32:$rt), 16)>, ISA_MIPS32R2;
+}
 
 // Load halfword/word patterns.
 let AddedComplexity = 40 in {

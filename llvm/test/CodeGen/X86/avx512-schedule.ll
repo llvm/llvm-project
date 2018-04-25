@@ -8702,6 +8702,7 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 ; GENERIC-NEXT:    callq func_f32
 ; GENERIC-NEXT:    vbroadcastss (%rsp), %zmm0 # 16-byte Folded Reload sched: [6:1.00]
 ; GENERIC-NEXT:    addq $24, %rsp # sched: [1:0.33]
+; GENERIC-NEXT:    .cfi_def_cfa_offset 8
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: broadcast_ss_spill:
@@ -8713,6 +8714,7 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 ; SKX-NEXT:    callq func_f32
 ; SKX-NEXT:    vbroadcastss (%rsp), %zmm0 # 16-byte Folded Reload sched: [8:0.50]
 ; SKX-NEXT:    addq $24, %rsp # sched: [1:0.25]
+; SKX-NEXT:    .cfi_def_cfa_offset 8
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %a  = fadd float %x, %x
   call void @func_f32(float %a)
@@ -8732,6 +8734,7 @@ define <8 x double> @broadcast_sd_spill(double %x) {
 ; GENERIC-NEXT:    callq func_f64
 ; GENERIC-NEXT:    vbroadcastsd (%rsp), %zmm0 # 16-byte Folded Reload sched: [6:1.00]
 ; GENERIC-NEXT:    addq $24, %rsp # sched: [1:0.33]
+; GENERIC-NEXT:    .cfi_def_cfa_offset 8
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: broadcast_sd_spill:
@@ -8743,6 +8746,7 @@ define <8 x double> @broadcast_sd_spill(double %x) {
 ; SKX-NEXT:    callq func_f64
 ; SKX-NEXT:    vbroadcastsd (%rsp), %zmm0 # 16-byte Folded Reload sched: [8:0.50]
 ; SKX-NEXT:    addq $24, %rsp # sched: [1:0.25]
+; SKX-NEXT:    .cfi_def_cfa_offset 8
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %a  = fadd double %x, %x
   call void @func_f64(double %a)

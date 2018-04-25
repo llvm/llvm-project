@@ -61,6 +61,7 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-NEXT:    vmovaps %ymm14, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 bb:
   %tmp = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <16 x i64> %arg, <16 x i64> %arg1

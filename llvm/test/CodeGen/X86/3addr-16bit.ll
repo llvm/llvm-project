@@ -29,7 +29,7 @@ define zeroext i16 @test1(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    incl %eax
 ; X32-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
@@ -82,7 +82,7 @@ define zeroext i16 @test2(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    decl %eax
 ; X32-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
@@ -137,7 +137,7 @@ define zeroext i16 @test3(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    addl $2, %eax
 ; X32-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
@@ -190,8 +190,8 @@ define zeroext i16 @test4(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl %edx, %eax
 ; X32-NEXT:    addl %ecx, %eax
 ; X32-NEXT:    cmpw %cx, %dx

@@ -116,6 +116,12 @@ defm WriteBlend  : X86SchedWritePair; // Vector blends.
 defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.
 defm WritePSADBW : X86SchedWritePair; // Vector PSADBW.
 defm WriteMPSAD : X86SchedWritePair; // Vector MPSAD.
+defm WritePHMINPOS : X86SchedWritePair; // Vector PHMINPOS.
+
+// Vector insert/extract operations.
+defm WriteVecInsert : X86SchedWritePair; // Insert gpr to vector element.
+def  WriteVecExtract : SchedWrite; // Extract vector element to gpr.
+def  WriteVecExtractSt : SchedWrite; // Extract vector element and store.
 
 // MOVMSK operations.
 def WriteFMOVMSK : SchedWrite;
@@ -126,6 +132,7 @@ def WriteMMXMOVMSK : SchedWrite;
 defm WriteCvtF2I : X86SchedWritePair; // Float -> Integer.
 defm WriteCvtI2F : X86SchedWritePair; // Integer -> Float.
 defm WriteCvtF2F : X86SchedWritePair; // Float -> Float size conversion.
+def  WriteCvtF2FSt : SchedWrite; // // Float -> Float + store size conversion.
 
 // CRC32 instruction.
 defm WriteCRC32 : X86SchedWritePair;

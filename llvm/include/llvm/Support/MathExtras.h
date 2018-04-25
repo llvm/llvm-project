@@ -455,7 +455,7 @@ std::size_t countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return countLeadingZeros(~Value, ZB);
+  return countLeadingZeros<T>(~Value, ZB);
 }
 
 /// \brief Count the number of ones from the least significant bit to the first
@@ -471,7 +471,7 @@ std::size_t countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return countTrailingZeros(~Value, ZB);
+  return countTrailingZeros<T>(~Value, ZB);
 }
 
 namespace detail {

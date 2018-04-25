@@ -330,6 +330,61 @@ define i32 @in_complex_y1_m1(i32 %x, i32 %y_hi, i32 %y_low, i32 %m_a, i32 %m_b) 
   ret i32 %r
 }
 ; ============================================================================ ;
+; Both xor's have the same constant operand
+; ============================================================================ ;
+define i32 @out_constant_y_mone(i32 %x, i32 %mask) {
+; CHECK-LABEL: out_constant_y_mone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    orn w0, w8, w1
+; CHECK-NEXT:    ret
+  %mx = and i32 %x, %mask
+  %notmask = xor i32 %mask, -1
+  %my = and i32 %notmask, -1 ; %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+; FIXME: should be bic+mvn
+define i32 @in_constant_y_mone(i32 %x, i32 %mask) {
+; CHECK-LABEL: in_constant_y_mone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    orn w0, w8, w1
+; CHECK-NEXT:    ret
+  %n0 = xor i32 %x, -1 ; %y
+  %n1 = and i32 %n0, %mask
+  %r = xor i32 %n1, -1 ; %y
+  ret i32 %r
+}
+define i32 @out_constant_y_one(i32 %x, i32 %mask) {
+; CHECK-LABEL: out_constant_y_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    ret
+  %mx = and i32 %x, %mask
+  %notmask = xor i32 %mask, -1
+  %my = and i32 %notmask, 1 ; %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+; FIXME: should be eor+and+eor
+define i32 @in_constant_y_one(i32 %x, i32 %mask) {
+; CHECK-LABEL: in_constant_y_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    ret
+  %n0 = xor i32 %x, 1 ; %y
+  %n1 = and i32 %n0, %mask
+  %r = xor i32 %n1, 1 ; %y
+  ret i32 %r
+}
+; ============================================================================ ;
 ; Negative tests. Should not be folded.
 ; ============================================================================ ;
 ; Multi-use tests.

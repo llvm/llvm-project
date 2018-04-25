@@ -6,17 +6,15 @@ declare void @foo(i32, i32) #0
 declare x86_stdcallcc void @stdfoo(i32, i32) #0
 
 ; CHECK-LABEL: test1:
-; CHECK: subl $8, %esp
-; CHECK: .cfi_adjust_cfa_offset 8
+; CHECK: subl $20, %esp
+; CHECK: .cfi_adjust_cfa_offset 20
 ; CHECK: pushl $2
 ; CHECK: .cfi_adjust_cfa_offset 4
 ; CHECK: pushl $1
 ; CHECK: .cfi_adjust_cfa_offset 4
 ; CHECK: calll foo
-; CHECK: addl $16, %esp
-; CHECK: .cfi_adjust_cfa_offset -16
-; CHECK: subl $8, %esp
-; CHECK: .cfi_adjust_cfa_offset 8
+; CHECK: addl $8, %esp
+; CHECK: .cfi_adjust_cfa_offset -8
 ; CHECK: pushl $4
 ; CHECK: .cfi_adjust_cfa_offset 4
 ; CHECK: pushl $3
@@ -24,7 +22,7 @@ declare x86_stdcallcc void @stdfoo(i32, i32) #0
 ; CHECK: calll stdfoo
 ; CHECK: .cfi_adjust_cfa_offset -8
 ; CHECK: addl $20, %esp
-; CHECK: .cfi_adjust_cfa_offset -8
+; CHECK: .cfi_adjust_cfa_offset -20
 define void @test1() #0 !dbg !4 {
 entry:
   tail call void @foo(i32 1, i32 2) #1, !dbg !10

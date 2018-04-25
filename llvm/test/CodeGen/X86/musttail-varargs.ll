@@ -94,12 +94,19 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm7 # 16-byte Reload
 ; LINUX-NEXT:    movb {{[0-9]+}}(%rsp), %al # 1-byte Reload
 ; LINUX-NEXT:    addq $360, %rsp # imm = 0x168
+; LINUX-NEXT:    .cfi_def_cfa_offset 56
 ; LINUX-NEXT:    popq %rbx
+; LINUX-NEXT:    .cfi_def_cfa_offset 48
 ; LINUX-NEXT:    popq %r12
+; LINUX-NEXT:    .cfi_def_cfa_offset 40
 ; LINUX-NEXT:    popq %r13
+; LINUX-NEXT:    .cfi_def_cfa_offset 32
 ; LINUX-NEXT:    popq %r14
+; LINUX-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-NEXT:    popq %r15
+; LINUX-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-NEXT:    popq %rbp
+; LINUX-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-NEXT:    jmpq *%r11 # TAILCALL
 ;
 ; LINUX-X32-LABEL: f_thunk:
@@ -181,12 +188,19 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm7 # 16-byte Reload
 ; LINUX-X32-NEXT:    movb {{[0-9]+}}(%esp), %al # 1-byte Reload
 ; LINUX-X32-NEXT:    addl $344, %esp # imm = 0x158
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 56
 ; LINUX-X32-NEXT:    popq %rbx
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 48
 ; LINUX-X32-NEXT:    popq %r12
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 40
 ; LINUX-X32-NEXT:    popq %r13
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 32
 ; LINUX-X32-NEXT:    popq %r14
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X32-NEXT:    popq %r15
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-X32-NEXT:    popq %rbp
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ;
 ; WINDOWS-LABEL: f_thunk:
@@ -295,6 +309,7 @@ define void @g_thunk(i8* %fptr_i8, ...) {
 ; LINUX-NEXT:    pushq %rax
 ; LINUX-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-NEXT:    popq %r11
+; LINUX-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-NEXT:    jmpq *%rdi # TAILCALL
 ;
 ; LINUX-X32-LABEL: g_thunk:
@@ -303,6 +318,7 @@ define void @g_thunk(i8* %fptr_i8, ...) {
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-X32-NEXT:    movl %edi, %r11d
 ; LINUX-X32-NEXT:    addl $8, %esp
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ;
 ; WINDOWS-LABEL: g_thunk:
@@ -344,11 +360,14 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; LINUX-NEXT:  # %bb.1: # %then
 ; LINUX-NEXT:    movq 8(%rdi), %r11
 ; LINUX-NEXT:    addq $8, %rsp
+; LINUX-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-NEXT:    jmpq *%r11 # TAILCALL
 ; LINUX-NEXT:  .LBB2_2: # %else
+; LINUX-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-NEXT:    movq 16(%rdi), %r11
 ; LINUX-NEXT:    movl $42, {{.*}}(%rip)
 ; LINUX-NEXT:    addq $8, %rsp
+; LINUX-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-NEXT:    jmpq *%r11 # TAILCALL
 ;
 ; LINUX-X32-LABEL: h_thunk:
@@ -360,11 +379,14 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; LINUX-X32-NEXT:  # %bb.1: # %then
 ; LINUX-X32-NEXT:    movl 4(%edi), %r11d
 ; LINUX-X32-NEXT:    addl $8, %esp
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ; LINUX-X32-NEXT:  .LBB2_2: # %else
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-X32-NEXT:    movl 8(%edi), %r11d
 ; LINUX-X32-NEXT:    movl $42, {{.*}}(%rip)
 ; LINUX-X32-NEXT:    addl $8, %esp
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ;
 ; WINDOWS-LABEL: h_thunk:

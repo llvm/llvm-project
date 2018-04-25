@@ -312,10 +312,6 @@ struct MCSchedModel {
   static Optional<double>
   getReciprocalThroughput(unsigned SchedClass, const InstrItineraryData &IID);
 
-  Optional<double> computeReciprocalThroughput(const MCSubtargetInfo &STI,
-                                               const MCInstrInfo &MCII,
-                                               unsigned Opcode) const;
-
   /// Returns the default initialized model.
   static const MCSchedModel &GetDefaultSchedModel() { return Default; }
   static const MCSchedModel Default;

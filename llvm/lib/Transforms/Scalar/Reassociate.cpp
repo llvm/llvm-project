@@ -43,6 +43,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -780,6 +781,18 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
 
       if (ExpressionChanged == I)
         break;
+
+      // Discard any debug info related to the expressions that has changed (we
+      // can leave debug infor related to the root, since the result of the
+      // expression tree should be the same even after reassociation).
+      SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
+      findDbgUsers(DbgUsers, ExpressionChanged);
+      for (auto *DII : DbgUsers) {
+        Value *Undef = UndefValue::get(ExpressionChanged->getType());
+        DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
+                                                ValueAsMetadata::get(Undef)));
+      }
+
       ExpressionChanged->moveBefore(I);
       ExpressionChanged = cast<BinaryOperator>(*ExpressionChanged->user_begin());
     } while (true);

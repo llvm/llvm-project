@@ -24,6 +24,7 @@ define zeroext i16 @test_mm512_kunpackb(<8 x i64> %__A, <8 x i64> %__B, <8 x i64
 ; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -75,6 +76,7 @@ define i32 @test_mm512_kortestc(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -123,6 +125,7 @@ define i32 @test_mm512_kortestz(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;

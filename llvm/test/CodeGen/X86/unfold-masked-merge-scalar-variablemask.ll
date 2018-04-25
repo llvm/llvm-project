@@ -535,6 +535,100 @@ define i32 @in_complex_y1_m1(i32 %x, i32 %y_hi, i32 %y_low, i32 %m_a, i32 %m_b) 
   ret i32 %r
 }
 ; ============================================================================ ;
+; Both xor's have the same constant operand
+; ============================================================================ ;
+define i32 @out_constant_y_mone(i32 %x, i32 %mask) {
+; CHECK-NOBMI-LABEL: out_constant_y_mone:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    andl %esi, %edi
+; CHECK-NOBMI-NEXT:    notl %esi
+; CHECK-NOBMI-NEXT:    orl %edi, %esi
+; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI-LABEL: out_constant_y_mone:
+; CHECK-BMI:       # %bb.0:
+; CHECK-BMI-NEXT:    andl %esi, %edi
+; CHECK-BMI-NEXT:    notl %esi
+; CHECK-BMI-NEXT:    orl %edi, %esi
+; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    retq
+  %mx = and i32 %x, %mask
+  %notmask = xor i32 %mask, -1
+  %my = and i32 %notmask, -1 ; %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+; FIXME: should be andnl+notl if BMI
+define i32 @in_constant_y_mone(i32 %x, i32 %mask) {
+; CHECK-NOBMI-LABEL: in_constant_y_mone:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    notl %edi
+; CHECK-NOBMI-NEXT:    andl %esi, %edi
+; CHECK-NOBMI-NEXT:    notl %edi
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI-LABEL: in_constant_y_mone:
+; CHECK-BMI:       # %bb.0:
+; CHECK-BMI-NEXT:    andl %esi, %edi
+; CHECK-BMI-NEXT:    notl %esi
+; CHECK-BMI-NEXT:    orl %edi, %esi
+; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    retq
+  %n0 = xor i32 %x, -1 ; %y
+  %n1 = and i32 %n0, %mask
+  %r = xor i32 %n1, -1 ; %y
+  ret i32 %r
+}
+define i32 @out_constant_y_one(i32 %x, i32 %mask) {
+; CHECK-NOBMI-LABEL: out_constant_y_one:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    andl %esi, %edi
+; CHECK-NOBMI-NEXT:    notl %esi
+; CHECK-NOBMI-NEXT:    andl $1, %esi
+; CHECK-NOBMI-NEXT:    orl %edi, %esi
+; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI-LABEL: out_constant_y_one:
+; CHECK-BMI:       # %bb.0:
+; CHECK-BMI-NEXT:    andl %esi, %edi
+; CHECK-BMI-NEXT:    notl %esi
+; CHECK-BMI-NEXT:    andl $1, %esi
+; CHECK-BMI-NEXT:    orl %edi, %esi
+; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    retq
+  %mx = and i32 %x, %mask
+  %notmask = xor i32 %mask, -1
+  %my = and i32 %notmask, 1 ; %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+; FIXME: NOBMI and BMI should match, or BMI should be better.
+define i32 @in_constant_y_one(i32 %x, i32 %mask) {
+; CHECK-NOBMI-LABEL: in_constant_y_one:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    xorl $1, %edi
+; CHECK-NOBMI-NEXT:    andl %esi, %edi
+; CHECK-NOBMI-NEXT:    xorl $1, %edi
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI-LABEL: in_constant_y_one:
+; CHECK-BMI:       # %bb.0:
+; CHECK-BMI-NEXT:    andl %esi, %edi
+; CHECK-BMI-NEXT:    notl %esi
+; CHECK-BMI-NEXT:    andl $1, %esi
+; CHECK-BMI-NEXT:    orl %edi, %esi
+; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    retq
+  %n0 = xor i32 %x, 1 ; %y
+  %n1 = and i32 %n0, %mask
+  %r = xor i32 %n1, 1 ; %y
+  ret i32 %r
+}
+; ============================================================================ ;
 ; Negative tests. Should not be folded.
 ; ============================================================================ ;
 ; Multi-use tests.

@@ -60,7 +60,7 @@ namespace {
   /// as the given instruction and the use.
   struct CapturesBefore : public CaptureTracker {
 
-    CapturesBefore(bool ReturnCaptures, const Instruction *I, DominatorTree *DT,
+    CapturesBefore(bool ReturnCaptures, const Instruction *I, const DominatorTree *DT,
                    bool IncludeI, OrderedBasicBlock *IC)
       : OrderedBB(IC), BeforeHere(I), DT(DT),
         ReturnCaptures(ReturnCaptures), IncludeI(IncludeI), Captured(false) {}
@@ -140,7 +140,7 @@ namespace {
 
     OrderedBasicBlock *OrderedBB;
     const Instruction *BeforeHere;
-    DominatorTree *DT;
+    const DominatorTree *DT;
 
     bool ReturnCaptures;
     bool IncludeI;
@@ -184,7 +184,7 @@ bool llvm::PointerMayBeCaptured(const Value *V,
 /// queries about relative order among instructions in the same basic block.
 bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
                                       bool StoreCaptures, const Instruction *I,
-                                      DominatorTree *DT, bool IncludeI,
+                                      const DominatorTree *DT, bool IncludeI,
                                       OrderedBasicBlock *OBB) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");

@@ -821,7 +821,7 @@ class ZPRAsmOperand <string name, int Width>: AsmOperandClass {
   let PredicateMethod = "isSVEVectorRegOfWidth<"
                             # Width # ", AArch64::ZPRRegClassID>";
   let RenderMethod = "addRegOperands";
-  let ParserMethod = "tryParseSVEDataVector<"
+  let ParserMethod = "tryParseSVEDataVector<false, "
                                # !if(!eq(Width, 0), "false", "true") # ">";
 }
 
@@ -934,6 +934,64 @@ def ZZZZ_d : RegisterOperand<ZPR4, "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 4>;
 }
 
+class ZPRExtendAsmOperand<string ShiftExtend, int RegWidth, int Scale>
+    : AsmOperandClass {
+  let Name = "ZPRExtend" # ShiftExtend # RegWidth # Scale;
+  let PredicateMethod = "isSVEVectorRegWithShiftExtend<"
+                          # RegWidth # ", AArch64::ZPRRegClassID, "
+                          # "AArch64_AM::" # ShiftExtend # ", "
+                          # Scale # ">";
+  let DiagnosticType = "InvalidZPR" # RegWidth # ShiftExtend # Scale;
+  let RenderMethod = "addRegOperands";
+  let ParserMethod = "tryParseSVEDataVector<true, true>";
+}
+
+class ZPRExtendRegisterOperand<bit SignExtend, bit IsLSL, string Repr,
+                               int RegWidth, int Scale> : RegisterOperand<ZPR> {
+  let ParserMatchClass =
+    !cast<AsmOperandClass>("ZPR" # RegWidth # "AsmOpndExt" # Repr # Scale);
+  let PrintMethod = "printRegWithShiftExtend<"
+                          # !if(SignExtend, "true", "false") # ", "
+                          # Scale # ", "
+                          # !if(IsLSL, "'x'", "'w'") # ", "
+                          # !if(!eq(RegWidth, 32), "'s'", "'d'") # ">";
+}
+
+foreach RegWidth = [32, 64] in {
+  // UXTW(8|16|32|64)
+  def ZPR#RegWidth#AsmOpndExtUXTW8     : ZPRExtendAsmOperand<"UXTW", RegWidth, 8>;
+  def ZPR#RegWidth#AsmOpndExtUXTW16    : ZPRExtendAsmOperand<"UXTW", RegWidth, 16>;
+  def ZPR#RegWidth#AsmOpndExtUXTW32    : ZPRExtendAsmOperand<"UXTW", RegWidth, 32>;
+  def ZPR#RegWidth#AsmOpndExtUXTW64    : ZPRExtendAsmOperand<"UXTW", RegWidth, 64>;
+
+  def ZPR#RegWidth#ExtUXTW8            : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 8>;
+  def ZPR#RegWidth#ExtUXTW16           : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 16>;
+  def ZPR#RegWidth#ExtUXTW32           : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 32>;
+  def ZPR#RegWidth#ExtUXTW64           : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 64>;
+
+  // SXTW(8|16|32|64)
+  def ZPR#RegWidth#AsmOpndExtSXTW8     : ZPRExtendAsmOperand<"SXTW", RegWidth, 8>;
+  def ZPR#RegWidth#AsmOpndExtSXTW16    : ZPRExtendAsmOperand<"SXTW", RegWidth, 16>;
+  def ZPR#RegWidth#AsmOpndExtSXTW32    : ZPRExtendAsmOperand<"SXTW", RegWidth, 32>;
+  def ZPR#RegWidth#AsmOpndExtSXTW64    : ZPRExtendAsmOperand<"SXTW", RegWidth, 64>;
+
+  def ZPR#RegWidth#ExtSXTW8            : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 8>;
+  def ZPR#RegWidth#ExtSXTW16           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 16>;
+  def ZPR#RegWidth#ExtSXTW32           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 32>;
+  def ZPR#RegWidth#ExtSXTW64           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 64>;
+}
+
+// LSL(8|16|32|64)
+def ZPR64AsmOpndExtLSL8      : ZPRExtendAsmOperand<"LSL", 64, 8>;
+def ZPR64AsmOpndExtLSL16     : ZPRExtendAsmOperand<"LSL", 64, 16>;
+def ZPR64AsmOpndExtLSL32     : ZPRExtendAsmOperand<"LSL", 64, 32>;
+def ZPR64AsmOpndExtLSL64     : ZPRExtendAsmOperand<"LSL", 64, 64>;
+
+def ZPR64ExtLSL8             : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 8>;
+def ZPR64ExtLSL16            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 16>;
+def ZPR64ExtLSL32            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 32>;
+def ZPR64ExtLSL64            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 64>;
+
 class GPR64ShiftExtendAsmOperand <string AsmOperandName, int Scale, string RegClass> : AsmOperandClass {
   let Name = AsmOperandName # Scale;
   let PredicateMethod = "isGPR64WithShiftExtend<AArch64::"#RegClass#"RegClassID, " # Scale # ">";
@@ -944,7 +1002,7 @@ class GPR64ShiftExtendAsmOperand <string AsmOperandName, int Scale, string RegCl
 
 class GPR64ExtendRegisterOperand<string Name, int Scale, RegisterClass RegClass> : RegisterOperand<RegClass>{
   let ParserMatchClass = !cast<AsmOperandClass>(Name);
-  let PrintMethod = "printRegWithShiftExtend<false, " # Scale # ", 'x'>";
+  let PrintMethod = "printRegWithShiftExtend<false, " # Scale # ", 'x', 0>";
 }
 
 foreach Scale = [8, 16, 32, 64] in {

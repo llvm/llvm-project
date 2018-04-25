@@ -114,10 +114,6 @@ void LLVMAddAggressiveDCEPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createAggressiveDCEPass());
 }
 
-void LLVMAddAggressiveInstCombinerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createAggressiveInstCombinerPass());
-}
-
 void LLVMAddBitTrackingDCEPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createBitTrackingDCEPass());
 }
