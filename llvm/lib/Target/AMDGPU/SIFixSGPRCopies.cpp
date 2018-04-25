@@ -69,6 +69,7 @@
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDGPUMCUtils.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -450,6 +451,67 @@ static bool isReachable(const MachineInstr *From,
            (const MachineBasicBlock *MBB) { return MBB == MBBFrom; });
 }
 
+// Writelane is special in that it can use SGPR and M0 (which would normally
+// count as using the constant bus twice - but in this case it is allowed as the
+// lane selector doesn't count as a use of the constant bus).
+// However, it is still required to abide by the 1 SGPR rule
+// Apply a fix here as we might have multiple SGPRs after legalizing VGPRs to
+// SGPRs
+static bool fixWriteLane(MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  bool Changed = false;
+
+  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
+                                                  BI != BE; ++BI) {
+    MachineBasicBlock &MBB = *BI;
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
+         I != E; ++I) {
+      MachineInstr &MI = *I;
+
+      if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32) {
+        int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+        int Src1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
+        MachineOperand &Src0 = MI.getOperand(Src0Idx);
+        MachineOperand &Src1 = MI.getOperand(Src1Idx);
+
+        // Check to see if the instruction violates the 1 SGPR rule
+        if ((Src0.isReg() && TRI->isSGPRReg(MRI, Src0.getReg()) && Src0.getReg() != AMDGPU::M0) &&
+            (Src1.isReg() && TRI->isSGPRReg(MRI, Src1.getReg()) && Src1.getReg() != AMDGPU::M0)) {
+
+          // Check for trivially easy constant prop into one of the operands
+          // If this is the case then perform the operation now to resolve SGPR
+          // issue
+          bool Resolved = false;
+          std::vector<MachineOperand*> MOs { &Src0, &Src1 };
+          for (auto MO : MOs ) {
+            auto Imm = AMDGPU::foldToImm(*MO, &MRI, TII);
+            if (Imm && TII->isInlineConstant(APInt(64, *Imm, true))) {
+              MO->ChangeToImmediate(*Imm);
+              Changed = true;
+              Resolved = true;
+              break;
+            }
+          }
+
+          if (!Resolved) {
+            // Haven't managed to resolve by replacing an SGPR with an immediate
+            // Move src1 to be in M0
+            BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+              .add(Src1);
+            Src1.ChangeToRegister(AMDGPU::M0, false);
+            Changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  return Changed;
+}
+
 // Return the first non-prologue instruction in the block.
 static MachineBasicBlock::iterator
 getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
@@ -790,6 +852,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  fixWriteLane(MF);
 
   if (MF.getTarget().getOptLevel() > CodeGenOpt::None && EnableM0Merge)
     hoistAndMergeSGPRInits(AMDGPU::M0, MRI, TRI, *MDT, TII);
