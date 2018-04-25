@@ -24,6 +24,34 @@ ForwardIt remove_if(ForwardIt, ForwardIt, UnaryPredicate);
 template <typename ForwardIt>
 ForwardIt unique(ForwardIt, ForwardIt);
 
+template <typename T>
+struct default_delete;
+
+template <typename T, typename Deleter = std::default_delete<T>>
+struct unique_ptr {
+  T *release() noexcept;
+};
+
+template <typename T>
+struct char_traits;
+
+template <typename T>
+struct allocator;
+
+template <typename CharT,
+          typename Traits = char_traits<CharT>,
+          typename Allocator = allocator<CharT>>
+struct basic_string {
+  bool empty() const;
+};
+
+typedef basic_string<char> string;
+
+template <typename T, typename Allocator = std::allocator<T>>
+struct vector {
+  bool empty() const noexcept;
+};
+
 // the check should be able to match std lib calls even if the functions are
 // declared inside inline namespaces
 inline namespace v1 {
@@ -62,6 +90,18 @@ void warning() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
 
   std::unique(nullptr, nullptr);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+
+  std::unique_ptr<Foo> UPtr;
+  UPtr.release();
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+
+  std::string Str;
+  Str.empty();
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+
+  std::vector<Foo> Vec;
+  Vec.empty();
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
 
   // test discarding return values inside different kinds of statements
@@ -136,6 +176,15 @@ void noWarning() {
   auto RemoveIfRetval = std::remove_if(nullptr, nullptr, nullptr);
 
   auto UniqueRetval = std::unique(nullptr, nullptr);
+
+  std::unique_ptr<Foo> UPtrNoWarning;
+  auto ReleaseRetval = UPtrNoWarning.release();
+
+  std::string StrNoWarning;
+  auto StrEmptyRetval = StrNoWarning.empty();
+
+  std::vector<Foo> VecNoWarning;
+  auto VecEmptyRetval = VecNoWarning.empty();
 
   // test using the return value in different kinds of expressions
   useFuture(std::async(increment, 42));

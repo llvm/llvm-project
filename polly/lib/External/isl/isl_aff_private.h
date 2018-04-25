@@ -162,6 +162,9 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_substitute(
 	__isl_take isl_pw_multi_aff *pma, enum isl_dim_type type, unsigned pos,
 	__isl_keep isl_pw_aff *subs);
 
+isl_stat isl_pw_aff_check_named_params(__isl_keep isl_pw_aff *pa);
+isl_stat isl_pw_multi_aff_check_named_params(__isl_keep isl_pw_multi_aff *pma);
+
 isl_bool isl_pw_aff_matching_params(__isl_keep isl_pw_aff *pa,
 	__isl_keep isl_space *space);
 isl_stat isl_pw_aff_check_match_domain_space(__isl_keep isl_pw_aff *pa,

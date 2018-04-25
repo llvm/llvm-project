@@ -20,8 +20,8 @@
  *
  *===-----------------------------------------------------------------------===
  */
-#ifndef _WMMINTRIN_AES_H
-#define _WMMINTRIN_AES_H
+#ifndef __WMMINTRIN_AES_H
+#define __WMMINTRIN_AES_H
 
 #include <emmintrin.h>
 
@@ -148,4 +148,4 @@ _mm_aesimc_si128(__m128i __V)
 
 #undef __DEFAULT_FN_ATTRS
 
-#endif  /* _WMMINTRIN_AES_H */
+#endif  /* __WMMINTRIN_AES_H */

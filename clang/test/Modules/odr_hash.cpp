@@ -1635,6 +1635,96 @@ S6 s6;
 // expected-note@first.h:* {{but in 'FirstModule' found field 'x'}}
 #endif
 
+#if defined(FIRST)
+struct S7 {
+  template<int> void run() {}
+  template<> void run<1>() {}
+};
+#elif defined(SECOND)
+struct S7 {
+  template<int> void run() {}
+  void run() {}
+};
+#else
+S7 s7;
+// expected-error@second.h:* {{'TemplateArgument::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'run' with no template arguments}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'run' with template arguments}}
+#endif
+
+#if defined(FIRST)
+struct S8 {
+  static int a, b;
+  template<int&> void run() {}
+  template<int&, int&> void run() {}
+  template<> void run<a>() {}
+};
+#elif defined(SECOND)
+struct S8 {
+  static int a, b;
+  template<int&> void run() {}
+  template<int&, int&> void run() {}
+  template<> void run<a, b>() {}
+};
+#else
+S8 s8;
+// expected-error@second.h:* {{'TemplateArgument::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'run' with 2 template arguments}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'run' with 1 template argument}}
+#endif
+
+#if defined(FIRST)
+struct S9 {
+  static int a, b;
+  template<int&> void run() {}
+  template<> void run<a>() {}
+};
+#elif defined(SECOND)
+struct S9 {
+  static int a, b;
+  template<int&> void run() {}
+  template<> void run<b>() {}
+};
+#else
+S9 s9;
+// expected-error@second.h:* {{'TemplateArgument::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'run' with 'b' for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'run' with 'a' for 1st template argument}}
+#endif
+
+#if defined(FIRST)
+struct S10 {
+  static int a, b;
+  template<int, int&...> void run() {}
+  template<> void run<1, a>() {}
+};
+#elif defined(SECOND)
+struct S10 {
+  static int a, b;
+  template<int, int&...> void run() {}
+  template<> void run<1, b>() {}
+};
+#else
+S10 s10;
+// expected-error@second.h:* {{'TemplateArgument::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'run' with 'b' for 2nd template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'run' with 'a' for 2nd template argument}}
+#endif
+
+#if defined(FIRST)
+struct S11 {
+  static int a, b;
+  template<int, int&...> void run() {}
+  template<> void run<1, a>() {}
+};
+#elif defined(SECOND)
+struct S11 {
+  static int a, b;
+  template<int, int&...> void run() {}
+  template<> void run<1, a, a>() {}
+};
+#else
+S11 s11;
+// expected-error@second.h:* {{'TemplateArgument::S11' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'run' with 3 template arguments}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'run' with 2 template arguments}}
+#endif
+
 #define DECLS                   \
   OneClass<int> a;              \
   OneInt<1> b;                  \
@@ -1642,7 +1732,20 @@ S6 s6;
   using d = OneInt<2>;          \
   using e = OneInt<2 + 2>;      \
   OneTemplateClass<OneClass> f; \
-  OneTemplateInt<OneInt> g;
+  OneTemplateInt<OneInt> g;     \
+  static int i1, i2;            \
+  template <int &>              \
+  void Function() {}            \
+  template <int &, int &>       \
+  void Function() {}            \
+  template <>                   \
+  void Function<i1>() {}        \
+  template <>                   \
+  void Function<i2>() {}        \
+  template <>                   \
+  void Function<i1, i2>() {}    \
+  template <>                   \
+  void Function<i2, i1>() {}
 
 #if defined(FIRST) || defined(SECOND)
 template <class> struct OneClass{};

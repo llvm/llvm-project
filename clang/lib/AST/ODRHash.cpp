@@ -148,6 +148,8 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
       AddQualType(TA.getAsType());
       break;
     case TemplateArgument::Declaration:
+      AddDecl(TA.getAsDecl());
+      break;
     case TemplateArgument::NullPtr:
     case TemplateArgument::Integral:
       break;
@@ -329,6 +331,15 @@ public:
     }
 
     AddQualType(D->getReturnType());
+
+    const auto* SpecializationArgs = D->getTemplateSpecializationArgs();
+    Hash.AddBoolean(SpecializationArgs);
+    if (SpecializationArgs) {
+      ID.AddInteger(SpecializationArgs->size());
+      for (const TemplateArgument &TA : SpecializationArgs->asArray()) {
+        Hash.AddTemplateArgument(TA);
+      }
+    }
 
     Inherited::VisitFunctionDecl(D);
   }

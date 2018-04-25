@@ -1616,7 +1616,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
   //   4.4.2-rc4
   //   4.4.x-patched
   // And retains any patch number it finds.
-  StringRef PatchText = Second.second.str();
+  StringRef PatchText = Second.second;
   if (!PatchText.empty()) {
     if (size_t EndNumber = PatchText.find_first_not_of("0123456789")) {
       // Try to parse the number and any suffix.

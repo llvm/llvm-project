@@ -52,15 +52,16 @@ verifies the tags. Currently, the following sequence is used:
   // int foo(int *a) { return *a; }
   // clang -O2 --target=aarch64-linux -fsanitize=hwaddress -c load.c
   foo:
-       0:	08 dc 44 d3 	ubfx	x8, x0, #4, #52  // shadow address
-       4:	08 01 40 39 	ldrb	w8, [x8]         // load shadow
-       8:	09 fc 78 d3 	lsr	x9, x0, #56      // address tag
-       c:	3f 01 08 6b 	cmp	w9, w8           // compare tags
-      10:	61 00 00 54 	b.ne	#12              // jump on mismatch
-      14:	00 00 40 b9 	ldr	w0, [x0]         // original load
-      18:	c0 03 5f d6 	ret
-      1c:	40 20 21 d4 	brk	#0x902           // trap
-
+       0:	08 00 00 90 	adrp	x8, 0 <__hwasan_shadow>
+       4:	08 01 40 f9 	ldr	x8, [x8]         // shadow base (to be resolved by the loader)
+       8:	09 dc 44 d3 	ubfx	x9, x0, #4, #52  // shadow offset
+       c:	28 69 68 38 	ldrb	w8, [x9, x8]     // load shadow tag
+      10:	09 fc 78 d3 	lsr	x9, x0, #56      // extract address tag
+      14:	3f 01 08 6b 	cmp	w9, w8           // compare tags
+      18:	61 00 00 54 	b.ne	24               // jump on mismatch
+      1c:	00 00 40 b9 	ldr	w0, [x0]         // original load
+      20:	c0 03 5f d6 	ret
+      24:	40 20 21 d4 	brk	#0x902           // trap
 
 Alternatively, memory accesses are prefixed with a function call.
 

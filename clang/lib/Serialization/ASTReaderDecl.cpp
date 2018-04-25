@@ -381,6 +381,7 @@ namespace clang {
     void VisitBindingDecl(BindingDecl *BD);
     void VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D);
     DeclID VisitTemplateDecl(TemplateDecl *D);
+    void VisitConceptDecl(ConceptDecl *D);
     RedeclarableResult VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
     void VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D);
@@ -2033,6 +2034,11 @@ DeclID ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
   return PatternID;
 }
 
+void ASTDeclReader::VisitConceptDecl(ConceptDecl *D) {
+  VisitTemplateDecl(D);
+  D->setConstraintExpr(Record.readExpr());
+}
+
 ASTDeclReader::RedeclarableResult
 ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarable(D);
@@ -3596,6 +3602,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_TYPE_ALIAS_TEMPLATE:
     D = TypeAliasTemplateDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_CONCEPT:
+    D = ConceptDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_STATIC_ASSERT:
     D = StaticAssertDecl::CreateDeserialized(Context, ID);

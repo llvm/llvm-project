@@ -3073,6 +3073,11 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   return nullptr;
 }
 
+Decl *TemplateDeclInstantiator::VisitConceptDecl(ConceptDecl *D) {
+  llvm_unreachable("Concept definitions cannot reside inside a template");
+  return nullptr;
+}
+
 Decl *TemplateDeclInstantiator::VisitDecl(Decl *D) {
   llvm_unreachable("Unexpected decl");
 }

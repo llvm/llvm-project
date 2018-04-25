@@ -733,6 +733,7 @@ void PrintPreambleAction::ExecuteAction() {
   case InputKind::ObjCXX:
   case InputKind::OpenCL:
   case InputKind::CUDA:
+  case InputKind::HIP:
     break;
       
   case InputKind::Unknown:

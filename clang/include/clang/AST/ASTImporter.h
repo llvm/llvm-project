@@ -83,10 +83,6 @@ class TypeSourceInfo;
     ///  the "from" source manager to the corresponding CXXBasesSpecifier
     ///  in the "to" source manager.
     ImportedCXXBaseSpecifierMap ImportedCXXBaseSpecifiers;
-
-    /// \brief Imported, anonymous tag declarations that are missing their 
-    /// corresponding typedefs.
-    SmallVector<TagDecl *, 4> AnonTagsWithPendingTypedefs;
     
     /// \brief Declaration (from, to) pairs that are known not to be equivalent
     /// (which we have already complained about).
@@ -136,6 +132,9 @@ class TypeSourceInfo;
     /// \returns the equivalent declaration in the "to" context, or a NULL type 
     /// if an error occurred.
     Decl *Import(Decl *FromD);
+    Decl *Import(const Decl *FromD) {
+      return Import(const_cast<Decl *>(FromD));
+    }
 
     /// \brief Return the copy of the given declaration in the "to" context if
     /// it has already been imported from the "from" context.  Otherwise return
