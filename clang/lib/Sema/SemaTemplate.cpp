@@ -232,9 +232,11 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
     } else {
       assert(isa<ClassTemplateDecl>(TD) || isa<TemplateTemplateParmDecl>(TD) ||
              isa<TypeAliasTemplateDecl>(TD) || isa<VarTemplateDecl>(TD) ||
-             isa<BuiltinTemplateDecl>(TD));
+             isa<BuiltinTemplateDecl>(TD) || isa<ConceptDecl>(TD));
       TemplateKind =
-          isa<VarTemplateDecl>(TD) ? TNK_Var_template : TNK_Type_template;
+          isa<VarTemplateDecl>(TD) ? TNK_Var_template :
+          isa<ConceptDecl>(TD) ? TNK_Concept_template :
+          TNK_Type_template;
     }
   }
 
@@ -3034,7 +3036,8 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
 
   TemplateDecl *Template = Name.getAsTemplateDecl();
   if (!Template || isa<FunctionTemplateDecl>(Template) ||
-      isa<VarTemplateDecl>(Template)) {
+      isa<VarTemplateDecl>(Template) ||
+      isa<ConceptDecl>(Template)) {
     // We might have a substituted template template parameter pack. If so,
     // build a template specialization type for it.
     if (Name.getAsSubstTemplateTemplateParmPack())
@@ -3988,6 +3991,18 @@ Sema::CheckVarTemplateId(const CXXScopeSpec &SS,
                                   /*FoundD=*/nullptr, TemplateArgs);
 }
 
+ExprResult
+Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
+                             const DeclarationNameInfo &NameInfo,
+                             ConceptDecl *Template,
+                             SourceLocation TemplateLoc,
+                             const TemplateArgumentListInfo *TemplateArgs) {
+  // TODO: Do concept specialization here.
+  Diag(Template->getLocation(), diag::err_concept_feature_unimplemented)
+      << "can not form concept template-id";
+  return ExprError();
+}
+
 ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
                                      SourceLocation TemplateKWLoc,
                                      LookupResult &R,
@@ -4009,12 +4024,19 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
 
   // In C++1y, check variable template ids.
   bool InstantiationDependent;
-  if (R.getAsSingle<VarTemplateDecl>() &&
-      !TemplateSpecializationType::anyDependentTemplateArguments(
-           *TemplateArgs, InstantiationDependent)) {
+  const bool DependentArguments =
+    TemplateSpecializationType::anyDependentTemplateArguments(
+      *TemplateArgs, InstantiationDependent);
+  if (R.getAsSingle<VarTemplateDecl>() && !DependentArguments) {
     return CheckVarTemplateId(SS, R.getLookupNameInfo(),
                               R.getAsSingle<VarTemplateDecl>(),
                               TemplateKWLoc, TemplateArgs);
+  }
+
+  if (R.getAsSingle<ConceptDecl>() && !DependentArguments) {
+    return CheckConceptTemplateId(SS, R.getLookupNameInfo(),
+                                  R.getAsSingle<ConceptDecl>(),
+                                  TemplateKWLoc, TemplateArgs);
   }
 
   // We don't want lookup warnings at this point.
@@ -7685,6 +7707,61 @@ Decl *Sema::ActOnTemplateDeclarator(Scope *S,
                                     Declarator &D) {
   Decl *NewDecl = HandleDeclarator(S, D, TemplateParameterLists);
   ActOnDocumentableDecl(NewDecl);
+  return NewDecl;
+}
+
+ConceptDecl *Sema::ActOnConceptDefinition(Scope *S,
+    MultiTemplateParamsArg TemplateParameterLists, IdentifierInfo *Name,
+    SourceLocation NameLoc, Expr *ConstraintExpr) {
+  // C++2a [temp.concept]p3:
+  // A concept-definition shall appear in the global scope or in a namespace
+  // scope.
+  assert(
+      CurContext->isFileContext() &&
+      "We check during parsing that 'concept's only occur at namespace scope");
+
+  // Forbid any prior declaration of this name within the current namespace.
+  LookupResult Previous(*this,
+                        DeclarationNameInfo(DeclarationName(Name), NameLoc),
+                        LookupOrdinaryName);
+  LookupName(Previous, S);
+  if (!Previous.empty()) {
+    const NamedDecl *PrevDecl = Previous.getRepresentativeDecl();
+    if (PrevDecl->getDeclContext()->Equals(CurContext)) {
+      if (Previous.isSingleResult() &&
+          isa<ConceptDecl>(Previous.getFoundDecl())) {
+        Diag(NameLoc, diag::err_redefinition) << Name;
+      } else {
+        Diag(NameLoc, diag::err_redefinition_different_kind) << Name;
+      }
+      Diag(PrevDecl->getLocation(), diag::note_previous_decl) << PrevDecl;
+      return nullptr;
+    }
+  }
+
+  ConceptDecl *NewDecl = ConceptDecl::Create(Context, CurContext, NameLoc,
+                                             Name, TemplateParameterLists[0],
+                                             ConstraintExpr);
+
+  if (!NewDecl)
+    return nullptr;
+
+  if (NewDecl->getAssociatedConstraints()) {
+    // C++2a [temp.concept]p4:
+    // A concept shall not have associated constraints.
+    // TODO: Make a test once we have actual associated constraints.
+    Diag(NameLoc, diag::err_concept_no_associated_constraints);
+    NewDecl->setInvalidDecl();
+  }
+
+  assert((S->isTemplateParamScope() || !TemplateParameterLists[0]->size()) &&
+         "Not in template param scope?");
+  assert(S->getParent() && !S->getParent()->isTemplateParamScope() &&
+         "Parent scope should exist and not be template parameter.");
+
+  ActOnDocumentableDecl(NewDecl);
+  PushOnScopeChains(NewDecl, S->getParent(), /*AddToContext=*/true);
+
   return NewDecl;
 }
 

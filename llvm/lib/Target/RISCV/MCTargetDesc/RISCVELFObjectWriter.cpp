@@ -23,6 +23,15 @@ public:
 
   ~RISCVELFObjectWriter() override;
 
+  // Return true if the given relocation must be with a symbol rather than
+  // section plus offset.
+  bool needsRelocateWithSymbol(const MCSymbol &Sym,
+                               unsigned Type) const override {
+    // TODO: this is very conservative, update once RISC-V psABI requirements
+    //       are clarified.
+    return true;
+  }
+
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
@@ -67,6 +76,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_RVC_JUMP;
   case RISCV::fixup_riscv_rvc_branch:
     return ELF::R_RISCV_RVC_BRANCH;
+  case RISCV::fixup_riscv_call:
+    return ELF::R_RISCV_CALL;
   }
 }
 

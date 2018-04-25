@@ -178,7 +178,7 @@ static bool updateOperand(FoldCandidate &Fold,
         if (!(Fold.ImmToFold & 0xffff)) {
           Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
           Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-          Old.ChangeToImmediate(Fold.ImmToFold >> 16);
+          Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
           return true;
         }
         Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);

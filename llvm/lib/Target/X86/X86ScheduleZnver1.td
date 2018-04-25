@@ -208,6 +208,8 @@ defm : ZnWriteResFpuPair<WriteFShuffle,  [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFVarShuffle, [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFMul,      [ZnFPU0],  5>;
 defm : ZnWriteResFpuPair<WriteFMA,       [ZnFPU03], 5>;
+defm : ZnWriteResFpuPair<WriteFMAS,      [ZnFPU03], 5>;
+defm : ZnWriteResFpuPair<WriteFMAY,      [ZnFPU03], 5>;
 defm : ZnWriteResFpuPair<WriteFRcp,      [ZnFPU01], 5>;
 defm : ZnWriteResFpuPair<WriteFRsqrt,    [ZnFPU01], 5>;
 defm : ZnWriteResFpuPair<WriteFSqrt,     [ZnFPU3], 20>;
@@ -230,6 +232,7 @@ defm : ZnWriteResFpuPair<WriteBlend,      [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteShuffle256, [ZnFPU],   2>;
 defm : ZnWriteResFpuPair<WriteVarShuffle256, [ZnFPU],   2>;
 defm : ZnWriteResFpuPair<WritePSADBW,     [ZnFPU0],  3>;
+defm : ZnWriteResFpuPair<WritePHMINPOS,   [ZnFPU0],  4>;
 
 // Vector Shift Operations
 defm : ZnWriteResFpuPair<WriteVarVecShift, [ZnFPU12], 1>;

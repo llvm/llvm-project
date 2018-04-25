@@ -44,8 +44,8 @@ registers:
   - { id: 2, class: vgpr_32 }
 stack:
   - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
-      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
-      di-location: '' }
+      callee-saved-register: '', local-offset: 0, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
@@ -65,8 +65,8 @@ registers:
   - { id: 2, class: vgpr_32 }
 stack:
   - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
-      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
-      di-location: '' }
+      callee-saved-register: '', local-offset: 0, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
@@ -87,8 +87,8 @@ registers:
   - { id: 2, class: vgpr_32 }
 stack:
   - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
-      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
-      di-location: '' }
+      callee-saved-register: '', local-offset: 0, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
@@ -109,8 +109,8 @@ registers:
   - { id: 2, class: vgpr_32 }
 stack:
   - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
-      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
-      di-location: '' }
+      callee-saved-register: '', local-offset: 0, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
@@ -130,8 +130,8 @@ registers:
   - { id: 2, class: vgpr_32 }
 stack:
   - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
-      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
-      di-location: '' }
+      callee-saved-register: '', local-offset: 0, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
@@ -151,8 +151,8 @@ registers:
   - { id: 2, class: vgpr_32 }
 stack:
   - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
-      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
-      di-location: '' }
+      callee-saved-register: '', local-offset: 0, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec

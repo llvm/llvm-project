@@ -164,6 +164,7 @@ defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
 defm : SLMWriteResPair<WritePSADBW, [SLM_FPC_RSV0],  4>;
+defm : SLMWriteResPair<WritePHMINPOS,  [SLM_FPC_RSV0],   4>;
 
 // Vector insert/extract operations.
 defm : SLMWriteResPair<WriteVecInsert, [SLM_FPC_RSV0],  1>;
@@ -283,6 +284,8 @@ defm : SLMWriteResPair<WriteShuffle256, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle256, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarVecShift, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFMA, [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteFMAS, [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteFMAY, [SLM_FPC_RSV0],  1>;
 
 // Instruction overrides
 

@@ -15,7 +15,8 @@ add_clang_unittest(ASTMatchersTests
   ASTMatchersInternalTest.cpp
   ASTMatchersNodeTest.cpp
   ASTMatchersNarrowingTest.cpp
-  ASTMatchersTraversalTest.cpp)
+  ASTMatchersTraversalTest.cpp
+  )
 
 target_link_libraries(ASTMatchersTests
   PRIVATE

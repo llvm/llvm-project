@@ -159,7 +159,9 @@ defm : SKLWriteResPair<WriteFDiv,   [SKLPort0], 12>; // 10-14 cycles. // Floatin
 defm : SKLWriteResPair<WriteFSqrt,  [SKLPort0], 15>; // Floating point square root.
 defm : SKLWriteResPair<WriteFRcp,   [SKLPort0], 4>; // Floating point reciprocal estimate.
 defm : SKLWriteResPair<WriteFRsqrt, [SKLPort0], 4>; // Floating point reciprocal square root estimate.
-defm : SKLWriteResPair<WriteFMA,    [SKLPort01], 4>; // Fused Multiply Add.
+defm : SKLWriteResPair<WriteFMA,    [SKLPort01], 4, [1], 1, 6>; // Fused Multiply Add.
+defm : SKLWriteResPair<WriteFMAS,   [SKLPort01], 4, [1], 1, 5>; // Fused Multiply Add (Scalar).
+defm : SKLWriteResPair<WriteFMAY,   [SKLPort01], 4, [1], 1, 7>; // Fused Multiply Add (YMM/ZMM).
 defm : SKLWriteResPair<WriteFSign,   [SKLPort0], 1>; // Floating point fabs/fchs.
 defm : SKLWriteResPair<WriteFLogic, [SKLPort015], 1, [1], 1, 6>; // Floating point and/or/xor logicals.
 defm : SKLWriteResPair<WriteFShuffle,  [SKLPort5],  1>; // Floating point vector shuffles.
@@ -192,6 +194,7 @@ defm : SKLWriteResPair<WriteBlend,  [SKLPort5], 1, [1], 1, 6>; // Vector blends.
 defm : SKLWriteResPair<WriteVarBlend,  [SKLPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : SKLWriteResPair<WriteMPSAD,  [SKLPort5], 4, [2], 2, 6>; // Vector MPSAD.
 defm : SKLWriteResPair<WritePSADBW, [SKLPort5], 3>; // Vector PSADBW.
+defm : SKLWriteResPair<WritePHMINPOS, [SKLPort01], 4, [1], 1, 6>; // Vector PHMINPOS.
 
 // Vector insert/extract operations.
 def : WriteRes<WriteVecInsert, [SKLPort5]> {
@@ -927,7 +930,6 @@ def: InstRW<[SKLWriteResGroup48], (instregex "(V?)ADDPD(Y?)rr",
                                              "(V?)MULPS(Y?)rr",
                                              "(V?)MULSDrr",
                                              "(V?)MULSSrr",
-                                             "(V?)PHMINPOSUWrr",
                                              "(V?)PMADDUBSW(Y?)rr",
                                              "(V?)PMADDWD(Y?)rr",
                                              "(V?)PMULDQ(Y?)rr",
@@ -1883,7 +1885,6 @@ def: InstRW<[SKLWriteResGroup134], (instregex "(V?)ADDPDrm",
                                               "(V?)CVTTPS2DQrm",
                                               "(V?)MULPDrm",
                                               "(V?)MULPSrm",
-                                              "(V?)PHMINPOSUWrm",
                                               "(V?)PMADDUBSWrm",
                                               "(V?)PMADDWDrm",
                                               "(V?)PMULDQrm",
@@ -1894,8 +1895,6 @@ def: InstRW<[SKLWriteResGroup134], (instregex "(V?)ADDPDrm",
                                               "(V?)PMULUDQrm",
                                               "(V?)SUBPDrm",
                                               "(V?)SUBPSrm")>;
-def: InstRW<[SKLWriteResGroup134],
-            (instregex "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)m")>;
 
 def SKLWriteResGroup138 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23]> {
   let Latency = 10;
@@ -2007,8 +2006,6 @@ def: InstRW<[SKLWriteResGroup147], (instregex "VADDPDYrm",
                                               "VPMULUDQYrm",
                                               "VSUBPDYrm",
                                               "VSUBPSYrm")>;
-def: InstRW<[SKLWriteResGroup147],
-            (instregex "VF(N)?M(ADD|SUB|ADDSUB|SUBADD)(132|213|231)P(D|S)Ym")>;
 
 def SKLWriteResGroup149 : SchedWriteRes<[SKLPort5,SKLPort23]> {
   let Latency = 11;

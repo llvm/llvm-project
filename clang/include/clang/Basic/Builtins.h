@@ -211,7 +211,7 @@ public:
     return ID >= (Builtin::FirstTSBuiltin + TSRecords.size());
   }
 
-  /// Return real buitin ID (i.e. ID it would have furing compilation
+  /// Return real builtin ID (i.e. ID it would have during compilation
   /// for AuxTarget).
   unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSRecords.size(); }
 

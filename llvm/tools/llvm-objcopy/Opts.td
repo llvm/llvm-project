@@ -23,7 +23,7 @@ defm split_dwo : Eq<"split-dwo">,
                  HelpText<"Equivalent to extract-dwo on the input file to <dwo-file>, then strip-dwo on the input file">;
 defm add_gnu_debuglink : Eq<"add-gnu-debuglink">,
                          MetaVarName<"debug-file">,
-                         HelpText<"adds a .gnu_debuglink for <debug-file>">;
+                         HelpText<"Add a .gnu_debuglink for <debug-file>">;
 defm remove_section : Eq<"remove-section">,
                       MetaVarName<"section">,
                       HelpText<"Remove <section>">;
@@ -41,11 +41,11 @@ defm add_section : Eq<"add-section">,
                    MetaVarName<"section=file">,
                    HelpText<"Make a section named <section> with the contents of <file>.">;
 def strip_all : Flag<["-", "--"], "strip-all">,
-                HelpText<"Removes non-allocated sections other than .gnu.warning* sections">;
+                HelpText<"Remove non-allocated sections other than .gnu.warning* sections">;
 def strip_all_gnu : Flag<["-", "--"], "strip-all-gnu">,
                     HelpText<"Compaitable with GNU objcopy's --strip-all">;
 def strip_debug : Flag<["-", "--"], "strip-debug">,
-                  HelpText<"Removes all debug information">;
+                  HelpText<"Remove all debug information">;
 def strip_dwo : Flag<["-", "--"], "strip-dwo">,
                 HelpText<"Remove all DWARF .dwo sections from file">;
 def strip_sections : Flag<["-", "--"], "strip-sections">,

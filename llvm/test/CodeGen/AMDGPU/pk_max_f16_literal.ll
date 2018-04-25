@@ -40,7 +40,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_m1:
-; GFX9: v_pk_max_f16 v{{[0-9]+}}, -1.0, v{{[0-9]+}} op_sel:[1,0] op_sel_hi:[0,1]{{$}}
+; GFX9: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, -1.0 op_sel:[0,1] op_sel_hi:[1,0]{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_0_m1(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()

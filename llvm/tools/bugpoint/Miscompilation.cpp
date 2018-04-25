@@ -776,15 +776,15 @@ Error BugDriver::debugMiscompilation() {
 
 /// Get the specified modules ready for code generator testing.
 ///
-static void CleanupAndPrepareModules(BugDriver &BD,
-                                     std::unique_ptr<Module> &Test,
-                                     Module *Safe) {
+static std::unique_ptr<Module>
+CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
+                         Module *Safe) {
   // Clean up the modules, removing extra cruft that we don't need anymore...
-  Test = BD.performFinalCleanups(Test.get());
+  Test = BD.performFinalCleanups(std::move(Test));
 
   // If we are executing the JIT, we have several nasty issues to take care of.
   if (!BD.isExecutingJIT())
-    return;
+    return Test;
 
   // First, if the main function is in the Safe module, we must add a stub to
   // the Test module to call into it.  Thus, we create a new function `main'
@@ -930,6 +930,8 @@ static void CleanupAndPrepareModules(BugDriver &BD,
     errs() << "Bugpoint has a bug, which corrupted a module!!\n";
     abort();
   }
+
+  return Test;
 }
 
 /// This is the predicate function used to check to see if the "Test" portion of
@@ -939,7 +941,7 @@ static void CleanupAndPrepareModules(BugDriver &BD,
 static Expected<bool> TestCodeGenerator(BugDriver &BD,
                                         std::unique_ptr<Module> Test,
                                         std::unique_ptr<Module> Safe) {
-  CleanupAndPrepareModules(BD, Test, Safe.get());
+  Test = CleanupAndPrepareModules(BD, std::move(Test), Safe.get());
 
   SmallString<128> TestModuleBC;
   int TestModuleFD;
@@ -1030,7 +1032,8 @@ Error BugDriver::debugCodeGenerator() {
       SplitFunctionsOutOfModule(ToNotCodeGen.get(), *Funcs, VMap);
 
   // Condition the modules
-  CleanupAndPrepareModules(*this, ToCodeGen, ToNotCodeGen.get());
+  ToCodeGen =
+      CleanupAndPrepareModules(*this, std::move(ToCodeGen), ToNotCodeGen.get());
 
   SmallString<128> TestModuleBC;
   int TestModuleFD;

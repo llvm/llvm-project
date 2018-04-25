@@ -9,9 +9,7 @@ define i32 @test_call_external(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a1, %hi(external_function)
-; RV32I-NEXT:    addi a1, a1, %lo(external_function)
-; RV32I-NEXT:    jalr a1
+; RV32I-NEXT:    call external_function
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -33,9 +31,7 @@ define i32 @test_call_defined(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a1, %hi(defined_function)
-; RV32I-NEXT:    addi a1, a1, %lo(defined_function)
-; RV32I-NEXT:    jalr a1
+; RV32I-NEXT:    call defined_function
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -77,10 +73,7 @@ define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp)
 ; RV32I-NEXT:    sw s1, 8(sp)
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lui a0, %hi(fastcc_function)
-; RV32I-NEXT:    addi a2, a0, %lo(fastcc_function)
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    jalr a2
+; RV32I-NEXT:    call fastcc_function
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    lw s1, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
@@ -101,17 +94,14 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    sw a0, 4(sp)
 ; RV32I-NEXT:    sw a0, 0(sp)
-; RV32I-NEXT:    lui a0, %hi(external_many_args)
-; RV32I-NEXT:    addi t0, a0, %lo(external_many_args)
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    mv a2, s1
-; RV32I-NEXT:    mv a3, s1
-; RV32I-NEXT:    mv a4, s1
-; RV32I-NEXT:    mv a5, s1
-; RV32I-NEXT:    mv a6, s1
-; RV32I-NEXT:    mv a7, s1
-; RV32I-NEXT:    jalr t0
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a2, a0
+; RV32I-NEXT:    mv a3, a0
+; RV32I-NEXT:    mv a4, a0
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    mv a6, a0
+; RV32I-NEXT:    mv a7, a0
+; RV32I-NEXT:    call external_many_args
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    lw s1, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
@@ -139,8 +129,6 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp)
 ; RV32I-NEXT:    sw a0, 4(sp)
 ; RV32I-NEXT:    sw a0, 0(sp)
-; RV32I-NEXT:    lui a1, %hi(defined_many_args)
-; RV32I-NEXT:    addi t0, a1, %lo(defined_many_args)
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a3, a0
@@ -148,7 +136,7 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV32I-NEXT:    mv a5, a0
 ; RV32I-NEXT:    mv a6, a0
 ; RV32I-NEXT:    mv a7, a0
-; RV32I-NEXT:    jalr t0
+; RV32I-NEXT:    call defined_many_args
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret

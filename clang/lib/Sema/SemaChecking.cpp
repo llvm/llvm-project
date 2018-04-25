@@ -11277,7 +11277,12 @@ void Sema::CheckArrayAccess(const Expr *expr) {
         const ArraySubscriptExpr *ASE = cast<ArraySubscriptExpr>(expr);
         CheckArrayAccess(ASE->getBase(), ASE->getIdx(), ASE,
                          AllowOnePastEnd > 0);
-        return;
+        expr = ASE->getBase();
+        break;
+      }
+      case Stmt::MemberExprClass: {
+        expr = cast<MemberExpr>(expr)->getBase();
+        break;
       }
       case Stmt::OMPArraySectionExprClass: {
         const OMPArraySectionExpr *ASE = cast<OMPArraySectionExpr>(expr);

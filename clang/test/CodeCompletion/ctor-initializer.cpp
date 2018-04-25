@@ -58,5 +58,9 @@ struct B {
   // RUN: %clang_cc1 -fsyntax-only -std=c++98 -code-completion-at=%s:57:9 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
   // RUN: %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:57:9 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
   // CHECK-CC7: COMPLETION: Pattern : member1(<#args#>
+  // Check in the middle and at the end of identifier too.
+  // RUN: %clang_cc1 -fsyntax-only -std=c++98 -code-completion-at=%s:57:13 %s -o - | FileCheck -check-prefix=CHECK-CC8 %s
+  // RUN: %clang_cc1 -fsyntax-only -std=c++98 -code-completion-at=%s:57:16 %s -o - | FileCheck -check-prefix=CHECK-CC8 %s
+  // CHECK-CC8: COMPLETION: Pattern : member2(<#args#>
   int member1, member2;
 };

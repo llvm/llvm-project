@@ -766,8 +766,9 @@ static BasicBlock *buildClonedLoopBlocks(
     ArrayRef<BasicBlock *> ExitBlocks, BasicBlock *ParentBB,
     BasicBlock *UnswitchedSuccBB, BasicBlock *ContinueSuccBB,
     const SmallPtrSetImpl<BasicBlock *> &SkippedLoopAndExitBlocks,
-    ValueToValueMapTy &VMap, AssumptionCache &AC, DominatorTree &DT,
-    LoopInfo &LI) {
+    ValueToValueMapTy &VMap,
+    SmallVectorImpl<DominatorTree::UpdateType> &DTUpdates, AssumptionCache &AC,
+    DominatorTree &DT, LoopInfo &LI) {
   SmallVector<BasicBlock *, 4> NewBlocks;
   NewBlocks.reserve(L.getNumBlocks() + ExitBlocks.size());
 
@@ -781,10 +782,6 @@ static BasicBlock *buildClonedLoopBlocks(
     // Record this block and the mapping.
     NewBlocks.push_back(NewBB);
     VMap[OldBB] = NewBB;
-
-    // Add the block to the domtree. We'll move it to the correct position
-    // below.
-    DT.addNewBlock(NewBB, SplitBB);
 
     return NewBB;
   };
@@ -823,17 +820,6 @@ static BasicBlock *buildClonedLoopBlocks(
            "Exit block should have been split to have one successor!");
     assert(ClonedExitBB->getTerminator()->getSuccessor(0) == MergeBB &&
            "Cloned exit block has the wrong successor!");
-
-    // Move the merge block's idom to be the split point as one exit is
-    // dominated by one header, and the other by another, so we know the split
-    // point dominates both. While the dominator tree isn't fully accurate, we
-    // want sub-trees within the original loop to be correctly reflect
-    // dominance within that original loop (at least) and that requires moving
-    // the merge block out of that subtree.
-    // FIXME: This is very brittle as we essentially have a partial contract on
-    // the dominator tree. We really need to instead update it and keep it
-    // valid or stop relying on it.
-    DT.changeImmediateDominator(MergeBB, SplitBB);
 
     // Remap any cloned instructions and create a merge phi node for them.
     for (auto ZippedInsts : llvm::zip_first(
@@ -895,6 +881,11 @@ static BasicBlock *buildClonedLoopBlocks(
         if (auto *ClonedSuccBB = cast_or_null<BasicBlock>(VMap.lookup(SuccBB)))
           for (PHINode &PN : ClonedSuccBB->phis())
             PN.removeIncomingValue(LoopBB, /*DeletePHIIfEmpty*/ false);
+
+  // Record the domtree updates for the new blocks.
+  for (auto *ClonedBB : NewBlocks)
+    for (auto *SuccBB : successors(ClonedBB))
+      DTUpdates.push_back({DominatorTree::Insert, ClonedBB, SuccBB});
 
   return ClonedPH;
 }
@@ -1217,32 +1208,18 @@ static Loop *buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
   return ClonedL;
 }
 
-static void deleteDeadBlocksFromLoop(Loop &L, BasicBlock *DeadSubtreeRoot,
-                                     SmallVectorImpl<BasicBlock *> &ExitBlocks,
-                                     DominatorTree &DT, LoopInfo &LI) {
-  // Walk the dominator tree to build up the set of blocks we will delete here.
-  // The order is designed to allow us to always delete bottom-up and avoid any
-  // dangling uses.
-  SmallSetVector<BasicBlock *, 16> DeadBlocks;
-  DeadBlocks.insert(DeadSubtreeRoot);
-  for (int i = 0; i < (int)DeadBlocks.size(); ++i)
-    for (DomTreeNode *ChildN : *DT[DeadBlocks[i]]) {
-      // FIXME: This assert should pass and that means we don't change nearly
-      // as much below! Consider rewriting all of this to avoid deleting
-      // blocks. They are always cloned before being deleted, and so instead
-      // could just be moved.
-      // FIXME: This in turn means that we might actually be more able to
-      // update the domtree.
-      assert((L.contains(ChildN->getBlock()) ||
-              llvm::find(ExitBlocks, ChildN->getBlock()) != ExitBlocks.end()) &&
-             "Should never reach beyond the loop and exits when deleting!");
-      DeadBlocks.insert(ChildN->getBlock());
-    }
+static void
+deleteDeadBlocksFromLoop(Loop &L,
+                         const SmallVectorImpl<BasicBlock *> &DeadBlocks,
+                         SmallVectorImpl<BasicBlock *> &ExitBlocks,
+                         DominatorTree &DT, LoopInfo &LI) {
+  SmallPtrSet<BasicBlock *, 16> DeadBlockSet(DeadBlocks.begin(),
+                                             DeadBlocks.end());
 
   // Filter out the dead blocks from the exit blocks list so that it can be
   // used in the caller.
   llvm::erase_if(ExitBlocks,
-                 [&](BasicBlock *BB) { return DeadBlocks.count(BB); });
+                 [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Remove these blocks from their successors.
   for (auto *BB : DeadBlocks)
@@ -1254,18 +1231,18 @@ static void deleteDeadBlocksFromLoop(Loop &L, BasicBlock *DeadSubtreeRoot,
     for (auto *BB : DeadBlocks)
       ParentL->getBlocksSet().erase(BB);
     llvm::erase_if(ParentL->getBlocksVector(),
-                   [&](BasicBlock *BB) { return DeadBlocks.count(BB); });
+                   [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
   }
 
   // Now delete the dead child loops. This raw delete will clear them
   // recursively.
   llvm::erase_if(L.getSubLoopsVector(), [&](Loop *ChildL) {
-    if (!DeadBlocks.count(ChildL->getHeader()))
+    if (!DeadBlockSet.count(ChildL->getHeader()))
       return false;
 
     assert(llvm::all_of(ChildL->blocks(),
                         [&](BasicBlock *ChildBB) {
-                          return DeadBlocks.count(ChildBB);
+                          return DeadBlockSet.count(ChildBB);
                         }) &&
            "If the child loop header is dead all blocks in the child loop must "
            "be dead as well!");
@@ -1273,19 +1250,20 @@ static void deleteDeadBlocksFromLoop(Loop &L, BasicBlock *DeadSubtreeRoot,
     return true;
   });
 
-  // Remove the mappings for the dead blocks.
-  for (auto *BB : DeadBlocks)
+  // Remove the loop mappings for the dead blocks and drop all the references
+  // from these blocks to others to handle cyclic references as we start
+  // deleting the blocks themselves.
+  for (auto *BB : DeadBlocks) {
+    // Check that the dominator tree has already been updated.
+    assert(!DT.getNode(BB) && "Should already have cleared domtree!");
     LI.changeLoopFor(BB, nullptr);
-
-  // Drop all the references from these blocks to others to handle cyclic
-  // references as we start deleting the blocks themselves.
-  for (auto *BB : DeadBlocks)
     BB->dropAllReferences();
-
-  for (auto *BB : llvm::reverse(DeadBlocks)) {
-    DT.eraseNode(BB);
-    BB->eraseFromParent();
   }
+
+  // Actually delete the blocks now that they've been fully unhooked from the
+  // IR.
+  for (auto *BB : DeadBlocks)
+    BB->eraseFromParent();
 }
 
 /// Recompute the set of blocks in a loop after unswitching.
@@ -1737,17 +1715,13 @@ static bool unswitchInvariantBranch(
   // Keep a mapping for the cloned values.
   ValueToValueMapTy VMap;
 
+  // Keep track of the dominator tree updates needed.
+  SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
+
   // Build the cloned blocks from the loop.
   auto *ClonedPH = buildClonedLoopBlocks(
       L, LoopPH, SplitBB, ExitBlocks, ParentBB, UnswitchedSuccBB,
-      ContinueSuccBB, SkippedLoopAndExitBlocks, VMap, AC, DT, LI);
-
-  // Build the cloned loop structure itself. This may be substantially
-  // different from the original structure due to the simplified CFG. This also
-  // handles inserting all the cloned blocks into the correct loops.
-  SmallVector<Loop *, 4> NonChildClonedLoops;
-  Loop *ClonedL =
-      buildClonedLoops(L, ExitBlocks, VMap, LI, NonChildClonedLoops);
+      ContinueSuccBB, SkippedLoopAndExitBlocks, VMap, DTUpdates, AC, DT, LI);
 
   // Remove the parent as a predecessor of the unswitched successor.
   UnswitchedSuccBB->removePredecessor(ParentBB, /*DontDeleteUselessPHIs*/ true);
@@ -1763,23 +1737,57 @@ static bool unswitchInvariantBranch(
   // the one cloned).
   BranchInst::Create(ContinueSuccBB, ParentBB);
 
+  // Before we update the dominator tree, collect the dead blocks if we're going
+  // to end up deleting the unswitched successor.
+  SmallVector<BasicBlock *, 16> DeadBlocks;
+  if (DeleteUnswitchedSucc) {
+    DeadBlocks.push_back(UnswitchedSuccBB);
+    for (int i = 0; i < (int)DeadBlocks.size(); ++i) {
+      // If we reach an exit block, stop recursing as the unswitched loop will
+      // end up reaching the merge block which we make the successor of the
+      // exit.
+      if (ExitBlockSet.count(DeadBlocks[i]))
+        continue;
+
+      // Insert the children that are within the loop or exit block set. Other
+      // children may reach out of the loop. While we don't expect these to be
+      // dead (as the unswitched clone should reach them) we don't try to prove
+      // that here.
+      for (DomTreeNode *ChildN : *DT[DeadBlocks[i]])
+        if (L.contains(ChildN->getBlock()) ||
+            ExitBlockSet.count(ChildN->getBlock()))
+          DeadBlocks.push_back(ChildN->getBlock());
+    }
+  }
+
+  // Add the remaining edges to our updates and apply them to get an up-to-date
+  // dominator tree. Note that this will cause the dead blocks above to be
+  // unreachable and no longer in the dominator tree.
+  DTUpdates.push_back({DominatorTree::Delete, ParentBB, UnswitchedSuccBB});
+  DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
+  DT.applyUpdates(DTUpdates);
+
+  // Build the cloned loop structure itself. This may be substantially
+  // different from the original structure due to the simplified CFG. This also
+  // handles inserting all the cloned blocks into the correct loops.
+  SmallVector<Loop *, 4> NonChildClonedLoops;
+  Loop *ClonedL =
+      buildClonedLoops(L, ExitBlocks, VMap, LI, NonChildClonedLoops);
+
   // Delete anything that was made dead in the original loop due to
   // unswitching.
-  if (DeleteUnswitchedSucc)
-    deleteDeadBlocksFromLoop(L, UnswitchedSuccBB, ExitBlocks, DT, LI);
+  if (!DeadBlocks.empty())
+    deleteDeadBlocksFromLoop(L, DeadBlocks, ExitBlocks, DT, LI);
 
   SmallVector<Loop *, 4> HoistedLoops;
   bool IsStillLoop = rebuildLoopAfterUnswitch(L, ExitBlocks, LI, HoistedLoops);
 
-  // This will have completely invalidated the dominator tree. We can't easily
-  // bound how much is invalid because in some cases we will refine the
-  // predecessor set of exit blocks of the loop which can move large unrelated
-  // regions of code into a new subtree.
-  //
-  // FIXME: Eventually, we should use an incremental update utility that
-  // leverages the existing information in the dominator tree (and potentially
-  // the nature of the change) to more efficiently update things.
-  DT.recalculate(*SplitBB->getParent());
+  // This transformation has a high risk of corrupting the dominator tree, and
+  // the below steps to rebuild loop structures will result in hard to debug
+  // errors in that case so verify that the dominator tree is sane first.
+  // FIXME: Remove this when the bugs stop showing up and rely on existing
+  // verification steps.
+  assert(DT.verify(DominatorTree::VerificationLevel::Fast));
 
   // We can change which blocks are exit blocks of all the cloned sibling
   // loops, the current loop, and any parent loops which shared exit blocks

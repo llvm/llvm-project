@@ -76,6 +76,10 @@ def int_r600_cube : Intrinsic<
   [llvm_v4f32_ty], [llvm_v4f32_ty], [IntrNoMem, IntrSpeculatable]
 >;
 
+def int_r600_store_stream_output : Intrinsic<
+  [], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []
+>;
+
 } // End TargetPrefix = "r600"
 
 let TargetPrefix = "amdgcn" in {

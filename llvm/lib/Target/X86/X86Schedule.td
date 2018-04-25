@@ -87,6 +87,8 @@ defm WriteFSqrt  : X86SchedWritePair; // Floating point square root.
 defm WriteFRcp   : X86SchedWritePair; // Floating point reciprocal estimate.
 defm WriteFRsqrt : X86SchedWritePair; // Floating point reciprocal square root estimate.
 defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
+defm WriteFMAS   : X86SchedWritePair; // Fused Multiply Add (Scalar).
+defm WriteFMAY   : X86SchedWritePair; // Fused Multiply Add (YMM/ZMM).
 defm WriteFSign : X86SchedWritePair; // Floating point fabs/fchs.
 defm WriteFLogic : X86SchedWritePair; // Floating point and/or/xor logicals.
 defm WriteFShuffle  : X86SchedWritePair; // Floating point vector shuffles.
@@ -116,6 +118,7 @@ defm WriteBlend  : X86SchedWritePair; // Vector blends.
 defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.
 defm WritePSADBW : X86SchedWritePair; // Vector PSADBW.
 defm WriteMPSAD : X86SchedWritePair; // Vector MPSAD.
+defm WritePHMINPOS : X86SchedWritePair; // Vector PHMINPOS.
 
 // Vector insert/extract operations.
 defm WriteVecInsert : X86SchedWritePair; // Insert gpr to vector element.

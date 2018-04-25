@@ -59,7 +59,7 @@ define i8 @test_movb_hreg(i16 %a0) {
 ;
 ; X32-LABEL: test_movb_hreg:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addb %al, %ah
 ; X32-NEXT:    movb %ah, %al
 ; X32-NEXT:    retl

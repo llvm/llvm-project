@@ -13,9 +13,7 @@ define double @foo(double %a) nounwind {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    lui a2, %hi(floor)
-; RV32IFD-NEXT:    addi a2, a2, %lo(floor)
-; RV32IFD-NEXT:    jalr a2
+; RV32IFD-NEXT:    call floor
 ; RV32IFD-NEXT:    lw ra, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret

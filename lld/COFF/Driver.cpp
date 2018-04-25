@@ -105,7 +105,9 @@ static std::future<MBErrPair> createFutureForFile(std::string Path) {
   auto Strategy = std::launch::deferred;
 #endif
   return std::async(Strategy, [=]() {
-    auto MBOrErr = MemoryBuffer::getFile(Path);
+    auto MBOrErr = MemoryBuffer::getFile(Path,
+                                         /*FileSize*/ -1,
+                                         /*RequiresNullTerminator*/ false);
     if (!MBOrErr)
       return MBErrPair{nullptr, MBOrErr.getError()};
     return MBErrPair{std::move(*MBOrErr), std::error_code()};
@@ -563,7 +565,8 @@ static void createImportLibrary(bool AsLib) {
 
   // If the import library already exists, replace it only if the contents
   // have changed.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> OldBuf = MemoryBuffer::getFile(Path);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> OldBuf = MemoryBuffer::getFile(
+      Path, /*FileSize*/ -1, /*RequiresNullTerminator*/ false);
   if (!OldBuf) {
     HandleError(writeImportLibrary(LibName, Path, Exports, Config->Machine,
                                    false, Config->MinGW));
@@ -582,7 +585,8 @@ static void createImportLibrary(bool AsLib) {
     return;
   }
 
-  std::unique_ptr<MemoryBuffer> NewBuf = check(MemoryBuffer::getFile(TmpName));
+  std::unique_ptr<MemoryBuffer> NewBuf = check(MemoryBuffer::getFile(
+      TmpName, /*FileSize*/ -1, /*RequiresNullTerminator*/ false));
   if ((*OldBuf)->getBuffer() != NewBuf->getBuffer()) {
     OldBuf->reset();
     HandleError(errorCodeToError(sys::fs::rename(TmpName, Path)));
@@ -1161,7 +1165,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
                    !Config->DoGC && !Config->DoICF && !Args.hasArg(OPT_order) &&
                        !Args.hasArg(OPT_profile));
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
-  Config->TerminalServerAware = Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
+  Config->TerminalServerAware =
+      !Config->DLL && Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   Config->DebugDwarf = Args.hasArg(OPT_debug_dwarf);
   Config->DebugGHashes = Args.hasArg(OPT_debug_ghash);
 

@@ -9,9 +9,7 @@ define i32 @udiv(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a2, %hi(__udivsi3)
-; RV32I-NEXT:    addi a2, a2, %lo(__udivsi3)
-; RV32I-NEXT:    jalr a2
+; RV32I-NEXT:    call __udivsi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -29,10 +27,8 @@ define i32 @udiv_constant(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a1, %hi(__udivsi3)
-; RV32I-NEXT:    addi a2, a1, %lo(__udivsi3)
 ; RV32I-NEXT:    addi a1, zero, 5
-; RV32I-NEXT:    jalr a2
+; RV32I-NEXT:    call __udivsi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -67,9 +63,7 @@ define i64 @udiv64(i64 %a, i64 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a4, %hi(__udivdi3)
-; RV32I-NEXT:    addi a4, a4, %lo(__udivdi3)
-; RV32I-NEXT:    jalr a4
+; RV32I-NEXT:    call __udivdi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -78,9 +72,7 @@ define i64 @udiv64(i64 %a, i64 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -16
 ; RV32IM-NEXT:    sw ra, 12(sp)
-; RV32IM-NEXT:    lui a4, %hi(__udivdi3)
-; RV32IM-NEXT:    addi a4, a4, %lo(__udivdi3)
-; RV32IM-NEXT:    jalr a4
+; RV32IM-NEXT:    call __udivdi3
 ; RV32IM-NEXT:    lw ra, 12(sp)
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
@@ -93,11 +85,9 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a2, %hi(__udivdi3)
-; RV32I-NEXT:    addi a4, a2, %lo(__udivdi3)
 ; RV32I-NEXT:    addi a2, zero, 5
 ; RV32I-NEXT:    mv a3, zero
-; RV32I-NEXT:    jalr a4
+; RV32I-NEXT:    call __udivdi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -106,11 +96,9 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -16
 ; RV32IM-NEXT:    sw ra, 12(sp)
-; RV32IM-NEXT:    lui a2, %hi(__udivdi3)
-; RV32IM-NEXT:    addi a4, a2, %lo(__udivdi3)
 ; RV32IM-NEXT:    addi a2, zero, 5
 ; RV32IM-NEXT:    mv a3, zero
-; RV32IM-NEXT:    jalr a4
+; RV32IM-NEXT:    call __udivdi3
 ; RV32IM-NEXT:    lw ra, 12(sp)
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
@@ -123,9 +111,7 @@ define i32 @sdiv(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a2, %hi(__divsi3)
-; RV32I-NEXT:    addi a2, a2, %lo(__divsi3)
-; RV32I-NEXT:    jalr a2
+; RV32I-NEXT:    call __divsi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -143,10 +129,8 @@ define i32 @sdiv_constant(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a1, %hi(__divsi3)
-; RV32I-NEXT:    addi a2, a1, %lo(__divsi3)
 ; RV32I-NEXT:    addi a1, zero, 5
-; RV32I-NEXT:    jalr a2
+; RV32I-NEXT:    call __divsi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -189,9 +173,7 @@ define i64 @sdiv64(i64 %a, i64 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a4, %hi(__divdi3)
-; RV32I-NEXT:    addi a4, a4, %lo(__divdi3)
-; RV32I-NEXT:    jalr a4
+; RV32I-NEXT:    call __divdi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -200,9 +182,7 @@ define i64 @sdiv64(i64 %a, i64 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -16
 ; RV32IM-NEXT:    sw ra, 12(sp)
-; RV32IM-NEXT:    lui a4, %hi(__divdi3)
-; RV32IM-NEXT:    addi a4, a4, %lo(__divdi3)
-; RV32IM-NEXT:    jalr a4
+; RV32IM-NEXT:    call __divdi3
 ; RV32IM-NEXT:    lw ra, 12(sp)
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
@@ -215,11 +195,9 @@ define i64 @sdiv64_constant(i64 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a2, %hi(__divdi3)
-; RV32I-NEXT:    addi a4, a2, %lo(__divdi3)
 ; RV32I-NEXT:    addi a2, zero, 5
 ; RV32I-NEXT:    mv a3, zero
-; RV32I-NEXT:    jalr a4
+; RV32I-NEXT:    call __divdi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -228,11 +206,9 @@ define i64 @sdiv64_constant(i64 %a) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    addi sp, sp, -16
 ; RV32IM-NEXT:    sw ra, 12(sp)
-; RV32IM-NEXT:    lui a2, %hi(__divdi3)
-; RV32IM-NEXT:    addi a4, a2, %lo(__divdi3)
 ; RV32IM-NEXT:    addi a2, zero, 5
 ; RV32IM-NEXT:    mv a3, zero
-; RV32IM-NEXT:    jalr a4
+; RV32IM-NEXT:    call __divdi3
 ; RV32IM-NEXT:    lw ra, 12(sp)
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret

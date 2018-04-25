@@ -31,6 +31,13 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolID &ID) {
   return OS;
 }
 
+std::string SymbolID::str() const {
+  std::string ID;
+  llvm::raw_string_ostream OS(ID);
+  OS << *this;
+  return OS.str();
+}
+
 void operator>>(StringRef Str, SymbolID &ID) {
   std::string HexString = fromHex(Str);
   assert(HexString.size() == ID.HashValue.size());

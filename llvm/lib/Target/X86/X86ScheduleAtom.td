@@ -215,6 +215,8 @@ defm : AtomWriteResPair<WriteFLogic,        [AtomPort01],  [AtomPort0]>;
 defm : AtomWriteResPair<WriteFShuffle,       [AtomPort0],  [AtomPort0]>;
 defm : AtomWriteResPair<WriteFVarShuffle,    [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteFMA,            [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
+defm : AtomWriteResPair<WriteFMAS,           [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
+defm : AtomWriteResPair<WriteFMAY,           [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteFBlend,         [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteFVarBlend,      [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteFShuffle256,    [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
@@ -242,6 +244,7 @@ defm : AtomWriteResPair<WriteVecLogic,     [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecShift,     [AtomPort01], [AtomPort01], 2, 3, [2], [3]>;
 defm : AtomWriteResPair<WriteVecIMul,       [AtomPort0],  [AtomPort0], 5, 5, [5], [5]>;
 defm : AtomWriteResPair<WritePMULLD,       [AtomPort01],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WritePHMINPOS,      [AtomPort0],  [AtomPort0], 5, 5, [5], [5]>;
 defm : AtomWriteResPair<WriteMPSAD,        [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WritePSADBW,        [AtomPort0],  [AtomPort0], 5, 5, [5], [5]>;
 defm : AtomWriteResPair<WriteShuffle,       [AtomPort0],  [AtomPort0], 1, 1>;

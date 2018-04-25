@@ -145,6 +145,7 @@ struct WasmSymbolInfo {
   StringRef Name;
   uint8_t Kind;
   uint32_t Flags;
+  StringRef Module; // For undefined symbols the module name of the import
   union {
     // For function or global symbols, the index in function or global index
     // space.

@@ -18,9 +18,7 @@ define void @simple_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub a0, sp, a0
 ; RV32I-NEXT:    mv sp, a0
-; RV32I-NEXT:    lui a1, %hi(notdead)
-; RV32I-NEXT:    addi a1, a1, %lo(notdead)
-; RV32I-NEXT:    jalr a1
+; RV32I-NEXT:    call notdead
 ; RV32I-NEXT:    addi sp, s0, -16
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
@@ -47,9 +45,7 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub a0, sp, a0
 ; RV32I-NEXT:    mv sp, a0
-; RV32I-NEXT:    lui a1, %hi(notdead)
-; RV32I-NEXT:    addi a1, a1, %lo(notdead)
-; RV32I-NEXT:    jalr a1
+; RV32I-NEXT:    call notdead
 ; RV32I-NEXT:    mv sp, s1
 ; RV32I-NEXT:    addi sp, s0, -16
 ; RV32I-NEXT:    lw s1, 4(sp)
@@ -88,8 +84,6 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; RV32I-NEXT:    sw a1, 4(sp)
 ; RV32I-NEXT:    addi a1, zero, 9
 ; RV32I-NEXT:    sw a1, 0(sp)
-; RV32I-NEXT:    lui a1, %hi(func)
-; RV32I-NEXT:    addi t0, a1, %lo(func)
 ; RV32I-NEXT:    addi a1, zero, 2
 ; RV32I-NEXT:    addi a2, zero, 3
 ; RV32I-NEXT:    addi a3, zero, 4
@@ -97,7 +91,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; RV32I-NEXT:    addi a5, zero, 6
 ; RV32I-NEXT:    addi a6, zero, 7
 ; RV32I-NEXT:    addi a7, zero, 8
-; RV32I-NEXT:    jalr t0
+; RV32I-NEXT:    call func
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    addi sp, s0, -16
 ; RV32I-NEXT:    lw s0, 8(sp)

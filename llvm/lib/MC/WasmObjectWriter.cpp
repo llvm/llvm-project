@@ -216,7 +216,7 @@ class WasmObjectWriter : public MCObjectWriter {
   std::vector<WasmCustomSection> CustomSections;
   unsigned NumFunctionImports = 0;
   unsigned NumGlobalImports = 0;
-  uint32_t SectionCount;
+  uint32_t SectionCount = 0;
 
   // TargetObjectWriter wrappers.
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }

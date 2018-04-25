@@ -5751,10 +5751,10 @@ multiclass SS41I_unop_rm_int_v16<bits<8> opc, string OpcodeStr,
 let Predicates = [HasAVX] in
 defm VPHMINPOSUW : SS41I_unop_rm_int_v16<0x41, "vphminposuw",
                                          X86phminpos, loadv2i64,
-                                         WriteVecIMul>, VEX, VEX_WIG;
+                                         WritePHMINPOS>, VEX, VEX_WIG;
 defm PHMINPOSUW : SS41I_unop_rm_int_v16<0x41, "phminposuw",
                                          X86phminpos, memopv2i64,
-                                         WriteVecIMul>;
+                                         WritePHMINPOS>;
 
 /// SS48I_binop_rm - Simple SSE41 binary operator.
 multiclass SS48I_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,

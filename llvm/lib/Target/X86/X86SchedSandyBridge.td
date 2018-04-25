@@ -153,7 +153,7 @@ defm : SBWriteResPair<WriteFSign,    [SBPort5], 1>;
 defm : SBWriteResPair<WriteFLogic,   [SBPort5], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFShuffle, [SBPort5],  1>;
 defm : SBWriteResPair<WriteFVarShuffle, [SBPort5],  1>;
-defm : SBWriteResPair<WriteFBlend,  [SBPort05],  1>;
+defm : SBWriteResPair<WriteFBlend,    [SBPort05], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFVarBlend, [SBPort05], 2, [2], 2, 6>;
 def  : WriteRes<WriteCvtF2FSt, [SBPort1, SBPort23, SBPort4]> { let Latency = 4; }
 
@@ -173,6 +173,7 @@ defm : SBWriteResPair<WriteBlend,   [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVarBlend, [SBPort15], 2, [2], 2, 6>;
 defm : SBWriteResPair<WriteMPSAD, [SBPort0, SBPort15], 7, [1,2], 3, 6>;
 defm : SBWriteResPair<WritePSADBW,  [SBPort0], 5>;
+defm : SBWriteResPair<WritePHMINPOS,  [SBPort0], 5, [1], 1, 6>;
 
 // Vector insert/extract operations.
 def : WriteRes<WriteVecInsert, [SBPort5,SBPort15]> {
@@ -313,6 +314,8 @@ defm : SBWriteResPair<WriteShuffle256, [SBPort0],  1>;
 defm : SBWriteResPair<WriteVarShuffle256, [SBPort0],  1>;
 defm : SBWriteResPair<WriteVarVecShift, [SBPort0],  1>;
 defm : SBWriteResPair<WriteFMA, [SBPort01],  5>;
+defm : SBWriteResPair<WriteFMAS, [SBPort01],  5>;
+defm : SBWriteResPair<WriteFMAY, [SBPort01],  5>;
 
 // Remaining SNB instrs.
 
@@ -965,9 +968,7 @@ def SBWriteResGroup58 : SchedWriteRes<[SBPort23,SBPort05]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup58], (instregex "(V?)BLENDPDrmi",
-                                            "(V?)BLENDPSrmi",
-                                            "VINSERTF128rm")>;
+def: InstRW<[SBWriteResGroup58], (instregex "VINSERTF128rm")>;
 
 def SBWriteResGroup59 : SchedWriteRes<[SBPort23,SBPort15]> {
   let Latency = 7;
@@ -1537,8 +1538,7 @@ def SBWriteResGroup104 : SchedWriteRes<[SBPort0,SBPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup104], (instregex "(V?)PCMPGTQrm",
-                                             "(V?)PHMINPOSUWrm")>;
+def: InstRW<[SBWriteResGroup104], (instregex "(V?)PCMPGTQrm")>;
 
 def SBWriteResGroup106 : SchedWriteRes<[SBPort1,SBPort23]> {
   let Latency = 11;

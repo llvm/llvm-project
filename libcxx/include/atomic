@@ -1741,7 +1741,7 @@ typedef struct atomic_flag
     atomic_flag() _NOEXCEPT : __a_() {}
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
 
 #ifndef _LIBCPP_CXX03_LANG

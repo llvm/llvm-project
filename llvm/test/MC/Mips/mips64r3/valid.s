@@ -337,7 +337,9 @@ a:
         swr       $s1,-26590($14)
         swxc1     $f19,$12($k0)
         sync                           # CHECK: sync                   # encoding: [0x00,0x00,0x00,0x0f]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNC
         sync      1                    # CHECK: sync 1                 # encoding: [0x00,0x00,0x00,0x4f]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNC
         syscall                        # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
         syscall   256                  # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         teq $zero, $3                  # CHECK: teq $zero, $3          # encoding: [0x00,0x03,0x00,0x34]
@@ -379,6 +381,8 @@ a:
         xor       $s2,$a0,$s8
         xor       $2, 4                # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
         wsbh      $k1,$9
+        synci     -15842($a2)          # CHECK: synci -15842($6)       # encoding: [0x04,0xdf,0xc2,0x1e]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNCI
 
 1:
 

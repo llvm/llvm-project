@@ -81,7 +81,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -110,12 +109,7 @@ namespace {
 
 class SIFixSGPRCopies : public MachineFunctionPass {
   MachineDominatorTree *MDT;
-  MachinePostDominatorTree *MPDT;
-  DenseMap<MachineBasicBlock *, SetVector<MachineBasicBlock*>> PDF;
-  void computePDF(MachineFunction * MF);
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void printPDF();
-#endif
+
 public:
   static char ID;
 
@@ -128,8 +122,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
-    AU.addPreserved<MachinePostDominatorTree>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -417,6 +409,12 @@ bool searchPredecessors(const MachineBasicBlock *MBB,
   return false;
 }
 
+static bool predsHasDivergentTerminator(MachineBasicBlock *MBB,
+                                        const TargetRegisterInfo *TRI) {
+  return searchPredecessors(MBB, nullptr, [TRI](MachineBasicBlock *MBB) {
+           return hasTerminatorThatModifiesExec(*MBB, *TRI); });
+}
+
 // Checks if there is potential path From instruction To instruction.
 // If CutOff is specified and it sits in between of that path we ignore
 // a higher portion of the path and report it is not reachable.
@@ -567,47 +565,12 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   return Changed;
 }
 
-void SIFixSGPRCopies::computePDF(MachineFunction *MF) {
-  MachineFunction::iterator B = MF->begin();
-  MachineFunction::iterator E = MF->end();
-  for (; B != E; ++B) {
-    if (B->succ_size() > 1) {
-      for (auto S : B->successors()) {
-        MachineDomTreeNode *runner = MPDT->getNode(&*S);
-        MachineDomTreeNode *sentinel = MPDT->getNode(&*B)->getIDom();
-        while (runner && runner != sentinel) {
-          PDF[runner->getBlock()].insert(&*B);
-          runner = runner->getIDom();
-        }
-      }
-    }
-  }
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void SIFixSGPRCopies::printPDF() {
-  dbgs() << "\n######## PostDominanceFrontiers set #########\n";
-  for (auto &I : PDF) {
-    dbgs() << "PDF[ " << I.first->getNumber() << "] : ";
-    for (auto &J : I.second) {
-      dbgs() << J->getNumber() << ' ';
-    }
-    dbgs() << '\n';
-  }
-  dbgs() << "\n##############################################\n";
-}
-#endif
-
 bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   MDT = &getAnalysis<MachineDominatorTree>();
-  MPDT = &getAnalysis<MachinePostDominatorTree>();
-  PDF.clear();
-  computePDF(&MF);
-  DEBUG(printPDF());
 
   SmallVector<MachineInstr *, 16> Worklist;
 
@@ -661,27 +624,15 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         if (!TRI->isSGPRClass(MRI.getRegClass(Reg)))
           break;
 
-        // We don't need to fix the PHI if all the source blocks
-        // have no divergent control dependecies
+        // We don't need to fix the PHI if the common dominator of the
+        // two incoming blocks terminates with a uniform branch.
         bool HasVGPROperand = phiHasVGPROperands(MI, MRI, TRI, TII);
-        if (!HasVGPROperand) {
-          bool Uniform = true;
-          MachineBasicBlock * Join = MI.getParent();
-          for (auto &O : MI.explicit_operands()) {
-            if (O.isMBB()) {
-              MachineBasicBlock * Source = O.getMBB();
-              SetVector<MachineBasicBlock*> &SourcePDF = PDF[Source];
-              SetVector<MachineBasicBlock*> &JoinPDF   = PDF[Join];
-              SetVector<MachineBasicBlock*> CDList;
-              for (auto &I : SourcePDF) {
-                if (!JoinPDF.count(I) || /* back edge */MDT->dominates(Join, I)) {
-                  if (hasTerminatorThatModifiesExec(*I, *TRI))
-                    Uniform = false;
-                }
-              }
-            }
-          }
-          if (Uniform) {
+        if (MI.getNumExplicitOperands() == 5 && !HasVGPROperand) {
+          MachineBasicBlock *MBB0 = MI.getOperand(2).getMBB();
+          MachineBasicBlock *MBB1 = MI.getOperand(4).getMBB();
+
+          if (!predsHasDivergentTerminator(MBB0, TRI) &&
+              !predsHasDivergentTerminator(MBB1, TRI)) {
             DEBUG(dbgs() << "Not fixing PHI for uniform branch: " << MI << '\n');
             break;
           }

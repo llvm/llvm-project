@@ -1720,7 +1720,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 48.00  2.00    -     355.50 907.50 402.00 398.00 381.00  -     43.00  114.00 116.50 116.50 40.00
+# CHECK-NEXT: 48.00  2.00    -     355.50 907.50 402.00 398.00 381.00  -     43.00  114.00 117.50 117.50 38.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   	Instructions:
@@ -2147,8 +2147,8 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	vphaddsw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vphaddw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	vphaddw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   	vphminposuw	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   	vphminposuw	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     0.50   0.50    -     	vphminposuw	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -     0.50   0.50    -     	vphminposuw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vphsubd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     	vphsubd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     	vphsubsw	%xmm0, %xmm1, %xmm2

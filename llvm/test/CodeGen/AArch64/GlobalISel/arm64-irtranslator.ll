@@ -33,13 +33,13 @@ define i64 @muli64(i64 %arg1, i64 %arg2) {
 ; CHECK: stack:
 ; CHECK-NEXT:   - { id: 0, name: ptr1, type: default, offset: 0, size: 8, alignment: 8,
 ; CHECK-NEXT:       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-; CHECK-NEXT: di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 ; CHECK-NEXT:   - { id: 1, name: ptr2, type: default, offset: 0, size: 8, alignment: 1,
 ; CHECK-NEXT:       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-; CHECK-NEXT:       di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 ; CHECK-NEXT:   - { id: 2, name: ptr3, type: default, offset: 0, size: 128, alignment: 8,
 ; CHECK-NEXT:       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-; CHECK-NEXT:       di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 ; CHECK-NEXT:   - { id: 3, name: ptr4, type: default, offset: 0, size: 1, alignment: 8,
 ; CHECK: %{{[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.0.ptr1
 ; CHECK: %{{[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.1.ptr2

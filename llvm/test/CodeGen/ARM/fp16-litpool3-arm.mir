@@ -68,7 +68,8 @@ fixedStack:
 stack:
   - { id: 0, name: res, type: default, offset: -2, size: 2, alignment: 2,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -2, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -2, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
 constants:
   - id:              0
     value:           half 0xH706B

@@ -127,7 +127,8 @@ BugDriver::deleteInstructionFromProgram(const Instruction *I,
 }
 
 std::unique_ptr<Module>
-BugDriver::performFinalCleanups(Module *M, bool MayModifySemantics) {
+BugDriver::performFinalCleanups(std::unique_ptr<Module> M,
+                                bool MayModifySemantics) {
   // Make all functions external, so GlobalDCE doesn't delete them...
   for (Module::iterator I = M->begin(), E = M->end(); I != E; ++I)
     I->setLinkage(GlobalValue::ExternalLinkage);
@@ -140,12 +141,11 @@ BugDriver::performFinalCleanups(Module *M, bool MayModifySemantics) {
   else
     CleanupPasses.push_back("deadargelim");
 
-  std::unique_ptr<Module> New = runPassesOn(M, CleanupPasses);
+  std::unique_ptr<Module> New = runPassesOn(M.get(), CleanupPasses);
   if (!New) {
     errs() << "Final cleanups failed.  Sorry. :(  Please report a bug!\n";
     return nullptr;
   }
-  delete M;
   return New;
 }
 
