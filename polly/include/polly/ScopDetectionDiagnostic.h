@@ -90,6 +90,7 @@ enum class RejectReasonKind {
 
   LoopBound,
   LoopHasNoExit,
+  LoopHasMultipleExits,
   LoopOnlySomeLatches,
 
   FuncCall,
@@ -567,6 +568,34 @@ class ReportLoopHasNoExit : public RejectReason {
 public:
   ReportLoopHasNoExit(Loop *L)
       : RejectReason(RejectReasonKind::LoopHasNoExit), L(L),
+        Loc(L->getStartLoc()) {}
+
+  /// @name LLVM-RTTI interface
+  //@{
+  static bool classof(const RejectReason *RR);
+  //@}
+
+  /// @name RejectReason interface
+  //@{
+  std::string getRemarkName() const override;
+  const Value *getRemarkBB() const override;
+  std::string getMessage() const override;
+  const DebugLoc &getDebugLoc() const override;
+  std::string getEndUserMessage() const override;
+  //@}
+};
+
+//===----------------------------------------------------------------------===//
+/// Captures errors when a loop has multiple exists.
+class ReportLoopHasMultipleExits : public RejectReason {
+  /// The loop that has multiple exits.
+  Loop *L;
+
+  const DebugLoc Loc;
+
+public:
+  ReportLoopHasMultipleExits(Loop *L)
+      : RejectReason(RejectReasonKind::LoopHasMultipleExits), L(L),
         Loc(L->getStartLoc()) {}
 
   /// @name LLVM-RTTI interface
