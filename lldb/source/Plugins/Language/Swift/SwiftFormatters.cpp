@@ -242,11 +242,28 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     if (objectAddr == LLDB_INVALID_ADDRESS)
       return false;
 
-    uint64_t topNibbleMask = 0xF000000000000000;
-    uint64_t smallUTF8TopNibble = 0xE000000000000000;
+    bool isValue = objectAddr & (1ULL << 63);
+    bool isCocoaOrSmall = objectAddr & (1ULL << 62);
+    bool isOpaque = objectAddr & (1ULL << 61);
+    bool isUTF16 = objectAddr & (1ULL << 60);
+    uint64_t payloadAddr = objectAddr & ((1ULL << 56) - 1);
 
-    // Small UTF-8 string
-    if ((objectAddr & topNibbleMask) == smallUTF8TopNibble) {
+    if (!isOpaque && !isCocoaOrSmall) {
+      // Handle native Swift strings.
+      uint64_t count = otherBits->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
+
+      // The character buffer for wrapped strings is offset by 4 words.
+      if (!isValue)
+        payloadAddr += 32;
+
+      return readStringFromAddress(payloadAddr, count, isUTF16);
+    } else if (isCocoaOrSmall && !isValue) {
+      // Handle strings which point to NSStrings.
+      return readStringAsNSString(payloadAddr);
+    } else if (isCocoaOrSmall && isValue && !isOpaque) {
+      // Handle strings which contain an NSString inline.
+      return NSStringSummaryProvider(*otherBits.get(), stream, summary_options);
+    } else if (isCocoaOrSmall && isValue && isOpaque) {
       // Small UTF-8 strings store their contents directly in register. The
       // high nibble of the most significant byte of the first word denotes
       // that the string is small, the low nibble holds the count. The least-
@@ -256,8 +273,6 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       //   { isSmallUTF8Nibble << 60 | count << 56 | c_14 << 48 | ... | c_8,
       //     c_7 << 56 | c_6 << 48 | ... | c_0
       //   }
-      //
-      //
       uint64_t countMask = 0x0F00000000000000;
       uint64_t count = (objectAddr & countMask) >> 56U;
       assert(count <= 15 && "malformed small string");
@@ -277,29 +292,6 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
           .SetLanguage(lldb::eLanguageTypeSwift);
       return StringPrinter::ReadBufferAndDumpToStream<
           StringPrinter::StringElementType::UTF8>(options);
-    }
-
-    bool isValue = objectAddr & (1ULL << 63);
-    bool isCocoaOrSmall = objectAddr & (1ULL << 62);
-    bool isOpaque = objectAddr & (1ULL << 61);
-    bool isUTF16 = objectAddr & (1ULL << 60);
-    uint64_t payloadAddr = objectAddr & ((1ULL << 56) - 1);
-
-    if (!isOpaque && !isCocoaOrSmall) {
-      // Handle native Swift strings.
-      uint64_t count = otherBits->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
-
-      // The character buffer for wrapped strings is offset by 4 words.
-      if (!isValue)
-        payloadAddr += 32;
-
-      return readStringFromAddress(payloadAddr, count, isUTF16);
-    } else if (isCocoaOrSmall && !isValue) {
-      // Handle strings which point to NSStrings.
-      return readStringAsNSString(payloadAddr);
-    } else if (isCocoaOrSmall && isValue) {
-      // Handle strings which contain an NSString inline.
-      return NSStringSummaryProvider(*otherBits.get(), stream, summary_options);
     }
   } else {
     static ConstString g_variant("_variant");
