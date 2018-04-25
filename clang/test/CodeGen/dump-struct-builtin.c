@@ -107,6 +107,12 @@
 // CHECK-NEXT: [[FORMAT_U17:@[0-9]+]] = private unnamed_addr constant [6 x i8] c"%hhd\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U17:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
+// CHECK: @unit18.a = private unnamed_addr constant %struct.U18A { x86_fp80 0xK3FFF8FCD67FD3F5B6000 }, align 16
+// CHECK-NEXT: [[STRUCT_STR_U18:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U18A {\0A\00"
+// CHECK-NEXT: [[FIELD_U18:@[0-9]+]] = private unnamed_addr constant [17 x i8] c"long double a : \00"
+// CHECK-NEXT: [[FORMAT_U18:@[0-9]+]] = private unnamed_addr constant [5 x i8] c"%Lf\0A\00"
+// CHECK-NEXT: [[END_STRUCT_U18:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
+
 int printf(const char *fmt, ...) {
     return 0;
 }
@@ -414,6 +420,24 @@ void unit17() {
   // CHECK: [[LOAD1:%[0-9]+]] = load i8, i8* [[RES1]],
   // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* [[FORMAT_U17]], i32 0, i32 0), i8 [[LOAD1]])
   // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[END_STRUCT_U17]], i32 0, i32 0)
+  __builtin_dump_struct(&a, &printf);
+}
+
+void unit18() {
+  struct U18A {
+    long double a;
+  };
+
+  struct U18A a = {
+      .a = 1.123456,
+  };
+
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* [[STRUCT_STR_U18]], i32 0, i32 0))
+  // CHECK: [[RES1:%[0-9]+]] = getelementptr inbounds %struct.U18A, %struct.U18A* %a, i32 0, i32 0
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([17 x i8], [17 x i8]* [[FIELD_U18]], i32 0, i32 0))
+  // CHECK: [[LOAD1:%[0-9]+]] = load x86_fp80, x86_fp80* [[RES1]],
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* [[FORMAT_U18]], i32 0, i32 0), x86_fp80 [[LOAD1]])
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[END_STRUCT_U18]], i32 0, i32 0)
   __builtin_dump_struct(&a, &printf);
 }
 

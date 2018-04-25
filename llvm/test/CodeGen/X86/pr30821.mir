@@ -47,13 +47,14 @@ fixedStack:
 stack:
   - { id: 0, name: alpha, type: default, offset: 0, size: 1, alignment: 1,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      di-variable: '', di-expression: '', di-location: '' }
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: foxtrot, type: default, offset: 0, size: 16, alignment: 16,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      di-variable: '', di-expression: '', di-location: '' }
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 2, name: india, type: default, offset: 0, size: 16, alignment: 16,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      di-variable: '', di-expression: '', di-location: '' }
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
 constants:
 body:             |
   bb.0.entry:

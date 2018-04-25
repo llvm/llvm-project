@@ -38,16 +38,7 @@ endforeach()
 set(LLVM_RUNTIME_TARGETS "default;x86_64-fuchsia;aarch64-fuchsia;x86_64-fuchsia-asan:x86_64-fuchsia;aarch64-fuchsia-asan:aarch64-fuchsia" CACHE STRING "")
 
 # Set the default target runtimes options.
-if(APPLE)
-  # Disable installing libc++, libc++abi or libunwind on Darwin, since Clang
-  # driver doesn't know how to use libraries that are part of the toolchain.
-  set(LIBUNWIND_INSTALL_HEADERS OFF CACHE BOOL "")
-  set(LIBUNWIND_INSTALL_LIBRARY OFF CACHE BOOL "")
-  set(LIBCXXABI_INSTALL_HEADERS OFF CACHE BOOL "")
-  set(LIBCXXABI_INSTALL_LIBRARY OFF CACHE BOOL "")
-  set(LIBCXX_INSTALL_HEADERS OFF CACHE BOOL "")
-  set(LIBCXX_INSTALL_LIBRARY OFF CACHE BOOL "")
-else()
+if(NOT APPLE)
   set(LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
   set(LIBUNWIND_INSTALL_LIBRARY OFF CACHE BOOL "")

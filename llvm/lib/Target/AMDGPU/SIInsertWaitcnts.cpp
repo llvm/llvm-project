@@ -40,6 +40,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -50,9 +51,21 @@
 #include <utility>
 #include <vector>
 
+using namespace llvm;
+
 #define DEBUG_TYPE "si-insert-waitcnts"
 
-using namespace llvm;
+DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE"-forceexp",
+              "Force emit s_waitcnt expcnt(0) instrs");
+DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE"-forcelgkm",
+              "Force emit s_waitcnt lgkmcnt(0) instrs");
+DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE"-forcevm",
+              "Force emit s_waitcnt vmcnt(0) instrs");
+
+static cl::opt<unsigned> ForceEmitZeroFlag(
+  "amdgpu-waitcnt-forcezero",
+  cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
+  cl::init(0), cl::Hidden);
 
 namespace {
 
@@ -373,6 +386,9 @@ private:
 
   std::vector<std::unique_ptr<BlockWaitcntBrackets>> KillWaitBrackets;
 
+  bool ForceEmitZeroWaitcnt;
+  bool ForceEmitWaitcnt[NUM_INST_CNTS];
+
 public:
   static char ID;
 
@@ -395,6 +411,41 @@ public:
     // traversed.
     KillWaitBrackets.push_back(
         llvm::make_unique<BlockWaitcntBrackets>(*Bracket));
+  }
+
+  bool isForceEmitWaitcnt() const {
+    for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
+         T = (enum InstCounterType)(T + 1))
+      if (ForceEmitWaitcnt[T])
+        return true;
+    return false;
+  }
+
+  void setForceEmitWaitcnt() {
+// For non-debug builds, ForceEmitWaitcnt has been initialized to false;
+// For debug builds, get the debug counter info and adjust if need be
+#ifndef NDEBUG
+    if (DebugCounter::isCounterSet(ForceExpCounter) &&
+        DebugCounter::shouldExecute(ForceExpCounter)) {
+      ForceEmitWaitcnt[EXP_CNT] = true;
+    } else {
+      ForceEmitWaitcnt[EXP_CNT] = false;
+    }
+
+    if (DebugCounter::isCounterSet(ForceLgkmCounter) &&
+         DebugCounter::shouldExecute(ForceLgkmCounter)) {
+      ForceEmitWaitcnt[LGKM_CNT] = true;
+    } else {
+      ForceEmitWaitcnt[LGKM_CNT] = false;
+    }
+
+    if (DebugCounter::isCounterSet(ForceVMCounter) &&
+        DebugCounter::shouldExecute(ForceVMCounter)) {
+      ForceEmitWaitcnt[VM_CNT] = true;
+    } else {
+      ForceEmitWaitcnt[VM_CNT] = false;
+    }
+#endif // NDEBUG
   }
 
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
@@ -836,6 +887,10 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
   // sc-merge. It is not a coincident that all these cases correspond to the
   // instructions that are skipped in the assembling loop.
   bool NeedLineMapping = false; // TODO: Check on this.
+  setForceEmitWaitcnt();
+
+  bool IsForceEmitWaitcnt = isForceEmitWaitcnt();
+
   if (MI.isDebugValue() &&
       // TODO: any other opcode?
       !NeedLineMapping) {
@@ -1047,9 +1102,6 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
     } // End of for loop that looks at all dest operands.
   }
 
-  // TODO: Tie force zero to a compiler triage option.
-  bool ForceZero = false;
-
   // Check to see if this is an S_BARRIER, and if an implicit S_WAITCNT 0
   // occurs before the instruction. Doing it here prevents any additional
   // S_WAITCNTs from being emitted if the instruction was marked as
@@ -1076,17 +1128,17 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
       // block, so if we only wait on LGKM here, we might end up with
       // another s_waitcnt inserted right after this if there are non-LGKM
       // instructions still outstanding.
-      ForceZero = true;
+      ForceEmitZeroWaitcnt = true;
       EmitWaitcnt = true;
     }
   }
 
   // Does this operand processing indicate s_wait counter update?
-  if (EmitWaitcnt) {
+  if (EmitWaitcnt || IsForceEmitWaitcnt) {
     int CntVal[NUM_INST_CNTS];
 
     bool UseDefaultWaitcntStrategy = true;
-    if (ForceZero) {
+    if (ForceEmitZeroWaitcnt) {
       // Force all waitcnts to 0.
       for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
            T = (enum InstCounterType)(T + 1)) {
@@ -1123,7 +1175,7 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
     }
 
     // If we are not waiting on any counter we can skip the wait altogether.
-    if (EmitWaitcnt != 0) {
+    if (EmitWaitcnt != 0 || IsForceEmitWaitcnt) {
       MachineInstr *OldWaitcnt = ScoreBrackets->getWaitcnt();
       int Imm = (!OldWaitcnt) ? 0 : OldWaitcnt->getOperand(0).getImm();
       if (!OldWaitcnt ||
@@ -1151,8 +1203,10 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
       }
 
       // Update an existing waitcount, or make a new one.
-      unsigned Enc = AMDGPU::encodeWaitcnt(IV, CntVal[VM_CNT],
-                                           CntVal[EXP_CNT], CntVal[LGKM_CNT]);
+      unsigned Enc = AMDGPU::encodeWaitcnt(IV,
+                      ForceEmitWaitcnt[VM_CNT] ? 0 : CntVal[VM_CNT],
+                      ForceEmitWaitcnt[EXP_CNT] ? 0 : CntVal[EXP_CNT],
+                      ForceEmitWaitcnt[LGKM_CNT] ? 0 : CntVal[LGKM_CNT]);
       // We don't remove waitcnts that existed prior to the waitcnt
       // pass. Check if the waitcnt to-be-inserted can be avoided
       // or if the prev waitcnt can be updated.
@@ -1178,6 +1232,11 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
       }
       if (insertSWaitInst) {
         if (OldWaitcnt && OldWaitcnt->getOpcode() == AMDGPU::S_WAITCNT) {
+          if (ForceEmitZeroWaitcnt)
+            DEBUG(dbgs() << "Force emit s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)\n");
+          if (IsForceEmitWaitcnt)
+            DEBUG(dbgs() << "Force emit a s_waitcnt due to debug counter\n");
+
           OldWaitcnt->getOperand(0).setImm(Enc);
           if (!OldWaitcnt->getParent())
             MI.getParent()->insert(MI, OldWaitcnt);
@@ -1603,7 +1662,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   BlockWaitcntBrackets *ScoreBrackets = BlockWaitcntBracketsMap[&Block].get();
 
   DEBUG({
-    dbgs() << "Block" << Block.getNumber();
+    dbgs() << "*** Block" << Block.getNumber() << " ***";
     ScoreBrackets->dump();
   });
 
@@ -1768,6 +1827,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   IV = AMDGPU::IsaInfo::getIsaVersion(ST->getFeatureBits());
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   AMDGPUASI = ST->getAMDGPUAS();
+
+  ForceEmitZeroWaitcnt = ForceEmitZeroFlag;
+  for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
+       T = (enum InstCounterType)(T + 1))
+    ForceEmitWaitcnt[T] = false;
 
   HardwareLimits.VmcntMax = AMDGPU::getVmcntBitMask(IV);
   HardwareLimits.ExpcntMax = AMDGPU::getExpcntBitMask(IV);

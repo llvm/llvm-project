@@ -10,6 +10,7 @@
 #ifndef LLVM_COV_COVERAGEVIEWOPTIONS_H
 #define LLVM_COV_COVERAGEVIEWOPTIONS_H
 
+#include "llvm/Config/llvm-config.h"
 #include "RenderingSupport.h"
 #include <vector>
 

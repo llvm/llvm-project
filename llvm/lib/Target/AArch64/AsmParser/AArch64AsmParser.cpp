@@ -140,7 +140,7 @@ private:
   OperandMatchResultTy tryParseGPRSeqPair(OperandVector &Operands);
   template <bool ParseShiftExtend>
   OperandMatchResultTy tryParseGPROperand(OperandVector &Operands);
-  template <bool ParseSuffix>
+  template <bool ParseShiftExtend, bool ParseSuffix>
   OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
   OperandMatchResultTy tryParseSVEPredicateVector(OperandVector &Operands);
   template <RegKind VectorKind>
@@ -855,6 +855,14 @@ public:
   bool isSVEVectorRegOfWidth() const {
     return isSVEVectorReg<Class>() &&
            (ElementWidth == 0 || Reg.ElementWidth == ElementWidth);
+  }
+
+  template <int ElementWidth, unsigned Class,
+            AArch64_AM::ShiftExtendType ShiftExtendTy, int ShiftWidth>
+  bool isSVEVectorRegWithShiftExtend() const {
+    return Kind == k_Register && isSVEVectorRegOfWidth<ElementWidth, Class>() &&
+           ShiftExtendTy == getShiftExtendType() &&
+           getShiftExtendAmount() == Log2_32(ShiftWidth / 8);
   }
 
   bool isGPR32as64() const {
@@ -3839,6 +3847,38 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "register must be x0..x30 with required shift 'lsl #2'");
   case Match_InvalidGPR64NoXZRshifted64:
     return Error(Loc, "register must be x0..x30 with required shift 'lsl #3'");
+  case Match_InvalidZPR32UXTW8:
+  case Match_InvalidZPR32SXTW8:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'");
+  case Match_InvalidZPR32UXTW16:
+  case Match_InvalidZPR32SXTW16:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw) #1'");
+  case Match_InvalidZPR32UXTW32:
+  case Match_InvalidZPR32SXTW32:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw) #2'");
+  case Match_InvalidZPR32UXTW64:
+  case Match_InvalidZPR32SXTW64:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw) #3'");
+  case Match_InvalidZPR64UXTW8:
+  case Match_InvalidZPR64SXTW8:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'");
+  case Match_InvalidZPR64UXTW16:
+  case Match_InvalidZPR64SXTW16:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, (lsl|uxtw|sxtw) #1'");
+  case Match_InvalidZPR64UXTW32:
+  case Match_InvalidZPR64SXTW32:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, (lsl|uxtw|sxtw) #2'");
+  case Match_InvalidZPR64UXTW64:
+  case Match_InvalidZPR64SXTW64:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, (lsl|uxtw|sxtw) #3'");
+  case Match_InvalidZPR64LSL8:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d'");
+  case Match_InvalidZPR64LSL16:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, lsl #1'");
+  case Match_InvalidZPR64LSL32:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, lsl #2'");
+  case Match_InvalidZPR64LSL64:
+    return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, lsl #3'");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPredicateAnyReg:
@@ -4292,6 +4332,26 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidGPR64NoXZRshifted16:
   case Match_InvalidGPR64NoXZRshifted32:
   case Match_InvalidGPR64NoXZRshifted64:
+  case Match_InvalidZPR32UXTW8:
+  case Match_InvalidZPR32UXTW16:
+  case Match_InvalidZPR32UXTW32:
+  case Match_InvalidZPR32UXTW64:
+  case Match_InvalidZPR32SXTW8:
+  case Match_InvalidZPR32SXTW16:
+  case Match_InvalidZPR32SXTW32:
+  case Match_InvalidZPR32SXTW64:
+  case Match_InvalidZPR64UXTW8:
+  case Match_InvalidZPR64SXTW8:
+  case Match_InvalidZPR64UXTW16:
+  case Match_InvalidZPR64SXTW16:
+  case Match_InvalidZPR64UXTW32:
+  case Match_InvalidZPR64SXTW32:
+  case Match_InvalidZPR64UXTW64:
+  case Match_InvalidZPR64SXTW64:
+  case Match_InvalidZPR64LSL8:
+  case Match_InvalidZPR64LSL16:
+  case Match_InvalidZPR64LSL32:
+  case Match_InvalidZPR64LSL64:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPattern:
   case Match_InvalidSVEPredicateBReg:
@@ -4897,7 +4957,7 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-template <bool ParseSuffix>
+template <bool ParseShiftExtend, bool ParseSuffix>
 OperandMatchResultTy
 AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
   const SMLoc S = getLoc();
@@ -4919,9 +4979,29 @@ AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
     return MatchOperand_NoMatch;
 
   unsigned ElementWidth = KindRes->second;
+
+  // No shift/extend is the default.
+  if (!ParseShiftExtend || getParser().getTok().isNot(AsmToken::Comma)) {
+    Operands.push_back(AArch64Operand::CreateVectorReg(
+        RegNum, RegKind::SVEDataVector, ElementWidth, S, S, getContext()));
+
+    return MatchOperand_Success;
+  }
+
+  // Eat the comma
+  getParser().Lex();
+
+  // Match the shift
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> ExtOpnd;
+  Res = tryParseOptionalShiftExtend(ExtOpnd);
+  if (Res != MatchOperand_Success)
+    return Res;
+
+  auto Ext = static_cast<AArch64Operand *>(ExtOpnd.back().get());
   Operands.push_back(AArch64Operand::CreateVectorReg(
-      RegNum, RegKind::SVEDataVector, ElementWidth, S, S,
-      getContext()));
+      RegNum, RegKind::SVEDataVector, ElementWidth, S, Ext->getEndLoc(),
+      getContext(), Ext->getShiftExtendType(), Ext->getShiftExtendAmount(),
+      Ext->hasShiftExtendAmount()));
 
   return MatchOperand_Success;
 }

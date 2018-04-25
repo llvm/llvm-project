@@ -46,10 +46,8 @@ define i8* @test_frameaddress_3_alloca() nounwind {
 ; RV32I-NEXT:    sw ra, 108(sp)
 ; RV32I-NEXT:    sw s0, 104(sp)
 ; RV32I-NEXT:    addi s0, sp, 112
-; RV32I-NEXT:    lui a0, %hi(notdead)
-; RV32I-NEXT:    addi a1, a0, %lo(notdead)
 ; RV32I-NEXT:    addi a0, s0, -108
-; RV32I-NEXT:    jalr a1
+; RV32I-NEXT:    call notdead
 ; RV32I-NEXT:    lw a0, -8(s0)
 ; RV32I-NEXT:    lw a0, -8(a0)
 ; RV32I-NEXT:    lw a0, -8(a0)

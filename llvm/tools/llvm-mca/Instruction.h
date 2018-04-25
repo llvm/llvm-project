@@ -313,7 +313,6 @@ public:
   bool isReady() const { return Stage == IS_READY; }
   bool isExecuting() const { return Stage == IS_EXECUTING; }
   bool isExecuted() const { return Stage == IS_EXECUTED; }
-  bool isZeroLatency() const;
 
   void retire() {
     assert(isExecuted() && "Instruction is in an invalid state!");

@@ -71,6 +71,7 @@ Statistic RejectStatistics[] = {
     SCOP_STAT(LastAffFunc, ""),
     SCOP_STAT(LoopBound, "Uncomputable loop bounds"),
     SCOP_STAT(LoopHasNoExit, "Loop without exit"),
+    SCOP_STAT(LoopHasMultipleExits, "Loop with multiple exits"),
     SCOP_STAT(LoopOnlySomeLatches, "Not all loop latches in scop"),
     SCOP_STAT(FuncCall, "Function call with side effects"),
     SCOP_STAT(NonSimpleMemoryAccess,
@@ -493,6 +494,31 @@ const DebugLoc &ReportLoopHasNoExit::getDebugLoc() const { return Loc; }
 
 std::string ReportLoopHasNoExit::getEndUserMessage() const {
   return "Loop cannot be handled because it has no exit.";
+}
+
+//===----------------------------------------------------------------------===//
+// ReportLoopHasMultipleExits.
+
+std::string ReportLoopHasMultipleExits::getRemarkName() const {
+  return "ReportLoopHasMultipleExits";
+}
+
+const Value *ReportLoopHasMultipleExits::getRemarkBB() const {
+  return L->getHeader();
+}
+
+std::string ReportLoopHasMultipleExits::getMessage() const {
+  return "Loop " + L->getHeader()->getName() + " has multiple exits.";
+}
+
+bool ReportLoopHasMultipleExits::classof(const RejectReason *RR) {
+  return RR->getKind() == RejectReasonKind::LoopHasMultipleExits;
+}
+
+const DebugLoc &ReportLoopHasMultipleExits::getDebugLoc() const { return Loc; }
+
+std::string ReportLoopHasMultipleExits::getEndUserMessage() const {
+  return "Loop cannot be handled because it has multiple exits.";
 }
 
 //===----------------------------------------------------------------------===//

@@ -3759,8 +3759,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (!ReportMultipleNearMisses) {
-    OS << "      if (!checkAsmTiedOperandConstraints(it->ConvertFn, Operands, ErrorInfo))\n";
-    OS << "        return Match_InvalidTiedOperand;\n";
+    OS << "    if (!checkAsmTiedOperandConstraints(it->ConvertFn, Operands, ErrorInfo))\n";
+    OS << "      return Match_InvalidTiedOperand;\n";
     OS << "\n";
   }
 

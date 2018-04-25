@@ -254,7 +254,9 @@ a:
         ssnop                    # WARNING: [[@LINE]]:9: warning: ssnop is deprecated for MIPS64r6 and is equivalent to a nop instruction
         swc2    $25,304($s0)     # CHECK: swc2 $25, 304($16)     # encoding: [0x49,0x79,0x81,0x30]
         sync                     # CHECK: sync                   # encoding: [0x00,0x00,0x00,0x0f]
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNC
         sync    1                # CHECK: sync 1                 # encoding: [0x00,0x00,0x00,0x4f]
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNC
         syscall                  # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
         syscall   256            # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         tlbp                     # CHECK: tlbp                   # encoding: [0x42,0x00,0x00,0x08]
@@ -282,7 +284,8 @@ a:
         tne     $6,$17           # CHECK: tne $6, $17            # encoding: [0x00,0xd1,0x00,0x36]
         tne     $7,$8,885        # CHECK: tne $7, $8, 885        # encoding: [0x00,0xe8,0xdd,0x76]
         xor     $2, 4            # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
-
+        synci     -15842($a2)    # CHECK: synci -15842($6)       # encoding: [0x04,0xdf,0xc2,0x1e]
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNCI
 1:
 
         # Check that we accept traditional %relocation(symbol) offsets for stores

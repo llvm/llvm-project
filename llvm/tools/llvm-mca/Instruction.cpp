@@ -116,10 +116,6 @@ void Instruction::execute() {
     Stage = IS_EXECUTED;
 }
 
-bool Instruction::isZeroLatency() const {
-  return Desc.MaxLatency == 0 && Defs.size() == 0 && Uses.size() == 0;
-}
-
 void Instruction::update() {
   if (!isDispatched())
     return;

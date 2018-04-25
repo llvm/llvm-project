@@ -1166,10 +1166,13 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Glue = Chain.getValue(1);
   }
 
-  if (isa<GlobalAddressSDNode>(Callee)) {
-    Callee = lowerGlobalAddress(Callee, DAG);
-  } else if (isa<ExternalSymbolSDNode>(Callee)) {
-    Callee = lowerExternalSymbol(Callee, DAG);
+  // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
+  // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
+  // split it and then direct call can be matched by PseudoCALL.
+  if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    Callee = DAG.getTargetGlobalAddress(S->getGlobal(), DL, PtrVT, 0, 0);
+  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, 0);
   }
 
   // The first call operand is the chain and the second is the target address.

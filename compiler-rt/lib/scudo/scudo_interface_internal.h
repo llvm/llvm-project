@@ -25,6 +25,9 @@ const char* __scudo_default_options();
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __scudo_set_rss_limit(uptr LimitMb, s32 HardLimit);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __scudo_print_stats();
 }  // extern "C"
 
 #endif  // SCUDO_INTERFACE_INTERNAL_H_

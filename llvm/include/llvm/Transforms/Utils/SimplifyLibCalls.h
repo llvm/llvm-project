@@ -151,6 +151,8 @@ private:
   Value *optimizeIsDigit(CallInst *CI, IRBuilder<> &B);
   Value *optimizeIsAscii(CallInst *CI, IRBuilder<> &B);
   Value *optimizeToAscii(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeAtoi(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStrtol(CallInst *CI, IRBuilder<> &B);
 
   // Formatting and IO Library Call Optimizations
   Value *optimizeErrorReporting(CallInst *CI, IRBuilder<> &B,

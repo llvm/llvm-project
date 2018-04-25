@@ -2709,9 +2709,14 @@ Decl *ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
 
   // Not found. Create it.
   FriendDecl::FriendUnion ToFU;
-  if (NamedDecl *FriendD = D->getFriendDecl())
-    ToFU = cast_or_null<NamedDecl>(Importer.Import(FriendD));
-  else
+  if (NamedDecl *FriendD = D->getFriendDecl()) {
+    auto *ToFriendD = cast_or_null<NamedDecl>(Importer.Import(FriendD));
+    if (ToFriendD && FriendD->getFriendObjectKind() != Decl::FOK_None &&
+        !(FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator)))
+      ToFriendD->setObjectOfFriendDecl(false);
+
+    ToFU = ToFriendD;
+  }  else // The friend is a type, not a decl.
     ToFU = Importer.Import(D->getFriendType());
   if (!ToFU)
     return nullptr;
@@ -2731,7 +2736,6 @@ Decl *ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
                                        ToTPLists);
 
   Importer.Imported(D, FrD);
-  RD->pushFriendDecl(FrD);
 
   FrD->setAccess(D->getAccess());
   FrD->setLexicalDeclContext(LexicalDC);
@@ -6596,7 +6600,7 @@ Decl *ASTImporter::Import(Decl *FromD) {
 
   // Record the imported declaration.
   ImportedDecls[FromD] = ToD;
-
+  ToD->IdentifierNamespace = FromD->IdentifierNamespace;
   return ToD;
 }
 

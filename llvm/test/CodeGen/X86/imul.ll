@@ -119,7 +119,8 @@ define i32 @mul3_32(i32 %A) {
 ;
 ; X86-LABEL: mul3_32:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $3, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    retl
 ; But why?!
     %mul = mul i32 %A, 3
@@ -134,9 +135,10 @@ define i64 @mul3_64(i64 %A) {
 ;
 ; X86-LABEL: mul3_64:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    movl $3, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    imull $3, {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    retl
     %mul = mul i64 %A, 3

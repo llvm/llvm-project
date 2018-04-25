@@ -370,7 +370,8 @@ Parser::ParseConceptDefinition(SourceLocation ConceptLoc,
     if (DSC != DeclSpecContext::DSC_template_param) {
       SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
     } else {
-      SkipUntil(llvm::makeArrayRef({tok::comma, tok::greater}),
+      tok::TokenKind Tokens[] = { tok::comma, tok::greater };
+      SkipUntil(llvm::makeArrayRef(Tokens),
                 StopAtSemi | StopBeforeMatch);
     }
     return;

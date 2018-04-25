@@ -256,6 +256,21 @@ static void printRegClassOrBank(unsigned Reg, yaml::StringValue &Dest,
   OS << printRegClassOrBank(Reg, RegInfo, TRI);
 }
 
+template <typename T>
+static void
+printStackObjectDbgInfo(const MachineFunction::VariableDbgInfo &DebugVar,
+                        T &Object, ModuleSlotTracker &MST) {
+  std::array<std::string *, 3> Outputs{{&Object.DebugVar.Value,
+                                        &Object.DebugExpr.Value,
+                                        &Object.DebugLoc.Value}};
+  std::array<const Metadata *, 3> Metas{{DebugVar.Var,
+                                        DebugVar.Expr,
+                                        DebugVar.Loc}};
+  for (unsigned i = 0; i < 3; ++i) {
+    raw_string_ostream StrOS(*Outputs[i]);
+    Metas[i]->printAsOperand(StrOS, MST);
+  }
+}
 
 void MIRPrinter::convert(yaml::MachineFunction &MF,
                          const MachineRegisterInfo &RegInfo,
@@ -421,19 +436,12 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     assert(StackObjectInfo != StackObjectOperandMapping.end() &&
            "Invalid stack object index");
     const FrameIndexOperand &StackObject = StackObjectInfo->second;
-    assert(!StackObject.IsFixed && "Expected a non-fixed stack object");
-    auto &Object = YMF.StackObjects[StackObject.ID];
-    {
-      raw_string_ostream StrOS(Object.DebugVar.Value);
-      DebugVar.Var->printAsOperand(StrOS, MST);
-    }
-    {
-      raw_string_ostream StrOS(Object.DebugExpr.Value);
-      DebugVar.Expr->printAsOperand(StrOS, MST);
-    }
-    {
-      raw_string_ostream StrOS(Object.DebugLoc.Value);
-      DebugVar.Loc->printAsOperand(StrOS, MST);
+    if (StackObject.IsFixed) {
+      auto &Object = YMF.FixedStackObjects[StackObject.ID];
+      printStackObjectDbgInfo(DebugVar, Object, MST);
+    } else {
+      auto &Object = YMF.StackObjects[StackObject.ID];
+      printStackObjectDbgInfo(DebugVar, Object, MST);
     }
   }
 }

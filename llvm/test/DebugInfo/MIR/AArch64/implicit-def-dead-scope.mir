@@ -173,14 +173,14 @@ frameInfo:
 fixedStack:      
 stack:           
   - { id: 0, name: bz, type: default, offset: -32, size: 16, alignment: 8, 
-      callee-saved-register: '', local-offset: -16, di-variable: '', di-expression: '', 
-      di-location: '' }
+      callee-saved-register: '', local-offset: -16, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: att, type: default, offset: -48, size: 16, alignment: 8, 
-      callee-saved-register: '', local-offset: -32, di-variable: '', di-expression: '', 
-      di-location: '' }
+      callee-saved-register: '', local-offset: -32, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
   - { id: 2, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16, 
-      callee-saved-register: '$lr', di-variable: '', di-expression: '', 
-      di-location: '' }
+      callee-saved-register: '$lr', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
 constants:       
 body:             |
   bb.0.entry:

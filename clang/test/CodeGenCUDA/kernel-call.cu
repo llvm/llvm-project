@@ -4,14 +4,14 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK-LABEL: define{{.*}} void @_Z2g1i
+// CHECK-LABEL: define{{.*}}g1
 // HIP: call{{.*}}hipSetupArgument
 // HIP: call{{.*}}hipLaunchByPtr
 // CUDA: call{{.*}}cudaSetupArgument
 // CUDA: call{{.*}}cudaLaunch
 __global__ void g1(int x) {}
 
-// CHECK-LABEL: define{{.*}} i32 @main
+// CHECK-LABEL: define{{.*}}main
 int main(void) {
   // HIP: call{{.*}}hipConfigureCall
   // CUDA: call{{.*}}cudaConfigureCall

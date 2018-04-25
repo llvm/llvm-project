@@ -1,6 +1,12 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s --check-prefix=AST
 ;
+; The SCoP contains a loop with multiple exit blocks (BBs after leaving
+; the loop). The current implementation of deriving their domain derives
+; only a common domain for all of the exit blocks. We disabled loops with
+; multiple exit blocks until this is fixed.
+; XFAIL: *
+;
 ;    void f(int *A, int *B, int N) {
 ;      for (int i = 0; i < N; i++) {
 ;        A[i]++;

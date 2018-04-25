@@ -11,25 +11,32 @@ name: Proc8
 stack:
   - { id: 0, type: default, offset: 0, size: 4, alignment: 4,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -4, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
   - { id: 1, type: default, offset: 0, size: 8, alignment: 8,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -16, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -16, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
   - { id: 2, type: default, offset: 0, size: 8, alignment: 8,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -24, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -24, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
   - { id: 3, type: default, offset: 0, size: 8, alignment: 8,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -32, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -32, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
   - { id: 4, type: default, offset: 0, size: 8, alignment: 8,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -40, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -40, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
   - { id: 5, type: default, offset: 0, size: 8, alignment: 8,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -48, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -48, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
   - { id: 6, type: default, offset: 0, size: 8, alignment: 8,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      local-offset: -56, di-variable: '', di-expression: '', di-location: '' }
+      local-offset: -56, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
 constants:
 body: |
   bb.0:
