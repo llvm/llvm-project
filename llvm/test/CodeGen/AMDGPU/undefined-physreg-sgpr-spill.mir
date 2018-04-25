@@ -35,7 +35,8 @@ liveins:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
       stack-id: 1, callee-saved-register: '', callee-saved-restored: true,
-      di-variable: '', di-expression: '', di-location: '' }
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
 constants:
 body:             |
   bb.0:
@@ -98,7 +99,8 @@ liveins:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
       stack-id: 1, callee-saved-register: '', callee-saved-restored: true,
-      di-variable: '', di-expression: '', di-location: '' }
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
 constants:
 body:             |
   bb.0:
