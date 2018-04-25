@@ -638,6 +638,9 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   Opts->Features.clear();
   for (const auto &F : Features)
     Opts->Features.push_back((F.getValue() ? "+" : "-") + F.getKey().str());
+  // Sort here, so we handle the features in a predictable order. (This matters
+  // when we're dealing with features that overlap.)
+  llvm::sort(Opts->Features.begin(), Opts->Features.end());
 
   if (!Target->handleTargetFeatures(Opts->Features, Diags))
     return nullptr;

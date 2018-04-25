@@ -19,14 +19,32 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 
+namespace {
+
+// Matches functions that are instantiated from a class template member function
+// matching InnerMatcher. Functions not instantiated from a class template
+// member function are matched directly with InnerMatcher.
+AST_MATCHER_P(FunctionDecl, isInstantiatedFrom, Matcher<FunctionDecl>,
+              InnerMatcher) {
+  FunctionDecl *InstantiatedFrom = Node.getInstantiatedFromMemberFunction();
+  return InnerMatcher.matches(InstantiatedFrom ? *InstantiatedFrom : Node,
+                              Finder, Builder);
+}
+
+} // namespace
+
 UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CheckedFunctions(Options.get("CheckedFunctions", "::std::async;"
-                                                       "::std::launder;"
-                                                       "::std::remove;"
-                                                       "::std::remove_if;"
-                                                       "::std::unique")) {}
+      CheckedFunctions(Options.get("CheckedFunctions",
+                                   "::std::async;"
+                                   "::std::launder;"
+                                   "::std::remove;"
+                                   "::std::remove_if;"
+                                   "::std::unique;"
+                                   "::std::unique_ptr::release;"
+                                   "::std::basic_string::empty;"
+                                   "::std::vector::empty")) {}
 
 void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckedFunctions", CheckedFunctions);
@@ -35,11 +53,11 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
   auto FunVec = utils::options::parseStringList(CheckedFunctions);
   auto MatchedCallExpr = expr(ignoringImplicit(ignoringParenImpCasts(
-      callExpr(
-          callee(functionDecl(
-              // Don't match void overloads of checked functions.
-              unless(returns(voidType())), hasAnyName(std::vector<StringRef>(
-                                               FunVec.begin(), FunVec.end())))))
+      callExpr(callee(functionDecl(
+                   // Don't match void overloads of checked functions.
+                   unless(returns(voidType())),
+                   isInstantiatedFrom(hasAnyName(
+                       std::vector<StringRef>(FunVec.begin(), FunVec.end()))))))
           .bind("match"))));
 
   auto UnusedInCompoundStmt =

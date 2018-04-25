@@ -69,6 +69,7 @@ def Named : Decl<"named declarations", 1>;
       def TypeAliasTemplate : DDecl<RedeclarableTemplate>;
     def TemplateTemplateParm : DDecl<Template>;
     def BuiltinTemplate : DDecl<Template>;
+    def Concept : DDecl<Template>;
   def Using : DDecl<Named>;
   def UsingPack : DDecl<Named>;
   def UsingShadow : DDecl<Named>;

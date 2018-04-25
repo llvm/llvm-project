@@ -9,14 +9,14 @@
 vaddps %xmm0, %xmm0, %xmm2
 vfmadd213ps (%rdi), %xmm1, %xmm2
 
-# HASWELL:      [0,0]	DeeeER    .    ..	vaddps	%xmm0, %xmm0, %xmm2
-# HASWELL-NEXT: [0,1]	D===eeeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
+# HASWELL:      [0,0]	DeeeER    . .	vaddps	%xmm0, %xmm0, %xmm2
+# HASWELL-NEXT: [0,1]	DeeeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
 
 # BDWELL:       [0,0]	DeeeER    . .	vaddps	%xmm0, %xmm0, %xmm2
 # BDWELL-NEXT:  [0,1]	DeeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
 
-# SKYLAKE:      [0,0]	DeeeeER   .    ..	vaddps	%xmm0, %xmm0, %xmm2
-# SKYLAKE-NEXT: [0,1]	D====eeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
+# SKYLAKE:      [0,0]	DeeeeER   . .	vaddps	%xmm0, %xmm0, %xmm2
+# SKYLAKE-NEXT: [0,1]	DeeeeeeeeeeER	vfmadd213ps	(%rdi), %xmm1, %xmm2
 
 # ZNVER1:       [0,0]	DeeeER    .   .	  vaddps	%xmm0, %xmm0, %xmm2
 # ZNVER1-NEXT:  [0,1]	DeeeeeeeeeeeeER	  vfmadd213ps	(%rdi), %xmm1, %xmm2

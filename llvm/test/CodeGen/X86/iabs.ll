@@ -36,7 +36,7 @@ define i8 @test_i8(i8 %a) nounwind {
 define i16 @test_i16(i16 %a) nounwind {
 ; X86-NO-CMOV-LABEL: test_i16:
 ; X86-NO-CMOV:       # %bb.0:
-; X86-NO-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-CMOV-NEXT:    movl %eax, %ecx
 ; X86-NO-CMOV-NEXT:    sarw $15, %cx
 ; X86-NO-CMOV-NEXT:    addl %ecx, %eax

@@ -18,9 +18,7 @@ define void @br_fcmp_false(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB0_2: # %if.else
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp false float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.then:
@@ -44,9 +42,7 @@ define void @br_fcmp_oeq(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB1_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp oeq float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -74,9 +70,7 @@ define void @br_fcmp_oeq_alt(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB2_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp oeq float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.then:
@@ -100,9 +94,7 @@ define void @br_fcmp_ogt(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB3_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp ogt float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -126,9 +118,7 @@ define void @br_fcmp_oge(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB4_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp oge float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -152,9 +142,7 @@ define void @br_fcmp_olt(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB5_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp olt float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -178,9 +166,7 @@ define void @br_fcmp_ole(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB6_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp ole float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -212,9 +198,7 @@ define void @br_fcmp_one(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB7_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp one float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -242,9 +226,7 @@ define void @br_fcmp_ord(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB8_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp ord float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -273,9 +255,7 @@ define void @br_fcmp_ueq(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB9_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp ueq float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -300,9 +280,7 @@ define void @br_fcmp_ugt(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB10_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp ugt float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -327,9 +305,7 @@ define void @br_fcmp_uge(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB11_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp uge float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -354,9 +330,7 @@ define void @br_fcmp_ult(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB12_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp ult float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -381,9 +355,7 @@ define void @br_fcmp_ule(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB13_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp ule float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -408,9 +380,7 @@ define void @br_fcmp_une(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB14_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp une float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -438,9 +408,7 @@ define void @br_fcmp_uno(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB15_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp uno float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -462,9 +430,7 @@ define void @br_fcmp_true(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB16_2: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
   %1 = fcmp true float %a, %b
   br i1 %1, label %if.then, label %if.else
 if.else:
@@ -482,35 +448,29 @@ define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
 ; RV32IF:       # %bb.0: # %entry
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp)
-; RV32IF-NEXT:    sw s1, 8(sp)
-; RV32IF-NEXT:    lui a0, %hi(dummy)
-; RV32IF-NEXT:    addi s1, a0, %lo(dummy)
 ; RV32IF-NEXT:    mv a0, zero
-; RV32IF-NEXT:    jalr s1
+; RV32IF-NEXT:    call dummy
+; RV32IF-NEXT:    lui a1, %hi(.LCPI17_0)
+; RV32IF-NEXT:    addi a1, a1, %lo(.LCPI17_0)
+; RV32IF-NEXT:    flw ft1, 0(a1)
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
-; RV32IF-NEXT:    lui a0, %hi(.LCPI17_0)
-; RV32IF-NEXT:    addi a0, a0, %lo(.LCPI17_0)
-; RV32IF-NEXT:    flw ft1, 0(a0)
-; RV32IF-NEXT:    fsw ft1, 4(sp)
+; RV32IF-NEXT:    fsw ft1, 8(sp)
 ; RV32IF-NEXT:    feq.s a0, ft0, ft1
 ; RV32IF-NEXT:    beqz a0, .LBB17_3
 ; RV32IF-NEXT:  # %bb.1: # %if.end
 ; RV32IF-NEXT:    mv a0, zero
-; RV32IF-NEXT:    jalr s1
+; RV32IF-NEXT:    call dummy
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
-; RV32IF-NEXT:    flw ft1, 4(sp)
+; RV32IF-NEXT:    flw ft1, 8(sp)
 ; RV32IF-NEXT:    feq.s a0, ft0, ft1
 ; RV32IF-NEXT:    beqz a0, .LBB17_3
 ; RV32IF-NEXT:  # %bb.2: # %if.end4
 ; RV32IF-NEXT:    mv a0, zero
-; RV32IF-NEXT:    lw s1, 8(sp)
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB17_3: # %if.then
-; RV32IF-NEXT:    lui a0, %hi(abort)
-; RV32IF-NEXT:    addi a0, a0, %lo(abort)
-; RV32IF-NEXT:    jalr a0
+; RV32IF-NEXT:    call abort
 entry:
   %call = call float @dummy(float 0.000000e+00)
   %cmp = fcmp une float %call, 0.000000e+00

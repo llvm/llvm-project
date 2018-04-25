@@ -32,6 +32,10 @@ AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                      const Value *Val, unsigned VReg) const {
+  // FIXME: Add support for non-void returns.
+  if (Val)
+    return false;
+
   MIRBuilder.buildInstr(AMDGPU::S_ENDPGM);
   return true;
 }
@@ -139,40 +143,75 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   unsigned NumArgs = F.arg_size();
   Function::const_arg_iterator CurOrigArg = F.arg_begin();
   const AMDGPUTargetLowering &TLI = *getTLI<AMDGPUTargetLowering>();
+  unsigned PSInputNum = 0;
+  BitVector Skipped(NumArgs);
   for (unsigned i = 0; i != NumArgs; ++i, ++CurOrigArg) {
     EVT ValEVT = TLI.getValueType(DL, CurOrigArg->getType());
 
     // We can only hanlde simple value types at the moment.
-    if (!ValEVT.isSimple())
-      return false;
-    MVT ValVT = ValEVT.getSimpleVT();
     ISD::ArgFlagsTy Flags;
     ArgInfo OrigArg{VRegs[i], CurOrigArg->getType()};
     setArgFlags(OrigArg, i + 1, DL, F);
     Flags.setOrigAlign(DL.getABITypeAlignment(CurOrigArg->getType()));
+
+    if (F.getCallingConv() == CallingConv::AMDGPU_PS &&
+        !OrigArg.Flags.isInReg() && !OrigArg.Flags.isByVal() &&
+        PSInputNum <= 15) {
+      if (CurOrigArg->use_empty() && !Info->isPSInputAllocated(PSInputNum)) {
+        Skipped.set(i);
+        ++PSInputNum;
+        continue;
+      }
+
+      Info->markPSInputAllocated(PSInputNum);
+      if (!CurOrigArg->use_empty())
+        Info->markPSInputEnabled(PSInputNum);
+
+      ++PSInputNum;
+    }
+
     CCAssignFn *AssignFn = CCAssignFnForCall(F.getCallingConv(),
                                              /*IsVarArg=*/false);
-    bool Res =
-        AssignFn(i, ValVT, ValVT, CCValAssign::Full, OrigArg.Flags, CCInfo);
 
-    // Fail if we don't know how to handle this type.
-    if (Res)
-      return false;
+    if (ValEVT.isVector()) {
+      EVT ElemVT = ValEVT.getVectorElementType();
+      if (!ValEVT.isSimple())
+        return false;
+      MVT ValVT = ElemVT.getSimpleVT();
+      bool Res = AssignFn(i, ValVT, ValVT, CCValAssign::Full,
+                          OrigArg.Flags, CCInfo);
+      if (!Res)
+        return false;
+    } else {
+      MVT ValVT = ValEVT.getSimpleVT();
+      if (!ValEVT.isSimple())
+        return false;
+      bool Res =
+          AssignFn(i, ValVT, ValVT, CCValAssign::Full, OrigArg.Flags, CCInfo);
+
+      // Fail if we don't know how to handle this type.
+      if (Res)
+        return false;
+    }
   }
 
   Function::const_arg_iterator Arg = F.arg_begin();
 
-  if (F.getCallingConv() == CallingConv::AMDGPU_VS) {
-    for (unsigned i = 0; i != NumArgs; ++i, ++Arg) {
-      CCValAssign &VA = ArgLocs[i];
-      MRI.addLiveIn(VA.getLocReg(), VRegs[i]);
+  if (F.getCallingConv() == CallingConv::AMDGPU_VS ||
+      F.getCallingConv() == CallingConv::AMDGPU_PS) {
+    for (unsigned i = 0, OrigArgIdx = 0;
+         OrigArgIdx != NumArgs && i != ArgLocs.size(); ++Arg, ++OrigArgIdx) {
+       if (Skipped.test(OrigArgIdx))
+          continue;
+      CCValAssign &VA = ArgLocs[i++];
+      MRI.addLiveIn(VA.getLocReg(), VRegs[OrigArgIdx]);
       MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
-      MIRBuilder.buildCopy(VRegs[i], VA.getLocReg());
+      MIRBuilder.buildCopy(VRegs[OrigArgIdx], VA.getLocReg());
     }
     return true;
   }
 
-  for (unsigned i = 0; i != NumArgs; ++i, ++Arg) {
+  for (unsigned i = 0; i != ArgLocs.size(); ++i, ++Arg) {
     // FIXME: We should be getting DebugInfo from the arguments some how.
     CCValAssign &VA = ArgLocs[i];
     lowerParameter(MIRBuilder, Arg->getType(),

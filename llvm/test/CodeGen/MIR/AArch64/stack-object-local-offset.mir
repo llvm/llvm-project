@@ -27,7 +27,8 @@ frameInfo:
 # CHECK: stack:
 # CHECK: - { id: 0, name: local_var, type: default, offset: 0, size: 8, alignment: 8,
 # CHECK-NEXT: stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-# CHECK-NEXT: local-offset: -8, di-variable: '', di-expression: '', di-location: '' }
+# CHECK-NEXT: local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT: debug-info-location: '' }
 stack:
   - { id: 0,name: local_var,offset: 0,size: 8,alignment: 8, local-offset: -8 }
 body: |

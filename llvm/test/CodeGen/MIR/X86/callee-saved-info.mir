@@ -50,7 +50,7 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
 # CHECK: fixedStack:
-# CHECK: callee-saved-register: '$rbx', callee-saved-restored: true }
+# CHECK: callee-saved-register: '$rbx', callee-saved-restored: true
 fixedStack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbx' }
 # CHECK: stack:

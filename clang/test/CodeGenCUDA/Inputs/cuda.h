@@ -16,7 +16,12 @@ struct dim3 {
 
 typedef struct cudaStream *cudaStream_t;
 
+#ifdef __HIP__
+int hipConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,
+                     cudaStream_t stream = 0);
+#else
 int cudaConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,
                       cudaStream_t stream = 0);
+#endif
 
 extern "C" __device__ int printf(const char*, ...);

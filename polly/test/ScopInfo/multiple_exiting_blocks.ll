@@ -1,5 +1,11 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
+; The SCoP contains a loop with multiple exit blocks (BBs after leaving
+; the loop). The current implementation of deriving their domain derives
+; only a common domain for all of the exit blocks. We disabled loops with
+; multiple exit blocks until this is fixed.
+; XFAIL: *
+;
 ; CHECK: Domain :=
 ; CHECK:   [N, P, Q] -> { Stmt_if_end[i0] : 0 <= i0 <= 1 + Q and i0 < N and (i0 < P or (P < 0 and i0 >= 2 + P)); Stmt_if_end[0] : N > 0 and ((P <= -2 and Q <= -2) or (P > 0 and Q <= -2) or P = -1) };
 ;

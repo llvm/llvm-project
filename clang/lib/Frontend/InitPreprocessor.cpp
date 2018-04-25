@@ -471,8 +471,14 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)
     Builder.defineMacro("__ASSEMBLER__");
-  if (LangOpts.CUDA)
+  if (LangOpts.CUDA && !LangOpts.HIP)
     Builder.defineMacro("__CUDA__");
+  if (LangOpts.HIP) {
+    Builder.defineMacro("__HIP__");
+    Builder.defineMacro("__HIPCC__");
+    if (LangOpts.CUDAIsDevice)
+      Builder.defineMacro("__HIP_DEVICE_COMPILE__");
+  }
 }
 
 /// Initialize the predefined C++ language feature test macros defined in
@@ -1031,7 +1037,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   }
 
   // CUDA device path compilaton
-  if (LangOpts.CUDAIsDevice) {
+  if (LangOpts.CUDAIsDevice && !LangOpts.HIP) {
     // The CUDA_ARCH value is set for the GPU target specified in the NVPTX
     // backend's target defines.
     Builder.defineMacro("__CUDA_ARCH__");

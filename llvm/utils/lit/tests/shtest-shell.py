@@ -26,14 +26,6 @@
 # CHECK: error: command failed with exit status: 1
 # CHECK: ***
 
-# CHECK: FAIL: shtest-shell :: colon-error.txt
-# CHECK: *** TEST 'shtest-shell :: colon-error.txt' FAILED ***
-# CHECK: $ ":"
-# CHECK: # command stderr:
-# CHECK: Unsupported: ':' cannot be part of a pipeline
-# CHECK: error: command failed with exit status: 127
-# CHECK: ***
-
 # CHECK: FAIL: shtest-shell :: diff-error-0.txt
 # CHECK: *** TEST 'shtest-shell :: diff-error-0.txt' FAILED ***
 # CHECK: $ "diff" "diff-error-0.txt" "diff-error-0.txt"
@@ -161,7 +153,7 @@
 #
 # CHECK: FAIL: shtest-shell :: error-1.txt
 # CHECK: *** TEST 'shtest-shell :: error-1.txt' FAILED ***
-# CHECK: shell parser error on: ': \'RUN: at line 3\'; echo "missing quote'
+# CHECK: shell parser error on: 'echo "missing quote'
 # CHECK: ***
 
 # CHECK: FAIL: shtest-shell :: error-2.txt
@@ -227,4 +219,4 @@
 # CHECK: PASS: shtest-shell :: sequencing-0.txt
 # CHECK: XFAIL: shtest-shell :: sequencing-1.txt
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failing Tests (27)
+# CHECK: Failing Tests (26)

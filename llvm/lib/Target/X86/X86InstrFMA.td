@@ -36,13 +36,13 @@
 
 multiclass fma3p_rm_213<bits<8> opc, string OpcodeStr, RegisterClass RC,
                         ValueType VT, X86MemOperand x86memop, PatFrag MemFrag,
-                        SDNode Op> {
+                        SDNode Op, X86FoldableSchedWrite sched> {
   def r     : FMA3<opc, MRMSrcReg, (outs RC:$dst),
                    (ins RC:$src1, RC:$src2, RC:$src3),
                    !strconcat(OpcodeStr,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                    [(set RC:$dst, (VT (Op RC:$src2, RC:$src1, RC:$src3)))]>,
-                   Sched<[WriteFMA]>;
+                   Sched<[sched]>;
 
   let mayLoad = 1 in
   def m     : FMA3<opc, MRMSrcMem, (outs RC:$dst),
@@ -51,18 +51,18 @@ multiclass fma3p_rm_213<bits<8> opc, string OpcodeStr, RegisterClass RC,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                    [(set RC:$dst, (VT (Op RC:$src2, RC:$src1,
                                           (MemFrag addr:$src3))))]>,
-                   Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+                   Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
 }
 
 multiclass fma3p_rm_231<bits<8> opc, string OpcodeStr, RegisterClass RC,
                         ValueType VT, X86MemOperand x86memop, PatFrag MemFrag,
-                        SDNode Op> {
+                        SDNode Op, X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in
   def r     : FMA3<opc, MRMSrcReg, (outs RC:$dst),
                    (ins RC:$src1, RC:$src2, RC:$src3),
                    !strconcat(OpcodeStr,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                   []>, Sched<[WriteFMA]>;
+                   []>, Sched<[sched]>;
 
   let mayLoad = 1 in
   def m     : FMA3<opc, MRMSrcMem, (outs RC:$dst),
@@ -71,18 +71,18 @@ multiclass fma3p_rm_231<bits<8> opc, string OpcodeStr, RegisterClass RC,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                    [(set RC:$dst, (VT (Op RC:$src2, (MemFrag addr:$src3),
                                           RC:$src1)))]>,
-                   Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+                   Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
 }
 
 multiclass fma3p_rm_132<bits<8> opc, string OpcodeStr, RegisterClass RC,
                         ValueType VT, X86MemOperand x86memop, PatFrag MemFrag,
-                        SDNode Op> {
+                        SDNode Op, X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in
   def r     : FMA3<opc, MRMSrcReg, (outs RC:$dst),
                    (ins RC:$src1, RC:$src2, RC:$src3),
                    !strconcat(OpcodeStr,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                   []>, Sched<[WriteFMA]>;
+                   []>, Sched<[sched]>;
 
   // Pattern is 312 order so that the load is in a different place from the
   // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
@@ -93,71 +93,77 @@ multiclass fma3p_rm_132<bits<8> opc, string OpcodeStr, RegisterClass RC,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                    [(set RC:$dst, (VT (Op (MemFrag addr:$src3), RC:$src1,
                                           RC:$src2)))]>,
-                   Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+                   Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
 }
 
 let Constraints = "$src1 = $dst", hasSideEffects = 0, isCommutable = 1 in
 multiclass fma3p_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpcodeStr, string PackTy, string Suff,
                        PatFrag MemFrag128, PatFrag MemFrag256,
-                       SDNode Op, ValueType OpTy128, ValueType OpTy256> {
+                       SDNode Op, ValueType OpTy128, ValueType OpTy256,
+                       X86FoldableSchedWrite sched128,
+                       X86FoldableSchedWrite sched256> {
   defm NAME#213#Suff : fma3p_rm_213<opc213, !strconcat(OpcodeStr, "213", PackTy),
-                                    VR128, OpTy128, f128mem, MemFrag128, Op>;
+                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched128>;
   defm NAME#231#Suff : fma3p_rm_231<opc231, !strconcat(OpcodeStr, "231", PackTy),
-                                    VR128, OpTy128, f128mem, MemFrag128, Op>;
+                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched128>;
   defm NAME#132#Suff : fma3p_rm_132<opc132, !strconcat(OpcodeStr, "132", PackTy),
-                                    VR128, OpTy128, f128mem, MemFrag128, Op>;
+                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched128>;
 
   defm NAME#213#Suff#Y : fma3p_rm_213<opc213, !strconcat(OpcodeStr, "213", PackTy),
-                                      VR256, OpTy256, f256mem, MemFrag256, Op>,
+                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched256>,
                                       VEX_L;
   defm NAME#231#Suff#Y : fma3p_rm_231<opc231, !strconcat(OpcodeStr, "231", PackTy),
-                                      VR256, OpTy256, f256mem, MemFrag256, Op>,
+                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched256>,
                                       VEX_L;
   defm NAME#132#Suff#Y : fma3p_rm_132<opc132, !strconcat(OpcodeStr, "132", PackTy),
-                                      VR256, OpTy256, f256mem, MemFrag256, Op>,
+                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched256>,
                                       VEX_L;
 }
 
 // Fused Multiply-Add
 let ExeDomain = SSEPackedSingle in {
   defm VFMADD    : fma3p_forms<0x98, 0xA8, 0xB8, "vfmadd", "ps", "PS",
-                               loadv4f32, loadv8f32, X86Fmadd, v4f32, v8f32>;
+                               loadv4f32, loadv8f32, X86Fmadd, v4f32, v8f32,
+                               WriteFMA, WriteFMAY>;
   defm VFMSUB    : fma3p_forms<0x9A, 0xAA, 0xBA, "vfmsub", "ps", "PS",
-                               loadv4f32, loadv8f32, X86Fmsub, v4f32, v8f32>;
+                               loadv4f32, loadv8f32, X86Fmsub, v4f32, v8f32,
+                               WriteFMA, WriteFMAY>;
   defm VFMADDSUB : fma3p_forms<0x96, 0xA6, 0xB6, "vfmaddsub", "ps", "PS",
-                               loadv4f32, loadv8f32, X86Fmaddsub, v4f32, v8f32>;
+                               loadv4f32, loadv8f32, X86Fmaddsub, v4f32, v8f32,
+                               WriteFMA, WriteFMAY>;
   defm VFMSUBADD : fma3p_forms<0x97, 0xA7, 0xB7, "vfmsubadd", "ps", "PS",
-                               loadv4f32, loadv8f32, X86Fmsubadd, v4f32, v8f32>;
+                               loadv4f32, loadv8f32, X86Fmsubadd, v4f32, v8f32,
+                               WriteFMA, WriteFMAY>;
 }
 
 let ExeDomain = SSEPackedDouble in {
   defm VFMADD    : fma3p_forms<0x98, 0xA8, 0xB8, "vfmadd", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmadd, v2f64,
-                               v4f64>, VEX_W;
+                               v4f64, WriteFMA, WriteFMAY>, VEX_W;
   defm VFMSUB    : fma3p_forms<0x9A, 0xAA, 0xBA, "vfmsub", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmsub, v2f64,
-                               v4f64>, VEX_W;
+                               v4f64, WriteFMA, WriteFMAY>, VEX_W;
   defm VFMADDSUB : fma3p_forms<0x96, 0xA6, 0xB6, "vfmaddsub", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmaddsub,
-                               v2f64, v4f64>, VEX_W;
+                               v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
   defm VFMSUBADD : fma3p_forms<0x97, 0xA7, 0xB7, "vfmsubadd", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmsubadd,
-                               v2f64, v4f64>, VEX_W;
+                               v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
 }
 
 // Fused Negative Multiply-Add
 let ExeDomain = SSEPackedSingle in {
   defm VFNMADD : fma3p_forms<0x9C, 0xAC, 0xBC, "vfnmadd", "ps", "PS", loadv4f32,
-                             loadv8f32, X86Fnmadd, v4f32, v8f32>;
+                             loadv8f32, X86Fnmadd, v4f32, v8f32, WriteFMA, WriteFMAY>;
   defm VFNMSUB : fma3p_forms<0x9E, 0xAE, 0xBE, "vfnmsub", "ps", "PS", loadv4f32,
-                             loadv8f32, X86Fnmsub, v4f32, v8f32>;
+                             loadv8f32, X86Fnmsub, v4f32, v8f32, WriteFMA, WriteFMAY>;
 }
 let ExeDomain = SSEPackedDouble in {
   defm VFNMADD : fma3p_forms<0x9C, 0xAC, 0xBC, "vfnmadd", "pd", "PD", loadv2f64,
-                             loadv4f64, X86Fnmadd, v2f64, v4f64>, VEX_W;
+                             loadv4f64, X86Fnmadd, v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
   defm VFNMSUB : fma3p_forms<0x9E, 0xAE, 0xBE, "vfnmsub", "pd", "PD", loadv2f64,
-                             loadv4f64, X86Fnmsub, v2f64, v4f64>, VEX_W;
+                             loadv4f64, X86Fnmsub, v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
 }
 
 // All source register operands of FMA opcodes defined in fma3s_rm multiclass
@@ -171,13 +177,14 @@ let ExeDomain = SSEPackedDouble in {
 // defining FMA3 opcodes above.
 multiclass fma3s_rm_213<bits<8> opc, string OpcodeStr,
                         X86MemOperand x86memop, RegisterClass RC,
-                        SDPatternOperator OpNode> {
+                        SDPatternOperator OpNode,
+                        X86FoldableSchedWrite sched> {
   def r : FMA3S<opc, MRMSrcReg, (outs RC:$dst),
                 (ins RC:$src1, RC:$src2, RC:$src3),
                 !strconcat(OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                 [(set RC:$dst, (OpNode RC:$src2, RC:$src1, RC:$src3))]>,
-                Sched<[WriteFMA]>;
+                Sched<[sched]>;
 
   let mayLoad = 1 in
   def m : FMA3S<opc, MRMSrcMem, (outs RC:$dst),
@@ -186,18 +193,18 @@ multiclass fma3s_rm_213<bits<8> opc, string OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                 [(set RC:$dst,
                   (OpNode RC:$src2, RC:$src1, (load addr:$src3)))]>,
-                Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+                Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
 }
 
 multiclass fma3s_rm_231<bits<8> opc, string OpcodeStr,
                         X86MemOperand x86memop, RegisterClass RC,
-                        SDPatternOperator OpNode> {
+                        SDPatternOperator OpNode, X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in
   def r : FMA3S<opc, MRMSrcReg, (outs RC:$dst),
                 (ins RC:$src1, RC:$src2, RC:$src3),
                 !strconcat(OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                []>, Sched<[WriteFMA]>;
+                []>, Sched<[sched]>;
 
   let mayLoad = 1 in
   def m : FMA3S<opc, MRMSrcMem, (outs RC:$dst),
@@ -206,18 +213,18 @@ multiclass fma3s_rm_231<bits<8> opc, string OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                 [(set RC:$dst,
                   (OpNode RC:$src2, (load addr:$src3), RC:$src1))]>,
-                Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+                Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
 }
 
 multiclass fma3s_rm_132<bits<8> opc, string OpcodeStr,
                         X86MemOperand x86memop, RegisterClass RC,
-                        SDPatternOperator OpNode> {
+                        SDPatternOperator OpNode, X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in
   def r : FMA3S<opc, MRMSrcReg, (outs RC:$dst),
                 (ins RC:$src1, RC:$src2, RC:$src3),
                 !strconcat(OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                []>, Sched<[WriteFMA]>;
+                []>, Sched<[sched]>;
 
   // Pattern is 312 order so that the load is in a different place from the
   // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
@@ -228,20 +235,20 @@ multiclass fma3s_rm_132<bits<8> opc, string OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                 [(set RC:$dst,
                   (OpNode (load addr:$src3), RC:$src1, RC:$src2))]>,
-                Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+                Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
 }
 
 let Constraints = "$src1 = $dst", isCommutable = 1, hasSideEffects = 0 in
 multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpStr, string PackTy, string Suff,
                        SDNode OpNode, RegisterClass RC,
-                       X86MemOperand x86memop> {
+                       X86MemOperand x86memop, X86FoldableSchedWrite sched> {
   defm NAME#213#Suff : fma3s_rm_213<opc213, !strconcat(OpStr, "213", PackTy),
-                                    x86memop, RC, OpNode>;
+                                    x86memop, RC, OpNode, sched>;
   defm NAME#231#Suff : fma3s_rm_231<opc231, !strconcat(OpStr, "231", PackTy),
-                                    x86memop, RC, OpNode>;
+                                    x86memop, RC, OpNode, sched>;
   defm NAME#132#Suff : fma3s_rm_132<opc132, !strconcat(OpStr, "132", PackTy),
-                                    x86memop, RC, OpNode>;
+                                    x86memop, RC, OpNode, sched>;
 }
 
 // These FMA*_Int instructions are defined specially for being used when
@@ -260,19 +267,20 @@ multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
     hasSideEffects = 0 in
 multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
-                        Operand memopr, RegisterClass RC> {
+                        Operand memopr, RegisterClass RC,
+                        X86FoldableSchedWrite sched> {
   def r_Int : FMA3S_Int<opc, MRMSrcReg, (outs RC:$dst),
                         (ins RC:$src1, RC:$src2, RC:$src3),
                         !strconcat(OpcodeStr,
                                    "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                        []>, Sched<[WriteFMA]>;
+                        []>, Sched<[sched]>;
 
   let mayLoad = 1 in
   def m_Int : FMA3S_Int<opc, MRMSrcMem, (outs RC:$dst),
                         (ins RC:$src1, RC:$src2, memopr:$src3),
                         !strconcat(OpcodeStr,
                                    "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                        []>, Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+                        []>, Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
 }
 
 // The FMA 213 form is created for lowering of scalar FMA intrinscis
@@ -286,28 +294,30 @@ multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
 // such analysis will be implemented eventually.
 multiclass fma3s_int_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                            string OpStr, string PackTy, string Suff,
-                           RegisterClass RC, Operand memop> {
+                           RegisterClass RC, Operand memop,
+                           X86FoldableSchedWrite sched> {
   defm NAME#132#Suff : fma3s_rm_int<opc132, !strconcat(OpStr, "132", PackTy),
-                                    memop, RC>;
+                                    memop, RC, sched>;
   defm NAME#213#Suff : fma3s_rm_int<opc213, !strconcat(OpStr, "213", PackTy),
-                                    memop, RC>;
+                                    memop, RC, sched>;
   defm NAME#231#Suff : fma3s_rm_int<opc231, !strconcat(OpStr, "231", PackTy),
-                                    memop, RC>;
+                                    memop, RC, sched>;
 }
 
 multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
-                 string OpStr, SDNode OpNodeIntrin, SDNode OpNode> {
+                 string OpStr, SDNode OpNodeIntrin, SDNode OpNode,
+                 X86FoldableSchedWrite sched> {
   let ExeDomain = SSEPackedSingle in
   defm NAME : fma3s_forms<opc132, opc213, opc231, OpStr, "ss", "SS", OpNode,
-                          FR32, f32mem>,
+                          FR32, f32mem, sched>,
               fma3s_int_forms<opc132, opc213, opc231, OpStr, "ss", "SS",
-                              VR128, ssmem>;
+                              VR128, ssmem, sched>;
 
   let ExeDomain = SSEPackedDouble in
   defm NAME : fma3s_forms<opc132, opc213, opc231, OpStr, "sd", "SD", OpNode,
-                        FR64, f64mem>,
+                        FR64, f64mem, sched>,
               fma3s_int_forms<opc132, opc213, opc231, OpStr, "sd", "SD",
-                              VR128, sdmem>, VEX_W;
+                              VR128, sdmem, sched>, VEX_W;
 
   // These patterns use the 123 ordering, instead of 213, even though
   // they match the intrinsic to the 213 version of the instruction.
@@ -345,23 +355,23 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
   }
 }
 
-defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", X86Fmadds1, X86Fmadd>, VEX_LIG;
-defm VFMSUB : fma3s<0x9B, 0xAB, 0xBB, "vfmsub", X86Fmsubs1, X86Fmsub>, VEX_LIG;
+defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", X86Fmadds1, X86Fmadd,
+                    WriteFMAS>, VEX_LIG;
+defm VFMSUB : fma3s<0x9B, 0xAB, 0xBB, "vfmsub", X86Fmsubs1, X86Fmsub,
+                    WriteFMAS>, VEX_LIG;
 
-defm VFNMADD : fma3s<0x9D, 0xAD, 0xBD, "vfnmadd", X86Fnmadds1, X86Fnmadd>,
-                     VEX_LIG;
-defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86Fnmsubs1, X86Fnmsub>,
-                     VEX_LIG;
-
+defm VFNMADD : fma3s<0x9D, 0xAD, 0xBD, "vfnmadd", X86Fnmadds1, X86Fnmadd,
+                     WriteFMAS>, VEX_LIG;
+defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86Fnmsubs1, X86Fnmsub,
+                     WriteFMAS>, VEX_LIG;
 
 //===----------------------------------------------------------------------===//
 // FMA4 - AMD 4 operand Fused Multiply-Add instructions
 //===----------------------------------------------------------------------===//
 
-
 multiclass fma4s<bits<8> opc, string OpcodeStr, RegisterClass RC,
                  X86MemOperand x86memop, ValueType OpVT, SDNode OpNode,
-                 PatFrag mem_frag> {
+                 PatFrag mem_frag, X86FoldableSchedWrite sched> {
   let isCommutable = 1 in
   def rr : FMA4S<opc, MRMSrcRegOp4, (outs RC:$dst),
            (ins RC:$src1, RC:$src2, RC:$src3),
@@ -369,21 +379,21 @@ multiclass fma4s<bits<8> opc, string OpcodeStr, RegisterClass RC,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set RC:$dst,
              (OpVT (OpNode RC:$src1, RC:$src2, RC:$src3)))]>, VEX_W, VEX_LIG,
-           Sched<[WriteFMA]>;
+           Sched<[sched]>;
   def rm : FMA4S<opc, MRMSrcMemOp4, (outs RC:$dst),
            (ins RC:$src1, RC:$src2, x86memop:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set RC:$dst, (OpNode RC:$src1, RC:$src2,
                            (mem_frag addr:$src3)))]>, VEX_W, VEX_LIG,
-           Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
   def mr : FMA4S<opc, MRMSrcMem, (outs RC:$dst),
            (ins RC:$src1, x86memop:$src2, RC:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set RC:$dst,
              (OpNode RC:$src1, (mem_frag addr:$src2), RC:$src3))]>, VEX_LIG,
-           Sched<[WriteFMALd, ReadAfterLd,
+           Sched<[sched.Folded, ReadAfterLd,
                   // x86memop:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
@@ -395,11 +405,12 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
                (ins RC:$src1, RC:$src2, RC:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-               VEX_LIG, FoldGenData<NAME#rr>, Sched<[WriteFMA]>;
+               VEX_LIG, FoldGenData<NAME#rr>, Sched<[sched]>;
 }
 
 multiclass fma4s_int<bits<8> opc, string OpcodeStr, Operand memop,
-                     ValueType VT, ComplexPattern mem_cpat, SDNode OpNode> {
+                     ValueType VT, ComplexPattern mem_cpat, SDNode OpNode,
+                     X86FoldableSchedWrite sched> {
 let isCodeGenOnly = 1 in {
   def rr_Int : FMA4S_Int<opc, MRMSrcRegOp4, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
@@ -407,21 +418,21 @@ let isCodeGenOnly = 1 in {
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                [(set VR128:$dst,
                  (VT (OpNode VR128:$src1, VR128:$src2, VR128:$src3)))]>, VEX_W,
-               VEX_LIG, Sched<[WriteFMA]>;
+               VEX_LIG, Sched<[sched]>;
   def rm_Int : FMA4S_Int<opc, MRMSrcMemOp4, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, memop:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                [(set VR128:$dst, (VT (OpNode VR128:$src1, VR128:$src2,
                                   mem_cpat:$src3)))]>, VEX_W, VEX_LIG,
-               Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+               Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
   def mr_Int : FMA4S_Int<opc, MRMSrcMem, (outs VR128:$dst),
                (ins VR128:$src1, memop:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                [(set VR128:$dst,
                  (VT (OpNode VR128:$src1, mem_cpat:$src2, VR128:$src3)))]>,
-               VEX_LIG, Sched<[WriteFMALd, ReadAfterLd,
+               VEX_LIG, Sched<[sched.Folded, ReadAfterLd,
                                // memop:$src2
                                ReadDefault, ReadDefault, ReadDefault,
                                ReadDefault, ReadDefault,
@@ -432,13 +443,15 @@ let hasSideEffects = 0 in
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-               []>, VEX_LIG, FoldGenData<NAME#rr_Int>, Sched<[WriteFMA]>;
+               []>, VEX_LIG, FoldGenData<NAME#rr_Int>, Sched<[sched]>;
 } // isCodeGenOnly = 1
 }
 
 multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                  ValueType OpVT128, ValueType OpVT256,
-                 PatFrag ld_frag128, PatFrag ld_frag256> {
+                 PatFrag ld_frag128, PatFrag ld_frag256,
+                 X86FoldableSchedWrite sched128,
+                 X86FoldableSchedWrite sched256> {
   let isCommutable = 1 in
   def rr : FMA4<opc, MRMSrcRegOp4, (outs VR128:$dst),
            (ins VR128:$src1, VR128:$src2, VR128:$src3),
@@ -446,21 +459,21 @@ multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
              (OpVT128 (OpNode VR128:$src1, VR128:$src2, VR128:$src3)))]>,
-           VEX_W, Sched<[WriteFMA]>;
+           VEX_W, Sched<[sched128]>;
   def rm : FMA4<opc, MRMSrcMemOp4, (outs VR128:$dst),
            (ins VR128:$src1, VR128:$src2, f128mem:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst, (OpNode VR128:$src1, VR128:$src2,
                               (ld_frag128 addr:$src3)))]>, VEX_W,
-           Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched128.Folded, ReadAfterLd, ReadAfterLd]>;
   def mr : FMA4<opc, MRMSrcMem, (outs VR128:$dst),
            (ins VR128:$src1, f128mem:$src2, VR128:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
              (OpNode VR128:$src1, (ld_frag128 addr:$src2), VR128:$src3))]>,
-           Sched<[WriteFMALd, ReadAfterLd,
+           Sched<[sched128.Folded, ReadAfterLd,
                   // f128mem:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
@@ -473,21 +486,21 @@ multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst,
              (OpVT256 (OpNode VR256:$src1, VR256:$src2, VR256:$src3)))]>,
-           VEX_W, VEX_L, Sched<[WriteFMA]>;
+           VEX_W, VEX_L, Sched<[sched256]>;
   def Yrm : FMA4<opc, MRMSrcMemOp4, (outs VR256:$dst),
            (ins VR256:$src1, VR256:$src2, f256mem:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst, (OpNode VR256:$src1, VR256:$src2,
                               (ld_frag256 addr:$src3)))]>, VEX_W, VEX_L,
-           Sched<[WriteFMALd, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched256.Folded, ReadAfterLd, ReadAfterLd]>;
   def Ymr : FMA4<opc, MRMSrcMem, (outs VR256:$dst),
            (ins VR256:$src1, f256mem:$src2, VR256:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst, (OpNode VR256:$src1,
                               (ld_frag256 addr:$src2), VR256:$src3))]>, VEX_L,
-           Sched<[WriteFMALd, ReadAfterLd,
+           Sched<[sched256.Folded, ReadAfterLd,
                   // f256mem:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
@@ -499,74 +512,78 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-               Sched<[WriteFMA]>, FoldGenData<NAME#rr>;
+               Sched<[sched128]>, FoldGenData<NAME#rr>;
   def Yrr_REV : FMA4<opc, MRMSrcReg, (outs VR256:$dst),
                 (ins VR256:$src1, VR256:$src2, VR256:$src3),
                 !strconcat(OpcodeStr,
                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-                VEX_L, Sched<[WriteFMA]>, FoldGenData<NAME#Yrr>;
+                VEX_L, Sched<[sched256]>, FoldGenData<NAME#Yrr>;
 } // isCodeGenOnly = 1
 }
 
 let ExeDomain = SSEPackedSingle in {
   // Scalar Instructions
-  defm VFMADDSS4  : fma4s<0x6A, "vfmaddss", FR32, f32mem, f32, X86Fmadd, loadf32>,
+  defm VFMADDSS4  : fma4s<0x6A, "vfmaddss", FR32, f32mem, f32, X86Fmadd, loadf32,
+                          WriteFMAS>,
                     fma4s_int<0x6A, "vfmaddss", ssmem, v4f32, sse_load_f32,
-                              X86Fmadd4s>;
-  defm VFMSUBSS4  : fma4s<0x6E, "vfmsubss", FR32, f32mem, f32, X86Fmsub, loadf32>,
+                              X86Fmadd4s, WriteFMAS>;
+  defm VFMSUBSS4  : fma4s<0x6E, "vfmsubss", FR32, f32mem, f32, X86Fmsub, loadf32,
+                          WriteFMAS>,
                     fma4s_int<0x6E, "vfmsubss", ssmem, v4f32, sse_load_f32,
-                              X86Fmsub4s>;
+                              X86Fmsub4s, WriteFMAS>;
   defm VFNMADDSS4 : fma4s<0x7A, "vfnmaddss", FR32, f32mem, f32,
-                          X86Fnmadd, loadf32>,
+                          X86Fnmadd, loadf32, WriteFMAS>,
                     fma4s_int<0x7A, "vfnmaddss", ssmem, v4f32, sse_load_f32,
-                              X86Fnmadd4s>;
+                              X86Fnmadd4s, WriteFMAS>;
   defm VFNMSUBSS4 : fma4s<0x7E, "vfnmsubss", FR32, f32mem, f32,
-                          X86Fnmsub, loadf32>,
+                          X86Fnmsub, loadf32, WriteFMAS>,
                     fma4s_int<0x7E, "vfnmsubss", ssmem, v4f32, sse_load_f32,
-                              X86Fnmsub4s>;
+                              X86Fnmsub4s, WriteFMAS>;
   // Packed Instructions
   defm VFMADDPS4    : fma4p<0x68, "vfmaddps", X86Fmadd, v4f32, v8f32,
-                            loadv4f32, loadv8f32>;
+                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
   defm VFMSUBPS4    : fma4p<0x6C, "vfmsubps", X86Fmsub, v4f32, v8f32,
-                            loadv4f32, loadv8f32>;
+                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
   defm VFNMADDPS4   : fma4p<0x78, "vfnmaddps", X86Fnmadd, v4f32, v8f32,
-                            loadv4f32, loadv8f32>;
+                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
   defm VFNMSUBPS4   : fma4p<0x7C, "vfnmsubps", X86Fnmsub, v4f32, v8f32,
-                            loadv4f32, loadv8f32>;
+                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
   defm VFMADDSUBPS4 : fma4p<0x5C, "vfmaddsubps", X86Fmaddsub, v4f32, v8f32,
-                            loadv4f32, loadv8f32>;
+                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
   defm VFMSUBADDPS4 : fma4p<0x5E, "vfmsubaddps", X86Fmsubadd, v4f32, v8f32,
-                            loadv4f32, loadv8f32>;
+                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
 }
 
 let ExeDomain = SSEPackedDouble in {
   // Scalar Instructions
-  defm VFMADDSD4  : fma4s<0x6B, "vfmaddsd", FR64, f64mem, f64, X86Fmadd, loadf64>,
+  defm VFMADDSD4  : fma4s<0x6B, "vfmaddsd", FR64, f64mem, f64, X86Fmadd, loadf64,
+                          WriteFMAS>,
                     fma4s_int<0x6B, "vfmaddsd", sdmem, v2f64, sse_load_f64,
-                              X86Fmadd4s>;
-  defm VFMSUBSD4  : fma4s<0x6F, "vfmsubsd", FR64, f64mem, f64, X86Fmsub, loadf64>,
+                              X86Fmadd4s, WriteFMAS>;
+  defm VFMSUBSD4  : fma4s<0x6F, "vfmsubsd", FR64, f64mem, f64, X86Fmsub, loadf64,
+                          WriteFMAS>,
                     fma4s_int<0x6F, "vfmsubsd", sdmem, v2f64, sse_load_f64,
-                              X86Fmsub4s>;
+                              X86Fmsub4s, WriteFMAS>;
   defm VFNMADDSD4 : fma4s<0x7B, "vfnmaddsd", FR64, f64mem, f64,
-                          X86Fnmadd, loadf64>,
+                          X86Fnmadd, loadf64, WriteFMAS>,
                     fma4s_int<0x7B, "vfnmaddsd", sdmem, v2f64, sse_load_f64,
-                              X86Fnmadd4s>;
+                              X86Fnmadd4s, WriteFMAS>;
   defm VFNMSUBSD4 : fma4s<0x7F, "vfnmsubsd", FR64, f64mem, f64,
-                          X86Fnmsub, loadf64>,
+                          X86Fnmsub, loadf64, WriteFMAS>,
                     fma4s_int<0x7F, "vfnmsubsd", sdmem, v2f64, sse_load_f64,
-                              X86Fnmsub4s>;
+                              X86Fnmsub4s, WriteFMAS>;
   // Packed Instructions
   defm VFMADDPD4    : fma4p<0x69, "vfmaddpd", X86Fmadd, v2f64, v4f64,
-                            loadv2f64, loadv4f64>;
+                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
   defm VFMSUBPD4    : fma4p<0x6D, "vfmsubpd", X86Fmsub, v2f64, v4f64,
-                            loadv2f64, loadv4f64>;
+                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
   defm VFNMADDPD4   : fma4p<0x79, "vfnmaddpd", X86Fnmadd, v2f64, v4f64,
-                            loadv2f64, loadv4f64>;
+                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
   defm VFNMSUBPD4   : fma4p<0x7D, "vfnmsubpd", X86Fnmsub, v2f64, v4f64,
-                            loadv2f64, loadv4f64>;
+                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
   defm VFMADDSUBPD4 : fma4p<0x5D, "vfmaddsubpd", X86Fmaddsub, v2f64, v4f64,
-                            loadv2f64, loadv4f64>;
+                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
   defm VFMSUBADDPD4 : fma4p<0x5F, "vfmsubaddpd", X86Fmsubadd, v2f64, v4f64,
-                            loadv2f64, loadv4f64>;
+                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
 }
 

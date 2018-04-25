@@ -282,7 +282,12 @@ bc1t $fcc1, 4               # CHECK: bc1t $fcc1, 4              # encoding: [0x4
                             # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} BC1T_MM
 bc1f $fcc2, -20             # CHECK: bc1f $fcc2, -20            # encoding: [0x43,0x88,0xff,0xf6]
                             # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} BC1F_MM
-sync                        # CHECK: sync                   # encoding: [0x00,0x00,0x6b,0x7c]
-sync 0                      # CHECK: sync 0                 # encoding: [0x00,0x00,0x6b,0x7c]
-sync 1                      # CHECK: sync 1                 # encoding: [0x00,0x01,0x6b,0x7c]
-synci 64($5)                # CHECK: synci 64($5)           # encoding: [0x42,0x00,0x00,0x40]
+sync                        # CHECK: sync                       # encoding: [0x00,0x00,0x6b,0x7c]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} SYNC_MM
+sync 0                      # CHECK: sync                       # encoding: [0x00,0x00,0x6b,0x7c]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} SYNC_MM
+sync 1                      # CHECK: sync 1                     # encoding: [0x00,0x01,0x6b,0x7c]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} SYNC_MM
+synci 64($5)                # CHECK: synci 64($5)               # encoding: [0x42,0x05,0x00,0x40]
+                            # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} SYNCI_MM
+

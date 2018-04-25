@@ -16,10 +16,8 @@ define i32 @test() nounwind {
 ; RV32I-FPELIM-NEXT:    sw zero, 16(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 12(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 8(sp)
-; RV32I-FPELIM-NEXT:    lui a0, %hi(test1)
-; RV32I-FPELIM-NEXT:    addi a1, a0, %lo(test1)
 ; RV32I-FPELIM-NEXT:    addi a0, sp, 12
-; RV32I-FPELIM-NEXT:    jalr a1
+; RV32I-FPELIM-NEXT:    call test1
 ; RV32I-FPELIM-NEXT:    mv a0, zero
 ; RV32I-FPELIM-NEXT:    lw ra, 28(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 32
@@ -36,10 +34,8 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    sw zero, -24(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -28(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -32(s0)
-; RV32I-WITHFP-NEXT:    lui a0, %hi(test1)
-; RV32I-WITHFP-NEXT:    addi a1, a0, %lo(test1)
 ; RV32I-WITHFP-NEXT:    addi a0, s0, -28
-; RV32I-WITHFP-NEXT:    jalr a1
+; RV32I-WITHFP-NEXT:    call test1
 ; RV32I-WITHFP-NEXT:    mv a0, zero
 ; RV32I-WITHFP-NEXT:    lw s0, 24(sp)
 ; RV32I-WITHFP-NEXT:    lw ra, 28(sp)

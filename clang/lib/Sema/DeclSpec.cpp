@@ -426,6 +426,7 @@ unsigned DeclSpec::getParsedSpecifiers() const {
   return Res;
 }
 
+
 template <class T> static bool BadSpecifier(T TNew, T TPrev,
                                             const char *&PrevSpec,
                                             unsigned &DiagID,
@@ -491,7 +492,6 @@ const char *DeclSpec::getSpecifierName(TSS S) {
   }
   llvm_unreachable("Unknown typespec!");
 }
-
 const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
                                        const PrintingPolicy &Policy) {
   switch (T) {
@@ -969,6 +969,69 @@ bool DeclSpec::SetConstexprSpec(SourceLocation Loc, const char *&PrevSpec,
   return false;
 }
 
+bool DeclSpec::setConceptSpec(const SourceLocation Loc, const char *&PrevSpec,
+                              unsigned &DiagID, const PrintingPolicy &PP) {
+  assert(Loc.isValid() && "Loc must be valid, since it is used to identify "
+                          "that this function was called before");
+  assert(!ConceptLoc.isValid() &&
+         "how is this called if concept was already encountered and triggered "
+         "ParseConceptDefinition which parses upto the semi-colon");
+
+  PrevSpec = nullptr;
+  if (TypeSpecType != TST_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName(static_cast<TST>(TypeSpecType), PP);
+	  ClearTypeSpecType();
+  }
+  if (TypeSpecSign != TSS_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName(static_cast<TSS>(TypeSpecSign));
+	  TypeSpecSign = TSS_unspecified;
+  }
+  if (TypeSpecWidth != TSW_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName(static_cast<TSW>(TypeSpecWidth));
+	  TypeSpecWidth = TSW_unspecified;
+  }
+  if (StorageClassSpec != SCS_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName(static_cast<SCS>(StorageClassSpec));
+	  ClearStorageClassSpecs();
+  }
+  if (ThreadStorageClassSpec != TSCS_unspecified) {
+    PrevSpec =
+        DeclSpec::getSpecifierName(static_cast<TSCS>(ThreadStorageClassSpec));
+    ClearStorageClassSpecs();
+  }
+  if (TypeSpecComplex != TSC_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName(static_cast<TSC>(TypeSpecComplex));
+    TypeSpecComplex = TSC_unspecified;
+  }
+  if (getTypeQualifiers()) {
+	  PrevSpec = DeclSpec::getSpecifierName(static_cast<TQ>(TypeQualifiers));
+    ClearTypeQualifiers();
+  }
+  if (isFriendSpecified()) {
+    PrevSpec = "friend";
+    Friend_specified = false;
+    FriendLoc = SourceLocation();
+  }
+  if (isConstexprSpecified()) {
+    PrevSpec = "constexpr";
+    Constexpr_specified = false;
+    ConstexprLoc = SourceLocation();
+  }
+  if (isInlineSpecified()) {
+    PrevSpec = "inline";
+    FS_inlineLoc = SourceLocation();
+    FS_inline_specified = false;
+  }
+
+  if (PrevSpec) {
+    DiagID = diag::err_invalid_decl_spec_combination;
+  }
+  // We set the concept location regardless of whether an error occurred.
+  DeclRep = nullptr;
+  ConceptLoc = Loc;
+  return PrevSpec; // If this is non-null, an error occurred.
+}
+
 void DeclSpec::SaveWrittenBuiltinSpecs() {
   writtenBS.Sign = getTypeSpecSign();
   writtenBS.Width = getTypeSpecWidth();
@@ -1270,6 +1333,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // TODO: return "auto function" and other bad things based on the real type.
 
   // 'data definition has no type or storage class'?
+
 }
 
 bool DeclSpec::isMissingDeclaratorOk() {

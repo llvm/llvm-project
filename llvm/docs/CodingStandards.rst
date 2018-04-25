@@ -826,6 +826,17 @@ As a rule of thumb, in case an ordered result is expected, remember to
 sort an unordered container before iteration. Or use ordered containers
 like vector/MapVector/SetVector if you want to iterate pointer keys.
 
+Beware of non-deterministic sorting order of equal elements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+std::sort uses a non-stable sorting algorithm in which the order of equal
+elements is not guaranteed to be preserved. Thus using std::sort for a
+container having equal elements may result in non-determinstic behavior.
+To uncover such instances of non-determinism, LLVM has introduced a new
+llvm::sort wrapper function. For an EXPENSIVE_CHECKS build this will randomly
+shuffle the container before sorting. As a rule of thumb, always make sure to
+use llvm::sort instead of std::sort.
+
 Style Issues
 ============
 

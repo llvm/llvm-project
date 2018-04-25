@@ -572,11 +572,6 @@ def : GCNPat<
   (SI_ELSE $src, $target, 0)
 >;
 
-def : GCNPat <
-  (int_AMDGPU_kilp),
-  (SI_KILL_I1_PSEUDO (i1 0), 0)
->;
-
 def : Pat <
   // -1.0 as i32 (LowerINTRINSIC_VOID converts all other constants to -1.0)
   (AMDGPUkill (i32 -1082130432)),

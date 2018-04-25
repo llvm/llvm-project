@@ -168,6 +168,10 @@ LANGSTANDARD_ALIAS_DEPR(opencl20, "CL2.0")
 LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
              LineComment | CPlusPlus | Digraphs)
 
+// HIP
+LANGSTANDARD(hip, "hip", HIP, "HIP",
+             LineComment | CPlusPlus | Digraphs)
+
 #undef LANGSTANDARD
 #undef LANGSTANDARD_ALIAS
 #undef LANGSTANDARD_ALIAS_DEPR

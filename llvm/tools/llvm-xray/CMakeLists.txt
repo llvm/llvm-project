@@ -12,7 +12,6 @@ set(LLVM_XRAY_TOOLS
   xray-color-helper.cc
   xray-converter.cc
   xray-extract.cc
-  xray-extract.cc
   xray-graph.cc
   xray-graph-diff.cc
   xray-stacks.cc

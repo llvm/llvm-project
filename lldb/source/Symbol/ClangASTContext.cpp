@@ -408,6 +408,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case InputKind::ObjCXX:
       LangStd = LangStandard::lang_gnucxx98;
       break;
+    case InputKind::HIP:
+      LangStd = LangStandard::lang_hip;
+      break;
     }
   }
 

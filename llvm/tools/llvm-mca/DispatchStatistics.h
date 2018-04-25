@@ -62,7 +62,8 @@ class DispatchStatistics : public View {
   void printDispatchStalls(llvm::raw_ostream &OS) const;
 
 public:
-  DispatchStatistics() : NumDispatched(0), NumCycles(0),
+  DispatchStatistics()
+      : NumDispatched(0), NumCycles(0),
         HWStalls(HWStallEvent::LastGenericEvent) {}
 
   void onInstructionEvent(const HWInstructionEvent &Event) override;

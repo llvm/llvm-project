@@ -67,7 +67,8 @@ void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
   // An empty set of register classes means: this register file contains all
   // the physical registers specified by the target.
   if (Entries.empty()) {
-    for (std::pair<WriteState *, IndexPlusCostPairTy> &Mapping : RegisterMappings)
+    for (std::pair<WriteState *, IndexPlusCostPairTy> &Mapping :
+         RegisterMappings)
       Mapping.second = std::make_pair(RegisterFileIndex, 1U);
     return;
   }
@@ -406,9 +407,13 @@ void DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
     AvailableEntries -= NumMicroOps;
   }
 
-  // Update RAW dependencies.
-  for (std::unique_ptr<ReadState> &RS : NewInst->getUses())
-    updateRAWDependencies(*RS, STI);
+  // Update RAW dependencies if this instruction is not a zero-latency
+  // instruction. The assumption is that a zero-latency instruction doesn't
+  // require to be issued to the scheduler for execution. More importantly, it
+  // doesn't have to wait on the register input operands.
+  if (NewInst->getDesc().MaxLatency)
+    for (std::unique_ptr<ReadState> &RS : NewInst->getUses())
+      updateRAWDependencies(*RS, STI);
 
   // Allocate new mappings.
   SmallVector<unsigned, 4> RegisterFiles(RAT->getNumRegisterFiles());

@@ -543,22 +543,16 @@ struct LoopInterchange : public FunctionPass {
     printDepMatrix(DependencyMatrix);
 #endif
 
-    BasicBlock *OuterMostLoopLatch = OuterMostLoop->getLoopLatch();
-    BranchInst *OuterMostLoopLatchBI =
-        dyn_cast<BranchInst>(OuterMostLoopLatch->getTerminator());
-    if (!OuterMostLoopLatchBI || OuterMostLoopLatchBI->getNumSuccessors() != 2)
-      return false;
-
     // Since we currently do not handle LCSSA PHI's any failure in loop
     // condition will now branch to LoopNestExit.
     // TODO: This should be removed once we handle LCSSA PHI nodes.
 
     // Get the Outermost loop exit.
-    BasicBlock *LoopNestExit;
-    if (OuterMostLoopLatchBI->getSuccessor(0) == OuterMostLoop->getHeader())
-      LoopNestExit = OuterMostLoopLatchBI->getSuccessor(1);
-    else
-      LoopNestExit = OuterMostLoopLatchBI->getSuccessor(0);
+    BasicBlock *LoopNestExit = OuterMostLoop->getExitBlock();
+    if (!LoopNestExit) {
+      DEBUG(dbgs() << "OuterMostLoop needs an unique exit block");
+      return false;
+    }
 
     if (isa<PHINode>(LoopNestExit->begin())) {
       DEBUG(dbgs() << "PHI Nodes in loop nest exit is not handled for now "
@@ -756,28 +750,29 @@ static bool containsSafePHI(BasicBlock *Block, bool isOuterLoopExitBlock) {
   return true;
 }
 
-static BasicBlock *getLoopLatchExitBlock(BasicBlock *LatchBlock,
-                                         BasicBlock *LoopHeader) {
-  if (BranchInst *BI = dyn_cast<BranchInst>(LatchBlock->getTerminator())) {
-    assert(BI->getNumSuccessors() == 2 &&
-           "Branch leaving loop latch must have 2 successors");
-    for (BasicBlock *Succ : BI->successors()) {
-      if (Succ == LoopHeader)
-        continue;
-      return Succ;
-    }
-  }
-  return nullptr;
-}
-
 // This function indicates the current limitations in the transform as a result
 // of which we do not proceed.
 bool LoopInterchangeLegality::currentLimitations() {
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-  BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
-  BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
-  BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
+
+  // transform currently expects the loop latches to also be the exiting
+  // blocks.
+  if (InnerLoop->getExitingBlock() != InnerLoopLatch ||
+      OuterLoop->getExitingBlock() != OuterLoop->getLoopLatch() ||
+      !isa<BranchInst>(InnerLoopLatch->getTerminator()) ||
+      !isa<BranchInst>(OuterLoop->getLoopLatch()->getTerminator())) {
+    DEBUG(dbgs() << "Loops where the latch is not the exiting block are not"
+                 << " supported currently.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "ExitingNotLatch",
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
+             << "Loops where the latch is not the exiting block cannot be"
+                " interchange currently.";
+    });
+    return true;
+  }
 
   PHINode *InnerInductionVar;
   SmallVector<PHINode *, 8> Inductions;
@@ -867,9 +862,8 @@ bool LoopInterchangeLegality::currentLimitations() {
   }
 
   // TODO: We only handle LCSSA PHI's corresponding to reduction for now.
-  BasicBlock *LoopExitBlock =
-      getLoopLatchExitBlock(OuterLoopLatch, OuterLoopHeader);
-  if (!LoopExitBlock || !containsSafePHI(LoopExitBlock, true)) {
+  BasicBlock *OuterExit = OuterLoop->getExitBlock();
+  if (!containsSafePHI(OuterExit, true)) {
     DEBUG(dbgs() << "Can only handle LCSSA PHIs in outer loops currently.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "NoLCSSAPHIOuter",
@@ -881,8 +875,8 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
-  LoopExitBlock = getLoopLatchExitBlock(InnerLoopLatch, InnerLoopHeader);
-  if (!LoopExitBlock || !containsSafePHI(LoopExitBlock, false)) {
+  BasicBlock *InnerExit = InnerLoop->getExitBlock();
+  if (!containsSafePHI(InnerExit, false)) {
     DEBUG(dbgs() << "Can only handle LCSSA PHIs in inner loops currently.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "NoLCSSAPHIOuterInner",

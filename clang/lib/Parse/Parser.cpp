@@ -919,7 +919,7 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
                                        AccessSpecifier AS) {
   MaybeParseMicrosoftAttributes(DS.getAttributes());
   // Parse the common declaration-specifiers piece.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS,
+  ParseDeclarationSpecifiersOrConceptDefinition(DS, ParsedTemplateInfo(), AS,
                              DeclSpecContext::DSC_top_level);
 
   // If we had a free-standing type definition with a missing semicolon, we
@@ -1287,7 +1287,7 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 
     // Parse the common declaration-specifiers piece.
     DeclSpec DS(AttrFactory);
-    ParseDeclarationSpecifiers(DS);
+    ParseDeclarationSpecifiersOrConceptDefinition(DS);
 
     // C99 6.9.1p6: 'each declaration in the declaration list shall have at
     // least one declarator'.
@@ -1647,7 +1647,7 @@ bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
 /// Actions.getTypeName will not be needed to be called again (e.g. getTypeName
 /// will not be called twice, once to check whether we have a declaration
 /// specifier, and another one to get the actual type inside
-/// ParseDeclarationSpecifiers).
+/// ParseDeclarationSpecifiersOrConceptDefinition).
 ///
 /// This returns true if an error occurred.
 ///

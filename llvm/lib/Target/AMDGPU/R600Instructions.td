@@ -1739,11 +1739,6 @@ def : R600Pat <
 >;
 
 // KIL Patterns
-def KILP : R600Pat <
-  (int_AMDGPU_kilp),
-  (MASK_WRITE (KILLGT (f32 ONE), (f32 ZERO)))
->;
-
 def KIL : R600Pat <
   (int_AMDGPU_kill f32:$src0),
   (MASK_WRITE (KILLGT (f32 ZERO), $src0))
