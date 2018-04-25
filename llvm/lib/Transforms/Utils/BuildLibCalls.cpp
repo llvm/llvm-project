@@ -698,9 +698,9 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setRetNonNull(F);
     Changed |= setRetDoesNotAlias(F);
     return Changed;
-  //TODO: add LibFunc entries for:
-  //case LibFunc_memset_pattern4:
-  //case LibFunc_memset_pattern8:
+  // TODO: add LibFunc entries for:
+  // case LibFunc_memset_pattern4:
+  // case LibFunc_memset_pattern8:
   case LibFunc_memset_pattern16:
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotCapture(F, 0);

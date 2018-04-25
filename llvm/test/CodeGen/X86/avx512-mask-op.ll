@@ -15,7 +15,7 @@ define i16 @mask16(i16 %x) {
 ;
 ; X86-LABEL: mask16:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    notl %eax
 ; X86-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
@@ -157,8 +157,8 @@ define i16 @mand16(i16 %x, i16 %y) {
 ;
 ; X86-LABEL: mand16:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    andl %ecx, %edx
 ; X86-NEXT:    xorl %ecx, %eax

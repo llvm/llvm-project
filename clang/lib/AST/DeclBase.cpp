@@ -724,6 +724,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case Binding:
     case NonTypeTemplateParm:
     case VarTemplate:
+    case Concept:
       // These (C++-only) declarations are found by redeclaration lookup for
       // tag types, so we include them in the tag namespace.
       return IDNS_Ordinary | IDNS_Tag;

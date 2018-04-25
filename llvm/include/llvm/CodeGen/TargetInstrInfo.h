@@ -225,6 +225,17 @@ public:
     return 0;
   }
 
+  /// Optional extension of isLoadFromStackSlot that returns the number of
+  /// bytes loaded from the stack. This must be implemented if a backend
+  /// supports partial stack slot spills/loads to further disambiguate
+  /// what the load does.
+  virtual unsigned isLoadFromStackSlot(const MachineInstr &MI,
+                                       int &FrameIndex,
+                                       unsigned &MemBytes) const {
+    MemBytes = 0;
+    return isLoadFromStackSlot(MI, FrameIndex);
+  }
+
   /// Check for post-frame ptr elimination stack locations as well.
   /// This uses a heuristic so it isn't reliable for correctness.
   virtual unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
@@ -250,6 +261,17 @@ public:
   virtual unsigned isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex) const {
     return 0;
+  }
+
+  /// Optional extension of isStoreToStackSlot that returns the number of
+  /// bytes stored to the stack. This must be implemented if a backend
+  /// supports partial stack slot spills/loads to further disambiguate
+  /// what the store does.
+  virtual unsigned isStoreToStackSlot(const MachineInstr &MI,
+                                      int &FrameIndex,
+                                      unsigned &MemBytes) const {
+    MemBytes = 0;
+    return isStoreToStackSlot(MI, FrameIndex);
   }
 
   /// Check for post-frame ptr elimination stack locations as well.

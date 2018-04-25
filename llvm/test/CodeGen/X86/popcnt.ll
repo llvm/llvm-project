@@ -60,7 +60,7 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 define i16 @cnt16(i16 %x) nounwind readnone {
 ; X32-LABEL: cnt16:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl %ecx
 ; X32-NEXT:    andl $21845, %ecx # imm = 0x5555
