@@ -674,6 +674,49 @@ def : Pat <
   (COPY $src) // Return the SGPRs representing i1 src
 >;
 
+// Waterfall pseudo ops - these are effectively specialized control flow pseudo
+// instructions
+let UseNamedOperandTable = 1 in {
+
+class SI_WATERFALL_BEGIN<RegisterClass idx_rc> : SPseudoInstSI <
+  (outs SReg_32:$tok),
+  (ins idx_rc:$idx)> {
+}
+
+class SI_WATERFALL_READFIRSTLANE<RegisterClass dst_rc, RegisterClass src_rc> : SPseudoInstSI <
+  (outs dst_rc:$dst),
+  (ins SReg_32:$tok, src_rc:$src)>;
+
+class SI_WATERFALL_END<RegisterClass rc> : SPseudoInstSI <
+  (outs rc:$dst),
+  (ins SReg_32:$tok, rc:$src)>;
+
+class SI_WATERFALL_LAST_USE<RegisterClass rc> : SPseudoInstSI <
+  (outs rc:$dst),
+  (ins SReg_32:$tok, rc:$src)>;
+
+} // End UseNamedOperandTable = 1
+
+def SI_WATERFALL_BEGIN_V1 : SI_WATERFALL_BEGIN<VGPR_32>;
+def SI_WATERFALL_BEGIN_V2 : SI_WATERFALL_BEGIN<VReg_64>;
+def SI_WATERFALL_BEGIN_V4 : SI_WATERFALL_BEGIN<VReg_128>;
+def SI_WATERFALL_BEGIN_V8 : SI_WATERFALL_BEGIN<VReg_256>;
+
+def SI_WATERFALL_READFIRSTLANE_V1 : SI_WATERFALL_READFIRSTLANE<SReg_32, VGPR_32>;
+def SI_WATERFALL_READFIRSTLANE_V2 : SI_WATERFALL_READFIRSTLANE<SReg_64, VReg_64>;
+def SI_WATERFALL_READFIRSTLANE_V4 : SI_WATERFALL_READFIRSTLANE<SReg_128, VReg_128>;
+def SI_WATERFALL_READFIRSTLANE_V8 : SI_WATERFALL_READFIRSTLANE<SReg_256, VReg_256>;
+
+def SI_WATERFALL_END_V1 : SI_WATERFALL_END<VGPR_32>;
+def SI_WATERFALL_END_V2 : SI_WATERFALL_END<VReg_64>;
+def SI_WATERFALL_END_V4 : SI_WATERFALL_END<VReg_128>;
+def SI_WATERFALL_END_V8 : SI_WATERFALL_END<VReg_256>;
+
+def SI_WATERFALL_LAST_USE_V1 : SI_WATERFALL_LAST_USE<SGPR_32>;
+def SI_WATERFALL_LAST_USE_V2 : SI_WATERFALL_LAST_USE<SReg_64>;
+def SI_WATERFALL_LAST_USE_V4 : SI_WATERFALL_LAST_USE<SReg_128>;
+def SI_WATERFALL_LAST_USE_V8 : SI_WATERFALL_LAST_USE<SReg_256>;
+
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -1365,6 +1408,63 @@ def : GCNPat <
     (V_MUL_F32_e32 (i32 CONST.FP_UINT_MAX_PLUS_1),
                    (V_RCP_IFLAG_F32_e32 (V_CVT_F32_U32_e32 $src0))))
 >;
+
+multiclass SI_WATERFALL_Pattern < ValueType dvt, ValueType svt, string VecSize> {
+  def : GCNPat<
+    (i32 (int_amdgcn_waterfall_begin svt:$idx)),
+    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) $idx)
+  >;
+
+  def : GCNPat<
+    (dvt (int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
+    (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize) $tok, $src)
+  >;
+
+  def : GCNPat<
+    (svt (int_amdgcn_waterfall_end i32:$tok, svt:$src)),
+    (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) $tok, $src)
+  >;
+}
+
+multiclass SI_WATERFALL_S_Pattern < ValueType svt, string VecSize> {
+  def : GCNPat<
+    (i32 (int_amdgcn_waterfall_begin svt:$idx)),
+    (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) $idx)
+  >;
+
+  def : GCNPat<
+    (svt (int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
+    (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize) $tok, $src)
+  >;
+
+  def : GCNPat<
+    (svt (int_amdgcn_waterfall_end i32:$tok, svt:$src)),
+    (!cast<Instruction>("SI_WATERFALL_END_"#VecSize) $tok, $src)
+  >;
+
+  def : GCNPat<
+    (svt (int_amdgcn_waterfall_last_use i32:$tok, svt:$src)),
+    (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize) $tok, $src)
+  >;
+}
+
+defm : SI_WATERFALL_S_Pattern <i16, "V1">;
+defm : SI_WATERFALL_S_Pattern <v2i16, "V1">;
+defm : SI_WATERFALL_S_Pattern <v4i16, "V2">;
+
+defm : SI_WATERFALL_S_Pattern <i32, "V1">;
+defm : SI_WATERFALL_S_Pattern <v2i32, "V2">;
+defm : SI_WATERFALL_S_Pattern <v4i32, "V4">;
+defm : SI_WATERFALL_S_Pattern <v8i32, "V8">;
+
+defm : SI_WATERFALL_Pattern <i16, f16, "V1">;
+defm : SI_WATERFALL_Pattern <v2i16, v2f16, "V1">;
+defm : SI_WATERFALL_Pattern <v4i16, v4f16, "V2">;
+
+defm : SI_WATERFALL_Pattern <i32, f32, "V1">;
+defm : SI_WATERFALL_Pattern <v2i32, v2f32, "V2">;
+defm : SI_WATERFALL_Pattern <v4i32, v4f32, "V4">;
+defm : SI_WATERFALL_Pattern <v8i32, v8f32, "V8">;
 
 //===----------------------------------------------------------------------===//
 // VOP3 Patterns

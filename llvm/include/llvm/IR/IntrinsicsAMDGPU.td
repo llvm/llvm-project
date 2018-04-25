@@ -1524,6 +1524,54 @@ def int_amdgcn_is_private : GCCBuiltin<"__builtin_amdgcn_is_private">,
   [IntrNoMem, IntrSpeculatable, NoCapture<0>]
 >;
 
+// Waterfall intrinics used to tag a region as requiring waterfall loops to
+// transform VGPR values into SGPR values in a loop
+// Best case (uniform index in VGPR) the loop will execute once, worst case (all
+// values in the index are different) the loop will execute wave-size times.
+// There is a requirement that all three intrinsics are present.
+// There is also a requirement that all three intrinsics are contained in a
+// single block.
+// TODO: extend the support to allow spanning multiple blocks
+
+// Set of intrinsics to allow for non-uniform control by dictating access via
+// waterfall style code
+def int_amdgcn_waterfall_begin :
+    Intrinsic<[llvm_i32_ty],  // Returns sgpr token
+              [llvm_any_ty],  // VGPR index for waterfall
+              [IntrConvergent]>;
+
+// Often the index from begin will be used as the readfirstlane value from
+// waterfall code - however, this isn't always the case. The readfirstlane style
+// intrinsic is required to be used, but often is a no-op if the index is the
+// thing that is used
+def int_amdgcn_waterfall_readfirstlane :
+    Intrinsic<[llvm_anyint_ty],  // Returns any sgpr value
+              [llvm_i32_ty,      // Token from begin
+               llvm_any_ty],     // VGPR value to be used in readfirstlane
+              [IntrConvergent]>;
+
+// Effectively a no-op, but this intrinsic is used to indicate the end of the
+// region for waterfall by tagging a value as the end of the section
+// Waterfall will happen for all values dependent on the begin until the end
+// intrinsic is reached
+// To enable waterfall, all three intrinsics
+def int_amdgcn_waterfall_end :
+    Intrinsic<[llvm_any_ty],      // Returns any value
+              [llvm_i32_ty,       // Token from begin
+               LLVMMatchType<0>], // Same as return value
+              [IntrConvergent]>;
+
+// Effectively a no-op, no code results directly from this intrinsic. This is
+// used to indicate that the use of the defined value constitutes the end of the
+// waterfall propagation. This is roughly equivalent to the end intrinsic, but
+// can be used to tag values that are used in non-defining operations such as a
+// store
+def int_amdgcn_waterfall_last_use :
+    Intrinsic<[llvm_anyint_ty],   // Returns any sgpr value
+              [llvm_i32_ty,       // Token from begin
+               LLVMMatchType<0>], // Same as return value
+              [IntrConvergent]>;
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//

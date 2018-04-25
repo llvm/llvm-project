@@ -712,7 +712,25 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
         return false;
         case Intrinsic::amdgcn_readfirstlane:
         case Intrinsic::amdgcn_readlane:
+        case Intrinsic::amdgcn_waterfall_readfirstlane:
+        case Intrinsic::amdgcn_waterfall_begin:
+        case Intrinsic::amdgcn_waterfall_end:
+        case Intrinsic::amdgcn_waterfall_last_use:
           return true;
+      }
+    }
+    break;
+    case ISD::INTRINSIC_W_CHAIN:
+    {
+      unsigned IntrID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+      switch (IntrID) {
+        default:
+        return false;
+        case Intrinsic::amdgcn_waterfall_readfirstlane:
+        case Intrinsic::amdgcn_waterfall_begin:
+        case Intrinsic::amdgcn_waterfall_end:
+        case Intrinsic::amdgcn_waterfall_last_use:
+        return true;
       }
     }
     break;
