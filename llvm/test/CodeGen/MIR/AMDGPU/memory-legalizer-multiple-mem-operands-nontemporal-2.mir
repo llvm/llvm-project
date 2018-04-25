@@ -101,11 +101,13 @@ fixedStack:
       isImmutable: false, isAliased: false, callee-saved-register: '' }
 stack:
   - { id: 0, name: scratch0, type: default, offset: 4, size: 32768, alignment: 4,
-      stack-id: 0, callee-saved-register: '', local-offset: 0, di-variable: '',
-      di-expression: '', di-location: '' }
+      stack-id: 0, callee-saved-register: '', local-offset: 0,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
   - { id: 1, name: scratch1, type: default, offset: 32772, size: 32768,
       alignment: 4, stack-id: 0, callee-saved-register: '', local-offset: 32768,
-      di-variable: '', di-expression: '', di-location: '' }
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
 constants:
 body:             |
   bb.0.entry:
