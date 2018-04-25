@@ -1165,7 +1165,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
                    !Config->DoGC && !Config->DoICF && !Args.hasArg(OPT_order) &&
                        !Args.hasArg(OPT_profile));
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
-  Config->TerminalServerAware = Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
+  Config->TerminalServerAware =
+      !Config->DLL && Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   Config->DebugDwarf = Args.hasArg(OPT_debug_dwarf);
   Config->DebugGHashes = Args.hasArg(OPT_debug_ghash);
 

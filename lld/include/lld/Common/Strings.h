@@ -45,6 +45,9 @@ public:
   /*implicit*/ StringRefZ(llvm::StringRef S)
       : Start(S.data()), Size(S.size()) {}
 
+  const char *data() const { return Start; }
+  size_t rawSize() const { return Size; };
+
   operator llvm::StringRef() const {
     if (Size == (size_t)-1)
       Size = strlen(Start);
