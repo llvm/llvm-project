@@ -1,0 +1,8 @@
+// Test that we can sleep in the repl
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=SLEEP
+
+import Foundation
+sleep(2)
+// SLEEP: $R0: UInt32 = 0
