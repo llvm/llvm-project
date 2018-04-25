@@ -6,6 +6,8 @@
 // RUN: mkdir -p %t/SDKs/iPhoneOS8.0.0.sdk
 // RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk %clang %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-IPHONE %s
+// RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk IPHONEOS_DEPLOYMENT_TARGET=8.0 %clang %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-IPHONE %s
 // CHECK-IPHONE: clang
 // CHECK-IPHONE: "-cc1"
 // CHECK-IPHONE: -apple-ios8.0.0"
@@ -28,6 +30,8 @@
 // RUN: rm -rf %t/SDKs/WatchOS3.0.sdk
 // RUN: mkdir -p %t/SDKs/WatchOS3.0.sdk
 // RUN: env SDKROOT=%t/SDKs/WatchOS3.0.sdk %clang %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-WATCH %s
+// RUN: env WATCHOS_DEPLOYMENT_TARGET=3.0 %clang %s -isysroot %t/SDKs/WatchOS3.0.sdk -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-WATCH %s
 //
 // CHECK-WATCH: clang
