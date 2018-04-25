@@ -295,6 +295,12 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       expr_options.SetColorizeErrors(colorize_err);
       expr_options.SetPoundLine(m_repl_source_path.c_str(),
                                 m_code.GetSize() + 1);
+
+      // We don't want other threads to interfere and block the thread
+      // it's currently running. This is needed to get, e.g. sleep() to
+      // work reliably in the REPL.
+      expr_options.SetStopOthers(false);
+
       if (m_command_options.timeout > 0)
         expr_options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
       else
