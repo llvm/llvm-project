@@ -21,7 +21,7 @@
 ; CHECK: ret;
 ; CHECK: }
 
-; CHECK: .file 1 "test/t.c"
+; CHECK: .file 1 "test{{(/|\\\\)}}t.c"
 
 ; CHECK: // .section .debug_abbrev
 ; CHECK: // {

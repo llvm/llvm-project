@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -52,6 +53,10 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
+  void expandFunctionCall(const MCInst &MI, raw_ostream &OS,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
+
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -80,12 +85,54 @@ MCCodeEmitter *llvm::createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
   return new RISCVMCCodeEmitter(Ctx, MCII);
 }
 
+// Expand PseudoCALL to AUIPC and JALR with relocation types.
+// We expand PseudoCALL while encoding, meaning AUIPC and JALR won't go through
+// RISCV MC to MC compressed instruction transformation. This is acceptable
+// because AUIPC has no 16-bit form and C_JALR have no immediate operand field.
+// We let linker relaxation deal with it. When linker relaxation enabled,
+// AUIPC and JALR have chance relax to JAL. If C extension is enabled,
+// JAL has chance relax to C_JAL.
+void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  MCInst TmpInst;
+  MCOperand Func = MI.getOperand(0);
+  unsigned Ra = RISCV::X1;
+  uint32_t Binary;
+
+  assert(Func.isExpr() && "Expected expression");
+
+  const MCExpr *Expr = Func.getExpr();
+
+  // Create function call expression CallExpr for AUIPC.
+  const MCExpr *CallExpr =
+      RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_CALL, Ctx);
+
+  // Emit AUIPC Ra, Func with R_RISCV_CALL relocation type.
+  TmpInst = MCInstBuilder(RISCV::AUIPC)
+                .addReg(Ra)
+                .addOperand(MCOperand::createExpr(CallExpr));
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::Writer<support::little>(OS).write(Binary);
+
+  // Emit JALR Ra, Ra, 0
+  TmpInst = MCInstBuilder(RISCV::JALR).addReg(Ra).addReg(Ra).addImm(0);
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::Writer<support::little>(OS).write(Binary);
+}
+
 void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   // Get byte count of instruction.
   unsigned Size = Desc.getSize();
+
+  if (MI.getOpcode() == RISCV::PseudoCALL) {
+    expandFunctionCall(MI, OS, Fixups, STI);
+    MCNumEmitted += 2;
+    return;
+  }
 
   switch (Size) {
   default:
@@ -182,6 +229,9 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       break;
     case RISCVMCExpr::VK_RISCV_PCREL_HI:
       FixupKind = RISCV::fixup_riscv_pcrel_hi20;
+      break;
+    case RISCVMCExpr::VK_RISCV_CALL:
+      FixupKind = RISCV::fixup_riscv_call;
       break;
     }
   } else if (Kind == MCExpr::SymbolRef &&

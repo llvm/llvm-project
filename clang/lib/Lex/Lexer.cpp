@@ -1654,7 +1654,21 @@ FinishIdentifier:
     if (isCodeCompletionPoint(CurPtr)) {
       // Return the code-completion token.
       Result.setKind(tok::code_completion);
-      cutOffLexing();
+      // Skip the code-completion char and all immediate identifier characters.
+      // This ensures we get consistent behavior when completing at any point in
+      // an identifier (i.e. at the start, in the middle, at the end). Note that
+      // only simple cases (i.e. [a-zA-Z0-9_]) are supported to keep the code
+      // simpler.
+      assert(*CurPtr == 0 && "Completion character must be 0");
+      ++CurPtr;
+      // Note that code completion token is not added as a separate character
+      // when the completion point is at the end of the buffer. Therefore, we need
+      // to check if the buffer has ended.
+      if (CurPtr < BufferEnd) {
+        while (isIdentifierBody(*CurPtr))
+          ++CurPtr;
+      }
+      BufferPtr = CurPtr;
       return true;
     }
 

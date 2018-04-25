@@ -107,7 +107,8 @@ define i32 @test_mul_by_2(i32 %x) {
 define i32 @test_mul_by_3(i32 %x) {
 ; X86-LABEL: test_mul_by_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $3, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: test_mul_by_3:
@@ -209,7 +210,8 @@ define i32 @test_mul_by_4(i32 %x) {
 define i32 @test_mul_by_5(i32 %x) {
 ; X86-LABEL: test_mul_by_5:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $5, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: test_mul_by_5:
@@ -415,7 +417,8 @@ define i32 @test_mul_by_8(i32 %x) {
 define i32 @test_mul_by_9(i32 %x) {
 ; X86-LABEL: test_mul_by_9:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $9, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: test_mul_by_9:

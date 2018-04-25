@@ -13,13 +13,11 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV32IFD-NEXT:    beqz a2, .LBB0_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
 ; RV32IFD-NEXT:    addi a2, a2, -1
-; RV32IFD-NEXT:    lui a0, %hi(func)
-; RV32IFD-NEXT:    addi a3, a0, %lo(func)
 ; RV32IFD-NEXT:    fsd ft0, 16(sp)
 ; RV32IFD-NEXT:    lw a0, 16(sp)
 ; RV32IFD-NEXT:    lw a1, 20(sp)
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
-; RV32IFD-NEXT:    jalr a3
+; RV32IFD-NEXT:    call func
 ; RV32IFD-NEXT:    sw a0, 16(sp)
 ; RV32IFD-NEXT:    sw a1, 20(sp)
 ; RV32IFD-NEXT:    fld ft0, 16(sp)

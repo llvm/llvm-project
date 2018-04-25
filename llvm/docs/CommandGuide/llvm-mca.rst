@@ -89,9 +89,8 @@ option specifies "``-``", then the output will also be sent to standard output.
 
 .. option:: -mcpu=<cpuname>
 
- Specify the processor for whic to run the analysis.
- By default this defaults to a "generic" processor. It is not autodetected to
- the current architecture.
+  Specify the processor for which to analyze the code.  By default, the cpu name
+  is autodetected from the host.
 
 .. option:: -output-asm-variant=<variant id>
 

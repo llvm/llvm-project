@@ -98,6 +98,12 @@ public:
            memcmp(getNameStart(), Str, StrLen-1) == 0;
   }
 
+  /// \brief Return true if this is the identifier for the specified StringRef.
+  bool isStr(llvm::StringRef Str) const {
+    llvm::StringRef ThisStr(getNameStart(), getLength());
+    return ThisStr == Str;
+  }
+
   /// \brief Return the beginning of the actual null-terminated string for this
   /// identifier.
   const char *getNameStart() const {

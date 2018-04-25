@@ -69,6 +69,9 @@ public:
     return HashValue < Sym.HashValue;
   }
 
+  // Returns a 40-bytes hex encoded string.
+  std::string str() const;
+
 private:
   static constexpr unsigned HashByteLength = 20;
 

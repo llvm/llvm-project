@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -942,6 +943,44 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
           return false;
         }
       }
+
+      // Check the friends for consistency.
+      CXXRecordDecl::friend_iterator Friend2 = D2CXX->friend_begin(),
+              Friend2End = D2CXX->friend_end();
+      for (CXXRecordDecl::friend_iterator Friend1 = D1CXX->friend_begin(),
+                   Friend1End = D1CXX->friend_end();
+           Friend1 != Friend1End; ++Friend1, ++Friend2) {
+        if (Friend2 == Friend2End) {
+          if (Context.Complain) {
+            Context.Diag2(D2->getLocation(),
+                          diag::warn_odr_tag_type_inconsistent)
+                    << Context.ToCtx.getTypeDeclType(D2CXX);
+            Context.Diag1((*Friend1)->getFriendLoc(), diag::note_odr_friend);
+            Context.Diag2(D2->getLocation(), diag::note_odr_missing_friend);
+          }
+          return false;
+        }
+
+        if (!IsStructurallyEquivalent(Context, *Friend1, *Friend2)) {
+          if (Context.Complain) {
+            Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
+              << Context.ToCtx.getTypeDeclType(D2CXX);
+            Context.Diag1((*Friend1)->getFriendLoc(), diag::note_odr_friend);
+            Context.Diag2((*Friend2)->getFriendLoc(), diag::note_odr_friend);
+          }
+          return false;
+        }
+      }
+
+      if (Friend2 != Friend2End) {
+        if (Context.Complain) {
+          Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
+                  << Context.ToCtx.getTypeDeclType(D2);
+          Context.Diag2((*Friend2)->getFriendLoc(), diag::note_odr_friend);
+          Context.Diag1(D1->getLocation(), diag::note_odr_missing_friend);
+        }
+        return false;
+      }
     } else if (D1CXX->getNumBases() > 0) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
@@ -1184,6 +1223,31 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                           D2->getTemplatedDecl()->getType());
 }
 
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     FriendDecl *D1, FriendDecl *D2) {
+  if ((D1->getFriendType() && D2->getFriendDecl()) ||
+      (D1->getFriendDecl() && D2->getFriendType())) {
+      return false;
+  }
+  if (D1->getFriendType() && D2->getFriendType())
+    return IsStructurallyEquivalent(Context,
+                                    D1->getFriendType()->getType(),
+                                    D2->getFriendType()->getType());
+  if (D1->getFriendDecl() && D2->getFriendDecl())
+    return IsStructurallyEquivalent(Context, D1->getFriendDecl(),
+                                    D2->getFriendDecl());
+  return false;
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     FunctionDecl *D1, FunctionDecl *D2) {
+  // FIXME: Consider checking for function attributes as well.
+  if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType()))
+    return false;
+
+  return true;
+}
+
 /// Determine structural equivalence of two declarations.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      Decl *D1, Decl *D2) {
@@ -1377,6 +1441,25 @@ bool StructuralEquivalenceContext::Finish() {
       if (auto *TTP2 = dyn_cast<TemplateTemplateParmDecl>(D2)) {
         if (!::IsStructurallyEquivalent(*this, TTP1, TTP2))
           Equivalent = false;
+      } else {
+        // Kind mismatch.
+        Equivalent = false;
+      }
+    } else if (FunctionDecl *FD1 = dyn_cast<FunctionDecl>(D1)) {
+      if (FunctionDecl *FD2 = dyn_cast<FunctionDecl>(D2)) {
+        if (!::IsStructurallyEquivalent(FD1->getIdentifier(),
+                                        FD2->getIdentifier()))
+          Equivalent = false;
+        if (!::IsStructurallyEquivalent(*this, FD1, FD2))
+          Equivalent = false;
+      } else {
+        // Kind mismatch.
+        Equivalent = false;
+      }
+    } else if (FriendDecl *FrD1 = dyn_cast<FriendDecl>(D1)) {
+      if (FriendDecl *FrD2 = dyn_cast<FriendDecl>(D2)) {
+          if (!::IsStructurallyEquivalent(*this, FrD1, FrD2))
+            Equivalent = false;
       } else {
         // Kind mismatch.
         Equivalent = false;

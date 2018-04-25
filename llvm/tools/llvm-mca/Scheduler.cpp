@@ -263,7 +263,7 @@ void Scheduler::scheduleInstruction(unsigned Idx, Instruction &MCIS) {
   // issued immediately to the pipeline(s). Any other in-order buffered
   // resources (i.e. BufferSize=1) is consumed.
 
-  if (!MCIS.isZeroLatency() && !Resources->mustIssueImmediately(Desc)) {
+  if (Desc.MaxLatency && !Resources->mustIssueImmediately(Desc)) {
     DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx << " to the Ready Queue\n");
     ReadyQueue[Idx] = &MCIS;
     return;

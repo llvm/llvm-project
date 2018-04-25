@@ -32,6 +32,10 @@ AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                      const Value *Val, unsigned VReg) const {
+  // FIXME: Add support for non-void returns.
+  if (Val)
+    return false;
+
   MIRBuilder.buildInstr(AMDGPU::S_ENDPGM);
   return true;
 }

@@ -47,7 +47,7 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
 
     @staticmethod
     def make_parsers():
-        def custom_parse(line_number, line, output, keyword):
+        def custom_parse(line_number, line, output):
             if output is None:
                 output = []
             output += [part for part in line.split(' ') if part.strip()]
@@ -99,8 +99,8 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         cmd_parser = self.get_parser(parsers, 'MY_RUN:')
         value = cmd_parser.getValue()
         self.assertEqual(len(value), 2)  # there are only two run lines
-        self.assertEqual(value[0].strip(), ": 'MY_RUN: at line 4';  baz")
-        self.assertEqual(value[1].strip(), ": 'MY_RUN: at line 7';  foo  bar")
+        self.assertEqual(value[0].strip(), 'baz')
+        self.assertEqual(value[1].strip(), 'foo  bar')
 
     def test_custom(self):
         parsers = self.make_parsers()

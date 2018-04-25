@@ -92,14 +92,14 @@ define void @trunc_shl_32_i32_i64(i32* %out, i64* %in) {
 define void @trunc_shl_15_i16_i64(i16* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_15_i16_i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movzwl (%rsi), %eax
+; SSE2-NEXT:    movl (%rsi), %eax
 ; SSE2-NEXT:    shll $15, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_15_i16_i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzwl (%rsi), %eax
+; AVX2-NEXT:    movl (%rsi), %eax
 ; AVX2-NEXT:    shll $15, %eax
 ; AVX2-NEXT:    movw %ax, (%rdi)
 ; AVX2-NEXT:    retq

@@ -789,13 +789,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         results.append(cmdResult)
         return cmdResult.exitCode
 
-    if cmd.commands[0].args[0] == ':':
-        if len(cmd.commands) != 1:
-            raise InternalShellError(cmd.commands[0], "Unsupported: ':' "
-                                     "cannot be part of a pipeline")
-        results.append(ShellCommandResult(cmd.commands[0], '', '', 0, False))
-        return 0;
-
     procs = []
     default_stdin = subprocess.PIPE
     stderrTempFiles = []
@@ -1325,8 +1318,7 @@ class IntegratedTestKeywordParser(object):
     def parseLine(self, line_number, line):
         try:
             self.parsed_lines += [(line_number, line)]
-            self.value = self.parser(line_number, line, self.value,
-                                     self.keyword)
+            self.value = self.parser(line_number, line, self.value)
         except ValueError as e:
             raise ValueError(str(e) + ("\nin %s directive on test line %d" %
                                        (self.keyword, line_number)))
@@ -1335,12 +1327,12 @@ class IntegratedTestKeywordParser(object):
         return self.value
 
     @staticmethod
-    def _handleTag(line_number, line, output, keyword):
+    def _handleTag(line_number, line, output):
         """A helper for parsing TAG type keywords"""
         return (not line.strip() or output)
 
     @staticmethod
-    def _handleCommand(line_number, line, output, keyword):
+    def _handleCommand(line_number, line, output):
         """A helper for parsing COMMAND type keywords"""
         # Trim trailing whitespace.
         line = line.rstrip()
@@ -1359,15 +1351,11 @@ class IntegratedTestKeywordParser(object):
         else:
             if output is None:
                 output = []
-            line = ": '{keyword} at line {line}'; {real_command}".format(
-                keyword=keyword,
-                line=line_number,
-                real_command=line)
             output.append(line)
         return output
 
     @staticmethod
-    def _handleList(line_number, line, output, keyword):
+    def _handleList(line_number, line, output):
         """A parser for LIST type keywords"""
         if output is None:
             output = []
@@ -1375,7 +1363,7 @@ class IntegratedTestKeywordParser(object):
         return output
 
     @staticmethod
-    def _handleBooleanExpr(line_number, line, output, keyword):
+    def _handleBooleanExpr(line_number, line, output):
         """A parser for BOOLEAN_EXPR type keywords"""
         if output is None:
             output = []
@@ -1388,18 +1376,17 @@ class IntegratedTestKeywordParser(object):
         return output
 
     @staticmethod
-    def _handleRequiresAny(line_number, line, output, keyword):
+    def _handleRequiresAny(line_number, line, output):
         """A custom parser to transform REQUIRES-ANY: into REQUIRES:"""
 
         # Extract the conditions specified in REQUIRES-ANY: as written.
         conditions = []
-        IntegratedTestKeywordParser._handleList(line_number, line, conditions,
-                                                keyword)
+        IntegratedTestKeywordParser._handleList(line_number, line, conditions)
 
         # Output a `REQUIRES: a || b || c` expression in its place.
         expression = ' || '.join(conditions)
-        IntegratedTestKeywordParser._handleBooleanExpr(line_number, expression,
-                                                       output, keyword)
+        IntegratedTestKeywordParser._handleBooleanExpr(line_number,
+                                                       expression, output)
         return output
 
 def parseIntegratedTestScript(test, additional_parsers=[],

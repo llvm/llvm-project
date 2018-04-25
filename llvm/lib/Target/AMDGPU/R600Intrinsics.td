@@ -45,10 +45,6 @@ def int_r600_store_swizzle :
   Intrinsic<[], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty], []
 >;
 
-def int_r600_store_stream_output : Intrinsic<
-  [], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []
->;
-
 def int_r600_tex : TextureIntrinsicFloatInput;
 def int_r600_texc : TextureIntrinsicFloatInput;
 def int_r600_txl : TextureIntrinsicFloatInput;

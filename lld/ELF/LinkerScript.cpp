@@ -801,12 +801,6 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
       continue;
     }
 
-    // Handle ASSERT().
-    if (auto *Cmd = dyn_cast<AssertCommand>(Base)) {
-      Cmd->Expression();
-      continue;
-    }
-
     // Handle a single input section description command.
     // It calculates and assigns the offsets for each section and also
     // updates the output section size.
@@ -1053,12 +1047,6 @@ void LinkerScript::assignAddresses() {
       Cmd->Size = Dot - Cmd->Addr;
       continue;
     }
-
-    if (auto *Cmd = dyn_cast<AssertCommand>(Base)) {
-      Cmd->Expression();
-      continue;
-    }
-
     assignOffsets(cast<OutputSection>(Base));
   }
   Ctx = nullptr;

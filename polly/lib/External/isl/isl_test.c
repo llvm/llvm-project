@@ -7168,6 +7168,64 @@ int test_align_parameters(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that isl_*_drop_unused_params actually drops the unused parameters
+ * by comparing the result using isl_*_plain_is_equal.
+ * Note that this assumes that isl_*_plain_is_equal does not consider
+ * objects that only differ by unused parameters to be equal.
+ */
+int test_drop_unused_parameters(isl_ctx *ctx)
+{
+	const char *str_with, *str_without;
+	isl_basic_set *bset1, *bset2;
+	isl_set *set1, *set2;
+	isl_pw_aff *pwa1, *pwa2;
+	int equal;
+
+	str_with = "[n, m, o] -> { [m] }";
+	str_without = "[m] -> { [m] }";
+
+	bset1 = isl_basic_set_read_from_str(ctx, str_with);
+	bset2 = isl_basic_set_read_from_str(ctx, str_without);
+	bset1 = isl_basic_set_drop_unused_params(bset1);
+	equal = isl_basic_set_plain_is_equal(bset1, bset2);
+	isl_basic_set_free(bset1);
+	isl_basic_set_free(bset2);
+
+	if (equal < 0)
+		return -1;
+	if (!equal)
+		isl_die(ctx, isl_error_unknown,
+			"result not as expected", return -1);
+
+	set1 = isl_set_read_from_str(ctx, str_with);
+	set2 = isl_set_read_from_str(ctx, str_without);
+	set1 = isl_set_drop_unused_params(set1);
+	equal = isl_set_plain_is_equal(set1, set2);
+	isl_set_free(set1);
+	isl_set_free(set2);
+
+	if (equal < 0)
+		return -1;
+	if (!equal)
+		isl_die(ctx, isl_error_unknown,
+			"result not as expected", return -1);
+
+	pwa1 = isl_pw_aff_read_from_str(ctx, str_with);
+	pwa2 = isl_pw_aff_read_from_str(ctx, str_without);
+	pwa1 = isl_pw_aff_drop_unused_params(pwa1);
+	equal = isl_pw_aff_plain_is_equal(pwa1, pwa2);
+	isl_pw_aff_free(pwa1);
+	isl_pw_aff_free(pwa2);
+
+	if (equal < 0)
+		return -1;
+	if (!equal)
+		isl_die(ctx, isl_error_unknown,
+			"result not as expected", return -1);
+
+	return 0;
+}
+
 static int test_list(isl_ctx *ctx)
 {
 	isl_id *a, *b, *c, *d, *id;
@@ -8908,6 +8966,7 @@ struct {
 	{ "conversion", &test_conversion },
 	{ "list", &test_list },
 	{ "align parameters", &test_align_parameters },
+	{ "drop unused parameters", &test_drop_unused_parameters },
 	{ "preimage", &test_preimage },
 	{ "pullback", &test_pullback },
 	{ "AST", &test_ast },

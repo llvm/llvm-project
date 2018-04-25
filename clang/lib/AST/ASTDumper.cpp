@@ -466,6 +466,7 @@ namespace  {
                                          bool DumpRefOnly);
     template<typename TemplateDecl>
     void VisitTemplateDecl(const TemplateDecl *D, bool DumpExplicitInst);
+    void VisitConceptDecl(const ConceptDecl *D);
     void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D);
     void VisitClassTemplateDecl(const ClassTemplateDecl *D);
     void VisitClassTemplateSpecializationDecl(
@@ -1575,6 +1576,12 @@ void ASTDumper::VisitTemplateDecl(const TemplateDecl *D,
   for (auto *Child : D->specializations())
     VisitTemplateDeclSpecialization(Child, DumpExplicitInst,
                                     !D->isCanonicalDecl());
+}
+
+void ASTDumper::VisitConceptDecl(const ConceptDecl *D) {
+  dumpName(D);
+  dumpTemplateParameters(D->getTemplateParameters());
+  dumpStmt(D->getConstraintExpr());
 }
 
 void ASTDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {

@@ -5,8 +5,8 @@
 define signext i16 @foo(i16 signext %x) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl $21998, %eax # imm = 0x55EE
+; X86-NEXT:    movl $21998, %eax # imm = 0x55EE
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -23,8 +23,8 @@ entry:
 define signext i16 @bar(i16 signext %x) nounwind {
 ; X86-LABEL: bar:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl $54766, %eax # imm = 0xD5EE
+; X86-NEXT:    movl $54766, %eax # imm = 0xD5EE
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;

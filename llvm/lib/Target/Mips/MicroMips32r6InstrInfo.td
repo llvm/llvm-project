@@ -1127,7 +1127,7 @@ class SYNC_MMR6_DESC : MMR6Arch<"sync">, MipsR6Inst {
   bit HasSideEffects = 1;
 }
 
-class SYNCI_MMR6_DESC : SYNCI_FT<"synci"> {
+class SYNCI_MMR6_DESC : SYNCI_FT<"synci", mem_mm_16> {
   let DecoderMethod = "DecodeSynciR6";
 }
 
