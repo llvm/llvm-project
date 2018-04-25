@@ -1349,6 +1349,14 @@ isl_stat isl_map_check_named_params(__isl_keep isl_map *map)
 	return isl_space_check_named_params(isl_map_peek_space(map));
 }
 
+/* Check that "bmap" has only named parameters, reporting an error
+ * if it does not.
+ */
+static isl_stat isl_basic_map_check_named_params(__isl_keep isl_basic_map *bmap)
+{
+	return isl_space_check_named_params(isl_basic_map_peek_space(bmap));
+}
+
 /* Check that "bmap1" and "bmap2" have the same parameters,
  * reporting an error if they do not.
  */
@@ -11760,9 +11768,8 @@ __isl_give isl_basic_map *isl_basic_map_align_params(
 	if (!isl_space_has_named_params(model))
 		isl_die(ctx, isl_error_invalid,
 			"model has unnamed parameters", goto error);
-	if (!isl_space_has_named_params(bmap->dim))
-		isl_die(ctx, isl_error_invalid,
-			"relation has unnamed parameters", goto error);
+	if (isl_basic_map_check_named_params(bmap) < 0)
+		goto error;
 	equal_params = isl_space_has_equal_params(bmap->dim, model);
 	if (equal_params < 0)
 		goto error;
@@ -11830,6 +11837,69 @@ __isl_give isl_basic_set *isl_basic_set_align_params(
 	__isl_take isl_basic_set *bset, __isl_take isl_space *model)
 {
 	return isl_basic_map_align_params(bset, model);
+}
+
+/* Drop all parameters not referenced by "map".
+ */
+__isl_give isl_map *isl_map_drop_unused_params(__isl_take isl_map *map)
+{
+	int i;
+
+	if (isl_map_check_named_params(map) < 0)
+		return isl_map_free(map);
+
+	for (i = isl_map_dim(map, isl_dim_param) - 1; i >= 0; i--) {
+		isl_bool involves;
+
+		involves = isl_map_involves_dims(map, isl_dim_param, i, 1);
+		if (involves < 0)
+			return isl_map_free(map);
+		if (!involves)
+			map = isl_map_project_out(map, isl_dim_param, i, 1);
+	}
+
+	return map;
+}
+
+/* Drop all parameters not referenced by "set".
+ */
+__isl_give isl_set *isl_set_drop_unused_params(
+	__isl_take isl_set *set)
+{
+	return set_from_map(isl_map_drop_unused_params(set_to_map(set)));
+}
+
+/* Drop all parameters not referenced by "bmap".
+ */
+__isl_give isl_basic_map *isl_basic_map_drop_unused_params(
+	__isl_take isl_basic_map *bmap)
+{
+	int i;
+
+	if (isl_basic_map_check_named_params(bmap) < 0)
+		return isl_basic_map_free(bmap);
+
+	for (i = isl_basic_map_dim(bmap, isl_dim_param) - 1; i >= 0; i--) {
+		isl_bool involves;
+
+		involves = isl_basic_map_involves_dims(bmap,
+							isl_dim_param, i, 1);
+		if (involves < 0)
+			return isl_basic_map_free(bmap);
+		if (!involves)
+			bmap = isl_basic_map_drop(bmap, isl_dim_param, i, 1);
+	}
+
+	return bmap;
+}
+
+/* Drop all parameters not referenced by "bset".
+ */
+__isl_give isl_basic_set *isl_basic_set_drop_unused_params(
+	__isl_take isl_basic_set *bset)
+{
+	return bset_from_bmap(isl_basic_map_drop_unused_params(
+							bset_to_bmap(bset)));
 }
 
 __isl_give isl_mat *isl_basic_map_equalities_matrix(
@@ -13369,9 +13439,8 @@ __isl_give isl_map *isl_map_preimage_pw_multi_aff(__isl_take isl_map *map,
 
 	if (isl_map_check_named_params(map) < 0)
 		goto error;
-	if (!isl_space_has_named_params(pma->dim))
-		isl_die(map->ctx, isl_error_invalid,
-			"unaligned unnamed parameters", goto error);
+	if (isl_pw_multi_aff_check_named_params(pma) < 0)
+		goto error;
 	map = isl_map_align_params(map, isl_pw_multi_aff_get_space(pma));
 	pma = isl_pw_multi_aff_align_params(pma, isl_map_get_space(map));
 

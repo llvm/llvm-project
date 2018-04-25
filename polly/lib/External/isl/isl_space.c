@@ -2546,7 +2546,7 @@ isl_stat isl_space_check_named_params(__isl_keep isl_space *space)
 		return isl_stat_error;
 	if (!named)
 		isl_die(isl_space_get_ctx(space), isl_error_invalid,
-			"unaligned unnamed parameters", return isl_stat_error);
+			"unexpected unnamed parameters", return isl_stat_error);
 
 	return isl_stat_ok;
 }
