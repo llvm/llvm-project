@@ -1,0 +1,11 @@
+// Test that CFString works in the REPL.
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+// CHECK: Welcome to Swift
+
+import Foundation
+
+let s = CFStringCreateWithCString(nil, "abcdefghijklmnop", kCFStringEncodingASCII)!
+let s2 = s as String
+// CHECK: s2: String = "abcdefghijklmnop"

@@ -230,8 +230,15 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     CompilerType id_type =
         process->GetTarget().GetScratchClangASTContext()->GetBasicType(
             lldb::eBasicTypeObjCID);
-    ValueObjectSP nsstring = ValueObject::CreateValueObjectFromAddress(
-        "nsstring", startAddress, valobj.GetExecutionContextRef(), id_type);
+
+    // Warning: Using ValueObject::CreateValueObjectFromAddress can create an
+    // invalid ValueObject here in an unknown set of cases. Until this is fixed,
+    // use CreateValueObjectFromData (rdar://39741576).
+    DataExtractor DE(&startAddress, process->GetAddressByteSize(),
+                     process->GetByteOrder(), process->GetAddressByteSize());
+    ValueObjectSP nsstring = ValueObject::CreateValueObjectFromData(
+        "nsstring", DE, valobj.GetExecutionContextRef(), id_type);
+
     if (nsstring)
       return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
     return false;
