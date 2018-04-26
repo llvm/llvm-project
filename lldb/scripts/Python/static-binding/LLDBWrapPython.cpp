@@ -20815,6 +20815,23 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBDebugger_GetBuildConfiguration(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBStructuredData result;
+  
+  if (!PyArg_ParseTuple(args,(char *)":SBDebugger_GetBuildConfiguration")) SWIG_fail;
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = lldb::SBDebugger::GetBuildConfiguration();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBStructuredData(static_cast< const lldb::SBStructuredData& >(result))), SWIGTYPE_p_lldb__SBStructuredData, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBDebugger_StateIsRunningState(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::StateType arg1 ;
@@ -74874,6 +74891,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBDebugger_GetScriptingLanguage", _wrap_SBDebugger_GetScriptingLanguage, METH_VARARGS, (char *)"SBDebugger_GetScriptingLanguage(SBDebugger self, char script_language_name) -> ScriptLanguage"},
 	 { (char *)"SBDebugger_GetVersionString", _wrap_SBDebugger_GetVersionString, METH_VARARGS, (char *)"SBDebugger_GetVersionString() -> char"},
 	 { (char *)"SBDebugger_StateAsCString", _wrap_SBDebugger_StateAsCString, METH_VARARGS, (char *)"SBDebugger_StateAsCString(StateType state) -> char"},
+	 { (char *)"SBDebugger_GetBuildConfiguration", _wrap_SBDebugger_GetBuildConfiguration, METH_VARARGS, (char *)"SBDebugger_GetBuildConfiguration() -> SBStructuredData"},
 	 { (char *)"SBDebugger_StateIsRunningState", _wrap_SBDebugger_StateIsRunningState, METH_VARARGS, (char *)"SBDebugger_StateIsRunningState(StateType state) -> bool"},
 	 { (char *)"SBDebugger_StateIsStoppedState", _wrap_SBDebugger_StateIsStoppedState, METH_VARARGS, (char *)"SBDebugger_StateIsStoppedState(StateType state) -> bool"},
 	 { (char *)"SBDebugger_EnableLog", _wrap_SBDebugger_EnableLog, METH_VARARGS, (char *)"SBDebugger_EnableLog(SBDebugger self, char channel, char types) -> bool"},

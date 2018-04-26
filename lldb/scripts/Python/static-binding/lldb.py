@@ -3690,6 +3690,12 @@ class SBDebugger(_object):
 
     if _newclass:StateAsCString = staticmethod(StateAsCString)
     __swig_getmethods__["StateAsCString"] = lambda x: StateAsCString
+    def GetBuildConfiguration():
+        """GetBuildConfiguration() -> SBStructuredData"""
+        return _lldb.SBDebugger_GetBuildConfiguration()
+
+    if _newclass:GetBuildConfiguration = staticmethod(GetBuildConfiguration)
+    __swig_getmethods__["GetBuildConfiguration"] = lambda x: GetBuildConfiguration
     def StateIsRunningState(*args):
         """StateIsRunningState(StateType state) -> bool"""
         return _lldb.SBDebugger_StateIsRunningState(*args)
@@ -3885,6 +3891,10 @@ def SBDebugger_GetVersionString():
 def SBDebugger_StateAsCString(*args):
   """SBDebugger_StateAsCString(StateType state) -> str"""
   return _lldb.SBDebugger_StateAsCString(*args)
+
+def SBDebugger_GetBuildConfiguration():
+  """SBDebugger_GetBuildConfiguration() -> SBStructuredData"""
+  return _lldb.SBDebugger_GetBuildConfiguration()
 
 def SBDebugger_StateIsRunningState(*args):
   """SBDebugger_StateIsRunningState(StateType state) -> bool"""
