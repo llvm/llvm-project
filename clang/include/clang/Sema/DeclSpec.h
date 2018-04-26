@@ -38,7 +38,6 @@
 namespace clang {
   class ASTContext;
   class CXXRecordDecl;
-  class ConceptDecl;
   class TypeLoc;
   class LangOptions;
   class IdentifierInfo;
@@ -222,13 +221,10 @@ public:
   unsigned location_size() const { return Builder.getBuffer().second; }
 };
 
-/// \brief Captures information about "decl-specifiers" and also concept
-/// definitions.
+/// \brief Captures information about "declaration specifiers".
 ///
 /// "Declaration specifiers" encompasses storage-class-specifiers,
-/// type-specifiers, type-qualifiers, and function-specifiers. This includes
-/// class and enum definitions whose AST representations must be stored - same
-/// with the expression-operands of decltype.
+/// type-specifiers, type-qualifiers, and function-specifiers.
 class DeclSpec {
 public:
   /// \brief storage-class-specifier
@@ -367,14 +363,8 @@ private:
   unsigned Constexpr_specified : 1;
 
   union {
-	// Valid if isTypeRep is true.
     UnionParsedType TypeRep;
-    // If we parsed a concept, class, enum (etc.) defintion or elaborated type
-    // specifier, this stores the AST representation.  This is valid if either
-    // isDeclRep or isConceptSpecified returns true.
     Decl *DeclRep;
-    // If we parsed a typeof(e) or decltype(e) operator, this stores the
-    // expression 'e'.  Valid if isExprRep is true.
     Expr *ExprRep;
   };
 
@@ -403,11 +393,6 @@ private:
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
   SourceLocation TQ_pipeLoc;
-  
-  // Even though 'concept' is not a specifier, we handle it here. This allows us
-  // to reuse infrastructure for diagnosing attributes and invalid
-  // decl-specifiers.
-  SourceLocation ConceptLoc;
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
@@ -497,10 +482,7 @@ public:
   bool isTypeSpecOwned() const { return TypeSpecOwned; }
   bool isTypeRep() const { return isTypeRep((TST) TypeSpecType); }
   bool isTypeSpecPipe() const { return TypeSpecPipe; }
-  bool isDeclRep() const {
-    return isDeclRep((TST)TypeSpecType);
-  }
-  
+
   ParsedType getRepAsType() const {
     assert(isTypeRep((TST) TypeSpecType) && "DeclSpec does not store a type");
     return TypeRep;
@@ -509,19 +491,6 @@ public:
     assert(isDeclRep((TST) TypeSpecType) && "DeclSpec does not store a decl");
     return DeclRep;
   }
-  // This is a template that should only be instantiated with the type
-  // ConceptDecl.  By making it a template we only require ConceptDecl to be a
-  // complete type where this function is called.
-  template<class ConceptDeclTy = ConceptDecl>
-  ConceptDeclTy *getRepAsConcept() const {
-    static_assert(std::is_same<ConceptDeclTy, ConceptDecl>::value,
-                  "Must only be instantiated with ConceptDecl");
-    assert(isConceptSpecified() && "DeclSpec does not store a concept");
-
-    return cast_or_null<ConceptDeclTy>(DeclRep);
-  }
-
-
   Expr *getRepAsExpr() const {
     assert(isExprRep((TST) TypeSpecType) && "DeclSpec does not store an expr");
     return ExprRep;
@@ -696,20 +665,6 @@ public:
     assert(isDeclRep((TST) TypeSpecType));
     DeclRep = Rep;
   }
-  // This function can only be instantiated with ConceptDecl.  We made it a
-  // template so that ConceptDecl only has to be defined where this is called.
-  template <class ConceptDeclTy = ConceptDecl>
-  void
-  setConceptRep(typename llvm::identity<ConceptDeclTy>::argument_type *Rep) {
-    static_assert(std::is_same<ConceptDeclTy, ConceptDecl>::value,
-                  "Must only be instantiated with ConceptDecl");
-    assert(isConceptSpecified() && "DeclSpec does not store a concept");
-    assert(!DeclRep &&
-           "why is this not null? We expect this function to be called only "
-           "once, and usually right after DeclRep was set to null");
-    DeclRep = Rep;
-  }
-
   void UpdateTypeRep(ParsedType Rep) {
     assert(isTypeRep((TST) TypeSpecType));
     TypeRep = Rep;
@@ -739,8 +694,6 @@ public:
                             unsigned &DiagID);
   bool SetConstexprSpec(SourceLocation Loc, const char *&PrevSpec,
                         unsigned &DiagID);
-  bool setConceptSpec(SourceLocation Loc, const char *&PrevSpec,
-                      unsigned &DiagID, const PrintingPolicy &P);
 
   bool isFriendSpecified() const { return Friend_specified; }
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
@@ -751,8 +704,6 @@ public:
   bool isConstexprSpecified() const { return Constexpr_specified; }
   SourceLocation getConstexprSpecLoc() const { return ConstexprLoc; }
 
-  bool isConceptSpecified() const { return ConceptLoc.isValid(); }
-  SourceLocation getConceptLoc() const { return ConceptLoc; }
   void ClearConstexprSpec() {
     Constexpr_specified = false;
     ConstexprLoc = SourceLocation();

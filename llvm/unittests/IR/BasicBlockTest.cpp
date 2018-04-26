@@ -69,6 +69,15 @@ TEST(BasicBlockTest, PhiRange) {
   CI = BB->phis().begin();
   EXPECT_NE(CI, BB->phis().end());
 
+  // Test that filtering iterators work with basic blocks.
+  auto isPhi = [](Instruction &I) { return isa<PHINode>(&I); };
+  auto Phis = make_filter_range(*BB, isPhi);
+  auto ReversedPhis = reverse(make_filter_range(*BB, isPhi));
+  EXPECT_EQ(std::distance(Phis.begin(), Phis.end()), 3);
+  EXPECT_EQ(&*Phis.begin(), P1);
+  EXPECT_EQ(std::distance(ReversedPhis.begin(), ReversedPhis.end()), 3);
+  EXPECT_EQ(&*ReversedPhis.begin(), P3);
+
   // And iterate a const range.
   for (const auto &PN : const_cast<const BasicBlock *>(BB.get())->phis()) {
     EXPECT_EQ(BB.get(), PN.getIncomingBlock(0));

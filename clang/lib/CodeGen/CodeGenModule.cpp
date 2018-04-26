@@ -4423,7 +4423,6 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   case Decl::TypeAliasTemplate:
   case Decl::Block:
   case Decl::Empty:
-  case Decl::Concept:
     break;
   case Decl::Using:          // using X; [C++]
     if (CGDebugInfo *DI = getModuleDebugInfo())

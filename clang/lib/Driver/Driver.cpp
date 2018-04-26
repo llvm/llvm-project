@@ -129,7 +129,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
 
 void Driver::ParseDriverMode(StringRef ProgramName,
                              ArrayRef<const char *> Args) {
-  ClangNameParts = ToolChain::getTargetAndModeFromProgramName(ProgramName);
+  if (ClangNameParts.isEmpty())
+    ClangNameParts = ToolChain::getTargetAndModeFromProgramName(ProgramName);
   setDriverModeFromOption(ClangNameParts.DriverMode);
 
   for (const char *ArgPtr : Args) {

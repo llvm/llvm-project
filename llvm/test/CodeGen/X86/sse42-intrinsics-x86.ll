@@ -437,7 +437,7 @@ define <16 x i8> @test_x86_sse42_pcmpistrm128_load(<16 x i8> %a0, <16 x i8>* %a1
 ; VCHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; VCHECK-NEXT:    vpcmpistrm $7, (%eax), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x62,0x00,0x07]
 ; VCHECK-NEXT:    retl ## encoding: [0xc3]
-  %1 = load <16 x i8>, <16 x i8>* %a1
+  %1 = load <16 x i8>, <16 x i8>* %a1, align 1
   %res = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %a0, <16 x i8> %1, i8 7) ; <<16 x i8>> [#uses=1]
   ret <16 x i8> %res
 }
