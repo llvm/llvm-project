@@ -62,6 +62,8 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
     CustomSec = std::move(NameSec);
   } else if (WasmSec.Name == "linking") {
     std::unique_ptr<WasmYAML::LinkingSection> LinkingSec = make_unique<WasmYAML::LinkingSection>();
+    LinkingSec->Version = Obj.linkingData().Version;
+
     ArrayRef<StringRef> Comdats = Obj.linkingData().Comdats;
     for (StringRef ComdatName : Comdats)
       LinkingSec->Comdats.emplace_back(WasmYAML::Comdat{ComdatName, {}});
@@ -71,6 +73,7 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
                 WasmYAML::ComdatEntry{wasm::WASM_COMDAT_FUNCTION, Func.Index});
       }
     }
+
     uint32_t SegmentIndex = 0;
     for (const object::WasmSegment &Segment : Obj.dataSegments()) {
       if (!Segment.Data.Name.empty()) {
@@ -87,6 +90,7 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
       }
       SegmentIndex++;
     }
+
     uint32_t SymbolIndex = 0;
     for (const wasm::WasmSymbolInfo &Symbol : Obj.linkingData().SymbolTable) {
       WasmYAML::SymbolInfo Info;
@@ -102,13 +106,18 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
         Info.ElementIndex = Symbol.ElementIndex;
         break;
+      case wasm::WASM_SYMBOL_TYPE_SECTION:
+        Info.ElementIndex = Symbol.ElementIndex;
+        break;
       }
       LinkingSec->SymbolTable.emplace_back(Info);
     }
+
     for (const wasm::WasmInitFunc &Func : Obj.linkingData().InitFunctions) {
       WasmYAML::InitFunction F{Func.Priority, Func.Symbol};
       LinkingSec->InitFunctions.emplace_back(F);
     }
+
     CustomSec = std::move(LinkingSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);

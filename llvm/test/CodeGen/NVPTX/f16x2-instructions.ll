@@ -1423,5 +1423,13 @@ define <2 x half> @test_fmuladd(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 
   ret <2 x half> %r
 }
 
+; CHECK-LABEL: test_shufflevector(
+; CHECK: mov.b32 {%h1, %h2}, %hh1;
+; CHECK: mov.b32 %hh2, {%h2, %h1};
+define <2 x half> @test_shufflevector(<2 x half> %a) #0 {
+  %s = shufflevector <2 x half> %a, <2 x half> undef, <2 x i32> <i32 1, i32 0>
+  ret <2 x half> %s
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { "unsafe-fp-math" = "true" }

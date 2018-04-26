@@ -1,0 +1,81 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy --redefine-sym foo=oof --redefine-sym empty= %t %t2
+# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+# RUN: not llvm-objcopy --redefine-sym barbar %t %t2 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+# RUN: not llvm-objcopy --redefine-sym foo=f1 --redefine-sym foo=f2 %t %t2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-REDEFINITION
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Content:         "0000000000000000"
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x0000000000000010
+    Content:         "0000000000000000"
+Symbols:
+  Global:
+    - Name:     foo
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x1004
+    - Name:     bar
+      Type:     STT_OBJECT
+      Section:  .data
+      Value:    0x2000
+      Size:     4
+    - Name:     empty
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x1008
+
+#CHECK: Symbols [
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name:
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: None
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: oof
+#CHECK-NEXT:    Value: 0x1004
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: bar
+#CHECK-NEXT:    Value: 0x2000
+#CHECK-NEXT:    Size: 4
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Object
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .data
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: 
+#CHECK-NEXT:    Value: 0x1008
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+
+#BAD-FORMAT: Bad format for --redefine-sym
+#MULTIPLE-REDEFINITION: Multiple redefinition of symbol foo

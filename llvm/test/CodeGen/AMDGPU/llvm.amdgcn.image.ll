@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VERDE %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}image_load_v4i32:
@@ -159,7 +159,7 @@ main_body:
 ;
 ; GCN-LABEL: {{^}}image_store_wait:
 ; GCN: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
-; GCN: s_waitcnt expcnt(0)
+; VERDE: s_waitcnt expcnt(0)
 ; GCN: image_load v[0:3], v4, s[8:15] dmask:0xf unorm
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: image_store v[0:3], v4, s[16:23] dmask:0xf unorm

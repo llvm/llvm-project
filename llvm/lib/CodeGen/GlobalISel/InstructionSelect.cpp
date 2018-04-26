@@ -218,6 +218,12 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   auto &TLI = *MF.getSubtarget().getTargetLowering();
   TLI.finalizeLowering(MF);
 
+  DEBUG({
+    dbgs() << "Rules covered by selecting function: " << MF.getName() << ":";
+    for (auto RuleID : CoverageInfo.covered())
+      dbgs() << " id" << RuleID;
+    dbgs() << "\n\n";
+  });
   CoverageInfo.emit(CoveragePrefix,
                     MF.getSubtarget()
                         .getTargetLowering()

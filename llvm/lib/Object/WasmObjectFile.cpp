@@ -313,6 +313,14 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
         "Linking data must come after code section", object_error::parse_failed);
   }
 
+  LinkingData.Version = readVaruint32(Ptr);
+  if (LinkingData.Version != wasm::WasmMetadataVersion) {
+    return make_error<GenericBinaryError>(
+        "Unexpected metadata version: " + Twine(LinkingData.Version) +
+            " (Expected: " + Twine(wasm::WasmMetadataVersion) + ")",
+        object_error::parse_failed);
+  }
+
   while (Ptr < End) {
     uint8_t Type = readUint8(Ptr);
     uint32_t Size = readVaruint32(Ptr);
@@ -457,6 +465,14 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
       }
       break;
 
+    case wasm::WASM_SYMBOL_TYPE_SECTION: {
+      Info.ElementIndex = readVaruint32(Ptr);
+      // Use somewhat unique section name as symbol name.
+      StringRef SectionName = Sections[Info.ElementIndex].Name;
+      Info.Name = SectionName;
+      break;
+    }
+
     default:
       return make_error<GenericBinaryError>("Invalid symbol type",
                                             object_error::parse_failed);
@@ -565,6 +581,18 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
                                               object_error::parse_failed);
       Reloc.Addend = readVarint32(Ptr);
       break;
+    case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+      if (!isValidFunctionSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation function index",
+                                              object_error::parse_failed);
+      Reloc.Addend = readVarint32(Ptr);
+      break;
+    case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+      if (!isValidSectionSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation section index",
+                                              object_error::parse_failed);
+      Reloc.Addend = readVarint32(Ptr);
+      break;
     default:
       return make_error<GenericBinaryError>("Bad relocation type: " +
                                                 Twine(Reloc.Type),
@@ -576,7 +604,9 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, const uint8_t *Ptr,
     // to check that.
     uint64_t Size = 5;
     if (Reloc.Type == wasm::R_WEBASSEMBLY_TABLE_INDEX_I32 ||
-        Reloc.Type == wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32)
+        Reloc.Type == wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32 ||
+        Reloc.Type == wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32 ||
+        Reloc.Type == wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32)
       Size = 4;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("Bad relocation offset",
@@ -803,6 +833,10 @@ bool WasmObjectFile::isValidDataSymbol(uint32_t Index) const {
   return Index < Symbols.size() && Symbols[Index].isTypeData();
 }
 
+bool WasmObjectFile::isValidSectionSymbol(uint32_t Index) const {
+  return Index < Symbols.size() && Symbols[Index].isTypeSection();
+}
+
 wasm::WasmFunction &WasmObjectFile::getDefinedFunction(uint32_t Index) {
   assert(isDefinedFunctionIndex(Index));
   return Functions[Index - NumImportedFunctions];
@@ -983,6 +1017,8 @@ uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol& Sym) const {
     assert(Segment.Offset.Opcode == wasm::WASM_OPCODE_I32_CONST);
     return Segment.Offset.Value.Int32 + Sym.Info.DataRef.Offset;
   }
+  case wasm::WASM_SYMBOL_TYPE_SECTION:
+    return 0;
   }
   llvm_unreachable("invalid symbol type");
 }
@@ -1012,6 +1048,8 @@ WasmObjectFile::getSymbolType(DataRefImpl Symb) const {
     return SymbolRef::ST_Other;
   case wasm::WASM_SYMBOL_TYPE_DATA:
     return SymbolRef::ST_Data;
+  case wasm::WASM_SYMBOL_TYPE_SECTION:
+    return SymbolRef::ST_Debug;
   }
 
   llvm_unreachable("Unknown WasmSymbol::SymbolType");
@@ -1035,6 +1073,10 @@ WasmObjectFile::getSymbolSection(DataRefImpl Symb) const {
   case wasm::WASM_SYMBOL_TYPE_DATA:
     Ref.d.a = DataSection;
     break;
+  case wasm::WASM_SYMBOL_TYPE_SECTION: {
+    Ref.d.a = Sym.Info.ElementIndex;
+    break;
+  }
   default:
     llvm_unreachable("Unknown WasmSymbol::SymbolType");
   }
@@ -1139,10 +1181,14 @@ uint64_t WasmObjectFile::getRelocationOffset(DataRefImpl Ref) const {
   return Rel.Offset;
 }
 
-symbol_iterator WasmObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
-  llvm_unreachable("not yet implemented");
-  SymbolRef Ref;
-  return symbol_iterator(Ref);
+symbol_iterator WasmObjectFile::getRelocationSymbol(DataRefImpl Ref) const {
+  const wasm::WasmRelocation &Rel = getWasmRelocation(Ref);
+  if (Rel.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB)
+    return symbol_end();
+  DataRefImpl Sym;
+  Sym.d.a = Rel.Index;
+  Sym.d.b = 0;
+  return symbol_iterator(SymbolRef(Sym, this));
 }
 
 uint64_t WasmObjectFile::getRelocationType(DataRefImpl Ref) const {

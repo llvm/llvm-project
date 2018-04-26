@@ -177,8 +177,8 @@ INLINE unsigned long PadBytes(unsigned long size,
 INLINE void *SafeMalloc(size_t size, const char *msg) // check if success
 {
   void *ptr = malloc(size);
-  PRINT(LD_MEM, "malloc data of size %d for %s: 0x%llx\n", size, msg, P64(ptr));
-  ASSERT(LT_SAFETY, ptr, "failed to allocate %d bytes for %s\n", size, msg);
+  PRINT(LD_MEM, "malloc data of size %zu for %s: 0x%llx\n", size, msg, P64(ptr));
+  ASSERT(LT_SAFETY, ptr, "failed to allocate %zu bytes for %s\n", size, msg);
   return ptr;
 }
 

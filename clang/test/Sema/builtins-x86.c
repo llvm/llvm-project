@@ -16,6 +16,11 @@ typedef unsigned char __mmask8;
 typedef unsigned short __mmask16;
 typedef unsigned int __mmask32;
 
+void call_x86_32_builtins(void) {
+  (void)__builtin_ia32_readeflags_u32();                             // expected-error{{this builtin is only available on 32-bit targets}}
+  (void)__builtin_ia32_writeeflags_u32(4);                           // expected-error{{this builtin is only available on 32-bit targets}}
+}
+
 __m128 test__builtin_ia32_cmpps(__m128 __a, __m128 __b) {
   __builtin_ia32_cmpps(__a, __b, 32); // expected-error {{argument should be a value from 0 to 31}}
 }
