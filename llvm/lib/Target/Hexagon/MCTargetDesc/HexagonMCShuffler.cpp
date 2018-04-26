@@ -100,10 +100,10 @@ bool HexagonMCShuffler::reshuffleTo(MCInst &MCB) {
   return false;
 }
 
-bool llvm::HexagonMCShuffle(MCContext &Context, bool Fatal,
+bool llvm::HexagonMCShuffle(MCContext &Context, bool ReportErrors,
                             MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                             MCInst &MCB) {
-  HexagonMCShuffler MCS(Context, Fatal, MCII, STI, MCB);
+  HexagonMCShuffler MCS(Context, ReportErrors, MCII, STI, MCB);
 
   if (DisableShuffle)
     // Ignore if user chose so.
