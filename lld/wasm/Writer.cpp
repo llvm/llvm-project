@@ -430,8 +430,7 @@ void Writer::createLinkingSection() {
       createSyntheticSection(WASM_SEC_CUSTOM, "linking");
   raw_ostream &OS = Section->getStream();
 
-  if (!Config->Relocatable)
-    return;
+  writeUleb128(OS, WasmMetadataVersion, "Version");
 
   if (!SymtabEntries.empty()) {
     SubSection Sub(WASM_SYMBOL_TABLE);

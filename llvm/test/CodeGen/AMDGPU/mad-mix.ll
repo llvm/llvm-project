@@ -461,11 +461,9 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half
   ret float %result
 }
 
-; FIXME: Should be able to fold
 ; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_and_b32_e32 v0, 0x7fff0000, v0
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX9-NEXT: v_mad_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
   %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
@@ -478,11 +476,9 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half
   ret float %result
 }
 
-; FIXME: Should be able to fold
 ; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_and_b32_e32 v0, 0x7fff0000, v0
-; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX9-NEXT: v_mad_mix_f32 v0, -|v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
   %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>

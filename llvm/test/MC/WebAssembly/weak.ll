@@ -20,9 +20,7 @@ entry:
 ; CHECK-NEXT:         Field:           __indirect_function_table
 
 
-; CHECK:        - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     SymbolTable:      
+; CHECK:          SymbolTable:      
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            weak_function

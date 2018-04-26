@@ -630,7 +630,7 @@ class SYS_FM_MM : MMArch {
   let Inst{5-0}   = 0x3c;
 }
 
-class WAIT_FM_MM {
+class WAIT_FM_MM : MMArch {
   bits<10> code_;
   bits<32> Inst;
 

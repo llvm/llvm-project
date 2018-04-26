@@ -27,6 +27,9 @@ defm add_gnu_debuglink : Eq<"add-gnu-debuglink">,
 defm remove_section : Eq<"remove-section">,
                       MetaVarName<"section">,
                       HelpText<"Remove <section>">;
+defm redefine_symbol : Eq<"redefine-sym">,
+                       MetaVarName<"old=new">,
+                       HelpText<"Change the name of a symbol old to new">;
 def R : JoinedOrSeparate<["-"], "R">,
         Alias<remove_section>;
 defm keep : Eq<"keep">,
@@ -56,3 +59,8 @@ def extract_dwo : Flag<["-", "--"], "extract-dwo">,
                   HelpText<"Remove all sections that are not DWARF .dwo sections from file">;
 def localize_hidden : Flag<["-", "--"], "localize-hidden">,
                       HelpText<"Mark all symbols that have hidden or internal visibility as local">;
+defm localize_symbol : Eq<"localize-symbol">,
+                       MetaVarName<"symbol">,
+                       HelpText<"Mark <symbol> as local">;
+def L : JoinedOrSeparate<["-"], "L">,
+        Alias<localize_symbol>;

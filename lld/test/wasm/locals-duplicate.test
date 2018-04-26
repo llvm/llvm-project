@@ -382,6 +382,7 @@
 ; RELOC-NEXT:         Content:         '0000000000000000'
 ; RELOC-NEXT:   - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            linking
+; RELOC-NEXT:     Version:         1
 ; RELOC-NEXT:     SymbolTable:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Kind:            FUNCTION
