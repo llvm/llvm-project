@@ -230,8 +230,15 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     CompilerType id_type =
         process->GetTarget().GetScratchClangASTContext()->GetBasicType(
             lldb::eBasicTypeObjCID);
-    ValueObjectSP nsstring = ValueObject::CreateValueObjectFromAddress(
-        "nsstring", startAddress, valobj.GetExecutionContextRef(), id_type);
+
+    // Warning: Using ValueObject::CreateValueObjectFromAddress can create an
+    // invalid ValueObject here in an unknown set of cases. Until this is fixed,
+    // use CreateValueObjectFromData (rdar://39741576).
+    DataExtractor DE(&startAddress, process->GetAddressByteSize(),
+                     process->GetByteOrder(), process->GetAddressByteSize());
+    ValueObjectSP nsstring = ValueObject::CreateValueObjectFromData(
+        "nsstring", DE, valobj.GetExecutionContextRef(), id_type);
+
     if (nsstring)
       return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
     return false;
@@ -241,43 +248,6 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     uint64_t objectAddr = object->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
     if (objectAddr == LLDB_INVALID_ADDRESS)
       return false;
-
-    uint64_t topNibbleMask = 0xF000000000000000;
-    uint64_t smallUTF8TopNibble = 0xE000000000000000;
-
-    // Small UTF-8 string
-    if ((objectAddr & topNibbleMask) == smallUTF8TopNibble) {
-      // Small UTF-8 strings store their contents directly in register. The
-      // high nibble of the most significant byte of the first word denotes
-      // that the string is small, the low nibble holds the count. The least-
-      // significant byte of the second word is the first UTF-8 code unit.
-      //
-      // {object, otherBits} =
-      //   { isSmallUTF8Nibble << 60 | count << 56 | c_14 << 48 | ... | c_8,
-      //     c_7 << 56 | c_6 << 48 | ... | c_0
-      //   }
-      //
-      //
-      uint64_t countMask = 0x0F00000000000000;
-      uint64_t count = (objectAddr & countMask) >> 56U;
-      assert(count <= 15 && "malformed small string");
-      uint64_t buffer[2] = {otherBits->GetValueAsUnsigned(0), objectAddr};
-
-      DataExtractor data(buffer, count, process->GetByteOrder(),
-                         process->GetAddressByteSize());
-
-      StringPrinter::ReadBufferAndDumpToStreamOptions options;
-      options.SetData(data)
-          .SetEscapeNonPrintables(true)
-          .SetPrefixToken(0)
-          .SetQuote('"')
-          .SetStream(&stream)
-          .SetSourceSize(count)
-          .SetBinaryZeroIsTerminator(false)
-          .SetLanguage(lldb::eLanguageTypeSwift);
-      return StringPrinter::ReadBufferAndDumpToStream<
-          StringPrinter::StringElementType::UTF8>(options);
-    }
 
     bool isValue = objectAddr & (1ULL << 63);
     bool isCocoaOrSmall = objectAddr & (1ULL << 62);
@@ -297,9 +267,38 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     } else if (isCocoaOrSmall && !isValue) {
       // Handle strings which point to NSStrings.
       return readStringAsNSString(payloadAddr);
-    } else if (isCocoaOrSmall && isValue) {
+    } else if (isCocoaOrSmall && isValue && !isOpaque) {
       // Handle strings which contain an NSString inline.
       return NSStringSummaryProvider(*otherBits.get(), stream, summary_options);
+    } else if (isCocoaOrSmall && isValue && isOpaque) {
+      // Small UTF-8 strings store their contents directly in register. The
+      // high nibble of the most significant byte of the first word denotes
+      // that the string is small, the low nibble holds the count. The least-
+      // significant byte of the second word is the first UTF-8 code unit.
+      //
+      // {object, otherBits} =
+      //   { isSmallUTF8Nibble << 60 | count << 56 | c_14 << 48 | ... | c_8,
+      //     c_7 << 56 | c_6 << 48 | ... | c_0
+      //   }
+      uint64_t countMask = 0x0F00000000000000;
+      uint64_t count = (objectAddr & countMask) >> 56U;
+      assert(count <= 15 && "malformed small string");
+      uint64_t buffer[2] = {otherBits->GetValueAsUnsigned(0), objectAddr};
+
+      DataExtractor data(buffer, count, process->GetByteOrder(),
+                         process->GetAddressByteSize());
+
+      StringPrinter::ReadBufferAndDumpToStreamOptions options;
+      options.SetData(data)
+          .SetEscapeNonPrintables(true)
+          .SetPrefixToken(0)
+          .SetQuote('"')
+          .SetStream(&stream)
+          .SetSourceSize(count)
+          .SetBinaryZeroIsTerminator(false)
+          .SetLanguage(lldb::eLanguageTypeSwift);
+      return StringPrinter::ReadBufferAndDumpToStream<
+          StringPrinter::StringElementType::UTF8>(options);
     }
   } else {
     static ConstString g_variant("_variant");
