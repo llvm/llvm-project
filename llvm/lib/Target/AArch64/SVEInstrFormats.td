@@ -760,3 +760,132 @@ multiclass sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
 }
+
+//===----------------------------------------------------------------------===//
+// SVE Memory - 32-bit Gather and Unsized Contiguous Group
+//===----------------------------------------------------------------------===//
+
+// bit xs      is '1' if offsets are signed
+// bit scaled  is '1' if the offsets are scaled
+class sve_mem_32b_gld_sv<bits<4> opc, bit xs, bit scaled, string asm,
+                         RegisterOperand zprext>
+: I<(outs Z_s:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm),
+  asm, "\t$Zt, $Pg/z, [$Rn, $Zm]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rn;
+  bits<5> Zm;
+  bits<5> Zt;
+  let Inst{31-25} = 0b1000010;
+  let Inst{24-23} = opc{3-2};
+  let Inst{22}    = xs;
+  let Inst{21}    = scaled;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = opc{1-0};
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+  let Defs = !if(!eq(opc{0}, 1), [FFR], []);
+  let Uses = !if(!eq(opc{0}, 1), [FFR], []);
+}
+
+multiclass sve_mem_32b_gld_sv_32_scaled<bits<4> opc, string asm,
+                                        RegisterOperand sxtw_opnd,
+                                        RegisterOperand uxtw_opnd> {
+  def _UXTW_SCALED_REAL : sve_mem_32b_gld_sv<opc, 0, 1, asm, uxtw_opnd>;
+  def _SXTW_SCALED_REAL : sve_mem_32b_gld_sv<opc, 1, 1, asm, sxtw_opnd>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+}
+
+multiclass sve_mem_32b_gld_vs_32_unscaled<bits<4> opc, string asm,
+                                          RegisterOperand sxtw_opnd,
+                                          RegisterOperand uxtw_opnd> {
+  def _UXTW_REAL : sve_mem_32b_gld_sv<opc, 0, 0, asm, uxtw_opnd>;
+  def _SXTW_REAL : sve_mem_32b_gld_sv<opc, 1, 0, asm, sxtw_opnd>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _UXTW_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _SXTW_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// SVE Memory - 64-bit Gather Group
+//===----------------------------------------------------------------------===//
+
+// bit xs      is '1' if offsets are signed
+// bit scaled  is '1' if the offsets are scaled
+// bit lsl     is '0' if the offsets are extended (uxtw/sxtw), '1' if shifted (lsl)
+class sve_mem_64b_gld_sv<bits<4> opc, bit xs, bit scaled, bit lsl, string asm,
+                         RegisterOperand zprext>
+: I<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm),
+  asm, "\t$Zt, $Pg/z, [$Rn, $Zm]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rn;
+  bits<5> Zm;
+  bits<5> Zt;
+  let Inst{31-25} = 0b1100010;
+  let Inst{24-23} = opc{3-2};
+  let Inst{22}    = xs;
+  let Inst{21}    = scaled;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = lsl;
+  let Inst{14-13} = opc{1-0};
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+  let Defs = !if(!eq(opc{0}, 1), [FFR], []);
+  let Uses = !if(!eq(opc{0}, 1), [FFR], []);
+}
+
+multiclass sve_mem_64b_gld_sv_32_scaled<bits<4> opc, string asm,
+                                        RegisterOperand sxtw_opnd,
+                                        RegisterOperand uxtw_opnd> {
+  def _UXTW_SCALED_REAL : sve_mem_64b_gld_sv<opc, 0, 1, 0, asm, uxtw_opnd>;
+  def _SXTW_SCALED_REAL : sve_mem_64b_gld_sv<opc, 1, 1, 0, asm, sxtw_opnd>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+}
+
+multiclass sve_mem_64b_gld_vs_32_unscaled<bits<4> opc, string asm,
+                                          RegisterOperand sxtw_opnd,
+                                          RegisterOperand uxtw_opnd> {
+  def _UXTW_REAL : sve_mem_64b_gld_sv<opc, 0, 0, 0, asm, uxtw_opnd>;
+  def _SXTW_REAL : sve_mem_64b_gld_sv<opc, 1, 0, 0, asm, sxtw_opnd>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _UXTW_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _SXTW_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
+}
+
+multiclass sve_mem_64b_gld_sv2_64_scaled<bits<4> opc, string asm,
+                                         RegisterOperand zprext> {
+  def _SCALED_REAL : sve_mem_64b_gld_sv<opc, 1, 1, 1, asm, zprext>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm), 0>;
+}
+
+multiclass sve_mem_64b_gld_vs2_64_unscaled<bits<4> opc, string asm> {
+  def _REAL : sve_mem_64b_gld_sv<opc, 1, 0, 1, asm, ZPR64ExtLSL8>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
+                  (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, ZPR64ExtLSL8:$Zm), 0>;
+}

@@ -49,3 +49,26 @@ ldff1d z0.d, p0/z, [x0, w0, uxtw]
 // CHECK-NEXT: ldff1d z0.d, p0/z, [x0, w0, uxtw]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + vector addressing modes
+
+ldff1d z0.d, p0/z, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1d z0.d, p0/z, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [x0, z0.d, uxtw #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1d z0.d, p0/z, [x0, z0.d, uxtw #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [x0, z0.d, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1d z0.d, p0/z, [x0, z0.d, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [x0, z0.d, lsl]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expected #imm after shift specifier
+// CHECK-NEXT: ldff1d z0.d, p0/z, [x0, z0.d, lsl]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

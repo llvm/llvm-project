@@ -923,7 +923,8 @@ bool LoopInterchangeLegality::currentLimitations() {
   // instruction.
 
   bool FoundInduction = false;
-  for (const Instruction &I : llvm::reverse(*InnerLoopLatch)) {
+  for (const Instruction &I :
+       llvm::reverse(InnerLoopLatch->instructionsWithoutDebug())) {
     if (isa<BranchInst>(I) || isa<CmpInst>(I) || isa<TruncInst>(I) ||
         isa<ZExtInst>(I))
       continue;
@@ -976,10 +977,9 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     });
     return false;
   }
-
   // Check if outer and inner loop contain legal instructions only.
   for (auto *BB : OuterLoop->blocks())
-    for (Instruction &I : *BB)
+    for (Instruction &I : BB->instructionsWithoutDebug())
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         // readnone functions do not prevent interchanging.
         if (CI->doesNotReadMemory())
