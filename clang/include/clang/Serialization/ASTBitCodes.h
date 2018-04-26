@@ -1408,9 +1408,6 @@ namespace serialization {
       /// \brief A TypeAliasTemplateDecl record.
       DECL_TYPE_ALIAS_TEMPLATE,
 
-      /// \brief A ConceptDecl record.
-      DECL_CONCEPT,
-
       /// \brief A StaticAssertDecl record.
       DECL_STATIC_ASSERT,
 

@@ -29,6 +29,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -148,11 +149,11 @@ getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
   if (CallLoc.isMacroID())
     return nullptr;
 
-  assert(SMgr.isInMainFile(CallLoc) &&
-         "The call piece should be in the main file.");
+  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
+         "The call piece should not be in a header file.");
 
   // Check if CP represents a path through a function outside of the main file.
-  if (!SMgr.isInMainFile(CP->callEnterWithin.asLocation()))
+  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
     return CP;
 
   const PathPieces &Path = CP->path;

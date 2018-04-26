@@ -51,6 +51,17 @@ static cl::opt<bool, true> DebugPrintingX(
     cl::location(PollyDebugPrinting), cl::Hidden, cl::init(false),
     cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool> TraceStmts(
+    "polly-codegen-trace-stmts",
+    cl::desc("Add printf calls that print the statement being executed"),
+    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<bool> TraceScalars(
+    "polly-codegen-trace-scalars",
+    cl::desc("Add printf calls that print the values of all scalar values "
+             "used in a statement. Requires -polly-codegen-trace-stmts."),
+    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 BlockGenerator::BlockGenerator(
     PollyIRBuilder &B, LoopInfo &LI, ScalarEvolution &SE, DominatorTree &DT,
     AllocaMapTy &ScalarMap, EscapeUsersAllocaMapTy &EscapeMap,
@@ -436,6 +447,7 @@ BasicBlock *BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB,
   BasicBlock *CopyBB = splitBB(BB);
   Builder.SetInsertPoint(&CopyBB->front());
   generateScalarLoads(Stmt, LTS, BBMap, NewAccesses);
+  generateBeginStmtTrace(Stmt, LTS, BBMap);
 
   copyBB(Stmt, BB, CopyBB, BBMap, LTS, NewAccesses);
 
@@ -645,6 +657,108 @@ void BlockGenerator::generateConditionalExecution(
   Builder.SetInsertPoint(ThenBlock, ThenBlock->getFirstInsertionPt());
   GenThenFunc();
   Builder.SetInsertPoint(TailBlock, TailBlock->getFirstInsertionPt());
+}
+
+static std::string getInstName(Value *Val) {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  Val->printAsOperand(OS, false);
+  return OS.str();
+}
+
+void BlockGenerator::generateBeginStmtTrace(ScopStmt &Stmt, LoopToScevMapT &LTS,
+                                            ValueMapT &BBMap) {
+  if (!TraceStmts)
+    return;
+
+  Scop *S = Stmt.getParent();
+  const char *BaseName = Stmt.getBaseName();
+
+  isl::ast_build AstBuild = Stmt.getAstBuild();
+  isl::set Domain = Stmt.getDomain();
+
+  isl::union_map USchedule = AstBuild.get_schedule().intersect_domain(Domain);
+  isl::map Schedule = isl::map::from_union_map(USchedule);
+  assert(Schedule.is_empty().is_false() &&
+         "The stmt must have a valid instance");
+
+  isl::multi_pw_aff ScheduleMultiPwAff =
+      isl::pw_multi_aff::from_map(Schedule.reverse());
+  isl::ast_build RestrictedBuild = AstBuild.restrict(Schedule.range());
+
+  // Sequence of strings to print.
+  SmallVector<llvm::Value *, 8> Values;
+
+  // Print the name of the statement.
+  // TODO: Indent by the depth of the statement instance in the schedule tree.
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, BaseName));
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "("));
+
+  // Add the coordinate of the statement instance.
+  int DomDims = ScheduleMultiPwAff.dim(isl::dim::out);
+  for (int i = 0; i < DomDims; i += 1) {
+    if (i > 0)
+      Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, ","));
+
+    isl::ast_expr IsInSet =
+        RestrictedBuild.expr_from(ScheduleMultiPwAff.get_pw_aff(i));
+    Values.push_back(ExprBuilder->create(IsInSet.copy()));
+  }
+
+  if (TraceScalars) {
+    Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, ")"));
+    DenseSet<Instruction *> Encountered;
+
+    // Add the value of each scalar (and the result of PHIs) used in the
+    // statement.
+    // TODO: Values used in region-statements.
+    for (Instruction *Inst : Stmt.insts()) {
+      if (!RuntimeDebugBuilder::isPrintable(Inst->getType()))
+        continue;
+
+      if (isa<PHINode>(Inst)) {
+        Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, " "));
+        Values.push_back(RuntimeDebugBuilder::getPrintableString(
+            Builder, getInstName(Inst)));
+        Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "="));
+        Values.push_back(getNewValue(Stmt, Inst, BBMap, LTS,
+                                     LI.getLoopFor(Inst->getParent())));
+      } else {
+        for (Value *Op : Inst->operand_values()) {
+          // Do not print values that cannot change during the execution of the
+          // SCoP.
+          auto *OpInst = dyn_cast<Instruction>(Op);
+          if (!OpInst)
+            continue;
+          if (!S->contains(OpInst))
+            continue;
+
+          // Print each scalar at most once, and exclude values defined in the
+          // statement itself.
+          if (Encountered.count(OpInst))
+            continue;
+
+          Values.push_back(
+              RuntimeDebugBuilder::getPrintableString(Builder, " "));
+          Values.push_back(RuntimeDebugBuilder::getPrintableString(
+              Builder, getInstName(OpInst)));
+          Values.push_back(
+              RuntimeDebugBuilder::getPrintableString(Builder, "="));
+          Values.push_back(getNewValue(Stmt, OpInst, BBMap, LTS,
+                                       LI.getLoopFor(Inst->getParent())));
+          Encountered.insert(OpInst);
+        }
+      }
+
+      Encountered.insert(Inst);
+    }
+
+    Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "\n"));
+  } else {
+    Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, ")\n"));
+  }
+
+  RuntimeDebugBuilder::createCPUPrinter(Builder, ArrayRef<Value *>(Values));
 }
 
 void BlockGenerator::generateScalarStores(
@@ -1375,6 +1489,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
   ValueMapT &EntryBBMap = RegionMaps[EntryBBCopy];
   generateScalarLoads(Stmt, LTS, EntryBBMap, IdToAstExp);
+  generateBeginStmtTrace(Stmt, LTS, EntryBBMap);
 
   for (auto PI = pred_begin(EntryBB), PE = pred_end(EntryBB); PI != PE; ++PI)
     if (!R->contains(*PI)) {

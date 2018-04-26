@@ -78,6 +78,10 @@ struct ParsedClangName {
                   bool IsRegistered)
       : TargetPrefix(Target), ModeSuffix(Suffix), DriverMode(Mode),
         TargetIsValid(IsRegistered) {}
+
+  bool isEmpty() const {
+    return TargetPrefix.empty() && ModeSuffix.empty() && DriverMode == nullptr;
+  }
 };
 
 /// ToolChain - Access to tools for a single platform.

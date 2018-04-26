@@ -110,6 +110,11 @@ public:
     /// 'const int &x = C().x;'.
     bool IsTemporaryLifetimeExtendedViaSubobject = false;
 
+    /// This call is a constructor for a temporary that is lifetime-extended
+    /// by binding it to a reference-type field within an aggregate,
+    /// for example 'A { const C &c; }; A a = { C() };'
+    bool IsTemporaryLifetimeExtendedViaAggregate = false;
+
     EvalCallOptions() {}
   };
 

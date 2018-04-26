@@ -326,14 +326,13 @@ Optional<Symbol *> ObjFile::createDefined(
   if (SectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
     return nullptr;
 
-  // Reserved sections numbers don't have contents.
   if (llvm::COFF::isReservedSectionNumber(SectionNumber))
-    fatal("broken object file: " + toString(this));
+    fatal(toString(this) + ": " + Name +
+          " should not refer to special section " + Twine(SectionNumber));
 
-  // This symbol references a section which is not present in the section
-  // header.
   if ((uint32_t)SectionNumber >= SparseChunks.size())
-    fatal("broken object file: " + toString(this));
+    fatal(toString(this) + ": " + Name +
+          " should not refer to non-existent section " + Twine(SectionNumber));
 
   // Handle comdat leader symbols.
   if (const coff_aux_section_definition *Def = ComdatDefs[SectionNumber]) {

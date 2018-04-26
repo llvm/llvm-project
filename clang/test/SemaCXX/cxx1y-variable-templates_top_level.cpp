@@ -30,8 +30,8 @@ namespace use_in_top_level_funcs {
 
   void no_deduce() {
     // template arguments are not deduced for uses of variable templates.
-    int ipi = pi; // expected-error {{cannot refer to variable template 'pi' without a template argument list}}
-    int icpi = cpi; // expected-error {{cannot refer to variable template 'cpi' without a template argument list}}
+    int ipi = pi; // expected-error {{use of variable template 'pi' requires template arguments}}
+    int icpi = cpi; // expected-error {{use of variable template 'cpi' requires template arguments}}
   }
   
   template<typename T>
@@ -465,5 +465,5 @@ auto variadic2 = Variadic<int, int>;
 
 namespace VexingParse {
   template <typename> int var; // expected-note {{declared here}}
-  int x(var); // expected-error {{cannot refer to variable template 'var' without a template argument list}}
+  int x(var); // expected-error {{use of variable template 'var' requires template arguments}}
 }

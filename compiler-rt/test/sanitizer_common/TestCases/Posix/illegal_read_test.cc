@@ -2,7 +2,7 @@
 // RUN: %clangxx -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: stable-runtime
-// XFAIL: powerpc64
+// XFAIL: powerpc64, s390x
 
 volatile int *null = 0;
 volatile int a;

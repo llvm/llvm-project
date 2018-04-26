@@ -1739,8 +1739,7 @@ Parser::ParseSimpleDeclaration(DeclaratorContext Context,
   ParsingDeclSpec DS(*this);
 
   DeclSpecContext DSContext = getDeclSpecContextFromDeclaratorContext(Context);
-  ParseDeclarationSpecifiersOrConceptDefinition(DS, ParsedTemplateInfo(),
-                                                       AS_none, DSContext);
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none, DSContext);
 
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
@@ -2387,8 +2386,7 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
-  ParseDeclarationSpecifiersOrConceptDefinition(DS, ParsedTemplateInfo(), AS,
-                                                DSC);
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS, DSC);
 
   // Validate declspec for type-name.
   unsigned Specs = DS.getParsedSpecifiers();
@@ -2873,12 +2871,11 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
   // and call ParsedFreeStandingDeclSpec as appropriate.
   DS.ClearTypeSpecType();
   ParsedTemplateInfo NotATemplate;
-  ParseDeclarationSpecifiersOrConceptDefinition(DS, NotATemplate, AS, DSContext,
-                                      LateAttrs);
+  ParseDeclarationSpecifiers(DS, NotATemplate, AS, DSContext, LateAttrs);
   return false;
 }
 
-/// ParseDeclarationSpecifiersOrConceptDefinition
+/// ParseDeclarationSpecifiers
 ///       declaration-specifiers: [C99 6.7]
 ///         storage-class-specifier declaration-specifiers[opt]
 ///         type-specifier declaration-specifiers[opt]
@@ -2905,8 +2902,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
 /// [OpenCL] '__kernel'
 ///       'friend': [C++ dcl.friend]
 ///       'constexpr': [C++0x dcl.constexpr]
-/// [C++2a] 'concept'
-void Parser::ParseDeclarationSpecifiersOrConceptDefinition(DeclSpec &DS,
+void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                         const ParsedTemplateInfo &TemplateInfo,
                                         AccessSpecifier AS,
                                         DeclSpecContext DSContext,
@@ -3684,11 +3680,7 @@ void Parser::ParseDeclarationSpecifiersOrConceptDefinition(DeclSpec &DS,
       ConsumeToken();
       ParseEnumSpecifier(Loc, DS, TemplateInfo, AS, DSContext);
       continue;
-    
-    case tok::kw_concept:
-      ConsumeToken();
-      ParseConceptDefinition(Loc, DS, TemplateInfo, AS, DSContext);
-      continue;
+
     // cv-qualifier:
     case tok::kw_const:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_const, Loc, PrevSpec, DiagID,
@@ -6374,7 +6366,7 @@ void Parser::ParseParameterDeclarationClause(
     // too much hassle.
     DS.takeAttributesFrom(FirstArgAttrs);
 
-    ParseDeclarationSpecifiersOrConceptDefinition(DS);
+    ParseDeclarationSpecifiers(DS);
 
 
     // Parse the declarator.  This is "PrototypeContext" or 

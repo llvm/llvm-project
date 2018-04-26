@@ -699,6 +699,11 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
       // within it to a reference, automatic destructors don't work properly.
       if (CallOpts.IsTemporaryLifetimeExtendedViaSubobject)
         return CIP_DisallowedOnce;
+
+      // If the temporary is lifetime-extended by binding it to a reference-typ
+      // field within an aggregate, automatic destructors don't work properly.
+      if (CallOpts.IsTemporaryLifetimeExtendedViaAggregate)
+        return CIP_DisallowedOnce;
     }
 
     break;
@@ -806,8 +811,9 @@ static bool isCXXSharedPtrDtor(const FunctionDecl *FD) {
 /// This checks static properties of the function, such as its signature and
 /// CFG, to determine whether the analyzer should ever consider inlining it,
 /// in any context.
-static bool mayInlineDecl(AnalysisDeclContext *CalleeADC,
-                          AnalyzerOptions &Opts) {
+static bool mayInlineDecl(AnalysisManager &AMgr,
+                          AnalysisDeclContext *CalleeADC) {
+  AnalyzerOptions &Opts = AMgr.getAnalyzerOptions();
   // FIXME: Do not inline variadic calls.
   if (CallEvent::isVariadic(CalleeADC->getDecl()))
     return false;
@@ -830,7 +836,7 @@ static bool mayInlineDecl(AnalysisDeclContext *CalleeADC,
       // Conditionally control the inlining of methods on objects that look
       // like C++ containers.
       if (!Opts.mayInlineCXXContainerMethods())
-        if (!Ctx.getSourceManager().isInMainFile(FD->getLocation()))
+        if (!AMgr.isInCodeFile(FD->getLocation()))
           if (isContainerMethod(Ctx, FD))
             return false;
 
@@ -891,7 +897,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   } else {
     // We haven't actually checked the static properties of this function yet.
     // Do that now, and record our decision in the function summaries.
-    if (mayInlineDecl(CalleeADC, Opts)) {
+    if (mayInlineDecl(getAnalysisManager(), CalleeADC)) {
       Engine.FunctionSummaries->markMayInline(D);
     } else {
       Engine.FunctionSummaries->markShouldNotInline(D);

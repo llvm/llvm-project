@@ -37,6 +37,11 @@ static std::string LibPath(const std::string Name = "TestPlugin") {
 }
 
 TEST(PluginsTests, LoadPlugin) {
+#if !defined(LLVM_ENABLE_PLUGINS)
+  // Disable the test if plugins are disabled.
+  return;
+#endif
+
   auto PluginPath = LibPath();
   ASSERT_NE("", PluginPath);
 

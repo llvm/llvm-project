@@ -302,3 +302,38 @@
 // CHECK-X86_64: "-L{{.*}}/sysroot/usr/lib/x86_64-linux-android/21"
 // CHECK-X86_64: "-L{{.*}}/sysroot/usr/lib/x86_64-linux-android"
 // CHECK-X86_64: "-L{{.*}}/lib/gcc/x86_64-linux-android/4.9/../../../../x86_64-linux-android/lib"
+
+// We need two sets of tests to verify that we both don't find non-Android
+// toolchains installations and that we *do* find Android toolchains. We can't
+// do both at the same time in this environment because we need to pass
+// --sysroot to find the toolchains which would override searching in /usr. In a
+// production environment --sysroot is not used and the toolchains are instead
+// found relative to the clang binary, so both would be considered.
+
+// RUN: %clang -v --target=i686-linux-android \
+// RUN:     2>&1 | FileCheck --check-prefix=CHECK-I686-GCC-NOSYS %s
+//
+// CHECK-I686-GCC-NOSYS-NOT: Found candidate GCC installation: /usr{{.*}}
+//
+// RUN: %clang -v --target=i686-linux-android \
+// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree \
+// RUN:     2>&1 | FileCheck --check-prefix=CHECK-I686-GCC %s
+//
+// CHECK-I686-GCC-NOT: Found candidate GCC installation: /usr{{.*}}
+// CHECK-I686-GCC: Found candidate GCC installation: {{.*}}i686-linux-android{{[/\\]}}4.9
+// CHECK-I686-GCC-NEXT: Found candidate GCC installation: {{.*}}x86_64-linux-android{{[/\\]}}4.9
+// CHECK-I686-GCC-NEXT: Selected GCC installation: {{.*}}i686-linux-android{{[/\\]}}4.9
+
+// RUN: %clang -v --target=x86_64-linux-android \
+// RUN:     2>&1 | FileCheck --check-prefix=CHECK-X86_64-GCC-NOSYS %s
+//
+// CHECK-X86_64-GCC-NOSYS-NOT: Found candidate GCC installation: /usr{{.*}}
+
+// RUN: %clang -v --target=x86_64-linux-android \
+// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree \
+// RUN:     2>&1 | FileCheck --check-prefix=CHECK-X86_64-GCC %s
+//
+// CHECK-X86_64-GCC-NOT: Found candidate GCC installation: /usr{{.*}}
+// CHECK-X86_64-GCC: Found candidate GCC installation: {{.*}}i686-linux-android{{[/\\]}}4.9
+// CHECK-X86_64-GCC-NEXT: Found candidate GCC installation: {{.*}}x86_64-linux-android{{[/\\]}}4.9
+// CHECK-X86_64-GCC-NEXT: Selected GCC installation: {{.*}}x86_64-linux-android{{[/\\]}}4.9

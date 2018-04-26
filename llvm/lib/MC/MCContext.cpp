@@ -570,6 +570,11 @@ CodeViewContext &MCContext::getCVContext() {
   return *CVContext.get();
 }
 
+void MCContext::clearCVLocSeen() {
+  if (CVContext)
+    CVContext->clearCVLocSeen();
+}
+
 //===----------------------------------------------------------------------===//
 // Error Reporting
 //===----------------------------------------------------------------------===//
