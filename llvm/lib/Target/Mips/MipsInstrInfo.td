@@ -1657,8 +1657,8 @@ class SYNC_FT<string opstr> :
   InstSE<(outs), (ins uimm5:$stype), "sync $stype",
          [(MipsSync immZExt5:$stype)], II_SYNC, FrmOther, opstr>;
 
-class SYNCI_FT<string opstr> :
-  InstSE<(outs), (ins mem_simm16:$addr), !strconcat(opstr, "\t$addr"), [],
+class SYNCI_FT<string opstr, DAGOperand MO> :
+  InstSE<(outs), (ins MO:$addr), !strconcat(opstr, "\t$addr"), [],
          II_SYNCI, FrmOther, opstr> {
   let hasSideEffects = 1;
   let DecoderMethod = "DecodeSyncI";
@@ -2050,7 +2050,8 @@ let DecoderNamespace = "COP3_" in {
 }
 
   def SYNC : MMRel, StdMMR6Rel, SYNC_FT<"sync">, SYNC_FM, ISA_MIPS2;
-  def SYNCI : MMRel, StdMMR6Rel, SYNCI_FT<"synci">, SYNCI_FM, ISA_MIPS32R2;
+  def SYNCI : MMRel, StdMMR6Rel, SYNCI_FT<"synci", mem_simm16>, SYNCI_FM,
+              ISA_MIPS32R2;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -2641,8 +2642,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
                      ISA_MIPS32R2;
 }
 def : MipsInstAlias<"sdbbp", (SDBBP 0)>, ISA_MIPS32_NOT_32R6_64R6;
-def : MipsInstAlias<"sync",
-                    (SYNC 0), 1>, ISA_MIPS2;
+let AdditionalPredicates = [NotInMicroMips] in
+  def : MipsInstAlias<"sync", (SYNC 0), 1>, ISA_MIPS2;
 
 def : MipsInstAlias<"mulo $rs, $rt",
                     (MULOMacro GPR32Opnd:$rs, GPR32Opnd:$rs, GPR32Opnd:$rt), 0>,

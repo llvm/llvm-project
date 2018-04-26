@@ -69,3 +69,27 @@ ld1d z0.d, p0/z, [x0, w0, uxtw]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
 // CHECK-NEXT: ld1d z0.d, p0/z, [x0, w0, uxtw]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + vector addressing modes
+
+ld1d z0.d, p0/z, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ld1d z0.d, p0/z, [x0, z0.d, uxtw #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, z0.d, uxtw #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ld1d z0.d, p0/z, [x0, z0.d, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, z0.d, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ld1d z0.d, p0/z, [x0, z0.d, lsl]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expected #imm after shift specifier
+// CHECK-NEXT: ld1d z0.d, p0/z, [x0, z0.d, lsl]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

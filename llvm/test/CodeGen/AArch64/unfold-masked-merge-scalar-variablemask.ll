@@ -330,58 +330,210 @@ define i32 @in_complex_y1_m1(i32 %x, i32 %y_hi, i32 %y_low, i32 %m_a, i32 %m_b) 
   ret i32 %r
 }
 ; ============================================================================ ;
-; Both xor's have the same constant operand
+; Various cases with %x and/or %y being a constant
 ; ============================================================================ ;
-define i32 @out_constant_y_mone(i32 %x, i32 %mask) {
-; CHECK-LABEL: out_constant_y_mone:
+define i32 @out_constant_varx_mone(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_varx_mone:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    orn w0, w8, w1
+; CHECK-NEXT:    and w8, w2, w0
+; CHECK-NEXT:    orn w0, w8, w2
 ; CHECK-NEXT:    ret
-  %mx = and i32 %x, %mask
   %notmask = xor i32 %mask, -1
-  %my = and i32 %notmask, -1 ; %y
+  %mx = and i32 %mask, %x
+  %my = and i32 %notmask, -1
   %r = or i32 %mx, %my
   ret i32 %r
 }
-; FIXME: should be bic+mvn
-define i32 @in_constant_y_mone(i32 %x, i32 %mask) {
-; CHECK-LABEL: in_constant_y_mone:
+define i32 @in_constant_varx_mone(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_varx_mone:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    orn w0, w8, w1
+; CHECK-NEXT:    and w8, w0, w2
+; CHECK-NEXT:    orn w0, w8, w2
 ; CHECK-NEXT:    ret
-  %n0 = xor i32 %x, -1 ; %y
+  %n0 = xor i32 %x, -1 ; %x
   %n1 = and i32 %n0, %mask
-  %r = xor i32 %n1, -1 ; %y
+  %r = xor i32 %n1, -1
   ret i32 %r
 }
-define i32 @out_constant_y_one(i32 %x, i32 %mask) {
-; CHECK-LABEL: out_constant_y_one:
+define i32 @out_constant_varx_mone_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_varx_mone_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w9, w1
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w0, w2
+; CHECK-NEXT:    orr w0, w8, w2
 ; CHECK-NEXT:    ret
-  %mx = and i32 %x, %mask
   %notmask = xor i32 %mask, -1
-  %my = and i32 %notmask, 1 ; %y
+  %mx = and i32 %notmask, %x
+  %my = and i32 %mask, -1
   %r = or i32 %mx, %my
   ret i32 %r
 }
-; FIXME: should be eor+and+eor
-define i32 @in_constant_y_one(i32 %x, i32 %mask) {
-; CHECK-LABEL: in_constant_y_one:
+define i32 @in_constant_varx_mone_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_varx_mone_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w9, w1
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    bic w8, w0, w2
+; CHECK-NEXT:    orr w0, w8, w2
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %n0 = xor i32 %x, -1 ; %x
+  %n1 = and i32 %n0, %notmask
+  %r = xor i32 %n1, -1
+  ret i32 %r
+}
+define i32 @out_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_varx_42:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    and w8, w2, w0
+; CHECK-NEXT:    bic w9, w9, w2
 ; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
-  %n0 = xor i32 %x, 1 ; %y
+  %notmask = xor i32 %mask, -1
+  %mx = and i32 %mask, %x
+  %my = and i32 %notmask, 42
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+define i32 @in_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_varx_42:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    bic w8, w8, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %n0 = xor i32 %x, 42 ; %x
   %n1 = and i32 %n0, %mask
-  %r = xor i32 %n1, 1 ; %y
+  %r = xor i32 %n1, 42
+  ret i32 %r
+}
+define i32 @out_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_varx_42_invmask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    bic w8, w0, w2
+; CHECK-NEXT:    and w9, w2, w9
+; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %mx = and i32 %notmask, %x
+  %my = and i32 %mask, 42
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+define i32 @in_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_varx_42_invmask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    and w8, w2, w8
+; CHECK-NEXT:    bic w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %n0 = xor i32 %x, 42 ; %x
+  %n1 = and i32 %n0, %notmask
+  %r = xor i32 %n1, 42
+  ret i32 %r
+}
+define i32 @out_constant_mone_vary(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_mone_vary:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    orr w0, w2, w8
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %mx = and i32 %mask, -1
+  %my = and i32 %notmask, %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+define i32 @in_constant_mone_vary(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_mone_vary:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    orr w0, w2, w8
+; CHECK-NEXT:    ret
+  %n0 = xor i32 -1, %y ; %x
+  %n1 = and i32 %n0, %mask
+  %r = xor i32 %n1, %y
+  ret i32 %r
+}
+define i32 @out_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_mone_vary_invmask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w2, w1
+; CHECK-NEXT:    orn w0, w8, w2
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %mx = and i32 %notmask, -1
+  %my = and i32 %mask, %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+define i32 @in_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_mone_vary_invmask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w1, w2
+; CHECK-NEXT:    orn w0, w8, w2
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %n0 = xor i32 -1, %y ; %x
+  %n1 = and i32 %n0, %notmask
+  %r = xor i32 %n1, %y
+  ret i32 %r
+}
+define i32 @out_constant_42_vary(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_42_vary:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    and w8, w2, w8
+; CHECK-NEXT:    bic w9, w1, w2
+; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %mx = and i32 %mask, 42
+  %my = and i32 %notmask, %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+define i32 @in_constant_42_vary(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_42_vary:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w2, w9
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %n0 = xor i32 42, %y ; %x
+  %n1 = and i32 %n0, %mask
+  %r = xor i32 %n1, %y
+  ret i32 %r
+}
+define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: out_constant_42_vary_invmask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    bic w8, w8, w2
+; CHECK-NEXT:    and w9, w2, w1
+; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %mx = and i32 %notmask, 42
+  %my = and i32 %mask, %y
+  %r = or i32 %mx, %my
+  ret i32 %r
+}
+define i32 @in_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
+; CHECK-LABEL: in_constant_42_vary_invmask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    and w8, w1, w2
+; CHECK-NEXT:    bic w9, w9, w2
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %notmask = xor i32 %mask, -1
+  %n0 = xor i32 42, %y ; %x
+  %n1 = and i32 %n0, %notmask
+  %r = xor i32 %n1, %y
   ret i32 %r
 }
 ; ============================================================================ ;

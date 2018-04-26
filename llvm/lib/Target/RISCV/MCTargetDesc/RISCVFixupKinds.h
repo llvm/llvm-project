@@ -47,6 +47,9 @@ enum Fixups {
   // fixup_riscv_rvc_branch - 8-bit fixup for symbol references in the
   // compressed branch instruction
   fixup_riscv_rvc_branch,
+  // fixup_riscv_call - A fixup representing a call attached to the auipc
+  // instruction in a pair composed of adjacent auipc+jalr instructions.
+  fixup_riscv_call,
 
   // fixup_riscv_invalid - used as a sentinel and a marker, must be last fixup
   fixup_riscv_invalid,

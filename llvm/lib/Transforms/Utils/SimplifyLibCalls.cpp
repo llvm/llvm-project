@@ -102,6 +102,31 @@ static bool callHasFloatingPointArgument(const CallInst *CI) {
   });
 }
 
+static Value *convertStrToNumber(CallInst *CI, StringRef &Str, int64_t Base) {
+  if (Base < 2 || Base > 36)
+    // handle special zero base
+    if (Base != 0)
+      return nullptr;
+
+  char *End;
+  std::string nptr = Str.str();
+  errno = 0;
+  long long int Result = strtoll(nptr.c_str(), &End, Base);
+  if (errno)
+    return nullptr;
+
+  // if we assume all possible target locales are ASCII supersets,
+  // then if strtoll successfully parses a number on the host,
+  // it will also successfully parse the same way on the target
+  if (*End != '\0')
+    return nullptr;
+
+  if (!isIntN(CI->getType()->getPrimitiveSizeInBits(), Result))
+    return nullptr;
+
+  return ConstantInt::get(CI->getType(), Result);
+}
+
 //===----------------------------------------------------------------------===//
 // String and Memory Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -1663,6 +1688,29 @@ Value *LibCallSimplifier::optimizeToAscii(CallInst *CI, IRBuilder<> &B) {
                      ConstantInt::get(CI->getType(), 0x7F));
 }
 
+Value *LibCallSimplifier::optimizeAtoi(CallInst *CI, IRBuilder<> &B) {
+  StringRef Str;
+  if (!getConstantStringInfo(CI->getArgOperand(0), Str))
+    return nullptr;
+
+  return convertStrToNumber(CI, Str, 10);
+}
+
+Value *LibCallSimplifier::optimizeStrtol(CallInst *CI, IRBuilder<> &B) {
+  StringRef Str;
+  if (!getConstantStringInfo(CI->getArgOperand(0), Str))
+    return nullptr;
+
+  if (!isa<ConstantPointerNull>(CI->getArgOperand(1)))
+    return nullptr;
+
+  if (ConstantInt *CInt = dyn_cast<ConstantInt>(CI->getArgOperand(2))) {
+    return convertStrToNumber(CI, Str, CInt->getSExtValue());
+  }
+
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Formatting and IO Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -2259,6 +2307,13 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeIsAscii(CI, Builder);
     case LibFunc_toascii:
       return optimizeToAscii(CI, Builder);
+    case LibFunc_atoi:
+    case LibFunc_atol:
+    case LibFunc_atoll:
+      return optimizeAtoi(CI, Builder);
+    case LibFunc_strtol:
+    case LibFunc_strtoll:
+      return optimizeStrtol(CI, Builder);
     case LibFunc_printf:
       return optimizePrintF(CI, Builder);
     case LibFunc_sprintf:

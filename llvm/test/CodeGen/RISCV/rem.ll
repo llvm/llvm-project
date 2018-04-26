@@ -9,9 +9,7 @@ define i32 @urem(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a2, %hi(__umodsi3)
-; RV32I-NEXT:    addi a2, a2, %lo(__umodsi3)
-; RV32I-NEXT:    jalr a2
+; RV32I-NEXT:    call __umodsi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -29,9 +27,7 @@ define i32 @srem(i32 %a, i32 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a2, %hi(__modsi3)
-; RV32I-NEXT:    addi a2, a2, %lo(__modsi3)
-; RV32I-NEXT:    jalr a2
+; RV32I-NEXT:    call __modsi3
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret

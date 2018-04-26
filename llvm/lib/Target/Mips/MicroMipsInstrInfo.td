@@ -128,6 +128,7 @@ def mem_mm_16 : Operand<i32> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, simm16);
   let EncoderMethod = "getMemEncodingMMImm16";
+  let DecoderMethod = "DecodeMemMMImm16";
   let ParserMatchClass = MipsMemSimm16AsmOperand;
   let OperandType = "OPERAND_MEMORY";
 }
@@ -960,11 +961,13 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 }
 def B_MM    : UncondBranch<BEQ_MM, brtarget_mm>, IsBranch, ISA_MICROMIPS;
 let DecoderNamespace = "MicroMips" in {
-  let Predicates = [InMicroMips] in {
 
   /// Control Instructions
-  def SYNC_MM    : MMRel, SYNC_FT<"sync">, SYNC_FM_MM;
-  def SYNCI_MM   : MMRel, SYNCI_FT<"synci">, SYNCI_FM_MM;
+  def SYNC_MM    : MMRel, SYNC_FT<"sync">, SYNC_FM_MM, ISA_MICROMIPS;
+  let DecoderMethod = "DecodeSyncI_MM" in
+    def SYNCI_MM   : MMRel, SYNCI_FT<"synci", mem_mm_16>, SYNCI_FM_MM,
+                     ISA_MICROMIPS32_NOT_MIPS32R6;
+  let Predicates = [InMicroMips] in {
   def BREAK_MM   : MMRel, BRK_FT<"break">, BRK_FM_MM;
   def SYSCALL_MM : MMRel, SYS_FT<"syscall", uimm10, II_SYSCALL>, SYS_FM_MM;
   def WAIT_MM    : WaitMM<"wait">, WAIT_FM_MM;
@@ -1221,6 +1224,8 @@ let Predicates = [InMicroMips] in {
   def : MipsInstAlias<"rotr $rt, $imm",
                       (ROTR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, uimm5:$imm), 0>;
   def : MipsInstAlias<"syscall", (SYSCALL_MM 0), 1>;
+
+  def : MipsInstAlias<"sync", (SYNC_MM 0), 1>, ISA_MICROMIPS;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"add", ADDi_MM>, ISA_MICROMIPS;
 

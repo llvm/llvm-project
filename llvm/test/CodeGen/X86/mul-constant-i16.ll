@@ -37,7 +37,8 @@ define i16 @test_mul_by_2(i16 %x) {
 define i16 @test_mul_by_3(i16 %x) {
 ; X86-LABEL: test_mul_by_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $3, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -72,7 +73,8 @@ define i16 @test_mul_by_4(i16 %x) {
 define i16 @test_mul_by_5(i16 %x) {
 ; X86-LABEL: test_mul_by_5:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $5, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -147,7 +149,8 @@ define i16 @test_mul_by_8(i16 %x) {
 define i16 @test_mul_by_9(i16 %x) {
 ; X86-LABEL: test_mul_by_9:
 ; X86:       # %bb.0:
-; X86-NEXT:    imull $9, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,8), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;

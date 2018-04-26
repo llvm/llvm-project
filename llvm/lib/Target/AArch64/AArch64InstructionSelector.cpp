@@ -1466,6 +1466,15 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_VASTART:
     return STI.isTargetDarwin() ? selectVaStartDarwin(I, MF, MRI)
                                 : selectVaStartAAPCS(I, MF, MRI);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    if (!I.getOperand(0).isIntrinsicID())
+      return false;
+    if (I.getOperand(0).getIntrinsicID() != Intrinsic::trap)
+      return false;
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::BRK))
+      .addImm(1);
+    I.eraseFromParent();
+    return true;
   case TargetOpcode::G_IMPLICIT_DEF:
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());

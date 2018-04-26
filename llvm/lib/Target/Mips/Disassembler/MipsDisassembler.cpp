@@ -305,6 +305,11 @@ static DecodeStatus DecodeSyncI(MCInst &Inst,
                                 uint64_t Address,
                                 const void *Decoder);
 
+static DecodeStatus DecodeSyncI_MM(MCInst &Inst,
+                                   unsigned Insn,
+                                   uint64_t Address,
+                                   const void *Decoder);
+
 static DecodeStatus DecodeSynciR6(MCInst &Inst,
                                   unsigned Insn,
                                   uint64_t Address,
@@ -1640,6 +1645,19 @@ static DecodeStatus DecodeSyncI(MCInst &Inst,
                               const void *Decoder) {
   int Offset = SignExtend32<16>(Insn & 0xffff);
   unsigned Base = fieldFromInstruction(Insn, 21, 5);
+
+  Base = getReg(Decoder, Mips::GPR32RegClassID, Base);
+
+  Inst.addOperand(MCOperand::createReg(Base));
+  Inst.addOperand(MCOperand::createImm(Offset));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeSyncI_MM(MCInst &Inst, unsigned Insn,
+                                   uint64_t Address, const void *Decoder) {
+  int Offset = SignExtend32<16>(Insn & 0xffff);
+  unsigned Base = fieldFromInstruction(Insn, 16, 5);
 
   Base = getReg(Decoder, Mips::GPR32RegClassID, Base);
 

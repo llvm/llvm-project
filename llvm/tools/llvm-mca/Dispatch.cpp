@@ -67,7 +67,8 @@ void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
   // An empty set of register classes means: this register file contains all
   // the physical registers specified by the target.
   if (Entries.empty()) {
-    for (std::pair<WriteState *, IndexPlusCostPairTy> &Mapping : RegisterMappings)
+    for (std::pair<WriteState *, IndexPlusCostPairTy> &Mapping :
+         RegisterMappings)
       Mapping.second = std::make_pair(RegisterFileIndex, 1U);
     return;
   }

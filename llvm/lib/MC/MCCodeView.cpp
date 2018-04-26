@@ -472,6 +472,19 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   if (Locs.empty())
     return;
 
+  // Check that the locations are all in the same section.
+#ifndef NDEBUG
+  const MCSection *FirstSec = &Locs.front().getLabel()->getSection();
+  for (const MCCVLineEntry &Loc : Locs) {
+    if (&Loc.getLabel()->getSection() != FirstSec) {
+      errs() << ".cv_loc " << Loc.getFunctionId() << ' ' << Loc.getFileNum()
+             << ' ' << Loc.getLine() << ' ' << Loc.getColumn()
+             << " is in the wrong section\n";
+      llvm_unreachable(".cv_loc crosses sections");
+    }
+  }
+#endif
+
   // Make an artificial start location using the function start and the inlinee
   // lines start location information. All deltas start relative to this
   // location.

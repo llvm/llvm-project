@@ -52,10 +52,12 @@ frameInfo:
 # CHECK: stack:
 # CHECK:  - { id: 0, name: y.i, type: default, offset: 0, size: 256, alignment: 16,
 # CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
-# CHECK-NEXT: di-variable: '!4', di-expression: '!DIExpression()', di-location: '!10' }
+# CHECK-NEXT: debug-info-variable: '!4', debug-info-expression: '!DIExpression()',
+# CHECK-NEXT: debug-info-location: '!10' }
 stack:
-  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
-      di-expression: '!DIExpression()', di-location: '!7' }
+  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16,
+      debug-info-variable: '!4', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!7' }
 body: |
   bb.0.entry:
     successors: %bb.1.for.body

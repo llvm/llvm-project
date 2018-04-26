@@ -442,3 +442,197 @@ define i32 @test15j(i32 %X) {
   ret i32 %t3
 }
 
+declare void @use1(i1)
+
+; (X & 8) == 0 ? -3 : -11 --> (X & 8) ^ -3
+; Extra cmp use ensures that cmp predicate canonicalization is thwarted.
+
+define i32 @clear_to_set(i32 %x) {
+; CHECK-LABEL: @clear_to_set(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[T1]], -3
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t1 = and i32 %x, 8
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = select i1 %t2, i32 -3, i32 -11
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
+; (X & 8) == 0 ? -11 : -3 --> (X & 8) | -11
+; Extra cmp use ensures that cmp predicate canonicalization is thwarted.
+
+define i32 @clear_to_clear(i32 %x) {
+; CHECK-LABEL: @clear_to_clear(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T1]], -11
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t1 = and i32 %x, 8
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = select i1 %t2, i32 -11, i32 -3
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
+; (X & 8) != 0 ? -3 : -11 --> (X & 8) | -11
+; Extra cmp use ensures that cmp predicate canonicalization is thwarted.
+
+define i32 @set_to_set(i32 %x) {
+; CHECK-LABEL: @set_to_set(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T1]], -11
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t1 = and i32 %x, 8
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 -3, i32 -11
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
+; (X & 8) != 0 ? -3 : -11 --> (X & 8) ^ -3
+; Extra cmp use ensures that cmp predicate canonicalization is thwarted.
+
+define i32 @set_to_clear(i32 %x) {
+; CHECK-LABEL: @set_to_clear(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[T1]], -3
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t1 = and i32 %x, 8
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 -11, i32 -3
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
+; (X & 128) == 0 ? 131 : 3 --> (X & 128) ^ 131
+
+define i8 @clear_to_set_decomposebittest(i8 %x) {
+; CHECK-LABEL: @clear_to_set_decomposebittest(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], -125
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp sgt i8 %x, -1
+  %t3 = select i1 %t2, i8 131, i8 3
+  ret i8 %t3
+}
+
+; (X & 128) == 0 ? 3 : 131 --> (X & 128) | 3
+
+define i8 @clear_to_clear_decomposebittest(i8 %x) {
+; CHECK-LABEL: @clear_to_clear_decomposebittest(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 3
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp sgt i8 %x, -1
+  %t3 = select i1 %t2, i8 3, i8 131
+  ret i8 %t3
+}
+
+; (X & 128) != 0 ? 131 : 3 --> (X & 128) | 3
+
+define i8 @set_to_set_decomposebittest(i8 %x) {
+; CHECK-LABEL: @set_to_set_decomposebittest(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 3
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp slt i8 %x, 0
+  %t3 = select i1 %t2, i8 131, i8 3
+  ret i8 %t3
+}
+
+; (X & 128) != 0 ? 3 : 131 --> (X & 128) ^ 131
+
+define i8 @set_to_clear_decomposebittest(i8 %x) {
+; CHECK-LABEL: @set_to_clear_decomposebittest(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], -125
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp slt i8 %x, 0
+  %t3 = select i1 %t2, i8 3, i8 131
+  ret i8 %t3
+}
+
+; (X & 128) == 0 ? 131 : 3 --> (X & 128) ^ 131
+; Extra cmp use to verify that we are not creating extra instructions.
+
+define i8 @clear_to_set_decomposebittest_extra_use(i8 %x) {
+; CHECK-LABEL: @clear_to_set_decomposebittest_extra_use(
+; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], -125
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp sgt i8 %x, -1
+  %t3 = select i1 %t2, i8 131, i8 3
+  call void @use1(i1 %t2)
+  ret i8 %t3
+}
+
+; (X & 128) == 0 ? 3 : 131 --> (X & 128) | 3
+; Extra cmp use to verify that we are not creating extra instructions.
+
+define i8 @clear_to_clear_decomposebittest_extra_use(i8 %x) {
+; CHECK-LABEL: @clear_to_clear_decomposebittest_extra_use(
+; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 3
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp sgt i8 %x, -1
+  %t3 = select i1 %t2, i8 3, i8 131
+  call void @use1(i1 %t2)
+  ret i8 %t3
+}
+
+; (X & 128) != 0 ? 131 : 3 --> (X & 128) | 3
+; Extra cmp use to verify that we are not creating extra instructions.
+
+define i8 @set_to_set_decomposebittest_extra_use(i8 %x) {
+; CHECK-LABEL: @set_to_set_decomposebittest_extra_use(
+; CHECK-NEXT:    [[T2:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 3
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp slt i8 %x, 0
+  %t3 = select i1 %t2, i8 131, i8 3
+  call void @use1(i1 %t2)
+  ret i8 %t3
+}
+
+; (X & 128) != 0 ? 3 : 131 --> (X & 128) ^ 131
+; Extra cmp use to verify that we are not creating extra instructions.
+
+define i8 @set_to_clear_decomposebittest_extra_use(i8 %x) {
+; CHECK-LABEL: @set_to_clear_decomposebittest_extra_use(
+; CHECK-NEXT:    [[T2:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], -125
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %t2 = icmp slt i8 %x, 0
+  %t3 = select i1 %t2, i8 3, i8 131
+  call void @use1(i1 %t2)
+  ret i8 %t3
+}
+

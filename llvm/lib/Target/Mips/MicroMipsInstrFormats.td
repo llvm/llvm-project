@@ -600,8 +600,9 @@ class SYNC_FM_MM : MMArch {
 }
 
 class SYNCI_FM_MM : MMArch {
-  bits<5> rs;
-  bits<16> offset;
+  bits<21> addr;
+  bits<5> rs = addr{20-16};
+  bits<16> offset = addr{15-0};
   bits<32> Inst;
 
   let Inst{31-26} = 0b010000;

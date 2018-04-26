@@ -34,10 +34,8 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    lui a0, %hi(foo)
 ; RV32I-NEXT:    lw a0, %lo(foo)(a0)
 ; RV32I-NEXT:    sw a0, 12(sp)
-; RV32I-NEXT:    lui a0, %hi(callee)
-; RV32I-NEXT:    addi a1, a0, %lo(callee)
 ; RV32I-NEXT:    addi a0, sp, 12
-; RV32I-NEXT:    jalr a1
+; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    lw ra, 28(sp)
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
