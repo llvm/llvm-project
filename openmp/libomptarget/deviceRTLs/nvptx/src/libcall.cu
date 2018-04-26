@@ -55,7 +55,7 @@ EXTERN int omp_get_max_threads(void) {
     rc = GetNumberOfProcsInTeam();
     ASSERT0(LT_FUSSY, rc >= 0, "bad number of threads");
   }
-  PRINT(LD_IO, "call omp_get_max_threads() return %\n", rc);
+  PRINT(LD_IO, "call omp_get_max_threads() return %d\n", rc);
   return rc;
 }
 
@@ -192,7 +192,7 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
           omp_sched_t sched = currTaskDescr->GetRuntimeSched();
           PRINT(LD_ALL,
                 "task descr %s %d: %s, in par %d, dyn %d, rt sched %d,"
-                " chunk %lld; tid %d, tnum %d, nthreads %d\n",
+                " chunk %" PRIu64 "; tid %d, tnum %d, nthreads %d\n",
                 "ancestor", steps,
                 (currTaskDescr->IsParallelConstruct() ? "par" : "task"),
                 currTaskDescr->InParallelRegion(), currTaskDescr->IsDynamic(),
@@ -261,7 +261,7 @@ EXTERN void omp_set_schedule(omp_sched_t kind, int modifier) {
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor();
     currTaskDescr->SetRuntimeSched(kind);
     currTaskDescr->RuntimeChunkSize() = modifier;
-    PRINT(LD_IOD, "omp_set_schedule did set sched %d & modif %d\n",
+    PRINT(LD_IOD, "omp_set_schedule did set sched %d & modif %" PRIu64 "\n",
           (int)currTaskDescr->GetRuntimeSched(),
           currTaskDescr->RuntimeChunkSize());
   }

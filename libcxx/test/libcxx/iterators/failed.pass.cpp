@@ -12,32 +12,21 @@
 // class ostreambuf_iterator
 
 // bool failed() const throw();
+//
+//	Extension: constructing from NULL is UB; we just make it a failed iterator
 
 #include <iterator>
 #include <sstream>
 #include <cassert>
 
-template <typename Char, typename Traits = std::char_traits<Char> >
-struct my_streambuf : public std::basic_streambuf<Char,Traits> {
-	typedef typename std::basic_streambuf<Char,Traits>::int_type  int_type;
-	typedef typename std::basic_streambuf<Char,Traits>::char_type char_type;
-	
-	my_streambuf() {}
-	int_type sputc(char_type) { return Traits::eof(); }
-	};
-
 int main()
 {
     {
-    	my_streambuf<char> buf;
-        std::ostreambuf_iterator<char> i(&buf);
-        i = 'a';
+        std::ostreambuf_iterator<char> i(nullptr);
         assert(i.failed());
     }
     {
-    	my_streambuf<wchar_t> buf;
-        std::ostreambuf_iterator<wchar_t> i(&buf);
-        i = L'a';
+        std::ostreambuf_iterator<wchar_t> i(nullptr);
         assert(i.failed());
     }
 }

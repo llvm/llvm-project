@@ -69,7 +69,6 @@ protected:
 public:
   uint32_t DynsymIndex = 0;
   uint32_t GotIndex = -1;
-  uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
   uint32_t GlobalDynIndex = -1;
 

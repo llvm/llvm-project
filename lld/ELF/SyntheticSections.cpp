@@ -887,7 +887,7 @@ GotPltSection::GotPltSection()
                        Target->GotPltEntrySize, ".got.plt") {}
 
 void GotPltSection::addEntry(Symbol &Sym) {
-  Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
+  assert(Sym.PltIndex == Entries.size());
   Entries.push_back(&Sym);
 }
 
@@ -922,7 +922,7 @@ IgotPltSection::IgotPltSection()
 
 void IgotPltSection::addEntry(Symbol &Sym) {
   Sym.IsInIgot = true;
-  Sym.GotPltIndex = Entries.size();
+  assert(Sym.PltIndex == Entries.size());
   Entries.push_back(&Sym);
 }
 
