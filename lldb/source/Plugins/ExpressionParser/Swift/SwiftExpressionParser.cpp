@@ -1492,20 +1492,6 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
       return make_error<SwiftASTContextError>();
   }
 
-  // This currently crashes with Assertion failed: (BufferID != -1), function
-  // findBufferContainingLoc, file
-  // llvm/tools/swift/include/swift/Basic/SourceManager.h, line 92.
-  //    if (log)
-  //    {
-  //        std::string s;
-  //        llvm::raw_string_ostream ss(s);
-  //        source_file->dump(ss);
-  //        ss.flush();
-  //
-  //        log->Printf("Source file after parsing:");
-  //        log->PutCString(s.c_str());
-  //    }
-
   if (!done)
     return make_error<llvm::StringError>(
         "Parse did not consume the whole expression.",
@@ -1576,20 +1562,6 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
 
     code_manipulator->AddExternalVariables(local_variables);
 
-    // This currently crashes with Assertion failed: (BufferID != -1), function
-    // findBufferContainingLoc, file
-    // llvm/tools/swift/include/swift/Basic/SourceManager.h, line 92.
-    //        if (log)
-    //        {
-    //            std::string s;
-    //            llvm::raw_string_ostream ss(s);
-    //            source_file->dump(ss);
-    //            ss.flush();
-    //
-    //            log->Printf("Source file after code manipulation:");
-    //            log->PutCString(s.c_str());
-    //        }
-
     stack_frame_sp.reset();
   }
 
@@ -1611,6 +1583,12 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
                                            auto_import_error.AsCString());
     }
   }
+
+  // After the swift code manipulator performed AST transformations, verify
+  // that the AST we have in our hands is valid. This is a nop for release
+  // builds, but helps catching bug when assertions are turned on.
+  swift::verify(*source_file);
+
   ParsedExpression result = {std::move(code_manipulator),
                              *ast_context,
                              module,
