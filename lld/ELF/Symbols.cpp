@@ -97,14 +97,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     }
     return VA;
   }
-  case Symbol::SharedKind: {
-    auto &SS = cast<SharedSymbol>(Sym);
-    if (SS.CopyRelSec)
-      return SS.CopyRelSec->getVA(0);
-    if (SS.NeedsPltAddr)
-      return Sym.getPltVA();
-    return 0;
-  }
+  case Symbol::SharedKind:
   case Symbol::UndefinedKind:
     return 0;
   case Symbol::LazyArchiveKind:
@@ -143,6 +136,11 @@ uint64_t Symbol::getPltVA() const {
   return InX::Plt->getVA() + Target->getPltEntryOffset(PltIndex);
 }
 
+uint64_t Symbol::getPltOffset() const {
+  assert(!this->IsInIplt);
+  return Target->getPltEntryOffset(PltIndex);
+}
+
 uint64_t Symbol::getSize() const {
   if (const auto *DR = dyn_cast<Defined>(this))
     return DR->Size;
@@ -157,13 +155,6 @@ OutputSection *Symbol::getOutputSection() const {
       return Sec->Repl->getOutputSection();
     return nullptr;
   }
-
-  if (auto *S = dyn_cast<SharedSymbol>(this)) {
-    if (S->CopyRelSec)
-      return S->CopyRelSec->getParent();
-    return nullptr;
-  }
-
   return nullptr;
 }
 

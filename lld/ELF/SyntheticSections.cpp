@@ -1646,6 +1646,8 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
         CommonSec = dyn_cast_or_null<BssSection>(D->Section);
     if (CommonSec)
       ESym->st_shndx = SHN_COMMON;
+    else if (Sym->NeedsPltAddr)
+      ESym->st_shndx = SHN_UNDEF;
     else if (const OutputSection *OutSec = Sym->getOutputSection())
       ESym->st_shndx = OutSec->SectionIndex;
     else if (isa<Defined>(Sym))
@@ -1688,8 +1690,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       if (isMicroMips()) {
         // Set STO_MIPS_MICROMIPS flag and less-significant bit for
         // defined microMIPS symbols and shared symbols with PLT record.
-        if ((Sym->isDefined() && (Sym->StOther & STO_MIPS_MICROMIPS)) ||
-            (Sym->isShared() && Sym->NeedsPltAddr)) {
+        if (Sym->isDefined() && (Sym->StOther & STO_MIPS_MICROMIPS)) {
           if (StrTabSec.isDynamic())
             ESym->st_value |= 1;
           ESym->st_other |= STO_MIPS_MICROMIPS;
@@ -1831,10 +1832,6 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
   // its type correctly.
   std::vector<SymbolTableEntry>::iterator Mid =
       std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
-        // Shared symbols that this executable preempts are special. The dynamic
-        // linker has to look them up, so they have to be in the hash table.
-        if (auto *SS = dyn_cast<SharedSymbol>(S.Sym))
-          return SS->CopyRelSec == nullptr && !SS->NeedsPltAddr;
         return !S.Sym->isDefined();
       });
 
@@ -2359,9 +2356,8 @@ VersionNeedSection<ELFT>::VersionNeedSection()
   NextIndex = getVerDefNum() + 1;
 }
 
-template <class ELFT>
-void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
-  SharedFile<ELFT> &File = SS->getFile<ELFT>();
+template <class ELFT> void VersionNeedSection<ELFT>::addSymbol(Symbol *SS) {
+  auto &File = cast<SharedFile<ELFT>>(*SS->File);
   if (SS->VerdefIndex == VER_NDX_GLOBAL) {
     SS->VersionId = VER_NDX_GLOBAL;
     return;

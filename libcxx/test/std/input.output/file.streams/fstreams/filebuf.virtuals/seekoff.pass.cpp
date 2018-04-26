@@ -14,10 +14,10 @@
 // pos_type seekpos(pos_type sp,
 //                  ios_base::openmode which = ios_base::in | ios_base::out);
 
-// This test is not entirely portable
-
 #include <fstream>
 #include <cassert>
+
+#include "test_macros.h"
 
 int main()
 {
@@ -30,7 +30,7 @@ int main()
                                                        | std::ios_base::trunc) != 0);
         assert(f.is_open());
         f.sputn("abcdefghijklmnopqrstuvwxyz", 26);
-        assert(buf[0] == 'v');
+        LIBCPP_ASSERT(buf[0] == 'v');
         pos_type p = f.pubseekoff(-15, std::ios_base::cur);
         assert(p == 11);
         assert(f.sgetc() == 'l');
@@ -51,7 +51,7 @@ int main()
                                                        | std::ios_base::trunc) != 0);
         assert(f.is_open());
         f.sputn(L"abcdefghijklmnopqrstuvwxyz", 26);
-        assert(buf[0] == L'v');
+        LIBCPP_ASSERT(buf[0] == L'v');
         pos_type p = f.pubseekoff(-15, std::ios_base::cur);
         assert(p == 11);
         assert(f.sgetc() == L'l');

@@ -670,7 +670,7 @@ template <class ELFT> class VersionNeedSection final : public SyntheticSection {
 
 public:
   VersionNeedSection();
-  void addSymbol(SharedSymbol *SS);
+  void addSymbol(Symbol *Sym);
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
