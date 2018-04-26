@@ -479,6 +479,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMA, MVT::v2f16, Legal);
     setOperationAction(ISD::FMINNUM, MVT::v2f16, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::v2f16, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v2f16, Legal);
 
     // This isn't really legal, but this avoids the legalizer unrolling it (and
     // allows matching fneg (fabs x) patterns)
@@ -6600,13 +6601,14 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   SDValue Vec = N->getOperand(0);
 
   SelectionDAG &DAG = DCI.DAG;
-  if (Vec.getOpcode() == ISD::FNEG && allUsesHaveSourceMods(N)) {
+  if ((Vec.getOpcode() == ISD::FNEG ||
+       Vec.getOpcode() == ISD::FABS) && allUsesHaveSourceMods(N)) {
     SDLoc SL(N);
     EVT EltVT = N->getValueType(0);
     SDValue Idx = N->getOperand(1);
     SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
                               Vec.getOperand(0), Idx);
-    return DAG.getNode(ISD::FNEG, SL, EltVT, Elt);
+    return DAG.getNode(Vec.getOpcode(), SL, EltVT, Elt);
   }
 
   return SDValue();

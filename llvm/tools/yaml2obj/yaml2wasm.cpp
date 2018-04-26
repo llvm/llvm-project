@@ -134,6 +134,7 @@ public:
 
 int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section) {
   writeStringRef(Section.Name, OS);
+  encodeULEB128(Section.Version, OS);
 
   SubSectionWriter SubSection(OS);
 
@@ -163,6 +164,9 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
           encodeULEB128(Info.DataRef.Offset, SubSection.GetStream());
           encodeULEB128(Info.DataRef.Size, SubSection.GetStream());
         }
+        break;
+      case wasm::WASM_SYMBOL_TYPE_SECTION:
+        encodeULEB128(Info.ElementIndex, SubSection.GetStream());
         break;
       default:
         llvm_unreachable("unexpected kind");
@@ -423,20 +427,28 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 
 int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
                                   uint32_t SectionIndex) {
-  StringRef Name;
   switch (Sec.Type) {
     case wasm::WASM_SEC_CODE:
-      Name = "reloc.CODE";
+      writeStringRef("reloc.CODE", OS);
       break;
     case wasm::WASM_SEC_DATA:
-      Name = "reloc.DATA";
+      writeStringRef("reloc.DATA", OS);
       break;
+    case wasm::WASM_SEC_CUSTOM: {
+      auto CustomSection = dyn_cast<WasmYAML::CustomSection>(&Sec);
+      if (!CustomSection->Name.startswith(".debug_")) {
+        llvm_unreachable("not yet implemented (only for debug sections)");
+        return 1;
+      }
+
+      writeStringRef(("reloc." + CustomSection->Name).str(), OS);
+      break;
+    }
     default:
       llvm_unreachable("not yet implemented");
       return 1;
   }
 
-  writeStringRef(Name, OS);
   encodeULEB128(SectionIndex, OS);
   encodeULEB128(Sec.Relocations.size(), OS);
 
@@ -448,6 +460,8 @@ int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
       case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
       case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
       case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
+      case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+      case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
         encodeULEB128(Reloc.Addend, OS);
     }
   }

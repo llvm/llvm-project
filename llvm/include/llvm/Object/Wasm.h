@@ -53,6 +53,10 @@ public:
     return Info.Kind == wasm::WASM_SYMBOL_TYPE_GLOBAL;
   }
 
+  bool isTypeSection() const {
+    return Info.Kind == wasm::WASM_SYMBOL_TYPE_SECTION;
+  }
+
   bool isDefined() const { return !isUndefined(); }
 
   bool isUndefined() const {
@@ -206,6 +210,7 @@ private:
   bool isValidFunctionSymbol(uint32_t Index) const;
   bool isValidGlobalSymbol(uint32_t Index) const;
   bool isValidDataSymbol(uint32_t Index) const;
+  bool isValidSectionSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
   wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
 

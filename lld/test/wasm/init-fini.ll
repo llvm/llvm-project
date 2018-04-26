@@ -131,8 +131,7 @@ entry:
 ; RUN: wasm-ld --check-signatures -r %t.o %t.global-ctor-dtor.o -o %t.reloc.wasm
 ; RUN: obj2yaml %t.reloc.wasm | FileCheck -check-prefix=RELOC %s
 
-; RELOC:          Name:            linking
-; RELOC-NEXT:     SymbolTable:
+; RELOC:          SymbolTable:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Kind:            FUNCTION
 ; RELOC-NEXT:         Name:            func1

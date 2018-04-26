@@ -506,19 +506,24 @@ public:
 
   template <int Width> bool isSImm() const { return isSImmScaled<Width, 1>(); }
 
-  template <int Bits, int Scale> bool isSImmScaled() const {
+  template <int Bits, int Scale>
+  DiagnosticPredicate isSImmScaled() const {
     if (!isImm())
-      return false;
+      return DiagnosticPredicateTy::NoMatch;
+
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return false;
+      return DiagnosticPredicateTy::NoMatch;
 
     int64_t Shift = Bits - 1;
     int64_t MinVal = (int64_t(1) << Shift) * -Scale;
     int64_t MaxVal = ((int64_t(1) << Shift) - 1) * Scale;
 
     int64_t Val = MCE->getValue();
-    return Val >= MinVal && Val <= MaxVal && (Val % Scale) == 0;
+    if (Val >= MinVal && Val <= MaxVal && (Val % Scale) == 0)
+      return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   bool isSVEPattern() const {
@@ -859,10 +864,16 @@ public:
 
   template <int ElementWidth, unsigned Class,
             AArch64_AM::ShiftExtendType ShiftExtendTy, int ShiftWidth>
-  bool isSVEVectorRegWithShiftExtend() const {
-    return Kind == k_Register && isSVEVectorRegOfWidth<ElementWidth, Class>() &&
-           ShiftExtendTy == getShiftExtendType() &&
-           getShiftExtendAmount() == Log2_32(ShiftWidth / 8);
+  DiagnosticPredicate isSVEVectorRegWithShiftExtend() const {
+    if (Kind != k_Register || Reg.Kind != RegKind::SVEDataVector)
+      return DiagnosticPredicateTy::NoMatch;
+
+    if (isSVEVectorRegOfWidth<ElementWidth, Class>() &&
+        ShiftExtendTy == getShiftExtendType() &&
+        getShiftExtendAmount() == Log2_32(ShiftWidth / 8))
+      return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   bool isGPR32as64() const {
@@ -899,12 +910,14 @@ public:
   }
 
   template <unsigned RegClassID, int ExtWidth>
-  bool isGPR64WithShiftExtend() const {
-    if (!isGPR64<RegClassID>())
-      return false;
+  DiagnosticPredicate isGPR64WithShiftExtend() const {
+    if (Kind != k_Register || Reg.Kind != RegKind::Scalar)
+      return DiagnosticPredicateTy::NoMatch;
 
-    return getShiftExtendType() == AArch64_AM::LSL &&
-           getShiftExtendAmount() == Log2_32(ExtWidth / 8);
+    if (isGPR64<RegClassID>() && getShiftExtendType() == AArch64_AM::LSL &&
+        getShiftExtendAmount() == Log2_32(ExtWidth / 8))
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   /// Is this a vector list with the type implicit (presumably attached to the

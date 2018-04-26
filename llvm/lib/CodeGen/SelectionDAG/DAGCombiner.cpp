@@ -10902,6 +10902,36 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
   return SDValue();
 }
 
+static SDValue foldFPToIntToFP(SDNode *N, SelectionDAG &DAG,
+                               const TargetLowering &TLI) {
+  // This optimization is guarded by a function attribute because it may produce
+  // unexpected results. Ie, programs may be relying on the platform-specific
+  // undefined behavior when the float-to-int conversion overflows.
+  const Function &F = DAG.getMachineFunction().getFunction();
+  Attribute CastWorkaround = F.getFnAttribute("fp-cast-overflow-workaround");
+  if (CastWorkaround.getValueAsString().equals("true"))
+    return SDValue();
+
+  // We only do this if the target has legal ftrunc. Otherwise, we'd likely be
+  // replacing casts with a libcall.
+  EVT VT = N->getValueType(0);
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
+    return SDValue();
+
+  // fptosi/fptoui round towards zero, so converting from FP to integer and
+  // back is the same as an 'ftrunc': [us]itofp (fpto[us]i X) --> ftrunc X
+  SDValue N0 = N->getOperand(0);
+  if (N->getOpcode() == ISD::SINT_TO_FP && N0.getOpcode() == ISD::FP_TO_SINT &&
+      N0.getOperand(0).getValueType() == VT)
+    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
+
+  if (N->getOpcode() == ISD::UINT_TO_FP && N0.getOpcode() == ISD::FP_TO_UINT &&
+      N0.getOperand(0).getValueType() == VT)
+    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -10953,14 +10983,8 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
     }
   }
 
-  // fptosi rounds towards zero, so converting from FP to integer and back is
-  // the same as an 'ftrunc': sitofp (fptosi X) --> ftrunc X
-  // We only do this if the target has legal ftrunc, otherwise we'd likely be
-  // replacing casts with a libcall.
-  if (N0.getOpcode() == ISD::FP_TO_SINT &&
-      N0.getOperand(0).getValueType() == VT &&
-      TLI.isOperationLegal(ISD::FTRUNC, VT))
-    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
+  if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
+    return FTrunc;
 
   return SDValue();
 }
@@ -11001,14 +11025,8 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
     }
   }
 
-  // fptoui rounds towards zero, so converting from FP to integer and back is
-  // the same as an 'ftrunc': uitofp (fptoui X) --> ftrunc X
-  // We only do this if the target has legal ftrunc, otherwise we'd likely be
-  // replacing casts with a libcall.
-  if (N0.getOpcode() == ISD::FP_TO_UINT &&
-      N0.getOperand(0).getValueType() == VT &&
-      TLI.isOperationLegal(ISD::FTRUNC, VT))
-    return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0.getOperand(0));
+  if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
+    return FTrunc;
 
   return SDValue();
 }

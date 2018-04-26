@@ -121,10 +121,10 @@
   xori $3, 65536      # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
   not $3, 4           # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
   lb $32, 8($5)       # CHECK: :[[@LINE]]:6: error: invalid register number
-  lb $4, -32769($5)   # CHECK: :[[@LINE]]:10: error: expected memory with 16-bit signed offset
-  lb $4, 32768($5)    # CHECK: :[[@LINE]]:10: error: expected memory with 16-bit signed offset
+  lb $4, -2147483649($5)  # CHECK: :[[@LINE]]:10: error: expected memory with 32-bit signed offset
+  lb $4, 2147483648($5)   # CHECK: :[[@LINE]]:10: error: expected memory with 32-bit signed offset
   lb $4, 8($32)       # CHECK: :[[@LINE]]:12: error: invalid register number
   lbu $32, 8($5)      # CHECK: :[[@LINE]]:7: error: invalid register number
-  lbu $4, -32769($5)  # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
-  lbu $4, 32768($5)   # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
+  lbu $4, -2147483649($5) # CHECK: :[[@LINE]]:11: error: expected memory with 32-bit signed offset
+  lbu $4, 2147483648($5)  # CHECK: :[[@LINE]]:11: error: expected memory with 32-bit signed offset
   lbu $4, 8($32)      # CHECK: :[[@LINE]]:13: error: invalid register number

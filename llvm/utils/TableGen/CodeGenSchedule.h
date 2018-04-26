@@ -384,11 +384,11 @@ public:
     return const_cast<CodeGenSchedRW&>(
       IsRead ? getSchedRead(Idx) : getSchedWrite(Idx));
   }
-  const CodeGenSchedRW &getSchedRW(Record*Def) const {
+  const CodeGenSchedRW &getSchedRW(Record *Def) const {
     return const_cast<CodeGenSchedModels&>(*this).getSchedRW(Def);
   }
 
-  unsigned getSchedRWIdx(Record *Def, bool IsRead) const;
+  unsigned getSchedRWIdx(const Record *Def, bool IsRead) const;
 
   // Return true if the given write record is referenced by a ReadAdvance.
   bool hasReadOfWrite(Record *WriteDef) const;
@@ -426,9 +426,6 @@ public:
                          ArrayRef<unsigned> ProcIndices);
 
   unsigned findOrInsertRW(ArrayRef<unsigned> Seq, bool IsRead);
-
-  unsigned findSchedClassIdx(Record *ItinClassDef, ArrayRef<unsigned> Writes,
-                             ArrayRef<unsigned> Reads) const;
 
   Record *findProcResUnits(Record *ProcResKind, const CodeGenProcModel &PM,
                            ArrayRef<SMLoc> Loc) const;
