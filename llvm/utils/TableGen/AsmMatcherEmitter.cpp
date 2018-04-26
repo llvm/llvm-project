@@ -2451,14 +2451,20 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info,
       continue;
 
     OS << "  // '" << CI.ClassName << "' class\n";
-    OS << "  case " << CI.Name << ":\n";
-    OS << "    if (Operand." << CI.PredicateMethod << "())\n";
+    OS << "  case " << CI.Name << ": {\n";
+    OS << "    DiagnosticPredicate DP(Operand." << CI.PredicateMethod
+       << "());\n";
+    OS << "    if (DP.isMatch())\n";
     OS << "      return MCTargetAsmParser::Match_Success;\n";
-    if (!CI.DiagnosticType.empty())
-      OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
+    if (!CI.DiagnosticType.empty()) {
+      OS << "    if (DP.isNearMatch())\n";
+      OS << "      return " << Info.Target.getName() << "AsmParser::Match_"
          << CI.DiagnosticType << ";\n";
+      OS << "    break;\n";
+    }
     else
       OS << "    break;\n";
+    OS << "    }\n";
   }
   OS << "  } // end switch (Kind)\n\n";
 

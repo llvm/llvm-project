@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=mipsel -show-encoding -mcpu=mips32r2 -mattr=micromips \
+# RUN: llvm-mc %s -triple=mipsel -show-encoding -mcpu=mips32r2 -mattr=micromips -show-inst \
 # RUN: | FileCheck -check-prefix=CHECK-EL %s
-# RUN: llvm-mc %s -triple=mips -show-encoding -mcpu=mips32r2 -mattr=micromips \
+# RUN: llvm-mc %s -triple=mips -show-encoding -mcpu=mips32r2 -mattr=micromips -show-inst \
 # RUN: | FileCheck -check-prefix=CHECK-EB %s
 # Check that the assembler can handle the documented syntax
 # for control instructions.
@@ -21,20 +21,31 @@
 # CHECK-EL:    ehb                        # encoding: [0x00,0x00,0x00,0x18]
 # CHECK-EL:    pause                      # encoding: [0x00,0x00,0x00,0x28]
 # CHECK-EL:    break                      # encoding: [0x00,0x00,0x07,0x00]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} BREAK_MM
 # CHECK-EL:    break 7                    # encoding: [0x07,0x00,0x07,0x00]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} BREAK_MM
 # CHECK-EL:    break 7, 5                 # encoding: [0x07,0x00,0x47,0x01]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} BREAK_MM
 # CHECK-EL:    syscall                    # encoding: [0x00,0x00,0x7c,0x8b]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} SYSCALL_MM
 # CHECK-EL:    syscall 396                # encoding: [0x8c,0x01,0x7c,0x8b]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} SYSCALL_MM
 # CHECK-EL:    eret                       # encoding: [0x00,0x00,0x7c,0xf3]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} ERET_MM
 # CHECK-EL:    deret                      # encoding: [0x00,0x00,0x7c,0xe3]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} DERET_MM
 # CHECK-EL:    di                         # encoding: [0x00,0x00,0x7c,0x47]
-# CHECK-EL:    di                         # encoding: [0x00,0x00,0x7c,0x47]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} DI_MM
 # CHECK-EL:    di  $10                    # encoding: [0x0a,0x00,0x7c,0x47]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} DI_MM
 # CHECK-EL:    ei                         # encoding: [0x00,0x00,0x7c,0x57]
-# CHECK-EL:    ei                         # encoding: [0x00,0x00,0x7c,0x57]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} EI_MM
 # CHECK-EL:    ei  $10                    # encoding: [0x0a,0x00,0x7c,0x57]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} EI_MM
 # CHECK-EL:    wait                       # encoding: [0x00,0x00,0x7c,0x93]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} WAIT_MM
 # CHECK-EL:    wait 17                    # encoding: [0x11,0x00,0x7c,0x93]
+# CHECK-EL-NEXT:                          # <MCInst #{{[0-9]+}} WAIT_MM
 # CHECK-EL:    tlbp                       # encoding: [0x00,0x00,0x7c,0x03]
 # CHECK-EL:    tlbr                       # encoding: [0x00,0x00,0x7c,0x13]
 # CHECK-EL:    tlbwi                      # encoding: [0x00,0x00,0x7c,0x23]

@@ -142,6 +142,49 @@ define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x
   ret void
 }
 
+; GCN-LABEL: {{^}}v_extract_fabs_fold_v2f16:
+; GCN-DAG: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
+; CI-DAG: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
+; CI-DAG: v_add_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
+
+; GFX89-DAG: v_mul_f16_e32 v{{[0-9]+}}, -4.0, [[VAL]]
+; GFX89-DAG: v_mov_b32_e32 [[CONST2:v[0-9]+]], 0x4000
+; GFX89-DAG: v_sub_f16_sdwa v{{[0-9]+}}, [[CONST2]], [[VAL]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+define amdgpu_kernel void @v_extract_fabs_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
+  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
+  %elt0 = extractelement <2 x half> %fabs, i32 0
+  %elt1 = extractelement <2 x half> %fabs, i32 1
+
+  %fmul0 = fmul half %elt0, 4.0
+  %fadd1 = fadd half %elt1, 2.0
+  store volatile half %fmul0, half addrspace(1)* undef
+  store volatile half %fadd1, half addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extract_fabs_no_fold_v2f16:
+; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
+
+; FIXME: Extra bfe on VI
+; GFX9-NOT: v_bfe_u32
+; VI: v_bfe_u32
+; GCN: v_and_b32_e32 [[AND:v[0-9]+]], 0x7fff7fff, [[VAL]]
+; GFX9: global_store_short_d16_hi v{{\[[0-9]+:[0-9]+\]}}, [[AND]], off
+define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
+  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
+  %elt0 = extractelement <2 x half> %fabs, i32 0
+  %elt1 = extractelement <2 x half> %fabs, i32 1
+  store volatile half %elt0, half addrspace(1)* undef
+  store volatile half %elt1, half addrspace(1)* undef
+  ret void
+}
+
 declare half @llvm.fabs.f16(half) #1
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
 declare <4 x half> @llvm.fabs.v4f16(<4 x half>) #1

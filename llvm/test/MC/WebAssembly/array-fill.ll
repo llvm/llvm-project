@@ -12,9 +12,7 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK:        - Type:            DATA
 ; CHECK:              Content:         '0102'
 
-; CHECK:        - Type:            CUSTOM
-; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     SymbolTable:
+; CHECK:          SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            DATA
 ; CHECK-NEXT:         Name:            gBd

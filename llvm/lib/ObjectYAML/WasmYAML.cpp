@@ -57,6 +57,7 @@ static void sectionMapping(IO &IO, WasmYAML::NameSection &Section) {
 static void sectionMapping(IO &IO, WasmYAML::LinkingSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
+  IO.mapRequired("Version", Section.Version);
   IO.mapOptional("SymbolTable", Section.SymbolTable);
   IO.mapOptional("SegmentInfo", Section.SegmentInfos);
   IO.mapOptional("InitFunctions", Section.InitFunctions);
@@ -404,6 +405,8 @@ void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,
       IO.mapOptional("Offset", Info.DataRef.Offset, 0u);
       IO.mapRequired("Size", Info.DataRef.Size);
     }
+  } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_SECTION) {
+    IO.mapRequired("Section", Info.ElementIndex);
   } else {
     llvm_unreachable("unsupported symbol kind");
   }
@@ -438,6 +441,7 @@ void ScalarEnumerationTraits<WasmYAML::SymbolKind>::enumeration(
   ECase(FUNCTION);
   ECase(DATA);
   ECase(GLOBAL);
+  ECase(SECTION);
 #undef ECase
 }
 

@@ -230,8 +230,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         addOpAddress(*Loc, Sym);
       }
     }
-    if (Expr)
-      DwarfExpr->addExpression(Expr);
+    // Global variables attached to symbols are memory locations.
+    DwarfExpr->setMemoryLocationKind();
+    DwarfExpr->addExpression(Expr);
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());

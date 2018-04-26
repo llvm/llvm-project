@@ -642,6 +642,7 @@ public:
     SK_Broadcast,       ///< Broadcast element 0 to all other elements.
     SK_Reverse,         ///< Reverse the order of the vector.
     SK_Alternate,       ///< Choose alternate elements from vector.
+    SK_Transpose,       ///< Transpose two vectors.
     SK_InsertSubvector, ///< InsertSubvector. Index indicates start offset.
     SK_ExtractSubvector,///< ExtractSubvector Index indicates start offset.
     SK_PermuteTwoSrc,   ///< Merge elements from two source vectors into one

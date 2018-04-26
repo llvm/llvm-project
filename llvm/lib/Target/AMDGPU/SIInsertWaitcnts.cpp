@@ -1328,7 +1328,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(
              Inst.getOpcode() != AMDGPU::BUFFER_WBINVL1_SC &&
              Inst.getOpcode() != AMDGPU::BUFFER_WBINVL1_VOL) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
-    if ( // TODO: assumed yes -- target_info->MemWriteNeedsExpWait() &&
+    if (ST->vmemWriteNeedsExpWaitcnt() &&
         (Inst.mayStore() || AMDGPU::getAtomicNoRetOp(Inst.getOpcode()) != -1)) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMW_GPR_LOCK, Inst);
     }

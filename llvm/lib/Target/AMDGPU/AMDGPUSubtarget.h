@@ -530,6 +530,10 @@ public:
     return HasSDWAOutModsVOPC;
   }
 
+  bool vmemWriteNeedsExpWaitcnt() const {
+    return getGeneration() < SEA_ISLANDS;
+  }
+
   /// \brief Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
   unsigned getExplicitKernelArgOffset(const MachineFunction &MF) const {

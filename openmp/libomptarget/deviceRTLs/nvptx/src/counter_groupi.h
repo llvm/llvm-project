@@ -45,7 +45,7 @@ INLINE Counter omptarget_nvptx_CounterGroup::Next() {
 
 // set priv to n, to be used in later waitOrRelease
 INLINE void omptarget_nvptx_CounterGroup::Complete(Counter &priv, Counter n) {
-  PRINT(LD_SYNCD, "complete priv counter 0x%llx with val %lld->%lld (+%d)\n",
+  PRINT(LD_SYNCD, "complete priv counter 0x%llx with val %llu->%llu (+%llu)\n",
         P64(&priv), P64(priv), P64(priv + n), n);
   priv += n;
 }

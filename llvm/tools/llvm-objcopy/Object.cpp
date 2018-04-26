@@ -202,15 +202,9 @@ void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
   assignIndices();
 }
 
-void SymbolTableSection::localize(
-    std::function<bool(const Symbol &)> ToLocalize) {
-  for (const auto &Sym : Symbols) {
-    if (ToLocalize(*Sym))
-      Sym->Binding = STB_LOCAL;
-  }
-
-  // Now that the local symbols aren't grouped at the start we have to reorder
-  // the symbols to respect this property.
+void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
+  for (auto &Sym : Symbols)
+    Callable(*Sym);
   std::stable_partition(
       std::begin(Symbols), std::end(Symbols),
       [](const SymPtr &Sym) { return Sym->Binding == STB_LOCAL; });
