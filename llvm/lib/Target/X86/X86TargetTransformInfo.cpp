@@ -419,12 +419,6 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,   MVT::v64i8,     11 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,   MVT::v32i8,      4 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,   MVT::v16i8,      4 }, // extend/pmullw/trunc sequence.
-
-    // Vectorizing division is a bad idea. See the SSE2 table for more comments.
-    { ISD::SDIV,  MVT::v64i8,  64*20 },
-    { ISD::SDIV,  MVT::v32i16, 32*20 },
-    { ISD::UDIV,  MVT::v64i8,  64*20 },
-    { ISD::UDIV,  MVT::v32i16, 32*20 }
   };
 
   // Look for AVX512BW lowering tricks for custom cases.
@@ -458,12 +452,6 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::FADD,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FSUB,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FMUL,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-
-    // Vectorizing division is a bad idea. See the SSE2 table for more comments.
-    { ISD::SDIV,    MVT::v16i32, 16*20 },
-    { ISD::SDIV,    MVT::v8i64,   8*20 },
-    { ISD::UDIV,    MVT::v16i32, 16*20 },
-    { ISD::UDIV,    MVT::v8i64,   8*20 }
   };
 
   if (ST->hasAVX512())
@@ -650,16 +638,6 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::FDIV,    MVT::f64,       22 }, // SNB from http://www.agner.org/
     { ISD::FDIV,    MVT::v2f64,     22 }, // SNB from http://www.agner.org/
     { ISD::FDIV,    MVT::v4f64,     44 }, // SNB from http://www.agner.org/
-
-    // Vectorizing division is a bad idea. See the SSE2 table for more comments.
-    { ISD::SDIV,    MVT::v32i8,  32*20 },
-    { ISD::SDIV,    MVT::v16i16, 16*20 },
-    { ISD::SDIV,    MVT::v8i32,   8*20 },
-    { ISD::SDIV,    MVT::v4i64,   4*20 },
-    { ISD::UDIV,    MVT::v32i8,  32*20 },
-    { ISD::UDIV,    MVT::v16i16, 16*20 },
-    { ISD::UDIV,    MVT::v8i32,   8*20 },
-    { ISD::UDIV,    MVT::v4i64,   4*20 },
   };
 
   if (ST->hasAVX())
@@ -751,21 +729,6 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::FDIV, MVT::v4f32,      39 }, // Pentium IV from http://www.agner.org/
     { ISD::FDIV, MVT::f64,        38 }, // Pentium IV from http://www.agner.org/
     { ISD::FDIV, MVT::v2f64,      69 }, // Pentium IV from http://www.agner.org/
-
-    // It is not a good idea to vectorize division. We have to scalarize it and
-    // in the process we will often end up having to spilling regular
-    // registers. The overhead of division is going to dominate most kernels
-    // anyways so try hard to prevent vectorization of division - it is
-    // generally a bad idea. Assume somewhat arbitrarily that we have to be able
-    // to hide "20 cycles" for each lane.
-    { ISD::SDIV,  MVT::v16i8,  16*20 },
-    { ISD::SDIV,  MVT::v8i16,   8*20 },
-    { ISD::SDIV,  MVT::v4i32,   4*20 },
-    { ISD::SDIV,  MVT::v2i64,   2*20 },
-    { ISD::UDIV,  MVT::v16i8,  16*20 },
-    { ISD::UDIV,  MVT::v8i16,   8*20 },
-    { ISD::UDIV,  MVT::v4i32,   4*20 },
-    { ISD::UDIV,  MVT::v2i64,   2*20 },
   };
 
   if (ST->hasSSE2())
@@ -780,6 +743,19 @@ int X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTable, ISD, LT.second))
       return LT.first * Entry->Cost;
+
+  // It is not a good idea to vectorize division. We have to scalarize it and
+  // in the process we will often end up having to spilling regular
+  // registers. The overhead of division is going to dominate most kernels
+  // anyways so try hard to prevent vectorization of division - it is
+  // generally a bad idea. Assume somewhat arbitrarily that we have to be able
+  // to hide "20 cycles" for each lane.
+  if ((ISD == ISD::SDIV || ISD == ISD::UDIV) && LT.second.isVector()) {
+    int ScalarCost = getArithmeticInstrCost(
+        Opcode, Ty->getScalarType(), Op1Info, Op2Info,
+        TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+    return 20 * LT.first * LT.second.getVectorNumElements() * ScalarCost;
+  }
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info);
