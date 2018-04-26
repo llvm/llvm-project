@@ -920,16 +920,12 @@ getVarTemplateSpecialization(Sema &S, VarTemplateDecl *VarTempl,
                       const TemplateArgumentListInfo *TemplateArgs,
                       const DeclarationNameInfo &MemberNameInfo,
                       SourceLocation TemplateKWLoc) {
-
   if (!TemplateArgs) {
-    S.Diag(MemberNameInfo.getBeginLoc(), diag::err_template_decl_ref)
-        << /*Variable template*/ 1 << MemberNameInfo.getName()
-        << MemberNameInfo.getSourceRange();
-
-    S.Diag(VarTempl->getLocation(), diag::note_template_decl_here);
-
+    S.diagnoseMissingTemplateArguments(TemplateName(VarTempl),
+                                       MemberNameInfo.getBeginLoc());
     return nullptr;
   }
+
   DeclResult VDecl = S.CheckVarTemplateId(
       VarTempl, TemplateKWLoc, MemberNameInfo.getLoc(), *TemplateArgs);
   if (VDecl.isInvalid())

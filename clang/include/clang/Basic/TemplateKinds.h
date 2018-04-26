@@ -43,10 +43,10 @@ enum TemplateNameKind {
   /// whether the template name is assumed to refer to a type template or a
   /// function template depends on the context in which the template
   /// name occurs.
-  TNK_Dependent_template_name,
-  /// The name refers to a concept definition.
-  TNK_Concept_template
+  TNK_Dependent_template_name
 };
 
 }
 #endif
+
+

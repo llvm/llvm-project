@@ -13,14 +13,14 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def check_simulator_ostype(self, sdk, platform_names, arch='x86_64'):
+    def check_simulator_ostype(self, sdk, platform, arch='x86_64'):
         sim_devices_str = subprocess.check_output(['xcrun', 'simctl', 'list',
                                                    '-j', 'devices'])
         sim_devices = json.loads(sim_devices_str)['devices']
         # Find an available simulator for the requested platform
         deviceUDID = None
         for (runtime,devices) in sim_devices.items():
-            if not any(p in runtime.lower() for p in platform_names):
+            if not platform in runtime.lower():
                 continue
             for device in devices:
                 if device['availability'] != '(available)':
@@ -32,7 +32,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Launch the process using simctl
         self.assertIsNotNone(deviceUDID)
-        exe_name = 'test_simulator_platform_{}'.format(platform_names[0])
+        exe_name = 'test_simulator_platform_{}'.format(platform)
         sdkroot = subprocess.check_output(['xcrun', '--show-sdk-path', '--sdk',
                                            sdk])
         self.build(dictionary={ 'EXE': exe_name, 'SDKROOT': sdkroot.strip(),
@@ -75,7 +75,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(process_info)
 
         # Check that ostype is correct
-        self.assertTrue(process_info['ostype'] in platform_names)
+        self.assertEquals(process_info['ostype'], platform)
 
         # Now for dylibs
         dylib_info_raw = context.get("dylib_info_raw")
@@ -90,23 +90,23 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             break
 
         self.assertIsNotNone(image_info)
-        self.assertTrue(image['min_version_os_name'] in platform_names)
+        self.assertEquals(image['min_version_os_name'], platform)
 
 
     @apple_simulator_test('iphone')
     @debugserver_test
     def test_simulator_ostype_ios(self):
         self.check_simulator_ostype(sdk='iphonesimulator',
-                                    platform_names=['iphoneos', 'ios'])
+                                    platform='ios')
 
     @apple_simulator_test('appletv')
     @debugserver_test
     def test_simulator_ostype_tvos(self):
         self.check_simulator_ostype(sdk='appletvsimulator',
-                                    platform_names=['tvos'])
+                                    platform='tvos')
 
     @apple_simulator_test('watch')
     @debugserver_test
     def test_simulator_ostype_watchos(self):
         self.check_simulator_ostype(sdk='watchsimulator',
-                                    platform_names=['watchos'], arch='i386')
+                                    platform='watchos', arch='i386')

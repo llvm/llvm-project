@@ -90,7 +90,7 @@ public:
     printMemReference(MI, OpNo, O);
   }
   void printf80mem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
-    O << "xword ptr ";
+    O << "tbyte ptr ";
     printMemReference(MI, OpNo, O);
   }
   void printf128mem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {

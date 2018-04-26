@@ -595,7 +595,7 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
 
     switch (cmd) {
     case LC_VERSION_MIN_IPHONEOS:
-      return "iphoneos";
+      return "ios";
     case LC_VERSION_MIN_MACOSX:
       return "macosx";
     case LC_VERSION_MIN_TVOS:
@@ -621,7 +621,7 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     case PLATFORM_MACOS:
       return "macosx";
     case PLATFORM_IOS:
-      return "iphoneos";
+      return "ios";
     case PLATFORM_TVOS:
       return "tvos";
     case PLATFORM_WATCHOS:
