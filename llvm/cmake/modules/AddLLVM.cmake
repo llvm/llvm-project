@@ -152,7 +152,8 @@ if(NOT WIN32 AND NOT APPLE)
   if( LLVM_USE_LINKER )
     set(command ${CMAKE_C_COMPILER} -fuse-ld=${LLVM_USE_LINKER} -Wl,--version)
   else()
-    set(command ${CMAKE_C_COMPILER} -Wl,--version)
+    separate_arguments(flags UNIX_COMMAND "${CMAKE_EXE_LINKER_FLAGS}")
+    set(command ${CMAKE_C_COMPILER} ${flags} -Wl,--version)
   endif()
   execute_process(
     COMMAND ${command}

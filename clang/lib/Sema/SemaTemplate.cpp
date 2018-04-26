@@ -4017,6 +4017,14 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   assert(!R.empty() && "empty lookup results when building templateid");
   assert(!R.isAmbiguous() && "ambiguous lookup when building templateid");
 
+  // Non-function templates require a template argument list.
+  if (auto *TD = R.getAsSingle<TemplateDecl>()) {
+    if (!TemplateArgs && !isa<FunctionTemplateDecl>(TD)) {
+      diagnoseMissingTemplateArguments(TemplateName(TD), R.getNameLoc());
+      return ExprError();
+    }
+  }
+
   auto AnyDependentArguments = [&]() -> bool {
     bool InstantiationDependent;
     return TemplateArgs &&
