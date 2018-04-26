@@ -253,22 +253,22 @@ void elf::printTraceSymbol(Symbol *Sym) {
 void elf::warnUnorderableSymbol(const Symbol *Sym) {
   if (!Config->WarnSymbolOrdering)
     return;
+
   const InputFile *File = Sym->File;
   auto *D = dyn_cast<Defined>(Sym);
+
+  auto Warn = [&](StringRef S) { warn(toString(File) + S + Sym->getName()); };
+
   if (Sym->isUndefined())
-    warn(toString(File) +
-         ": unable to order undefined symbol: " + Sym->getName());
+    Warn(": unable to order undefined symbol: ");
   else if (Sym->isShared())
-    warn(toString(File) + ": unable to order shared symbol: " + Sym->getName());
+    Warn(": unable to order shared symbol: ");
   else if (D && !D->Section)
-    warn(toString(File) +
-         ": unable to order absolute symbol: " + Sym->getName());
+    Warn(": unable to order absolute symbol: ");
   else if (D && isa<OutputSection>(D->Section))
-    warn(toString(File) +
-         ": unable to order synthetic symbol: " + Sym->getName());
+    Warn(": unable to order synthetic symbol: ");
   else if (D && !D->Section->Repl->Live)
-    warn(toString(File) +
-         ": unable to order discarded symbol: " + Sym->getName());
+    Warn(": unable to order discarded symbol: ");
 }
 
 // Returns a symbol for an error message.

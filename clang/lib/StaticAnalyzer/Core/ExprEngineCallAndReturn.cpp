@@ -699,6 +699,11 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
       // within it to a reference, automatic destructors don't work properly.
       if (CallOpts.IsTemporaryLifetimeExtendedViaSubobject)
         return CIP_DisallowedOnce;
+
+      // If the temporary is lifetime-extended by binding it to a reference-typ
+      // field within an aggregate, automatic destructors don't work properly.
+      if (CallOpts.IsTemporaryLifetimeExtendedViaAggregate)
+        return CIP_DisallowedOnce;
     }
 
     break;

@@ -32,6 +32,20 @@ template <class ELFT> class ObjFile;
 class OutputSection;
 template <class ELFT> class SharedFile;
 
+// This is a StringRef-like container that doesn't run strlen().
+//
+// ELF string tables contain a lot of null-terminated strings. Most of them
+// are not necessary for the linker because they are names of local symbols,
+// and the linker doesn't use local symbol names for name resolution. So, we
+// use this class to represents strings read from string tables.
+struct StringRefZ {
+  StringRefZ(const char *S) : Data(S), Size(-1) {}
+  StringRefZ(StringRef S) : Data(S.data()), Size(S.size()) {}
+
+  const char *Data;
+  const uint32_t Size;
+};
+
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -49,7 +63,7 @@ public:
   InputFile *File;
 
 protected:
-  const char *NameStart;
+  const char *NameData;
   mutable uint32_t NameSize;
 
 public:
@@ -117,9 +131,10 @@ public:
 
   StringRef getName() const {
     if (NameSize == (uint32_t)-1)
-      NameSize = strlen(NameStart);
-    return StringRef(NameStart, NameSize);
+      NameSize = strlen(NameData);
+    return {NameData, NameSize};
   }
+
   void parseSymbolVersion();
 
   bool isInGot() const { return GotIndex != -1U; }
@@ -138,11 +153,10 @@ public:
 protected:
   Symbol(Kind K, InputFile *File, StringRefZ Name, uint8_t Binding,
          uint8_t StOther, uint8_t Type)
-      : File(File), NameStart(Name.data()), NameSize(Name.rawSize()),
-        Binding(Binding), Type(Type), StOther(StOther), SymbolKind(K),
-        NeedsPltAddr(false), IsInGlobalMipsGot(false), Is32BitMipsGot(false),
-        IsInIplt(false), IsInIgot(false), IsPreemptible(false),
-        Used(!Config->GcSections) {}
+      : File(File), NameData(Name.Data), NameSize(Name.Size), Binding(Binding),
+        Type(Type), StOther(StOther), SymbolKind(K), NeedsPltAddr(false),
+        IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
+        IsInIgot(false), IsPreemptible(false), Used(!Config->GcSections) {}
 
 public:
   // True the symbol should point to its PLT entry.

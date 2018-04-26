@@ -2561,8 +2561,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   if (MalformedTypeSpec)
     DS.SetTypeSpecError();
 
-  ParseDeclarationSpecifiersOrConceptDefinition(
-      DS, TemplateInfo, AS, DeclSpecContext::DSC_class, &CommonLateParsedAttrs);
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DeclSpecContext::DSC_class,
+                             &CommonLateParsedAttrs);
 
   // Turn off colon protection that was set for declspec.
   X.restore();

@@ -419,3 +419,11 @@ template <typename> struct CT2 {
   template <class U> struct X;
 };
 template <typename T> int CT2<int>::X<>; // expected-error {{template parameter list matching the non-templated nested type 'CT2<int>' should be empty}}
+
+namespace DependentTemplateIdWithNoArgs {
+  template<typename T> void f() { T::template f(); }
+  struct X {
+    template<int = 0> static void f();
+  };
+  void g() { f<X>(); }
+}
