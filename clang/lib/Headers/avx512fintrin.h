@@ -1581,6 +1581,18 @@ _mm512_mask_mullo_epi32(__m512i __W, __mmask16 __M, __m512i __A, __m512i __B)
                                              (__v16si)__W);
 }
 
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mullox_epi64 (__m512i __A, __m512i __B) {
+  return (__m512i) ((__v8du) __A * (__v8du) __B);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_mullox_epi64(__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
+  return (__m512i)__builtin_ia32_selectq_512((__mmask8)__U,
+                                             (__v8di)_mm512_mullox_epi64(__A, __B),
+                                             (__v8di)__W);
+}
+
 #define _mm512_mask_sqrt_round_pd(W, U, A, R) __extension__ ({ \
   (__m512d)__builtin_ia32_sqrtpd512_mask((__v8df)(__m512d)(A), \
                                          (__v8df)(__m512d)(W), (__mmask8)(U), \

@@ -108,3 +108,33 @@ ld1sb    { z23.d }, p3/z, [x13, x8]
 // CHECK-ENCODING: [0xb7,0x4d,0x88,0xa5]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: b7 4d 88 a5 <unknown>
+
+ld1sb   { z0.s }, p0/z, [x0, z0.s, uxtw]
+// CHECK-INST: ld1sb   { z0.s }, p0/z, [x0, z0.s, uxtw]
+// CHECK-ENCODING: [0x00,0x00,0x00,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 00 00 84 <unknown>
+
+ld1sb   { z0.s }, p0/z, [x0, z0.s, sxtw]
+// CHECK-INST: ld1sb   { z0.s }, p0/z, [x0, z0.s, sxtw]
+// CHECK-ENCODING: [0x00,0x00,0x40,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 00 40 84 <unknown>
+
+ld1sb   { z31.d }, p7/z, [sp, z31.d]
+// CHECK-INST: ld1sb   { z31.d }, p7/z, [sp, z31.d]
+// CHECK-ENCODING: [0xff,0x9f,0x5f,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 9f 5f c4 <unknown>
+
+ld1sb   { z21.d }, p5/z, [x10, z21.d, uxtw]
+// CHECK-INST: ld1sb   { z21.d }, p5/z, [x10, z21.d, uxtw]
+// CHECK-ENCODING: [0x55,0x15,0x15,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 55 15 15 c4 <unknown>
+
+ld1sb   { z21.d }, p5/z, [x10, z21.d, sxtw]
+// CHECK-INST: ld1sb   { z21.d }, p5/z, [x10, z21.d, sxtw]
+// CHECK-ENCODING: [0x55,0x15,0x55,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 55 15 55 c4 <unknown>

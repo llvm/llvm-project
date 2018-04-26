@@ -45,3 +45,46 @@ ldff1b z0.b, p0/z, [x0, w0, uxtw]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 or xzr, without shift
 // CHECK-NEXT: ldff1b z0.b, p0/z, [x0, w0, uxtw]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + vector addressing modes
+
+ldff1b z0.d, p0/z, [x0, z0.b]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.d, p0/z, [x0, z0.b]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1b z0.d, p0/z, [x0, z0.h]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.d, p0/z, [x0, z0.h]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1b z0.d, p0/z, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.d, p0/z, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1b z0.s, p0/z, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.s, p0/z, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1b z0.s, p0/z, [x0, z0.s, uxtw #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.s, p0/z, [x0, z0.s, uxtw #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1b z0.s, p0/z, [x0, z0.s, lsl #0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.s, p0/z, [x0, z0.s, lsl #0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1b z0.d, p0/z, [x0, z0.d, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.d, p0/z, [x0, z0.d, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1b z0.d, p0/z, [x0, z0.d, sxtw #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: ldff1b z0.d, p0/z, [x0, z0.d, sxtw #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
