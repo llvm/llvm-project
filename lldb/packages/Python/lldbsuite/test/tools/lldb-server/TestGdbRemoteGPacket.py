@@ -24,6 +24,15 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         register_bank = context.get("register_bank")
         self.assertTrue(register_bank[0] != 'E')
 
+        self.test_sequence.add_log_lines(
+            ["read packet: $G" + register_bank + "#00",
+             {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
+              "capture": {1: "G_reply"}}],
+            True)
+        context = self.expect_gdbremote_sequence()
+        self.assertTrue(context.get("G_reply")[0] != 'E')
+
+
     @skipIfOutOfTreeDebugserver
     @debugserver_test
     def test_g_packet_debugserver(self):
