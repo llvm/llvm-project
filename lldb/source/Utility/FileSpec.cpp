@@ -244,9 +244,13 @@ inline char safeCharAtIndex(const llvm::StringRef &path, size_t i) {
 //------------------------------------------------------------------
 bool needsNormalization(const llvm::StringRef &path,
                         FileSpec::PathSyntax syntax) {
-  const auto separator = GetPreferredPathSeparator(syntax);
-  for (auto i = path.find(separator); i != llvm::StringRef::npos;
-       i = path.find(separator, i + 1)) {
+  if (path.empty())
+    return false;
+  // We strip off leading "." values so these paths need to be normalized
+  if (path[0] == '.')
+    return true;
+  for (auto i = path.find_first_of("\\/"); i != llvm::StringRef::npos;
+       i = path.find_first_of("\\/", i + 1)) {
     const auto next = safeCharAtIndex(path, i+1);
     switch (next) {
       case 0:
@@ -257,7 +261,7 @@ bool needsNormalization(const llvm::StringRef &path,
       case '\\':
         // two path separator chars in the middle of a path needs to be
         // normalized
-        if (next == separator && i > 0)
+        if (i > 0)
           return true;
         ++i;
         break;
@@ -269,9 +273,7 @@ bool needsNormalization(const llvm::StringRef &path,
             case 0: return true; // ends with "/."
             case '/':
             case '\\':
-              if (next_next == separator)
-                return true; // contains "/./"
-              break;
+              return true; // contains "/./"
             case '.': {
               const auto next_next_next = safeCharAtIndex(path, i+3);
               switch (next_next_next) {
@@ -279,9 +281,7 @@ bool needsNormalization(const llvm::StringRef &path,
                 case 0: return true; // ends with "/.."
                 case '/':
                 case '\\':
-                  if (next_next_next == separator)
-                    return true; // contains "/../"
-                  break;
+                  return true; // contains "/../"
               }
               break;
             }
