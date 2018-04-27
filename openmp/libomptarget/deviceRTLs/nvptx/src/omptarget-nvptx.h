@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <inttypes.h>
+
 // cuda includes
 #include <cuda.h>
 #include <math.h>

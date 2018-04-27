@@ -240,8 +240,8 @@ public:
     // Process schedule.
     if (tnum == 1 || tripCount <= 1 || OrderedSchedule(schedule)) {
       PRINT(LD_LOOP,
-            "go sequential as tnum=%d, trip count %lld, ordered sched=%d\n",
-            tnum, P64(tripCount), schedule);
+            "go sequential as tnum=%ld, trip count %lld, ordered sched=%d\n",
+            (long)tnum, P64(tripCount), schedule);
       schedule = kmp_sched_static_chunk;
       chunk = tripCount; // one thread gets the whole loop
 
@@ -301,8 +301,8 @@ public:
       omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = lb;
       omptarget_nvptx_threadPrivateContext->Stride(tid) = stride;
       PRINT(LD_LOOP,
-            "dispatch init (static chunk) : num threads = %d, ub = %lld,"
-            "next lower bound = %lld, stride = %lld\n",
+            "dispatch init (static chunk) : num threads = %d, ub =  %" PRId64 ","
+            "next lower bound = %llu, stride = %llu\n",
             GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized()),
             omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
             omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
@@ -322,8 +322,8 @@ public:
       omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = lb;
       omptarget_nvptx_threadPrivateContext->Stride(tid) = stride;
       PRINT(LD_LOOP,
-            "dispatch init (static nochunk) : num threads = %d, ub = %lld,"
-            "next lower bound = %lld, stride = %lld\n",
+            "dispatch init (static nochunk) : num threads = %d, ub = %" PRId64 ","
+            "next lower bound = %llu, stride = %llu\n",
             GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized()),
             omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
             omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
@@ -338,8 +338,8 @@ public:
       omptarget_nvptx_threadPrivateContext->Chunk(tid) = chunk;
       omptarget_nvptx_threadPrivateContext->EventsNumber(tid) = eventNum;
       PRINT(LD_LOOP,
-            "dispatch init (dyn) : num threads = %d, ub = %lld, chunk %lld, "
-            "events number = %lld\n",
+            "dispatch init (dyn) : num threads = %d, ub = %" PRId64 ", chunk %" PRIu64 ", "
+            "events number = %llu\n",
             GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized()),
             omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
             omptarget_nvptx_threadPrivateContext->Chunk(tid),

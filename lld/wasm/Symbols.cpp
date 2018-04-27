@@ -231,6 +231,8 @@ std::string lld::toString(WasmSymbolType Type) {
     return "Data";
   case llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL:
     return "Global";
+  case llvm::wasm::WASM_SYMBOL_TYPE_SECTION:
+    return "Section";
   }
   llvm_unreachable("invalid symbol type");
 }
