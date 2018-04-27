@@ -13,6 +13,7 @@ import Cocoa
 
 func main() {
   var num = 22
+  //% self.expect("po num", substrs=["\\n", "\""], matching=False) # Make sure po doesn't escape non-printables.
   var str = "Hello world" //% self.expect("po num", substrs = ['22'])
   var arr = [1,2,3,4] 
   var nsarr = NSMutableArray(array: arr) //% self.expect("po str", substrs = ['Hello world'])
