@@ -2724,6 +2724,13 @@ The ``swift_bridge`` attribute indicates that the type to which the attribute ap
   }];
 }
 
+def SwiftBridgedTypedefDocs : Documentation {
+  let Category = SwiftDocs;
+  let Content = [{
+The ``swift_bridged_typedef`` attribute indicates that, when the typedef to which the attribute appertains is imported into Swift, it should refer to the bridged Swift type (e.g., Swift's ``String``) rather than the Objective-C type as written (e.g., ``NSString``).
+  }];
+}
+
 def SwiftObjCMembersDocs : Documentation {
   let Category = SwiftDocs;
   let Content = [{
