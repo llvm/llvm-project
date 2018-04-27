@@ -291,7 +291,7 @@ def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
 defm symbol_ordering_file: Eq<"symbol-ordering-file">,
-  HelpText<"Layout sections in the order specified by symbol file">;
+  HelpText<"Layout sections to place symbols in the order specified by symbol ordering file">;
 
 defm sysroot: Eq<"sysroot">, HelpText<"Set the system root">;
 

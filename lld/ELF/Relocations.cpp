@@ -461,6 +461,26 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol &SS) {
   return Ret;
 }
 
+// When a symbol is copy relocated or we create a canonical plt entry, it is
+// effectively a defined symbol. In the case of copy relocation the symbol is
+// in .bss and in the case of a canonical plt entry it is in .plt. This function
+// replaces the existing symbol with a Defined pointing to the appropriate
+// location.
+static void replaceWithDefined(Symbol &Sym, SectionBase *Sec, uint64_t Value,
+                               uint64_t Size) {
+  Symbol Old = Sym;
+  replaceSymbol<Defined>(&Sym, Sym.File, Sym.getName(), Sym.Binding,
+                         Sym.StOther, Sym.Type, Value, Size, Sec);
+  Sym.PltIndex = Old.PltIndex;
+  Sym.GotIndex = Old.GotIndex;
+  Sym.VerdefIndex = Old.VerdefIndex;
+  Sym.IsInGlobalMipsGot = Old.IsInGlobalMipsGot;
+  Sym.IsPreemptible = true;
+  Sym.ExportDynamic = true;
+  Sym.IsUsedInRegularObj = true;
+  Sym.Used = true;
+}
+
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
 //
 // The copy relocation is pretty much a hack. If you use a copy relocation
@@ -522,11 +542,8 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &SS) {
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
-    Sym->CopyRelSec = Sec;
-    Sym->IsUsedInRegularObj = true;
-    Sym->Used = true;
-  }
+  for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS))
+    replaceWithDefined(*Sym, Sec, 0, Sym->Size);
 
   InX::RelaDyn->addReloc(Target->CopyRel, Sec, 0, &SS);
 }
@@ -762,12 +779,12 @@ static bool canDefineSymbolInExecutable(Symbol &Sym) {
 // complicates things for the dynamic linker and means we would have to reserve
 // space for the extra PT_LOAD even if we end up not using it.
 template <class ELFT, class RelTy>
-static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
-                               RelType Type, uint64_t Offset, Symbol &Sym,
-                               const RelTy &Rel, int64_t Addend) {
+static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
+                            uint64_t Offset, Symbol &Sym, const RelTy &Rel,
+                            int64_t Addend) {
   if (isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Offset)) {
     Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    return Expr;
+    return;
   }
   bool CanWrite = (Sec.Flags & SHF_WRITE) || !Config->ZText;
   if (CanWrite) {
@@ -777,7 +794,7 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
     if (!IsPreemptibleValue) {
       InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, &Sym, Addend,
                              Expr, Type);
-      return Expr;
+      return;
     } else if (RelType Rel = Target->getDynRel(Type)) {
       InX::RelaDyn->addReloc(Rel, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
 
@@ -798,7 +815,7 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
       if (Config->EMachine == EM_MIPS)
         InX::MipsGot->addEntry(Sym, Addend, Expr);
-      return Expr;
+      return;
     }
   }
 
@@ -806,7 +823,7 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
   // executable, give up on it and produce a non preemptible 0.
   if (!Config->Shared && Sym.isUndefWeak()) {
     Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    return Expr;
+    return;
   }
 
   if (!CanWrite && (Config->Pic && !isRelExpr(Expr))) {
@@ -816,7 +833,7 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
         " in readonly segment; recompile object files with -fPIC "
         "or pass '-Wl,-z,notext' to allow text relocations in the output" +
         getLocation(Sec, Sym, Offset));
-    return Expr;
+    return;
   }
 
   // Copy relocations are only possible if we are creating an executable.
@@ -824,34 +841,31 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
     errorOrWarn("relocation " + toString(Type) +
                 " cannot be used against symbol " + toString(Sym) +
                 "; recompile with -fPIC" + getLocation(Sec, Sym, Offset));
-    return Expr;
+    return;
   }
 
   // If the symbol is undefined we already reported any relevant errors.
-  if (!Sym.isShared()) {
-    assert(Sym.isUndefined());
-    return Expr;
-  }
+  if (Sym.isUndefined())
+    return;
 
   if (!canDefineSymbolInExecutable(Sym)) {
     error("cannot preempt symbol: " + toString(Sym) +
           getLocation(Sec, Sym, Offset));
-    return Expr;
+    return;
   }
 
   if (Sym.isObject()) {
     // Produce a copy relocation.
-    auto &SS = cast<SharedSymbol>(Sym);
-    if (!SS.CopyRelSec) {
+    if (auto *SS = dyn_cast<SharedSymbol>(&Sym)) {
       if (!Config->ZCopyreloc)
         error("unresolvable relocation " + toString(Type) +
-              " against symbol '" + toString(SS) +
+              " against symbol '" + toString(*SS) +
               "'; recompile with -fPIC or remove '-z nocopyreloc'" +
               getLocation(Sec, Sym, Offset));
-      addCopyRelSymbol<ELFT>(SS);
+      addCopyRelSymbol<ELFT>(*SS);
     }
     Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    return Expr;
+    return;
   }
 
   if (Sym.isFunc()) {
@@ -886,15 +900,18 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
       errorOrWarn("symbol '" + toString(Sym) +
                   "' cannot be preempted; recompile with -fPIE" +
                   getLocation(Sec, Sym, Offset));
+    if (!Sym.isInPlt())
+      addPltEntry<ELFT>(InX::Plt, InX::GotPlt, InX::RelaPlt, Target->PltRel,
+                        Sym);
+    if (!Sym.isDefined())
+      replaceWithDefined(Sym, InX::Plt, Sym.getPltOffset(), 0);
     Sym.NeedsPltAddr = true;
-    Expr = toPlt(Expr);
     Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    return Expr;
+    return;
   }
 
   errorOrWarn("symbol '" + toString(Sym) + "' has no type" +
               getLocation(Sec, Sym, Offset));
-  return Expr;
 }
 
 template <class ELFT, class RelTy>
@@ -963,7 +980,6 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
     return;
   }
 
-  Expr = processRelocAux<ELFT>(Sec, Expr, Type, Offset, Sym, Rel, Addend);
   // If a relocation needs PLT, we create PLT and GOTPLT slots for the symbol.
   if (needsPlt(Expr) && !Sym.isInPlt()) {
     if (Sym.isGnuIFunc() && !Sym.IsPreemptible)
@@ -992,6 +1008,8 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
       addGotEntry<ELFT>(Sym);
     }
   }
+
+  processRelocAux<ELFT>(Sec, Expr, Type, Offset, Sym, Rel, Addend);
 }
 
 template <class ELFT, class RelTy>
