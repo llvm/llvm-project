@@ -587,7 +587,9 @@ public:
   const SCEV *getUMaxExpr(const SCEV *LHS, const SCEV *RHS);
   const SCEV *getUMaxExpr(SmallVectorImpl<const SCEV *> &Operands);
   const SCEV *getSMinExpr(const SCEV *LHS, const SCEV *RHS);
+  const SCEV *getSMinExpr(SmallVectorImpl<const SCEV *> &Operands);
   const SCEV *getUMinExpr(const SCEV *LHS, const SCEV *RHS);
+  const SCEV *getUMinExpr(SmallVectorImpl<const SCEV *> &Operands);
   const SCEV *getUnknown(Value *V);
   const SCEV *getCouldNotCompute();
 
@@ -649,6 +651,10 @@ public:
   /// Promote the operands to the wider of the types using zero-extension, and
   /// then perform a umin operation with them.
   const SCEV *getUMinFromMismatchedTypes(const SCEV *LHS, const SCEV *RHS);
+
+  /// Promote the operands to the wider of the types using zero-extension, and
+  /// then perform a umin operation with them. N-ary function.
+  const SCEV *getUMinFromMismatchedTypes(SmallVectorImpl<const SCEV *> &Ops);
 
   /// Transitively follow the chain of pointer-type operands until reaching a
   /// SCEV that does not have a single pointer operand. This returns a
