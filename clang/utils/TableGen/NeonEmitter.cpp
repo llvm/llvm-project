@@ -995,6 +995,19 @@ void Type::applyModifier(char Mod) {
     if (!AppliedQuad)
       Bitwidth *= 2;
     break;
+  case '7':
+    if (AppliedQuad)
+      Bitwidth /= 2;
+    ElementBitwidth = 8;
+    break;
+  case '8':
+    ElementBitwidth = 8;
+    break;
+  case '9':
+    if (!AppliedQuad)
+      Bitwidth *= 2;
+    ElementBitwidth = 8;
+    break;
   default:
     llvm_unreachable("Unhandled character!");
   }

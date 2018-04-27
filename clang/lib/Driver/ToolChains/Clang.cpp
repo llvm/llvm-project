@@ -2241,6 +2241,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-mfpmath");
     CmdArgs.push_back(A->getValue());
   }
+
+  // Disable a codegen optimization for floating-point casts.
+  if (Args.hasFlag(options::OPT_ffp_cast_overflow_workaround,
+                   options::OPT_fno_fp_cast_overflow_workaround, false))
+    CmdArgs.push_back("-ffp-cast-overflow-workaround");
 }
 
 static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,

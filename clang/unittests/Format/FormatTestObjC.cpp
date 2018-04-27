@@ -945,7 +945,7 @@ TEST_F(FormatTestObjC, ObjCForIn) {
                "     }]) {\n}");
 }
 
-TEST_F(FormatTestObjC, ObjCNew) {
+TEST_F(FormatTestObjC, ObjCCxxKeywords) {
   verifyFormat("+ (instancetype)new {\n"
                "  return nil;\n"
                "}\n");
@@ -954,6 +954,17 @@ TEST_F(FormatTestObjC, ObjCNew) {
                "}\n");
   verifyFormat("SEL NewSelector(void) { return @selector(new); }\n");
   verifyFormat("SEL MacroSelector(void) { return MACRO(new); }\n");
+  verifyFormat("+ (instancetype)delete {\n"
+               "  return nil;\n"
+               "}\n");
+  verifyFormat("+ (instancetype)myDelete {\n"
+               "  return [self delete];\n"
+               "}\n");
+  verifyFormat("SEL DeleteSelector(void) { return @selector(delete); }\n");
+  verifyFormat("SEL MacroSelector(void) { return MACRO(delete); }\n");
+  verifyFormat("MACRO(new:)\n");
+  verifyFormat("MACRO(delete:)\n");
+  verifyFormat("foo = @{MACRO(new:) : MACRO(delete:)}\n");
 }
 
 TEST_F(FormatTestObjC, ObjCLiterals) {

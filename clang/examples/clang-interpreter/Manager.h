@@ -12,7 +12,7 @@
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 
-#if defined(LLVM_ON_WIN32) && defined(_WIN64)
+#if defined(_WIN32) && defined(_WIN64)
 #define CLANG_INTERPRETER_COFF_FORMAT
 #define CLANG_INTERPRETER_WIN_EXCEPTIONS
 #endif
