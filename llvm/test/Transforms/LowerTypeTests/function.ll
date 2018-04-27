@@ -49,7 +49,7 @@ define i1 @foo(i8* %p) {
 }
 
 ; X86-LINUX:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 8 {
-; X86-WIN32:   define private void @[[JT]]() section ".text.cfi" align 8 {
+; X86-WIN32:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 8 {
 ; ARM:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
 ; THUMB: define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
 
@@ -70,9 +70,10 @@ define i1 @foo(i8* %p) {
 
 ; NATIVE-SAME: "s,s"(void ()* @f.cfi, void ()* @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { {{.*}}naked
-; ARM: attributes #[[ATTR]] = { {{.*}}naked
-; THUMB: attributes #[[ATTR]] = { {{.*}}naked{{.*}}"target-cpu"="cortex-a8"
+; X86-LINUX: attributes #[[ATTR]] = { naked nounwind }
+; X86-WIN32: attributes #[[ATTR]] = { nounwind }
+; ARM: attributes #[[ATTR]] = { naked nounwind
+; THUMB: attributes #[[ATTR]] = { naked nounwind "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

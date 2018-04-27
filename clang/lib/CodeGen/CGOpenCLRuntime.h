@@ -35,7 +35,8 @@ class CodeGenModule;
 class CGOpenCLRuntime {
 protected:
   CodeGenModule &CGM;
-  llvm::Type *PipeTy;
+  llvm::Type *PipeROTy;
+  llvm::Type *PipeWOTy;
   llvm::PointerType *SamplerTy;
 
   /// Structure for enqueued block information.
@@ -47,9 +48,12 @@ protected:
   /// Maps block expression to block information.
   llvm::DenseMap<const Expr *, EnqueuedBlockInfo> EnqueuedBlockMap;
 
+  virtual llvm::Type *getPipeType(const PipeType *T, StringRef Name,
+                                  llvm::Type *&PipeTy);
+
 public:
-  CGOpenCLRuntime(CodeGenModule &CGM) : CGM(CGM), PipeTy(nullptr),
-    SamplerTy(nullptr) {}
+  CGOpenCLRuntime(CodeGenModule &CGM) : CGM(CGM),
+    PipeROTy(nullptr), PipeWOTy(nullptr), SamplerTy(nullptr) {}
   virtual ~CGOpenCLRuntime();
 
   /// Emit the IR required for a work-group-local variable declaration, and add

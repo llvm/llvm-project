@@ -1086,12 +1086,14 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
     // This workaround will just run the first destructor (which will still
     // invalidate the entire array).
     CallOpts.IsArrayCtorOrDtor = true;
+    // Yes, it may even be a multi-dimensional array.
+    while (const auto *AT = getContext().getAsArrayType(DTy))
+      DTy = AT->getElementType();
     if (ArgR)
       ArgR = getStoreManager().GetElementZeroRegion(cast<SubRegion>(ArgR), DTy);
   }
 
-  VisitCXXDestructor(DE->getDestroyedType(), ArgR, DE, /*IsBase=*/false,
-                     Pred, Dst, CallOpts);
+  VisitCXXDestructor(DTy, ArgR, DE, /*IsBase=*/false, Pred, Dst, CallOpts);
 }
 
 void ExprEngine::ProcessBaseDtor(const CFGBaseDtor D,

@@ -1962,6 +1962,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
                 DtorKind == QualType::DK_nontrivial_c_struct) &&
                "unexpected destructor type");
         pushDestroy(DtorKind, DeclPtr, Ty);
+        CalleeDestructedParamCleanups[cast<ParmVarDecl>(&D)] =
+            EHStack.stable_begin();
       }
     }
   } else {

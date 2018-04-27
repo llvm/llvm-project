@@ -602,7 +602,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
             /*AllowConstructorName=*/!(Tok.is(tok::identifier) &&
                                        NextToken().is(tok::equal)),
             /*AllowDeductionGuide=*/false,
-            nullptr, D.TemplateKWLoc, D.Name))
+            nullptr, nullptr, D.Name))
       return true;
   }
 
@@ -2476,7 +2476,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       SourceLocation TemplateKWLoc;
       UnqualifiedId Name;
       if (ParseUnqualifiedId(SS, false, true, true, false, nullptr,
-                             TemplateKWLoc, Name)) {
+                             &TemplateKWLoc, Name)) {
         SkipUntil(tok::semi);
         return nullptr;
       }
@@ -2488,6 +2488,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         return nullptr;
       }
 
+      // FIXME: We should do something with the 'template' keyword here.
       return DeclGroupPtrTy::make(DeclGroupRef(Actions.ActOnUsingDeclaration(
           getCurScope(), AS, /*UsingLoc*/ SourceLocation(),
           /*TypenameLoc*/ SourceLocation(), SS, Name,

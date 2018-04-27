@@ -279,11 +279,7 @@ else()
 endif()
 
 # Build sanitizer runtimes with debug info.
-if(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
-  list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
-elseif(COMPILER_RT_HAS_G_FLAG)
-  list(APPEND SANITIZER_COMMON_CFLAGS -g)
-elseif(MSVC)
+if(MSVC)
   # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099
   # warning from the MS linker complaining that it can't find the 'vc140.pdb'
   # file used by our object library compilations.
@@ -291,6 +287,10 @@ elseif(MSVC)
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS "/Z[i7I]" "/Z7")
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_DEBUG "/Z[i7I]" "/Z7")
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Z[i7I]" "/Z7")
+elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
+  list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
+elseif(COMPILER_RT_HAS_G_FLAG)
+  list(APPEND SANITIZER_COMMON_CFLAGS -g)
 endif()
 
 if(LLVM_ENABLE_MODULES)

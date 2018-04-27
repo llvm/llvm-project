@@ -1075,211 +1075,97 @@ __m256i test_mm256_mask_packus_epi16(__m256i __W, __mmask32 __M, __m256i __A,   
 
 __m128i test_mm_mask_adds_epi8(__m128i __W, __mmask16 __U, __m128i __A,        __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_adds_epi8
-  // CHECK-NOT: @llvm.x86.sse2.padds.b
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: add <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <16 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <16 x i16> %{{.*}}
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: @llvm.x86.sse2.padds.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_mask_adds_epi8(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_adds_epi8(__mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_adds_epi8
-  // CHECK-NOT: @llvm.x86.sse2.padds.b
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: add <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <16 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <16 x i16> %{{.*}}
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: @llvm.x86.sse2.padds.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_maskz_adds_epi8(__U,__A,__B); 
 }
 __m256i test_mm256_mask_adds_epi8(__m256i __W, __mmask32 __U, __m256i __A,           __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_adds_epi8
-  // CHECK-NOT: @llvm.x86.avx2.padds.b
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: add <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <32 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <32 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <32 x i16> %{{.*}}
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: @llvm.x86.avx2.padds.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_mask_adds_epi8(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_adds_epi8(__mmask32 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_adds_epi8
-  // CHECK-NOT: @llvm.x86.avx2.padds.b
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: add <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <32 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <32 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <32 x i16> %{{.*}}
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: @llvm.x86.avx2.padds.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_maskz_adds_epi8(__U,__A,__B); 
 }
 __m128i test_mm_mask_adds_epi16(__m128i __W, __mmask8 __U, __m128i __A,         __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_adds_epi16
-  // CHECK-NOT: @llvm.x86.sse2.padds.w
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: add <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <8 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <8 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <8 x i32> %{{.*}}
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
+  // CHECK: @llvm.x86.sse2.padds.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_adds_epi16(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_adds_epi16(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_adds_epi16
-  // CHECK-NOT: @llvm.x86.sse2.padds.w
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: add <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <8 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <8 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <8 x i32> %{{.*}}
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
+  // CHECK: @llvm.x86.sse2.padds.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_adds_epi16(__U,__A,__B); 
 }
 __m256i test_mm256_mask_adds_epi16(__m256i __W, __mmask16 __U, __m256i __A,      __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_adds_epi16
-  // CHECK-NOT: @llvm.x86.avx2.padds.w
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: add <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <16 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <16 x i32> %{{.*}}
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
+  // CHECK: @llvm.x86.avx2.padds.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_adds_epi16(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_adds_epi16(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_adds_epi16
-  // CHECK-NOT: @llvm.x86.avx2.padds.w
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: add <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <16 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <16 x i32> %{{.*}}
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
+  // CHECK: @llvm.x86.avx2.padds.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_adds_epi16(__U,__A,__B); 
 }
-__m128i test_mm_mask_adds_epu8(__m128i __W, __mmask16 __U, __m128i __A, __m128i __B) {
+__m128i test_mm_mask_adds_epu8(__m128i __W, __mmask16 __U, __m128i __A,        __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_adds_epu8
-  // CHECK-NOT: @llvm.x86.sse2.paddus.b
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: add <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <16 x i16> %{{.*}}, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: @llvm.x86.sse2.paddus.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_mask_adds_epu8(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_adds_epu8(__mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_adds_epu8
-  // CHECK-NOT: @llvm.x86.sse2.paddus.b
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: add <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <16 x i16> %{{.*}}, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: @llvm.x86.sse2.paddus.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_maskz_adds_epu8(__U,__A,__B); 
 }
 __m256i test_mm256_mask_adds_epu8(__m256i __W, __mmask32 __U, __m256i __A,           __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_adds_epu8
-  // CHECK-NOT: @llvm.x86.avx2.paddus.b
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: add <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <32 x i16> %{{.*}}, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: @llvm.x86.avx2.paddus.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_mask_adds_epu8(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_adds_epu8(__mmask32 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_adds_epu8
-  // CHECK-NOT: @llvm.x86.avx2.paddus.b
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: add <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <32 x i16> %{{.*}}, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: @llvm.x86.avx2.paddus.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_maskz_adds_epu8(__U,__A,__B); 
 }
 __m128i test_mm_mask_adds_epu16(__m128i __W, __mmask8 __U, __m128i __A,         __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_adds_epu16
-  // CHECK-NOT: @llvm.x86.sse2.paddus.w
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: add <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <8 x i32> %{{.*}}, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
+  // CHECK: @llvm.x86.sse2.paddus.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_adds_epu16(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_adds_epu16(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_adds_epu16
-  // CHECK-NOT: @llvm.x86.sse2.paddus.w
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: zext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: add <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <8 x i32> %{{.*}}, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
+  // CHECK: @llvm.x86.sse2.paddus.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_adds_epu16(__U,__A,__B); 
 }
 __m256i test_mm256_mask_adds_epu16(__m256i __W, __mmask16 __U, __m256i __A,      __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_adds_epu16
-  // CHECK-NOT: @llvm.x86.avx2.paddus.w
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: add <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <16 x i32> %{{.*}}, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
+  // CHECK: @llvm.x86.avx2.paddus.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_adds_epu16(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_adds_epu16(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_adds_epu16
-  // CHECK-NOT: @llvm.x86.avx2.paddus.w
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: add <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp ule <16 x i32> %{{.*}}, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
+  // CHECK: @llvm.x86.avx2.paddus.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_adds_epu16(__U,__A,__B); 
 }
@@ -1633,190 +1519,101 @@ __m256i test_mm256_maskz_shuffle_epi8(__mmask32 __U, __m256i __A, __m256i __B) {
 }
 __m128i test_mm_mask_subs_epi8(__m128i __W, __mmask16 __U, __m128i __A,        __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_subs_epi8
-  // CHECK-NOT: @llvm.x86.sse2.psubs.b
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: sub <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <16 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <16 x i16> %{{.*}}
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: @llvm.x86.sse2.psubs.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_mask_subs_epi8(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_subs_epi8(__mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_subs_epi8
-  // CHECK-NOT: @llvm.x86.sse2.psubs.b
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
-  // CHECK: sub <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <16 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <16 x i16> %{{.*}}
-  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: @llvm.x86.sse2.psubs.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_maskz_subs_epi8(__U,__A,__B); 
 }
 __m256i test_mm256_mask_subs_epi8(__m256i __W, __mmask32 __U, __m256i __A,           __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_subs_epi8
-  // CHECK-NOT: @llvm.x86.avx2.psubs.b
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: sub <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <32 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <32 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <32 x i16> %{{.*}}
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: @llvm.x86.avx2.psubs.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_mask_subs_epi8(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_subs_epi8(__mmask32 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_subs_epi8
-  // CHECK-NOT: @llvm.x86.avx2.psubs.b
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
-  // CHECK: sub <32 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <32 x i16> %{{.*}}, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  // CHECK: icmp slt <32 x i16> %{{.*}}, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>, <32 x i16> %{{.*}}
-  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: @llvm.x86.avx2.psubs.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_maskz_subs_epi8(__U,__A,__B); 
 }
 __m128i test_mm_mask_subs_epi16(__m128i __W, __mmask8 __U, __m128i __A,         __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_subs_epi16
-  // CHECK-NOT: @llvm.x86.sse2.psubs.w
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: sub <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <8 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <8 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <8 x i32> %{{.*}}
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
+  // CHECK: @llvm.x86.sse2.psubs.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_subs_epi16(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_subs_epi16(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_subs_epi16
-  // CHECK-NOT: @llvm.x86.sse2.psubs.w
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: sub <8 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <8 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <8 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <8 x i32> %{{.*}}
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
+  // CHECK: @llvm.x86.sse2.psubs.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_subs_epi16(__U,__A,__B); 
 }
 __m256i test_mm256_mask_subs_epi16(__m256i __W, __mmask16 __U, __m256i __A,      __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_subs_epi16
-  // CHECK-NOT: @llvm.x86.avx2.psubs.w
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: sub <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <16 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <16 x i32> %{{.*}}
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
+  // CHECK: @llvm.x86.avx2.psubs.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_subs_epi16(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_subs_epi16(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_subs_epi16
-  // CHECK-NOT: @llvm.x86.avx2.psubs.w
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: sub <16 x i32> %{{.*}}, %{{.*}}
-  // CHECK: icmp sle <16 x i32> %{{.*}}, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  // CHECK: icmp slt <16 x i32> %{{.*}}, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>, <16 x i32> %{{.*}}
-  // CHECK: trunc <16 x i32> %{{.*}} to <16 x i16>
+  // CHECK: @llvm.x86.avx2.psubs.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_subs_epi16(__U,__A,__B); 
 }
 __m128i test_mm_mask_subs_epu8(__m128i __W, __mmask16 __U, __m128i __A,        __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_subs_epu8
-  // CHECK-NOT: @llvm.x86.sse2.psubus.b
-  // CHECK: icmp ugt <16 x i8> {{.*}}, {{.*}}
-  // CHECK: select <16 x i1> {{.*}}, <16 x i8> {{.*}}, <16 x i8> {{.*}}
-  // CHECK: sub <16 x i8> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.sse2.psubus.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_mask_subs_epu8(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_subs_epu8(__mmask16 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_subs_epu8
-  // CHECK-NOT: @llvm.x86.sse2.psubus.b
-  // CHECK: icmp ugt <16 x i8> {{.*}}, {{.*}}
-  // CHECK: select <16 x i1> {{.*}}, <16 x i8> {{.*}}, <16 x i8> {{.*}}
-  // CHECK: sub <16 x i8> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.sse2.psubus.b
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_maskz_subs_epu8(__U,__A,__B); 
 }
 __m256i test_mm256_mask_subs_epu8(__m256i __W, __mmask32 __U, __m256i __A,           __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_subs_epu8
-  // CHECK-NOT: @llvm.x86.avx2.psubus.b
-  // CHECK: icmp ugt <32 x i8> {{.*}}, {{.*}}
-  // CHECK: select <32 x i1> {{.*}}, <32 x i8> {{.*}}, <32 x i8> {{.*}}
-  // CHECK: sub <32 x i8> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.avx2.psubus.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_mask_subs_epu8(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_subs_epu8(__mmask32 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_subs_epu8
-  // CHECK-NOT: @llvm.x86.avx2.psubus.b
-  // CHECK: icmp ugt <32 x i8> {{.*}}, {{.*}}
-  // CHECK: select <32 x i1> {{.*}}, <32 x i8> {{.*}}, <32 x i8> {{.*}}
-  // CHECK: sub <32 x i8> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.avx2.psubus.b
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_maskz_subs_epu8(__U,__A,__B); 
 }
 __m128i test_mm_mask_subs_epu16(__m128i __W, __mmask8 __U, __m128i __A,         __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_subs_epu16
-  // CHECK-NOT: @llvm.x86.sse2.psubus.w
-  // CHECK: icmp ugt <8 x i16> {{.*}}, {{.*}}
-  // CHECK: select <8 x i1> {{.*}}, <8 x i16> {{.*}}, <8 x i16> {{.*}}
-  // CHECK: sub <8 x i16> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.sse2.psubus.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_subs_epu16(__W,__U,__A,__B); 
 }
 __m128i test_mm_maskz_subs_epu16(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_subs_epu16
-  // CHECK-NOT: @llvm.x86.sse2.psubus.w
-  // CHECK: icmp ugt <8 x i16> {{.*}}, {{.*}}
-  // CHECK: select <8 x i1> {{.*}}, <8 x i16> {{.*}}, <8 x i16> {{.*}}
-  // CHECK: sub <8 x i16> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.sse2.psubus.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_subs_epu16(__U,__A,__B); 
 }
 __m256i test_mm256_mask_subs_epu16(__m256i __W, __mmask16 __U, __m256i __A,      __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_subs_epu16
-  // CHECK-NOT: @llvm.x86.avx2.psubus.w
-  // CHECK: icmp ugt <16 x i16> {{.*}}, {{.*}}
-  // CHECK: select <16 x i1> {{.*}}, <16 x i16> {{.*}}, <16 x i16> {{.*}}
-  // CHECK: sub <16 x i16> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.avx2.psubus.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_subs_epu16(__W,__U,__A,__B); 
 }
 __m256i test_mm256_maskz_subs_epu16(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_subs_epu16
-  // CHECK-NOT: @llvm.x86.avx2.psubus.w
-  // CHECK: icmp ugt <16 x i16> {{.*}}, {{.*}}
-  // CHECK: select <16 x i1> {{.*}}, <16 x i16> {{.*}}, <16 x i16> {{.*}}
-  // CHECK: sub <16 x i16> {{.*}}, {{.*}}
+  // CHECK: @llvm.x86.avx2.psubus.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_subs_epu16(__U,__A,__B); 
 }
+
 
 __m128i test_mm_mask2_permutex2var_epi16(__m128i __A, __m128i __I, __mmask8 __U,            __m128i __B) {
   // CHECK-LABEL: @test_mm_mask2_permutex2var_epi16

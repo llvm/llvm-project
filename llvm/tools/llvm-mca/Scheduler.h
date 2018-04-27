@@ -362,7 +362,7 @@ public:
   bool canBeIssued(const InstrDesc &Desc) const;
 
   void issueInstruction(
-      unsigned Index, const InstrDesc &Desc,
+      const InstrDesc &Desc,
       llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes);
 
   void cycleEvent(llvm::SmallVectorImpl<ResourceRef> &ResourcesFreed);

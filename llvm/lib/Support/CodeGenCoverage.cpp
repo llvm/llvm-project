@@ -38,10 +38,15 @@ void CodeGenCoverage::setCovered(uint64_t RuleID) {
   RuleCoverage[RuleID] = true;
 }
 
-bool CodeGenCoverage::isCovered(uint64_t RuleID) {
+bool CodeGenCoverage::isCovered(uint64_t RuleID) const {
   if (RuleCoverage.size() <= RuleID)
     return false;
   return RuleCoverage[RuleID];
+}
+
+iterator_range<CodeGenCoverage::const_covered_iterator>
+CodeGenCoverage::covered() const {
+  return RuleCoverage.set_bits();
 }
 
 bool CodeGenCoverage::parse(MemoryBuffer &Buffer, StringRef BackendName) {
