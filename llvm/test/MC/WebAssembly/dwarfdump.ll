@@ -17,7 +17,7 @@
 ; CHECK-NEXT:                DW_AT_name	("foo")
 ; CHECK-NEXT:                DW_AT_type	(0x00000037 "int*")
 ; CHECK-NEXT:                DW_AT_external	(true)
-; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple/test.c")
+; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line	(4)
 ; CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x0)
 
@@ -33,7 +33,7 @@
 ; CHECK-NEXT:                DW_AT_name	("ptr2")
 ; CHECK-NEXT:                DW_AT_type	(0x00000054 "subroutine *")
 ; CHECK-NEXT:                DW_AT_external	(true)
-; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple/test.c")
+; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line	(5)
 ; CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x4)
 
@@ -47,7 +47,7 @@
 ; CHECK-NEXT:                DW_AT_low_pc	(0x0000000000000002)
 ; CHECK-NEXT:                DW_AT_high_pc	(0x0000000000000004)
 ; CHECK-NEXT:                DW_AT_name	("f2")
-; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple/test.c")
+; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
 ; CHECK-NEXT:                DW_AT_decl_line	(2)
 ; CHECK-NEXT:                DW_AT_prototyped	(true)
 ; CHECK-NEXT:                DW_AT_external		(true)

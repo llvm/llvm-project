@@ -5600,12 +5600,11 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
            D.getContext() == DeclaratorContext::MemberContext);
       }
 
-      SourceLocation TemplateKWLoc;
       bool HadScope = D.getCXXScopeSpec().isValid();
       if (ParseUnqualifiedId(D.getCXXScopeSpec(),
                              /*EnteringContext=*/true,
                              /*AllowDestructorName=*/true, AllowConstructorName,
-                             AllowDeductionGuide, nullptr, TemplateKWLoc,
+                             AllowDeductionGuide, nullptr, nullptr,
                              D.getName()) ||
           // Once we're past the identifier, if the scope was bad, mark the
           // whole declarator bad.

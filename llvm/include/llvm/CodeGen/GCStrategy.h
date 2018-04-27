@@ -105,12 +105,12 @@ public:
 
   /// By default, write barriers are replaced with simple store
   /// instructions. If true, you must provide a custom pass to lower 
-  /// calls to @llvm.gcwrite.
+  /// calls to \@llvm.gcwrite.
   bool customWriteBarrier() const { return CustomWriteBarriers; }
 
   /// By default, read barriers are replaced with simple load
   /// instructions. If true, you must provide a custom pass to lower 
-  /// calls to @llvm.gcread.
+  /// calls to \@llvm.gcread.
   bool customReadBarrier() const { return CustomReadBarriers; }
 
   /// Returns true if this strategy is expecting the use of gc.statepoints,
@@ -147,7 +147,7 @@ public:
 
   /// By default, roots are left for the code generator so it can generate a
   /// stack map. If true, you must provide a custom pass to lower 
-  /// calls to @llvm.gcroot.
+  /// calls to \@llvm.gcroot.
   bool customRoots() const { return CustomRoots; }
 
   /// If set, gcroot intrinsics should initialize their allocas to null

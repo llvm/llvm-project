@@ -168,7 +168,7 @@ protected:
 
 class DefinedData : public DataSymbol {
 public:
-  // Constructor for for regular data symbols originating from input files.
+  // Constructor for regular data symbols originating from input files.
   DefinedData(StringRef Name, uint32_t Flags, InputFile *F,
               InputSegment *Segment, uint32_t Offset, uint32_t Size)
       : DataSymbol(Name, DefinedDataKind, Flags, F), Segment(Segment),

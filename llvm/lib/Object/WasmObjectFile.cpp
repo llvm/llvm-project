@@ -466,6 +466,11 @@ Error WasmObjectFile::parseLinkingSectionSymtab(const uint8_t *&Ptr,
       break;
 
     case wasm::WASM_SYMBOL_TYPE_SECTION: {
+      if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) !=
+          wasm::WASM_SYMBOL_BINDING_LOCAL)
+        return make_error<GenericBinaryError>(
+            "Section symbols must have local binding",
+            object_error::parse_failed);
       Info.ElementIndex = readVaruint32(Ptr);
       // Use somewhat unique section name as symbol name.
       StringRef SectionName = Sections[Info.ElementIndex].Name;

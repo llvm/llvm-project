@@ -274,6 +274,24 @@ void test_var_delete() {
   clang_analyzer_eval(true); // expected-warning{{TRUE}}
 }
 
+void test_array_delete() {
+  class C {
+  public:
+    ~C() {}
+  };
+
+  auto c1 = new C[2][3];
+  delete[] c1; // no-crash // no-warning
+
+  C c2[4];
+  // FIXME: Should warn.
+  delete[] &c2; // no-crash
+
+  C c3[7][6];
+  // FIXME: Should warn.
+  delete[] &c3; // no-crash
+}
+
 void testDeleteNull() {
   NoReturnDtor *foo = 0;
   delete foo; // should not call destructor, checked below

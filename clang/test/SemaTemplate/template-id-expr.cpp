@@ -85,6 +85,52 @@ struct Y0 {
   }
 };
 
+template<typename U> void Y0
+  ::template // expected-error {{expected unqualified-id}}
+    f1(U) {}
+
+// FIXME: error recovery is awful without this.
+    ;
+
+template<typename T>
+struct Y1 {
+  template<typename U>
+  void f1(U);
+
+  template<typename U>
+  static void f2(U);
+
+  void f3(int);
+
+  static int f4(int);
+  template<typename U>
+  static void f4(U);
+
+  template<typename U>
+  void f() {
+    Y1::template f1<U>(0);
+    Y1::template f1(0);
+    this->template f1(0);
+
+    Y1::template f2<U>(0);
+    Y1::template f2(0);
+
+    Y1::template f3(0); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
+    Y1::template f3(); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
+
+    int x;
+    x = Y1::f4(0);
+    x = Y1::f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+
+    x = this->f4(0);
+    x = this->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = this->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+  }
+};
+
+void use_Y1(Y1<int> y1) { y1.f<int>(); } // expected-note {{in instantiation of}}
+
 struct A {
   template<int I>
   struct B {

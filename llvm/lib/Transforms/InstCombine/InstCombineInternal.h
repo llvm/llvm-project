@@ -626,6 +626,13 @@ private:
   /// value, or null if it didn't simplify.
   Value *SimplifyUsingDistributiveLaws(BinaryOperator &I);
 
+  /// Tries to simplify add operations using the definition of remainder.
+  ///
+  /// The definition of remainder is X % C = X - (X / C ) * C. The add
+  /// expression X % C0 + (( X / C0 ) % C1) * C0 can be simplified to
+  /// X % (C0 * C1)
+  Value *SimplifyAddWithRemainder(BinaryOperator &I);
+
   // Binary Op helper for select operations where the expression can be
   // efficiently reorganized.
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
