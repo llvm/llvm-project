@@ -174,38 +174,39 @@ static const char *removeHostnameFromPathname(const char *path_from_dwarf) {
   return colon_pos + 1;
 }
 
-static const char *resolveCompDir(const char *path_from_dwarf) {
+static FileSpec resolveCompDir(const char *path_from_dwarf) {
   if (!path_from_dwarf)
-    return nullptr;
+    return FileSpec();
 
   // DWARF2/3 suggests the form hostname:pathname for compilation directory.
   // Remove the host part if present.
   const char *local_path = removeHostnameFromPathname(path_from_dwarf);
   if (!local_path)
-    return nullptr;
+    return FileSpec();
 
   bool is_symlink = false;
-  FileSpec local_path_spec(local_path, false);
+  // Always normalize our compile unit directory to get rid of redundant
+  // slashes and other path anomalies before we use it for path prepending
+  FileSpec local_spec(local_path, false);
   const auto &file_specs = GetGlobalPluginProperties()->GetSymLinkPaths();
   for (size_t i = 0; i < file_specs.GetSize() && !is_symlink; ++i)
     is_symlink = FileSpec::Equal(file_specs.GetFileSpecAtIndex(i),
-                                 local_path_spec, true);
+                                 local_spec, true);
 
   if (!is_symlink)
-    return local_path;
+    return local_spec;
 
   namespace fs = llvm::sys::fs;
-  if (fs::get_file_type(local_path_spec.GetPath(), false) !=
+  if (fs::get_file_type(local_spec.GetPath(), false) !=
       fs::file_type::symlink_file)
-    return local_path;
+    return local_spec;
 
-  FileSpec resolved_local_path_spec;
-  const auto error =
-      FileSystem::Readlink(local_path_spec, resolved_local_path_spec);
+  FileSpec resolved_symlink;
+  const auto error = FileSystem::Readlink(local_spec, resolved_symlink);
   if (error.Success())
-    return resolved_local_path_spec.GetCString();
+    return resolved_symlink;
 
-  return nullptr;
+  return local_spec;
 }
 
 DWARFUnit *SymbolFileDWARF::GetBaseCompileUnit() {
@@ -912,7 +913,7 @@ bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
     const DWARFDIE cu_die = dwarf_cu->GetUnitDIEOnly();
 
     if (cu_die) {
-      const char *cu_comp_dir = resolveCompDir(
+      FileSpec cu_comp_dir = resolveCompDir(
           cu_die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr));
       const dw_offset_t stmt_list = cu_die.GetAttributeValueAsUnsigned(
           DW_AT_stmt_list, DW_INVALID_OFFSET);

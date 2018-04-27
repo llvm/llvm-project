@@ -60,13 +60,30 @@ class TargetMachine;
 class TargetOptions;
 
 MCStreamer *createNullStreamer(MCContext &Ctx);
-MCStreamer *createAsmStreamer(MCContext &Ctx,
-                              std::unique_ptr<formatted_raw_ostream> OS,
-                              bool isVerboseAsm, bool useDwarfDirectory,
-                              MCInstPrinter *InstPrint, MCCodeEmitter *CE,
-                              MCAsmBackend *TAB, bool ShowInst);
+// Takes ownership of \p TAB and \p CE.
 
-/// Takes ownership of \p TAB and \p CE.
+/// Create a machine code streamer which will print out assembly for the native
+/// target, suitable for compiling with a native assembler.
+///
+/// \param InstPrint - If given, the instruction printer to use. If not given
+/// the MCInst representation will be printed.  This method takes ownership of
+/// InstPrint.
+///
+/// \param CE - If given, a code emitter to use to show the instruction
+/// encoding inline with the assembly. This method takes ownership of \p CE.
+///
+/// \param TAB - If given, a target asm backend to use to show the fixup
+/// information in conjunction with encoding information. This method takes
+/// ownership of \p TAB.
+///
+/// \param ShowInst - Whether to show the MCInst representation inline with
+/// the assembly.
+MCStreamer *
+createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+                  bool isVerboseAsm, bool useDwarfDirectory,
+                  MCInstPrinter *InstPrint, std::unique_ptr<MCCodeEmitter> &&CE,
+                  std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst);
+
 MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCAsmBackend> &&TAB,
                               raw_pwrite_stream &OS,
@@ -493,12 +510,14 @@ public:
   MCStreamer *createAsmStreamer(MCContext &Ctx,
                                 std::unique_ptr<formatted_raw_ostream> OS,
                                 bool IsVerboseAsm, bool UseDwarfDirectory,
-                                MCInstPrinter *InstPrint, MCCodeEmitter *CE,
-                                MCAsmBackend *TAB, bool ShowInst) const {
+                                MCInstPrinter *InstPrint,
+                                std::unique_ptr<MCCodeEmitter> &&CE,
+                                std::unique_ptr<MCAsmBackend> &&TAB,
+                                bool ShowInst) const {
     formatted_raw_ostream &OSRef = *OS;
-    MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), IsVerboseAsm,
-                                            UseDwarfDirectory, InstPrint, CE,
-                                            TAB, ShowInst);
+    MCStreamer *S = llvm::createAsmStreamer(
+        Ctx, std::move(OS), IsVerboseAsm, UseDwarfDirectory, InstPrint,
+        std::move(CE), std::move(TAB), ShowInst);
     createAsmTargetStreamer(*S, OSRef, InstPrint, IsVerboseAsm);
     return S;
   }

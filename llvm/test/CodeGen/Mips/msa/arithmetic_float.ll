@@ -137,44 +137,46 @@ define void @fma_v2f64(<2 x double>* %d, <2 x double>* %a, <2 x double>* %b,
   ; CHECK: .size fma_v2f64
 }
 
-define void @fmsub_v4f32(<4 x float>* %d, <4 x float>* %a, <4 x float>* %b,
+define void @fmlu_fsub_v4f32(<4 x float>* %d, <4 x float>* %a, <4 x float>* %b,
                        <4 x float>* %c) nounwind {
-  ; CHECK: fmsub_v4f32:
+  ; CHECK: fmlu_fsub_v4f32:
 
-  %1 = load <4 x float>, <4 x float>* %a
-  ; CHECK-DAG: ld.w [[R1:\$w[0-9]+]], 0($5)
-  %2 = load <4 x float>, <4 x float>* %b
-  ; CHECK-DAG: ld.w [[R2:\$w[0-9]+]], 0($6)
-  %3 = load <4 x float>, <4 x float>* %c
-  ; CHECK-DAG: ld.w [[R3:\$w[0-9]+]], 0($7)
-  %4 = fmul <4 x float> %2, %3
-  %5 = fsub <4 x float> %1, %4
-  ; CHECK-DAG: fmsub.w [[R1]], [[R2]], [[R3]]
+  %1 = load <4 x float>, <4 x float>* %b
+  ; CHECK-DAG: ld.w [[R1:\$w[0-9]+]], 0($6)
+  %2 = load <4 x float>, <4 x float>* %c
+  ; CHECK-DAG: ld.w [[R2:\$w[0-9]+]], 0($7)
+  %3 = fmul <4 x float> %1, %2
+  ; CHECK-DAG: fmul.w [[R2]], [[R1]], [[R2]]
+  %4 = load <4 x float>, <4 x float>* %a
+  ; CHECK-DAG: ld.w [[R3:\$w[0-9]+]], 0($5)
+  %5 = fsub <4 x float> %4, %3
+  ; CHECK-DAG: fsub.w [[R2]], [[R3]], [[R2]]
   store <4 x float> %5, <4 x float>* %d
-  ; CHECK-DAG: st.w [[R1]], 0($4)
+  ; CHECK-DAG: st.w [[R2]], 0($4)
 
   ret void
-  ; CHECK: .size fmsub_v4f32
+  ; CHECK: .size fmlu_fsub_v4f32
 }
 
-define void @fmsub_v2f64(<2 x double>* %d, <2 x double>* %a, <2 x double>* %b,
+define void @fmul_fsub_v2f64(<2 x double>* %d, <2 x double>* %a, <2 x double>* %b,
                        <2 x double>* %c) nounwind {
-  ; CHECK: fmsub_v2f64:
+  ; CHECK: fmul_fsub_v2f64:
 
-  %1 = load <2 x double>, <2 x double>* %a
-  ; CHECK-DAG: ld.d [[R1:\$w[0-9]+]], 0($5)
-  %2 = load <2 x double>, <2 x double>* %b
+  %1 = load <2 x double>, <2 x double>* %b
+  ; CHECK-DAG: ld.d [[R1:\$w[0-9]+]], 0($7)
+  %2 = load <2 x double>, <2 x double>* %c
   ; CHECK-DAG: ld.d [[R2:\$w[0-9]+]], 0($6)
-  %3 = load <2 x double>, <2 x double>* %c
-  ; CHECK-DAG: ld.d [[R3:\$w[0-9]+]], 0($7)
-  %4 = fmul <2 x double> %2, %3
-  %5 = fsub <2 x double> %1, %4
-  ; CHECK-DAG: fmsub.d [[R1]], [[R2]], [[R3]]
+  %3 = fmul <2 x double> %1, %2
+  ; CHECK-DAG: fmul.d [[R1]], [[R2]], [[R1]]
+  %4 = load <2 x double>, <2 x double>* %a
+  ; CHECK-DAG: ld.d [[R3:\$w[0-9]+]], 0($5)
+  %5 = fsub <2 x double> %4, %3
+  ; CHECK-DAG: fsub.d [[R1]], [[R3]], [[R1]]
   store <2 x double> %5, <2 x double>* %d
   ; CHECK-DAG: st.d [[R1]], 0($4)
 
   ret void
-  ; CHECK: .size fmsub_v2f64
+  ; CHECK: .size fmul_fsub_v2f64
 }
 
 define void @fdiv_v4f32(<4 x float>* %c, <4 x float>* %a, <4 x float>* %b) nounwind {

@@ -439,16 +439,17 @@ int main(int argc, char **argv) {
     IP->setPrintImmHex(PrintImmHex);
 
     // Set up the AsmStreamer.
-    MCCodeEmitter *CE = nullptr;
-    MCAsmBackend *MAB = nullptr;
-    if (ShowEncoding) {
-      CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-      MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
-    }
+    std::unique_ptr<MCCodeEmitter> CE;
+    if (ShowEncoding)
+      CE.reset(TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+
+    std::unique_ptr<MCAsmBackend> MAB(
+        TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = llvm::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(TheTarget->createAsmStreamer(
-        Ctx, std::move(FOut), /*asmverbose*/ true,
-        /*useDwarfDirectory*/ true, IP, CE, MAB, ShowInst));
+    Str.reset(
+        TheTarget->createAsmStreamer(Ctx, std::move(FOut), /*asmverbose*/ true,
+                                     /*useDwarfDirectory*/ true, IP,
+                                     std::move(CE), std::move(MAB), ShowInst));
 
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));

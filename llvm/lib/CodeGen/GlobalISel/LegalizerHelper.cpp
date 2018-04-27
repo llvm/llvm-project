@@ -272,8 +272,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
   MIRBuilder.setInstr(MI);
 
-  int64_t SizeOp0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-  int64_t NarrowSize = NarrowTy.getSizeInBits();
+  uint64_t SizeOp0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  uint64_t NarrowSize = NarrowTy.getSizeInBits();
 
   switch (MI.getOpcode()) {
   default:
@@ -339,8 +339,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, SrcRegs);
 
     unsigned OpReg = MI.getOperand(0).getReg();
-    int64_t OpStart = MI.getOperand(2).getImm();
-    int64_t OpSize = MRI.getType(OpReg).getSizeInBits();
+    uint64_t OpStart = MI.getOperand(2).getImm();
+    uint64_t OpSize = MRI.getType(OpReg).getSizeInBits();
     for (int i = 0; i < NumParts; ++i) {
       unsigned SrcStart = i * NarrowSize;
 
@@ -355,7 +355,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
       // OpSegStart is where this destination segment would start in OpReg if it
       // extended infinitely in both directions.
-      int64_t ExtractOffset, SegSize;
+      int64_t ExtractOffset;
+      uint64_t SegSize;
       if (OpStart < SrcStart) {
         ExtractOffset = 0;
         SegSize = std::min(NarrowSize, OpStart + OpSize - SrcStart);
@@ -391,8 +392,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, SrcRegs);
 
     unsigned OpReg = MI.getOperand(2).getReg();
-    int64_t OpStart = MI.getOperand(3).getImm();
-    int64_t OpSize = MRI.getType(OpReg).getSizeInBits();
+    uint64_t OpStart = MI.getOperand(3).getImm();
+    uint64_t OpSize = MRI.getType(OpReg).getSizeInBits();
     for (int i = 0; i < NumParts; ++i) {
       unsigned DstStart = i * NarrowSize;
 
@@ -409,7 +410,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
       // OpSegStart is where this destination segment would start in OpReg if it
       // extended infinitely in both directions.
-      int64_t ExtractOffset, InsertOffset, SegSize;
+      int64_t ExtractOffset, InsertOffset;
+      uint64_t SegSize;
       if (OpStart < DstStart) {
         InsertOffset = 0;
         ExtractOffset = DstStart - OpStart;
@@ -443,6 +445,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     // NarrowSize.
     if (SizeOp0 % NarrowSize != 0)
       return UnableToLegalize;
+
+    const auto &MMO = **MI.memoperands_begin();
+    // This implementation doesn't work for atomics. Give up instead of doing
+    // something invalid.
+    if (MMO.getOrdering() != AtomicOrdering::NotAtomic ||
+        MMO.getFailureOrdering() != AtomicOrdering::NotAtomic)
+      return UnableToLegalize;
+
     int NumParts = SizeOp0 / NarrowSize;
     LLT OffsetTy = LLT::scalar(
         MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits());
@@ -453,12 +463,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       unsigned SrcReg = 0;
       unsigned Adjustment = i * NarrowSize / 8;
 
+      MachineMemOperand *SplitMMO = MIRBuilder.getMF().getMachineMemOperand(
+          MMO.getPointerInfo().getWithOffset(Adjustment), MMO.getFlags(),
+          NarrowSize / 8, i == 0 ? MMO.getAlignment() : NarrowSize / 8,
+          MMO.getAAInfo(), MMO.getRanges(), MMO.getSyncScopeID(),
+          MMO.getOrdering(), MMO.getFailureOrdering());
+
       MIRBuilder.materializeGEP(SrcReg, MI.getOperand(1).getReg(), OffsetTy,
                                 Adjustment);
 
-      // TODO: This is conservatively correct, but we probably want to split the
-      // memory operands in the future.
-      MIRBuilder.buildLoad(DstReg, SrcReg, **MI.memoperands_begin());
+      MIRBuilder.buildLoad(DstReg, SrcReg, *SplitMMO);
 
       DstRegs.push_back(DstReg);
     }
@@ -472,6 +486,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     // NarrowSize.
     if (SizeOp0 % NarrowSize != 0)
       return UnableToLegalize;
+
+    const auto &MMO = **MI.memoperands_begin();
+    // This implementation doesn't work for atomics. Give up instead of doing
+    // something invalid.
+    if (MMO.getOrdering() != AtomicOrdering::NotAtomic ||
+        MMO.getFailureOrdering() != AtomicOrdering::NotAtomic)
+      return UnableToLegalize;
+
     int NumParts = SizeOp0 / NarrowSize;
     LLT OffsetTy = LLT::scalar(
         MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits());
@@ -483,12 +505,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       unsigned DstReg = 0;
       unsigned Adjustment = i * NarrowSize / 8;
 
+      MachineMemOperand *SplitMMO = MIRBuilder.getMF().getMachineMemOperand(
+          MMO.getPointerInfo().getWithOffset(Adjustment), MMO.getFlags(),
+          NarrowSize / 8, i == 0 ? MMO.getAlignment() : NarrowSize / 8,
+          MMO.getAAInfo(), MMO.getRanges(), MMO.getSyncScopeID(),
+          MMO.getOrdering(), MMO.getFailureOrdering());
+
       MIRBuilder.materializeGEP(DstReg, MI.getOperand(1).getReg(), OffsetTy,
                                 Adjustment);
 
-      // TODO: This is conservatively correct, but we probably want to split the
-      // memory operands in the future.
-      MIRBuilder.buildStore(SrcRegs[i], DstReg, **MI.memoperands_begin());
+      MIRBuilder.buildStore(SrcRegs[i], DstReg, *SplitMMO);
     }
     MI.eraseFromParent();
     return Legalized;

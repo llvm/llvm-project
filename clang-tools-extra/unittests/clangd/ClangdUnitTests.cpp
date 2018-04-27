@@ -9,6 +9,7 @@
 
 #include "Annotations.h"
 #include "ClangdUnit.h"
+#include "SourceCode.h"
 #include "TestFS.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
@@ -214,6 +215,28 @@ main.cpp:2:3: error: something terrible happened)");
       LSPDiags,
       ElementsAre(Pair(EqualToLSPDiag(MainLSP), ElementsAre(EqualToFix(F))),
                   Pair(EqualToLSPDiag(NoteInMainLSP), IsEmpty())));
+}
+
+TEST(ClangdUnitTest, GetBeginningOfIdentifier) {
+  // First ^ is the expected beginning, last is the search position.
+  for (const char *Text : {
+           "int ^f^oo();", // inside identifier
+           "int ^foo();",  // beginning of identifier
+           "int ^foo^();", // end of identifier
+           "int foo(^);",  // non-identifier
+           "^int foo();",  // beginning of file (can't back up)
+           "int ^f0^0();", // after a digit (lexing at N-1 is wrong)
+           "int ^λλ^λ();", // UTF-8 handled properly when backing up
+       }) {
+    Annotations TestCase(Text);
+    auto AST = build(TestCase.code());
+    const auto &SourceMgr = AST.getASTContext().getSourceManager();
+    SourceLocation Actual = getBeginningOfIdentifier(
+        AST, TestCase.points().back(), SourceMgr.getMainFileID());
+    Position ActualPos =
+        offsetToPosition(TestCase.code(), SourceMgr.getFileOffset(Actual));
+    EXPECT_EQ(TestCase.points().front(), ActualPos) << Text;
+  }
 }
 
 } // namespace

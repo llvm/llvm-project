@@ -86,6 +86,10 @@ public:
   ArrayRef<CieRecord *> getCieRecords() const { return CieRecords; }
 
 private:
+  // This is used only when parsing EhInputSection. We keep it here to avoid
+  // allocating one for each EhInputSection.
+  llvm::DenseMap<size_t, CieRecord *> OffsetToCie;
+
   uint64_t Size = 0;
 
   template <class ELFT, class RelTy>
@@ -834,6 +838,7 @@ private:
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 void decompressSections();
+template <class ELFT> void splitSections();
 void mergeSections();
 
 Defined *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,

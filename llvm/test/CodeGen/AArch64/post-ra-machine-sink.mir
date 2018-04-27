@@ -203,8 +203,43 @@ body: |
     liveins: $w0, $w19
     $w0 = ADDWrr $w0, $w19
     RET $x0
----
+...
 
+---
+# Sink w19 to %bb.3 through %bb.2.
+# CHECK-LABEL: name: sinkcopy8
+# CHECK-LABEL: bb.0:
+# CHECK-NOT: renamable $w19 = COPY $w0, implicit-def $x19
+# CHECK-LABEL: bb.2:
+# CHECK: $w1 = ADDWrr $w1, $w0, implicit $x0
+# CHECK-LABEL: bb.3:
+# CHECK: liveins: $x1, $w0
+# CHECK: renamable $w19 = COPY killed $w0, implicit-def $x19
+name: sinkcopy8
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $x1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable $w19 = COPY $w0, implicit-def $x19
+    Bcc 11, %bb.2, implicit $nzcv
+
+  bb.1:
+    liveins: $x0
+    $w19 = COPY $wzr
+    RET $x0
+
+  bb.2:
+    liveins: $w0, $x1, $x19
+    $w1 = ADDWrr $w1, $w0, implicit killed $x0
+
+  bb.3:
+    liveins: $x1, $x19
+    $x0 = ADDXrr $x1, $x19
+    RET $x0
+...
+
+---
 # Don't sink w19 as w0 is defined in bb.0.
 # CHECK-LABEL: name: donotsinkcopy1
 # CHECK-LABEL: bb.0:

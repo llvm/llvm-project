@@ -23,14 +23,9 @@ namespace clangd {
 
 /// Turn a [line, column] pair into an offset in Code.
 ///
-/// If the character value is greater than the line length, the behavior depends
-/// on AllowColumnsBeyondLineLength:
-///
-/// - if true: default back to the end of the line
-/// - if false: return an error
-///
-/// If the line number is greater than the number of lines in the document,
-/// always return an error.
+/// If P.character exceeds the line length, returns the offset at end-of-line.
+/// (If !AllowColumnsBeyondLineLength, then returns an error instead).
+/// If the line number is out of range, returns an error.
 ///
 /// The returned value is in the range [0, Code.size()].
 llvm::Expected<size_t>
@@ -38,7 +33,7 @@ positionToOffset(llvm::StringRef Code, Position P,
                  bool AllowColumnsBeyondLineLength = true);
 
 /// Turn an offset in Code into a [line, column] pair.
-/// FIXME: This should return an error if the offset is invalid.
+/// The offset must be in range [0, Code.size()].
 Position offsetToPosition(llvm::StringRef Code, size_t Offset);
 
 /// Turn a SourceLocation into a [line, column] pair.
@@ -48,6 +43,12 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc);
 // Converts a half-open clang source range to an LSP range.
 // Note that clang also uses closed source ranges, which this can't handle!
 Range halfOpenToRange(const SourceManager &SM, CharSourceRange R);
+
+// Converts an offset to a clang line/column (1-based, columns are bytes).
+// The offset must be in range [0, Code.size()].
+// Prefer to use SourceManager if one is available.
+std::pair<size_t, size_t> offsetToClangLineColumn(llvm::StringRef Code,
+                                                  size_t Offset);
 
 /// From "a::b::c", return {"a::b::", "c"}. Scope is empty if there's no
 /// qualifier.

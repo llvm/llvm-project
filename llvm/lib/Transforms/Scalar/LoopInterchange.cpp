@@ -543,20 +543,10 @@ struct LoopInterchange : public FunctionPass {
     printDepMatrix(DependencyMatrix);
 #endif
 
-    // Since we currently do not handle LCSSA PHI's any failure in loop
-    // condition will now branch to LoopNestExit.
-    // TODO: This should be removed once we handle LCSSA PHI nodes.
-
     // Get the Outermost loop exit.
     BasicBlock *LoopNestExit = OuterMostLoop->getExitBlock();
     if (!LoopNestExit) {
       DEBUG(dbgs() << "OuterMostLoop needs an unique exit block");
-      return false;
-    }
-
-    if (isa<PHINode>(LoopNestExit->begin())) {
-      DEBUG(dbgs() << "PHI Nodes in loop nest exit is not handled for now "
-                      "since on failure all loops branch to loop nest exit.\n");
       return false;
     }
 
@@ -862,19 +852,6 @@ bool LoopInterchangeLegality::currentLimitations() {
   }
 
   // TODO: We only handle LCSSA PHI's corresponding to reduction for now.
-  BasicBlock *OuterExit = OuterLoop->getExitBlock();
-  if (!containsSafePHI(OuterExit, true)) {
-    DEBUG(dbgs() << "Can only handle LCSSA PHIs in outer loops currently.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "NoLCSSAPHIOuter",
-                                      OuterLoop->getStartLoc(),
-                                      OuterLoop->getHeader())
-             << "Only outer loops with LCSSA PHIs can be interchange "
-                "currently.";
-    });
-    return true;
-  }
-
   BasicBlock *InnerExit = InnerLoop->getExitBlock();
   if (!containsSafePHI(InnerExit, false)) {
     DEBUG(dbgs() << "Can only handle LCSSA PHIs in inner loops currently.\n");
@@ -962,6 +939,43 @@ bool LoopInterchangeLegality::currentLimitations() {
   return false;
 }
 
+// We currently support LCSSA PHI nodes in the outer loop exit, if their
+// incoming values do not come from the outer loop latch or if the
+// outer loop latch has a single predecessor. In that case, the value will
+// be available if both the inner and outer loop conditions are true, which
+// will still be true after interchanging. If we have multiple predecessor,
+// that may not be the case, e.g. because the outer loop latch may be executed
+// if the inner loop is not executed.
+static bool areLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
+  BasicBlock *LoopNestExit = OuterLoop->getUniqueExitBlock();
+  for (PHINode &PHI : LoopNestExit->phis()) {
+    //  FIXME: We currently are not able to detect floating point reductions
+    //         and have to use floating point PHIs as a proxy to prevent
+    //         interchanging in the presence of floating point reductions.
+    if (PHI.getType()->isFloatingPointTy())
+      return false;
+    for (unsigned i = 0; i < PHI.getNumIncomingValues(); i++) {
+     Instruction *IncomingI = dyn_cast<Instruction>(PHI.getIncomingValue(i));
+     if (!IncomingI || IncomingI->getParent() != OuterLoop->getLoopLatch())
+       continue;
+
+     // The incoming value is defined in the outer loop latch. Currently we
+     // only support that in case the outer loop latch has a single predecessor.
+     // This guarantees that the outer loop latch is executed if and only if
+     // the inner loop is executed (because tightlyNested() guarantees that the
+     // outer loop header only branches to the inner loop or the outer loop
+     // latch).
+     // FIXME: We could weaken this logic and allow multiple predecessors,
+     //        if the values are produced outside the loop latch. We would need
+     //        additional logic to update the PHI nodes in the exit block as
+     //        well.
+     if (OuterLoop->getLoopLatch()->getUniquePredecessor() == nullptr)
+       return false;
+    }
+  }
+  return true;
+}
+
 bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                                                   unsigned OuterLoopId,
                                                   CharMatrix &DepMatrix) {
@@ -1034,6 +1048,17 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                                       InnerLoop->getHeader())
              << "Cannot interchange loops because they are not tightly "
                 "nested.";
+    });
+    return false;
+  }
+
+  if (!areLoopExitPHIsSupported(OuterLoop, InnerLoop)) {
+    DEBUG(dbgs() << "Found unsupported PHI nodes in outer loop exit.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedExitPHI",
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
+             << "Found unsupported PHI node in loop exit.";
     });
     return false;
   }

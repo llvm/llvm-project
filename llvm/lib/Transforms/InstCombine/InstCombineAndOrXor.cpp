@@ -1288,8 +1288,8 @@ static Instruction *foldAndToXor(BinaryOperator &I,
   // Operand complexity canonicalization guarantees that the 'or' is Op0.
   // (A | B) & ~(A & B) --> A ^ B
   // (A | B) & ~(B & A) --> A ^ B
-  if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
-      match(Op1, m_Not(m_c_And(m_Specific(A), m_Specific(B)))))
+  if (match(&I, m_BinOp(m_Or(m_Value(A), m_Value(B)),
+                        m_Not(m_c_And(m_Deferred(A), m_Deferred(B))))))
     return BinaryOperator::CreateXor(A, B);
 
   // (A | ~B) & (~A | B) --> ~(A ^ B)
@@ -1297,8 +1297,8 @@ static Instruction *foldAndToXor(BinaryOperator &I,
   // (~B | A) & (~A | B) --> ~(A ^ B)
   // (~B | A) & (B | ~A) --> ~(A ^ B)
   if (Op0->hasOneUse() || Op1->hasOneUse())
-    if (match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Specific(B))))
+    if (match(&I, m_BinOp(m_c_Or(m_Value(A), m_Not(m_Value(B))),
+                          m_c_Or(m_Not(m_Deferred(A)), m_Deferred(B)))))
       return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
   return nullptr;
@@ -2294,10 +2294,8 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (A & B) ^ (B | A) -> A ^ B
   // (A | B) ^ (A & B) -> A ^ B
   // (A | B) ^ (B & A) -> A ^ B
-  if ((match(Op0, m_And(m_Value(A), m_Value(B))) &&
-       match(Op1, m_c_Or(m_Specific(A), m_Specific(B)))) ||
-      (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
-       match(Op1, m_c_And(m_Specific(A), m_Specific(B))))) {
+  if (match(&I, m_c_Xor(m_And(m_Value(A), m_Value(B)),
+                        m_c_Or(m_Deferred(A), m_Deferred(B))))) {
     I.setOperand(0, A);
     I.setOperand(1, B);
     return &I;
@@ -2307,10 +2305,8 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (~B | A) ^ (~A | B) -> A ^ B
   // (~A | B) ^ (A | ~B) -> A ^ B
   // (B | ~A) ^ (A | ~B) -> A ^ B
-  if ((match(Op0, m_Or(m_Value(A), m_Not(m_Value(B)))) &&
-       match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Specific(B)))) ||
-      (match(Op0, m_Or(m_Not(m_Value(A)), m_Value(B))) &&
-       match(Op1, m_c_Or(m_Specific(A), m_Not(m_Specific(B)))))) {
+  if (match(&I, m_Xor(m_c_Or(m_Value(A), m_Not(m_Value(B))),
+                      m_c_Or(m_Not(m_Deferred(A)), m_Deferred(B))))) {
     I.setOperand(0, A);
     I.setOperand(1, B);
     return &I;
@@ -2320,10 +2316,8 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (~B & A) ^ (~A & B) -> A ^ B
   // (~A & B) ^ (A & ~B) -> A ^ B
   // (B & ~A) ^ (A & ~B) -> A ^ B
-  if ((match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
-       match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B)))) ||
-      (match(Op0, m_And(m_Not(m_Value(A)), m_Value(B))) &&
-       match(Op1, m_c_And(m_Specific(A), m_Not(m_Specific(B)))))) {
+  if (match(&I, m_Xor(m_c_And(m_Value(A), m_Not(m_Value(B))),
+                      m_c_And(m_Not(m_Deferred(A)), m_Deferred(B))))) {
     I.setOperand(0, A);
     I.setOperand(1, B);
     return &I;

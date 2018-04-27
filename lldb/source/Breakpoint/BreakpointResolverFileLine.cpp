@@ -122,7 +122,7 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
 
   llvm::StringRef relative_path;
   if (is_relative)
-    relative_path = m_file_spec.GetNormalizedPath().GetDirectory().GetStringRef();
+    relative_path = m_file_spec.GetDirectory().GetStringRef();
 
   Log * log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
   for(uint32_t i = 0; i < sc_list.GetSize(); ++i) {

@@ -514,6 +514,38 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
   OffsetOpnd.setImm(OffsetOpnd.getImm() + LocalStackSize / 8);
 }
 
+static void adaptForLdStOpt(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator FirstSPPopI,
+                            MachineBasicBlock::iterator LastPopI) {
+  // Sometimes (when we restore in the same order as we save), we can end up
+  // with code like this:
+  //
+  // ldp      x26, x25, [sp]
+  // ldp      x24, x23, [sp, #16]
+  // ldp      x22, x21, [sp, #32]
+  // ldp      x20, x19, [sp, #48]
+  // add      sp, sp, #64
+  //
+  // In this case, it is always better to put the first ldp at the end, so
+  // that the load-store optimizer can run and merge the ldp and the add into
+  // a post-index ldp.
+  // If we managed to grab the first pop instruction, move it to the end.
+  if (ReverseCSRRestoreSeq)
+    MBB.splice(FirstSPPopI, &MBB, LastPopI);
+  // We should end up with something like this now:
+  //
+  // ldp      x24, x23, [sp, #16]
+  // ldp      x22, x21, [sp, #32]
+  // ldp      x20, x19, [sp, #48]
+  // ldp      x26, x25, [sp]
+  // add      sp, sp, #64
+  //
+  // and the load-store optimizer can merge the last two instructions into:
+  //
+  // ldp      x26, x25, [sp], #64
+  //
+}
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -930,12 +962,20 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     int StackRestoreBytes = RedZone ? 0 : NumBytes;
     if (NoCalleeSaveRestore)
       StackRestoreBytes += AfterCSRPopSize;
-    emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
-                    StackRestoreBytes, TII, MachineInstr::FrameDestroy);
+
     // If we were able to combine the local stack pop with the argument pop,
     // then we're done.
-    if (NoCalleeSaveRestore || AfterCSRPopSize == 0)
+    bool Done = NoCalleeSaveRestore || AfterCSRPopSize == 0;
+
+    // If we're done after this, make sure to help the load store optimizer.
+    if (Done)
+      adaptForLdStOpt(MBB, MBB.getFirstTerminator(), LastPopI);
+
+    emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
+                    StackRestoreBytes, TII, MachineInstr::FrameDestroy);
+    if (Done)
       return;
+
     NumBytes = 0;
   }
 
@@ -967,33 +1007,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       FirstSPPopI = Prev;
     }
 
-    // Sometimes (when we restore in the same order as we save), we can end up
-    // with code like this:
-    //
-    // ldp      x26, x25, [sp]
-    // ldp      x24, x23, [sp, #16]
-    // ldp      x22, x21, [sp, #32]
-    // ldp      x20, x19, [sp, #48]
-    // add      sp, sp, #64
-    //
-    // In this case, it is always better to put the first ldp at the end, so
-    // that the load-store optimizer can run and merge the ldp and the add into
-    // a post-index ldp.
-    // If we managed to grab the first pop instruction, move it to the end.
-    if (LastPopI != Begin)
-      MBB.splice(FirstSPPopI, &MBB, LastPopI);
-    // We should end up with something like this now:
-    //
-    // ldp      x24, x23, [sp, #16]
-    // ldp      x22, x21, [sp, #32]
-    // ldp      x20, x19, [sp, #48]
-    // ldp      x26, x25, [sp]
-    // add      sp, sp, #64
-    //
-    // and the load-store optimizer can merge the last two instructions into:
-    //
-    // ldp      x26, x25, [sp], #64
-    //
+    adaptForLdStOpt(MBB, FirstSPPopI, LastPopI);
+
     emitFrameOffset(MBB, FirstSPPopI, DL, AArch64::SP, AArch64::SP,
                     AfterCSRPopSize, TII, MachineInstr::FrameDestroy);
   }

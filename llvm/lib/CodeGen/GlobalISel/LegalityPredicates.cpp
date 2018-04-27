@@ -41,6 +41,18 @@ LegalityPredicate LegalityPredicates::typePairInSet(
   };
 }
 
+LegalityPredicate LegalityPredicates::typePairAndMemSizeInSet(
+    unsigned TypeIdx0, unsigned TypeIdx1, unsigned MMOIdx,
+    std::initializer_list<TypePairAndMemSize> TypesAndMemSizeInit) {
+  SmallVector<TypePairAndMemSize, 4> TypesAndMemSize = TypesAndMemSizeInit;
+  return [=](const LegalityQuery &Query) {
+    TypePairAndMemSize Match = {Query.Types[TypeIdx0], Query.Types[TypeIdx1],
+                                Query.MMODescrs[MMOIdx].Size};
+    return std::find(TypesAndMemSize.begin(), TypesAndMemSize.end(), Match) !=
+           TypesAndMemSize.end();
+  };
+}
+
 LegalityPredicate LegalityPredicates::isScalar(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     return Query.Types[TypeIdx].isScalar();
@@ -67,6 +79,12 @@ LegalityPredicate LegalityPredicates::sizeNotPow2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT &QueryTy = Query.Types[TypeIdx];
     return QueryTy.isScalar() && !isPowerOf2_32(QueryTy.getSizeInBits());
+  };
+}
+
+LegalityPredicate LegalityPredicates::memSizeInBytesNotPow2(unsigned MMOIdx) {
+  return [=](const LegalityQuery &Query) {
+    return !isPowerOf2_32(Query.MMODescrs[MMOIdx].Size /* In Bytes */);
   };
 }
 

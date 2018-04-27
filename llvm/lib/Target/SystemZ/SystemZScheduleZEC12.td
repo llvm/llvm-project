@@ -134,21 +134,6 @@ def : InstRW<[LSU_lat1, EndGroup], (instregex "Return$")>;
 def : InstRW<[LSU_lat1], (instregex "CondReturn$")>;
 
 //===----------------------------------------------------------------------===//
-// Select instructions
-//===----------------------------------------------------------------------===//
-
-// Select pseudo 
-def : InstRW<[FXU], (instregex "Select(32|64|32Mux)$")>;
-
-// CondStore pseudos
-def : InstRW<[FXU], (instregex "CondStore16(Inv)?$")>;
-def : InstRW<[FXU], (instregex "CondStore16Mux(Inv)?$")>;
-def : InstRW<[FXU], (instregex "CondStore32(Inv)?$")>;
-def : InstRW<[FXU], (instregex "CondStore64(Inv)?$")>;
-def : InstRW<[FXU], (instregex "CondStore8(Inv)?$")>;
-def : InstRW<[FXU], (instregex "CondStore8Mux(Inv)?$")>;
-
-//===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//
 
@@ -644,7 +629,7 @@ def : InstRW<[FXU, FXU, LSU, Lat6, GroupAlone], (instregex "BASSM$")>;
 
 // Transaction begin
 def : InstRW<[LSU, LSU, FXU, FXU, FXU, FXU, FXU, Lat15, GroupAlone],
-              (instregex "TBEGIN(C|_nofloat)?$")>;
+              (instregex "TBEGIN(C)?$")>;
 
 // Transaction end
 def : InstRW<[LSU, GroupAlone], (instregex "TEND$")>;
@@ -674,10 +659,6 @@ def : InstRW<[FXU, FXU, Lat7, GroupAlone], (instregex "FLOGR$")>;
 // Population count
 def : InstRW<[FXU, Lat3], (instregex "POPCNT$")>;
 
-// Extend
-def : InstRW<[FXU], (instregex "AEXT128$")>;
-def : InstRW<[FXU], (instregex "ZEXT128$")>;
-
 // String instructions
 def : InstRW<[FXU, LSU, Lat30], (instregex "SRST$")>;
 def : InstRW<[FXU, Lat30], (instregex "SRSTU$")>;
@@ -704,14 +685,6 @@ def : InstRW<[], (instregex "Insn.*")>;
 // ----------------------------- Floating point ----------------------------- //
 
 //===----------------------------------------------------------------------===//
-// FP: Select instructions
-//===----------------------------------------------------------------------===//
-
-def : InstRW<[FXU], (instregex "SelectF(32|64|128)$")>;
-def : InstRW<[FXU], (instregex "CondStoreF32(Inv)?$")>;
-def : InstRW<[FXU], (instregex "CondStoreF64(Inv)?$")>;
-
-//===----------------------------------------------------------------------===//
 // FP: Move instructions
 //===----------------------------------------------------------------------===//
 
@@ -727,11 +700,11 @@ def : InstRW<[FXU, FXU, Lat2, GroupAlone], (instregex "LXR$")>;
 
 // Load and Test
 def : InstRW<[FPU], (instregex "LT(D|E)BR$")>;
-def : InstRW<[FPU], (instregex "LTEBRCompare(_VecPseudo)?$")>;
-def : InstRW<[FPU], (instregex "LTDBRCompare(_VecPseudo)?$")>;
+def : InstRW<[FPU], (instregex "LTEBRCompare$")>;
+def : InstRW<[FPU], (instregex "LTDBRCompare$")>;
 def : InstRW<[FPU2, FPU2, Lat9, GroupAlone], (instregex "LTXBR$")>;
 def : InstRW<[FPU2, FPU2, Lat9, GroupAlone],
-             (instregex "LTXBRCompare(_VecPseudo)?$")>;
+             (instregex "LTXBRCompare$")>;
 
 // Copy sign
 def : InstRW<[FXU, FXU, Lat5, GroupAlone], (instregex "CPSDRd(d|s)$")>;
