@@ -729,8 +729,15 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   FrontendOpts.SkipFunctionBodies = true;
   FrontendOpts.CodeCompleteOpts = Options;
   FrontendOpts.CodeCompletionAt.FileName = Input.FileName;
-  FrontendOpts.CodeCompletionAt.Line = Input.Pos.line + 1;
-  FrontendOpts.CodeCompletionAt.Column = Input.Pos.character + 1;
+  auto Offset = positionToOffset(Input.Contents, Input.Pos);
+  if (!Offset) {
+    log("Code completion position was invalid " +
+        llvm::toString(Offset.takeError()));
+    return false;
+  }
+  std::tie(FrontendOpts.CodeCompletionAt.Line,
+           FrontendOpts.CodeCompletionAt.Column) =
+      offsetToClangLineColumn(Input.Contents, *Offset);
 
   Clang->setCodeCompletionConsumer(Consumer.release());
 

@@ -164,11 +164,8 @@ makeLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
 
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
-  if (!FE)
-    return {};
-
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(AST, Pos, FE);
+  SourceLocation SourceLocationBeg =
+      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
 
   std::vector<Location> Result;
   // Handle goto definition for #include.
@@ -280,11 +277,8 @@ private:
 std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
-  if (!FE)
-    return {};
-
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(AST, Pos, FE);
+  SourceLocation SourceLocationBeg =
+      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
 
   DeclarationAndMacrosFinder DeclMacrosFinder(llvm::errs(), SourceLocationBeg,
                                               AST.getASTContext(),
@@ -413,11 +407,8 @@ static Hover getHoverContents(StringRef MacroName) {
 
 Hover getHover(ParsedAST &AST, Position Pos) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
-  if (FE == nullptr)
-    return Hover();
-
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(AST, Pos, FE);
+  SourceLocation SourceLocationBeg =
+      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
   DeclarationAndMacrosFinder DeclMacrosFinder(llvm::errs(), SourceLocationBeg,
                                               AST.getASTContext(),
                                               AST.getPreprocessor());
