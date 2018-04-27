@@ -836,10 +836,6 @@ static unsigned getReloc(IntTy Begin, IntTy Size, const ArrayRef<RelTy> &Rels,
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
 template <class ELFT> void EhInputSection::split() {
-  // Early exit if already split.
-  if (!Pieces.empty())
-    return;
-
   if (AreRelocsRela)
     split<ELFT>(relas<ELFT>());
   else
@@ -937,10 +933,6 @@ void MergeInputSection::splitIntoPieces() {
   OffsetMap.reserve(Pieces.size());
   for (size_t I = 0, E = Pieces.size(); I != E; ++I)
     OffsetMap[Pieces[I].InputOff] = I;
-
-  if (Config->GcSections && (Flags & SHF_ALLOC))
-    for (uint32_t Off : LiveOffsets)
-      getSectionPiece(Off)->Live = true;
 }
 
 template <class It, class T, class Compare>
