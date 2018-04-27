@@ -51,18 +51,43 @@ public:
                         BugReporter &BR) const;
 private:
   std::vector<std::string> SelectorsWithAutoreleasingPool = {
+      // Common to NSArray,  NSSet, NSOrderedSet
       "enumerateObjectsUsingBlock:",
+      "enumerateObjectsWithOptions:usingBlock:",
+
+      // Common to NSArray and NSOrderedSet
+      "enumerateObjectsAtIndexes:options:usingBlock:",
+      "indexOfObjectAtIndexes:options:passingTest:",
+      "indexesOfObjectsAtIndexes:options:passingTest:",
+      "indexOfObjectPassingTest:",
+      "indexOfObjectWithOptions:passingTest:",
+      "indexesOfObjectsPassingTest:",
+      "indexesOfObjectsWithOptions:passingTest:",
+
+      // NSDictionary
       "enumerateKeysAndObjectsUsingBlock:",
       "enumerateKeysAndObjectsWithOptions:usingBlock:",
-      "enumerateObjectsWithOptions:usingBlock:",
-      "enumerateObjectsAtIndexes:options:usingBlock:",
+      "keysOfEntriesPassingTest:",
+      "keysOfEntriesWithOptions:passingTest:",
+
+      // NSSet
+      "objectsPassingTest:",
+      "objectsWithOptions:passingTest:",
+      "enumerateIndexPathsWithOptions:usingBlock:",
+
+      // NSIndexSet
       "enumerateIndexesWithOptions:usingBlock:",
       "enumerateIndexesUsingBlock:",
       "enumerateIndexesInRange:options:usingBlock:",
       "enumerateRangesUsingBlock:",
       "enumerateRangesWithOptions:usingBlock:",
-      "enumerateRangesInRange:options:usingBlock:"
-      "objectWithOptions:passingTest:",
+      "enumerateRangesInRange:options:usingBlock:",
+      "indexPassingTest:",
+      "indexesPassingTest:",
+      "indexWithOptions:passingTest:",
+      "indexesWithOptions:passingTest:",
+      "indexInRange:options:passingTest:",
+      "indexesInRange:options:passingTest:"
   };
 
   std::vector<std::string> FunctionsWithAutoreleasingPool = {
@@ -95,9 +120,9 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
   assert(SW);
   BR.EmitBasicReport(
       ADC->getDecl(), Checker,
-      /*Name=*/"Writing into auto-releasing variable from a different queue",
+      /*Name=*/"Write to autoreleasing out parameter inside autorelease pool",
       /*Category=*/"Memory",
-      (llvm::Twine("Writing into an auto-releasing out parameter inside ") +
+      (llvm::Twine("Write to autoreleasing out parameter inside ") +
        "autorelease pool that may exit before " + Name + " returns; consider "
        "writing first to a strong local variable declared outside of the block")
           .str(),
