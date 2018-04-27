@@ -2633,7 +2633,9 @@ nub_size_t DNBArchImplX86_64::GetRegisterContext(void *buf,
 
       // Walk around the gaps in the FPU regs
       memcpy(p, &m_state.context.fpu.no_avx.__fpu_fcw, 5);
-      p += 5;
+      // We read 5 bytes, but we skip 6 to account for __fpu_rsrv1
+      // to match the g_fpu_registers_* tables.
+      p += 6;
       memcpy(p, &m_state.context.fpu.no_avx.__fpu_fop, 8);
       p += 8;
       memcpy(p, &m_state.context.fpu.no_avx.__fpu_dp, 6);
