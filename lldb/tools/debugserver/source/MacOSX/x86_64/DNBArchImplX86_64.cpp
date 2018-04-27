@@ -2717,7 +2717,9 @@ nub_size_t DNBArchImplX86_64::SetRegisterContext(const void *buf,
 
     // Copy fcw through mxcsrmask as there is no padding
     memcpy(&m_state.context.fpu.no_avx.__fpu_fcw, p, 5);
-    p += 5;
+    // We wrote 5 bytes, but we skip 6 to account for __fpu_rsrv1
+    // to match the g_fpu_registers_* tables.
+    p += 6;
     memcpy(&m_state.context.fpu.no_avx.__fpu_fop, p, 8);
     p += 8;
     memcpy(&m_state.context.fpu.no_avx.__fpu_dp, p, 6);
