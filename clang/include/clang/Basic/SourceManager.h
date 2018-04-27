@@ -389,8 +389,8 @@ namespace SrcMgr {
     static ExpansionInfo createForMacroArg(SourceLocation SpellingLoc,
                                            SourceLocation ExpansionLoc) {
       // We store an intentionally invalid source location for the end of the
-      // expansion range to mark that this is a macro argument ion rather than
-      // a normal one.
+      // expansion range to mark that this is a macro argument location rather
+      // than a normal one.
       return create(SpellingLoc, ExpansionLoc, SourceLocation());
     }
   };
