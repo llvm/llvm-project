@@ -126,7 +126,7 @@ public:
                         static_cast<const BasicBlock *>(this)->getTerminator());
   }
 
-  /// Returns the call instruction calling @llvm.experimental.deoptimize
+  /// Returns the call instruction calling \@llvm.experimental.deoptimize
   /// prior to the terminating return instruction of this basic block, if such
   /// a call is present.  Otherwise, returns null.
   const CallInst *getTerminatingDeoptimizeCall() const;

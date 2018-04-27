@@ -759,9 +759,9 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
     TypoExpr *TE = nullptr;
     QualType RecordTy = BaseType;
     if (IsArrow) RecordTy = RecordTy->getAs<PointerType>()->getPointeeType();
-    if (LookupMemberExprInRecord(*this, R, nullptr,
-                                 RecordTy->getAs<RecordType>(), OpLoc, IsArrow,
-                                 SS, TemplateArgs != nullptr, TE))
+    if (LookupMemberExprInRecord(
+            *this, R, nullptr, RecordTy->getAs<RecordType>(), OpLoc, IsArrow,
+            SS, TemplateKWLoc.isValid() || TemplateArgs != nullptr, TE))
       return ExprError();
     if (TE)
       return TE;
@@ -769,10 +769,10 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
   // Explicit member accesses.
   } else {
     ExprResult BaseResult = Base;
-    ExprResult Result = LookupMemberExpr(
-        *this, R, BaseResult, IsArrow, OpLoc, SS,
-        ExtraArgs ? ExtraArgs->ObjCImpDecl : nullptr,
-        TemplateArgs != nullptr);
+    ExprResult Result =
+        LookupMemberExpr(*this, R, BaseResult, IsArrow, OpLoc, SS,
+                         ExtraArgs ? ExtraArgs->ObjCImpDecl : nullptr,
+                         TemplateKWLoc.isValid() || TemplateArgs != nullptr);
 
     if (BaseResult.isInvalid())
       return ExprError();

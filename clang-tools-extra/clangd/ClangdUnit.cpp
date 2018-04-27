@@ -215,19 +215,6 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
                    std::move(IncLocations));
 }
 
-namespace {
-
-SourceLocation getMacroArgExpandedLocation(const SourceManager &Mgr,
-                                           const FileEntry *FE, Position Pos) {
-  // The language server protocol uses zero-based line and column numbers.
-  // Clang uses one-based numbers.
-  SourceLocation InputLoc =
-      Mgr.translateFileLineCol(FE, Pos.line + 1, Pos.character + 1);
-  return Mgr.getMacroArgExpandedLocation(InputLoc);
-}
-
-} // namespace
-
 void ParsedAST::ensurePreambleDeclsDeserialized() {
   if (PreambleDeclsDeserialized || !Preamble)
     return;
@@ -470,40 +457,34 @@ CppFile::rebuildPreamble(CompilerInvocation &CI,
 
 SourceLocation clangd::getBeginningOfIdentifier(ParsedAST &Unit,
                                                 const Position &Pos,
-                                                const FileEntry *FE) {
+                                                const FileID FID) {
   const ASTContext &AST = Unit.getASTContext();
   const SourceManager &SourceMgr = AST.getSourceManager();
-
-  SourceLocation InputLocation =
-      getMacroArgExpandedLocation(SourceMgr, FE, Pos);
-  if (Pos.character == 0) {
-    return InputLocation;
+  auto Offset = positionToOffset(SourceMgr.getBufferData(FID), Pos);
+  if (!Offset) {
+    log("getBeginningOfIdentifier: " + toString(Offset.takeError()));
+    return SourceLocation();
   }
+  SourceLocation InputLoc = SourceMgr.getComposedLoc(FID, *Offset);
 
-  // This handle cases where the position is in the middle of a token or right
-  // after the end of a token. In theory we could just use GetBeginningOfToken
-  // to find the start of the token at the input position, but this doesn't
-  // work when right after the end, i.e. foo|.
-  // So try to go back by one and see if we're still inside an identifier
-  // token. If so, Take the beginning of this token.
-  // (It should be the same identifier because you can't have two adjacent
-  // identifiers without another token in between.)
-  Position PosCharBehind = Pos;
-  --PosCharBehind.character;
-
-  SourceLocation PeekBeforeLocation =
-      getMacroArgExpandedLocation(SourceMgr, FE, PosCharBehind);
-  Token Result;
-  if (Lexer::getRawToken(PeekBeforeLocation, Result, SourceMgr,
-                         AST.getLangOpts(), false)) {
-    // getRawToken failed, just use InputLocation.
-    return InputLocation;
-  }
-
-  if (Result.is(tok::raw_identifier)) {
-    return Lexer::GetBeginningOfToken(PeekBeforeLocation, SourceMgr,
-                                      AST.getLangOpts());
-  }
-
-  return InputLocation;
+  // GetBeginningOfToken(pos) is almost what we want, but does the wrong thing
+  // if the cursor is at the end of the identifier.
+  // Instead, we lex at GetBeginningOfToken(pos - 1). The cases are:
+  //  1) at the beginning of an identifier, we'll be looking at something
+  //  that isn't an identifier.
+  //  2) at the middle or end of an identifier, we get the identifier.
+  //  3) anywhere outside an identifier, we'll get some non-identifier thing.
+  // We can't actually distinguish cases 1 and 3, but returning the original
+  // location is correct for both!
+  if (*Offset == 0) // Case 1 or 3.
+    return SourceMgr.getMacroArgExpandedLocation(InputLoc);
+  SourceLocation Before =
+      SourceMgr.getMacroArgExpandedLocation(InputLoc.getLocWithOffset(-1));
+  Before = Lexer::GetBeginningOfToken(Before, SourceMgr, AST.getLangOpts());
+  Token Tok;
+  if (Before.isValid() &&
+      !Lexer::getRawToken(Before, Tok, SourceMgr, AST.getLangOpts(), false) &&
+      Tok.is(tok::raw_identifier))
+    return Before;                                        // Case 2.
+  return SourceMgr.getMacroArgExpandedLocation(InputLoc); // Case 1 or 3.
 }

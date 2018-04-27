@@ -104,7 +104,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
     unlock_locked = true;
   }
   u64 mid = s->GetId();
-  u32 last_lock = s->last_lock;
+  u64 last_lock = s->last_lock;
   if (!unlock_locked)
     s->Reset(thr->proc());  // must not reset it before the report is printed
   s->mtx.Unlock();
@@ -114,7 +114,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
     rep.AddMutex(mid);
     VarSizeStackTrace trace;
     ObtainCurrentStack(thr, pc, &trace);
-    rep.AddStack(trace);
+    rep.AddStack(trace, true);
     FastState last(last_lock);
     RestoreStack(last.tid(), last.epoch(), &trace, 0);
     rep.AddStack(trace, true);

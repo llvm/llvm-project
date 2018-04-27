@@ -220,10 +220,9 @@ class FJ<bits<6> op> : StdArch
 }
 
 //===----------------------------------------------------------------------===//
-// MFC instruction class in Mips : <|op|mf|rt|rd|0000000|sel|>
+// MFC instruction class in Mips : <|op|mf|rt|rd|gst|0000|sel|>
 //===----------------------------------------------------------------------===//
-class MFC3OP_FM<bits<6> op, bits<5> mfmt>
-{
+class MFC3OP_FM<bits<6> op, bits<5> mfmt, bits<3> guest> : StdArch {
   bits<5> rt;
   bits<5> rd;
   bits<3> sel;
@@ -234,7 +233,8 @@ class MFC3OP_FM<bits<6> op, bits<5> mfmt>
   let Inst{25-21} = mfmt;
   let Inst{20-16} = rt;
   let Inst{15-11} = rd;
-  let Inst{10-3}  = 0;
+  let Inst{10-8}  = guest;
+  let Inst{7-3}   = 0;
   let Inst{2-0}   = sel;
 }
 
@@ -969,4 +969,15 @@ class CACHEOP_FM<bits<6> op> : StdArch {
   let Inst{25-21} = base;
   let Inst{20-16} = hint;
   let Inst{15-0}  = offset;
+}
+
+class HYPCALL_FM<bits<6> op> : StdArch {
+  bits<10> code_;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010000;
+  let Inst{25}    = 1;
+  let Inst{20-11} = code_;
+  let Inst{5-0}   = op;
 }

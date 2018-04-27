@@ -11,10 +11,10 @@
 
 // int_type pbackfail(int_type c = traits::eof());
 
-// This test is not entirely portable
-
 #include <fstream>
 #include <cassert>
+
+#include "test_macros.h"
 
 template <class CharT>
 struct test_buf
@@ -41,7 +41,12 @@ int main()
         assert(f.is_open());
         assert(f.sbumpc() == '1');
         assert(f.sgetc() == '2');
-        assert(f.pbackfail('a') == -1);
+        typename test_buf<char>::int_type pbackResult = f.pbackfail('a');
+        LIBCPP_ASSERT(pbackResult == -1);
+        if (pbackResult != -1) {
+            assert(f.sbumpc() == 'a');
+            assert(f.sgetc() == '2');
+        }
     }
     {
         test_buf<char> f;
@@ -49,8 +54,11 @@ int main()
         assert(f.is_open());
         assert(f.sbumpc() == '1');
         assert(f.sgetc() == '2');
-        assert(f.pbackfail('a') == 'a');
-        assert(f.sbumpc() == 'a');
-        assert(f.sgetc() == '2');
+        typename test_buf<char>::int_type pbackResult = f.pbackfail('a');
+        LIBCPP_ASSERT(pbackResult == 'a');
+        if (pbackResult != -1) {
+            assert(f.sbumpc() == 'a');
+            assert(f.sgetc() == '2');
+        }
     }
 }

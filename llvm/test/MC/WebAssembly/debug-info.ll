@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | llvm-readobj -r -s | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | llvm-readobj -r -s -symbols | FileCheck %s
 
 ; CHECK: Format: WASM
 ; CHECK-NEXT:Arch: wasm32
@@ -159,6 +159,68 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section (14) .debug_line {
 ; CHECK-NEXT:    0x2B R_WEBASSEMBLY_FUNCTION_OFFSET_I32[8] 0
+; CHECK-NEXT:  }
+; CHECK-NEXT:]
+; CHECK-NEXT:Symbols [
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_str
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_abbrev
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_info
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_ranges
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_macinfo
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_pubnames
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_pubtypes
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_line
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: f2
+; CHECK-NEXT:    Type: FUNCTION (0x0)
+; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: foo
+; CHECK-NEXT:    Type: DATA (0x1)
+; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: myextern
+; CHECK-NEXT:    Type: DATA (0x1)
+; CHECK-NEXT:    Flags: 0x10
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: ptr2
+; CHECK-NEXT:    Type: DATA (0x1)
+; CHECK-NEXT:    Flags: 0x4
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 

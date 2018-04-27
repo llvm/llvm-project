@@ -44,6 +44,8 @@ public:
   virtual void emitDirectiveSetNoMt();
   virtual void emitDirectiveSetCRC();
   virtual void emitDirectiveSetNoCRC();
+  virtual void emitDirectiveSetVirt();
+  virtual void emitDirectiveSetNoVirt();
   virtual void emitDirectiveSetAt();
   virtual void emitDirectiveSetAtWithArg(unsigned RegNo);
   virtual void emitDirectiveSetNoAt();
@@ -107,6 +109,8 @@ public:
   virtual void emitDirectiveSetNoOddSPReg();
   virtual void emitDirectiveModuleCRC();
   virtual void emitDirectiveModuleNoCRC();
+  virtual void emitDirectiveModuleVirt();
+  virtual void emitDirectiveModuleNoVirt();
 
   void emitR(unsigned Opcode, unsigned Reg0, SMLoc IDLoc,
              const MCSubtargetInfo *STI);
@@ -219,6 +223,8 @@ public:
   void emitDirectiveSetNoMt() override;
   void emitDirectiveSetCRC() override;
   void emitDirectiveSetNoCRC() override;
+  void emitDirectiveSetVirt() override;
+  void emitDirectiveSetNoVirt() override;
   void emitDirectiveSetAt() override;
   void emitDirectiveSetAtWithArg(unsigned RegNo) override;
   void emitDirectiveSetNoAt() override;
@@ -286,6 +292,8 @@ public:
   void emitDirectiveModuleMT() override;
   void emitDirectiveModuleCRC() override;
   void emitDirectiveModuleNoCRC() override;
+  void emitDirectiveModuleVirt() override;
+  void emitDirectiveModuleNoVirt() override;
   void emitDirectiveSetFp(MipsABIFlagsSection::FpABIKind Value) override;
   void emitDirectiveSetOddSPReg() override;
   void emitDirectiveSetNoOddSPReg() override;

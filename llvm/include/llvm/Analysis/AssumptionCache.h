@@ -32,20 +32,20 @@ class Function;
 class raw_ostream;
 class Value;
 
-/// \brief A cache of @llvm.assume calls within a function.
+/// \brief A cache of \@llvm.assume calls within a function.
 ///
 /// This cache provides fast lookup of assumptions within a function by caching
 /// them and amortizing the cost of scanning for them across all queries. Passes
 /// that create new assumptions are required to call registerAssumption() to
-/// register any new @llvm.assume calls that they create. Deletions of
-/// @llvm.assume calls do not require special handling.
+/// register any new \@llvm.assume calls that they create. Deletions of
+/// \@llvm.assume calls do not require special handling.
 class AssumptionCache {
   /// \brief The function for which this cache is handling assumptions.
   ///
   /// We track this to lazily populate our assumptions.
   Function &F;
 
-  /// \brief Vector of weak value handles to calls of the @llvm.assume
+  /// \brief Vector of weak value handles to calls of the \@llvm.assume
   /// intrinsic.
   SmallVector<WeakTrackingVH, 4> AssumeHandles;
 
@@ -98,7 +98,7 @@ public:
     return false;
   }
 
-  /// \brief Add an @llvm.assume intrinsic to this function's cache.
+  /// \brief Add an \@llvm.assume intrinsic to this function's cache.
   ///
   /// The call passed in must be an instruction within this function and must
   /// not already be in the cache.
@@ -108,7 +108,7 @@ public:
   /// the values about which this assumption provides information).
   void updateAffectedValues(CallInst *CI);
 
-  /// \brief Clear the cache of @llvm.assume intrinsics for a function.
+  /// \brief Clear the cache of \@llvm.assume intrinsics for a function.
   ///
   /// It will be re-scanned the next time it is requested.
   void clear() {

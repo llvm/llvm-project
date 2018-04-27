@@ -37,5 +37,5 @@ define void @h2() "target-features"="-thumb-mode" !type !1 {
 ; CHECK-NEXT:  unreachable
 ; CHECK-NEXT: }
 
-; CHECK-DAG: attributes #[[AA]] = { naked "target-features"="-thumb-mode" }
-; CHECK-DAG: attributes #[[AT]] = { naked "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; CHECK-DAG: attributes #[[AA]] = { naked nounwind "target-features"="-thumb-mode" }
+; CHECK-DAG: attributes #[[AT]] = { naked nounwind "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }

@@ -91,6 +91,8 @@ struct Position {
   int line = 0;
 
   /// Character offset on a line in a document (zero-based).
+  /// WARNING: this is in UTF-16 codepoints, not bytes or characters!
+  /// Use the functions in SourceCode.h to construct/interpret Positions.
   int character = 0;
 
   friend bool operator==(const Position &LHS, const Position &RHS) {

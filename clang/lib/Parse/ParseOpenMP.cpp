@@ -1154,7 +1154,6 @@ bool Parser::ParseOpenMPSimpleVarList(
   // Read tokens while ')' or annot_pragma_openmp_end is not found.
   while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end)) {
     CXXScopeSpec SS;
-    SourceLocation TemplateKWLoc;
     UnqualifiedId Name;
     // Read var name.
     Token PrevTok = Tok;
@@ -1166,7 +1165,7 @@ bool Parser::ParseOpenMPSimpleVarList(
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
     } else if (ParseUnqualifiedId(SS, false, false, false, false, nullptr,
-                                  TemplateKWLoc, Name)) {
+                                  nullptr, Name)) {
       IsCorrect = false;
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -1648,7 +1647,6 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPClauseKind Kind,
 
 static bool ParseReductionId(Parser &P, CXXScopeSpec &ReductionIdScopeSpec,
                              UnqualifiedId &ReductionId) {
-  SourceLocation TemplateKWLoc;
   if (ReductionIdScopeSpec.isEmpty()) {
     auto OOK = OO_None;
     switch (P.getCurToken().getKind()) {
@@ -1690,7 +1688,7 @@ static bool ParseReductionId(Parser &P, CXXScopeSpec &ReductionIdScopeSpec,
                               /*AllowDestructorName*/ false,
                               /*AllowConstructorName*/ false,
                               /*AllowDeductionGuide*/ false,
-                              nullptr, TemplateKWLoc, ReductionId);
+                              nullptr, nullptr, ReductionId);
 }
 
 /// Parses clauses with list.
