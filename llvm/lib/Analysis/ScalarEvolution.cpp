@@ -3567,6 +3567,11 @@ const SCEV *ScalarEvolution::getUMinExpr(const SCEV *LHS,
 }
 
 const SCEV *ScalarEvolution::getUMinExpr(SmallVectorImpl<const SCEV *> &Ops) {
+  assert(!Ops.empty() && "At least one operand must be!");
+  // Trivial case.
+  if (Ops.size() == 1)
+    return Ops[0];
+
   // ~umax(~x, ~y, ~z) == umin(x, y, z).
   SmallVector<const SCEV *, 2> NotOps;
   for (auto *S : Ops)
@@ -3965,6 +3970,11 @@ const SCEV *ScalarEvolution::getUMinFromMismatchedTypes(const SCEV *LHS,
 
 const SCEV *ScalarEvolution::getUMinFromMismatchedTypes(
     SmallVectorImpl<const SCEV *> &Ops) {
+  assert(!Ops.empty() && "At least one operand must be!");
+  // Trivial case.
+  if (Ops.size() == 1)
+    return Ops[0];
+
   // Find the max type first.
   Type *MaxType = nullptr;
   for (auto *S : Ops)
@@ -6718,8 +6728,7 @@ ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
            "Predicate should be always true!");
   }
 
-  assert(!Ops.empty() && "Loop without exits");
-  return Ops.size() == 1 ? Ops[0] : SE->getUMinFromMismatchedTypes(Ops);
+  return SE->getUMinFromMismatchedTypes(Ops);
 }
 
 /// Get the exact not taken count for this loop exit.

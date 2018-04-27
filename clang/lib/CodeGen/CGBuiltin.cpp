@@ -3051,11 +3051,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   // OpenCL v2.0 s6.13.16.4 Built-in pipe query functions
   case Builtin::BIget_pipe_num_packets:
   case Builtin::BIget_pipe_max_packets: {
-    const char *Name;
+    const char *BaseName;
+    const PipeType *PipeTy = E->getArg(0)->getType()->getAs<PipeType>();
     if (BuiltinID == Builtin::BIget_pipe_num_packets)
-      Name = "__get_pipe_num_packets";
+      BaseName = "__get_pipe_num_packets";
     else
-      Name = "__get_pipe_max_packets";
+      BaseName = "__get_pipe_max_packets";
+    auto Name = std::string(BaseName) +
+                std::string(PipeTy->isReadOnly() ? "_ro" : "_wo");
 
     // Building the generic function prototype.
     Value *Arg0 = EmitScalarExpr(E->getArg(0));

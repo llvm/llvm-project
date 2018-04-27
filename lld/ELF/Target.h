@@ -48,7 +48,7 @@ public:
   }
 
   // Returns true if a relocation only uses the low bits of a value such that
-  // all those bits are in in the same page. For example, if the relocation
+  // all those bits are in the same page. For example, if the relocation
   // only uses the low 12 bits in a system with 4k pages. If this is true, the
   // bits will always have the same value at runtime and we don't have to emit
   // a dynamic relocation.
