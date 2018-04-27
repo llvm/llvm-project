@@ -678,7 +678,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   SourceLocation SL = Body ? Body->getLocStart() : D->getLocation();
   SL = SM.getExpansionLoc(SL);
 
-  if (!Opts->AnalyzeAll && !SM.isWrittenInMainFile(SL)) {
+  if (!Opts->AnalyzeAll && !Mgr->isInCodeFile(SL)) {
     if (SL.isInvalid() || SM.isInSystemHeader(SL))
       return AM_None;
     return Mode & ~AM_Path;
