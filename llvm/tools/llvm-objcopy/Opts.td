@@ -64,3 +64,11 @@ defm localize_symbol : Eq<"localize-symbol">,
                        HelpText<"Mark <symbol> as local">;
 def L : JoinedOrSeparate<["-"], "L">,
         Alias<localize_symbol>;
+defm globalize_symbol : Eq<"globalize-symbol">,
+                       MetaVarName<"symbol">,
+                       HelpText<"Mark <symbol> as global">;
+defm weaken_symbol : Eq<"weaken-symbol">,
+                       MetaVarName<"symbol">,
+                       HelpText<"Mark <symbol> as weak">;
+def W : JoinedOrSeparate<["-"], "W">,
+        Alias<weaken_symbol>;

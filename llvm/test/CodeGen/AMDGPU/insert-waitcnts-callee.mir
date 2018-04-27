@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waits -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 --- |
   define float @entry_callee_wait(float %arg) #0 {
     ret float %arg

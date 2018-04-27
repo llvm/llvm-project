@@ -14,6 +14,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -22,6 +23,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -31,6 +33,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TargetRegistry.h"
 #include <cctype>
 
 using namespace llvm;
@@ -42,12 +45,12 @@ class MCAsmStreamer final : public MCStreamer {
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
-  std::unique_ptr<MCCodeEmitter> Emitter;
-  std::unique_ptr<MCAsmBackend> AsmBackend;
+  std::unique_ptr<MCAssembler> Assembler;
 
   SmallString<128> ExplicitCommentToEmit;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
+  raw_null_ostream NullStream;
 
   unsigned IsVerboseAsm : 1;
   unsigned ShowInst : 1;
@@ -60,13 +63,16 @@ class MCAsmStreamer final : public MCStreamer {
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
                 bool isVerboseAsm, bool useDwarfDirectory,
-                MCInstPrinter *printer, MCCodeEmitter *emitter,
-                MCAsmBackend *asmbackend, bool showInst)
+                MCInstPrinter *printer, std::unique_ptr<MCCodeEmitter> emitter,
+                std::unique_ptr<MCAsmBackend> asmbackend, bool showInst)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(printer), Emitter(emitter),
-        AsmBackend(asmbackend), CommentStream(CommentToEmit),
-        IsVerboseAsm(isVerboseAsm), ShowInst(showInst),
-        UseDwarfDirectory(useDwarfDirectory) {
+        MAI(Context.getAsmInfo()), InstPrinter(printer),
+        Assembler(llvm::make_unique<MCAssembler>(
+            Context, std::move(asmbackend), std::move(emitter),
+            (asmbackend) ? asmbackend->createObjectWriter(NullStream)
+                         : nullptr)),
+        CommentStream(CommentToEmit), IsVerboseAsm(isVerboseAsm),
+        ShowInst(showInst), UseDwarfDirectory(useDwarfDirectory) {
     assert(InstPrinter);
     if (IsVerboseAsm)
         InstPrinter->setCommentStream(CommentStream);
@@ -1648,7 +1654,12 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
   SmallString<256> Code;
   SmallVector<MCFixup, 4> Fixups;
   raw_svector_ostream VecOS(Code);
-  Emitter->encodeInstruction(Inst, VecOS, Fixups, STI);
+
+  // If we have no code emitter, don't emit code.
+  if (!Assembler->getEmitterPtr())
+    return;
+
+  Assembler->getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
 
   // If we are showing fixups, create symbolic markers in the encoded
   // representation. We do this by making a per-bit map to the fixup item index,
@@ -1660,7 +1671,8 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
     MCFixup &F = Fixups[i];
-    const MCFixupKindInfo &Info = AsmBackend->getFixupKindInfo(F.getKind());
+    const MCFixupKindInfo &Info =
+        Assembler->getBackend().getFixupKindInfo(F.getKind());
     for (unsigned j = 0; j != Info.TargetSize; ++j) {
       unsigned Index = F.getOffset() * 8 + Info.TargetOffset + j;
       assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
@@ -1724,7 +1736,8 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
     MCFixup &F = Fixups[i];
-    const MCFixupKindInfo &Info = AsmBackend->getFixupKindInfo(F.getKind());
+    const MCFixupKindInfo &Info =
+        Assembler->getBackend().getFixupKindInfo(F.getKind());
     OS << "  fixup " << char('A' + i) << " - " << "offset: " << F.getOffset()
        << ", value: " << *F.getValue() << ", kind: " << Info.Name << "\n";
   }
@@ -1737,8 +1750,7 @@ void MCAsmStreamer::EmitInstruction(const MCInst &Inst,
          "Cannot emit contents before setting section!");
 
   // Show the encoding in a comment if we have a code emitter.
-  if (Emitter)
-    AddEncodingComment(Inst, STI, PrintSchedInfo);
+  AddEncodingComment(Inst, STI, PrintSchedInfo);
 
   // Show the MCInst if enabled.
   if (ShowInst) {
@@ -1827,8 +1839,11 @@ void MCAsmStreamer::FinishImpl() {
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
                                     bool isVerboseAsm, bool useDwarfDirectory,
-                                    MCInstPrinter *IP, MCCodeEmitter *CE,
-                                    MCAsmBackend *MAB, bool ShowInst) {
+                                    MCInstPrinter *IP,
+                                    std::unique_ptr<MCCodeEmitter> &&CE,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    bool ShowInst) {
   return new MCAsmStreamer(Context, std::move(OS), isVerboseAsm,
-                           useDwarfDirectory, IP, CE, MAB, ShowInst);
+                           useDwarfDirectory, IP, std::move(CE), std::move(MAB),
+                           ShowInst);
 }

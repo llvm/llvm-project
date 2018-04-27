@@ -40,9 +40,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/GuardWidening.h"
+#include <functional>
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/ConstantRange.h"
@@ -53,6 +55,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
 
@@ -64,6 +67,11 @@ class GuardWideningImpl {
   DominatorTree &DT;
   PostDominatorTree &PDT;
   LoopInfo &LI;
+
+  /// Together, these describe the region of interest.  This might be all of
+  /// the blocks within a function, or only a given loop's blocks and preheader.
+  DomTreeNode *Root;
+  std::function<bool(BasicBlock*)> BlockFilter;
 
   /// The set of guards whose conditions have been widened into dominating
   /// guards.
@@ -205,9 +213,11 @@ class GuardWideningImpl {
   }
 
 public:
+
   explicit GuardWideningImpl(DominatorTree &DT, PostDominatorTree &PDT,
-                             LoopInfo &LI)
-      : DT(DT), PDT(PDT), LI(LI) {}
+                             LoopInfo &LI, DomTreeNode *Root,
+                             std::function<bool(BasicBlock*)> BlockFilter)
+    : DT(DT), PDT(PDT), LI(LI), Root(Root), BlockFilter(BlockFilter) {}
 
   /// The entry point for this pass.
   bool run();
@@ -220,9 +230,12 @@ bool GuardWideningImpl::run() {
   DenseMap<BasicBlock *, SmallVector<IntrinsicInst *, 8>> GuardsInBlock;
   bool Changed = false;
 
-  for (auto DFI = df_begin(DT.getRootNode()), DFE = df_end(DT.getRootNode());
+  for (auto DFI = df_begin(Root), DFE = df_end(Root);
        DFI != DFE; ++DFI) {
     auto *BB = (*DFI)->getBlock();
+    if (!BlockFilter(BB))
+      continue;
+
     auto &CurrentList = GuardsInBlock[BB];
 
     for (auto &I : *BB)
@@ -233,6 +246,7 @@ bool GuardWideningImpl::run() {
       Changed |= eliminateGuardViaWidening(II, DFI, GuardsInBlock);
   }
 
+  assert(EliminatedGuards.empty() || Changed);
   for (auto *II : EliminatedGuards)
     if (!WidenedGuards.count(II))
       II->eraseFromParent();
@@ -252,6 +266,8 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
   // for the most profit.
   for (unsigned i = 0, e = DFSI.getPathLength(); i != e; ++i) {
     auto *CurBB = DFSI.getPath(i)->getBlock();
+    if (!BlockFilter(CurBB))
+      break;
     auto *CurLoop = LI.getLoopFor(CurBB);
     assert(GuardsInBlock.count(CurBB) && "Must have been populated by now!");
     const auto &GuardsInCurBB = GuardsInBlock.find(CurBB)->second;
@@ -319,6 +335,8 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   bool HoistingOutOfLoop = false;
 
   if (DominatingGuardLoop != DominatedGuardLoop) {
+    // Be conservative and don't widen into a sibling loop.  TODO: If the
+    // sibling is colder, we should consider allowing this.
     if (DominatingGuardLoop &&
         !DominatingGuardLoop->contains(DominatedGuardLoop))
       return WS_IllegalOrNegative;
@@ -329,6 +347,12 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   if (!isAvailableAt(DominatedGuard->getArgOperand(0), DominatingGuard))
     return WS_IllegalOrNegative;
 
+  // If the guard was conditional executed, it may never be reached
+  // dynamically.  There are two potential downsides to hoisting it out of the
+  // conditionally executed region: 1) we may spuriously deopt without need and
+  // 2) we have the extra cost of computing the guard condition in the common
+  // case.  At the moment, we really only consider the second in our heuristic
+  // here.  TODO: evaluate cost model for spurious deopt
   bool HoistingOutOfIf =
       !PDT.dominates(DominatedGuard->getParent(), DominatingGuard->getParent());
 
@@ -647,7 +671,8 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!GuardWideningImpl(DT, PDT, LI).run())
+  if (!GuardWideningImpl(DT, PDT, LI, DT.getRootNode(),
+                         [](BasicBlock*) { return true; } ).run())
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -658,7 +683,6 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
 namespace {
 struct GuardWideningLegacyPass : public FunctionPass {
   static char ID;
-  GuardWideningPass Impl;
 
   GuardWideningLegacyPass() : FunctionPass(ID) {
     initializeGuardWideningLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -667,10 +691,11 @@ struct GuardWideningLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
-    return GuardWideningImpl(
-               getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-               getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree(),
-               getAnalysis<LoopInfoWrapperPass>().getLoopInfo()).run();
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    return GuardWideningImpl(DT, PDT, LI, DT.getRootNode(),
+                         [](BasicBlock*) { return true; } ).run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -680,9 +705,43 @@ struct GuardWideningLegacyPass : public FunctionPass {
     AU.addRequired<LoopInfoWrapperPass>();
   }
 };
+
+/// Same as above, but restricted to a single loop at a time.  Can be
+/// scheduled with other loop passes w/o breaking out of LPM
+struct LoopGuardWideningLegacyPass : public LoopPass {
+  static char ID;
+
+  LoopGuardWideningLegacyPass() : LoopPass(ID) {
+    initializeLoopGuardWideningLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
+    if (skipLoop(L))
+      return false;
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    BasicBlock *RootBB = L->getLoopPredecessor();
+    if (!RootBB)
+      RootBB = L->getHeader();
+    auto BlockFilter = [&](BasicBlock *BB) {
+      return BB == RootBB || L->contains(BB);
+    };
+    return GuardWideningImpl(DT, PDT, LI,
+                             DT.getNode(RootBB), BlockFilter).run();
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    getLoopAnalysisUsage(AU);
+    AU.addRequired<PostDominatorTreeWrapperPass>();
+    AU.addPreserved<PostDominatorTreeWrapperPass>();
+  }
+};
 }
 
 char GuardWideningLegacyPass::ID = 0;
+char LoopGuardWideningLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(GuardWideningLegacyPass, "guard-widening", "Widen guards",
                       false, false)
@@ -692,6 +751,20 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(GuardWideningLegacyPass, "guard-widening", "Widen guards",
                     false, false)
 
+INITIALIZE_PASS_BEGIN(LoopGuardWideningLegacyPass, "loop-guard-widening",
+                      "Widen guards (within a single loop, as a loop pass)",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_END(LoopGuardWideningLegacyPass, "loop-guard-widening",
+                    "Widen guards (within a single loop, as a loop pass)",
+                    false, false)
+
 FunctionPass *llvm::createGuardWideningPass() {
   return new GuardWideningLegacyPass();
+}
+
+Pass *llvm::createLoopGuardWideningPass() {
+  return new LoopGuardWideningLegacyPass();
 }

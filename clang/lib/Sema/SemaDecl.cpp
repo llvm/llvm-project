@@ -6979,7 +6979,7 @@ NamedDecl *Sema::getShadowedDeclaration(const TypedefNameDecl *D,
   // Don't warn if typedef declaration is part of a class
   if (D->getDeclContext()->isRecord())
     return nullptr;
-  
+
   if (!shouldWarnIfShadowedDecl(Diags, R))
     return nullptr;
 

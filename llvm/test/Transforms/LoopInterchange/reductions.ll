@@ -220,3 +220,43 @@ for.inc13:                                        ; preds = %for.cond4.for.inc10
 for.end15:                                        ; preds = %for.inc13, %entry
   ret void
 }
+
+;;  for( int i=1;i<N;i++)
+;;    for( int j=1;j<N;j++)
+;;      X+=A[j][i];
+;;  Y = X
+; CHECK: Loops interchanged.
+define void @reduction_05(i32 %N) {
+entry:
+  %cmp16 = icmp sgt i32 %N, 1
+  br i1 %cmp16, label %for.body7.lr.ph, label %for.end8
+
+for.body7.lr.ph:                                  ; preds = %entry, %for.cond1.for.inc6_crit_edge
+  %indvars.iv18 = phi i64 [ %indvars.iv.next19, %for.cond1.for.inc6_crit_edge ], [ 1, %entry ]
+  %X.promoted = load i32, i32* @X
+  br label %for.body7
+
+for.body7:                                        ; preds = %for.body7, %for.body7.lr.ph
+  %indvars.iv = phi i64 [ 1, %for.body7.lr.ph ], [ %indvars.iv.next, %for.body7 ]
+  %add15 = phi i32 [ %X.promoted, %for.body7.lr.ph ], [ %add, %for.body7 ]
+  %arrayidx5 = getelementptr inbounds [500 x [500 x i32]], [500 x [500 x i32]]* @A, i64 0, i64 %indvars.iv, i64 %indvars.iv18
+  %0 = load i32, i32* %arrayidx5
+  %add = add nsw i32 %add15, %0
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %N
+  br i1 %exitcond, label %for.cond1.for.inc6_crit_edge, label %for.body7
+
+for.cond1.for.inc6_crit_edge:                     ; preds = %for.body7
+  store i32 %add, i32* @X
+  %indvars.iv.next19 = add nuw nsw i64 %indvars.iv18, 1
+  %lftr.wideiv20 = trunc i64 %indvars.iv.next19 to i32
+  %exitcond21 = icmp eq i32 %lftr.wideiv20, %N
+  br i1 %exitcond21, label %for.end8, label %for.body7.lr.ph
+
+for.end8:                                         ; preds = %for.cond1.for.inc6_crit_edge, %entry
+  %add.res = phi i32 [ %add, %for.cond1.for.inc6_crit_edge], [ 0, %entry ]
+  store i32 %add.res, i32* @Y
+
+  ret void
+}

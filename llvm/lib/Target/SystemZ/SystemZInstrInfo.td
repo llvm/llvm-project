@@ -681,7 +681,7 @@ let Predicates = [FeatureLoadAndTrap], hasSideEffects = 1 in {
 }
 
 // Extend GR64s to GR128s.
-let usesCustomInserter = 1 in
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
   def ZEXT128 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
 
 //===----------------------------------------------------------------------===//
@@ -693,7 +693,7 @@ def : Pat<(i64 (anyext GR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, subreg_l32)>;
 
 // Extend GR64s to GR128s.
-let usesCustomInserter = 1 in
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
   def AEXT128 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
 
 //===----------------------------------------------------------------------===//
@@ -1934,7 +1934,8 @@ let hasSideEffects = 1, Predicates = [FeatureTransactionalExecution] in {
   // Transaction Begin
   let mayStore = 1, usesCustomInserter = 1, Defs = [CC] in {
     def TBEGIN : SideEffectBinarySIL<"tbegin", 0xE560, z_tbegin, imm32zx16>;
-    def TBEGIN_nofloat : SideEffectBinarySILPseudo<z_tbegin_nofloat, imm32zx16>;
+    let hasNoSchedulingInfo = 1 in
+     def TBEGIN_nofloat : SideEffectBinarySILPseudo<z_tbegin_nofloat, imm32zx16>;
     def TBEGINC : SideEffectBinarySIL<"tbeginc", 0xE561,
                                       int_s390_tbeginc, imm32zx16>;
   }

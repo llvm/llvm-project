@@ -138,17 +138,17 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
         getTargetTriple(), MAI.getAssemblerDialect(), MAI, MII, MRI);
 
     // Create a code emitter if asked to show the encoding.
-    MCCodeEmitter *MCE = nullptr;
+    std::unique_ptr<MCCodeEmitter> MCE;
     if (Options.MCOptions.ShowMCEncoding)
-      MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
+      MCE.reset(getTarget().createMCCodeEmitter(MII, MRI, Context));
 
-    MCAsmBackend *MAB =
-        getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
+    std::unique_ptr<MCAsmBackend> MAB(
+        getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
     auto FOut = llvm::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
         Context, std::move(FOut), Options.MCOptions.AsmVerbose,
-        Options.MCOptions.MCUseDwarfDirectory, InstPrinter, MCE, MAB,
-        Options.MCOptions.ShowMCInst);
+        Options.MCOptions.MCUseDwarfDirectory, InstPrinter, std::move(MCE),
+        std::move(MAB), Options.MCOptions.ShowMCInst);
     AsmStreamer.reset(S);
     break;
   }

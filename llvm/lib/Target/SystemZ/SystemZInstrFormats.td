@@ -4685,6 +4685,7 @@ class SelectWrapper<ValueType vt, RegisterOperand cls>
            [(set (vt cls:$dst), (z_select_ccmask cls:$src1, cls:$src2,
                                             imm32zx4:$valid, imm32zx4:$cc))]> {
   let usesCustomInserter = 1;
+  let hasNoSchedulingInfo = 1;
   // Although the instructions used by these nodes do not in themselves
   // change CC, the insertion requires new blocks, and CC cannot be live
   // across them.
@@ -4695,7 +4696,7 @@ class SelectWrapper<ValueType vt, RegisterOperand cls>
 // Stores $new to $addr if $cc is true ("" case) or false (Inv case).
 multiclass CondStores<RegisterOperand cls, SDPatternOperator store,
                       SDPatternOperator load, AddressingMode mode> {
-  let Defs = [CC], Uses = [CC], usesCustomInserter = 1,
+  let Defs = [CC], Uses = [CC], usesCustomInserter = 1, hasNoSchedulingInfo = 1,
       mayLoad = 1, mayStore = 1 in {
     def "" : Pseudo<(outs),
                     (ins cls:$new, mode:$addr, imm32zx4:$valid, imm32zx4:$cc),

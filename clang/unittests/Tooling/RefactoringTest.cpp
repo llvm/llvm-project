@@ -1035,7 +1035,7 @@ TEST(DeduplicateByFileTest, PathsWithDots) {
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
       new vfs::InMemoryFileSystem());
   FileManager FileMgr(FileSystemOptions(), VFS);
-#if !defined(LLVM_ON_WIN32)
+#if !defined(_WIN32)
   StringRef Path1 = "a/b/.././c.h";
   StringRef Path2 = "a/c.h";
 #else
@@ -1056,7 +1056,7 @@ TEST(DeduplicateByFileTest, PathWithDotSlash) {
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
       new vfs::InMemoryFileSystem());
   FileManager FileMgr(FileSystemOptions(), VFS);
-#if !defined(LLVM_ON_WIN32)
+#if !defined(_WIN32)
   StringRef Path1 = "./a/b/c.h";
   StringRef Path2 = "a/b/c.h";
 #else
@@ -1077,7 +1077,7 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
       new vfs::InMemoryFileSystem());
   FileManager FileMgr(FileSystemOptions(), VFS);
-#if !defined(LLVM_ON_WIN32)
+#if !defined(_WIN32)
   StringRef Path1 = "./a/b/c.h";
   StringRef Path2 = "a/b/c.h";
 #else

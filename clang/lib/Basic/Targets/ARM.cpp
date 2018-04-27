@@ -390,6 +390,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Unaligned = 1;
   SoftFloat = SoftFloatABI = false;
   HWDiv = 0;
+  DotProd = 0;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "+fp-only-sp".
@@ -432,6 +433,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
       HasLegalHalfType = true;
+    } else if (Feature == "+dotprod") {
+      DotProd = true;
     }
   }
   HW_FP &= ~HW_FP_remove;
@@ -731,6 +734,9 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasLegalHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
+  // Armv8.2-A dot product intrinsics
+  if (DotProd)
+    Builder.defineMacro("__ARM_FEATURE_DOTPROD", "1");
 
   switch (ArchKind) {
   default:

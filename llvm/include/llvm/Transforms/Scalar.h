@@ -99,6 +99,16 @@ FunctionPass *createGuardWideningPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopGuardWidening - Analogous to the GuardWidening pass, but restricted to a
+// single loop at a time for use within a LoopPassManager.  Desired effect is
+// to widen guards into preheader or a single guard within loop if that's not
+// possible.
+//
+Pass *createLoopGuardWideningPass();
+
+
+//===----------------------------------------------------------------------===//
+//
 // BitTrackingDCE - This pass uses a bit-tracking DCE algorithm in order to
 // remove computations of dead bits.
 //

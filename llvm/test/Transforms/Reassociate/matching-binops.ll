@@ -2,13 +2,13 @@
 ; RUN: opt < %s -reassociate -S | FileCheck %s
 
 ; PR37098 - https://bugs.llvm.org/show_bug.cgi?id=37098
-; In all positive tests, we should reassociate binops 
+; In all positive tests, we should reassociate binops
 ; to allow more factoring folds.
 
-; There are 5 associative integer binops * 
-;           13 integer binops * 
+; There are 5 associative integer binops *
+;           13 integer binops *
 ;           4 operand commutes =
-;           260 potential variations of this fold 
+;           260 potential variations of this fold
 ; for integer binops. There are another 40 for FP.
 ; Mix the commutation options to provide coverage using less tests.
 
@@ -283,4 +283,77 @@ define float @fmul_fdiv(float %x, float %y, float %z, float %m) {
   %r = fmul fast float %sy, %a
   ret float %r
 }
+
+; Verify that debug info for modified instructions gets discarded (references become undef).
+
+define i32 @and_shl_dbg(i32 %x, i32 %y, i32 %z, i32 %shamt) {
+; CHECK-LABEL: @and_shl_dbg(
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[X:%.*]], metadata !7, metadata !DIExpression()), !dbg !20
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[Y:%.*]], metadata !13, metadata !DIExpression()), !dbg !21
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[Z:%.*]], metadata !14, metadata !DIExpression()), !dbg !22
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[SHAMT:%.*]], metadata !15, metadata !DIExpression()), !dbg !23
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X]], [[SHAMT]], !dbg !24
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[SHL]], metadata !16, metadata !DIExpression()), !dbg !25
+; CHECK-NEXT:    [[SHL1:%.*]] = shl i32 [[Y]], [[SHAMT]], !dbg !26
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[SHL1]], metadata !17, metadata !DIExpression()), !dbg !27
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[Z]], !dbg !28
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[AND]], metadata !18, metadata !DIExpression()), !dbg !29
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND]], [[SHL1]], !dbg !30
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[AND2]], metadata !19, metadata !DIExpression()), !dbg !31
+; CHECK-NEXT:    ret i32 [[AND2]], !dbg !32
+;
+  call void @llvm.dbg.value(metadata i32 %x, metadata !13, metadata !DIExpression()), !dbg !21
+  call void @llvm.dbg.value(metadata i32 %y, metadata !14, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.value(metadata i32 %z, metadata !15, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.value(metadata i32 %shamt, metadata !16, metadata !DIExpression()), !dbg !24
+  %shl = shl i32 %x, %shamt, !dbg !25
+  call void @llvm.dbg.value(metadata i32 %shl, metadata !17, metadata !DIExpression()), !dbg !26
+  %shl1 = shl i32 %y, %shamt, !dbg !27
+  call void @llvm.dbg.value(metadata i32 %shl1, metadata !18, metadata !DIExpression()), !dbg !28
+  %and = and i32 %shl, %z, !dbg !29
+  call void @llvm.dbg.value(metadata i32 %and, metadata !19, metadata !DIExpression()), !dbg !30
+  %and2 = and i32 %and, %shl1, !dbg !31
+  call void @llvm.dbg.value(metadata i32 %and2, metadata !20, metadata !DIExpression()), !dbg !32
+  ret i32 %and2, !dbg !33
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!3, !4, !5, !6}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0 (trunk 331069)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!1 = !DIFile(filename: "ass.c", directory: "/Users/spatel/myllvm/release/bin")
+!2 = !{}
+!3 = !{i32 2, !"Dwarf Version", i32 4}
+!4 = !{i32 2, !"Debug Info Version", i32 3}
+!5 = !{i32 1, !"wchar_size", i32 4}
+!6 = !{i32 7, !"PIC Level", i32 2}
+!7 = !{!"clang version 7.0.0 (trunk 331069)"}
+!8 = distinct !DISubprogram(name: "and_shl_dbg", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!9 = !DISubroutineType(types: !10)
+!10 = !{!11, !11, !11, !11, !11}
+!11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!12 = !{!13, !14, !15, !16, !17, !18, !19, !20}
+!13 = !DILocalVariable(name: "x", arg: 1, scope: !8, file: !1, line: 1, type: !11)
+!14 = !DILocalVariable(name: "y", arg: 2, scope: !8, file: !1, line: 1, type: !11)
+!15 = !DILocalVariable(name: "z", arg: 3, scope: !8, file: !1, line: 1, type: !11)
+!16 = !DILocalVariable(name: "shamt", arg: 4, scope: !8, file: !1, line: 1, type: !11)
+!17 = !DILocalVariable(name: "sx", scope: !8, file: !1, line: 2, type: !11)
+!18 = !DILocalVariable(name: "sy", scope: !8, file: !1, line: 3, type: !11)
+!19 = !DILocalVariable(name: "a", scope: !8, file: !1, line: 4, type: !11)
+!20 = !DILocalVariable(name: "r", scope: !8, file: !1, line: 5, type: !11)
+!21 = !DILocation(line: 1, column: 21, scope: !8)
+!22 = !DILocation(line: 1, column: 28, scope: !8)
+!23 = !DILocation(line: 1, column: 35, scope: !8)
+!24 = !DILocation(line: 1, column: 42, scope: !8)
+!25 = !DILocation(line: 2, column: 14, scope: !8)
+!26 = !DILocation(line: 2, column: 7, scope: !8)
+!27 = !DILocation(line: 3, column: 14, scope: !8)
+!28 = !DILocation(line: 3, column: 7, scope: !8)
+!29 = !DILocation(line: 4, column: 14, scope: !8)
+!30 = !DILocation(line: 4, column: 7, scope: !8)
+!31 = !DILocation(line: 5, column: 14, scope: !8)
+!32 = !DILocation(line: 5, column: 7, scope: !8)
+!33 = !DILocation(line: 6, column: 3, scope: !8)
 

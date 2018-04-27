@@ -378,7 +378,7 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
   // forward.
   CmdArgs.push_back("-plugin");
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
   const char *Suffix = ".dll";
 #elif defined(__APPLE__)
   const char *Suffix = ".dylib";

@@ -1725,3 +1725,37 @@ def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
 def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
               (TAILCALL_MMR6 texternalsym:$dst)>, ISA_MICROMIPS32R6;
 
+
+def : MipsPat<(brcond (i32 (setne GPR32:$lhs, 0)), bb:$dst),
+              (BNEZC_MMR6 GPR32:$lhs, bb:$dst)>, ISA_MICROMIPS32R6;
+def : MipsPat<(brcond (i32 (seteq GPR32:$lhs, 0)), bb:$dst),
+              (BEQZC_MMR6 GPR32:$lhs, bb:$dst)>, ISA_MICROMIPS32R6;
+
+def : MipsPat<(brcond (i32 (setge GPR32:$lhs, GPR32:$rhs)), bb:$dst),
+              (BEQZC_MMR6 (SLT_MM GPR32:$lhs, GPR32:$rhs), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+def : MipsPat<(brcond (i32 (setuge GPR32:$lhs, GPR32:$rhs)), bb:$dst),
+              (BEQZC_MMR6 (SLTu_MM GPR32:$lhs, GPR32:$rhs), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+def : MipsPat<(brcond (i32 (setge GPR32:$lhs, immSExt16:$rhs)), bb:$dst),
+              (BEQZC_MMR6 (SLTi_MM GPR32:$lhs, immSExt16:$rhs), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+def : MipsPat<(brcond (i32 (setuge GPR32:$lhs, immSExt16:$rhs)), bb:$dst),
+              (BEQZC_MMR6 (SLTiu_MM GPR32:$lhs, immSExt16:$rhs), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+def : MipsPat<(brcond (i32 (setgt GPR32:$lhs, immSExt16Plus1:$rhs)), bb:$dst),
+              (BEQZC_MMR6 (SLTi_MM GPR32:$lhs, (Plus1 imm:$rhs)), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+def : MipsPat<(brcond (i32 (setugt GPR32:$lhs, immSExt16Plus1:$rhs)), bb:$dst),
+              (BEQZC_MMR6 (SLTiu_MM GPR32:$lhs, (Plus1 imm:$rhs)), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+
+def : MipsPat<(brcond (i32 (setle GPR32:$lhs, GPR32:$rhs)), bb:$dst),
+              (BEQZC_MMR6  (SLT_MM GPR32:$rhs, GPR32:$lhs), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+def : MipsPat<(brcond (i32 (setule GPR32:$lhs, GPR32:$rhs)), bb:$dst),
+              (BEQZC_MMR6  (SLTu_MM GPR32:$rhs, GPR32:$lhs), bb:$dst)>,
+      ISA_MICROMIPS32R6;
+
+def : MipsPat<(brcond GPR32:$cond, bb:$dst),
+              (BNEZC_MMR6 GPR32:$cond, bb:$dst)>, ISA_MICROMIPS32R6;

@@ -90,6 +90,9 @@ class TargetRegisterClass;
       // Thread Pointer
       ThreadPointer,
 
+      // Vector Floating Point Multiply and Subtract
+      FMS,
+
       // Floating Point Branch Conditional
       FPBrcond,
 
