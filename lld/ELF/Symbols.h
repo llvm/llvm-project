@@ -32,6 +32,20 @@ template <class ELFT> class ObjFile;
 class OutputSection;
 template <class ELFT> class SharedFile;
 
+// This is a StringRef-like container that doesn't run strlen().
+//
+// ELF string tables contain a lot of null-terminated strings. Most of them
+// are not necessary for the linker because they are names of local symbols,
+// and the linker doesn't use local symbol names for name resolution. So, we
+// use this class to represents strings read from string tables.
+struct StringRefZ {
+  StringRefZ(const char *S) : Data(S), Size(-1) {}
+  StringRefZ(StringRef S) : Data(S.data()), Size(S.size()) {}
+
+  const char *Data;
+  const uint32_t Size;
+};
+
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -49,15 +63,17 @@ public:
   InputFile *File;
 
 protected:
-  const char *NameStart;
+  const char *NameData;
   mutable uint32_t NameSize;
 
 public:
   uint32_t DynsymIndex = 0;
   uint32_t GotIndex = -1;
-  uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
   uint32_t GlobalDynIndex = -1;
+
+  // This field is a index to the symbol's version definition.
+  uint32_t VerdefIndex = -1;
 
   // Version definition index.
   uint16_t VersionId;
@@ -117,9 +133,10 @@ public:
 
   StringRef getName() const {
     if (NameSize == (uint32_t)-1)
-      NameSize = strlen(NameStart);
-    return StringRef(NameStart, NameSize);
+      NameSize = strlen(NameData);
+    return {NameData, NameSize};
   }
+
   void parseSymbolVersion();
 
   bool isInGot() const { return GotIndex != -1U; }
@@ -132,17 +149,17 @@ public:
   uint64_t getGotPltOffset() const;
   uint64_t getGotPltVA() const;
   uint64_t getPltVA() const;
+  uint64_t getPltOffset() const;
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 
 protected:
   Symbol(Kind K, InputFile *File, StringRefZ Name, uint8_t Binding,
          uint8_t StOther, uint8_t Type)
-      : File(File), NameStart(Name.data()), NameSize(Name.rawSize()),
-        Binding(Binding), Type(Type), StOther(StOther), SymbolKind(K),
-        NeedsPltAddr(false), IsInGlobalMipsGot(false), Is32BitMipsGot(false),
-        IsInIplt(false), IsInIgot(false), IsPreemptible(false),
-        Used(!Config->GcSections) {}
+      : File(File), NameData(Name.Data), NameSize(Name.Size), Binding(Binding),
+        Type(Type), StOther(StOther), SymbolKind(K), NeedsPltAddr(false),
+        IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
+        IsInIgot(false), IsPreemptible(false), Used(!Config->GcSections) {}
 
 public:
   // True the symbol should point to its PLT entry.
@@ -212,8 +229,9 @@ public:
   SharedSymbol(InputFile &File, StringRef Name, uint8_t Binding,
                uint8_t StOther, uint8_t Type, uint64_t Value, uint64_t Size,
                uint32_t Alignment, uint32_t VerdefIndex)
-      : Symbol(SharedKind, &File, Name, Binding, StOther, Type), Value(Value),
-        Size(Size), VerdefIndex(VerdefIndex), Alignment(Alignment) {
+      : Symbol(SharedKind, &File, Name, Binding, StOther, Type),
+        Alignment(Alignment), Value(Value), Size(Size) {
+    this->VerdefIndex = VerdefIndex;
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
     // regular symbol resolution scheme in which symbols are resolved just
@@ -238,16 +256,10 @@ public:
     return *cast<SharedFile<ELFT>>(File);
   }
 
-  // If not null, there is a copy relocation to this section.
-  InputSection *CopyRelSec = nullptr;
+  uint32_t Alignment;
 
   uint64_t Value; // st_value
   uint64_t Size;  // st_size
-
-  // This field is a index to the symbol's version definition.
-  uint32_t VerdefIndex;
-
-  uint32_t Alignment;
 };
 
 // LazyArchive and LazyObject represent a symbols that is not yet in the link,

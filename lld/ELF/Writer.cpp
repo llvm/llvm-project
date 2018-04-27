@@ -1570,9 +1570,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
     if (InX::DynSymTab && Sym->includeInDynsym()) {
       InX::DynSymTab->addSymbol(Sym);
-      if (auto *SS = dyn_cast<SharedSymbol>(Sym))
-        if (cast<SharedFile<ELFT>>(Sym->File)->IsNeeded)
-          In<ELFT>::VerNeed->addSymbol(SS);
+      if (auto *File = dyn_cast_or_null<SharedFile<ELFT>>(Sym->File))
+        if (File->IsNeeded && !Sym->isUndefined())
+          In<ELFT>::VerNeed->addSymbol(Sym);
     }
   }
 
