@@ -633,6 +633,8 @@ def err_template_spec_syntax_non_template : Error<
   "<unused>|refers to a variable template|<unused>}1">;
 def err_id_after_template_in_nested_name_spec : Error<
   "expected template name after 'template' keyword in nested name specifier">;
+def err_unexpected_template_in_unqualified_id : Error<
+  "'template' keyword not permitted here">;
 def err_two_right_angle_brackets_need_space : Error<
   "a space is required between consecutive right angle brackets (use '> >')">;
 def err_right_angle_bracket_equal_needs_space : Error<

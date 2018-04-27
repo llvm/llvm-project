@@ -6115,7 +6115,7 @@ public:
   TemplateNameKind isTemplateName(Scope *S,
                                   CXXScopeSpec &SS,
                                   bool hasTemplateKeyword,
-                                  UnqualifiedId &Name,
+                                  const UnqualifiedId &Name,
                                   ParsedType ObjectType,
                                   bool EnteringContext,
                                   TemplateTy &Template,
@@ -6285,7 +6285,7 @@ public:
 
   TemplateNameKind ActOnDependentTemplateName(
       Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-      UnqualifiedId &Name, ParsedType ObjectType, bool EnteringContext,
+      const UnqualifiedId &Name, ParsedType ObjectType, bool EnteringContext,
       TemplateTy &Template, bool AllowInjectedClassName = false);
 
   DeclResult

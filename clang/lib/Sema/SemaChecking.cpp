@@ -2309,12 +2309,29 @@ bool Sema::CheckX86BuiltinGatherScatterScale(unsigned BuiltinID,
     << Arg->getSourceRange();
 }
 
+static bool isX86_32Builtin(unsigned BuiltinID) {
+  // These builtins only work on x86-32 targets.
+  switch (BuiltinID) {
+  case X86::BI__builtin_ia32_readeflags_u32:
+  case X86::BI__builtin_ia32_writeeflags_u32:
+    return true;
+  }
+
+  return false;
+}
+
 bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   if (BuiltinID == X86::BI__builtin_cpu_supports)
     return SemaBuiltinCpuSupports(*this, TheCall);
 
   if (BuiltinID == X86::BI__builtin_cpu_is)
     return SemaBuiltinCpuIs(*this, TheCall);
+
+  // Check for 32-bit only builtins on a 64-bit target.
+  const llvm::Triple &TT = Context.getTargetInfo().getTriple();
+  if (TT.getArch() != llvm::Triple::x86 && isX86_32Builtin(BuiltinID))
+    return Diag(TheCall->getCallee()->getLocStart(),
+                diag::err_32_bit_builtin_64_bit_tgt);
 
   // If the intrinsic has rounding or SAE make sure its valid.
   if (CheckX86BuiltinRoundingOrSAE(BuiltinID, TheCall))

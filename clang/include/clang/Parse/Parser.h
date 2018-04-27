@@ -2552,12 +2552,11 @@ private:
   struct UsingDeclarator {
     SourceLocation TypenameLoc;
     CXXScopeSpec SS;
-    SourceLocation TemplateKWLoc;
     UnqualifiedId Name;
     SourceLocation EllipsisLoc;
 
     void clear() {
-      TypenameLoc = TemplateKWLoc = EllipsisLoc = SourceLocation();
+      TypenameLoc = EllipsisLoc = SourceLocation();
       SS.clear();
       Name.clear();
     }
@@ -2752,7 +2751,7 @@ public:
                           bool AllowConstructorName,
                           bool AllowDeductionGuide,
                           ParsedType ObjectType,
-                          SourceLocation& TemplateKWLoc,
+                          SourceLocation *TemplateKWLoc,
                           UnqualifiedId &Result);
 
 private:
