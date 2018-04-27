@@ -6916,6 +6916,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_SwiftBridge:
     handleSwiftBridgeAttr(S, D, AL);
     break;
+  case AttributeList::AT_SwiftBridgedTypedef:
+    handleSimpleAttribute<SwiftBridgedTypedefAttr>(S, D, Attr);
+    break;
   case AttributeList::AT_SwiftObjCMembers:
     handleSimpleAttribute<SwiftObjCMembersAttr>(S, D, AL);
     break;
