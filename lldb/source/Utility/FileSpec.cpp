@@ -62,17 +62,18 @@ bool IsPathSeparator(char value, FileSpec::PathSyntax syntax) {
   return value == '/' || (!PathSyntaxIsPosix(syntax) && value == '\\');
 }
 
-void Normalize(llvm::SmallVectorImpl<char> &path, FileSpec::PathSyntax syntax) {
-  if (PathSyntaxIsPosix(syntax))
-    return;
-
-  std::replace(path.begin(), path.end(), '\\', '/');
-  // Windows path can have \\ slashes which can be changed by replace
-  // call above to //. Here we remove the duplicate.
-  auto iter = std::unique(path.begin(), path.end(), [](char &c1, char &c2) {
-    return (c1 == '/' && c2 == '/');
-  });
-  path.erase(iter, path.end());
+inline llvm::sys::path::Style
+LLVMPathSyntax(FileSpec::PathSyntax lldb_syntax) {
+  switch (lldb_syntax) {
+    case FileSpec::ePathSyntaxPosix:
+      return llvm::sys::path::Style::posix;
+    case FileSpec::ePathSyntaxWindows:
+      return llvm::sys::path::Style::windows;
+    default:
+    case FileSpec::ePathSyntaxHostNative:
+      return llvm::sys::path::Style::native;
+  };
+  return llvm::sys::path::Style::native;
 }
 
 void Denormalize(llvm::SmallVectorImpl<char> &path,
@@ -199,6 +200,104 @@ FileSpec::FileSpec(const FileSpec *rhs) : m_directory(), m_filename() {
 //------------------------------------------------------------------
 FileSpec::~FileSpec() {}
 
+namespace {
+//------------------------------------------------------------------
+/// Safely get a character at the specified index.
+///
+/// @param[in] path
+///     A full, partial, or relative path to a file.
+///
+/// @param[in] i
+///     An index into path which may or may not be valid.
+///
+/// @return
+///   The character at index \a i if the index is valid, or 0 if
+///   the index is not valid.
+//------------------------------------------------------------------
+inline char safeCharAtIndex(const llvm::StringRef &path, size_t i) {
+  if (i < path.size())
+    return path[i];
+  return 0;
+}
+
+//------------------------------------------------------------------
+/// Check if a path needs to be normalized.
+///
+/// Check if a path needs to be normalized. We currently consider a
+/// path to need normalization if any of the following are true
+///  - path contains "/./"
+///  - path contains "/../"
+///  - path contains "//"
+///  - path ends with "/"
+/// Paths that start with "./" or with "../" are not considered to
+/// need normalization since we aren't trying to resolve the path,
+/// we are just trying to remove redundant things from the path.
+///
+/// @param[in] path
+///     A full, partial, or relative path to a file.
+///
+/// @param[in] syntax
+///     The syntax enumeration for the path in \a path.
+///
+/// @return
+///   Returns \b true if the path needs to be normalized.
+//------------------------------------------------------------------
+bool needsNormalization(const llvm::StringRef &path,
+                        FileSpec::PathSyntax syntax) {
+  const auto separator = GetPreferredPathSeparator(syntax);
+  for (auto i = path.find(separator); i != llvm::StringRef::npos;
+       i = path.find(separator, i + 1)) {
+    const auto next = safeCharAtIndex(path, i+1);
+    switch (next) {
+      case 0:
+        // path separator char at the end of the string which should be
+        // stripped unless it is the one and only character
+        return i > 0;
+      case '/':
+      case '\\':
+        // two path separator chars in the middle of a path needs to be
+        // normalized
+        if (next == separator && i > 0)
+          return true;
+        ++i;
+        break;
+
+      case '.': {
+          const auto next_next = safeCharAtIndex(path, i+2);
+          switch (next_next) {
+            default: break;
+            case 0: return true; // ends with "/."
+            case '/':
+            case '\\':
+              if (next_next == separator)
+                return true; // contains "/./"
+              break;
+            case '.': {
+              const auto next_next_next = safeCharAtIndex(path, i+3);
+              switch (next_next_next) {
+                default: break;
+                case 0: return true; // ends with "/.."
+                case '/':
+                case '\\':
+                  if (next_next_next == separator)
+                    return true; // contains "/../"
+                  break;
+              }
+              break;
+            }
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+  return false;
+}
+
+  
+}
 //------------------------------------------------------------------
 // Assignment operator.
 //------------------------------------------------------------------
@@ -238,7 +337,14 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
     m_is_resolved = true;
   }
 
-  Normalize(resolved, m_syntax);
+  // Normalize the path by removing ".", ".." and other redundant components.
+  if (needsNormalization(llvm::StringRef(resolved.data(), resolved.size()),
+                         syntax))
+    llvm::sys::path::remove_dots(resolved, true, LLVMPathSyntax(syntax));
+
+  // Normalize back slashes to forward slashes
+  if (syntax == FileSpec::ePathSyntaxWindows)
+    std::replace(resolved.begin(), resolved.end(), '\\', '/');
 
   llvm::StringRef resolve_path_ref(resolved.c_str());
   size_t dir_end = ParentPathEnd(resolve_path_ref, m_syntax);
@@ -408,106 +514,22 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
   return ConstString::Compare(a.m_filename, b.m_filename, case_sensitive);
 }
 
-bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full,
-                     bool remove_backups) {
-  static ConstString g_dot_string(".");
-  static ConstString g_dot_dot_string("..");
+bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
 
   // case sensitivity of equality test
   const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
   
-  bool filenames_equal = ConstString::Equals(a.m_filename, 
-                                             b.m_filename, 
-                                             case_sensitive);
+  const bool filenames_equal = ConstString::Equals(a.m_filename,
+                                                   b.m_filename,
+                                                   case_sensitive);
 
-  // The only way two FileSpecs can be equal if their filenames are
-  // unequal is if we are removing backups and one or the other filename
-  // is a backup string:
-
-  if (!filenames_equal && !remove_backups)
+  if (!filenames_equal)
       return false;
-
-  bool last_component_is_dot = ConstString::Equals(a.m_filename, g_dot_string) 
-                               || ConstString::Equals(a.m_filename, 
-                                                      g_dot_dot_string)
-                               || ConstString::Equals(b.m_filename, 
-                                                      g_dot_string)
-                               || ConstString::Equals(b.m_filename, 
-                                                      g_dot_dot_string);
-
-  if (!filenames_equal && !last_component_is_dot)
-    return false;
 
   if (!full && (a.GetDirectory().IsEmpty() || b.GetDirectory().IsEmpty()))
     return filenames_equal;
 
-  if (remove_backups == false)
-    return a == b;
-
-  if (a == b)
-    return true;
-
-  return Equal(a.GetNormalizedPath(), b.GetNormalizedPath(), full, false);
-}
-
-FileSpec FileSpec::GetNormalizedPath() const {
-  // Fast path. Do nothing if the path is not interesting.
-  if (!m_directory.GetStringRef().contains(".") &&
-      !m_directory.GetStringRef().contains("//") &&
-      m_filename.GetStringRef() != ".." && m_filename.GetStringRef() != ".")
-    return *this;
-
-  llvm::SmallString<64> path, result;
-  const bool normalize = false;
-  GetPath(path, normalize);
-  llvm::StringRef rest(path);
-
-  // We will not go below root dir.
-  size_t root_dir_start = RootDirStart(path, m_syntax);
-  const bool absolute = root_dir_start != llvm::StringRef::npos;
-  if (absolute) {
-    result += rest.take_front(root_dir_start + 1);
-    rest = rest.drop_front(root_dir_start + 1);
-  } else {
-    if (m_syntax == ePathSyntaxWindows && path.size() > 2 && path[1] == ':') {
-      result += rest.take_front(2);
-      rest = rest.drop_front(2);
-    }
-  }
-
-  bool anything_added = false;
-  llvm::SmallVector<llvm::StringRef, 0> components, processed;
-  rest.split(components, '/', -1, false);
-  processed.reserve(components.size());
-  for (auto component : components) {
-    if (component == ".")
-      continue; // Skip these.
-    if (component != "..") {
-      processed.push_back(component);
-      continue; // Regular file name.
-    }
-    if (!processed.empty()) {
-      processed.pop_back();
-      continue; // Dots. Go one level up if we can.
-    }
-    if (absolute)
-      continue; // We're at the top level. Cannot go higher than that. Skip.
-
-    result += component; // We're a relative path. We need to keep these.
-    result += '/';
-    anything_added = true;
-  }
-  for (auto component : processed) {
-    result += component;
-    result += '/';
-    anything_added = true;
-  }
-  if (anything_added)
-    result.pop_back(); // Pop last '/'.
-  else if (result.empty())
-    result = ".";
-
-  return FileSpec(result, false, m_syntax);
+  return a == b;
 }
 
 //------------------------------------------------------------------
@@ -647,12 +669,14 @@ void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
                        bool denormalize) const {
   path.append(m_directory.GetStringRef().begin(),
               m_directory.GetStringRef().end());
-  if (m_directory && m_filename &&
-      !IsPathSeparator(m_directory.GetStringRef().back(), m_syntax))
-    path.insert(path.end(), GetPreferredPathSeparator(m_syntax));
+  // Since the path was normalized and all paths use '/' when stored in these
+  // objects, we don't need to look for the actual syntax specific path
+  // separator, we just look for and insert '/'.
+  if (m_directory && m_filename && m_directory.GetStringRef().back() != '/' &&
+      m_filename.GetStringRef().back() != '/')
+    path.insert(path.end(), '/');
   path.append(m_filename.GetStringRef().begin(),
               m_filename.GetStringRef().end());
-  Normalize(path, m_syntax);
   if (denormalize && !path.empty())
     Denormalize(path, m_syntax);
 }

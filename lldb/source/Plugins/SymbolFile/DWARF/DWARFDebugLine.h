@@ -90,7 +90,7 @@ public:
       include_directories.clear();
       file_names.clear();
     }
-    bool GetFile(uint32_t file_idx, const char *comp_dir,
+    bool GetFile(uint32_t file_idx, const lldb_private::FileSpec &cu_comp_dir,
                  lldb_private::FileSpec &file) const;
   };
 
@@ -199,7 +199,8 @@ public:
   static bool
   ParseSupportFiles(const lldb::ModuleSP &module_sp,
                     const lldb_private::DWARFDataExtractor &debug_line_data,
-                    const char *cu_comp_dir, dw_offset_t stmt_list,
+                    const lldb_private::FileSpec &cu_comp_dir,
+                    dw_offset_t stmt_list,
                     lldb_private::FileSpecList &support_files);
   static bool
   ParsePrologue(const lldb_private::DWARFDataExtractor &debug_line_data,

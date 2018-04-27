@@ -256,8 +256,7 @@ public:
   //------------------------------------------------------------------
   static int Compare(const FileSpec &lhs, const FileSpec &rhs, bool full);
 
-  static bool Equal(const FileSpec &a, const FileSpec &b, bool full,
-                    bool remove_backups = false);
+  static bool Equal(const FileSpec &a, const FileSpec &b, bool full);
 
   //------------------------------------------------------------------
   /// Case sensitivity of path.
@@ -486,12 +485,6 @@ public:
   /// @see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   size_t MemorySize() const;
-
-  //------------------------------------------------------------------
-  /// Normalize a pathname by collapsing redundant separators and
-  /// up-level references.
-  //------------------------------------------------------------------
-  FileSpec GetNormalizedPath() const;
 
   //------------------------------------------------------------------
   /// Change the file specified with a new path.
