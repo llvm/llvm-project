@@ -24,6 +24,7 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         register_bank = context.get("register_bank")
         self.assertTrue(register_bank[0] != 'E')
 
+    @skipIfOutOfTreeDebugserver
     @debugserver_test
     def test_g_packet_debugserver(self):
         self.init_debugserver_test()
