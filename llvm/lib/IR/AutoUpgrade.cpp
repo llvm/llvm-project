@@ -84,19 +84,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // like to use this information to remove upgrade code for some older
   // intrinsics. It is currently undecided how we will determine that future
   // point.
-  if (Name.startswith("sse2.padds") || // Added in 7.0
-      Name.startswith("sse2.paddus") || // Added in 7.0
-      Name.startswith("sse2.psubs") || // Added in 7.0
-      Name.startswith("sse2.psubus") || // Added in 7.0
-      Name.startswith("avx2.padds") || // Added in 7.0
-      Name.startswith("avx2.paddus") || // Added in 7.0
-      Name.startswith("avx2.psubs") || // Added in 7.0
-      Name.startswith("avx2.psubus") || // Added in 7.0
-      Name.startswith("avx512.mask.padds") || // Added in 7.0
-      Name.startswith("avx512.mask.paddus") || // Added in 7.0
-      Name.startswith("avx512.mask.psubs") || // Added in 7.0
-      Name.startswith("avx512.mask.psubus") || // Added in 7.0
-      Name=="ssse3.pabs.b.128" || // Added in 6.0
+  if (Name=="ssse3.pabs.b.128" || // Added in 6.0
       Name=="ssse3.pabs.w.128" || // Added in 6.0
       Name=="ssse3.pabs.d.128" || // Added in 6.0
       Name.startswith("avx512.mask.shuf.i") || // Added in 6.0
@@ -855,77 +843,6 @@ static Value *UpgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
                                              "palignr");
 
   return EmitX86Select(Builder, Mask, Align, Passthru);
-}
-
-static Value *UpgradeX86AddSubSatIntrinsics(IRBuilder<> &Builder, CallInst &CI,
-                                            bool IsSigned, bool IsAddition) {
-  // Get elements.
-  Value *Op0 = CI.getArgOperand(0);
-  Value *Op1 = CI.getArgOperand(1);
-
-  // Extend elements.
-  Type *ResultType = CI.getType();
-  unsigned NumElts = ResultType->getVectorNumElements();
-
-  Value *Res;
-  if (!IsAddition && !IsSigned) {
-    Value *ICmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Op0, Op1);
-    Value *Select = Builder.CreateSelect(ICmp, Op0, Op1);
-    Res = Builder.CreateSub(Select, Op1);
-  } else {
-    Type *EltType = ResultType->getVectorElementType();
-    Type *ExtEltType = EltType == Builder.getInt8Ty() ? Builder.getInt16Ty()
-                                                      : Builder.getInt32Ty();
-    Type *ExtVT = VectorType::get(ExtEltType, NumElts);
-    Op0 = IsSigned ? Builder.CreateSExt(Op0, ExtVT)
-                   : Builder.CreateZExt(Op0, ExtVT);
-    Op1 = IsSigned ? Builder.CreateSExt(Op1, ExtVT)
-                   : Builder.CreateZExt(Op1, ExtVT);
-
-    // Perform addition/substraction.
-    Res = IsAddition ? Builder.CreateAdd(Op0, Op1)
-                     : Builder.CreateSub(Op0, Op1);
-
-    // Create a vector of maximum values of not extended type
-    // (if overflow occurs, it will be saturated to that value).
-    unsigned EltSizeInBits = EltType->getPrimitiveSizeInBits();
-    APInt MaxInt = IsSigned ? APInt::getSignedMaxValue(EltSizeInBits)
-                            : APInt::getMaxValue(EltSizeInBits);
-    Value *MaxVec = ConstantInt::get(ResultType, MaxInt);
-    // Extend so that it can be compared to result of add/sub.
-    MaxVec = IsSigned ? Builder.CreateSExt(MaxVec, ExtVT)
-                      : Builder.CreateZExt(MaxVec, ExtVT);
-
-    // Saturate overflow.
-    ICmpInst::Predicate Pred = IsSigned ? ICmpInst::ICMP_SLE
-                                        : ICmpInst::ICMP_ULE;
-    Value *Cmp = Builder.CreateICmp(Pred, Res,
-                                    MaxVec); // 1 if no overflow.
-    Res = Builder.CreateSelect(Cmp, Res,
-                               MaxVec); // If overflowed, copy from max vec.
-
-    // Saturate underflow.
-    if (IsSigned) {
-      APInt MinInt = APInt::getSignedMinValue(EltSizeInBits);
-      Value *MinVec = ConstantInt::get(ResultType, MinInt);
-      // Extend so that it can be compared to result of add/sub.
-      MinVec = Builder.CreateSExt(MinVec, ExtVT);
-      Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SGT, Res,
-                                      MinVec); // 1 if no underflow.
-      Res = Builder.CreateSelect(Cmp, Res,
-                                 MinVec); // If underflowed, copy from min vec.
-    }
-
-    // Truncate to original type.
-    Res = Builder.CreateTrunc(Res, ResultType);
-  }
-
-  if (CI.getNumArgOperands() == 4) { // For masked intrinsics.
-    Value *VecSRC = CI.getArgOperand(2);
-    Value *Mask = CI.getArgOperand(3);
-    Res = EmitX86Select(Builder, Mask, Res, VecSRC);
-  }
-  return Res;
 }
 
 static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
@@ -1766,26 +1683,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                         ShuffleMask);
       Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
-    } else if (IsX86 && (Name.startswith("sse2.padds") ||
-                         Name.startswith("avx2.padds") ||
-                         Name.startswith("avx512.mask.padds"))) {
-      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI,
-                                          true, true); // Signed add.
-    } else if (IsX86 && (Name.startswith("sse2.paddus") ||
-                         Name.startswith("avx2.paddus") ||
-                         Name.startswith("avx512.mask.paddus"))) {
-      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI,
-                                          false, true); // Unsigned add.
-    } else if (IsX86 && (Name.startswith("sse2.psubs") ||
-                         Name.startswith("avx2.psubs") ||
-                         Name.startswith("avx512.mask.psubs"))) {
-      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI,
-                                          true, false); // Signed sub.
-    } else if (IsX86 && (Name.startswith("sse2.psubus") ||
-                         Name.startswith("avx2.psubus") ||
-                         Name.startswith("avx512.mask.psubus"))) {
-      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI,
-                                          false, false); // Unsigned sub.
     } else if (IsX86 && (Name.startswith("avx2.pbroadcast") ||
                          Name.startswith("avx2.vbroadcast") ||
                          Name.startswith("avx512.pbroadcast") ||
@@ -1796,6 +1693,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Type *MaskTy = VectorType::get(Type::getInt32Ty(C), NumElts);
       Rep = Builder.CreateShuffleVector(Op, UndefValue::get(Op->getType()),
                                         Constant::getNullValue(MaskTy));
+
       if (CI->getNumArgOperands() == 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));

@@ -1290,6 +1290,8 @@ void LowerTypeTestsModule::createJumpTable(
     // by Clang for -march=armv7.
     F->addFnAttr("target-cpu", "cortex-a8");
   }
+  // Make sure we don't emit .eh_frame for this function.
+  F->addFnAttr(Attribute::NoUnwind);
 
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);

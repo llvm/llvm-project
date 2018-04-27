@@ -380,7 +380,7 @@ namespace llvm {
   ///
   ModulePass *createLowerEmuTLSPass();
 
-  /// This pass lowers the @llvm.load.relative intrinsic to instructions.
+  /// This pass lowers the \@llvm.load.relative intrinsic to instructions.
   /// This is unsafe to do earlier because a pass may combine the constant
   /// initializer into the load, which may result in an overflowing evaluation.
   ModulePass *createPreISelIntrinsicLoweringPass();

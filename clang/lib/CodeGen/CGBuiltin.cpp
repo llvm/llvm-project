@@ -8449,76 +8449,6 @@ static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op,
   return CGF.Builder.CreateSExt(Mask, DstTy, "vpmovm2");
 }
 
-// Emit addition or subtraction with saturation.
-// Handles both signed and unsigned intrinsics.
-static Value *EmitX86AddSubSatExpr(CodeGenFunction &CGF, const CallExpr *E,
-                                   SmallVectorImpl<Value *> &Ops,
-                                   bool IsAddition, bool Signed) {
-
-  // Collect vector elements and type data.
-  llvm::Type *ResultType = CGF.ConvertType(E->getType());
-  int NumElements = ResultType->getVectorNumElements();
-  Value *Res;
-  if (!IsAddition && !Signed) {
-    Value *ICmp = CGF.Builder.CreateICmp(ICmpInst::ICMP_UGT, Ops[0], Ops[1]);
-    Value *Select = CGF.Builder.CreateSelect(ICmp, Ops[0], Ops[1]);
-    Res = CGF.Builder.CreateSub(Select, Ops[1]);
-  } else {
-    unsigned EltSizeInBits = ResultType->getScalarSizeInBits();
-    llvm::Type *ExtElementType = EltSizeInBits == 8 ?
-                                 CGF.Builder.getInt16Ty() :
-                                 CGF.Builder.getInt32Ty();
-
-    // Extending vectors to next possible width to make space for possible
-    // overflow.
-    llvm::Type *ExtType = llvm::VectorType::get(ExtElementType, NumElements);
-    Value *VecA = Signed ? CGF.Builder.CreateSExt(Ops[0], ExtType)
-                         : CGF.Builder.CreateZExt(Ops[0], ExtType);
-    Value *VecB = Signed ? CGF.Builder.CreateSExt(Ops[1], ExtType)
-                         : CGF.Builder.CreateZExt(Ops[1], ExtType);
-
-    llvm::Value *ExtProduct = IsAddition ? CGF.Builder.CreateAdd(VecA, VecB)
-                                         : CGF.Builder.CreateSub(VecA, VecB);
-
-    // Create vector of the same type as expected result with max possible
-    // values and extend it to the same type as the product of the addition.
-    APInt SignedMaxValue =
-        llvm::APInt::getSignedMaxValue(EltSizeInBits);
-    Value *Max = Signed ? llvm::ConstantInt::get(ResultType, SignedMaxValue)
-                        : llvm::Constant::getAllOnesValue(ResultType);
-    Value *ExtMaxVec = Signed ? CGF.Builder.CreateSExt(Max, ExtType)
-                              : CGF.Builder.CreateZExt(Max, ExtType);
-    // In Product, replace all overflowed values with max values of non-extended
-    // type.
-    ICmpInst::Predicate Pred = Signed ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-    Value *Cmp = CGF.Builder.CreateICmp(Pred, ExtProduct,
-                                        ExtMaxVec); // 1 if no overflow.
-    Value *SaturatedProduct = CGF.Builder.CreateSelect(
-        Cmp, ExtProduct, ExtMaxVec); // If overflowed, copy from max values.
-
-    if (Signed) {
-      APInt SignedMinValue =
-          llvm::APInt::getSignedMinValue(EltSizeInBits);
-      Value *Min = llvm::ConstantInt::get(ResultType, SignedMinValue);
-      Value *ExtMinVec = CGF.Builder.CreateSExt(Min, ExtType);
-      Value *IsNegative =
-        CGF.Builder.CreateICmp(ICmpInst::ICMP_SLT, SaturatedProduct, ExtMinVec);
-      SaturatedProduct =
-        CGF.Builder.CreateSelect(IsNegative, ExtMinVec, SaturatedProduct);
-    }
-
-    Res = CGF.Builder.CreateTrunc(SaturatedProduct,
-                                  ResultType); // Trunc to ResultType.
-  }
-  if (E->getNumArgs() == 4) { // For masked intrinsics.
-    Value *VecSRC = Ops[2];
-    Value *Mask = Ops[3];
-    return EmitX86Select(CGF, Mask, Res, VecSRC);
-  }
-
-  return Res;
-}
-
 Value *CodeGenFunction::EmitX86CpuIs(const CallExpr *E) {
   const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
   StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
@@ -9586,36 +9516,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Load->setVolatile(true);
     return Load;
   }
-  case X86::BI__builtin_ia32_paddusb512_mask:
-  case X86::BI__builtin_ia32_paddusw512_mask:
-  case X86::BI__builtin_ia32_paddusb256:
-  case X86::BI__builtin_ia32_paddusw256:
-  case X86::BI__builtin_ia32_paddusb128:
-  case X86::BI__builtin_ia32_paddusw128:
-    return EmitX86AddSubSatExpr(*this, E, Ops, true, false); // Add, unsigned.
-  case X86::BI__builtin_ia32_paddsb512_mask:
-  case X86::BI__builtin_ia32_paddsw512_mask:
-  case X86::BI__builtin_ia32_paddsb256:
-  case X86::BI__builtin_ia32_paddsw256:
-  case X86::BI__builtin_ia32_paddsb128:
-  case X86::BI__builtin_ia32_paddsw128:
-    return EmitX86AddSubSatExpr(*this, E, Ops, true, true); // Add, signed.
-  case X86::BI__builtin_ia32_psubusb512_mask:
-  case X86::BI__builtin_ia32_psubusw512_mask:
-  case X86::BI__builtin_ia32_psubusb256:
-  case X86::BI__builtin_ia32_psubusw256:
-  case X86::BI__builtin_ia32_psubusb128:
-  case X86::BI__builtin_ia32_psubusw128:
-    return EmitX86AddSubSatExpr(*this, E, Ops, false, false); // Sub, unsigned.
-  case X86::BI__builtin_ia32_psubsb512_mask:
-  case X86::BI__builtin_ia32_psubsw512_mask:
-  case X86::BI__builtin_ia32_psubsb256:
-  case X86::BI__builtin_ia32_psubsw256:
-  case X86::BI__builtin_ia32_psubsb128:
-  case X86::BI__builtin_ia32_psubsw128:
-    return EmitX86AddSubSatExpr(*this, E, Ops, false, true); // Sub, signed.
   }
 }
+
 
 Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {

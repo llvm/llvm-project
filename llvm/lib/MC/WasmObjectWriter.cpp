@@ -1220,7 +1220,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     wasm::WasmSymbolInfo Info;
     Info.Name = SectionSym->getName();
     Info.Kind = wasm::WASM_SYMBOL_TYPE_SECTION;
-    Info.Flags = 0;
+    Info.Flags = wasm::WASM_SYMBOL_BINDING_LOCAL;
     Info.ElementIndex = ElementIndex;
     SymbolIndices[SectionSym] = SymbolInfos.size();
     SymbolInfos.emplace_back(Info);

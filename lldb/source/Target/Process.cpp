@@ -6177,11 +6177,16 @@ void Process::MapSupportedStructuredDataPlugins(
 
   // For each StructuredDataPlugin, if the plugin handles any of the
   // types in the supported_type_names, map that type name to that plugin.
-  uint32_t plugin_index = 0;
-  for (auto create_instance =
+  // Stop when we've consumed all the type names.
+  // FIXME: should we return an error if there are type names nobody 
+  // supports?
+  for (uint32_t plugin_index = 0; !const_type_names.empty(); plugin_index++) {
+    auto create_instance =
            PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(
                plugin_index);
-       create_instance && !const_type_names.empty(); ++plugin_index) {
+    if (!create_instance)
+      break;
+      
     // Create the plugin.
     StructuredDataPluginSP plugin_sp = (*create_instance)(*this);
     if (!plugin_sp) {
