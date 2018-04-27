@@ -147,6 +147,37 @@ void f5() {
   // FIXME: Should be TRUE. Should not warn about garbage value.
   clang_analyzer_eval(after == before); // expected-warning{{UNKNOWN}}
 }
+
+struct A { // A is an aggregate.
+  const C &c;
+};
+
+void f6() {
+  C *after, *before;
+  {
+    A a{C(true, &after, &before)};
+  }
+  // FIXME: Should be TRUE. Should not warn about garbage value.
+  clang_analyzer_eval(after == before); // expected-warning{{UNKNOWN}}
+}
+
+void f7() {
+  C *after, *before;
+  {
+    A a = {C(true, &after, &before)};
+  }
+  // FIXME: Should be TRUE. Should not warn about garbage value.
+  clang_analyzer_eval(after == before); // expected-warning{{UNKNOWN}}
+}
+
+void f8() {
+  C *after, *before;
+  {
+    A a[2] = {C(false, nullptr, nullptr), C(true, &after, &before)};
+  }
+  // FIXME: Should be TRUE. Should not warn about garbage value.
+  clang_analyzer_eval(after == before); // expected-warning{{UNKNOWN}}
+}
 } // end namespace maintain_original_object_address_on_lifetime_extension
 
 namespace maintain_original_object_address_on_move {
