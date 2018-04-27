@@ -437,6 +437,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "Swift.Array summary provider",
       ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21_SwiftDeferredNSArray")), summary_flags, false);
   AddCXXSummary(
+      swift_category_sp, lldb_private::formatters::swift::Array_SummaryProvider,
+      "Swift.Array summary provider",
+      ConstString("Swift._SwiftDeferredNSArray"), summary_flags, false);
+  AddCXXSummary(
       swift_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "Swift.Array summary provider",
       ConstString("_TtCs21_SwiftDeferredNSArray"), summary_flags, false);
@@ -512,6 +516,13 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                   ConstString("_TtCs21_SwiftDeferredNSArray"),
                   synth_flags,
                   false);
+  AddCXXSynthetic(swift_category_sp,
+                  lldb_private::formatters::swift::ArraySyntheticFrontEndCreator,
+                  "Swift.Array synthetic children",
+                  ConstString("Swift._SwiftDeferredNSArray"),
+                  synth_flags,
+                  false);
+
 
   AddCXXSynthetic(
       swift_category_sp,
