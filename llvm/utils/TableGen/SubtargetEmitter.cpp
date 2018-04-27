@@ -1443,26 +1443,64 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   OS << "\n#undef DBGFIELD";
 }
 
+static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
+  std::string Buffer;
+  raw_string_ostream Stream(Buffer);
+
+  // Collect all the PredicateProlog records and print them to the output
+  // stream.
+  std::vector<Record *> Prologs =
+      Records.getAllDerivedDefinitions("PredicateProlog");
+  llvm::sort(Prologs.begin(), Prologs.end(), LessRecord());
+  for (Record *P : Prologs)
+    Stream << P->getValueAsString("Code") << '\n';
+
+  Stream.flush();
+  OS << Buffer;
+}
+
+static void emitPredicates(const CodeGenSchedTransition &T,
+                           const CodeGenSchedClass &SC, unsigned ProcIdx,
+                           raw_ostream &OS) {
+  if (ProcIdx && !count(T.ProcIndices, ProcIdx))
+    return;
+
+  std::string Buffer;
+  raw_string_ostream Stream(Buffer);
+  Stream << "      if (";
+  for (RecIter RI = T.PredTerm.begin(), RE = T.PredTerm.end(); RI != RE; ++RI) {
+    if (RI != T.PredTerm.begin())
+      Stream << "\n          && ";
+    Stream << "(" << (*RI)->getValueAsString("Predicate") << ")";
+  }
+
+  Stream << ")\n"
+         << "        return " << T.ToClassIdx << "; // " << SC.Name << '\n';
+  Stream.flush();
+  OS << Buffer;
+}
+
 void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
                                              raw_ostream &OS) {
   OS << "unsigned " << ClassName
      << "\n::resolveSchedClass(unsigned SchedClass, const MachineInstr *MI,"
      << " const TargetSchedModel *SchedModel) const {\n";
 
-  std::vector<Record*> Prologs = Records.getAllDerivedDefinitions("PredicateProlog");
-  llvm::sort(Prologs.begin(), Prologs.end(), LessRecord());
-  for (Record *P : Prologs) {
-    OS << P->getValueAsString("Code") << '\n';
-  }
+  // Emit the predicate prolog code.
+  emitPredicateProlog(Records, OS);
+
+  // Collect Variant Classes.
   IdxVec VariantClasses;
   for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
     if (SC.Transitions.empty())
       continue;
     VariantClasses.push_back(SC.Index);
   }
+
   if (!VariantClasses.empty()) {
     OS << "  switch (SchedClass) {\n";
     for (unsigned VC : VariantClasses) {
+      // Emit code for each variant scheduling class.
       const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
       OS << "  case " << VC << ": // " << SC.Name << '\n';
       IdxVec ProcIndices;
@@ -1479,22 +1517,10 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
           OS << "if (SchedModel->getProcessorID() == " << PI << ") ";
         OS << "{ // " << (SchedModels.procModelBegin() + PI)->ModelName
            << '\n';
-        for (const CodeGenSchedTransition &T : SC.Transitions) {
-          if (PI != 0 && !std::count(T.ProcIndices.begin(),
-                                     T.ProcIndices.end(), PI)) {
-              continue;
-          }
-          OS << "      if (";
-          for (RecIter RI = T.PredTerm.begin(), RE = T.PredTerm.end();
-               RI != RE; ++RI) {
-            if (RI != T.PredTerm.begin())
-              OS << "\n          && ";
-            OS << "(" << (*RI)->getValueAsString("Predicate") << ")";
-          }
-          OS << ")\n"
-             << "        return " << T.ToClassIdx << "; // "
-             << SchedModels.getSchedClass(T.ToClassIdx).Name << '\n';
-        }
+
+        for (const CodeGenSchedTransition &T : SC.Transitions)
+          emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PI, OS);
+
         OS << "    }\n";
         if (PI == 0)
           break;

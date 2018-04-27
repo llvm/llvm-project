@@ -39,6 +39,15 @@ public:
   explicit RISCVTargetLowering(const TargetMachine &TM,
                                const RISCVSubtarget &STI);
 
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
+  bool isLegalICmpImmediate(int64_t Imm) const override;
+  bool isLegalAddImmediate(int64_t Imm) const override;
+  bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
+  bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
+  bool isZExtFree(SDValue Val, EVT VT2) const override;
+
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 

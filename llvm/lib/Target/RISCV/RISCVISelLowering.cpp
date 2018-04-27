@@ -157,6 +157,74 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
   return VT.changeVectorElementTypeToInteger();
 }
 
+bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
+                                                const AddrMode &AM, Type *Ty,
+                                                unsigned AS,
+                                                Instruction *I) const {
+  // No global is ever allowed as a base.
+  if (AM.BaseGV)
+    return false;
+
+  // Require a 12-bit signed offset.
+  if (!isInt<12>(AM.BaseOffs))
+    return false;
+
+  switch (AM.Scale) {
+  case 0: // "r+i" or just "i", depending on HasBaseReg.
+    break;
+  case 1:
+    if (!AM.HasBaseReg) // allow "r+i".
+      break;
+    return false; // disallow "r+r" or "r+r+i".
+  default:
+    return false;
+  }
+
+  return true;
+}
+
+bool RISCVTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
+  return isInt<12>(Imm);
+}
+
+bool RISCVTargetLowering::isLegalAddImmediate(int64_t Imm) const {
+  return isInt<12>(Imm);
+}
+
+// On RV32, 64-bit integers are split into their high and low parts and held
+// in two different registers, so the trunc is free since the low register can
+// just be used.
+bool RISCVTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
+  if (Subtarget.is64Bit() || !SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+    return false;
+  unsigned SrcBits = SrcTy->getPrimitiveSizeInBits();
+  unsigned DestBits = DstTy->getPrimitiveSizeInBits();
+  return (SrcBits == 64 && DestBits == 32);
+}
+
+bool RISCVTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
+  if (Subtarget.is64Bit() || SrcVT.isVector() || DstVT.isVector() ||
+      !SrcVT.isInteger() || !DstVT.isInteger())
+    return false;
+  unsigned SrcBits = SrcVT.getSizeInBits();
+  unsigned DestBits = DstVT.getSizeInBits();
+  return (SrcBits == 64 && DestBits == 32);
+}
+
+bool RISCVTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
+  // Zexts are free if they can be combined with a load.
+  if (auto *LD = dyn_cast<LoadSDNode>(Val)) {
+    EVT MemVT = LD->getMemoryVT();
+    if ((MemVT == MVT::i8 || MemVT == MVT::i16 ||
+         (Subtarget.is64Bit() && MemVT == MVT::i32)) &&
+        (LD->getExtensionType() == ISD::NON_EXTLOAD ||
+         LD->getExtensionType() == ISD::ZEXTLOAD))
+      return true;
+  }
+
+  return TargetLowering::isZExtFree(Val, VT2);
+}
+
 // Changes the condition code and swaps operands if necessary, so the SetCC
 // operation matches one of the comparisons supported directly in the RISC-V
 // ISA.

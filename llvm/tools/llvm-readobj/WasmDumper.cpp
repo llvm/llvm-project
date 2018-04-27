@@ -27,6 +27,7 @@ static const EnumEntry<unsigned> WasmSymbolTypes[] = {
   ENUM_ENTRY(FUNCTION),
   ENUM_ENTRY(DATA),
   ENUM_ENTRY(GLOBAL),
+  ENUM_ENTRY(SECTION),
 #undef ENUM_ENTRY
 };
 
@@ -84,6 +85,8 @@ void WasmDumper::printRelocation(const SectionRef &Section,
   case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
   case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
   case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
+  case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+  case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
     HasAddend = true;
     break;
   default:

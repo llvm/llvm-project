@@ -30,22 +30,22 @@ ldff1w z4.d, p8/z, [x0]
 // Invalid scalar + scalar addressing modes
 
 ldff1w z0.s, p0/z, [x0, sp]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 or xzr, with required shift 'lsl #2'
 // CHECK-NEXT: ldff1w z0.s, p0/z, [x0, sp]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1w z0.s, p0/z, [x0, x0, lsl #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 or xzr, with required shift 'lsl #2'
 // CHECK-NEXT: ldff1w z0.s, p0/z, [x0, x0, lsl #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1w z0.s, p0/z, [x0, w0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 or xzr, with required shift 'lsl #2'
 // CHECK-NEXT: ldff1w z0.s, p0/z, [x0, w0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1w z0.s, p0/z, [x0, w0, uxtw]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 or xzr, with required shift 'lsl #2'
 // CHECK-NEXT: ldff1w z0.s, p0/z, [x0, w0, uxtw]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

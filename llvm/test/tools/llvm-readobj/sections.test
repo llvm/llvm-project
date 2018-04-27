@@ -528,14 +528,14 @@ WASM-NEXT:     ]
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)
-WASM-NEXT:     Size: 57
+WASM-NEXT:     Size: 61
 WASM-NEXT:     Offset: 191
 WASM-NEXT:     Name: linking
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)
 WASM-NEXT:     Size: 12
-WASM-NEXT:     Offset: 262
+WASM-NEXT:     Offset: 266
 WASM-NEXT:     Name: reloc.CODE
 WASM-NEXT:   }
 WASM-NEXT: ]

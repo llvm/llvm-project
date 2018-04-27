@@ -4989,6 +4989,13 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
     return false;
 
+  // Don't outline from functions with section markings; the program could
+  // expect that all the code is in the named section.
+  // FIXME: Allow outlining from multiple functions with the same section
+  // marking.
+  if (F.hasSection())
+    return false;
+
   // Outlining from functions with redzones is unsafe since the outliner may
   // modify the stack. Check if hasRedZone is true or unknown; if yes, don't
   // outline from it.

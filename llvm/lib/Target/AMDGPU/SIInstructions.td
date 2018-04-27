@@ -11,13 +11,6 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-def has16BankLDS : Predicate<"Subtarget->getLDSBankCount() == 16">;
-def has32BankLDS : Predicate<"Subtarget->getLDSBankCount() == 32">;
-def HasVGPRIndexMode : Predicate<"Subtarget->hasVGPRIndexMode()">,
-                      AssemblerPredicate<"FeatureVGPRIndexMode">;
-def HasMovrel : Predicate<"Subtarget->hasMovrel()">,
-                AssemblerPredicate<"FeatureMovrel">;
-
 class GCNPat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
   let SubtargetPredicate = isGCN;
 }

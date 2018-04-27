@@ -63,7 +63,8 @@ Non-comprehensive list of changes in this release
 
 * Optimization of floating-point casts is improved. This may cause surprising
   results for code that is relying on undefined behavior. Code sanitizers can
-  be used to detect affected patterns such as this:
+  be used to detect affected patterns. The option for detecting this problem 
+  alone is "-fsanitize=float-cast-overflow":
 
 .. code-block:: c
 
@@ -76,7 +77,7 @@ Non-comprehensive list of changes in this release
 
 .. code-block:: bash
 
-    clang -O1 ftrunc.c -fsanitize=undefined ; ./a.out 
+    clang -O1 ftrunc.c -fsanitize=float-cast-overflow ; ./a.out 
     ftrunc.c:5:15: runtime error: 4.29497e+09 is outside the range of representable values of type 'int'
     junk in the ftrunc: 0.000000
 

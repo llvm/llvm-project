@@ -553,11 +553,15 @@ public:
 
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                           Type *SubTp) {
-    if (Kind == TTI::SK_Alternate || Kind == TTI::SK_PermuteTwoSrc ||
-        Kind == TTI::SK_PermuteSingleSrc) {
+    switch (Kind) {
+    case TTI::SK_Alternate:
+    case TTI::SK_Transpose:
+    case TTI::SK_PermuteSingleSrc:
+    case TTI::SK_PermuteTwoSrc:
       return getPermuteShuffleOverhead(Tp);
+    default:
+      return 1;
     }
-    return 1;
   }
 
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,

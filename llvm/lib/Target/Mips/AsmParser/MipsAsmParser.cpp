@@ -1303,6 +1303,20 @@ public:
     return IsReloc && isShiftedInt<Bits, ShiftAmount>(Res.getConstant());
   }
 
+  bool isMemWithPtrSizeOffset() const {
+    if (!isMem())
+      return false;
+    if (!getMemBase()->isGPRAsmReg())
+      return false;
+    const unsigned PtrBits = 32;
+    if (isa<MCTargetExpr>(getMemOff()) ||
+        (isConstantMemOff() && isIntN(PtrBits, getConstantMemOff())))
+      return true;
+    MCValue Res;
+    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    return IsReloc && isIntN(PtrBits, Res.getConstant());
+  }
+
   bool isMemWithGRPMM16Base() const {
     return isMem() && getMemBase()->isMM16AsmReg();
   }
@@ -5452,6 +5466,9 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MemSImm16:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected memory with 16-bit signed offset");
+  case Match_MemSImmPtr:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected memory with 32-bit signed offset");
   case Match_RequiresPosSizeRange0_32: {
     SMLoc ErrorStart = Operands[3]->getStartLoc();
     SMLoc ErrorEnd = Operands[4]->getEndLoc();

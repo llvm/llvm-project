@@ -1091,7 +1091,7 @@ private:
   /// The target library information for the target we are targeting.
   TargetLibraryInfo &TLI;
 
-  /// The tracker for @llvm.assume intrinsics in this function.
+  /// The tracker for \@llvm.assume intrinsics in this function.
   AssumptionCache &AC;
 
   /// The dominator tree.

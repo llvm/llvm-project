@@ -651,6 +651,7 @@ WASM-NEXT: FileHeader:
 WASM-NEXT:   Version:         0x00000001
 WASM:        - Type:            CUSTOM
 WASM-NEXT:     Name:            linking
+WASM-NEXT:     Version:         1
 WASM-NEXT:     SymbolTable:
 WASM-NEXT:       - Index:           0
 WASM-NEXT:         Kind:            FUNCTION

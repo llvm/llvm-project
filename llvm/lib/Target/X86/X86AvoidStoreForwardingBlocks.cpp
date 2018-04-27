@@ -395,30 +395,40 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
 
   unsigned Reg1 = MRI->createVirtualRegister(
       TII->getRegClass(TII->get(NLoadOpcode), 0, TRI, *(MBB->getParent())));
-  BuildMI(*MBB, LoadInst, LoadInst->getDebugLoc(), TII->get(NLoadOpcode), Reg1)
-      .add(LoadBase)
-      .addImm(1)
-      .addReg(X86::NoRegister)
-      .addImm(LoadDisp)
-      .addReg(X86::NoRegister)
-      .addMemOperand(
-          MBB->getParent()->getMachineMemOperand(LMMO, LMMOffset, Size));
-  DEBUG(LoadInst->getPrevNode()->dump());
+  MachineInstr *NewLoad =
+      BuildMI(*MBB, LoadInst, LoadInst->getDebugLoc(), TII->get(NLoadOpcode),
+              Reg1)
+          .add(LoadBase)
+          .addImm(1)
+          .addReg(X86::NoRegister)
+          .addImm(LoadDisp)
+          .addReg(X86::NoRegister)
+          .addMemOperand(
+              MBB->getParent()->getMachineMemOperand(LMMO, LMMOffset, Size));
+  if (LoadBase.isReg())
+    getBaseOperand(NewLoad).setIsKill(false);
+  DEBUG(NewLoad->dump());
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
   MachineInstr *StInst = StoreInst;
   if (StoreInst->getPrevNode() == LoadInst)
     StInst = LoadInst;
-  BuildMI(*MBB, StInst, StInst->getDebugLoc(), TII->get(NStoreOpcode))
-      .add(StoreBase)
-      .addImm(1)
-      .addReg(X86::NoRegister)
-      .addImm(StoreDisp)
-      .addReg(X86::NoRegister)
-      .addReg(Reg1)
-      .addMemOperand(
-          MBB->getParent()->getMachineMemOperand(SMMO, SMMOffset, Size));
-  DEBUG(StInst->getPrevNode()->dump());
+  MachineInstr *NewStore =
+      BuildMI(*MBB, StInst, StInst->getDebugLoc(), TII->get(NStoreOpcode))
+          .add(StoreBase)
+          .addImm(1)
+          .addReg(X86::NoRegister)
+          .addImm(StoreDisp)
+          .addReg(X86::NoRegister)
+          .addReg(Reg1)
+          .addMemOperand(
+              MBB->getParent()->getMachineMemOperand(SMMO, SMMOffset, Size));
+  if (StoreBase.isReg())
+    getBaseOperand(NewStore).setIsKill(false);
+  MachineOperand &StoreSrcVReg = StoreInst->getOperand(X86::AddrNumOperands);
+  assert(StoreSrcVReg.isReg() && "Expected virtual register");
+  NewStore->getOperand(X86::AddrNumOperands).setIsKill(StoreSrcVReg.isKill());
+  DEBUG(NewStore->dump());
 }
 
 void X86AvoidSFBPass::buildCopies(int Size, MachineInstr *LoadInst,

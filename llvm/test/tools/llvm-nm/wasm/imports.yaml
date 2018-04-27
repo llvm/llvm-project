@@ -25,6 +25,7 @@ Sections:
         GlobalMutable:   false
   - Type:            CUSTOM
     Name:            linking
+    Version:         1
     SymbolTable:
        - Index:           0
          Kind:            FUNCTION

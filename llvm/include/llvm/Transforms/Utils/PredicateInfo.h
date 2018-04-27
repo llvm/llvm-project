@@ -31,7 +31,7 @@
 /// %cmp = icmp eq i32, %x, 50
 /// br i1 %cmp, label %true, label %false
 /// true:
-/// %x.0 = call @llvm.ssa_copy.i32(i32 %x)
+/// %x.0 = call \@llvm.ssa_copy.i32(i32 %x)
 /// ret i32 %x.0
 /// false:
 /// ret i32 1

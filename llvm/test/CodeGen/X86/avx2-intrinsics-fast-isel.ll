@@ -98,17 +98,11 @@ define <4 x i64> @test_mm256_adds_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %1 = sext <32 x i8> %arg0 to <32 x i16>
-  %2 = sext <32 x i8> %arg1 to <32 x i16>
-  %3 = add nsw <32 x i16> %1, %2
-  %4 = icmp slt <32 x i16> %3, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  %6 = icmp sgt <32 x i16> %5, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  %7 = select <32 x i1> %6, <32 x i16> %5, <32 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  %8 = trunc <32 x i16> %7 to <32 x i8>
-  %bc = bitcast <32 x i8> %8 to <4 x i64>
+  %res = call <32 x i8> @llvm.x86.avx2.padds.b(<32 x i8> %arg0, <32 x i8> %arg1)
+  %bc = bitcast <32 x i8> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <32 x i8> @llvm.x86.avx2.padds.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_adds_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_adds_epi16:
@@ -117,17 +111,11 @@ define <4 x i64> @test_mm256_adds_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %1 = sext <16 x i16> %arg0 to <16 x i32>
-  %2 = sext <16 x i16> %arg1 to <16 x i32>
-  %3 = add nsw <16 x i32> %1, %2
-  %4 = icmp slt <16 x i32> %3, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  %6 = icmp sgt <16 x i32> %5, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  %7 = select <16 x i1> %6, <16 x i32> %5, <16 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  %8 = trunc <16 x i32> %7 to <16 x i16>
-  %bc = bitcast <16 x i16> %8 to <4 x i64>
+  %res = call <16 x i16> @llvm.x86.avx2.padds.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <16 x i16> @llvm.x86.avx2.padds.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_adds_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_adds_epu8:
@@ -136,15 +124,11 @@ define <4 x i64> @test_mm256_adds_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %1 = zext <32 x i8> %arg0 to <32 x i16>
-  %2 = zext <32 x i8> %arg1 to <32 x i16>
-  %3 = add nsw <32 x i16> %1, %2
-  %4 = icmp ult <32 x i16> %3, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  %6 = trunc <32 x i16> %5 to <32 x i8>
-  %bc = bitcast <32 x i8> %6 to <4 x i64>
+  %res = call <32 x i8> @llvm.x86.avx2.paddus.b(<32 x i8> %arg0, <32 x i8> %arg1)
+  %bc = bitcast <32 x i8> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <32 x i8> @llvm.x86.avx2.paddus.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_adds_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_adds_epu16:
@@ -153,15 +137,11 @@ define <4 x i64> @test_mm256_adds_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %1 = zext <16 x i16> %arg0 to <16 x i32>
-  %2 = zext <16 x i16> %arg1 to <16 x i32>
-  %3 = add nsw <16 x i32> %1, %2
-  %4 = icmp ult <16 x i32> %3, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  %6 = trunc <16 x i32> %5 to <16 x i16>
-  %bc = bitcast <16 x i16> %6 to <4 x i64>
+  %res = call <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_alignr_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_alignr_epi8:
@@ -2549,17 +2529,11 @@ define <4 x i64> @test_mm256_subs_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %1 = sext <32 x i8> %arg0 to <32 x i16>
-  %2 = sext <32 x i8> %arg1 to <32 x i16>
-  %3 = sub nsw <32 x i16> %1, %2
-  %4 = icmp slt <32 x i16> %3, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  %5 = select <32 x i1> %4, <32 x i16> %3, <32 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
-  %6 = icmp sgt <32 x i16> %5, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  %7 = select <32 x i1> %6, <32 x i16> %5, <32 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
-  %8 = trunc <32 x i16> %7 to <32 x i8>
-  %bc = bitcast <32 x i8> %8 to <4 x i64>
+  %res = call <32 x i8> @llvm.x86.avx2.psubs.b(<32 x i8> %arg0, <32 x i8> %arg1)
+  %bc = bitcast <32 x i8> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <32 x i8> @llvm.x86.avx2.psubs.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_subs_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_subs_epi16:
@@ -2568,47 +2542,37 @@ define <4 x i64> @test_mm256_subs_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %1 = sext <16 x i16> %arg0 to <16 x i32>
-  %2 = sext <16 x i16> %arg1 to <16 x i32>
-  %3 = sub nsw <16 x i32> %1, %2
-  %4 = icmp slt <16 x i32> %3, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  %6 = icmp sgt <16 x i32> %5, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  %7 = select <16 x i1> %6, <16 x i32> %5, <16 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
-  %8 = trunc <16 x i32> %7 to <16 x i16>
-  %bc = bitcast <16 x i16> %8 to <4 x i64>
+  %res = call <16 x i16> @llvm.x86.avx2.psubs.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <16 x i16> @llvm.x86.avx2.psubs.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_subs_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_subs_epu8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %cmp = icmp ugt <32 x i8> %arg0, %arg1
-  %sel = select <32 x i1> %cmp, <32 x i8> %arg0, <32 x i8> %arg1
-  %sub = sub <32 x i8> %sel, %arg1
-  %bc = bitcast <32 x i8> %sub to <4 x i64>
+  %res = call <32 x i8> @llvm.x86.avx2.psubus.b(<32 x i8> %arg0, <32 x i8> %arg1)
+  %bc = bitcast <32 x i8> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <32 x i8> @llvm.x86.avx2.psubus.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_subs_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_subs_epu16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %cmp = icmp ugt <16 x i16> %arg0, %arg1
-  %sel = select <16 x i1> %cmp, <16 x i16> %arg0, <16 x i16> %arg1
-  %sub = sub <16 x i16> %sel, %arg1
-  %bc = bitcast <16 x i16> %sub to <4 x i64>
+  %res = call <16 x i16> @llvm.x86.avx2.psubus.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
+declare <16 x i16> @llvm.x86.avx2.psubus.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_unpackhi_epi8(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; CHECK-LABEL: test_mm256_unpackhi_epi8:

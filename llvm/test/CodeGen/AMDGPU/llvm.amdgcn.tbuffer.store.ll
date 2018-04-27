@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefixes=GCN,VERDE %s
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}tbuffer_store:
@@ -67,7 +67,7 @@ main_body:
 ;
 ; GCN-LABEL: {{^}}buffer_store_wait:
 ; GCN: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], dfmt:15, nfmt:3, 0 idxen
-; GCN: s_waitcnt expcnt(0)
+; VERDE: s_waitcnt expcnt(0)
 ; GCN: buffer_load_format_xyzw v[0:3], v5, s[0:3], 0 idxen
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: tbuffer_store_format_xyzw v[0:3], v6, s[0:3], dfmt:16, nfmt:2, 0 idxen
