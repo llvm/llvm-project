@@ -6383,25 +6383,6 @@ let Constraints = "$src1 = $dst" in
 // SSE4.2 - String/text Processing Instructions
 //===----------------------------------------------------------------------===//
 
-// Packed Compare Implicit Length Strings, Return Mask
-multiclass pseudo_pcmpistrm<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-    [(set VR128:$dst, (int_x86_sse42_pcmpistrm128 VR128:$src1, VR128:$src2,
-                                                  imm:$src3))]>;
-  def MEM : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-    [(set VR128:$dst, (int_x86_sse42_pcmpistrm128 VR128:$src1,
-                       (bc_v16i8 (ld_frag addr:$src2)), imm:$src3))]>;
-}
-
-let Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  defm VPCMPISTRM128 : pseudo_pcmpistrm<"#VPCMPISTRM128", loadv2i64>,
-                         Requires<[HasAVX]>, VEX_WIG;
-  defm PCMPISTRM128 : pseudo_pcmpistrm<"#PCMPISTRM128", loadv2i64>,
-                         Requires<[UseSSE42]>;
-}
-
 multiclass pcmpistrm_SS42AI<string asm> {
   def rr : SS42AI<0x62, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src2, u8imm:$src3),
@@ -6416,27 +6397,8 @@ multiclass pcmpistrm_SS42AI<string asm> {
 
 let Defs = [XMM0, EFLAGS], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPISTRM128 : pcmpistrm_SS42AI<"vpcmpistrm">, VEX;
-  defm PCMPISTRM128  : pcmpistrm_SS42AI<"pcmpistrm"> ;
-}
-
-// Packed Compare Explicit Length Strings, Return Mask
-multiclass pseudo_pcmpestrm<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, VR128:$src3, u8imm:$src5),
-    [(set VR128:$dst, (int_x86_sse42_pcmpestrm128
-                       VR128:$src1, EAX, VR128:$src3, EDX, imm:$src5))]>;
-  def MEM : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
-    [(set VR128:$dst, (int_x86_sse42_pcmpestrm128 VR128:$src1, EAX,
-                       (bc_v16i8 (ld_frag addr:$src3)), EDX, imm:$src5))]>;
-}
-
-let Defs = [EFLAGS], Uses = [EAX, EDX], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  defm VPCMPESTRM128 : pseudo_pcmpestrm<"#VPCMPESTRM128", loadv2i64>,
-                         Requires<[HasAVX]>;
-  defm PCMPESTRM128 : pseudo_pcmpestrm<"#PCMPESTRM128", loadv2i64>,
-                         Requires<[UseSSE42]>;
+  defm VPCMPISTRM : pcmpistrm_SS42AI<"vpcmpistrm">, VEX;
+  defm PCMPISTRM  : pcmpistrm_SS42AI<"pcmpistrm"> ;
 }
 
 multiclass SS42AI_pcmpestrm<string asm> {
@@ -6453,27 +6415,8 @@ multiclass SS42AI_pcmpestrm<string asm> {
 
 let Defs = [XMM0, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPESTRM128 : SS42AI_pcmpestrm<"vpcmpestrm">, VEX;
-  defm PCMPESTRM128 :  SS42AI_pcmpestrm<"pcmpestrm">;
-}
-
-// Packed Compare Implicit Length Strings, Return Index
-multiclass pseudo_pcmpistri<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-    [(set GR32:$dst, EFLAGS,
-      (X86pcmpistri VR128:$src1, VR128:$src2, imm:$src3))]>;
-  def MEM : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-    [(set GR32:$dst, EFLAGS, (X86pcmpistri VR128:$src1,
-                              (bc_v16i8 (ld_frag addr:$src2)), imm:$src3))]>;
-}
-
-let Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  defm VPCMPISTRI : pseudo_pcmpistri<"#VPCMPISTRI", loadv2i64>,
-                      Requires<[HasAVX]>, VEX_WIG;
-  defm PCMPISTRI  : pseudo_pcmpistri<"#PCMPISTRI", loadv2i64>,
-                      Requires<[UseSSE42]>;
+  defm VPCMPESTRM : SS42AI_pcmpestrm<"vpcmpestrm">, VEX;
+  defm PCMPESTRM :  SS42AI_pcmpestrm<"pcmpestrm">;
 }
 
 multiclass SS42AI_pcmpistri<string asm> {
@@ -6492,26 +6435,6 @@ let Defs = [ECX, EFLAGS], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
   defm VPCMPISTRI : SS42AI_pcmpistri<"vpcmpistri">, VEX;
   defm PCMPISTRI  : SS42AI_pcmpistri<"pcmpistri">;
-}
-
-// Packed Compare Explicit Length Strings, Return Index
-multiclass pseudo_pcmpestri<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, VR128:$src3, u8imm:$src5),
-    [(set GR32:$dst, EFLAGS,
-      (X86pcmpestri VR128:$src1, EAX, VR128:$src3, EDX, imm:$src5))]>;
-  def MEM : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
-    [(set GR32:$dst, EFLAGS,
-      (X86pcmpestri VR128:$src1, EAX, (bc_v16i8 (ld_frag addr:$src3)), EDX,
-       imm:$src5))]>;
-}
-
-let Defs = [EFLAGS], Uses = [EAX, EDX], hasNoSchedulingInfo = 1, usesCustomInserter = 1 in {
-  defm VPCMPESTRI : pseudo_pcmpestri<"#VPCMPESTRI", loadv2i64>,
-                      Requires<[HasAVX]>;
-  defm PCMPESTRI  : pseudo_pcmpestri<"#PCMPESTRI", loadv2i64>,
-                      Requires<[UseSSE42]>;
 }
 
 multiclass SS42AI_pcmpestri<string asm> {

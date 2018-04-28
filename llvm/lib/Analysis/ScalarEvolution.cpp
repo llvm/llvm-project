@@ -6512,8 +6512,10 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // must be cleared in this scope.
   BackedgeTakenInfo Result = computeBackedgeTakenCount(L);
 
-  if (Result.getExact(L, this) != getCouldNotCompute()) {
-    assert(isLoopInvariant(Result.getExact(L, this), L) &&
+#if LLVM_ENABLE_STATS || !defined(NDEBUG)
+  const SCEV *BEExact = Result.getExact(L, this);
+  if (BEExact != getCouldNotCompute()) {
+    assert(isLoopInvariant(BEExact, L) &&
            isLoopInvariant(Result.getMax(this), L) &&
            "Computed backedge-taken count isn't loop invariant for loop!");
     ++NumTripCountsComputed;
@@ -6523,6 +6525,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
     // Only count loops that have phi nodes as not being computable.
     ++NumTripCountsNotComputed;
   }
+#endif // LLVM_ENABLE_STATS || !defined(NDEBUG)
 
   // Now that we know more about the trip count for this loop, forget any
   // existing SCEV values for PHI nodes in this loop since they are only

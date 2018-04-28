@@ -1522,8 +1522,8 @@ void llvm::salvageDebugInfo(Instruction &I) {
 
   auto doSalvage = [&](DbgInfoIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
     auto *DIExpr = DII->getExpression();
-    DIExpr = DIExpression::doPrepend(DIExpr, Ops,
-                                     DIExpression::WithStackValue);
+    DIExpr =
+        DIExpression::prependOpcodes(DIExpr, Ops, DIExpression::WithStackValue);
     DII->setOperand(0, wrapMD(I.getOperand(0)));
     DII->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
     DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');

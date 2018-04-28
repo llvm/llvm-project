@@ -188,7 +188,7 @@ define i32 @test13(i32 %x, i32 %y) {
 ; ((x | ~y) ^ (~x | y)) -> x ^ y
 define i32 @test14(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -201,7 +201,7 @@ define i32 @test14(i32 %x, i32 %y) {
 
 define i32 @test14_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test14_commuted(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -215,7 +215,7 @@ define i32 @test14_commuted(i32 %x, i32 %y) {
 ; ((x & ~y) ^ (~x & y)) -> x ^ y
 define i32 @test15(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -228,7 +228,7 @@ define i32 @test15(i32 %x, i32 %y) {
 
 define i32 @test15_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15_commuted(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1

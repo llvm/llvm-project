@@ -230,8 +230,13 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         addOpAddress(*Loc, Sym);
       }
     }
-    if (Expr)
-      DwarfExpr->addExpression(Expr);
+    // Global variables attached to symbols are memory locations.
+    // It would be better if this were unconditional, but malformed input that
+    // mixes non-fragments and fragments for the same variable is too expensive
+    // to detect in the verifier.
+    if (!DwarfExpr->isMemoryLocation())
+      DwarfExpr->setMemoryLocationKind();
+    DwarfExpr->addExpression(Expr);
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());

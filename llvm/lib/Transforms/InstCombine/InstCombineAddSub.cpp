@@ -1363,26 +1363,15 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   }
 
   // (add (xor A, B) (and A, B)) --> (or A, B)
-  if (match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
-      match(RHS, m_c_And(m_Specific(A), m_Specific(B))))
-    return BinaryOperator::CreateOr(A, B);
-
   // (add (and A, B) (xor A, B)) --> (or A, B)
-  if (match(RHS, m_Xor(m_Value(A), m_Value(B))) &&
-      match(LHS, m_c_And(m_Specific(A), m_Specific(B))))
+  if (match(&I, m_c_BinOp(m_Xor(m_Value(A), m_Value(B)),
+                          m_c_And(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateOr(A, B);
 
   // (add (or A, B) (and A, B)) --> (add A, B)
-  if (match(LHS, m_Or(m_Value(A), m_Value(B))) &&
-      match(RHS, m_c_And(m_Specific(A), m_Specific(B)))) {
-    I.setOperand(0, A);
-    I.setOperand(1, B);
-    return &I;
-  }
-
   // (add (and A, B) (or A, B)) --> (add A, B)
-  if (match(RHS, m_Or(m_Value(A), m_Value(B))) &&
-      match(LHS, m_c_And(m_Specific(A), m_Specific(B)))) {
+  if (match(&I, m_c_BinOp(m_Or(m_Value(A), m_Value(B)),
+                          m_c_And(m_Deferred(A), m_Deferred(B))))) {
     I.setOperand(0, A);
     I.setOperand(1, B);
     return &I;

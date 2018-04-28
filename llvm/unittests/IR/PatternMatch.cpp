@@ -65,6 +65,56 @@ TEST_F(PatternMatchTest, OneUse) {
   EXPECT_FALSE(m_OneUse(m_Value()).match(Leaf));
 }
 
+TEST_F(PatternMatchTest, CommutativeDeferredValue) {
+  Value *X = IRB.getInt32(1);
+  Value *Y = IRB.getInt32(2);
+
+  {
+    Value *tX = X;
+    EXPECT_TRUE(match(X, m_Deferred(tX)));
+    EXPECT_FALSE(match(Y, m_Deferred(tX)));
+  }
+  {
+    const Value *tX = X;
+    EXPECT_TRUE(match(X, m_Deferred(tX)));
+    EXPECT_FALSE(match(Y, m_Deferred(tX)));
+  }
+  {
+    Value *const tX = X;
+    EXPECT_TRUE(match(X, m_Deferred(tX)));
+    EXPECT_FALSE(match(Y, m_Deferred(tX)));
+  }
+  {
+    const Value *const tX = X;
+    EXPECT_TRUE(match(X, m_Deferred(tX)));
+    EXPECT_FALSE(match(Y, m_Deferred(tX)));
+  }
+
+  {
+    Value *tX = nullptr;
+    EXPECT_TRUE(match(IRB.CreateAnd(X, X), m_And(m_Value(tX), m_Deferred(tX))));
+    EXPECT_EQ(tX, X);
+  }
+  {
+    Value *tX = nullptr;
+    EXPECT_FALSE(
+        match(IRB.CreateAnd(X, Y), m_c_And(m_Value(tX), m_Deferred(tX))));
+  }
+
+  auto checkMatch = [X, Y](Value *Pattern) {
+    Value *tX = nullptr, *tY = nullptr;
+    EXPECT_TRUE(match(
+        Pattern, m_c_And(m_Value(tX), m_c_And(m_Deferred(tX), m_Value(tY)))));
+    EXPECT_EQ(tX, X);
+    EXPECT_EQ(tY, Y);
+  };
+
+  checkMatch(IRB.CreateAnd(X, IRB.CreateAnd(X, Y)));
+  checkMatch(IRB.CreateAnd(X, IRB.CreateAnd(Y, X)));
+  checkMatch(IRB.CreateAnd(IRB.CreateAnd(X, Y), X));
+  checkMatch(IRB.CreateAnd(IRB.CreateAnd(Y, X), X));
+}
+
 TEST_F(PatternMatchTest, FloatingPointOrderedMin) {
   Type *FltTy = IRB.getFloatTy();
   Value *L = ConstantFP::get(FltTy, 1.0);
