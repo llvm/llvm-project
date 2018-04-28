@@ -288,11 +288,8 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       DataExtractor data(buffer, count, process->GetByteOrder(),
                          process->GetAddressByteSize());
 
-      StringPrinter::ReadBufferAndDumpToStreamOptions options;
+      StringPrinter::ReadBufferAndDumpToStreamOptions options(read_options);
       options.SetData(data)
-          .SetEscapeNonPrintables(true)
-          .SetPrefixToken(0)
-          .SetQuote('"')
           .SetStream(&stream)
           .SetSourceSize(count)
           .SetBinaryZeroIsTerminator(false)
