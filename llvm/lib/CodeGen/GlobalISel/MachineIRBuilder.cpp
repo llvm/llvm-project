@@ -278,10 +278,16 @@ MachineInstrBuilder MachineIRBuilderBase::buildBrCond(unsigned Tst,
 
 MachineInstrBuilder MachineIRBuilderBase::buildLoad(unsigned Res, unsigned Addr,
                                                     MachineMemOperand &MMO) {
+  return buildLoadInstr(TargetOpcode::G_LOAD, Res, Addr, MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilderBase::buildLoadInstr(unsigned Opcode, unsigned Res,
+                                     unsigned Addr, MachineMemOperand &MMO) {
   assert(getMRI()->getType(Res).isValid() && "invalid operand type");
   assert(getMRI()->getType(Addr).isPointer() && "invalid operand type");
 
-  return buildInstr(TargetOpcode::G_LOAD)
+  return buildInstr(Opcode)
       .addDef(Res)
       .addUse(Addr)
       .addMemOperand(&MMO);

@@ -135,6 +135,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .maxScalarIf(typeInSet(1, {s64}), 0, s32)
       .widenScalarToNextPow2(0);
 
+  getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+      .lower();
+
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .legalForTypesWithMemSize({{s8, p0, 8},
                                  {s16, p0, 16},
@@ -147,6 +150,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .unsupportedIfMemSizeNotPow2()
       .clampScalar(0, s8, s64)
       .widenScalarToNextPow2(0)
+      .lowerIf([=](const LegalityQuery &Query) {
+        return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].Size * 8;
+      })
       .clampNumElements(0, v2s32, v2s32);
 
   // Constants

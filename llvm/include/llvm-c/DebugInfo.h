@@ -362,7 +362,7 @@ LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
 LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
-    unsigned SizeInBits, unsigned AlignInBits, LLVMMetadataRef *Elements,
+    uint64_t SizeInBits, uint32_t AlignInBits, LLVMMetadataRef *Elements,
     unsigned NumElements, LLVMMetadataRef ClassTy);
 
 /**
@@ -385,7 +385,7 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(
 LLVMMetadataRef LLVMDIBuilderCreateUnionType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
-    unsigned SizeInBits, unsigned AlignInBits, LLVMDIFlags Flags,
+    uint64_t SizeInBits, uint32_t AlignInBits, LLVMDIFlags Flags,
     LLVMMetadataRef *Elements, unsigned NumElements, unsigned RunTimeLang,
     const char *UniqueId, size_t UniqueIdLen);
 
@@ -400,8 +400,8 @@ LLVMMetadataRef LLVMDIBuilderCreateUnionType(
  * \param NumSubscripts Number of subscripts.
  */
 LLVMMetadataRef
-LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, unsigned Size,
-                             unsigned AlignInBits, LLVMMetadataRef Ty,
+LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, uint64_t Size,
+                             uint32_t AlignInBits, LLVMMetadataRef Ty,
                              LLVMMetadataRef *Subscripts,
                              unsigned NumSubscripts);
 
@@ -415,8 +415,8 @@ LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, unsigned Size,
  * \param NumSubscripts Number of subscripts.
  */
 LLVMMetadataRef
-LLVMDIBuilderCreateVectorType(LLVMDIBuilderRef Builder, unsigned Size,
-                              unsigned AlignInBits, LLVMMetadataRef Ty,
+LLVMDIBuilderCreateVectorType(LLVMDIBuilderRef Builder, uint64_t Size,
+                              uint32_t AlignInBits, LLVMMetadataRef Ty,
                               LLVMMetadataRef *Subscripts,
                               unsigned NumSubscripts);
 
@@ -441,7 +441,7 @@ LLVMDIBuilderCreateUnspecifiedType(LLVMDIBuilderRef Builder, const char *Name,
  */
 LLVMMetadataRef
 LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
-                             size_t NameLen, unsigned SizeInBits,
+                             size_t NameLen, uint64_t SizeInBits,
                              LLVMDWARFTypeEncoding Encoding);
 
 /**
@@ -456,7 +456,7 @@ LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
  */
 LLVMMetadataRef LLVMDIBuilderCreatePointerType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy,
-    unsigned SizeInBits, unsigned AlignInBits, unsigned AddressSpace,
+    uint64_t SizeInBits, uint32_t AlignInBits, unsigned AddressSpace,
     const char *Name, size_t NameLen);
 
 /**
@@ -480,7 +480,7 @@ LLVMMetadataRef LLVMDIBuilderCreatePointerType(
 LLVMMetadataRef LLVMDIBuilderCreateStructType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
-    unsigned SizeInBits, unsigned AlignInBits, LLVMDIFlags Flags,
+    uint64_t SizeInBits, uint32_t AlignInBits, LLVMDIFlags Flags,
     LLVMMetadataRef DerivedFrom, LLVMMetadataRef *Elements,
     unsigned NumElements, unsigned RunTimeLang, LLVMMetadataRef VTableHolder,
     const char *UniqueId, size_t UniqueIdLen);
@@ -502,7 +502,7 @@ LLVMMetadataRef LLVMDIBuilderCreateStructType(
 LLVMMetadataRef LLVMDIBuilderCreateMemberType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNo,
-    unsigned SizeInBits, unsigned AlignInBits, unsigned OffsetInBits,
+    uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     LLVMDIFlags Flags, LLVMMetadataRef Ty);
 
 /**
@@ -524,7 +524,7 @@ LLVMDIBuilderCreateStaticMemberType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
     LLVMMetadataRef Type, LLVMDIFlags Flags, LLVMValueRef ConstantVal,
-    unsigned AlignInBits);
+    uint32_t AlignInBits);
 
 /**
  * Create debugging information entry for a pointer to member.
@@ -539,8 +539,8 @@ LLVMMetadataRef
 LLVMDIBuilderCreateMemberPointerType(LLVMDIBuilderRef Builder,
                                      LLVMMetadataRef PointeeType,
                                      LLVMMetadataRef ClassType,
-                                     unsigned SizeInBits,
-                                     unsigned AlignInBits,
+                                     uint64_t SizeInBits,
+                                     uint32_t AlignInBits,
                                      LLVMDIFlags Flags);
 
 /**
@@ -602,7 +602,7 @@ LLVMDIBuilderCreateNullPtrType(LLVMDIBuilderRef Builder);
 LLVMMetadataRef LLVMDIBuilderCreateForwardDecl(
     LLVMDIBuilderRef Builder, unsigned Tag, const char *Name,
     size_t NameLen, LLVMMetadataRef Scope, LLVMMetadataRef File, unsigned Line,
-    unsigned RuntimeLang, unsigned SizeInBits, unsigned AlignInBits,
+    unsigned RuntimeLang, uint64_t SizeInBits, uint32_t AlignInBits,
     const char *UniqueIdentifier, size_t UniqueIdentifierLen);
 
 /**
@@ -626,7 +626,7 @@ LLVMMetadataRef
 LLVMDIBuilderCreateReplaceableCompositeType(
     LLVMDIBuilderRef Builder, unsigned Tag, const char *Name,
     size_t NameLen, LLVMMetadataRef Scope, LLVMMetadataRef File, unsigned Line,
-    unsigned RuntimeLang, unsigned SizeInBits, unsigned AlignInBits,
+    unsigned RuntimeLang, uint64_t SizeInBits, uint32_t AlignInBits,
     LLVMDIFlags Flags, const char *UniqueIdentifier,
     size_t UniqueIdentifierLen);
 
@@ -649,32 +649,41 @@ LLVMDIBuilderCreateBitFieldMemberType(LLVMDIBuilderRef Builder,
                                       LLVMMetadataRef Scope,
                                       const char *Name, size_t NameLen,
                                       LLVMMetadataRef File, unsigned LineNumber,
-                                      unsigned SizeInBits,
-                                      unsigned OffsetInBits,
-                                      unsigned StorageOffsetInBits,
+                                      uint64_t SizeInBits,
+                                      uint64_t OffsetInBits,
+                                      uint64_t StorageOffsetInBits,
                                       LLVMDIFlags Flags, LLVMMetadataRef Type);
 
 /**
  * Create debugging information entry for a class.
- * \param Scope        Scope in which this class is defined.
- * \param Name         class name.
- * \param File         File where this member is defined.
- * \param LineNumber   Line number.
- * \param SizeInBits   Member size.
- * \param AlignInBits  Member alignment.
- * \param OffsetInBits Member offset.
- * \param Flags        Flags to encode member attribute, e.g. private
- * \param Elements     class members.
- * \param NumElements  Number of class elements.
- * \param DerivedFrom  Debug info of the base class of this type.
- * \param TemplateParamsNode Template type parameters.
+ * \param Scope               Scope in which this class is defined.
+ * \param Name                Class name.
+ * \param NameLen             The length of the C string passed to \c Name.
+ * \param File                File where this member is defined.
+ * \param LineNumber          Line number.
+ * \param SizeInBits          Member size.
+ * \param AlignInBits         Member alignment.
+ * \param OffsetInBits        Member offset.
+ * \param Flags               Flags to encode member attribute, e.g. private.
+ * \param DerivedFrom         Debug info of the base class of this type.
+ * \param Elements            Class members.
+ * \param NumElements         Number of class elements.
+ * \param VTableHolder        Debug info of the base class that contains vtable
+ *                            for this type. This is used in
+ *                            DW_AT_containing_type. See DWARF documentation
+ *                            for more info.
+ * \param TemplateParamsNode  Template type parameters.
+ * \param UniqueIdentifier    A unique identifier for the type.
+ * \param UniqueIdentifierLen Length of the unique identifier.
  */
 LLVMMetadataRef LLVMDIBuilderCreateClassType(LLVMDIBuilderRef Builder,
     LLVMMetadataRef Scope, const char *Name, size_t NameLen,
-    LLVMMetadataRef File, unsigned LineNumber, unsigned SizeInBits,
-    unsigned AlignInBits, unsigned OffsetInBits, LLVMDIFlags Flags,
+    LLVMMetadataRef File, unsigned LineNumber, uint64_t SizeInBits,
+    uint32_t AlignInBits, uint64_t OffsetInBits, LLVMDIFlags Flags,
+    LLVMMetadataRef DerivedFrom,
     LLVMMetadataRef *Elements, unsigned NumElements,
-    LLVMMetadataRef DerivedFrom, LLVMMetadataRef TemplateParamsNode);
+    LLVMMetadataRef VTableHolder, LLVMMetadataRef TemplateParamsNode,
+    const char *UniqueIdentifier, size_t UniqueIdentifierLen);
 
 /**
  * Create a new DIType* with "artificial" flag set.

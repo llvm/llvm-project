@@ -802,15 +802,9 @@ def: InstRW<[SKXWriteResGroup7], (instregex "ADC(16|32|64)ri",
                                             "BTR(16|32|64)rr",
                                             "BTS(16|32|64)ri8",
                                             "BTS(16|32|64)rr",
-                                            "SAR(8|16|32|64)r1",
-                                            "SAR(8|16|32|64)ri",
                                             "SBB(16|32|64)ri",
                                             "SBB(16|32|64)i",
-                                            "SBB(8|16|32|64)rr",
-                                            "SHL(8|16|32|64)r1",
-                                            "SHL(8|16|32|64)ri",
-                                            "SHR(8|16|32|64)r1",
-                                            "SHR(8|16|32|64)ri")>;
+                                            "SBB(8|16|32|64)rr")>;
 
 def SKXWriteResGroup8 : SchedWriteRes<[SKXPort15]> {
   let Latency = 1;

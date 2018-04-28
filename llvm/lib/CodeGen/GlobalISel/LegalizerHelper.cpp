@@ -732,17 +732,19 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MI.eraseFromParent();
     return Legalized;
   }
-  case TargetOpcode::G_LOAD: {
+  case TargetOpcode::G_LOAD:
     // For some types like i24, we might try to widen to i32. To properly handle
     // this we should be using a dedicated extending load, until then avoid
     // trying to legalize.
     if (alignTo(MRI.getType(MI.getOperand(0).getReg()).getSizeInBits(), 8) !=
         WideTy.getSizeInBits())
       return UnableToLegalize;
-
+    LLVM_FALLTHROUGH;
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_ZEXTLOAD: {
     unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildLoad(DstExt, MI.getOperand(1).getReg(),
-                         **MI.memoperands_begin());
+    MIRBuilder.buildLoadInstr(MI.getOpcode(), DstExt, MI.getOperand(1).getReg(),
+                              **MI.memoperands_begin());
     MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
     MI.eraseFromParent();
     return Legalized;
@@ -1029,6 +1031,44 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MIRBuilder.buildICmp(CmpInst::ICMP_EQ, SuccessRes, OldValRes, CmpVal);
     MI.eraseFromParent();
     return Legalized;
+  }
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_ZEXTLOAD: {
+    // Lower to a memory-width G_LOAD and a G_SEXT/G_ZEXT/G_ANYEXT
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned PtrReg = MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    auto &MMO = **MI.memoperands_begin();
+
+    if (DstTy.getSizeInBits() == MMO.getSize() /* in bytes */ * 8) {
+      MIRBuilder.buildLoad(DstReg, PtrReg, MMO);
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
+    if (DstTy.isScalar()) {
+      unsigned TmpReg = MRI.createGenericVirtualRegister(
+          LLT::scalar(MMO.getSize() /* in bytes */ * 8));
+      MIRBuilder.buildLoad(TmpReg, PtrReg, MMO);
+      switch (MI.getOpcode()) {
+      default:
+        llvm_unreachable("Unexpected opcode");
+      case TargetOpcode::G_LOAD:
+        MIRBuilder.buildAnyExt(DstReg, TmpReg);
+        break;
+      case TargetOpcode::G_SEXTLOAD:
+        MIRBuilder.buildSExt(DstReg, TmpReg);
+        break;
+      case TargetOpcode::G_ZEXTLOAD:
+        MIRBuilder.buildZExt(DstReg, TmpReg);
+        break;
+      }
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
+    return UnableToLegalize;
   }
   }
 }

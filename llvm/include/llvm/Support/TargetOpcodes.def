@@ -265,8 +265,14 @@ HANDLE_TARGET_OPCODE(G_INTTOPTR)
 /// COPY is the relevant instruction.
 HANDLE_TARGET_OPCODE(G_BITCAST)
 
-/// Generic load.
+/// Generic load (including anyext load)
 HANDLE_TARGET_OPCODE(G_LOAD)
+
+/// Generic signext load
+HANDLE_TARGET_OPCODE(G_SEXTLOAD)
+
+/// Generic zeroext load
+HANDLE_TARGET_OPCODE(G_ZEXTLOAD)
 
 /// Generic store.
 HANDLE_TARGET_OPCODE(G_STORE)

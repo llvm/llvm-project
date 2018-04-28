@@ -1308,7 +1308,7 @@ class MnemonicAlias<string From, string To, string VariantName = ""> {
 /// InstAlias - This defines an alternate assembly syntax that is allowed to
 /// match an instruction that has a different (more canonical) assembly
 /// representation.
-class InstAlias<string Asm, dag Result, int Emit = 1> {
+class InstAlias<string Asm, dag Result, int Emit = 1, string VariantName = ""> {
   string AsmString = Asm;      // The .s format to match the instruction with.
   dag ResultInst = Result;     // The MCInst to generate.
 
@@ -1332,7 +1332,7 @@ class InstAlias<string Asm, dag Result, int Emit = 1> {
 
   // Assembler variant name to use for this alias. If not specified then
   // assembler variants will be determined based on AsmString
-  string AsmVariantName = "";
+  string AsmVariantName = VariantName;
 }
 
 //===----------------------------------------------------------------------===//
