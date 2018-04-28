@@ -97,14 +97,17 @@ public:
   void evalStrcpy(CheckerContext &C, const CallExpr *CE) const;
   void evalStrncpy(CheckerContext &C, const CallExpr *CE) const;
   void evalStpcpy(CheckerContext &C, const CallExpr *CE) const;
+  void evalStrlcpy(CheckerContext &C, const CallExpr *CE) const;
   void evalStrcpyCommon(CheckerContext &C,
                         const CallExpr *CE,
                         bool returnEnd,
                         bool isBounded,
-                        bool isAppending) const;
+                        bool isAppending,
+                        bool canOverlap = false) const;
 
   void evalStrcat(CheckerContext &C, const CallExpr *CE) const;
   void evalStrncat(CheckerContext &C, const CallExpr *CE) const;
+  void evalStrlcat(CheckerContext &C, const CallExpr *CE) const;
 
   void evalStrcmp(CheckerContext &C, const CallExpr *CE) const;
   void evalStrncmp(CheckerContext &C, const CallExpr *CE) const;
@@ -1393,6 +1396,18 @@ void CStringChecker::evalStpcpy(CheckerContext &C, const CallExpr *CE) const {
                    /* isAppending = */ false);
 }
 
+void CStringChecker::evalStrlcpy(CheckerContext &C, const CallExpr *CE) const {
+  if (CE->getNumArgs() < 3)
+    return;
+
+  // char *strlcpy(char *dst, const char *src, size_t n);
+  evalStrcpyCommon(C, CE,
+                   /* returnEnd = */ true,
+                   /* isBounded = */ true,
+                   /* isAppending = */ false,
+                   /* canOverlap = */ true);
+}
+
 void CStringChecker::evalStrcat(CheckerContext &C, const CallExpr *CE) const {
   if (CE->getNumArgs() < 2)
     return;
@@ -1415,9 +1430,21 @@ void CStringChecker::evalStrncat(CheckerContext &C, const CallExpr *CE) const {
                    /* isAppending = */ true);
 }
 
+void CStringChecker::evalStrlcat(CheckerContext &C, const CallExpr *CE) const {
+  if (CE->getNumArgs() < 3)
+    return;
+
+  //char *strlcat(char *s1, const char *s2, size_t n);
+  evalStrcpyCommon(C, CE,
+                   /* returnEnd = */ false,
+                   /* isBounded = */ true,
+                   /* isAppending = */ true,
+                   /* canOverlap = */ true);
+}
+
 void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
                                       bool returnEnd, bool isBounded,
-                                      bool isAppending) const {
+                                      bool isAppending, bool canOverlap) const {
   CurrentFunctionDescription = "string copy function";
   ProgramStateRef state = C.getState();
   const LocationContext *LCtx = C.getLocationContext();
@@ -1454,6 +1481,12 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   SVal amountCopied = UnknownVal();
   SVal maxLastElementIndex = UnknownVal();
   const char *boundWarning = nullptr;
+
+  if (canOverlap)
+    state = CheckOverlap(C, state, CE->getArg(2), Dst, srcExpr);
+
+  if (!state)
+    return;
 
   // If the function is strncpy, strncat, etc... it is bounded.
   if (isBounded) {
@@ -2091,10 +2124,14 @@ bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
     evalFunction =  &CStringChecker::evalStrncpy;
   else if (C.isCLibraryFunction(FDecl, "stpcpy"))
     evalFunction =  &CStringChecker::evalStpcpy;
+  else if (C.isCLibraryFunction(FDecl, "strlcpy"))
+    evalFunction =  &CStringChecker::evalStrlcpy;
   else if (C.isCLibraryFunction(FDecl, "strcat"))
     evalFunction =  &CStringChecker::evalStrcat;
   else if (C.isCLibraryFunction(FDecl, "strncat"))
     evalFunction =  &CStringChecker::evalStrncat;
+  else if (C.isCLibraryFunction(FDecl, "strlcat"))
+    evalFunction =  &CStringChecker::evalStrlcat;
   else if (C.isCLibraryFunction(FDecl, "strlen"))
     evalFunction =  &CStringChecker::evalstrLength;
   else if (C.isCLibraryFunction(FDecl, "strnlen"))
