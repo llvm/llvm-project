@@ -5351,6 +5351,9 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     return It;
   }
 
+  // We want to return the spot where we inserted the call.
+  MachineBasicBlock::iterator CallPt;
+
   // We have a default call. Save the link register.
   MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
                               .addReg(AArch64::SP, RegState::Define)
@@ -5363,7 +5366,7 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   // Insert the call.
   It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::BL))
                           .addGlobalAddress(M.getNamedValue(MF.getName())));
-
+  CallPt = It;
   It++;
 
   // Restore the link register.
@@ -5374,5 +5377,5 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
                                .addImm(16);
   It = MBB.insert(It, LDRXpost);
 
-  return It;
+  return CallPt;
 }

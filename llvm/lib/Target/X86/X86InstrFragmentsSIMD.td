@@ -555,17 +555,6 @@ def X86RndScalesRnd : SDNode<"X86ISD::VRNDSCALES_RND", SDTFPBinOpImmRound>;
 def X86ReducesRnd   : SDNode<"X86ISD::VREDUCES_RND",   SDTFPBinOpImmRound>;
 def X86GetMantsRnd  : SDNode<"X86ISD::VGETMANTS_RND",  SDTFPBinOpImmRound>;
 
-def SDT_PCMPISTRI : SDTypeProfile<2, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
-                                         SDTCisVT<2, v16i8>, SDTCisVT<3, v16i8>,
-                                         SDTCisVT<4, i8>]>;
-def SDT_PCMPESTRI : SDTypeProfile<2, 5, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
-                                         SDTCisVT<2, v16i8>, SDTCisVT<3, i32>,
-                                         SDTCisVT<4, v16i8>, SDTCisVT<5, i32>,
-                                         SDTCisVT<6, i8>]>;
-
-def X86pcmpistri : SDNode<"X86ISD::PCMPISTRI", SDT_PCMPISTRI>;
-def X86pcmpestri : SDNode<"X86ISD::PCMPESTRI", SDT_PCMPESTRI>;
-
 def X86compress: SDNode<"X86ISD::COMPRESS", SDTypeProfile<1, 1,
                               [SDTCisSameAs<0, 1>, SDTCisVec<1>]>, []>;
 def X86expand  : SDNode<"X86ISD::EXPAND", SDTypeProfile<1, 1,

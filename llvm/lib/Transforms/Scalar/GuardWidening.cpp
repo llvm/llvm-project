@@ -65,7 +65,7 @@ namespace {
 
 class GuardWideningImpl {
   DominatorTree &DT;
-  PostDominatorTree &PDT;
+  PostDominatorTree *PDT;
   LoopInfo &LI;
 
   /// Together, these describe the region of interest.  This might be all of
@@ -214,7 +214,7 @@ class GuardWideningImpl {
 
 public:
 
-  explicit GuardWideningImpl(DominatorTree &DT, PostDominatorTree &PDT,
+  explicit GuardWideningImpl(DominatorTree &DT, PostDominatorTree *PDT,
                              LoopInfo &LI, DomTreeNode *Root,
                              std::function<bool(BasicBlock*)> BlockFilter)
     : DT(DT), PDT(PDT), LI(LI), Root(Root), BlockFilter(BlockFilter) {}
@@ -353,9 +353,8 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   // 2) we have the extra cost of computing the guard condition in the common
   // case.  At the moment, we really only consider the second in our heuristic
   // here.  TODO: evaluate cost model for spurious deopt
-  bool HoistingOutOfIf =
-      !PDT.dominates(DominatedGuard->getParent(), DominatingGuard->getParent());
-
+  // NOTE: As written, this also lets us hoist right over another guard which
+  // is essentially just another spelling for control flow.  
   if (isWideningCondProfitable(DominatedGuard->getArgOperand(0),
                                DominatingGuard->getArgOperand(0)))
     return HoistingOutOfLoop ? WS_VeryPositive : WS_Positive;
@@ -363,7 +362,26 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   if (HoistingOutOfLoop)
     return WS_Positive;
 
-  return HoistingOutOfIf ? WS_IllegalOrNegative : WS_Neutral;
+  // Returns true if we might be hoisting above explicit control flow.  Note
+  // that this completely ignores implicit control flow (guards, calls which
+  // throw, etc...).  That choice appears arbitrary.
+  auto MaybeHoistingOutOfIf = [&]() {
+    auto *DominatingBlock = DominatingGuard->getParent();
+    auto *DominatedBlock = DominatedGuard->getParent();
+    
+    // Same Block?
+    if (DominatedBlock == DominatingBlock)
+      return false;
+    // Obvious successor (common loop header/preheader case)
+    if (DominatedBlock == DominatingBlock->getUniqueSuccessor())
+      return false;
+    // TODO: diamond, triangle cases
+    if (!PDT) return true;
+    return !PDT->dominates(DominatedGuard->getParent(),
+                           DominatingGuard->getParent());
+  };
+
+  return MaybeHoistingOutOfIf() ? WS_IllegalOrNegative : WS_Neutral;
 }
 
 bool GuardWideningImpl::isAvailableAt(Value *V, Instruction *Loc,
@@ -671,7 +689,7 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!GuardWideningImpl(DT, PDT, LI, DT.getRootNode(),
+  if (!GuardWideningImpl(DT, &PDT, LI, DT.getRootNode(),
                          [](BasicBlock*) { return true; } ).run())
     return PreservedAnalyses::all();
 
@@ -694,7 +712,7 @@ struct GuardWideningLegacyPass : public FunctionPass {
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    return GuardWideningImpl(DT, PDT, LI, DT.getRootNode(),
+    return GuardWideningImpl(DT, &PDT, LI, DT.getRootNode(),
                          [](BasicBlock*) { return true; } ).run();
   }
 
@@ -720,7 +738,8 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
       return false;
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
+    auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
     BasicBlock *RootBB = L->getLoopPredecessor();
     if (!RootBB)
       RootBB = L->getHeader();
@@ -734,7 +753,6 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     getLoopAnalysisUsage(AU);
-    AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addPreserved<PostDominatorTreeWrapperPass>();
   }
 };
