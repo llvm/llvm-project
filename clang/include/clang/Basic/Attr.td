@@ -1716,6 +1716,13 @@ def SwiftBridge : Attr {
   let Documentation = [SwiftBridgeDocs];
 }
 
+def SwiftBridgedTypedef : Attr {
+  let Spellings = [GNU<"swift_bridged_typedef">];
+  let Subjects = SubjectList<[TypedefName], ErrorDiag, "typedefs">;
+  let Args = [];
+  let Documentation = [SwiftBridgedTypedefDocs];
+}
+
 def SwiftObjCMembers : Attr {
   let Spellings = [GNU<"swift_objc_members">];
   let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
