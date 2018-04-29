@@ -359,15 +359,15 @@ def VERWm : I<0x00, MRM5m, (outs), (ins i16mem:$seg), "verw\t$seg", []>, TB;
 
 let SchedRW = [WriteSystem] in {
 def SGDT16m : I<0x01, MRM0m, (outs), (ins opaque48mem:$dst),
-                "sgdt{w}\t$dst", []>, TB, OpSize16, Requires<[Not64BitMode]>;
+                "sgdtw\t$dst", []>, TB, OpSize16, Requires<[Not64BitMode]>;
 def SGDT32m : I<0x01, MRM0m, (outs), (ins opaque48mem:$dst),
-                "sgdt{l}\t$dst", []>, OpSize32, TB, Requires <[Not64BitMode]>;
+                "sgdt{l|d}\t$dst", []>, OpSize32, TB, Requires <[Not64BitMode]>;
 def SGDT64m : I<0x01, MRM0m, (outs), (ins opaque80mem:$dst),
                 "sgdt{q}\t$dst", []>, TB, Requires <[In64BitMode]>;
 def SIDT16m : I<0x01, MRM1m, (outs), (ins opaque48mem:$dst),
-                "sidt{w}\t$dst", []>, TB, OpSize16, Requires<[Not64BitMode]>;
+                "sidtw\t$dst", []>, TB, OpSize16, Requires<[Not64BitMode]>;
 def SIDT32m : I<0x01, MRM1m, (outs), (ins opaque48mem:$dst),
-                "sidt{l}\t$dst", []>, OpSize32, TB, Requires <[Not64BitMode]>;
+                "sidt{l|d}\t$dst", []>, OpSize32, TB, Requires <[Not64BitMode]>;
 def SIDT64m : I<0x01, MRM1m, (outs), (ins opaque80mem:$dst),
                 "sidt{q}\t$dst", []>, TB, Requires <[In64BitMode]>;
 def SLDT16r : I<0x00, MRM0r, (outs GR16:$dst), (ins),
@@ -384,15 +384,15 @@ def SLDT64r : RI<0x00, MRM0r, (outs GR64:$dst), (ins),
                  "sldt{q}\t$dst", []>, TB, Requires<[In64BitMode]>;
 
 def LGDT16m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
-                "lgdt{w}\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;
+                "lgdtw\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;
 def LGDT32m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
-                "lgdt{l}\t$src", []>, OpSize32, TB, Requires<[Not64BitMode]>;
+                "lgdt{l|d}\t$src", []>, OpSize32, TB, Requires<[Not64BitMode]>;
 def LGDT64m : I<0x01, MRM2m, (outs), (ins opaque80mem:$src),
                 "lgdt{q}\t$src", []>, TB, Requires<[In64BitMode]>;
 def LIDT16m : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
-                "lidt{w}\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;
+                "lidtw\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;
 def LIDT32m : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
-                "lidt{l}\t$src", []>, OpSize32, TB, Requires<[Not64BitMode]>;
+                "lidt{l|d}\t$src", []>, OpSize32, TB, Requires<[Not64BitMode]>;
 def LIDT64m : I<0x01, MRM3m, (outs), (ins opaque80mem:$src),
                 "lidt{q}\t$src", []>, TB, Requires<[In64BitMode]>;
 def LLDT16r : I<0x00, MRM2r, (outs), (ins GR16:$src),
@@ -401,6 +401,15 @@ let mayLoad = 1 in
 def LLDT16m : I<0x00, MRM2m, (outs), (ins i16mem:$src),
                 "lldt{w}\t$src", []>, TB;
 } // SchedRW
+
+def : InstAlias<"sgdt\t$dst", (SGDT16m opaque48mem:$dst), 0>, Requires<[In16BitMode]>;
+def : InstAlias<"sgdt\t$dst", (SGDT32m opaque48mem:$dst), 0>, Requires<[In32BitMode]>;
+def : InstAlias<"sidt\t$dst", (SIDT16m opaque48mem:$dst), 0>, Requires<[In16BitMode]>;
+def : InstAlias<"sidt\t$dst", (SIDT32m opaque48mem:$dst), 0>, Requires<[In32BitMode]>;
+def : InstAlias<"lgdt\t$src", (LGDT16m opaque48mem:$src), 0>, Requires<[In16BitMode]>;
+def : InstAlias<"lgdt\t$src", (LGDT32m opaque48mem:$src), 0>, Requires<[In32BitMode]>;
+def : InstAlias<"lidt\t$src", (LIDT16m opaque48mem:$src), 0>, Requires<[In16BitMode]>;
+def : InstAlias<"lidt\t$src", (LIDT32m opaque48mem:$src), 0>, Requires<[In32BitMode]>;
 
 //===----------------------------------------------------------------------===//
 // Specialized register support

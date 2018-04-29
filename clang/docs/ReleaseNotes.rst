@@ -78,6 +78,12 @@ Non-comprehensive list of changes in this release
   standard-layout if all base classes and the first data member (or bit-field)
   can be laid out at offset zero.
 
+- Clang's handling of the GCC ``packed`` class attribute in C++ has been fixed
+  to apply only to non-static data members and not to base classes. This fixes
+  an ABI difference between Clang and GCC, but creates an ABI difference between
+  Clang 7 and earlier versions. The old behavior can be restored by setting
+  ``-fclang-abi-compat`` to ``6`` or earlier.
+
 - ...
 
 New Compiler Flags

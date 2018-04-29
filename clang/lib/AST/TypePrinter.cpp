@@ -385,14 +385,23 @@ void TypePrinter::printBlockPointerAfter(const BlockPointerType *T,
   printAfter(T->getPointeeType(), OS);
 }
 
+// When printing a reference, the referenced type might also be a reference.
+// If so, we want to skip that before printing the inner type.
+static QualType skipTopLevelReferences(QualType T) {
+  if (auto *Ref = T->getAs<ReferenceType>())
+    return skipTopLevelReferences(Ref->getPointeeTypeAsWritten());
+  return T;
+}
+
 void TypePrinter::printLValueReferenceBefore(const LValueReferenceType *T,
                                              raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
   SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
-  printBefore(T->getPointeeTypeAsWritten(), OS);
+  QualType Inner = skipTopLevelReferences(T->getPointeeTypeAsWritten());
+  printBefore(Inner, OS);
   // Handle things like 'int (&A)[4];' correctly.
   // FIXME: this should include vectors, but vectors use attributes I guess.
-  if (isa<ArrayType>(T->getPointeeTypeAsWritten()))
+  if (isa<ArrayType>(Inner))
     OS << '(';
   OS << '&';
 }
@@ -401,21 +410,23 @@ void TypePrinter::printLValueReferenceAfter(const LValueReferenceType *T,
                                             raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
   SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
+  QualType Inner = skipTopLevelReferences(T->getPointeeTypeAsWritten());
   // Handle things like 'int (&A)[4];' correctly.
   // FIXME: this should include vectors, but vectors use attributes I guess.
-  if (isa<ArrayType>(T->getPointeeTypeAsWritten()))
+  if (isa<ArrayType>(Inner))
     OS << ')';
-  printAfter(T->getPointeeTypeAsWritten(), OS);
+  printAfter(Inner, OS);
 }
 
 void TypePrinter::printRValueReferenceBefore(const RValueReferenceType *T,
                                              raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
   SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
-  printBefore(T->getPointeeTypeAsWritten(), OS);
+  QualType Inner = skipTopLevelReferences(T->getPointeeTypeAsWritten());
+  printBefore(Inner, OS);
   // Handle things like 'int (&&A)[4];' correctly.
   // FIXME: this should include vectors, but vectors use attributes I guess.
-  if (isa<ArrayType>(T->getPointeeTypeAsWritten()))
+  if (isa<ArrayType>(Inner))
     OS << '(';
   OS << "&&";
 }
@@ -424,11 +435,12 @@ void TypePrinter::printRValueReferenceAfter(const RValueReferenceType *T,
                                             raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
   SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
+  QualType Inner = skipTopLevelReferences(T->getPointeeTypeAsWritten());
   // Handle things like 'int (&&A)[4];' correctly.
   // FIXME: this should include vectors, but vectors use attributes I guess.
-  if (isa<ArrayType>(T->getPointeeTypeAsWritten()))
+  if (isa<ArrayType>(Inner))
     OS << ')';
-  printAfter(T->getPointeeTypeAsWritten(), OS);
+  printAfter(Inner, OS);
 }
 
 void TypePrinter::printMemberPointerBefore(const MemberPointerType *T, 

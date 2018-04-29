@@ -9,6 +9,15 @@ call [eax]
 jmp [eax]
 // CHECK: jmpl *(%eax)
 
+lgdt [eax]
+// CHECK: lgdtl (%eax)
+lidt [eax]
+// CHECK: lidtl (%eax)
+sgdt [eax]
+// CHECK: sgdtl (%eax)
+sidt [eax]
+// CHECK: sidtl (%eax)
+
 // mode switch
 .code16
 
@@ -18,3 +27,12 @@ call [eax]
 // CHECK: callw *(%eax)
 jmp [eax]
 // CHECK: jmpw *(%eax)
+
+lgdt [eax]
+// CHECK: lgdtw (%eax)
+lidt [eax]
+// CHECK: lidtw (%eax)
+sgdt [eax]
+// CHECK: sgdtw (%eax)
+sidt [eax]
+// CHECK: sidtw (%eax)
