@@ -450,9 +450,8 @@ def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup9], (instregex "LAHF", // TODO: This doesnt match Agner's data
-                                           "NOOP",
-                                           "SAHF", // TODO: This doesn't match Agner's data
+def: InstRW<[BWWriteResGroup9], (instrs LAHF, SAHF)>; // TODO: This doesnt match Agner's data
+def: InstRW<[BWWriteResGroup9], (instregex "NOOP",
                                            "SGDT64m",
                                            "SIDT64m",
                                            "SMSW16m",
@@ -884,7 +883,7 @@ def BWWriteResGroup54 : SchedWriteRes<[BWPort6,BWPort0156]> {
   let NumMicroOps = 5;
   let ResourceCycles = [1,4];
 }
-def: InstRW<[BWWriteResGroup54], (instregex "PAUSE")>;
+def: InstRW<[BWWriteResGroup54], (instrs PAUSE)>;
 
 def BWWriteResGroup55 : SchedWriteRes<[BWPort06,BWPort0156]> {
   let Latency = 5;
@@ -1197,24 +1196,15 @@ def BWWriteResGroup81 : SchedWriteRes<[BWPort0,BWPort5,BWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[BWWriteResGroup81], (instregex "PSLLDrm",
-                                            "PSLLQrm",
-                                            "PSLLWrm",
-                                            "PSRADrm",
-                                            "PSRAWrm",
-                                            "PSRLDrm",
-                                            "PSRLQrm",
-                                            "PSRLWrm",
-                                            "PTESTrm",
-                                            "VPSLLDrm",
-                                            "VPSLLQrm",
-                                            "VPSLLWrm",
-                                            "VPSRADrm",
-                                            "VPSRAWrm",
-                                            "VPSRLDrm",
-                                            "VPSRLQrm",
-                                            "VPSRLWrm",
-                                            "VPTESTrm")>;
+def: InstRW<[BWWriteResGroup81], (instregex "(V?)PSLLDrm",
+                                            "(V?)PSLLQrm",
+                                            "(V?)PSLLWrm",
+                                            "(V?)PSRADrm",
+                                            "(V?)PSRAWrm",
+                                            "(V?)PSRLDrm",
+                                            "(V?)PSRLQrm",
+                                            "(V?)PSRLWrm",
+                                            "(V?)PTESTrm")>;
 
 def BWWriteResGroup82 : SchedWriteRes<[BWPort0,BWPort01,BWPort23]> {
   let Latency = 7;

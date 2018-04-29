@@ -375,6 +375,7 @@ def SBWriteResGroup4 : SchedWriteRes<[SBPort05]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SBWriteResGroup4], (instrs CDQ, CQO)>;
+def: InstRW<[SBWriteResGroup4], (instrs LAHF, SAHF)>;
 def: InstRW<[SBWriteResGroup4], (instregex "BT(16|32|64)ri8",
                                            "BT(16|32|64)rr",
                                            "BTC(16|32|64)ri8",
@@ -383,8 +384,6 @@ def: InstRW<[SBWriteResGroup4], (instregex "BT(16|32|64)ri8",
                                            "BTR(16|32|64)rr",
                                            "BTS(16|32|64)ri8",
                                            "BTS(16|32|64)rr",
-                                           "LAHF",
-                                           "SAHF",
                                            "VMOVDQA(Y?)rr",
                                            "VMOVDQU(Y?)rr")>;
 
@@ -712,7 +711,7 @@ def SBWriteResGroup29_2 : SchedWriteRes<[SBPort5,SBPort015]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SBWriteResGroup29_2], (instregex "PAUSE")>;
+def: InstRW<[SBWriteResGroup29_2], (instrs PAUSE)>;
 
 def SBWriteResGroup29_3 : SchedWriteRes<[SBPort05,SBPort015]> {
   let Latency = 4;

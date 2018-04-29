@@ -82,3 +82,42 @@ ldff1sw z0.d, p0/z, [x0, z0.d, sxtw #3]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
 // CHECK-NEXT: ldff1sw z0.d, p0/z, [x0, z0.d, sxtw #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid vector + immediate addressing modes
+
+ldff1sw z0.s, p0/z, [z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: ldff1sw z0.s, p0/z, [z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1sw z0.s, p0/z, [z0.s, #4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: ldff1sw z0.s, p0/z, [z0.s, #4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1sw z0.d, p0/z, [z0.d, #-4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #-4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1sw z0.d, p0/z, [z0.d, #-1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #-1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1sw z0.d, p0/z, [z0.d, #125]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #125]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1sw z0.d, p0/z, [z0.d, #128]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #128]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1sw z0.d, p0/z, [z0.d, #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

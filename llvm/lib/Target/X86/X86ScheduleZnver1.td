@@ -361,14 +361,14 @@ def ZnWritePushA : SchedWriteRes<[ZnAGU]> {
 def : InstRW<[ZnWritePushA], (instregex "PUSHA(16|32)")>;
 
 //LAHF
-def : InstRW<[WriteMicrocoded], (instregex "LAHF")>;
+def : InstRW<[WriteMicrocoded], (instrs LAHF)>;
 
 // SAHF.
 def ZnWriteSAHF : SchedWriteRes<[ZnALU]> {
   let Latency = 2;
   let NumMicroOps = 2;
 }
-def : InstRW<[ZnWriteSAHF], (instregex "SAHF")>;
+def : InstRW<[ZnWriteSAHF], (instrs SAHF)>;
 
 // BSWAP.
 def ZnWriteBSwap : SchedWriteRes<[ZnALU]> {
@@ -395,15 +395,6 @@ def : InstRW<[WriteALULd], (instregex "(ADD|SUB)(8|16|32|64)m(r|i)",
                           "(ADD|SUB)64mi32")>;
 
 // ADC SBB.
-// r,r/i.
-def : InstRW<[WriteALU], (instregex "(ADC|SBB)(8|16|32|64)r(r|i)",
-                          "(ADC|SBB)(16|32|64)ri8",
-                          "(ADC|SBB)64ri32")>;
-
-// r,m.
-def : InstRW<[WriteALULd, ReadAfterLd],
-            (instregex "(ADC|SBB)(8|16|32|64)rm")>;
-
 // m,r/i.
 def : InstRW<[WriteALULd],
              (instregex "(ADC|SBB)(8|16|32|64)m(r|i)",
@@ -522,7 +513,7 @@ def ZnWriteJCXZ : SchedWriteRes<[ZnALU03]>;
 def : InstRW<[ZnWriteJCXZ], (instrs JCXZ, JECXZ, JRCXZ)>;
 
 // INTO
-def : InstRW<[WriteMicrocoded], (instregex "INTO")>;
+def : InstRW<[WriteMicrocoded], (instrs INTO)>;
 
 // LOOP.
 def ZnWriteLOOP : SchedWriteRes<[ZnALU03]>;
@@ -563,10 +554,7 @@ def ZnWriteALULat2Ld : SchedWriteRes<[ZnAGU, ZnALU]> {
 }
 
 // BT.
-// r,r/i.
-def : InstRW<[WriteShift], (instregex "BT(16|32|64)r(r|i8)")>;
-
-def : InstRW<[WriteShiftLd], (instregex "BT(16|32|64)mr")>;
+// m,i.
 def : InstRW<[WriteShiftLd], (instregex "BT(16|32|64)mi8")>;
 
 // BTR BTS BTC.
@@ -576,7 +564,6 @@ def ZnWriteBTRSC : SchedWriteRes<[ZnALU]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[ZnWriteBTRSC], (instregex "BT(R|S|C)(16|32|64)r(r|i8)")>;
-
 
 // m,r,i.
 def ZnWriteBTRSCm : SchedWriteRes<[ZnAGU, ZnALU]> {
@@ -643,7 +630,7 @@ def ZnWriteLEAVE : SchedWriteRes<[ZnALU, ZnAGU]> {
 def : InstRW<[ZnWriteLEAVE], (instregex "LEAVE")>;
 
 // PAUSE.
-def : InstRW<[WriteMicrocoded], (instregex "PAUSE")>;
+def : InstRW<[WriteMicrocoded], (instrs PAUSE)>;
 
 // RDTSC.
 def : InstRW<[WriteMicrocoded], (instregex "RDTSC")>;
@@ -1317,7 +1304,7 @@ def : InstRW<[ZnWriteCVTPS2PIr], (instregex "MMX_CVT(T?)PS2PIirr")>;
 
 // CVTPI2PD.
 // x,mm.
-def : InstRW<[ZnWriteCVTPS2PDr], (instregex "MMX_CVT(T?)PI2PDirr")>;
+def : InstRW<[ZnWriteCVTPS2PDr], (instregex "MMX_CVTPI2PDirr")>;
 
 // CVT(T)PD2PI.
 // mm,x.
