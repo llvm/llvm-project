@@ -139,6 +139,8 @@ void CodeGenFunction::DetachScope::StartDetach() {
   CGF.ExceptionSlot = nullptr;
   OldEHSelectorSlot = CGF.EHSelectorSlot;
   CGF.EHSelectorSlot = nullptr;
+  OldNormalCleanupDest = CGF.NormalCleanupDest;
+  CGF.NormalCleanupDest = nullptr;
 
   // Emit the detached block.
   CGF.EmitBlock(DetachedBlock);
@@ -211,6 +213,7 @@ void CodeGenFunction::DetachScope::FinishDetach() {
   CGF.EHResumeBlock = OldEHResumeBlock;
   CGF.ExceptionSlot = OldExceptionSlot;
   CGF.EHSelectorSlot = OldEHSelectorSlot;
+  CGF.NormalCleanupDest = OldNormalCleanupDest;
 
   // Emit the continue block.
   CleanupsScope->ForceCleanup();
@@ -349,11 +352,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
 
   const Expr *Inc = S.getInc();
   assert(Inc && "_Cilk_for loop has no increment");
-  JumpDest Preattach = getJumpDestInCurrentScope("pfor.preattach");
   Continue = getJumpDestInCurrentScope("pfor.inc");
-
-  // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(Preattach, Preattach));
 
   // Ensure that the _Cilk_for loop iterations are synced on exit from the loop,
   // whether normally or by an exception.
@@ -369,6 +368,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   llvm::BasicBlock *OldEHResumeBlock = EHResumeBlock;
   llvm::Value *OldExceptionSlot = ExceptionSlot;
   llvm::AllocaInst *OldEHSelectorSlot = EHSelectorSlot;
+  llvm::AllocaInst *OldNormalCleanupDest = NormalCleanupDest;
 
   const VarDecl *LoopVar = S.getLoopVariable();
   RValue LoopVarInitRV;
@@ -428,6 +428,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
     EHResumeBlock = nullptr;
     ExceptionSlot = nullptr;
     EHSelectorSlot = nullptr;
+    NormalCleanupDest = nullptr;
 
     EmitBlock(ForBodyEntry);
   }
@@ -442,6 +443,10 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   EHCatchScope *CatchScope = EHStack.pushCatch(1);
   CatchScope->setCatchAllHandler(0, DetRethrow.get());
   RunCleanupsScope DetachCleanupsScope(*this);
+
+  // Store the blocks to use for break and continue.
+  JumpDest Preattach = getJumpDestInCurrentScope("pfor.preattach");
+  BreakContinueStack.push_back(BreakContinue(Preattach, Preattach));
 
   // Inside the detached block, create the loop variable, setting its value to
   // the saved initialization value.
@@ -491,6 +496,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
     EHResumeBlock = OldEHResumeBlock;
     ExceptionSlot = OldExceptionSlot;
     EHSelectorSlot = OldEHSelectorSlot;
+    NormalCleanupDest = OldNormalCleanupDest;
   }
 
   // Emit the increment next.

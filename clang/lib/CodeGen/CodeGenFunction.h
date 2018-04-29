@@ -1066,25 +1066,27 @@ public:
   /// \brief RAII object to manage creation of detach/reattach instructions.
   class DetachScope {
     CodeGenFunction &CGF;
-    bool DetachStarted, DetachInitialized;
-    llvm::DetachInst *Detach;
-    llvm::BasicBlock *DetachedBlock;
-    llvm::BasicBlock *ContinueBlock;
+    bool DetachStarted = false;
+    bool DetachInitialized = false;
+    llvm::DetachInst *Detach = nullptr;
+    llvm::BasicBlock *DetachedBlock = nullptr;
+    llvm::BasicBlock *ContinueBlock = nullptr;
 
-    RunCleanupsScope *CleanupsScope;
-    RunCleanupsScope *ExnCleanupsScope;
+    RunCleanupsScope *CleanupsScope = nullptr;
+    RunCleanupsScope *ExnCleanupsScope = nullptr;
     DetachScope *ParentScope;
 
     DetachedRethrowHandler DetRethrow;
 
     // Old state from the CGF to restore when we're done with the detach.
-    llvm::AssertingVH<llvm::Instruction> OldAllocaInsertPt;
-    llvm::BasicBlock *OldEHResumeBlock;
-    llvm::Value *OldExceptionSlot;
-    llvm::AllocaInst *OldEHSelectorSlot;
+    llvm::AssertingVH<llvm::Instruction> OldAllocaInsertPt = nullptr;
+    llvm::BasicBlock *OldEHResumeBlock = nullptr;
+    llvm::Value *OldExceptionSlot = nullptr;
+    llvm::AllocaInst *OldEHSelectorSlot = nullptr;
+    llvm::AllocaInst *OldNormalCleanupDest = nullptr;
 
     // Saved state in an initialized detach scope.
-    llvm::AssertingVH<llvm::Instruction> SavedDetachedAllocaInsertPt;
+    llvm::AssertingVH<llvm::Instruction> SavedDetachedAllocaInsertPt = nullptr;
 
     // Information about a reference temporary created early in the detached
     // block.
@@ -1100,14 +1102,7 @@ public:
   public:
     /// \brief Enter a new detach scope
     explicit DetachScope(CodeGenFunction &CGF)
-        : CGF(CGF), DetachStarted(false), DetachInitialized(false),
-          Detach(nullptr), DetachedBlock(nullptr),
-          ContinueBlock(nullptr), CleanupsScope(nullptr),
-          ExnCleanupsScope(nullptr), ParentScope(CGF.CurDetachScope),
-          DetRethrow(CGF),
-          OldAllocaInsertPt(nullptr), OldEHResumeBlock(nullptr),
-          OldExceptionSlot(nullptr), OldEHSelectorSlot(nullptr),
-          SavedDetachedAllocaInsertPt(nullptr),
+        : CGF(CGF), ParentScope(CGF.CurDetachScope), DetRethrow(CGF),
           RefTmp(nullptr, CharUnits()) {
       CGF.CurDetachScope = this;
     }
