@@ -154,3 +154,31 @@ namespace ExplicitRefInit {
   struct A { explicit A(int); };
   const A &a(0); // expected-error {{reference to type 'const ExplicitRefInit::A' could not bind to an rvalue of type 'int'}}
 }
+
+namespace RefCollapseTypePrinting {
+  template<typename T> void add_lref() {
+    using X = int(T); // expected-note 4{{previous}}
+    using X = const volatile T&;
+    // expected-error@-1 {{'int &' vs 'int (int &)'}}
+    // expected-error@-2 {{'int &' vs 'int (int &&)'}}
+    // expected-error@-3 {{'const int &' vs 'int (const int &)'}}
+    // expected-error@-4 {{'const int &' vs 'int (const int &&)'}}
+  }
+  template void add_lref<int&>(); // expected-note {{instantiation of}}
+  template void add_lref<int&&>(); // expected-note {{instantiation of}}
+  template void add_lref<const int&>(); // expected-note {{instantiation of}}
+  template void add_lref<const int&&>(); // expected-note {{instantiation of}}
+
+  template<typename T> void add_rref() {
+    using X = int(T); // expected-note 4{{previous}}
+    using X = const volatile T&&;
+    // expected-error@-1 {{'int &' vs 'int (int &)'}}
+    // expected-error@-2 {{'int &&' vs 'int (int &&)'}}
+    // expected-error@-3 {{'const int &' vs 'int (const int &)'}}
+    // expected-error@-4 {{'const int &&' vs 'int (const int &&)'}}
+  }
+  template void add_rref<int&>(); // expected-note {{instantiation of}}
+  template void add_rref<int&&>(); // expected-note {{instantiation of}}
+  template void add_rref<const int&>(); // expected-note {{instantiation of}}
+  template void add_rref<const int&&>(); // expected-note {{instantiation of}}
+}
