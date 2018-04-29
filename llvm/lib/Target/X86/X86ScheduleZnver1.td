@@ -601,38 +601,20 @@ def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rr", "PEXT(32|64)rr")>;
 // r,r,m.
 def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rm", "PEXT(32|64)rm")>;
 
-// ROR ROL.
-def : InstRW<[WriteShift], (instregex "RO(R|L)(8|16|32|64)r1")>;
-
 // RCR RCL.
-// r,1.
-def : InstRW<[WriteShift], (instregex "RC(R|L)(8|16|32|64)r1")>;
-
-// m,1.
-def : InstRW<[WriteMicrocoded], (instregex "RC(R|L)(8|16|32|64)m1")>;
-
-// i.
-def : InstRW<[WriteShift], (instregex "RC(R|L)(8|16|32|64)r(i|CL)")>;
-
 // m,i.
-def : InstRW<[WriteMicrocoded], (instregex "RC(R|L)(8|16|32|64)m(i|CL)")>;
+def : InstRW<[WriteMicrocoded], (instregex "RC(R|L)(8|16|32|64)m(1|i|CL)")>;
 
 // SHR SHL SAR.
 // m,i.
 def : InstRW<[WriteShiftLd], (instregex "S(A|H)(R|L)(8|16|32|64)m(i|1)")>;
 
 // SHRD SHLD.
-// r,r
-def : InstRW<[WriteShift], (instregex "SH(R|L)D(16|32|64)rri8")>;
-
 // m,r
 def : InstRW<[WriteShiftLd], (instregex "SH(R|L)D(16|32|64)mri8")>;
 
 // r,r,cl.
-def : InstRW<[WriteMicrocoded], (instregex "SHLD(16|32|64)rrCL")>;
-
-// r,r,cl.
-def : InstRW<[WriteMicrocoded], (instregex "SHRD(16|32|64)rrCL")>;
+def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)rrCL")>;
 
 // m,r,cl.
 def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)mrCL")>;

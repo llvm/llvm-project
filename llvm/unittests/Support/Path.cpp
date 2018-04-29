@@ -23,7 +23,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include "llvm/ADT/ArrayRef.h"
 #include <windows.h>
 #include <winerror.h>
@@ -59,7 +59,7 @@ TEST(is_separator, Works) {
   EXPECT_TRUE(path::is_separator('\\', path::Style::windows));
   EXPECT_FALSE(path::is_separator('\\', path::Style::posix));
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   EXPECT_TRUE(path::is_separator('\\'));
 #else
   EXPECT_FALSE(path::is_separator('\\'));
@@ -259,7 +259,7 @@ TEST(Support, AbsolutePathIteratorEnd) {
 
 TEST(Support, HomeDirectory) {
   std::string expected;
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   if (wchar_t const *path = ::_wgetenv(L"USERPROFILE")) {
     auto pathLen = ::wcslen(path);
     ArrayRef<char> ref{reinterpret_cast<char const *>(path),
@@ -348,7 +348,7 @@ TEST(Support, TempDirectory) {
   EXPECT_TRUE(!TempDir.empty());
 }
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 static std::string path2regex(std::string Path) {
   size_t Pos = 0;
   while ((Pos = Path.find('\\', Pos)) != std::string::npos) {
@@ -617,7 +617,7 @@ TEST_F(FileSystemTest, TempFiles) {
   ASSERT_EQ(fs::access(Twine(TempPath), sys::fs::AccessMode::Exist),
             errc::no_such_file_or_directory);
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   // Path name > 260 chars should get an error.
   const char *Path270 =
     "abcdefghijklmnopqrstuvwxyz9abcdefghijklmnopqrstuvwxyz8"
@@ -665,7 +665,7 @@ TEST_F(FileSystemTest, CreateDir) {
   ::umask(OldUmask);
 #endif
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   // Prove that create_directories() can handle a pathname > 248 characters,
   // which is the documented limit for CreateDirectory().
   // (248 is MAX_PATH subtracting room for an 8.3 filename.)
@@ -958,7 +958,7 @@ TEST_F(FileSystemTest, Remove) {
   ASSERT_FALSE(fs::exists(BaseDir));
 }
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 TEST_F(FileSystemTest, CarriageReturn) {
   SmallString<128> FilePathname(TestDirectory);
   std::error_code EC;
@@ -1076,7 +1076,7 @@ TEST(Support, NormalizePath) {
     EXPECT_EQ(std::get<2>(T), Posix);
   }
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
   SmallString<64> PathHome;
   path::home_directory(PathHome);
 
@@ -1256,7 +1256,7 @@ TEST_F(FileSystemTest, permissions) {
   EXPECT_EQ(fs::setPermissions(TempPath, fs::all_read | fs::all_exe), NoError);
   EXPECT_TRUE(CheckPermissions(fs::all_read | fs::all_exe));
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
   fs::perms ReadOnly = fs::all_read | fs::all_exe;
   EXPECT_EQ(fs::setPermissions(TempPath, fs::no_perms), NoError);
   EXPECT_TRUE(CheckPermissions(ReadOnly));

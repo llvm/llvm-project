@@ -455,7 +455,6 @@ def: InstRW<[BWWriteResGroup9], (instregex "LAHF", // TODO: This doesnt match Ag
                                            "SAHF", // TODO: This doesn't match Agner's data
                                            "SGDT64m",
                                            "SIDT64m",
-                                           "SLDT64m",
                                            "SMSW16m",
                                            "STRm",
                                            "SYSCALL")>;

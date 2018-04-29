@@ -115,7 +115,7 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
     return FileOrErr.takeError();
   fs::TempFile File = std::move(*FileOrErr);
 
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
   // On Windows, CreateFileMapping (the mmap function on Windows)
   // automatically extends the underlying file. We don't need to
   // extend the file beforehand. _chsize (ftruncate on Windows) is

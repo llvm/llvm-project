@@ -6602,9 +6602,9 @@ defm VCVTSI642SDZ: avx512_vcvtsi_common<0x2A, X86SintToFpRnd, WriteCvtI2F, GR64,
                                  XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
+              (VCVTSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
 def : InstAlias<"vcvtsi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
+              (VCVTSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
 
 def : Pat<(f32 (sint_to_fp (loadi32 addr:$src))),
           (VCVTSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
@@ -6638,9 +6638,9 @@ defm VCVTUSI642SDZ : avx512_vcvtsi_common<0x7B, X86UintToFpRnd, WriteCvtI2F, GR6
                                   XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 def : InstAlias<"vcvtusi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTUSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
+              (VCVTUSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
 def : InstAlias<"vcvtusi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
-              (VCVTUSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
+              (VCVTUSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0, "att">;
 
 def : Pat<(f32 (uint_to_fp (loadi32 addr:$src))),
           (VCVTUSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
@@ -6689,9 +6689,9 @@ multiclass avx512_cvt_s_int_round<bits<8> opc, X86VectorVTInfo SrcVT,
                 EVEX, VEX_LIG, Sched<[sched.Folded, ReadAfterLd]>;
 
     def : InstAlias<"v" # asm # aliasStr # "\t{$src, $dst|$dst, $src}",
-            (!cast<Instruction>(NAME # "rr_Int") DstVT.RC:$dst, SrcVT.RC:$src), 0>;
+            (!cast<Instruction>(NAME # "rr_Int") DstVT.RC:$dst, SrcVT.RC:$src), 0, "att">;
     def : InstAlias<"v" # asm # aliasStr # "\t{$rc, $src, $dst|$dst, $src, $rc}",
-            (!cast<Instruction>(NAME # "rrb_Int") DstVT.RC:$dst, SrcVT.RC:$src, AVX512RC:$rc), 0>;
+            (!cast<Instruction>(NAME # "rrb_Int") DstVT.RC:$dst, SrcVT.RC:$src, AVX512RC:$rc), 0, "att">;
   } // Predicates = [HasAVX512]
 }
 
@@ -6703,7 +6703,7 @@ multiclass avx512_cvt_s_int_round_aliases<bits<8> opc, X86VectorVTInfo SrcVT,
   let Predicates = [HasAVX512] in {
     def : InstAlias<"v" # asm # aliasStr # "\t{$src, $dst|$dst, $src}",
             (!cast<Instruction>(NAME # "rm_Int") DstVT.RC:$dst,
-                                            SrcVT.IntScalarMemOp:$src), 0>;
+                                            SrcVT.IntScalarMemOp:$src), 0, "att">;
   } // Predicates = [HasAVX512]
 }
 
@@ -6838,9 +6838,9 @@ let Predicates = [HasAVX512] in {
               EVEX, VEX_LIG, Sched<[sched.Folded, ReadAfterLd]>;
 
   def : InstAlias<asm # aliasStr # "\t{$src, $dst|$dst, $src}",
-          (!cast<Instruction>(NAME # "rr_Int") _DstRC.RC:$dst, _SrcRC.RC:$src), 0>;
+          (!cast<Instruction>(NAME # "rr_Int") _DstRC.RC:$dst, _SrcRC.RC:$src), 0, "att">;
   def : InstAlias<asm # aliasStr # "\t{{sae}, $src, $dst|$dst, $src, {sae}}",
-          (!cast<Instruction>(NAME # "rrb_Int") _DstRC.RC:$dst, _SrcRC.RC:$src), 0>;
+          (!cast<Instruction>(NAME # "rrb_Int") _DstRC.RC:$dst, _SrcRC.RC:$src), 0, "att">;
 } //HasAVX512
 }
 
@@ -6854,7 +6854,7 @@ multiclass avx512_cvt_s_all_unsigned<bits<8> opc, string asm,
 let Predicates = [HasAVX512] in {
   def : InstAlias<asm # aliasStr # "\t{$src, $dst|$dst, $src}",
           (!cast<Instruction>(NAME # "rm_Int") _DstRC.RC:$dst,
-                                          _SrcRC.IntScalarMemOp:$src), 0>;
+                                          _SrcRC.IntScalarMemOp:$src), 0, "att">;
 }
 }
 
@@ -7109,11 +7109,11 @@ multiclass avx512_cvtpd2ps<bits<8> opc, string OpcodeStr, X86FoldableSchedWrite 
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, f128mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, f128mem:$src), 0, "intel">;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, f256mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, f256mem:$src), 0, "intel">;
   }
 }
 
@@ -7230,11 +7230,11 @@ multiclass avx512_cvttpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, i128mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, i128mem:$src), 0, "intel">;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, i256mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, i256mem:$src), 0, "intel">;
   }
 }
 
@@ -7260,11 +7260,11 @@ multiclass avx512_cvtpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, f128mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, f128mem:$src), 0, "intel">;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, f256mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, f256mem:$src), 0, "intel">;
   }
 }
 
@@ -7380,11 +7380,11 @@ multiclass avx512_cvtqq2ps<bits<8> opc, string OpcodeStr, SDNode OpNode,
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, i128mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, i128mem:$src), 0, "intel">;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
     def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
-                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, i256mem:$src), 0>;
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, i256mem:$src), 0, "intel">;
   }
 }
 

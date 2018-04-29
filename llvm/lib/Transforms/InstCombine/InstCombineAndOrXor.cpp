@@ -2411,6 +2411,36 @@ Value *InstCombiner::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
   return nullptr;
 }
 
+/// If we have a masked merge, in the canonical form of:
+///   |        A  |  |B|
+///   ((x ^ y) & M) ^ y
+///    |  D  |
+/// * If M is inverted:
+///      |  D  |
+///     ((x ^ y) & ~M) ^ y
+///   If A has one use, and, we want to canonicalize it to non-inverted mask:
+///     ((x ^ y) & M) ^ x
+static Instruction *visitMaskedMerge(BinaryOperator &I,
+                                     InstCombiner::BuilderTy &Builder) {
+  Value *B, *X, *D;
+  Value *M;
+  if (!match(&I, m_c_Xor(m_Value(B),
+                         m_OneUse(m_c_And(
+                             m_CombineAnd(m_c_Xor(m_Deferred(B), m_Value(X)),
+                                          m_Value(D)),
+                             m_Value(M))))))
+    return nullptr;
+
+  Value *NotM;
+  if (match(M, m_Not(m_Value(NotM)))) {
+    // De-invert the mask and swap the value in B part.
+    Value *NewA = Builder.CreateAnd(D, NotM);
+    return BinaryOperator::CreateXor(NewA, X);
+  }
+
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2460,6 +2490,9 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
     return BinaryOperator::CreateAnd(X, NotY);
   }
+
+  if (Instruction *Xor = visitMaskedMerge(I, Builder))
+    return Xor;
 
   // Is this a 'not' (~) fed by a binary operator?
   BinaryOperator *NotVal;

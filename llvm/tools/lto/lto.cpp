@@ -96,7 +96,7 @@ struct LTOToolDiagnosticHandler : public DiagnosticHandler {
 // Initialize the configured targets if they have not been initialized.
 static void lto_initialize() {
   if (!initialized) {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
     // Dialog box on crash disabling doesn't work across DLL boundaries, so do
     // it here.
     llvm::sys::DisableSystemDialogsOnCrash();
