@@ -114,10 +114,8 @@ public:
     AtomRange(AtomVector<T> &v) : _v(v) {}
     AtomRange(const AtomVector<T> &v) : _v(const_cast<AtomVector<T> &>(v)) {}
 
-    typedef std::pointer_to_unary_function<const OwningAtomPtr<T>&,
-                                           const T*> ConstDerefFn;
-
-    typedef std::pointer_to_unary_function<OwningAtomPtr<T>&, T*> DerefFn;
+    using ConstDerefFn = const T* (*)(const OwningAtomPtr<T>&);
+    using DerefFn = T* (*)(OwningAtomPtr<T>&);
 
     typedef llvm::mapped_iterator<typename AtomVector<T>::const_iterator,
                                   ConstDerefFn> ConstItTy;

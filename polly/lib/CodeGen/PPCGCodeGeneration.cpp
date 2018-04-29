@@ -2730,8 +2730,8 @@ public:
     PPCGScop->tagged_must_writes = getTaggedMustWrites();
     PPCGScop->must_writes = S->getMustWrites().release();
     PPCGScop->live_out = nullptr;
-    PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.take();
-    PPCGScop->must_kills = KillsInfo.MustKills.take();
+    PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.release();
+    PPCGScop->must_kills = KillsInfo.MustKills.release();
 
     PPCGScop->tagger = nullptr;
     PPCGScop->independence =
@@ -2747,7 +2747,7 @@ public:
     // If we have something non-trivial to kill, add it to the schedule
     if (KillsInfo.KillsSchedule.get())
       PPCGScop->schedule = isl_schedule_sequence(
-          PPCGScop->schedule, KillsInfo.KillsSchedule.take());
+          PPCGScop->schedule, KillsInfo.KillsSchedule.release());
 
     PPCGScop->names = getNames();
     PPCGScop->pet = nullptr;

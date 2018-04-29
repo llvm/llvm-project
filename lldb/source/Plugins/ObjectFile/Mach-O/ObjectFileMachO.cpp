@@ -1212,6 +1212,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDWARFAppleTypes:
           case eSectionTypeDWARFAppleNamespaces:
           case eSectionTypeDWARFAppleObjC:
+          case eSectionTypeDWARFGNUDebugAltLink:
             return eAddressClassDebug;
 
           case eSectionTypeEHFrame:

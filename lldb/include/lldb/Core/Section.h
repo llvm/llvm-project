@@ -182,6 +182,8 @@ public:
 
   lldb::SectionType GetType() const { return m_type; }
 
+  const char *GetTypeAsCString() const;
+
   lldb::SectionSP GetParent() const { return m_parent_wp.lock(); }
 
   bool IsThreadSpecific() const { return m_thread_specific; }
