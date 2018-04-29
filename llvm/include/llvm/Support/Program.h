@@ -27,7 +27,7 @@ namespace sys {
   // a colon on Unix or a semicolon on Windows.
 #if defined(LLVM_ON_UNIX)
   const char EnvPathSeparator = ':';
-#elif defined (LLVM_ON_WIN32)
+#elif defined (_WIN32)
   const char EnvPathSeparator = ';';
 #endif
 
@@ -35,7 +35,7 @@ namespace sys {
 struct ProcessInfo {
 #if defined(LLVM_ON_UNIX)
   typedef pid_t ProcessId;
-#elif defined(LLVM_ON_WIN32)
+#elif defined(_WIN32)
   typedef unsigned long ProcessId; // Must match the type of DWORD on Windows.
   typedef void * HANDLE; // Must match the type of HANDLE on Windows.
   /// The handle to the process (available on Windows only).

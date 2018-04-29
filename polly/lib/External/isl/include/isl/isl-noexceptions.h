@@ -171,8 +171,6 @@ class vec;
 // declarations for isl::aff
 inline isl::aff manage(__isl_take isl_aff *ptr);
 inline isl::aff manage_copy(__isl_keep isl_aff *ptr);
-inline isl::aff give(__isl_take isl_aff *ptr);
-
 
 class aff {
   friend inline isl::aff manage(__isl_take isl_aff *ptr);
@@ -196,8 +194,6 @@ public:
   inline __isl_keep isl_aff *get() const;
   inline __isl_give isl_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_aff *keep() const;
-  inline __isl_give isl_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -276,8 +272,6 @@ public:
 // declarations for isl::aff_list
 inline isl::aff_list manage(__isl_take isl_aff_list *ptr);
 inline isl::aff_list manage_copy(__isl_keep isl_aff_list *ptr);
-inline isl::aff_list give(__isl_take isl_aff_list *ptr);
-
 
 class aff_list {
   friend inline isl::aff_list manage(__isl_take isl_aff_list *ptr);
@@ -298,8 +292,6 @@ public:
   inline __isl_keep isl_aff_list *get() const;
   inline __isl_give isl_aff_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_aff_list *keep() const;
-  inline __isl_give isl_aff_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -309,8 +301,6 @@ public:
 // declarations for isl::ast_build
 inline isl::ast_build manage(__isl_take isl_ast_build *ptr);
 inline isl::ast_build manage_copy(__isl_keep isl_ast_build *ptr);
-inline isl::ast_build give(__isl_take isl_ast_build *ptr);
-
 
 class ast_build {
   friend inline isl::ast_build manage(__isl_take isl_ast_build *ptr);
@@ -332,8 +322,6 @@ public:
   inline __isl_keep isl_ast_build *get() const;
   inline __isl_give isl_ast_build *release();
   inline bool is_null() const;
-  inline __isl_keep isl_ast_build *keep() const;
-  inline __isl_give isl_ast_build *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
 
@@ -355,8 +343,6 @@ public:
 // declarations for isl::ast_expr
 inline isl::ast_expr manage(__isl_take isl_ast_expr *ptr);
 inline isl::ast_expr manage_copy(__isl_keep isl_ast_expr *ptr);
-inline isl::ast_expr give(__isl_take isl_ast_expr *ptr);
-
 
 class ast_expr {
   friend inline isl::ast_expr manage(__isl_take isl_ast_expr *ptr);
@@ -377,8 +363,6 @@ public:
   inline __isl_keep isl_ast_expr *get() const;
   inline __isl_give isl_ast_expr *release();
   inline bool is_null() const;
-  inline __isl_keep isl_ast_expr *keep() const;
-  inline __isl_give isl_ast_expr *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -414,8 +398,6 @@ public:
 // declarations for isl::ast_expr_list
 inline isl::ast_expr_list manage(__isl_take isl_ast_expr_list *ptr);
 inline isl::ast_expr_list manage_copy(__isl_keep isl_ast_expr_list *ptr);
-inline isl::ast_expr_list give(__isl_take isl_ast_expr_list *ptr);
-
 
 class ast_expr_list {
   friend inline isl::ast_expr_list manage(__isl_take isl_ast_expr_list *ptr);
@@ -436,8 +418,6 @@ public:
   inline __isl_keep isl_ast_expr_list *get() const;
   inline __isl_give isl_ast_expr_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_ast_expr_list *keep() const;
-  inline __isl_give isl_ast_expr_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -447,8 +427,6 @@ public:
 // declarations for isl::ast_node
 inline isl::ast_node manage(__isl_take isl_ast_node *ptr);
 inline isl::ast_node manage_copy(__isl_keep isl_ast_node *ptr);
-inline isl::ast_node give(__isl_take isl_ast_node *ptr);
-
 
 class ast_node {
   friend inline isl::ast_node manage(__isl_take isl_ast_node *ptr);
@@ -469,8 +447,6 @@ public:
   inline __isl_keep isl_ast_node *get() const;
   inline __isl_give isl_ast_node *release();
   inline bool is_null() const;
-  inline __isl_keep isl_ast_node *keep() const;
-  inline __isl_give isl_ast_node *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -499,8 +475,6 @@ public:
 // declarations for isl::ast_node_list
 inline isl::ast_node_list manage(__isl_take isl_ast_node_list *ptr);
 inline isl::ast_node_list manage_copy(__isl_keep isl_ast_node_list *ptr);
-inline isl::ast_node_list give(__isl_take isl_ast_node_list *ptr);
-
 
 class ast_node_list {
   friend inline isl::ast_node_list manage(__isl_take isl_ast_node_list *ptr);
@@ -521,8 +495,6 @@ public:
   inline __isl_keep isl_ast_node_list *get() const;
   inline __isl_give isl_ast_node_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_ast_node_list *keep() const;
-  inline __isl_give isl_ast_node_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -532,8 +504,6 @@ public:
 // declarations for isl::basic_map
 inline isl::basic_map manage(__isl_take isl_basic_map *ptr);
 inline isl::basic_map manage_copy(__isl_keep isl_basic_map *ptr);
-inline isl::basic_map give(__isl_take isl_basic_map *ptr);
-
 
 class basic_map {
   friend inline isl::basic_map manage(__isl_take isl_basic_map *ptr);
@@ -555,8 +525,6 @@ public:
   inline __isl_keep isl_basic_map *get() const;
   inline __isl_give isl_basic_map *release();
   inline bool is_null() const;
-  inline __isl_keep isl_basic_map *keep() const;
-  inline __isl_give isl_basic_map *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -669,8 +637,6 @@ public:
 // declarations for isl::basic_map_list
 inline isl::basic_map_list manage(__isl_take isl_basic_map_list *ptr);
 inline isl::basic_map_list manage_copy(__isl_keep isl_basic_map_list *ptr);
-inline isl::basic_map_list give(__isl_take isl_basic_map_list *ptr);
-
 
 class basic_map_list {
   friend inline isl::basic_map_list manage(__isl_take isl_basic_map_list *ptr);
@@ -691,8 +657,6 @@ public:
   inline __isl_keep isl_basic_map_list *get() const;
   inline __isl_give isl_basic_map_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_basic_map_list *keep() const;
-  inline __isl_give isl_basic_map_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -702,8 +666,6 @@ public:
 // declarations for isl::basic_set
 inline isl::basic_set manage(__isl_take isl_basic_set *ptr);
 inline isl::basic_set manage_copy(__isl_keep isl_basic_set *ptr);
-inline isl::basic_set give(__isl_take isl_basic_set *ptr);
-
 
 class basic_set {
   friend inline isl::basic_set manage(__isl_take isl_basic_set *ptr);
@@ -726,8 +688,6 @@ public:
   inline __isl_keep isl_basic_set *get() const;
   inline __isl_give isl_basic_set *release();
   inline bool is_null() const;
-  inline __isl_keep isl_basic_set *keep() const;
-  inline __isl_give isl_basic_set *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -809,8 +769,6 @@ public:
 // declarations for isl::basic_set_list
 inline isl::basic_set_list manage(__isl_take isl_basic_set_list *ptr);
 inline isl::basic_set_list manage_copy(__isl_keep isl_basic_set_list *ptr);
-inline isl::basic_set_list give(__isl_take isl_basic_set_list *ptr);
-
 
 class basic_set_list {
   friend inline isl::basic_set_list manage(__isl_take isl_basic_set_list *ptr);
@@ -831,8 +789,6 @@ public:
   inline __isl_keep isl_basic_set_list *get() const;
   inline __isl_give isl_basic_set_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_basic_set_list *keep() const;
-  inline __isl_give isl_basic_set_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -842,8 +798,6 @@ public:
 // declarations for isl::constraint
 inline isl::constraint manage(__isl_take isl_constraint *ptr);
 inline isl::constraint manage_copy(__isl_keep isl_constraint *ptr);
-inline isl::constraint give(__isl_take isl_constraint *ptr);
-
 
 class constraint {
   friend inline isl::constraint manage(__isl_take isl_constraint *ptr);
@@ -864,8 +818,6 @@ public:
   inline __isl_keep isl_constraint *get() const;
   inline __isl_give isl_constraint *release();
   inline bool is_null() const;
-  inline __isl_keep isl_constraint *keep() const;
-  inline __isl_give isl_constraint *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -895,8 +847,6 @@ public:
 // declarations for isl::constraint_list
 inline isl::constraint_list manage(__isl_take isl_constraint_list *ptr);
 inline isl::constraint_list manage_copy(__isl_keep isl_constraint_list *ptr);
-inline isl::constraint_list give(__isl_take isl_constraint_list *ptr);
-
 
 class constraint_list {
   friend inline isl::constraint_list manage(__isl_take isl_constraint_list *ptr);
@@ -917,8 +867,6 @@ public:
   inline __isl_keep isl_constraint_list *get() const;
   inline __isl_give isl_constraint_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_constraint_list *keep() const;
-  inline __isl_give isl_constraint_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -928,8 +876,6 @@ public:
 // declarations for isl::id
 inline isl::id manage(__isl_take isl_id *ptr);
 inline isl::id manage_copy(__isl_keep isl_id *ptr);
-inline isl::id give(__isl_take isl_id *ptr);
-
 
 class id {
   friend inline isl::id manage(__isl_take isl_id *ptr);
@@ -950,8 +896,6 @@ public:
   inline __isl_keep isl_id *get() const;
   inline __isl_give isl_id *release();
   inline bool is_null() const;
-  inline __isl_keep isl_id *keep() const;
-  inline __isl_give isl_id *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -966,8 +910,6 @@ public:
 // declarations for isl::id_list
 inline isl::id_list manage(__isl_take isl_id_list *ptr);
 inline isl::id_list manage_copy(__isl_keep isl_id_list *ptr);
-inline isl::id_list give(__isl_take isl_id_list *ptr);
-
 
 class id_list {
   friend inline isl::id_list manage(__isl_take isl_id_list *ptr);
@@ -988,8 +930,6 @@ public:
   inline __isl_keep isl_id_list *get() const;
   inline __isl_give isl_id_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_id_list *keep() const;
-  inline __isl_give isl_id_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -999,8 +939,6 @@ public:
 // declarations for isl::id_to_ast_expr
 inline isl::id_to_ast_expr manage(__isl_take isl_id_to_ast_expr *ptr);
 inline isl::id_to_ast_expr manage_copy(__isl_keep isl_id_to_ast_expr *ptr);
-inline isl::id_to_ast_expr give(__isl_take isl_id_to_ast_expr *ptr);
-
 
 class id_to_ast_expr {
   friend inline isl::id_to_ast_expr manage(__isl_take isl_id_to_ast_expr *ptr);
@@ -1021,8 +959,6 @@ public:
   inline __isl_keep isl_id_to_ast_expr *get() const;
   inline __isl_give isl_id_to_ast_expr *release();
   inline bool is_null() const;
-  inline __isl_keep isl_id_to_ast_expr *keep() const;
-  inline __isl_give isl_id_to_ast_expr *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -1038,8 +974,6 @@ public:
 // declarations for isl::local_space
 inline isl::local_space manage(__isl_take isl_local_space *ptr);
 inline isl::local_space manage_copy(__isl_keep isl_local_space *ptr);
-inline isl::local_space give(__isl_take isl_local_space *ptr);
-
 
 class local_space {
   friend inline isl::local_space manage(__isl_take isl_local_space *ptr);
@@ -1061,8 +995,6 @@ public:
   inline __isl_keep isl_local_space *get() const;
   inline __isl_give isl_local_space *release();
   inline bool is_null() const;
-  inline __isl_keep isl_local_space *keep() const;
-  inline __isl_give isl_local_space *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -1096,8 +1028,6 @@ public:
 // declarations for isl::map
 inline isl::map manage(__isl_take isl_map *ptr);
 inline isl::map manage_copy(__isl_keep isl_map *ptr);
-inline isl::map give(__isl_take isl_map *ptr);
-
 
 class map {
   friend inline isl::map manage(__isl_take isl_map *ptr);
@@ -1120,8 +1050,6 @@ public:
   inline __isl_keep isl_map *get() const;
   inline __isl_give isl_map *release();
   inline bool is_null() const;
-  inline __isl_keep isl_map *keep() const;
-  inline __isl_give isl_map *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -1298,8 +1226,6 @@ public:
 // declarations for isl::map_list
 inline isl::map_list manage(__isl_take isl_map_list *ptr);
 inline isl::map_list manage_copy(__isl_keep isl_map_list *ptr);
-inline isl::map_list give(__isl_take isl_map_list *ptr);
-
 
 class map_list {
   friend inline isl::map_list manage(__isl_take isl_map_list *ptr);
@@ -1320,8 +1246,6 @@ public:
   inline __isl_keep isl_map_list *get() const;
   inline __isl_give isl_map_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_map_list *keep() const;
-  inline __isl_give isl_map_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -1331,8 +1255,6 @@ public:
 // declarations for isl::mat
 inline isl::mat manage(__isl_take isl_mat *ptr);
 inline isl::mat manage_copy(__isl_keep isl_mat *ptr);
-inline isl::mat give(__isl_take isl_mat *ptr);
-
 
 class mat {
   friend inline isl::mat manage(__isl_take isl_mat *ptr);
@@ -1353,8 +1275,6 @@ public:
   inline __isl_keep isl_mat *get() const;
   inline __isl_give isl_mat *release();
   inline bool is_null() const;
-  inline __isl_keep isl_mat *keep() const;
-  inline __isl_give isl_mat *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -1404,8 +1324,6 @@ public:
 // declarations for isl::multi_aff
 inline isl::multi_aff manage(__isl_take isl_multi_aff *ptr);
 inline isl::multi_aff manage_copy(__isl_keep isl_multi_aff *ptr);
-inline isl::multi_aff give(__isl_take isl_multi_aff *ptr);
-
 
 class multi_aff {
   friend inline isl::multi_aff manage(__isl_take isl_multi_aff *ptr);
@@ -1428,8 +1346,6 @@ public:
   inline __isl_keep isl_multi_aff *get() const;
   inline __isl_give isl_multi_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_multi_aff *keep() const;
-  inline __isl_give isl_multi_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -1501,8 +1417,6 @@ public:
 // declarations for isl::multi_pw_aff
 inline isl::multi_pw_aff manage(__isl_take isl_multi_pw_aff *ptr);
 inline isl::multi_pw_aff manage_copy(__isl_keep isl_multi_pw_aff *ptr);
-inline isl::multi_pw_aff give(__isl_take isl_multi_pw_aff *ptr);
-
 
 class multi_pw_aff {
   friend inline isl::multi_pw_aff manage(__isl_take isl_multi_pw_aff *ptr);
@@ -1527,8 +1441,6 @@ public:
   inline __isl_keep isl_multi_pw_aff *get() const;
   inline __isl_give isl_multi_pw_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_multi_pw_aff *keep() const;
-  inline __isl_give isl_multi_pw_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -1601,8 +1513,6 @@ public:
 // declarations for isl::multi_union_pw_aff
 inline isl::multi_union_pw_aff manage(__isl_take isl_multi_union_pw_aff *ptr);
 inline isl::multi_union_pw_aff manage_copy(__isl_keep isl_multi_union_pw_aff *ptr);
-inline isl::multi_union_pw_aff give(__isl_take isl_multi_union_pw_aff *ptr);
-
 
 class multi_union_pw_aff {
   friend inline isl::multi_union_pw_aff manage(__isl_take isl_multi_union_pw_aff *ptr);
@@ -1627,8 +1537,6 @@ public:
   inline __isl_keep isl_multi_union_pw_aff *get() const;
   inline __isl_give isl_multi_union_pw_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_multi_union_pw_aff *keep() const;
-  inline __isl_give isl_multi_union_pw_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -1698,8 +1606,6 @@ public:
 // declarations for isl::multi_val
 inline isl::multi_val manage(__isl_take isl_multi_val *ptr);
 inline isl::multi_val manage_copy(__isl_keep isl_multi_val *ptr);
-inline isl::multi_val give(__isl_take isl_multi_val *ptr);
-
 
 class multi_val {
   friend inline isl::multi_val manage(__isl_take isl_multi_val *ptr);
@@ -1721,8 +1627,6 @@ public:
   inline __isl_keep isl_multi_val *get() const;
   inline __isl_give isl_multi_val *release();
   inline bool is_null() const;
-  inline __isl_keep isl_multi_val *keep() const;
-  inline __isl_give isl_multi_val *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -1780,8 +1684,6 @@ public:
 // declarations for isl::point
 inline isl::point manage(__isl_take isl_point *ptr);
 inline isl::point manage_copy(__isl_keep isl_point *ptr);
-inline isl::point give(__isl_take isl_point *ptr);
-
 
 class point {
   friend inline isl::point manage(__isl_take isl_point *ptr);
@@ -1803,8 +1705,6 @@ public:
   inline __isl_keep isl_point *get() const;
   inline __isl_give isl_point *release();
   inline bool is_null() const;
-  inline __isl_keep isl_point *keep() const;
-  inline __isl_give isl_point *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -1820,8 +1720,6 @@ public:
 // declarations for isl::pw_aff
 inline isl::pw_aff manage(__isl_take isl_pw_aff *ptr);
 inline isl::pw_aff manage_copy(__isl_keep isl_pw_aff *ptr);
-inline isl::pw_aff give(__isl_take isl_pw_aff *ptr);
-
 
 class pw_aff {
   friend inline isl::pw_aff manage(__isl_take isl_pw_aff *ptr);
@@ -1846,8 +1744,6 @@ public:
   inline __isl_keep isl_pw_aff *get() const;
   inline __isl_give isl_pw_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_pw_aff *keep() const;
-  inline __isl_give isl_pw_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -1936,8 +1832,6 @@ public:
 // declarations for isl::pw_aff_list
 inline isl::pw_aff_list manage(__isl_take isl_pw_aff_list *ptr);
 inline isl::pw_aff_list manage_copy(__isl_keep isl_pw_aff_list *ptr);
-inline isl::pw_aff_list give(__isl_take isl_pw_aff_list *ptr);
-
 
 class pw_aff_list {
   friend inline isl::pw_aff_list manage(__isl_take isl_pw_aff_list *ptr);
@@ -1958,8 +1852,6 @@ public:
   inline __isl_keep isl_pw_aff_list *get() const;
   inline __isl_give isl_pw_aff_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_pw_aff_list *keep() const;
-  inline __isl_give isl_pw_aff_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -1969,8 +1861,6 @@ public:
 // declarations for isl::pw_multi_aff
 inline isl::pw_multi_aff manage(__isl_take isl_pw_multi_aff *ptr);
 inline isl::pw_multi_aff manage_copy(__isl_keep isl_pw_multi_aff *ptr);
-inline isl::pw_multi_aff give(__isl_take isl_pw_multi_aff *ptr);
-
 
 class pw_multi_aff {
   friend inline isl::pw_multi_aff manage(__isl_take isl_pw_multi_aff *ptr);
@@ -1994,8 +1884,6 @@ public:
   inline __isl_keep isl_pw_multi_aff *get() const;
   inline __isl_give isl_pw_multi_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_pw_multi_aff *keep() const;
-  inline __isl_give isl_pw_multi_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2065,8 +1953,6 @@ public:
 // declarations for isl::pw_qpolynomial
 inline isl::pw_qpolynomial manage(__isl_take isl_pw_qpolynomial *ptr);
 inline isl::pw_qpolynomial manage_copy(__isl_keep isl_pw_qpolynomial *ptr);
-inline isl::pw_qpolynomial give(__isl_take isl_pw_qpolynomial *ptr);
-
 
 class pw_qpolynomial {
   friend inline isl::pw_qpolynomial manage(__isl_take isl_pw_qpolynomial *ptr);
@@ -2088,8 +1974,6 @@ public:
   inline __isl_keep isl_pw_qpolynomial *get() const;
   inline __isl_give isl_pw_qpolynomial *release();
   inline bool is_null() const;
-  inline __isl_keep isl_pw_qpolynomial *keep() const;
-  inline __isl_give isl_pw_qpolynomial *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2145,8 +2029,6 @@ public:
 // declarations for isl::qpolynomial
 inline isl::qpolynomial manage(__isl_take isl_qpolynomial *ptr);
 inline isl::qpolynomial manage_copy(__isl_keep isl_qpolynomial *ptr);
-inline isl::qpolynomial give(__isl_take isl_qpolynomial *ptr);
-
 
 class qpolynomial {
   friend inline isl::qpolynomial manage(__isl_take isl_qpolynomial *ptr);
@@ -2167,8 +2049,6 @@ public:
   inline __isl_keep isl_qpolynomial *get() const;
   inline __isl_give isl_qpolynomial *release();
   inline bool is_null() const;
-  inline __isl_keep isl_qpolynomial *keep() const;
-  inline __isl_give isl_qpolynomial *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -2218,8 +2098,6 @@ public:
 // declarations for isl::schedule
 inline isl::schedule manage(__isl_take isl_schedule *ptr);
 inline isl::schedule manage_copy(__isl_keep isl_schedule *ptr);
-inline isl::schedule give(__isl_take isl_schedule *ptr);
-
 
 class schedule {
   friend inline isl::schedule manage(__isl_take isl_schedule *ptr);
@@ -2241,8 +2119,6 @@ public:
   inline __isl_keep isl_schedule *get() const;
   inline __isl_give isl_schedule *release();
   inline bool is_null() const;
-  inline __isl_keep isl_schedule *keep() const;
-  inline __isl_give isl_schedule *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2269,8 +2145,6 @@ public:
 // declarations for isl::schedule_constraints
 inline isl::schedule_constraints manage(__isl_take isl_schedule_constraints *ptr);
 inline isl::schedule_constraints manage_copy(__isl_keep isl_schedule_constraints *ptr);
-inline isl::schedule_constraints give(__isl_take isl_schedule_constraints *ptr);
-
 
 class schedule_constraints {
   friend inline isl::schedule_constraints manage(__isl_take isl_schedule_constraints *ptr);
@@ -2292,8 +2166,6 @@ public:
   inline __isl_keep isl_schedule_constraints *get() const;
   inline __isl_give isl_schedule_constraints *release();
   inline bool is_null() const;
-  inline __isl_keep isl_schedule_constraints *keep() const;
-  inline __isl_give isl_schedule_constraints *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2319,8 +2191,6 @@ public:
 // declarations for isl::schedule_node
 inline isl::schedule_node manage(__isl_take isl_schedule_node *ptr);
 inline isl::schedule_node manage_copy(__isl_keep isl_schedule_node *ptr);
-inline isl::schedule_node give(__isl_take isl_schedule_node *ptr);
-
 
 class schedule_node {
   friend inline isl::schedule_node manage(__isl_take isl_schedule_node *ptr);
@@ -2341,8 +2211,6 @@ public:
   inline __isl_keep isl_schedule_node *get() const;
   inline __isl_give isl_schedule_node *release();
   inline bool is_null() const;
-  inline __isl_keep isl_schedule_node *keep() const;
-  inline __isl_give isl_schedule_node *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2413,8 +2281,6 @@ public:
 // declarations for isl::set
 inline isl::set manage(__isl_take isl_set *ptr);
 inline isl::set manage_copy(__isl_keep isl_set *ptr);
-inline isl::set give(__isl_take isl_set *ptr);
-
 
 class set {
   friend inline isl::set manage(__isl_take isl_set *ptr);
@@ -2439,8 +2305,6 @@ public:
   inline __isl_keep isl_set *get() const;
   inline __isl_give isl_set *release();
   inline bool is_null() const;
-  inline __isl_keep isl_set *keep() const;
-  inline __isl_give isl_set *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2582,8 +2446,6 @@ public:
 // declarations for isl::set_list
 inline isl::set_list manage(__isl_take isl_set_list *ptr);
 inline isl::set_list manage_copy(__isl_keep isl_set_list *ptr);
-inline isl::set_list give(__isl_take isl_set_list *ptr);
-
 
 class set_list {
   friend inline isl::set_list manage(__isl_take isl_set_list *ptr);
@@ -2604,8 +2466,6 @@ public:
   inline __isl_keep isl_set_list *get() const;
   inline __isl_give isl_set_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_set_list *keep() const;
-  inline __isl_give isl_set_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -2615,8 +2475,6 @@ public:
 // declarations for isl::space
 inline isl::space manage(__isl_take isl_space *ptr);
 inline isl::space manage_copy(__isl_keep isl_space *ptr);
-inline isl::space give(__isl_take isl_space *ptr);
-
 
 class space {
   friend inline isl::space manage(__isl_take isl_space *ptr);
@@ -2639,8 +2497,6 @@ public:
   inline __isl_keep isl_space *get() const;
   inline __isl_give isl_space *release();
   inline bool is_null() const;
-  inline __isl_keep isl_space *keep() const;
-  inline __isl_give isl_space *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2720,8 +2576,6 @@ public:
 // declarations for isl::term
 inline isl::term manage(__isl_take isl_term *ptr);
 inline isl::term manage_copy(__isl_keep isl_term *ptr);
-inline isl::term give(__isl_take isl_term *ptr);
-
 
 class term {
   friend inline isl::term manage(__isl_take isl_term *ptr);
@@ -2742,8 +2596,6 @@ public:
   inline __isl_keep isl_term *get() const;
   inline __isl_give isl_term *release();
   inline bool is_null() const;
-  inline __isl_keep isl_term *keep() const;
-  inline __isl_give isl_term *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
 
@@ -2756,8 +2608,6 @@ public:
 // declarations for isl::union_access_info
 inline isl::union_access_info manage(__isl_take isl_union_access_info *ptr);
 inline isl::union_access_info manage_copy(__isl_keep isl_union_access_info *ptr);
-inline isl::union_access_info give(__isl_take isl_union_access_info *ptr);
-
 
 class union_access_info {
   friend inline isl::union_access_info manage(__isl_take isl_union_access_info *ptr);
@@ -2779,8 +2629,6 @@ public:
   inline __isl_keep isl_union_access_info *get() const;
   inline __isl_give isl_union_access_info *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_access_info *keep() const;
-  inline __isl_give isl_union_access_info *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2796,8 +2644,6 @@ public:
 // declarations for isl::union_flow
 inline isl::union_flow manage(__isl_take isl_union_flow *ptr);
 inline isl::union_flow manage_copy(__isl_keep isl_union_flow *ptr);
-inline isl::union_flow give(__isl_take isl_union_flow *ptr);
-
 
 class union_flow {
   friend inline isl::union_flow manage(__isl_take isl_union_flow *ptr);
@@ -2818,8 +2664,6 @@ public:
   inline __isl_keep isl_union_flow *get() const;
   inline __isl_give isl_union_flow *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_flow *keep() const;
-  inline __isl_give isl_union_flow *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2835,8 +2679,6 @@ public:
 // declarations for isl::union_map
 inline isl::union_map manage(__isl_take isl_union_map *ptr);
 inline isl::union_map manage_copy(__isl_keep isl_union_map *ptr);
-inline isl::union_map give(__isl_take isl_union_map *ptr);
-
 
 class union_map {
   friend inline isl::union_map manage(__isl_take isl_union_map *ptr);
@@ -2861,8 +2703,6 @@ public:
   inline __isl_keep isl_union_map *get() const;
   inline __isl_give isl_union_map *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_map *keep() const;
-  inline __isl_give isl_union_map *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -2971,8 +2811,6 @@ public:
 // declarations for isl::union_map_list
 inline isl::union_map_list manage(__isl_take isl_union_map_list *ptr);
 inline isl::union_map_list manage_copy(__isl_keep isl_union_map_list *ptr);
-inline isl::union_map_list give(__isl_take isl_union_map_list *ptr);
-
 
 class union_map_list {
   friend inline isl::union_map_list manage(__isl_take isl_union_map_list *ptr);
@@ -2993,8 +2831,6 @@ public:
   inline __isl_keep isl_union_map_list *get() const;
   inline __isl_give isl_union_map_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_map_list *keep() const;
-  inline __isl_give isl_union_map_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -3004,8 +2840,6 @@ public:
 // declarations for isl::union_pw_aff
 inline isl::union_pw_aff manage(__isl_take isl_union_pw_aff *ptr);
 inline isl::union_pw_aff manage_copy(__isl_keep isl_union_pw_aff *ptr);
-inline isl::union_pw_aff give(__isl_take isl_union_pw_aff *ptr);
-
 
 class union_pw_aff {
   friend inline isl::union_pw_aff manage(__isl_take isl_union_pw_aff *ptr);
@@ -3029,8 +2863,6 @@ public:
   inline __isl_keep isl_union_pw_aff *get() const;
   inline __isl_give isl_union_pw_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_pw_aff *keep() const;
-  inline __isl_give isl_union_pw_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -3074,8 +2906,6 @@ public:
 // declarations for isl::union_pw_aff_list
 inline isl::union_pw_aff_list manage(__isl_take isl_union_pw_aff_list *ptr);
 inline isl::union_pw_aff_list manage_copy(__isl_keep isl_union_pw_aff_list *ptr);
-inline isl::union_pw_aff_list give(__isl_take isl_union_pw_aff_list *ptr);
-
 
 class union_pw_aff_list {
   friend inline isl::union_pw_aff_list manage(__isl_take isl_union_pw_aff_list *ptr);
@@ -3096,8 +2926,6 @@ public:
   inline __isl_keep isl_union_pw_aff_list *get() const;
   inline __isl_give isl_union_pw_aff_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_pw_aff_list *keep() const;
-  inline __isl_give isl_union_pw_aff_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -3107,8 +2935,6 @@ public:
 // declarations for isl::union_pw_multi_aff
 inline isl::union_pw_multi_aff manage(__isl_take isl_union_pw_multi_aff *ptr);
 inline isl::union_pw_multi_aff manage_copy(__isl_keep isl_union_pw_multi_aff *ptr);
-inline isl::union_pw_multi_aff give(__isl_take isl_union_pw_multi_aff *ptr);
-
 
 class union_pw_multi_aff {
   friend inline isl::union_pw_multi_aff manage(__isl_take isl_union_pw_multi_aff *ptr);
@@ -3134,8 +2960,6 @@ public:
   inline __isl_keep isl_union_pw_multi_aff *get() const;
   inline __isl_give isl_union_pw_multi_aff *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_pw_multi_aff *keep() const;
-  inline __isl_give isl_union_pw_multi_aff *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -3180,8 +3004,6 @@ public:
 // declarations for isl::union_pw_multi_aff_list
 inline isl::union_pw_multi_aff_list manage(__isl_take isl_union_pw_multi_aff_list *ptr);
 inline isl::union_pw_multi_aff_list manage_copy(__isl_keep isl_union_pw_multi_aff_list *ptr);
-inline isl::union_pw_multi_aff_list give(__isl_take isl_union_pw_multi_aff_list *ptr);
-
 
 class union_pw_multi_aff_list {
   friend inline isl::union_pw_multi_aff_list manage(__isl_take isl_union_pw_multi_aff_list *ptr);
@@ -3202,8 +3024,6 @@ public:
   inline __isl_keep isl_union_pw_multi_aff_list *get() const;
   inline __isl_give isl_union_pw_multi_aff_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_pw_multi_aff_list *keep() const;
-  inline __isl_give isl_union_pw_multi_aff_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -3213,8 +3033,6 @@ public:
 // declarations for isl::union_pw_qpolynomial
 inline isl::union_pw_qpolynomial manage(__isl_take isl_union_pw_qpolynomial *ptr);
 inline isl::union_pw_qpolynomial manage_copy(__isl_keep isl_union_pw_qpolynomial *ptr);
-inline isl::union_pw_qpolynomial give(__isl_take isl_union_pw_qpolynomial *ptr);
-
 
 class union_pw_qpolynomial {
   friend inline isl::union_pw_qpolynomial manage(__isl_take isl_union_pw_qpolynomial *ptr);
@@ -3236,8 +3054,6 @@ public:
   inline __isl_keep isl_union_pw_qpolynomial *get() const;
   inline __isl_give isl_union_pw_qpolynomial *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_pw_qpolynomial *keep() const;
-  inline __isl_give isl_union_pw_qpolynomial *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -3276,8 +3092,6 @@ public:
 // declarations for isl::union_set
 inline isl::union_set manage(__isl_take isl_union_set *ptr);
 inline isl::union_set manage_copy(__isl_keep isl_union_set *ptr);
-inline isl::union_set give(__isl_take isl_union_set *ptr);
-
 
 class union_set {
   friend inline isl::union_set manage(__isl_take isl_union_set *ptr);
@@ -3302,8 +3116,6 @@ public:
   inline __isl_keep isl_union_set *get() const;
   inline __isl_give isl_union_set *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_set *keep() const;
-  inline __isl_give isl_union_set *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -3370,8 +3182,6 @@ public:
 // declarations for isl::union_set_list
 inline isl::union_set_list manage(__isl_take isl_union_set_list *ptr);
 inline isl::union_set_list manage_copy(__isl_keep isl_union_set_list *ptr);
-inline isl::union_set_list give(__isl_take isl_union_set_list *ptr);
-
 
 class union_set_list {
   friend inline isl::union_set_list manage(__isl_take isl_union_set_list *ptr);
@@ -3392,8 +3202,6 @@ public:
   inline __isl_keep isl_union_set_list *get() const;
   inline __isl_give isl_union_set_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_union_set_list *keep() const;
-  inline __isl_give isl_union_set_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -3403,8 +3211,6 @@ public:
 // declarations for isl::val
 inline isl::val manage(__isl_take isl_val *ptr);
 inline isl::val manage_copy(__isl_keep isl_val *ptr);
-inline isl::val give(__isl_take isl_val *ptr);
-
 
 class val {
   friend inline isl::val manage(__isl_take isl_val *ptr);
@@ -3427,8 +3233,6 @@ public:
   inline __isl_keep isl_val *get() const;
   inline __isl_give isl_val *release();
   inline bool is_null() const;
-  inline __isl_keep isl_val *keep() const;
-  inline __isl_give isl_val *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline std::string to_str() const;
@@ -3492,8 +3296,6 @@ public:
 // declarations for isl::val_list
 inline isl::val_list manage(__isl_take isl_val_list *ptr);
 inline isl::val_list manage_copy(__isl_keep isl_val_list *ptr);
-inline isl::val_list give(__isl_take isl_val_list *ptr);
-
 
 class val_list {
   friend inline isl::val_list manage(__isl_take isl_val_list *ptr);
@@ -3514,8 +3316,6 @@ public:
   inline __isl_keep isl_val_list *get() const;
   inline __isl_give isl_val_list *release();
   inline bool is_null() const;
-  inline __isl_keep isl_val_list *keep() const;
-  inline __isl_give isl_val_list *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -3525,8 +3325,6 @@ public:
 // declarations for isl::vec
 inline isl::vec manage(__isl_take isl_vec *ptr);
 inline isl::vec manage_copy(__isl_keep isl_vec *ptr);
-inline isl::vec give(__isl_take isl_vec *ptr);
-
 
 class vec {
   friend inline isl::vec manage(__isl_take isl_vec *ptr);
@@ -3547,8 +3345,6 @@ public:
   inline __isl_keep isl_vec *get() const;
   inline __isl_give isl_vec *release();
   inline bool is_null() const;
-  inline __isl_keep isl_vec *keep() const;
-  inline __isl_give isl_vec *take();
   inline explicit operator bool() const;
   inline isl::ctx get_ctx() const;
   inline void dump() const;
@@ -3587,10 +3383,6 @@ isl::aff manage_copy(__isl_keep isl_aff *ptr) {
   ptr = isl_aff_copy(ptr);
   return aff(ptr);
 }
-isl::aff give(__isl_take isl_aff *ptr) {
-  return manage(ptr);
-}
-
 
 aff::aff()
     : ptr(nullptr) {}
@@ -3649,14 +3441,6 @@ __isl_give isl_aff *aff::release() {
 bool aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_aff *aff::keep() const {
-  return get();
-}
-
-__isl_give isl_aff *aff::take() {
-  return release();
-}
-
 aff::operator bool() const {
   return !is_null();
 }
@@ -4097,10 +3881,6 @@ isl::aff_list manage_copy(__isl_keep isl_aff_list *ptr) {
   ptr = isl_aff_list_copy(ptr);
   return aff_list(ptr);
 }
-isl::aff_list give(__isl_take isl_aff_list *ptr) {
-  return manage(ptr);
-}
-
 
 aff_list::aff_list()
     : ptr(nullptr) {}
@@ -4144,14 +3924,6 @@ __isl_give isl_aff_list *aff_list::release() {
 bool aff_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_aff_list *aff_list::keep() const {
-  return get();
-}
-
-__isl_give isl_aff_list *aff_list::take() {
-  return release();
-}
-
 aff_list::operator bool() const {
   return !is_null();
 }
@@ -4175,10 +3947,6 @@ isl::ast_build manage_copy(__isl_keep isl_ast_build *ptr) {
   ptr = isl_ast_build_copy(ptr);
   return ast_build(ptr);
 }
-isl::ast_build give(__isl_take isl_ast_build *ptr) {
-  return manage(ptr);
-}
-
 
 ast_build::ast_build()
     : ptr(nullptr) {}
@@ -4227,14 +3995,6 @@ __isl_give isl_ast_build *ast_build::release() {
 bool ast_build::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_ast_build *ast_build::keep() const {
-  return get();
-}
-
-__isl_give isl_ast_build *ast_build::take() {
-  return release();
-}
-
 ast_build::operator bool() const {
   return !is_null();
 }
@@ -4331,10 +4091,6 @@ isl::ast_expr manage_copy(__isl_keep isl_ast_expr *ptr) {
   ptr = isl_ast_expr_copy(ptr);
   return ast_expr(ptr);
 }
-isl::ast_expr give(__isl_take isl_ast_expr *ptr) {
-  return manage(ptr);
-}
-
 
 ast_expr::ast_expr()
     : ptr(nullptr) {}
@@ -4378,14 +4134,6 @@ __isl_give isl_ast_expr *ast_expr::release() {
 bool ast_expr::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_ast_expr *ast_expr::keep() const {
-  return get();
-}
-
-__isl_give isl_ast_expr *ast_expr::take() {
-  return release();
-}
-
 ast_expr::operator bool() const {
   return !is_null();
 }
@@ -4569,10 +4317,6 @@ isl::ast_expr_list manage_copy(__isl_keep isl_ast_expr_list *ptr) {
   ptr = isl_ast_expr_list_copy(ptr);
   return ast_expr_list(ptr);
 }
-isl::ast_expr_list give(__isl_take isl_ast_expr_list *ptr) {
-  return manage(ptr);
-}
-
 
 ast_expr_list::ast_expr_list()
     : ptr(nullptr) {}
@@ -4616,14 +4360,6 @@ __isl_give isl_ast_expr_list *ast_expr_list::release() {
 bool ast_expr_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_ast_expr_list *ast_expr_list::keep() const {
-  return get();
-}
-
-__isl_give isl_ast_expr_list *ast_expr_list::take() {
-  return release();
-}
-
 ast_expr_list::operator bool() const {
   return !is_null();
 }
@@ -4647,10 +4383,6 @@ isl::ast_node manage_copy(__isl_keep isl_ast_node *ptr) {
   ptr = isl_ast_node_copy(ptr);
   return ast_node(ptr);
 }
-isl::ast_node give(__isl_take isl_ast_node *ptr) {
-  return manage(ptr);
-}
-
 
 ast_node::ast_node()
     : ptr(nullptr) {}
@@ -4694,14 +4426,6 @@ __isl_give isl_ast_node *ast_node::release() {
 bool ast_node::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_ast_node *ast_node::keep() const {
-  return get();
-}
-
-__isl_give isl_ast_node *ast_node::take() {
-  return release();
-}
-
 ast_node::operator bool() const {
   return !is_null();
 }
@@ -4843,10 +4567,6 @@ isl::ast_node_list manage_copy(__isl_keep isl_ast_node_list *ptr) {
   ptr = isl_ast_node_list_copy(ptr);
   return ast_node_list(ptr);
 }
-isl::ast_node_list give(__isl_take isl_ast_node_list *ptr) {
-  return manage(ptr);
-}
-
 
 ast_node_list::ast_node_list()
     : ptr(nullptr) {}
@@ -4890,14 +4610,6 @@ __isl_give isl_ast_node_list *ast_node_list::release() {
 bool ast_node_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_ast_node_list *ast_node_list::keep() const {
-  return get();
-}
-
-__isl_give isl_ast_node_list *ast_node_list::take() {
-  return release();
-}
-
 ast_node_list::operator bool() const {
   return !is_null();
 }
@@ -4921,10 +4633,6 @@ isl::basic_map manage_copy(__isl_keep isl_basic_map *ptr) {
   ptr = isl_basic_map_copy(ptr);
   return basic_map(ptr);
 }
-isl::basic_map give(__isl_take isl_basic_map *ptr) {
-  return manage(ptr);
-}
-
 
 basic_map::basic_map()
     : ptr(nullptr) {}
@@ -4973,14 +4681,6 @@ __isl_give isl_basic_map *basic_map::release() {
 bool basic_map::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_basic_map *basic_map::keep() const {
-  return get();
-}
-
-__isl_give isl_basic_map *basic_map::take() {
-  return release();
-}
-
 basic_map::operator bool() const {
   return !is_null();
 }
@@ -5634,10 +5334,6 @@ isl::basic_map_list manage_copy(__isl_keep isl_basic_map_list *ptr) {
   ptr = isl_basic_map_list_copy(ptr);
   return basic_map_list(ptr);
 }
-isl::basic_map_list give(__isl_take isl_basic_map_list *ptr) {
-  return manage(ptr);
-}
-
 
 basic_map_list::basic_map_list()
     : ptr(nullptr) {}
@@ -5681,14 +5377,6 @@ __isl_give isl_basic_map_list *basic_map_list::release() {
 bool basic_map_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_basic_map_list *basic_map_list::keep() const {
-  return get();
-}
-
-__isl_give isl_basic_map_list *basic_map_list::take() {
-  return release();
-}
-
 basic_map_list::operator bool() const {
   return !is_null();
 }
@@ -5712,10 +5400,6 @@ isl::basic_set manage_copy(__isl_keep isl_basic_set *ptr) {
   ptr = isl_basic_set_copy(ptr);
   return basic_set(ptr);
 }
-isl::basic_set give(__isl_take isl_basic_set *ptr) {
-  return manage(ptr);
-}
-
 
 basic_set::basic_set()
     : ptr(nullptr) {}
@@ -5769,14 +5453,6 @@ __isl_give isl_basic_set *basic_set::release() {
 bool basic_set::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_basic_set *basic_set::keep() const {
-  return get();
-}
-
-__isl_give isl_basic_set *basic_set::take() {
-  return release();
-}
-
 basic_set::operator bool() const {
   return !is_null();
 }
@@ -6252,10 +5928,6 @@ isl::basic_set_list manage_copy(__isl_keep isl_basic_set_list *ptr) {
   ptr = isl_basic_set_list_copy(ptr);
   return basic_set_list(ptr);
 }
-isl::basic_set_list give(__isl_take isl_basic_set_list *ptr) {
-  return manage(ptr);
-}
-
 
 basic_set_list::basic_set_list()
     : ptr(nullptr) {}
@@ -6299,14 +5971,6 @@ __isl_give isl_basic_set_list *basic_set_list::release() {
 bool basic_set_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_basic_set_list *basic_set_list::keep() const {
-  return get();
-}
-
-__isl_give isl_basic_set_list *basic_set_list::take() {
-  return release();
-}
-
 basic_set_list::operator bool() const {
   return !is_null();
 }
@@ -6330,10 +5994,6 @@ isl::constraint manage_copy(__isl_keep isl_constraint *ptr) {
   ptr = isl_constraint_copy(ptr);
   return constraint(ptr);
 }
-isl::constraint give(__isl_take isl_constraint *ptr) {
-  return manage(ptr);
-}
-
 
 constraint::constraint()
     : ptr(nullptr) {}
@@ -6377,14 +6037,6 @@ __isl_give isl_constraint *constraint::release() {
 bool constraint::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_constraint *constraint::keep() const {
-  return get();
-}
-
-__isl_give isl_constraint *constraint::take() {
-  return release();
-}
-
 constraint::operator bool() const {
   return !is_null();
 }
@@ -6528,10 +6180,6 @@ isl::constraint_list manage_copy(__isl_keep isl_constraint_list *ptr) {
   ptr = isl_constraint_list_copy(ptr);
   return constraint_list(ptr);
 }
-isl::constraint_list give(__isl_take isl_constraint_list *ptr) {
-  return manage(ptr);
-}
-
 
 constraint_list::constraint_list()
     : ptr(nullptr) {}
@@ -6575,14 +6223,6 @@ __isl_give isl_constraint_list *constraint_list::release() {
 bool constraint_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_constraint_list *constraint_list::keep() const {
-  return get();
-}
-
-__isl_give isl_constraint_list *constraint_list::take() {
-  return release();
-}
-
 constraint_list::operator bool() const {
   return !is_null();
 }
@@ -6606,10 +6246,6 @@ isl::id manage_copy(__isl_keep isl_id *ptr) {
   ptr = isl_id_copy(ptr);
   return id(ptr);
 }
-isl::id give(__isl_take isl_id *ptr) {
-  return manage(ptr);
-}
-
 
 id::id()
     : ptr(nullptr) {}
@@ -6653,14 +6289,6 @@ __isl_give isl_id *id::release() {
 bool id::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_id *id::keep() const {
-  return get();
-}
-
-__isl_give isl_id *id::take() {
-  return release();
-}
-
 id::operator bool() const {
   return !is_null();
 }
@@ -6717,10 +6345,6 @@ isl::id_list manage_copy(__isl_keep isl_id_list *ptr) {
   ptr = isl_id_list_copy(ptr);
   return id_list(ptr);
 }
-isl::id_list give(__isl_take isl_id_list *ptr) {
-  return manage(ptr);
-}
-
 
 id_list::id_list()
     : ptr(nullptr) {}
@@ -6764,14 +6388,6 @@ __isl_give isl_id_list *id_list::release() {
 bool id_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_id_list *id_list::keep() const {
-  return get();
-}
-
-__isl_give isl_id_list *id_list::take() {
-  return release();
-}
-
 id_list::operator bool() const {
   return !is_null();
 }
@@ -6795,10 +6411,6 @@ isl::id_to_ast_expr manage_copy(__isl_keep isl_id_to_ast_expr *ptr) {
   ptr = isl_id_to_ast_expr_copy(ptr);
   return id_to_ast_expr(ptr);
 }
-isl::id_to_ast_expr give(__isl_take isl_id_to_ast_expr *ptr) {
-  return manage(ptr);
-}
-
 
 id_to_ast_expr::id_to_ast_expr()
     : ptr(nullptr) {}
@@ -6842,14 +6454,6 @@ __isl_give isl_id_to_ast_expr *id_to_ast_expr::release() {
 bool id_to_ast_expr::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_id_to_ast_expr *id_to_ast_expr::keep() const {
-  return get();
-}
-
-__isl_give isl_id_to_ast_expr *id_to_ast_expr::take() {
-  return release();
-}
-
 id_to_ast_expr::operator bool() const {
   return !is_null();
 }
@@ -6916,10 +6520,6 @@ isl::local_space manage_copy(__isl_keep isl_local_space *ptr) {
   ptr = isl_local_space_copy(ptr);
   return local_space(ptr);
 }
-isl::local_space give(__isl_take isl_local_space *ptr) {
-  return manage(ptr);
-}
-
 
 local_space::local_space()
     : ptr(nullptr) {}
@@ -6968,14 +6568,6 @@ __isl_give isl_local_space *local_space::release() {
 bool local_space::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_local_space *local_space::keep() const {
-  return get();
-}
-
-__isl_give isl_local_space *local_space::take() {
-  return release();
-}
-
 local_space::operator bool() const {
   return !is_null();
 }
@@ -7143,10 +6735,6 @@ isl::map manage_copy(__isl_keep isl_map *ptr) {
   ptr = isl_map_copy(ptr);
   return map(ptr);
 }
-isl::map give(__isl_take isl_map *ptr) {
-  return manage(ptr);
-}
-
 
 map::map()
     : ptr(nullptr) {}
@@ -7200,14 +6788,6 @@ __isl_give isl_map *map::release() {
 bool map::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_map *map::keep() const {
-  return get();
-}
-
-__isl_give isl_map *map::take() {
-  return release();
-}
-
 map::operator bool() const {
   return !is_null();
 }
@@ -8245,10 +7825,6 @@ isl::map_list manage_copy(__isl_keep isl_map_list *ptr) {
   ptr = isl_map_list_copy(ptr);
   return map_list(ptr);
 }
-isl::map_list give(__isl_take isl_map_list *ptr) {
-  return manage(ptr);
-}
-
 
 map_list::map_list()
     : ptr(nullptr) {}
@@ -8292,14 +7868,6 @@ __isl_give isl_map_list *map_list::release() {
 bool map_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_map_list *map_list::keep() const {
-  return get();
-}
-
-__isl_give isl_map_list *map_list::take() {
-  return release();
-}
-
 map_list::operator bool() const {
   return !is_null();
 }
@@ -8323,10 +7891,6 @@ isl::mat manage_copy(__isl_keep isl_mat *ptr) {
   ptr = isl_mat_copy(ptr);
   return mat(ptr);
 }
-isl::mat give(__isl_take isl_mat *ptr) {
-  return manage(ptr);
-}
-
 
 mat::mat()
     : ptr(nullptr) {}
@@ -8370,14 +7934,6 @@ __isl_give isl_mat *mat::release() {
 bool mat::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_mat *mat::keep() const {
-  return get();
-}
-
-__isl_give isl_mat *mat::take() {
-  return release();
-}
-
 mat::operator bool() const {
   return !is_null();
 }
@@ -8640,10 +8196,6 @@ isl::multi_aff manage_copy(__isl_keep isl_multi_aff *ptr) {
   ptr = isl_multi_aff_copy(ptr);
   return multi_aff(ptr);
 }
-isl::multi_aff give(__isl_take isl_multi_aff *ptr) {
-  return manage(ptr);
-}
-
 
 multi_aff::multi_aff()
     : ptr(nullptr) {}
@@ -8697,14 +8249,6 @@ __isl_give isl_multi_aff *multi_aff::release() {
 bool multi_aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_multi_aff *multi_aff::keep() const {
-  return get();
-}
-
-__isl_give isl_multi_aff *multi_aff::take() {
-  return release();
-}
-
 multi_aff::operator bool() const {
   return !is_null();
 }
@@ -9103,10 +8647,6 @@ isl::multi_pw_aff manage_copy(__isl_keep isl_multi_pw_aff *ptr) {
   ptr = isl_multi_pw_aff_copy(ptr);
   return multi_pw_aff(ptr);
 }
-isl::multi_pw_aff give(__isl_take isl_multi_pw_aff *ptr) {
-  return manage(ptr);
-}
-
 
 multi_pw_aff::multi_pw_aff()
     : ptr(nullptr) {}
@@ -9170,14 +8710,6 @@ __isl_give isl_multi_pw_aff *multi_pw_aff::release() {
 bool multi_pw_aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_multi_pw_aff *multi_pw_aff::keep() const {
-  return get();
-}
-
-__isl_give isl_multi_pw_aff *multi_pw_aff::take() {
-  return release();
-}
-
 multi_pw_aff::operator bool() const {
   return !is_null();
 }
@@ -9582,10 +9114,6 @@ isl::multi_union_pw_aff manage_copy(__isl_keep isl_multi_union_pw_aff *ptr) {
   ptr = isl_multi_union_pw_aff_copy(ptr);
   return multi_union_pw_aff(ptr);
 }
-isl::multi_union_pw_aff give(__isl_take isl_multi_union_pw_aff *ptr) {
-  return manage(ptr);
-}
-
 
 multi_union_pw_aff::multi_union_pw_aff()
     : ptr(nullptr) {}
@@ -9649,14 +9177,6 @@ __isl_give isl_multi_union_pw_aff *multi_union_pw_aff::release() {
 bool multi_union_pw_aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_multi_union_pw_aff *multi_union_pw_aff::keep() const {
-  return get();
-}
-
-__isl_give isl_multi_union_pw_aff *multi_union_pw_aff::take() {
-  return release();
-}
-
 multi_union_pw_aff::operator bool() const {
   return !is_null();
 }
@@ -10043,10 +9563,6 @@ isl::multi_val manage_copy(__isl_keep isl_multi_val *ptr) {
   ptr = isl_multi_val_copy(ptr);
   return multi_val(ptr);
 }
-isl::multi_val give(__isl_take isl_multi_val *ptr) {
-  return manage(ptr);
-}
-
 
 multi_val::multi_val()
     : ptr(nullptr) {}
@@ -10095,14 +9611,6 @@ __isl_give isl_multi_val *multi_val::release() {
 bool multi_val::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_multi_val *multi_val::keep() const {
-  return get();
-}
-
-__isl_give isl_multi_val *multi_val::take() {
-  return release();
-}
-
 multi_val::operator bool() const {
   return !is_null();
 }
@@ -10417,10 +9925,6 @@ isl::point manage_copy(__isl_keep isl_point *ptr) {
   ptr = isl_point_copy(ptr);
   return point(ptr);
 }
-isl::point give(__isl_take isl_point *ptr) {
-  return manage(ptr);
-}
-
 
 point::point()
     : ptr(nullptr) {}
@@ -10469,14 +9973,6 @@ __isl_give isl_point *point::release() {
 bool point::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_point *point::keep() const {
-  return get();
-}
-
-__isl_give isl_point *point::take() {
-  return release();
-}
-
 point::operator bool() const {
   return !is_null();
 }
@@ -10538,10 +10034,6 @@ isl::pw_aff manage_copy(__isl_keep isl_pw_aff *ptr) {
   ptr = isl_pw_aff_copy(ptr);
   return pw_aff(ptr);
 }
-isl::pw_aff give(__isl_take isl_pw_aff *ptr) {
-  return manage(ptr);
-}
-
 
 pw_aff::pw_aff()
     : ptr(nullptr) {}
@@ -10605,14 +10097,6 @@ __isl_give isl_pw_aff *pw_aff::release() {
 bool pw_aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_pw_aff *pw_aff::keep() const {
-  return get();
-}
-
-__isl_give isl_pw_aff *pw_aff::take() {
-  return release();
-}
-
 pw_aff::operator bool() const {
   return !is_null();
 }
@@ -11121,10 +10605,6 @@ isl::pw_aff_list manage_copy(__isl_keep isl_pw_aff_list *ptr) {
   ptr = isl_pw_aff_list_copy(ptr);
   return pw_aff_list(ptr);
 }
-isl::pw_aff_list give(__isl_take isl_pw_aff_list *ptr) {
-  return manage(ptr);
-}
-
 
 pw_aff_list::pw_aff_list()
     : ptr(nullptr) {}
@@ -11168,14 +10648,6 @@ __isl_give isl_pw_aff_list *pw_aff_list::release() {
 bool pw_aff_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_pw_aff_list *pw_aff_list::keep() const {
-  return get();
-}
-
-__isl_give isl_pw_aff_list *pw_aff_list::take() {
-  return release();
-}
-
 pw_aff_list::operator bool() const {
   return !is_null();
 }
@@ -11199,10 +10671,6 @@ isl::pw_multi_aff manage_copy(__isl_keep isl_pw_multi_aff *ptr) {
   ptr = isl_pw_multi_aff_copy(ptr);
   return pw_multi_aff(ptr);
 }
-isl::pw_multi_aff give(__isl_take isl_pw_multi_aff *ptr) {
-  return manage(ptr);
-}
-
 
 pw_multi_aff::pw_multi_aff()
     : ptr(nullptr) {}
@@ -11261,14 +10729,6 @@ __isl_give isl_pw_multi_aff *pw_multi_aff::release() {
 bool pw_multi_aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_pw_multi_aff *pw_multi_aff::keep() const {
-  return get();
-}
-
-__isl_give isl_pw_multi_aff *pw_multi_aff::take() {
-  return release();
-}
-
 pw_multi_aff::operator bool() const {
   return !is_null();
 }
@@ -11664,10 +11124,6 @@ isl::pw_qpolynomial manage_copy(__isl_keep isl_pw_qpolynomial *ptr) {
   ptr = isl_pw_qpolynomial_copy(ptr);
   return pw_qpolynomial(ptr);
 }
-isl::pw_qpolynomial give(__isl_take isl_pw_qpolynomial *ptr) {
-  return manage(ptr);
-}
-
 
 pw_qpolynomial::pw_qpolynomial()
     : ptr(nullptr) {}
@@ -11716,14 +11172,6 @@ __isl_give isl_pw_qpolynomial *pw_qpolynomial::release() {
 bool pw_qpolynomial::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_pw_qpolynomial *pw_qpolynomial::keep() const {
-  return get();
-}
-
-__isl_give isl_pw_qpolynomial *pw_qpolynomial::take() {
-  return release();
-}
-
 pw_qpolynomial::operator bool() const {
   return !is_null();
 }
@@ -12033,10 +11481,6 @@ isl::qpolynomial manage_copy(__isl_keep isl_qpolynomial *ptr) {
   ptr = isl_qpolynomial_copy(ptr);
   return qpolynomial(ptr);
 }
-isl::qpolynomial give(__isl_take isl_qpolynomial *ptr) {
-  return manage(ptr);
-}
-
 
 qpolynomial::qpolynomial()
     : ptr(nullptr) {}
@@ -12080,14 +11524,6 @@ __isl_give isl_qpolynomial *qpolynomial::release() {
 bool qpolynomial::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_qpolynomial *qpolynomial::keep() const {
-  return get();
-}
-
-__isl_give isl_qpolynomial *qpolynomial::take() {
-  return release();
-}
-
 qpolynomial::operator bool() const {
   return !is_null();
 }
@@ -12366,10 +11802,6 @@ isl::schedule manage_copy(__isl_keep isl_schedule *ptr) {
   ptr = isl_schedule_copy(ptr);
   return schedule(ptr);
 }
-isl::schedule give(__isl_take isl_schedule *ptr) {
-  return manage(ptr);
-}
-
 
 schedule::schedule()
     : ptr(nullptr) {}
@@ -12418,14 +11850,6 @@ __isl_give isl_schedule *schedule::release() {
 bool schedule::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_schedule *schedule::keep() const {
-  return get();
-}
-
-__isl_give isl_schedule *schedule::take() {
-  return release();
-}
-
 schedule::operator bool() const {
   return !is_null();
 }
@@ -12553,10 +11977,6 @@ isl::schedule_constraints manage_copy(__isl_keep isl_schedule_constraints *ptr) 
   ptr = isl_schedule_constraints_copy(ptr);
   return schedule_constraints(ptr);
 }
-isl::schedule_constraints give(__isl_take isl_schedule_constraints *ptr) {
-  return manage(ptr);
-}
-
 
 schedule_constraints::schedule_constraints()
     : ptr(nullptr) {}
@@ -12605,14 +12025,6 @@ __isl_give isl_schedule_constraints *schedule_constraints::release() {
 bool schedule_constraints::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_schedule_constraints *schedule_constraints::keep() const {
-  return get();
-}
-
-__isl_give isl_schedule_constraints *schedule_constraints::take() {
-  return release();
-}
-
 schedule_constraints::operator bool() const {
   return !is_null();
 }
@@ -12734,10 +12146,6 @@ isl::schedule_node manage_copy(__isl_keep isl_schedule_node *ptr) {
   ptr = isl_schedule_node_copy(ptr);
   return schedule_node(ptr);
 }
-isl::schedule_node give(__isl_take isl_schedule_node *ptr) {
-  return manage(ptr);
-}
-
 
 schedule_node::schedule_node()
     : ptr(nullptr) {}
@@ -12781,14 +12189,6 @@ __isl_give isl_schedule_node *schedule_node::release() {
 bool schedule_node::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_schedule_node *schedule_node::keep() const {
-  return get();
-}
-
-__isl_give isl_schedule_node *schedule_node::take() {
-  return release();
-}
-
 schedule_node::operator bool() const {
   return !is_null();
 }
@@ -13188,10 +12588,6 @@ isl::set manage_copy(__isl_keep isl_set *ptr) {
   ptr = isl_set_copy(ptr);
   return set(ptr);
 }
-isl::set give(__isl_take isl_set *ptr) {
-  return manage(ptr);
-}
-
 
 set::set()
     : ptr(nullptr) {}
@@ -13255,14 +12651,6 @@ __isl_give isl_set *set::release() {
 bool set::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_set *set::keep() const {
-  return get();
-}
-
-__isl_give isl_set *set::take() {
-  return release();
-}
-
 set::operator bool() const {
   return !is_null();
 }
@@ -14098,10 +13486,6 @@ isl::set_list manage_copy(__isl_keep isl_set_list *ptr) {
   ptr = isl_set_list_copy(ptr);
   return set_list(ptr);
 }
-isl::set_list give(__isl_take isl_set_list *ptr) {
-  return manage(ptr);
-}
-
 
 set_list::set_list()
     : ptr(nullptr) {}
@@ -14145,14 +13529,6 @@ __isl_give isl_set_list *set_list::release() {
 bool set_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_set_list *set_list::keep() const {
-  return get();
-}
-
-__isl_give isl_set_list *set_list::take() {
-  return release();
-}
-
 set_list::operator bool() const {
   return !is_null();
 }
@@ -14176,10 +13552,6 @@ isl::space manage_copy(__isl_keep isl_space *ptr) {
   ptr = isl_space_copy(ptr);
   return space(ptr);
 }
-isl::space give(__isl_take isl_space *ptr) {
-  return manage(ptr);
-}
-
 
 space::space()
     : ptr(nullptr) {}
@@ -14233,14 +13605,6 @@ __isl_give isl_space *space::release() {
 bool space::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_space *space::keep() const {
-  return get();
-}
-
-__isl_give isl_space *space::take() {
-  return release();
-}
-
 space::operator bool() const {
   return !is_null();
 }
@@ -14688,10 +14052,6 @@ isl::term manage_copy(__isl_keep isl_term *ptr) {
   ptr = isl_term_copy(ptr);
   return term(ptr);
 }
-isl::term give(__isl_take isl_term *ptr) {
-  return manage(ptr);
-}
-
 
 term::term()
     : ptr(nullptr) {}
@@ -14735,14 +14095,6 @@ __isl_give isl_term *term::release() {
 bool term::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_term *term::keep() const {
-  return get();
-}
-
-__isl_give isl_term *term::take() {
-  return release();
-}
-
 term::operator bool() const {
   return !is_null();
 }
@@ -14785,10 +14137,6 @@ isl::union_access_info manage_copy(__isl_keep isl_union_access_info *ptr) {
   ptr = isl_union_access_info_copy(ptr);
   return union_access_info(ptr);
 }
-isl::union_access_info give(__isl_take isl_union_access_info *ptr) {
-  return manage(ptr);
-}
-
 
 union_access_info::union_access_info()
     : ptr(nullptr) {}
@@ -14837,14 +14185,6 @@ __isl_give isl_union_access_info *union_access_info::release() {
 bool union_access_info::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_access_info *union_access_info::keep() const {
-  return get();
-}
-
-__isl_give isl_union_access_info *union_access_info::take() {
-  return release();
-}
-
 union_access_info::operator bool() const {
   return !is_null();
 }
@@ -14908,10 +14248,6 @@ isl::union_flow manage_copy(__isl_keep isl_union_flow *ptr) {
   ptr = isl_union_flow_copy(ptr);
   return union_flow(ptr);
 }
-isl::union_flow give(__isl_take isl_union_flow *ptr) {
-  return manage(ptr);
-}
-
 
 union_flow::union_flow()
     : ptr(nullptr) {}
@@ -14955,14 +14291,6 @@ __isl_give isl_union_flow *union_flow::release() {
 bool union_flow::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_flow *union_flow::keep() const {
-  return get();
-}
-
-__isl_give isl_union_flow *union_flow::take() {
-  return release();
-}
-
 union_flow::operator bool() const {
   return !is_null();
 }
@@ -15026,10 +14354,6 @@ isl::union_map manage_copy(__isl_keep isl_union_map *ptr) {
   ptr = isl_union_map_copy(ptr);
   return union_map(ptr);
 }
-isl::union_map give(__isl_take isl_union_map *ptr) {
-  return manage(ptr);
-}
-
 
 union_map::union_map()
     : ptr(nullptr) {}
@@ -15093,14 +14417,6 @@ __isl_give isl_union_map *union_map::release() {
 bool union_map::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_map *union_map::keep() const {
-  return get();
-}
-
-__isl_give isl_union_map *union_map::take() {
-  return release();
-}
-
 union_map::operator bool() const {
   return !is_null();
 }
@@ -15728,10 +15044,6 @@ isl::union_map_list manage_copy(__isl_keep isl_union_map_list *ptr) {
   ptr = isl_union_map_list_copy(ptr);
   return union_map_list(ptr);
 }
-isl::union_map_list give(__isl_take isl_union_map_list *ptr) {
-  return manage(ptr);
-}
-
 
 union_map_list::union_map_list()
     : ptr(nullptr) {}
@@ -15775,14 +15087,6 @@ __isl_give isl_union_map_list *union_map_list::release() {
 bool union_map_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_map_list *union_map_list::keep() const {
-  return get();
-}
-
-__isl_give isl_union_map_list *union_map_list::take() {
-  return release();
-}
-
 union_map_list::operator bool() const {
   return !is_null();
 }
@@ -15806,10 +15110,6 @@ isl::union_pw_aff manage_copy(__isl_keep isl_union_pw_aff *ptr) {
   ptr = isl_union_pw_aff_copy(ptr);
   return union_pw_aff(ptr);
 }
-isl::union_pw_aff give(__isl_take isl_union_pw_aff *ptr) {
-  return manage(ptr);
-}
-
 
 union_pw_aff::union_pw_aff()
     : ptr(nullptr) {}
@@ -15868,14 +15168,6 @@ __isl_give isl_union_pw_aff *union_pw_aff::release() {
 bool union_pw_aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_pw_aff *union_pw_aff::keep() const {
-  return get();
-}
-
-__isl_give isl_union_pw_aff *union_pw_aff::take() {
-  return release();
-}
-
 union_pw_aff::operator bool() const {
   return !is_null();
 }
@@ -16113,10 +15405,6 @@ isl::union_pw_aff_list manage_copy(__isl_keep isl_union_pw_aff_list *ptr) {
   ptr = isl_union_pw_aff_list_copy(ptr);
   return union_pw_aff_list(ptr);
 }
-isl::union_pw_aff_list give(__isl_take isl_union_pw_aff_list *ptr) {
-  return manage(ptr);
-}
-
 
 union_pw_aff_list::union_pw_aff_list()
     : ptr(nullptr) {}
@@ -16160,14 +15448,6 @@ __isl_give isl_union_pw_aff_list *union_pw_aff_list::release() {
 bool union_pw_aff_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_pw_aff_list *union_pw_aff_list::keep() const {
-  return get();
-}
-
-__isl_give isl_union_pw_aff_list *union_pw_aff_list::take() {
-  return release();
-}
-
 union_pw_aff_list::operator bool() const {
   return !is_null();
 }
@@ -16191,10 +15471,6 @@ isl::union_pw_multi_aff manage_copy(__isl_keep isl_union_pw_multi_aff *ptr) {
   ptr = isl_union_pw_multi_aff_copy(ptr);
   return union_pw_multi_aff(ptr);
 }
-isl::union_pw_multi_aff give(__isl_take isl_union_pw_multi_aff *ptr) {
-  return manage(ptr);
-}
-
 
 union_pw_multi_aff::union_pw_multi_aff()
     : ptr(nullptr) {}
@@ -16263,14 +15539,6 @@ __isl_give isl_union_pw_multi_aff *union_pw_multi_aff::release() {
 bool union_pw_multi_aff::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_pw_multi_aff *union_pw_multi_aff::keep() const {
-  return get();
-}
-
-__isl_give isl_union_pw_multi_aff *union_pw_multi_aff::take() {
-  return release();
-}
-
 union_pw_multi_aff::operator bool() const {
   return !is_null();
 }
@@ -16514,10 +15782,6 @@ isl::union_pw_multi_aff_list manage_copy(__isl_keep isl_union_pw_multi_aff_list 
   ptr = isl_union_pw_multi_aff_list_copy(ptr);
   return union_pw_multi_aff_list(ptr);
 }
-isl::union_pw_multi_aff_list give(__isl_take isl_union_pw_multi_aff_list *ptr) {
-  return manage(ptr);
-}
-
 
 union_pw_multi_aff_list::union_pw_multi_aff_list()
     : ptr(nullptr) {}
@@ -16561,14 +15825,6 @@ __isl_give isl_union_pw_multi_aff_list *union_pw_multi_aff_list::release() {
 bool union_pw_multi_aff_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_pw_multi_aff_list *union_pw_multi_aff_list::keep() const {
-  return get();
-}
-
-__isl_give isl_union_pw_multi_aff_list *union_pw_multi_aff_list::take() {
-  return release();
-}
-
 union_pw_multi_aff_list::operator bool() const {
   return !is_null();
 }
@@ -16592,10 +15848,6 @@ isl::union_pw_qpolynomial manage_copy(__isl_keep isl_union_pw_qpolynomial *ptr) 
   ptr = isl_union_pw_qpolynomial_copy(ptr);
   return union_pw_qpolynomial(ptr);
 }
-isl::union_pw_qpolynomial give(__isl_take isl_union_pw_qpolynomial *ptr) {
-  return manage(ptr);
-}
-
 
 union_pw_qpolynomial::union_pw_qpolynomial()
     : ptr(nullptr) {}
@@ -16644,14 +15896,6 @@ __isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial::release() {
 bool union_pw_qpolynomial::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_pw_qpolynomial *union_pw_qpolynomial::keep() const {
-  return get();
-}
-
-__isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial::take() {
-  return release();
-}
-
 union_pw_qpolynomial::operator bool() const {
   return !is_null();
 }
@@ -16861,10 +16105,6 @@ isl::union_set manage_copy(__isl_keep isl_union_set *ptr) {
   ptr = isl_union_set_copy(ptr);
   return union_set(ptr);
 }
-isl::union_set give(__isl_take isl_union_set *ptr) {
-  return manage(ptr);
-}
-
 
 union_set::union_set()
     : ptr(nullptr) {}
@@ -16928,14 +16168,6 @@ __isl_give isl_union_set *union_set::release() {
 bool union_set::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_set *union_set::keep() const {
-  return get();
-}
-
-__isl_give isl_union_set *union_set::take() {
-  return release();
-}
-
 union_set::operator bool() const {
   return !is_null();
 }
@@ -17319,10 +16551,6 @@ isl::union_set_list manage_copy(__isl_keep isl_union_set_list *ptr) {
   ptr = isl_union_set_list_copy(ptr);
   return union_set_list(ptr);
 }
-isl::union_set_list give(__isl_take isl_union_set_list *ptr) {
-  return manage(ptr);
-}
-
 
 union_set_list::union_set_list()
     : ptr(nullptr) {}
@@ -17366,14 +16594,6 @@ __isl_give isl_union_set_list *union_set_list::release() {
 bool union_set_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_union_set_list *union_set_list::keep() const {
-  return get();
-}
-
-__isl_give isl_union_set_list *union_set_list::take() {
-  return release();
-}
-
 union_set_list::operator bool() const {
   return !is_null();
 }
@@ -17397,10 +16617,6 @@ isl::val manage_copy(__isl_keep isl_val *ptr) {
   ptr = isl_val_copy(ptr);
   return val(ptr);
 }
-isl::val give(__isl_take isl_val *ptr) {
-  return manage(ptr);
-}
-
 
 val::val()
     : ptr(nullptr) {}
@@ -17454,14 +16670,6 @@ __isl_give isl_val *val::release() {
 bool val::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_val *val::keep() const {
-  return get();
-}
-
-__isl_give isl_val *val::take() {
-  return release();
-}
-
 val::operator bool() const {
   return !is_null();
 }
@@ -17811,10 +17019,6 @@ isl::val_list manage_copy(__isl_keep isl_val_list *ptr) {
   ptr = isl_val_list_copy(ptr);
   return val_list(ptr);
 }
-isl::val_list give(__isl_take isl_val_list *ptr) {
-  return manage(ptr);
-}
-
 
 val_list::val_list()
     : ptr(nullptr) {}
@@ -17858,14 +17062,6 @@ __isl_give isl_val_list *val_list::release() {
 bool val_list::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_val_list *val_list::keep() const {
-  return get();
-}
-
-__isl_give isl_val_list *val_list::take() {
-  return release();
-}
-
 val_list::operator bool() const {
   return !is_null();
 }
@@ -17889,10 +17085,6 @@ isl::vec manage_copy(__isl_keep isl_vec *ptr) {
   ptr = isl_vec_copy(ptr);
   return vec(ptr);
 }
-isl::vec give(__isl_take isl_vec *ptr) {
-  return manage(ptr);
-}
-
 
 vec::vec()
     : ptr(nullptr) {}
@@ -17936,14 +17128,6 @@ __isl_give isl_vec *vec::release() {
 bool vec::is_null() const {
   return ptr == nullptr;
 }
-__isl_keep isl_vec *vec::keep() const {
-  return get();
-}
-
-__isl_give isl_vec *vec::take() {
-  return release();
-}
-
 vec::operator bool() const {
   return !is_null();
 }

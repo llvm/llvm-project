@@ -539,7 +539,6 @@ def: InstRW<[SKLWriteResGroup10], (instregex "CLC",
                                              "SAHF", // TODO: This doesn't match Agner's data
                                              "SGDT64m",
                                              "SIDT64m",
-                                             "SLDT64m",
                                              "SMSW16m",
                                              "STC",
                                              "STRm",

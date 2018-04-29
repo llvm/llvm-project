@@ -879,8 +879,7 @@ void MemoryAccess::foldAccessRelation() {
     isl::pw_aff DimSize = getPwAff(Sizes[i + 1]);
 
     isl::space SpaceSize = DimSize.get_space();
-    isl::id ParamId =
-        give(isl_space_get_dim_id(SpaceSize.get(), isl_dim_param, 0));
+    isl::id ParamId = SpaceSize.get_dim_id(isl::dim::param, 0);
 
     Space = AccessRelation.get_space();
     Space = Space.range().map_from_set();
@@ -1240,7 +1239,7 @@ bool MemoryAccess::isLatestPartialAccess() const {
   isl::set StmtDom = getStatement()->getDomain();
   isl::set AccDom = getLatestAccessRelation().domain();
 
-  return isl_set_is_subset(StmtDom.keep(), AccDom.keep()) == isl_bool_false;
+  return !StmtDom.is_subset(AccDom);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1420,7 +1419,7 @@ getPwAff(Scop &S, BasicBlock *BB,
          bool NonNegative = false) {
   PWACtx PWAC = S.getPwAff(E, BB, NonNegative);
   InvalidDomainMap[BB] = InvalidDomainMap[BB].unite(PWAC.second);
-  return PWAC.first.take();
+  return PWAC.first.release();
 }
 
 /// Build the conditions sets for the switch @p SI in the @p Domain.
@@ -2383,7 +2382,7 @@ static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
   isl::union_map Accesses = isl::union_map::empty(S.getParamSpace());
 
   for (MemoryAccess *MA : AliasGroup)
-    Accesses = Accesses.add_map(give(MA->getAccessRelation().release()));
+    Accesses = Accesses.add_map(MA->getAccessRelation());
 
   Accesses = Accesses.intersect_domain(Domains);
   isl::union_set Locations = Accesses.range();
@@ -3848,7 +3847,7 @@ isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
   if (hasNonHoistableBasePtrInScop(Access, Writes))
     return nullptr;
 
-  isl::map AccessRelation = give(Access->getAccessRelation().release());
+  isl::map AccessRelation = Access->getAccessRelation();
   assert(!AccessRelation.is_empty());
 
   if (AccessRelation.involves_dims(isl::dim::in, 0, Stmt.getNumIterators()))
@@ -4526,7 +4525,7 @@ isl_bool isNotExtNode(__isl_keep isl_schedule_node *Node, void *User) {
 
 bool Scop::containsExtensionNode(isl::schedule Schedule) {
   return isl_schedule_foreach_schedule_node_top_down(
-             Schedule.keep(), isNotExtNode, nullptr) == isl_stat_error;
+             Schedule.get(), isNotExtNode, nullptr) == isl_stat_error;
 }
 
 isl::union_map Scop::getSchedule() const {

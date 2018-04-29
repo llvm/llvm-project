@@ -153,7 +153,7 @@ protected:
   uid_t fs_st_uid = 0;
   gid_t fs_st_gid = 0;
   off_t fs_st_size = 0;
-  #elif defined (LLVM_ON_WIN32)
+  #elif defined (_WIN32)
   uint32_t LastAccessedTimeHigh = 0;
   uint32_t LastAccessedTimeLow = 0;
   uint32_t LastWriteTimeHigh = 0;
@@ -174,7 +174,7 @@ public:
                     uid_t UID, gid_t GID, off_t Size)
       : fs_st_atime(ATime), fs_st_mtime(MTime), fs_st_uid(UID), fs_st_gid(GID),
         fs_st_size(Size), Type(Type), Perms(Perms) {}
-#elif defined(LLVM_ON_WIN32)
+#elif defined(_WIN32)
   basic_file_status(file_type Type, perms Perms, uint32_t LastAccessTimeHigh,
                     uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
                     uint32_t LastWriteTimeLow, uint32_t FileSizeHigh,
@@ -196,7 +196,7 @@ public:
   uint32_t getUser() const { return fs_st_uid; }
   uint32_t getGroup() const { return fs_st_gid; }
   uint64_t getSize() const { return fs_st_size; }
-  #elif defined (LLVM_ON_WIN32)
+  #elif defined (_WIN32)
   uint32_t getUser() const {
     return 9999; // Not applicable to Windows, so...
   }
@@ -223,7 +223,7 @@ class file_status : public basic_file_status {
   dev_t fs_st_dev = 0;
   nlink_t fs_st_nlinks = 0;
   ino_t fs_st_ino = 0;
-  #elif defined (LLVM_ON_WIN32)
+  #elif defined (_WIN32)
   uint32_t NumLinks = 0;
   uint32_t VolumeSerialNumber = 0;
   uint32_t FileIndexHigh = 0;
@@ -240,7 +240,7 @@ public:
               time_t ATime, time_t MTime, uid_t UID, gid_t GID, off_t Size)
       : basic_file_status(Type, Perms, ATime, MTime, UID, GID, Size),
         fs_st_dev(Dev), fs_st_nlinks(Links), fs_st_ino(Ino) {}
-  #elif defined(LLVM_ON_WIN32)
+  #elif defined(_WIN32)
   file_status(file_type Type, perms Perms, uint32_t LinkCount,
               uint32_t LastAccessTimeHigh, uint32_t LastAccessTimeLow,
               uint32_t LastWriteTimeHigh, uint32_t LastWriteTimeLow,

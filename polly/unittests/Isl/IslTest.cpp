@@ -23,9 +23,9 @@ static isl::space parseSpace(isl_ctx *Ctx, const char *Str) {
 
   isl::space Result;
   if (Obj.type == isl_obj_set)
-    Result = give(isl_set_get_space(static_cast<isl_set *>(Obj.v)));
+    Result = isl::manage(isl_set_get_space(static_cast<isl_set *>(Obj.v)));
   else if (Obj.type == isl_obj_map)
-    Result = give(isl_map_get_space(static_cast<isl_map *>(Obj.v)));
+    Result = isl::manage(isl_map_get_space(static_cast<isl_map *>(Obj.v)));
 
   isl_stream_free(Stream);
   if (Obj.type)

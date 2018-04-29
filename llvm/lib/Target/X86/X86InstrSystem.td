@@ -382,9 +382,6 @@ def SLDT32r : I<0x00, MRM0r, (outs GR32:$dst), (ins),
 //   extension.
 def SLDT64r : RI<0x00, MRM0r, (outs GR64:$dst), (ins),
                  "sldt{q}\t$dst", []>, TB, Requires<[In64BitMode]>;
-let mayStore = 1 in
-def SLDT64m : RI<0x00, MRM0m, (outs), (ins i16mem:$dst),
-                 "sldt{q}\t$dst", []>, TB, Requires<[In64BitMode]>;
 
 def LGDT16m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
                 "lgdt{w}\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;

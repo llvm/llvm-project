@@ -26,7 +26,7 @@ extern char **environ;
 void sleep_for(unsigned int seconds) {
   sleep(seconds);
 }
-#elif defined(LLVM_ON_WIN32)
+#elif defined(_WIN32)
 #include <windows.h>
 void sleep_for(unsigned int seconds) {
   Sleep(seconds * 1000);
@@ -65,7 +65,7 @@ class ProgramEnvTest : public testing::Test {
 protected:
   void SetUp() override {
     auto EnvP = [] {
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
       _wgetenv(L"TMP"); // Populate _wenviron, initially is null
       return _wenviron;
 #elif defined(__APPLE__)
@@ -77,7 +77,7 @@ protected:
     ASSERT_TRUE(EnvP);
 
     auto prepareEnvVar = [this](decltype(*EnvP) Var) {
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
       // On Windows convert UTF16 encoded variable to UTF8
       auto Len = wcslen(Var);
       ArrayRef<char> Ref{reinterpret_cast<char const *>(Var),
@@ -115,7 +115,7 @@ protected:
   }
 };
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 TEST_F(ProgramEnvTest, CreateProcessLongPath) {
   if (getenv("LLVM_PROGRAM_TEST_LONG_PATH"))
     exit(0);
@@ -186,7 +186,7 @@ TEST_F(ProgramEnvTest, CreateProcessTrailingSlash) {
   std::string error;
   bool ExecutionFailed;
   // Redirect stdout and stdin to NUL, but let stderr through.
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   StringRef nul("NUL");
 #else
   StringRef nul("/dev/null");
@@ -312,7 +312,7 @@ TEST(ProgramTest, TestExecuteNegative) {
 
 }
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 const char utf16le_text[] =
     "\x6c\x00\x69\x00\x6e\x00\x67\x00\xfc\x00\x69\x00\xe7\x00\x61\x00";
 const char utf16be_text[] =
@@ -332,7 +332,7 @@ TEST(ProgramTest, TestWriteWithSystemEncoding) {
                                              sys::WEM_UTF16));
   int fd = 0;
   ASSERT_NO_ERROR(fs::openFileForRead(file_pathname.c_str(), fd));
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
   char buf[18];
   ASSERT_EQ(::read(fd, buf, 18), 18);
   if (strncmp(buf, "\xfe\xff", 2) == 0) { // UTF16-BE

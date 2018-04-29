@@ -304,6 +304,72 @@ LLVMDIBuilderCreateLexicalBlockFile(LLVMDIBuilderRef Builder,
                                     unsigned Discriminator);
 
 /**
+ * Create a descriptor for an imported namespace. Suitable for e.g. C++
+ * using declarations.
+ * \param Builder    The \c DIBuilder.
+ * \param Scope      The scope this module is imported into
+ * \param File       File where the declaration is located.
+ * \param Line       Line number of the declaration.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateImportedModuleFromNamespace(LLVMDIBuilderRef Builder,
+                                               LLVMMetadataRef Scope,
+                                               LLVMMetadataRef NS,
+                                               LLVMMetadataRef File,
+                                               unsigned Line);
+
+/**
+ * Create a descriptor for an imported module that aliases another
+ * imported entity descriptor.
+ * \param Builder        The \c DIBuilder.
+ * \param Scope          The scope this module is imported into
+ * \param ImportedEntity Previous imported entity to alias.
+ * \param File           File where the declaration is located.
+ * \param Line           Line number of the declaration.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateImportedModuleFromAlias(LLVMDIBuilderRef Builder,
+                                           LLVMMetadataRef Scope,
+                                           LLVMMetadataRef ImportedEntity,
+                                           LLVMMetadataRef File,
+                                           unsigned Line);
+
+/**
+ * Create a descriptor for an imported module.
+ * \param Builder    The \c DIBuilder.
+ * \param Scope      The scope this module is imported into
+ * \param M          The module being imported here
+ * \param File       File where the declaration is located.
+ * \param Line       Line number of the declaration.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateImportedModuleFromModule(LLVMDIBuilderRef Builder,
+                                            LLVMMetadataRef Scope,
+                                            LLVMMetadataRef M,
+                                            LLVMMetadataRef File,
+                                            unsigned Line);
+
+/**
+ * Create a descriptor for an imported function, type, or variable.  Suitable
+ * for e.g. FORTRAN-style USE declarations.
+ * \param Builder    The DIBuilder.
+ * \param Scope      The scope this module is imported into.
+ * \param Decl       The declaration (or definition) of a function, type,
+                     or variable.
+ * \param File       File where the declaration is located.
+ * \param Line       Line number of the declaration.
+ * \param Name       A name that uniquely identifies this imported declaration.
+ * \param NameLen    The length of the C string passed to \c Name.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateImportedDeclaration(LLVMDIBuilderRef Builder,
+                                       LLVMMetadataRef Scope,
+                                       LLVMMetadataRef Decl,
+                                       LLVMMetadataRef File,
+                                       unsigned Line,
+                                       const char *Name, size_t NameLen);
+
+/**
  * Creates a new DebugLocation that describes a source location.
  * \param Line The line in the source file.
  * \param Column The column in the source file.

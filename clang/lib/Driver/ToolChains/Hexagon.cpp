@@ -11,7 +11,6 @@
 #include "InputInfo.h"
 #include "CommonArgs.h"
 #include "clang/Basic/VirtualFileSystem.h"
-#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
