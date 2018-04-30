@@ -41,9 +41,20 @@ DWARFUnit::~DWARFUnit() {}
 // Parses a compile unit and indexes its DIEs if it hasn't already been done.
 //----------------------------------------------------------------------
 size_t DWARFUnit::ExtractDIEsIfNeeded(bool cu_die_only) {
-  const size_t initial_die_array_size = m_die_array.size();
-  if ((cu_die_only && initial_die_array_size > 0) || initial_die_array_size > 1)
-    return 0; // Already parsed
+  size_t initial_die_array_size;
+  auto already_parsed = [cu_die_only, &initial_die_array_size, this]() -> bool {
+    initial_die_array_size = m_die_array.size();
+    return (cu_die_only && initial_die_array_size > 0)
+        || initial_die_array_size > 1;
+  };
+  {
+    llvm::sys::ScopedReader lock(m_extractdies_mutex);
+    if (already_parsed())
+      return 0;
+  }
+  llvm::sys::ScopedWriter lock(m_extractdies_mutex);
+  if (already_parsed())
+    return 0;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
@@ -304,6 +315,8 @@ void DWARFUnit::SetAddrBase(dw_addr_t addr_base,
 
 void DWARFUnit::ClearDIEs(bool keep_compile_unit_die) {
   if (m_die_array.size() > 1) {
+    llvm::sys::ScopedWriter lock(m_extractdies_mutex);
+
     // std::vectors never get any smaller when resized to a smaller size, or
     // when clear() or erase() are called, the size will report that it is
     // smaller, but the memory allocated remains intact (call capacity() to see
