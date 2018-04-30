@@ -306,8 +306,9 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
         Context.getSourceManager().isMacroArgExpansion(Range.getEnd()))
       Range.setEnd(Context.getSourceManager().getSpellingLoc(Range.getEnd()));
     else
-      Range.setEnd(
-          Context.getSourceManager().getExpansionRange(Range.getEnd()).second);
+      Range.setEnd(Context.getSourceManager()
+                       .getExpansionRange(Range.getEnd())
+                       .getEnd());
   }
   CandidateExtractionInfo.push_back(ExtractOperation::CandidateInfo(Range));
   Result.RefactoringOp = std::move(Operation);
