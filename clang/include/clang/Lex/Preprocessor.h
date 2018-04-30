@@ -1616,6 +1616,11 @@ public:
                     SourceLocation ExpansionLocStart = SourceLocation(),
                     SourceLocation ExpansionLocEnd = SourceLocation());
 
+  /// Split the first Length characters out of the token starting at TokLoc
+  /// and return a location pointing to the split token. Re-lexing from the
+  /// split token will return the split token rather than the original.
+  SourceLocation SplitToken(SourceLocation TokLoc, unsigned Length);
+
   /// \brief Computes the source location just past the end of the
   /// token at this source location.
   ///

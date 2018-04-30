@@ -265,6 +265,7 @@ public:
  
   void setBegin(SourceLocation b) { Range.setBegin(b); }
   void setEnd(SourceLocation e) { Range.setEnd(e); }
+  void setTokenRange(bool TR) { IsTokenRange = TR; }
   
   bool isValid() const { return Range.isValid(); }
   bool isInvalid() const { return !isValid(); }
@@ -359,7 +360,6 @@ public:
   FullSourceLoc getExpansionLoc() const;
   FullSourceLoc getSpellingLoc() const;
   FullSourceLoc getFileLoc() const;
-  std::pair<FullSourceLoc, FullSourceLoc> getImmediateExpansionRange() const;
   PresumedLoc getPresumedLoc(bool UseLineDirectives = true) const;
   bool isMacroArgExpansion(FullSourceLoc *StartLoc = nullptr) const;
   FullSourceLoc getImmediateMacroCallerLoc() const;
@@ -376,8 +376,6 @@ public:
 
   unsigned getLineNumber(bool *Invalid = nullptr) const;
   unsigned getColumnNumber(bool *Invalid = nullptr) const;
-
-  std::pair<FullSourceLoc, FullSourceLoc> getExpansionRange() const;
 
   const FileEntry *getFileEntry() const;
 

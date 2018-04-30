@@ -9562,7 +9562,7 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
     StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
         Loc, S.SourceMgr, S.getLangOpts());
     if (MacroName == "NULL")
-      Loc = S.SourceMgr.getImmediateExpansionRange(Loc).first;
+      Loc = S.SourceMgr.getImmediateExpansionRange(Loc).getBegin();
   }
 
   // Only warn if the null and context location are in the same macro expansion.

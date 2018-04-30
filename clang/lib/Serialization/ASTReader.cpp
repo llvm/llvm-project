@@ -1482,6 +1482,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     SourceMgr.createExpansionLoc(SpellingLoc,
                                      ReadSourceLocation(*F, Record[2]),
                                      ReadSourceLocation(*F, Record[3]),
+                                     Record[5],
                                      Record[4],
                                      ID,
                                      BaseOffset + Record[0]);

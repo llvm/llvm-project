@@ -579,11 +579,22 @@ SourceManager::createExpansionLoc(SourceLocation SpellingLoc,
                                   SourceLocation ExpansionLocStart,
                                   SourceLocation ExpansionLocEnd,
                                   unsigned TokLength,
+                                  bool ExpansionIsTokenRange,
                                   int LoadedID,
                                   unsigned LoadedOffset) {
-  ExpansionInfo Info = ExpansionInfo::create(SpellingLoc, ExpansionLocStart,
-                                             ExpansionLocEnd);
+  ExpansionInfo Info = ExpansionInfo::create(
+      SpellingLoc, ExpansionLocStart, ExpansionLocEnd, ExpansionIsTokenRange);
   return createExpansionLocImpl(Info, TokLength, LoadedID, LoadedOffset);
+}
+
+SourceLocation SourceManager::createTokenSplitLoc(SourceLocation Spelling,
+                                                  SourceLocation TokenStart,
+                                                  SourceLocation TokenEnd) {
+  assert(getFileID(TokenStart) == getFileID(TokenEnd) &&
+         "token spans multiple files");
+  return createExpansionLocImpl(
+      ExpansionInfo::createForTokenSplit(Spelling, TokenStart, TokenEnd),
+      TokenEnd.getOffset() - TokenStart.getOffset());
 }
 
 SourceLocation
@@ -895,7 +906,7 @@ SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
     if (isMacroArgExpansion(Loc))
       Loc = getImmediateSpellingLoc(Loc);
     else
-      Loc = getImmediateExpansionRange(Loc).first;
+      Loc = getImmediateExpansionRange(Loc).getBegin();
   } while (!Loc.isFileID());
   return Loc;
 }
@@ -950,7 +961,7 @@ SourceLocation SourceManager::getImmediateSpellingLoc(SourceLocation Loc) const{
 
 /// getImmediateExpansionRange - Loc is required to be an expansion location.
 /// Return the start/end of the expansion information.
-std::pair<SourceLocation,SourceLocation>
+CharSourceRange
 SourceManager::getImmediateExpansionRange(SourceLocation Loc) const {
   assert(Loc.isMacroID() && "Not a macro expansion loc!");
   const ExpansionInfo &Expansion = getSLocEntry(getFileID(Loc)).getExpansion();
@@ -965,19 +976,21 @@ SourceLocation SourceManager::getTopMacroCallerLoc(SourceLocation Loc) const {
 
 /// getExpansionRange - Given a SourceLocation object, return the range of
 /// tokens covered by the expansion in the ultimate file.
-std::pair<SourceLocation,SourceLocation>
-SourceManager::getExpansionRange(SourceLocation Loc) const {
-  if (Loc.isFileID()) return std::make_pair(Loc, Loc);
+CharSourceRange SourceManager::getExpansionRange(SourceLocation Loc) const {
+  if (Loc.isFileID())
+    return CharSourceRange(SourceRange(Loc, Loc), true);
 
-  std::pair<SourceLocation,SourceLocation> Res =
-    getImmediateExpansionRange(Loc);
+  CharSourceRange Res = getImmediateExpansionRange(Loc);
 
   // Fully resolve the start and end locations to their ultimate expansion
   // points.
-  while (!Res.first.isFileID())
-    Res.first = getImmediateExpansionRange(Res.first).first;
-  while (!Res.second.isFileID())
-    Res.second = getImmediateExpansionRange(Res.second).second;
+  while (!Res.getBegin().isFileID())
+    Res.setBegin(getImmediateExpansionRange(Res.getBegin()).getBegin());
+  while (!Res.getEnd().isFileID()) {
+    CharSourceRange EndRange = getImmediateExpansionRange(Res.getEnd());
+    Res.setEnd(EndRange.getEnd());
+    Res.setTokenRange(EndRange.isTokenRange());
+  }
   return Res;
 }
 
