@@ -482,6 +482,22 @@ def G_LOAD : GenericInstruction {
   let mayLoad = 1;
 }
 
+// Generic sign-extended load. Expects a MachineMemOperand in addition to explicit operands.
+def G_SEXTLOAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$addr);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+// Generic zero-extended load. Expects a MachineMemOperand in addition to explicit operands.
+def G_ZEXTLOAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$addr);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
 // Generic store. Expects a MachineMemOperand in addition to explicit operands.
 def G_STORE : GenericInstruction {
   let OutOperandList = (outs);

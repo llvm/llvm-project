@@ -287,9 +287,8 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
   // when finding file indexes
   std::vector<uint32_t> file_indexes;
   const bool full_match = (bool)file_spec.GetDirectory();
-  const bool remove_backup_dots = true;
   bool file_spec_matches_cu_file_spec =
-      FileSpec::Equal(file_spec, *this, full_match, remove_backup_dots);
+      FileSpec::Equal(file_spec, *this, full_match);
 
   // If we are not looking for inlined functions and our file spec doesn't
   // match then we are done...
@@ -297,11 +296,10 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
     return 0;
 
   uint32_t file_idx =
-      GetSupportFiles().FindFileIndex(1, file_spec, true, remove_backup_dots);
+      GetSupportFiles().FindFileIndex(1, file_spec, true);
   while (file_idx != UINT32_MAX) {
     file_indexes.push_back(file_idx);
-    file_idx = GetSupportFiles().FindFileIndex(file_idx + 1, file_spec, true,
-                                               remove_backup_dots);
+    file_idx = GetSupportFiles().FindFileIndex(file_idx + 1, file_spec, true);
   }
 
   const size_t num_file_indexes = file_indexes.size();

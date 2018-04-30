@@ -398,17 +398,19 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   if (Opts.OutputType == AssemblerInvocation::FT_Asm) {
     MCInstPrinter *IP = TheTarget->createMCInstPrinter(
         llvm::Triple(Opts.Triple), Opts.OutputAsmVariant, *MAI, *MCII, *MRI);
-    MCCodeEmitter *CE = nullptr;
-    MCAsmBackend *MAB = nullptr;
-    if (Opts.ShowEncoding) {
-      CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-      MCTargetOptions Options;
-      MAB = TheTarget->createMCAsmBackend(*STI, *MRI, Options);
-    }
+
+    std::unique_ptr<MCCodeEmitter> CE;
+    if (Opts.ShowEncoding)
+      CE.reset(TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+    MCTargetOptions MCOptions;
+    std::unique_ptr<MCAsmBackend> MAB(
+        TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
+
     auto FOut = llvm::make_unique<formatted_raw_ostream>(*Out);
     Str.reset(TheTarget->createAsmStreamer(
         Ctx, std::move(FOut), /*asmverbose*/ true,
-        /*useDwarfDirectory*/ true, IP, CE, MAB, Opts.ShowInst));
+        /*useDwarfDirectory*/ true, IP, std::move(CE), std::move(MAB),
+        Opts.ShowInst));
   } else if (Opts.OutputType == AssemblerInvocation::FT_Null) {
     Str.reset(createNullStreamer(Ctx));
   } else {
@@ -419,13 +421,16 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
       Out = BOS.get();
     }
 
-    MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-    MCTargetOptions Options;
-    MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, Options);
+    std::unique_ptr<MCCodeEmitter> CE(
+        TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
+    MCTargetOptions MCOptions;
+    std::unique_ptr<MCAsmBackend> MAB(
+        TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
+
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
-                T, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *Out, std::unique_ptr<MCCodeEmitter>(CE), *STI,
-        Opts.RelaxAll, Opts.IncrementalLinkerCompatible,
+        T, Ctx, std::move(MAB), *Out, std::move(CE), *STI, Opts.RelaxAll,
+        Opts.IncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     Str.get()->InitSections(Opts.NoExecStack);
   }

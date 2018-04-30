@@ -883,3 +883,12 @@ lsl ebx, word ptr [eax]
 
 // CHECK: lslw (%eax), %bx
 lsl bx, word ptr [eax]
+
+// CHECK: sysexitl
+sysexit
+// CHECK: sysexitq
+sysexitq
+// CHECK: sysretl
+sysret
+// CHECK: sysretq
+sysretq

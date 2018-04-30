@@ -967,7 +967,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
   /// "." and "./" in their paths. FIXME: some unittests currently fail on
   /// win32 when using remove_dots and remove_leading_dotslash on paths.
   bool UseCanonicalizedPaths =
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
       false;
 #else
       true;
@@ -1560,7 +1560,7 @@ ErrorOr<Entry *> RedirectingFileSystem::lookupPath(const Twine &Path_) {
 ErrorOr<Entry *>
 RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
                                   sys::path::const_iterator End, Entry *From) {
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
   assert(!isTraversalComponent(*Start) &&
          !isTraversalComponent(From->getName()) &&
          "Paths should not contain traversal components");

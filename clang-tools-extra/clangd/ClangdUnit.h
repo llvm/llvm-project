@@ -173,8 +173,9 @@ private:
 };
 
 /// Get the beginning SourceLocation at a specified \p Pos.
+/// May be invalid if Pos is, or if there's no identifier.
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
-                                        const FileEntry *FE);
+                                        const FileID FID);
 
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.

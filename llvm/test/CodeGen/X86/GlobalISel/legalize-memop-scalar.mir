@@ -96,14 +96,14 @@ body:             |
     ; X64: G_STORE [[LOAD]](s64), [[DEF]](p0) :: (store 8)
     ; X32-LABEL: name: test_memop_s64
     ; X32: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
-    ; X32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load 8)
+    ; X32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load 4, align 8)
     ; X32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; X32: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[DEF]], [[C]](s32)
-    ; X32: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p0) :: (load 8)
-    ; X32: G_STORE [[LOAD]](s32), [[DEF]](p0) :: (store 8)
+    ; X32: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p0) :: (load 4)
+    ; X32: G_STORE [[LOAD]](s32), [[DEF]](p0) :: (store 4, align 8)
     ; X32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; X32: [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[DEF]], [[C1]](s32)
-    ; X32: G_STORE [[LOAD1]](s32), [[GEP1]](p0) :: (store 8)
+    ; X32: G_STORE [[LOAD1]](s32), [[GEP1]](p0) :: (store 4)
     %0(p0) = IMPLICIT_DEF
     %1(s64) = G_LOAD %0(p0) :: (load 8)
 

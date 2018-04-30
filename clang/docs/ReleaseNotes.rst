@@ -78,10 +78,25 @@ Non-comprehensive list of changes in this release
   standard-layout if all base classes and the first data member (or bit-field)
   can be laid out at offset zero.
 
+- Clang's handling of the GCC ``packed`` class attribute in C++ has been fixed
+  to apply only to non-static data members and not to base classes. This fixes
+  an ABI difference between Clang and GCC, but creates an ABI difference between
+  Clang 7 and earlier versions. The old behavior can be restored by setting
+  ``-fclang-abi-compat`` to ``6`` or earlier.
+
 - ...
 
 New Compiler Flags
 ------------------
+
+- :option:`-ffp-cast-overflow-workaround` and
+  :option:`-fno-fp-cast-overflow-workaround`
+  enable (disable) a workaround for code that casts floating-point values to
+  integers and back to floating-point. If the floating-point value is not
+  representable in the intermediate integer type, the code is incorrect
+  according to the language standard. This flag will attempt to generate code
+  as if the result of an overflowing conversion matches the overflowing behavior
+  of a target's native float-to-int conversion instructions.
 
 - ...
 

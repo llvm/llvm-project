@@ -485,7 +485,7 @@ int main(int argc_, const char **argv_) {
       // On Windows, abort will return an exit code of 3.  In these cases,
       // generate additional diagnostic information if possible.
       bool DiagnoseCrash = CommandRes < 0 || CommandRes == 70;
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
       DiagnoseCrash |= CommandRes == 3;
 #endif
       if (DiagnoseCrash) {
@@ -501,7 +501,7 @@ int main(int argc_, const char **argv_) {
   // results now.  This happens in -disable-free mode.
   llvm::TimerGroup::printAll(llvm::errs());
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   // Exit status should not be negative on Win32, unless abnormal termination.
   // Once abnormal termiation was caught, negative status should not be
   // propagated.

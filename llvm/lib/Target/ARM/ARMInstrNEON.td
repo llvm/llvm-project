@@ -4682,37 +4682,59 @@ def : Pat<(v4f32 (fma (fneg QPR:$Vn), QPR:$Vm, QPR:$src1)),
 // We put them in the VFPV8 decoder namespace because the ARM and Thumb
 // encodings are the same and thus no further bit twiddling is necessary
 // in the disassembler.
-let Predicates = [HasDotProd], DecoderNamespace = "VFPV8" in {
-
-def VUDOTD : N3Vnp<0b11000, 0b10, 0b1101, 0b0, 0b1,
-                  (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm),
-                  N3RegFrm, IIC_VDOTPROD, "vudot", "u8", []>;
-def VSDOTD : N3Vnp<0b11000, 0b10, 0b1101, 0b0, 0b0,
-                  (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm),
-                  N3RegFrm, IIC_VDOTPROD, "vsdot", "s8", []>;
-def VUDOTQ : N3Vnp<0b11000, 0b10, 0b1101, 0b1, 0b1,
-                  (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm),
-                  N3RegFrm, IIC_VDOTPROD, "vudot", "u8", []>;
-def VSDOTQ : N3Vnp<0b11000, 0b10, 0b1101, 0b1, 0b0,
-                  (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm),
-                  N3RegFrm, IIC_VDOTPROD, "vsdot", "s8", []>;
-
-// Indexed dot product instructions:
-class DOTI<string opc, string dt, bit Q, bit U, RegisterClass Ty> :
-  N3Vnp<0b11100, 0b10, 0b1101, Q, U,
-       (outs Ty:$Vd), (ins Ty:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
-       N3RegFrm, IIC_VDOTPROD, opc, dt, []> {
-  bit lane;
-  let Inst{5} = lane;
-  let AsmString = !strconcat(opc, ".", dt, "\t$Vd, $Vn, $Vm$lane");
+class VDOT<bit op6, bit op4, RegisterClass RegTy, string Asm, string AsmTy,
+           ValueType AccumTy, ValueType InputTy,
+           SDPatternOperator OpNode> :
+      N3Vnp<0b11000, 0b10, 0b1101, op6, op4, (outs RegTy:$dst),
+            (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm), N3RegFrm, IIC_VDOTPROD,
+            Asm, AsmTy,
+            [(set (AccumTy RegTy:$dst),
+                  (OpNode (AccumTy RegTy:$Vd),
+                          (InputTy RegTy:$Vn),
+                          (InputTy RegTy:$Vm)))]> {
+  let Predicates = [HasDotProd];
+  let DecoderNamespace = "VFPV8";
+  let Constraints = "$dst = $Vd";
 }
 
-def VUDOTDI : DOTI<"vudot", "u8", 0b0, 0b1, DPR>;
-def VSDOTDI : DOTI<"vsdot", "s8", 0b0, 0b0, DPR>;
-def VUDOTQI : DOTI<"vudot", "u8", 0b1, 0b1, QPR>;
-def VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR>;
+def VUDOTD : VDOT<0, 1, DPR, "vudot", "u8", v2i32, v8i8,  int_arm_neon_udot>;
+def VSDOTD : VDOT<0, 0, DPR, "vsdot", "s8", v2i32, v8i8,  int_arm_neon_sdot>;
+def VUDOTQ : VDOT<1, 1, QPR, "vudot", "u8", v4i32, v16i8, int_arm_neon_udot>;
+def VSDOTQ : VDOT<1, 0, QPR, "vsdot", "s8", v4i32, v16i8, int_arm_neon_sdot>;
 
-}  // HasDotProd
+// Indexed dot product instructions:
+multiclass DOTI<string opc, string dt, bit Q, bit U, RegisterClass Ty,
+           ValueType AccumType, ValueType InputType, SDPatternOperator OpNode,
+           dag RHS> {
+  def "" : N3Vnp<0b11100, 0b10, 0b1101, Q, U, (outs Ty:$dst),
+                 (ins Ty:$Vd, Ty:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
+                 N3RegFrm, IIC_VDOTPROD, opc, dt, []> {
+    bit lane;
+    let Inst{5} = lane;
+    let AsmString = !strconcat(opc, ".", dt, "\t$Vd, $Vn, $Vm$lane");
+    let Constraints = "$dst = $Vd";
+    let Predicates = [HasDotProd];
+    let DecoderNamespace = "VFPV8";
+  }
+
+  def : Pat<
+    (AccumType (OpNode (AccumType Ty:$Vd),
+                       (InputType Ty:$Vn),
+                       (InputType (bitconvert (AccumType
+                                  (NEONvduplane (AccumType Ty:$Vm),
+                                                 VectorIndex32:$lane)))))),
+    (!cast<Instruction>(NAME) Ty:$Vd, Ty:$Vn, RHS, VectorIndex32:$lane)>;
+}
+
+defm VUDOTDI : DOTI<"vudot", "u8", 0b0, 0b1, DPR, v2i32, v8i8,
+                    int_arm_neon_udot, (v2i32 DPR_VFP2:$Vm)>;
+defm VSDOTDI : DOTI<"vsdot", "s8", 0b0, 0b0, DPR, v2i32, v8i8,
+                    int_arm_neon_sdot, (v2i32 DPR_VFP2:$Vm)>;
+defm VUDOTQI : DOTI<"vudot", "u8", 0b1, 0b1, QPR, v4i32, v16i8,
+                    int_arm_neon_udot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
+defm VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR, v4i32, v16i8,
+                    int_arm_neon_sdot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
+
 
 // ARMv8.3 complex operations
 class BaseN3VCP8ComplexTied<bit op21, bit op4, bit s, bit q,

@@ -59,7 +59,7 @@
 #endif
 #endif
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include "Windows/WindowsSupport.h"
 #endif
 
@@ -533,7 +533,7 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
 
   // Get the starting position.
   off_t loc = ::lseek(FD, 0, SEEK_CUR);
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   // MSVCRT's _lseek(SEEK_CUR) doesn't return -1 for pipes.
   sys::fs::file_status Status;
   std::error_code EC = status(FD, Status);
@@ -586,7 +586,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   // It is observed that Linux returns EINVAL for a very large write (>2G).
   // Make it a reasonably small value.
   MaxWriteSize = 1024 * 1024 * 1024;
-#elif defined(LLVM_ON_WIN32)
+#elif defined(_WIN32)
   // Writing a large size of output to Windows console returns ENOMEM. It seems
   // that, prior to Windows 8, WriteFile() is redirecting to WriteConsole(), and
   // the latter has a size limit (66000 bytes or less, depending on heap usage).
@@ -639,7 +639,7 @@ void raw_fd_ostream::close() {
 uint64_t raw_fd_ostream::seek(uint64_t off) {
   assert(SupportsSeeking && "Stream does not support seeking!");
   flush();
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   pos = ::_lseeki64(FD, off, SEEK_SET);
 #elif defined(HAVE_LSEEK64)
   pos = ::lseek64(FD, off, SEEK_SET);

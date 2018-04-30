@@ -584,7 +584,18 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
       if (InOpd)
         SymVA = read64be(&Out::OpdBuf[SymVA - OpdStart]);
     }
-    return SymVA - P;
+
+    // PPC64 V2 ABI describes two entry points to a function. The global entry
+    // point sets up the TOC base pointer. When calling a local function, the
+    // call should branch to the local entry point rather than the global entry
+    // point. Section 3.4.1 describes using the 3 most significant bits of the
+    // st_other field to find out how many instructions there are between the
+    // local and global entry point.
+    uint8_t StOther = (Sym.StOther >> 5) & 7;
+    if (StOther == 0 || StOther == 1)
+      return SymVA - P;
+
+    return SymVA - P + (1 << StOther);
   }
   case R_PPC_TOC:
     return getPPC64TocBase() + A;
@@ -825,10 +836,6 @@ static unsigned getReloc(IntTy Begin, IntTy Size, const ArrayRef<RelTy> &Rels,
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
 template <class ELFT> void EhInputSection::split() {
-  // Early exit if already split.
-  if (!Pieces.empty())
-    return;
-
   if (AreRelocsRela)
     split<ELFT>(relas<ELFT>());
   else
@@ -926,10 +933,6 @@ void MergeInputSection::splitIntoPieces() {
   OffsetMap.reserve(Pieces.size());
   for (size_t I = 0, E = Pieces.size(); I != E; ++I)
     OffsetMap[Pieces[I].InputOff] = I;
-
-  if (Config->GcSections && (Flags & SHF_ALLOC))
-    for (uint32_t Off : LiveOffsets)
-      getSectionPiece(Off)->Live = true;
 }
 
 template <class It, class T, class Compare>

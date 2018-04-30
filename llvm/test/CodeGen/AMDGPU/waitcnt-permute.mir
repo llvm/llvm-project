@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waits -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 
 ...
 # CHECK-LABEL: name: waitcnt-permute{{$}}

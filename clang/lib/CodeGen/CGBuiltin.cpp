@@ -3867,6 +3867,8 @@ static const NeonIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP0(vcvtq_u16_v),
   NEONMAP0(vcvtq_u32_v),
   NEONMAP0(vcvtq_u64_v),
+  NEONMAP2(vdot_v, arm_neon_udot, arm_neon_sdot, 0),
+  NEONMAP2(vdotq_v, arm_neon_udot, arm_neon_sdot, 0),
   NEONMAP0(vext_v),
   NEONMAP0(vextq_v),
   NEONMAP0(vfma_v),
@@ -4061,6 +4063,8 @@ static const NeonIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vcvtq_n_u32_v, aarch64_neon_vcvtfp2fxu, 0),
   NEONMAP1(vcvtq_n_u64_v, aarch64_neon_vcvtfp2fxu, 0),
   NEONMAP1(vcvtx_f32_v, aarch64_neon_fcvtxn, AddRetType | Add1ArgType),
+  NEONMAP2(vdot_v, aarch64_neon_udot, aarch64_neon_sdot, 0),
+  NEONMAP2(vdotq_v, aarch64_neon_udot, aarch64_neon_sdot, 0),
   NEONMAP0(vext_v),
   NEONMAP0(vextq_v),
   NEONMAP0(vfma_v),
@@ -4973,6 +4977,14 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
+  }
+  case NEON::BI__builtin_neon_vdot_v:
+  case NEON::BI__builtin_neon_vdotq_v: {
+    llvm::Type *InputTy =
+        llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    Int = Usgn ? LLVMIntrinsic : AltLLVMIntrinsic;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vdot");
   }
   }
 

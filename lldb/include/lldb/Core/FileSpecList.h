@@ -119,16 +119,11 @@ public:
   /// @param[in] full
   ///     Should FileSpec::Equal be called with "full" true or false.
   ///
-  /// @param[in] remove_backup_dots
-  ///     Should FileSpec::Equal be called with "remove_backup_dots" true or
-  ///     false.
-  ///
   /// @return
   ///     The index of the file that matches \a file if it is found,
   ///     else UINT32_MAX is returned.
   //------------------------------------------------------------------
-  size_t FindFileIndex(size_t idx, const FileSpec &file, bool full,
-                       bool remove_backup_dots = false) const;
+  size_t FindFileIndex(size_t idx, const FileSpec &file, bool full) const;
 
   //------------------------------------------------------------------
   /// Get file at index.

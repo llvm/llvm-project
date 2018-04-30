@@ -72,3 +72,42 @@ ldff1d z0.d, p0/z, [x0, z0.d, lsl]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expected #imm after shift specifier
 // CHECK-NEXT: ldff1d z0.d, p0/z, [x0, z0.d, lsl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid vector + immediate addressing modes
+
+ldff1d z0.s, p0/z, [z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: ldff1d z0.s, p0/z, [z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.s, p0/z, [z0.s, #8]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: ldff1d z0.s, p0/z, [z0.s, #8]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [z0.d, #-8]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #-8]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [z0.d, #-1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #-1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [z0.d, #249]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #249]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [z0.d, #256]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #256]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+ldff1d z0.d, p0/z, [z0.d, #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

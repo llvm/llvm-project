@@ -2887,6 +2887,13 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     unsigned Idx = EltIndex++;
     if (C->isNullValue() || C->isOpaque())
       return false;
+    // The instruction sequence to be generated contains shifting C by (op size
+    // in bits - # of trailing zeros in C), which results in an undef value when
+    // C == 1. (e.g. if the op size in bits is 32, it will be (sra x , 32) if C
+    // == 1)
+    if (C->getAPIntValue().isOneValue())
+      return false;
+
     if (C->getAPIntValue().isPowerOf2())
       return true;
     if ((-C->getAPIntValue()).isPowerOf2()) {

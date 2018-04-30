@@ -17,6 +17,7 @@
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLTools.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -128,49 +129,6 @@ static bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
 }
 #endif
 
-/// If @p PwAff maps to a constant, return said constant. If @p Max/@p Min, it
-/// can also be a piecewise constant and it would return the minimum/maximum
-/// value. Otherwise, return NaN.
-static isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
-  assert(!Max || !Min);
-  isl::val Result;
-  PwAff.foreach_piece([=, &Result](isl::set Set, isl::aff Aff) -> isl::stat {
-    if (Result && Result.is_nan())
-      return isl::stat::ok;
-
-    // TODO: If Min/Max, we can also determine a minimum/maximum value if
-    // Set is constant-bounded.
-    if (!Aff.is_cst()) {
-      Result = isl::val::nan(Aff.get_ctx());
-      return isl::stat::error;
-    }
-
-    auto ThisVal = Aff.get_constant_val();
-    if (!Result) {
-      Result = ThisVal;
-      return isl::stat::ok;
-    }
-
-    if (Result.eq(ThisVal))
-      return isl::stat::ok;
-
-    if (Max && ThisVal.gt(Result)) {
-      Result = ThisVal;
-      return isl::stat::ok;
-    }
-
-    if (Min && ThisVal.lt(Result)) {
-      Result = ThisVal;
-      return isl::stat::ok;
-    }
-
-    // Not compatible
-    Result = isl::val::nan(Aff.get_ctx());
-    return isl::stat::error;
-  });
-  return Result;
-}
-
 char MaximalStaticExpander::ID = 0;
 
 isl::union_map MaximalStaticExpander::filterDependences(
@@ -202,7 +160,7 @@ isl::union_map MaximalStaticExpander::filterDependences(
     auto NewMap = Map.factor_domain();
     auto NewMapDomainId = NewMap.domain().get_tuple_id();
 
-    if (AccessDomainId.keep() != NewMapDomainId.keep())
+    if (AccessDomainId.get() != NewMapDomainId.get())
       return isl::stat::ok;
 
     // Add the corresponding map to MapDependences.
@@ -281,10 +239,9 @@ bool MaximalStaticExpander::isExpandable(
           return false;
         }
 
-        StmtReads = give(isl_union_map_union(StmtReads.take(), AccRel.take()));
+        StmtReads = StmtReads.unite(AccRel);
       } else {
-        StmtWrites =
-            give(isl_union_map_union(StmtWrites.take(), AccRel.take()));
+        StmtWrites = StmtWrites.unite(AccRel);
       }
 
       // For now, we are not able to expand MayWrite.
@@ -487,7 +444,7 @@ bool MaximalStaticExpander::runOnScop(Scop &S) {
   // Get the RAW Dependences.
   auto &DI = getAnalysis<DependenceInfo>();
   auto &D = DI.getDependences(Dependences::AL_Reference);
-  auto Dependences = isl::give(D.getDependences(Dependences::TYPE_RAW));
+  auto Dependences = isl::manage(D.getDependences(Dependences::TYPE_RAW));
 
   SmallVector<ScopArrayInfo *, 4> CurrentSAI(S.arrays().begin(),
                                              S.arrays().end());

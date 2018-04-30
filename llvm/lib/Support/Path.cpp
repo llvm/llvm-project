@@ -37,7 +37,7 @@ namespace {
   using llvm::sys::path::Style;
 
   inline Style real_style(Style style) {
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
     return (style == Style::posix) ? Style::posix : Style::windows;
 #else
     return (style == Style::windows) ? Style::windows : Style::posix;
@@ -1073,7 +1073,7 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
 #if defined(LLVM_ON_UNIX)
 #include "Unix/Path.inc"
 #endif
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "Windows/Path.inc"
 #endif
 
@@ -1095,7 +1095,7 @@ Error TempFile::discard() {
   Done = true;
   std::error_code RemoveEC;
 // On windows closing will remove the file.
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
   // Always try to close and remove.
   if (!TmpName.empty()) {
     RemoveEC = fs::remove(TmpName);
@@ -1119,7 +1119,7 @@ Error TempFile::keep(const Twine &Name) {
   assert(!Done);
   Done = true;
   // Always try to close and rename.
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   // If we cant't cancel the delete don't rename.
   std::error_code RenameEC = cancelDeleteOnClose(FD);
   if (!RenameEC)
@@ -1151,7 +1151,7 @@ Error TempFile::keep() {
   assert(!Done);
   Done = true;
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   if (std::error_code EC = cancelDeleteOnClose(FD))
     return errorCodeToError(EC);
 #else
@@ -1177,7 +1177,7 @@ Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
     return errorCodeToError(EC);
 
   TempFile Ret(ResultPath, FD);
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
   if (sys::RemoveFileOnSignal(ResultPath)) {
     // Make sure we delete the file when RemoveFileOnSignal fails.
     consumeError(Ret.discard());

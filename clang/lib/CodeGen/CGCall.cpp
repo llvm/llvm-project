@@ -1727,6 +1727,9 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
     FuncAttrs.addAttribute("no-trapping-math",
                            llvm::toStringRef(CodeGenOpts.NoTrappingMath));
 
+    if (CodeGenOpts.FPCastOverflowWorkaround)
+      FuncAttrs.addAttribute("fp-cast-overflow-workaround", "true");
+
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
     FuncAttrs.addAttribute("no-infs-fp-math",

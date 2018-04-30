@@ -361,7 +361,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       break;
     case dwarf::DW_OP_deref:
       assert(LocationKind != Register);
-      if (LocationKind != Memory && isMemoryLocation(ExprCursor))
+      if (LocationKind != Memory && ::isMemoryLocation(ExprCursor))
         // Turning this into a memory location description makes the deref
         // implicit.
         LocationKind = Memory;
