@@ -195,14 +195,10 @@ llvm::Optional<SymbolLocation> getSymbolLocation(
   auto TokenLength = clang::Lexer::MeasureTokenLength(NameLoc, SM, LangOpts);
 
   auto CreatePosition = [&SM](SourceLocation Loc) {
-    auto FileIdAndOffset = SM.getDecomposedLoc(Loc);
-    auto FileId = FileIdAndOffset.first;
-    auto Offset = FileIdAndOffset.second;
+    auto LSPLoc = sourceLocToPosition(SM, Loc);
     SymbolLocation::Position Pos;
-    // Position is 0-based while SourceManager is 1-based.
-    Pos.Line = SM.getLineNumber(FileId, Offset) - 1;
-    // FIXME: Use UTF-16 code units, not UTF-8 bytes.
-    Pos.Column = SM.getColumnNumber(FileId, Offset) - 1;
+    Pos.Line = LSPLoc.line;
+    Pos.Column = LSPLoc.character;
     return Pos;
   };
 

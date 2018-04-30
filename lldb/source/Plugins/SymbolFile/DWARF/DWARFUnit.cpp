@@ -801,6 +801,7 @@ void DWARFUnit::IndexPrivate(
                 break;
 
               case DW_TAG_compile_unit:
+              case DW_TAG_partial_unit:
                 is_global_or_static_variable = true;
                 parent_die = NULL; // Terminate the while loop.
                 break;

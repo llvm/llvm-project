@@ -1925,7 +1925,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         dw_tag_t sc_parent_tag = sc_parent_die.Tag();
 
         SymbolContextScope *symbol_context_scope = NULL;
-        if (sc_parent_tag == DW_TAG_compile_unit) {
+        if (sc_parent_tag == DW_TAG_compile_unit ||
+            sc_parent_tag == DW_TAG_partial_unit) {
           symbol_context_scope = sc.comp_unit;
         } else if (sc.function != NULL && sc_parent_die) {
           symbol_context_scope =
@@ -2745,7 +2746,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
       Mangled func_name;
       if (mangled)
         func_name.SetValue(ConstString(mangled), true);
-      else if (die.GetParent().Tag() == DW_TAG_compile_unit &&
+      else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
+                die.GetParent().Tag() == DW_TAG_partial_unit) &&
                Language::LanguageIsCPlusPlus(die.GetLanguage()) && name &&
                strcmp(name, "main") != 0) {
         // If the mangled name is not present in the DWARF, generate the
@@ -3838,6 +3840,7 @@ DWARFASTParserClang::GetClangDeclContextForDIE(const DWARFDIE &die) {
     bool try_parsing_type = true;
     switch (die.Tag()) {
     case DW_TAG_compile_unit:
+    case DW_TAG_partial_unit:
       decl_ctx = m_ast.GetTranslationUnitDecl();
       try_parsing_type = false;
       break;

@@ -57,6 +57,7 @@ bool UniqueDWARFASTTypeList::Find(const DWARFDIE &die,
               } break;
 
               case DW_TAG_compile_unit:
+              case DW_TAG_partial_unit:
                 done = true;
                 break;
               }

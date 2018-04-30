@@ -218,7 +218,8 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
         m_tag = abbrevDecl->Tag();
         m_has_children = abbrevDecl->HasChildren();
 
-        bool isCompileUnitTag = m_tag == DW_TAG_compile_unit;
+        bool isCompileUnitTag = (m_tag == DW_TAG_compile_unit ||
+                                 m_tag == DW_TAG_partial_unit);
         if (cu && isCompileUnitTag)
           const_cast<DWARFUnit *>(cu)->SetBaseAddress(0);
 
@@ -770,7 +771,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(
   const DWARFAbbreviationDeclaration *abbrevDecl = nullptr;
   lldb::offset_t offset = 0;
   if (cu) {
-    if (m_tag != DW_TAG_compile_unit) {
+    if (m_tag != DW_TAG_compile_unit && m_tag != DW_TAG_partial_unit) {
       SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
       if (dwo_symbol_file)
         return GetAttributes(dwo_symbol_file->GetCompileUnit(),
@@ -851,7 +852,8 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     dw_offset_t *end_attr_offset_ptr,
     bool check_specification_or_abstract_origin) const {
   SymbolFileDWARFDwo *dwo_symbol_file = cu->GetDwoSymbolFile();
-  if (dwo_symbol_file && m_tag != DW_TAG_compile_unit)
+  if (dwo_symbol_file && m_tag != DW_TAG_compile_unit &&
+                         m_tag != DW_TAG_partial_unit)
     return GetAttributeValue(dwo_symbol_file, dwo_symbol_file->GetCompileUnit(),
                              attr, form_value, end_attr_offset_ptr,
                              check_specification_or_abstract_origin);
@@ -1382,11 +1384,12 @@ void DWARFDebugInfoEntry::GetDWARFDeclContext(
     SymbolFileDWARF *dwarf2Data, DWARFUnit *cu,
     DWARFDeclContext &dwarf_decl_ctx) const {
   const dw_tag_t tag = Tag();
-  if (tag != DW_TAG_compile_unit) {
+  if (tag != DW_TAG_compile_unit && tag != DW_TAG_partial_unit) {
     dwarf_decl_ctx.AppendDeclContext(tag, GetName(dwarf2Data, cu));
     DWARFDIE parent_decl_ctx_die = GetParentDeclContextDIE(dwarf2Data, cu);
     if (parent_decl_ctx_die && parent_decl_ctx_die.GetDIE() != this) {
-      if (parent_decl_ctx_die.Tag() != DW_TAG_compile_unit)
+      if (parent_decl_ctx_die.Tag() != DW_TAG_compile_unit &&
+          parent_decl_ctx_die.Tag() != DW_TAG_partial_unit)
         parent_decl_ctx_die.GetDIE()->GetDWARFDeclContext(
             parent_decl_ctx_die.GetDWARF(), parent_decl_ctx_die.GetCU(),
             dwarf_decl_ctx);
@@ -1424,6 +1427,7 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
     if (die.GetDIE() != this) {
       switch (die.Tag()) {
       case DW_TAG_compile_unit:
+      case DW_TAG_partial_unit:
       case DW_TAG_namespace:
       case DW_TAG_structure_type:
       case DW_TAG_union_type:
@@ -1661,6 +1665,7 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
     case DW_TAG_unspecified_type:
       break;
     case DW_TAG_partial_unit:
+      match_addr_range = true;
       break;
     case DW_TAG_imported_unit:
       break;
@@ -1684,6 +1689,7 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
             //  puts("***MATCH***");
             switch (m_tag) {
             case DW_TAG_compile_unit: // File
+            case DW_TAG_partial_unit: // File
               check_children = ((function_die != NULL) || (block_die != NULL));
               break;
 
@@ -1709,7 +1715,8 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
         } else { // compile units may not have a valid high/low pc when there
           // are address gaps in subroutines so we must always search
           // if there is no valid high and low PC
-          check_children = (m_tag == DW_TAG_compile_unit) &&
+          check_children = (m_tag == DW_TAG_compile_unit ||
+                            m_tag == DW_TAG_partial_unit) &&
                            ((function_die != NULL) || (block_die != NULL));
         }
       } else {
@@ -1728,6 +1735,7 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
             //  puts("***MATCH***");
             switch (m_tag) {
             case DW_TAG_compile_unit: // File
+            case DW_TAG_partial_unit: // File
               check_children = ((function_die != NULL) || (block_die != NULL));
               break;
 

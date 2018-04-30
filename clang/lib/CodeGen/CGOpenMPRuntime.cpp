@@ -2588,21 +2588,20 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
 static void getTargetEntryUniqueInfo(ASTContext &C, SourceLocation Loc,
                                      unsigned &DeviceID, unsigned &FileID,
                                      unsigned &LineNum) {
-
   SourceManager &SM = C.getSourceManager();
 
   // The loc should be always valid and have a file ID (the user cannot use
   // #pragma directives in macros)
 
   assert(Loc.isValid() && "Source location is expected to be always valid.");
-  assert(Loc.isFileID() && "Source location is expected to refer to a file.");
 
   PresumedLoc PLoc = SM.getPresumedLoc(Loc);
   assert(PLoc.isValid() && "Source location is expected to be always valid.");
 
   llvm::sys::fs::UniqueID ID;
-  if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
-    llvm_unreachable("Source file with target region no longer exists!");
+  if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
+    SM.getDiagnostics().Report(diag::err_cannot_open_file)
+        << PLoc.getFilename() << EC.message();
 
   DeviceID = ID.getDevice();
   FileID = ID.getFile();
@@ -3586,8 +3585,13 @@ void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
   // If we are emitting code for a target, the entry is already initialized,
   // only has to be registered.
   if (CGM.getLangOpts().OpenMPIsDevice) {
-    assert(hasTargetRegionEntryInfo(DeviceID, FileID, ParentName, LineNum) &&
-           "Entry must exist.");
+    if (!hasTargetRegionEntryInfo(DeviceID, FileID, ParentName, LineNum)) {
+      unsigned DiagID = CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "Unable to find target region on line '%0' in the device code.");
+      CGM.getDiags().Report(DiagID) << LineNum;
+      return;
+    }
     auto &Entry =
         OffloadEntriesTargetRegion[DeviceID][FileID][ParentName][LineNum];
     assert(Entry.isValid() && "Entry not initialized!");
@@ -3928,14 +3932,27 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     if (const auto *CE =
             dyn_cast<OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion>(
                 E)) {
-      assert(CE->getID() && CE->getAddress() &&
-             "Entry ID and Addr are invalid!");
+      if (!CE->getID() || !CE->getAddress()) {
+        unsigned DiagID = CGM.getDiags().getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "Offloading entry for target region is incorect: either the "
+            "address or the ID is invalid.");
+        CGM.getDiags().Report(DiagID);
+        continue;
+      }
       createOffloadEntry(CE->getID(), CE->getAddress(), /*Size=*/0,
                          CE->getFlags(), llvm::GlobalValue::WeakAnyLinkage);
     } else if (const auto *CE =
                    dyn_cast<OffloadEntriesInfoManagerTy::
                                 OffloadEntryInfoDeviceGlobalVar>(E)) {
-      assert(CE->getAddress() && "Entry Addr is invalid!");
+      if (!CE->getAddress()) {
+        unsigned DiagID = CGM.getDiags().getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "Offloading entry for declare target varible is inccorect: the "
+            "address is invalid.");
+        CGM.getDiags().Report(DiagID);
+        continue;
+      }
       createOffloadEntry(CE->getAddress(), CE->getAddress(),
                          CE->getVarSize().getQuantity(), CE->getFlags(),
                          CE->getLinkage());
@@ -3958,15 +3975,23 @@ void CGOpenMPRuntime::loadOffloadInfoMetadata() {
     return;
 
   auto Buf = llvm::MemoryBuffer::getFile(CGM.getLangOpts().OMPHostIRFile);
-  if (Buf.getError())
+  if (auto EC = Buf.getError()) {
+    CGM.getDiags().Report(diag::err_cannot_open_file)
+        << CGM.getLangOpts().OMPHostIRFile << EC.message();
     return;
+  }
 
   llvm::LLVMContext C;
   auto ME = expectedToErrorOrAndEmitErrors(
       C, llvm::parseBitcodeFile(Buf.get()->getMemBufferRef(), C));
 
-  if (ME.getError())
+  if (auto EC = ME.getError()) {
+    unsigned DiagID = CGM.getDiags().getCustomDiagID(
+        DiagnosticsEngine::Error, "Unable to parse host IR file '%0':'%1'");
+    CGM.getDiags().Report(DiagID)
+        << CGM.getLangOpts().OMPHostIRFile << EC.message();
     return;
+  }
 
   llvm::NamedMDNode *MD = ME.get()->getNamedMetadata("omp_offload.info");
   if (!MD)

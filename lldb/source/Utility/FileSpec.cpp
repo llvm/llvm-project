@@ -69,7 +69,6 @@ LLVMPathSyntax(FileSpec::PathSyntax lldb_syntax) {
       return llvm::sys::path::Style::posix;
     case FileSpec::ePathSyntaxWindows:
       return llvm::sys::path::Style::windows;
-    default:
     case FileSpec::ePathSyntaxHostNative:
       return llvm::sys::path::Style::native;
   };
@@ -236,14 +235,10 @@ inline char safeCharAtIndex(const llvm::StringRef &path, size_t i) {
 /// @param[in] path
 ///     A full, partial, or relative path to a file.
 ///
-/// @param[in] syntax
-///     The syntax enumeration for the path in \a path.
-///
 /// @return
 ///   Returns \b true if the path needs to be normalized.
 //------------------------------------------------------------------
-bool needsNormalization(const llvm::StringRef &path,
-                        FileSpec::PathSyntax syntax) {
+bool needsNormalization(const llvm::StringRef &path) {
   if (path.empty())
     return false;
   // We strip off leading "." values so these paths need to be normalized
@@ -338,12 +333,11 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
   }
 
   // Normalize the path by removing ".", ".." and other redundant components.
-  if (needsNormalization(llvm::StringRef(resolved.data(), resolved.size()),
-                         syntax))
-    llvm::sys::path::remove_dots(resolved, true, LLVMPathSyntax(syntax));
+  if (needsNormalization(resolved))
+    llvm::sys::path::remove_dots(resolved, true, LLVMPathSyntax(m_syntax));
 
   // Normalize back slashes to forward slashes
-  if (syntax == FileSpec::ePathSyntaxWindows)
+  if (m_syntax == FileSpec::ePathSyntaxWindows)
     std::replace(resolved.begin(), resolved.end(), '\\', '/');
 
   llvm::StringRef resolve_path_ref(resolved.c_str());

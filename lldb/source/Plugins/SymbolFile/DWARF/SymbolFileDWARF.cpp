@@ -382,6 +382,7 @@ SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
 
     switch (tag) {
     case DW_TAG_compile_unit:
+    case DW_TAG_partial_unit:
     case DW_TAG_subprogram:
     case DW_TAG_inlined_subroutine:
     case DW_TAG_lexical_block:
@@ -3110,6 +3111,7 @@ SymbolFileDWARF::GetDeclContextDIEContainingDIE(const DWARFDIE &orig_die) {
       if (orig_die != die) {
         switch (die.Tag()) {
         case DW_TAG_compile_unit:
+        case DW_TAG_partial_unit:
         case DW_TAG_namespace:
         case DW_TAG_structure_type:
         case DW_TAG_union_type:
@@ -3308,7 +3310,7 @@ bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
   //   [0] DW_TAG_class_type for "B"
   //   [1] DW_TAG_class_type for "A"
   //   [2] DW_TAG_namespace  for "lldb"
-  //   [3] DW_TAG_compile_unit for the source file.
+  //   [3] DW_TAG_compile_unit or DW_TAG_partial_unit for the source file.
   //
   // We grab both contexts and make sure that everything matches
   // all the way back to the compiler unit.
@@ -3337,9 +3339,11 @@ bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
 #if defined LLDB_CONFIGURATION_DEBUG
 
   // Make sure the top item in the decl context die array is always
-  // DW_TAG_compile_unit. If it isn't then something went wrong in
-  // the DWARFDIE::GetDeclContextDIEs() function...
-  assert(decl_ctx_1.GetDIEAtIndex(count1 - 1).Tag() == DW_TAG_compile_unit);
+  // DW_TAG_compile_unit or DW_TAG_partial_unit. If it isn't then something
+  // went wrong in the DWARFDIE::GetDeclContextDIEs() function...
+  dw_tag_t cu_tag = decl_ctx_1.GetDIEAtIndex(count1 - 1).Tag();
+  UNUSED_IF_ASSERT_DISABLED(cu_tag);
+  assert(cu_tag == DW_TAG_compile_unit || cu_tag == DW_TAG_partial_unit);
 
 #endif
   // Always skip the compile unit when comparing by only iterating up to
@@ -3941,7 +3945,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       const DWARFDIE parent_context_die = GetDeclContextDIEContainingDIE(die);
       const dw_tag_t parent_tag = die.GetParent().Tag();
       bool is_static_member =
-          parent_tag == DW_TAG_compile_unit &&
+          (parent_tag == DW_TAG_compile_unit ||
+           parent_tag == DW_TAG_partial_unit) &&
           (parent_context_die.Tag() == DW_TAG_class_type ||
            parent_context_die.Tag() == DW_TAG_structure_type);
 
@@ -3963,7 +3968,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         // "(int) A::B::j = 4". If the compiler does not emit a linkage name, we
         // should be able
         // to generate a fully qualified name from the declaration context.
-        if (parent_tag == DW_TAG_compile_unit &&
+        if ((parent_tag == DW_TAG_compile_unit ||
+             parent_tag == DW_TAG_partial_unit) &&
             Language::LanguageIsCPlusPlus(die.GetLanguage())) {
           DWARFDeclContext decl_ctx;
 
@@ -4221,6 +4227,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
           dw_tag_t parent_tag = sc_parent_die.Tag();
           switch (parent_tag) {
           case DW_TAG_compile_unit:
+          case DW_TAG_partial_unit:
             if (sc.comp_unit != NULL) {
               variable_list_sp = sc.comp_unit->GetVariableList(false);
               if (variable_list_sp.get() == NULL) {

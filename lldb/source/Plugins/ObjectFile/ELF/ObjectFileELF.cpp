@@ -1950,6 +1950,16 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = kalimbaSectionType(m_header, header);
       }
 
+      // In common case ELF code section can have arbitrary name (for example,
+      // we can specify it using section attribute for particular function) so
+      // assume that section is a code section if it has SHF_EXECINSTR flag set
+      // and has SHT_PROGBITS type.
+      if (eSectionTypeOther == sect_type &&
+          llvm::ELF::SHT_PROGBITS == header.sh_type &&
+          (header.sh_flags & SHF_EXECINSTR)) {
+        sect_type = eSectionTypeCode;
+      }
+
       const uint32_t target_bytes_size =
           (eSectionTypeData == sect_type || eSectionTypeZeroFill == sect_type)
               ? m_arch_spec.GetDataByteSize()
