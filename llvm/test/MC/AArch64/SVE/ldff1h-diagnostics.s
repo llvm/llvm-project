@@ -69,22 +69,22 @@ ldff1h z0.s, p0/z, [x0, z0.s]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1h z0.s, p0/z, [x0, z0.s, uxtw #2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw) #1'
 // CHECK-NEXT: ldff1h z0.s, p0/z, [x0, z0.s, uxtw #2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1h z0.s, p0/z, [x0, z0.s, lsl #1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw) #1'
 // CHECK-NEXT: ldff1h z0.s, p0/z, [x0, z0.s, lsl #1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1h z0.d, p0/z, [x0, z0.d, lsl #2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (lsl|uxtw|sxtw) #1'
 // CHECK-NEXT: ldff1h z0.d, p0/z, [x0, z0.d, lsl #2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1h z0.d, p0/z, [x0, z0.d, sxtw #2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (lsl|uxtw|sxtw) #1'
 // CHECK-NEXT: ldff1h z0.d, p0/z, [x0, z0.d, sxtw #2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

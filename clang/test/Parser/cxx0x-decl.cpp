@@ -130,15 +130,18 @@ namespace AliasDeclEndLocation {
   using B = AliasDeclEndLocation::A<int
     > // expected-error {{expected ';' after alias declaration}}
     +;
-  // FIXME: After splitting this >> into two > tokens, we incorrectly determine
-  // the end of the template-id to be after the *second* '>'.
-  // Perhaps we could synthesize an expansion FileID containing '> >' to fix this?
   using C = AliasDeclEndLocation::A<int
     >\
 > // expected-error {{expected ';' after alias declaration}}
     ;
   using D = AliasDeclEndLocation::A<int
     > // expected-error {{expected ';' after alias declaration}}
+  // FIXME: After splitting this >> into two > tokens, we incorrectly determine
+  // the end of the template-id to be after the *second* '>'.
+  using E = AliasDeclEndLocation::A<int>>;
+#define GGG >>>
+  using F = AliasDeclEndLocation::A<int GGG;
+  // expected-error@-1 {{expected ';' after alias declaration}}
   B something_else;
 }
 

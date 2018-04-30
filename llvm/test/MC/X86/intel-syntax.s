@@ -62,7 +62,7 @@ main:
   lcall [rax]
 // CHECK: ljmpl *(%rax)
   jmp FWORD ptr [rax]
-// CHECK: ljmpl *(%rax)
+// CHECK: ljmpq *(%rax)
   ljmp [rax]
 
 // CHECK:	movl	$257, -4(%rsp)
@@ -551,13 +551,9 @@ test [ECX], AL
 
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
-// CHECK: fnstsw %ax
-// CHECK: fnstsw %ax
 // CHECK: fnstsw (%eax)
 fnstsw
 fnstsw AX
-fnstsw EAX
-fnstsw AL
 fnstsw WORD PTR [EAX]
 
 // CHECK: faddp %st(1)

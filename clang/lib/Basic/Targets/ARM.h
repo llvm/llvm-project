@@ -156,6 +156,11 @@ public:
                              std::string &SuggestedModifier) const override;
   const char *getClobbers() const override;
 
+  StringRef getConstraintRegister(StringRef Constraint,
+                                  StringRef Expression) const override {
+    return Expression;
+  }
+
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
   int getEHDataRegisterNumber(unsigned RegNo) const override;

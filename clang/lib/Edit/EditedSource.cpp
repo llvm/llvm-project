@@ -36,12 +36,14 @@ void EditedSource::deconstructMacroArgLoc(SourceLocation Loc,
                                           SourceLocation &ExpansionLoc,
                                           MacroArgUse &ArgUse) {
   assert(SourceMgr.isMacroArgExpansion(Loc));
-  SourceLocation DefArgLoc = SourceMgr.getImmediateExpansionRange(Loc).first;
+  SourceLocation DefArgLoc =
+      SourceMgr.getImmediateExpansionRange(Loc).getBegin();
   SourceLocation ImmediateExpansionLoc =
-      SourceMgr.getImmediateExpansionRange(DefArgLoc).first;
+      SourceMgr.getImmediateExpansionRange(DefArgLoc).getBegin();
   ExpansionLoc = ImmediateExpansionLoc;
   while (SourceMgr.isMacroBodyExpansion(ExpansionLoc))
-    ExpansionLoc = SourceMgr.getImmediateExpansionRange(ExpansionLoc).first;
+    ExpansionLoc =
+        SourceMgr.getImmediateExpansionRange(ExpansionLoc).getBegin();
   SmallString<20> Buf;
   StringRef ArgName = Lexer::getSpelling(SourceMgr.getSpellingLoc(DefArgLoc),
                                          Buf, SourceMgr, LangOpts);

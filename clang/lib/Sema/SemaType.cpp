@@ -4489,7 +4489,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // the predefined
           // __strong/__weak/__autoreleasing/__unsafe_unretained.
           if (AttrLoc.isMacroID())
-            AttrLoc = S.SourceMgr.getImmediateExpansionRange(AttrLoc).first;
+            AttrLoc =
+                S.SourceMgr.getImmediateExpansionRange(AttrLoc).getBegin();
 
           S.Diag(AttrLoc, diag::warn_arc_lifetime_result_type)
             << T.getQualifiers().getObjCLifetime();
@@ -5893,7 +5894,8 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
   Sema &S = state.getSema();
   SourceLocation AttrLoc = attr.getLoc();
   if (AttrLoc.isMacroID())
-    AttrLoc = S.getSourceManager().getImmediateExpansionRange(AttrLoc).first;
+    AttrLoc =
+        S.getSourceManager().getImmediateExpansionRange(AttrLoc).getBegin();
 
   if (!attr.isArgIdent(0)) {
     S.Diag(AttrLoc, diag::err_attribute_argument_type)

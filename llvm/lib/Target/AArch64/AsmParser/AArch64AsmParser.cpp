@@ -877,14 +877,25 @@ public:
   }
 
   template <int ElementWidth, unsigned Class,
-            AArch64_AM::ShiftExtendType ShiftExtendTy, int ShiftWidth>
+            AArch64_AM::ShiftExtendType ShiftExtendTy, int ShiftWidth,
+            bool ShiftWidthAlwaysSame>
   DiagnosticPredicate isSVEVectorRegWithShiftExtend() const {
     if (Kind != k_Register || Reg.Kind != RegKind::SVEDataVector)
       return DiagnosticPredicateTy::NoMatch;
 
-    if (isSVEVectorRegOfWidth<ElementWidth, Class>() &&
-        ShiftExtendTy == getShiftExtendType() &&
-        getShiftExtendAmount() == Log2_32(ShiftWidth / 8))
+    if (!isSVEVectorRegOfWidth<ElementWidth, Class>())
+      return DiagnosticPredicateTy::NearMatch;
+
+    // Give a more specific diagnostic when the user has explicitly typed in
+    // a shift-amount that does not match what is expected, but for which
+    // there is also an unscaled addressing mode (e.g. sxtw/uxtw).
+    bool MatchShift = getShiftExtendAmount() == Log2_32(ShiftWidth / 8);
+    if (!MatchShift && (ShiftExtendTy == AArch64_AM::UXTW ||
+                        ShiftExtendTy == AArch64_AM::SXTW) &&
+        !ShiftWidthAlwaysSame && hasShiftExtendAmount() && ShiftWidth == 8)
+      return DiagnosticPredicateTy::NoMatch;
+
+    if (MatchShift && ShiftExtendTy == getShiftExtendType())
       return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;

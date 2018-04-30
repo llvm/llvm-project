@@ -629,6 +629,12 @@ public:
   StringRef getNormalizedGCCRegisterName(StringRef Name,
                                          bool ReturnCanonical = false) const;
 
+  /// \brief Extracts a register from the passed constraint (if it is a
+  /// single-register constraint) and the asm label expression related to a
+  /// variable in the input or output list of an inline asm statement.
+  ///
+  /// This function is used by Sema in order to diagnose conflicts between
+  /// the clobber list and the input/output lists.
   virtual StringRef getConstraintRegister(StringRef Constraint,
                                           StringRef Expression) const {
     return "";
