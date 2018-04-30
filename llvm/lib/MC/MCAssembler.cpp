@@ -83,9 +83,12 @@ STATISTIC(PaddingFragmentsBytes,
 
 /* *** */
 
-MCAssembler::MCAssembler(MCContext &Context, MCAsmBackend &Backend,
-                         MCCodeEmitter &Emitter, MCObjectWriter &Writer)
-    : Context(Context), Backend(Backend), Emitter(Emitter), Writer(Writer),
+MCAssembler::MCAssembler(MCContext &Context,
+                         std::unique_ptr<MCAsmBackend> Backend,
+                         std::unique_ptr<MCCodeEmitter> Emitter,
+                         std::unique_ptr<MCObjectWriter> Writer)
+    : Context(Context), Backend(std::move(Backend)),
+      Emitter(std::move(Emitter)), Writer(std::move(Writer)),
       BundleAlignSize(0), RelaxAll(false), SubsectionsViaSymbols(false),
       IncrementalLinkerCompatible(false), ELFHeaderEFlags(0) {
   VersionInfo.Major = 0; // Major version == 0 for "none specified"
@@ -110,9 +113,12 @@ void MCAssembler::reset() {
   VersionInfo.Major = 0;
 
   // reset objects owned by us
-  getBackend().reset();
-  getEmitter().reset();
-  getWriter().reset();
+  if (getBackendPtr())
+    getBackendPtr()->reset();
+  if (getEmitterPtr())
+    getEmitterPtr()->reset();
+  if (getWriterPtr())
+    getWriterPtr()->reset();
   getLOHContainer().reset();
 }
 
@@ -215,10 +221,11 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
     }
   }
 
-  bool IsPCRel = Backend.getFixupKindInfo(
-    Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel;
+  assert(getBackendPtr() && "Expected assembler backend");
+  bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
+                 MCFixupKindInfo::FKF_IsPCRel;
 
-  bool IsResolved;
+  bool IsResolved = false;
   if (IsPCRel) {
     if (Target.getSymB()) {
       IsResolved = false;
@@ -229,8 +236,8 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
       const MCSymbol &SA = A->getSymbol();
       if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
         IsResolved = false;
-      } else {
-        IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+      } else if (auto *Writer = getWriterPtr()) {
+        IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(
             *this, SA, *DF, false, true);
       }
     }
@@ -251,8 +258,8 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
       Value -= Layout.getSymbolOffset(Sym);
   }
 
-  bool ShouldAlignPC = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
-                         MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
+  bool ShouldAlignPC = getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
+                       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
   assert((ShouldAlignPC ? IsPCRel : true) &&
     "FKF_IsAlignedDownTo32Bits is only allowed on PC-relative fixups!");
 
@@ -266,7 +273,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   }
 
   // Let the backend force a relocation if needed.
-  if (IsResolved && Backend.shouldForceRelocation(*this, Fixup, Target))
+  if (IsResolved && getBackend().shouldForceRelocation(*this, Fixup, Target))
     IsResolved = false;
 
   return IsResolved;
@@ -274,6 +281,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
 
 uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
                                           const MCFragment &F) const {
+  assert(getBackendPtr() && "Requires assembler backend");
   switch (F.getKind()) {
   case MCFragment::FT_Data:
     return cast<MCDataFragment>(F).getContents().size();
@@ -437,6 +445,7 @@ void MCAssembler::registerSymbol(const MCSymbol &Symbol, bool *Created) {
 
 void MCAssembler::writeFragmentPadding(const MCFragment &F, uint64_t FSize,
                                        MCObjectWriter *OW) const {
+  assert(getBackendPtr() && "Expected assembler backend");
   // Should NOP padding be written out before this fragment?
   unsigned BundlePadding = F.getBundlePadding();
   if (BundlePadding > 0) {
@@ -470,7 +479,8 @@ void MCAssembler::writeFragmentPadding(const MCFragment &F, uint64_t FSize,
 /// \brief Write the fragment \p F to the output file.
 static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
                           const MCFragment &F) {
-  MCObjectWriter *OW = &Asm.getWriter();
+  MCObjectWriter *OW = Asm.getWriterPtr();
+  assert(OW && "Need ObjectWriter to write fragment");
 
   // FIXME: Embed in fragments instead?
   uint64_t FragmentSize = Asm.computeFragmentSize(Layout, F);
@@ -619,6 +629,8 @@ static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
 
 void MCAssembler::writeSectionData(const MCSection *Sec,
                                    const MCAsmLayout &Layout) const {
+  assert(getBackendPtr() && "Expected assembler backend");
+
   // Ignore virtual sections.
   if (Sec->isVirtualSection()) {
     assert(Layout.getSectionFileSize(Sec) == 0 && "Invalid size for section!");
@@ -688,6 +700,7 @@ MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
 }
 
 void MCAssembler::layout(MCAsmLayout &Layout) {
+  assert(getBackendPtr() && "Expected assembler backend");
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - pre-layout\n--\n";
       dump(); });
@@ -788,6 +801,7 @@ void MCAssembler::Finish() {
 bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
                                        const MCRelaxableFragment *DF,
                                        const MCAsmLayout &Layout) const {
+  assert(getBackendPtr() && "Expected assembler backend");
   MCValue Target;
   uint64_t Value;
   bool Resolved = evaluateFixup(Layout, Fixup, DF, Target, Value);
@@ -801,6 +815,7 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
 
 bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F,
                                           const MCAsmLayout &Layout) const {
+  assert(getBackendPtr() && "Expected assembler backend");
   // If this inst doesn't ever need relaxation, ignore it. This occurs when we
   // are intentionally pushing out inst fragments, or because we relaxed a
   // previous instruction to one that doesn't need relaxation.
@@ -816,6 +831,8 @@ bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F,
 
 bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
                                    MCRelaxableFragment &F) {
+  assert(getEmitterPtr() &&
+         "Expected CodeEmitter defined for relaxInstruction");
   if (!fragmentNeedsRelaxation(&F, Layout))
     return false;
 
@@ -848,6 +865,7 @@ bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
 
 bool MCAssembler::relaxPaddingFragment(MCAsmLayout &Layout,
                                        MCPaddingFragment &PF) {
+  assert(getBackendPtr() && "Expected assembler backend");
   uint64_t OldSize = PF.getSize();
   if (!getBackend().relaxFragment(&PF, Layout))
     return false;
@@ -992,6 +1010,7 @@ bool MCAssembler::layoutOnce(MCAsmLayout &Layout) {
 }
 
 void MCAssembler::finishLayout(MCAsmLayout &Layout) {
+  assert(getBackendPtr() && "Expected assembler backend");
   // The layout is done. Mark every fragment as valid.
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
     MCSection &Section = *Layout.getSectionOrder()[i];

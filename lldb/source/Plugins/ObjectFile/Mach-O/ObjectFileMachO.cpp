@@ -5098,9 +5098,6 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
           // It is OK to resolve this path because we must find a file on
           // disk for us to accept it anyway if it is rpath relative.
           FileSpec file_spec(path, true);
-          // Remove any redundant parts of the path (like "../foo") since
-          // LC_RPATH values often contain "..".
-          file_spec = file_spec.GetNormalizedPath();
           if (file_spec.Exists() && files.AppendIfUnique(file_spec)) {
             count++;
             break;
@@ -5118,7 +5115,6 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       for (const auto &at_exec_relative_path : at_exec_relative_paths) {
         FileSpec file_spec = 
             exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
-        file_spec = file_spec.GetNormalizedPath();
         if (file_spec.Exists() && files.AppendIfUnique(file_spec))
           count++;
       }

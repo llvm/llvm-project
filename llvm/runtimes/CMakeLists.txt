@@ -109,6 +109,9 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
   # Avoid checking whether the compiler is working.
   set(LLVM_COMPILER_CHECKED ON)
+  # Enable warnings, otherwise -w gets added to the cflags by HandleLLVMOptions
+  # resulting in unjustified successes by check_cxx_compiler_flag.
+  set(LLVM_ENABLE_WARNINGS ON)
 
   # Handle common options used by all runtimes.
   include(AddLLVM)

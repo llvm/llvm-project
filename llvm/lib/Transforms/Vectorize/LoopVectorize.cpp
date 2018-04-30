@@ -3121,6 +3121,22 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
   if (isMaskRequired)
     Mask = *BlockInMask;
 
+  const auto CreateVecPtr = [&](unsigned Part, Value *Ptr) -> Value * {
+    // Calculate the pointer for the specific unroll-part.
+    Value *PartPtr = Builder.CreateGEP(Ptr, Builder.getInt32(Part * VF));
+
+    if (Reverse) {
+      // If the address is consecutive but reversed, then the
+      // wide store needs to start at the last vector element.
+      PartPtr = Builder.CreateGEP(Ptr, Builder.getInt32(-Part * VF));
+      PartPtr = Builder.CreateGEP(PartPtr, Builder.getInt32(1 - VF));
+      if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
+        Mask[Part] = reverseVector(Mask[Part]);
+    }
+
+    return Builder.CreateBitCast(PartPtr, DataTy->getPointerTo(AddressSpace));
+  };
+
   // Handle Stores:
   if (SI) {
     setDebugLocFromInst(Builder, SI);
@@ -3134,30 +3150,14 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
         NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
                                             MaskPart);
       } else {
-        // Calculate the pointer for the specific unroll-part.
-        Value *PartPtr =
-            Builder.CreateGEP(nullptr, Ptr, Builder.getInt32(Part * VF));
-
         if (Reverse) {
           // If we store to reverse consecutive memory locations, then we need
           // to reverse the order of elements in the stored value.
           StoredVal = reverseVector(StoredVal);
           // We don't want to update the value in the map as it might be used in
           // another expression. So don't call resetVectorValue(StoredVal).
-
-          // If the address is consecutive but reversed, then the
-          // wide store needs to start at the last vector element.
-          PartPtr =
-              Builder.CreateGEP(nullptr, Ptr, Builder.getInt32(-Part * VF));
-          PartPtr =
-              Builder.CreateGEP(nullptr, PartPtr, Builder.getInt32(1 - VF));
-          if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
-            Mask[Part] = reverseVector(Mask[Part]);
         }
-
-        Value *VecPtr =
-            Builder.CreateBitCast(PartPtr, DataTy->getPointerTo(AddressSpace));
-
+        auto *VecPtr = CreateVecPtr(Part, Ptr);
         if (isMaskRequired)
           NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
                                             Mask[Part]);
@@ -3181,21 +3181,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
                                          nullptr, "wide.masked.gather");
       addMetadata(NewLI, LI);
     } else {
-      // Calculate the pointer for the specific unroll-part.
-      Value *PartPtr =
-          Builder.CreateGEP(nullptr, Ptr, Builder.getInt32(Part * VF));
-
-      if (Reverse) {
-        // If the address is consecutive but reversed, then the
-        // wide load needs to start at the last vector element.
-        PartPtr = Builder.CreateGEP(nullptr, Ptr, Builder.getInt32(-Part * VF));
-        PartPtr = Builder.CreateGEP(nullptr, PartPtr, Builder.getInt32(1 - VF));
-        if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
-          Mask[Part] = reverseVector(Mask[Part]);
-      }
-
-      Value *VecPtr =
-          Builder.CreateBitCast(PartPtr, DataTy->getPointerTo(AddressSpace));
+      auto *VecPtr = CreateVecPtr(Part, Ptr);
       if (isMaskRequired)
         NewLI = Builder.CreateMaskedLoad(VecPtr, Alignment, Mask[Part],
                                          UndefValue::get(DataTy),

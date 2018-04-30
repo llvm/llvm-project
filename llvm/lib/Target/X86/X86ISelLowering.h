@@ -576,8 +576,13 @@ namespace llvm {
       RDSEED,
 
       // SSE42 string comparisons.
-      PCMPISTRI,
-      PCMPESTRI,
+      // These nodes produce 3 results, index, mask, and flags. X86ISelDAGToDAG
+      // will emit one or two instructions based on which results are used. If
+      // flags and index/mask this allows us to use a single instruction since
+      // we won't have to pick and opcode for flags. Instead we can rely on the
+      // DAG to CSE everything and decide at isel.
+      PCMPISTR,
+      PCMPESTR,
 
       // Test if in transactional execution.
       XTEST,

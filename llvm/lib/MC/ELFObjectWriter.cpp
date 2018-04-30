@@ -420,6 +420,10 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
         !Rest.startswith("@@@"))
       report_fatal_error("A @@ version cannot be undefined");
 
+    if (Renames.count(&Symbol) && Renames[&Symbol] != Alias)
+      report_fatal_error(llvm::Twine("Multiple symbol versions defined for ") +
+                         Symbol.getName());
+
     Renames.insert(std::make_pair(&Symbol, Alias));
   }
 }

@@ -446,59 +446,61 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     BasicBlock *BB = DTN->getBlock();
     // Only need to process the contents of this block if it is not part of a
     // subloop (which would already have been processed).
-    if (!inSubLoop(BB, CurLoop, LI))
-      for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
-        Instruction &I = *II++;
-        // Try constant folding this instruction.  If all the operands are
-        // constants, it is technically hoistable, but it would be better to
-        // just fold it.
-        if (Constant *C = ConstantFoldInstruction(
-                &I, I.getModule()->getDataLayout(), TLI)) {
-          DEBUG(dbgs() << "LICM folding inst: " << I << "  --> " << *C << '\n');
-          CurAST->copyValue(&I, C);
-          I.replaceAllUsesWith(C);
-          if (isInstructionTriviallyDead(&I, TLI)) {
-            CurAST->deleteValue(&I);
-            I.eraseFromParent();
-          }
-          Changed = true;
-          continue;
-        }
+    if (inSubLoop(BB, CurLoop, LI))
+      continue;
 
-        // Attempt to remove floating point division out of the loop by
-        // converting it to a reciprocal multiplication.
-        if (I.getOpcode() == Instruction::FDiv &&
-            CurLoop->isLoopInvariant(I.getOperand(1)) &&
-            I.hasAllowReciprocal()) {
-          auto Divisor = I.getOperand(1);
-          auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
-          auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
-          ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
-          ReciprocalDivisor->insertBefore(&I);
-
-          auto Product =
-              BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
-          Product->setFastMathFlags(I.getFastMathFlags());
-          Product->insertAfter(&I);
-          I.replaceAllUsesWith(Product);
+    for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
+      Instruction &I = *II++;
+      // Try constant folding this instruction.  If all the operands are
+      // constants, it is technically hoistable, but it would be better to
+      // just fold it.
+      if (Constant *C = ConstantFoldInstruction(
+              &I, I.getModule()->getDataLayout(), TLI)) {
+        DEBUG(dbgs() << "LICM folding inst: " << I << "  --> " << *C << '\n');
+        CurAST->copyValue(&I, C);
+        I.replaceAllUsesWith(C);
+        if (isInstructionTriviallyDead(&I, TLI)) {
+          CurAST->deleteValue(&I);
           I.eraseFromParent();
-
-          hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
-          Changed = true;
-          continue;
         }
-
-        // Try hoisting the instruction out to the preheader.  We can only do
-        // this if all of the operands of the instruction are loop invariant and
-        // if it is safe to hoist the instruction.
-        //
-        if (CurLoop->hasLoopInvariantOperands(&I) &&
-            canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
-            isSafeToExecuteUnconditionally(
-                I, DT, CurLoop, SafetyInfo, ORE,
-                CurLoop->getLoopPreheader()->getTerminator()))
-          Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
+        Changed = true;
+        continue;
       }
+
+      // Attempt to remove floating point division out of the loop by
+      // converting it to a reciprocal multiplication.
+      if (I.getOpcode() == Instruction::FDiv &&
+          CurLoop->isLoopInvariant(I.getOperand(1)) &&
+          I.hasAllowReciprocal()) {
+        auto Divisor = I.getOperand(1);
+        auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
+        auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
+        ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
+        ReciprocalDivisor->insertBefore(&I);
+
+        auto Product =
+            BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
+        Product->setFastMathFlags(I.getFastMathFlags());
+        Product->insertAfter(&I);
+        I.replaceAllUsesWith(Product);
+        I.eraseFromParent();
+
+        hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
+        Changed = true;
+        continue;
+      }
+
+      // Try hoisting the instruction out to the preheader.  We can only do
+      // this if all of the operands of the instruction are loop invariant and
+      // if it is safe to hoist the instruction.
+      //
+      if (CurLoop->hasLoopInvariantOperands(&I) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
+          isSafeToExecuteUnconditionally(
+              I, DT, CurLoop, SafetyInfo, ORE,
+              CurLoop->getLoopPreheader()->getTerminator()))
+        Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
+    }
   }
 
   return Changed;

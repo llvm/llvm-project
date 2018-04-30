@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/None.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -978,11 +979,6 @@ public:
   /// Return true if the given SDNode can be copied during scheduling
   /// even if it has glue.
   virtual bool canCopyGluedNodeDuringSchedule(SDNode *N) const { return false; }
-
-  /// Remember what registers the specified instruction uses and modifies.
-  virtual void trackRegDefsUses(const MachineInstr &MI, BitVector &ModifiedRegs,
-                                BitVector &UsedRegs,
-                                const TargetRegisterInfo *TRI) const;
 
 protected:
   /// Target-dependent implementation for foldMemoryOperand.

@@ -199,6 +199,13 @@ def OP_SCALAR_HALF_SET_LNQ : Op<(bitcast "float16x8_t",
                                           (bitcast "int16_t", $p0),
                                           (bitcast "int16x8_t", $p1), $p2))>;
 
+def OP_DOT_LN
+    : Op<(call "vdot", $p0, $p1,
+          (bitcast $p1, (splat(bitcast "uint32x2_t", $p2), $p3)))>;
+def OP_DOT_LNQ
+    : Op<(call "vdot", $p0, $p1,
+          (bitcast $p1, (splat(bitcast "uint32x4_t", $p2), $p3)))>;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -1578,4 +1585,14 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarc
 
   def SCALAR_VDUP_LANEH  : IInst<"vdup_lane", "sdi", "Sh">;
   def SCALAR_VDUP_LANEQH : IInst<"vdup_laneq", "sji", "Sh">;
+}
+
+// v8.2-A dot product instructions.
+let ArchGuard = "defined(__ARM_FEATURE_DOTPROD)" in {
+  def DOT : SInst<"vdot", "dd88", "iQiUiQUi">;
+  def DOT_LANE : SOpInst<"vdot_lane", "dd87i", "iUiQiQUi", OP_DOT_LN>;
+}
+let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
+  // Variants indexing into a 128-bit vector are A64 only.
+  def UDOT_LANEQ : SOpInst<"vdot_laneq", "dd89i", "iUiQiQUi", OP_DOT_LNQ>;
 }

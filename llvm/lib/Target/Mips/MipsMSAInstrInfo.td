@@ -46,6 +46,7 @@ def MipsILVR  : SDNode<"MipsISD::ILVR",  SDT_ILV>;
 def MipsPCKEV : SDNode<"MipsISD::PCKEV", SDT_ILV>;
 def MipsPCKOD : SDNode<"MipsISD::PCKOD", SDT_ILV>;
 def MipsINSVE : SDNode<"MipsISD::INSVE", SDT_INSVE>;
+def MipsFMS   : SDNode<"MipsISD::FMS", SDTFPTernaryOp>;
 
 def vsetcc : SDNode<"ISD::SETCC", SDT_VSetCC>;
 def vfsetcc : SDNode<"ISD::SETCC", SDT_VFSetCC>;
@@ -368,9 +369,6 @@ def vbset_w : PatFrag<(ops node:$ws, node:$wt),
 def vbset_d : PatFrag<(ops node:$ws, node:$wt),
                       (or node:$ws, (shl (v2i64 vsplati64_imm_eq_1),
                                          node:$wt))>;
-
-def fms : PatFrag<(ops node:$wd, node:$ws, node:$wt),
-                  (fsub node:$wd, (fmul node:$ws, node:$wt))>;
 
 def muladd : PatFrag<(ops node:$wd, node:$ws, node:$wt),
                      (add node:$wd, (mul node:$ws, node:$wt))>;
@@ -2091,8 +2089,8 @@ class FMIN_A_W_DESC : MSA_3RF_DESC_BASE<"fmin_a.w", int_mips_fmin_a_w,
 class FMIN_A_D_DESC : MSA_3RF_DESC_BASE<"fmin_a.d", int_mips_fmin_a_d,
                                         MSA128DOpnd>;
 
-class FMSUB_W_DESC : MSA_3RF_4RF_DESC_BASE<"fmsub.w", fms, MSA128WOpnd>;
-class FMSUB_D_DESC : MSA_3RF_4RF_DESC_BASE<"fmsub.d", fms, MSA128DOpnd>;
+class FMSUB_W_DESC : MSA_3RF_4RF_DESC_BASE<"fmsub.w", MipsFMS, MSA128WOpnd>;
+class FMSUB_D_DESC : MSA_3RF_4RF_DESC_BASE<"fmsub.d", MipsFMS, MSA128DOpnd>;
 
 class FMUL_W_DESC : MSA_3RF_DESC_BASE<"fmul.w", fmul, MSA128WOpnd>;
 class FMUL_D_DESC : MSA_3RF_DESC_BASE<"fmul.d", fmul, MSA128DOpnd>;
@@ -3134,6 +3132,20 @@ def FTRUNC_S_D : FTRUNC_S_D_ENC, FTRUNC_S_D_DESC;
 
 def FTRUNC_U_W : FTRUNC_U_W_ENC, FTRUNC_U_W_DESC;
 def FTRUNC_U_D : FTRUNC_U_D_ENC, FTRUNC_U_D_DESC;
+
+def : MipsPat<(fsub MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
+              (FMSUB_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
+              FPOP_FUSION_FAST;
+def : MipsPat<(fsub MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
+              (FMSUB_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
+              FPOP_FUSION_FAST;
+
+def : MipsPat<(fadd MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
+              (FMADD_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
+              FPOP_FUSION_FAST;
+def : MipsPat<(fadd MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
+              (FMADD_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
+              FPOP_FUSION_FAST;
 
 def HADD_S_H : HADD_S_H_ENC, HADD_S_H_DESC;
 def HADD_S_W : HADD_S_W_ENC, HADD_S_W_DESC;

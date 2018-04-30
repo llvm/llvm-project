@@ -1668,15 +1668,11 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         // val * (ValOther - ValInit) + ValInit:
         // DW_OP_deref DW_OP_constu <ValMinus>
         // DW_OP_mul DW_OP_constu <ValInit> DW_OP_plus DW_OP_stack_value
-        E = DIExpression::get(NewGV->getContext(),
-                             {dwarf::DW_OP_deref,
-                              dwarf::DW_OP_constu,
-                              ValMinus,
-                              dwarf::DW_OP_mul,
-                              dwarf::DW_OP_constu,
-                              ValInit,
-                              dwarf::DW_OP_plus,
-                              dwarf::DW_OP_stack_value});
+        SmallVector<uint64_t, 12> Ops = {
+            dwarf::DW_OP_deref, dwarf::DW_OP_constu, ValMinus,
+            dwarf::DW_OP_mul,   dwarf::DW_OP_constu, ValInit,
+            dwarf::DW_OP_plus};
+        E = DIExpression::prependOpcodes(E, Ops, DIExpression::WithStackValue);
         DIGlobalVariableExpression *DGVE =
           DIGlobalVariableExpression::get(NewGV->getContext(), DGV, E);
         NewGV->addDebugInfo(DGVE);

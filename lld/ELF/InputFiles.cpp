@@ -63,7 +63,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
 
   log(Path);
 
-  auto MBOrErr = MemoryBuffer::getFile(Path);
+  auto MBOrErr = MemoryBuffer::getFile(Path, -1, false);
   if (auto EC = MBOrErr.getError()) {
     error("cannot open " + Path + ": " + EC.message());
     return None;

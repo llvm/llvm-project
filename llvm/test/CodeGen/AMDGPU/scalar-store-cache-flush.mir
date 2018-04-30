@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass si-insert-waits %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -run-pass si-insert-waitcnts %s -o - | FileCheck %s
 
 --- |
   define amdgpu_kernel void @basic_insert_dcache_wb() {

@@ -66,13 +66,19 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
 }
 
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
-  if (!PipeTy){
-    uint32_t PipeAddrSpc = CGM.getContext().getTargetAddressSpace(
-        CGM.getContext().getOpenCLTypeAddrSpace(T));
-    PipeTy = llvm::PointerType::get(llvm::StructType::create(
-      CGM.getLLVMContext(), "opencl.pipe_t"), PipeAddrSpc);
-  }
+  if (T->isReadOnly())
+    return getPipeType(T, "opencl.pipe_ro_t", PipeROTy);
+  else
+    return getPipeType(T, "opencl.pipe_wo_t", PipeWOTy);
+}
 
+llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T, StringRef Name,
+                                         llvm::Type *&PipeTy) {
+  if (!PipeTy)
+    PipeTy = llvm::PointerType::get(llvm::StructType::create(
+      CGM.getLLVMContext(), Name),
+      CGM.getContext().getTargetAddressSpace(
+          CGM.getContext().getOpenCLTypeAddrSpace(T)));
   return PipeTy;
 }
 

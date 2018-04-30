@@ -97,13 +97,13 @@ isl::union_map computeScalarReachingOverwrite(isl::union_map Schedule,
                                               bool InclOverwrite) {
 
   // { DomainWrite[] }
-  auto WritesMap = give(isl_union_map_from_domain(Writes.take()));
+  auto WritesMap = isl::union_map::from_domain(Writes);
 
   // { [Element[] -> Scatter[]] -> DomainWrite[] }
   auto Result = computeReachingOverwrite(
       std::move(Schedule), std::move(WritesMap), InclPrevWrite, InclOverwrite);
 
-  return give(isl_union_map_domain_factor_range(Result.take()));
+  return Result.domain_factor_range();
 }
 
 /// Overload of computeScalarReachingOverwrite, with only one writing statement.
@@ -247,9 +247,8 @@ private:
     if (!Occupied || !Unused)
       return;
 
-    assert(isl_union_set_is_disjoint(Occupied.keep(), Unused.keep()) ==
-           isl_bool_true);
-    auto Universe = give(isl_union_set_union(Occupied.copy(), Unused.copy()));
+    assert(Occupied.is_disjoint(Unused));
+    auto Universe = Occupied.unite(Unused);
 
     assert(!Known.domain().is_subset(Universe).is_false());
     assert(!Written.domain().is_subset(Universe).is_false());
@@ -299,12 +298,11 @@ public:
         "This function is only prepared to learn occupied elements from That");
     assert(!Occupied && "This function does not implement "
                         "`this->Occupied = "
-                        "give(isl_union_set_union(this->Occupied.take(), "
-                        "That.Occupied.copy()));`");
+                        "this->Occupied.unite(That.Occupied);`");
 
-    Unused = give(isl_union_set_subtract(Unused.take(), That.Occupied.copy()));
-    Known = give(isl_union_map_union(Known.take(), That.Known.copy()));
-    Written = give(isl_union_map_union(Written.take(), That.Written.take()));
+    Unused = Unused.subtract(That.Occupied);
+    Known = Known.unite(That.Known);
+    Written = Written.unite(That.Written);
 
     checkConsistency();
   }
@@ -336,12 +334,9 @@ public:
 
 #ifndef NDEBUG
     if (Existing.Occupied && Proposed.Unused) {
-      auto ExistingUniverse = give(isl_union_set_union(Existing.Occupied.copy(),
-                                                       Existing.Unused.copy()));
-      auto ProposedUniverse = give(isl_union_set_union(Proposed.Occupied.copy(),
-                                                       Proposed.Unused.copy()));
-      assert(isl_union_set_is_equal(ExistingUniverse.keep(),
-                                    ProposedUniverse.keep()) == isl_bool_true &&
+      auto ExistingUniverse = Existing.Occupied.unite(Existing.Unused);
+      auto ProposedUniverse = Proposed.Occupied.unite(Proposed.Unused);
+      assert(ExistingUniverse.is_equal(ProposedUniverse) &&
              "Both inputs' Knowledges must be over the same universe");
     }
 #endif
@@ -620,8 +615,7 @@ private:
 
     // Find all uses.
     for (auto *MA : S->getValueUses(SAI))
-      Reads =
-          give(isl_union_set_add_set(Reads.take(), getDomainFor(MA).take()));
+      Reads = Reads.add_set(getDomainFor(MA));
 
     // { DomainRead[] -> Scatter[] }
     auto ReadSchedule = getScatterFor(Reads);
@@ -639,22 +633,19 @@ private:
     auto ReachDef = getScalarReachingDefinition(DefMA->getStatement());
 
     // { [DomainDef[] -> Scatter[]] -> DomainUse[] }
-    auto Uses = give(
-        isl_union_map_apply_range(isl_union_map_from_map(isl_map_range_map(
-                                      isl_map_reverse(ReachDef.take()))),
-                                  isl_union_map_reverse(ReadSchedule.take())));
+    auto Uses = isl::union_map(ReachDef.reverse().range_map())
+                    .apply_range(ReadSchedule.reverse());
 
     // { DomainDef[] -> Scatter[] }
     auto UseScatter =
-        singleton(give(isl_union_set_unwrap(isl_union_map_domain(Uses.copy()))),
-                  give(isl_space_map_from_domain_and_range(
-                      isl_set_get_space(Writes.keep()), ScatterSpace.copy())));
+        singleton(Uses.domain().unwrap(),
+                  Writes.get_space().map_from_domain_and_range(ScatterSpace));
 
     // { DomainDef[] -> Zone[] }
     auto Lifetime = betweenScatter(WriteScatter, UseScatter, false, true);
 
     // { DomainDef[] -> DomainRead[] }
-    auto DefUses = give(isl_union_map_domain_factor_domain(Uses.take()));
+    auto DefUses = Uses.domain_factor_domain();
 
     return std::make_pair(DefUses, Lifetime);
   }
@@ -684,14 +675,13 @@ private:
 
     // Where each write is mapped to, according to the suggestion.
     // { DomainDef[] -> Element[] }
-    auto DefTarget = give(isl_map_apply_domain(
-        TargetElt.copy(), isl_map_reverse(DefSched.copy())));
+    auto DefTarget = TargetElt.apply_domain(DefSched.reverse());
     simplify(DefTarget);
     DEBUG(dbgs() << "    Def Mapping: " << DefTarget << '\n');
 
     auto OrigDomain = getDomainFor(DefMA);
-    auto MappedDomain = give(isl_map_domain(DefTarget.copy()));
-    if (!isl_set_is_subset(OrigDomain.keep(), MappedDomain.keep())) {
+    auto MappedDomain = DefTarget.domain();
+    if (!OrigDomain.is_subset(MappedDomain)) {
       DEBUG(dbgs()
             << "    Reject because mapping does not encompass all instances\n");
       return false;
@@ -707,8 +697,7 @@ private:
     DEBUG(dbgs() << "    Lifetime: " << Lifetime << '\n');
 
     /// { [Element[] -> Zone[]] }
-    auto EltZone = give(
-        isl_map_wrap(isl_map_apply_domain(Lifetime.copy(), DefTarget.copy())));
+    auto EltZone = Lifetime.apply_domain(DefTarget).wrap();
     simplify(EltZone);
 
     // When known knowledge is disabled, just return the unknown value. It will
@@ -722,21 +711,17 @@ private:
       ValInst = makeUnknownForDomain(DefMA->getStatement());
 
     // { DomainDef[] -> [Element[] -> Zone[]] }
-    auto EltKnownTranslator =
-        give(isl_map_range_product(DefTarget.copy(), Lifetime.copy()));
+    auto EltKnownTranslator = DefTarget.range_product(Lifetime);
 
     // { [Element[] -> Zone[]] -> ValInst[] }
-    auto EltKnown =
-        give(isl_map_apply_domain(ValInst.copy(), EltKnownTranslator.take()));
+    auto EltKnown = ValInst.apply_domain(EltKnownTranslator);
     simplify(EltKnown);
 
     // { DomainDef[] -> [Element[] -> Scatter[]] }
-    auto WrittenTranslator =
-        give(isl_map_range_product(DefTarget.copy(), DefSched.take()));
+    auto WrittenTranslator = DefTarget.range_product(DefSched);
 
     // { [Element[] -> Scatter[]] -> ValInst[] }
-    auto DefEltSched =
-        give(isl_map_apply_domain(ValInst.copy(), WrittenTranslator.take()));
+    auto DefEltSched = ValInst.apply_domain(WrittenTranslator);
     simplify(DefEltSched);
 
     Knowledge Proposed(EltZone, nullptr, filterKnownValInst(EltKnown),
@@ -745,9 +730,7 @@ private:
       return false;
 
     // { DomainUse[] -> Element[] }
-    auto UseTarget = give(
-        isl_union_map_apply_range(isl_union_map_reverse(DefUses.take()),
-                                  isl_union_map_from_map(DefTarget.copy())));
+    auto UseTarget = DefUses.reverse().apply_range(DefTarget);
 
     mapValue(SAI, std::move(DefTarget), std::move(UseTarget),
              std::move(Lifetime), std::move(Proposed));
@@ -782,11 +765,10 @@ private:
       auto Domain = getDomainFor(MA);
 
       // { DomainUse[] -> Element[] }
-      auto NewAccRel = give(isl_union_map_intersect_domain(
-          UseTarget.copy(), isl_union_set_from_set(Domain.take())));
+      auto NewAccRel = UseTarget.intersect_domain(Domain);
       simplify(NewAccRel);
 
-      assert(isl_union_map_n_map(NewAccRel.keep()) == 1);
+      assert(isl_union_map_n_map(NewAccRel.get()) == 1);
       MA->setNewAccessRelation(isl::map::from_union_map(NewAccRel));
     }
 
@@ -836,10 +818,10 @@ private:
         ValInst = makeUnknownForDomain(WriteStmt);
       }
 
-      Result = give(isl_union_map_union(Result.take(), ValInst.take()));
+      Result = Result.unite(ValInst);
     }
 
-    assert(isl_union_map_is_single_valued(Result.keep()) == isl_bool_true &&
+    assert(Result.is_single_valued() &&
            "Cannot have multiple incoming values for same incoming statement");
     return Result;
   }
@@ -865,14 +847,13 @@ private:
     auto PHISched = getScatterFor(PHIRead);
 
     // { DomainRead[] -> Element[] }
-    auto PHITarget =
-        give(isl_map_apply_range(PHISched.copy(), TargetElt.copy()));
+    auto PHITarget = PHISched.apply_range(TargetElt);
     simplify(PHITarget);
     DEBUG(dbgs() << "    Mapping: " << PHITarget << '\n');
 
     auto OrigDomain = getDomainFor(PHIRead);
-    auto MappedDomain = give(isl_map_domain(PHITarget.copy()));
-    if (!isl_set_is_subset(OrigDomain.keep(), MappedDomain.keep())) {
+    auto MappedDomain = PHITarget.domain();
+    if (!OrigDomain.is_subset(MappedDomain)) {
       DEBUG(dbgs()
             << "    Reject because mapping does not encompass all instances\n");
       return false;
@@ -882,25 +863,22 @@ private:
     auto PerPHIWrites = computePerPHI(SAI);
 
     // { DomainWrite[] -> Element[] }
-    auto WritesTarget = give(isl_union_map_reverse(isl_union_map_apply_domain(
-        PerPHIWrites.copy(), isl_union_map_from_map(PHITarget.copy()))));
+    auto WritesTarget = PerPHIWrites.apply_domain(PHITarget).reverse();
     simplify(WritesTarget);
 
     // { DomainWrite[] }
-    auto UniverseWritesDom = give(isl_union_set_empty(ParamSpace.copy()));
+    auto UniverseWritesDom = isl::union_set::empty(ParamSpace);
 
     for (auto *MA : S->getPHIIncomings(SAI))
-      UniverseWritesDom = give(isl_union_set_add_set(UniverseWritesDom.take(),
-                                                     getDomainFor(MA).take()));
+      UniverseWritesDom = UniverseWritesDom.add_set(getDomainFor(MA));
 
     auto RelevantWritesTarget = WritesTarget;
     if (DelicmOverapproximateWrites)
       WritesTarget = expandMapping(WritesTarget, UniverseWritesDom);
 
-    auto ExpandedWritesDom = give(isl_union_map_domain(WritesTarget.copy()));
+    auto ExpandedWritesDom = WritesTarget.domain();
     if (!DelicmPartialWrites &&
-        !isl_union_set_is_subset(UniverseWritesDom.keep(),
-                                 ExpandedWritesDom.keep())) {
+        !UniverseWritesDom.is_subset(ExpandedWritesDom)) {
       DEBUG(dbgs() << "    Reject because did not find PHI write mapping for "
                       "all instances\n");
       if (DelicmOverapproximateWrites)
@@ -908,15 +886,13 @@ private:
                      << '\n');
       DEBUG(dbgs() << "      Deduced Mapping:     " << WritesTarget << '\n');
       DEBUG(dbgs() << "      Missing instances:    "
-                   << give(isl_union_set_subtract(UniverseWritesDom.copy(),
-                                                  ExpandedWritesDom.copy()))
-                   << '\n');
+                   << UniverseWritesDom.subtract(ExpandedWritesDom) << '\n');
       return false;
     }
 
     //  { DomainRead[] -> Scatter[] }
-    auto PerPHIWriteScatter = give(isl_map_from_union_map(
-        isl_union_map_apply_range(PerPHIWrites.copy(), Schedule.copy())));
+    auto PerPHIWriteScatter =
+        isl::map::from_union_map(PerPHIWrites.apply_range(Schedule));
 
     // { DomainRead[] -> Zone[] }
     auto Lifetime = betweenScatter(PerPHIWriteScatter, PHISched, false, true);
@@ -924,35 +900,30 @@ private:
     DEBUG(dbgs() << "    Lifetime: " << Lifetime << "\n");
 
     // { DomainWrite[] -> Zone[] }
-    auto WriteLifetime = give(isl_union_map_apply_domain(
-        isl_union_map_from_map(Lifetime.copy()), PerPHIWrites.copy()));
+    auto WriteLifetime = isl::union_map(Lifetime).apply_domain(PerPHIWrites);
 
     // { DomainWrite[] -> ValInst[] }
     auto WrittenValue = determinePHIWrittenValues(SAI);
 
     // { DomainWrite[] -> [Element[] -> Scatter[]] }
-    auto WrittenTranslator =
-        give(isl_union_map_range_product(WritesTarget.copy(), Schedule.copy()));
+    auto WrittenTranslator = WritesTarget.range_product(Schedule);
 
     // { [Element[] -> Scatter[]] -> ValInst[] }
-    auto Written = give(isl_union_map_apply_domain(WrittenValue.copy(),
-                                                   WrittenTranslator.copy()));
+    auto Written = WrittenValue.apply_domain(WrittenTranslator);
     simplify(Written);
 
     // { DomainWrite[] -> [Element[] -> Zone[]] }
-    auto LifetimeTranslator = give(
-        isl_union_map_range_product(WritesTarget.copy(), WriteLifetime.copy()));
+    auto LifetimeTranslator = WritesTarget.range_product(WriteLifetime);
 
     // { DomainWrite[] -> ValInst[] }
     auto WrittenKnownValue = filterKnownValInst(WrittenValue);
 
     // { [Element[] -> Zone[]] -> ValInst[] }
-    auto EltLifetimeInst = give(isl_union_map_apply_domain(
-        WrittenKnownValue.copy(), LifetimeTranslator.copy()));
+    auto EltLifetimeInst = WrittenKnownValue.apply_domain(LifetimeTranslator);
     simplify(EltLifetimeInst);
 
     // { [Element[] -> Zone[] }
-    auto Occupied = give(isl_union_map_range(LifetimeTranslator.copy()));
+    auto Occupied = LifetimeTranslator.range();
     simplify(Occupied);
 
     Knowledge Proposed(Occupied, nullptr, EltLifetimeInst, Written);
@@ -990,8 +961,7 @@ private:
       auto Domain = getDomainFor(MA);
 
       // { DomainWrite[] -> Element[] }
-      auto NewAccRel = give(isl_union_map_intersect_domain(
-          WriteTarget.copy(), isl_union_set_from_set(Domain.copy())));
+      auto NewAccRel = WriteTarget.intersect_domain(Domain);
       simplify(NewAccRel);
 
       isl::space NewAccRelSpace =
@@ -1038,8 +1008,7 @@ private:
 
     // { Zone[] -> Element[] }
     // Use the target store's write location as a suggestion to map scalars to.
-    auto EltTarget =
-        give(isl_map_apply_range(Target.take(), TargetAccRel.take()));
+    auto EltTarget = Target.apply_range(TargetAccRel);
     simplify(EltTarget);
     DEBUG(dbgs() << "    Target mapping is " << EltTarget << '\n');
 
@@ -1147,7 +1116,7 @@ private:
     auto ArrayUnused = computeArrayUnused(Schedule, AllMustWrites, AllReads,
                                           false, false, true);
 
-    auto Result = give(isl_union_map_wrap(ArrayUnused.copy()));
+    auto Result = ArrayUnused.wrap();
 
     simplify(Result);
     return Result;
@@ -1176,8 +1145,8 @@ private:
   ///         different elements are accessed.
   bool isScalarAccess(MemoryAccess *MA) {
     auto Map = getAccessRelationFor(MA);
-    auto Set = give(isl_map_range(Map.take()));
-    return isl_set_is_singleton(Set.keep()) == isl_bool_true;
+    auto Set = Map.range();
+    return Set.is_singleton();
   }
 
   /// Print mapping statistics to @p OS.

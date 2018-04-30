@@ -216,7 +216,7 @@ struct VerifyEndCallback : public SourceFileCallbacks {
   bool Matched;
 };
 
-#if !defined(LLVM_ON_WIN32)
+#if !defined(_WIN32)
 TEST(newFrontendActionFactory, InjectsSourceFileCallbacks) {
   VerifyEndCallback EndCallback;
 
@@ -531,7 +531,7 @@ TEST(addTargetAndModeForProgramName, IgnoresExistingMode) {
             ArgsAlt);
 }
 
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
 TEST(ClangToolTest, BuildASTs) {
   FixedCompilationDatabase Compilations("/", std::vector<std::string>());
 

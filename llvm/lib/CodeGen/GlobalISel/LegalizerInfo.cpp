@@ -42,11 +42,18 @@ cl::opt<bool> llvm::DisableGISelLegalityCheck(
     cl::Hidden);
 
 raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
-  OS << Opcode << ", {";
+  OS << Opcode << ", Tys={";
   for (const auto &Type : Types) {
     OS << Type << ", ";
   }
+  OS << "}, Opcode=";
+
+  OS << Opcode << ", MMOs={";
+  for (const auto &MMODescr : MMODescrs) {
+    OS << MMODescr.Size << ", ";
+  }
   OS << "}";
+
   return OS;
 }
 
@@ -330,7 +337,12 @@ LegalizerInfo::getAction(const MachineInstr &MI,
     LLT Ty = getTypeFromTypeIdx(MI, MRI, i, TypeIdx);
     Types.push_back(Ty);
   }
-  return getAction({MI.getOpcode(), Types});
+
+  SmallVector<LegalityQuery::MemDesc, 2> MemDescrs;
+  for (const auto &MMO : MI.memoperands())
+    MemDescrs.push_back({MMO->getSize() /* in bytes */ * 8});
+
+  return getAction({MI.getOpcode(), Types, MemDescrs});
 }
 
 bool LegalizerInfo::isLegal(const MachineInstr &MI,

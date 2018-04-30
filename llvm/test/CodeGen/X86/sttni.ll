@@ -4,8 +4,10 @@
 
 declare i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32, <16 x i8>, i32, i8)
 declare i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32, <16 x i8>, i32, i8)
+declare <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %lhs, i32, <16 x i8>, i32, i8)
 declare i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8>, i8)
 declare i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8>, i8)
+declare <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8>, i8)
 
 define i1 @pcmpestri_reg_eq_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len) nounwind {
 ; X32-LABEL: pcmpestri_reg_eq_i8:
@@ -962,3 +964,374 @@ exit:
   %result_ext = zext i16 %result to i32
   ret i32 %result_ext
 }
+
+define void @pcmpestr_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i32* %iptr, i32* %fptr) nounwind {
+; X32-LABEL: pcmpestr_index_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    pcmpestri $24, %xmm1, %xmm0
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl %ecx, (%edi)
+; X32-NEXT:    movl %ebx, (%esi)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpestr_index_flag:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rcx, %r8
+; X64-NEXT:    movq %rdx, %r9
+; X64-NEXT:    xorl %r10d, %r10d
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
+; X64-NEXT:    setb %r10b
+; X64-NEXT:    movl %ecx, (%r9)
+; X64-NEXT:    movl %r10d, (%r8)
+; X64-NEXT:    retq
+entry:
+  %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  %index = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  store i32 %index, i32* %iptr
+  store i32 %flag, i32* %fptr
+  ret void
+}
+
+define void @pcmpestr_mask_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, <16 x i8>* %mptr, i32* %fptr) nounwind {
+; X32-LABEL: pcmpestr_mask_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    pcmpestrm $24, %xmm1, %xmm0
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movdqa %xmm0, (%esi)
+; X32-NEXT:    movl %ebx, (%ecx)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpestr_mask_flag:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    xorl %r9d, %r9d
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    pcmpestrm $24, %xmm1, %xmm0
+; X64-NEXT:    setb %r9b
+; X64-NEXT:    movdqa %xmm0, (%r8)
+; X64-NEXT:    movl %r9d, (%rcx)
+; X64-NEXT:    retq
+entry:
+  %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  %mask = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  store <16 x i8> %mask, <16 x i8>* %mptr
+  store i32 %flag, i32* %fptr
+  ret void
+}
+
+define void @pcmpestr_mask_index(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, <16 x i8>* %mptr, i32* %iptr) nounwind {
+; X32-LABEL: pcmpestr_mask_index:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movdqa %xmm0, %xmm2
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    pcmpestrm $24, %xmm1, %xmm0
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    pcmpestri $24, %xmm1, %xmm2
+; X32-NEXT:    movdqa %xmm0, (%edi)
+; X32-NEXT:    movl %ecx, (%esi)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpestr_mask_index:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rcx, %r8
+; X64-NEXT:    movq %rdx, %r9
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    pcmpestrm $24, %xmm1, %xmm0
+; X64-NEXT:    pcmpestri $24, %xmm1, %xmm2
+; X64-NEXT:    movdqa %xmm0, (%r9)
+; X64-NEXT:    movl %ecx, (%r8)
+; X64-NEXT:    retq
+entry:
+  %index = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  %mask = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  store <16 x i8> %mask, <16 x i8>* %mptr
+  store i32 %index, i32* %iptr
+  ret void
+}
+
+define void @pcmpestr_mask_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, <16 x i8>* %mptr, i32* %iptr, i32* %fptr) nounwind {
+; X32-LABEL: pcmpestr_mask_index_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movdqa %xmm0, %xmm2
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    pcmpestrm $24, %xmm1, %xmm0
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    pcmpestri $24, %xmm1, %xmm2
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movdqa %xmm0, (%ebp)
+; X32-NEXT:    movl %ecx, (%edi)
+; X32-NEXT:    movl %ebx, (%esi)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpestr_mask_index_flag:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rcx, %r9
+; X64-NEXT:    movq %rdx, %r10
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    pcmpestrm $24, %xmm1, %xmm0
+; X64-NEXT:    xorl %esi, %esi
+; X64-NEXT:    pcmpestri $24, %xmm1, %xmm2
+; X64-NEXT:    setb %sil
+; X64-NEXT:    movdqa %xmm0, (%r10)
+; X64-NEXT:    movl %ecx, (%r9)
+; X64-NEXT:    movl %esi, (%r8)
+; X64-NEXT:    retq
+entry:
+  %index = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  %mask = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  store <16 x i8> %mask, <16 x i8>* %mptr
+  store i32 %index, i32* %iptr
+  store i32 %flag, i32* %fptr
+  ret void
+}
+
+define void @pcmpistr_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, i32* %iptr, i32* %fptr) nounwind {
+; X32-LABEL: pcmpistr_index_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    pcmpistri $24, %xmm1, %xmm0
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    setb %dl
+; X32-NEXT:    movl %ecx, (%esi)
+; X32-NEXT:    movl %edx, (%eax)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpistr_index_flag:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    pcmpistri $24, %xmm1, %xmm0
+; X64-NEXT:    setb %al
+; X64-NEXT:    movl %ecx, (%rdi)
+; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    retq
+entry:
+  %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  store i32 %index, i32* %iptr
+  store i32 %flag, i32* %fptr
+  ret void
+}
+
+define void @pcmpistr_mask_flag(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mptr, i32* %fptr) nounwind {
+; X32-LABEL: pcmpistr_mask_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    pcmpistrm $24, %xmm1, %xmm0
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    setb %cl
+; X32-NEXT:    movdqa %xmm0, (%edx)
+; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpistr_mask_flag:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    pcmpistrm $24, %xmm1, %xmm0
+; X64-NEXT:    setb %al
+; X64-NEXT:    movdqa %xmm0, (%rdi)
+; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    retq
+entry:
+  %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  store <16 x i8> %mask, <16 x i8>* %mptr
+  store i32 %flag, i32* %fptr
+  ret void
+}
+
+define void @pcmpistr_mask_index(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mptr, i32* %iptr) nounwind {
+; X32-LABEL: pcmpistr_mask_index:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pcmpistri $24, %xmm1, %xmm0
+; X32-NEXT:    pcmpistrm $24, %xmm1, %xmm0
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movdqa %xmm0, (%edx)
+; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpistr_mask_index:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pcmpistri $24, %xmm1, %xmm0
+; X64-NEXT:    pcmpistrm $24, %xmm1, %xmm0
+; X64-NEXT:    movdqa %xmm0, (%rdi)
+; X64-NEXT:    movl %ecx, (%rsi)
+; X64-NEXT:    retq
+entry:
+  %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  store <16 x i8> %mask, <16 x i8>* %mptr
+  store i32 %index, i32* %iptr
+  ret void
+}
+
+define void @pcmpistr_mask_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mptr, i32* %iptr, i32* %fptr) nounwind {
+; X32-LABEL: pcmpistr_mask_index_flag:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movdqa %xmm0, %xmm2
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    pcmpistrm $24, %xmm1, %xmm0
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    pcmpistri $24, %xmm1, %xmm2
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movdqa %xmm0, (%esi)
+; X32-NEXT:    movl %ecx, (%edx)
+; X32-NEXT:    movl %ebx, (%eax)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpistr_mask_index_flag:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    pcmpistrm $24, %xmm1, %xmm0
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    pcmpistri $24, %xmm1, %xmm2
+; X64-NEXT:    setb %al
+; X64-NEXT:    movdqa %xmm0, (%rdi)
+; X64-NEXT:    movl %ecx, (%rsi)
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    retq
+entry:
+  %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  store <16 x i8> %mask, <16 x i8>* %mptr
+  store i32 %index, i32* %iptr
+  store i32 %flag, i32* %fptr
+  ret void
+}
+
+; Make sure we don't fold loads when we need to emit pcmpistrm and pcmpistri.
+define void @pcmpistr_mask_index_flag_load(<16 x i8> %lhs, <16 x i8>* %rhsptr, <16 x i8>* %mptr, i32* %iptr, i32* %fptr) nounwind {
+; X32-LABEL: pcmpistr_mask_index_flag_load:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movdqa %xmm0, %xmm1
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movdqu (%ecx), %xmm2
+; X32-NEXT:    pcmpistrm $24, %xmm2, %xmm0
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    pcmpistri $24, %xmm2, %xmm1
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movdqa %xmm0, (%esi)
+; X32-NEXT:    movl %ecx, (%edx)
+; X32-NEXT:    movl %ebx, (%eax)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpistr_mask_index_flag_load:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    movdqu (%rdi), %xmm2
+; X64-NEXT:    pcmpistrm $24, %xmm2, %xmm0
+; X64-NEXT:    xorl %edi, %edi
+; X64-NEXT:    pcmpistri $24, %xmm2, %xmm1
+; X64-NEXT:    setb %dil
+; X64-NEXT:    movdqa %xmm0, (%rsi)
+; X64-NEXT:    movl %ecx, (%rdx)
+; X64-NEXT:    movl %edi, (%rax)
+; X64-NEXT:    retq
+entry:
+  %rhs = load <16 x i8>, <16 x i8>* %rhsptr, align 1
+  %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
+  store <16 x i8> %mask, <16 x i8>* %mptr
+  store i32 %index, i32* %iptr
+  store i32 %flag, i32* %fptr
+  ret void
+}
+
+; Make sure we don't fold nontemporal loads.
+define i32 @pcmpestri_nontemporal(<16 x i8> %lhs, i32 %lhs_len, <16 x i8>* %rhsptr, i32 %rhs_len) nounwind {
+; X32-LABEL: pcmpestri_nontemporal:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movntdqa (%ecx), %xmm1
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    pcmpestri $24, %xmm1, %xmm0
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: pcmpestri_nontemporal:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movntdqa (%rsi), %xmm1
+; X64-NEXT:    xorl %esi, %esi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
+; X64-NEXT:    setb %sil
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    retq
+entry:
+  %rhs = load <16 x i8>, <16 x i8>* %rhsptr, align 16, !nontemporal !0
+  %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
+  ret i32 %flag
+}
+
+!0 = !{ i32 1 }

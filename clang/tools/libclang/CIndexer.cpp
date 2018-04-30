@@ -28,10 +28,10 @@
 #ifdef __CYGWIN__
 #include <cygwin/version.h>
 #include <sys/cygwin.h>
-#define LLVM_ON_WIN32 1
+#define _WIN32 1
 #endif
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <dlfcn.h>
@@ -47,7 +47,7 @@ const std::string &CIndexer::getClangResourcesPath() {
   SmallString<128> LibClangPath;
 
   // Find the location where this library lives (libclang.dylib).
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   MEMORY_BASIC_INFORMATION mbi;
   char path[MAX_PATH];
   VirtualQuery((void *)(uintptr_t)clang_createTranslationUnit, &mbi,

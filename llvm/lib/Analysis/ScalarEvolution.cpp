@@ -3567,6 +3567,11 @@ const SCEV *ScalarEvolution::getUMinExpr(const SCEV *LHS,
 }
 
 const SCEV *ScalarEvolution::getUMinExpr(SmallVectorImpl<const SCEV *> &Ops) {
+  assert(!Ops.empty() && "At least one operand must be!");
+  // Trivial case.
+  if (Ops.size() == 1)
+    return Ops[0];
+
   // ~umax(~x, ~y, ~z) == umin(x, y, z).
   SmallVector<const SCEV *, 2> NotOps;
   for (auto *S : Ops)
@@ -3965,6 +3970,11 @@ const SCEV *ScalarEvolution::getUMinFromMismatchedTypes(const SCEV *LHS,
 
 const SCEV *ScalarEvolution::getUMinFromMismatchedTypes(
     SmallVectorImpl<const SCEV *> &Ops) {
+  assert(!Ops.empty() && "At least one operand must be!");
+  // Trivial case.
+  if (Ops.size() == 1)
+    return Ops[0];
+
   // Find the max type first.
   Type *MaxType = nullptr;
   for (auto *S : Ops)
@@ -6502,8 +6512,13 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // must be cleared in this scope.
   BackedgeTakenInfo Result = computeBackedgeTakenCount(L);
 
-  if (Result.getExact(L, this) != getCouldNotCompute()) {
-    assert(isLoopInvariant(Result.getExact(L, this), L) &&
+  // In product build, there are no usage of statistic.
+  (void)NumTripCountsComputed;
+  (void)NumTripCountsNotComputed;
+#if LLVM_ENABLE_STATS || !defined(NDEBUG)
+  const SCEV *BEExact = Result.getExact(L, this);
+  if (BEExact != getCouldNotCompute()) {
+    assert(isLoopInvariant(BEExact, L) &&
            isLoopInvariant(Result.getMax(this), L) &&
            "Computed backedge-taken count isn't loop invariant for loop!");
     ++NumTripCountsComputed;
@@ -6513,6 +6528,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
     // Only count loops that have phi nodes as not being computable.
     ++NumTripCountsNotComputed;
   }
+#endif // LLVM_ENABLE_STATS || !defined(NDEBUG)
 
   // Now that we know more about the trip count for this loop, forget any
   // existing SCEV values for PHI nodes in this loop since they are only
@@ -6718,8 +6734,7 @@ ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
            "Predicate should be always true!");
   }
 
-  assert(!Ops.empty() && "Loop without exits");
-  return Ops.size() == 1 ? Ops[0] : SE->getUMinFromMismatchedTypes(Ops);
+  return SE->getUMinFromMismatchedTypes(Ops);
 }
 
 /// Get the exact not taken count for this loop exit.

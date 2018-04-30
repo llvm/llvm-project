@@ -632,9 +632,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::PABSDrr,         X86::PABSDrm,             TB_ALIGN_16 },
     { X86::PABSWrr,         X86::PABSWrm,             TB_ALIGN_16 },
     { X86::PCMPESTRIrr,     X86::PCMPESTRIrm,         0 },
-    { X86::PCMPESTRM128rr,  X86::PCMPESTRM128rm,      0 },
+    { X86::PCMPESTRMrr,     X86::PCMPESTRMrm,         0 },
     { X86::PCMPISTRIrr,     X86::PCMPISTRIrm,         0 },
-    { X86::PCMPISTRM128rr,  X86::PCMPISTRM128rm,      0 },
+    { X86::PCMPISTRMrr,     X86::PCMPISTRMrm,         0 },
     { X86::PHMINPOSUWrr,    X86::PHMINPOSUWrm,        TB_ALIGN_16 },
     { X86::PMOVSXBDrr,      X86::PMOVSXBDrm,          TB_NO_REVERSE },
     { X86::PMOVSXBQrr,      X86::PMOVSXBQrm,          TB_NO_REVERSE },
@@ -736,10 +736,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPABSDrr,        X86::VPABSDrm,            0 },
     { X86::VPABSWrr,        X86::VPABSWrm,            0 },
     { X86::VPCMPESTRIrr,    X86::VPCMPESTRIrm,        0 },
-    { X86::VPCMPESTRM128rr, X86::VPCMPESTRM128rm,     0 },
+    { X86::VPCMPESTRMrr,    X86::VPCMPESTRMrm,        0 },
     { X86::VPCMPISTRIrr,    X86::VPCMPISTRIrm,        0 },
-    { X86::VPCMPISTRM128rr, X86::VPCMPISTRM128rm,     0 },
-    { X86::VPHMINPOSUWrr,   X86::VPHMINPOSUWrm,      0 },
+    { X86::VPCMPISTRMrr,    X86::VPCMPISTRMrm,        0 },
+    { X86::VPHMINPOSUWrr,   X86::VPHMINPOSUWrm,       0 },
     { X86::VPERMILPDri,     X86::VPERMILPDmi,         0 },
     { X86::VPERMILPSri,     X86::VPERMILPSmi,         0 },
     { X86::VPMOVSXBDrr,     X86::VPMOVSXBDrm,         TB_NO_REVERSE },
@@ -6936,9 +6936,9 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
     }
     if (X86::BNDRRegClass.hasSubClassEq(RC)) {
       if (STI.is64Bit())
-        return load ? X86::BNDMOVRM64rm : X86::BNDMOVMR64mr;
+        return load ? X86::BNDMOV64rm : X86::BNDMOV64mr;
       else
-        return load ? X86::BNDMOVRM32rm : X86::BNDMOVMR32mr;
+        return load ? X86::BNDMOV32rm : X86::BNDMOV32mr;
     }
     llvm_unreachable("Unknown 16-byte regclass");
   }

@@ -95,10 +95,12 @@ body:             |
     ; SOFT-ABI: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
     ; SOFT-ABI: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; SOFT-ABI: [[FI1:%[0-9]+]]:_(p0) = G_GEP [[SP1]], [[OFF1]](s32)
-    ; SOFT-ABI: G_STORE [[Y0]](s32), [[FI1]](p0){{.*}}store 8 into stack
+
+    ; FIXME: This ought to be align 8 but ARM's call lowering hardcodes it to 0
+    ; SOFT-ABI: G_STORE [[Y0]](s32), [[FI1]](p0){{.*}}store 4 into stack, align 0)
     ; SOFT-ABI: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; SOFT-ABI: [[FI2:%[0-9]+]]:_(p0) = G_GEP [[FI1]], [[OFF2]](s32)
-    ; SOFT-ABI: G_STORE [[Y1]](s32), [[FI2]](p0){{.*}}store 8 into stack
+    ; SOFT-ABI: G_STORE [[Y1]](s32), [[FI2]](p0){{.*}}store 4 into stack + 4)
     ; SOFT-ABI: BL &fma, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
     ; SOFT-ABI-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT-ABI-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1

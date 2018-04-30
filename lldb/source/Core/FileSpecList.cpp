@@ -82,7 +82,7 @@ void FileSpecList::Dump(Stream *s, const char *separator_cstr) const {
 // it is found, else std::numeric_limits<uint32_t>::max() is returned.
 //------------------------------------------------------------------
 size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
-                                   bool full, bool remove_dots) const {
+                                   bool full) const {
   const size_t num_files = m_files.size();
 
   // When looking for files, we will compare only the filename if the
@@ -96,7 +96,7 @@ size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
               file_spec.IsCaseSensitive() || m_files[idx].IsCaseSensitive()))
         return idx;
     } else {
-      if (FileSpec::Equal(m_files[idx], file_spec, full, remove_dots))
+      if (FileSpec::Equal(m_files[idx], file_spec, full))
         return idx;
     }
   }

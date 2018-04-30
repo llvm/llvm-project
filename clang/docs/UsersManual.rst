@@ -1255,6 +1255,16 @@ are listed below.
    flushed-to-zero number is preserved in the sign of 0, denormals are
    flushed to positive zero, respectively.
 
+.. option:: -f[no-]fp-cast-overflow-workaround
+
+   Enable a workaround for code that casts floating-point values to 
+   integers and back to floating-point. If the floating-point value 
+   is not representable in the intermediate integer type, the code is
+   incorrect according to the language standard. This flag will attempt 
+   to generate code as if the result of an overflowing conversion matches
+   the overflowing behavior of a target's native float-to-int conversion
+   instructions.
+
 .. option:: -fwhole-program-vtables
 
    Enable whole-program vtable optimizations, such as single-implementation

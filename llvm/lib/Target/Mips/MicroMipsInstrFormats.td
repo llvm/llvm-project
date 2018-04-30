@@ -1053,3 +1053,39 @@ class POOL32A_CFTC2_FM_MM<bits<10> funct> : MMArch {
   let Inst{15-6}  = funct;
   let Inst{5-0}   = 0b111100;
 }
+
+class POOL32A_TLBINV_FM_MM<bits<10> funct> : MMArch {
+  bits<32> Inst;
+
+  let Inst{31-26} = 0x0;
+  let Inst{25-16} = 0x0;
+  let Inst{15-6}  = funct;
+  let Inst{5-0}   = 0b111100;
+}
+
+class POOL32A_MFTC0_FM_MM<bits<5> funct, bits<6> opcode> : MMArch {
+  bits<5> rt;
+  bits<5> rs;
+  bits<3> sel;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-14} = 0;
+  let Inst{13-11} = sel;
+  let Inst{10-6}  = funct;
+  let Inst{5-0}   = opcode;
+}
+
+class POOL32A_HYPCALL_FM_MM : MMArch {
+  bits<32> Inst;
+
+  bits<10> code_;
+
+  let Inst{31-26} = 0x0;
+  let Inst{25-16} = code_;
+  let Inst{15-6}  = 0b1100001101;
+  let Inst{5-0}   = 0b111100;
+}

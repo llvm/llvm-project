@@ -461,34 +461,11 @@ struct X86Operand : public MCParsedAsmOperand {
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
-  static unsigned getGR32FromGR64(unsigned RegNo) {
-    switch (RegNo) {
-    default: llvm_unreachable("Unexpected register");
-    case X86::RAX: return X86::EAX;
-    case X86::RCX: return X86::ECX;
-    case X86::RDX: return X86::EDX;
-    case X86::RBX: return X86::EBX;
-    case X86::RBP: return X86::EBP;
-    case X86::RSP: return X86::ESP;
-    case X86::RSI: return X86::ESI;
-    case X86::RDI: return X86::EDI;
-    case X86::R8: return X86::R8D;
-    case X86::R9: return X86::R9D;
-    case X86::R10: return X86::R10D;
-    case X86::R11: return X86::R11D;
-    case X86::R12: return X86::R12D;
-    case X86::R13: return X86::R13D;
-    case X86::R14: return X86::R14D;
-    case X86::R15: return X86::R15D;
-    case X86::RIP: return X86::EIP;
-    }
-  }
-
   void addGR32orGR64Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     unsigned RegNo = getReg();
     if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
-      RegNo = getGR32FromGR64(RegNo);
+      RegNo = getX86SubSuperRegister(RegNo, 32);
     Inst.addOperand(MCOperand::createReg(RegNo));
   }
 

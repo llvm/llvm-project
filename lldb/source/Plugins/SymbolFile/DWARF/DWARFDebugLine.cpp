@@ -444,7 +444,7 @@ bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
 
 bool DWARFDebugLine::ParseSupportFiles(
     const lldb::ModuleSP &module_sp, const DWARFDataExtractor &debug_line_data,
-    const char *cu_comp_dir, dw_offset_t stmt_list,
+    const lldb_private::FileSpec &cu_comp_dir, dw_offset_t stmt_list,
     FileSpecList &support_files) {
   lldb::offset_t offset = stmt_list;
 
@@ -861,8 +861,8 @@ void DWARFDebugLine::Prologue::Dump(Log *log) {
 //  buff.Append8(0);    // Terminate the file names section with empty string
 //}
 
-bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx, const char *comp_dir,
-                                       FileSpec &file) const {
+bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx,
+    const lldb_private::FileSpec &comp_dir, FileSpec &file) const {
   uint32_t idx = file_idx - 1; // File indexes are 1 based...
   if (idx < file_names.size()) {
     file.SetFile(file_names[idx].name, false);
@@ -876,7 +876,7 @@ bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx, const char *comp_dir,
         }
       }
 
-      if (comp_dir && comp_dir[0])
+      if (comp_dir)
         file.PrependPathComponent(comp_dir);
     }
     return true;

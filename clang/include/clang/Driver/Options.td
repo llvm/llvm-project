@@ -1029,6 +1029,11 @@ def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Form fused FP ops (e.g. FMAs): fast (everywhere)"
   " | on (according to FP_CONTRACT pragma, default) | off (never fuse)">, Values<"fast,on,off">;
 
+def ffp_cast_overflow_workaround : Flag<["-"],
+  "ffp-cast-overflow-workaround">, Group<f_Group>, Flags<[CC1Option]>;
+def fno_fp_cast_overflow_workaround : Flag<["-"],
+  "fno-fp-cast-overflow-workaround">, Group<f_Group>, Flags<[CC1Option]>;
+
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
 

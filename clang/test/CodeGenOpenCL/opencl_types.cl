@@ -63,9 +63,13 @@ kernel void foo(image1d_t img) {
   // CHECK-AMDGCN: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(4)*
 }
 
-kernel void foo_pipe(read_only pipe int p) {}
-// CHECK-SPIR: @foo_pipe(%opencl.pipe_t addrspace(1)* %p)
-// CHECK_AMDGCN: @foo_pipe(%opencl.pipe_t addrspace(1)* %p)
+kernel void foo_ro_pipe(read_only pipe int p) {}
+// CHECK-SPIR: @foo_ro_pipe(%opencl.pipe_ro_t addrspace(1)* %p)
+// CHECK_AMDGCN: @foo_ro_pipe(%opencl.pipe_ro_t addrspace(1)* %p)
+
+kernel void foo_wo_pipe(write_only pipe int p) {}
+// CHECK-SPIR: @foo_wo_pipe(%opencl.pipe_wo_t addrspace(1)* %p)
+// CHECK_AMDGCN: @foo_wo_pipe(%opencl.pipe_wo_t addrspace(1)* %p)
 
 void __attribute__((overloadable)) bad1(image1d_t b, image2d_t c, image2d_t d) {}
 // CHECK-SPIR-LABEL: @{{_Z4bad114ocl_image1d_ro14ocl_image2d_roS0_|"\\01\?bad1@@\$\$J0YAXPAUocl_image1d_ro@@PAUocl_image2d_ro@@1@Z"}}

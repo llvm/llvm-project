@@ -241,7 +241,7 @@ TEST(DraftStoreIncrementalUpdateTest, StartCharOutOfRange) {
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(llvm::toString(Result.takeError()),
-            "Character value is out of range (100)");
+            "UTF-16 offset 100 is invalid for line 0");
 }
 
 TEST(DraftStoreIncrementalUpdateTest, EndCharOutOfRange) {
@@ -262,7 +262,7 @@ TEST(DraftStoreIncrementalUpdateTest, EndCharOutOfRange) {
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(llvm::toString(Result.takeError()),
-            "Character value is out of range (100)");
+            "UTF-16 offset 100 is invalid for line 0");
 }
 
 TEST(DraftStoreIncrementalUpdateTest, StartLineOutOfRange) {
@@ -338,7 +338,7 @@ TEST(DraftStoreIncrementalUpdateTest, InvalidRangeInASequence) {
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(llvm::toString(Result.takeError()),
-            "Character value is out of range (100)");
+            "UTF-16 offset 100 is invalid for line 0");
 
   llvm::Optional<std::string> Contents = DS.getDraft(File);
   EXPECT_TRUE(Contents);

@@ -12,10 +12,10 @@ body: |
 
     ; CHECK-LABEL: name: test_extracts_1
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load 16)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load 8, align 16)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 16)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 8)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[LOAD]](s64)
     ; CHECK: G_STORE [[COPY1]](s64), [[COPY]](p0) :: (store 8)
     ; CHECK: RET_ReallyLR
@@ -37,10 +37,10 @@ body: |
       ; Low extraction wipes takes whole low register. High extraction is real.
     ; CHECK-LABEL: name: test_extracts_2
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load 16)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load 8, align 16)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 16)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 8)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[LOAD]](s64)
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD1]](s64), 0
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[EXTRACT]](s32)

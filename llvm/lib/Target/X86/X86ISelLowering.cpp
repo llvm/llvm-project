@@ -20947,50 +20947,50 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     switch (IntNo) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
     case Intrinsic::x86_sse42_pcmpistria128:
-      Opcode = X86ISD::PCMPISTRI;
+      Opcode = X86ISD::PCMPISTR;
       X86CC = X86::COND_A;
       break;
     case Intrinsic::x86_sse42_pcmpestria128:
-      Opcode = X86ISD::PCMPESTRI;
+      Opcode = X86ISD::PCMPESTR;
       X86CC = X86::COND_A;
       break;
     case Intrinsic::x86_sse42_pcmpistric128:
-      Opcode = X86ISD::PCMPISTRI;
+      Opcode = X86ISD::PCMPISTR;
       X86CC = X86::COND_B;
       break;
     case Intrinsic::x86_sse42_pcmpestric128:
-      Opcode = X86ISD::PCMPESTRI;
+      Opcode = X86ISD::PCMPESTR;
       X86CC = X86::COND_B;
       break;
     case Intrinsic::x86_sse42_pcmpistrio128:
-      Opcode = X86ISD::PCMPISTRI;
+      Opcode = X86ISD::PCMPISTR;
       X86CC = X86::COND_O;
       break;
     case Intrinsic::x86_sse42_pcmpestrio128:
-      Opcode = X86ISD::PCMPESTRI;
+      Opcode = X86ISD::PCMPESTR;
       X86CC = X86::COND_O;
       break;
     case Intrinsic::x86_sse42_pcmpistris128:
-      Opcode = X86ISD::PCMPISTRI;
+      Opcode = X86ISD::PCMPISTR;
       X86CC = X86::COND_S;
       break;
     case Intrinsic::x86_sse42_pcmpestris128:
-      Opcode = X86ISD::PCMPESTRI;
+      Opcode = X86ISD::PCMPESTR;
       X86CC = X86::COND_S;
       break;
     case Intrinsic::x86_sse42_pcmpistriz128:
-      Opcode = X86ISD::PCMPISTRI;
+      Opcode = X86ISD::PCMPISTR;
       X86CC = X86::COND_E;
       break;
     case Intrinsic::x86_sse42_pcmpestriz128:
-      Opcode = X86ISD::PCMPESTRI;
+      Opcode = X86ISD::PCMPESTR;
       X86CC = X86::COND_E;
       break;
     }
     SmallVector<SDValue, 5> NewOps(Op->op_begin()+1, Op->op_end());
-    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
-    SDValue PCMP = DAG.getNode(Opcode, dl, VTs, NewOps);
-    SDValue SetCC = getSETCC(X86CC, SDValue(PCMP.getNode(), 1), dl, DAG);
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::v16i8, MVT::i32);
+    SDValue PCMP = DAG.getNode(Opcode, dl, VTs, NewOps).getValue(2);
+    SDValue SetCC = getSETCC(X86CC, PCMP, dl, DAG);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
   }
 
@@ -20998,13 +20998,26 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::x86_sse42_pcmpestri128: {
     unsigned Opcode;
     if (IntNo == Intrinsic::x86_sse42_pcmpistri128)
-      Opcode = X86ISD::PCMPISTRI;
+      Opcode = X86ISD::PCMPISTR;
     else
-      Opcode = X86ISD::PCMPESTRI;
+      Opcode = X86ISD::PCMPESTR;
 
     SmallVector<SDValue, 5> NewOps(Op->op_begin()+1, Op->op_end());
-    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::v16i8, MVT::i32);
     return DAG.getNode(Opcode, dl, VTs, NewOps);
+  }
+
+  case Intrinsic::x86_sse42_pcmpistrm128:
+  case Intrinsic::x86_sse42_pcmpestrm128: {
+    unsigned Opcode;
+    if (IntNo == Intrinsic::x86_sse42_pcmpistrm128)
+      Opcode = X86ISD::PCMPISTR;
+    else
+      Opcode = X86ISD::PCMPESTR;
+
+    SmallVector<SDValue, 5> NewOps(Op->op_begin()+1, Op->op_end());
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::v16i8, MVT::i32);
+    return DAG.getNode(Opcode, dl, VTs, NewOps).getValue(1);
   }
 
   case Intrinsic::eh_sjlj_lsda: {
@@ -25794,8 +25807,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VGETMANT_RND:       return "X86ISD::VGETMANT_RND";
   case X86ISD::VGETMANTS:          return "X86ISD::VGETMANTS";
   case X86ISD::VGETMANTS_RND:      return "X86ISD::VGETMANTS_RND";
-  case X86ISD::PCMPESTRI:          return "X86ISD::PCMPESTRI";
-  case X86ISD::PCMPISTRI:          return "X86ISD::PCMPISTRI";
+  case X86ISD::PCMPESTR:           return "X86ISD::PCMPESTR";
+  case X86ISD::PCMPISTR:           return "X86ISD::PCMPISTR";
   case X86ISD::XTEST:              return "X86ISD::XTEST";
   case X86ISD::COMPRESS:           return "X86ISD::COMPRESS";
   case X86ISD::EXPAND:             return "X86ISD::EXPAND";
@@ -26177,79 +26190,6 @@ static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
 
   MI.eraseFromParent();
   return sinkMBB;
-}
-
-// FIXME: When we get size specific XMM0 registers, i.e. XMM0_V16I8
-// or XMM0_V32I8 in AVX all of this code can be replaced with that
-// in the .td file.
-static MachineBasicBlock *emitPCMPSTRM(MachineInstr &MI, MachineBasicBlock *BB,
-                                       const TargetInstrInfo *TII) {
-  unsigned Opc;
-  switch (MI.getOpcode()) {
-  default: llvm_unreachable("illegal opcode!");
-  case X86::PCMPISTRM128REG:  Opc = X86::PCMPISTRM128rr;  break;
-  case X86::VPCMPISTRM128REG: Opc = X86::VPCMPISTRM128rr; break;
-  case X86::PCMPISTRM128MEM:  Opc = X86::PCMPISTRM128rm;  break;
-  case X86::VPCMPISTRM128MEM: Opc = X86::VPCMPISTRM128rm; break;
-  case X86::PCMPESTRM128REG:  Opc = X86::PCMPESTRM128rr;  break;
-  case X86::VPCMPESTRM128REG: Opc = X86::VPCMPESTRM128rr; break;
-  case X86::PCMPESTRM128MEM:  Opc = X86::PCMPESTRM128rm;  break;
-  case X86::VPCMPESTRM128MEM: Opc = X86::VPCMPESTRM128rm; break;
-  }
-
-  DebugLoc dl = MI.getDebugLoc();
-  MachineInstrBuilder MIB = BuildMI(*BB, MI, dl, TII->get(Opc));
-
-  unsigned NumArgs = MI.getNumOperands();
-  for (unsigned i = 1; i < NumArgs; ++i) {
-    MachineOperand &Op = MI.getOperand(i);
-    if (!(Op.isReg() && Op.isImplicit()))
-      MIB.add(Op);
-  }
-  if (MI.hasOneMemOperand())
-    MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-
-  BuildMI(*BB, MI, dl, TII->get(TargetOpcode::COPY), MI.getOperand(0).getReg())
-      .addReg(X86::XMM0);
-
-  MI.eraseFromParent();
-  return BB;
-}
-
-// FIXME: Custom handling because TableGen doesn't support multiple implicit
-// defs in an instruction pattern
-static MachineBasicBlock *emitPCMPSTRI(MachineInstr &MI, MachineBasicBlock *BB,
-                                       const TargetInstrInfo *TII) {
-  unsigned Opc;
-  switch (MI.getOpcode()) {
-  default: llvm_unreachable("illegal opcode!");
-  case X86::PCMPISTRIREG:  Opc = X86::PCMPISTRIrr;  break;
-  case X86::VPCMPISTRIREG: Opc = X86::VPCMPISTRIrr; break;
-  case X86::PCMPISTRIMEM:  Opc = X86::PCMPISTRIrm;  break;
-  case X86::VPCMPISTRIMEM: Opc = X86::VPCMPISTRIrm; break;
-  case X86::PCMPESTRIREG:  Opc = X86::PCMPESTRIrr;  break;
-  case X86::VPCMPESTRIREG: Opc = X86::VPCMPESTRIrr; break;
-  case X86::PCMPESTRIMEM:  Opc = X86::PCMPESTRIrm;  break;
-  case X86::VPCMPESTRIMEM: Opc = X86::VPCMPESTRIrm; break;
-  }
-
-  DebugLoc dl = MI.getDebugLoc();
-  MachineInstrBuilder MIB = BuildMI(*BB, MI, dl, TII->get(Opc));
-
-  unsigned NumArgs = MI.getNumOperands(); // remove the results
-  for (unsigned i = 1; i < NumArgs; ++i) {
-    MachineOperand &Op = MI.getOperand(i);
-    if (!(Op.isReg() && Op.isImplicit()))
-      MIB.add(Op);
-  }
-  if (MI.hasOneMemOperand())
-    MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-
-  BuildMI(*BB, MI, dl, TII->get(TargetOpcode::COPY), MI.getOperand(0).getReg())
-      .addReg(X86::ECX);
-
-  MI.eraseFromParent();
-  return BB;
 }
 
 static MachineBasicBlock *emitWRPKRU(MachineInstr &MI, MachineBasicBlock *BB,
@@ -28167,32 +28107,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo instruction is gone now.
     return BB;
   }
-    // String/text processing lowering.
-  case X86::PCMPISTRM128REG:
-  case X86::VPCMPISTRM128REG:
-  case X86::PCMPISTRM128MEM:
-  case X86::VPCMPISTRM128MEM:
-  case X86::PCMPESTRM128REG:
-  case X86::VPCMPESTRM128REG:
-  case X86::PCMPESTRM128MEM:
-  case X86::VPCMPESTRM128MEM:
-    assert(Subtarget.hasSSE42() &&
-           "Target must have SSE4.2 or AVX features enabled");
-    return emitPCMPSTRM(MI, BB, Subtarget.getInstrInfo());
-
-  // String/text processing lowering.
-  case X86::PCMPISTRIREG:
-  case X86::VPCMPISTRIREG:
-  case X86::PCMPISTRIMEM:
-  case X86::VPCMPISTRIMEM:
-  case X86::PCMPESTRIREG:
-  case X86::VPCMPESTRIREG:
-  case X86::PCMPESTRIMEM:
-  case X86::VPCMPESTRIMEM:
-    assert(Subtarget.hasSSE42() &&
-           "Target must have SSE4.2 or AVX features enabled");
-    return emitPCMPSTRI(MI, BB, Subtarget.getInstrInfo());
-
   // Thread synchronization.
   case X86::MONITOR:
     return emitMonitor(MI, BB, Subtarget, X86::MONITORrrr);

@@ -1727,6 +1727,9 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
     FuncAttrs.addAttribute("no-trapping-math",
                            llvm::toStringRef(CodeGenOpts.NoTrappingMath));
 
+    if (CodeGenOpts.FPCastOverflowWorkaround)
+      FuncAttrs.addAttribute("fp-cast-overflow-workaround", "true");
+
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
     FuncAttrs.addAttribute("no-infs-fp-math",
@@ -3065,19 +3068,15 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
   }
 
   // Deactivate the cleanup for the callee-destructed param that was pushed.
-  if (hasAggregateEvaluationKind(type) &&
-      getContext().isParamDestroyedInCallee(type)) {
+  if (hasAggregateEvaluationKind(type) && !CurFuncIsThunk &&
+      getContext().isParamDestroyedInCallee(type) && type.isDestructedType()) {
     EHScopeStack::stable_iterator cleanup =
         CalleeDestructedParamCleanups.lookup(cast<ParmVarDecl>(param));
-    if (cleanup.isValid()) {
-      // This unreachable is a temporary marker which will be removed later.
-      llvm::Instruction *isActive = Builder.CreateUnreachable();
-      args.addArgCleanupDeactivation(cleanup, isActive);
-    } else
-      // A param cleanup should have been pushed unless we are code-generating
-      // a thunk.
-      assert(CurFuncIsThunk &&
-             "cleanup for callee-destructed param not recorded");
+    assert(cleanup.isValid() &&
+           "cleanup for callee-destructed param not recorded");
+    // This unreachable is a temporary marker which will be removed later.
+    llvm::Instruction *isActive = Builder.CreateUnreachable();
+    args.addArgCleanupDeactivation(cleanup, isActive);
   }
 }
 
