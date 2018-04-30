@@ -450,7 +450,7 @@ def : InstRW<[HWWriteBOUND], (instregex "BOUNDS(16|32)rm")>;
 def HWWriteINTO : SchedWriteRes<[]> {
   let NumMicroOps = 4;
 }
-def : InstRW<[HWWriteINTO], (instregex "INTO")>;
+def : InstRW<[HWWriteINTO], (instrs INTO)>;
 
 //-- String instructions --//
 
@@ -1941,7 +1941,7 @@ def HWWriteResGroup99 : SchedWriteRes<[HWPort6,HWPort0156]> {
   let NumMicroOps = 5;
   let ResourceCycles = [1,4];
 }
-def: InstRW<[HWWriteResGroup99], (instregex "PAUSE")>;
+def: InstRW<[HWWriteResGroup99], (instrs PAUSE)>;
 
 def HWWriteResGroup100 : SchedWriteRes<[HWPort06,HWPort0156]> {
   let Latency = 5;

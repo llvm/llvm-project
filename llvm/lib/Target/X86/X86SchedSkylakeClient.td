@@ -532,11 +532,10 @@ def SKLWriteResGroup10 : SchedWriteRes<[SKLPort0156]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SKLWriteResGroup10], (instrs CBW, CWDE, CDQE)>;
+def: InstRW<[SKLWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
 def: InstRW<[SKLWriteResGroup10], (instregex "CLC",
                                              "CMC",
-                                             "LAHF", // TODO: This doesn't match Agner's data
                                              "NOOP",
-                                             "SAHF", // TODO: This doesn't match Agner's data
                                              "SGDT64m",
                                              "SIDT64m",
                                              "SMSW16m",
@@ -978,7 +977,7 @@ def SKLWriteResGroup55 : SchedWriteRes<[SKLPort6,SKLPort0156]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SKLWriteResGroup55], (instregex "PAUSE")>;
+def: InstRW<[SKLWriteResGroup55], (instrs PAUSE)>;
 
 def SKLWriteResGroup56 : SchedWriteRes<[SKLPort015,SKLPort0156]> {
   let Latency = 4;

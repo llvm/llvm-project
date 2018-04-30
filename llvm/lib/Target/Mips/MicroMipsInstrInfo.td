@@ -793,21 +793,22 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   /// Load and Store Instructions - aligned
   let DecoderMethod = "DecodeMemMMImm16" in {
-    def LB_MM  : LoadMemory<"lb", GPR32Opnd, mem_mm_16, null_frag, II_LB>,
-                 MMRel, LW_FM_MM<0x7>;
-    def LBu_MM : LoadMemory<"lbu", GPR32Opnd, mem_mm_16, null_frag, II_LBU>,
-                 MMRel, LW_FM_MM<0x5>;
+    def LB_MM  : LoadMemory<"lb", GPR32Opnd, mem_mm_16, sextloadi8, II_LB>,
+                 MMRel, LW_FM_MM<0x7>, ISA_MICROMIPS;
+    def LBu_MM : LoadMemory<"lbu", GPR32Opnd, mem_mm_16, zextloadi8, II_LBU>,
+                 MMRel, LW_FM_MM<0x5>, ISA_MICROMIPS;
     def LH_MM  : LoadMemory<"lh", GPR32Opnd, mem_simm16, sextloadi16, II_LH,
-                            addrDefault>, MMRel, LW_FM_MM<0xf>;
+                            addrDefault>, MMRel, LW_FM_MM<0xf>, ISA_MICROMIPS;
     def LHu_MM : LoadMemory<"lhu", GPR32Opnd, mem_simm16, zextloadi16, II_LHU>,
-                 MMRel, LW_FM_MM<0xd>;
-    def LW_MM  : Load<"lw", GPR32Opnd, null_frag, II_LW>, MMRel, LW_FM_MM<0x3f>;
-    def SB_MM  : Store<"sb", GPR32Opnd, null_frag, II_SB>, MMRel,
-                 LW_FM_MM<0x6>;
-    def SH_MM  : Store<"sh", GPR32Opnd, null_frag, II_SH>, MMRel,
-                 LW_FM_MM<0xe>;
+                 MMRel, LW_FM_MM<0xd>, ISA_MICROMIPS;
+    def LW_MM  : Load<"lw", GPR32Opnd, null_frag, II_LW>, MMRel, LW_FM_MM<0x3f>,
+                 ISA_MICROMIPS;
+    def SB_MM  : Store<"sb", GPR32Opnd, truncstorei8, II_SB>, MMRel,
+                 LW_FM_MM<0x6>, ISA_MICROMIPS;
+    def SH_MM  : Store<"sh", GPR32Opnd, truncstorei16, II_SH>, MMRel,
+                 LW_FM_MM<0xe>, ISA_MICROMIPS;
     def SW_MM  : Store<"sw", GPR32Opnd, null_frag, II_SW>, MMRel,
-                 LW_FM_MM<0x3e>;
+                 LW_FM_MM<0x3e>, ISA_MICROMIPS;
   }
 }
 let DecoderNamespace = "MicroMips" in {
@@ -1185,6 +1186,19 @@ let Predicates = [InMicroMips] in {
                 (LW_MM addr:$addr)>;
   def : MipsPat<(subc GPR32:$lhs, GPR32:$rhs),
                 (SUBu_MM GPR32:$lhs, GPR32:$rhs)>;
+
+  def : MipsPat<(i32 (extloadi1  addr:$src)), (LBu_MM addr:$src)>,
+        ISA_MICROMIPS;
+
+  def : MipsPat<(i32 (extloadi8  addr:$src)), (LBu_MM addr:$src)>,
+        ISA_MICROMIPS;
+
+  def : MipsPat<(i32 (extloadi16 addr:$src)), (LHu_MM addr:$src)>,
+        ISA_MICROMIPS;
+
+  let AddedComplexity = 40 in
+    def : MipsPat<(i32 (sextloadi16 addrRegImm:$a)),
+                  (LH_MM addrRegImm:$a)>, ISA_MICROMIPS;
 }
 
 def : MipsPat<(bswap GPR32:$rt), (ROTR_MM (WSBH_MM GPR32:$rt), 16)>,
@@ -1195,14 +1209,8 @@ def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
 def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
               (TAILCALL_MM texternalsym:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
-let AddedComplexity = 40 in {
-  def : MipsPat<(i32 (sextloadi16 addrRegImm:$a)),
-                (LH_MM addrRegImm:$a)>;
-}
 def : MipsPat<(atomic_load_16 addr:$a),
               (LH_MM addr:$a)>;
-def : MipsPat<(i32 (extloadi16 addr:$src)),
-              (LHu_MM addr:$src)>;
 
 defm : BrcondPats<GPR32, BEQ_MM, BEQ_MM, BNE_MM, SLT_MM, SLTu_MM, SLTi_MM,
                   SLTiu_MM, ZERO>;

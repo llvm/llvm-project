@@ -49,13 +49,13 @@ def INT : Ii8<0xcd, RawFrm, (outs), (ins u8imm:$trap), "int\t$trap",
 
 def SYSCALL  : I<0x05, RawFrm, (outs), (ins), "syscall", []>, TB;
 def SYSRET   : I<0x07, RawFrm, (outs), (ins), "sysret{l}", []>, TB;
-def SYSRET64 :RI<0x07, RawFrm, (outs), (ins), "sysret{q}", []>, TB,
+def SYSRET64 :RI<0x07, RawFrm, (outs), (ins), "sysretq", []>, TB,
                Requires<[In64BitMode]>;
 
 def SYSENTER : I<0x34, RawFrm, (outs), (ins), "sysenter", []>, TB;
 
 def SYSEXIT   : I<0x35, RawFrm, (outs), (ins), "sysexit{l}", []>, TB;
-def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexit{q}", []>, TB,
+def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
                   Requires<[In64BitMode]>;
 } // SchedRW
 
@@ -401,15 +401,6 @@ let mayLoad = 1 in
 def LLDT16m : I<0x00, MRM2m, (outs), (ins i16mem:$src),
                 "lldt{w}\t$src", []>, TB;
 } // SchedRW
-
-def : InstAlias<"sgdt\t$dst", (SGDT16m opaque48mem:$dst), 0>, Requires<[In16BitMode]>;
-def : InstAlias<"sgdt\t$dst", (SGDT32m opaque48mem:$dst), 0>, Requires<[In32BitMode]>;
-def : InstAlias<"sidt\t$dst", (SIDT16m opaque48mem:$dst), 0>, Requires<[In16BitMode]>;
-def : InstAlias<"sidt\t$dst", (SIDT32m opaque48mem:$dst), 0>, Requires<[In32BitMode]>;
-def : InstAlias<"lgdt\t$src", (LGDT16m opaque48mem:$src), 0>, Requires<[In16BitMode]>;
-def : InstAlias<"lgdt\t$src", (LGDT32m opaque48mem:$src), 0>, Requires<[In32BitMode]>;
-def : InstAlias<"lidt\t$src", (LIDT16m opaque48mem:$src), 0>, Requires<[In16BitMode]>;
-def : InstAlias<"lidt\t$src", (LIDT32m opaque48mem:$src), 0>, Requires<[In32BitMode]>;
 
 //===----------------------------------------------------------------------===//
 // Specialized register support
