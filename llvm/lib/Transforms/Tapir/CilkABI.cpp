@@ -28,6 +28,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypeBuilder.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
@@ -434,7 +435,9 @@ static CallInst *EmitCilkSetJmp(IRBuilder<> &B, Value *SF, Module& M) {
   LLVMContext &Ctx = M.getContext();
 
   // We always want to save the floating point state too
-  EmitSaveFloatingPointState(B, SF);
+  Triple T(M.getTargetTriple()); 
+  if(T.getArch() == Triple::x86 || T.getArch() == Triple::x86_64) 
+    EmitSaveFloatingPointState(B, SF);
 
   Type *Int32Ty = Type::getInt32Ty(Ctx);
   Type *Int8PtrTy = Type::getInt8PtrTy(Ctx);
