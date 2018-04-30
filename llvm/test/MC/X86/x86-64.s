@@ -340,13 +340,9 @@ fucomi	%st(2), %st
 
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
-// CHECK: fnstsw %ax
-// CHECK: fnstsw %ax
 
 fnstsw
 fnstsw %ax
-fnstsw %eax
-fnstsw %al
 
 // rdar://8431880
 // CHECK: rclb	%bl

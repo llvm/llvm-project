@@ -49,13 +49,13 @@ def INT : Ii8<0xcd, RawFrm, (outs), (ins u8imm:$trap), "int\t$trap",
 
 def SYSCALL  : I<0x05, RawFrm, (outs), (ins), "syscall", []>, TB;
 def SYSRET   : I<0x07, RawFrm, (outs), (ins), "sysret{l}", []>, TB;
-def SYSRET64 :RI<0x07, RawFrm, (outs), (ins), "sysret{q}", []>, TB,
+def SYSRET64 :RI<0x07, RawFrm, (outs), (ins), "sysretq", []>, TB,
                Requires<[In64BitMode]>;
 
 def SYSENTER : I<0x34, RawFrm, (outs), (ins), "sysenter", []>, TB;
 
 def SYSEXIT   : I<0x35, RawFrm, (outs), (ins), "sysexit{l}", []>, TB;
-def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexit{q}", []>, TB,
+def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
                   Requires<[In64BitMode]>;
 } // SchedRW
 

@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test module-sections %t | FileCheck %s
+
+# CHECK: Name: .gnu_debugaltlink
+# CHECK-NEXT: Type: dwarf-gnu-debugaltlink
+# CHECK-NEXT: VM size: 0
+# CHECK-NEXT: File size: 8
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x00000000000007A0
+Sections:        
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .gnu_debugaltlink
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+...

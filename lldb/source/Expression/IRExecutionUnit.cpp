@@ -1100,6 +1100,7 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
   case lldb::eSectionTypeDWARFAppleTypes:
   case lldb::eSectionTypeDWARFAppleNamespaces:
   case lldb::eSectionTypeDWARFAppleObjC:
+  case lldb::eSectionTypeDWARFGNUDebugAltLink:
     error.Clear();
     break;
   default:

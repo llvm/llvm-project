@@ -27,8 +27,8 @@ class DataExtractor;
 using namespace lldb;
 using namespace lldb_private;
 
-static const char *GetSectionTypeAsCString(lldb::SectionType sect_type) {
-  switch (sect_type) {
+const char *Section::GetTypeAsCString() const {
+  switch (m_type) {
   case eSectionTypeInvalid:
     return "invalid";
   case eSectionTypeCode:
@@ -117,6 +117,8 @@ static const char *GetSectionTypeAsCString(lldb::SectionType sect_type) {
     return "go-symtab";
   case eSectionTypeAbsoluteAddress:
     return "absolute";
+  case eSectionTypeDWARFGNUDebugAltLink:
+    return "dwarf-gnu-debugaltlink";
   case eSectionTypeOther:
     return "regular";
   }
@@ -283,8 +285,7 @@ int Section::Compare(const Section &a, const Section &b) {
 void Section::Dump(Stream *s, Target *target, uint32_t depth) const {
   //    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
   s->Indent();
-  s->Printf("0x%8.8" PRIx64 " %-16s ", GetID(),
-            GetSectionTypeAsCString(m_type));
+  s->Printf("0x%8.8" PRIx64 " %-16s ", GetID(), GetTypeAsCString());
   bool resolved = true;
   addr_t addr = LLDB_INVALID_ADDRESS;
 
