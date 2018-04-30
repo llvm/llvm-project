@@ -280,7 +280,10 @@ SourceLocation
 getLocForEndOfDecl(const clang::Decl *D,
                    const LangOptions &LangOpts = clang::LangOptions()) {
   const auto &SM = D->getASTContext().getSourceManager();
-  auto EndExpansionLoc = SM.getExpansionRange(D->getLocEnd()).second;
+  // If the expansion range is a character range, this is the location of
+  // the first character past the end. Otherwise it's the location of the
+  // first character in the final token in the range.
+  auto EndExpansionLoc = SM.getExpansionRange(D->getLocEnd()).getEnd();
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(EndExpansionLoc);
   // Try to load the file buffer.
   bool InvalidTemp = false;

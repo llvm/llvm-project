@@ -167,7 +167,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                       Requires<[In64BitMode]>, Sched<[WriteJumpLd]>, NOTRACK;
   }
 
-  let Predicates = [Not64BitMode] in {
+  let Predicates = [Not64BitMode], AsmVariantName = "att" in {
     def FARJMP16i  : Iseg16<0xEA, RawFrmImm16, (outs),
                             (ins i16imm:$off, i16imm:$seg),
                             "ljmp{w}\t$seg, $off", []>,
@@ -178,8 +178,9 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                             OpSize32, Sched<[WriteJump]>;
   }
   def FARJMP64   : RI<0xFF, MRM5m, (outs), (ins opaque80mem:$dst),
-                      "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>;
+                      "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>, Requires<[In64BitMode]>;
 
+  let AsmVariantName = "att" in
   def FARJMP16m  : I<0xFF, MRM5m, (outs), (ins opaque32mem:$dst),
                      "ljmp{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
   def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaque48mem:$dst),
@@ -244,7 +245,7 @@ let isCall = 1 in
                         Sched<[WriteJumpLd]>, NOTRACK;
     }
 
-    let Predicates = [Not64BitMode] in {
+    let Predicates = [Not64BitMode], AsmVariantName = "att" in {
       def FARCALL16i  : Iseg16<0x9A, RawFrmImm16, (outs),
                                (ins i16imm:$off, i16imm:$seg),
                                "lcall{w}\t$seg, $off", []>,

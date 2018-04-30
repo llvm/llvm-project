@@ -852,23 +852,14 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
       // Ignore invalid ranges.
       if (!RI->isValid()) continue;
 
-      FullSourceLoc B =
-          FullSourceLoc(RI->getBegin(), Loc.getManager()).getExpansionLoc();
-      FullSourceLoc E =
-          FullSourceLoc(RI->getEnd(), Loc.getManager()).getExpansionLoc();
+      auto &SM = Loc.getManager();
+      SourceLocation B = SM.getExpansionLoc(RI->getBegin());
+      CharSourceRange ERange = SM.getExpansionRange(RI->getEnd());
+      SourceLocation E = ERange.getEnd();
+      bool IsTokenRange = ERange.isTokenRange();
 
-      // If the End location and the start location are the same and are a
-      // macro location, then the range was something that came from a
-      // macro expansion or _Pragma.  If this is an object-like macro, the
-      // best we can do is to highlight the range.  If this is a
-      // function-like macro, we'd also like to highlight the arguments.
-      if (B == E && RI->getEnd().isMacroID())
-        E = FullSourceLoc(RI->getEnd(), Loc.getManager())
-                .getExpansionRange()
-                .second;
-
-      std::pair<FileID, unsigned> BInfo = B.getDecomposedLoc();
-      std::pair<FileID, unsigned> EInfo = E.getDecomposedLoc();
+      std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(B);
+      std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(E);
 
       // If the start or end of the range is in another file, just discard
       // it.
@@ -878,11 +869,14 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
       // Add in the length of the token, so that we cover multi-char
       // tokens.
       unsigned TokSize = 0;
-      if (RI->isTokenRange())
-        TokSize = Lexer::MeasureTokenLength(E, E.getManager(), LangOpts);
+      if (IsTokenRange)
+        TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
-      OS << '{' << B.getLineNumber() << ':' << B.getColumnNumber() << '-'
-         << E.getLineNumber() << ':' << (E.getColumnNumber() + TokSize) << '}';
+      FullSourceLoc BF(B, SM), EF(E, SM);
+      OS << '{'
+         << BF.getLineNumber() << ':' << BF.getColumnNumber() << '-'
+         << EF.getLineNumber() << ':' << (EF.getColumnNumber() + TokSize)
+         << '}';
       PrintedRange = true;
     }
 

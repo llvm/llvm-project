@@ -2178,7 +2178,7 @@ static void simplifySimpleBranches(PathPieces &pieces) {
 static Optional<size_t> getLengthOnSingleLine(SourceManager &SM,
                                               SourceRange Range) {
   SourceRange ExpansionRange(SM.getExpansionLoc(Range.getBegin()),
-                             SM.getExpansionRange(Range.getEnd()).second);
+                             SM.getExpansionRange(Range.getEnd()).getEnd());
 
   FileID FID = SM.getFileID(ExpansionRange.getBegin());
   if (FID != SM.getFileID(ExpansionRange.getEnd()))

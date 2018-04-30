@@ -590,8 +590,12 @@ StringRef TransformActionsImpl::getUniqueText(StringRef text) {
 SourceLocation TransformActionsImpl::getLocForEndOfToken(SourceLocation loc,
                                                          SourceManager &SM,
                                                          Preprocessor &PP) {
-  if (loc.isMacroID())
-    loc = SM.getExpansionRange(loc).second;
+  if (loc.isMacroID()) {
+    CharSourceRange Exp = SM.getExpansionRange(loc);
+    if (Exp.isCharRange())
+      return Exp.getEnd();
+    loc = Exp.getEnd();
+  }
   return PP.getLocForEndOfToken(loc);
 }
 

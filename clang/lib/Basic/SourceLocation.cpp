@@ -103,15 +103,6 @@ FullSourceLoc FullSourceLoc::getFileLoc() const {
   return FullSourceLoc(SrcMgr->getFileLoc(*this), *SrcMgr);
 }
 
-std::pair<FullSourceLoc, FullSourceLoc>
-FullSourceLoc::getImmediateExpansionRange() const {
-  assert(isValid());
-  std::pair<SourceLocation, SourceLocation> Range =
-      SrcMgr->getImmediateExpansionRange(*this);
-  return std::make_pair(FullSourceLoc(Range.first, *SrcMgr),
-                        FullSourceLoc(Range.second, *SrcMgr));
-}
-
 PresumedLoc FullSourceLoc::getPresumedLoc(bool UseLineDirectives) const {
   if (!isValid())
     return PresumedLoc();
@@ -152,15 +143,6 @@ unsigned FullSourceLoc::getLineNumber(bool *Invalid) const {
 unsigned FullSourceLoc::getColumnNumber(bool *Invalid) const {
   assert(isValid());
   return SrcMgr->getColumnNumber(getFileID(), getFileOffset(), Invalid);
-}
-
-std::pair<FullSourceLoc, FullSourceLoc>
-FullSourceLoc::getExpansionRange() const {
-  assert(isValid());
-  std::pair<SourceLocation, SourceLocation> Range =
-      SrcMgr->getExpansionRange(*this);
-  return std::make_pair(FullSourceLoc(Range.first, *SrcMgr),
-                        FullSourceLoc(Range.second, *SrcMgr));
 }
 
 const FileEntry *FullSourceLoc::getFileEntry() const {

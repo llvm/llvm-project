@@ -6487,7 +6487,7 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
   // macro only if it is at the beginning of the macro.
   while (ArgLoc.isMacroID() &&
          S.getSourceManager().isAtStartOfImmediateMacroExpansion(ArgLoc)) {
-    ArgLoc = S.getSourceManager().getImmediateExpansionRange(ArgLoc).first;
+    ArgLoc = S.getSourceManager().getImmediateExpansionRange(ArgLoc).getBegin();
   }
 
   if (LParen.isMacroID())

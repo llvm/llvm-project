@@ -183,7 +183,7 @@ public:
 
   /// \brief Find out where the current file is included or macro is expanded.
   SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc) {
-    return Loc.isMacroID() ? SM.getImmediateExpansionRange(Loc).first
+    return Loc.isMacroID() ? SM.getImmediateExpansionRange(Loc).getBegin()
                            : SM.getIncludeLoc(SM.getFileID(Loc));
   }
 
@@ -206,7 +206,7 @@ public:
   SourceLocation getStart(const Stmt *S) {
     SourceLocation Loc = S->getLocStart();
     while (SM.isMacroArgExpansion(Loc) || isInBuiltin(Loc))
-      Loc = SM.getImmediateExpansionRange(Loc).first;
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
     return Loc;
   }
 
@@ -214,7 +214,7 @@ public:
   SourceLocation getEnd(const Stmt *S) {
     SourceLocation Loc = S->getLocEnd();
     while (SM.isMacroArgExpansion(Loc) || isInBuiltin(Loc))
-      Loc = SM.getImmediateExpansionRange(Loc).first;
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
     return getPreciseTokenLocEnd(Loc);
   }
 

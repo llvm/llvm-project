@@ -62,7 +62,7 @@ main:
   lcall [rax]
 // CHECK: ljmpl *(%rax)
   jmp FWORD ptr [rax]
-// CHECK: ljmpl *(%rax)
+// CHECK: ljmpq *(%rax)
   ljmp [rax]
 
 // CHECK:	movl	$257, -4(%rsp)

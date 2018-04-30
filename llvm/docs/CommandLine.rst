@@ -1716,7 +1716,7 @@ line option outside of the library. In these cases the library does or should
 provide an external storage location that is accessible to users of the
 library. Examples of this include the ``llvm::DebugFlag`` exported by the
 ``lib/Support/Debug.cpp`` file and the ``llvm::TimePassesIsEnabled`` flag
-exported by the ``lib/VMCore/PassManager.cpp`` file.
+exported by the ``lib/IR/PassManager.cpp`` file.
 
 .. todo::
 
