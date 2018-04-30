@@ -332,7 +332,7 @@ private:
                NullMacros.end();
       }
 
-      MacroLoc = SM.getExpansionRange(ArgLoc).first;
+      MacroLoc = SM.getExpansionRange(ArgLoc).getBegin();
 
       ArgLoc = Expansion.getSpellingLoc().getLocWithOffset(LocInfo.second);
       if (ArgLoc.isFileID())
@@ -387,7 +387,7 @@ private:
         continue;
       }
 
-      MacroLoc = SM.getImmediateExpansionRange(Loc).first;
+      MacroLoc = SM.getImmediateExpansionRange(Loc).getBegin();
       if (MacroLoc.isFileID() && MacroLoc == TestMacroLoc) {
         // Match made.
         return true;

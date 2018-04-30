@@ -682,6 +682,11 @@ const DWARFDataExtractor &SymbolFileDWARF::get_apple_objc_data() {
   return GetCachedSectionData(eSectionTypeDWARFAppleObjC, m_data_apple_objc);
 }
 
+const DWARFDataExtractor &SymbolFileDWARF::get_gnu_debugaltlink() {
+  return GetCachedSectionData(eSectionTypeDWARFGNUDebugAltLink,
+                              m_data_gnu_debugaltlink);
+}
+
 DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (m_abbr.get() == NULL) {
     const DWARFDataExtractor &debug_abbrev_data = get_debug_abbrev_data();
