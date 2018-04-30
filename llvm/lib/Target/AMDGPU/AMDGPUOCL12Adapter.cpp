@@ -227,7 +227,8 @@ static bool findAndDefineBuiltinCalls(Module &M) {
       continue;
     // These functions should not be modified.
     if (F.getName().find("async_work_group", 0) == StringRef::npos &&
-        F.getName().find("prefetch", 0) == StringRef::npos) {
+        F.getName().find("prefetch", 0) == StringRef::npos &&
+        F.getName().find("ndrange", 0) == StringRef::npos) {
       isModified = true;
       Function *NewFunc = getNewOCL20BuiltinFuncDecl(&F, AMDGPUASI);
       // Get the new Function declaration.
