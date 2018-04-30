@@ -1,6 +1,5 @@
 
 framework module A {
   header "a.h"
-  //module * { export * }
   export *
 }
