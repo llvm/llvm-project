@@ -266,8 +266,7 @@ public:
   // I can't use a std::unique_ptr for this because the Deleter is a template
   // argument there
   // and I want the same type to represent both pointers I want to free and
-  // pointers I don't need
-  // to free - which is what this class essentially is
+  // pointers I don't need to free - which is what this class essentially is
   // It's very specialized to the needs of this file, and not suggested for
   // general use
   template <typename T = uint8_t, typename U = char, typename S = size_t>

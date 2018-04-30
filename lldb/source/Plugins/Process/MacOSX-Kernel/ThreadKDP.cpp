@@ -65,8 +65,8 @@ void ThreadKDP::RefreshStateAfterStop() {
   // context by the time this function gets called. The KDPRegisterContext
   // class has been made smart enough to detect when it needs to invalidate
   // which registers are valid by putting hooks in the register read and
-  // register supply functions where they check the process stop ID and do
-  // the right thing.
+  // register supply functions where they check the process stop ID and do the
+  // right thing.
   const bool force = false;
   lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
   if (reg_ctx_sp)
@@ -151,8 +151,8 @@ void ThreadKDP::SetStopInfoFrom_KDP_EXCEPTION(
       const uint32_t exc_type = exc_reply_packet.GetU32(&offset);
       const uint32_t exc_code = exc_reply_packet.GetU32(&offset);
       const uint32_t exc_subcode = exc_reply_packet.GetU32(&offset);
-      // We have to make a copy of the stop info because the thread list
-      // will iterate through the threads and clear all stop infos..
+      // We have to make a copy of the stop info because the thread list will
+      // iterate through the threads and clear all stop infos..
 
       // Let the StopInfoMachException::CreateStopReasonWithMachException()
       // function update the PC if needed as we might hit a software breakpoint

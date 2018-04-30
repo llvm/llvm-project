@@ -384,8 +384,7 @@ public:
                    bool thread_and_frame_only_if_stopped = false);
 
   // These two variants take in a locker, and grab the target, lock the API
-  // mutex into locker, then
-  // fill in the rest of the shared pointers.
+  // mutex into locker, then fill in the rest of the shared pointers.
   ExecutionContext(const ExecutionContextRef &exe_ctx_ref,
                    std::unique_lock<std::recursive_mutex> &locker);
   ExecutionContext(const ExecutionContextRef *exe_ctx_ref,
@@ -616,36 +615,35 @@ public:
   //------------------------------------------------------------------
   // Set the execution context using a target shared pointer.
   //
-  // If "target_sp" is valid, sets the target context to match and
-  // if "get_process" is true, sets the process shared pointer if
-  // the target currently has a process.
+  // If "target_sp" is valid, sets the target context to match and if
+  // "get_process" is true, sets the process shared pointer if the target
+  // currently has a process.
   //------------------------------------------------------------------
   void SetContext(const lldb::TargetSP &target_sp, bool get_process);
 
   //------------------------------------------------------------------
   // Set the execution context using a process shared pointer.
   //
-  // If "process_sp" is valid, then set the process and target in this
-  // context. Thread and frame contexts will be cleared.
-  // If "process_sp" is not valid, all shared pointers are reset.
+  // If "process_sp" is valid, then set the process and target in this context.
+  // Thread and frame contexts will be cleared. If "process_sp" is not valid,
+  // all shared pointers are reset.
   //------------------------------------------------------------------
   void SetContext(const lldb::ProcessSP &process_sp);
 
   //------------------------------------------------------------------
   // Set the execution context using a thread shared pointer.
   //
-  // If "thread_sp" is valid, then set the thread, process and target
-  // in this context. The frame context will be cleared.
-  // If "thread_sp" is not valid, all shared pointers are reset.
+  // If "thread_sp" is valid, then set the thread, process and target in this
+  // context. The frame context will be cleared. If "thread_sp" is not valid,
+  // all shared pointers are reset.
   //------------------------------------------------------------------
   void SetContext(const lldb::ThreadSP &thread_sp);
 
   //------------------------------------------------------------------
   // Set the execution context using a frame shared pointer.
   //
-  // If "frame_sp" is valid, then set the frame, thread, process and
-  // target in this context
-  // If "frame_sp" is not valid, all shared pointers are reset.
+  // If "frame_sp" is valid, then set the frame, thread, process and target in
+  // this context If "frame_sp" is not valid, all shared pointers are reset.
   //------------------------------------------------------------------
   void SetContext(const lldb::StackFrameSP &frame_sp);
 

@@ -104,8 +104,8 @@ protected:
 
   Predicate<uint16_t>
       m_port_predicate; // Used when binding to port zero to wait for the thread
-                        // that creates the socket, binds and listens to resolve
-                        // the port number.
+                        // that creates the socket, binds and listens to
+                        // resolve the port number.
 
   Pipe m_pipe;
   std::recursive_mutex m_mutex;

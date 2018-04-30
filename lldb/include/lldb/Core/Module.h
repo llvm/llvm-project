@@ -113,13 +113,12 @@ namespace lldb_private {
 class Module : public std::enable_shared_from_this<Module>,
                public SymbolContextScope {
 public:
-  // Static functions that can track the lifetime of module objects.
-  // This is handy because we might have Module objects that are in
-  // shared pointers that aren't in the global module list (from
-  // ModuleList). If this is the case we need to know about it.
-  // The modules in the global list maintained by these functions
-  // can be viewed using the "target modules list" command using the
-  // "--global" (-g for short).
+  // Static functions that can track the lifetime of module objects. This is
+  // handy because we might have Module objects that are in shared pointers
+  // that aren't in the global module list (from ModuleList). If this is the
+  // case we need to know about it. The modules in the global list maintained
+  // by these functions can be viewed using the "target modules list" command
+  // using the "--global" (-g for short).
   static size_t GetNumberAllocatedModules();
 
   static Module *GetAllocatedModuleAtIndex(size_t idx);
@@ -936,12 +935,10 @@ public:
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language);
 
   // Special error functions that can do printf style formatting that will
-  // prepend the message with
-  // something appropriate for this module (like the architecture, path and
-  // object name (if any)).
-  // This centralizes code so that everyone doesn't need to format their error
-  // and log messages on
-  // their own and keeps the output a bit more consistent.
+  // prepend the message with something appropriate for this module (like the
+  // architecture, path and object name (if any)). This centralizes code so
+  // that everyone doesn't need to format their error and log messages on their
+  // own and keeps the output a bit more consistent.
   void LogMessage(Log *log, const char *format, ...)
       __attribute__((format(printf, 3, 4)));
 
@@ -960,15 +957,15 @@ public:
       __attribute__((format(printf, 2, 3)));
 
   //------------------------------------------------------------------
-  // Return true if the file backing this module has changed since the
-  // module was originally created  since we saved the initial file
-  // modification time when the module first gets created.
+  // Return true if the file backing this module has changed since the module
+  // was originally created  since we saved the initial file modification time
+  // when the module first gets created.
   //------------------------------------------------------------------
   bool FileHasChanged() const;
 
   //------------------------------------------------------------------
-  // SymbolVendor, SymbolFile and ObjectFile member objects should
-  // lock the module mutex to avoid deadlocks.
+  // SymbolVendor, SymbolFile and ObjectFile member objects should lock the
+  // module mutex to avoid deadlocks.
   //------------------------------------------------------------------
   std::recursive_mutex &GetMutex() const { return m_mutex; }
 

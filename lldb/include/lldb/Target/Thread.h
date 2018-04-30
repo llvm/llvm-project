@@ -214,8 +214,8 @@ public:
 
   // This function is called on all the threads before "ShouldResume" and
   // "WillResume" in case a thread needs to change its state before the
-  // ThreadList polls all the threads to figure out which ones actually
-  // will get to run and how.
+  // ThreadList polls all the threads to figure out which ones actually will
+  // get to run and how.
   void SetupForResume();
 
   // Do not override this function, it is for thread plan logic only
@@ -224,8 +224,8 @@ public:
   // Override this to do platform specific tasks before resume.
   virtual void WillResume(lldb::StateType resume_state) {}
 
-  // This clears generic thread state after a resume.  If you subclass this,
-  // be sure to call it.
+  // This clears generic thread state after a resume.  If you subclass this, be
+  // sure to call it.
   virtual void DidResume();
 
   // This notifies the thread when a private stop occurs.
@@ -244,14 +244,10 @@ public:
   void Flush();
 
   // Return whether this thread matches the specification in ThreadSpec.  This
-  // is a virtual
-  // method because at some point we may extend the thread spec with a platform
-  // specific
-  // dictionary of attributes, which then only the platform specific Thread
-  // implementation
-  // would know how to match.  For now, this just calls through to the
-  // ThreadSpec's
-  // ThreadPassesBasicTests method.
+  // is a virtual method because at some point we may extend the thread spec
+  // with a platform specific dictionary of attributes, which then only the
+  // platform specific Thread implementation would know how to match.  For now,
+  // this just calls through to the ThreadSpec's ThreadPassesBasicTests method.
   virtual bool MatchesSpec(const ThreadSpec *spec);
 
   lldb::StopInfoSP GetStopInfo();
@@ -261,9 +257,8 @@ public:
   bool StopInfoIsUpToDate() const;
 
   // This sets the stop reason to a "blank" stop reason, so you can call
-  // functions on the thread
-  // without having the called function run with whatever stop reason you
-  // stopped with.
+  // functions on the thread without having the called function run with
+  // whatever stop reason you stopped with.
   void SetStopInfoToNothing();
 
   bool ThreadStoppedForAReason();
@@ -492,16 +487,15 @@ public:
   virtual void ClearBackingThread() {
     // Subclasses can use this function if a thread is actually backed by
     // another thread. This is currently used for the OperatingSystem plug-ins
-    // where they might have a thread that is in memory, yet its registers
-    // are available through the lldb_private::Thread subclass for the current
+    // where they might have a thread that is in memory, yet its registers are
+    // available through the lldb_private::Thread subclass for the current
     // lldb_private::Process class. Since each time the process stops the
-    // backing
-    // threads for memory threads can change, we need a way to clear the backing
-    // thread for all memory threads each time we stop.
+    // backing threads for memory threads can change, we need a way to clear
+    // the backing thread for all memory threads each time we stop.
   }
 
-  // If stop_format is true, this will be the form used when we print stop info.
-  // If false, it will be the form we use for thread list and co.
+  // If stop_format is true, this will be the form used when we print stop
+  // info. If false, it will be the form we use for thread list and co.
   void DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx, 
                                bool stop_format);
  
@@ -607,30 +601,24 @@ public:
   // Thread Plan Providers:
   // This section provides the basic thread plans that the Process control
   // machinery uses to run the target.  ThreadPlan.h provides more details on
-  // how this mechanism works.
-  // The thread provides accessors to a set of plans that perform basic
-  // operations.
-  // The idea is that particular Platform plugins can override these methods to
-  // provide the implementation of these basic operations appropriate to their
-  // environment.
+  // how this mechanism works. The thread provides accessors to a set of plans
+  // that perform basic operations. The idea is that particular Platform
+  // plugins can override these methods to provide the implementation of these
+  // basic operations appropriate to their environment.
   //
   // NB: All the QueueThreadPlanXXX providers return Shared Pointers to
   // Thread plans.  This is useful so that you can modify the plans after
   // creation in ways specific to that plan type.  Also, it is often necessary
-  // for
-  // ThreadPlans that utilize other ThreadPlans to implement their task to keep
-  // a shared
-  // pointer to the sub-plan.
-  // But besides that, the shared pointers should only be held onto by entities
-  // who live no longer
-  // than the thread containing the ThreadPlan.
+  // for ThreadPlans that utilize other ThreadPlans to implement their task to
+  // keep a shared pointer to the sub-plan. But besides that, the shared
+  // pointers should only be held onto by entities who live no longer than the
+  // thread containing the ThreadPlan.
   // FIXME: If this becomes a problem, we can make a version that just returns a
   // pointer,
   // which it is clearly unsafe to hold onto, and a shared pointer version, and
-  // only allow
-  // ThreadPlan and Co. to use the latter.  That is made more annoying to do
-  // because there's
-  // no elegant way to friend a method to all sub-classes of a given class.
+  // only allow ThreadPlan and Co. to use the latter.  That is made more
+  // annoying to do because there's no elegant way to friend a method to all
+  // sub-classes of a given class.
   //
   //------------------------------------------------------------------
 
@@ -717,9 +705,8 @@ public:
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
   // Helper function that takes a LineEntry to step, insted of an AddressRange.
-  // This may combine multiple
-  // LineEntries of the same source line number to step over a longer address
-  // range in a single operation.
+  // This may combine multiple LineEntries of the same source line number to
+  // step over a longer address range in a single operation.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepOverRange(
       bool abort_other_plans, const LineEntry &line_entry,
       const SymbolContext &addr_context, lldb::RunMode stop_other_threads,
@@ -779,9 +766,8 @@ public:
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
   // Helper function that takes a LineEntry to step, insted of an AddressRange.
-  // This may combine multiple
-  // LineEntries of the same source line number to step over a longer address
-  // range in a single operation.
+  // This may combine multiple LineEntries of the same source line number to
+  // step over a longer address range in a single operation.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRange(
       bool abort_other_plans, const LineEntry &line_entry,
       const SymbolContext &addr_context, const char *step_in_target,
@@ -1115,23 +1101,22 @@ public:
   void SetTracer(lldb::ThreadPlanTracerSP &tracer_sp);
 
   //------------------------------------------------------------------
-  // Get the thread index ID. The index ID that is guaranteed to not
-  // be re-used by a process. They start at 1 and increase with each
-  // new thread. This allows easy command line access by a unique ID
-  // that is easier to type than the actual system thread ID.
+  // Get the thread index ID. The index ID that is guaranteed to not be re-used
+  // by a process. They start at 1 and increase with each new thread. This
+  // allows easy command line access by a unique ID that is easier to type than
+  // the actual system thread ID.
   //------------------------------------------------------------------
   uint32_t GetIndexID() const;
 
   //------------------------------------------------------------------
   // Get the originating thread's index ID.
-  // In the case of an "extended" thread -- a thread which represents
-  // the stack that enqueued/spawned work that is currently executing --
-  // we need to provide the IndexID of the thread that actually did
-  // this work.  We don't want to just masquerade as that thread's IndexID
-  // by using it in our own IndexID because that way leads to madness -
-  // but the driver program which is iterating over extended threads
-  // may ask for the OriginatingThreadID to display that information
-  // to the user.
+  // In the case of an "extended" thread -- a thread which represents the stack
+  // that enqueued/spawned work that is currently executing -- we need to
+  // provide the IndexID of the thread that actually did this work.  We don't
+  // want to just masquerade as that thread's IndexID by using it in our own
+  // IndexID because that way leads to madness - but the driver program which
+  // is iterating over extended threads may ask for the OriginatingThreadID to
+  // display that information to the user.
   // Normal threads will return the same thing as GetIndexID();
   //------------------------------------------------------------------
   virtual uint32_t GetExtendedBacktraceOriginatingIndexID() {
@@ -1139,10 +1124,10 @@ public:
   }
 
   //------------------------------------------------------------------
-  // The API ID is often the same as the Thread::GetID(), but not in
-  // all cases. Thread::GetID() is the user visible thread ID that
-  // clients would want to see. The API thread ID is the thread ID
-  // that is used when sending data to/from the debugging protocol.
+  // The API ID is often the same as the Thread::GetID(), but not in all cases.
+  // Thread::GetID() is the user visible thread ID that clients would want to
+  // see. The API thread ID is the thread ID that is used when sending data
+  // to/from the debugging protocol.
   //------------------------------------------------------------------
   virtual lldb::user_id_t GetProtocolID() const { return GetID(); }
 
@@ -1171,9 +1156,9 @@ public:
                              uint32_t num_frames_with_source);
 
   // We need a way to verify that even though we have a thread in a shared
-  // pointer that the object itself is still valid. Currently this won't be
-  // the case if DestroyThread() was called. DestroyThread is called when
-  // a thread has been removed from the Process' thread list.
+  // pointer that the object itself is still valid. Currently this won't be the
+  // case if DestroyThread() was called. DestroyThread is called when a thread
+  // has been removed from the Process' thread list.
   bool IsValid() const { return !m_destroy_called; }
 
   // Sets and returns a valid stop info based on the process stop ID and the
@@ -1194,8 +1179,8 @@ public:
   //----------------------------------------------------------------------
   // Ask the thread subclass to set its stop info.
   //
-  // Thread subclasses should call Thread::SetStopInfo(...) with the
-  // reason the thread stopped.
+  // Thread subclasses should call Thread::SetStopInfo(...) with the reason the
+  // thread stopped.
   //
   // @return
   //      True if Thread::SetStopInfo(...) was called, false otherwise.
@@ -1206,10 +1191,10 @@ public:
   // Gets the temporary resume state for a thread.
   //
   // This value gets set in each thread by complex debugger logic in
-  // Thread::ShouldResume() and an appropriate thread resume state will get
-  // set in each thread every time the process is resumed prior to calling
-  // Process::DoResume(). The lldb_private::Process subclass should adhere
-  // to the thread resume state request which will be one of:
+  // Thread::ShouldResume() and an appropriate thread resume state will get set
+  // in each thread every time the process is resumed prior to calling
+  // Process::DoResume(). The lldb_private::Process subclass should adhere to
+  // the thread resume state request which will be one of:
   //
   //  eStateRunning   - thread will resume when process is resumed
   //  eStateStepping  - thread should step 1 instruction and stop when process
@@ -1257,10 +1242,9 @@ protected:
   friend class StackFrame;
   friend class OperatingSystem;
 
-  // This is necessary to make sure thread assets get destroyed while the thread
-  // is still in good shape
-  // to call virtual thread methods.  This must be called by classes that derive
-  // from Thread in their destructor.
+  // This is necessary to make sure thread assets get destroyed while the
+  // thread is still in good shape to call virtual thread methods.  This must
+  // be called by classes that derive from Thread in their destructor.
   virtual void DestroyThread();
 
   void PushPlan(lldb::ThreadPlanSP &plan_sp);
@@ -1286,8 +1270,7 @@ protected:
   virtual bool IsOperatingSystemPluginThread() const { return false; }
 
   // Subclasses that have a way to get an extended info dictionary for this
-  // thread should
-  // fill
+  // thread should fill
   virtual lldb_private::StructuredData::ObjectSP FetchThreadExtendedInfo() {
     return StructuredData::ObjectSP();
   }
@@ -1307,7 +1290,8 @@ protected:
   lldb::StopInfoSP m_stop_info_sp; ///< The private stop reason for this thread
   uint32_t m_stop_info_stop_id; // This is the stop id for which the StopInfo is
                                 // valid.  Can use this so you know that
-  // the thread's m_stop_info_sp is current and you don't have to fetch it again
+  // the thread's m_stop_info_sp is current and you don't have to fetch it
+  // again
   uint32_t m_stop_info_override_stop_id; // The stop ID containing the last time
                                          // the stop info was checked against
                                          // the stop info override

@@ -469,8 +469,7 @@ public:
   lldb::LanguageType GetLanguage();
 
   // similar to GetLanguage(), but is allowed to take a potentially incorrect
-  // guess
-  // if exact information is not available
+  // guess if exact information is not available
   lldb::LanguageType GuessLanguage();
 
   //------------------------------------------------------------------

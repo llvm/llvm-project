@@ -86,11 +86,10 @@ public:
     m_add_to_history = value;
   }
   // These return the default behaviors if the behavior is not
-  // eLazyBoolCalculate.
-  // But I've also left the ivars public since for different ways of running the
-  // interpreter you might want to force different defaults...  In that case,
-  // just grab
-  // the LazyBool ivars directly and do what you want with eLazyBoolCalculate.
+  // eLazyBoolCalculate. But I've also left the ivars public since for
+  // different ways of running the interpreter you might want to force
+  // different defaults...  In that case, just grab the LazyBool ivars directly
+  // and do what you want with eLazyBoolCalculate.
   bool GetStopOnContinue() const { return DefaultToNo(m_stop_on_continue); }
 
   void SetStopOnContinue(bool stop_on_continue) {
@@ -293,26 +292,19 @@ public:
   CommandObject *GetCommandObjectForCommand(llvm::StringRef &command_line);
 
   // This handles command line completion.  You are given a pointer to the
-  // command string buffer, to the current cursor,
-  // and to the end of the string (in case it is not NULL terminated).
-  // You also passed in an StringList object to fill with the returns.
-  // The first element of the array will be filled with the string that you
-  // would need to insert at
-  // the cursor point to complete the cursor point to the longest common
-  // matching prefix.
-  // If you want to limit the number of elements returned, set
-  // max_return_elements to the number of elements
-  // you want returned.  Otherwise set max_return_elements to -1.
-  // If you want to start some way into the match list, then set
-  // match_start_point to the desired start
-  // point.
-  // Returns:
-  // -1 if the completion character should be inserted
-  // -2 if the entire command line should be deleted and replaced with
-  // matches.GetStringAtIndex(0)
+  // command string buffer, to the current cursor, and to the end of the string
+  // (in case it is not NULL terminated). You also passed in an StringList
+  // object to fill with the returns. The first element of the array will be
+  // filled with the string that you would need to insert at the cursor point
+  // to complete the cursor point to the longest common matching prefix. If you
+  // want to limit the number of elements returned, set max_return_elements to
+  // the number of elements you want returned.  Otherwise set
+  // max_return_elements to -1. If you want to start some way into the match
+  // list, then set match_start_point to the desired start point. Returns: -1
+  // if the completion character should be inserted -2 if the entire command
+  // line should be deleted and replaced with matches.GetStringAtIndex(0)
   // INT_MAX if the number of matches is > max_return_elements, but it is
-  // expensive to compute.
-  // Otherwise, returns the number of matches.
+  // expensive to compute. Otherwise, returns the number of matches.
   //
   // FIXME: Only max_return_elements == -1 is supported at present.
   int HandleCompletion(const char *current_line, const char *cursor,
@@ -320,11 +312,10 @@ public:
                        int max_return_elements, StringList &matches);
 
   // This version just returns matches, and doesn't compute the substring.  It
-  // is here so the
-  // Help command can call it for the first argument.
+  // is here so the Help command can call it for the first argument.
   // word_complete tells whether the completions are considered a "complete"
-  // response (so the
-  // completer should complete the quote & put a space after the word.
+  // response (so the completer should complete the quote & put a space after
+  // the word.
   int HandleCompletionMatches(Args &input, int &cursor_index,
                               int &cursor_char_position, int match_start_point,
                               int max_return_elements, bool &word_complete,

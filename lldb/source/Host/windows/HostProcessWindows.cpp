@@ -88,8 +88,8 @@ HostThread HostProcessWindows::StartMonitoring(
   info->callback = callback;
 
   // Since the life of this HostProcessWindows instance and the life of the
-  // process may be different, duplicate the handle so that
-  // the monitor thread can have ownership over its own copy of the handle.
+  // process may be different, duplicate the handle so that the monitor thread
+  // can have ownership over its own copy of the handle.
   HostThread result;
   if (::DuplicateHandle(GetCurrentProcess(), m_process, GetCurrentProcess(),
                         &info->process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS))

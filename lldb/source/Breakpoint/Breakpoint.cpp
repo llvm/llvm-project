@@ -285,13 +285,13 @@ void Breakpoint::RemoveInvalidLocations(const ArchSpec &arch) {
   m_locations.RemoveInvalidLocations(arch);
 }
 
-// For each of the overall options we need to decide how they propagate to
-// the location options.  This will determine the precedence of options on
-// the breakpoint vs. its locations.
+// For each of the overall options we need to decide how they propagate to the
+// location options.  This will determine the precedence of options on the
+// breakpoint vs. its locations.
 
-// Disable at the breakpoint level should override the location settings.
-// That way you can conveniently turn off a whole breakpoint without messing
-// up the individual settings.
+// Disable at the breakpoint level should override the location settings. That
+// way you can conveniently turn off a whole breakpoint without messing up the
+// individual settings.
 
 void Breakpoint::SetEnabled(bool enable) {
   if (enable == m_options_up->IsEnabled())
@@ -331,10 +331,8 @@ bool Breakpoint::IgnoreCountShouldStop() {
   uint32_t ignore = GetIgnoreCount();
   if (ignore != 0) {
     // When we get here we know the location that caused the stop doesn't have
-    // an ignore count,
-    // since by contract we call it first...  So we don't have to find &
-    // decrement it, we only have
-    // to decrement our own ignore count.
+    // an ignore count, since by contract we call it first...  So we don't have
+    // to find & decrement it, we only have to decrement our own ignore count.
     DecrementIgnoreCount();
     return false;
   } else
@@ -431,8 +429,8 @@ const char *Breakpoint::GetConditionText() const {
 // This function is used when "baton" doesn't need to be freed
 void Breakpoint::SetCallback(BreakpointHitCallback callback, void *baton,
                              bool is_synchronous) {
-  // The default "Baton" class will keep a copy of "baton" and won't free
-  // or delete it when it goes goes out of scope.
+  // The default "Baton" class will keep a copy of "baton" and won't free or
+  // delete it when it goes goes out of scope.
   m_options_up->SetCallback(callback, std::make_shared<UntypedBaton>(baton),
                             is_synchronous);
 
@@ -478,8 +476,7 @@ void Breakpoint::ResolveBreakpointInModules(ModuleList &module_list,
                                             bool send_event) {
   if (m_resolver_sp) {
     // If this is not an internal breakpoint, set up to record the new
-    // locations, then dispatch
-    // an event with the new locations.
+    // locations, then dispatch an event with the new locations.
     if (!IsInternal() && send_event) {
       BreakpointEventData *new_locations_event = new BreakpointEventData(
           eBreakpointEventTypeLocationsAdded, shared_from_this());
@@ -517,8 +514,8 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
   std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
   if (load) {
     // The logic for handling new modules is:
-    // 1) If the filter rejects this module, then skip it.
-    // 2) Run through the current location list and if there are any locations
+    // 1) If the filter rejects this module, then skip it. 2) Run through the
+    // current location list and if there are any locations
     //    for that module, we mark the module as "seen" and we don't try to
     //    re-resolve
     //    breakpoint locations for that module.
@@ -528,8 +525,8 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
 
     ModuleList new_modules; // We'll stuff the "unseen" modules in this list,
                             // and then resolve
-    // them after the locations pass.  Have to do it this way because
-    // resolving breakpoints will add new locations potentially.
+    // them after the locations pass.  Have to do it this way because resolving
+    // breakpoints will add new locations potentially.
 
     for (ModuleSP module_sp : module_list.ModulesNoLocking()) {
       bool seen = false;
@@ -540,9 +537,9 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
       for (BreakpointLocationSP break_loc_sp :
            m_locations.BreakpointLocations()) {
 
-        // If the section for this location was deleted, that means
-        // it's Module has gone away but somebody forgot to tell us.
-        // Let's clean it up here.
+        // If the section for this location was deleted, that means it's Module
+        // has gone away but somebody forgot to tell us. Let's clean it up
+        // here.
         Address section_addr(break_loc_sp->GetAddress());
         if (section_addr.SectionWasDeleted()) {
           locations_with_no_section.Add(break_loc_sp);
@@ -554,10 +551,10 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
         
         SectionSP section_sp(section_addr.GetSection());
         
-        // If we don't have a Section, that means this location is a raw address
-        // that we haven't resolved to a section yet.  So we'll have to look
-        // in all the new modules to resolve this location.
-        // Otherwise, if it was set in this module, re-resolve it here.
+        // If we don't have a Section, that means this location is a raw
+        // address that we haven't resolved to a section yet.  So we'll have to
+        // look in all the new modules to resolve this location. Otherwise, if
+        // it was set in this module, re-resolve it here.
         if (section_sp && section_sp->GetModule() == module_sp) {
           if (!seen)
             seen = true;
@@ -606,10 +603,9 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           BreakpointLocationSP break_loc_sp(m_locations.GetByIndex(loc_idx));
           SectionSP section_sp(break_loc_sp->GetAddress().GetSection());
           if (section_sp && section_sp->GetModule() == module_sp) {
-            // Remove this breakpoint since the shared library is
-            // unloaded, but keep the breakpoint location around
-            // so we always get complete hit count and breakpoint
-            // lifetime info
+            // Remove this breakpoint since the shared library is unloaded, but
+            // keep the breakpoint location around so we always get complete
+            // hit count and breakpoint lifetime info
             break_loc_sp->ClearBreakpointSite();
             if (removed_locations_event) {
               removed_locations_event->GetBreakpointLocationCollection().Add(
@@ -637,7 +633,8 @@ static bool SymbolContextsMightBeEquivalent(SymbolContext &old_sc,
   bool equivalent_scs = false;
 
   if (old_sc.module_sp.get() == new_sc.module_sp.get()) {
-    // If these come from the same module, we can directly compare the pointers:
+    // If these come from the same module, we can directly compare the
+    // pointers:
     if (old_sc.comp_unit && new_sc.comp_unit &&
         (old_sc.comp_unit == new_sc.comp_unit)) {
       if (old_sc.function && new_sc.function &&
@@ -694,15 +691,13 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
     temp_list.Append(new_module_sp);
     ResolveBreakpointInModules(temp_list);
   } else {
-    // First search the new module for locations.
-    // Then compare this with the old list, copy over locations that "look the
-    // same"
-    // Then delete the old locations.
-    // Finally remember to post the creation event.
+    // First search the new module for locations. Then compare this with the
+    // old list, copy over locations that "look the same" Then delete the old
+    // locations. Finally remember to post the creation event.
     //
-    // Two locations are the same if they have the same comp unit & function (by
-    // name) and there are the same number
-    // of locations in the old function as in the new one.
+    // Two locations are the same if they have the same comp unit & function
+    // (by name) and there are the same number of locations in the old function
+    // as in the new one.
 
     ModuleList temp_list;
     temp_list.Append(new_module_sp);
@@ -715,8 +710,8 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
 
     if (num_new_locations > 0) {
       // Break out the case of one location -> one location since that's the
-      // most common one, and there's no need
-      // to build up the structures needed for the merge in that case.
+      // most common one, and there's no need to build up the structures needed
+      // for the merge in that case.
       if (num_new_locations == 1 && num_old_locations == 1) {
         bool equivalent_locations = false;
         SymbolContext old_sc, new_sc;
@@ -739,8 +734,7 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
         }
       } else {
         // We don't want to have to keep computing the SymbolContexts for these
-        // addresses over and over,
-        // so lets get them up front:
+        // addresses over and over, so lets get them up front:
 
         typedef std::map<lldb::break_id_t, SymbolContext> IDToSCMap;
         IDToSCMap old_sc_map;
@@ -763,7 +757,8 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
           lldb::break_id_t old_id = old_sc_map.begin()->first;
           SymbolContext &old_sc = old_sc_map.begin()->second;
 
-          // Count the number of entries equivalent to this SC for the old list:
+          // Count the number of entries equivalent to this SC for the old
+          // list:
           std::vector<lldb::break_id_t> old_id_vec;
           old_id_vec.push_back(old_id);
 
@@ -783,13 +778,11 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
           }
 
           // Alright, if we have the same number of potentially equivalent
-          // locations in the old
-          // and new modules, we'll just map them one to one in ascending ID
-          // order (assuming the
-          // resolver's order would match the equivalent ones.
-          // Otherwise, we'll dump all the old ones, and just take the new ones,
-          // erasing the elements
-          // from both maps as we go.
+          // locations in the old and new modules, we'll just map them one to
+          // one in ascending ID order (assuming the resolver's order would
+          // match the equivalent ones. Otherwise, we'll dump all the old ones,
+          // and just take the new ones, erasing the elements from both maps as
+          // we go.
 
           if (old_id_vec.size() == new_id_vec.size()) {
             llvm::sort(old_id_vec.begin(), old_id_vec.end());
@@ -821,11 +814,9 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
     }
 
     // Now remove the remaining old locations, and cons up a removed locations
-    // event.
-    // Note, we don't put the new locations that were swapped with an old
-    // location on the locations_to_remove
-    // list, so we don't need to worry about telling the world about removing a
-    // location we didn't tell them
+    // event. Note, we don't put the new locations that were swapped with an
+    // old location on the locations_to_remove list, so we don't need to worry
+    // about telling the world about removing a location we didn't tell them
     // about adding.
 
     BreakpointEventData *locations_event;
@@ -861,8 +852,8 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
 void Breakpoint::Dump(Stream *) {}
 
 size_t Breakpoint::GetNumResolvedLocations() const {
-  // Return the number of breakpoints that are actually resolved and set
-  // down in the inferior process.
+  // Return the number of breakpoints that are actually resolved and set down
+  // in the inferior process.
   return m_locations.GetNumResolvedLocations();
 }
 
@@ -889,9 +880,8 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
   const size_t num_resolved_locations = GetNumResolvedLocations();
 
   // They just made the breakpoint, they don't need to be told HOW they made
-  // it...
-  // Also, we'll print the breakpoint number differently depending on whether
-  // there is 1 or more locations.
+  // it... Also, we'll print the breakpoint number differently depending on
+  // whether there is 1 or more locations.
   if (level != eDescriptionLevelInitial) {
     s->Printf("%i: ", GetID());
     GetResolverDescription(s);
@@ -908,8 +898,7 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
                   (uint64_t)num_resolved_locations, GetHitCount());
     } else {
       // Don't print the pending notification for exception resolvers since we
-      // don't generally
-      // know how to set them until the target is run.
+      // don't generally know how to set them until the target is run.
       if (m_resolver_sp->getResolverID() !=
           BreakpointResolver::ExceptionResolver)
         s->Printf(", locations = 0 (pending)");
@@ -965,8 +954,7 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
 
   // The brief description is just the location name (1.2 or whatever).  That's
-  // pointless to
-  // show in the breakpoint's description, so suppress it.
+  // pointless to show in the breakpoint's description, so suppress it.
   if (show_locations && level != lldb::eDescriptionLevelBrief) {
     s->IndentMore();
     for (size_t i = 0; i < num_locations; ++i) {

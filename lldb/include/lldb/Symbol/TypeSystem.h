@@ -66,8 +66,8 @@ public:
   //    {
   //    }
   //
-  // Then you can use the llvm casting on any "TypeSystem *" to get an
-  // instance of your subclass.
+  // Then you can use the llvm casting on any "TypeSystem *" to get an instance
+  // of your subclass.
   //----------------------------------------------------------------------
   enum LLVMCastKind {
     eKindClang,
@@ -94,8 +94,7 @@ public:
                                            Target *target);
 
   // Free up any resources associated with this TypeSystem.  Done before
-  // removing
-  // all the TypeSystems from the TypeSystemMap.
+  // removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
   virtual DWARFASTParser *GetDWARFParser() { return nullptr; }
@@ -239,8 +238,7 @@ public:
   virtual CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) = 0;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
-  // prototype
-  // Returns a value >= 0 if there is a prototype.
+  // prototype Returns a value >= 0 if there is a prototype.
   virtual int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) = 0;
 
   virtual CompilerType
@@ -332,8 +330,8 @@ public:
       bool &child_is_base_class, bool &child_is_deref_of_parent,
       ValueObject *valobj, uint64_t &language_flags) = 0;
 
-  // Lookup a child given a name. This function will match base class names
-  // and member member names in "clang_type" only, not descendants.
+  // Lookup a child given a name. This function will match base class names and
+  // member member names in "clang_type" only, not descendants.
   virtual uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                            const char *name,
                                            bool omit_empty_base_classes) = 0;
@@ -395,8 +393,8 @@ public:
                            lldb::offset_t data_offset,
                            size_t data_byte_size) = 0;
 
-  // Converts "s" to a floating point value and place resulting floating
-  // point bytes in the "dst" buffer.
+  // Converts "s" to a floating point value and place resulting floating point
+  // bytes in the "dst" buffer.
   virtual size_t ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
                                            const char *s, uint8_t *dst,
                                            size_t dst_size) = 0;
@@ -481,23 +479,17 @@ public:
   virtual LazyBool ShouldPrintAsOneLiner(void *type, ValueObject *valobj);
 
   // Type systems can have types that are placeholder types, which are meant to
-  // indicate
-  // the presence of a type, but offer no actual information about said types,
-  // and leave
-  // the burden of actually figuring type information out to dynamic type
-  // resolution. For instance
-  // a language with a generics system, can use placeholder types to indicate
-  // "type argument goes here",
-  // without promising uniqueness of the placeholder, nor attaching any actually
-  // idenfiable information
-  // to said placeholder. This API allows type systems to tell LLDB when such a
-  // type has been encountered
-  // In response, the debugger can react by not using this type as a cache entry
-  // in any type-specific way
-  // For instance, LLDB will currently not cache any formatters that are
-  // discovered on such a type as
-  // attributable to the meaningless type itself, instead preferring to use the
-  // dynamic type
+  // indicate the presence of a type, but offer no actual information about
+  // said types, and leave the burden of actually figuring type information out
+  // to dynamic type resolution. For instance a language with a generics
+  // system, can use placeholder types to indicate "type argument goes here",
+  // without promising uniqueness of the placeholder, nor attaching any
+  // actually idenfiable information to said placeholder. This API allows type
+  // systems to tell LLDB when such a type has been encountered In response,
+  // the debugger can react by not using this type as a cache entry in any
+  // type-specific way For instance, LLDB will currently not cache any
+  // formatters that are discovered on such a type as attributable to the
+  // meaningless type itself, instead preferring to use the dynamic type
   virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
 
 protected:
@@ -514,8 +506,8 @@ public:
   // empties the map.
   void Clear();
 
-  // Iterate through all of the type systems that are created. Return true
-  // from callback to keep iterating, false to stop iterating.
+  // Iterate through all of the type systems that are created. Return true from
+  // callback to keep iterating, false to stop iterating.
   void ForEach(std::function<bool(TypeSystem *)> const &callback);
 
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language,

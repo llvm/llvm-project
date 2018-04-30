@@ -26,9 +26,8 @@ using namespace lldb_private;
 
 //----------------------------------------------------------------------
 // ThreadPlanStepThrough: If the current instruction is a trampoline, step
-// through it
-// If it is the beginning of the prologue of a function, step through that as
-// well.
+// through it If it is the beginning of the prologue of a function, step
+// through that as well.
 // FIXME: At present only handles DYLD trampolines.
 //----------------------------------------------------------------------
 
@@ -49,9 +48,8 @@ ThreadPlanStepThrough::ThreadPlanStepThrough(Thread &thread,
     m_start_address = GetThread().GetRegisterContext()->GetPC(0);
 
     // We are going to return back to the concrete frame 1, we might pass by
-    // some inlined code that we're in
-    // the middle of by doing this, but it's easier than trying to figure out
-    // where the inlined code might return to.
+    // some inlined code that we're in the middle of by doing this, but it's
+    // easier than trying to figure out where the inlined code might return to.
 
     StackFrameSP return_frame_sp = m_thread.GetFrameWithStackID(m_stack_id);
 
@@ -136,10 +134,8 @@ bool ThreadPlanStepThrough::ValidatePlan(Stream *error) {
 
 bool ThreadPlanStepThrough::DoPlanExplainsStop(Event *event_ptr) {
   // If we have a sub-plan, it will have been asked first if we explain the
-  // stop, and
-  // we won't get asked.  The only time we would be the one directly asked this
-  // question
-  // is if we hit our backstop breakpoint.
+  // stop, and we won't get asked.  The only time we would be the one directly
+  // asked this question is if we hit our backstop breakpoint.
 
   return HitOurBackstopBreakpoint();
 }
@@ -156,8 +152,7 @@ bool ThreadPlanStepThrough::ShouldStop(Event *event_ptr) {
   }
 
   // If we don't have a sub-plan, then we're also done (can't see how we would
-  // ever get here
-  // without a plan, but just in case.
+  // ever get here without a plan, but just in case.
 
   if (!m_sub_plan_sp) {
     SetPlanComplete();
@@ -165,15 +160,13 @@ bool ThreadPlanStepThrough::ShouldStop(Event *event_ptr) {
   }
 
   // If the current sub plan is not done, we don't want to stop.  Actually, we
-  // probably won't
-  // ever get here in this state, since we generally won't get asked any
-  // questions if out
-  // current sub-plan is not done...
+  // probably won't ever get here in this state, since we generally won't get
+  // asked any questions if out current sub-plan is not done...
   if (!m_sub_plan_sp->IsPlanComplete())
     return false;
 
-  // If our current sub plan failed, then let's just run to our backstop.  If we
-  // can't do that then just stop.
+  // If our current sub plan failed, then let's just run to our backstop.  If
+  // we can't do that then just stop.
   if (!m_sub_plan_sp->PlanSucceeded()) {
     if (m_backstop_bkpt_id != LLDB_INVALID_BREAK_ID) {
       m_sub_plan_sp.reset();
@@ -185,8 +178,7 @@ bool ThreadPlanStepThrough::ShouldStop(Event *event_ptr) {
   }
 
   // Next see if there is a specific step through plan at our current pc (these
-  // might
-  // chain, for instance stepping through a dylib trampoline to the objc
+  // might chain, for instance stepping through a dylib trampoline to the objc
   // dispatch function...)
   LookForPlanToStepThroughFromCurrentPC();
   if (m_sub_plan_sp) {

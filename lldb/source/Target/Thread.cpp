@@ -105,9 +105,8 @@ public:
                                      bool will_modify,
                                      uint32_t idx) const override {
     // When getting the value for a key from the thread options, we will always
-    // try and grab the setting from the current thread if there is one. Else we
-    // just
-    // use the one from this instance.
+    // try and grab the setting from the current thread if there is one. Else
+    // we just use the one from this instance.
     if (exe_ctx) {
       Thread *thread = exe_ctx->GetThreadPtr();
       if (thread) {
@@ -275,8 +274,8 @@ Thread::~Thread() {
 
 void Thread::DestroyThread() {
   // Tell any plans on the plan stacks that the thread is being destroyed since
-  // any plans that have a thread go away in the middle of might need
-  // to do cleanup, or in some cases NOT do cleanup...
+  // any plans that have a thread go away in the middle of might need to do
+  // cleanup, or in some cases NOT do cleanup...
   for (auto plan : m_plan_stack)
     plan->ThreadDestroyed();
 
@@ -291,11 +290,10 @@ void Thread::DestroyThread() {
   m_discarded_plan_stack.clear();
   m_completed_plan_stack.clear();
 
-  // Push a ThreadPlanNull on the plan stack.  That way we can continue assuming
-  // that the
-  // plan stack is never empty, but if somebody errantly asks questions of a
-  // destroyed thread
-  // without checking first whether it is destroyed, they won't crash.
+  // Push a ThreadPlanNull on the plan stack.  That way we can continue
+  // assuming that the plan stack is never empty, but if somebody errantly asks
+  // questions of a destroyed thread without checking first whether it is
+  // destroyed, they won't crash.
   ThreadPlanSP null_plan_sp(new ThreadPlanNull(*this));
   m_plan_stack.push_back(null_plan_sp);
 
@@ -385,11 +383,10 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   ProcessSP process_sp(GetProcess());
   const uint32_t stop_id = process_sp ? process_sp->GetStopID() : UINT32_MAX;
 
-  // Here we select the stop info according to priorirty:
-  // - m_stop_info_sp (if not trace) - preset value
-  // - completed plan stop info - new value with plan from completed plan stack
-  // - m_stop_info_sp (trace stop reason is OK now)
-  // - ask GetPrivateStopInfo to set stop info
+  // Here we select the stop info according to priorirty: - m_stop_info_sp (if
+  // not trace) - preset value - completed plan stop info - new value with plan
+  // from completed plan stack - m_stop_info_sp (trace stop reason is OK now) -
+  // ask GetPrivateStopInfo to set stop info
 
   bool have_valid_stop_info = m_stop_info_sp &&
       m_stop_info_sp ->IsValid() &&
@@ -432,13 +429,13 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo() {
       }
     }
 
-    // The stop info can be manually set by calling Thread::SetStopInfo()
-    // prior to this function ever getting called, so we can't rely on
-    // "m_stop_info_stop_id != process_stop_id" as the condition for
-    // the if statement below, we must also check the stop info to see
-    // if we need to override it. See the header documentation in
-    // Process::GetStopInfoOverrideCallback() for more information on
-    // the stop info override callback.
+    // The stop info can be manually set by calling Thread::SetStopInfo() prior
+    // to this function ever getting called, so we can't rely on
+    // "m_stop_info_stop_id != process_stop_id" as the condition for the if
+    // statement below, we must also check the stop info to see if we need to
+    // override it. See the header documentation in
+    // Process::GetStopInfoOverrideCallback() for more information on the stop
+    // info override callback.
     if (m_stop_info_override_stop_id != process_stop_id) {
       m_stop_info_override_stop_id = process_stop_id;
       if (m_stop_info_sp) {
@@ -509,9 +506,8 @@ void Thread::SetShouldReportStop(Vote vote) {
 
 void Thread::SetStopInfoToNothing() {
   // Note, we can't just NULL out the private reason, or the native thread
-  // implementation will try to
-  // go calculate it again.  For now, just set it to a Unix Signal with an
-  // invalid signal number.
+  // implementation will try to go calculate it again.  For now, just set it to
+  // a Unix Signal with an invalid signal number.
   SetStopInfo(
       StopInfo::CreateStopReasonWithSignal(*this, LLDB_INVALID_SIGNAL_NUMBER));
 }
@@ -604,10 +600,8 @@ void Thread::WillStop() {
 void Thread::SetupForResume() {
   if (GetResumeState() != eStateSuspended) {
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
-    // before
-    // telling the current plan it will resume, since we might change what the
-    // current
-    // plan is.
+    // before telling the current plan it will resume, since we might change
+    // what the current plan is.
 
     lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
     if (reg_ctx_sp) {
@@ -615,9 +609,8 @@ void Thread::SetupForResume() {
       BreakpointSiteSP bp_site_sp =
           GetProcess()->GetBreakpointSiteList().FindByAddress(thread_pc);
       if (bp_site_sp) {
-        // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the target
-        // may not require anything
-        // special to step over a breakpoint.
+        // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
+        // target may not require anything special to step over a breakpoint.
 
         ThreadPlan *cur_plan = GetCurrentPlan();
 
@@ -669,11 +662,9 @@ bool Thread::ShouldResume(StateType resume_state) {
     GetPrivateStopInfo();
 
   // This is a little dubious, but we are trying to limit how often we actually
-  // fetch stop info from
-  // the target, 'cause that slows down single stepping.  So assume that if we
-  // got to the point where
-  // we're about to resume, and we haven't yet had to fetch the stop reason,
-  // then it doesn't need to know
+  // fetch stop info from the target, 'cause that slows down single stepping.
+  // So assume that if we got to the point where we're about to resume, and we
+  // haven't yet had to fetch the stop reason, then it doesn't need to know
   // about the fact that we are resuming...
   const uint32_t process_stop_id = GetProcess()->GetStopID();
   if (m_stop_info_stop_id == process_stop_id &&
@@ -684,9 +675,9 @@ bool Thread::ShouldResume(StateType resume_state) {
   }
 
   // Tell all the plans that we are about to resume in case they need to clear
-  // any state.
-  // We distinguish between the plan on the top of the stack and the lower
-  // plans in case a plan needs to do any special business before it runs.
+  // any state. We distinguish between the plan on the top of the stack and the
+  // lower plans in case a plan needs to do any special business before it
+  // runs.
 
   bool need_to_resume = false;
   ThreadPlan *plan_ptr = GetCurrentPlan();
@@ -698,8 +689,7 @@ bool Thread::ShouldResume(StateType resume_state) {
     }
 
     // If the WillResume for the plan says we are faking a resume, then it will
-    // have set an appropriate stop info.
-    // In that case, don't reset it here.
+    // have set an appropriate stop info. In that case, don't reset it here.
 
     if (need_to_resume && resume_state != eStateSuspended) {
       m_stop_info_sp.reset();
@@ -743,9 +733,8 @@ bool Thread::ShouldStop(Event *event_ptr) {
   }
 
   // Based on the current thread plan and process stop info, check if this
-  // thread caused the process to stop. NOTE: this must take place before
-  // the plan is moved from the current plan stack to the completed plan
-  // stack.
+  // thread caused the process to stop. NOTE: this must take place before the
+  // plan is moved from the current plan stack to the completed plan stack.
   if (!ThreadStoppedForAReason()) {
     if (log)
       log->Printf("Thread::%s for tid = 0x%4.4" PRIx64 " 0x%4.4" PRIx64
@@ -775,10 +764,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
   current_plan->DoTraceLog();
 
   // First query the stop info's ShouldStopSynchronous.  This handles
-  // "synchronous" stop reasons, for example the breakpoint
-  // command on internal breakpoints.  If a synchronous stop reason says we
-  // should not stop, then we don't have to
-  // do any more work on this stop.
+  // "synchronous" stop reasons, for example the breakpoint command on internal
+  // breakpoints.  If a synchronous stop reason says we should not stop, then
+  // we don't have to do any more work on this stop.
   StopInfoSP private_stop_info(GetPrivateStopInfo());
   if (private_stop_info &&
       !private_stop_info->ShouldStopSynchronous(event_ptr)) {
@@ -788,8 +776,8 @@ bool Thread::ShouldStop(Event *event_ptr) {
     return false;
   }
 
-  // If we've already been restarted, don't query the plans since the state they
-  // would examine is not current.
+  // If we've already been restarted, don't query the plans since the state
+  // they would examine is not current.
   if (Process::ProcessEventData::GetRestartedFromEvent(event_ptr))
     return false;
 
@@ -798,12 +786,10 @@ bool Thread::ShouldStop(Event *event_ptr) {
   GetStackFrameList()->CalculateCurrentInlinedDepth();
 
   // If the base plan doesn't understand why we stopped, then we have to find a
-  // plan that does.
-  // If that plan is still working, then we don't need to do any more work.  If
-  // the plan that explains
-  // the stop is done, then we should pop all the plans below it, and pop it,
-  // and then let the plans above it decide
-  // whether they still need to do more work.
+  // plan that does. If that plan is still working, then we don't need to do
+  // any more work.  If the plan that explains the stop is done, then we should
+  // pop all the plans below it, and pop it, and then let the plans above it
+  // decide whether they still need to do more work.
 
   bool done_processing_current_plan = false;
 
@@ -812,16 +798,16 @@ bool Thread::ShouldStop(Event *event_ptr) {
       done_processing_current_plan = true;
       should_stop = false;
     } else {
-      // If the current plan doesn't explain the stop, then find one that
-      // does and let it handle the situation.
+      // If the current plan doesn't explain the stop, then find one that does
+      // and let it handle the situation.
       ThreadPlan *plan_ptr = current_plan;
       while ((plan_ptr = GetPreviousPlan(plan_ptr)) != nullptr) {
         if (plan_ptr->PlanExplainsStop(event_ptr)) {
           should_stop = plan_ptr->ShouldStop(event_ptr);
 
-          // plan_ptr explains the stop, next check whether plan_ptr is done, if
-          // so, then we should take it
-          // and all the plans below it off the stack.
+          // plan_ptr explains the stop, next check whether plan_ptr is done,
+          // if so, then we should take it and all the plans below it off the
+          // stack.
 
           if (plan_ptr->MischiefManaged()) {
             // We're going to pop the plans up to and including the plan that
@@ -833,9 +819,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
                 current_plan->WillStop();
               PopPlan();
             } while ((current_plan = GetCurrentPlan()) != prev_plan_ptr);
-            // Now, if the responsible plan was not "Okay to discard" then we're
-            // done,
-            // otherwise we forward this to the next plan in the stack below.
+            // Now, if the responsible plan was not "Okay to discard" then
+            // we're done, otherwise we forward this to the next plan in the
+            // stack below.
             done_processing_current_plan =
                 (plan_ptr->IsMasterPlan() && !plan_ptr->OkayToDiscard());
           } else
@@ -860,9 +846,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
       if (log)
         log->Printf("Base plan says should stop: %i.", should_stop);
     } else {
-      // Otherwise, don't let the base plan override what the other plans say to
-      // do, since
-      // presumably if there were other plans they would know what to do...
+      // Otherwise, don't let the base plan override what the other plans say
+      // to do, since presumably if there were other plans they would know what
+      // to do...
       while (1) {
         if (PlanIsBasePlan(current_plan))
           break;
@@ -875,9 +861,8 @@ bool Thread::ShouldStop(Event *event_ptr) {
           if (should_stop)
             current_plan->WillStop();
 
-          // If a Master Plan wants to stop, and wants to stick on the stack, we
-          // let it.
-          // Otherwise, see if the plan's parent wants to stop.
+          // If a Master Plan wants to stop, and wants to stick on the stack,
+          // we let it. Otherwise, see if the plan's parent wants to stop.
 
           if (should_stop && current_plan->IsMasterPlan() &&
               !current_plan->OkayToDiscard()) {
@@ -902,18 +887,16 @@ bool Thread::ShouldStop(Event *event_ptr) {
   }
 
   // One other potential problem is that we set up a master plan, then stop in
-  // before it is complete - for instance
-  // by hitting a breakpoint during a step-over - then do some step/finish/etc
-  // operations that wind up
-  // past the end point condition of the initial plan.  We don't want to strand
-  // the original plan on the stack,
-  // This code clears stale plans off the stack.
+  // before it is complete - for instance by hitting a breakpoint during a
+  // step-over - then do some step/finish/etc operations that wind up past the
+  // end point condition of the initial plan.  We don't want to strand the
+  // original plan on the stack, This code clears stale plans off the stack.
 
   if (should_stop) {
     ThreadPlan *plan_ptr = GetCurrentPlan();
 
-    // Discard the stale plans and all plans below them in the stack,
-    // plus move the completed plans to the completed plan stack
+    // Discard the stale plans and all plans below them in the stack, plus move
+    // the completed plans to the completed plan stack
     while (!PlanIsBasePlan(plan_ptr)) {
       bool stale = plan_ptr->IsPlanStale();
       ThreadPlan *examined_plan = plan_ptr;
@@ -928,8 +911,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
           DiscardPlan();
         }
         if (examined_plan->IsPlanComplete()) {
-          // plan is complete but does not explain the stop (example: step to a line
-          // with breakpoint), let us move the plan to completed_plan_stack anyway
+          // plan is complete but does not explain the stop (example: step to a
+          // line with breakpoint), let us move the plan to
+          // completed_plan_stack anyway
           PopPlan();
         } else
           DiscardPlan();
@@ -1097,8 +1081,8 @@ void Thread::DiscardPlan() {
 }
 
 ThreadPlan *Thread::GetCurrentPlan() {
-  // There will always be at least the base plan.  If somebody is mucking with a
-  // thread with an empty plan stack, we should assert right away.
+  // There will always be at least the base plan.  If somebody is mucking with
+  // a thread with an empty plan stack, we should assert right away.
   return m_plan_stack.empty() ? nullptr : m_plan_stack.back().get();
 }
 
@@ -1212,8 +1196,7 @@ void Thread::SetTracer(lldb::ThreadPlanTracerSP &tracer_sp) {
 
 bool Thread::DiscardUserThreadPlansUpToIndex(uint32_t thread_index) {
   // Count the user thread plans from the back end to get the number of the one
-  // we want
-  // to discard:
+  // we want to discard:
 
   uint32_t idx = 0;
   ThreadPlan *up_to_plan_ptr = nullptr;
@@ -1249,8 +1232,7 @@ void Thread::DiscardThreadPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
   int stack_size = m_plan_stack.size();
 
   // If the input plan is nullptr, discard all plans.  Otherwise make sure this
-  // plan is in the
-  // stack, and if so discard up to and including it.
+  // plan is in the stack, and if so discard up to and including it.
 
   if (up_to_plan_ptr == nullptr) {
     for (int i = stack_size - 1; i > 0; i--)
@@ -1314,8 +1296,7 @@ void Thread::DiscardThreadPlans(bool force) {
 
       // Now discard the master plan itself.
       // The bottom-most plan never gets discarded.  "OkayToDiscard" for it
-      // means
-      // discard it's dependent plans, but not it...
+      // means discard it's dependent plans, but not it...
       if (master_plan_idx > 0) {
         DiscardPlan();
       }
@@ -1340,8 +1321,7 @@ Status Thread::UnwindInnermostExpression() {
   int stack_size = m_plan_stack.size();
 
   // If the input plan is nullptr, discard all plans.  Otherwise make sure this
-  // plan is in the
-  // stack, and if so discard up to and including it.
+  // plan is in the stack, and if so discard up to and including it.
 
   for (int i = stack_size - 1; i > 0; i--) {
     if (m_plan_stack[i]->GetKind() == ThreadPlan::eKindCallFunction) {
@@ -1380,7 +1360,8 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
   return thread_plan_sp;
 }
 
-// Call the QueueThreadPlanForStepOverRange method which takes an address range.
+// Call the QueueThreadPlanForStepOverRange method which takes an address
+// range.
 ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
     bool abort_other_plans, const LineEntry &line_entry,
     const SymbolContext &addr_context, lldb::RunMode stop_other_threads,
@@ -1500,11 +1481,9 @@ lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
   ThreadPlanSP thread_plan_sp(new ThreadPlanPython(*this, class_name));
   QueueThreadPlan(thread_plan_sp, abort_other_plans);
   // This seems a little funny, but I don't want to have to split up the
-  // constructor and the
-  // DidPush in the scripted plan, that seems annoying.
-  // That means the constructor has to be in DidPush.
-  // So I have to validate the plan AFTER pushing it, and then take it off
-  // again...
+  // constructor and the DidPush in the scripted plan, that seems annoying.
+  // That means the constructor has to be in DidPush. So I have to validate the
+  // plan AFTER pushing it, and then take it off again...
   if (!thread_plan_sp->ValidatePlan(nullptr)) {
     DiscardThreadPlansUpToPlan(thread_plan_sp);
     return ThreadPlanSP();
@@ -1701,10 +1680,9 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
       return return_error;
   }
 
-  // Now write the return registers for the chosen frame:
-  // Note, we can't use ReadAllRegisterValues->WriteAllRegisterValues, since the
-  // read & write
-  // cook their data
+  // Now write the return registers for the chosen frame: Note, we can't use
+  // ReadAllRegisterValues->WriteAllRegisterValues, since the read & write cook
+  // their data
 
   StackFrameSP youngest_frame_sp = thread->GetStackFrameAtIndex(0);
   if (youngest_frame_sp) {
@@ -1754,13 +1732,11 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   target->GetImages().FindAddressesForLine(target_sp, file, line, sc.function,
                                            within_function, outside_function);
 
-  // If possible, we try and stay within the current function.
-  // Within a function, we accept multiple locations (optimized code may do
-  // this,
-  // there's no solution here so we do the best we can).
-  // However if we're trying to leave the function, we don't know how to pick
-  // the
-  // right location, so if there's more than one then we bail.
+  // If possible, we try and stay within the current function. Within a
+  // function, we accept multiple locations (optimized code may do this,
+  // there's no solution here so we do the best we can). However if we're
+  // trying to leave the function, we don't know how to pick the right
+  // location, so if there's more than one then we bail.
   if (!within_function.empty())
     candidates = within_function;
   else if (outside_function.size() == 1 && can_leave_function)
@@ -1836,8 +1812,8 @@ lldb::addr_t Thread::GetThreadPointer() { return LLDB_INVALID_ADDRESS; }
 
 addr_t Thread::GetThreadLocalData(const ModuleSP module,
                                   lldb::addr_t tls_file_addr) {
-  // The default implementation is to ask the dynamic loader for it.
-  // This can be overridden for specific platforms.
+  // The default implementation is to ask the dynamic loader for it. This can
+  // be overridden for specific platforms.
   DynamicLoader *loader = GetProcess()->GetDynamicLoader();
   if (loader)
     return loader->GetThreadLocalData(module, shared_from_this(),
@@ -2096,10 +2072,8 @@ void Thread::Flush() {
 
 bool Thread::IsStillAtLastBreakpointHit() {
   // If we are currently stopped at a breakpoint, always return that stopinfo
-  // and don't reset it.
-  // This allows threads to maintain their breakpoint stopinfo, such as when
-  // thread-stepping in
-  // multithreaded programs.
+  // and don't reset it. This allows threads to maintain their breakpoint
+  // stopinfo, such as when thread-stepping in multithreaded programs.
   if (m_stop_info_sp) {
     StopReason stop_reason = m_stop_info_sp->GetStopReason();
     if (stop_reason == lldb::eStopReasonBreakpoint) {

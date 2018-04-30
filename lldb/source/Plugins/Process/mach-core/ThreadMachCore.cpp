@@ -54,8 +54,8 @@ void ThreadMachCore::RefreshStateAfterStop() {
   // context by the time this function gets called. The KDPRegisterContext
   // class has been made smart enough to detect when it needs to invalidate
   // which registers are valid by putting hooks in the register read and
-  // register supply functions where they check the process stop ID and do
-  // the right thing.
+  // register supply functions where they check the process stop ID and do the
+  // right thing.
   const bool force = false;
   GetRegisterContext()->InvalidateIfNeeded(force);
 }

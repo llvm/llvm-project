@@ -40,9 +40,9 @@
 using namespace lldb_private;
 
 namespace {
-// Any Clang compiler requires a consumer for diagnostics.  This one stores them
-// as strings
-// so we can provide them to the user in case a module failed to load.
+// Any Clang compiler requires a consumer for diagnostics.  This one stores
+// them as strings so we can provide them to the user in case a module failed
+// to load.
 class StoringDiagnosticConsumer : public clang::DiagnosticConsumer {
 public:
   StoringDiagnosticConsumer();
@@ -62,8 +62,7 @@ private:
 };
 
 // The private implementation of our ClangModulesDeclVendor.  Contains all the
-// Clang state required
-// to load modules.
+// Clang state required to load modules.
 class ClangModulesDeclVendorImpl : public ClangModulesDeclVendor {
 public:
   ClangModulesDeclVendorImpl(

@@ -82,8 +82,7 @@ public:
 
 protected:
   // This is the method the ABI will call to actually calculate the return
-  // value.
-  // Don't put it in a persistent value object, that will be done by the
+  // value. Don't put it in a persistent value object, that will be done by the
   // ABI::GetReturnValueObject.
   virtual lldb::ValueObjectSP
   GetReturnValueObjectImpl(Thread &thread, CompilerType &ast_type) const = 0;
@@ -118,17 +117,17 @@ public:
   // restrictions (4, 8 or 16 byte aligned), and zero is usually not allowed.
   // This function should return true if "cfa" is valid call frame address for
   // the ABI, and false otherwise. This is used by the generic stack frame
-  // unwinding
-  // code to help determine when a stack ends.
+  // unwinding code to help determine when a stack ends.
   virtual bool CallFrameAddressIsValid(lldb::addr_t cfa) = 0;
 
-  // Validates a possible PC value and returns true if an opcode can be at "pc".
+  // Validates a possible PC value and returns true if an opcode can be at
+  // "pc".
   virtual bool CodeAddressIsValid(lldb::addr_t pc) = 0;
 
   virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc) {
-    // Some targets might use bits in a code address to indicate
-    // a mode switch. ARM uses bit zero to signify a code address is
-    // thumb, so any ARM ABI plug-ins would strip those bits.
+    // Some targets might use bits in a code address to indicate a mode switch.
+    // ARM uses bit zero to signify a code address is thumb, so any ARM ABI
+    // plug-ins would strip those bits.
     return pc;
   }
 

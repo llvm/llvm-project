@@ -27,12 +27,11 @@
 #include "lldb/Utility/DataExtractor.h"
 
 //----------------------------------------------------------------------
-// We recently fixed a leak in one of the Instruction subclasses where
-// the instruction will only hold a weak reference to the disassembler
-// to avoid a cycle that was keeping both objects alive (leak) and we
-// need the InstructionImpl class to make sure our public API behaves
-// as users would expect. Calls in our public API allow clients to do
-// things like:
+// We recently fixed a leak in one of the Instruction subclasses where the
+// instruction will only hold a weak reference to the disassembler to avoid a
+// cycle that was keeping both objects alive (leak) and we need the
+// InstructionImpl class to make sure our public API behaves as users would
+// expect. Calls in our public API allow clients to do things like:
 //
 // 1  lldb::SBInstruction inst;
 // 2  inst = target.ReadInstructions(pc, 1).GetInstructionAtIndex(0)
@@ -40,12 +39,12 @@
 // 4  ...
 //
 // There was a temporary lldb::DisassemblerSP object created in the
-// SBInstructionList that was returned by lldb.target.ReadInstructions()
-// that will go away after line 2 but the "inst" object should be able
-// to still answer questions about itself. So we make sure that any
-// SBInstruction objects that are given out have a strong reference to
-// the disassembler and the instruction so that the object can live and
-// successfully respond to all queries.
+// SBInstructionList that was returned by lldb.target.ReadInstructions() that
+// will go away after line 2 but the "inst" object should be able to still
+// answer questions about itself. So we make sure that any SBInstruction
+// objects that are given out have a strong reference to the disassembler and
+// the instruction so that the object can live and successfully respond to all
+// queries.
 //----------------------------------------------------------------------
 class InstructionImpl {
 public:

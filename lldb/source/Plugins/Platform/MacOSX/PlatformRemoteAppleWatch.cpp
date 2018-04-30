@@ -93,9 +93,9 @@ PlatformSP PlatformRemoteAppleWatch::CreateInstance(bool force,
         break;
 
 #if defined(__APPLE__)
-      // Only accept "unknown" for the vendor if the host is Apple and
-      // it "unknown" wasn't specified (it was just returned because it
-      // was NOT specified)
+      // Only accept "unknown" for the vendor if the host is Apple and it
+      // "unknown" wasn't specified (it was just returned because it was NOT
+      // specified)
       case llvm::Triple::UnknownArch:
         create = !arch->TripleVendorWasSpecified();
         break;
@@ -123,8 +123,8 @@ PlatformSP PlatformRemoteAppleWatch::CreateInstance(bool force,
 
 #if defined(__APPLE__) &&                                                      \
     (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
-  // If lldb is running on a watch, this isn't a RemoteWatch environment; it's a
-  // local system environment.
+  // If lldb is running on a watch, this isn't a RemoteWatch environment; it's
+  // a local system environment.
   if (force == false) {
     create = false;
   }

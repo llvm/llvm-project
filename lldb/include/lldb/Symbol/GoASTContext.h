@@ -216,8 +216,7 @@ public:
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
-  // prototype
-  // Returns a value >= 0 if there is a prototype.
+  // prototype Returns a value >= 0 if there is a prototype.
   int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetFunctionArgumentTypeAtIndex(lldb::opaque_compiler_type_t type,
@@ -294,8 +293,8 @@ public:
       bool &child_is_base_class, bool &child_is_deref_of_parent,
       ValueObject *valobj, uint64_t &language_flags) override;
 
-  // Lookup a child given a name. This function will match base class names
-  // and member member names in "clang_type" only, not descendants.
+  // Lookup a child given a name. This function will match base class names and
+  // member member names in "clang_type" only, not descendants.
   uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                    const char *name,
                                    bool omit_empty_base_classes) override;
@@ -347,8 +346,8 @@ public:
                    Stream *s, const DataExtractor &data,
                    lldb::offset_t data_offset, size_t data_byte_size) override;
 
-  // Converts "s" to a floating point value and place resulting floating
-  // point bytes in the "dst" buffer.
+  // Converts "s" to a floating point value and place resulting floating point
+  // bytes in the "dst" buffer.
   size_t ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
                                    const char *s, uint8_t *dst,
                                    size_t dst_size) override;

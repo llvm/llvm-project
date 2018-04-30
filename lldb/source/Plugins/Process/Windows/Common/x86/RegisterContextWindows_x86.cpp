@@ -30,14 +30,11 @@ using namespace lldb_private;
 namespace {
 
 // This enum defines the layout of the global RegisterInfo array.  This is
-// necessary because
-// lldb register sets are defined in terms of indices into the register array.
-// As such, the
-// order of RegisterInfos defined in global registers array must match the order
-// defined here.
-// When defining the register set layouts, these values can appear in an
-// arbitrary order, and that
-// determines the order that register values are displayed in a dump.
+// necessary because lldb register sets are defined in terms of indices into
+// the register array. As such, the order of RegisterInfos defined in global
+// registers array must match the order defined here. When defining the
+// register set layouts, these values can appear in an arbitrary order, and
+// that determines the order that register values are displayed in a dump.
 enum RegisterIndex {
   eRegisterIndexEax,
   eRegisterIndexEbx,
@@ -212,11 +209,10 @@ bool RegisterContextWindows_x86::ReadRegister(const RegisterInfo *reg_info,
 
 bool RegisterContextWindows_x86::WriteRegister(const RegisterInfo *reg_info,
                                                const RegisterValue &reg_value) {
-  // Since we cannot only write a single register value to the inferior, we need
-  // to make sure
-  // our cached copy of the register values are fresh.  Otherwise when writing
-  // EAX, for example,
-  // we may also overwrite some other register with a stale value.
+  // Since we cannot only write a single register value to the inferior, we
+  // need to make sure our cached copy of the register values are fresh.
+  // Otherwise when writing EAX, for example, we may also overwrite some other
+  // register with a stale value.
   if (!CacheAllRegisterValues())
     return false;
 

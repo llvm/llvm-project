@@ -74,8 +74,7 @@ protected:
   FileSpec m_module_filespec;   // If this filespec is Valid, and m_addr is an
                                 // offset, then it will be converted
   // to a Section+Offset address in this module, whenever that module gets
-  // around to
-  // being loaded.
+  // around to being loaded.
 private:
   DISALLOW_COPY_AND_ASSIGN(BreakpointResolverAddress);
 };

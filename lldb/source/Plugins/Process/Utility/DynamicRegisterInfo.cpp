@@ -74,8 +74,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       return 0;
     }
 
-    // { 'name':'rcx'       , 'bitsize' :  64, 'offset' :  16, 'encoding':'uint'
-    // , 'format':'hex'         , 'set': 0, 'ehframe' : 2,
+    // { 'name':'rcx'       , 'bitsize' :  64, 'offset' :  16,
+    // 'encoding':'uint' , 'format':'hex'         , 'set': 0, 'ehframe' : 2,
     // 'dwarf' : 2, 'generic':'arg4', 'alt-name':'arg4', },
     RegisterInfo reg_info;
     std::vector<uint32_t> value_regs;
@@ -100,14 +100,11 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     const ByteOrder byte_order = arch.GetByteOrder();
 
     if (reg_info.byte_offset == UINT32_MAX) {
-      // No offset for this register, see if the register has a value expression
-      // which indicates this register is part of another register. Value
-      // expressions
-      // are things like "rax[31:0]" which state that the current register's
-      // value
-      // is in a concrete register "rax" in bits 31:0. If there is a value
-      // expression
-      // we can calculate the offset
+      // No offset for this register, see if the register has a value
+      // expression which indicates this register is part of another register.
+      // Value expressions are things like "rax[31:0]" which state that the
+      // current register's value is in a concrete register "rax" in bits 31:0.
+      // If there is a value expression we can calculate the offset
       bool success = false;
       llvm::StringRef slice_str;
       if (reg_info_dict->GetValueForKeyAsString("slice", slice_str, nullptr)) {
@@ -491,8 +488,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   }
 
   // sort and unique all invalidate registers and make sure each is terminated
-  // with
-  // LLDB_INVALID_REGNUM
+  // with LLDB_INVALID_REGNUM
   for (reg_to_regs_map::iterator pos = m_invalidate_regs_map.begin(),
                                  end = m_invalidate_regs_map.end();
        pos != end; ++pos) {
@@ -516,8 +512,8 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
       m_regs[i].invalidate_regs = NULL;
   }
 
-  // Check if we need to automatically set the generic registers in case
-  // they weren't set
+  // Check if we need to automatically set the generic registers in case they
+  // weren't set
   bool generic_regs_specified = false;
   for (const auto &reg : m_regs) {
     if (reg.kinds[eRegisterKindGeneric] != LLDB_INVALID_REGNUM) {
@@ -732,8 +728,8 @@ void DynamicRegisterInfo::Dump() const {
 lldb_private::RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(
     const lldb_private::ConstString &reg_name) {
   for (auto &reg_info : m_regs) {
-    // We can use pointer comparison since we used a ConstString to set
-    // the "name" member in AddRegister()
+    // We can use pointer comparison since we used a ConstString to set the
+    // "name" member in AddRegister()
     if (reg_info.name == reg_name.GetCString()) {
       return &reg_info;
     }

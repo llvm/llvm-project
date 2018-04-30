@@ -49,227 +49,237 @@ const char *AppleObjCTrampolineHandler::g_lookup_implementation_function_name =
 const char *AppleObjCTrampolineHandler::
     g_lookup_implementation_with_stret_function_code =
         "                               \n\
-extern \"C\"                                                                                                    \n\
-{                                                                                                               \n\
-    extern void *class_getMethodImplementation(void *objc_class, void *sel);                                    \n\
-    extern void *class_getMethodImplementation_stret(void *objc_class, void *sel);                              \n\
-    extern void * object_getClass (id object);                                                                  \n\
-    extern void * sel_getUid(char *name);                                                                       \n\
-    extern int printf(const char *format, ...);                                                                 \n\
-}                                                                                                               \n\
-extern \"C\" void * __lldb_objc_find_implementation_for_selector (void *object,                                 \n\
-                                                    void *sel,                                                  \n\
-                                                    int is_stret,                                               \n\
-                                                    int is_super,                                               \n\
-                                                    int is_super2,                                              \n\
-                                                    int is_fixup,                                               \n\
-                                                    int is_fixed,                                               \n\
-                                                    int debug)                                                  \n\
-{                                                                                                               \n\
-    struct __lldb_imp_return_struct                                                                             \n\
-    {                                                                                                           \n\
-        void *class_addr;                                                                                       \n\
-        void *sel_addr;                                                                                         \n\
-        void *impl_addr;                                                                                        \n\
-    };                                                                                                          \n\
-                                                                                                                \n\
-    struct __lldb_objc_class {                                                                                  \n\
-        void *isa;                                                                                              \n\
-        void *super_ptr;                                                                                        \n\
-    };                                                                                                          \n\
-    struct __lldb_objc_super {                                                                                  \n\
-        void *reciever;                                                                                         \n\
-        struct __lldb_objc_class *class_ptr;                                                                    \n\
-    };                                                                                                          \n\
-    struct __lldb_msg_ref {                                                                                     \n\
-        void *dont_know;                                                                                        \n\
-        void *sel;                                                                                              \n\
-    };                                                                                                          \n\
-                                                                                                                \n\
-    struct __lldb_imp_return_struct return_struct;                                                              \n\
-                                                                                                                \n\
-    if (debug)                                                                                                  \n\
-        printf (\"\\n*** Called with obj: 0x%p sel: 0x%p is_stret: %d is_super: %d, \"                          \n\
-                \"is_super2: %d, is_fixup: %d, is_fixed: %d\\n\",                                               \n\
-                 object, sel, is_stret, is_super, is_super2, is_fixup, is_fixed);                               \n\
-    if (is_super)                                                                                               \n\
-    {                                                                                                           \n\
-        if (is_super2)                                                                                          \n\
-        {                                                                                                       \n\
-            return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr->super_ptr;                    \n\
-        }                                                                                                       \n\
-        else                                                                                                    \n\
-        {                                                                                                       \n\
-            return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr;                               \n\
-        }                                                                                                       \n\
-    }                                                                                                           \n\
-    else                                                                                                        \n\
-    {                                                                                                           \n\
-        // This code seems a little funny, but has its reasons...                                               \n\
-        // The call to [object class] is here because if this is a class, and has not been called into          \n\
-        // yet, we need to do something to force the class to initialize itself.                                \n\
-        // Then the call to object_getClass will actually return the correct class, either the class            \n\
-        // if object is a class instance, or the meta-class if it is a class pointer.                           \n\
-        void *class_ptr = (void *) [(id) object class];                                                         \n\
-        return_struct.class_addr = (id)  object_getClass((id) object);                                          \n\
-        if (debug)                                                                                              \n\
-        {                                                                                                       \n\
-            if (class_ptr == object)                                                                            \n\
-            {                                                                                                   \n\
-                printf (\"Found a class object, need to use the meta class %p -> %p\\n\",                       \n\
-                        class_ptr, return_struct.class_addr);                                                   \n\
-            }                                                                                                   \n\
-            else                                                                                                \n\
-            {                                                                                                   \n\
-                 printf (\"[object class] returned: %p object_getClass: %p.\\n\",                               \n\
-                 class_ptr, return_struct.class_addr);                                                          \n\
-            }                                                                                                   \n\
-        }                                                                                                       \n\
-    }                                                                                                           \n\
-                                                                                                                \n\
-    if (is_fixup)                                                                                               \n\
-    {                                                                                                           \n\
-        if (is_fixed)                                                                                           \n\
-        {                                                                                                       \n\
-            return_struct.sel_addr = ((__lldb_msg_ref *) sel)->sel;                                             \n\
-        }                                                                                                       \n\
-        else                                                                                                    \n\
-        {                                                                                                       \n\
-            char *sel_name = (char *) ((__lldb_msg_ref *) sel)->sel;                                            \n\
-            return_struct.sel_addr = sel_getUid (sel_name);                                                     \n\
-            if (debug)                                                                                          \n\
-                printf (\"\\n*** Got fixed up selector: %p for name %s.\\n\",                                   \n\
-                        return_struct.sel_addr, sel_name);                                                      \n\
-        }                                                                                                       \n\
-    }                                                                                                           \n\
-    else                                                                                                        \n\
-    {                                                                                                           \n\
-        return_struct.sel_addr = sel;                                                                           \n\
-    }                                                                                                           \n\
-                                                                                                                \n\
-    if (is_stret)                                                                                               \n\
-    {                                                                                                           \n\
-        return_struct.impl_addr = class_getMethodImplementation_stret (return_struct.class_addr,                \n\
-                                                                       return_struct.sel_addr);                 \n\
-    }                                                                                                           \n\
-    else                                                                                                        \n\
-    {                                                                                                           \n\
-        return_struct.impl_addr = class_getMethodImplementation (return_struct.class_addr,                      \n\
-                                                                       return_struct.sel_addr);                 \n\
-    }                                                                                                           \n\
-    if (debug)                                                                                                  \n\
-        printf (\"\\n*** Returning implementation: %p.\\n\", return_struct.impl_addr);                          \n\
-                                                                                                                \n\
-    return return_struct.impl_addr;                                                                             \n\
-}                                                                                                               \n\
+extern \"C\"                                                                 \n\
+{                                                                            \n\
+    extern void *class_getMethodImplementation(void *objc_class, void *sel); \n\
+    extern void *class_getMethodImplementation_stret(void *objc_class,       \n\
+                                                     void *sel);             \n\
+    extern void * object_getClass (id object);                               \n\
+    extern void * sel_getUid(char *name);                                    \n\
+    extern int printf(const char *format, ...);                              \n\
+}                                                                            \n\
+extern \"C\" void * __lldb_objc_find_implementation_for_selector (           \n\
+                                                    void *object,            \n\
+                                                    void *sel,               \n\
+                                                    int is_stret,            \n\
+                                                    int is_super,            \n\
+                                                    int is_super2,           \n\
+                                                    int is_fixup,            \n\
+                                                    int is_fixed,            \n\
+                                                    int debug)               \n\
+{                                                                            \n\
+    struct __lldb_imp_return_struct                                          \n\
+    {                                                                        \n\
+        void *class_addr;                                                    \n\
+        void *sel_addr;                                                      \n\
+        void *impl_addr;                                                     \n\
+    };                                                                       \n\
+                                                                             \n\
+    struct __lldb_objc_class {                                               \n\
+        void *isa;                                                           \n\
+        void *super_ptr;                                                     \n\
+    };                                                                       \n\
+    struct __lldb_objc_super {                                               \n\
+        void *reciever;                                                      \n\
+        struct __lldb_objc_class *class_ptr;                                 \n\
+    };                                                                       \n\
+    struct __lldb_msg_ref {                                                  \n\
+        void *dont_know;                                                     \n\
+        void *sel;                                                           \n\
+    };                                                                       \n\
+                                                                             \n\
+    struct __lldb_imp_return_struct return_struct;                           \n\
+                                                                             \n\
+    if (debug)                                                               \n\
+        printf (\"\\n*** Called with obj: 0x%p sel: 0x%p is_stret: %d is_super: %d, \"\n\
+                \"is_super2: %d, is_fixup: %d, is_fixed: %d\\n\",            \n\
+                 object, sel, is_stret, is_super, is_super2, is_fixup, is_fixed);\n\
+    if (is_super)                                                            \n\
+    {                                                                        \n\
+        if (is_super2)                                                       \n\
+        {                                                                    \n\
+            return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr->super_ptr;\n\
+        }                                                                    \n\
+        else                                                                 \n\
+        {                                                                    \n\
+            return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr;\n\
+        }                                                                    \n\
+    }                                                                        \n\
+    else                                                                     \n\
+    {                                                                        \n\
+        // This code seems a little funny, but has its reasons...            \n\
+                                                                             \n\
+        // The call to [object class] is here because if this is a           \n\
+        // class, and has not been called into yet, we need to do            \n\
+        // something to force the class to initialize itself.                \n\
+        // Then the call to object_getClass will actually return the         \n\
+        // correct class, either the class if object is a class              \n\
+        // instance, or the meta-class if it is a class pointer.             \n\
+        void *class_ptr = (void *) [(id) object class];                      \n\
+        return_struct.class_addr = (id)  object_getClass((id) object);       \n\
+        if (debug)                                                           \n\
+        {                                                                    \n\
+            if (class_ptr == object)                                         \n\
+            {                                                                \n\
+                printf (\"Found a class object, need to use the meta class %p -> %p\\n\",\n\
+                        class_ptr, return_struct.class_addr);                \n\
+            }                                                                \n\
+            else                                                             \n\
+            {                                                                \n\
+                 printf (\"[object class] returned: %p object_getClass: %p.\\n\", \n\
+                 class_ptr, return_struct.class_addr);                       \n\
+            }                                                                \n\
+        }                                                                    \n\
+    }                                                                        \n\
+                                                                             \n\
+    if (is_fixup)                                                            \n\
+    {                                                                        \n\
+        if (is_fixed)                                                        \n\
+        {                                                                    \n\
+            return_struct.sel_addr = ((__lldb_msg_ref *) sel)->sel;          \n\
+        }                                                                    \n\
+        else                                                                 \n\
+        {                                                                    \n\
+            char *sel_name = (char *) ((__lldb_msg_ref *) sel)->sel;         \n\
+            return_struct.sel_addr = sel_getUid (sel_name);                  \n\
+            if (debug)                                                       \n\
+                printf (\"\\n*** Got fixed up selector: %p for name %s.\\n\",\n\
+                        return_struct.sel_addr, sel_name);                   \n\
+        }                                                                    \n\
+    }                                                                        \n\
+    else                                                                     \n\
+    {                                                                        \n\
+        return_struct.sel_addr = sel;                                        \n\
+    }                                                                        \n\
+                                                                             \n\
+    if (is_stret)                                                            \n\
+    {                                                                        \n\
+        return_struct.impl_addr =                                            \n\
+          class_getMethodImplementation_stret (return_struct.class_addr,     \n\
+                                               return_struct.sel_addr);      \n\
+    }                                                                        \n\
+    else                                                                     \n\
+    {                                                                        \n\
+        return_struct.impl_addr =                                            \n\
+            class_getMethodImplementation (return_struct.class_addr,         \n\
+                                           return_struct.sel_addr);          \n\
+    }                                                                        \n\
+    if (debug)                                                               \n\
+        printf (\"\\n*** Returning implementation: %p.\\n\",                 \n\
+                          return_struct.impl_addr);                          \n\
+                                                                             \n\
+    return return_struct.impl_addr;                                          \n\
+}                                                                            \n\
 ";
 const char *
     AppleObjCTrampolineHandler::g_lookup_implementation_no_stret_function_code =
         "                      \n\
-extern \"C\"                                                                                                    \n\
-{                                                                                                               \n\
-    extern void *class_getMethodImplementation(void *objc_class, void *sel);                                    \n\
-    extern void * object_getClass (id object);                                                                  \n\
-    extern void * sel_getUid(char *name);                                                                       \n\
-    extern int printf(const char *format, ...);                                                                 \n\
-}                                                                                                               \n\
+extern \"C\"                                                                 \n\
+{                                                                            \n\
+    extern void *class_getMethodImplementation(void *objc_class, void *sel); \n\
+    extern void * object_getClass (id object);                               \n\
+    extern void * sel_getUid(char *name);                                    \n\
+    extern int printf(const char *format, ...);                              \n\
+}                                                                            \n\
 extern \"C\" void * __lldb_objc_find_implementation_for_selector (void *object,                                 \n\
-                                                    void *sel,                                                  \n\
-                                                    int is_stret,                                               \n\
-                                                    int is_super,                                               \n\
-                                                    int is_super2,                                              \n\
-                                                    int is_fixup,                                               \n\
-                                                    int is_fixed,                                               \n\
-                                                    int debug)                                                  \n\
-{                                                                                                               \n\
-    struct __lldb_imp_return_struct                                                                             \n\
-    {                                                                                                           \n\
-        void *class_addr;                                                                                       \n\
-        void *sel_addr;                                                                                         \n\
-        void *impl_addr;                                                                                        \n\
-    };                                                                                                          \n\
-                                                                                                                \n\
-    struct __lldb_objc_class {                                                                                  \n\
-        void *isa;                                                                                              \n\
-        void *super_ptr;                                                                                        \n\
-    };                                                                                                          \n\
-    struct __lldb_objc_super {                                                                                  \n\
-        void *reciever;                                                                                         \n\
-        struct __lldb_objc_class *class_ptr;                                                                    \n\
-    };                                                                                                          \n\
-    struct __lldb_msg_ref {                                                                                     \n\
-        void *dont_know;                                                                                        \n\
-        void *sel;                                                                                              \n\
-    };                                                                                                          \n\
-                                                                                                                \n\
-    struct __lldb_imp_return_struct return_struct;                                                              \n\
-                                                                                                                \n\
-    if (debug)                                                                                                  \n\
+                                                    void *sel,               \n\
+                                                    int is_stret,            \n\
+                                                    int is_super,            \n\
+                                                    int is_super2,           \n\
+                                                    int is_fixup,            \n\
+                                                    int is_fixed,            \n\
+                                                    int debug)               \n\
+{                                                                            \n\
+    struct __lldb_imp_return_struct                                          \n\
+    {                                                                        \n\
+        void *class_addr;                                                    \n\
+        void *sel_addr;                                                      \n\
+        void *impl_addr;                                                     \n\
+    };                                                                       \n\
+                                                                             \n\
+    struct __lldb_objc_class {                                               \n\
+        void *isa;                                                           \n\
+        void *super_ptr;                                                     \n\
+    };                                                                       \n\
+    struct __lldb_objc_super {                                               \n\
+        void *reciever;                                                      \n\
+        struct __lldb_objc_class *class_ptr;                                 \n\
+    };                                                                       \n\
+    struct __lldb_msg_ref {                                                  \n\
+        void *dont_know;                                                     \n\
+        void *sel;                                                           \n\
+    };                                                                       \n\
+                                                                             \n\
+    struct __lldb_imp_return_struct return_struct;                           \n\
+                                                                             \n\
+    if (debug)                                                               \n\
         printf (\"\\n*** Called with obj: 0x%p sel: 0x%p is_stret: %d is_super: %d, \"                          \n\
-                \"is_super2: %d, is_fixup: %d, is_fixed: %d\\n\",                                               \n\
+                \"is_super2: %d, is_fixup: %d, is_fixed: %d\\n\",            \n\
                  object, sel, is_stret, is_super, is_super2, is_fixup, is_fixed);                               \n\
-    if (is_super)                                                                                               \n\
-    {                                                                                                           \n\
-        if (is_super2)                                                                                          \n\
-        {                                                                                                       \n\
+    if (is_super)                                                            \n\
+    {                                                                        \n\
+        if (is_super2)                                                       \n\
+        {                                                                    \n\
             return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr->super_ptr;                    \n\
-        }                                                                                                       \n\
-        else                                                                                                    \n\
-        {                                                                                                       \n\
+        }                                                                    \n\
+        else                                                                 \n\
+        {                                                                    \n\
             return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr;                               \n\
-        }                                                                                                       \n\
-    }                                                                                                           \n\
-    else                                                                                                        \n\
-    {                                                                                                           \n\
-        // This code seems a little funny, but has its reasons...                                               \n\
+        }                                                                    \n\
+    }                                                                        \n\
+    else                                                                     \n\
+    {                                                                        \n\
+        // This code seems a little funny, but has its reasons...            \n\
         // The call to [object class] is here because if this is a class, and has not been called into          \n\
         // yet, we need to do something to force the class to initialize itself.                                \n\
         // Then the call to object_getClass will actually return the correct class, either the class            \n\
         // if object is a class instance, or the meta-class if it is a class pointer.                           \n\
-        void *class_ptr = (void *) [(id) object class];                                                         \n\
-        return_struct.class_addr = (id)  object_getClass((id) object);                                          \n\
-        if (debug)                                                                                              \n\
-        {                                                                                                       \n\
-            if (class_ptr == object)                                                                            \n\
-            {                                                                                                   \n\
+        void *class_ptr = (void *) [(id) object class];                      \n\
+        return_struct.class_addr = (id)  object_getClass((id) object);       \n\
+        if (debug)                                                           \n\
+        {                                                                    \n\
+            if (class_ptr == object)                                         \n\
+            {                                                                \n\
                 printf (\"Found a class object, need to return the meta class %p -> %p\\n\",                    \n\
-                        class_ptr, return_struct.class_addr);                                                   \n\
-            }                                                                                                   \n\
-            else                                                                                                \n\
-            {                                                                                                   \n\
+                        class_ptr, return_struct.class_addr);                \n\
+            }                                                                \n\
+            else                                                             \n\
+            {                                                                \n\
                  printf (\"[object class] returned: %p object_getClass: %p.\\n\",                               \n\
-                 class_ptr, return_struct.class_addr);                                                          \n\
-            }                                                                                                   \n\
-        }                                                                                                       \n\
-    }                                                                                                           \n\
-                                                                                                                \n\
-    if (is_fixup)                                                                                               \n\
-    {                                                                                                           \n\
-        if (is_fixed)                                                                                           \n\
-        {                                                                                                       \n\
-            return_struct.sel_addr = ((__lldb_msg_ref *) sel)->sel;                                             \n\
-        }                                                                                                       \n\
-        else                                                                                                    \n\
-        {                                                                                                       \n\
-            char *sel_name = (char *) ((__lldb_msg_ref *) sel)->sel;                                            \n\
-            return_struct.sel_addr = sel_getUid (sel_name);                                                     \n\
-            if (debug)                                                                                          \n\
-                printf (\"\\n*** Got fixed up selector: %p for name %s.\\n\",                                   \n\
-                        return_struct.sel_addr, sel_name);                                                      \n\
-        }                                                                                                       \n\
-    }                                                                                                           \n\
-    else                                                                                                        \n\
-    {                                                                                                           \n\
-        return_struct.sel_addr = sel;                                                                           \n\
-    }                                                                                                           \n\
-                                                                                                                \n\
-    return_struct.impl_addr = class_getMethodImplementation (return_struct.class_addr,                          \n\
-                                                             return_struct.sel_addr);                           \n\
-    if (debug)                                                                                                  \n\
-        printf (\"\\n*** Returning implementation: 0x%p.\\n\", return_struct.impl_addr);                        \n\
-                                                                                                                \n\
-    return return_struct.impl_addr;                                                                             \n\
-}                                                                                                               \n\
+                 class_ptr, return_struct.class_addr);                       \n\
+            }                                                                \n\
+        }                                                                    \n\
+    }                                                                        \n\
+                                                                             \n\
+    if (is_fixup)                                                            \n\
+    {                                                                        \n\
+        if (is_fixed)                                                        \n\
+        {                                                                    \n\
+            return_struct.sel_addr = ((__lldb_msg_ref *) sel)->sel;          \n\
+        }                                                                    \n\
+        else                                                                 \n\
+        {                                                                    \n\
+            char *sel_name = (char *) ((__lldb_msg_ref *) sel)->sel;         \n\
+            return_struct.sel_addr = sel_getUid (sel_name);                  \n\
+            if (debug)                                                       \n\
+                printf (\"\\n*** Got fixed up selector: %p for name %s.\\n\",\n\
+                        return_struct.sel_addr, sel_name);                   \n\
+        }                                                                    \n\
+    }                                                                        \n\
+    else                                                                     \n\
+    {                                                                        \n\
+        return_struct.sel_addr = sel;                                        \n\
+    }                                                                        \n\
+                                                                             \n\
+    return_struct.impl_addr =                                                \n\
+      class_getMethodImplementation (return_struct.class_addr,               \n\
+                                     return_struct.sel_addr);                \n\
+    if (debug)                                                               \n\
+        printf (\"\\n*** Returning implementation: 0x%p.\\n\",               \n\
+          return_struct.impl_addr);                                          \n\
+                                                                             \n\
+    return return_struct.impl_addr;                                          \n\
+}                                                                            \n\
 ";
 
 AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::VTableRegion(
@@ -328,12 +338,11 @@ void AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::SetUpRegion() {
   // uint32_t offset
   // uint32_t flags
   //
-  // Where offset is either 0 - in which case it is unused, or
-  // it is the offset of the vtable code from the beginning of the descriptor
-  // record.
-  // Below, we'll convert that into an absolute code address, since I don't want
-  // to have
-  // to compute it over and over.
+  // Where offset is either 0 - in which case it is unused, or it is
+  // the offset of the vtable code from the beginning of the
+  // descriptor record.  Below, we'll convert that into an absolute
+  // code address, since I don't want to have to compute it over and
+  // over.
 
   // Ingest the whole descriptor array:
   const lldb::addr_t desc_ptr = m_header_addr + header_size;
@@ -370,10 +379,9 @@ void AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::SetUpRegion() {
 
     offset = start_offset + descriptor_size;
   }
-  // Finally, a little bird told me that all the vtable code blocks are the same
-  // size.
-  // Let's compute the blocks and if they are all the same add the size to the
-  // code end address:
+  // Finally, a little bird told me that all the vtable code blocks
+  // are the same size.  Let's compute the blocks and if they are all
+  // the same add the size to the code end address:
   lldb::addr_t code_size = 0;
   bool all_the_same = true;
   for (size_t i = 0; i < num_descriptors - 1; i++) {
@@ -548,9 +556,8 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
 }
 
 bool AppleObjCTrampolineHandler::AppleObjCVTables::ReadRegions() {
-  // The no argument version reads the start region from the value of the
-  // gdb_regions_header, and
-  // gets started from there.
+  // The no argument version reads the  start region from the value of
+  // the gdb_regions_header, and gets started from there.
 
   m_regions.clear();
   if (!InitializeVTableSymbols())
@@ -718,13 +725,12 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
         g_lookup_implementation_with_stret_function_code;
   }
 
-  // Look up the addresses for the objc dispatch functions and cache them.  For
-  // now I'm inspecting the symbol
-  // names dynamically to figure out how to dispatch to them.  If it becomes
-  // more complicated than this we can
-  // turn the g_dispatch_functions char * array into a template table, and
-  // populate the DispatchFunction map
-  // from there.
+  // Look up the addresses for the objc dispatch functions and cache
+  // them.  For now I'm inspecting the symbol names dynamically to
+  // figure out how to dispatch to them.  If it becomes more
+  // complicated than this we can turn the g_dispatch_functions char *
+  // array into a template table, and populate the DispatchFunction
+  // map from there.
 
   for (size_t i = 0; i != llvm::array_lengthof(g_dispatch_functions); i++) {
     ConstString name_const_str(g_dispatch_functions[i].name);
@@ -732,11 +738,11 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
         m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
                                                          eSymbolTypeCode);
     if (msgSend_symbol && msgSend_symbol->ValueIsAddress()) {
-      // FixMe: Make g_dispatch_functions static table of DispatchFunctions, and
-      // have the map be address->index.
-      // Problem is we also need to lookup the dispatch function.  For now we
-      // could have a side table of stret & non-stret
-      // dispatch functions.  If that's as complex as it gets, we're fine.
+      // FIXME: Make g_dispatch_functions static table of
+      // DispatchFunctions, and have the map be address->index.
+      // Problem is we also need to lookup the dispatch function.  For
+      // now we could have a side table of stret & non-stret dispatch
+      // functions.  If that's as complex as it gets, we're fine.
 
       lldb::addr_t sym_addr =
           msgSend_symbol->GetAddressRef().GetOpcodeLoadAddress(target);
@@ -820,11 +826,11 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
 
   diagnostics.Clear();
 
-  // Now write down the argument values for this particular call.  This looks
-  // like it might be a race condition
-  // if other threads were calling into here, but actually it isn't because we
-  // allocate a new args structure for
-  // this call by passing args_addr = LLDB_INVALID_ADDRESS...
+  // Now write down the argument values for this particular call.
+  // This looks like it might be a race condition if other threads
+  // were calling into here, but actually it isn't because we allocate
+  // a new args structure for this call by passing args_addr =
+  // LLDB_INVALID_ADDRESS...
 
   if (!impl_function_caller->WriteFunctionArguments(
           exe_ctx, args_addr, dispatch_values, diagnostics)) {
@@ -847,9 +853,9 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
   DispatchFunction this_dispatch;
   bool found_it = false;
 
-  // First step is to look and see if we are in one of the known ObjC dispatch
-  // functions.  We've already compiled
-  // a table of same, so consult it.
+  // First step is to look and see if we are in one of the known ObjC
+  // dispatch functions.  We've already compiled a table of same, so
+  // consult it.
 
   MsgsendMap::iterator pos;
   pos = m_msgSend_map.find(curr_pc);
@@ -879,8 +885,8 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
   if (found_it) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
-    // We are decoding a method dispatch.
-    // First job is to pull the arguments out:
+    // We are decoding a method dispatch.  First job is to pull the
+    // arguments out:
 
     lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
 
@@ -906,10 +912,10 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     int obj_index;
     int sel_index;
 
-    // If this is a struct return dispatch, then the first argument is the
-    // return struct pointer, and the object is the second, and the selector is
-    // the third.
-    // Otherwise the object is the first and the selector the second.
+    // If this is a struct return dispatch, then the first argument is
+    // the return struct pointer, and the object is the second, and
+    // the selector is the third.  Otherwise the object is the first
+    // and the selector the second.
     if (this_dispatch.stret_return) {
       obj_index = 1;
       sel_index = 2;
@@ -938,29 +944,26 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
     ExecutionContext exe_ctx(thread.shared_from_this());
     Process *process = exe_ctx.GetProcessPtr();
-    // isa_addr will store the class pointer that the method is being dispatched
-    // to - so either the class
-    // directly or the super class if this is one of the objc_msgSendSuper
-    // flavors.  That's mostly used to
-    // look up the class/selector pair in our cache.
+    // isa_addr will store the class pointer that the method is being
+    // dispatched to - so either the class directly or the super class
+    // if this is one of the objc_msgSendSuper flavors.  That's mostly
+    // used to look up the class/selector pair in our cache.
 
     lldb::addr_t isa_addr = LLDB_INVALID_ADDRESS;
     lldb::addr_t sel_addr =
         argument_values.GetValueAtIndex(sel_index)->GetScalar().ULongLong();
 
-    // Figure out the class this is being dispatched to and see if we've already
-    // cached this method call,
-    // If so we can push a run-to-address plan directly.  Otherwise we have to
-    // figure out where
-    // the implementation lives.
+    // Figure out the class this is being dispatched to and see if
+    // we've already cached this method call, If so we can push a
+    // run-to-address plan directly.  Otherwise we have to figure out
+    // where the implementation lives.
 
     if (this_dispatch.is_super) {
       if (this_dispatch.is_super2) {
-        // In the objc_msgSendSuper2 case, we don't get the object directly, we
-        // get a structure containing
-        // the object and the class to which the super message is being sent.
-        // So we need to dig the super
-        // out of the class and use that.
+        // In the objc_msgSendSuper2 case, we don't get the object
+        // directly, we get a structure containing the object and the
+        // class to which the super message is being sent.  So we need
+        // to dig the super out of the class and use that.
 
         Value super_value(*(argument_values.GetValueAtIndex(obj_index)));
         super_value.GetScalar() += process->GetAddressByteSize();
@@ -984,11 +987,11 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
             log->Printf("Failed to extract the class value from objc_super.");
         }
       } else {
-        // In the objc_msgSendSuper case, we don't get the object directly, we
-        // get a two element structure containing
-        // the object and the super class to which the super message is being
-        // sent.  So the class we want is
-        // the second element of this structure.
+        // In the objc_msgSendSuper case, we don't get the object
+        // directly, we get a two element structure containing the
+        // object and the super class to which the super message is
+        // being sent.  So the class we want is the second element of
+        // this structure.
 
         Value super_value(*(argument_values.GetValueAtIndex(obj_index)));
         super_value.GetScalar() += process->GetAddressByteSize();
@@ -1009,9 +1012,9 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       // making the object value a load address value and resolving it will get
       // the pointer sized data pointed to by that value...
 
-      // Note, it isn't a fatal error not to be able to get the address from the
-      // object, since this might
-      // be a "tagged pointer" which isn't a real object, but rather some word
+      // Note, it isn't a fatal error not to be able to get the
+      // address from the object, since this might be a "tagged
+      // pointer" which isn't a real object, but rather some word
       // length encoded dingus.
 
       Value isa_value(*(argument_values.GetValueAtIndex(obj_index)));
@@ -1126,9 +1129,9 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
         flag_value.GetScalar() = 0; // FIXME - Set to 0 when debugging is done.
       dispatch_values.PushValue(flag_value);
 
-      // The step through code might have to fill in the cache, so it is not
-      // safe to run only one thread.
-      // So we override the stop_others value passed in to us here:
+      // The step through code might have to fill in the cache, so it
+      // is not safe to run only one thread.  So we override the
+      // stop_others value passed in to us here:
       const bool trampoline_stop_others = false;
       ret_plan_sp.reset(new AppleThreadPlanStepThroughObjCTrampoline(
           thread, this, dispatch_values, isa_addr, sel_addr,

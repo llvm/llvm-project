@@ -129,8 +129,8 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
   ModuleSpec resolved_module_spec(module_spec);
 
   if (IsHost()) {
-    // If we have "ls" as the exe_file, resolve the executable location based on
-    // the current path variables
+    // If we have "ls" as the exe_file, resolve the executable location based
+    // on the current path variables
     if (!resolved_module_spec.GetFileSpec().Exists()) {
       resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
       resolved_module_spec.GetFileSpec().SetFile(exe_path, true);
@@ -215,9 +215,9 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
             resolved_module_spec.GetArchitecture().GetArchitectureName());
       }
     } else {
-      // No valid architecture was specified, ask the platform for
-      // the architectures that we should be using (in the correct order)
-      // and see if we can find a match that way
+      // No valid architecture was specified, ask the platform for the
+      // architectures that we should be using (in the correct order) and see
+      // if we can find a match that way
       StreamString arch_names;
       for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
                idx, resolved_module_spec.GetArchitecture());
@@ -524,8 +524,8 @@ lldb_private::Status PlatformPOSIX::GetFile(
       Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL, 60);
       if (retcode == 0)
         return Status();
-      // If we are here, rsync has failed - let's try the slow way before giving
-      // up
+      // If we are here, rsync has failed - let's try the slow way before
+      // giving up
     }
     // open src and dst
     // read/write, read/write, read/write, ...
@@ -866,9 +866,8 @@ PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   if (IsHost()) {
     // We are going to hand this process off to debugserver which will be in
-    // charge of setting the exit status.
-    // We still need to reap it from lldb but if we let the monitor thread also
-    // set the exit status, we set up a
+    // charge of setting the exit status. We still need to reap it from lldb
+    // but if we let the monitor thread also set the exit status, we set up a
     // race between debugserver & us for who will find out about the debugged
     // process's death.
     launch_info.GetFlags().Set(eLaunchFlagDontSetExitStatus);
@@ -932,10 +931,11 @@ UtilityFunction *
 PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx, 
                                             Status &error)
 {
-  // Remember to prepend this with the prefix from GetLibdlFunctionDeclarations.
-  // The returned values are all in __lldb_dlopen_result for consistency.
-  // The wrapper returns a void * but doesn't use it because
-  // UtilityFunctions don't work with void returns at present.
+  // Remember to prepend this with the prefix from
+  // GetLibdlFunctionDeclarations. The returned values are all in
+  // __lldb_dlopen_result for consistency. The wrapper returns a void * but
+  // doesn't use it because UtilityFunctions don't work with void returns at
+  // present.
   static const char *dlopen_wrapper_code = R"(
   struct __lldb_dlopen_result {
     void *image_ptr;
@@ -1037,7 +1037,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   Status utility_error;
   
-  // The UtilityFunction is held in the Process.  Platforms don't track the 
+  // The UtilityFunction is held in the Process.  Platforms don't track the
   // lifespan of the Targets that use them, we can't put this in the Platform.
   UtilityFunction *dlopen_utility_func 
       = process->GetLoadImageUtilityFunction(this);
@@ -1059,8 +1059,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
   arguments = do_dlopen_function->GetArgumentValues();
   
-  // Now insert the path we are searching for and the result structure into
-  // the target.
+  // Now insert the path we are searching for and the result structure into the
+  // target.
   uint32_t permissions = ePermissionsReadable|ePermissionsWritable;
   size_t path_len = path.size() + 1;
   lldb::addr_t path_addr = process->AllocateMemory(path_len, 
@@ -1084,8 +1084,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
-  // Make space for our return structure.  It is two pointers big: the token and
-  // the error string.
+  // Make space for our return structure.  It is two pointers big: the token
+  // and the error string.
   const uint32_t addr_size = process->GetAddressByteSize();
   lldb::addr_t return_addr = process->CallocateMemory(2*addr_size,
                                                       permissions,

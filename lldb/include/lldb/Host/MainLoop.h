@@ -21,12 +21,12 @@
 
 namespace lldb_private {
 
-// Implementation of the MainLoopBase class. It can monitor file descriptors for
-// readability using ppoll, kqueue, poll or WSAPoll. On Windows it only supports
-// polling sockets, and will not work on generic file handles or pipes. On
-// systems without kqueue or ppoll handling singnals is not supported. In
-// addition to the common base, this class provides the ability to invoke a
-// given handler when a signal is received.
+// Implementation of the MainLoopBase class. It can monitor file descriptors
+// for readability using ppoll, kqueue, poll or WSAPoll. On Windows it only
+// supports polling sockets, and will not work on generic file handles or
+// pipes. On systems without kqueue or ppoll handling singnals is not
+// supported. In addition to the common base, this class provides the ability
+// to invoke a given handler when a signal is received.
 //
 // Since this class is primarily intended to be used for single-threaded
 // processing, it does not attempt to perform any internal synchronisation and
@@ -49,13 +49,13 @@ public:
                                   const Callback &callback,
                                   Status &error) override;
 
-  // Listening for signals from multiple MainLoop instances is perfectly safe as
-  // long as they don't try to listen for the same signal. The callback function
-  // is invoked when the control returns to the Run() function, not when the
-  // hander is executed. This mean that you can treat the callback as a normal
-  // function and perform things which would not be safe in a signal handler.
-  // However, since the callback is not invoked synchronously, you cannot use
-  // this mechanism to handle SIGSEGV and the like.
+  // Listening for signals from multiple MainLoop instances is perfectly safe
+  // as long as they don't try to listen for the same signal. The callback
+  // function is invoked when the control returns to the Run() function, not
+  // when the hander is executed. This mean that you can treat the callback as
+  // a normal function and perform things which would not be safe in a signal
+  // handler. However, since the callback is not invoked synchronously, you
+  // cannot use this mechanism to handle SIGSEGV and the like.
   SignalHandleUP RegisterSignal(int signo, const Callback &callback,
                                 Status &error);
 

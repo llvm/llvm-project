@@ -109,8 +109,8 @@ static bool should_show_stop_column_with_ansi(DebuggerSP debugger_sp) {
   if (!debugger_sp)
     return false;
 
-  // We don't use ANSI stop column formatting if the debugger doesn't think
-  // it should be using color.
+  // We don't use ANSI stop column formatting if the debugger doesn't think it
+  // should be using color.
   if (!debugger_sp->GetUseColor())
     return false;
 
@@ -128,8 +128,8 @@ static bool should_show_stop_column_with_caret(DebuggerSP debugger_sp) {
   if (!debugger_sp)
     return false;
 
-  // If we're asked to show the first available of ANSI or caret, then
-  // we do show the caret when ANSI is not available.
+  // If we're asked to show the first available of ANSI or caret, then we do
+  // show the caret when ANSI is not available.
   const auto value = debugger_sp->GetStopShowColumn();
   if ((value == eStopShowColumnAnsiOrCaret) && !debugger_sp->GetUseColor())
     return true;
@@ -255,9 +255,9 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
 
     if (m_last_line > 0) {
       if (reverse) {
-        // If this is the first time we've done a reverse, then back up one more
-        // time so we end
-        // up showing the chunk before the last one we've shown:
+        // If this is the first time we've done a reverse, then back up one
+        // more time so we end up showing the chunk before the last one we've
+        // shown:
         if (m_last_line > m_last_count)
           m_last_line -= m_last_count;
         else
@@ -299,10 +299,9 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
 
     if (target_sp) {
       // If nobody has set the default file and line then try here.  If there's
-      // no executable, then we
-      // will try again later when there is one.  Otherwise, if we can't find it
-      // we won't look again,
-      // somebody will have to set it (for instance when we stop somewhere...)
+      // no executable, then we will try again later when there is one.
+      // Otherwise, if we can't find it we won't look again, somebody will have
+      // to set it (for instance when we stop somewhere...)
       Module *executable_ptr = target_sp->GetExecutableModulePointer();
       if (executable_ptr) {
         SymbolContextList sc_list;
@@ -410,9 +409,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         FileSpec new_file_spec;
         // Check target specific source remappings first, then fall back to
         // modules objects can have individual path remappings that were
-        // detected
-        // when the debug info for a module was found.
-        // then
+        // detected when the debug info for a module was found. then
         if (target->GetSourcePathMap().FindFile(m_file_spec, new_file_spec) ||
             target->GetImages().FindSourceFile(m_file_spec, new_file_spec)) {
           m_file_spec = new_file_spec;
@@ -538,8 +535,8 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
       if (column && (column < count)) {
         auto debugger_sp = m_debugger_wp.lock();
         if (should_show_stop_column_with_ansi(debugger_sp) && debugger_sp) {
-          // Check if we have any ANSI codes with which to mark this column.
-          // If not, no need to do this work.
+          // Check if we have any ANSI codes with which to mark this column. If
+          // not, no need to do this work.
           auto ansi_prefix_entry = debugger_sp->GetStopShowColumnAnsiPrefix();
           auto ansi_suffix_entry = debugger_sp->GetStopShowColumnAnsiSuffix();
 

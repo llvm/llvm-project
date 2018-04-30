@@ -205,9 +205,9 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
     }
 
   } else {
-    // Since the compiler can't handle things like "main + 12" we should
-    // try to do this for now. The compiler doesn't like adding offsets
-    // to function pointer types.
+    // Since the compiler can't handle things like "main + 12" we should try to
+    // do this for now. The compiler doesn't like adding offsets to function
+    // pointer types.
     static RegularExpression g_symbol_plus_offset_regex(
         "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
     RegularExpression::Match regex_match(3);

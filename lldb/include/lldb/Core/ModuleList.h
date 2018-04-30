@@ -410,9 +410,9 @@ public:
   //------------------------------------------------------------------
   // Find a module by UUID
   //
-  // The UUID value for a module is extracted from the ObjectFile and
-  // is the MD5 checksum, or a smarter object file equivalent, so
-  // finding modules by UUID values is very efficient and accurate.
+  // The UUID value for a module is extracted from the ObjectFile and is the
+  // MD5 checksum, or a smarter object file equivalent, so finding modules by
+  // UUID values is very efficient and accurate.
   //------------------------------------------------------------------
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 

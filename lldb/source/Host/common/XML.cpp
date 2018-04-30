@@ -252,8 +252,8 @@ void XMLNode::ForEachSiblingElementWithName(
       if (node->type != XML_ELEMENT_NODE)
         continue;
 
-      // If name is nullptr, we take all nodes of type "t", else
-      // just the ones whose name matches
+      // If name is nullptr, we take all nodes of type "t", else just the ones
+      // whose name matches
       if (name) {
         if (strcmp((const char *)node->name, name) != 0)
           continue; // Name mismatch, ignore this one

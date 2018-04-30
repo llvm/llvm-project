@@ -86,8 +86,8 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
   // Always avoid code with line number 0.
   // FIXME: At present the ShouldStop and the StepFromHere calculate this
   // independently.  If this ever
-  // becomes expensive (this one isn't) we can try to have this set a state that
-  // the StepFromHere can use.
+  // becomes expensive (this one isn't) we can try to have this set a state
+  // that the StepFromHere can use.
   if (frame) {
     SymbolContext sc;
     sc = frame->GetSymbolContext(eSymbolContextLineEntry);
@@ -104,9 +104,8 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
   const bool stop_others = false;
   const size_t frame_index = 0;
   ThreadPlanSP return_plan_sp;
-  // If we are stepping through code at line number 0, then we need to step over
-  // this range.  Otherwise
-  // we will step out.
+  // If we are stepping through code at line number 0, then we need to step
+  // over this range.  Otherwise we will step out.
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
   StackFrame *frame = current_plan->GetThread().GetStackFrameAtIndex(0).get();
@@ -119,8 +118,7 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
     AddressRange range = sc.line_entry.range;
 
     // If the whole function is marked line 0 just step out, that's easier &
-    // faster than continuing
-    // to step through it.
+    // faster than continuing to step through it.
     bool just_step_out = false;
     if (sc.symbol && sc.symbol->ValueIsAddress()) {
       Address symbol_end = sc.symbol->GetAddress();

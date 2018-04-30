@@ -102,11 +102,11 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   if (port == UINT16_MAX)
     port = GetNextAvailablePort();
 
-  // Spawn a new thread to accept the port that gets bound after
-  // binding to port 0 (zero).
+  // Spawn a new thread to accept the port that gets bound after binding to
+  // port 0 (zero).
 
-  // ignore the hostname send from the remote end, just use the ip address
-  // that we're currently communicating with as the hostname
+  // ignore the hostname send from the remote end, just use the ip address that
+  // we're currently communicating with as the hostname
 
   // Spawn a debugserver and try to get the port it listens to.
   ProcessLaunchInfo debugserver_launch_info;
@@ -117,8 +117,8 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   if (log)
     log->Printf("Launching debugserver with: %s:%u...", hostname.c_str(), port);
 
-  // Do not run in a new session so that it can not linger after the
-  // platform closes.
+  // Do not run in a new session so that it can not linger after the platform
+  // closes.
   debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
   debugserver_launch_info.SetMonitorProcessCallback(
       std::bind(&GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped,
@@ -171,8 +171,8 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
 #ifdef _WIN32
   return SendErrorResponse(9);
 #else
-  // Spawn a local debugserver as a platform so we can then attach or launch
-  // a process...
+  // Spawn a local debugserver as a platform so we can then attach or launch a
+  // process...
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
   if (log)
@@ -260,8 +260,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qKillSpawnedProcess(
 
   lldb::pid_t pid = packet.GetU64(LLDB_INVALID_PROCESS_ID);
 
-  // verify that we know anything about this pid.
-  // Scope for locker
+  // verify that we know anything about this pid. Scope for locker
   {
     std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     if (m_spawned_pids.find(pid) == m_spawned_pids.end()) {
@@ -307,8 +306,8 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
       return true;
   }
 
-  // the launched process still lives.  Now try killing it again,
-  // this time with an unblockable signal.
+  // the launched process still lives.  Now try killing it again, this time
+  // with an unblockable signal.
   Host::Kill(pid, SIGKILL);
 
   for (size_t i = 0; i < 10; ++i) {
@@ -322,8 +321,7 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
     usleep(10000);
   }
 
-  // check one more time after the final usleep
-  // Scope for locker
+  // check one more time after the final usleep Scope for locker
   {
     std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     if (m_spawned_pids.find(pid) == m_spawned_pids.end())
@@ -390,14 +388,13 @@ GDBRemoteCommunicationServerPlatform::Handle_qC(
   StreamString response;
   response.Printf("QC%" PRIx64, pid);
 
-  // If we launch a process and this GDB server is acting as a platform,
-  // then we need to clear the process launch state so we can start
-  // launching another process. In order to launch a process a bunch or
-  // packets need to be sent: environment packets, working directory,
-  // disable ASLR, and many more settings. When we launch a process we
-  // then need to know when to clear this information. Currently we are
-  // selecting the 'qC' packet as that packet which seems to make the most
-  // sense.
+  // If we launch a process and this GDB server is acting as a platform, then
+  // we need to clear the process launch state so we can start launching
+  // another process. In order to launch a process a bunch or packets need to
+  // be sent: environment packets, working directory, disable ASLR, and many
+  // more settings. When we launch a process we then need to know when to clear
+  // this information. Currently we are selecting the 'qC' packet as that
+  // packet which seems to make the most sense.
   if (pid != LLDB_INVALID_PROCESS_ID) {
     m_process_launch_info.Clear();
   }
@@ -446,9 +443,8 @@ Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
     return Status("%s: no process command line specified to launch",
                   __FUNCTION__);
 
-  // specify the process monitor if not already set.  This should
-  // generally be what happens since we need to reap started
-  // processes.
+  // specify the process monitor if not already set.  This should generally be
+  // what happens since we need to reap started processes.
   if (!m_process_launch_info.GetMonitorProcessCallback())
     m_process_launch_info.SetMonitorProcessCallback(
         std::bind(
@@ -467,8 +463,8 @@ Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
          m_process_launch_info.GetArguments().GetArgumentAtIndex(0),
          m_process_launch_info.GetProcessID());
 
-  // add to list of spawned processes.  On an lldb-gdbserver, we
-  // would expect there to be only one.
+  // add to list of spawned processes.  On an lldb-gdbserver, we would expect
+  // there to be only one.
   const auto pid = m_process_launch_info.GetProcessID();
   if (pid != LLDB_INVALID_PROCESS_ID) {
     // add to spawned pids

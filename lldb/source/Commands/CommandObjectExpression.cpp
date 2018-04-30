@@ -322,9 +322,9 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
                                                  Stream *output_stream,
                                                  Stream *error_stream,
                                                  CommandReturnObject *result) {
-  // Don't use m_exe_ctx as this might be called asynchronously
-  // after the command object DoExecute has finished when doing
-  // multi-line expression that use an input reader...
+  // Don't use m_exe_ctx as this might be called asynchronously after the
+  // command object DoExecute has finished when doing multi-line expression
+  // that use an input reader...
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
 
   Target *target = exe_ctx.GetTargetPtr();
@@ -363,8 +363,8 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
     if (m_command_options.top_level)
       options.SetExecutionPolicy(eExecutionPolicyTopLevel);
 
-    // If there is any chance we are going to stop and want to see
-    // what went wrong with our expression, we should generate debug info
+    // If there is any chance we are going to stop and want to see what went
+    // wrong with our expression, we should generate debug info
     if (!m_command_options.ignore_breakpoints ||
         !m_command_options.unwind_on_error)
       options.SetGenerateDebugInfo(true);
@@ -475,9 +475,8 @@ bool CommandObjectExpression::IOHandlerIsInputComplete(IOHandler &io_handler,
   // An empty lines is used to indicate the end of input
   const size_t num_lines = lines.GetSize();
   if (num_lines > 0 && lines[num_lines - 1].empty()) {
-    // Remove the last empty line from "lines" so it doesn't appear
-    // in our resulting input and return true to indicate we are done
-    // getting lines
+    // Remove the last empty line from "lines" so it doesn't appear in our
+    // resulting input and return true to indicate we are done getting lines
     lines.PopBack();
     return true;
   }
@@ -562,19 +561,16 @@ bool CommandObjectExpression::DoExecute(const char *command,
           Debugger &debugger = target->GetDebugger();
 
           // Check if the LLDB command interpreter is sitting on top of a REPL
-          // that
-          // launched it...
+          // that launched it...
           if (debugger.CheckTopIOHandlerTypes(
                   IOHandler::Type::CommandInterpreter, IOHandler::Type::REPL)) {
             // the LLDB command interpreter is sitting on top of a REPL that
-            // launched it,
-            // so just say the command interpreter is done and fall back to the
-            // existing REPL
+            // launched it, so just say the command interpreter is done and
+            // fall back to the existing REPL
             m_interpreter.GetIOHandler(false)->SetIsDone(true);
           } else {
             // We are launching the REPL on top of the current LLDB command
-            // interpreter,
-            // so just push one
+            // interpreter, so just push one
             bool initialize = false;
             Status repl_error;
             REPLSP repl_sp(target->GetREPL(
@@ -642,14 +638,12 @@ bool CommandObjectExpression::DoExecute(const char *command,
       }
       history.AppendString(fixed_command);
     }
-    // Increment statistics to record this expression evaluation
-    // success.
+    // Increment statistics to record this expression evaluation success.
     target->IncrementStats(StatisticKind::ExpressionSuccessful);
     return true;
   }
 
-  // Increment statistics to record this expression evaluation
-  // failure.
+  // Increment statistics to record this expression evaluation failure.
   target->IncrementStats(StatisticKind::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;

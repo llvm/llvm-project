@@ -70,9 +70,9 @@ void SBModuleSpec::SetObjectName(const char *name) {
 
 const char *SBModuleSpec::GetTriple() {
   std::string triple(m_opaque_ap->GetArchitecture().GetTriple().str());
-  // Unique the string so we don't run into ownership issues since
-  // the const strings put the string into the string pool once and
-  // the strings never comes out
+  // Unique the string so we don't run into ownership issues since the const
+  // strings put the string into the string pool once and the strings never
+  // comes out
   ConstString const_triple(triple.c_str());
   return const_triple.GetCString();
 }

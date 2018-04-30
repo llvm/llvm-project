@@ -83,9 +83,9 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
       break;
 
 #if defined(__ANDROID__)
-    // Only accept "unknown" for the vendor if the host is android and
-    // it "unknown" wasn't specified (it was just returned because it
-    // was NOT specified_
+    // Only accept "unknown" for the vendor if the host is android and it
+    // "unknown" wasn't specified (it was just returned because it was NOT
+    // specified_
     case llvm::Triple::VendorType::UnknownVendor:
       create = !arch->TripleVendorWasSpecified();
       break;
@@ -100,9 +100,9 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
         break;
 
 #if defined(__ANDROID__)
-      // Only accept "unknown" for the OS if the host is android and
-      // it "unknown" wasn't specified (it was just returned because it
-      // was NOT specified)
+      // Only accept "unknown" for the OS if the host is android and it
+      // "unknown" wasn't specified (it was just returned because it was NOT
+      // specified)
       case llvm::Triple::OSType::UnknownOS:
         create = !arch->TripleOSWasSpecified();
         break;
@@ -222,8 +222,8 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   if (strchr(source_file, '\'') != nullptr)
     return Status("Doesn't support single-quotes in filenames");
 
-  // mode == 0 can signify that adbd cannot access the file
-  // due security constraints - try "cat ..." as a fallback.
+  // mode == 0 can signify that adbd cannot access the file due security
+  // constraints - try "cat ..." as a fallback.
   AdbClient adb(m_device_id);
 
   char cmd[PATH_MAX];

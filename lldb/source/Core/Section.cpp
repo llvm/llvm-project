@@ -177,9 +177,9 @@ Section::~Section() {
 addr_t Section::GetFileAddress() const {
   SectionSP parent_sp(GetParent());
   if (parent_sp) {
-    // This section has a parent which means m_file_addr is an offset into
-    // the parent section, so the file address for this section is the file
-    // address of the parent plus the offset
+    // This section has a parent which means m_file_addr is an offset into the
+    // parent section, so the file address for this section is the file address
+    // of the parent plus the offset
     return parent_sp->GetFileAddress() + m_file_addr;
   }
   // This section has no parent, so m_file_addr is the file base address
@@ -558,10 +558,8 @@ SectionSP SectionList::FindSectionContainingFileAddress(addr_t vm_addr,
     Section *sect = sect_iter->get();
     if (sect->ContainsFileAddress(vm_addr)) {
       // The file address is in this section. We need to make sure one of our
-      // child
-      // sections doesn't contain this address as well as obeying the depth
-      // limit
-      // that was passed in.
+      // child sections doesn't contain this address as well as obeying the
+      // depth limit that was passed in.
       if (depth > 0)
         sect_sp = sect->GetChildren().FindSectionContainingFileAddress(
             vm_addr, depth - 1);

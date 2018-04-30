@@ -104,8 +104,8 @@ public:
     }
 
     // Use tids instead of ThreadSPs to prevent deadlocking problems which
-    // result from JIT-ing
-    // code while iterating over the (locked) ThreadSP list.
+    // result from JIT-ing code while iterating over the (locked) ThreadSP
+    // list.
     std::vector<lldb::tid_t> tids;
 
     if (all_threads || m_unique_stacks) {
@@ -196,11 +196,10 @@ protected:
   //
   // If you return false, the iteration will stop, otherwise it will proceed.
   // The result is set to m_success_return (defaults to
-  // eReturnStatusSuccessFinishResult) before the iteration,
-  // so you only need to set the return status in HandleOneThread if you want to
-  // indicate an error.
-  // If m_add_return is true, a blank line will be inserted between each of the
-  // listings (except the last one.)
+  // eReturnStatusSuccessFinishResult) before the iteration, so you only need
+  // to set the return status in HandleOneThread if you want to indicate an
+  // error. If m_add_return is true, a blank line will be inserted between each
+  // of the listings (except the last one.)
 
   virtual bool HandleOneThread(lldb::tid_t, CommandReturnObject &result) = 0;
 
@@ -647,8 +646,7 @@ protected:
     const lldb::RunMode stop_other_threads = m_options.m_run_mode;
 
     // This is a bit unfortunate, but not all the commands in this command
-    // object support
-    // only while stepping, so I use the bool for them.
+    // object support only while stepping, so I use the bool for them.
     bool bool_stop_other_threads;
     if (m_options.m_run_mode == eAllThreads)
       bool_stop_other_threads = false;
@@ -753,8 +751,8 @@ protected:
     }
 
     // If we got a new plan, then set it to be a master plan (User level Plans
-    // should be master plans
-    // so that they can be interruptible).  Then resume the process.
+    // should be master plans so that they can be interruptible).  Then resume
+    // the process.
 
     if (new_plan_sp) {
       new_plan_sp->SetIsMasterPlan(true);
@@ -785,10 +783,9 @@ protected:
       }
 
       // There is a race condition where this thread will return up the call
-      // stack to the main command handler
-      // and show an (lldb) prompt before HandlePrivateEvent (from
-      // PrivateStateThread) has
-      // a chance to call PushProcessIOHandler().
+      // stack to the main command handler and show an (lldb) prompt before
+      // HandlePrivateEvent (from PrivateStateThread) has a chance to call
+      // PushProcessIOHandler().
       process->SyncIOHandler(iohandler_id, 2000);
 
       if (synchronous_execution) {
@@ -870,9 +867,9 @@ public:
         (state == eStateSuspended)) {
       const size_t argc = command.GetArgumentCount();
       if (argc > 0) {
-        // These two lines appear at the beginning of both blocks in
-        // this if..else, but that is because we need to release the
-        // lock before calling process->Resume below.
+        // These two lines appear at the beginning of both blocks in this
+        // if..else, but that is because we need to release the lock before
+        // calling process->Resume below.
         std::lock_guard<std::recursive_mutex> guard(
             process->GetThreadList().GetMutex());
         const uint32_t num_threads = process->GetThreadList().GetSize();
@@ -931,9 +928,9 @@ public:
                                          process->GetID());
         }
       } else {
-        // These two lines appear at the beginning of both blocks in
-        // this if..else, but that is because we need to release the
-        // lock before calling process->Resume below.
+        // These two lines appear at the beginning of both blocks in this
+        // if..else, but that is because we need to release the lock before
+        // calling process->Resume below.
         std::lock_guard<std::recursive_mutex> guard(
             process->GetThreadList().GetMutex());
         const uint32_t num_threads = process->GetThreadList().GetSize();
@@ -1195,8 +1192,8 @@ protected:
       ThreadPlanSP new_plan_sp;
 
       if (frame->HasDebugInformation()) {
-        // Finally we got here...  Translate the given line number to a bunch of
-        // addresses:
+        // Finally we got here...  Translate the given line number to a bunch
+        // of addresses:
         SymbolContext sc(frame->GetSymbolContext(eSymbolContextCompUnit));
         LineTable *line_table = nullptr;
         if (sc.comp_unit)
@@ -1275,10 +1272,9 @@ protected:
             abort_other_plans, &address_list.front(), address_list.size(),
             m_options.m_stop_others, m_options.m_frame_idx);
         // User level plans should be master plans so they can be interrupted
-        // (e.g. by hitting a breakpoint)
-        // and other plans executed by the user (stepping around the breakpoint)
-        // and then a "continue"
-        // will resume the original plan.
+        // (e.g. by hitting a breakpoint) and other plans executed by the user
+        // (stepping around the breakpoint) and then a "continue" will resume
+        // the original plan.
         new_plan_sp->SetIsMasterPlan(true);
         new_plan_sp->SetOkayToDiscard(false);
       } else {

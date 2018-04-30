@@ -112,8 +112,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(void *data) {
 lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(
     const ProcessLaunchInfo &launch_info) {
   // Grab a shared_ptr reference to this so that we know it won't get deleted
-  // until after the
-  // thread routine has exited.
+  // until after the thread routine has exited.
   std::shared_ptr<DebuggerThread> this_ref(shared_from_this());
 
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
@@ -124,14 +123,11 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(
   ProcessLauncherWindows launcher;
   HostProcess process(launcher.LaunchProcess(launch_info, error));
   // If we couldn't create the process, notify waiters immediately.  Otherwise
-  // enter the debug
-  // loop and wait until we get the create process debug notification.  Note
-  // that if the process
-  // was created successfully, we can throw away the process handle we got from
-  // CreateProcess
-  // because Windows will give us another (potentially more useful?) handle when
-  // it sends us the
-  // CREATE_PROCESS_DEBUG_EVENT.
+  // enter the debug loop and wait until we get the create process debug
+  // notification.  Note that if the process was created successfully, we can
+  // throw away the process handle we got from CreateProcess because Windows
+  // will give us another (potentially more useful?) handle when it sends us
+  // the CREATE_PROCESS_DEBUG_EVENT.
   if (error.Success())
     DebugLoop();
   else
@@ -143,8 +139,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(
 lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
     lldb::pid_t pid, const ProcessAttachInfo &attach_info) {
   // Grab a shared_ptr reference to this so that we know it won't get deleted
-  // until after the
-  // thread routine has exited.
+  // until after the thread routine has exited.
   std::shared_ptr<DebuggerThread> this_ref(shared_from_this());
 
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
@@ -157,11 +152,9 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
     return 0;
   }
 
-  // The attach was successful, enter the debug loop.  From here on out, this is
-  // no different than
-  // a create process operation, so all the same comments in DebugLaunch should
-  // apply from this
-  // point out.
+  // The attach was successful, enter the debug loop.  From here on out, this
+  // is no different than a create process operation, so all the same comments
+  // in DebugLaunch should apply from this point out.
   DebugLoop();
 
   return 0;
@@ -189,8 +182,8 @@ Status DebuggerThread::StopDebugging(bool terminate) {
 
   if (terminate) {
     // Initiate the termination before continuing the exception, so that the
-    // next debug
-    // event we get is the exit process event, and not some other event.
+    // next debug event we get is the exit process event, and not some other
+    // event.
     BOOL terminate_suceeded = TerminateProcess(handle, 0);
     LLDB_LOG(log,
              "calling TerminateProcess({0}, 0) (inferior={1}), success={2}",
@@ -198,11 +191,9 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   }
 
   // If we're stuck waiting for an exception to continue (e.g. the user is at a
-  // breakpoint
-  // messing around in the debugger), continue it now.  But only AFTER calling
-  // TerminateProcess
-  // to make sure that the very next call to WaitForDebugEvent is an exit
-  // process event.
+  // breakpoint messing around in the debugger), continue it now.  But only
+  // AFTER calling TerminateProcess to make sure that the very next call to
+  // WaitForDebugEvent is an exit process event.
   if (m_active_exception.get()) {
     LLDB_LOG(log, "masking active exception");
     ContinueAsyncException(ExceptionResult::MaskException);
@@ -355,8 +346,7 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
     }
 
     // Don't perform any blocking operations while we're shutting down.  That
-    // will
-    // cause TerminateProcess -> WaitForSingleObject to time out.
+    // will cause TerminateProcess -> WaitForSingleObject to time out.
     return ExceptionResult::SendToApplication;
   }
 

@@ -118,16 +118,14 @@ bool CommunicationKDP::SendRequestAndGetReply(
             }
           } else if (reply_sequence_id > request_sequence_id) {
             // Sequence ID was greater than the sequence ID of the packet we
-            // sent, something
-            // is really wrong...
+            // sent, something is really wrong...
             reply_packet.Clear();
             return false;
           } else {
-            // The reply sequence ID was less than our current packet's sequence
-            // ID
-            // so we should keep trying to get a response because this was a
-            // response
-            // for a previous packet that we must have retried.
+            // The reply sequence ID was less than our current packet's
+            // sequence ID so we should keep trying to get a response because
+            // this was a response for a previous packet that we must have
+            // retried.
           }
         } else {
           // Break and retry sending the packet as we didn't get a response due
@@ -315,9 +313,9 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
       offset = 2;
       const uint16_t length = packet.GetU16(&offset);
       if (length <= bytes_available) {
-        // We have an entire packet ready, we need to copy the data
-        // bytes into a buffer that will be owned by the packet and
-        // erase the bytes from our communcation buffer "m_bytes"
+        // We have an entire packet ready, we need to copy the data bytes into
+        // a buffer that will be owned by the packet and erase the bytes from
+        // our communcation buffer "m_bytes"
         packet.SetData(DataBufferSP(new DataBufferHeap(&m_bytes[0], length)));
         m_bytes.erase(0, length);
 
@@ -332,8 +330,8 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
     } break;
 
     default:
-      // Unrecognized reply command byte, erase this byte and try to get back on
-      // track
+      // Unrecognized reply command byte, erase this byte and try to get back
+      // on track
       if (log)
         log->Printf("CommunicationKDP::%s: tossing junk byte: 0x%2.2x",
                     __FUNCTION__, (uint8_t)m_bytes[0]);
@@ -1208,8 +1206,8 @@ uint32_t CommunicationKDP::SendRequestReadRegisters(uint32_t cpu,
       if (src) {
         ::memcpy(dst, src, bytes_to_copy);
         error.Clear();
-        // Return the number of bytes we could have returned regardless if
-        // we copied them or not, just so we know when things don't match up
+        // Return the number of bytes we could have returned regardless if we
+        // copied them or not, just so we know when things don't match up
         return src_len;
       }
     }

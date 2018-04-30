@@ -147,9 +147,8 @@ public:
     return child_sp;
   }
 
-  // return true if this object is now safe to use forever without
-  // ever updating again; the typical (and tested) answer here is
-  // 'false'
+  // return true if this object is now safe to use forever without ever
+  // updating again; the typical (and tested) answer here is 'false'
   bool Update() override { return false; }
 
   // maybe return false if the block pointer is, say, null
