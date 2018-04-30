@@ -156,18 +156,16 @@ public:
   // Callbacks
   //
   // Breakpoint callbacks come in two forms, synchronous and asynchronous.
-  // Synchronous callbacks will get
-  // run before any of the thread plans are consulted, and if they return false
-  // the target will continue
-  // "under the radar" of the thread plans.  There are a couple of restrictions
-  // to synchronous callbacks:
-  // 1) They should NOT resume the target themselves.  Just return false if you
-  // want the target to restart.
-  // 2) Breakpoints with synchronous callbacks can't have conditions (or rather,
-  // they can have them, but they
-  //    won't do anything.  Ditto with ignore counts, etc...  You are supposed
-  //    to control that all through the
-  //    callback.
+  // Synchronous callbacks will get run before any of the thread plans are
+  // consulted, and if they return false the target will continue "under the
+  // radar" of the thread plans.  There are a couple of restrictions to
+  // synchronous callbacks:
+  // 1) They should NOT resume the target themselves.
+  //     Just return false if you want the target to restart.
+  // 2) Breakpoints with synchronous callbacks can't have conditions
+  //    (or rather, they can have them, but they won't do anything.
+  //    Ditto with ignore counts, etc...  You are supposed to control that all
+  //    through the callback.
   // Asynchronous callbacks get run as part of the "ShouldStop" logic in the
   // thread plan.  The logic there is:
   //   a) If the breakpoint is thread specific and not for this thread, continue
@@ -181,12 +179,10 @@ public:
   //   b) If the ignore count says we shouldn't stop, then ditto.
   //   c) If the condition says we shouldn't stop, then ditto.
   //   d) Otherwise, the callback will get run, and if it returns true we will
-  //   stop, and if false we won't.
+  //      stop, and if false we won't.
   //  The asynchronous callback can run the target itself, but at present that
-  //  should be the last action the
-  //  callback does.  We will relax this condition at some point, but it will
-  //  take a bit of plumbing to get
-  //  that to work.
+  //  should be the last action the callback does.  We will relax this condition
+  //  at some point, but it will take a bit of plumbing to get that to work.
   //
   //------------------------------------------------------------------
 
@@ -227,8 +223,8 @@ public:
   //------------------------------------------------------------------
   void ClearCallback();
 
-  // The rest of these functions are meant to be used only within the breakpoint
-  // handling mechanism.
+  // The rest of these functions are meant to be used only within the
+  // breakpoint handling mechanism.
 
   //------------------------------------------------------------------
   /// Use this function to invoke the callback for a specific stop.

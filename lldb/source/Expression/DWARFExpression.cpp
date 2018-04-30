@@ -679,8 +679,8 @@ static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
             error_ptr->Clear();
           return true;
         } else {
-          // If we get this error, then we need to implement a value
-          // buffer in the dwarf expression evaluation function...
+          // If we get this error, then we need to implement a value buffer in
+          // the dwarf expression evaluation function...
           if (error_ptr)
             error_ptr->SetErrorStringWithFormat(
                 "register %s can't be converted to a scalar value",
@@ -991,17 +991,17 @@ bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
 
     if (op == DW_OP_addr) {
       const uint32_t addr_byte_size = m_data.GetAddressByteSize();
-      // We have to make a copy of the data as we don't know if this
-      // data is from a read only memory mapped buffer, so we duplicate
-      // all of the data first, then modify it, and if all goes well,
-      // we then replace the data for this expression
+      // We have to make a copy of the data as we don't know if this data is
+      // from a read only memory mapped buffer, so we duplicate all of the data
+      // first, then modify it, and if all goes well, we then replace the data
+      // for this expression
 
       // So first we copy the data into a heap buffer
       std::unique_ptr<DataBufferHeap> head_data_ap(
           new DataBufferHeap(m_data.GetDataStart(), m_data.GetByteSize()));
 
-      // Make en encoder so we can write the address into the buffer using
-      // the correct byte order (endianness)
+      // Make en encoder so we can write the address into the buffer using the
+      // correct byte order (endianness)
       DataEncoder encoder(head_data_ap->GetBytes(), head_data_ap->GetByteSize(),
                           m_data.GetByteOrder(), addr_byte_size);
 
@@ -1009,9 +1009,8 @@ bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
       if (encoder.PutMaxU64(offset, addr_byte_size, file_addr) == UINT32_MAX)
         return false;
 
-      // All went well, so now we can reset the data using a shared
-      // pointer to the heap data so "m_data" will now correctly
-      // manage the heap data.
+      // All went well, so now we can reset the data using a shared pointer to
+      // the heap data so "m_data" will now correctly manage the heap data.
       m_data.SetData(DataBufferSP(head_data_ap.release()));
       return true;
     } else {
@@ -1025,9 +1024,9 @@ bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
 }
 
 bool DWARFExpression::ContainsThreadLocalStorage() const {
-  // We are assuming for now that any thread local variable will not
-  // have a location list. This has been true for all thread local
-  // variables we have seen so far produced by any compiler.
+  // We are assuming for now that any thread local variable will not have a
+  // location list. This has been true for all thread local variables we have
+  // seen so far produced by any compiler.
   if (IsLocationList())
     return false;
   lldb::offset_t offset = 0;
@@ -1048,24 +1047,24 @@ bool DWARFExpression::LinkThreadLocalStorage(
     lldb::ModuleSP new_module_sp,
     std::function<lldb::addr_t(lldb::addr_t file_addr)> const
         &link_address_callback) {
-  // We are assuming for now that any thread local variable will not
-  // have a location list. This has been true for all thread local
-  // variables we have seen so far produced by any compiler.
+  // We are assuming for now that any thread local variable will not have a
+  // location list. This has been true for all thread local variables we have
+  // seen so far produced by any compiler.
   if (IsLocationList())
     return false;
 
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
-  // We have to make a copy of the data as we don't know if this
-  // data is from a read only memory mapped buffer, so we duplicate
-  // all of the data first, then modify it, and if all goes well,
-  // we then replace the data for this expression
+  // We have to make a copy of the data as we don't know if this data is from a
+  // read only memory mapped buffer, so we duplicate all of the data first,
+  // then modify it, and if all goes well, we then replace the data for this
+  // expression
 
   // So first we copy the data into a heap buffer
   std::shared_ptr<DataBufferHeap> heap_data_sp(
       new DataBufferHeap(m_data.GetDataStart(), m_data.GetByteSize()));
 
-  // Make en encoder so we can write the address into the buffer using
-  // the correct byte order (endianness)
+  // Make en encoder so we can write the address into the buffer using the
+  // correct byte order (endianness)
   DataEncoder encoder(heap_data_sp->GetBytes(), heap_data_sp->GetByteSize(),
                       m_data.GetByteOrder(), addr_byte_size);
 
@@ -1080,8 +1079,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
     switch (op) {
     case DW_OP_const4u:
       // Remember the const offset in case we later have a
-      // DW_OP_form_tls_address
-      // or DW_OP_GNU_push_tls_address
+      // DW_OP_form_tls_address or DW_OP_GNU_push_tls_address
       const_offset = offset;
       const_value = m_data.GetU32(&offset);
       decoded_data = true;
@@ -1090,8 +1088,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
 
     case DW_OP_const8u:
       // Remember the const offset in case we later have a
-      // DW_OP_form_tls_address
-      // or DW_OP_GNU_push_tls_address
+      // DW_OP_form_tls_address or DW_OP_GNU_push_tls_address
       const_offset = offset;
       const_value = m_data.GetU64(&offset);
       decoded_data = true;
@@ -1101,21 +1098,15 @@ bool DWARFExpression::LinkThreadLocalStorage(
     case DW_OP_form_tls_address:
     case DW_OP_GNU_push_tls_address:
       // DW_OP_form_tls_address and DW_OP_GNU_push_tls_address must be preceded
-      // by
-      // a file address on the stack. We assume that DW_OP_const4u or
-      // DW_OP_const8u
-      // is used for these values, and we check that the last opcode we got
-      // before
-      // either of these was DW_OP_const4u or DW_OP_const8u. If so, then we can
-      // link
-      // the value accodingly. For Darwin, the value in the DW_OP_const4u or
-      // DW_OP_const8u is the file address of a structure that contains a
-      // function
-      // pointer, the pthread key and the offset into the data pointed to by the
-      // pthread key. So we must link this address and also set the module of
-      // this
-      // expression to the new_module_sp so we can resolve the file address
-      // correctly
+      // by a file address on the stack. We assume that DW_OP_const4u or
+      // DW_OP_const8u is used for these values, and we check that the last
+      // opcode we got before either of these was DW_OP_const4u or
+      // DW_OP_const8u. If so, then we can link the value accodingly. For
+      // Darwin, the value in the DW_OP_const4u or DW_OP_const8u is the file
+      // address of a structure that contains a function pointer, the pthread
+      // key and the offset into the data pointed to by the pthread key. So we
+      // must link this address and also set the module of this expression to
+      // the new_module_sp so we can resolve the file address correctly
       if (const_byte_size > 0) {
         lldb::addr_t linked_file_addr = link_address_callback(const_value);
         if (linked_file_addr == LLDB_INVALID_ADDRESS)
@@ -1144,8 +1135,8 @@ bool DWARFExpression::LinkThreadLocalStorage(
   }
 
   // If we linked the TLS address correctly, update the module so that when the
-  // expression
-  // is evaluated it can resolve the file address to a load address and read the
+  // expression is evaluated it can resolve the file address to a load address
+  // and read the
   // TLS data
   m_module_wp = new_module_sp;
   m_data.SetData(heap_data_sp);
@@ -1397,11 +1388,11 @@ bool DWARFExpression::Evaluate(
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
     // shared libraries that have a location like:
     //  DW_OP_addr(0x1000)
-    // If this address resides in a shared library, then this virtual
-    // address won't make sense when it is evaluated in the context of a
-    // running process where shared libraries have been slid. To account for
-    // this, this new address type where we can store the section pointer
-    // and a 4 byte offset.
+    // If this address resides in a shared library, then this virtual address
+    // won't make sense when it is evaluated in the context of a running
+    // process where shared libraries have been slid. To account for this, this
+    // new address type where we can store the section pointer and a 4 byte
+    // offset.
     //----------------------------------------------------------------------
     //      case DW_OP_addr_sect_offset4:
     //          {
@@ -1436,9 +1427,9 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_deref
     // OPERANDS: none
     // DESCRIPTION: Pops the top stack entry and treats it as an address.
-    // The value retrieved from that address is pushed. The size of the
-    // data retrieved from the dereferenced address is the size of an
-    // address on the target machine.
+    // The value retrieved from that address is pushed. The size of the data
+    // retrieved from the dereferenced address is the size of an address on the
+    // target machine.
     //----------------------------------------------------------------------
     case DW_OP_deref: {
       if (stack.empty()) {
@@ -1500,13 +1491,13 @@ bool DWARFExpression::Evaluate(
     //  1 - uint8_t that specifies the size of the data to dereference.
     // DESCRIPTION: Behaves like the DW_OP_deref operation: it pops the top
     // stack entry and treats it as an address. The value retrieved from that
-    // address is pushed. In the DW_OP_deref_size operation, however, the
-    // size in bytes of the data retrieved from the dereferenced address is
+    // address is pushed. In the DW_OP_deref_size operation, however, the size
+    // in bytes of the data retrieved from the dereferenced address is
     // specified by the single operand. This operand is a 1-byte unsigned
     // integral constant whose value may not be larger than the size of an
-    // address on the target machine. The data retrieved is zero extended
-    // to the size of an address on the target machine before being pushed
-    // on the expression stack.
+    // address on the target machine. The data retrieved is zero extended to
+    // the size of an address on the target machine before being pushed on the
+    // expression stack.
     //----------------------------------------------------------------------
     case DW_OP_deref_size: {
       if (stack.empty()) {
@@ -1525,8 +1516,7 @@ bool DWARFExpression::Evaluate(
         // I can't decide whether the size operand should apply to the bytes in
         // their
         // lldb-host endianness or the target endianness.. I doubt this'll ever
-        // come up
-        // but I'll opt for assuming big endian regardless.
+        // come up but I'll opt for assuming big endian regardless.
         switch (size) {
         case 1:
           ptr = ptr & 0xff;
@@ -1622,18 +1612,17 @@ bool DWARFExpression::Evaluate(
     // OPERANDS: 1
     //  1 - uint8_t that specifies the size of the data to dereference.
     // DESCRIPTION: Behaves like the DW_OP_xderef operation: the entry at
-    // the top of the stack is treated as an address. The second stack
-    // entry is treated as an "address space identifier" for those
-    // architectures that support multiple address spaces. The top two
-    // stack elements are popped, a data item is retrieved through an
-    // implementation-defined address calculation and pushed as the new
-    // stack top. In the DW_OP_xderef_size operation, however, the size in
-    // bytes of the data retrieved from the dereferenced address is
-    // specified by the single operand. This operand is a 1-byte unsigned
-    // integral constant whose value may not be larger than the size of an
-    // address on the target machine. The data retrieved is zero extended
-    // to the size of an address on the target machine before being pushed
-    // on the expression stack.
+    // the top of the stack is treated as an address. The second stack entry is
+    // treated as an "address space identifier" for those architectures that
+    // support multiple address spaces. The top two stack elements are popped,
+    // a data item is retrieved through an implementation-defined address
+    // calculation and pushed as the new stack top. In the DW_OP_xderef_size
+    // operation, however, the size in bytes of the data retrieved from the
+    // dereferenced address is specified by the single operand. This operand is
+    // a 1-byte unsigned integral constant whose value may not be larger than
+    // the size of an address on the target machine. The data retrieved is zero
+    // extended to the size of an address on the target machine before being
+    // pushed on the expression stack.
     //----------------------------------------------------------------------
     case DW_OP_xderef_size:
       if (error_ptr)
@@ -1643,13 +1632,13 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_xderef
     // OPERANDS: none
     // DESCRIPTION: Provides an extended dereference mechanism. The entry at
-    // the top of the stack is treated as an address. The second stack entry
-    // is treated as an "address space identifier" for those architectures
-    // that support multiple address spaces. The top two stack elements are
-    // popped, a data item is retrieved through an implementation-defined
-    // address calculation and pushed as the new stack top. The size of the
-    // data retrieved from the dereferenced address is the size of an address
-    // on the target machine.
+    // the top of the stack is treated as an address. The second stack entry is
+    // treated as an "address space identifier" for those architectures that
+    // support multiple address spaces. The top two stack elements are popped,
+    // a data item is retrieved through an implementation-defined address
+    // calculation and pushed as the new stack top. The size of the data
+    // retrieved from the dereferenced address is the size of an address on the
+    // target machine.
     //----------------------------------------------------------------------
     case DW_OP_xderef:
       if (error_ptr)
@@ -1661,16 +1650,13 @@ bool DWARFExpression::Evaluate(
     //
     // Opcode           Operand 1
     // ---------------  ----------------------------------------------------
-    // DW_OP_const1u    1-byte unsigned integer constant
-    // DW_OP_const1s    1-byte signed integer constant
-    // DW_OP_const2u    2-byte unsigned integer constant
-    // DW_OP_const2s    2-byte signed integer constant
-    // DW_OP_const4u    4-byte unsigned integer constant
-    // DW_OP_const4s    4-byte signed integer constant
-    // DW_OP_const8u    8-byte unsigned integer constant
-    // DW_OP_const8s    8-byte signed integer constant
-    // DW_OP_constu     unsigned LEB128 integer constant
-    // DW_OP_consts     signed LEB128 integer constant
+    // DW_OP_const1u    1-byte unsigned integer constant DW_OP_const1s
+    // 1-byte signed integer constant DW_OP_const2u    2-byte unsigned integer
+    // constant DW_OP_const2s    2-byte signed integer constant DW_OP_const4u
+    // 4-byte unsigned integer constant DW_OP_const4s    4-byte signed integer
+    // constant DW_OP_const8u    8-byte unsigned integer constant DW_OP_const8s
+    // 8-byte signed integer constant DW_OP_constu     unsigned LEB128 integer
+    // constant DW_OP_consts     signed LEB128 integer constant
     //----------------------------------------------------------------------
     case DW_OP_const1u:
       stack.push_back(Scalar((uint8_t)opcodes.GetU8(&offset)));
@@ -1789,9 +1775,9 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_rot
     // OPERANDS: none
     // DESCRIPTION: Rotates the first three stack entries. The entry at
-    // the top of the stack becomes the third stack entry, the second
-    // entry becomes the top of the stack, and the third entry becomes
-    // the second entry.
+    // the top of the stack becomes the third stack entry, the second entry
+    // becomes the top of the stack, and the third entry becomes the second
+    // entry.
     //----------------------------------------------------------------------
     case DW_OP_rot:
       if (stack.size() < 3) {
@@ -1853,8 +1839,8 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_div
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, divides the former second
-    // entry by the former top of the stack using signed division, and
-    // pushes the result.
+    // entry by the former top of the stack using signed division, and pushes
+    // the result.
     //----------------------------------------------------------------------
     case DW_OP_div:
       if (stack.size() < 2) {
@@ -1905,8 +1891,8 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_mod
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values and pushes the result of
-    // the calculation: former second stack entry modulo the former top of
-    // the stack.
+    // the calculation: former second stack entry modulo the former top of the
+    // stack.
     //----------------------------------------------------------------------
     case DW_OP_mod:
       if (stack.size() < 2) {
@@ -2050,8 +2036,8 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_shl
     // OPERANDS: none
     // DESCRIPTION:  pops the top two stack entries, shifts the former
-    // second entry left by the number of bits specified by the former top
-    // of the stack, and pushes the result.
+    // second entry left by the number of bits specified by the former top of
+    // the stack, and pushes the result.
     //----------------------------------------------------------------------
     case DW_OP_shl:
       if (stack.size() < 2) {
@@ -2096,8 +2082,8 @@ bool DWARFExpression::Evaluate(
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack entries, shifts the former second
     // entry right arithmetically (divide the magnitude by 2, keep the same
-    // sign for the result) by the number of bits specified by the former
-    // top of the stack, and pushes the result.
+    // sign for the result) by the number of bits specified by the former top
+    // of the stack, and pushes the result.
     //----------------------------------------------------------------------
     case DW_OP_shra:
       if (stack.size() < 2) {
@@ -2136,8 +2122,8 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_skip
     // OPERANDS: int16_t
     // DESCRIPTION:  An unconditional branch. Its single operand is a 2-byte
-    // signed integer constant. The 2-byte constant is the number of bytes
-    // of the DWARF expression to skip forward or backward from the current
+    // signed integer constant. The 2-byte constant is the number of bytes of
+    // the DWARF expression to skip forward or backward from the current
     // operation, beginning after the 2-byte constant.
     //----------------------------------------------------------------------
     case DW_OP_skip: {
@@ -2156,11 +2142,10 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_bra
     // OPERANDS: int16_t
     // DESCRIPTION: A conditional branch. Its single operand is a 2-byte
-    // signed integer constant. This operation pops the top of stack. If
-    // the value popped is not the constant 0, the 2-byte constant operand
-    // is the number of bytes of the DWARF expression to skip forward or
-    // backward from the current operation, beginning after the 2-byte
-    // constant.
+    // signed integer constant. This operation pops the top of stack. If the
+    // value popped is not the constant 0, the 2-byte constant operand is the
+    // number of bytes of the DWARF expression to skip forward or backward from
+    // the current operation, beginning after the 2-byte constant.
     //----------------------------------------------------------------------
     case DW_OP_bra:
       if (stack.empty()) {
@@ -2537,15 +2522,15 @@ bool DWARFExpression::Evaluate(
     // OPERANDS: 1
     //      ULEB128: byte size of the piece
     // DESCRIPTION: The operand describes the size in bytes of the piece of
-    // the object referenced by the DWARF expression whose result is at the
-    // top of the stack. If the piece is located in a register, but does not
-    // occupy the entire register, the placement of the piece within that
-    // register is defined by the ABI.
+    // the object referenced by the DWARF expression whose result is at the top
+    // of the stack. If the piece is located in a register, but does not occupy
+    // the entire register, the placement of the piece within that register is
+    // defined by the ABI.
     //
-    // Many compilers store a single variable in sets of registers, or store
-    // a variable partially in memory and partially in registers.
-    // DW_OP_piece provides a way of describing how large a part of a
-    // variable a particular DWARF expression refers to.
+    // Many compilers store a single variable in sets of registers, or store a
+    // variable partially in memory and partially in registers. DW_OP_piece
+    // provides a way of describing how large a part of a variable a particular
+    // DWARF expression refers to.
     //----------------------------------------------------------------------
     case DW_OP_piece: {
       const uint64_t piece_byte_size = opcodes.GetULEB128(&offset);
@@ -2555,8 +2540,8 @@ bool DWARFExpression::Evaluate(
 
         if (stack.empty()) {
           // In a multi-piece expression, this means that the current piece is
-          // not available.
-          // Fill with zeros for now by resizing the data and appending it
+          // not available. Fill with zeros for now by resizing the data and
+          // appending it
           curr_piece.ResizeData(piece_byte_size);
           ::memset(curr_piece.GetBuffer().GetBytes(), 0, piece_byte_size);
           pieces.AppendDataToHostBuffer(curr_piece);
@@ -2646,9 +2631,9 @@ bool DWARFExpression::Evaluate(
 
           // Check if this is the first piece?
           if (op_piece_offset == 0) {
-            // This is the first piece, we should push it back onto the stack so
-            // subsequent
-            // pieces will be able to access this piece and add to it
+            // This is the first piece, we should push it back onto the stack
+            // so subsequent pieces will be able to access this piece and add
+            // to it
             if (pieces.AppendDataToHostBuffer(curr_piece) == 0) {
               if (error_ptr)
                 error_ptr->SetErrorString("failed to append piece data");
@@ -2727,11 +2712,11 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_push_object_address
     // OPERANDS: none
     // DESCRIPTION: Pushes the address of the object currently being
-    // evaluated as part of evaluation of a user presented expression.
-    // This object may correspond to an independent variable described by
-    // its own DIE or it may be a component of an array, structure, or class
-    // whose address has been dynamically determined by an earlier step
-    // during user expression evaluation.
+    // evaluated as part of evaluation of a user presented expression. This
+    // object may correspond to an independent variable described by its own
+    // DIE or it may be a component of an array, structure, or class whose
+    // address has been dynamically determined by an earlier step during user
+    // expression evaluation.
     //----------------------------------------------------------------------
     case DW_OP_push_object_address:
       if (object_address_ptr)
@@ -2749,21 +2734,20 @@ bool DWARFExpression::Evaluate(
     // OPERANDS:
     //      uint16_t compile unit relative offset of a DIE
     // DESCRIPTION: Performs subroutine calls during evaluation
-    // of a DWARF expression. The operand is the 2-byte unsigned offset
-    // of a debugging information entry in the current compilation unit.
+    // of a DWARF expression. The operand is the 2-byte unsigned offset of a
+    // debugging information entry in the current compilation unit.
     //
     // Operand interpretation is exactly like that for DW_FORM_ref2.
     //
-    // This operation transfers control of DWARF expression evaluation
-    // to the DW_AT_location attribute of the referenced DIE. If there is
-    // no such attribute, then there is no effect. Execution of the DWARF
-    // expression of a DW_AT_location attribute may add to and/or remove from
-    // values on the stack. Execution returns to the point following the call
-    // when the end of the attribute is reached. Values on the stack at the
-    // time of the call may be used as parameters by the called expression
-    // and values left on the stack by the called expression may be used as
-    // return values by prior agreement between the calling and called
-    // expressions.
+    // This operation transfers control of DWARF expression evaluation to the
+    // DW_AT_location attribute of the referenced DIE. If there is no such
+    // attribute, then there is no effect. Execution of the DWARF expression of
+    // a DW_AT_location attribute may add to and/or remove from values on the
+    // stack. Execution returns to the point following the call when the end of
+    // the attribute is reached. Values on the stack at the time of the call
+    // may be used as parameters by the called expression and values left on
+    // the stack by the called expression may be used as return values by prior
+    // agreement between the calling and called expressions.
     //----------------------------------------------------------------------
     case DW_OP_call2:
       if (error_ptr)
@@ -2774,22 +2758,21 @@ bool DWARFExpression::Evaluate(
     // OPERANDS: 1
     //      uint32_t compile unit relative offset of a DIE
     // DESCRIPTION: Performs a subroutine call during evaluation of a DWARF
-    // expression. For DW_OP_call4, the operand is a 4-byte unsigned offset
-    // of a debugging information entry in  the current compilation unit.
+    // expression. For DW_OP_call4, the operand is a 4-byte unsigned offset of
+    // a debugging information entry in  the current compilation unit.
     //
     // Operand interpretation DW_OP_call4 is exactly like that for
     // DW_FORM_ref4.
     //
-    // This operation transfers control of DWARF expression evaluation
-    // to the DW_AT_location attribute of the referenced DIE. If there is
-    // no such attribute, then there is no effect. Execution of the DWARF
-    // expression of a DW_AT_location attribute may add to and/or remove from
-    // values on the stack. Execution returns to the point following the call
-    // when the end of the attribute is reached. Values on the stack at the
-    // time of the call may be used as parameters by the called expression
-    // and values left on the stack by the called expression may be used as
-    // return values by prior agreement between the calling and called
-    // expressions.
+    // This operation transfers control of DWARF expression evaluation to the
+    // DW_AT_location attribute of the referenced DIE. If there is no such
+    // attribute, then there is no effect. Execution of the DWARF expression of
+    // a DW_AT_location attribute may add to and/or remove from values on the
+    // stack. Execution returns to the point following the call when the end of
+    // the attribute is reached. Values on the stack at the time of the call
+    // may be used as parameters by the called expression and values left on
+    // the stack by the called expression may be used as return values by prior
+    // agreement between the calling and called expressions.
     //----------------------------------------------------------------------
     case DW_OP_call4:
       if (error_ptr)
@@ -2800,9 +2783,8 @@ bool DWARFExpression::Evaluate(
     // OPCODE: DW_OP_stack_value
     // OPERANDS: None
     // DESCRIPTION: Specifies that the object does not exist in memory but
-    // rather is a constant value.  The value from the top of the stack is
-    // the value to be used.  This is the actual object value and not the
-    // location.
+    // rather is a constant value.  The value from the top of the stack is the
+    // value to be used.  This is the actual object value and not the location.
     //----------------------------------------------------------------------
     case DW_OP_stack_value:
       stack.back().SetValueType(Value::eValueTypeScalar);
@@ -2841,8 +2823,8 @@ bool DWARFExpression::Evaluate(
     // opcode, DW_OP_GNU_push_tls_address)
     // OPERANDS: none
     // DESCRIPTION: Pops a TLS offset from the stack, converts it to
-    // an address in the current thread's thread-local storage block,
-    // and pushes it on the stack.
+    // an address in the current thread's thread-local storage block, and
+    // pushes it on the stack.
     //----------------------------------------------------------------------
     case DW_OP_form_tls_address:
     case DW_OP_GNU_push_tls_address: {
@@ -2893,8 +2875,8 @@ bool DWARFExpression::Evaluate(
     // OPERANDS: 1
     //      ULEB128: index to the .debug_addr section
     // DESCRIPTION: Pushes an address to the stack from the .debug_addr
-    // section with the base address specified by the DW_AT_addr_base
-    // attribute and the 0 based index is the ULEB128 encoded index.
+    // section with the base address specified by the DW_AT_addr_base attribute
+    // and the 0 based index is the ULEB128 encoded index.
     //----------------------------------------------------------------------
     case DW_OP_GNU_addr_index: {
       if (!dwarf_cu) {

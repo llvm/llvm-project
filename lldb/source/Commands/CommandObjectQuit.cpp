@@ -30,10 +30,9 @@ CommandObjectQuit::CommandObjectQuit(CommandInterpreter &interpreter)
 
 CommandObjectQuit::~CommandObjectQuit() {}
 
-// returns true if there is at least one alive process
-// is_a_detach will be true if all alive processes will be detached when you
-// quit
-// and false if at least one process will be killed instead
+// returns true if there is at least one alive process is_a_detach will be true
+// if all alive processes will be detached when you quit and false if at least
+// one process will be killed instead
 bool CommandObjectQuit::ShouldAskForConfirmation(bool &is_a_detach) {
   if (m_interpreter.GetPromptOnQuit() == false)
     return false;

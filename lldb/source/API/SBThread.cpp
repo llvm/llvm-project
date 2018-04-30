@@ -615,8 +615,7 @@ SBError SBThread::ResumeNewPlan(ExecutionContext &exe_ctx,
   }
 
   // User level plans should be Master Plans so they can be interrupted, other
-  // plans executed, and
-  // then a "continue" will resume the plan.
+  // plans executed, and then a "continue" will resume the plan.
   if (new_plan != NULL) {
     new_plan->SetIsMasterPlan(true);
     new_plan->SetOkayToDiscard(false);
@@ -911,8 +910,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     // Grab the current function, then we will make sure the "until" address is
     // within the function.  We discard addresses that are out of the current
     // function, and then if there are no addresses remaining, give an
-    // appropriate
-    // error message.
+    // appropriate error message.
 
     bool all_in_function = true;
     AddressRange fun_range = frame_sc.function->GetAddressRange();
@@ -1374,8 +1372,7 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
                 runtime->GetExtendedBacktraceThread(real_thread, type_const));
             if (new_thread_sp) {
               // Save this in the Process' ExtendedThreadList so a strong
-              // pointer retains the
-              // object.
+              // pointer retains the object.
               process->GetExtendedThreadList().AddThread(new_thread_sp);
               sb_origin_thread.SetThread(new_thread_sp);
               if (log) {

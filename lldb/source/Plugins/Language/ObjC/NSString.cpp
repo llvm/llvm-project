@@ -256,8 +256,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     uint64_t location = valobj_addr + 2 * ptr_size;
     if (!has_explicit_length) {
       // in this kind of string, the byte before the string content is a length
-      // byte
-      // so let's try and use it to handle the embedded NUL case
+      // byte so let's try and use it to handle the embedded NUL case
       Status error;
       explicit_length =
           process_sp->ReadUnsignedIntegerFromMemory(location, 1, 0, error);
@@ -368,9 +367,7 @@ bool lldb_private::formatters::NSTaggedString_SummaryProvider(
   }
 
   // this is a fairly ugly trick - pretend that the numeric value is actually a
-  // char*
-  // this works under a few assumptions:
-  // little endian architecture
+  // char* this works under a few assumptions: little endian architecture
   // sizeof(uint64_t) > g_MaxNonBitmaskedLen
   if (len_bits <= g_MaxNonBitmaskedLen) {
     stream.Printf("%s", prefix.c_str());

@@ -312,9 +312,8 @@ Status ModuleCache::GetAndPut(const FileSpec &root_dir_spec,
   llvm::FileRemover tmp_symfile_remover(tmp_download_sym_file_spec.GetPath());
   if (error.Fail())
     // Failed to download a symfile but fetching the module was successful. The
-    // module might
-    // contain the necessary symbols and the debugging is also possible without
-    // a symfile.
+    // module might contain the necessary symbols and the debugging is also
+    // possible without a symfile.
     return Status();
 
   error = Put(root_dir_spec, escaped_hostname.c_str(), module_spec,

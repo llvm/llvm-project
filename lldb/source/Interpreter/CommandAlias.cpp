@@ -196,8 +196,8 @@ bool CommandAlias::IsDashDashCommand() {
     }
   }
 
-  // if this is a nested alias, it may be adding arguments on top of an
-  // already dash-dash alias
+  // if this is a nested alias, it may be adding arguments on top of an already
+  // dash-dash alias
   if ((m_is_dashdash_alias == eLazyBoolNo) && IsNestedAlias())
     m_is_dashdash_alias =
         (GetUnderlyingCommand()->IsDashDashCommand() ? eLazyBoolYes
@@ -228,8 +228,7 @@ std::pair<lldb::CommandObjectSP, OptionArgVectorSP> CommandAlias::Desugar() {
 }
 
 // allow CommandAlias objects to provide their own help, but fallback to the
-// info
-// for the underlying command if no customization has been provided
+// info for the underlying command if no customization has been provided
 void CommandAlias::SetHelp(llvm::StringRef str) {
   this->CommandObject::SetHelp(str);
   m_did_set_help = true;

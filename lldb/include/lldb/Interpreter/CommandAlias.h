@@ -74,8 +74,8 @@ public:
   OptionArgVectorSP GetOptionArguments() const { return m_option_args_sp; }
   const char *GetOptionString() { return m_option_string.c_str(); }
 
-  // this takes an alias - potentially nested (i.e. an alias to an alias)
-  // and expands it all the way to a non-alias command
+  // this takes an alias - potentially nested (i.e. an alias to an alias) and
+  // expands it all the way to a non-alias command
   std::pair<lldb::CommandObjectSP, OptionArgVectorSP> Desugar();
 
 protected:

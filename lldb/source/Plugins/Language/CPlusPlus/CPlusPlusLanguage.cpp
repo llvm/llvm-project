@@ -120,10 +120,9 @@ static bool ReverseFindMatchingChars(const llvm::StringRef &s,
 
 static bool IsTrivialBasename(const llvm::StringRef &basename) {
   // Check that the basename matches with the following regular expression
-  // "^~?([A-Za-z_][A-Za-z_0-9]*)$"
-  // We are using a hand written implementation because it is significantly more
-  // efficient then
-  // using the general purpose regular expression library.
+  // "^~?([A-Za-z_][A-Za-z_0-9]*)$" We are using a hand written implementation
+  // because it is significantly more efficient then using the general purpose
+  // regular expression library.
   size_t idx = 0;
   if (basename.size() > 0 && basename[0] == '~')
     idx = 1;
@@ -151,10 +150,9 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
 }
 
 bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
-  // This method tries to parse simple method definitions
-  // which are presumably most comman in user programs.
-  // Definitions that can be parsed by this function don't have return types
-  // and templates in the name.
+  // This method tries to parse simple method definitions which are presumably
+  // most comman in user programs. Definitions that can be parsed by this
+  // function don't have return types and templates in the name.
   // A::B::C::fun(std::vector<T> &) const
   size_t arg_start, arg_end;
   llvm::StringRef full(m_full.GetCString());
@@ -251,8 +249,8 @@ std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
 }
 
 bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
-  // FIXME!! we should really run through all the known C++ Language
-  // plugins and ask each one if this is a C++ mangled name
+  // FIXME!! we should really run through all the known C++ Language plugins
+  // and ask each one if this is a C++ mangled name
   
   if (name == nullptr)
     return false;

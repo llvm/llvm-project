@@ -78,8 +78,8 @@ public:
   }
 
   bool AppendValue(const lldb::OptionValueSP &value_sp) {
-    // Make sure the value_sp object is allowed to contain
-    // values of the type passed in...
+    // Make sure the value_sp object is allowed to contain values of the type
+    // passed in...
     if (value_sp && (m_type_mask & value_sp->GetTypeAsMask())) {
       m_values.push_back(value_sp);
       return true;
@@ -88,8 +88,8 @@ public:
   }
 
   bool InsertValue(size_t idx, const lldb::OptionValueSP &value_sp) {
-    // Make sure the value_sp object is allowed to contain
-    // values of the type passed in...
+    // Make sure the value_sp object is allowed to contain values of the type
+    // passed in...
     if (value_sp && (m_type_mask & value_sp->GetTypeAsMask())) {
       if (idx < m_values.size())
         m_values.insert(m_values.begin() + idx, value_sp);
@@ -101,8 +101,8 @@ public:
   }
 
   bool ReplaceValue(size_t idx, const lldb::OptionValueSP &value_sp) {
-    // Make sure the value_sp object is allowed to contain
-    // values of the type passed in...
+    // Make sure the value_sp object is allowed to contain values of the type
+    // passed in...
     if (value_sp && (m_type_mask & value_sp->GetTypeAsMask())) {
       if (idx < m_values.size()) {
         m_values[idx] = value_sp;

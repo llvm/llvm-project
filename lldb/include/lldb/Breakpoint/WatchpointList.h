@@ -31,9 +31,9 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 
 class WatchpointList {
-  // Only Target can make the watchpoint list, or add elements to it.
-  // This is not just some random collection of watchpoints.  Rather, the act of
-  // adding the watchpoint to this list sets its ID.
+  // Only Target can make the watchpoint list, or add elements to it. This is
+  // not just some random collection of watchpoints.  Rather, the act of adding
+  // the watchpoint to this list sets its ID.
   friend class Watchpoint;
   friend class Target;
 

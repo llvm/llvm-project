@@ -41,8 +41,8 @@ public:
     m_index = 0;
   }
 
-  // Returns true if the file position is still valid for the data
-  // contained in this string extractor object.
+  // Returns true if the file position is still valid for the data contained in
+  // this string extractor object.
   bool IsGood() const { return m_index != UINT64_MAX; }
 
   uint64_t GetFilePos() const { return m_index; }
@@ -129,9 +129,9 @@ protected:
   //------------------------------------------------------------------
   std::string m_packet; // The string in which to extract data.
   uint64_t m_index;     // When extracting data from a packet, this index
-                        // will march along as things get extracted. If set
-                        // to UINT64_MAX the end of the packet data was
-                        // reached when decoding information
+                        // will march along as things get extracted. If set to
+                        // UINT64_MAX the end of the packet data was reached
+                        // when decoding information
 };
 
 #endif // utility_StringExtractor_h_

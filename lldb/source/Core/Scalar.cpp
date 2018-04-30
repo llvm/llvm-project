@@ -25,8 +25,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
-// Promote to max type currently follows the ANSI C rule for type
-// promotion in expressions.
+// Promote to max type currently follows the ANSI C rule for type promotion in
+// expressions.
 //----------------------------------------------------------------------
 static Scalar::Type PromoteToMaxType(
     const Scalar &lhs,  // The const left hand side object
@@ -41,10 +41,9 @@ static Scalar::Type PromoteToMaxType(
                                      // lhs/rhs will get promoted)
     ) {
   Scalar result;
-  // Initialize the promoted values for both the right and left hand side values
-  // to be the objects themselves. If no promotion is needed (both right and
-  // left
-  // have the same type), then the temp_value will not get used.
+  // Initialize the promoted values for both the right and left hand side
+  // values to be the objects themselves. If no promotion is needed (both right
+  // and left have the same type), then the temp_value will not get used.
   promoted_lhs_ptr = &lhs;
   promoted_rhs_ptr = &rhs;
   // Extract the types of both the right and left hand side values
@@ -128,14 +127,13 @@ bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
 
     if (limit_byte_size < byte_size) {
       if (endian::InlHostByteOrder() == eByteOrderLittle) {
-        // On little endian systems if we want fewer bytes from the
-        // current type we just specify fewer bytes since the LSByte
-        // is first...
+        // On little endian systems if we want fewer bytes from the current
+        // type we just specify fewer bytes since the LSByte is first...
         byte_size = limit_byte_size;
       } else if (endian::InlHostByteOrder() == eByteOrderBig) {
-        // On big endian systems if we want fewer bytes from the
-        // current type have to advance our initial byte pointer and
-        // trim down the number of bytes since the MSByte is first
+        // On big endian systems if we want fewer bytes from the current type
+        // have to advance our initial byte pointer and trim down the number of
+        // bytes since the MSByte is first
         bytes += byte_size - limit_byte_size;
         byte_size = limit_byte_size;
       }
@@ -164,9 +162,8 @@ const void *Scalar::GetBytes() const {
   case e_slonglong:
   case e_ulonglong:
     bytes = reinterpret_cast<const uint8_t *>(m_integer.getRawData());
-    // getRawData always returns a pointer to an uint64_t.  If we have a smaller
-    // type,
-    // we need to update the pointer on big-endian systems.
+    // getRawData always returns a pointer to an uint64_t.  If we have a
+    // smaller type, we need to update the pointer on big-endian systems.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       size_t byte_size = m_integer.getBitWidth() / 8;
       if (byte_size < 8)
@@ -2065,8 +2062,7 @@ const Scalar lldb_private::operator/(const Scalar &lhs, const Scalar &rhs) {
     }
   }
   // For division only, the only way it should make it here is if a promotion
-  // failed,
-  // or if we are trying to do a divide by zero.
+  // failed, or if we are trying to do a divide by zero.
   result.m_type = Scalar::e_void;
   return result;
 }

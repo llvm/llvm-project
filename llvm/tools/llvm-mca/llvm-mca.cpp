@@ -349,7 +349,7 @@ int main(int argc, char **argv) {
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 
-  if (!STI->getSchedModel().isOutOfOrder()) {
+  if (!PrintInstructionTables && !STI->getSchedModel().isOutOfOrder()) {
     WithColor::error() << "please specify an out-of-order cpu. '" << MCPU
                        << "' is an in-order cpu.\n";
     return 1;

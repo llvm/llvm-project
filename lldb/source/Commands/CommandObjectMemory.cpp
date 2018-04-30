@@ -554,8 +554,8 @@ protected:
     lldb::addr_t addr;
     size_t total_byte_size = 0;
     if (argc == 0) {
-      // Use the last address and byte size and all options as they were
-      // if no options have been set
+      // Use the last address and byte size and all options as they were if no
+      // options have been set
       addr = m_next_addr;
       total_byte_size = m_prev_byte_size;
       clang_ast_type = m_prev_clang_ast_type;
@@ -574,8 +574,8 @@ protected:
 
     // TODO For non-8-bit byte addressable architectures this needs to be
     // revisited to fully support all lldb's range of formatting options.
-    // Furthermore code memory reads (for those architectures) will not
-    // be correctly formatted even w/o formatting options.
+    // Furthermore code memory reads (for those architectures) will not be
+    // correctly formatted even w/o formatting options.
     size_t item_byte_size =
         target->GetArchitecture().GetDataByteSize() > 1
             ? target->GetArchitecture().GetDataByteSize()
@@ -844,16 +844,14 @@ protected:
       if (!m_format_options.GetCountValue().OptionWasSet() || item_count == 1) {
         // this turns requests such as
         // memory read -fc -s10 -c1 *charPtrPtr
-        // which make no sense (what is a char of size 10?)
-        // into a request for fetching 10 chars of size 1 from the same memory
-        // location
+        // which make no sense (what is a char of size 10?) into a request for
+        // fetching 10 chars of size 1 from the same memory location
         format = eFormatCharArray;
         item_count = item_byte_size;
         item_byte_size = 1;
       } else {
-        // here we passed a count, and it was not 1
-        // so we have a byte_size and a count
-        // we could well multiply those, but instead let's just fail
+        // here we passed a count, and it was not 1 so we have a byte_size and
+        // a count we could well multiply those, but instead let's just fail
         result.AppendErrorWithFormat(
             "reading memory as characters of size %" PRIu64 " is not supported",
             (uint64_t)item_byte_size);

@@ -41,8 +41,8 @@ bool RegisterValue::Dump(Stream *s, const RegisterInfo *reg_info,
   DataExtractor data;
   if (GetData(data)) {
     bool name_printed = false;
-    // For simplicity, alignment of the register name printing applies only
-    // in the most common case where:
+    // For simplicity, alignment of the register name printing applies only in
+    // the most common case where:
     //
     //     prefix_with_name^prefix_with_alt_name is true
     //
@@ -375,9 +375,9 @@ static bool ParseVectorEncoding(const RegisterInfo *reg_info,
   std::vector<uint8_t> bytes;
   unsigned byte = 0;
 
-  // Using radix auto-sensing by passing 0 as the radix.
-  // Keep on processing the vector elements as long as the parsing succeeds and
-  // the vector size is < byte_size.
+  // Using radix auto-sensing by passing 0 as the radix. Keep on processing the
+  // vector elements as long as the parsing succeeds and the vector size is <
+  // byte_size.
   while (!car.getAsInteger(0, byte) && bytes.size() < byte_size) {
     bytes.push_back(byte);
     std::tie(car, cdr) = cdr.split(Sep);
@@ -812,10 +812,9 @@ bool RegisterValue::SetUInt(uint64_t uint, uint32_t byte_size) {
 
 void RegisterValue::SetBytes(const void *bytes, size_t length,
                              lldb::ByteOrder byte_order) {
-  // If this assertion fires off we need to increase the size of
-  // buffer.bytes, or make it something that is allocated on
-  // the heap. Since the data buffer is in a union, we can't make it
-  // a collection class like SmallVector...
+  // If this assertion fires off we need to increase the size of buffer.bytes,
+  // or make it something that is allocated on the heap. Since the data buffer
+  // is in a union, we can't make it a collection class like SmallVector...
   if (bytes && length > 0) {
     assert(length <= sizeof(buffer.bytes) &&
            "Storing too many bytes in a RegisterValue.");

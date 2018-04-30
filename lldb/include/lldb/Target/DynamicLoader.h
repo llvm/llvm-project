@@ -356,8 +356,8 @@ protected:
   // Return -1 if the read fails, otherwise return the result as an int64_t.
   int64_t ReadUnsignedIntWithSizeInBytes(lldb::addr_t addr, int size_in_bytes);
 
-  // Read a pointer from memory at the given addr.
-  // Return LLDB_INVALID_ADDRESS if the read fails.
+  // Read a pointer from memory at the given addr. Return LLDB_INVALID_ADDRESS
+  // if the read fails.
   lldb::addr_t ReadPointer(lldb::addr_t addr);
   
   // Calls into the Process protected method LoadOperatingSystemPlugin:

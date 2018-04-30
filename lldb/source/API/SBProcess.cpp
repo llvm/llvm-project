@@ -896,8 +896,7 @@ SBProcess SBProcess::GetProcessFromEvent(const SBEvent &event) {
   ProcessSP process_sp =
       Process::ProcessEventData::GetProcessFromEvent(event.get());
   if (!process_sp) {
-    // StructuredData events also know the process they come from.
-    // Try that.
+    // StructuredData events also know the process they come from. Try that.
     process_sp = EventDataStructuredData::GetProcessFromEvent(event.get());
   }
 

@@ -325,9 +325,10 @@ let isReturn = 1, isTerminator = 1, hasCtrlDep = 1 in {
 // Select instructions
 //===----------------------------------------------------------------------===//
 
-def Select32Mux : SelectWrapper<i32, GRX32>, Requires<[FeatureHighWord]>;
-def Select32    : SelectWrapper<i32, GR32>;
-def Select64    : SelectWrapper<i64, GR64>;
+def Select32    : SelectWrapper<i32, GR32>,
+                  Requires<[FeatureNoLoadStoreOnCond]>;
+def Select64    : SelectWrapper<i64, GR64>,
+                  Requires<[FeatureNoLoadStoreOnCond]>;
 
 // We don't define 32-bit Mux stores if we don't have STOCFH, because the
 // low-only STOC should then always be used if possible.
@@ -495,7 +496,7 @@ let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
   defm LOCHI   : CondBinaryRIEPair<"lochi",  0xEC42, GR32, imm32sx16>;
   defm LOCGHI  : CondBinaryRIEPair<"locghi", 0xEC46, GR64, imm64sx16>;
 
-  // Move register on condition.  Expanded from Select* pseudos and
+  // Move register on condition.  Matched via DAG pattern and
   // created by early if-conversion.
   let isCommutable = 1 in {
     // Expands to LOCR or LOCFHR or a branch-and-move sequence,
@@ -530,7 +531,7 @@ let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
 }
 
 let Predicates = [FeatureLoadStoreOnCond], Uses = [CC] in {
-  // Move register on condition.  Expanded from Select* pseudos and
+  // Move register on condition.  Matched via DAG pattern and
   // created by early if-conversion.
   let isCommutable = 1 in {
     defm LOCR  : CondBinaryRRFPair<"locr",  0xB9F2, GR32, GR32>;

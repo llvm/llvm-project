@@ -93,8 +93,8 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             TypeList class_types;
 
             uint32_t num_matches = 0;
-            // First look in the module that the vtable symbol came from
-            // and look for a single exact match.
+            // First look in the module that the vtable symbol came from and
+            // look for a single exact match.
             llvm::DenseSet<SymbolFile *> searched_symbol_files;
             if (sc.module_sp) {
               num_matches = sc.module_sp->FindTypes(
@@ -102,9 +102,8 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
                   searched_symbol_files, class_types);
             }
 
-            // If we didn't find a symbol, then move on to the entire
-            // module list in the target and get as many unique matches
-            // as possible
+            // If we didn't find a symbol, then move on to the entire module
+            // list in the target and get as many unique matches as possible
             if (num_matches == 0) {
               num_matches = target.GetImages().FindTypes(
                   sc, ConstString(lookup_name), exact_match, UINT32_MAX,
@@ -192,15 +191,12 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
     TypeAndOrName &class_type_or_name, Address &dynamic_address,
     Value::ValueType &value_type) {
   // For Itanium, if the type has a vtable pointer in the object, it will be at
-  // offset 0
-  // in the object.  That will point to the "address point" within the vtable
-  // (not the beginning of the
-  // vtable.)  We can then look up the symbol containing this "address point"
-  // and that symbol's name
-  // demangled will contain the full class name.
-  // The second pointer above the "address point" is the "offset_to_top".  We'll
-  // use that to get the
-  // start of the value object which holds the dynamic type.
+  // offset 0 in the object.  That will point to the "address point" within the
+  // vtable (not the beginning of the vtable.)  We can then look up the symbol
+  // containing this "address point" and that symbol's name demangled will
+  // contain the full class name. The second pointer above the "address point"
+  // is the "offset_to_top".  We'll use that to get the start of the value
+  // object which holds the dynamic type.
   //
 
   class_type_or_name.Clear();
@@ -235,17 +231,15 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
 
     if (class_type_or_name) {
       TypeSP type_sp = class_type_or_name.GetTypeSP();
-      // There can only be one type with a given name,
-      // so we've just found duplicate definitions, and this
-      // one will do as well as any other.
-      // We don't consider something to have a dynamic type if
-      // it is the same as the static type.  So compare against
-      // the value we were handed.
+      // There can only be one type with a given name, so we've just found
+      // duplicate definitions, and this one will do as well as any other. We
+      // don't consider something to have a dynamic type if it is the same as
+      // the static type.  So compare against the value we were handed.
       if (type_sp) {
         if (ClangASTContext::AreTypesSame(in_value.GetCompilerType(),
                                           type_sp->GetForwardCompilerType())) {
-          // The dynamic type we found was the same type,
-          // so we don't have a dynamic type here...
+          // The dynamic type we found was the same type, so we don't have a
+          // dynamic type here...
           return false;
         }
 
@@ -262,8 +256,8 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
 
         if (offset_to_top == INT64_MIN)
           return false;
-        // So the dynamic type is a value that starts at offset_to_top
-        // above the original address.
+        // So the dynamic type is a value that starts at offset_to_top above
+        // the original address.
         lldb::addr_t dynamic_addr = original_ptr + offset_to_top;
         if (!process->GetTarget().GetSectionLoadList().ResolveLoadAddress(
                 dynamic_addr, dynamic_address)) {
@@ -285,10 +279,9 @@ TypeAndOrName ItaniumABILanguageRuntime::FixUpDynamicType(
   TypeAndOrName ret(type_and_or_name);
   if (type_and_or_name.HasType()) {
     // The type will always be the type of the dynamic object.  If our parent's
-    // type was a pointer,
-    // then our type should be a pointer to the type of the dynamic object.  If
-    // a reference, then the original type
-    // should be okay...
+    // type was a pointer, then our type should be a pointer to the type of the
+    // dynamic object.  If a reference, then the original type should be
+    // okay...
     CompilerType orig_type = type_and_or_name.GetCompilerType();
     CompilerType corrected_type = orig_type;
     if (static_type_flags.AllSet(eTypeIsPointer))
@@ -373,8 +366,8 @@ protected:
 
       // the actual Mangled class should be strict about this, but on the
       // command line if you're copying mangled names out of 'nm' on Darwin,
-      // they will come out with an extra underscore - be willing to strip
-      // this on behalf of the user.   This is the moral equivalent of the -_/-n
+      // they will come out with an extra underscore - be willing to strip this
+      // on behalf of the user.   This is the moral equivalent of the -_/-n
       // options to c++filt
       auto name = entry.ref;
       if (name.startswith("__Z"))
@@ -453,13 +446,12 @@ BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
 BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
     Breakpoint *bkpt, bool catch_bp, bool throw_bp, bool for_expressions) {
   // One complication here is that most users DON'T want to stop at
-  // __cxa_allocate_expression, but until we can do
-  // anything better with predicting unwinding the expression parser does.  So
-  // we have two forms of the exception
-  // breakpoints, one for expressions that leaves out __cxa_allocate_exception,
-  // and one that includes it.
-  // The SetExceptionBreakpoints does the latter, the CreateExceptionBreakpoint
-  // in the runtime the former.
+  // __cxa_allocate_expression, but until we can do anything better with
+  // predicting unwinding the expression parser does.  So we have two forms of
+  // the exception breakpoints, one for expressions that leaves out
+  // __cxa_allocate_exception, and one that includes it. The
+  // SetExceptionBreakpoints does the latter, the CreateExceptionBreakpoint in
+  // the runtime the former.
   static const char *g_catch_name = "__cxa_begin_catch";
   static const char *g_throw_name1 = "__cxa_throw";
   static const char *g_throw_name2 = "__cxa_rethrow";
@@ -522,8 +514,7 @@ void ItaniumABILanguageRuntime::SetExceptionBreakpoints() {
   const bool for_expressions = true;
 
   // For the exception breakpoints set by the Expression parser, we'll be a
-  // little more aggressive and
-  // stop at exception allocation as well.
+  // little more aggressive and stop at exception allocation as well.
 
   if (m_cxx_exception_bp_sp) {
     m_cxx_exception_bp_sp->SetEnabled(true);

@@ -209,8 +209,8 @@ Status MainLoop::RunImpl::Poll() {
 
 void MainLoop::RunImpl::ProcessEvents() {
 #ifdef __ANDROID__
-  // Collect first all readable file descriptors into a separate vector and then
-  // iterate over it to invoke callbacks. Iterating directly over
+  // Collect first all readable file descriptors into a separate vector and
+  // then iterate over it to invoke callbacks. Iterating directly over
   // loop.m_read_fds is not possible because the callbacks can modify the
   // container which could invalidate the iterator.
   std::vector<IOObject::WaitableHandle> fds;
@@ -285,8 +285,7 @@ MainLoop::ReadHandleUP MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
 }
 
 // We shall block the signal, then install the signal handler. The signal will
-// be unblocked in
-// the Run() function to check for signal delivery.
+// be unblocked in the Run() function to check for signal delivery.
 MainLoop::SignalHandleUP
 MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
 #ifdef SIGNAL_POLLING_UNSUPPORTED
@@ -321,9 +320,9 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
   assert(ret == 0);
 #endif
 
-  // If we're using kqueue, the signal needs to be unblocked in order to recieve
-  // it. If using pselect/ppoll, we need to block it, and later unblock it as a
-  // part of the system call.
+  // If we're using kqueue, the signal needs to be unblocked in order to
+  // recieve it. If using pselect/ppoll, we need to block it, and later unblock
+  // it as a part of the system call.
   ret = pthread_sigmask(HAVE_SYS_EVENT_H ? SIG_UNBLOCK : SIG_BLOCK,
                         &new_action.sa_mask, &old_set);
   assert(ret == 0 && "pthread_sigmask failed");

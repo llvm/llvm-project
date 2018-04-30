@@ -57,8 +57,7 @@ bool HostInfoLinux::GetOSVersion(uint32_t &major, uint32_t &minor,
         success = true;
       else {
         // Some kernels omit the update version, so try looking for just "X.Y"
-        // and
-        // set update to 0.
+        // and set update to 0.
         g_fields->m_os_update = 0;
         status = sscanf(un.release, "%u.%u", &g_fields->m_os_major,
                         &g_fields->m_os_minor);
@@ -100,8 +99,8 @@ bool HostInfoLinux::GetOSKernelDescription(std::string &s) {
 }
 
 llvm::StringRef HostInfoLinux::GetDistributionId() {
-  // Try to run 'lbs_release -i', and use that response
-  // for the distribution id.
+  // Try to run 'lbs_release -i', and use that response for the distribution
+  // id.
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
@@ -109,8 +108,7 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
     if (log)
       log->Printf("attempting to determine Linux distribution...");
 
-    // check if the lsb_release command exists at one of the
-    // following paths
+    // check if the lsb_release command exists at one of the following paths
     const char *const exe_paths[] = {"/bin/lsb_release",
                                      "/usr/bin/lsb_release"};
 
@@ -212,8 +210,8 @@ bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 
 bool HostInfoLinux::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   // XDG Base Directory Specification
-  // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
-  // If XDG_DATA_HOME exists, use that, otherwise use ~/.local/share/lldb.
+  // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html If
+  // XDG_DATA_HOME exists, use that, otherwise use ~/.local/share/lldb.
   const char *xdg_data_home = getenv("XDG_DATA_HOME");
   if (xdg_data_home && xdg_data_home[0]) {
     std::string user_plugin_dir(xdg_data_home);

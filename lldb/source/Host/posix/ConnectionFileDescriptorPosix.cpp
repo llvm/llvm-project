@@ -189,15 +189,14 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
     }
 #ifndef LLDB_DISABLE_POSIX
     else if ((addr = GetURLAddress(path, FD_SCHEME))) {
-      // Just passing a native file descriptor within this current process
-      // that is already opened (possibly from a service or other source).
+      // Just passing a native file descriptor within this current process that
+      // is already opened (possibly from a service or other source).
       int fd = -1;
 
       if (!addr->getAsInteger(0, fd)) {
-        // We have what looks to be a valid file descriptor, but we
-        // should make sure it is. We currently are doing this by trying to
-        // get the flags from the file descriptor and making sure it
-        // isn't a bad fd.
+        // We have what looks to be a valid file descriptor, but we should make
+        // sure it is. We currently are doing this by trying to get the flags
+        // from the file descriptor and making sure it isn't a bad fd.
         errno = 0;
         int flags = ::fcntl(fd, F_GETFL, 0);
         if (flags == -1 || errno == EBADF) {
@@ -208,20 +207,18 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
           m_write_sp.reset();
           return eConnectionStatusError;
         } else {
-          // Don't take ownership of a file descriptor that gets passed
-          // to us since someone else opened the file descriptor and
-          // handed it to us.
+          // Don't take ownership of a file descriptor that gets passed to us
+          // since someone else opened the file descriptor and handed it to us.
           // TODO: Since are using a URL to open connection we should
-          // eventually parse options using the web standard where we
-          // have "fd://123?opt1=value;opt2=value" and we can have an
-          // option be "owns=1" or "owns=0" or something like this to
-          // allow us to specify this. For now, we assume we must
-          // assume we don't own it.
+          // eventually parse options using the web standard where we have
+          // "fd://123?opt1=value;opt2=value" and we can have an option be
+          // "owns=1" or "owns=0" or something like this to allow us to specify
+          // this. For now, we assume we must assume we don't own it.
 
           std::unique_ptr<TCPSocket> tcp_socket;
           tcp_socket.reset(new TCPSocket(fd, false, false));
-          // Try and get a socket option from this file descriptor to
-          // see if this is a socket and set m_is_socket accordingly.
+          // Try and get a socket option from this file descriptor to see if
+          // this is a socket and set m_is_socket accordingly.
           int resuse;
           bool is_socket =
               !!tcp_socket->GetOption(SOL_SOCKET, SO_REUSEADDR, resuse);
@@ -320,13 +317,11 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
       m_read_sp->GetFdType() == IOObject::eFDTypeSocket)
     static_cast<Socket &>(*m_read_sp).PreDisconnect();
 
-  // Try to get the ConnectionFileDescriptor's mutex.  If we fail, that is quite
-  // likely
-  // because somebody is doing a blocking read on our file descriptor.  If
-  // that's the case,
-  // then send the "q" char to the command file channel so the read will wake up
-  // and the connection
-  // will then know to shut down.
+  // Try to get the ConnectionFileDescriptor's mutex.  If we fail, that is
+  // quite likely because somebody is doing a blocking read on our file
+  // descriptor.  If that's the case, then send the "q" char to the command
+  // file channel so the read will wake up and the connection will then know to
+  // shut down.
 
   m_shutting_down = true;
 
@@ -430,11 +425,11 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
     case EINVAL:  // The pointer associated with fildes was negative.
     case EIO:     // An I/O error occurred while reading from the file system.
                   // The process group is orphaned.
-                  // The file is a regular file, nbyte is greater than 0,
-                  // the starting position is before the end-of-file, and
-                  // the starting position is greater than or equal to the
-                  // offset maximum established for the open file
-                  // descriptor associated with fildes.
+                  // The file is a regular file, nbyte is greater than 0, the
+                  // starting position is before the end-of-file, and the
+                  // starting position is greater than or equal to the offset
+                  // maximum established for the open file descriptor
+                  // associated with fildes.
     case EISDIR:  // An attempt is made to read a directory.
     case ENOBUFS: // An attempt to allocate a memory buffer fails.
     case ENOMEM:  // Insufficient memory is available.
@@ -550,15 +545,15 @@ ConnectionStatus
 ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
                                          Status *error_ptr) {
   // Don't need to take the mutex here separately since we are only called from
-  // Read.  If we
-  // ever get used more generally we will need to lock here as well.
+  // Read.  If we ever get used more generally we will need to lock here as
+  // well.
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_CONNECTION));
   LLDB_LOG(log, "this = {0}, timeout = {1}", this, timeout);
 
-  // Make a copy of the file descriptors to make sure we don't
-  // have another thread change these values out from under us
-  // and cause problems in the loop below where like in FS_SET()
+  // Make a copy of the file descriptors to make sure we don't have another
+  // thread change these values out from under us and cause problems in the
+  // loop below where like in FS_SET()
   const IOObject::WaitableHandle handle = m_read_sp->GetWaitableHandle();
   const int pipe_fd = m_pipe.GetReadFileDescriptor();
 
@@ -570,10 +565,9 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
     select_helper.FDSetRead(handle);
 #if defined(_MSC_VER)
     // select() won't accept pipes on Windows.  The entire Windows codepath
-    // needs to be
-    // converted over to using WaitForMultipleObjects and event HANDLEs, but for
-    // now at least
-    // this will allow ::select() to not return an error.
+    // needs to be converted over to using WaitForMultipleObjects and event
+    // HANDLEs, but for now at least this will allow ::select() to not return
+    // an error.
     const bool have_pipe_fd = false;
 #else
     const bool have_pipe_fd = pipe_fd >= 0;
@@ -603,11 +597,10 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           return eConnectionStatusTimedOut;
 
         case EAGAIN: // The kernel was (perhaps temporarily) unable to
-                     // allocate the requested number of file descriptors,
-                     // or we have non-blocking IO
+                     // allocate the requested number of file descriptors, or
+                     // we have non-blocking IO
         case EINTR:  // A signal was delivered before the time limit
-          // expired and before any of the selected events
-          // occurred.
+          // expired and before any of the selected events occurred.
           break; // Lets keep reading to until we timeout
         }
       } else {
@@ -615,8 +608,8 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           return eConnectionStatusSuccess;
 
         if (select_helper.FDIsSetRead(pipe_fd)) {
-          // There is an interrupt or exit command in the command pipe
-          // Read the data from that pipe:
+          // There is an interrupt or exit command in the command pipe Read the
+          // data from that pipe:
           char c;
 
           ssize_t bytes_read = llvm::sys::RetryAfterSignal(-1, ::read, pipe_fd, &c, 1);

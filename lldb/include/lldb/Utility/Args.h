@@ -343,11 +343,11 @@ public:
   static void EncodeEscapeSequences(const char *src, std::string &dst);
 
   // ExpandEscapeSequences will change a string of possibly non-printable
-  // characters and expand them into text. So '\n' will turn into two characters
-  // like "\n" which is suitable for human reading. When a character is not
-  // printable and isn't one of the common in escape sequences listed in the
-  // help for EncodeEscapeSequences, then it will be encoded as octal. Printable
-  // characters are left alone.
+  // characters and expand them into text. So '\n' will turn into two
+  // characters like "\n" which is suitable for human reading. When a character
+  // is not printable and isn't one of the common in escape sequences listed in
+  // the help for EncodeEscapeSequences, then it will be encoded as octal.
+  // Printable characters are left alone.
   static void ExpandEscapedCharacters(const char *src, std::string &dst);
 
   static std::string EscapeLLDBCommandArgument(const std::string &arg,

@@ -239,8 +239,8 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       if (item_byte_size <= 8) {
         uint64_t uval64 = DE.GetMaxU64Bitfield(&offset, item_byte_size,
                                                item_bit_size, item_bit_offset);
-        // Avoid std::bitset<64>::to_string() since it is missing in
-        // earlier C++ libraries
+        // Avoid std::bitset<64>::to_string() since it is missing in earlier
+        // C++ libraries
         std::string binary_value(64, '0');
         std::bitset<64> bits(uval64);
         for (uint32_t i = 0; i < 64; ++i)
@@ -263,8 +263,8 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         s->Printf("%2.2x", DE.GetU8(&offset));
       }
 
-      // Put an extra space between the groups of bytes if more than one
-      // is being dumped in a group (item_byte_size is more than 1).
+      // Put an extra space between the groups of bytes if more than one is
+      // being dumped in a group (item_byte_size is more than 1).
       if (item_byte_size > 1)
         s->PutChar(' ');
       break;
@@ -279,8 +279,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         return offset;
       }
 
-      // If we are only printing one character surround it with single
-      // quotes
+      // If we are only printing one character surround it with single quotes
       if (item_count == 1 && item_format == eFormatChar)
         s->PutChar('\'');
 
@@ -693,10 +692,9 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       break;
 
     // please keep the single-item formats below in sync with
-    // FormatManager::GetSingleItemFormat
-    // if you fail to do so, users will start getting different outputs
-    // depending on internal
-    // implementation details they should not care about ||
+    // FormatManager::GetSingleItemFormat if you fail to do so, users will
+    // start getting different outputs depending on internal implementation
+    // details they should not care about ||
     case eFormatVectorOfChar: //   ||
       s->PutChar('{');        //   \/
       offset =

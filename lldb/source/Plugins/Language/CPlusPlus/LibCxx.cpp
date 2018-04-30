@@ -123,12 +123,11 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   
   static ConstString g___i_("__i_");
   
-  // this must be a ValueObject* because it is a child of the ValueObject we are
-  // producing children for
-  // it if were a ValueObjectSP, we would end up with a loop (iterator ->
-  // synthetic -> child -> parent == iterator)
-  // and that would in turn leak memory by never allowing the ValueObjects to
-  // die and free their memory
+  // this must be a ValueObject* because it is a child of the ValueObject we
+  // are producing children for it if were a ValueObjectSP, we would end up
+  // with a loop (iterator -> synthetic -> child -> parent == iterator) and
+  // that would in turn leak memory by never allowing the ValueObjects to die
+  // and free their memory
   m_pair_ptr = valobj_sp
                    ->GetValueForExpressionPath(
                        ".__i_.__ptr_->__value_", nullptr, nullptr,
@@ -386,7 +385,8 @@ enum LibcxxStringLayoutMode {
 };
 
 // this function abstracts away the layout and mode details of a libc++ string
-// and returns the address of the data and the size ready for callers to consume
+// and returns the address of the data and the size ready for callers to
+// consume
 static bool ExtractLibcxxStringInfo(ValueObject &valobj,
                                     ValueObjectSP &location_sp,
                                     uint64_t &size) {

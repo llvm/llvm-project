@@ -241,9 +241,9 @@ public:
 private:
   friend class Process;
   friend class BreakpointLocation;
-  // The StopInfoBreakpoint knows when it is processing a hit for a thread for a
-  // site, so let it be the
-  // one to manage setting the location hit count once and only once.
+  // The StopInfoBreakpoint knows when it is processing a hit for a thread for
+  // a site, so let it be the one to manage setting the location hit count once
+  // and only once.
   friend class StopInfoBreakpoint;
 
   void BumpHitCounts();
@@ -264,8 +264,8 @@ private:
   bool
       m_enabled; ///< Boolean indicating if this breakpoint site enabled or not.
 
-  // Consider adding an optimization where if there is only one
-  // owner, we don't store a list.  The usual case will be only one owner...
+  // Consider adding an optimization where if there is only one owner, we don't
+  // store a list.  The usual case will be only one owner...
   BreakpointLocationCollection m_owners; ///< This has the BreakpointLocations
                                          ///that share this breakpoint site.
   std::recursive_mutex

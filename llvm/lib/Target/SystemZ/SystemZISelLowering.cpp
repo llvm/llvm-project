@@ -5954,8 +5954,7 @@ static unsigned forceReg(MachineInstr &MI, MachineOperand &Base,
 // Implement EmitInstrWithCustomInserter for pseudo Select* instruction MI.
 MachineBasicBlock *
 SystemZTargetLowering::emitSelect(MachineInstr &MI,
-                                  MachineBasicBlock *MBB,
-                                  unsigned LOCROpcode) const {
+                                  MachineBasicBlock *MBB) const {
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
 
@@ -5965,15 +5964,6 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   unsigned CCValid = MI.getOperand(3).getImm();
   unsigned CCMask = MI.getOperand(4).getImm();
   DebugLoc DL = MI.getDebugLoc();
-
-  // Use LOCROpcode if possible.
-  if (LOCROpcode && Subtarget.hasLoadStoreOnCond()) {
-    BuildMI(*MBB, MI, DL, TII->get(LOCROpcode), DestReg)
-      .addReg(FalseReg).addReg(TrueReg)
-      .addImm(CCValid).addImm(CCMask);
-    MI.eraseFromParent();
-    return MBB;
-  }
 
   MachineBasicBlock *StartMBB = MBB;
   MachineBasicBlock *JoinMBB  = splitBlockBefore(MI, MBB);
@@ -6824,18 +6814,15 @@ MachineBasicBlock *SystemZTargetLowering::emitLoadAndTestCmp0(
 MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
-  case SystemZ::Select32Mux:
-    return emitSelect(MI, MBB,
-                      Subtarget.hasLoadStoreOnCond2()? SystemZ::LOCRMux : 0);
   case SystemZ::Select32:
-    return emitSelect(MI, MBB, SystemZ::LOCR);
   case SystemZ::Select64:
-    return emitSelect(MI, MBB, SystemZ::LOCGR);
   case SystemZ::SelectF32:
   case SystemZ::SelectF64:
   case SystemZ::SelectF128:
+  case SystemZ::SelectVR32:
+  case SystemZ::SelectVR64:
   case SystemZ::SelectVR128:
-    return emitSelect(MI, MBB, 0);
+    return emitSelect(MI, MBB);
 
   case SystemZ::CondStore8Mux:
     return emitCondStore(MI, MBB, SystemZ::STCMux, 0, false);

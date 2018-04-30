@@ -100,10 +100,6 @@ private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
   bool isNoNanSrc(SDValue N) const;
   bool isInlineImmediate(const SDNode *N) const;
-  bool FoldOperand(SDValue &Src, SDValue &Sel, SDValue &Neg, SDValue &Abs,
-                   const R600InstrInfo *TII);
-  bool FoldOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
-  bool FoldDotOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
 
   bool isConstantLoad(const MemSDNode *N, int cbID) const;
   bool isUniformBr(const SDNode *N) const;

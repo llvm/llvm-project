@@ -290,11 +290,14 @@ define void @f12() {
 }
 
 ; Test selects involving high registers.
+; Note that we prefer to use a LOCR and move the result to a high register.
 define void @f13(i32 %x, i32 %y) {
 ; CHECK-LABEL: f13:
-; CHECK: llihl [[REG:%r[0-5]]], 0
-; CHECK: cije %r2, 0
-; CHECK: iihf [[REG]], 2102030405
+; CHECK-DAG: chi %r2, 0
+; CHECK-DAG: iilf [[REG1:%r[0-5]]], 2102030405
+; CHECK-DAG: lhi [[REG2:%r[0-5]]], 0
+; CHECK: locre [[REG1]], [[REG2]]
+; CHECK: risbhg [[REG:%r[0-5]]], [[REG1]], 0, 159, 32
 ; CHECK: blah [[REG]]
 ; CHECK: br %r14
   %cmp = icmp eq i32 %x, 0
@@ -306,9 +309,10 @@ define void @f13(i32 %x, i32 %y) {
 ; Test selects involving low registers.
 define void @f14(i32 %x, i32 %y) {
 ; CHECK-LABEL: f14:
-; CHECK: lhi [[REG:%r[0-5]]], 0
-; CHECK: cije %r2, 0
-; CHECK: iilf [[REG]], 2102030405
+; CHECK-DAG: chi %r2, 0
+; CHECK-DAG: iilf [[REG:%r[0-5]]], 2102030405
+; CHECK-DAG: lhi [[REG1:%r[0-5]]], 0
+; CHECK: locre [[REG]], [[REG1]]
 ; CHECK: blah [[REG]]
 ; CHECK: br %r14
   %cmp = icmp eq i32 %x, 0

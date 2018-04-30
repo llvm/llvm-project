@@ -119,9 +119,8 @@ HostThread Host::StartMonitoringChildProcess(
 
 #ifndef __linux__
 //------------------------------------------------------------------
-// Scoped class that will disable thread canceling when it is
-// constructed, and exception safely restore the previous value it
-// when it goes out of scope.
+// Scoped class that will disable thread canceling when it is constructed, and
+// exception safely restore the previous value it when it goes out of scope.
 //------------------------------------------------------------------
 class ScopedPThreadCancelDisabler {
 public:
@@ -270,8 +269,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
                           __FUNCTION__, arg);
             break;
           }
-          // If the callback returns true, it means this process should
-          // exit
+          // If the callback returns true, it means this process should exit
           if (callback_return) {
             if (log)
               log->Printf("%s (arg = %p) thread exiting because callback "
@@ -497,9 +495,9 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
   llvm::SmallString<PATH_MAX> output_file_path;
 
   if (command_output_ptr) {
-    // Create a temporary file to get the stdout/stderr and redirect the
-    // output of the command into this file. We will later read this file
-    // if all goes well and fill the data into "command_output_ptr"
+    // Create a temporary file to get the stdout/stderr and redirect the output
+    // of the command into this file. We will later read this file if all goes
+    // well and fill the data into "command_output_ptr"
     FileSpec tmpdir_file_spec;
     if (HostInfo::GetLLDBPath(ePathTypeLLDBTempSystemDir, tmpdir_file_spec)) {
       tmpdir_file_spec.AppendPathComponent("lldb-shell-output.%%%%%%");
@@ -580,7 +578,8 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
   return error;
 }
 
-// The functions below implement process launching for non-Apple-based platforms
+// The functions below implement process launching for non-Apple-based
+// platforms
 #if !defined(__APPLE__)
 Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   std::unique_ptr<ProcessLauncher> delegate_launcher;
@@ -595,8 +594,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   HostProcess process = launcher.LaunchProcess(launch_info, error);
 
   // TODO(zturner): It would be better if the entire HostProcess were returned
-  // instead of writing
-  // it into this structure.
+  // instead of writing it into this structure.
   launch_info.SetProcessID(process.GetProcessId());
 
   return error;

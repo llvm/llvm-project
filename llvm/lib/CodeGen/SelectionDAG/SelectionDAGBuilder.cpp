@@ -5254,6 +5254,19 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
+    // PHI nodes have already been selected, so we should know which VReg that
+    // is assigns to already.
+    if (isa<PHINode>(V)) {
+      auto It = FuncInfo.ValueMap.find(V);
+      if (It != FuncInfo.ValueMap.end()) {
+        unsigned Reg = It->second;
+        SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
+                                  SDNodeOrder);
+        DAG.AddDbgValue(SDV, nullptr, false);
+        return nullptr;
+      }
+    }
+
     // TODO: When we get here we will either drop the dbg.value completely, or
     // we try to move it forward by letting it dangle for awhile. So we should
     // probably add an extra DbgValue to the DAG here, with a reference to

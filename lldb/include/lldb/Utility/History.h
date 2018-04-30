@@ -39,9 +39,9 @@ public:
 
   virtual ~HistorySource() {}
 
-  // Create a new history event. Subclasses should use any data or members
-  // in the subclass of this class to produce a history event and push it
-  // onto the end of the history stack.
+  // Create a new history event. Subclasses should use any data or members in
+  // the subclass of this class to produce a history event and push it onto the
+  // end of the history stack.
 
   virtual HistoryEvent CreateHistoryEvent() = 0;
 
@@ -85,9 +85,9 @@ class HistorySourceUInt : public HistorySource {
 
   ~HistorySourceUInt() override {}
 
-  // Create a new history event. Subclasses should use any data or members
-  // in the subclass of this class to produce a history event and push it
-  // onto the end of the history stack.
+  // Create a new history event. Subclasses should use any data or members in
+  // the subclass of this class to produce a history event and push it onto the
+  // end of the history stack.
 
   HistoryEvent CreateHistoryEvent() override {
     ++m_curr_id;

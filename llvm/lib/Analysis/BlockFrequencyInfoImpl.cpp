@@ -17,6 +17,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"

@@ -139,8 +139,8 @@ bool RegisterContextMacOSXFrameBackchain::ReadRegister(
 
 bool RegisterContextMacOSXFrameBackchain::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
-  // Not supported yet. We could easily add support for this by remembering
-  // the address of each entry (it would need to be part of the cursor)
+  // Not supported yet. We could easily add support for this by remembering the
+  // address of each entry (it would need to be part of the cursor)
   return false;
 }
 
@@ -154,10 +154,10 @@ bool RegisterContextMacOSXFrameBackchain::ReadAllRegisterValues(
 
 bool RegisterContextMacOSXFrameBackchain::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  // Since this class doesn't respond to "ReadAllRegisterValues()", it must
-  // not have been the one that saved all the register values. So we just let
-  // the thread's register context (the register context for frame zero) do
-  // the writing.
+  // Since this class doesn't respond to "ReadAllRegisterValues()", it must not
+  // have been the one that saved all the register values. So we just let the
+  // thread's register context (the register context for frame zero) do the
+  // writing.
   return m_thread.GetRegisterContext()->WriteAllRegisterValues(data_sp);
 }
 

@@ -115,13 +115,12 @@ bool Options::VerifyOptions(CommandReturnObject &result) {
   int num_levels = GetRequiredOptions().size();
   if (num_levels) {
     for (int i = 0; i < num_levels && !options_are_valid; ++i) {
-      // This is the correct set of options if:  1). m_seen_options contains all
-      // of m_required_options[i]
-      // (i.e. all the required options at this level are a subset of
-      // m_seen_options); AND
-      // 2). { m_seen_options - m_required_options[i] is a subset of
-      // m_options_options[i] (i.e. all the rest of
-      // m_seen_options are in the set of optional options at this level.
+      // This is the correct set of options if:  1). m_seen_options contains
+      // all of m_required_options[i] (i.e. all the required options at this
+      // level are a subset of m_seen_options); AND 2). { m_seen_options -
+      // m_required_options[i] is a subset of m_options_options[i] (i.e. all
+      // the rest of m_seen_options are in the set of optional options at this
+      // level.
 
       // Check to see if all of m_required_options[i] are a subset of
       // m_seen_options
@@ -152,8 +151,7 @@ bool Options::VerifyOptions(CommandReturnObject &result) {
 }
 
 // This is called in the Options constructor, though we could call it lazily if
-// that ends up being
-// a performance problem.
+// that ends up being a performance problem.
 
 void Options::BuildValidOptionSets() {
   // Check to see if we already did this.
@@ -265,13 +263,11 @@ Option *Options::GetLongOptions() {
 }
 
 // This function takes INDENT, which tells how many spaces to output at the
-// front of each line; SPACES, which is
-// a string containing 80 spaces; and TEXT, which is the text that is to be
-// output.   It outputs the text, on
+// front of each line; SPACES, which is a string containing 80 spaces; and
+// TEXT, which is the text that is to be output.   It outputs the text, on
 // multiple lines if necessary, to RESULT, with INDENT spaces at the front of
-// each line.  It breaks lines on spaces,
-// tabs or newlines, shortening the line if necessary to not break in the middle
-// of a word.  It assumes that each
+// each line.  It breaks lines on spaces, tabs or newlines, shortening the line
+// if necessary to not break in the middle of a word.  It assumes that each
 // output line should contain a maximum of OUTPUT_MAX_COLUMNS characters.
 
 void Options::OutputFormattedUsageText(Stream &strm,
@@ -421,8 +417,8 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
   strm.IndentMore(2);
 
-  // First, show each usage level set of options, e.g. <cmd>
-  // [options-for-level-0]
+  // First, show each usage level set of options, e.g. <cmd> [options-for-
+  // level-0]
   //                                                   <cmd>
   //                                                   [options-for-level-1]
   //                                                   etc.
@@ -449,9 +445,9 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       if (cmd)
         cmd->GetFormattedCommandArguments(args_str, opt_set_mask);
 
-      // First go through and print all options that take no arguments as
-      // a single string. If a command has "-a" "-b" and "-c", this will show
-      // up as [-abc]
+      // First go through and print all options that take no arguments as a
+      // single string. If a command has "-a" "-b" and "-c", this will show up
+      // as [-abc]
 
       std::set<int> options;
       std::set<int>::const_iterator options_pos, options_end;
@@ -554,24 +550,23 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
     //   help text
 
     // This variable is used to keep track of which options' info we've printed
-    // out, because some options can be in
-    // more than one usage level, but we only want to print the long form of its
-    // information once.
+    // out, because some options can be in more than one usage level, but we
+    // only want to print the long form of its information once.
 
     std::multimap<int, uint32_t> options_seen;
     strm.IndentMore(5);
 
     // Put the unique command options in a vector & sort it, so we can output
-    // them alphabetically (by short_option)
-    // when writing out detailed help for each option.
+    // them alphabetically (by short_option) when writing out detailed help for
+    // each option.
 
     i = 0;
     for (auto &def : opt_defs)
       options_seen.insert(std::make_pair(def.short_option, i++));
 
-    // Go through the unique'd and alphabetically sorted vector of options, find
-    // the table entry for each option
-    // and write out the detailed help information for that option.
+    // Go through the unique'd and alphabetically sorted vector of options,
+    // find the table entry for each option and write out the detailed help
+    // information for that option.
 
     bool first_option_printed = false;
 
@@ -627,14 +622,10 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 }
 
 // This function is called when we have been given a potentially incomplete set
-// of
-// options, such as when an alias has been defined (more options might be added
-// at
-// at the time the alias is invoked).  We need to verify that the options in the
-// set
-// m_seen_options are all part of a set that may be used together, but
-// m_seen_options
-// may be missing some of the "required" options.
+// of options, such as when an alias has been defined (more options might be
+// added at at the time the alias is invoked).  We need to verify that the
+// options in the set m_seen_options are all part of a set that may be used
+// together, but m_seen_options may be missing some of the "required" options.
 
 bool Options::VerifyPartialOptions(CommandReturnObject &result) {
   bool options_are_valid = false;
@@ -643,10 +634,8 @@ bool Options::VerifyPartialOptions(CommandReturnObject &result) {
   if (num_levels) {
     for (int i = 0; i < num_levels && !options_are_valid; ++i) {
       // In this case we are treating all options as optional rather than
-      // required.
-      // Therefore a set of options is correct if m_seen_options is a subset of
-      // the
-      // union of m_required_options and m_optional_options.
+      // required. Therefore a set of options is correct if m_seen_options is a
+      // subset of the union of m_required_options and m_optional_options.
       OptionSet union_set;
       OptionsSetUnion(GetRequiredOptions()[i], GetOptionalOptions()[i],
                       union_set);
@@ -667,7 +656,8 @@ bool Options::HandleOptionCompletion(
 
   // For now we just scan the completions to see if the cursor position is in
   // an option or its argument.  Otherwise we'll call HandleArgumentCompletion.
-  // In the future we can use completion to validate options as well if we want.
+  // In the future we can use completion to validate options as well if we
+  // want.
 
   auto opt_defs = GetDefinitions();
 
@@ -709,12 +699,10 @@ bool Options::HandleOptionCompletion(
         }
         return true;
       } else if (opt_defs_index != OptionArgElement::eUnrecognizedArg) {
-        // We recognized it, if it an incomplete long option, complete it anyway
-        // (getopt_long_only is
-        // happy with shortest unique string, but it's still a nice thing to
-        // do.)  Otherwise return
-        // The string so the upper level code will know this is a full match and
-        // add the " ".
+        // We recognized it, if it an incomplete long option, complete it
+        // anyway (getopt_long_only is happy with shortest unique string, but
+        // it's still a nice thing to do.)  Otherwise return The string so the
+        // upper level code will know this is a full match and add the " ".
         if (cur_opt_str && strlen(cur_opt_str) > 2 && cur_opt_str[0] == '-' &&
             cur_opt_str[1] == '-' &&
             strcmp(opt_defs[opt_defs_index].long_option, cur_opt_str) != 0) {
@@ -731,9 +719,8 @@ bool Options::HandleOptionCompletion(
         // Check to see if they are writing a long option & complete it.
         // I think we will only get in here if the long option table has two
         // elements
-        // that are not unique up to this point.  getopt_long_only does shortest
-        // unique match
-        // for long options already.
+        // that are not unique up to this point.  getopt_long_only does
+        // shortest unique match for long options already.
 
         if (cur_opt_str && strlen(cur_opt_str) > 2 && cur_opt_str[0] == '-' &&
             cur_opt_str[1] == '-') {
@@ -762,8 +749,8 @@ bool Options::HandleOptionCompletion(
       }
 
     } else if (opt_arg_pos == cursor_index) {
-      // Okay the cursor is on the completion of an argument.
-      // See if it has a completion, otherwise return no matches.
+      // Okay the cursor is on the completion of an argument. See if it has a
+      // completion, otherwise return no matches.
 
       if (opt_defs_index != -1) {
         HandleOptionArgumentCompletion(
@@ -813,10 +800,9 @@ bool Options::HandleOptionArgumentCompletion(
     return return_value;
   }
 
-  // If this is a source file or symbol type completion, and  there is a
-  // -shlib option somewhere in the supplied arguments, then make a search
-  // filter
-  // for that shared library.
+  // If this is a source file or symbol type completion, and  there is a -shlib
+  // option somewhere in the supplied arguments, then make a search filter for
+  // that shared library.
   // FIXME: Do we want to also have an "OptionType" so we don't have to match
   // string names?
 
@@ -908,8 +894,8 @@ void OptionGroupOptions::Finalize() {
 Status OptionGroupOptions::SetOptionValue(uint32_t option_idx,
                                           llvm::StringRef option_value,
                                           ExecutionContext *execution_context) {
-  // After calling OptionGroupOptions::Append(...), you must finalize the groups
-  // by calling OptionGroupOptions::Finlize()
+  // After calling OptionGroupOptions::Append(...), you must finalize the
+  // groups by calling OptionGroupOptions::Finlize()
   assert(m_did_finalize);
   Status error;
   if (option_idx < m_option_infos.size()) {
@@ -1111,8 +1097,8 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     option_arg_vector->emplace_back(option_str.GetString(), has_arg,
                                     option_arg);
 
-    // Find option in the argument list; also see if it was supposed to take
-    // an argument and if one was supplied.  Remove option (and argument, if
+    // Find option in the argument list; also see if it was supposed to take an
+    // argument and if one was supplied.  Remove option (and argument, if
     // given) from the argument list.  Also remove them from the
     // raw_input_string, if one was passed in.
     size_t idx =
@@ -1155,8 +1141,8 @@ OptionElementVector Options::ParseForCompletion(const Args &args,
   if (long_options == nullptr)
     return option_element_vector;
 
-  // Leading : tells getopt to return a : for a missing option argument AND
-  // to suppress error messages.
+  // Leading : tells getopt to return a : for a missing option argument AND to
+  // suppress error messages.
 
   sstr << ":";
   for (int i = 0; long_options[i].definition != nullptr; ++i) {
@@ -1339,12 +1325,11 @@ OptionElementVector Options::ParseForCompletion(const Args &args,
   }
 
   // Finally we have to handle the case where the cursor index points at a
-  // single "-".  We want to mark that in
-  // the option_element_vector, but only if it is not after the "--".  But it
-  // turns out that OptionParser::Parse just ignores
-  // an isolated "-".  So we have to look it up by hand here.  We only care if
-  // it is AT the cursor position.
-  // Note, a single quoted dash is not the same as a single dash...
+  // single "-".  We want to mark that in the option_element_vector, but only
+  // if it is not after the "--".  But it turns out that OptionParser::Parse
+  // just ignores an isolated "-".  So we have to look it up by hand here.  We
+  // only care if it is AT the cursor position. Note, a single quoted dash is
+  // not the same as a single dash...
 
   const Args::ArgEntry &cursor = args[cursor_index];
   if ((static_cast<int32_t>(dash_dash_pos) == -1 ||
@@ -1426,8 +1411,8 @@ llvm::Expected<Args> Options::Parse(const Args &args,
       const OptionDefinition *def = long_options[long_options_index].definition;
 
       if (!platform_sp) {
-        // User did not pass in an explicit platform.  Try to grab
-        // from the execution context.
+        // User did not pass in an explicit platform.  Try to grab from the
+        // execution context.
         TargetSP target_sp =
             execution_context ? execution_context->GetTargetSP() : TargetSP();
         platform_sp = target_sp ? target_sp->GetPlatform() : PlatformSP();
@@ -1435,9 +1420,8 @@ llvm::Expected<Args> Options::Parse(const Args &args,
       OptionValidator *validator = def->validator;
 
       if (!platform_sp && require_validation) {
-        // Caller requires validation but we cannot validate as we
-        // don't have the mandatory platform against which to
-        // validate.
+        // Caller requires validation but we cannot validate as we don't have
+        // the mandatory platform against which to validate.
         return llvm::make_error<llvm::StringError>(
             "cannot validate options: no platform available",
             llvm::inconvertibleErrorCode());

@@ -92,8 +92,8 @@ bool SBInstructionList::GetDescription(lldb::SBStream &description) {
   if (m_opaque_sp) {
     size_t num_instructions = GetSize();
     if (num_instructions) {
-      // Call the ref() to make sure a stream is created if one deesn't
-      // exist already inside description...
+      // Call the ref() to make sure a stream is created if one deesn't exist
+      // already inside description...
       Stream &sref = description.ref();
       const uint32_t max_opcode_byte_size =
           m_opaque_sp->GetInstructionList().GetMaxOpcocdeByteSize();

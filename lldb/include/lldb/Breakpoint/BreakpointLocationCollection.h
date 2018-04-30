@@ -178,8 +178,8 @@ public:
 
 protected:
   //------------------------------------------------------------------
-  // Classes that inherit from BreakpointLocationCollection can see
-  // and modify these
+  // Classes that inherit from BreakpointLocationCollection can see and modify
+  // these
   //------------------------------------------------------------------
 
 private:

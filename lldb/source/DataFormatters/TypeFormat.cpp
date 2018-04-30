@@ -111,12 +111,12 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             valobj->GetBitfieldBitSize(),   // Bitfield bit size
             valobj->GetBitfieldBitOffset(), // Bitfield bit offset
             exe_scope);
-        // Given that we do not want to set the ValueObject's m_error
-        // for a formatting error (or else we wouldn't be able to reformat
-        // until a next update), an empty string is treated as a "false"
-        // return from here, but that's about as severe as we get
-        // CompilerType::DumpTypeValue() should always return
-        // something, even if that something is an error message
+        // Given that we do not want to set the ValueObject's m_error for a
+        // formatting error (or else we wouldn't be able to reformat until a
+        // next update), an empty string is treated as a "false" return from
+        // here, but that's about as severe as we get
+        // CompilerType::DumpTypeValue() should always return something, even
+        // if that something is an error message
         dest = sstr.GetString();
       }
     }
