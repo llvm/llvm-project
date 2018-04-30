@@ -62,10 +62,10 @@ body: |
     %13:_(s64) = G_BITCAST %7
     $x0 = COPY %13
 
-    ; CHECK: [[LOAD0:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
+    ; CHECK: [[LOAD0:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.addr, align 16)
     ; CHECK: [[OFFSET1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP %0, [[OFFSET1]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p0) :: (load 16 from %ir.addr)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p0) :: (load 8 from %ir.addr + 8)
     ; CHECK: %8:_(s128) = G_MERGE_VALUES [[LOAD0]](s64), [[LOAD1]](s64)
     %8(s128) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
     %14:_(s64) = G_TRUNC %8
@@ -120,10 +120,10 @@ body: |
     ; CHECK: G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
     G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
 
-    ; CHECK: G_STORE %5(s64), %0(p0) :: (store 16 into %ir.addr)
+    ; CHECK: G_STORE %5(s64), %0(p0) :: (store 8 into %ir.addr, align 16)
     ; CHECK: [[OFFSET1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP %0, [[OFFSET1]](s64)
-    ; CHECK: G_STORE %6(s64), [[GEP1]](p0) :: (store 16 into %ir.addr)
+    ; CHECK: G_STORE %6(s64), [[GEP1]](p0) :: (store 8 into %ir.addr + 8)
     %6(s64) = G_PTRTOINT %0(p0)
     %7(s128) = G_MERGE_VALUES %5, %6
     G_STORE %7, %0 :: (store 16 into %ir.addr)

@@ -33,7 +33,7 @@
 
 // Include the necessary headers to interface with the Windows registry and
 // environment.
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #define USE_WIN32
 #endif
 
@@ -1242,7 +1242,7 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
   // As a fallback, select default install paths.
   // FIXME: Don't guess drives and paths like this on Windows.
   const StringRef Paths[] = {

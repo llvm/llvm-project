@@ -551,13 +551,9 @@ test [ECX], AL
 
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
-// CHECK: fnstsw %ax
-// CHECK: fnstsw %ax
 // CHECK: fnstsw (%eax)
 fnstsw
 fnstsw AX
-fnstsw EAX
-fnstsw AL
 fnstsw WORD PTR [EAX]
 
 // CHECK: faddp %st(1)
@@ -883,3 +879,12 @@ lsl ebx, word ptr [eax]
 
 // CHECK: lslw (%eax), %bx
 lsl bx, word ptr [eax]
+
+// CHECK: sysexitl
+sysexit
+// CHECK: sysexitq
+sysexitq
+// CHECK: sysretl
+sysret
+// CHECK: sysretq
+sysretq

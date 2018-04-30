@@ -25,7 +25,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
-#include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -2241,6 +2240,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-mfpmath");
     CmdArgs.push_back(A->getValue());
   }
+
+  // Disable a codegen optimization for floating-point casts.
+  if (Args.hasFlag(options::OPT_ffp_cast_overflow_workaround,
+                   options::OPT_fno_fp_cast_overflow_workaround, false))
+    CmdArgs.push_back("-ffp-cast-overflow-workaround");
 }
 
 static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,

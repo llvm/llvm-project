@@ -107,8 +107,8 @@ E: stefanus.du.toit@intel.com
 D: Bug fixes and minor improvements
 
 N: Rafael Avila de Espindola
-E: rafael.espindola@gmail.com
-D: The ARM backend
+E: rafael@espindo.la
+D: MC and LLD work
 
 N: Dave Estes
 E: cestes@codeaurora.org

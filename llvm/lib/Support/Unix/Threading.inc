@@ -98,8 +98,6 @@ uint64_t llvm::get_threadid() {
   return uint64_t(gettid());
 #elif defined(__linux__)
   return uint64_t(syscall(SYS_gettid));
-#elif defined(LLVM_ON_WIN32)
-  return uint64_t(::GetCurrentThreadId());
 #else
   return uint64_t(pthread_self());
 #endif

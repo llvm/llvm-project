@@ -2329,7 +2329,8 @@ void CXXNameMangler::mangleObjCMethodName(const ObjCMethodDecl *MD) {
   Context.mangleObjCMethodName(MD, Out);
 }
 
-static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty) {
+static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
+                                ASTContext &Ctx) {
   if (Quals)
     return true;
   if (Ty->isSpecificBuiltinType(BuiltinType::ObjCSel))
@@ -2338,7 +2339,11 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty) {
     return true;
   if (Ty->isBuiltinType())
     return false;
-
+  // Through to Clang 6.0, we accidentally treated undeduced auto types as
+  // substitution candidates.
+  if (Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver6 &&
+      isa<AutoType>(Ty))
+    return false;
   return true;
 }
 
@@ -2399,7 +2404,8 @@ void CXXNameMangler::mangleType(QualType T) {
   Qualifiers quals = split.Quals;
   const Type *ty = split.Ty;
 
-  bool isSubstitutable = isTypeSubstitutable(quals, ty);
+  bool isSubstitutable =
+    isTypeSubstitutable(quals, ty, Context.getASTContext());
   if (isSubstitutable && mangleSubstitution(T))
     return;
 
@@ -3250,14 +3256,13 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
 }
 
 void CXXNameMangler::mangleType(const AutoType *T) {
-  QualType D = T->getDeducedType();
-  // <builtin-type> ::= Da  # dependent auto
-  if (D.isNull()) {
-    assert(T->getKeyword() != AutoTypeKeyword::GNUAutoType &&
-           "shouldn't need to mangle __auto_type!");
-    Out << (T->isDecltypeAuto() ? "Dc" : "Da");
-  } else
-    mangleType(D);
+  assert(T->getDeducedType().isNull() &&
+         "Deduced AutoType shouldn't be handled here!");
+  assert(T->getKeyword() != AutoTypeKeyword::GNUAutoType &&
+         "shouldn't need to mangle __auto_type!");
+  // <builtin-type> ::= Da # auto
+  //                ::= Dc # decltype(auto)
+  Out << (T->isDecltypeAuto() ? "Dc" : "Da");
 }
 
 void CXXNameMangler::mangleType(const DeducedTemplateSpecializationType *T) {

@@ -959,8 +959,8 @@ public:
   }
 
 private:
-  /// Track which registers have been modified and used.
-  BitVector ModifiedRegs, UsedRegs;
+  /// Track which register units have been modified and used.
+  LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 
   /// Sink Copy instructions unused in the same block close to their uses in
   /// successors.
@@ -975,26 +975,21 @@ char &llvm::PostRAMachineSinkingID = PostRAMachineSinking::ID;
 INITIALIZE_PASS(PostRAMachineSinking, "postra-machine-sink",
                 "PostRA Machine Sink", false, false)
 
-static bool aliasWithRegsInLiveIn(MachineBasicBlock *SI,
-                                  SmallSet<unsigned, 8> &AliasedRegs) {
-  for (const auto LI : SI->liveins())
-    if (AliasedRegs.count(LI.PhysReg))
-      return true;
-  return false;
+static bool aliasWithRegsInLiveIn(MachineBasicBlock &MBB, unsigned Reg,
+                                  const TargetRegisterInfo *TRI) {
+  LiveRegUnits LiveInRegUnits(*TRI);
+  LiveInRegUnits.addLiveIns(MBB);
+  return !LiveInRegUnits.available(Reg);
 }
 
 static MachineBasicBlock *
 getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
-                      ArrayRef<MachineBasicBlock *> SinkableBBs, unsigned Reg,
-                      const TargetRegisterInfo *TRI) {
-  SmallSet<unsigned, 8> AliasedRegs;
-  for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-    AliasedRegs.insert(*AI);
-
+                      const SmallPtrSetImpl<MachineBasicBlock *> &SinkableBBs,
+                      unsigned Reg, const TargetRegisterInfo *TRI) {
   // Try to find a single sinkable successor in which Reg is live-in.
   MachineBasicBlock *BB = nullptr;
   for (auto *SI : SinkableBBs) {
-    if (SI->isLiveIn(Reg)) {
+    if (aliasWithRegsInLiveIn(*SI, Reg, TRI)) {
       // If BB is set here, Reg is live-in to at least two sinkable successors,
       // so quit.
       if (BB)
@@ -1008,17 +1003,17 @@ getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
 
   // Check if any register aliased with Reg is live-in in other successors.
   for (auto *SI : CurBB.successors()) {
-    if (SI == BB)
-      continue;
-    if (aliasWithRegsInLiveIn(SI, AliasedRegs))
+    if (!SinkableBBs.count(SI) && aliasWithRegsInLiveIn(*SI, Reg, TRI))
       return nullptr;
   }
   return BB;
 }
 
-static MachineBasicBlock *getSingleLiveInSuccBB(
-    MachineBasicBlock &CurBB, ArrayRef<MachineBasicBlock *> SinkableBBs,
-    ArrayRef<unsigned> DefedRegsInCopy, const TargetRegisterInfo *TRI) {
+static MachineBasicBlock *
+getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
+                      const SmallPtrSetImpl<MachineBasicBlock *> &SinkableBBs,
+                      ArrayRef<unsigned> DefedRegsInCopy,
+                      const TargetRegisterInfo *TRI) {
   MachineBasicBlock *SingleBB = nullptr;
   for (auto DefReg : DefedRegsInCopy) {
     MachineBasicBlock *BB =
@@ -1032,11 +1027,12 @@ static MachineBasicBlock *getSingleLiveInSuccBB(
 
 static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
                            SmallVectorImpl<unsigned> &UsedOpsInCopy,
-                           BitVector &UsedRegs, const TargetRegisterInfo *TRI) {
+                           LiveRegUnits &UsedRegUnits,
+                           const TargetRegisterInfo *TRI) {
   for (auto U : UsedOpsInCopy) {
     MachineOperand &MO = MI->getOperand(U);
     unsigned SrcReg = MO.getReg();
-    if (UsedRegs[SrcReg]) {
+    if (!UsedRegUnits.available(SrcReg)) {
       MachineBasicBlock::iterator NI = std::next(MI->getIterator());
       for (MachineInstr &UI : make_range(NI, CurBB.end())) {
         if (UI.killsRegister(SrcReg, TRI)) {
@@ -1064,8 +1060,8 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
 static bool hasRegisterDependency(MachineInstr *MI,
                                   SmallVectorImpl<unsigned> &UsedOpsInCopy,
                                   SmallVectorImpl<unsigned> &DefedRegsInCopy,
-                                  BitVector &ModifiedRegs,
-                                  BitVector &UsedRegs) {
+                                  LiveRegUnits &ModifiedRegUnits,
+                                  LiveRegUnits &UsedRegUnits) {
   bool HasRegDependency = false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI->getOperand(i);
@@ -1075,7 +1071,7 @@ static bool hasRegisterDependency(MachineInstr *MI,
     if (!Reg)
       continue;
     if (MO.isDef()) {
-      if (ModifiedRegs[Reg] || UsedRegs[Reg]) {
+      if (!ModifiedRegUnits.available(Reg) || !UsedRegUnits.available(Reg)) {
         HasRegDependency = true;
         break;
       }
@@ -1086,7 +1082,7 @@ static bool hasRegisterDependency(MachineInstr *MI,
       // it's not perfectly clear if skipping the internal read is safe in all
       // other targets.
     } else if (MO.isUse()) {
-      if (ModifiedRegs[Reg]) {
+      if (!ModifiedRegUnits.available(Reg)) {
         HasRegDependency = true;
         break;
       }
@@ -1100,13 +1096,13 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
                                          MachineFunction &MF,
                                          const TargetRegisterInfo *TRI,
                                          const TargetInstrInfo *TII) {
-  SmallVector<MachineBasicBlock *, 2> SinkableBBs;
+  SmallPtrSet<MachineBasicBlock *, 2> SinkableBBs;
   // FIXME: For now, we sink only to a successor which has a single predecessor
   // so that we can directly sink COPY instructions to the successor without
   // adding any new block or branch instruction.
   for (MachineBasicBlock *SI : CurBB.successors())
     if (!SI->livein_empty() && SI->pred_size() == 1)
-      SinkableBBs.push_back(SI);
+      SinkableBBs.insert(SI);
 
   if (SinkableBBs.empty())
     return false;
@@ -1115,8 +1111,8 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
 
   // Track which registers have been modified and used between the end of the
   // block and the current instruction.
-  ModifiedRegs.reset();
-  UsedRegs.reset();
+  ModifiedRegUnits.clear();
+  UsedRegUnits.clear();
 
   for (auto I = CurBB.rbegin(), E = CurBB.rend(); I != E;) {
     MachineInstr *MI = &*I;
@@ -1127,7 +1123,8 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       return false;
 
     if (!MI->isCopy() || !MI->getOperand(0).isRenamable()) {
-      TII->trackRegDefsUses(*MI, ModifiedRegs, UsedRegs, TRI);
+      LiveRegUnits::accumulateUsedDefed(*MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
       continue;
     }
 
@@ -1137,9 +1134,10 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     SmallVector<unsigned, 2> DefedRegsInCopy;
 
     // Don't sink the COPY if it would violate a register dependency.
-    if (hasRegisterDependency(MI, UsedOpsInCopy, DefedRegsInCopy, ModifiedRegs,
-                              UsedRegs)) {
-      TII->trackRegDefsUses(*MI, ModifiedRegs, UsedRegs, TRI);
+    if (hasRegisterDependency(MI, UsedOpsInCopy, DefedRegsInCopy,
+                              ModifiedRegUnits, UsedRegUnits)) {
+      LiveRegUnits::accumulateUsedDefed(*MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
       continue;
     }
     assert((!UsedOpsInCopy.empty() && !DefedRegsInCopy.empty()) &&
@@ -1149,7 +1147,8 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // Don't sink if we cannot find a single sinkable successor in which Reg
     // is live-in.
     if (!SuccBB) {
-      TII->trackRegDefsUses(*MI, ModifiedRegs, UsedRegs, TRI);
+      LiveRegUnits::accumulateUsedDefed(*MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
       continue;
     }
     assert((SuccBB->pred_size() == 1 && *SuccBB->pred_begin() == &CurBB) &&
@@ -1157,7 +1156,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
 
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.
-    clearKillFlags(MI, CurBB, UsedOpsInCopy, UsedRegs, TRI);
+    clearKillFlags(MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
     MachineBasicBlock::iterator InsertPos = SuccBB->getFirstNonPHI();
     SuccBB->splice(InsertPos, &CurBB, MI);
     updateLiveIn(MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
@@ -1172,9 +1171,9 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  ModifiedRegs.resize(TRI->getNumRegs());
-  UsedRegs.resize(TRI->getNumRegs());
 
+  ModifiedRegUnits.init(*TRI);
+  UsedRegUnits.init(*TRI);
   for (auto &BB : MF)
     Changed |= tryToSinkCopy(BB, MF, TRI, TII);
 

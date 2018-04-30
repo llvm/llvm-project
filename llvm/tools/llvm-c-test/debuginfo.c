@@ -36,6 +36,18 @@ int llvm_test_dibuilder(void) {
                               "/test/include/llvm-c-test.h", 27,
                               "", 0);
 
+  LLVMMetadataRef OtherModule =
+    LLVMDIBuilderCreateModule(DIB, CompileUnit,
+                              "llvm-c-test-import", 18,
+                              "", 0,
+                              "/test/include/llvm-c-test-import.h", 34,
+                              "", 0);
+  LLVMMetadataRef ImportedModule =
+    LLVMDIBuilderCreateImportedModuleFromModule(DIB, Module, OtherModule,
+                                                File, 42);
+  LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule,
+                                             File, 42);
+
   LLVMMetadataRef Int64Ty =
     LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0);
   LLVMMetadataRef GlobalVarValueExpr =

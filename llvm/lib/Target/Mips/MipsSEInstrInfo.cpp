@@ -445,6 +445,14 @@ unsigned MipsSEInstrInfo::getOppositeBranchOpc(unsigned Opc) const {
   case Mips::BGEZC:  return Mips::BLTZC;
   case Mips::BLTZC:  return Mips::BGEZC;
   case Mips::BLEZC:  return Mips::BGTZC;
+  case Mips::BEQZC_MMR6:  return Mips::BNEZC_MMR6;
+  case Mips::BNEZC_MMR6:  return Mips::BEQZC_MMR6;
+  case Mips::BEQC_MMR6:   return Mips::BNEC_MMR6;
+  case Mips::BNEC_MMR6:   return Mips::BEQC_MMR6;
+  case Mips::BGTZC_MMR6:  return Mips::BLEZC_MMR6;
+  case Mips::BGEZC_MMR6:  return Mips::BLTZC_MMR6;
+  case Mips::BLTZC_MMR6:  return Mips::BGEZC_MMR6;
+  case Mips::BLEZC_MMR6:  return Mips::BGTZC_MMR6;
   case Mips::BEQZC64:  return Mips::BNEZC64;
   case Mips::BNEZC64:  return Mips::BEQZC64;
   case Mips::BEQC64:   return Mips::BNEC64;
@@ -553,7 +561,13 @@ unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
           Opc == Mips::BGTZC64 || Opc == Mips::BGEZC64 ||
           Opc == Mips::BLTZC64 || Opc == Mips::BLEZC64 || Opc == Mips::BC ||
           Opc == Mips::BBIT0 || Opc == Mips::BBIT1 || Opc == Mips::BBIT032 ||
-          Opc == Mips::BBIT132) ? Opc : 0;
+          Opc == Mips::BBIT132 ||  Opc == Mips::BC_MMR6 ||
+          Opc == Mips::BEQC_MMR6 || Opc == Mips::BNEC_MMR6 ||
+          Opc == Mips::BLTC_MMR6 || Opc == Mips::BGEC_MMR6 ||
+          Opc == Mips::BLTUC_MMR6 || Opc == Mips::BGEUC_MMR6 ||
+          Opc == Mips::BGTZC_MMR6 || Opc == Mips::BLEZC_MMR6 ||
+          Opc == Mips::BGEZC_MMR6 || Opc == Mips::BLTZC_MMR6 ||
+          Opc == Mips::BEQZC_MMR6 || Opc == Mips::BNEZC_MMR6) ? Opc : 0;
 }
 
 void MipsSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,

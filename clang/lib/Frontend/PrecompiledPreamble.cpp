@@ -40,7 +40,7 @@ namespace {
 StringRef getInMemoryPreamblePath() {
 #if defined(LLVM_ON_UNIX)
   return "/__clang_tmp/___clang_inmemory_preamble___";
-#elif defined(LLVM_ON_WIN32)
+#elif defined(_WIN32)
   return "C:\\__clang_tmp\\___clang_inmemory_preamble___";
 #else
 #warning "Unknown platform. Defaulting to UNIX-style paths for in-memory PCHs"

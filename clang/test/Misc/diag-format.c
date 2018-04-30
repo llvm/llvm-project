@@ -37,7 +37,7 @@
 // DEFAULT: {{.*}}:36:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
 // MSVC2010: {{.*}}(36,7) : warning: extra tokens at end of #endif directive [-Wextra-tokens]
 // MSVC2013: {{.*}}(36,8) : warning: extra tokens at end of #endif directive [-Wextra-tokens]
-// MSVC: {{.*}}(36,8){{ ?}}: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+// MSVC: {{.*\(36,[78]\) ?}}: warning: extra tokens at end of #endif directive [-Wextra-tokens]
 // MSVC2015: {{.*}}(36,8): warning: extra tokens at end of #endif directive [-Wextra-tokens]
 // VI: {{.*}} +36:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
 // MSVC2015_ORIG: {{.*}}(36): warning: extra tokens at end of #endif directive [-Wextra-tokens]

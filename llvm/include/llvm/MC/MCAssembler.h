@@ -99,11 +99,11 @@ public:
 private:
   MCContext &Context;
 
-  MCAsmBackend &Backend;
+  std::unique_ptr<MCAsmBackend> Backend;
 
-  MCCodeEmitter &Emitter;
+  std::unique_ptr<MCCodeEmitter> Emitter;
 
-  MCObjectWriter &Writer;
+  std::unique_ptr<MCObjectWriter> Writer;
 
   SectionListType Sections;
 
@@ -214,8 +214,9 @@ public:
   // concrete and require clients to pass in a target like object. The other
   // option is to make this abstract, and have targets provide concrete
   // implementations as we do with AsmParser.
-  MCAssembler(MCContext &Context, MCAsmBackend &Backend,
-              MCCodeEmitter &Emitter, MCObjectWriter &Writer);
+  MCAssembler(MCContext &Context, std::unique_ptr<MCAsmBackend> Backend,
+              std::unique_ptr<MCCodeEmitter> Emitter,
+              std::unique_ptr<MCObjectWriter> Writer);
   MCAssembler(const MCAssembler &) = delete;
   MCAssembler &operator=(const MCAssembler &) = delete;
   ~MCAssembler();
@@ -274,11 +275,17 @@ public:
 
   MCContext &getContext() const { return Context; }
 
-  MCAsmBackend &getBackend() const { return Backend; }
+  MCAsmBackend *getBackendPtr() const { return Backend.get(); }
 
-  MCCodeEmitter &getEmitter() const { return Emitter; }
+  MCCodeEmitter *getEmitterPtr() const { return Emitter.get(); }
 
-  MCObjectWriter &getWriter() const { return Writer; }
+  MCObjectWriter *getWriterPtr() const { return Writer.get(); }
+
+  MCAsmBackend &getBackend() const { return *Backend; }
+
+  MCCodeEmitter &getEmitter() const { return *Emitter; }
+
+  MCObjectWriter &getWriter() const { return *Writer; }
 
   MCDwarfLineTableParams getDWARFLinetableParams() const { return LTParams; }
   void setDWARFLinetableParams(MCDwarfLineTableParams P) { LTParams = P; }

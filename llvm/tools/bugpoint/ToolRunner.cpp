@@ -206,7 +206,7 @@ void AbstractInterpreter::anchor() {}
 
 #if defined(LLVM_ON_UNIX)
 const char EXESuffix[] = "";
-#elif defined(LLVM_ON_WIN32)
+#elif defined(_WIN32)
 const char EXESuffix[] = "exe";
 #endif
 

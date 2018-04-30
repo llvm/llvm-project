@@ -408,7 +408,7 @@ private:
           std::string Name =
               getIslCompatibleName("Val", V, ValueSets.size() - 1,
                                    std::string(), UseInstructionNames);
-          isl::id Id = give(isl_id_alloc(Ctx, Name.c_str(), V));
+          isl::id Id = isl::manage(isl_id_alloc(Ctx, Name.c_str(), V));
           Result = isl::set::universe(
               isl::space(Ctx, 0, 0).set_tuple_id(isl::dim::set, Id));
         }

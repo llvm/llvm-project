@@ -89,19 +89,24 @@ defm WriteFRsqrt : X86SchedWritePair; // Floating point reciprocal square root e
 defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
 defm WriteFMAS   : X86SchedWritePair; // Fused Multiply Add (Scalar).
 defm WriteFMAY   : X86SchedWritePair; // Fused Multiply Add (YMM/ZMM).
-defm WriteFSign : X86SchedWritePair; // Floating point fabs/fchs.
-defm WriteFLogic : X86SchedWritePair; // Floating point and/or/xor logicals.
+defm WriteFSign  : X86SchedWritePair; // Floating point fabs/fchs.
+defm WriteFLogic  : X86SchedWritePair; // Floating point and/or/xor logicals.
+defm WriteFLogicY : X86SchedWritePair; // Floating point and/or/xor logicals (YMM/ZMM).
 defm WriteFShuffle  : X86SchedWritePair; // Floating point vector shuffles.
 defm WriteFVarShuffle  : X86SchedWritePair; // Floating point vector variable shuffles.
+defm WriteFVarShuffleY : X86SchedWritePair; // Floating point vector variable shuffles (YMM/ZMM).
 defm WriteFBlend  : X86SchedWritePair; // Floating point vector blends.
+defm WriteFBlendY : X86SchedWritePair; // Floating point vector blends (YMM/ZMM).
 defm WriteFVarBlend  : X86SchedWritePair; // Fp vector variable blends.
+defm WriteFVarBlendY : X86SchedWritePair; // Fp vector variable blends (YMM/ZMM).
 
 // FMA Scheduling helper class.
 class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
 
 // Horizontal Add/Sub (float and integer)
 defm WriteFHAdd  : X86SchedWritePair;
-defm WritePHAdd : X86SchedWritePair;
+defm WriteFHAddY : X86SchedWritePair; // YMM/ZMM.
+defm WritePHAdd  : X86SchedWritePair;
 
 // Vector integer operations.
 def  WriteVecLoad  : SchedWrite;

@@ -87,6 +87,7 @@ multiclass sse12_fp_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
 /// sse12_fp_packed_logical_rm - SSE 1 & 2 packed instructions class
 multiclass sse12_fp_packed_logical_rm<bits<8> opc, RegisterClass RC, Domain d,
                                       string OpcodeStr, X86MemOperand x86memop,
+                                      X86FoldableSchedWrite sched,
                                       list<dag> pat_rr, list<dag> pat_rm,
                                       bit Is2Addr = 1> {
   let isCommutable = 1, hasSideEffects = 0 in
@@ -95,14 +96,14 @@ multiclass sse12_fp_packed_logical_rm<bits<8> opc, RegisterClass RC, Domain d,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        pat_rr, d>,
-       Sched<[WriteFLogic]>;
+       Sched<[sched]>;
   let hasSideEffects = 0, mayLoad = 1 in
   def rm : PI<opc, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        pat_rm, d>,
-       Sched<[WriteFLogic.Folded, ReadAfterLd]>;
+       Sched<[sched.Folded, ReadAfterLd]>;
 }
 
 
@@ -951,21 +952,21 @@ defm VCVTTSD2SI64 : sse12_cvt_s<0x2C, FR64, GR64, fp_to_sint, f64mem, loadf64,
                                 XD, VEX, VEX_W, VEX_LIG;
 
 def : InstAlias<"vcvttss2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTTSS2SIrr GR32:$dst, FR32:$src), 0>;
+                (VCVTTSS2SIrr GR32:$dst, FR32:$src), 0, "att">;
 def : InstAlias<"vcvttss2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTTSS2SIrm GR32:$dst, f32mem:$src), 0>;
+                (VCVTTSS2SIrm GR32:$dst, f32mem:$src), 0, "att">;
 def : InstAlias<"vcvttsd2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTTSD2SIrr GR32:$dst, FR64:$src), 0>;
+                (VCVTTSD2SIrr GR32:$dst, FR64:$src), 0, "att">;
 def : InstAlias<"vcvttsd2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTTSD2SIrm GR32:$dst, f64mem:$src), 0>;
+                (VCVTTSD2SIrm GR32:$dst, f64mem:$src), 0, "att">;
 def : InstAlias<"vcvttss2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTTSS2SI64rr GR64:$dst, FR32:$src), 0>;
+                (VCVTTSS2SI64rr GR64:$dst, FR32:$src), 0, "att">;
 def : InstAlias<"vcvttss2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTTSS2SI64rm GR64:$dst, f32mem:$src), 0>;
+                (VCVTTSS2SI64rm GR64:$dst, f32mem:$src), 0, "att">;
 def : InstAlias<"vcvttsd2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTTSD2SI64rr GR64:$dst, FR64:$src), 0>;
+                (VCVTTSD2SI64rr GR64:$dst, FR64:$src), 0, "att">;
 def : InstAlias<"vcvttsd2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTTSD2SI64rm GR64:$dst, f64mem:$src), 0>;
+                (VCVTTSD2SI64rm GR64:$dst, f64mem:$src), 0, "att">;
 }
 // The assembler can recognize rr 64-bit instructions by seeing a rxx
 // register, but the same isn't true when only using memory operands,
@@ -982,9 +983,9 @@ defm VCVTSI642SD : sse12_vcvt_avx<0x2A, GR64, FR64, i64mem, "cvtsi2sd{q}",
 
 let Predicates = [UseAVX] in {
   def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
-                (VCVTSI2SSrm FR64:$dst, FR64:$src1, i32mem:$src), 0>;
+                (VCVTSI2SSrm FR64:$dst, FR64:$src1, i32mem:$src), 0, "att">;
   def : InstAlias<"vcvtsi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
-                (VCVTSI2SDrm FR64:$dst, FR64:$src1, i32mem:$src), 0>;
+                (VCVTSI2SDrm FR64:$dst, FR64:$src1, i32mem:$src), 0, "att">;
 
   def : Pat<(f32 (sint_to_fp (loadi32 addr:$src))),
             (VCVTSI2SSrm (f32 (IMPLICIT_DEF)), addr:$src)>;
@@ -1031,26 +1032,26 @@ defm CVTSI642SD : sse12_cvt_s<0x2A, GR64, FR64, sint_to_fp, i64mem, loadi64,
                       WriteCvtI2F>, XD, REX_W;
 
 def : InstAlias<"cvttss2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTTSS2SIrr GR32:$dst, FR32:$src), 0>;
+                (CVTTSS2SIrr GR32:$dst, FR32:$src), 0, "att">;
 def : InstAlias<"cvttss2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTTSS2SIrm GR32:$dst, f32mem:$src), 0>;
+                (CVTTSS2SIrm GR32:$dst, f32mem:$src), 0, "att">;
 def : InstAlias<"cvttsd2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTTSD2SIrr GR32:$dst, FR64:$src), 0>;
+                (CVTTSD2SIrr GR32:$dst, FR64:$src), 0, "att">;
 def : InstAlias<"cvttsd2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTTSD2SIrm GR32:$dst, f64mem:$src), 0>;
+                (CVTTSD2SIrm GR32:$dst, f64mem:$src), 0, "att">;
 def : InstAlias<"cvttss2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTTSS2SI64rr GR64:$dst, FR32:$src), 0>;
+                (CVTTSS2SI64rr GR64:$dst, FR32:$src), 0, "att">;
 def : InstAlias<"cvttss2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTTSS2SI64rm GR64:$dst, f32mem:$src), 0>;
+                (CVTTSS2SI64rm GR64:$dst, f32mem:$src), 0, "att">;
 def : InstAlias<"cvttsd2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTTSD2SI64rr GR64:$dst, FR64:$src), 0>;
+                (CVTTSD2SI64rr GR64:$dst, FR64:$src), 0, "att">;
 def : InstAlias<"cvttsd2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTTSD2SI64rm GR64:$dst, f64mem:$src), 0>;
+                (CVTTSD2SI64rm GR64:$dst, f64mem:$src), 0, "att">;
 
 def : InstAlias<"cvtsi2ss\t{$src, $dst|$dst, $src}",
-                (CVTSI2SSrm FR64:$dst, i32mem:$src), 0>;
+                (CVTSI2SSrm FR64:$dst, i32mem:$src), 0, "att">;
 def : InstAlias<"cvtsi2sd\t{$src, $dst|$dst, $src}",
-                (CVTSI2SDrm FR64:$dst, i32mem:$src), 0>;
+                (CVTSI2SDrm FR64:$dst, i32mem:$src), 0, "att">;
 
 // Conversion Instructions Intrinsics - Match intrinsics which expect MM
 // and/or XMM operand(s).
@@ -1201,39 +1202,39 @@ defm CVTDQ2PS : sse12_cvt_p<0x5B, VR128, i128mem, v4f32, v4i32, memopv2i64,
 
 let Predicates = [UseAVX] in {
 def : InstAlias<"vcvtss2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTSS2SIrr_Int GR32:$dst, VR128:$src), 0>;
+                (VCVTSS2SIrr_Int GR32:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtss2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTSS2SIrm_Int GR32:$dst, ssmem:$src), 0>;
+                (VCVTSS2SIrm_Int GR32:$dst, ssmem:$src), 0, "att">;
 def : InstAlias<"vcvtsd2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTSD2SIrr_Int GR32:$dst, VR128:$src), 0>;
+                (VCVTSD2SIrr_Int GR32:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtsd2si{l}\t{$src, $dst|$dst, $src}",
-                (VCVTSD2SIrm_Int GR32:$dst, sdmem:$src), 0>;
+                (VCVTSD2SIrm_Int GR32:$dst, sdmem:$src), 0, "att">;
 def : InstAlias<"vcvtss2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTSS2SI64rr_Int GR64:$dst, VR128:$src), 0>;
+                (VCVTSS2SI64rr_Int GR64:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtss2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTSS2SI64rm_Int GR64:$dst, ssmem:$src), 0>;
+                (VCVTSS2SI64rm_Int GR64:$dst, ssmem:$src), 0, "att">;
 def : InstAlias<"vcvtsd2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTSD2SI64rr_Int GR64:$dst, VR128:$src), 0>;
+                (VCVTSD2SI64rr_Int GR64:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtsd2si{q}\t{$src, $dst|$dst, $src}",
-                (VCVTSD2SI64rm_Int GR64:$dst, sdmem:$src), 0>;
+                (VCVTSD2SI64rm_Int GR64:$dst, sdmem:$src), 0, "att">;
 }
 
 def : InstAlias<"cvtss2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTSS2SIrr_Int GR32:$dst, VR128:$src), 0>;
+                (CVTSS2SIrr_Int GR32:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"cvtss2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTSS2SIrm_Int GR32:$dst, ssmem:$src), 0>;
+                (CVTSS2SIrm_Int GR32:$dst, ssmem:$src), 0, "att">;
 def : InstAlias<"cvtsd2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTSD2SIrr_Int GR32:$dst, VR128:$src), 0>;
+                (CVTSD2SIrr_Int GR32:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"cvtsd2si{l}\t{$src, $dst|$dst, $src}",
-                (CVTSD2SIrm_Int GR32:$dst, sdmem:$src), 0>;
+                (CVTSD2SIrm_Int GR32:$dst, sdmem:$src), 0, "att">;
 def : InstAlias<"cvtss2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTSS2SI64rr_Int GR64:$dst, VR128:$src), 0>;
+                (CVTSS2SI64rr_Int GR64:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"cvtss2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTSS2SI64rm_Int GR64:$dst, ssmem:$src), 0>;
+                (CVTSS2SI64rm_Int GR64:$dst, ssmem:$src), 0, "att">;
 def : InstAlias<"cvtsd2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTSD2SI64rr_Int GR64:$dst, VR128:$src), 0>;
+                (CVTSD2SI64rr_Int GR64:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"cvtsd2si{q}\t{$src, $dst|$dst, $src}",
-                (CVTSD2SI64rm_Int GR64:$dst, sdmem:$src), 0>;
+                (CVTSD2SI64rm_Int GR64:$dst, sdmem:$src), 0, "att">;
 
 /// SSE 2 Only
 
@@ -1505,7 +1506,7 @@ def VCVTPD2DQrm : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                         (v4i32 (X86cvtp2Int (loadv2f64 addr:$src))))]>, VEX,
                       Sched<[WriteCvtF2ILd]>, VEX_WIG;
 def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQrm VR128:$dst, f128mem:$src), 0>;
+                (VCVTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
 
 // YMM only
 def VCVTPD2DQYrr : SDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR256:$src),
@@ -1521,7 +1522,7 @@ def VCVTPD2DQYrm : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
 def : InstAlias<"vcvtpd2dqy\t{$src, $dst|$dst, $src}",
                 (VCVTPD2DQYrr VR128:$dst, VR256:$src), 0>;
 def : InstAlias<"vcvtpd2dqy\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQYrm VR128:$dst, f256mem:$src), 0>;
+                (VCVTPD2DQYrm VR128:$dst, f256mem:$src), 0, "intel">;
 }
 
 def CVTPD2DQrm  : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
@@ -1593,7 +1594,7 @@ def VCVTTPD2DQrm : VPDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                           (v4i32 (X86cvttp2si (loadv2f64 addr:$src))))]>,
                         VEX, Sched<[WriteCvtF2ILd]>, VEX_WIG;
 def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQrm VR128:$dst, f128mem:$src), 0>;
+                (VCVTTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
 
 // YMM only
 let Predicates = [HasAVX, NoVLX] in {
@@ -1611,7 +1612,7 @@ def VCVTTPD2DQYrm : VPDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
 def : InstAlias<"vcvttpd2dqy\t{$src, $dst|$dst, $src}",
                 (VCVTTPD2DQYrr VR128:$dst, VR256:$src), 0>;
 def : InstAlias<"vcvttpd2dqy\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQYrm VR128:$dst, f256mem:$src), 0>;
+                (VCVTTPD2DQYrm VR128:$dst, f256mem:$src), 0, "intel">;
 
 let Predicates = [HasAVX, NoVLX] in {
   let AddedComplexity = 15 in {
@@ -1763,7 +1764,7 @@ def VCVTPD2PSrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                        [(set VR128:$dst, (X86vfpround (loadv2f64 addr:$src)))]>,
                        VEX, Sched<[WriteCvtF2FLd]>, VEX_WIG;
 def : InstAlias<"vcvtpd2psx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSrm VR128:$dst, f128mem:$src), 0>;
+                (VCVTPD2PSrm VR128:$dst, f128mem:$src), 0, "intel">;
 
 // YMM only
 let Predicates = [HasAVX, NoVLX] in {
@@ -1779,7 +1780,7 @@ def VCVTPD2PSYrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
 def : InstAlias<"vcvtpd2psy\t{$src, $dst|$dst, $src}",
                 (VCVTPD2PSYrr VR128:$dst, VR256:$src), 0>;
 def : InstAlias<"vcvtpd2psy\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSYrm VR128:$dst, f256mem:$src), 0>;
+                (VCVTPD2PSYrm VR128:$dst, f256mem:$src), 0, "intel">;
 
 def CVTPD2PSrr : PDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                      "cvtpd2ps\t{$src, $dst|$dst, $src}",
@@ -2334,29 +2335,29 @@ multiclass sse12_fp_packed_logical<bits<8> opc, string OpcodeStr,
                                    SDNode OpNode> {
   let Predicates = [HasAVX, NoVLX] in {
   defm V#NAME#PSY : sse12_fp_packed_logical_rm<opc, VR256, SSEPackedSingle,
-        !strconcat(OpcodeStr, "ps"), f256mem,
+        !strconcat(OpcodeStr, "ps"), f256mem, WriteFLogicY,
         [], [], 0>, PS, VEX_4V, VEX_L, VEX_WIG;
 
   defm V#NAME#PDY : sse12_fp_packed_logical_rm<opc, VR256, SSEPackedDouble,
-        !strconcat(OpcodeStr, "pd"), f256mem,
+        !strconcat(OpcodeStr, "pd"), f256mem, WriteFLogicY,
         [], [], 0>, PD, VEX_4V, VEX_L, VEX_WIG;
 
   defm V#NAME#PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
-       !strconcat(OpcodeStr, "ps"), f128mem,
+       !strconcat(OpcodeStr, "ps"), f128mem, WriteFLogic,
        [], [], 0>, PS, VEX_4V, VEX_WIG;
 
   defm V#NAME#PD : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedDouble,
-       !strconcat(OpcodeStr, "pd"), f128mem,
+       !strconcat(OpcodeStr, "pd"), f128mem, WriteFLogic,
        [], [], 0>, PD, VEX_4V, VEX_WIG;
   }
 
   let Constraints = "$src1 = $dst" in {
     defm PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
-         !strconcat(OpcodeStr, "ps"), f128mem,
+         !strconcat(OpcodeStr, "ps"), f128mem, WriteFLogic,
          [], []>, PS;
 
     defm PD : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedDouble,
-         !strconcat(OpcodeStr, "pd"), f128mem,
+         !strconcat(OpcodeStr, "pd"), f128mem, WriteFLogic,
          [], []>, PD;
   }
 }
@@ -3387,6 +3388,7 @@ defm PSADBW : PDI_binop_rm2<0xF6, "psadbw", X86psadbw, v2i64, v16i8, VR128,
 multiclass PDI_binop_rmi<bits<8> opc, bits<8> opc2, Format ImmForm,
                          string OpcodeStr, SDNode OpNode,
                          SDNode OpNode2, RegisterClass RC,
+                         X86FoldableSchedWrite sched,
                          ValueType DstVT, ValueType SrcVT,
                          PatFrag ld_frag, bit Is2Addr = 1> {
   // src2 is always 128-bit
@@ -3396,7 +3398,7 @@ multiclass PDI_binop_rmi<bits<8> opc, bits<8> opc2, Format ImmForm,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst, (DstVT (OpNode RC:$src1, (SrcVT VR128:$src2))))]>,
-       Sched<[WriteVecShift]>;
+       Sched<[sched]>;
   def rm : PDI<opc, MRMSrcMem, (outs RC:$dst),
        (ins RC:$src1, i128mem:$src2),
        !if(Is2Addr,
@@ -3404,79 +3406,83 @@ multiclass PDI_binop_rmi<bits<8> opc, bits<8> opc2, Format ImmForm,
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst, (DstVT (OpNode RC:$src1,
                        (SrcVT (bitconvert (ld_frag addr:$src2))))))]>,
-       Sched<[WriteVecShiftLd, ReadAfterLd]>;
+       Sched<[sched.Folded, ReadAfterLd]>;
   def ri : PDIi8<opc2, ImmForm, (outs RC:$dst),
        (ins RC:$src1, u8imm:$src2),
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst, (DstVT (OpNode2 RC:$src1, (i8 imm:$src2))))]>,
-       Sched<[WriteVecShift]>;
+       Sched<[sched]>;
 }
 
 multiclass PDI_binop_rmi_all<bits<8> opc, bits<8> opc2, Format ImmForm,
                              string OpcodeStr, SDNode OpNode,
                              SDNode OpNode2, ValueType DstVT128,
                              ValueType DstVT256, ValueType SrcVT,
-                             Predicate prd> {
+                             X86FoldableSchedWrite sched, Predicate prd> {
 let Predicates = [HasAVX, prd] in
   defm V#NAME : PDI_binop_rmi<opc, opc2, ImmForm, !strconcat("v", OpcodeStr),
-                              OpNode, OpNode2, VR128, DstVT128, SrcVT,
-                              loadv2i64, 0>, VEX_4V, VEX_WIG;
+                              OpNode, OpNode2, VR128, sched, DstVT128,
+                              SrcVT, loadv2i64, 0>, VEX_4V, VEX_WIG;
 let Predicates = [HasAVX2, prd] in
   defm V#NAME#Y : PDI_binop_rmi<opc, opc2, ImmForm, !strconcat("v", OpcodeStr),
-                                OpNode, OpNode2, VR256, DstVT256, SrcVT,
-                                loadv2i64, 0>, VEX_4V, VEX_L, VEX_WIG;
+                                OpNode, OpNode2, VR256, sched, DstVT256,
+                                SrcVT, loadv2i64, 0>, VEX_4V, VEX_L, VEX_WIG;
 let Constraints = "$src1 = $dst" in
   defm NAME : PDI_binop_rmi<opc, opc2, ImmForm, OpcodeStr, OpNode, OpNode2,
-                           VR128, DstVT128, SrcVT, memopv2i64>;
+                            VR128, sched, DstVT128, SrcVT, memopv2i64>;
 }
 
 multiclass PDI_binop_ri<bits<8> opc, Format ImmForm, string OpcodeStr,
                         SDNode OpNode, RegisterClass RC, ValueType VT,
-                        bit Is2Addr = 1> {
+                        X86FoldableSchedWrite sched, bit Is2Addr = 1> {
   def ri : PDIi8<opc, ImmForm, (outs RC:$dst), (ins RC:$src1, u8imm:$src2),
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst, (VT (OpNode RC:$src1, (i8 imm:$src2))))]>,
-       Sched<[WriteVecShift]>;
+       Sched<[sched]>;
 }
 
 multiclass PDI_binop_ri_all<bits<8> opc, Format ImmForm, string OpcodeStr,
-                           SDNode OpNode> {
+                            SDNode OpNode, X86FoldableSchedWrite sched> {
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in
   defm V#NAME : PDI_binop_ri<opc, ImmForm, !strconcat("v", OpcodeStr), OpNode,
-                             VR128, v16i8, 0>, VEX_4V, VEX_WIG;
+                             VR128, v16i8, sched, 0>, VEX_4V, VEX_WIG;
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in
   defm V#NAME#Y : PDI_binop_ri<opc, ImmForm, !strconcat("v", OpcodeStr), OpNode,
-                               VR256, v32i8, 0>, VEX_4V, VEX_L, VEX_WIG;
+                               VR256, v32i8, sched, 0>,
+                               VEX_4V, VEX_L, VEX_WIG;
 let Constraints = "$src1 = $dst" in
-  defm NAME : PDI_binop_ri<opc, ImmForm, OpcodeStr, OpNode, VR128, v16i8>;
+  defm NAME : PDI_binop_ri<opc, ImmForm, OpcodeStr, OpNode, VR128, v16i8, sched>;
 }
 
 let ExeDomain = SSEPackedInt in {
   defm PSLLW : PDI_binop_rmi_all<0xF1, 0x71, MRM6r, "psllw", X86vshl, X86vshli,
-                                 v8i16, v16i16, v8i16, NoVLX_Or_NoBWI>;
+                                 v8i16, v16i16, v8i16, WriteVecShift,
+                                 NoVLX_Or_NoBWI>;
   defm PSLLD : PDI_binop_rmi_all<0xF2, 0x72, MRM6r, "pslld", X86vshl, X86vshli,
-                                 v4i32, v8i32, v4i32, NoVLX>;
+                                 v4i32, v8i32, v4i32, WriteVecShift, NoVLX>;
   defm PSLLQ : PDI_binop_rmi_all<0xF3, 0x73, MRM6r, "psllq", X86vshl, X86vshli,
-                                 v2i64, v4i64, v2i64, NoVLX>;
+                                 v2i64, v4i64, v2i64, WriteVecShift, NoVLX>;
 
   defm PSRLW : PDI_binop_rmi_all<0xD1, 0x71, MRM2r, "psrlw", X86vsrl, X86vsrli,
-                                 v8i16, v16i16, v8i16, NoVLX_Or_NoBWI>;
+                                 v8i16, v16i16, v8i16, WriteVecShift,
+                                 NoVLX_Or_NoBWI>;
   defm PSRLD : PDI_binop_rmi_all<0xD2, 0x72, MRM2r, "psrld", X86vsrl, X86vsrli,
-                                 v4i32, v8i32, v4i32, NoVLX>;
+                                 v4i32, v8i32, v4i32, WriteVecShift, NoVLX>;
   defm PSRLQ : PDI_binop_rmi_all<0xD3, 0x73, MRM2r, "psrlq", X86vsrl, X86vsrli,
-                                 v2i64, v4i64, v2i64, NoVLX>;
+                                 v2i64, v4i64, v2i64, WriteVecShift, NoVLX>;
 
   defm PSRAW : PDI_binop_rmi_all<0xE1, 0x71, MRM4r, "psraw", X86vsra, X86vsrai,
-                                 v8i16, v16i16, v8i16, NoVLX_Or_NoBWI>;
+                                 v8i16, v16i16, v8i16, WriteVecShift,
+                                 NoVLX_Or_NoBWI>;
   defm PSRAD : PDI_binop_rmi_all<0xE2, 0x72, MRM4r, "psrad", X86vsra, X86vsrai,
-                                 v4i32, v8i32, v4i32, NoVLX>;
+                                 v4i32, v8i32, v4i32, WriteVecShift, NoVLX>;
 
-  defm PSLLDQ : PDI_binop_ri_all<0x73, MRM7r, "pslldq", X86vshldq>;
-  defm PSRLDQ : PDI_binop_ri_all<0x73, MRM3r, "psrldq", X86vshrdq>;
+  defm PSLLDQ : PDI_binop_ri_all<0x73, MRM7r, "pslldq", X86vshldq, WriteVecShift>;
+  defm PSRLDQ : PDI_binop_ri_all<0x73, MRM3r, "psrldq", X86vshrdq, WriteVecShift>;
   // PSRADQri doesn't exist in SSE[1-3].
 } // ExeDomain = SSEPackedInt
 
@@ -4472,9 +4478,9 @@ let Predicates = [HasAVX] in {
     defm VHSUBPS  : S3D_Int<0x7D, "vhsubps", v4f32, VR128, f128mem,
                             X86fhsub, WriteFHAdd, loadv4f32, 0>, VEX_4V, VEX_WIG;
     defm VHADDPSY : S3D_Int<0x7C, "vhaddps", v8f32, VR256, f256mem,
-                            X86fhadd, WriteFHAdd, loadv8f32, 0>, VEX_4V, VEX_L, VEX_WIG;
+                            X86fhadd, WriteFHAddY, loadv8f32, 0>, VEX_4V, VEX_L, VEX_WIG;
     defm VHSUBPSY : S3D_Int<0x7D, "vhsubps", v8f32, VR256, f256mem,
-                            X86fhsub, WriteFHAdd, loadv8f32, 0>, VEX_4V, VEX_L, VEX_WIG;
+                            X86fhsub, WriteFHAddY, loadv8f32, 0>, VEX_4V, VEX_L, VEX_WIG;
   }
   let ExeDomain = SSEPackedDouble in {
     defm VHADDPD  : S3_Int<0x7C, "vhaddpd", v2f64, VR128, f128mem,
@@ -4482,9 +4488,9 @@ let Predicates = [HasAVX] in {
     defm VHSUBPD  : S3_Int<0x7D, "vhsubpd", v2f64, VR128, f128mem,
                            X86fhsub, WriteFHAdd, loadv2f64, 0>, VEX_4V, VEX_WIG;
     defm VHADDPDY : S3_Int<0x7C, "vhaddpd", v4f64, VR256, f256mem,
-                           X86fhadd, WriteFHAdd, loadv4f64, 0>, VEX_4V, VEX_L, VEX_WIG;
+                           X86fhadd, WriteFHAddY, loadv4f64, 0>, VEX_4V, VEX_L, VEX_WIG;
     defm VHSUBPDY : S3_Int<0x7D, "vhsubpd", v4f64, VR256, f256mem,
-                           X86fhsub, WriteFHAdd, loadv4f64, 0>, VEX_4V, VEX_L, VEX_WIG;
+                           X86fhsub, WriteFHAddY, loadv4f64, 0>, VEX_4V, VEX_L, VEX_WIG;
   }
 }
 
@@ -5361,20 +5367,20 @@ multiclass sse41_fp_unop_p<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx_fp_unop_rm<bits<8> opcss, bits<8> opcsd,
-                          string OpcodeStr> {
+                          string OpcodeStr, X86FoldableSchedWrite sched> {
 let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
   def SSr : SS4AIi8<opcss, MRMSrcReg,
         (outs FR32:$dst), (ins FR32:$src1, FR32:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
             "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-      []>, Sched<[WriteFAdd]>;
+      []>, Sched<[sched]>;
 
   let mayLoad = 1 in
   def SSm : SS4AIi8<opcss, MRMSrcMem,
         (outs FR32:$dst), (ins FR32:$src1, f32mem:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
              "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-        []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+        []>, Sched<[sched.Folded, ReadAfterLd]>;
 } // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
 let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
@@ -5382,32 +5388,32 @@ let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
         (outs FR64:$dst), (ins FR64:$src1, FR64:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
               "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-        []>, Sched<[WriteFAdd]>;
+        []>, Sched<[sched]>;
 
   let mayLoad = 1 in
   def SDm : SS4AIi8<opcsd, MRMSrcMem,
         (outs FR64:$dst), (ins FR64:$src1, f64mem:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
              "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-        []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+        []>, Sched<[sched.Folded, ReadAfterLd]>;
 } // ExeDomain = SSEPackedDouble, hasSideEffects = 0
 }
 
 multiclass sse41_fp_unop_s<bits<8> opcss, bits<8> opcsd,
-                           string OpcodeStr> {
+                           string OpcodeStr, X86FoldableSchedWrite sched> {
 let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
   def SSr : SS4AIi8<opcss, MRMSrcReg,
                     (outs FR32:$dst), (ins FR32:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
                                "ss\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[WriteFAdd]>;
+                    []>, Sched<[sched]>;
 
   let mayLoad = 1 in
   def SSm : SS4AIi8<opcss, MRMSrcMem,
                     (outs FR32:$dst), (ins f32mem:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
                                "ss\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+                    []>, Sched<[sched.Folded, ReadAfterLd]>;
 } // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
 let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
@@ -5415,19 +5421,20 @@ let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
                     (outs FR64:$dst), (ins FR64:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
                                "sd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[WriteFAdd]>;
+                    []>, Sched<[sched]>;
 
   let mayLoad = 1 in
   def SDm : SS4AIi8<opcsd, MRMSrcMem,
                     (outs FR64:$dst), (ins f64mem:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
                                "sd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+                    []>, Sched<[sched.Folded, ReadAfterLd]>;
 } // ExeDomain = SSEPackedDouble, hasSideEffects = 0
 }
 
 multiclass sse41_fp_binop_s<bits<8> opcss, bits<8> opcsd,
-                            string OpcodeStr, ValueType VT32, ValueType VT64,
+                            string OpcodeStr, X86FoldableSchedWrite sched,
+                            ValueType VT32, ValueType VT64,
                             SDNode OpNode, bit Is2Addr = 1> {
 let ExeDomain = SSEPackedSingle, isCodeGenOnly = 1 in {
   def SSr_Int : SS4AIi8<opcss, MRMSrcReg,
@@ -5438,7 +5445,7 @@ let ExeDomain = SSEPackedSingle, isCodeGenOnly = 1 in {
             !strconcat(OpcodeStr,
                 "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
         [(set VR128:$dst, (VT32 (OpNode VR128:$src1, VR128:$src2, imm:$src3)))]>,
-        Sched<[WriteFAdd]>;
+        Sched<[sched]>;
 
   def SSm_Int : SS4AIi8<opcss, MRMSrcMem,
         (outs VR128:$dst), (ins VR128:$src1, ssmem:$src2, i32u8imm:$src3),
@@ -5449,7 +5456,7 @@ let ExeDomain = SSEPackedSingle, isCodeGenOnly = 1 in {
                 "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
         [(set VR128:$dst,
              (OpNode VR128:$src1, sse_load_f32:$src2, imm:$src3))]>,
-        Sched<[WriteFAddLd, ReadAfterLd]>;
+        Sched<[sched.Folded, ReadAfterLd]>;
 } // ExeDomain = SSEPackedSingle, isCodeGenOnly = 1
 
 let ExeDomain = SSEPackedDouble, isCodeGenOnly = 1 in {
@@ -5461,7 +5468,7 @@ let ExeDomain = SSEPackedDouble, isCodeGenOnly = 1 in {
             !strconcat(OpcodeStr,
                 "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
         [(set VR128:$dst, (VT64 (OpNode VR128:$src1, VR128:$src2, imm:$src3)))]>,
-        Sched<[WriteFAdd]>;
+        Sched<[sched]>;
 
   def SDm_Int : SS4AIi8<opcsd, MRMSrcMem,
         (outs VR128:$dst), (ins VR128:$src1, sdmem:$src2, i32u8imm:$src3),
@@ -5472,7 +5479,7 @@ let ExeDomain = SSEPackedDouble, isCodeGenOnly = 1 in {
                 "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
         [(set VR128:$dst,
               (OpNode VR128:$src1, sse_load_f64:$src2, imm:$src3))]>,
-        Sched<[WriteFAddLd, ReadAfterLd]>;
+        Sched<[sched.Folded, ReadAfterLd]>;
 } // ExeDomain = SSEPackedDouble, isCodeGenOnly = 1
 }
 
@@ -5498,9 +5505,10 @@ let Predicates = [HasAVX, NoVLX] in {
   }
 }
 let Predicates = [HasAVX, NoAVX512] in {
-  defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround", v4f32, v2f64,
+  defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround", WriteFAdd, v4f32, v2f64,
                                  X86RndScales, 0>, VEX_4V, VEX_LIG, VEX_WIG;
-  defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround">, VEX_4V, VEX_LIG, VEX_WIG;
+  defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround", WriteFAdd>,
+                                VEX_4V, VEX_LIG, VEX_WIG;
 }
 
 let Predicates = [UseAVX] in {
@@ -5579,10 +5587,11 @@ let ExeDomain = SSEPackedDouble in
 defm ROUNDPD  : sse41_fp_unop_p<0x09, "roundpd", f128mem, VR128, v2f64,
                                 memopv2f64, X86VRndScale, WriteFAdd>;
 
-defm ROUND  : sse41_fp_unop_s<0x0A, 0x0B, "round">;
+defm ROUND  : sse41_fp_unop_s<0x0A, 0x0B, "round", WriteFAdd>;
 
 let Constraints = "$src1 = $dst" in
-defm ROUND  : sse41_fp_binop_s<0x0A, 0x0B, "round", v4f32, v2f64, X86RndScales>;
+defm ROUND  : sse41_fp_binop_s<0x0A, 0x0B, "round", WriteFAdd,
+                               v4f32, v2f64, X86RndScales>;
 
 let Predicates = [UseSSE41] in {
   def : Pat<(ffloor FR32:$src),
@@ -6048,7 +6057,7 @@ let Predicates = [HasAVX] in {
                                   VEX_4V, VEX_WIG;
   defm VBLENDPSY : SS41I_blend_rmi<0x0C, "vblendps", X86Blendi, v8f32,
                                    VR256, loadv8f32, f256mem, 0, SSEPackedSingle,
-                                   WriteFBlend, BlendCommuteImm8>,
+                                   WriteFBlendY, BlendCommuteImm8>,
                                    VEX_4V, VEX_L, VEX_WIG;
   defm VBLENDPD : SS41I_blend_rmi<0x0D, "vblendpd", X86Blendi, v2f64,
                                   VR128, loadv2f64, f128mem, 0, SSEPackedDouble,
@@ -6056,7 +6065,7 @@ let Predicates = [HasAVX] in {
                                   VEX_4V, VEX_WIG;
   defm VBLENDPDY : SS41I_blend_rmi<0x0D, "vblendpd", X86Blendi, v4f64,
                                    VR256, loadv4f64, f256mem, 0, SSEPackedDouble,
-                                   WriteFBlend, BlendCommuteImm4>,
+                                   WriteFBlendY, BlendCommuteImm4>,
                                    VEX_4V, VEX_L, VEX_WIG;
   defm VPBLENDW : SS41I_blend_rmi<0x0E, "vpblendw", X86Blendi, v8i16,
                                   VR128, loadv2i64, i128mem, 0, SSEPackedInt,
@@ -6129,7 +6138,7 @@ defm VBLENDVPD  : SS41I_quaternary_int_avx<0x4B, "vblendvpd", VR128, f128mem,
                                            WriteFVarBlend>;
 defm VBLENDVPDY : SS41I_quaternary_int_avx<0x4B, "vblendvpd", VR256, f256mem,
                                   loadv4f64, int_x86_avx_blendv_pd_256,
-                                  WriteFVarBlend>, VEX_L;
+                                  WriteFVarBlendY>, VEX_L;
 } // ExeDomain = SSEPackedDouble
 let ExeDomain = SSEPackedSingle in {
 defm VBLENDVPS  : SS41I_quaternary_int_avx<0x4A, "vblendvps", VR128, f128mem,
@@ -6137,7 +6146,7 @@ defm VBLENDVPS  : SS41I_quaternary_int_avx<0x4A, "vblendvps", VR128, f128mem,
                                            WriteFVarBlend>;
 defm VBLENDVPSY : SS41I_quaternary_int_avx<0x4A, "vblendvps", VR256, f256mem,
                                   loadv8f32, int_x86_avx_blendv_ps_256,
-                                  WriteFVarBlend>, VEX_L;
+                                  WriteFVarBlendY>, VEX_L;
 } // ExeDomain = SSEPackedSingle
 defm VPBLENDVB  : SS41I_quaternary_int_avx<0x4C, "vpblendvb", VR128, i128mem,
                                            loadv2i64, int_x86_sse41_pblendvb,
@@ -6382,25 +6391,6 @@ let Constraints = "$src1 = $dst" in
 // SSE4.2 - String/text Processing Instructions
 //===----------------------------------------------------------------------===//
 
-// Packed Compare Implicit Length Strings, Return Mask
-multiclass pseudo_pcmpistrm<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-    [(set VR128:$dst, (int_x86_sse42_pcmpistrm128 VR128:$src1, VR128:$src2,
-                                                  imm:$src3))]>;
-  def MEM : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-    [(set VR128:$dst, (int_x86_sse42_pcmpistrm128 VR128:$src1,
-                       (bc_v16i8 (ld_frag addr:$src2)), imm:$src3))]>;
-}
-
-let Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  defm VPCMPISTRM128 : pseudo_pcmpistrm<"#VPCMPISTRM128", loadv2i64>,
-                         Requires<[HasAVX]>, VEX_WIG;
-  defm PCMPISTRM128 : pseudo_pcmpistrm<"#PCMPISTRM128", loadv2i64>,
-                         Requires<[UseSSE42]>;
-}
-
 multiclass pcmpistrm_SS42AI<string asm> {
   def rr : SS42AI<0x62, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src2, u8imm:$src3),
@@ -6415,27 +6405,8 @@ multiclass pcmpistrm_SS42AI<string asm> {
 
 let Defs = [XMM0, EFLAGS], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPISTRM128 : pcmpistrm_SS42AI<"vpcmpistrm">, VEX;
-  defm PCMPISTRM128  : pcmpistrm_SS42AI<"pcmpistrm"> ;
-}
-
-// Packed Compare Explicit Length Strings, Return Mask
-multiclass pseudo_pcmpestrm<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, VR128:$src3, u8imm:$src5),
-    [(set VR128:$dst, (int_x86_sse42_pcmpestrm128
-                       VR128:$src1, EAX, VR128:$src3, EDX, imm:$src5))]>;
-  def MEM : PseudoI<(outs VR128:$dst),
-                    (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
-    [(set VR128:$dst, (int_x86_sse42_pcmpestrm128 VR128:$src1, EAX,
-                       (bc_v16i8 (ld_frag addr:$src3)), EDX, imm:$src5))]>;
-}
-
-let Defs = [EFLAGS], Uses = [EAX, EDX], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  defm VPCMPESTRM128 : pseudo_pcmpestrm<"#VPCMPESTRM128", loadv2i64>,
-                         Requires<[HasAVX]>;
-  defm PCMPESTRM128 : pseudo_pcmpestrm<"#PCMPESTRM128", loadv2i64>,
-                         Requires<[UseSSE42]>;
+  defm VPCMPISTRM : pcmpistrm_SS42AI<"vpcmpistrm">, VEX;
+  defm PCMPISTRM  : pcmpistrm_SS42AI<"pcmpistrm"> ;
 }
 
 multiclass SS42AI_pcmpestrm<string asm> {
@@ -6452,27 +6423,8 @@ multiclass SS42AI_pcmpestrm<string asm> {
 
 let Defs = [XMM0, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
-  defm VPCMPESTRM128 : SS42AI_pcmpestrm<"vpcmpestrm">, VEX;
-  defm PCMPESTRM128 :  SS42AI_pcmpestrm<"pcmpestrm">;
-}
-
-// Packed Compare Implicit Length Strings, Return Index
-multiclass pseudo_pcmpistri<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-    [(set GR32:$dst, EFLAGS,
-      (X86pcmpistri VR128:$src1, VR128:$src2, imm:$src3))]>;
-  def MEM : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-    [(set GR32:$dst, EFLAGS, (X86pcmpistri VR128:$src1,
-                              (bc_v16i8 (ld_frag addr:$src2)), imm:$src3))]>;
-}
-
-let Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  defm VPCMPISTRI : pseudo_pcmpistri<"#VPCMPISTRI", loadv2i64>,
-                      Requires<[HasAVX]>, VEX_WIG;
-  defm PCMPISTRI  : pseudo_pcmpistri<"#PCMPISTRI", loadv2i64>,
-                      Requires<[UseSSE42]>;
+  defm VPCMPESTRM : SS42AI_pcmpestrm<"vpcmpestrm">, VEX;
+  defm PCMPESTRM :  SS42AI_pcmpestrm<"pcmpestrm">;
 }
 
 multiclass SS42AI_pcmpistri<string asm> {
@@ -6491,26 +6443,6 @@ let Defs = [ECX, EFLAGS], hasSideEffects = 0 in {
   let Predicates = [HasAVX] in
   defm VPCMPISTRI : SS42AI_pcmpistri<"vpcmpistri">, VEX;
   defm PCMPISTRI  : SS42AI_pcmpistri<"pcmpistri">;
-}
-
-// Packed Compare Explicit Length Strings, Return Index
-multiclass pseudo_pcmpestri<string asm, PatFrag ld_frag> {
-  def REG : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, VR128:$src3, u8imm:$src5),
-    [(set GR32:$dst, EFLAGS,
-      (X86pcmpestri VR128:$src1, EAX, VR128:$src3, EDX, imm:$src5))]>;
-  def MEM : PseudoI<(outs GR32:$dst),
-                    (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
-    [(set GR32:$dst, EFLAGS,
-      (X86pcmpestri VR128:$src1, EAX, (bc_v16i8 (ld_frag addr:$src3)), EDX,
-       imm:$src5))]>;
-}
-
-let Defs = [EFLAGS], Uses = [EAX, EDX], hasNoSchedulingInfo = 1, usesCustomInserter = 1 in {
-  defm VPCMPESTRI : pseudo_pcmpestri<"#VPCMPESTRI", loadv2i64>,
-                      Requires<[HasAVX]>;
-  defm PCMPESTRI  : pseudo_pcmpestri<"#PCMPESTRI", loadv2i64>,
-                      Requires<[UseSSE42]>;
 }
 
 multiclass SS42AI_pcmpestri<string asm> {
@@ -7155,45 +7087,51 @@ defm VMASKMOVPD : avx_movmask_rm<0x2D, 0x2F, "vmaskmovpd",
 multiclass avx_permil<bits<8> opc_rm, bits<8> opc_rmi, string OpcodeStr,
                       RegisterClass RC, X86MemOperand x86memop_f,
                       X86MemOperand x86memop_i, PatFrag i_frag,
-                      ValueType f_vt, ValueType i_vt> {
+                      ValueType f_vt, ValueType i_vt,
+                      X86FoldableSchedWrite sched,
+                      X86FoldableSchedWrite varsched> {
   let Predicates = [HasAVX, NoVLX] in {
     def rr  : AVX8I<opc_rm, MRMSrcReg, (outs RC:$dst),
                (ins RC:$src1, RC:$src2),
                !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                [(set RC:$dst, (f_vt (X86VPermilpv RC:$src1, (i_vt RC:$src2))))]>, VEX_4V,
-               Sched<[WriteFVarShuffle]>;
+               Sched<[varsched]>;
     def rm  : AVX8I<opc_rm, MRMSrcMem, (outs RC:$dst),
                (ins RC:$src1, x86memop_i:$src2),
                !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                [(set RC:$dst, (f_vt (X86VPermilpv RC:$src1,
                               (i_vt (bitconvert (i_frag addr:$src2))))))]>, VEX_4V,
-               Sched<[WriteFVarShuffleLd, ReadAfterLd]>;
+               Sched<[varsched.Folded, ReadAfterLd]>;
 
     def ri  : AVXAIi8<opc_rmi, MRMSrcReg, (outs RC:$dst),
              (ins RC:$src1, u8imm:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, (f_vt (X86VPermilpi RC:$src1, (i8 imm:$src2))))]>, VEX,
-             Sched<[WriteFShuffle]>;
+             Sched<[sched]>;
     def mi  : AVXAIi8<opc_rmi, MRMSrcMem, (outs RC:$dst),
              (ins x86memop_f:$src1, u8imm:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst,
                (f_vt (X86VPermilpi (load addr:$src1), (i8 imm:$src2))))]>, VEX,
-             Sched<[WriteFShuffleLd]>;
+             Sched<[sched.Folded]>;
   }// Predicates = [HasAVX, NoVLX]
 }
 
 let ExeDomain = SSEPackedSingle in {
   defm VPERMILPS  : avx_permil<0x0C, 0x04, "vpermilps", VR128, f128mem, i128mem,
-                               loadv2i64, v4f32, v4i32>;
+                               loadv2i64, v4f32, v4i32, WriteFShuffle,
+                               WriteFVarShuffle>;
   defm VPERMILPSY : avx_permil<0x0C, 0x04, "vpermilps", VR256, f256mem, i256mem,
-                               loadv4i64, v8f32, v8i32>, VEX_L;
+                               loadv4i64, v8f32, v8i32, WriteFShuffle,
+                               WriteFVarShuffleY>, VEX_L;
 }
 let ExeDomain = SSEPackedDouble in {
   defm VPERMILPD  : avx_permil<0x0D, 0x05, "vpermilpd", VR128, f128mem, i128mem,
-                               loadv2i64, v2f64, v2i64>;
+                               loadv2i64, v2f64, v2i64, WriteFShuffle,
+                               WriteFVarShuffle>;
   defm VPERMILPDY : avx_permil<0x0D, 0x05, "vpermilpd", VR256, f256mem, i256mem,
-                               loadv4i64, v4f64, v4i64>, VEX_L;
+                               loadv4i64, v4f64, v4i64, WriteFShuffle,
+                               WriteFVarShuffleY>, VEX_L;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7343,7 +7281,8 @@ let Predicates = [HasF16C, NoVLX] in {
 
 /// AVX2_blend_rmi - AVX2 blend with 8-bit immediate
 multiclass AVX2_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                          ValueType OpVT, RegisterClass RC, PatFrag memop_frag,
+                          ValueType OpVT, X86FoldableSchedWrite sched,
+                          RegisterClass RC, PatFrag memop_frag,
                           X86MemOperand x86memop, SDNodeXForm commuteXForm> {
   let isCommutable = 1 in
   def rri : AVX2AIi8<opc, MRMSrcReg, (outs RC:$dst),
@@ -7351,7 +7290,7 @@ multiclass AVX2_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
         !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
         [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2, imm:$src3)))]>,
-        Sched<[WriteBlend]>, VEX_4V;
+        Sched<[sched]>, VEX_4V;
   def rmi : AVX2AIi8<opc, MRMSrcMem, (outs RC:$dst),
         (ins RC:$src1, x86memop:$src2, u8imm:$src3),
         !strconcat(OpcodeStr,
@@ -7359,7 +7298,7 @@ multiclass AVX2_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
         [(set RC:$dst,
           (OpVT (OpNode RC:$src1,
            (bitconvert (memop_frag addr:$src2)), imm:$src3)))]>,
-        Sched<[WriteBlendLd, ReadAfterLd]>, VEX_4V;
+        Sched<[sched.Folded, ReadAfterLd]>, VEX_4V;
 
   // Pattern to commute if load is in first source.
   def : Pat<(OpVT (OpNode (bitconvert (memop_frag addr:$src2)),
@@ -7368,9 +7307,9 @@ multiclass AVX2_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                             (commuteXForm imm:$src3))>;
 }
 
-defm VPBLENDD : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v4i32,
+defm VPBLENDD : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v4i32, WriteBlend,
                                VR128, loadv2i64, i128mem, BlendCommuteImm4>;
-defm VPBLENDDY : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v8i32,
+defm VPBLENDDY : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v8i32, WriteBlend,
                                 VR256, loadv4i64, i256mem, BlendCommuteImm8>,
                                 VEX_L;
 

@@ -31,7 +31,7 @@
 #define BYTE_ORDER LITTLE_ENDIAN
 #endif
 #else
-#if !defined(BYTE_ORDER) && !defined(LLVM_ON_WIN32)
+#if !defined(BYTE_ORDER) && !defined(_WIN32)
 #include <machine/endian.h>
 #endif
 #endif

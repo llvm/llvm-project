@@ -56,7 +56,6 @@ body:             |
 
 # CHECK: name:            OUTLINED_FUNCTION_0
 # CHECK-DAG: bb.0:
-# CHECK-NEXT: liveins: $lr
 # CHECK-DAG: frame-setup CFI_INSTRUCTION def_cfa_offset -16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, 16
 # CHECK-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16

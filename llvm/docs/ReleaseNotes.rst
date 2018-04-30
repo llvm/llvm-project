@@ -62,9 +62,12 @@ Non-comprehensive list of changes in this release
   applied by default.
 
 * Optimization of floating-point casts is improved. This may cause surprising
-  results for code that is relying on undefined behavior. Code sanitizers can
-  be used to detect affected patterns. The option for detecting this problem 
-  alone is "-fsanitize=float-cast-overflow":
+  results for code that is relying on the undefined behavior of overflowing 
+  casts. The optimization can be disabled by specifying a function attribute:
+  "fp-cast-overflow-workaround"="true". This attribute may be created by the
+  clang option :option:`-ffp-cast-overflow-workaround`.
+  Code sanitizers can be used to detect affected patterns. The option for
+  detecting this problem alone is "-fsanitize=float-cast-overflow":
 
 .. code-block:: c
 

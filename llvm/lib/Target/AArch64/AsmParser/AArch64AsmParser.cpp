@@ -506,8 +506,16 @@ public:
 
   template <int Width> bool isSImm() const { return isSImmScaled<Width, 1>(); }
 
+  template <int Bits, int Scale> DiagnosticPredicate isSImmScaled() const {
+    return isImmScaled<Bits, Scale>(true);
+  }
+
+  template <int Bits, int Scale> DiagnosticPredicate isUImmScaled() const {
+    return isImmScaled<Bits, Scale>(false);
+  }
+
   template <int Bits, int Scale>
-  DiagnosticPredicate isSImmScaled() const {
+  DiagnosticPredicate isImmScaled(bool Signed) const {
     if (!isImm())
       return DiagnosticPredicateTy::NoMatch;
 
@@ -515,9 +523,15 @@ public:
     if (!MCE)
       return DiagnosticPredicateTy::NoMatch;
 
-    int64_t Shift = Bits - 1;
-    int64_t MinVal = (int64_t(1) << Shift) * -Scale;
-    int64_t MaxVal = ((int64_t(1) << Shift) - 1) * Scale;
+    int64_t MinVal, MaxVal;
+    if (Signed) {
+      int64_t Shift = Bits - 1;
+      MinVal = (int64_t(1) << Shift) * -Scale;
+      MaxVal = ((int64_t(1) << Shift) - 1) * Scale;
+    } else {
+      MinVal = 0;
+      MaxVal = ((int64_t(1) << Bits) - 1) * Scale;
+    }
 
     int64_t Val = MCE->getValue();
     if (Val >= MinVal && Val <= MaxVal && (Val % Scale) == 0)
@@ -1223,27 +1237,7 @@ public:
                                          FirstRegs[(unsigned)RegTy][0]));
   }
 
-  void addVectorIndex1Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getVectorIndex()));
-  }
-
-  void addVectorIndexBOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getVectorIndex()));
-  }
-
-  void addVectorIndexHOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getVectorIndex()));
-  }
-
-  void addVectorIndexSOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getVectorIndex()));
-  }
-
-  void addVectorIndexDOperands(MCInst &Inst, unsigned N) const {
+  void addVectorIndexOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getVectorIndex()));
   }
@@ -1307,127 +1301,6 @@ public:
       return;
     }
     Inst.addOperand(MCOperand::createImm(MCE->getValue() / Scale));
-  }
-
-  void addSImm9Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addSImm10s8Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue() / 8));
-  }
-
-  void addSImm7s4Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue() / 4));
-  }
-
-  void addSImm7s8Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue() / 8));
-  }
-
-  void addSImm7s16Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue() / 16));
-  }
-
-  void addImm0_1Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm0_7Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm1_8Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm0_15Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm1_16Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    assert(MCE && "Invalid constant immediate operand!");
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm0_31Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm1_31Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm1_32Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm0_63Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm1_63Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm1_64Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm0_127Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm0_255Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm0_65535Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
-  }
-
-  void addImm32_63Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
   }
 
   template <int Scale>
@@ -3746,7 +3619,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 4 in range [-32, 28].");
   case Match_InvalidMemoryIndexedSImm9:
     return Error(Loc, "index must be an integer in range [-256, 255].");
-  case Match_InvalidMemoryIndexedSImm10:
+  case Match_InvalidMemoryIndexed8SImm10:
     return Error(Loc, "index must be a multiple of 8 in range [-4096, 4088].");
   case Match_InvalidMemoryIndexed4SImm7:
     return Error(Loc, "index must be a multiple of 4 in range [-256, 252].");
@@ -3754,6 +3627,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 8 in range [-512, 504].");
   case Match_InvalidMemoryIndexed16SImm7:
     return Error(Loc, "index must be a multiple of 16 in range [-1024, 1008].");
+  case Match_InvalidMemoryIndexed8UImm5:
+    return Error(Loc, "index must be a multiple of 8 in range [0, 248].");
+  case Match_InvalidMemoryIndexed4UImm5:
+    return Error(Loc, "index must be a multiple of 4 in range [0, 124].");
+  case Match_InvalidMemoryIndexed2UImm5:
+    return Error(Loc, "index must be a multiple of 2 in range [0, 62].");
   case Match_InvalidMemoryWExtend8:
     return Error(Loc,
                  "expected 'uxtw' or 'sxtw' with optional shift of #0");
@@ -4313,10 +4192,13 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed4SImm7:
   case Match_InvalidMemoryIndexed8SImm7:
   case Match_InvalidMemoryIndexed16SImm7:
+  case Match_InvalidMemoryIndexed8UImm5:
+  case Match_InvalidMemoryIndexed4UImm5:
+  case Match_InvalidMemoryIndexed2UImm5:
   case Match_InvalidMemoryIndexedSImm6:
   case Match_InvalidMemoryIndexedSImm5:
   case Match_InvalidMemoryIndexedSImm9:
-  case Match_InvalidMemoryIndexedSImm10:
+  case Match_InvalidMemoryIndexed8SImm10:
   case Match_InvalidImm0_1:
   case Match_InvalidImm0_7:
   case Match_InvalidImm0_15:

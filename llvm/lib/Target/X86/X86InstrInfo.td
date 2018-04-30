@@ -2994,13 +2994,13 @@ def : InstAlias<"aam", (AAM8i8 10)>, Requires<[Not64BitMode]>;
 // Disambiguate the mem/imm form of bt-without-a-suffix as btl.
 // Likewise for btc/btr/bts.
 def : InstAlias<"bt\t{$imm, $mem|$mem, $imm}",
-                (BT32mi8 i32mem:$mem, i32i8imm:$imm), 0>;
+                (BT32mi8 i32mem:$mem, i32i8imm:$imm), 0, "att">;
 def : InstAlias<"btc\t{$imm, $mem|$mem, $imm}",
-                (BTC32mi8 i32mem:$mem, i32i8imm:$imm), 0>;
+                (BTC32mi8 i32mem:$mem, i32i8imm:$imm), 0, "att">;
 def : InstAlias<"btr\t{$imm, $mem|$mem, $imm}",
-                (BTR32mi8 i32mem:$mem, i32i8imm:$imm), 0>;
+                (BTR32mi8 i32mem:$mem, i32i8imm:$imm), 0, "att">;
 def : InstAlias<"bts\t{$imm, $mem|$mem, $imm}",
-                (BTS32mi8 i32mem:$mem, i32i8imm:$imm), 0>;
+                (BTS32mi8 i32mem:$mem, i32i8imm:$imm), 0, "att">;
 
 // clr aliases.
 def : InstAlias<"clr{b}\t$reg", (XOR8rr  GR8 :$reg, GR8 :$reg), 0>;
@@ -3019,10 +3019,10 @@ def : InstAlias<"lods\t{$src, %al|al, $src}", (LODSB srcidx8:$src),  0>;
 def : InstAlias<"lods\t{$src, %ax|ax, $src}", (LODSW srcidx16:$src), 0>;
 def : InstAlias<"lods\t{$src, %eax|eax, $src}", (LODSL srcidx32:$src), 0>;
 def : InstAlias<"lods\t{$src, %rax|rax, $src}", (LODSQ srcidx64:$src), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"lods{b}\t$src", (LODSB srcidx8:$src),  0>;
-def : InstAlias<"lods{w}\t$src", (LODSW srcidx16:$src), 0>;
-def : InstAlias<"lods{l}\t$src", (LODSL srcidx32:$src), 0>;
-def : InstAlias<"lods{q}\t$src", (LODSQ srcidx64:$src), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"lods\t$src", (LODSB srcidx8:$src),  0, "intel">;
+def : InstAlias<"lods\t$src", (LODSW srcidx16:$src), 0, "intel">;
+def : InstAlias<"lods\t$src", (LODSL srcidx32:$src), 0, "intel">;
+def : InstAlias<"lods\t$src", (LODSQ srcidx64:$src), 0, "intel">, Requires<[In64BitMode]>;
 
 
 // stos aliases. Accept the source being omitted because it's implicit in
@@ -3036,10 +3036,10 @@ def : InstAlias<"stos\t{%al, $dst|$dst, al}", (STOSB dstidx8:$dst),  0>;
 def : InstAlias<"stos\t{%ax, $dst|$dst, ax}", (STOSW dstidx16:$dst), 0>;
 def : InstAlias<"stos\t{%eax, $dst|$dst, eax}", (STOSL dstidx32:$dst), 0>;
 def : InstAlias<"stos\t{%rax, $dst|$dst, rax}", (STOSQ dstidx64:$dst), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"stos{b}\t$dst", (STOSB dstidx8:$dst),  0>;
-def : InstAlias<"stos{w}\t$dst", (STOSW dstidx16:$dst), 0>;
-def : InstAlias<"stos{l}\t$dst", (STOSL dstidx32:$dst), 0>;
-def : InstAlias<"stos{q}\t$dst", (STOSQ dstidx64:$dst), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"stos\t$dst", (STOSB dstidx8:$dst),  0, "intel">;
+def : InstAlias<"stos\t$dst", (STOSW dstidx16:$dst), 0, "intel">;
+def : InstAlias<"stos\t$dst", (STOSL dstidx32:$dst), 0, "intel">;
+def : InstAlias<"stos\t$dst", (STOSQ dstidx64:$dst), 0, "intel">, Requires<[In64BitMode]>;
 
 
 // scas aliases. Accept the destination being omitted because it's implicit
@@ -3053,24 +3053,24 @@ def : InstAlias<"scas\t{$dst, %al|al, $dst}", (SCASB dstidx8:$dst),  0>;
 def : InstAlias<"scas\t{$dst, %ax|ax, $dst}", (SCASW dstidx16:$dst), 0>;
 def : InstAlias<"scas\t{$dst, %eax|eax, $dst}", (SCASL dstidx32:$dst), 0>;
 def : InstAlias<"scas\t{$dst, %rax|rax, $dst}", (SCASQ dstidx64:$dst), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"scas{b}\t$dst", (SCASB dstidx8:$dst),  0>;
-def : InstAlias<"scas{w}\t$dst", (SCASW dstidx16:$dst), 0>;
-def : InstAlias<"scas{l}\t$dst", (SCASL dstidx32:$dst), 0>;
-def : InstAlias<"scas{q}\t$dst", (SCASQ dstidx64:$dst), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"scas\t$dst", (SCASB dstidx8:$dst),  0, "intel">;
+def : InstAlias<"scas\t$dst", (SCASW dstidx16:$dst), 0, "intel">;
+def : InstAlias<"scas\t$dst", (SCASL dstidx32:$dst), 0, "intel">;
+def : InstAlias<"scas\t$dst", (SCASQ dstidx64:$dst), 0, "intel">, Requires<[In64BitMode]>;
 
 // cmps aliases. Mnemonic suffix being omitted because it's implicit
 // in the destination.
-def : InstAlias<"cmps{b}\t{$dst, $src|$src, $dst}", (CMPSB dstidx8:$dst, srcidx8:$src),  0>;
-def : InstAlias<"cmps{w}\t{$dst, $src|$src, $dst}", (CMPSW dstidx16:$dst, srcidx16:$src), 0>;
-def : InstAlias<"cmps{l}\t{$dst, $src|$src, $dst}", (CMPSL dstidx32:$dst, srcidx32:$src), 0>;
-def : InstAlias<"cmps{q}\t{$dst, $src|$src, $dst}", (CMPSQ dstidx64:$dst, srcidx64:$src), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"cmps\t{$dst, $src|$src, $dst}", (CMPSB dstidx8:$dst, srcidx8:$src),   0, "intel">;
+def : InstAlias<"cmps\t{$dst, $src|$src, $dst}", (CMPSW dstidx16:$dst, srcidx16:$src), 0, "intel">;
+def : InstAlias<"cmps\t{$dst, $src|$src, $dst}", (CMPSL dstidx32:$dst, srcidx32:$src), 0, "intel">;
+def : InstAlias<"cmps\t{$dst, $src|$src, $dst}", (CMPSQ dstidx64:$dst, srcidx64:$src), 0, "intel">, Requires<[In64BitMode]>;
 
 // movs aliases. Mnemonic suffix being omitted because it's implicit
 // in the destination.
-def : InstAlias<"movs{b}\t{$src, $dst|$dst, $src}", (MOVSB dstidx8:$dst, srcidx8:$src),  0>;
-def : InstAlias<"movs{w}\t{$src, $dst|$dst, $src}", (MOVSW dstidx16:$dst, srcidx16:$src), 0>;
-def : InstAlias<"movs{l}\t{$src, $dst|$dst, $src}", (MOVSL dstidx32:$dst, srcidx32:$src), 0>;
-def : InstAlias<"movs{q}\t{$src, $dst|$dst, $src}", (MOVSQ dstidx64:$dst, srcidx64:$src), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"movs\t{$src, $dst|$dst, $src}", (MOVSB dstidx8:$dst, srcidx8:$src),   0, "intel">;
+def : InstAlias<"movs\t{$src, $dst|$dst, $src}", (MOVSW dstidx16:$dst, srcidx16:$src), 0, "intel">;
+def : InstAlias<"movs\t{$src, $dst|$dst, $src}", (MOVSL dstidx32:$dst, srcidx32:$src), 0, "intel">;
+def : InstAlias<"movs\t{$src, $dst|$dst, $src}", (MOVSQ dstidx64:$dst, srcidx64:$src), 0, "intel">, Requires<[In64BitMode]>;
 
 // div and idiv aliases for explicit A register.
 def : InstAlias<"div{b}\t{$src, %al|al, $src}", (DIV8r  GR8 :$src)>;
@@ -3151,10 +3151,7 @@ def : InstAlias<"fsub{r|}p\t{%st(0), $op|$op, st(0)}", (SUB_FPrST0 RST:$op)>;
 def : InstAlias<"fdiv{|r}p\t{%st(0), $op|$op, st(0)}", (DIVR_FPrST0 RST:$op)>;
 def : InstAlias<"fdiv{r|}p\t{%st(0), $op|$op, st(0)}", (DIV_FPrST0 RST:$op)>;
 
-// We accept "fnstsw %eax" even though it only writes %ax.
-def : InstAlias<"fnstsw\t{%eax|eax}", (FNSTSW16r)>;
-def : InstAlias<"fnstsw\t{%al|al}" , (FNSTSW16r)>;
-def : InstAlias<"fnstsw"     , (FNSTSW16r)>;
+def : InstAlias<"fnstsw"     , (FNSTSW16r), 0>;
 
 // lcall and ljmp aliases.  This seems to be an odd mapping in 64-bit mode, but
 // this is compatible with what GAS does.
@@ -3167,12 +3164,12 @@ def : InstAlias<"ljmp\t$seg, $off",  (FARJMP16i  i16imm:$off, i16imm:$seg), 0>, 
 def : InstAlias<"lcall\t{*}$dst",    (FARCALL16m opaque32mem:$dst), 0>, Requires<[In16BitMode]>;
 def : InstAlias<"ljmp\t{*}$dst",     (FARJMP16m  opaque32mem:$dst), 0>, Requires<[In16BitMode]>;
 
-def : InstAlias<"call\t{*}$dst",     (CALL64m i64mem:$dst), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"jmp\t{*}$dst",      (JMP64m  i64mem:$dst), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"call\t{*}$dst",     (CALL32m i32mem:$dst), 0>, Requires<[In32BitMode]>;
-def : InstAlias<"jmp\t{*}$dst",      (JMP32m  i32mem:$dst), 0>, Requires<[In32BitMode]>;
-def : InstAlias<"call\t{*}$dst",     (CALL16m i16mem:$dst), 0>, Requires<[In16BitMode]>;
-def : InstAlias<"jmp\t{*}$dst",      (JMP16m  i16mem:$dst), 0>, Requires<[In16BitMode]>;
+def : InstAlias<"call\t{*}$dst",     (CALL64m i64mem:$dst), 0, "att">, Requires<[In64BitMode]>;
+def : InstAlias<"jmp\t{*}$dst",      (JMP64m  i64mem:$dst), 0, "att">, Requires<[In64BitMode]>;
+def : InstAlias<"call\t{*}$dst",     (CALL32m i32mem:$dst), 0, "att">, Requires<[In32BitMode]>;
+def : InstAlias<"jmp\t{*}$dst",      (JMP32m  i32mem:$dst), 0, "att">, Requires<[In32BitMode]>;
+def : InstAlias<"call\t{*}$dst",     (CALL16m i16mem:$dst), 0, "att">, Requires<[In16BitMode]>;
+def : InstAlias<"jmp\t{*}$dst",      (JMP16m  i16mem:$dst), 0, "att">, Requires<[In16BitMode]>;
 
 
 // "imul <imm>, B" is an alias for "imul <imm>, B, B".
@@ -3185,15 +3182,15 @@ def : InstAlias<"imul{q}\t{$imm, $r|$r, $imm}", (IMUL64rri8 GR64:$r, GR64:$r, i6
 
 // ins aliases. Accept the mnemonic suffix being omitted because it's implicit
 // in the destination.
-def : InstAlias<"ins{b}\t{%dx, $dst|$dst, dx}", (INSB dstidx8:$dst),  0>;
-def : InstAlias<"ins{w}\t{%dx, $dst|$dst, dx}", (INSW dstidx16:$dst),  0>;
-def : InstAlias<"ins{l}\t{%dx, $dst|$dst, dx}", (INSL dstidx32:$dst),  0>;
+def : InstAlias<"ins\t{%dx, $dst|$dst, dx}", (INSB dstidx8:$dst),  0, "intel">;
+def : InstAlias<"ins\t{%dx, $dst|$dst, dx}", (INSW dstidx16:$dst), 0, "intel">;
+def : InstAlias<"ins\t{%dx, $dst|$dst, dx}", (INSL dstidx32:$dst), 0, "intel">;
 
 // outs aliases. Accept the mnemonic suffix being omitted because it's implicit
 // in the source.
-def : InstAlias<"outs{b}\t{$src, %dx|dx, $src}", (OUTSB srcidx8:$src),  0>;
-def : InstAlias<"outs{w}\t{$src, %dx|dx, $src}", (OUTSW srcidx16:$src),  0>;
-def : InstAlias<"outs{l}\t{$src, %dx|dx, $src}", (OUTSL srcidx32:$src),  0>;
+def : InstAlias<"outs\t{$src, %dx|dx, $src}", (OUTSB srcidx8:$src),  0, "intel">;
+def : InstAlias<"outs\t{$src, %dx|dx, $src}", (OUTSW srcidx16:$src), 0, "intel">;
+def : InstAlias<"outs\t{$src, %dx|dx, $src}", (OUTSL srcidx32:$src), 0, "intel">;
 
 // inb %dx -> inb %al, %dx
 def : InstAlias<"inb\t{%dx|dx}", (IN8rr), 0>;
@@ -3214,12 +3211,6 @@ def : InstAlias<"jmpw\t$seg, $off",  (FARJMP16i  i16imm:$off, i16imm:$seg)>, Req
 def : InstAlias<"calll\t$seg, $off", (FARCALL32i i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 def : InstAlias<"jmpl\t$seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 
-// Force mov without a suffix with a segment and mem to prefer the 'l' form of
-// the move.  All segment/mem forms are equivalent, this has the shortest
-// encoding.
-def : InstAlias<"mov\t{$mem, $seg|$seg, $mem}", (MOV16sm SEGMENT_REG:$seg, i16mem:$mem), 0>;
-def : InstAlias<"mov\t{$seg, $mem|$mem, $seg}", (MOV16ms i16mem:$mem, SEGMENT_REG:$seg), 0>;
-
 // Match 'movq <largeimm>, <reg>' as an alias for movabsq.
 def : InstAlias<"mov{q}\t{$imm, $reg|$reg, $imm}", (MOV64ri GR64:$reg, i64imm:$imm), 0>;
 
@@ -3232,21 +3223,21 @@ def : InstAlias<"movd\t{$src, $dst|$dst, $src}",
                 (MMX_MOVD64from64rr GR64:$dst, VR64:$src), 0>;
 
 // movsx aliases
-def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX16rr8 GR16:$dst, GR8:$src), 0>;
-def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX16rm8 GR16:$dst, i8mem:$src), 0>;
-def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX32rr8 GR32:$dst, GR8:$src), 0>;
-def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX32rr16 GR32:$dst, GR16:$src), 0>;
-def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX64rr8 GR64:$dst, GR8:$src), 0>;
-def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX64rr16 GR64:$dst, GR16:$src), 0>;
-def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX64rr32 GR64:$dst, GR32:$src), 0>;
+def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX16rr8 GR16:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX16rm8 GR16:$dst, i8mem:$src), 0, "att">;
+def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX32rr8 GR32:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX32rr16 GR32:$dst, GR16:$src), 0, "att">;
+def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX64rr8 GR64:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX64rr16 GR64:$dst, GR16:$src), 0, "att">;
+def : InstAlias<"movsx\t{$src, $dst|$dst, $src}", (MOVSX64rr32 GR64:$dst, GR32:$src), 0, "att">;
 
 // movzx aliases
-def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX16rr8 GR16:$dst, GR8:$src), 0>;
-def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX16rm8 GR16:$dst, i8mem:$src), 0>;
-def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX32rr8 GR32:$dst, GR8:$src), 0>;
-def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX32rr16 GR32:$dst, GR16:$src), 0>;
-def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX64rr8 GR64:$dst, GR8:$src), 0>;
-def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX64rr16 GR64:$dst, GR16:$src), 0>;
+def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX16rr8 GR16:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX16rm8 GR16:$dst, i8mem:$src), 0, "att">;
+def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX32rr8 GR32:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX32rr16 GR32:$dst, GR16:$src), 0, "att">;
+def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX64rr8 GR64:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"movzx\t{$src, $dst|$dst, $src}", (MOVZX64rr16 GR64:$dst, GR16:$src), 0, "att">;
 // Note: No GR32->GR64 movzx form.
 
 // outb %dx -> outb %al, %dx

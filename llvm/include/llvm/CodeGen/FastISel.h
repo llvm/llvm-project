@@ -226,6 +226,10 @@ protected:
   /// makes sense (for example, on function calls)
   MachineInstr *EmitStartPt;
 
+  /// Last local value flush point. On a subsequent flush, no local value will
+  /// sink past this point.
+  MachineBasicBlock::iterator LastFlushPoint;
+
 public:
   virtual ~FastISel();
 
@@ -569,7 +573,8 @@ private:
     MachineInstr *FirstTerminator = nullptr;
     unsigned FirstTerminatorOrder = std::numeric_limits<unsigned>::max();
 
-    void initialize(MachineBasicBlock *MBB);
+    void initialize(MachineBasicBlock *MBB,
+                    MachineBasicBlock::iterator LastFlushPoint);
   };
 
   /// Sinks the local value materialization instruction LocalMI to its first use

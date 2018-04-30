@@ -303,7 +303,7 @@ static void ConstructGoldLinkJob(const Tool &T, Compilation &C,
   }
 
   const char *Exec =
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
       Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld.gold"));
 #else
       Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));

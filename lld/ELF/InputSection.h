@@ -223,12 +223,6 @@ public:
   static bool classof(const SectionBase *S) { return S->kind() == Merge; }
   void splitIntoPieces();
 
-  // Mark the piece at a given offset live. Used by GC.
-  void markLiveAt(uint64_t Offset) {
-    if (this->Flags & llvm::ELF::SHF_ALLOC)
-      LiveOffsets.insert(Offset);
-  }
-
   // Translate an offset in the input section to an offset in the parent
   // MergeSyntheticSection.
   uint64_t getParentOffset(uint64_t Offset) const;
@@ -259,8 +253,6 @@ public:
 private:
   void splitStrings(ArrayRef<uint8_t> A, size_t Size);
   void splitNonStrings(ArrayRef<uint8_t> A, size_t Size);
-
-  llvm::DenseSet<uint32_t> LiveOffsets;
 };
 
 struct EhSectionPiece {

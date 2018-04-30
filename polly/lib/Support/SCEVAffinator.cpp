@@ -53,7 +53,7 @@ static isl_stat addNumBasicSets(__isl_take isl_set *Domain,
 /// Determine if @p PWAC is too complex to continue.
 static bool isTooComplex(PWACtx PWAC) {
   unsigned NumBasicSets = 0;
-  isl_pw_aff_foreach_piece(PWAC.first.keep(), addNumBasicSets, &NumBasicSets);
+  isl_pw_aff_foreach_piece(PWAC.first.get(), addNumBasicSets, &NumBasicSets);
   if (NumBasicSets <= MaxDisjunctionsInPwAff)
     return false;
   return true;
@@ -69,7 +69,7 @@ static SCEV::NoWrapFlags getNoWrapFlags(const SCEV *Expr) {
 static PWACtx combine(PWACtx PWAC0, PWACtx PWAC1,
                       __isl_give isl_pw_aff *(Fn)(__isl_take isl_pw_aff *,
                                                   __isl_take isl_pw_aff *)) {
-  PWAC0.first = isl::manage(Fn(PWAC0.first.take(), PWAC1.first.take()));
+  PWAC0.first = isl::manage(Fn(PWAC0.first.release(), PWAC1.first.release()));
   PWAC0.second = PWAC0.second.unite(PWAC1.second);
   return PWAC0;
 }
@@ -94,14 +94,14 @@ void SCEVAffinator::interpretAsUnsigned(PWACtx &PWAC, unsigned Width) {
       isl_pw_aff_intersect_domain(PWAC.first.copy(), isl_set_copy(NonNegDom));
   auto *ExpPWA = getWidthExpValOnDomain(Width, isl_set_complement(NonNegDom));
   PWAC.first = isl::manage(isl_pw_aff_union_add(
-      NonNegPWA, isl_pw_aff_add(PWAC.first.take(), ExpPWA)));
+      NonNegPWA, isl_pw_aff_add(PWAC.first.release(), ExpPWA)));
 }
 
 void SCEVAffinator::takeNonNegativeAssumption(PWACtx &PWAC) {
   auto *NegPWA = isl_pw_aff_neg(PWAC.first.copy());
   auto *NegDom = isl_pw_aff_pos_set(NegPWA);
   PWAC.second =
-      isl::manage(isl_set_union(PWAC.second.take(), isl_set_copy(NegDom)));
+      isl::manage(isl_set_union(PWAC.second.release(), isl_set_copy(NegDom)));
   auto *Restriction = BB ? NegDom : isl_set_params(NegDom);
   auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
   S->recordAssumption(UNSIGNED, isl::manage(Restriction), DL, AS_RESTRICTION,
@@ -161,7 +161,7 @@ isl::pw_aff SCEVAffinator::addModuloSemantic(isl::pw_aff PWA,
 
   isl::set Domain = PWA.domain();
   isl::pw_aff AddPW =
-      isl::manage(getWidthExpValOnDomain(Width - 1, Domain.take()));
+      isl::manage(getWidthExpValOnDomain(Width - 1, Domain.release()));
 
   return PWA.add(AddPW).mod(ModVal).sub(AddPW);
 }
@@ -276,7 +276,7 @@ PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   if (computeModuloForExpr(Expr))
     return OpPWAC;
 
-  auto *Dom = OpPWAC.first.domain().take();
+  auto *Dom = OpPWAC.first.domain().release();
   auto *ExpPWA = getWidthExpValOnDomain(Width - 1, Dom);
   auto *GreaterDom =
       isl_pw_aff_ge_set(OpPWAC.first.copy(), isl_pw_aff_copy(ExpPWA));
@@ -462,7 +462,7 @@ PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
     // piece-wise defined value described for zero-extends as we already know
     // the actual value of the constant divisor.
     unsigned Width = TD.getTypeSizeInBits(Expr->getType());
-    auto *DivisorDom = DivisorPWAC.first.domain().take();
+    auto *DivisorDom = DivisorPWAC.first.domain().release();
     auto *WidthExpPWA = getWidthExpValOnDomain(Width, DivisorDom);
     DivisorPWAC.first = DivisorPWAC.first.add(isl::manage(WidthExpPWA));
   }
