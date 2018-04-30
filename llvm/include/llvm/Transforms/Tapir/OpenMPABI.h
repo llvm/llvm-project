@@ -30,6 +30,7 @@ enum OpenMPRuntimeFunction {
   OMPRTL__kmpc_omp_taskwait,
   OMPRTL__kmpc_global_thread_num,
   OMPRTL__kmpc_barrier,
+  OMPRTL__kmpc_global_num_threads,
 };
 
 enum OpenMPSchedType {

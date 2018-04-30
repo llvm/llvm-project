@@ -187,6 +187,13 @@ Constant *createRuntimeFunction(OpenMPRuntimeFunction Function,
     RTLFn = M->getOrInsertFunction("__kmpc_barrier", FnTy);
     break;
   }
+  case OMPRTL__kmpc_global_num_threads: {
+    Type *TypeParams[] = {IdentTyPtrTy};
+    FunctionType *FnTy =
+        FunctionType::get(Int32Ty, TypeParams, /*isVarArg=*/false);
+    RTLFn = M->getOrInsertFunction("__kmpc_global_num_threads", FnTy);
+    break;
+  }
   }
   return RTLFn;
 }
@@ -271,7 +278,7 @@ Type *getOrCreateIdentTy(Module *M) {
       IdentTy->setBody(ArrayRef<llvm::Type*>({Int32Ty /* reserved_1 */,
                                    Int32Ty /* flags */, Int32Ty /* reserved_2 */,
                                    Int32Ty /* reserved_3 */,
-                                   Int8PtrTy /* psource */}), "ident_t");
+                                   Int8PtrTy /* psource */}), false);
   }
   return IdentTy;
 }
@@ -347,15 +354,51 @@ Value *getOrCreateDefaultLocation(Module *M) {
 
 //##############################################################################
 
+/// Get or create the worker count for the spawning function.
+static Value *GetOrCreateWorkerCount(Function &F) {
+  // TODO?: Figure out better place for these calls, but needed here due to
+  // this function being called before other initialization points
+  getOrCreateIdentTy(F.getParent());
+  getOrCreateDefaultLocation(F.getParent());
+
+  IRBuilder<> B(F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
+  auto NTFn = createRuntimeFunction(
+      OpenMPRuntimeFunction::OMPRTL__kmpc_global_num_threads, F.getParent());
+  Value *NWorkers = emitRuntimeCall(NTFn, {DefaultOpenMPLocation}, "", B);
+
+  return NWorkers;
+}
+
 /// Lower a call to get the grainsize of this Tapir loop.
 Value *llvm::OpenMPABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   Value *Limit = GrainsizeCall->getArgOperand(0);
   Module *M = GrainsizeCall->getModule();
   IRBuilder<> Builder(GrainsizeCall);
 
-  Constant *StaticGrainsize = ConstantInt::get(Limit->getType(), 2048);
-  GrainsizeCall->replaceAllUsesWith(StaticGrainsize);
-  return StaticGrainsize;
+  Value *Workers = GetOrCreateWorkerCount(*GrainsizeCall->getFunction());
+  // num_threads returns 0 if not in parallel region, so need to add 1 to avoid
+  // dividing by zero later in the case of fast-openmp
+  // `nworkers += nworkers == 0`
+  Type *Int32Ty = IntegerType::get(M->getContext(), 32);
+  Value *EQCmp = Builder.CreateICmpEQ(Workers, ConstantInt::get(Int32Ty, 0));
+  Value *IntEQCmp = Builder.CreateIntCast(EQCmp, Int32Ty, false);
+  Value *PosWorkers = Builder.CreateAdd(Workers, IntEQCmp, "nworkers");
+
+  Value *WorkersX8 = Builder.CreateIntCast(
+      Builder.CreateMul(PosWorkers, ConstantInt::get(PosWorkers->getType(), 8)),
+      Limit->getType(), false);
+  // Compute ceil(limit / 8 * workers) =
+  //           (limit + 8 * workers - 1) / (8 * workers)
+  Value *SmallLoopVal =
+    Builder.CreateUDiv(Builder.CreateSub(Builder.CreateAdd(Limit, WorkersX8),
+                                         ConstantInt::get(Limit->getType(), 1)),
+                       WorkersX8);
+  // Compute min
+  Value *LargeLoopVal = ConstantInt::get(Limit->getType(), 2048);
+  Value *Cmp = Builder.CreateICmpULT(LargeLoopVal, SmallLoopVal);
+  Value *Grainsize = Builder.CreateSelect(Cmp, LargeLoopVal, SmallLoopVal);
+  GrainsizeCall->replaceAllUsesWith(Grainsize);
+  return Grainsize;
 }
 
 void llvm::OpenMPABI::lowerSync(SyncInst &SI) {
@@ -774,5 +817,4 @@ void llvm::OpenMPABI::postProcessFunction(Function &F) {
   RegionFn->eraseFromParent();
 }
 
-void llvm::OpenMPABI::postProcessHelper(Function &F) {
-}
+void llvm::OpenMPABI::postProcessHelper(Function &F) {}
