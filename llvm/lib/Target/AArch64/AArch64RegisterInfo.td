@@ -934,22 +934,27 @@ def ZZZZ_d : RegisterOperand<ZPR4, "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 4>;
 }
 
-class ZPRExtendAsmOperand<string ShiftExtend, int RegWidth, int Scale>
-    : AsmOperandClass {
-  let Name = "ZPRExtend" # ShiftExtend # RegWidth # Scale;
+class ZPRExtendAsmOperand<string ShiftExtend, int RegWidth, int Scale,
+                          bit ScaleAlwaysSame = 0b0> : AsmOperandClass {
+  let Name = "ZPRExtend" # ShiftExtend # RegWidth # Scale
+                         # !if(ScaleAlwaysSame, "Only", "");
+
   let PredicateMethod = "isSVEVectorRegWithShiftExtend<"
                           # RegWidth # ", AArch64::ZPRRegClassID, "
                           # "AArch64_AM::" # ShiftExtend # ", "
-                          # Scale # ">";
+                          # Scale # ", "
+                          # !if(ScaleAlwaysSame, "true", "false")
+                          # ">";
   let DiagnosticType = "InvalidZPR" # RegWidth # ShiftExtend # Scale;
   let RenderMethod = "addRegOperands";
   let ParserMethod = "tryParseSVEDataVector<true, true>";
 }
 
 class ZPRExtendRegisterOperand<bit SignExtend, bit IsLSL, string Repr,
-                               int RegWidth, int Scale> : RegisterOperand<ZPR> {
+                               int RegWidth, int Scale, string Suffix = "">
+    : RegisterOperand<ZPR> {
   let ParserMatchClass =
-    !cast<AsmOperandClass>("ZPR" # RegWidth # "AsmOpndExt" # Repr # Scale);
+    !cast<AsmOperandClass>("ZPR" # RegWidth # "AsmOpndExt" # Repr # Scale # Suffix);
   let PrintMethod = "printRegWithShiftExtend<"
                           # !if(SignExtend, "true", "false") # ", "
                           # Scale # ", "
@@ -959,22 +964,26 @@ class ZPRExtendRegisterOperand<bit SignExtend, bit IsLSL, string Repr,
 
 foreach RegWidth = [32, 64] in {
   // UXTW(8|16|32|64)
+  def ZPR#RegWidth#AsmOpndExtUXTW8Only : ZPRExtendAsmOperand<"UXTW", RegWidth, 8, 0b1>;
   def ZPR#RegWidth#AsmOpndExtUXTW8     : ZPRExtendAsmOperand<"UXTW", RegWidth, 8>;
   def ZPR#RegWidth#AsmOpndExtUXTW16    : ZPRExtendAsmOperand<"UXTW", RegWidth, 16>;
   def ZPR#RegWidth#AsmOpndExtUXTW32    : ZPRExtendAsmOperand<"UXTW", RegWidth, 32>;
   def ZPR#RegWidth#AsmOpndExtUXTW64    : ZPRExtendAsmOperand<"UXTW", RegWidth, 64>;
 
+  def ZPR#RegWidth#ExtUXTW8Only        : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 8, "Only">;
   def ZPR#RegWidth#ExtUXTW8            : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 8>;
   def ZPR#RegWidth#ExtUXTW16           : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 16>;
   def ZPR#RegWidth#ExtUXTW32           : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 32>;
   def ZPR#RegWidth#ExtUXTW64           : ZPRExtendRegisterOperand<0b0, 0b0, "UXTW", RegWidth, 64>;
 
   // SXTW(8|16|32|64)
+  def ZPR#RegWidth#AsmOpndExtSXTW8Only : ZPRExtendAsmOperand<"SXTW", RegWidth, 8, 0b1>;
   def ZPR#RegWidth#AsmOpndExtSXTW8     : ZPRExtendAsmOperand<"SXTW", RegWidth, 8>;
   def ZPR#RegWidth#AsmOpndExtSXTW16    : ZPRExtendAsmOperand<"SXTW", RegWidth, 16>;
   def ZPR#RegWidth#AsmOpndExtSXTW32    : ZPRExtendAsmOperand<"SXTW", RegWidth, 32>;
   def ZPR#RegWidth#AsmOpndExtSXTW64    : ZPRExtendAsmOperand<"SXTW", RegWidth, 64>;
 
+  def ZPR#RegWidth#ExtSXTW8Only        : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 8, "Only">;
   def ZPR#RegWidth#ExtSXTW8            : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 8>;
   def ZPR#RegWidth#ExtSXTW16           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 16>;
   def ZPR#RegWidth#ExtSXTW32           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 32>;
@@ -986,7 +995,6 @@ def ZPR64AsmOpndExtLSL8      : ZPRExtendAsmOperand<"LSL", 64, 8>;
 def ZPR64AsmOpndExtLSL16     : ZPRExtendAsmOperand<"LSL", 64, 16>;
 def ZPR64AsmOpndExtLSL32     : ZPRExtendAsmOperand<"LSL", 64, 32>;
 def ZPR64AsmOpndExtLSL64     : ZPRExtendAsmOperand<"LSL", 64, 64>;
-
 def ZPR64ExtLSL8             : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 8>;
 def ZPR64ExtLSL16            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 16>;
 def ZPR64ExtLSL32            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 32>;

@@ -78,3 +78,6 @@ mov %rip, %rax
 // 32: error: register %rax is only available in 64-bit mode
 // 64: error: %rip is not allowed as an index register
 mov (%rax,%rip), %rbx
+
+// 32: error: instruction requires: 64-bit mode
+ljmpq *(%eax)

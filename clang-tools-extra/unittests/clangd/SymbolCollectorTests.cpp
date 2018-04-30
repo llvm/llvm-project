@@ -689,6 +689,15 @@ TEST_F(SymbolCollectorTest, ClassForwardDeclarationIsCanonical) {
                            IncludeHeader(TestHeaderURI), DefURI(TestFileURI))));
 }
 
+TEST_F(SymbolCollectorTest, UTF16Character) {
+  // ö is 2-bytes.
+  Annotations Header(/*Header=*/"class [[pörk]] {};");
+  runSymbolCollector(Header.code(), /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(QName("pörk"), DeclRange(Header.range()))));
+}
+
+
 } // namespace
 } // namespace clangd
 } // namespace clang

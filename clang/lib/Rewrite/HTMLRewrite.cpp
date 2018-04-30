@@ -30,7 +30,8 @@ using namespace clang;
 /// start/end tags are placed at the start/end of each line if the range is
 /// multiline.
 void html::HighlightRange(Rewriter &R, SourceLocation B, SourceLocation E,
-                          const char *StartTag, const char *EndTag) {
+                          const char *StartTag, const char *EndTag,
+                          bool IsTokenRange) {
   SourceManager &SM = R.getSourceMgr();
   B = SM.getExpansionLoc(B);
   E = SM.getExpansionLoc(E);
@@ -41,7 +42,8 @@ void html::HighlightRange(Rewriter &R, SourceLocation B, SourceLocation E,
   unsigned EOffset = SM.getFileOffset(E);
 
   // Include the whole end token in the range.
-  EOffset += Lexer::MeasureTokenLength(E, R.getSourceMgr(), R.getLangOpts());
+  if (IsTokenRange)
+    EOffset += Lexer::MeasureTokenLength(E, R.getSourceMgr(), R.getLangOpts());
 
   bool Invalid = false;
   const char *BufferStart = SM.getBufferData(FID, &Invalid).data();
@@ -588,16 +590,15 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
     // Okay, we have the first token of a macro expansion: highlight the
     // expansion by inserting a start tag before the macro expansion and
     // end tag after it.
-    std::pair<SourceLocation, SourceLocation> LLoc =
-      SM.getExpansionRange(Tok.getLocation());
+    CharSourceRange LLoc = SM.getExpansionRange(Tok.getLocation());
 
     // Ignore tokens whose instantiation location was not the main file.
-    if (SM.getFileID(LLoc.first) != FID) {
+    if (SM.getFileID(LLoc.getBegin()) != FID) {
       TmpPP.Lex(Tok);
       continue;
     }
 
-    assert(SM.getFileID(LLoc.second) == FID &&
+    assert(SM.getFileID(LLoc.getEnd()) == FID &&
            "Start and end of expansion must be in the same ultimate file!");
 
     std::string Expansion = EscapeText(TmpPP.getSpelling(Tok));
@@ -612,7 +613,7 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
     // instantiation.  It would be really nice to pop up a window with all the
     // spelling of the tokens or something.
     while (!Tok.is(tok::eof) &&
-           SM.getExpansionLoc(Tok.getLocation()) == LLoc.first) {
+           SM.getExpansionLoc(Tok.getLocation()) == LLoc.getBegin()) {
       // Insert a newline if the macro expansion is getting large.
       if (LineLen > 60) {
         Expansion += "<br>";
@@ -641,8 +642,8 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
     // highlighted.
     Expansion = "<span class='expansion'>" + Expansion + "</span></span>";
 
-    HighlightRange(R, LLoc.first, LLoc.second,
-                   "<span class='macro'>", Expansion.c_str());
+    HighlightRange(R, LLoc.getBegin(), LLoc.getEnd(), "<span class='macro'>",
+                   Expansion.c_str(), LLoc.isTokenRange());
   }
 
   // Restore the preprocessor's old state.

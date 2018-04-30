@@ -865,9 +865,9 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
     EndLoc = getExpansionLocForMacroDefLoc(EndLoc);
   FileID MacroFID = SM.getFileID(MacroExpansionStart);
   while (SM.getFileID(StartLoc) != MacroFID)
-    StartLoc = SM.getImmediateExpansionRange(StartLoc).first;
+    StartLoc = SM.getImmediateExpansionRange(StartLoc).getBegin();
   while (SM.getFileID(EndLoc) != MacroFID)
-    EndLoc = SM.getImmediateExpansionRange(EndLoc).second;
+    EndLoc = SM.getImmediateExpansionRange(EndLoc).getEnd();
     
   LHSTok.setLocation(SM.createExpansionLoc(LHSTok.getLocation(), StartLoc, EndLoc,
                                         LHSTok.getLength()));

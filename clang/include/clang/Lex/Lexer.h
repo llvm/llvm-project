@@ -336,13 +336,23 @@ public:
                                             const SourceManager &SM,
                                             const LangOptions &LangOpts);
 
+  /// Get the physical length (including trigraphs and escaped newlines) of the
+  /// first \p Characters characters of the token starting at TokStart.
+  static unsigned getTokenPrefixLength(SourceLocation TokStart,
+                                       unsigned Characters,
+                                       const SourceManager &SM,
+                                       const LangOptions &LangOpts);
+
   /// AdvanceToTokenCharacter - If the current SourceLocation specifies a
   /// location at the start of a token, return a new location that specifies a
   /// character within the token.  This handles trigraphs and escaped newlines.
   static SourceLocation AdvanceToTokenCharacter(SourceLocation TokStart,
-                                                unsigned Character,
+                                                unsigned Characters,
                                                 const SourceManager &SM,
-                                                const LangOptions &LangOpts);
+                                                const LangOptions &LangOpts) {
+    return TokStart.getLocWithOffset(
+        getTokenPrefixLength(TokStart, Characters, SM, LangOpts));
+  }
 
   /// \brief Computes the source location just past the end of the
   /// token at this source location.

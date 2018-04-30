@@ -317,9 +317,13 @@ namespace SrcMgr {
     /// invalid location.
     unsigned ExpansionLocStart, ExpansionLocEnd;
 
+    /// Whether the expansion range is a token range.
+    bool ExpansionIsTokenRange;
+
   public:
     SourceLocation getSpellingLoc() const {
-      return SourceLocation::getFromRawEncoding(SpellingLoc);
+      SourceLocation SpellLoc = SourceLocation::getFromRawEncoding(SpellingLoc);
+      return SpellLoc.isInvalid() ? getExpansionLocStart() : SpellLoc;
     }
 
     SourceLocation getExpansionLocStart() const {
@@ -332,8 +336,14 @@ namespace SrcMgr {
       return EndLoc.isInvalid() ? getExpansionLocStart() : EndLoc;
     }
 
-    std::pair<SourceLocation,SourceLocation> getExpansionLocRange() const {
-      return std::make_pair(getExpansionLocStart(), getExpansionLocEnd());
+    bool isExpansionTokenRange() const {
+      return ExpansionIsTokenRange;
+    }
+
+    CharSourceRange getExpansionLocRange() const {
+      return CharSourceRange(
+          SourceRange(getExpansionLocStart(), getExpansionLocEnd()),
+          isExpansionTokenRange());
     }
 
     bool isMacroArgExpansion() const {
@@ -359,11 +369,13 @@ namespace SrcMgr {
     /// the characters from the token come from). All three can refer to
     /// normal File SLocs or expansion locations.
     static ExpansionInfo create(SourceLocation SpellingLoc,
-                                SourceLocation Start, SourceLocation End) {
+                                SourceLocation Start, SourceLocation End,
+                                bool ExpansionIsTokenRange = true) {
       ExpansionInfo X;
       X.SpellingLoc = SpellingLoc.getRawEncoding();
       X.ExpansionLocStart = Start.getRawEncoding();
       X.ExpansionLocEnd = End.getRawEncoding();
+      X.ExpansionIsTokenRange = ExpansionIsTokenRange;
       return X;
     }
 
@@ -392,6 +404,17 @@ namespace SrcMgr {
       // expansion range to mark that this is a macro argument location rather
       // than a normal one.
       return create(SpellingLoc, ExpansionLoc, SourceLocation());
+    }
+
+    /// \brief Return a special ExpansionInfo representing a token that ends
+    /// prematurely. This is used to model a '>>' token that has been split
+    /// into '>' tokens and similar cases. Unlike for the other forms of
+    /// expansion, the expansion range in this case is a character range, not
+    /// a token range.
+    static ExpansionInfo createForTokenSplit(SourceLocation SpellingLoc,
+                                             SourceLocation Start,
+                                             SourceLocation End) {
+      return create(SpellingLoc, Start, End, false);
     }
   };
 
@@ -851,8 +874,15 @@ public:
                                     SourceLocation ExpansionLocStart,
                                     SourceLocation ExpansionLocEnd,
                                     unsigned TokLength,
+                                    bool ExpansionIsTokenRange = true,
                                     int LoadedID = 0,
                                     unsigned LoadedOffset = 0);
+
+  /// \brief Return a new SourceLocation that encodes that the token starting
+  /// at \p TokenStart ends prematurely at \p TokenEnd.
+  SourceLocation createTokenSplitLoc(SourceLocation SpellingLoc,
+                                     SourceLocation TokenStart,
+                                     SourceLocation TokenEnd);
 
   /// \brief Retrieve the memory buffer associated with the given file.
   ///
@@ -1102,19 +1132,28 @@ public:
   /// expansion location.
   ///
   /// \pre \p Loc is required to be an expansion location.
-  std::pair<SourceLocation,SourceLocation>
-  getImmediateExpansionRange(SourceLocation Loc) const;
+  CharSourceRange getImmediateExpansionRange(SourceLocation Loc) const;
 
   /// \brief Given a SourceLocation object, return the range of
   /// tokens covered by the expansion in the ultimate file.
-  std::pair<SourceLocation,SourceLocation>
-  getExpansionRange(SourceLocation Loc) const;
+  CharSourceRange getExpansionRange(SourceLocation Loc) const;
 
   /// \brief Given a SourceRange object, return the range of
-  /// tokens covered by the expansion in the ultimate file.
-  SourceRange getExpansionRange(SourceRange Range) const {
-    return SourceRange(getExpansionRange(Range.getBegin()).first,
-                       getExpansionRange(Range.getEnd()).second);
+  /// tokens or characters covered by the expansion in the ultimate file.
+  CharSourceRange getExpansionRange(SourceRange Range) const {
+    SourceLocation Begin = getExpansionRange(Range.getBegin()).getBegin();
+    CharSourceRange End = getExpansionRange(Range.getEnd());
+    return CharSourceRange(SourceRange(Begin, End.getEnd()),
+                           End.isTokenRange());
+  }
+
+  /// \brief Given a CharSourceRange object, return the range of
+  /// tokens or characters covered by the expansion in the ultimate file.
+  CharSourceRange getExpansionRange(CharSourceRange Range) const {
+    CharSourceRange Expansion = getExpansionRange(Range.getAsRange());
+    if (Expansion.getEnd() == Range.getEnd())
+      Expansion.setTokenRange(Range.isTokenRange());
+    return Expansion;
   }
 
   /// \brief Given a SourceLocation object, return the spelling
@@ -1643,7 +1682,7 @@ public:
 
     // Otherwise, the caller of the macro is located where this macro is
     // expanded (while the spelling is part of the macro definition).
-    return getImmediateExpansionRange(Loc).first;
+    return getImmediateExpansionRange(Loc).getBegin();
   }
 
   /// \return Location of the top-level macro caller.

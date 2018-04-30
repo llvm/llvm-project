@@ -374,7 +374,7 @@ static bool LineIsMarkedWithNOLINTinMacro(SourceManager &SM, SourceLocation Loc,
       return true;
     if (!Loc.isMacroID())
       return false;
-    Loc = SM.getImmediateExpansionRange(Loc).first;
+    Loc = SM.getImmediateExpansionRange(Loc).getBegin();
   }
   return false;
 }

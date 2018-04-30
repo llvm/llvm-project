@@ -172,7 +172,7 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
 }
 
 
-// NOTE: This must be kept in synch with the copy in lib/VMCore/Function.cpp!
+// NOTE: This must be kept in synch with the copy in lib/IR/Function.cpp!
 enum IIT_Info {
   // Common values should be encoded with 0-15.
   IIT_Done = 0,
