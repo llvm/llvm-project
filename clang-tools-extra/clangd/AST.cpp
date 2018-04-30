@@ -32,7 +32,7 @@ SourceLocation findNameLoc(const clang::Decl* D) {
       //     be "<scratch space>"
       //   * symbols controlled and defined by a compile command-line option
       //     `-DName=foo`, the spelling location will be "<command line>".
-      SpellingLoc = SM.getExpansionRange(D->getLocation()).first;
+      SpellingLoc = SM.getExpansionRange(D->getLocation()).getBegin();
     }
   }
   return SpellingLoc;
