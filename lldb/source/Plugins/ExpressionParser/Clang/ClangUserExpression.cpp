@@ -687,7 +687,9 @@ void ClangUserExpression::ClangUserExpressionHelper::CommitPersistentDecls() {
 }
 
 ConstString ClangUserExpression::ResultDelegate::GetName() {
-  return m_persistent_state->GetNextPersistentVariableName(*m_target_sp);
+  auto prefix = m_persistent_state->GetPersistentVariablePrefix();
+  return m_persistent_state->GetNextPersistentVariableName(*m_target_sp,
+                                                           prefix);
 }
 
 void ClangUserExpression::ResultDelegate::DidDematerialize(

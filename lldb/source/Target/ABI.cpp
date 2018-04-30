@@ -115,8 +115,10 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
     if (!persistent_expression_state)
       return ValueObjectSP();
 
-    ConstString persistent_variable_name(
-        persistent_expression_state->GetNextPersistentVariableName(target));
+    auto prefix = persistent_expression_state->GetPersistentVariablePrefix();
+    ConstString persistent_variable_name =
+        persistent_expression_state->GetNextPersistentVariableName(target,
+                                                                   prefix);
 
     lldb::ValueObjectSP const_valobj_sp;
 

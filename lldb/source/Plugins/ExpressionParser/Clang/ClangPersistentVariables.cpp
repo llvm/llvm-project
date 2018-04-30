@@ -83,15 +83,6 @@ void ClangPersistentVariables::RemovePersistentVariable(
   }
 }
 
-ConstString
-ClangPersistentVariables::GetNextPersistentVariableName(Target &target) {
-  char name_cstr[256];
-  ::snprintf(name_cstr, sizeof(name_cstr), "$%u",
-             target.GetNextPersistentVariableIndex());
-  ConstString name(name_cstr);
-  return name;
-}
-
 void ClangPersistentVariables::RegisterPersistentDecl(const ConstString &name,
                                                       clang::NamedDecl *decl) {
   m_persistent_decls.insert(

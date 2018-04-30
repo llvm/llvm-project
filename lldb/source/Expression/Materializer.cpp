@@ -951,7 +951,8 @@ public:
     ConstString name =
         m_delegate
             ? m_delegate->GetName()
-            : persistent_state->GetNextPersistentVariableName(*target_sp);
+            : persistent_state->GetNextPersistentVariableName(
+                  *target_sp, persistent_state->GetPersistentVariablePrefix());
 
     lldb::ProcessSP process_sp =
         map.GetBestExecutionContextScope()->CalculateProcess();
