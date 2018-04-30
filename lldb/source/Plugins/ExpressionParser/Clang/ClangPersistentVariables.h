@@ -77,7 +77,7 @@ public:
   /// @return
   ///     A string that contains the next persistent variable name.
   //----------------------------------------------------------------------
-  ConstString GetNextPersistentVariableName(bool is_error = false) override;
+  ConstString GetNextPersistentVariableName(Target &target) override;
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 

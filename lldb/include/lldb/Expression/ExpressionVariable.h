@@ -242,7 +242,7 @@ public:
                            lldb::ByteOrder byte_order,
                            uint32_t addr_byte_size) = 0;
 
-  virtual ConstString GetNextPersistentVariableName(bool is_error = false) = 0;
+  virtual ConstString GetNextPersistentVariableName(Target &target) = 0;
 
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;

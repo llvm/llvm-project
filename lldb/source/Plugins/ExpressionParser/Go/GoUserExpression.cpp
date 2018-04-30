@@ -272,7 +272,7 @@ GoUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   PersistentExpressionState *pv =
       target->GetPersistentExpressionStateForLanguage(eLanguageTypeGo);
   if (pv != nullptr) {
-    result->SetName(pv->GetNextPersistentVariableName());
+    result->SetName(pv->GetNextPersistentVariableName(*target));
     pv->AddVariable(result);
   }
   return lldb::eExpressionCompleted;
@@ -652,11 +652,11 @@ GoPersistentExpressionState::GoPersistentExpressionState()
     : PersistentExpressionState(eKindGo) {}
 
 ConstString
-GoPersistentExpressionState::GetNextPersistentVariableName(bool is_error) {
+GoPersistentExpressionState::GetNextPersistentVariableName(Target &target) {
   char name_cstr[256];
   // We can't use the same variable format as clang.
   ::snprintf(name_cstr, sizeof(name_cstr), "$go%u",
-             m_next_persistent_variable_id++);
+             target.GetNextPersistentVariableIndex());
   ConstString name(name_cstr);
   return name;
 }

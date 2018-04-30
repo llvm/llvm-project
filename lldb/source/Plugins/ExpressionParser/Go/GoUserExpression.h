@@ -29,7 +29,7 @@ class GoPersistentExpressionState : public PersistentExpressionState {
 public:
   GoPersistentExpressionState();
 
-  ConstString GetNextPersistentVariableName(bool is_error = false) override;
+  ConstString GetNextPersistentVariableName(Target &target) override;
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
