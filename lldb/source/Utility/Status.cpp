@@ -107,9 +107,9 @@ const Status &Status::operator=(const Status &rhs) {
 Status::~Status() = default;
 
 //----------------------------------------------------------------------
-// Get the error value as a NULL C string. The error string will be
-// fetched and cached on demand. The cached error string value will
-// remain until the error value is changed or cleared.
+// Get the error value as a NULL C string. The error string will be fetched and
+// cached on demand. The cached error string value will remain until the error
+// value is changed or cleared.
 //----------------------------------------------------------------------
 const char *Status::AsCString(const char *default_error_str) const {
   if (Success())
@@ -161,8 +161,8 @@ Status::ValueType Status::GetError() const { return m_code; }
 ErrorType Status::GetType() const { return m_type; }
 
 //----------------------------------------------------------------------
-// Returns true if this object contains a value that describes an
-// error or otherwise non-success result.
+// Returns true if this object contains a value that describes an error or
+// otherwise non-success result.
 //----------------------------------------------------------------------
 bool Status::Fail() const { return m_code != 0; }
 
@@ -210,8 +210,7 @@ void Status::SetError(ValueType err, ErrorType type) {
 }
 
 //----------------------------------------------------------------------
-// Update the error value to be "errno" and update the type to
-// be "POSIX".
+// Update the error value to be "errno" and update the type to be "POSIX".
 //----------------------------------------------------------------------
 void Status::SetErrorToErrno() {
   m_code = errno;
@@ -220,8 +219,8 @@ void Status::SetErrorToErrno() {
 }
 
 //----------------------------------------------------------------------
-// Update the error value to be LLDB_GENERIC_ERROR and update the type
-// to be "Generic".
+// Update the error value to be LLDB_GENERIC_ERROR and update the type to be
+// "Generic".
 //----------------------------------------------------------------------
 void Status::SetErrorToGenericError() {
   m_code = LLDB_GENERIC_ERROR;
@@ -230,15 +229,15 @@ void Status::SetErrorToGenericError() {
 }
 
 //----------------------------------------------------------------------
-// Set accessor for the error string value for a specific error.
-// This allows any string to be supplied as an error explanation.
-// The error string value will remain until the error value is
-// cleared or a new error value/type is assigned.
+// Set accessor for the error string value for a specific error. This allows
+// any string to be supplied as an error explanation. The error string value
+// will remain until the error value is cleared or a new error value/type is
+// assigned.
 //----------------------------------------------------------------------
 void Status::SetErrorString(llvm::StringRef err_str) {
   if (!err_str.empty()) {
-    // If we have an error string, we should always at least have an error
-    // set to a generic value.
+    // If we have an error string, we should always at least have an error set
+    // to a generic value.
     if (Success())
       SetErrorToGenericError();
   }
@@ -266,8 +265,8 @@ int Status::SetErrorStringWithFormat(const char *format, ...) {
 
 int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
   if (format != nullptr && format[0]) {
-    // If we have an error string, we should always at least have
-    // an error set to a generic value.
+    // If we have an error string, we should always at least have an error set
+    // to a generic value.
     if (Success())
       SetErrorToGenericError();
 
@@ -282,8 +281,8 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
 }
 
 //----------------------------------------------------------------------
-// Returns true if the error code in this object is considered a
-// successful return value.
+// Returns true if the error code in this object is considered a successful
+// return value.
 //----------------------------------------------------------------------
 bool Status::Success() const { return m_code == 0; }
 

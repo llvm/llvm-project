@@ -193,14 +193,14 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::ReadRegister(
     bool success = ReadRegister(full_reg, value);
 
     if (success) {
-      // If our read was not aligned (for ah,bh,ch,dh), shift our returned value
-      // one byte to the right.
+      // If our read was not aligned (for ah,bh,ch,dh), shift our returned
+      // value one byte to the right.
       if (is_subreg && (reg_info->byte_offset & 0x1))
         value.SetUInt64(value.GetAsUInt64() >> 8);
 
       // If our return byte size was greater than the return value reg size,
-      // then
-      // use the type specified by reg_info rather than the uint64_t default
+      // then use the type specified by reg_info rather than the uint64_t
+      // default
       if (value.GetByteSize() > reg_info->byte_size)
         value.SetType(reg_info);
     }
@@ -221,7 +221,8 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::ReadRegister(
         value.SetBytes(m_fpr.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
                        reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_ymm && reg <= m_reg_info.last_ymm) {
-        // Concatenate ymm using the register halves in xmm.bytes and ymmh.bytes
+        // Concatenate ymm using the register halves in xmm.bytes and
+        // ymmh.bytes
         if (GetFPRType() == eXSAVE && CopyXSTATEtoYMM(reg, byte_order))
           value.SetBytes(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes,
                          reg_info->byte_size, byte_order);
@@ -233,11 +234,10 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::ReadRegister(
     return false;
   }
 
-  // Get pointer to m_fpr.fxsave variable and set the data from it.
-  // Byte offsets of all registers are calculated wrt 'UserArea' structure.
-  // However, ReadFPR() reads fpu registers {using ptrace(PT_GETFPREGS,..)}
-  // and stores them in 'm_fpr' (of type FPR structure). To extract values of
-  // fpu
+  // Get pointer to m_fpr.fxsave variable and set the data from it. Byte
+  // offsets of all registers are calculated wrt 'UserArea' structure. However,
+  // ReadFPR() reads fpu registers {using ptrace(PT_GETFPREGS,..)} and stores
+  // them in 'm_fpr' (of type FPR structure). To extract values of fpu
   // registers, m_fpr should be read at byte offsets calculated wrt to FPR
   // structure.
 
@@ -299,12 +299,12 @@ bool RegisterContextPOSIXProcessMonitor_x86_64::WriteRegister(
           return false;
       }
     } else {
-      // Get pointer to m_fpr.fxsave variable and set the data to it.
-      // Byte offsets of all registers are calculated wrt 'UserArea' structure.
-      // However, WriteFPR() takes m_fpr (of type FPR structure) and writes only
-      // fpu
-      // registers using ptrace(PT_SETFPREGS,..) API. Hence fpu registers should
-      // be written in m_fpr at byte offsets calculated wrt FPR structure.
+      // Get pointer to m_fpr.fxsave variable and set the data to it. Byte
+      // offsets of all registers are calculated wrt 'UserArea' structure.
+      // However, WriteFPR() takes m_fpr (of type FPR structure) and writes
+      // only fpu registers using ptrace(PT_SETFPREGS,..) API. Hence fpu
+      // registers should be written in m_fpr at byte offsets calculated wrt
+      // FPR structure.
 
       // Since, FPR structure is also one of the member of UserArea structure.
       // byte_offset(fpu wrt FPR) = byte_offset(fpu wrt UserArea) -

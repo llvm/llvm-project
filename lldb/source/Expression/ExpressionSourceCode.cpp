@@ -93,15 +93,15 @@ public:
       m_state = CURRENT_FILE_POPPED;
   }
 
-  // An entry is valid if it occurs before the current line in
-  // the current file.
+  // An entry is valid if it occurs before the current line in the current
+  // file.
   bool IsValidEntry(uint32_t line) {
     switch (m_state) {
     case CURRENT_FILE_NOT_YET_PUSHED:
       return true;
     case CURRENT_FILE_PUSHED:
-      // If we are in file included in the current file,
-      // the entry should be added.
+      // If we are in file included in the current file, the entry should be
+      // added.
       if (m_file_stack.back() != m_current_file)
         return true;
 

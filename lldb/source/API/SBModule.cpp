@@ -165,11 +165,10 @@ const char *SBModule::GetUUIDString() const {
   const char *uuid_cstr = NULL;
   ModuleSP module_sp(GetSP());
   if (module_sp) {
-    // We are going to return a "const char *" value through the public
-    // API, so we need to constify it so it gets added permanently the
-    // string pool and then we don't need to worry about the lifetime of the
-    // string as it will never go away once it has been put into the ConstString
-    // string pool
+    // We are going to return a "const char *" value through the public API, so
+    // we need to constify it so it gets added permanently the string pool and
+    // then we don't need to worry about the lifetime of the string as it will
+    // never go away once it has been put into the ConstString string pool
     uuid_cstr = ConstString(module_sp->GetUUID().GetAsString()).GetCString();
   }
 
@@ -515,9 +514,9 @@ const char *SBModule::GetTriple() {
   ModuleSP module_sp(GetSP());
   if (module_sp) {
     std::string triple(module_sp->GetArchitecture().GetTriple().str());
-    // Unique the string so we don't run into ownership issues since
-    // the const strings put the string into the string pool once and
-    // the strings never comes out
+    // Unique the string so we don't run into ownership issues since the const
+    // strings put the string into the string pool once and the strings never
+    // comes out
     ConstString const_triple(triple.c_str());
     return const_triple.GetCString();
   }

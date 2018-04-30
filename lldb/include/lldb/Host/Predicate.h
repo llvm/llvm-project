@@ -199,11 +199,11 @@ public:
   //------------------------------------------------------------------
   T WaitForSetValueBits(T bits, const std::chrono::microseconds &timeout =
                                     std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
+    // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
+    // the mutex and wait for the condition to be set. When either function
+    // returns, they will re-lock the mutex. We use an auto lock/unlock class
+    // (std::lock_guard) to allow us to return at any point in this function
+    // and not have to worry about unlocking the mutex.
     std::unique_lock<std::mutex> lock(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
     printf("%s (bits = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
@@ -253,11 +253,11 @@ public:
   //------------------------------------------------------------------
   T WaitForResetValueBits(T bits, const std::chrono::microseconds &timeout =
                                       std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
+    // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
+    // the mutex and wait for the condition to be set. When either function
+    // returns, they will re-lock the mutex. We use an auto lock/unlock class
+    // (std::lock_guard) to allow us to return at any point in this function
+    // and not have to worry about unlocking the mutex.
     std::unique_lock<std::mutex> lock(m_mutex);
 
 #ifdef DB_PTHREAD_LOG_EVENTS
@@ -313,11 +313,11 @@ public:
   bool WaitForValueEqualTo(T value, const std::chrono::microseconds &timeout =
                                         std::chrono::microseconds(0),
                            bool *timed_out = nullptr) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
+    // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
+    // the mutex and wait for the condition to be set. When either function
+    // returns, they will re-lock the mutex. We use an auto lock/unlock class
+    // (std::lock_guard) to allow us to return at any point in this function
+    // and not have to worry about unlocking the mutex.
     std::unique_lock<std::mutex> lock(m_mutex);
 
 #ifdef DB_PTHREAD_LOG_EVENTS
@@ -382,11 +382,11 @@ public:
       T wait_value, T new_value,
       const std::chrono::microseconds &timeout = std::chrono::microseconds(0),
       bool *timed_out = nullptr) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
+    // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
+    // the mutex and wait for the condition to be set. When either function
+    // returns, they will re-lock the mutex. We use an auto lock/unlock class
+    // (std::lock_guard) to allow us to return at any point in this function
+    // and not have to worry about unlocking the mutex.
     std::unique_lock<std::mutex> lock(m_mutex);
 
 #ifdef DB_PTHREAD_LOG_EVENTS
@@ -449,11 +449,11 @@ public:
   bool WaitForValueNotEqualTo(
       T value, T &new_value,
       const std::chrono::microseconds &timeout = std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
+    // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
+    // the mutex and wait for the condition to be set. When either function
+    // returns, they will re-lock the mutex. We use an auto lock/unlock class
+    // (std::lock_guard) to allow us to return at any point in this function
+    // and not have to worry about unlocking the mutex.
     std::unique_lock<std::mutex> lock(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
     printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
@@ -478,8 +478,8 @@ public:
 
 protected:
   //----------------------------------------------------------------------
-  // pthread condition and mutex variable to control access and allow
-  // blocking between the main thread and the spotlight index thread.
+  // pthread condition and mutex variable to control access and allow blocking
+  // between the main thread and the spotlight index thread.
   //----------------------------------------------------------------------
   T m_value; ///< The templatized value T that we are protecting access to
   mutable std::mutex m_mutex; ///< The mutex to use when accessing the data

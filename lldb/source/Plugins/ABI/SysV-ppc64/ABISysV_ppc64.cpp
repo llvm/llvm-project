@@ -281,8 +281,8 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (!value)
       return false;
 
-    // We currently only support extracting values with Clang QualTypes.
-    // Do we care about others?
+    // We currently only support extracting values with Clang QualTypes. Do we
+    // care about others?
     CompilerType compiler_type = value->GetCompilerType();
     if (!compiler_type)
       return false;
@@ -380,8 +380,8 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   if (!set_it_simple) {
     // Okay we've got a structure or something that doesn't fit in a simple
-    // register.
-    // We should figure out where it really goes, but we don't support this yet.
+    // register. We should figure out where it really goes, but we don't
+    // support this yet.
     error.SetErrorString("We only support setting simple integer and float "
                          "return types at present.");
   }
@@ -400,10 +400,10 @@ namespace {
 class ReturnValueExtractor {
   // This class represents a register, from which data may be extracted.
   //
-  // It may be constructed by directly specifying its index (where 0 is
-  // the first register used to return values) or by specifying the offset
-  // of a given struct field, in which case the appropriated register index
-  // will be calculated.
+  // It may be constructed by directly specifying its index (where 0 is the
+  // first register used to return values) or by specifying the offset of a
+  // given struct field, in which case the appropriated register index will be
+  // calculated.
   class Register {
   public:
     enum Type {
@@ -720,8 +720,8 @@ private:
       }
     }
 
-    // Get the whole contents of vector registers and let the
-    // logic here arrange the data properly.
+    // Get the whole contents of vector registers and let the logic here
+    // arrange the data properly.
 
     RegisterValue vr_val[MAX_VRS];
     Status error;
@@ -740,8 +740,8 @@ private:
       }
     }
 
-    // The compiler generated code seems to always put the vector elements
-    // at the end of the vector register, in case they don't occupy all of it.
+    // The compiler generated code seems to always put the vector elements at
+    // the end of the vector register, in case they don't occupy all of it.
     // This offset variable handles this.
     uint32_t offs = 0;
     if (m_byte_size < vr_size)
@@ -1025,8 +1025,8 @@ bool ABISysV_ppc64::RegisterIsVolatile(const RegisterInfo *reg_info) {
 
 // See "Register Usage" in the
 // "System V Application Binary Interface"
-// "64-bit PowerPC ELF Application Binary Interface Supplement"
-// current version is 2 released 2015 at
+// "64-bit PowerPC ELF Application Binary Interface Supplement" current version
+// is 2 released 2015 at
 // https://members.openpowerfoundation.org/document/dl/576
 bool ABISysV_ppc64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   if (reg_info) {

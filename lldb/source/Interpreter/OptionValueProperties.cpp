@@ -35,15 +35,13 @@ OptionValueProperties::OptionValueProperties(
       m_name(global_properties.m_name),
       m_properties(global_properties.m_properties),
       m_name_to_index(global_properties.m_name_to_index) {
-  // We now have an exact copy of "global_properties". We need to now
-  // find all non-global settings and copy the property values so that
-  // all non-global settings get new OptionValue instances created for
-  // them.
+  // We now have an exact copy of "global_properties". We need to now find all
+  // non-global settings and copy the property values so that all non-global
+  // settings get new OptionValue instances created for them.
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i) {
     // Duplicate any values that are not global when constructing properties
-    // from
-    // a global copy
+    // from a global copy
     if (m_properties[i].IsGlobal() == false) {
       lldb::OptionValueSP new_value_sp(m_properties[i].GetValue()->DeepCopy());
       m_properties[i].SetOptionValue(new_value_sp);
@@ -157,15 +155,13 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
   case '{':
     // Predicate matching for predicates like
     // "<setting-name>{<predicate>}"
-    // strings are parsed by the current OptionValueProperties subclass
-    // to mean whatever they want to. For instance a subclass of
-    // OptionValueProperties for a lldb_private::Target might implement:
-    // "target.run-args{arch==i386}"   -- only set run args if the arch is
-    // i386
-    // "target.run-args{path=/tmp/a/b/c/a.out}" -- only set run args if the
-    // path matches
-    // "target.run-args{basename==test&&arch==x86_64}" -- only set run args
-    // if executable basename is "test" and arch is "x86_64"
+    // strings are parsed by the current OptionValueProperties subclass to mean
+    // whatever they want to. For instance a subclass of OptionValueProperties
+    // for a lldb_private::Target might implement: "target.run-
+    // args{arch==i386}"   -- only set run args if the arch is i386 "target
+    // .run-args{path=/tmp/a/b/c/a.out}" -- only set run args if the path
+    // matches "target.run-args{basename==test&&arch==x86_64}" -- only set run
+    // args if executable basename is "test" and arch is "x86_64"
     if (sub_name[1]) {
       llvm::StringRef predicate_start = sub_name.drop_front();
       size_t pos = predicate_start.find_first_of('}');
@@ -189,9 +185,8 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
     break;
 
   case '[':
-    // Array or dictionary access for subvalues like:
-    // "[12]"       -- access 12th array element
-    // "['hello']"  -- dictionary access of key named hello
+    // Array or dictionary access for subvalues like: "[12]"       -- access
+    // 12th array element "['hello']"  -- dictionary access of key named hello
     return value_sp->GetSubValue(exe_ctx, sub_name, will_modify, error);
 
   default:

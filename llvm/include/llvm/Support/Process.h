@@ -26,7 +26,6 @@
 #define LLVM_SUPPORT_PROCESS_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/DataTypes.h"

@@ -226,8 +226,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
     return true;
 
   // In C++11, last_expr can be a LValueToRvalue implicit cast.  Strip that off
-  // if that's the
-  // case.
+  // if that's the case.
 
   do {
     ImplicitCastExpr *implicit_cast = dyn_cast<ImplicitCastExpr>(last_expr);
@@ -242,8 +241,8 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
   } while (0);
 
   // is_lvalue is used to record whether the expression returns an assignable
-  // Lvalue or an
-  // Rvalue.  This is relevant because they are handled differently.
+  // Lvalue or an Rvalue.  This is relevant because they are handled
+  // differently.
   //
   // For Lvalues
   //

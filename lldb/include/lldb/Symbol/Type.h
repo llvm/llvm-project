@@ -24,8 +24,8 @@
 
 namespace lldb_private {
 //----------------------------------------------------------------------
-// CompilerContext allows an array of these items to be passed to
-// perform detailed lookups in SymbolVendor and SymbolFile functions.
+// CompilerContext allows an array of these items to be passed to perform
+// detailed lookups in SymbolVendor and SymbolFile functions.
 //----------------------------------------------------------------------
 struct CompilerContext {
   CompilerContext(CompilerContextKind t, const ConstString &n)
@@ -82,16 +82,12 @@ public:
     eEncodingIsSyntheticUID
   } EncodingDataType;
 
-  // We must force the underlying type of the enum to be unsigned here.  Not all
-  // compilers
-  // behave the same with regards to the default underlying type of an enum, but
-  // because
-  // this enum is used in an enum bitfield and integer comparisons are done with
-  // the value
-  // we need to guarantee that it's always unsigned so that, for example,
-  // eResolveStateFull
-  // doesn't compare less than eResolveStateUnresolved when used in a 2-bit
-  // bitfield.
+  // We must force the underlying type of the enum to be unsigned here.  Not
+  // all compilers behave the same with regards to the default underlying type
+  // of an enum, but because this enum is used in an enum bitfield and integer
+  // comparisons are done with the value we need to guarantee that it's always
+  // unsigned so that, for example, eResolveStateFull doesn't compare less than
+  // eResolveStateUnresolved when used in a 2-bit bitfield.
   typedef enum ResolveStateTag : unsigned {
     eResolveStateUnresolved = 0,
     eResolveStateForward = 1,
@@ -106,8 +102,7 @@ public:
        ResolveState compiler_type_resolve_state);
 
   // This makes an invalid type.  Used for functions that return a Type when
-  // they
-  // get an error.
+  // they get an error.
   Type();
 
   Type(const Type &rhs);
@@ -119,7 +114,8 @@ public:
   void DumpTypeName(Stream *s);
 
   // Since Type instances only keep a "SymbolFile *" internally, other classes
-  // like TypeImpl need make sure the module is still around before playing with
+  // like TypeImpl need make sure the module is still around before playing
+  // with
   // Type instances. They can store a weak pointer to the Module;
   lldb::ModuleSP GetModule();
 
@@ -188,8 +184,8 @@ public:
   CompilerType GetFullCompilerType();
 
   // Get the clang type, and resolve definitions enough so that the type could
-  // have layout performed. This allows ptrs and refs to class/struct/union/enum
-  // types remain forward declarations.
+  // have layout performed. This allows ptrs and refs to
+  // class/struct/union/enum types remain forward declarations.
   CompilerType GetLayoutCompilerType();
 
   // Get the clang type and leave class/struct/union/enum types as forward
@@ -198,8 +194,8 @@ public:
 
   static int Compare(const Type &a, const Type &b);
 
-  // From a fully qualified typename, split the type into the type basename
-  // and the remaining type scope (namespaces/classes).
+  // From a fully qualified typename, split the type into the type basename and
+  // the remaining type scope (namespaces/classes).
   static bool GetTypeScopeAndBasename(const llvm::StringRef& name,
                                       llvm::StringRef &scope,
                                       llvm::StringRef &basename,
@@ -366,8 +362,8 @@ protected:
   lldb::TypeSP type_sp;
 };
 
-// the two classes here are used by the public API as a backend to
-// the SBType and SBTypeList classes
+// the two classes here are used by the public API as a backend to the SBType
+// and SBTypeList classes
 
 class TypeImpl {
 public:

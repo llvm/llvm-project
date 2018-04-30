@@ -88,7 +88,7 @@ int C::method1() {
   return 0;
 }
 
-void foo() {
+void foo(int p) {
   a = 0; // expected-error {{threadprivate variables cannot be used in target constructs}}
   b = 0; // expected-note {{used here}}
   t = 1; // expected-error {{threadprivate variables cannot be used in target constructs}}
@@ -96,7 +96,7 @@ void foo() {
   VC object1;
   g = object.method();
   g += object.method1();
-  g += object1.method();
+  g += object1.method() + p;
   f();
   c(); // expected-note {{used here}}
 }
@@ -119,7 +119,7 @@ int main (int argc, char **argv) {
 #pragma omp declare target // expected-error {{unexpected OpenMP directive '#pragma omp declare target'}}
   int v;
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
-  foo();
+  foo(v);
   return (0);
 }
 

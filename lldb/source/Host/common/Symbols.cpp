@@ -111,15 +111,15 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
 
           // Add a ".dSYM" name to each directory component of the path,
           // stripping off components.  e.g. we may have a binary like
-          // /S/L/F/Foundation.framework/Versions/A/Foundation
-          // and
+          // /S/L/F/Foundation.framework/Versions/A/Foundation and
           // /S/L/F/Foundation.framework.dSYM
           //
-          // so we'll need to start with /S/L/F/Foundation.framework/Versions/A,
-          // add the .dSYM part to the "A", and if that doesn't exist, strip off
-          // the "A" and try it again with "Versions", etc., until we find a
-          // dSYM bundle or we've stripped off enough path components that
-          // there's no need to continue.
+          // so we'll need to start with
+          // /S/L/F/Foundation.framework/Versions/A, add the .dSYM part to the
+          // "A", and if that doesn't exist, strip off the "A" and try it again
+          // with "Versions", etc., until we find a dSYM bundle or we've
+          // stripped off enough path components that there's no need to
+          // continue.
 
           for (int i = 0; i < 4; i++) {
             // Does this part of the path have a "." character - could it be a
@@ -131,7 +131,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
               dsym_fspec = parent_dirs;
               dsym_fspec.RemoveLastPathComponent();
 
-              // If the current directory name is "Foundation.framework", see if
+              // If the current directory name is "Foundation.framework", see
+              // if
               // "Foundation.framework.dSYM/Contents/Resources/DWARF/Foundation"
               // exists & has the right uuid.
               std::string dsym_fn = fn;
@@ -293,10 +294,9 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
           if (num_specs == 1) {
             ModuleSpec mspec;
             if (specs.GetModuleSpecAtIndex(0, mspec)) {
-              // Skip the uuids check if module_uuid is invalid.
-              // For example, this happens for *.dwp files since
-              // at the moment llvm-dwp doesn't output build ids,
-              // nor does binutils dwp.
+              // Skip the uuids check if module_uuid is invalid. For example,
+              // this happens for *.dwp files since at the moment llvm-dwp
+              // doesn't output build ids, nor does binutils dwp.
               if (!module_uuid.IsValid() || module_uuid == mspec.GetUUID())
                 return file_spec;
             }

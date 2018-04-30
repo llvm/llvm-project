@@ -163,8 +163,8 @@ public:
 
   size_t PutPointer(void *ptr);
 
-  // Append \a src_len bytes from \a src to the stream as hex characters
-  // (two ascii characters per byte of input data)
+  // Append \a src_len bytes from \a src to the stream as hex characters (two
+  // ascii characters per byte of input data)
   size_t
   PutBytesAsRawHex8(const void *src, size_t src_len,
                     lldb::ByteOrder src_byte_order = lldb::eByteOrderInvalid,

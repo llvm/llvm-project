@@ -34,13 +34,11 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 
 class BreakpointLocationList {
-  // Only Breakpoints can make the location list, or add elements to it.
-  // This is not just some random collection of locations.  Rather, the act of
-  // adding the location
-  // to this list sets its ID, and implicitly all the locations have the same
-  // breakpoint ID as
-  // well.  If you need a generic container for breakpoint locations, use
-  // BreakpointLocationCollection.
+  // Only Breakpoints can make the location list, or add elements to it. This
+  // is not just some random collection of locations.  Rather, the act of
+  // adding the location to this list sets its ID, and implicitly all the
+  // locations have the same breakpoint ID as well.  If you need a generic
+  // container for breakpoint locations, use BreakpointLocationCollection.
   friend class Breakpoint;
 
 public:

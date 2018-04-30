@@ -80,8 +80,8 @@ public:
       *this = Permissions();
     }
     
-    // Merge the permissions from incoming into this set of permissions.
-    // Only merge set permissions, and most restrictive permission wins.
+    // Merge the permissions from incoming into this set of permissions. Only
+    // merge set permissions, and most restrictive permission wins.
     void MergeInto(const Permissions &incoming)
     {
       MergePermission(incoming, listPerm);

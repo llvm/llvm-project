@@ -10,6 +10,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
@@ -440,6 +441,10 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const {
   return evaluateAsAbsolute(Res, &Asm, nullptr, nullptr);
 }
 
+bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const {
+  return evaluateAsAbsolute(Res, Asm, nullptr, nullptr);
+}
+
 bool MCExpr::evaluateKnownAbsolute(int64_t &Res,
                                    const MCAsmLayout &Layout) const {
   return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, nullptr,
@@ -493,7 +498,7 @@ static void AttemptToFoldSymbolOffsetDifference(
     return;
 
   if (SA.getFragment() == SB.getFragment() && !SA.isVariable() &&
-      !SB.isVariable()) {
+      !SA.isUnset() && !SB.isVariable() && !SB.isUnset()) {
     Addend += (SA.getOffset() - SB.getOffset());
 
     // Pointers to Thumb symbols need to have their low-bit set to allow

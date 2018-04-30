@@ -146,10 +146,9 @@ public:
   virtual Type GetType() { return Type::eTypeUnknown; }
 
   // we are using a ValueObject* instead of a ValueObjectSP because we do not
-  // need to hold on to this for
-  // extended periods of time and we trust the ValueObject to stay around for as
-  // long as it is required
-  // for us to generate its value
+  // need to hold on to this for extended periods of time and we trust the
+  // ValueObject to stay around for as long as it is required for us to
+  // generate its value
   virtual bool FormatObject(ValueObject *valobj, std::string &dest) const = 0;
 
   virtual std::string GetDescription() = 0;

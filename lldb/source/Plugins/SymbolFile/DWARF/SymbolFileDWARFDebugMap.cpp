@@ -44,10 +44,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 // Subclass lldb_private::Module so we can intercept the
-// "Module::GetObjectFile()"
-// (so we can fixup the object file sections) and also for
-// "Module::GetSymbolVendor()"
-// (so we can fixup the symbol file id.
+// "Module::GetObjectFile()" (so we can fixup the object file sections) and
+// also for "Module::GetSymbolVendor()" (so we can fixup the symbol file id.
 
 const SymbolFileDWARFDebugMap::FileRangeMap &
 SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
@@ -84,8 +82,8 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
       /// const uint32_t fun_resolve_flags = SymbolContext::Module |
       /// eSymbolContextCompUnit | eSymbolContextFunction;
       // SectionList *oso_sections = oso_objfile->Sections();
-      // Now we need to make sections that map from zero based object
-      // file addresses to where things ended up in the main executable.
+      // Now we need to make sections that map from zero based object file
+      // addresses to where things ended up in the main executable.
 
       assert(comp_unit_info->first_symbol_index != UINT32_MAX);
       // End index is one past the last valid symbol index
@@ -104,9 +102,9 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
             break;
 
           case eSymbolTypeCode: {
-            // For each N_FUN, or function that we run into in the debug map
-            // we make a new section that we add to the sections found in the
-            // .o file. This new section has the file address set to what the
+            // For each N_FUN, or function that we run into in the debug map we
+            // make a new section that we add to the sections found in the .o
+            // file. This new section has the file address set to what the
             // addresses are in the .o file, and the load address is adjusted
             // to match where it ended up in the final executable! We do this
             // before we parse any dwarf info so that when it goes get parsed
@@ -129,21 +127,21 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
           } break;
 
           case eSymbolTypeData: {
-            // For each N_GSYM we remap the address for the global by making
-            // a new section that we add to the sections found in the .o file.
-            // This new section has the file address set to what the
-            // addresses are in the .o file, and the load address is adjusted
-            // to match where it ended up in the final executable! We do this
-            // before we parse any dwarf info so that when it goes get parsed
-            // all section/offset addresses that get registered will resolve
+            // For each N_GSYM we remap the address for the global by making a
+            // new section that we add to the sections found in the .o file.
+            // This new section has the file address set to what the addresses
+            // are in the .o file, and the load address is adjusted to match
+            // where it ended up in the final executable! We do this before we
+            // parse any dwarf info so that when it goes get parsed all
+            // section/offset addresses that get registered will resolve
             // correctly to the new addresses in the main executable. We
             // initially set the section size to be 1 byte, but will need to
             // fix up these addresses further after all globals have been
             // parsed to span the gaps, or we can find the global variable
             // sizes from the DWARF info as we are parsing.
 
-            // Next we find the non-stab entry that corresponds to the N_GSYM in
-            // the .o file
+            // Next we find the non-stab entry that corresponds to the N_GSYM
+            // in the .o file
             Symbol *oso_gsym_symbol =
                 oso_symtab->FindFirstSymbolWithNameAndType(
                     exe_symbol->GetMangled().GetName(lldb::eLanguageTypeUnknown,
@@ -198,9 +196,9 @@ public:
         SymbolVendor *symbol_vendor =
             Module::GetSymbolVendor(can_create, feedback_strm);
         if (symbol_vendor) {
-          // Set a pointer to this class to set our OSO DWARF file know
-          // that the DWARF is being used along with a debug map and that
-          // it will have the remapped sections that we do below.
+          // Set a pointer to this class to set our OSO DWARF file know that
+          // the DWARF is being used along with a debug map and that it will
+          // have the remapped sections that we do below.
           SymbolFileDWARF *oso_symfile =
               SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(
                   symbol_vendor->GetSymbolFile());
@@ -292,8 +290,8 @@ void SymbolFileDWARFDebugMap::InitOSO() {
 
   // In order to get the abilities of this plug-in, we look at the list of
   // N_OSO entries (object files) from the symbol table and make sure that
-  // these files exist and also contain valid DWARF. If we get any of that
-  // then we return the abilities of the first N_OSO's DWARF.
+  // these files exist and also contain valid DWARF. If we get any of that then
+  // we return the abilities of the first N_OSO's DWARF.
 
   Symtab *symtab = m_obj_file->GetSymtab();
   if (symtab) {
@@ -303,10 +301,10 @@ void SymbolFileDWARFDebugMap::InitOSO() {
     // When a mach-o symbol is encoded, the n_type field is encoded in bits
     // 23:16, and the n_desc field is encoded in bits 15:0.
     //
-    // To find all N_OSO entries that are part of the DWARF + debug map
-    // we find only object file symbols with the flags value as follows:
-    // bits 23:16 == 0x66 (N_OSO)
-    // bits 15: 0 == 0x0001 (specifies this is a debug map object file)
+    // To find all N_OSO entries that are part of the DWARF + debug map we find
+    // only object file symbols with the flags value as follows: bits 23:16 ==
+    // 0x66 (N_OSO) bits 15: 0 == 0x0001 (specifies this is a debug map object
+    // file)
     const uint32_t k_oso_symbol_flags_value = 0x660001u;
 
     const uint32_t oso_index_count =
@@ -443,16 +441,15 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
           return NULL;
         }
       }
-      // Always create a new module for .o files. Why? Because we
-      // use the debug map, to add new sections to each .o file and
-      // even though a .o file might not have changed, the sections
-      // that get added to the .o file can change.
+      // Always create a new module for .o files. Why? Because we use the debug
+      // map, to add new sections to each .o file and even though a .o file
+      // might not have changed, the sections that get added to the .o file can
+      // change.
       ArchSpec oso_arch;
       // Only adopt the architecture from the module (not the vendor or OS)
-      // since .o files for "i386-apple-ios" will historically show up as
-      // "i386-apple-macosx"
-      // due to the lack of a LC_VERSION_MIN_MACOSX or LC_VERSION_MIN_IPHONEOS
-      // load command...
+      // since .o files for "i386-apple-ios" will historically show up as "i386
+      // -apple-macosx" due to the lack of a LC_VERSION_MIN_MACOSX or
+      // LC_VERSION_MIN_IPHONEOS load command...
       oso_arch.SetTriple(m_obj_file->GetModule()
                              ->GetArchitecture()
                              .GetTriple()
@@ -546,8 +543,8 @@ SymbolFileDWARF *SymbolFileDWARFDebugMap::GetSymbolFileByCompUnitInfo(
 uint32_t SymbolFileDWARFDebugMap::CalculateAbilities() {
   // In order to get the abilities of this plug-in, we look at the list of
   // N_OSO entries (object files) from the symbol table and make sure that
-  // these files exist and also contain valid DWARF. If we get any of that
-  // then we return the abilities of the first N_OSO's DWARF.
+  // these files exist and also contain valid DWARF. If we get any of that then
+  // we return the abilities of the first N_OSO's DWARF.
 
   const uint32_t oso_index_count = GetNumCompileUnits();
   if (oso_index_count > 0) {
@@ -576,9 +573,8 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
     if (oso_module) {
       FileSpec so_file_spec;
       if (GetFileSpecForSO(cu_idx, so_file_spec)) {
-        // User zero as the ID to match the compile unit at offset
-        // zero in each .o file since each .o file can only have
-        // one compile unit for now.
+        // User zero as the ID to match the compile unit at offset zero in each
+        // .o file since each .o file can only have one compile unit for now.
         lldb::user_id_t cu_id = 0;
         m_compile_unit_infos[cu_idx].compile_unit_sp.reset(
             new CompileUnit(m_obj_file->GetModule(), NULL, so_file_spec, cu_id,
@@ -767,8 +763,8 @@ uint32_t SymbolFileDWARFDebugMap::ResolveSymbolContext(
   const uint32_t cu_count = GetNumCompileUnits();
 
   for (uint32_t i = 0; i < cu_count; ++i) {
-    // If we are checking for inlines, then we need to look through all
-    // compile units no matter if "file_spec" matches.
+    // If we are checking for inlines, then we need to look through all compile
+    // units no matter if "file_spec" matches.
     bool resolve = check_inlines;
 
     if (!resolve) {
@@ -823,8 +819,8 @@ uint32_t SymbolFileDWARFDebugMap::FindGlobalVariables(
   if (!append)
     variables.Clear();
 
-  // Remember how many variables are in the list before we search in case
-  // we are appending the results to a variable list.
+  // Remember how many variables are in the list before we search in case we
+  // are appending the results to a variable list.
   const uint32_t original_size = variables.GetSize();
 
   uint32_t total_matches = 0;
@@ -843,8 +839,8 @@ uint32_t SymbolFileDWARFDebugMap::FindGlobalVariables(
       if (max_matches >= total_matches)
         return true;
 
-      // Update the max matches for any subsequent calls to find globals
-      // in any other object files with DWARF
+      // Update the max matches for any subsequent calls to find globals in any
+      // other object files with DWARF
       max_matches -= oso_matches;
     }
 
@@ -863,8 +859,8 @@ SymbolFileDWARFDebugMap::FindGlobalVariables(const RegularExpression &regex,
   if (!append)
     variables.Clear();
 
-  // Remember how many variables are in the list before we search in case
-  // we are appending the results to a variable list.
+  // Remember how many variables are in the list before we search in case we
+  // are appending the results to a variable list.
   const uint32_t original_size = variables.GetSize();
 
   uint32_t total_matches = 0;
@@ -882,8 +878,8 @@ SymbolFileDWARFDebugMap::FindGlobalVariables(const RegularExpression &regex,
       if (max_matches >= total_matches)
         return true;
 
-      // Update the max matches for any subsequent calls to find globals
-      // in any other object files with DWARF
+      // Update the max matches for any subsequent calls to find globals in any
+      // other object files with DWARF
       max_matches -= oso_matches;
     }
 
@@ -965,12 +961,12 @@ SymbolFileDWARFDebugMap::GetCompileUnitInfoForSymbolWithID(
 static void RemoveFunctionsWithModuleNotEqualTo(const ModuleSP &module_sp,
                                                 SymbolContextList &sc_list,
                                                 uint32_t start_idx) {
-  // We found functions in .o files. Not all functions in the .o files
-  // will have made it into the final output file. The ones that did
-  // make it into the final output file will have a section whose module
-  // matches the module from the ObjectFile for this SymbolFile. When
-  // the modules don't match, then we have something that was in a
-  // .o file, but doesn't map to anything in the final executable.
+  // We found functions in .o files. Not all functions in the .o files will
+  // have made it into the final output file. The ones that did make it into
+  // the final output file will have a section whose module matches the module
+  // from the ObjectFile for this SymbolFile. When the modules don't match,
+  // then we have something that was in a .o file, but doesn't map to anything
+  // in the final executable.
   uint32_t i = start_idx;
   while (i < sc_list.GetSize()) {
     SymbolContext sc;
@@ -1105,8 +1101,8 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
   // the type name and whose type is eSymbolTypeObjCClass. If we can find that
   // symbol and find its containing parent, we can locate the .o file that will
   // contain the implementation definition since it will be scoped inside the
-  // N_SO
-  // and we can then locate the SymbolFileDWARF that corresponds to that N_SO.
+  // N_SO and we can then locate the SymbolFileDWARF that corresponds to that
+  // N_SO.
   SymbolFileDWARF *oso_dwarf = NULL;
   TypeSP type_sp;
   ObjectFile *module_objfile = m_obj_file->GetModule()->GetObjectFile();
@@ -1118,8 +1114,7 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
           Symtab::eVisibilityAny);
       if (objc_class_symbol) {
         // Get the N_SO symbol that contains the objective C class symbol as
-        // this
-        // should be the .o file that contains the real definition...
+        // this should be the .o file that contains the real definition...
         const Symbol *source_file_symbol = symtab->GetParent(objc_class_symbol);
 
         if (source_file_symbol &&
@@ -1147,10 +1142,8 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
   }
 
   // Only search all .o files for the definition if we don't need the
-  // implementation
-  // because otherwise, with a valid debug map we should have the ObjC class
-  // symbol and
-  // the code above should have found it.
+  // implementation because otherwise, with a valid debug map we should have
+  // the ObjC class symbol and the code above should have found it.
   if (must_be_implementation == false) {
     TypeSP type_sp;
 

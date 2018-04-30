@@ -140,8 +140,8 @@ bool RegisterContextPOSIXProcessMonitor_powerpc::ReadRegister(
 
     if (success) {
       // If our return byte size was greater than the return value reg size,
-      // then
-      // use the type specified by reg_info rather than the uint64_t default
+      // then use the type specified by reg_info rather than the uint64_t
+      // default
       if (value.GetByteSize() > reg_info->byte_size)
         value.SetType(reg_info);
     }

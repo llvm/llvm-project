@@ -112,8 +112,7 @@ SBThread SBQueueItem::GetExtendedBacktraceThread(const char *type) {
       thread_sp = m_queue_item_sp->GetExtendedBacktraceThread(type_const);
       if (thread_sp) {
         // Save this in the Process' ExtendedThreadList so a strong pointer
-        // retains the
-        // object
+        // retains the object
         process_sp->GetExtendedThreadList().AddThread(thread_sp);
         result.SetThread(thread_sp);
         if (log) {

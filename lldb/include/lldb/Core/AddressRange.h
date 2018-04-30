@@ -261,8 +261,8 @@ public:
   ///     The number of bytes that this object occupies in memory.
   //------------------------------------------------------------------
   size_t MemorySize() const {
-    // Noting special for the memory size of a single AddressRange object,
-    // it is just the size of itself.
+    // Noting special for the memory size of a single AddressRange object, it
+    // is just the size of itself.
     return sizeof(AddressRange);
   }
 

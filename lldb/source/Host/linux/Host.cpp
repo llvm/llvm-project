@@ -246,8 +246,8 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
       if (State == ProcessState::Zombie)
         continue;
 
-      // Check for user match if we're not matching all users and not running as
-      // root.
+      // Check for user match if we're not matching all users and not running
+      // as root.
       if (!all_users && (our_uid != 0) && (process_info.GetUserID() != our_uid))
         continue;
 

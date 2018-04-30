@@ -59,9 +59,9 @@ struct ChildDeleter {
 
 bool WorkaroundNeeded() {
   // We shall spawn a child, and use it to verify the debug capabilities of the
-  // cpu. We shall iterate through the cpus, bind the child to each one in turn,
-  // and verify that single-stepping works on that cpu. A workaround is needed
-  // if we find at least one broken cpu.
+  // cpu. We shall iterate through the cpus, bind the child to each one in
+  // turn, and verify that single-stepping works on that cpu. A workaround is
+  // needed if we find at least one broken cpu.
 
   Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
   ::pid_t child_pid = fork();

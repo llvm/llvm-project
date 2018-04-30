@@ -184,19 +184,16 @@ public:
   virtual const char *GetLanguageSpecificTypeLookupHelp();
 
   // if an individual data formatter can apply to several types and cross a
-  // language boundary
-  // it makes sense for individual languages to want to customize the printing
-  // of values of that
-  // type by appending proper prefix/suffix information in language-specific
-  // ways
+  // language boundary it makes sense for individual languages to want to
+  // customize the printing of values of that type by appending proper
+  // prefix/suffix information in language-specific ways
   virtual bool GetFormatterPrefixSuffix(ValueObject &valobj,
                                         ConstString type_hint,
                                         std::string &prefix,
                                         std::string &suffix);
 
   // if a language has a custom format for printing variable declarations that
-  // it wants LLDB to honor
-  // it should return an appropriate closure here
+  // it wants LLDB to honor it should return an appropriate closure here
   virtual DumpValueObjectOptions::DeclPrintingHelper GetDeclPrintingHelper();
 
   virtual LazyBool IsLogicalTrue(ValueObject &valobj, Status &error);
@@ -206,11 +203,9 @@ public:
   virtual bool IsNilReference(ValueObject &valobj);
 
   // for a ValueObject of some "reference type", if the language provides a
-  // technique
-  // to decide whether the reference has ever been assigned to some object, this
-  // method
-  // will return true if such detection is possible, and if the reference has
-  // never been assigned
+  // technique to decide whether the reference has ever been assigned to some
+  // object, this method will return true if such detection is possible, and if
+  // the reference has never been assigned
   virtual bool IsUninitializedReference(ValueObject &valobj);
 
   virtual bool GetFunctionDisplayName(const SymbolContext *sc,

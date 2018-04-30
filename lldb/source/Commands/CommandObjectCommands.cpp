@@ -331,9 +331,8 @@ protected:
 
       m_interpreter.HandleCommandsFromFile(cmd_file, exe_ctx, options, result);
     } else {
-      // No options were set, inherit any settings from nested "command
-      // source" commands,
-      // or set to sane default settings...
+      // No options were set, inherit any settings from nested "command source"
+      // commands, or set to sane default settings...
       CommandInterpreterRunOptions options;
       m_interpreter.HandleCommandsFromFile(cmd_file, exe_ctx, options, result);
     }
@@ -614,8 +613,7 @@ protected:
     }
 
     // Strip the new alias name off 'raw_command_string'  (leave it on args,
-    // which gets passed to 'Execute', which
-    // does the stripping itself.
+    // which gets passed to 'Execute', which does the stripping itself.
     size_t pos = raw_command_string.find(alias_command);
     if (pos == 0) {
       raw_command_string = raw_command_string.substr(alias_command.size());
@@ -653,9 +651,8 @@ protected:
       return false;
     } else if (!cmd_obj->WantsRawCommandString()) {
       // Note that args was initialized with the original command, and has not
-      // been updated to this point.
-      // Therefore can we pass it to the version of Execute that does not
-      // need/expect raw input in the alias.
+      // been updated to this point. Therefore can we pass it to the version of
+      // Execute that does not need/expect raw input in the alias.
       return HandleAliasingNormalCommand(args, result);
     } else {
       return HandleAliasingRawCommand(alias_command, raw_command_string,
@@ -1129,8 +1126,8 @@ protected:
       return error;
     }
     const size_t first_separator_char_pos = 1;
-    // use the char that follows 's' as the regex separator character
-    // so we can have "s/<regex>/<subst>/" or "s|<regex>|<subst>|"
+    // use the char that follows 's' as the regex separator character so we can
+    // have "s/<regex>/<subst>/" or "s|<regex>|<subst>|"
     const char separator_char = regex_sed[first_separator_char_pos];
     const size_t second_separator_char_pos =
         regex_sed.find(separator_char, first_separator_char_pos + 1);
@@ -1159,8 +1156,7 @@ protected:
     }
 
     if (third_separator_char_pos != regex_sed_size - 1) {
-      // Make sure that everything that follows the last regex
-      // separator char
+      // Make sure that everything that follows the last regex separator char
       if (regex_sed.find_first_not_of("\t\n\v\f\r ",
                                       third_separator_char_pos + 1) !=
           std::string::npos) {
@@ -1541,10 +1537,11 @@ protected:
       // FIXME: this is necessary because CommandObject::CheckRequirements()
       // assumes that commands won't ever be recursively invoked, but it's
       // actually possible to craft a Python script that does other "command
-      // script imports" in __lldb_init_module the real fix is to have recursive
-      // commands possible with a CommandInvocation object separate from the
-      // CommandObject itself, so that recursive command invocations won't stomp
-      // on each other (wrt to execution contents, options, and more)
+      // script imports" in __lldb_init_module the real fix is to have
+      // recursive commands possible with a CommandInvocation object separate
+      // from the CommandObject itself, so that recursive command invocations
+      // won't stomp on each other (wrt to execution contents, options, and
+      // more)
       m_exe_ctx.Clear();
       if (m_interpreter.GetScriptInterpreter()->LoadScriptingModule(
               entry.c_str(), m_options.m_allow_reload, init_session, error)) {

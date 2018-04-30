@@ -49,12 +49,12 @@ bool BreakpointLocationList::ShouldStop(StoppointCallbackContext *context,
   BreakpointLocationSP bp = FindByID(break_id);
   if (bp) {
     // Let the BreakpointLocation decide if it should stop here (could not have
-    // reached it's target hit count yet, or it could have a callback
-    // that decided it shouldn't stop (shared library loads/unloads).
+    // reached it's target hit count yet, or it could have a callback that
+    // decided it shouldn't stop (shared library loads/unloads).
     return bp->ShouldStop(context);
   }
-  // We should stop here since this BreakpointLocation isn't valid anymore or it
-  // doesn't exist.
+  // We should stop here since this BreakpointLocation isn't valid anymore or
+  // it doesn't exist.
   return true;
 }
 
@@ -266,8 +266,8 @@ void BreakpointLocationList::RemoveLocationByIndex(size_t idx) {
 void BreakpointLocationList::RemoveInvalidLocations(const ArchSpec &arch) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   size_t idx = 0;
-  // Don't cache m_location.size() as it will change since we might
-  // remove locations from our vector...
+  // Don't cache m_location.size() as it will change since we might remove
+  // locations from our vector...
   while (idx < m_locations.size()) {
     BreakpointLocation *bp_loc = m_locations[idx].get();
     if (bp_loc->GetAddress().SectionWasDeleted()) {
@@ -287,7 +287,8 @@ void BreakpointLocationList::RemoveInvalidLocations(const ArchSpec &arch) {
         }
       }
     }
-    // Only increment the index if we didn't remove the locations at index "idx"
+    // Only increment the index if we didn't remove the locations at index
+    // "idx"
     ++idx;
   }
 }

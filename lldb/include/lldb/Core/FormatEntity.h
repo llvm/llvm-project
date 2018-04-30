@@ -218,10 +218,10 @@ public:
   //----------------------------------------------------------------------
   // Format the current elements into the stream \a s.
   //
-  // The root element will be stripped off and the format str passed in
-  // will be either an empty string (print a description of this object),
-  // or contain a . separated series like a domain name that identifies
-  // further sub elements to display.
+  // The root element will be stripped off and the format str passed in will be
+  // either an empty string (print a description of this object), or contain a
+  // `.`-separated series like a domain name that identifies further
+  //  sub-elements to display.
   //----------------------------------------------------------------------
   static bool FormatFileSpec(const FileSpec &file, Stream &s,
                              llvm::StringRef elements,

@@ -120,8 +120,8 @@ DWARFUnit *DWARFDebugInfo::GetCompileUnitAtIndex(uint32_t idx) {
 }
 
 bool DWARFDebugInfo::ContainsCompileUnit(const DWARFUnit *cu) const {
-  // Not a verify efficient function, but it is handy for use in assertions
-  // to make sure that a compile unit comes from a debug information file.
+  // Not a verify efficient function, but it is handy for use in assertions to
+  // make sure that a compile unit comes from a debug information file.
   CompileUnitColl::const_iterator end_pos = m_compile_units.end();
   CompileUnitColl::const_iterator pos;
 
@@ -227,12 +227,12 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
 //----------------------------------------------------------------------
 // Parse
 //
-// Parses the .debug_info section and uses the .debug_abbrev section
-// and various other sections in the SymbolFileDWARF class and calls the
-// supplied callback function each time a compile unit header, or debug
-// information entry is successfully parsed. This function can be used
-// for different tasks such as parsing the file contents into a
-// structured data, dumping, verifying and much more.
+// Parses the .debug_info section and uses the .debug_abbrev section and
+// various other sections in the SymbolFileDWARF class and calls the supplied
+// callback function each time a compile unit header, or debug information
+// entry is successfully parsed. This function can be used for different tasks
+// such as parsing the file contents into a structured data, dumping, verifying
+// and much more.
 //----------------------------------------------------------------------
 void DWARFDebugInfo::Parse(SymbolFileDWARF *dwarf2Data, Callback callback,
                            void *userData) {
@@ -252,8 +252,8 @@ void DWARFDebugInfo::Parse(SymbolFileDWARF *dwarf2Data, Callback callback,
 
       // Make sure we are within our compile unit
       if (offset < next_cu_offset) {
-        // We are in our compile unit, parse starting at the offset
-        // we were told to parse
+        // We are in our compile unit, parse starting at the offset we were
+        // told to parse
         bool done = false;
         while (!done && die.Extract(dwarf2Data, cu.get(), &offset)) {
           // Call the callback function with DIE pointer that falls within the
@@ -301,11 +301,11 @@ typedef struct DumpInfo {
 // DumpCallback
 //
 // A callback function for the static DWARFDebugInfo::Parse() function
-// that gets called each time a compile unit header or debug information
-// entry is successfully parsed.
+// that gets called each time a compile unit header or debug information entry
+// is successfully parsed.
 //
-// This function dump DWARF information and obey recurse depth and
-// whether a single DIE is to be dumped (or all of the data).
+// This function dump DWARF information and obey recurse depth and whether a
+// single DIE is to be dumped (or all of the data).
 //----------------------------------------------------------------------
 static dw_offset_t DumpCallback(SymbolFileDWARF *dwarf2Data,
                                 DWARFUnit *cu, DWARFDebugInfoEntry *die,
@@ -403,8 +403,8 @@ static dw_offset_t DumpCallback(SymbolFileDWARF *dwarf2Data,
         dumpInfo->ancestors.resize(1);
       }
 
-      // We are dumping only a single DIE possibly with it's children and
-      // we must find it's compile unit before we can dump it properly
+      // We are dumping only a single DIE possibly with it's children and we
+      // must find it's compile unit before we can dump it properly
       if (cu && dumpInfo->die_offset < cu->GetFirstDIEOffset()) {
         // Not found, maybe the DIE offset provided wasn't correct?
         //  *ostrm_ptr << "DIE at offset " << HEX32 << dumpInfo->die_offset << "
@@ -436,14 +436,13 @@ static dw_offset_t DumpCallback(SymbolFileDWARF *dwarf2Data,
 //----------------------------------------------------------------------
 // Dump
 //
-// Dump the information in the .debug_info section to the specified
-// ostream. If die_offset is valid, a single DIE will be dumped. If the
-// die_offset is invalid, all the DWARF information will be dumped. Both
-// cases will obey a "recurse_depth" or how deep to traverse into the
-// children of each DIE entry. A recurse_depth of zero will dump all
-// compile unit headers. A recurse_depth of 1 will dump all compile unit
-// headers and the DW_TAG_compile unit tags. A depth of 2 will also
-// dump all types and functions.
+// Dump the information in the .debug_info section to the specified ostream. If
+// die_offset is valid, a single DIE will be dumped. If the die_offset is
+// invalid, all the DWARF information will be dumped. Both cases will obey a
+// "recurse_depth" or how deep to traverse into the children of each DIE entry.
+// A recurse_depth of zero will dump all compile unit headers. A recurse_depth
+// of 1 will dump all compile unit headers and the DW_TAG_compile unit tags. A
+// depth of 2 will also dump all types and functions.
 //----------------------------------------------------------------------
 void DWARFDebugInfo::Dump(Stream *s, SymbolFileDWARF *dwarf2Data,
                           const uint32_t die_offset,
@@ -469,8 +468,8 @@ void DWARFDebugInfo::Dump(Stream *s, SymbolFileDWARF *dwarf2Data,
 //----------------------------------------------------------------------
 // Dump
 //
-// Dump the contents of this DWARFDebugInfo object as has been parsed
-// and/or modified after it has been parsed.
+// Dump the contents of this DWARFDebugInfo object as has been parsed and/or
+// modified after it has been parsed.
 //----------------------------------------------------------------------
 void DWARFDebugInfo::Dump(Stream *s, const uint32_t die_offset,
                           const uint32_t recurse_depth) {

@@ -31,8 +31,8 @@
 //----------------------------------------------------------------------
 
 // TODO: Add a bunch of ifdefs to determine the host system and what
-// things should be defined. Currently MacOSX is being assumed by default
-// since that is what lldb was first developed for.
+// things should be defined. Currently MacOSX is being assumed by default since
+// that is what lldb was first developed for.
 
 #ifdef _WIN32
 

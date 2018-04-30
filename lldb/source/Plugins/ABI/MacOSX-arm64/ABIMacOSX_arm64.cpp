@@ -1760,8 +1760,8 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
   addr_t sp = 0;
 
   for (uint32_t value_idx = 0; value_idx < num_values; ++value_idx) {
-    // We currently only support extracting values with Clang QualTypes.
-    // Do we care about others?
+    // We currently only support extracting values with Clang QualTypes. Do we
+    // care about others?
     Value *value = values.GetValueAtIndex(value_idx);
 
     if (!value)
@@ -2022,10 +2022,9 @@ bool ABIMacOSX_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 }
 
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says
-// registers x19 through x28 and sp are callee preserved.
-// v8-v15 are non-volatile (and specifically only the lower 8 bytes of these
-// regs),
-// the rest of the fp/SIMD registers are volatile.
+// registers x19 through x28 and sp are callee preserved. v8-v15 are non-
+// volatile (and specifically only the lower 8 bytes of these regs), the rest
+// of the fp/SIMD registers are volatile.
 
 // We treat x29 as callee preserved also, else the unwinder won't try to
 // retrieve fp saves.
@@ -2209,14 +2208,14 @@ static bool LoadValueFromConsecutiveGPRRegisters(
   } else {
     const RegisterInfo *reg_info = nullptr;
     if (is_return_value) {
-      // We are assuming we are decoding this immediately after returning
-      // from a function call and that the address of the structure is in x8
+      // We are assuming we are decoding this immediately after returning from
+      // a function call and that the address of the structure is in x8
       reg_info = reg_ctx->GetRegisterInfoByName("x8", 0);
     } else {
       // We are assuming we are stopped at the first instruction in a function
-      // and that the ABI is being respected so all parameters appear where they
-      // should be (functions with no external linkage can legally violate the
-      // ABI).
+      // and that the ABI is being respected so all parameters appear where
+      // they should be (functions with no external linkage can legally violate
+      // the ABI).
       if (NGRN >= 8)
         return false;
 

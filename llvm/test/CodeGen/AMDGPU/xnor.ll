@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX700 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx800 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX800 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX900 %s
+; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN-DL --check-prefix=GFX906 %s
 
 ; GCN-LABEL: {{^}}scalar_xnor_i32_one_use
 ; GCN: s_xnor_b32
@@ -62,6 +63,7 @@ entry:
 ; GCN-NOT: s_xnor_b32
 ; GCN: v_xor_b32
 ; GCN: v_not_b32
+; GCN-DL: v_xnor_b32
 define i32 @vector_xnor_i32_one_use(i32 %a, i32 %b) {
 entry:
   %xor = xor i32 %a, %b
@@ -75,6 +77,8 @@ entry:
 ; GCN: v_xor_b32
 ; GCN: v_not_b32
 ; GCN: v_not_b32
+; GCN-DL: v_xnor_b32
+; GCN-DL: v_xnor_b32
 define i64 @vector_xnor_i64_one_use(i64 %a, i64 %b) {
 entry:
   %xor = xor i64 %a, %b

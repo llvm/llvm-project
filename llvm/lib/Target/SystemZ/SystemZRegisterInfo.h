@@ -44,6 +44,12 @@ public:
     return &SystemZ::ADDR64BitRegClass;
   }
 
+  /// getCrossCopyRegClass - Returns a legal register class to copy a register
+  /// in the specified class to or from. Returns NULL if it is possible to copy
+  /// between a two registers of the specified class.
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
+
   bool getRegAllocationHints(unsigned VirtReg,
                              ArrayRef<MCPhysReg> Order,
                              SmallVectorImpl<MCPhysReg> &Hints,

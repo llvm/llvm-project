@@ -182,13 +182,13 @@ uint32_t SymbolFilePDB::GetNumCompileUnits() {
       return 0;
 
     // The linker could link *.dll (compiland language = LINK), or import
-    // *.dll. For example, a compiland with name `Import:KERNEL32.dll`
-    // could be found as a child of the global scope (PDB executable).
-    // Usually, such compilands contain `thunk` symbols in which we are not
-    // interested for now. However we still count them in the compiland list.
-    // If we perform any compiland related activity, like finding symbols
-    // through llvm::pdb::IPDBSession methods, such compilands will all be
-    // searched automatically no matter whether we include them or not.
+    // *.dll. For example, a compiland with name `Import:KERNEL32.dll` could be
+    // found as a child of the global scope (PDB executable). Usually, such
+    // compilands contain `thunk` symbols in which we are not interested for
+    // now. However we still count them in the compiland list. If we perform
+    // any compiland related activity, like finding symbols through
+    // llvm::pdb::IPDBSession methods, such compilands will all be searched
+    // automatically no matter whether we include them or not.
     m_cached_compile_unit_count = compilands->getChildCount();
 
     // The linker can inject an additional "dummy" compilation unit into the
@@ -470,8 +470,8 @@ size_t SymbolFilePDB::ParseTypes(const lldb_private::SymbolContext &sc) {
     ParseTypesByTagFn(*compiland);
 
     // Also parse global types particularly coming from this compiland.
-    // Unfortunately, PDB has no compiland information for each global type.
-    // We have to parse them all. But ensure we only do this once.
+    // Unfortunately, PDB has no compiland information for each global type. We
+    // have to parse them all. But ensure we only do this once.
     static bool parse_all_global_types = false;
     if (!parse_all_global_types) {
       ParseTypesByTagFn(*m_global_scope_up);
@@ -622,10 +622,10 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
     // For each one, either find its previously parsed data or parse it afresh
     // and add it to the symbol context list.
     while (auto compiland = compilands->getNext()) {
-      // If we're not checking inlines, then don't add line information for this
-      // file unless the FileSpec matches.
-      // For inline functions, we don't have to match the FileSpec since they
-      // could be defined in headers other than file specified in FileSpec.
+      // If we're not checking inlines, then don't add line information for
+      // this file unless the FileSpec matches. For inline functions, we don't
+      // have to match the FileSpec since they could be defined in headers
+      // other than file specified in FileSpec.
       if (!check_inlines) {
         std::string source_file = compiland->getSourceFileFullPath();
         if (source_file.empty())
@@ -651,7 +651,8 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
 
         if ((resolve_scope & eSymbolContextLineEntry) && !has_line_table) {
           // The query asks for line entries, but we can't get them for the
-          // compile unit. This is not normal for `line` = 0. So just assert it.
+          // compile unit. This is not normal for `line` = 0. So just assert
+          // it.
           assert(line && "Couldn't get all line entries!\n");
 
           // Current compiland does not have the requested line. Search next.
@@ -669,8 +670,8 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
           // Skip the terminal line entry.
           --num_line_entries;
 
-          // If `line `!= 0, see if we can resolve function for each line
-          // entry in the line table.
+          // If `line `!= 0, see if we can resolve function for each line entry
+          // in the line table.
           for (uint32_t line_idx = 0; line && line_idx < num_line_entries;
                ++line_idx) {
             if (!line_table->GetLineEntryAtIndex(line_idx, sc.line_entry))
@@ -779,10 +780,10 @@ void SymbolFilePDB::CacheFunctionNames() {
 
         ConstString cstr_name(name);
 
-        // To search a method name, like NS::Class:MemberFunc, LLDB searches its
-        // base name, i.e. MemberFunc by default. Since PDBSymbolFunc does not
-        // have inforamtion of this, we extract base names and cache them by our
-        // own effort.
+        // To search a method name, like NS::Class:MemberFunc, LLDB searches
+        // its base name, i.e. MemberFunc by default. Since PDBSymbolFunc does
+        // not have inforamtion of this, we extract base names and cache them
+        // by our own effort.
         llvm::StringRef basename;
         CPlusPlusLanguage::MethodName cpp_method(cstr_name);
         if (cpp_method.IsValid()) {
@@ -1040,8 +1041,8 @@ void SymbolFilePDB::FindTypesByName(const std::string &name,
     case PDB_SymType::Typedef:
       break;
     default:
-      // We're looking only for types that have names.  Skip symbols, as well as
-      // unnamed types such as arrays, pointers, etc.
+      // We're looking only for types that have names.  Skip symbols, as well
+      // as unnamed types such as arrays, pointers, etc.
       continue;
     }
 
@@ -1228,8 +1229,8 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(
 
   // LineEntry needs the *index* of the file into the list of support files
   // returned by ParseCompileUnitSupportFiles.  But the underlying SDK gives us
-  // a globally unique idenfitifier in the namespace of the PDB.  So, we have to
-  // do a mapping so that we can hand out indices.
+  // a globally unique idenfitifier in the namespace of the PDB.  So, we have
+  // to do a mapping so that we can hand out indices.
   llvm::DenseMap<uint32_t, uint32_t> index_map;
   BuildSupportFileIdToSupportFileIndexMap(*compiland_up, index_map);
   auto line_table = llvm::make_unique<LineTable>(sc.comp_unit);
@@ -1240,8 +1241,8 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(
   if (!files)
     return false;
 
-  // For each source and header file, create a LineSequence for contributions to
-  // the compiland from that file, and add the sequence.
+  // For each source and header file, create a LineSequence for contributions
+  // to the compiland from that file, and add the sequence.
   while (auto file = files->getNext()) {
     std::unique_ptr<LineSequence> sequence(
         line_table->CreateLineSequenceContainer());
@@ -1265,8 +1266,8 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(
       uint32_t col = line->getColumnNumber();
       uint32_t source_idx = index_map[source_id];
 
-      // There was a gap between the current entry and the previous entry if the
-      // addresses don't perfectly line up.
+      // There was a gap between the current entry and the previous entry if
+      // the addresses don't perfectly line up.
       bool is_gap = (i > 0) && (prev_addr + prev_length < addr);
 
       // Before inserting the current entry, insert a terminal entry at the end
@@ -1325,8 +1326,8 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(
 void SymbolFilePDB::BuildSupportFileIdToSupportFileIndexMap(
     const PDBSymbolCompiland &compiland,
     llvm::DenseMap<uint32_t, uint32_t> &index_map) const {
-  // This is a hack, but we need to convert the source id into an index into the
-  // support files array.  We don't want to do path comparisons to avoid
+  // This is a hack, but we need to convert the source id into an index into
+  // the support files array.  We don't want to do path comparisons to avoid
   // basename / full path issues that may or may not even be a problem, so we
   // use the globally unique source file identifiers.  Ideally we could use the
   // global identifiers everywhere, but LineEntry currently assumes indices.
@@ -1400,12 +1401,12 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
     // For MSVC, format of C funciton's decorated name depends on calling
     // conventon. Unfortunately none of the format is recognized by current
     // LLDB. For example, `_purecall` is a __cdecl C function. From PDB,
-    // `__purecall` is retrieved as both its decorated and
-    // undecorated name (using PDBSymbolFunc::getUndecoratedName method).
-    // However `__purecall` string is not treated as mangled in LLDB
-    // (neither `?` nor `_Z` prefix). Mangled::GetDemangledName method
-    // will fail internally and caches an empty string as its undecorated
-    // name. So we will face a contradition here for the same symbol:
+    // `__purecall` is retrieved as both its decorated and undecorated name
+    // (using PDBSymbolFunc::getUndecoratedName method). However `__purecall`
+    // string is not treated as mangled in LLDB (neither `?` nor `_Z` prefix).
+    // Mangled::GetDemangledName method will fail internally and caches an
+    // empty string as its undecorated name. So we will face a contradition
+    // here for the same symbol:
     //   non-empty undecorated name from PDB
     //   empty undecorated name from LLDB
     if (!func_undecorated_name.empty() &&
@@ -1413,8 +1414,8 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
       mangled.SetDemangledName(ConstString(func_undecorated_name));
 
     // LLDB uses several flags to control how a C++ decorated name is
-    // undecorated for MSVC. See `safeUndecorateName` in Class Mangled.
-    // So the yielded name could be different from what we retrieve from
+    // undecorated for MSVC. See `safeUndecorateName` in Class Mangled. So the
+    // yielded name could be different from what we retrieve from
     // PDB source unless we also apply same flags in getting undecorated
     // name through PDBSymbolFunc::getUndecoratedNameEx method.
     if (!func_undecorated_name.empty() &&

@@ -64,8 +64,8 @@ DynamicLoader::DynamicLoader(Process *process) : m_process(process) {}
 DynamicLoader::~DynamicLoader() = default;
 
 //----------------------------------------------------------------------
-// Accessosors to the global setting as to whether to stop at image
-// (shared library) loading/unloading.
+// Accessosors to the global setting as to whether to stop at image (shared
+// library) loading/unloading.
 //----------------------------------------------------------------------
 
 bool DynamicLoader::GetStopWhenImagesChange() const {
@@ -86,8 +86,8 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
                              executable->GetArchitecture());
       auto module_sp = std::make_shared<Module>(module_spec);
 
-      // Check if the executable has changed and set it to the target executable
-      // if they differ.
+      // Check if the executable has changed and set it to the target
+      // executable if they differ.
       if (module_sp && module_sp->GetUUID().IsValid() &&
           executable->GetUUID().IsValid()) {
         if (module_sp->GetUUID() != executable->GetUUID())
@@ -99,8 +99,8 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
       if (!executable) {
         executable = target.GetSharedModule(module_spec);
         if (executable.get() != target.GetExecutableModulePointer()) {
-          // Don't load dependent images since we are in dyld where we will know
-          // and find out about all images that are loaded
+          // Don't load dependent images since we are in dyld where we will
+          // know and find out about all images that are loaded
           const bool get_dependent_images = false;
           target.SetExecutableModule(executable, get_dependent_images);
         }
@@ -177,8 +177,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
   bool check_alternative_file_name = true;
   if (base_addr_is_offset) {
     // Try to fetch the load address of the file from the process as we need
-    // absolute load
-    // address to read the file out of the memory instead of a load bias.
+    // absolute load address to read the file out of the memory instead of a
+    // load bias.
     bool is_loaded = false;
     lldb::addr_t load_addr;
     Status error = m_process->GetFileLoadAddress(file, is_loaded, load_addr);
@@ -188,9 +188,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
     }
   }
 
-  // We failed to find the module based on its name. Lets try to check if we can
-  // find a
-  // different name based on the memory region info.
+  // We failed to find the module based on its name. Lets try to check if we
+  // can find a different name based on the memory region info.
   if (check_alternative_file_name) {
     MemoryRegionInfo memory_info;
     Status error = m_process->GetMemoryRegionInfo(base_addr, memory_info);

@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"

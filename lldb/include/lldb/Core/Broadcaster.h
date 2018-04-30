@@ -59,10 +59,9 @@ public:
 
   uint32_t GetEventBits() const { return m_event_bits; }
 
-  // Tell whether this BroadcastEventSpec is contained in in_spec.
-  // That is:
-  // (a) the two spec's share the same broadcaster class
-  // (b) the event bits of this spec are wholly contained in those of in_spec.
+  // Tell whether this BroadcastEventSpec is contained in in_spec. That is: (a)
+  // the two spec's share the same broadcaster class (b) the event bits of this
+  // spec are wholly contained in those of in_spec.
   bool IsContainedIn(BroadcastEventSpec in_spec) const {
     if (m_broadcaster_class != in_spec.GetBroadcasterClass())
       return false;
@@ -454,8 +453,7 @@ public:
   void RestoreBroadcaster() { m_broadcaster_sp->RestoreBroadcaster(); }
 
   // This needs to be filled in if you are going to register the broadcaster
-  // with the broadcaster
-  // manager and do broadcaster class matching.
+  // with the broadcaster manager and do broadcaster class matching.
   // FIXME: Probably should make a ManagedBroadcaster subclass with all the bits
   // needed to work
   // with the BroadcasterManager, so that it is clearer how to add one.
@@ -465,21 +463,17 @@ public:
 
 protected:
   // BroadcasterImpl contains the actual Broadcaster implementation.  The
-  // Broadcaster makes a BroadcasterImpl
-  // which lives as long as it does.  The Listeners & the Events hold a weak
-  // pointer to the BroadcasterImpl,
-  // so that they can survive if a Broadcaster they were listening to is
-  // destroyed w/o their being able to
-  // unregister from it (which can happen if the Broadcasters & Listeners are
-  // being destroyed on separate threads
-  // simultaneously.
-  // The Broadcaster itself can't be shared out as a weak pointer, because some
-  // things that are broadcasters
-  // (e.g. the Target and the Process) are shared in their own right.
+  // Broadcaster makes a BroadcasterImpl which lives as long as it does.  The
+  // Listeners & the Events hold a weak pointer to the BroadcasterImpl, so that
+  // they can survive if a Broadcaster they were listening to is destroyed w/o
+  // their being able to unregister from it (which can happen if the
+  // Broadcasters & Listeners are being destroyed on separate threads
+  // simultaneously. The Broadcaster itself can't be shared out as a weak
+  // pointer, because some things that are broadcasters (e.g. the Target and
+  // the Process) are shared in their own right.
   //
   // For the most part, the Broadcaster functions dispatch to the
-  // BroadcasterImpl, and are documented in the
-  // public Broadcaster API above.
+  // BroadcasterImpl, and are documented in the public Broadcaster API above.
 
   class BroadcasterImpl {
     friend class Listener;

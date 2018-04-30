@@ -127,6 +127,12 @@ def FeatureMadMixInsts : SubtargetFeature<"mad-mix-insts",
   "Has v_mad_mix_f32, v_mad_mixlo_f16, v_mad_mixhi_f16 instructions"
 >;
 
+def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
+  "HasFmaMixInsts",
+  "true",
+  "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
+>;
+
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
 // XNACK. The current default kernel driver setting is:
 // - graphics ring: XNACK disabled
@@ -308,6 +314,12 @@ def FeatureUnpackedD16VMem : SubtargetFeature<"unpacked-d16-vmem",
   "HasUnpackedD16VMem",
   "true",
   "Has unpacked d16 vmem instructions"
+>;
+
+def FeatureDLInsts : SubtargetFeature<"dl-insts",
+  "HasDLInsts",
+  "true",
+  "Has deep learning instructions"
 >;
 
 //===------------------------------------------------------------===//
@@ -606,6 +618,18 @@ def FeatureISAVersion9_0_2 : SubtargetFeatureISAVersion <9,0,2,
    FeatureXNACK
    ]>;
 
+def FeatureISAVersion9_0_4 : SubtargetFeatureISAVersion <9,0,4,
+  [FeatureGFX9,
+   FeatureLDSBankCount32,
+   FeatureFmaMixInsts]>;
+
+def FeatureISAVersion9_0_6 : SubtargetFeatureISAVersion <9,0,6,
+  [FeatureGFX9,
+   HalfRate64Ops,
+   FeatureFmaMixInsts,
+   FeatureLDSBankCount32,
+   FeatureDLInsts]>;
+
 //===----------------------------------------------------------------------===//
 // Debugger related subtarget features.
 //===----------------------------------------------------------------------===//
@@ -787,6 +811,13 @@ def HasVGPRIndexMode : Predicate<"Subtarget->hasVGPRIndexMode()">,
                       AssemblerPredicate<"FeatureVGPRIndexMode">;
 def HasMovrel : Predicate<"Subtarget->hasMovrel()">,
                 AssemblerPredicate<"FeatureMovrel">;
+
+def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
+  AssemblerPredicate<"FeatureFmaMixInsts">;
+
+def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
+  AssemblerPredicate<"FeatureDLInsts">;
+
 
 def EnableLateCFGStructurize : Predicate<
   "EnableLateStructurizeCFG">;

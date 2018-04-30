@@ -114,8 +114,8 @@ typedef std::shared_ptr<ProcessProperties> ProcessPropertiesSP;
 //----------------------------------------------------------------------
 // ProcessInstanceInfo
 //
-// Describes an existing process and any discoverable information that
-// pertains to that process.
+// Describes an existing process and any discoverable information that pertains
+// to that process.
 //----------------------------------------------------------------------
 class ProcessInstanceInfo : public ProcessInfo {
 public:
@@ -279,7 +279,8 @@ protected:
 class ProcessLaunchCommandOptions : public Options {
 public:
   ProcessLaunchCommandOptions() : Options() {
-    // Keep default values of all options in one place: OptionParsingStarting ()
+    // Keep default values of all options in one place: OptionParsingStarting
+    // ()
     OptionParsingStarting(nullptr);
   }
 
@@ -389,10 +390,8 @@ protected:
 };
 
 // This class tracks the Modification state of the process.  Things that can
-// currently modify
-// the program are running the program (which will up the StopID) and writing
-// memory (which
-// will up the MemoryID.)
+// currently modify the program are running the program (which will up the
+// StopID) and writing memory (which will up the MemoryID.)
 // FIXME: Should we also include modification of register states?
 
 class ProcessModID {
@@ -540,12 +539,11 @@ public:
   enum Warnings { eWarningsOptimization = 1 };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
-  // We use a read/write lock to allow on or more clients to
-  // access the process state while the process is stopped (reader).
-  // We lock the write lock to control access to the process
-  // while it is running (readers, or clients that want the process
-  // stopped can block waiting for the process to stop, or just
-  // try to lock it to see if they can immediately access the stopped
+  // We use a read/write lock to allow on or more clients to access the process
+  // state while the process is stopped (reader). We lock the write lock to
+  // control access to the process while it is running (readers, or clients
+  // that want the process stopped can block waiting for the process to stop,
+  // or just try to lock it to see if they can immediately access the stopped
   // process. If the try read lock fails, then the process is running.
   typedef ProcessRunLock::ProcessRunLocker StopLocker;
 
@@ -810,18 +808,16 @@ public:
   //------------------------------------------------------------------
   // FUTURE WORK: {Set,Get}LoadImageUtilityFunction are the first use we've
   // had of having other plugins cache data in the Process.  This is handy for
-  // long-living plugins - like the Platform - which manage interactions whose 
-  // lifetime is governed by the Process lifetime.  If we find we need to do 
+  // long-living plugins - like the Platform - which manage interactions whose
+  // lifetime is governed by the Process lifetime.  If we find we need to do
   // this more often, we should construct a general solution to the problem.
   // The consensus suggestion was that we have a token based registry in the
-  // Process.
-  // Some undecided questions are 
-  // (1) who manages the tokens.  It's probably best that you add the element 
-  // and get back a token that represents it.  That will avoid collisions.  But
-  // there may be some utility in the registerer controlling the token?
-  // (2) whether the thing added should be simply owned by Process, and
-  // just go away when it does
-  // (3) whether the registree should be notified of the Process' demise.
+  // Process. Some undecided questions are  (1) who manages the tokens.  It's
+  // probably best that you add the element  and get back a token that
+  // represents it.  That will avoid collisions.  But there may be some utility
+  // in the registerer controlling the token? (2) whether the thing added
+  // should be simply owned by Process, and just go away when it does (3)
+  // whether the registree should be notified of the Process' demise.
   //
   // We are postponing designing this till we have at least a second use case.
   //------------------------------------------------------------------
@@ -1565,8 +1561,8 @@ public:
   //------------------------------------------------------------------
   // Notify this process class that modules got loaded.
   //
-  // If subclasses override this method, they must call this version
-  // before doing anything in the subclass version of the function.
+  // If subclasses override this method, they must call this version before
+  // doing anything in the subclass version of the function.
   //------------------------------------------------------------------
   virtual void ModulesDidLoad(ModuleList &module_list);
 
@@ -1604,16 +1600,14 @@ public:
   }
 
   // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return
-  // the full list of loaded shared libraries without needing any input.
+  // return the full list of loaded shared libraries without needing any input.
   virtual lldb_private::StructuredData::ObjectSP
   GetLoadedDynamicLibrariesInfos() {
     return StructuredData::ObjectSP();
   }
 
   // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return
-  // information about binaries given their load addresses.
+  // return information about binaries given their load addresses.
   virtual lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
       const std::vector<lldb::addr_t> &load_addresses) {
     return StructuredData::ObjectSP();
@@ -1623,10 +1617,9 @@ public:
   // Get information about the library shared cache, if that exists
   //
   // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return
-  // information about the library shared cache (a set of standard libraries
-  // that are
-  // loaded at the same location for all processes on a system) in use.
+  // return information about the library shared cache (a set of standard
+  // libraries that are loaded at the same location for all processes on a
+  // system) in use.
   //------------------------------------------------------------------
   virtual lldb_private::StructuredData::ObjectSP GetSharedCacheInfo() {
     return StructuredData::ObjectSP();
@@ -2371,9 +2364,9 @@ public:
   }
 
   // This is implemented completely using the lldb::Process API. Subclasses
-  // don't need to implement this function unless the standard flow of
-  // read existing opcode, write breakpoint opcode, verify breakpoint opcode
-  // doesn't work for a specific process plug-in.
+  // don't need to implement this function unless the standard flow of read
+  // existing opcode, write breakpoint opcode, verify breakpoint opcode doesn't
+  // work for a specific process plug-in.
   virtual Status EnableSoftwareBreakpoint(BreakpointSite *bp_site);
 
   // This is implemented completely using the lldb::Process API. Subclasses
@@ -2397,8 +2390,8 @@ public:
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
 
-  // BreakpointLocations use RemoveOwnerFromBreakpointSite to remove
-  // themselves from the owner's list of this breakpoint sites.
+  // BreakpointLocations use RemoveOwnerFromBreakpointSite to remove themselves
+  // from the owner's list of this breakpoint sites.
   void RemoveOwnerFromBreakpointSite(lldb::user_id_t owner_id,
                                      lldb::user_id_t owner_loc_id,
                                      lldb::BreakpointSiteSP &bp_site_sp);
@@ -2420,11 +2413,10 @@ public:
 
   ThreadList &GetThreadList() { return m_thread_list; }
 
-  // When ExtendedBacktraces are requested, the HistoryThreads that are
-  // created need an owner -- they're saved here in the Process.  The
-  // threads in this list are not iterated over - driver programs need to
-  // request the extended backtrace calls starting from a root concrete
-  // thread one by one.
+  // When ExtendedBacktraces are requested, the HistoryThreads that are created
+  // need an owner -- they're saved here in the Process.  The threads in this
+  // list are not iterated over - driver programs need to request the extended
+  // backtrace calls starting from a root concrete thread one by one.
   ThreadList &GetExtendedThreadList() { return m_extended_thread_list; }
 
   ThreadList::ThreadIterable Threads() { return m_thread_list.Threads(); }
@@ -2436,10 +2428,9 @@ public:
   // Returns true if an index id has been assigned to a thread.
   bool HasAssignedIndexIDToThread(uint64_t sb_thread_id);
 
-  // Given a thread_id, it will assign a more reasonable index id for display to
-  // the user.
-  // If the thread_id has previously been assigned, the same index id will be
-  // used.
+  // Given a thread_id, it will assign a more reasonable index id for display
+  // to the user. If the thread_id has previously been assigned, the same index
+  // id will be used.
   uint32_t AssignIndexIDToThread(uint64_t thread_id);
 
   //------------------------------------------------------------------
@@ -2464,13 +2455,11 @@ public:
   lldb::StateType GetNextEvent(lldb::EventSP &event_sp);
 
   // Returns the process state when it is stopped. If specified, event_sp_ptr
-  // is set to the event which triggered the stop. If wait_always = false,
-  // and the process is already stopped, this function returns immediately.
-  // If the process is hijacked and use_run_lock is true (the default), then
-  // this
+  // is set to the event which triggered the stop. If wait_always = false, and
+  // the process is already stopped, this function returns immediately. If the
+  // process is hijacked and use_run_lock is true (the default), then this
   // function releases the run lock after the stop. Setting use_run_lock to
-  // false
-  // will avoid this behavior.
+  // false will avoid this behavior.
   lldb::StateType
   WaitForProcessToStop(const Timeout<std::micro> &timeout,
                        lldb::EventSP *event_sp_ptr = nullptr,
@@ -2628,27 +2617,26 @@ public:
   void SetSTDIOFileDescriptor(int file_descriptor);
 
   //------------------------------------------------------------------
-  // Add a permanent region of memory that should never be read or
-  // written to. This can be used to ensure that memory reads or writes
-  // to certain areas of memory never end up being sent to the
-  // DoReadMemory or DoWriteMemory functions which can improve
-  // performance.
+  // Add a permanent region of memory that should never be read or written to.
+  // This can be used to ensure that memory reads or writes to certain areas of
+  // memory never end up being sent to the DoReadMemory or DoWriteMemory
+  // functions which can improve performance.
   //------------------------------------------------------------------
   void AddInvalidMemoryRegion(const LoadRange &region);
 
   //------------------------------------------------------------------
-  // Remove a permanent region of memory that should never be read or
-  // written to that was previously added with AddInvalidMemoryRegion.
+  // Remove a permanent region of memory that should never be read or written
+  // to that was previously added with AddInvalidMemoryRegion.
   //------------------------------------------------------------------
   bool RemoveInvalidMemoryRange(const LoadRange &region);
 
   //------------------------------------------------------------------
   // If the setup code of a thread plan needs to do work that might involve
-  // calling a function in the target, it should not do that work directly
-  // in one of the thread plan functions (DidPush/WillResume) because
-  // such work needs to be handled carefully.  Instead, put that work in
-  // a PreResumeAction callback, and register it with the process.  It will
-  // get done before the actual "DoResume" gets called.
+  // calling a function in the target, it should not do that work directly in
+  // one of the thread plan functions (DidPush/WillResume) because such work
+  // needs to be handled carefully.  Instead, put that work in a
+  // PreResumeAction callback, and register it with the process.  It will get
+  // done before the actual "DoResume" gets called.
   //------------------------------------------------------------------
 
   typedef bool(PreResumeActionCallback)(void *);
@@ -2936,15 +2924,14 @@ protected:
                     const char *fmt, ...) __attribute__((format(printf, 4, 5)));
 
   //------------------------------------------------------------------
-  // NextEventAction provides a way to register an action on the next
-  // event that is delivered to this process.  There is currently only
-  // one next event action allowed in the process at one time.  If a
-  // new "NextEventAction" is added while one is already present, the
-  // old action will be discarded (with HandleBeingUnshipped called
-  // after it is discarded.)
+  // NextEventAction provides a way to register an action on the next event
+  // that is delivered to this process.  There is currently only one next event
+  // action allowed in the process at one time.  If a new "NextEventAction" is
+  // added while one is already present, the old action will be discarded (with
+  // HandleBeingUnshipped called after it is discarded.)
   //
-  // If you want to resume the process as a result of a resume action,
-  // call RequestResume, don't call Resume directly.
+  // If you want to resume the process as a result of a resume action, call
+  // RequestResume, don't call Resume directly.
   //------------------------------------------------------------------
   class NextEventAction {
   public:
@@ -3158,11 +3145,11 @@ protected:
   bool m_currently_handling_do_on_removals;
   bool m_resume_requested; // If m_currently_handling_event or
                            // m_currently_handling_do_on_removals are true,
-                           // Resume will only request a resume, using this flag
-                           // to check.
+                           // Resume will only request a resume, using this
+                           // flag to check.
   bool m_finalizing; // This is set at the beginning of Process::Finalize() to
-                     // stop functions from looking up or creating things during
-                     // a finalize call
+                     // stop functions from looking up or creating things
+                     // during a finalize call
   bool m_finalize_called; // This is set at the end of Process::Finalize()
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;
@@ -3213,12 +3200,9 @@ private:
   static lldb::thread_result_t PrivateStateThread(void *arg);
 
   // The starts up the private state thread that will watch for events from the
-  // debugee.
-  // Pass true for is_secondary_thread in the case where you have to temporarily
-  // spin up a
-  // secondary state thread to handle events from a hand-called function on the
-  // primary
-  // private state thread.
+  // debugee. Pass true for is_secondary_thread in the case where you have to
+  // temporarily spin up a secondary state thread to handle events from a hand-
+  // called function on the primary private state thread.
 
   lldb::thread_result_t RunPrivateStateThread(bool is_secondary_thread);
 
@@ -3231,8 +3215,7 @@ protected:
                                             const Timeout<std::micro> &timeout);
 
   // This waits for both the state change broadcaster, and the control
-  // broadcaster.
-  // If control_only, it only waits for the control broadcaster.
+  // broadcaster. If control_only, it only waits for the control broadcaster.
 
   bool GetEventsPrivate(lldb::EventSP &event_sp,
                         const Timeout<std::micro> &timeout, bool control_only);

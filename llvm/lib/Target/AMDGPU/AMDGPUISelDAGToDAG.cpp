@@ -100,10 +100,6 @@ private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
   bool isNoNanSrc(SDValue N) const;
   bool isInlineImmediate(const SDNode *N) const;
-  bool FoldOperand(SDValue &Src, SDValue &Sel, SDValue &Neg, SDValue &Abs,
-                   const R600InstrInfo *TII);
-  bool FoldOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
-  bool FoldDotOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
 
   bool isConstantLoad(const MemSDNode *N, int cbID) const;
   bool isUniformBr(const SDNode *N) const;
@@ -219,7 +215,7 @@ private:
   void SelectS_BFE(SDNode *N);
   bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
-  void SelectFMAD(SDNode *N);
+  void SelectFMAD_FMA(SDNode *N);
   void SelectATOMIC_CMP_SWAP(SDNode *N);
 
 protected:
@@ -625,7 +621,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectBRCOND(N);
     return;
   case ISD::FMAD:
-    SelectFMAD(N);
+  case ISD::FMA:
+    SelectFMAD_FMA(N);
     return;
   case AMDGPUISD::ATOMIC_CMP_SWAP:
     SelectATOMIC_CMP_SWAP(N);
@@ -1732,9 +1729,13 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
                        VCC.getValue(0));
 }
 
-void AMDGPUDAGToDAGISel::SelectFMAD(SDNode *N) {
+void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
   MVT VT = N->getSimpleValueType(0);
-  if (VT != MVT::f32 || !Subtarget->hasMadMixInsts()) {
+  bool IsFMA = N->getOpcode() == ISD::FMA;
+  if (VT != MVT::f32 || (!Subtarget->hasMadMixInsts() &&
+                         !Subtarget->hasFmaMixInsts()) ||
+      ((IsFMA && Subtarget->hasMadMixInsts()) ||
+       (!IsFMA && Subtarget->hasFmaMixInsts()))) {
     SelectCode(N);
     return;
   }
@@ -1744,13 +1745,13 @@ void AMDGPUDAGToDAGISel::SelectFMAD(SDNode *N) {
   SDValue Src2 = N->getOperand(2);
   unsigned Src0Mods, Src1Mods, Src2Mods;
 
-  // Avoid using v_mad_mix_f32 unless there is actually an operand using the
-  // conversion from f16.
+  // Avoid using v_mad_mix_f32/v_fma_mix_f32 unless there is actually an operand
+  // using the conversion from f16.
   bool Sel0 = SelectVOP3PMadMixModsImpl(Src0, Src0, Src0Mods);
   bool Sel1 = SelectVOP3PMadMixModsImpl(Src1, Src1, Src1Mods);
   bool Sel2 = SelectVOP3PMadMixModsImpl(Src2, Src2, Src2Mods);
 
-  assert(!Subtarget->hasFP32Denormals() &&
+  assert((IsFMA || !Subtarget->hasFP32Denormals()) &&
          "fmad selected with denormals enabled");
   // TODO: We can select this with f32 denormals enabled if all the sources are
   // converted from f16 (in which case fmad isn't legal).
@@ -1766,7 +1767,9 @@ void AMDGPUDAGToDAGISel::SelectFMAD(SDNode *N) {
       Zero, Zero
     };
 
-    CurDAG->SelectNodeTo(N, AMDGPU::V_MAD_MIX_F32, MVT::f32, Ops);
+    CurDAG->SelectNodeTo(N,
+                         IsFMA ? AMDGPU::V_FMA_MIX_F32 : AMDGPU::V_MAD_MIX_F32,
+                         MVT::f32, Ops);
   } else {
     SelectCode(N);
   }

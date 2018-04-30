@@ -160,18 +160,17 @@ Status Socket::TcpListen(llvm::StringRef host_and_port,
 
   error = listen_socket->Listen(host_and_port, backlog);
   if (error.Success()) {
-    // We were asked to listen on port zero which means we
-    // must now read the actual port that was given to us
-    // as port zero is a special code for "find an open port
-    // for me".
+    // We were asked to listen on port zero which means we must now read the
+    // actual port that was given to us as port zero is a special code for
+    // "find an open port for me".
     if (port == 0)
       port = listen_socket->GetLocalPortNumber();
 
-    // Set the port predicate since when doing a listen://<host>:<port>
-    // it often needs to accept the incoming connection which is a blocking
-    // system call. Allowing access to the bound port using a predicate allows
-    // us to wait for the port predicate to be set to a non-zero value from
-    // another thread in an efficient manor.
+    // Set the port predicate since when doing a listen://<host>:<port> it
+    // often needs to accept the incoming connection which is a blocking system
+    // call. Allowing access to the bound port using a predicate allows us to
+    // wait for the port predicate to be set to a non-zero value from another
+    // thread in an efficient manor.
     if (predicate)
       predicate->SetValue(port, eBroadcastAlways);
     socket = listen_socket.release();
@@ -282,8 +281,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
   }
 
   // If this was unsuccessful, then check if it's simply a signed 32-bit
-  // integer, representing
-  // a port with an empty host.
+  // integer, representing a port with an empty host.
   host_str.clear();
   port_str.clear();
   bool ok = false;
@@ -436,8 +434,8 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   error.Clear();
 #if defined(ANDROID_USE_ACCEPT_WORKAROUND)
   // Hack:
-  // This enables static linking lldb-server to an API 21 libc, but still having
-  // it run on older devices. It is necessary because API 21 libc's
+  // This enables static linking lldb-server to an API 21 libc, but still
+  // having it run on older devices. It is necessary because API 21 libc's
   // implementation of accept() uses the accept4 syscall(), which is not
   // available in older kernels. Using an older libc would fix this issue, but
   // introduce other ones, as the old libraries were quite buggy.

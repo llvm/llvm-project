@@ -107,9 +107,9 @@ void TerminalState::Clear() {
 }
 
 //----------------------------------------------------------------------
-// Save the current state of the TTY for the file descriptor "fd"
-// and if "save_process_group" is true, attempt to save the process
-// group info for the TTY.
+// Save the current state of the TTY for the file descriptor "fd" and if
+// "save_process_group" is true, attempt to save the process group info for the
+// TTY.
 //----------------------------------------------------------------------
 bool TerminalState::Save(int fd, bool save_process_group) {
   m_tty.SetFileDescriptor(fd);
@@ -142,8 +142,8 @@ bool TerminalState::Save(int fd, bool save_process_group) {
 }
 
 //----------------------------------------------------------------------
-// Restore the state of the TTY using the cached values from a
-// previous call to Save().
+// Restore the state of the TTY using the cached values from a previous call to
+// Save().
 //----------------------------------------------------------------------
 bool TerminalState::Restore() const {
 #ifndef LLDB_DISABLE_POSIX
@@ -173,8 +173,8 @@ bool TerminalState::Restore() const {
 }
 
 //----------------------------------------------------------------------
-// Returns true if this object has valid saved TTY state settings
-// that can be used to restore a previous state.
+// Returns true if this object has valid saved TTY state settings that can be
+// used to restore a previous state.
 //----------------------------------------------------------------------
 bool TerminalState::IsValid() const {
   return m_tty.FileDescriptorIsValid() &&
@@ -236,21 +236,20 @@ bool TerminalStateSwitcher::Restore(uint32_t idx) const {
       m_ttystates[idx].IsValid())
     return true;
 
-  // Set the state to match the index passed in and only update the
-  // current state if there are no errors.
+  // Set the state to match the index passed in and only update the current
+  // state if there are no errors.
   if (m_ttystates[idx].Restore()) {
     m_currentState = idx;
     return true;
   }
 
-  // We failed to set the state. The tty state was invalid or not
-  // initialized.
+  // We failed to set the state. The tty state was invalid or not initialized.
   return false;
 }
 
 //------------------------------------------------------------------
-// Save the state at index "idx" for file descriptor "fd" and
-// save the process group if requested.
+// Save the state at index "idx" for file descriptor "fd" and save the process
+// group if requested.
 //
 // Returns true if the restore was successful, false otherwise.
 //------------------------------------------------------------------

@@ -100,6 +100,7 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
 
       case AMDGPU::V_MAC_F32_e64:
       case AMDGPU::V_MAC_F16_e64:
+      case AMDGPU::V_FMAC_F32_e64:
         if (!isVGPR(Src2, TRI, MRI) ||
             TII->hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
           return false;

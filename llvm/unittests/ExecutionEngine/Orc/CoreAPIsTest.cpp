@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcTestCommon.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "gtest/gtest.h"
 

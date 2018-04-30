@@ -613,11 +613,8 @@ ReprocessLoop:
       // comparison and the branch.
       bool AllInvariant = true;
       bool AnyInvariant = false;
-      for (BasicBlock::iterator I = ExitingBlock->begin(); &*I != BI; ) {
+      for (auto I = ExitingBlock->instructionsWithoutDebug().begin(); &*I != BI; ) {
         Instruction *Inst = &*I++;
-        // Skip debug info intrinsics.
-        if (isa<DbgInfoIntrinsic>(Inst))
-          continue;
         if (Inst == CI)
           continue;
         if (!L->makeLoopInvariant(Inst, AnyInvariant,

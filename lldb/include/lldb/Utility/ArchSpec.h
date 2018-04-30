@@ -592,15 +592,14 @@ protected:
   Core m_core = kCore_invalid;
   lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
 
-  // Additional arch flags which we cannot get from triple and core
-  // For MIPS these are application specific extensions like
-  // micromips, mips16 etc.
+  // Additional arch flags which we cannot get from triple and core For MIPS
+  // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
 
   ConstString m_distribution_id;
 
-  // Called when m_def or m_entry are changed.  Fills in all remaining
-  // members with default values.
+  // Called when m_def or m_entry are changed.  Fills in all remaining members
+  // with default values.
   void CoreUpdated(bool update_triple);
 };
 

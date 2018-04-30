@@ -85,8 +85,8 @@ public:
 
     switch (short_option) {
     case 'c':
-      // Normally an empty breakpoint condition marks is as unset.
-      // But we need to say it was passed in.
+      // Normally an empty breakpoint condition marks is as unset. But we need
+      // to say it was passed in.
       m_bp_opts.SetCondition(option_arg.str().c_str());
       m_bp_opts.m_set_flags.Set(BreakpointOptions::eCondition);
       break;
@@ -263,8 +263,9 @@ static OptionDefinition g_breakpoint_set_options[] = {
   "#included, set target.inline-breakpoint-strategy to \"always\"." },
   { LLDB_OPT_SET_1,                true,  "line",                   'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLineNum,             "Specifies the line number on which to set this breakpoint." },
 
-  // Comment out this option for the moment, as we don't actually use it, but will in the future.
-  // This way users won't see it, but the infrastructure is left in place.
+  // Comment out this option for the moment, as we don't actually use it, but
+  // will in the future. This way users won't see it, but the infrastructure is
+  // left in place.
   //    { 0, false, "column",     'C', OptionParser::eRequiredArgument, nullptr, "<column>",
   //    "Set the breakpoint by source location at this particular column."},
 
@@ -854,9 +855,9 @@ protected:
         output_stream.Printf("Breakpoint set in dummy target, will get copied "
                              "into future targets.\n");
       else {
-        // Don't print out this warning for exception breakpoints.  They can get
-        // set before the target is set, but we won't know how to actually set
-        // the breakpoint till we run.
+        // Don't print out this warning for exception breakpoints.  They can
+        // get set before the target is set, but we won't know how to actually
+        // set the breakpoint till we run.
         if (bp_sp->GetNumLocations() == 0 && break_type != eSetTypeException) {
           output_stream.Printf("WARNING:  Unable to resolve breakpoint to any "
                                "actual locations.\n");
@@ -875,8 +876,8 @@ private:
   bool GetDefaultFile(Target *target, FileSpec &file,
                       CommandReturnObject &result) {
     uint32_t default_line;
-    // First use the Source Manager's default file.
-    // Then use the current stack frame's file.
+    // First use the Source Manager's default file. Then use the current stack
+    // frame's file.
     if (!target->GetSourceManager().GetDefaultFileAndLine(file, default_line)) {
       StackFrame *cur_frame = m_exe_ctx.GetFramePtr();
       if (cur_frame == nullptr) {
@@ -1452,7 +1453,8 @@ protected:
       return false;
     }
 
-    // The following are the various types of breakpoints that could be cleared:
+    // The following are the various types of breakpoints that could be
+    // cleared:
     //   1). -f -l (clearing breakpoint by source location)
 
     BreakpointClearType break_type = eClearTypeInvalid;
@@ -1898,8 +1900,8 @@ protected:
         return false;
       }
     }
-    // Now configure them, we already pre-checked the names so we don't need
-    // to check the error:
+    // Now configure them, we already pre-checked the names so we don't need to
+    // check the error:
     BreakpointSP bp_sp;
     if (m_bp_id.m_breakpoint.OptionWasSet())
     {
@@ -2560,11 +2562,10 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(Args &args, Target *target,
   }
 
   // Create a new Args variable to use; copy any non-breakpoint-id-ranges stuff
-  // directly from the old ARGS to
-  // the new TEMP_ARGS.  Do not copy breakpoint id range strings over; instead
-  // generate a list of strings for
-  // all the breakpoint ids in the range, and shove all of those breakpoint id
-  // strings into TEMP_ARGS.
+  // directly from the old ARGS to the new TEMP_ARGS.  Do not copy breakpoint
+  // id range strings over; instead generate a list of strings for all the
+  // breakpoint ids in the range, and shove all of those breakpoint id strings
+  // into TEMP_ARGS.
 
   BreakpointIDList::FindAndReplaceIDRanges(args, target, allow_locations, 
                                            purpose, result, temp_args);
@@ -2575,15 +2576,13 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(Args &args, Target *target,
   valid_ids->InsertStringArray(temp_args.GetConstArgumentVector(),
                                temp_args.GetArgumentCount(), result);
 
-  // At this point,  all of the breakpoint ids that the user passed in have been
-  // converted to breakpoint IDs
-  // and put into valid_ids.
+  // At this point,  all of the breakpoint ids that the user passed in have
+  // been converted to breakpoint IDs and put into valid_ids.
 
   if (result.Succeeded()) {
     // Now that we've converted everything from args into a list of breakpoint
-    // ids, go through our tentative list
-    // of breakpoint id's and verify that they correspond to valid/currently set
-    // breakpoints.
+    // ids, go through our tentative list of breakpoint id's and verify that
+    // they correspond to valid/currently set breakpoints.
 
     const size_t count = valid_ids->GetSize();
     for (size_t i = 0; i < count; ++i) {

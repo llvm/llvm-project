@@ -133,8 +133,8 @@ llvm::StringRef UUID::DecodeUUIDBytesFromString(llvm::StringRef p,
       // Skip both hex digits
       p = p.drop_front(2);
 
-      // Increment the byte that we are decoding within the UUID value
-      // and break out if we are done
+      // Increment the byte that we are decoding within the UUID value and
+      // break out if we are done
       if (++uuid_byte_idx == num_uuid_bytes)
         break;
     } else if (p.front() == '-') {

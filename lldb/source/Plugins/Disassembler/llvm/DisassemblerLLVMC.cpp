@@ -1082,8 +1082,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   llvm::Triple triple = arch.GetTriple();
 
   // So far the only supported flavor is "intel" on x86.  The base class will
-  // set this
-  // correctly coming in.
+  // set this correctly coming in.
   if (triple.getArch() == llvm::Triple::x86 ||
       triple.getArch() == llvm::Triple::x86_64) {
     if (m_flavor == "intel") {
@@ -1107,12 +1106,10 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   }
 
   // If no sub architecture specified then use the most recent arm architecture
-  // so the
-  // disassembler will return all instruction. Without it we will see a lot of
-  // unknow opcode
-  // in case the code uses instructions which are not available in the oldest
-  // arm version
-  // (used when no sub architecture is specified)
+  // so the disassembler will return all instruction. Without it we will see a
+  // lot of unknow opcode in case the code uses instructions which are not
+  // available in the oldest arm version (used when no sub architecture is
+  // specified)
   if (triple.getArch() == llvm::Triple::arm &&
       triple.getSubArch() == llvm::Triple::NoSubArch)
     triple.setArchName("armv8.2a");
@@ -1186,14 +1183,14 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
-  // If any AArch64 variant, enable the ARMv8.2 ISA
-  // extensions so we can disassemble newer instructions.
+  // If any AArch64 variant, enable the ARMv8.2 ISA extensions so we can
+  // disassemble newer instructions.
   if (triple.getArch() == llvm::Triple::aarch64)
     features_str += "+v8.2a";
 
-  // We use m_disasm_ap.get() to tell whether we are valid or not,
-  // so if this isn't good for some reason,
-  // we won't be valid and FindPlugin will fail and we won't get used.
+  // We use m_disasm_ap.get() to tell whether we are valid or not, so if this
+  // isn't good for some reason, we won't be valid and FindPlugin will fail and
+  // we won't get used.
   m_disasm_up = MCDisasmInstance::Create(triple_str, cpu, features_str.c_str(),
                                          flavor, *this);
 
@@ -1391,8 +1388,8 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
           }
         }
 
-        // If the "value" address (the target address we're symbolicating)
-        // is inside the same SymbolContext as the current instruction pc
+        // If the "value" address (the target address we're symbolicating) is
+        // inside the same SymbolContext as the current instruction pc
         // (pc_so_addr), don't print the full function name - just print it
         // with DumpStyleNoFunctionName style, e.g. "<+36>".
         if (format_omitting_current_func_name) {
@@ -1407,9 +1404,8 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
 
         if (!ss.GetString().empty()) {
           // If Address::Dump returned a multi-line description, most commonly
-          // seen when we
-          // have multiple levels of inlined functions at an address, only show
-          // the first line.
+          // seen when we have multiple levels of inlined functions at an
+          // address, only show the first line.
           std::string str = ss.GetString();
           size_t first_eol_char = str.find_first_of("\r\n");
           if (first_eol_char != std::string::npos) {

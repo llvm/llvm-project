@@ -30,6 +30,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compression.h"
@@ -2242,9 +2243,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   // Disable a codegen optimization for floating-point casts.
-  if (Args.hasFlag(options::OPT_ffp_cast_overflow_workaround,
-                   options::OPT_fno_fp_cast_overflow_workaround, false))
-    CmdArgs.push_back("-ffp-cast-overflow-workaround");
+  if (Args.hasFlag(options::OPT_fno_strict_float_cast_overflow,
+                   options::OPT_fstrict_float_cast_overflow, false))
+    CmdArgs.push_back("-fno-strict-float-cast-overflow");
 }
 
 static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,

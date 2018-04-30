@@ -9,6 +9,7 @@
 
 #include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"

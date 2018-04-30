@@ -197,7 +197,7 @@ defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5],  1>; // Vector variable shu
 defm : SKXWriteResPair<WriteBlend, [SKXPort5], 1, [1], 1, 6>; // Vector blends.
 defm : SKXWriteResPair<WriteVarBlend, [SKXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : SKXWriteResPair<WriteMPSAD,  [SKXPort5], 4, [2], 2, 6>; // Vector MPSAD.
-defm : SKXWriteResPair<WritePSADBW, [SKXPort5], 3, [1,1], 1, 6>; // Vector PSADBW.
+defm : SKXWriteResPair<WritePSADBW, [SKXPort5], 3, [1], 1, 6>; // Vector PSADBW.
 defm : SKXWriteResPair<WritePHMINPOS, [SKXPort015], 4, [1], 1, 6>; // Vector PHMINPOS.
 
 // Vector insert/extract operations.
@@ -2458,7 +2458,6 @@ def: InstRW<[SKXWriteResGroup95], (instregex "VBLENDMPDZ128rm(b?)",
                                              "VPBROADCASTQZ128m(b?)",
                                              "VPMASKMOVDrm",
                                              "VPMASKMOVQrm",
-                                             "VPORrm",
                                              "VPSUBBZ128rm(b?)",
                                              "(V?)PSUBBrm",
                                              "VPSUBDZ128rm(b?)",

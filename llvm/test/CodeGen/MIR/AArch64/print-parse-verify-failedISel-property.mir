@@ -14,6 +14,7 @@
 # 5) It's possible to start llc mid-GlobalISel pipeline from a MIR file with
 #    the FailedISel property set to true and watch it properly fallback to
 #    FastISel / SelectionDAG ISel.
+# 6) Resetting a MachineFunction resets unique MachineBasicBlock IDs as well.
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64--"
@@ -40,17 +41,21 @@ regBankSelected: true
 failedISel:      true
 tracksRegLiveness: true
 body:             |
-  bb.1.entry:
+  bb.0.entry:
     liveins: $w0, $w1
 
     ; CHECK: liveins: $w0, $w1
+    ;
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK: [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[COPY1]], [[COPY]]
     ; CHECK: $w0 = COPY [[ADD]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     ;
-    ; FALLBACK: liveins: $w0, $w1
+    ; FALLBACK: body: |
+    ; FALLBACK-NEXT: bb.0.entry:
+    ; FALLBACK-NEXT: liveins: $w0, $w1
+    ;
     ; FALLBACK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
     ; FALLBACK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
     ; FALLBACK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]

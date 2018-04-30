@@ -71,6 +71,10 @@ private:
   MemIndex Index;
 };
 
+/// Retrieves namespace and class level symbols in \p AST.
+/// Exposed to assist in unit tests.
+SymbolSlab indexAST(ParsedAST *AST);
+
 } // namespace clangd
 } // namespace clang
 

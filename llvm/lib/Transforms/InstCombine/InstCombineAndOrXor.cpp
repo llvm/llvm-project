@@ -2412,14 +2412,19 @@ Value *InstCombiner::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
 }
 
 /// If we have a masked merge, in the canonical form of:
+/// (assuming that A only has one use.)
 ///   |        A  |  |B|
 ///   ((x ^ y) & M) ^ y
 ///    |  D  |
 /// * If M is inverted:
 ///      |  D  |
 ///     ((x ^ y) & ~M) ^ y
-///   If A has one use, and, we want to canonicalize it to non-inverted mask:
+///   We can canonicalize by swapping the final xor operand
+///   to eliminate the 'not' of the mask.
 ///     ((x ^ y) & M) ^ x
+/// * If M is a constant, and D has one use, we transform to 'and' / 'or' ops
+///   because that shortens the dependency chain and improves analysis:
+///     (x & M) | (y & ~M)
 static Instruction *visitMaskedMerge(BinaryOperator &I,
                                      InstCombiner::BuilderTy &Builder) {
   Value *B, *X, *D;
@@ -2436,6 +2441,15 @@ static Instruction *visitMaskedMerge(BinaryOperator &I,
     // De-invert the mask and swap the value in B part.
     Value *NewA = Builder.CreateAnd(D, NotM);
     return BinaryOperator::CreateXor(NewA, X);
+  }
+
+  Constant *C;
+  if (D->hasOneUse() && match(M, m_Constant(C))) {
+    // Unfold.
+    Value *LHS = Builder.CreateAnd(X, C);
+    Value *NotC = Builder.CreateNot(C);
+    Value *RHS = Builder.CreateAnd(B, NotC);
+    return BinaryOperator::CreateOr(LHS, RHS);
   }
 
   return nullptr;

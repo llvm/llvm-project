@@ -423,7 +423,7 @@ Fix-it hints can be created with one of three constructors:
 .. _DiagnosticConsumer:
 
 The ``DiagnosticConsumer`` Interface
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once code generates a diagnostic with all of the arguments and the rest of the
 relevant information, Clang needs to know what to do with it.  As previously

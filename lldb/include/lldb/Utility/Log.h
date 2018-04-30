@@ -74,10 +74,10 @@ public:
         : log_ptr(nullptr), categories(categories),
           default_flags(default_flags) {}
 
-    // This function is safe to call at any time
-    // If the channel is disabled after (or concurrently with) this function
-    // returning a non-null Log pointer, it is still safe to attempt to write to
-    // the Log object -- the output will be discarded.
+    // This function is safe to call at any time If the channel is disabled
+    // after (or concurrently with) this function returning a non-null Log
+    // pointer, it is still safe to attempt to write to the Log object -- the
+    // output will be discarded.
     Log *GetLogIfAll(uint32_t mask) {
       Log *log = log_ptr.load(std::memory_order_relaxed);
       if (log && log->GetMask().AllSet(mask))
@@ -85,10 +85,10 @@ public:
       return nullptr;
     }
 
-    // This function is safe to call at any time
-    // If the channel is disabled after (or concurrently with) this function
-    // returning a non-null Log pointer, it is still safe to attempt to write to
-    // the Log object -- the output will be discarded.
+    // This function is safe to call at any time If the channel is disabled
+    // after (or concurrently with) this function returning a non-null Log
+    // pointer, it is still safe to attempt to write to the Log object -- the
+    // output will be discarded.
     Log *GetLogIfAny(uint32_t mask) {
       Log *log = log_ptr.load(std::memory_order_relaxed);
       if (log && log->GetMask().AnySet(mask))
@@ -171,8 +171,8 @@ public:
 private:
   Channel &m_channel;
 
-  // The mutex makes sure enable/disable operations are thread-safe. The options
-  // and mask variables are atomic to enable their reading in
+  // The mutex makes sure enable/disable operations are thread-safe. The
+  // options and mask variables are atomic to enable their reading in
   // Channel::GetLogIfAny without taking the mutex to speed up the fast path.
   // Their modification however, is still protected by this mutex.
   llvm::sys::RWMutex m_mutex;

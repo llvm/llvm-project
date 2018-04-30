@@ -67,10 +67,10 @@ void CompileUnit::GetDescription(Stream *s,
 }
 
 //----------------------------------------------------------------------
-// Dump the current contents of this object. No functions that cause on
-// demand parsing of functions, globals, statics are called, so this
-// is a good function to call to get an idea of the current contents of
-// the CompileUnit object.
+// Dump the current contents of this object. No functions that cause on demand
+// parsing of functions, globals, statics are called, so this is a good
+// function to call to get an idea of the current contents of the CompileUnit
+// object.
 //----------------------------------------------------------------------
 void CompileUnit::Dump(Stream *s, bool show_context) const {
   const char *language = Language::GetNameForLanguageType(m_language);
@@ -118,28 +118,27 @@ FunctionSP CompileUnit::GetFunctionAtIndex(size_t idx) {
 }
 
 //----------------------------------------------------------------------
-// Find functions using the Mangled::Tokens token list. This
-// function currently implements an interactive approach designed to find
-// all instances of certain functions. It isn't designed to the
-// quickest way to lookup functions as it will need to iterate through
-// all functions and see if they match, though it does provide a powerful
-// and context sensitive way to search for all functions with a certain
-// name, all functions in a namespace, or all functions of a template
-// type. See Mangled::Tokens::Parse() comments for more information.
+// Find functions using the Mangled::Tokens token list. This function currently
+// implements an interactive approach designed to find all instances of certain
+// functions. It isn't designed to the quickest way to lookup functions as it
+// will need to iterate through all functions and see if they match, though it
+// does provide a powerful and context sensitive way to search for all
+// functions with a certain name, all functions in a namespace, or all
+// functions of a template type. See Mangled::Tokens::Parse() comments for more
+// information.
 //
-// The function prototype will need to change to return a list of
-// results. It was originally used to help debug the Mangled class
-// and the Mangled::Tokens::MatchesQuery() function and it currently
-// will print out a list of matching results for the functions that
-// are currently in this compile unit.
+// The function prototype will need to change to return a list of results. It
+// was originally used to help debug the Mangled class and the
+// Mangled::Tokens::MatchesQuery() function and it currently will print out a
+// list of matching results for the functions that are currently in this
+// compile unit.
 //
 // A FindFunctions method should be called prior to this that takes
-// a regular function name (const char * or ConstString as a parameter)
-// before resorting to this slower but more complete function. The
-// other FindFunctions method should be able to take advantage of any
-// accelerator tables available in the debug information (which is
-// parsed by the SymbolFile parser plug-ins and registered with each
-// Module).
+// a regular function name (const char * or ConstString as a parameter) before
+// resorting to this slower but more complete function. The other FindFunctions
+// method should be able to take advantage of any accelerator tables available
+// in the debug information (which is parsed by the SymbolFile parser plug-ins
+// and registered with each Module).
 //----------------------------------------------------------------------
 // void
 // CompileUnit::FindFunctions(const Mangled::Tokens& tokens)
@@ -283,8 +282,8 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
                                            bool exact, uint32_t resolve_scope,
                                            SymbolContextList &sc_list) {
   // First find all of the file indexes that match our "file_spec". If
-  // "file_spec" has an empty directory, then only compare the basenames
-  // when finding file indexes
+  // "file_spec" has an empty directory, then only compare the basenames when
+  // finding file indexes
   std::vector<uint32_t> file_indexes;
   const bool full_match = (bool)file_spec.GetDirectory();
   bool file_spec_matches_cu_file_spec =
@@ -319,23 +318,23 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
       uint32_t line_idx;
 
       if (num_file_indexes == 1) {
-        // We only have a single support file that matches, so use
-        // the line table function that searches for a line entries
-        // that match a single support file index
+        // We only have a single support file that matches, so use the line
+        // table function that searches for a line entries that match a single
+        // support file index
         LineEntry line_entry;
         line_idx = line_table->FindLineEntryIndexByFileIndex(
             0, file_indexes.front(), line, exact, &line_entry);
 
-        // If "exact == true", then "found_line" will be the same
-        // as "line". If "exact == false", the "found_line" will be the
-        // closest line entry with a line number greater than "line" and
-        // we will use this for our subsequent line exact matches below.
+        // If "exact == true", then "found_line" will be the same as "line". If
+        // "exact == false", the "found_line" will be the closest line entry
+        // with a line number greater than "line" and we will use this for our
+        // subsequent line exact matches below.
         found_line = line_entry.line;
 
         while (line_idx != UINT32_MAX) {
-          // If they only asked for the line entry, then we're done, we can just
-          // copy that over.
-          // But if they wanted more than just the line number, fill it in.
+          // If they only asked for the line entry, then we're done, we can
+          // just copy that over. But if they wanted more than just the line
+          // number, fill it in.
           if (resolve_scope == eSymbolContextLineEntry) {
             sc.line_entry = line_entry;
           } else {
@@ -349,17 +348,17 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
               &line_entry);
         }
       } else {
-        // We found multiple support files that match "file_spec" so use
-        // the line table function that searches for a line entries
-        // that match a multiple support file indexes.
+        // We found multiple support files that match "file_spec" so use the
+        // line table function that searches for a line entries that match a
+        // multiple support file indexes.
         LineEntry line_entry;
         line_idx = line_table->FindLineEntryIndexByFileIndex(
             0, file_indexes, line, exact, &line_entry);
 
-        // If "exact == true", then "found_line" will be the same
-        // as "line". If "exact == false", the "found_line" will be the
-        // closest line entry with a line number greater than "line" and
-        // we will use this for our subsequent line exact matches below.
+        // If "exact == true", then "found_line" will be the same as "line". If
+        // "exact == false", the "found_line" will be the closest line entry
+        // with a line number greater than "line" and we will use this for our
+        // subsequent line exact matches below.
         found_line = line_entry.line;
 
         while (line_idx != UINT32_MAX) {
@@ -377,8 +376,8 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
       }
     }
   } else if (file_spec_matches_cu_file_spec && !check_inlines) {
-    // only append the context if we aren't looking for inline call sites
-    // by file and line and if the file spec matches that of the compile unit
+    // only append the context if we aren't looking for inline call sites by
+    // file and line and if the file spec matches that of the compile unit
     sc_list.Append(sc);
   }
   return sc_list.GetSize() - prev_size;

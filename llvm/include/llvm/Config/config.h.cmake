@@ -311,9 +311,6 @@
 /* Define if this is Unixish platform */
 #cmakedefine LLVM_ON_UNIX ${LLVM_ON_UNIX}
 
-/* Define if this is Win32ish platform */
-#cmakedefine LLVM_ON_WIN32 ${LLVM_ON_WIN32}
-
 /* Define if overriding target triple is enabled */
 #cmakedefine LLVM_TARGET_TRIPLE_ENV "${LLVM_TARGET_TRIPLE_ENV}"
 

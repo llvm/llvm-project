@@ -341,8 +341,8 @@ public:
     m_specs.insert(m_specs.end(), rhs.m_specs.begin(), rhs.m_specs.end());
   }
 
-  // The index "i" must be valid and this can't be used in
-  // multi-threaded code as no mutex lock is taken.
+  // The index "i" must be valid and this can't be used in multi-threaded code
+  // as no mutex lock is taken.
   ModuleSpec &GetModuleSpecRefAtIndex(size_t i) { return m_specs[i]; }
 
   bool GetModuleSpecAtIndex(size_t i, ModuleSpec &module_spec) const {

@@ -89,14 +89,13 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- :option:`-ffp-cast-overflow-workaround` and
-  :option:`-fno-fp-cast-overflow-workaround`
-  enable (disable) a workaround for code that casts floating-point values to
-  integers and back to floating-point. If the floating-point value is not
-  representable in the intermediate integer type, the code is incorrect
-  according to the language standard. This flag will attempt to generate code
-  as if the result of an overflowing conversion matches the overflowing behavior
-  of a target's native float-to-int conversion instructions.
+- :option:`-fstrict-float-cast-overflow` and
+  :option:`-fno-strict-float-cast-overflow` -
+   When a floating-point value is not representable in a destination integer
+   type, the code has undefined behavior according to the language standard.
+   By default, Clang will not guarantee any particular result in that case.
+   With the 'no-strict' option, Clang attempts to match the overflowing behavior
+   of the target's native float-to-int conversion instructions.
 
 - ...
 

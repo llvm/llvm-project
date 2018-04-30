@@ -115,12 +115,12 @@ MinidumpParser::GetThreadContext(const MinidumpThread &td) {
 
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
-  // On Windows, a 32-bit process can run on a 64-bit machine under
-  // WOW64. If the minidump was captured with a 64-bit debugger, then
-  // the CONTEXT we just grabbed from the mini_dump_thread is the one
-  // for the 64-bit "native" process rather than the 32-bit "guest"
-  // process we care about.  In this case, we can get the 32-bit CONTEXT
-  // from the TEB (Thread Environment Block) of the 64-bit process.
+  // On Windows, a 32-bit process can run on a 64-bit machine under WOW64. If
+  // the minidump was captured with a 64-bit debugger, then the CONTEXT we just
+  // grabbed from the mini_dump_thread is the one for the 64-bit "native"
+  // process rather than the 32-bit "guest" process we care about.  In this
+  // case, we can get the 32-bit CONTEXT from the TEB (Thread Environment
+  // Block) of the 64-bit process.
   auto teb_mem = GetMemory(td.teb, sizeof(TEB64));
   if (teb_mem.empty())
     return {};
@@ -130,9 +130,9 @@ MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
   if (error.Fail())
     return {};
 
-  // Slot 1 of the thread-local storage in the 64-bit TEB points to a
-  // structure that includes the 32-bit CONTEXT (after a ULONG).
-  // See:  https://msdn.microsoft.com/en-us/library/ms681670.aspx
+  // Slot 1 of the thread-local storage in the 64-bit TEB points to a structure
+  // that includes the 32-bit CONTEXT (after a ULONG). See:
+  // https://msdn.microsoft.com/en-us/library/ms681670.aspx
   auto context =
       GetMemory(wow64teb->tls_slots[1] + 4, sizeof(MinidumpContext_x86_32));
   if (context.size() < sizeof(MinidumpContext_x86_32))
@@ -334,10 +334,10 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
     }
   }
 
-  // Some Minidumps have a Memory64ListStream that captures all the heap
-  // memory (full-memory Minidumps).  We can't exactly use the same loop as
-  // above, because the Minidump uses slightly different data structures to
-  // describe those
+  // Some Minidumps have a Memory64ListStream that captures all the heap memory
+  // (full-memory Minidumps).  We can't exactly use the same loop as above,
+  // because the Minidump uses slightly different data structures to describe
+  // those
 
   if (!data64.empty()) {
     llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
@@ -377,8 +377,8 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
     return {};
 
   // There's at least some overlap between the beginning of the desired range
-  // (addr) and the current range.  Figure out where the overlap begins and
-  // how much overlap there is.
+  // (addr) and the current range.  Figure out where the overlap begins and how
+  // much overlap there is.
 
   const size_t offset = addr - range->start;
 

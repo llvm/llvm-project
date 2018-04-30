@@ -29,12 +29,11 @@ namespace lldb_private {
 
 //------------------------------------------------------------------
 // QueueItem:
-// This class represents a work item enqueued on a libdispatch aka
-// Grand Central Dispatch (GCD) queue.  Most often, this will be a
-// function or block.
-// "enqueued" here means that the work item has been added to a queue
-// but it has not yet started executing.  When it is "dequeued",
-// execution of the item begins.
+// This class represents a work item enqueued on a libdispatch aka Grand
+// Central Dispatch (GCD) queue.  Most often, this will be a function or block.
+// "enqueued" here means that the work item has been added to a queue but it
+// has not yet started executing.  When it is "dequeued", execution of the item
+// begins.
 //------------------------------------------------------------------
 
 class QueueItem : public std::enable_shared_from_this<QueueItem> {

@@ -149,8 +149,8 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
       return matches.GetSize();
     }
 
-    // If there was no trailing slash, then we're done as soon as we resolve the
-    // expression to the correct directory.  Otherwise we need to continue
+    // If there was no trailing slash, then we're done as soon as we resolve
+    // the expression to the correct directory.  Otherwise we need to continue
     // looking for matches within that directory.
     if (FirstSep == llvm::StringRef::npos) {
       // Make sure it ends with a separator.
