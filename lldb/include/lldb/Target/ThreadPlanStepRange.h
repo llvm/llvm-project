@@ -58,10 +58,9 @@ protected:
                                              size_t &insn_offset);
 
   // Pushes a plan to proceed through the next section of instructions in the
-  // range - usually just a RunToAddress
-  // plan to run to the next branch.  Returns true if it pushed such a plan.  If
-  // there was no available 'quick run'
-  // plan, then just single step.
+  // range - usually just a RunToAddress plan to run to the next branch.
+  // Returns true if it pushed such a plan.  If there was no available 'quick
+  // run' plan, then just single step.
   bool SetNextBranchBreakpoint();
 
   void ClearNextBranchBreakpoint();

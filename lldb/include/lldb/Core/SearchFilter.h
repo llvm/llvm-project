@@ -303,8 +303,7 @@ protected:
                              OptionNames name, FileSpecList &file_list);
 
   // These are utility functions to assist with the search iteration.  They are
-  // used by the
-  // default Search method.
+  // used by the default Search method.
 
   Searcher::CallbackReturn DoModuleIteration(const SymbolContext &context,
                                              Searcher &searcher);

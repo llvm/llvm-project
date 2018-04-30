@@ -28,13 +28,12 @@ NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread)
 NativeRegisterContext::~NativeRegisterContext() {}
 
 // FIXME revisit invalidation, process stop ids, etc.  Right now we don't
-// support caching in NativeRegisterContext.  We can do this later by
-// utilizing NativeProcessProtocol::GetStopID () and adding a stop id to
+// support caching in NativeRegisterContext.  We can do this later by utilizing
+// NativeProcessProtocol::GetStopID () and adding a stop id to
 // NativeRegisterContext.
 
 // void
-// NativeRegisterContext::InvalidateIfNeeded (bool force)
-// {
+// NativeRegisterContext::InvalidateIfNeeded (bool force) {
 //     ProcessSP process_sp (m_thread.GetProcess());
 //     bool invalidate = force;
 //     uint32_t process_stop_id = UINT32_MAX;
@@ -365,8 +364,8 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   // We now have a memory buffer that contains the part or all of the register
   // value. Set the register value using this memory data.
   // TODO: we might need to add a parameter to this function in case the byte
-  // order of the memory data doesn't match the process. For now we are assuming
-  // they are the same.
+  // order of the memory data doesn't match the process. For now we are
+  // assuming they are the same.
   reg_value.SetFromMemoryData(reg_info, src, src_len, process.GetByteOrder(),
                               error);
 
@@ -385,8 +384,7 @@ Status NativeRegisterContext::WriteRegisterValueToMemory(
 
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
-  // assuming
-  // they are the same.
+  // assuming they are the same.
   const size_t bytes_copied = reg_value.GetAsMemoryData(
       reg_info, dst, dst_len, process.GetByteOrder(), error);
 

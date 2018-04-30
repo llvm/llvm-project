@@ -3,7 +3,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd February 9, 2018
+.Dd April 28, 2018
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -401,6 +401,10 @@ Display the version number and exit.
 .It Fl v
 Display the version number and proceed with linking if object files are
 specified.
+.It Fl -warn-backrefs
+Warn about reverse or cyclic dependencies to or between static archives.
+This can be used to ensure linker invocation remains compatible with
+traditional Unix-like linkers.
 .It Fl -warn-common
 Warn about duplicate common symbols.
 .It Fl -warn-unresolved-symbols
@@ -525,3 +529,8 @@ may produce different results compared to traditional linkers.
 In practice, large bodies of third party software have been linked with
 .Nm
 without material issues.
+.Pp
+The
+.Fl -warn-backrefs
+option may be used to identify a linker invocation that may be incompatible
+with traditional Unix-like linker behavior.

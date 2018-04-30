@@ -19,9 +19,9 @@ using namespace lldb;
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
-// Create an instance of this class. This function is filled into
-// the plugin info class that gets handed out by the plugin factory and
-// allows the lldb to instantiate an instance of this class.
+// Create an instance of this class. This function is filled into the plugin
+// info class that gets handed out by the plugin factory and allows the lldb to
+// instantiate an instance of this class.
 //----------------------------------------------------------------------
 DynamicLoader *DynamicLoaderStatic::CreateInstance(Process *process,
                                                    bool force) {
@@ -97,17 +97,17 @@ void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
         if (section_list) {
           // All sections listed in the dyld image info structure will all
           // either be fixed up already, or they will all be off by a single
-          // slide amount that is determined by finding the first segment
-          // that is at file offset zero which also has bytes (a file size
-          // that is greater than zero) in the object file.
+          // slide amount that is determined by finding the first segment that
+          // is at file offset zero which also has bytes (a file size that is
+          // greater than zero) in the object file.
 
           // Determine the slide amount (if any)
           const size_t num_sections = section_list->GetSize();
           size_t sect_idx = 0;
           for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
-            // Iterate through the object file sections to find the
-            // first section that starts of file offset zero and that
-            // has bytes in the file...
+            // Iterate through the object file sections to find the first
+            // section that starts of file offset zero and that has bytes in
+            // the file...
             SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
             if (section_sp) {
               if (m_process->GetTarget().SetSectionLoadAddress(

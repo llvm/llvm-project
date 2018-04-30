@@ -174,8 +174,8 @@ public:
   ///     @li \b false if this object is not equal to \a rhs.
   //------------------------------------------------------------------
   bool operator==(const ConstString &rhs) const {
-    // We can do a pointer compare to compare these strings since they
-    // must come from the same pool in order to be equal.
+    // We can do a pointer compare to compare these strings since they must
+    // come from the same pool in order to be equal.
     return m_string == rhs.m_string;
   }
 

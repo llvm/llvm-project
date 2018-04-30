@@ -312,8 +312,8 @@ bool OperatingSystemGo::UpdateThreadList(ThreadList &old_thread_list,
   }
   std::vector<Goroutine> goroutines;
   // The threads that are in "new_thread_list" upon entry are the threads from
-  // the
-  // lldb_private::Process subclass, no memory threads will be in this list.
+  // the lldb_private::Process subclass, no memory threads will be in this
+  // list.
 
   Status err;
   for (uint64_t i = 0; i < allglen; ++i) {

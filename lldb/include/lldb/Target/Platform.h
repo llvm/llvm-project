@@ -259,9 +259,9 @@ public:
   //------------------------------------------------------------------
   // Subclasses must be able to fetch the current OS version
   //
-  // Remote classes must be connected for this to succeed. Local
-  // subclasses don't need to override this function as it will just
-  // call the HostInfo::GetOSVersion().
+  // Remote classes must be connected for this to succeed. Local subclasses
+  // don't need to override this function as it will just call the
+  // HostInfo::GetOSVersion().
   //------------------------------------------------------------------
   virtual bool GetRemoteOSVersion() { return false; }
 
@@ -322,8 +322,8 @@ public:
   //----------------------------------------------------------------------
   // Locate the scripting resource given a module specification.
   //
-  // Locating the file should happen only on the local computer or using
-  // the current computers global settings.
+  // Locating the file should happen only on the local computer or using the
+  // current computers global settings.
   //----------------------------------------------------------------------
   virtual FileSpecList
   LocateExecutableScriptingResources(Target *target, Module &module,
@@ -467,8 +467,8 @@ public:
   //                Status &error) = 0;
 
   //------------------------------------------------------------------
-  // The base class Platform will take care of the host platform.
-  // Subclasses will need to fill in the remote case.
+  // The base class Platform will take care of the host platform. Subclasses
+  // will need to fill in the remote case.
   //------------------------------------------------------------------
   virtual uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &proc_infos);
@@ -476,15 +476,15 @@ public:
   virtual bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
   //------------------------------------------------------------------
-  // Set a breakpoint on all functions that can end up creating a thread
-  // for this platform. This is needed when running expressions and
-  // also for process control.
+  // Set a breakpoint on all functions that can end up creating a thread for
+  // this platform. This is needed when running expressions and also for
+  // process control.
   //------------------------------------------------------------------
   virtual lldb::BreakpointSP SetThreadCreationBreakpoint(Target &target);
 
   //------------------------------------------------------------------
-  // Given a target, find the local SDK directory if one exists on the
-  // current host.
+  // Given a target, find the local SDK directory if one exists on the current
+  // host.
   //------------------------------------------------------------------
   virtual lldb_private::ConstString
   GetSDKDirectory(lldb_private::Target &target) {
@@ -533,8 +533,8 @@ public:
 
   void SetSDKBuild(const ConstString &sdk_build) { m_sdk_build = sdk_build; }
 
-  // Override this to return true if your platform supports Clang modules.
-  // You may also need to override AddClangModuleCompilationOptions to pass the
+  // Override this to return true if your platform supports Clang modules. You
+  // may also need to override AddClangModuleCompilationOptions to pass the
   // right Clang flags for your platform.
   virtual bool SupportsModules() { return false; }
 
@@ -549,9 +549,8 @@ public:
   bool SetWorkingDirectory(const FileSpec &working_dir);
 
   // There may be modules that we don't want to find by default for operations
-  // like "setting breakpoint by name".
-  // The platform will return "true" from this call if the passed in module
-  // happens to be one of these.
+  // like "setting breakpoint by name". The platform will return "true" from
+  // this call if the passed in module happens to be one of these.
 
   virtual bool
   ModuleIsExcludedForUnconstrainedSearches(Target &target,
@@ -870,11 +869,11 @@ public:
 
 protected:
   bool m_is_host;
-  // Set to true when we are able to actually set the OS version while
-  // being connected. For remote platforms, we might set the version ahead
-  // of time before we actually connect and this version might change when
-  // we actually connect to a remote platform. For the host platform this
-  // will be set to the once we call HostInfo::GetOSVersion().
+  // Set to true when we are able to actually set the OS version while being
+  // connected. For remote platforms, we might set the version ahead of time
+  // before we actually connect and this version might change when we actually
+  // connect to a remote platform. For the host platform this will be set to
+  // the once we call HostInfo::GetOSVersion().
   bool m_os_version_set_while_connected;
   bool m_system_arch_set_while_connected;
   ConstString
@@ -925,9 +924,8 @@ protected:
 
   const char *GetCachedUserName(uint32_t uid) {
     std::lock_guard<std::mutex> guard(m_mutex);
-    // return the empty string if our string is NULL
-    // so we can tell when things were in the negative
-    // cached (didn't find a valid user name, don't keep
+    // return the empty string if our string is NULL so we can tell when things
+    // were in the negative cached (didn't find a valid user name, don't keep
     // trying)
     const auto pos = m_uid_map.find(uid);
     return ((pos != m_uid_map.end()) ? pos->second.AsCString("") : nullptr);
@@ -957,9 +955,8 @@ protected:
 
   const char *GetCachedGroupName(uint32_t gid) {
     std::lock_guard<std::mutex> guard(m_mutex);
-    // return the empty string if our string is NULL
-    // so we can tell when things were in the negative
-    // cached (didn't find a valid group name, don't keep
+    // return the empty string if our string is NULL so we can tell when things
+    // were in the negative cached (didn't find a valid group name, don't keep
     // trying)
     const auto pos = m_gid_map.find(gid);
     return ((pos != m_gid_map.end()) ? pos->second.AsCString("") : nullptr);

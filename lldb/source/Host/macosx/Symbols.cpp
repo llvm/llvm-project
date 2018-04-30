@@ -340,9 +340,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
     std::string DBGBuildSourcePath;
     std::string DBGSourcePath;
 
-    // If DBGVersion value 2 or higher, look for
-    // DBGSourcePathRemapping dictionary and append the key-value pairs
-    // to our remappings.
+    // If DBGVersion value 2 or higher, look for DBGSourcePathRemapping
+    // dictionary and append the key-value pairs to our remappings.
     cf_dict = (CFDictionaryRef)CFDictionaryGetValue(
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSourcePathRemapping"));
     if (cf_dict && CFGetTypeID(cf_dict) == CFDictionaryGetTypeID()) {
@@ -389,10 +388,9 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
           }
           if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
             // In the "old style" DBGSourcePathRemapping dictionary, the
-            // DBGSourcePath values
-            // (the "values" half of key-value path pairs) were wrong.  Ignore
-            // them and use the
-            // universal DBGSourcePath string from earlier.
+            // DBGSourcePath values (the "values" half of key-value path pairs)
+            // were wrong.  Ignore them and use the universal DBGSourcePath
+            // string from earlier.
             if (new_style_source_remapping_dictionary == true &&
                 !original_DBGSourcePath_value.empty()) {
               DBGSourcePath = original_DBGSourcePath_value;
@@ -402,9 +400,9 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
               DBGSourcePath = resolved_source_path.GetPath();
             }
             // With version 2 of DBGSourcePathRemapping, we can chop off the
-            // last two filename parts from the source remapping and get a
-            // more general source remapping that still works. Add this as
-            // another option in addition to the full source path remap.
+            // last two filename parts from the source remapping and get a more
+            // general source remapping that still works. Add this as another
+            // option in addition to the full source path remap.
             module_spec.GetSourceMappingList().Append(
                 ConstString(DBGBuildSourcePath.c_str()),
                 ConstString(DBGSourcePath.c_str()), true);
@@ -429,8 +427,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
     }
 
 
-    // If we have a DBGBuildSourcePath + DBGSourcePath pair,
-    // append them to the source remappings list.
+    // If we have a DBGBuildSourcePath + DBGSourcePath pair, append them to the
+    // source remappings list.
 
     cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
                                                CFSTR("DBGBuildSourcePath"));
@@ -464,8 +462,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
   const FileSpec *file_spec_ptr = module_spec.GetFileSpecPtr();
 
   // It's expensive to check for the DBGShellCommands defaults setting, only do
-  // it once per
-  // lldb run and cache the result.
+  // it once per lldb run and cache the result.
   static bool g_have_checked_for_dbgshell_command = false;
   static const char *g_dbgshell_command = NULL;
   if (g_have_checked_for_dbgshell_command == false) {
@@ -487,8 +484,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
   }
 
   // When g_dbgshell_command is NULL, the user has not enabled the use of an
-  // external program
-  // to find the symbols, don't run it for them.
+  // external program to find the symbols, don't run it for them.
   if (force_lookup == false && g_dbgshell_command == NULL) {
     return false;
   }

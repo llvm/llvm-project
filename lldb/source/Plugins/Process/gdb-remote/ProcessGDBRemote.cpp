@@ -94,11 +94,11 @@ using namespace lldb_private::process_gdb_remote;
 
 namespace lldb {
 // Provide a function that can easily dump the packet history if we know a
-// ProcessGDBRemote * value (which we can get from logs or from debugging).
-// We need the function in the lldb namespace so it makes it into the final
+// ProcessGDBRemote * value (which we can get from logs or from debugging). We
+// need the function in the lldb namespace so it makes it into the final
 // executable since the LLDB shared library only exports stuff in the lldb
-// namespace. This allows you to attach with a debugger and call this
-// function and get the packet history dumped to a file.
+// namespace. This allows you to attach with a debugger and call this function
+// and get the packet history dumped to a file.
 void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
   StreamFile strm;
   Status error(strm.GetFile().Open(path, File::eOpenOptionWrite |
@@ -161,8 +161,8 @@ static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
 } // anonymous namespace end
 
 // TODO Randomly assigning a port is unsafe.  We should get an unused
-// ephemeral port from the kernel and make sure we reserve it before passing
-// it to debugserver.
+// ephemeral port from the kernel and make sure we reserve it before passing it
+// to debugserver.
 
 #if defined(__APPLE__)
 #define LOW_PORT (IPPORT_RESERVED)
@@ -236,8 +236,8 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
     }
     return exe_module->GetFileSpec().Exists();
   }
-  // However, if there is no executable module, we return true since we might be
-  // preparing to attach.
+  // However, if there is no executable module, we return true since we might
+  // be preparing to attach.
   return true;
 }
 
@@ -303,17 +303,16 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
 ProcessGDBRemote::~ProcessGDBRemote() {
   //  m_mach_process.UnregisterNotificationCallbacks (this);
   Clear();
-  // We need to call finalize on the process before destroying ourselves
-  // to make sure all of the broadcaster cleanup goes as planned. If we
-  // destruct this class, then Process::~Process() might have problems
-  // trying to fully destroy the broadcaster.
+  // We need to call finalize on the process before destroying ourselves to
+  // make sure all of the broadcaster cleanup goes as planned. If we destruct
+  // this class, then Process::~Process() might have problems trying to fully
+  // destroy the broadcaster.
   Finalize();
 
-  // The general Finalize is going to try to destroy the process and that SHOULD
-  // shut down the async thread.  However, if we don't kill it it will get
-  // stranded and
-  // its connection will go away so when it wakes up it will crash.  So kill it
-  // for sure here.
+  // The general Finalize is going to try to destroy the process and that
+  // SHOULD shut down the async thread.  However, if we don't kill it it will
+  // get stranded and its connection will go away so when it wakes up it will
+  // crash.  So kill it for sure here.
   StopAsyncThread();
   KillDebugserverProcess();
 }
@@ -372,8 +371,7 @@ bool ProcessGDBRemote::ParsePythonTargetDefinition(
 }
 
 // If the remote stub didn't give us eh_frame or DWARF register numbers for a
-// register,
-// see if the ABI can provide them.
+// register, see if the ABI can provide them.
 // DWARF and eh_frame register numbers are defined as a part of the ABI.
 static void AugmentRegisterInfoViaABI(RegisterInfo &reg_info,
                                       ConstString reg_name, ABISP abi_sp) {
@@ -426,9 +424,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
 
   m_register_info.Clear();
 
-  // Check if qHostInfo specified a specific packet timeout for this connection.
-  // If so then lets update our setting so the user knows what the timeout is
-  // and can see it.
+  // Check if qHostInfo specified a specific packet timeout for this
+  // connection. If so then lets update our setting so the user knows what the
+  // timeout is and can see it.
   const auto host_packet_timeout = m_gdb_comm.GetHostDefaultPacketTimeout();
   if (host_packet_timeout > std::chrono::seconds(0)) {
     GetGlobalPluginProperties()->SetPacketTimeout(host_packet_timeout.count());
@@ -600,10 +598,8 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         }
 
         // We have to make a temporary ABI here, and not use the GetABI because
-        // this code
-        // gets called in DidAttach, when the target architecture (and
-        // consequently the ABI we'll get from
-        // the process) may be wrong.
+        // this code gets called in DidAttach, when the target architecture
+        // (and consequently the ABI we'll get from the process) may be wrong.
         ABISP abi_to_use = ABI::FindPlugin(shared_from_this(), arch_to_use);
 
         AugmentRegisterInfoViaABI(reg_info, reg_name, abi_to_use);
@@ -624,9 +620,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
 
   // We didn't get anything if the accumulated reg_num is zero.  See if we are
   // debugging ARM and fill with a hard coded register set until we can get an
-  // updated debugserver down on the devices.
-  // On the other hand, if the accumulated reg_num is positive, see if we can
-  // add composite registers to the existing primordial ones.
+  // updated debugserver down on the devices. On the other hand, if the
+  // accumulated reg_num is positive, see if we can add composite registers to
+  // the existing primordial ones.
   bool from_scratch = (m_register_info.GetNumRegisters() == 0);
 
   if (!target_arch.IsValid()) {
@@ -673,9 +669,8 @@ Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
 
   lldb::pid_t pid = m_gdb_comm.GetCurrentProcessID();
   if (pid == LLDB_INVALID_PROCESS_ID) {
-    // We don't have a valid process ID, so note that we are connected
-    // and could now request to launch or attach, or get remote process
-    // listings...
+    // We don't have a valid process ID, so note that we are connected and
+    // could now request to launch or attach, or get remote process listings...
     SetPrivateState(eStateConnected);
   } else {
     // We have a valid process
@@ -725,7 +720,8 @@ Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
 
   if (error.Success() && !GetTarget().GetArchitecture().IsValid() &&
       m_gdb_comm.GetHostArchitecture().IsValid()) {
-    // Prefer the *process'* architecture over that of the *host*, if available.
+    // Prefer the *process'* architecture over that of the *host*, if
+    // available.
     if (m_gdb_comm.GetProcessArchitecture().IsValid())
       GetTarget().SetArchitecture(m_gdb_comm.GetProcessArchitecture());
     else
@@ -804,8 +800,8 @@ Status ProcessGDBRemote::DoLaunch(Module *exe_module,
 
   const bool disable_stdio = (launch_flags & eLaunchFlagDisableSTDIO) != 0;
   if (stdin_file_spec || disable_stdio) {
-    // the inferior will be reading stdin from the specified file
-    // or stdio is completely disabled
+    // the inferior will be reading stdin from the specified file or stdio is
+    // completely disabled
     m_stdin_forward = false;
   } else {
     m_stdin_forward = true;
@@ -999,16 +995,15 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
     return error;
   }
 
-  // Start the communications read thread so all incoming data can be
-  // parsed into packets and queued as they arrive.
+  // Start the communications read thread so all incoming data can be parsed
+  // into packets and queued as they arrive.
   if (GetTarget().GetNonStopModeEnabled())
     m_gdb_comm.StartReadThread();
 
-  // We always seem to be able to open a connection to a local port
-  // so we need to make sure we can then send data to it. If we can't
-  // then we aren't actually connected to anything, so try and do the
-  // handshake with the remote GDB server and make sure that goes
-  // alright.
+  // We always seem to be able to open a connection to a local port so we need
+  // to make sure we can then send data to it. If we can't then we aren't
+  // actually connected to anything, so try and do the handshake with the
+  // remote GDB server and make sure that goes alright.
   if (!m_gdb_comm.HandshakeWithServer(&error)) {
     m_gdb_comm.Disconnect();
     if (error.Success())
@@ -1050,9 +1045,9 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
 
     // See if the GDB server supports the qHostInfo information
 
-    // See if the GDB server supports the qProcessInfo packet, if so
-    // prefer that over the Host information as it will be more specific
-    // to our process.
+    // See if the GDB server supports the qProcessInfo packet, if so prefer
+    // that over the Host information as it will be more specific to our
+    // process.
 
     const ArchSpec &remote_process_arch = m_gdb_comm.GetProcessArchitecture();
     if (remote_process_arch.IsValid()) {
@@ -1097,9 +1092,8 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
         // architectures.
         // You can have an armv6 executable, and if the host is armv7, then the
         // system will load the best possible architecture for all shared
-        // libraries
-        // it has, so we really need to take the remote host architecture as our
-        // defacto architecture in this case.
+        // libraries it has, so we really need to take the remote host
+        // architecture as our defacto architecture in this case.
 
         if ((process_arch.GetMachine() == llvm::Triple::arm ||
              process_arch.GetMachine() == llvm::Triple::thumb) &&
@@ -1145,14 +1139,14 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
                           ? target_arch.GetTriple().getTriple().c_str()
                           : "<null>");
       } else {
-        // The target doesn't have a valid architecture yet, set it from
-        // the architecture we got from the remote GDB server
+        // The target doesn't have a valid architecture yet, set it from the
+        // architecture we got from the remote GDB server
         GetTarget().SetArchitecture(process_arch);
       }
     }
 
-    // Find out which StructuredDataPlugins are supported by the
-    // debug monitor.  These plugins transmit data over async $J packets.
+    // Find out which StructuredDataPlugins are supported by the debug monitor.
+    // These plugins transmit data over async $J packets.
     auto supported_packets_array =
         m_gdb_comm.GetSupportedStructuredDataPlugins();
     if (supported_packets_array)
@@ -1360,9 +1354,9 @@ Status ProcessGDBRemote::DoResume() {
       continue_packet_error = true;
 
     if (continue_packet_error) {
-      // Either no vCont support, or we tried to use part of the vCont
-      // packet that wasn't supported by the remote GDB server.
-      // We need to try and make a simple packet that can do our continue
+      // Either no vCont support, or we tried to use part of the vCont packet
+      // that wasn't supported by the remote GDB server. We need to try and
+      // make a simple packet that can do our continue
       const size_t num_continue_c_tids = m_continue_c_tids.size();
       const size_t num_continue_C_tids = m_continue_C_tids.size();
       const size_t num_continue_s_tids = m_continue_s_tids.size();
@@ -1389,11 +1383,10 @@ Status ProcessGDBRemote::DoResume() {
           const int continue_signo = m_continue_C_tids.front().second;
           // Only one thread is continuing
           if (num_continue_C_tids > 1) {
-            // More that one thread with a signal, yet we don't have
-            // vCont support and we are being asked to resume each
-            // thread with a signal, we need to make sure they are
-            // all the same signal, or we can't issue the continue
-            // accurately with the current support...
+            // More that one thread with a signal, yet we don't have vCont
+            // support and we are being asked to resume each thread with a
+            // signal, we need to make sure they are all the same signal, or we
+            // can't issue the continue accurately with the current support...
             if (num_continue_C_tids > 1) {
               continue_packet_error = false;
               for (size_t i = 1; i < m_continue_C_tids.size(); ++i) {
@@ -1670,9 +1663,8 @@ bool ProcessGDBRemote::UpdateThreadList(ThreadList &old_thread_list,
     }
   }
 
-  // Whatever that is left in old_thread_list_copy are not
-  // present in new_thread_list. Remove non-existent threads from internal id
-  // table.
+  // Whatever that is left in old_thread_list_copy are not present in
+  // new_thread_list. Remove non-existent threads from internal id table.
   size_t old_num_thread_ids = old_thread_list_copy.GetSize(false);
   for (size_t i = 0; i < old_num_thread_ids; i++) {
     ThreadSP old_thread_sp(old_thread_list_copy.GetThreadAtIndex(i, false));
@@ -1733,12 +1725,11 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     return true;
 
   // See if we got thread stop info for any threads valid stop info reasons
-  // threads
-  // via the "jstopinfo" packet stop reply packet key/value pair?
+  // threads via the "jstopinfo" packet stop reply packet key/value pair?
   if (m_jstopinfo_sp) {
     // If we have "jstopinfo" then we have stop descriptions for all threads
-    // that have stop reasons, and if there is no entry for a thread, then
-    // it has no stop reason.
+    // that have stop reasons, and if there is no entry for a thread, then it
+    // has no stop reason.
     thread->GetRegisterContext()->InvalidateIfNeeded(true);
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
       thread->SetStopInfo(StopInfoSP());
@@ -1766,9 +1757,8 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   if (tid != LLDB_INVALID_THREAD_ID) {
     // Scope for "locker" below
     {
-      // m_thread_list_real does have its own mutex, but we need to
-      // hold onto the mutex between the call to
-      // m_thread_list_real.FindThreadByID(...)
+      // m_thread_list_real does have its own mutex, but we need to hold onto
+      // the mutex between the call to m_thread_list_real.FindThreadByID(...)
       // and the m_thread_list_real.AddThread(...) so it doesn't change on us
       std::lock_guard<std::recursive_mutex> guard(
           m_thread_list_real.GetMutex());
@@ -1846,9 +1836,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                                                       ->GetBreakpointSiteList()
                                                       .FindByAddress(pc);
 
-              // If the current pc is a breakpoint site then the StopInfo should
-              // be set to Breakpoint
-              // Otherwise, it will be set to Trace.
+              // If the current pc is a breakpoint site then the StopInfo
+              // should be set to Breakpoint Otherwise, it will be set to
+              // Trace.
               if (bp_site_sp &&
                   bp_site_sp->ValidForThisThread(thread_sp.get())) {
                 thread_sp->SetStopInfo(
@@ -1865,11 +1855,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                                                       .FindByAddress(pc);
               if (bp_site_sp) {
                 // If the breakpoint is for this thread, then we'll report the
-                // hit, but if it is for another thread,
-                // we can just report no reason.  We don't need to worry about
-                // stepping over the breakpoint here, that
-                // will be taken care of when the thread resumes and notices
-                // that there's a breakpoint under the pc.
+                // hit, but if it is for another thread, we can just report no
+                // reason.  We don't need to worry about stepping over the
+                // breakpoint here, that will be taken care of when the thread
+                // resumes and notices that there's a breakpoint under the pc.
                 handled = true;
                 if (bp_site_sp->ValidForThisThread(thread_sp.get())) {
                   thread_sp->SetStopInfo(
@@ -1931,13 +1920,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                     pc);
 
             // If the current pc is a breakpoint site then the StopInfo should
-            // be set to Breakpoint
-            // even though the remote stub did not set it as such. This can
-            // happen when
-            // the thread is involuntarily interrupted (e.g. due to stops on
-            // other
-            // threads) just as it is about to execute the breakpoint
-            // instruction.
+            // be set to Breakpoint even though the remote stub did not set it
+            // as such. This can happen when the thread is involuntarily
+            // interrupted (e.g. due to stops on other threads) just as it is
+            // about to execute the breakpoint instruction.
             if (bp_site_sp && bp_site_sp->ValidForThisThread(thread_sp.get())) {
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonWithBreakpointSiteID(
@@ -1959,11 +1945,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
               if (bp_site_sp) {
                 // If the breakpoint is for this thread, then we'll report the
-                // hit, but if it is for another thread,
-                // we can just report no reason.  We don't need to worry about
-                // stepping over the breakpoint here, that
-                // will be taken care of when the thread resumes and notices
-                // that there's a breakpoint under the pc.
+                // hit, but if it is for another thread, we can just report no
+                // reason.  We don't need to worry about stepping over the
+                // breakpoint here, that will be taken care of when the thread
+                // resumes and notices that there's a breakpoint under the pc.
                 if (bp_site_sp->ValidForThisThread(thread_sp.get())) {
                   if (m_breakpoint_pc_offset != 0)
                     thread_sp->GetRegisterContext()->SetPC(pc);
@@ -1976,8 +1961,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                 }
               } else {
                 // If we were stepping then assume the stop was the result of
-                // the trace.  If we were
-                // not stepping then report the SIGTRAP.
+                // the trace.  If we were not stepping then report the SIGTRAP.
                 // FIXME: We are still missing the case where we single step
                 // over a trap instruction.
                 if (thread_sp->GetTemporaryResumeState() == eStateStepping)
@@ -2172,15 +2156,15 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
   switch (stop_type) {
   case 'T':
   case 'S': {
-    // This is a bit of a hack, but is is required. If we did exec, we
-    // need to clear our thread lists and also know to rebuild our dynamic
-    // register info before we lookup and threads and populate the expedited
-    // register values so we need to know this right away so we can cleanup
-    // and update our registers.
+    // This is a bit of a hack, but is is required. If we did exec, we need to
+    // clear our thread lists and also know to rebuild our dynamic register
+    // info before we lookup and threads and populate the expedited register
+    // values so we need to know this right away so we can cleanup and update
+    // our registers.
     const uint32_t stop_id = GetStopID();
     if (stop_id == 0) {
-      // Our first stop, make sure we have a process ID, and also make
-      // sure we know about our registers
+      // Our first stop, make sure we have a process ID, and also make sure we
+      // know about our registers
       if (GetID() == LLDB_INVALID_PROCESS_ID) {
         lldb::pid_t pid = m_gdb_comm.GetCurrentProcessID();
         if (pid != LLDB_INVALID_PROCESS_ID)
@@ -2226,8 +2210,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         m_thread_ids.clear();
         // A comma separated list of all threads in the current
-        // process that includes the thread for this stop reply
-        // packet
+        // process that includes the thread for this stop reply packet
         lldb::tid_t tid;
         while (!value.empty()) {
           llvm::StringRef tid_str;
@@ -2239,8 +2222,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       } else if (key.compare("thread-pcs") == 0) {
         m_thread_pcs.clear();
         // A comma separated list of all threads in the current
-        // process that includes the thread for this stop reply
-        // packet
+        // process that includes the thread for this stop reply packet
         lldb::addr_t pc;
         while (!value.empty()) {
           llvm::StringRef pc_str;
@@ -2292,13 +2274,10 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         desc_extractor.GetHexByteString(description);
       } else if (key.compare("memory") == 0) {
         // Expedited memory. GDB servers can choose to send back expedited
-        // memory
-        // that can populate the L1 memory cache in the process so that things
-        // like
-        // the frame pointer backchain can be expedited. This will help stack
-        // backtracing be more efficient by not having to send as many memory
-        // read
-        // requests down the remote GDB server.
+        // memory that can populate the L1 memory cache in the process so that
+        // things like the frame pointer backchain can be expedited. This will
+        // help stack backtracing be more efficient by not having to send as
+        // many memory read requests down the remote GDB server.
 
         // Key/value pair format: memory:<addr>=<bytes>;
         // <addr> is a number whose base will be interpreted by the prefix:
@@ -2350,7 +2329,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     if (tid == LLDB_INVALID_THREAD_ID) {
       // A thread id may be invalid if the response is old style 'S' packet
       // which does not provide the
-      // thread information. So update the thread list and choose the first one.
+      // thread information. So update the thread list and choose the first
+      // one.
       UpdateThreadIDList();
 
       if (!m_thread_ids.empty()) {
@@ -2383,9 +2363,9 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
 
   m_thread_ids.clear();
   m_thread_pcs.clear();
-  // Set the thread stop info. It might have a "threads" key whose value is
-  // a list of all thread IDs in the current process, so m_thread_ids might
-  // get set.
+  // Set the thread stop info. It might have a "threads" key whose value is a
+  // list of all thread IDs in the current process, so m_thread_ids might get
+  // set.
 
   // Scope for the lock
   {
@@ -2416,8 +2396,8 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
     m_initial_tid = LLDB_INVALID_THREAD_ID;
   }
 
-  // Let all threads recover from stopping and do any clean up based
-  // on the previous thread state (if any).
+  // Let all threads recover from stopping and do any clean up based on the
+  // previous thread state (if any).
   m_thread_list_real.RefreshStateAfterStop();
 }
 
@@ -2425,8 +2405,8 @@ Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
   if (m_public_state.GetValue() == eStateAttaching) {
-    // We are being asked to halt during an attach. We need to just close
-    // our file handle and debugserver will go away, and we can be done...
+    // We are being asked to halt during an attach. We need to just close our
+    // file handle and debugserver will go away, and we can be done...
     m_gdb_comm.Disconnect();
   } else
     caused_stop = m_gdb_comm.Interrupt();
@@ -2469,31 +2449,24 @@ Status ProcessGDBRemote::DoDestroy() {
     log->Printf("ProcessGDBRemote::DoDestroy()");
 
   // There is a bug in older iOS debugservers where they don't shut down the
-  // process
-  // they are debugging properly.  If the process is sitting at a breakpoint or
-  // an exception,
-  // this can cause problems with restarting.  So we check to see if any of our
-  // threads are stopped
-  // at a breakpoint, and if so we remove all the breakpoints, resume the
-  // process, and THEN
-  // destroy it again.
+  // process they are debugging properly.  If the process is sitting at a
+  // breakpoint or an exception, this can cause problems with restarting.  So
+  // we check to see if any of our threads are stopped at a breakpoint, and if
+  // so we remove all the breakpoints, resume the process, and THEN destroy it
+  // again.
   //
   // Note, we don't have a good way to test the version of debugserver, but I
-  // happen to know that
-  // the set of all the iOS debugservers which don't support
-  // GetThreadSuffixSupported() and that of
-  // the debugservers with this bug are equal.  There really should be a better
-  // way to test this!
+  // happen to know that the set of all the iOS debugservers which don't
+  // support GetThreadSuffixSupported() and that of the debugservers with this
+  // bug are equal.  There really should be a better way to test this!
   //
   // We also use m_destroy_tried_resuming to make sure we only do this once, if
-  // we resume and then halt and
-  // get called here to destroy again and we're still at a breakpoint or
-  // exception, then we should
-  // just do the straight-forward kill.
+  // we resume and then halt and get called here to destroy again and we're
+  // still at a breakpoint or exception, then we should just do the straight-
+  // forward kill.
   //
   // And of course, if we weren't able to stop the process by the time we get
-  // here, it isn't
-  // necessary (or helpful) to do any of this.
+  // here, it isn't necessary (or helpful) to do any of this.
 
   if (!m_gdb_comm.GetThreadSuffixSupported() &&
       m_public_state.GetValue() != eStateRunning) {
@@ -2508,9 +2481,8 @@ Status ProcessGDBRemote::DoDestroy() {
                           "destroy once already, not doing it again.");
       } else {
         // At present, the plans are discarded and the breakpoints disabled
-        // Process::Destroy,
-        // but we really need it to happen here and it doesn't matter if we do
-        // it twice.
+        // Process::Destroy, but we really need it to happen here and it
+        // doesn't matter if we do it twice.
         m_thread_list.DiscardThreadPlans();
         DisableAllBreakpointSites();
 
@@ -2547,12 +2519,11 @@ Status ProcessGDBRemote::DoDestroy() {
           m_destroy_tried_resuming = true;
 
           // If we are going to run again before killing, it would be good to
-          // suspend all the threads
-          // before resuming so they won't get into more trouble.  Sadly, for
-          // the threads stopped with
-          // the breakpoint or exception, the exception doesn't get cleared if
-          // it is suspended, so we do
-          // have to run the risk of letting those threads proceed a bit.
+          // suspend all the threads before resuming so they won't get into
+          // more trouble.  Sadly, for the threads stopped with the breakpoint
+          // or exception, the exception doesn't get cleared if it is
+          // suspended, so we do have to run the risk of letting those threads
+          // proceed a bit.
 
           {
             std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
@@ -2599,17 +2570,14 @@ Status ProcessGDBRemote::DoDestroy() {
         if (packet_cmd == 'W' || packet_cmd == 'X') {
 #if defined(__APPLE__)
           // For Native processes on Mac OS X, we launch through the Host
-          // Platform, then hand the process off
-          // to debugserver, which becomes the parent process through
-          // "PT_ATTACH".  Then when we go to kill
-          // the process on Mac OS X we call ptrace(PT_KILL) to kill it, then we
-          // call waitpid which returns
-          // with no error and the correct status.  But amusingly enough that
-          // doesn't seem to actually reap
+          // Platform, then hand the process off to debugserver, which becomes
+          // the parent process through "PT_ATTACH".  Then when we go to kill
+          // the process on Mac OS X we call ptrace(PT_KILL) to kill it, then
+          // we call waitpid which returns with no error and the correct
+          // status.  But amusingly enough that doesn't seem to actually reap
           // the process, but instead it is left around as a Zombie.  Probably
-          // the kernel is in the process of
-          // switching ownership back to lldb which was the original parent, and
-          // gets confused in the handoff.
+          // the kernel is in the process of switching ownership back to lldb
+          // which was the original parent, and gets confused in the handoff.
           // Anyway, so call waitpid here to finally reap it.
           PlatformSP platform_sp(GetTarget().GetPlatform());
           if (platform_sp && platform_sp->IsHost()) {
@@ -2681,9 +2649,8 @@ void ProcessGDBRemote::SetLastStopPacket(
     if (GetTarget().GetNonStopModeEnabled() == false)
       m_stop_packet_stack.clear();
 
-    // Add this stop packet to the stop packet stack
-    // This stack will get popped and examined when we switch to the
-    // Stopped state
+    // Add this stop packet to the stop packet stack This stack will get popped
+    // and examined when we switch to the Stopped state
     m_stop_packet_stack.push_back(response);
   }
 }
@@ -2715,12 +2682,11 @@ addr_t ProcessGDBRemote::GetImageInfoAddress() {
 }
 
 void ProcessGDBRemote::WillPublicStop() {
-  // See if the GDB remote client supports the JSON threads info.
-  // If so, we gather stop info for all threads, expedited registers,
-  // expedited memory, runtime queue information (iOS and MacOSX only),
-  // and more. Expediting memory will help stack backtracing be much
-  // faster. Expediting registers will make sure we don't have to read
-  // the thread registers for GPRs.
+  // See if the GDB remote client supports the JSON threads info. If so, we
+  // gather stop info for all threads, expedited registers, expedited memory,
+  // runtime queue information (iOS and MacOSX only), and more. Expediting
+  // memory will help stack backtracing be much faster. Expediting registers
+  // will make sure we don't have to read the thread registers for GPRs.
   m_jthreadsinfo_sp = m_gdb_comm.GetThreadsInfo();
 
   if (m_jthreadsinfo_sp) {
@@ -2770,14 +2736,13 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
       error.Clear();
       if (binary_memory_read) {
         // The lower level GDBRemoteCommunication packet receive layer has
-        // already de-quoted any
-        // 0x7d character escaping that was present in the packet
+        // already de-quoted any 0x7d character escaping that was present in
+        // the packet
 
         size_t data_received_size = response.GetBytesLeft();
         if (data_received_size > size) {
           // Don't write past the end of BUF if the remote debug server gave us
-          // too
-          // much data for some reason.
+          // too much data for some reason.
           data_received_size = size;
         }
         memcpy(buf, response.GetStringRef().data(), data_received_size);
@@ -2816,10 +2781,10 @@ Status ProcessGDBRemote::WriteObjectFile(
   if (error.Success())
     error = FlashDone();
   else
-    // Even though some of the writing failed, try to send a flash done if
-    // some of the writing succeeded so the flash state is reset to normal,
-    // but don't stomp on the error status that was set in the write failure
-    // since that's the one we want to report back.
+    // Even though some of the writing failed, try to send a flash done if some
+    // of the writing succeeded so the flash state is reset to normal, but
+    // don't stomp on the error status that was set in the write failure since
+    // that's the one we want to report back.
     FlashDone();
   m_allow_flash_writes = false;
   return error;
@@ -2869,17 +2834,17 @@ Status ProcessGDBRemote::FlashErase(lldb::addr_t addr, size_t size) {
     return status;
 
   // We haven't erased the entire range, but we may have erased part of it.
-  // (e.g., block A is already erased and range starts in A and ends in B).
-  // So, adjust range if necessary to exclude already erased blocks.
+  // (e.g., block A is already erased and range starts in A and ends in B). So,
+  // adjust range if necessary to exclude already erased blocks.
   if (!m_erased_flash_ranges.IsEmpty()) {
     // Assuming that writes and erasures are done in increasing addr order,
-    // because that is a requirement of the vFlashWrite command.  Therefore,
-    // we only need to look at the last range in the list for overlap.
+    // because that is a requirement of the vFlashWrite command.  Therefore, we
+    // only need to look at the last range in the list for overlap.
     const auto &last_range = *m_erased_flash_ranges.Back();
     if (range.GetRangeBase() < last_range.GetRangeEnd()) {
       auto overlap = last_range.GetRangeEnd() - range.GetRangeBase();
-      // overlap will be less than range.GetByteSize() or else HasErased() would
-      // have been true
+      // overlap will be less than range.GetByteSize() or else HasErased()
+      // would have been true
       range.SetByteSize(range.GetByteSize() - overlap);
       range.SetRangeBase(range.GetRangeBase() + overlap);
     }
@@ -3074,8 +3039,8 @@ Status ProcessGDBRemote::DoDeallocateMemory(lldb::addr_t addr) {
 
   switch (supported) {
   case eLazyBoolCalculate:
-    // We should never be deallocating memory without allocating memory
-    // first so we should never get eLazyBoolCalculate
+    // We should never be deallocating memory without allocating memory first
+    // so we should never get eLazyBoolCalculate
     error.SetErrorString(
         "tried to deallocate memory without ever allocating memory");
     break;
@@ -3147,18 +3112,14 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
   const size_t bp_op_size = GetSoftwareBreakpointTrapOpcode(bp_site);
 
   // SupportsGDBStoppointPacket() simply checks a boolean, indicating if this
-  // breakpoint type
-  // is supported by the remote stub. These are set to true by default, and
-  // later set to false
-  // only after we receive an unimplemented response when sending a breakpoint
-  // packet. This means
-  // initially that unless we were specifically instructed to use a hardware
-  // breakpoint, LLDB will
-  // attempt to set a software breakpoint. HardwareRequired() also queries a
-  // boolean variable which
-  // indicates if the user specifically asked for hardware breakpoints.  If true
-  // then we will
-  // skip over software breakpoints.
+  // breakpoint type is supported by the remote stub. These are set to true by
+  // default, and later set to false only after we receive an unimplemented
+  // response when sending a breakpoint packet. This means initially that
+  // unless we were specifically instructed to use a hardware breakpoint, LLDB
+  // will attempt to set a software breakpoint. HardwareRequired() also queries
+  // a boolean variable which indicates if the user specifically asked for
+  // hardware breakpoints.  If true then we will skip over software
+  // breakpoints.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) &&
       (!bp_site->HardwareRequired())) {
     // Try to send off a software breakpoint packet ($Z0)
@@ -3171,19 +3132,14 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
       return error;
     }
 
-    // SendGDBStoppointTypePacket() will return an error if it was unable to set
-    // this
-    // breakpoint. We need to differentiate between a error specific to placing
-    // this breakpoint
-    // or if we have learned that this breakpoint type is unsupported. To do
-    // this, we
-    // must test the support boolean for this breakpoint type to see if it now
-    // indicates that
-    // this breakpoint type is unsupported.  If they are still supported then we
-    // should return
+    // SendGDBStoppointTypePacket() will return an error if it was unable to
+    // set this breakpoint. We need to differentiate between a error specific
+    // to placing this breakpoint or if we have learned that this breakpoint
+    // type is unsupported. To do this, we must test the support boolean for
+    // this breakpoint type to see if it now indicates that this breakpoint
+    // type is unsupported.  If they are still supported then we should return
     // with the error code.  If they are now unsupported, then we would like to
-    // fall through
-    // and try another form of breakpoint.
+    // fall through and try another form of breakpoint.
     if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware)) {
       if (error_no != UINT8_MAX)
         error.SetErrorStringWithFormat(
@@ -3194,21 +3150,18 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
     }
 
     // We reach here when software breakpoints have been found to be
-    // unsupported. For future
-    // calls to set a breakpoint, we will not attempt to set a breakpoint with a
-    // type that is
-    // known not to be supported.
+    // unsupported. For future calls to set a breakpoint, we will not attempt
+    // to set a breakpoint with a type that is known not to be supported.
     if (log)
       log->Printf("Software breakpoints are unsupported");
 
     // So we will fall through and try a hardware breakpoint
   }
 
-  // The process of setting a hardware breakpoint is much the same as above.  We
-  // check the
-  // supported boolean for this breakpoint type, and if it is thought to be
-  // supported then we
-  // will try to set this breakpoint with a hardware breakpoint.
+  // The process of setting a hardware breakpoint is much the same as above.
+  // We check the supported boolean for this breakpoint type, and if it is
+  // thought to be supported then we will try to set this breakpoint with a
+  // hardware breakpoint.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     // Try to send off a hardware breakpoint packet ($Z1)
     uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(
@@ -3250,8 +3203,8 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
     return error;
   }
 
-  // As a last resort we want to place a manual breakpoint. An instruction
-  // is placed into the process memory using memory write packets.
+  // As a last resort we want to place a manual breakpoint. An instruction is
+  // placed into the process memory using memory write packets.
   return EnableSoftwareBreakpoint(bp_site);
 }
 
@@ -3381,10 +3334,9 @@ Status ProcessGDBRemote::DisableWatchpoint(Watchpoint *wp, bool notify) {
         log->Printf("ProcessGDBRemote::DisableWatchpoint (watchID = %" PRIu64
                     ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
                     watchID, (uint64_t)addr);
-      // See also 'class WatchpointSentry' within StopInfo.cpp.
-      // This disabling attempt might come from the user-supplied actions, we'll
-      // route it in order for
-      // the watchpoint object to intelligently process this action.
+      // See also 'class WatchpointSentry' within StopInfo.cpp. This disabling
+      // attempt might come from the user-supplied actions, we'll route it in
+      // order for the watchpoint object to intelligently process this action.
       wp->SetEnabled(false, notify);
       return error;
     }
@@ -3469,8 +3421,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     static FileSpec g_debugserver_file_spec;
 
     ProcessLaunchInfo debugserver_launch_info;
-    // Make debugserver run in its own session so signals generated by
-    // special terminal key sequences (^C) don't affect debugserver.
+    // Make debugserver run in its own session so signals generated by special
+    // terminal key sequences (^C) don't affect debugserver.
     debugserver_launch_info.SetLaunchInSeparateProcessGroup(true);
 
     const std::weak_ptr<ProcessGDBRemote> this_wp =
@@ -3510,8 +3462,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
 
     if (m_debugserver_pid != LLDB_INVALID_PROCESS_ID) {
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
-      // Our process spawned correctly, we can now set our connection to use our
-      // end of the socket pair
+      // Our process spawned correctly, we can now set our connection to use
+      // our end of the socket pair
       cleanup_our.disable();
       m_gdb_comm.SetConnection(new ConnectionFileDescriptor(our_socket, true));
 #endif
@@ -3528,8 +3480,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     }
 
     if (m_gdb_comm.IsConnected()) {
-      // Finish the connection process by doing the handshake without connecting
-      // (send NULL URL)
+      // Finish the connection process by doing the handshake without
+      // connecting (send NULL URL)
       ConnectToDebugserver("");
     } else {
       error.SetErrorString("connection failed");
@@ -3544,8 +3496,8 @@ bool ProcessGDBRemote::MonitorDebugserverProcess(
     int signo,      // Zero for no signal
     int exit_status // Exit value of process if signal is zero
     ) {
-  // "debugserver_pid" argument passed in is the process ID for
-  // debugserver that we are tracking...
+  // "debugserver_pid" argument passed in is the process ID for debugserver
+  // that we are tracking...
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   const bool handled = true;
 
@@ -3561,12 +3513,12 @@ bool ProcessGDBRemote::MonitorDebugserverProcess(
   if (!process_sp || process_sp->m_debugserver_pid != debugserver_pid)
     return handled;
 
-  // Sleep for a half a second to make sure our inferior process has
-  // time to set its exit status before we set it incorrectly when
-  // both the debugserver and the inferior process shut down.
+  // Sleep for a half a second to make sure our inferior process has time to
+  // set its exit status before we set it incorrectly when both the debugserver
+  // and the inferior process shut down.
   usleep(500000);
-  // If our process hasn't yet exited, debugserver might have died.
-  // If the process did exit, then we are reaping it.
+  // If our process hasn't yet exited, debugserver might have died. If the
+  // process did exit, then we are reaping it.
   const StateType state = process_sp->GetState();
 
   if (state != eStateInvalid && state != eStateUnloaded &&
@@ -3589,8 +3541,8 @@ bool ProcessGDBRemote::MonitorDebugserverProcess(
 
     process_sp->SetExitStatus(-1, error_str);
   }
-  // Debugserver has exited we need to let our ProcessGDBRemote
-  // know that it no longer has a debugserver instance
+  // Debugserver has exited we need to let our ProcessGDBRemote know that it no
+  // longer has a debugserver instance
   process_sp->m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
   return handled;
 }
@@ -3680,10 +3632,9 @@ bool ProcessGDBRemote::HandleNotifyPacket(StringExtractorGDBRemote &packet) {
   // check for more stop reasons
   HandleStopReplySequence();
 
-  // if the process is stopped then we need to fake a resume
-  // so that we can stop properly with the new break. This
-  // is possible due to SetPrivateState() broadcasting the
-  // state change as a side effect.
+  // if the process is stopped then we need to fake a resume so that we can
+  // stop properly with the new break. This is possible due to
+  // SetPrivateState() broadcasting the state change as a side effect.
   if (GetPrivateState() == lldb::StateType::eStateStopped) {
     SetPrivateState(lldb::StateType::eStateRunning);
   }
@@ -3756,12 +3707,11 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                       response);
 
               // We need to immediately clear the thread ID list so we are sure
-              // to get a valid list of threads.
-              // The thread ID list might be contained within the "response", or
-              // the stop reply packet that
+              // to get a valid list of threads. The thread ID list might be
+              // contained within the "response", or the stop reply packet that
               // caused the stop. So clear it now before we give the stop reply
-              // packet to the process
-              // using the process->SetLastStopPacket()...
+              // packet to the process using the
+              // process->SetLastStopPacket()...
               process->ClearThreadIDList();
 
               switch (stop_state) {
@@ -3798,8 +3748,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                 // Check to see if we were trying to attach and if we got back
                 // the "E87" error code from debugserver -- this indicates that
                 // the process is not debuggable.  Return a slightly more
-                // helpful
-                // error message about why the attach failed.
+                // helpful error message about why the attach failed.
                 if (::strstr(continue_cstr, "vAttach") != NULL &&
                     response.GetError() == 0x87) {
                   process->SetExitStatus(-1, "cannot attach to process due to "
@@ -3918,8 +3867,8 @@ Status ProcessGDBRemote::UpdateAutomaticSignalFiltering() {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   LLDB_LOG(log, "Check if need to update ignored signals");
 
-  // QPassSignals package is not supported by the server,
-  // there is no way we can ignore any signals on server side.
+  // QPassSignals package is not supported by the server, there is no way we
+  // can ignore any signals on server side.
   if (!m_gdb_comm.GetQPassSignalsSupported())
     return Status();
 
@@ -4043,9 +3992,9 @@ ProcessGDBRemote::GetExtendedInfoForThread(lldb::tid_t tid) {
 
     // FIXME the final character of a JSON dictionary, '}', is the escape
     // character in gdb-remote binary mode.  lldb currently doesn't escape
-    // these characters in its packet output -- so we add the quoted version
-    // of the } character here manually in case we talk to a debugserver which
-    // un-escapes the characters at packet read time.
+    // these characters in its packet output -- so we add the quoted version of
+    // the } character here manually in case we talk to a debugserver which un-
+    // escapes the characters at packet read time.
     packet << (char)(0x7d ^ 0x20);
 
     StringExtractorGDBRemote response;
@@ -4115,9 +4064,9 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender(
 
     // FIXME the final character of a JSON dictionary, '}', is the escape
     // character in gdb-remote binary mode.  lldb currently doesn't escape
-    // these characters in its packet output -- so we add the quoted version
-    // of the } character here manually in case we talk to a debugserver which
-    // un-escapes the characters at packet read time.
+    // these characters in its packet output -- so we add the quoted version of
+    // the } character here manually in case we talk to a debugserver which un-
+    // escapes the characters at packet read time.
     packet << (char)(0x7d ^ 0x20);
 
     StringExtractorGDBRemote response;
@@ -4148,9 +4097,9 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
 
     // FIXME the final character of a JSON dictionary, '}', is the escape
     // character in gdb-remote binary mode.  lldb currently doesn't escape
-    // these characters in its packet output -- so we add the quoted version
-    // of the } character here manually in case we talk to a debugserver which
-    // un-escapes the characters at packet read time.
+    // these characters in its packet output -- so we add the quoted version of
+    // the } character here manually in case we talk to a debugserver which un-
+    // escapes the characters at packet read time.
     packet << (char)(0x7d ^ 0x20);
 
     StringExtractorGDBRemote response;
@@ -4175,14 +4124,14 @@ Status ProcessGDBRemote::ConfigureStructuredData(
   return m_gdb_comm.ConfigureRemoteStructuredData(type_name, config_sp);
 }
 
-// Establish the largest memory read/write payloads we should use.
-// If the remote stub has a max packet size, stay under that size.
+// Establish the largest memory read/write payloads we should use. If the
+// remote stub has a max packet size, stay under that size.
 //
-// If the remote stub's max packet size is crazy large, use a
-// reasonable largeish default.
+// If the remote stub's max packet size is crazy large, use a reasonable
+// largeish default.
 //
-// If the remote stub doesn't advertise a max packet size, use a
-// conservative default.
+// If the remote stub doesn't advertise a max packet size, use a conservative
+// default.
 
 void ProcessGDBRemote::GetMaxMemorySize() {
   const uint64_t reasonable_largeish_default = 128 * 1024;
@@ -4194,15 +4143,15 @@ void ProcessGDBRemote::GetMaxMemorySize() {
       // Save the stub's claimed maximum packet size
       m_remote_stub_max_memory_size = stub_max_size;
 
-      // Even if the stub says it can support ginormous packets,
-      // don't exceed our reasonable largeish default packet size.
+      // Even if the stub says it can support ginormous packets, don't exceed
+      // our reasonable largeish default packet size.
       if (stub_max_size > reasonable_largeish_default) {
         stub_max_size = reasonable_largeish_default;
       }
 
-      // Memory packet have other overheads too like Maddr,size:#NN
-      // Instead of calculating the bytes taken by size and addr every
-      // time, we take a maximum guess here.
+      // Memory packet have other overheads too like Maddr,size:#NN Instead of
+      // calculating the bytes taken by size and addr every time, we take a
+      // maximum guess here.
       if (stub_max_size > 70)
         stub_max_size -= 32 + 32 + 6;
       else {
@@ -4293,8 +4242,8 @@ bool ProcessGDBRemote::GetHostOSVersion(uint32_t &major, uint32_t &minor,
                                         uint32_t &update) {
   if (m_gdb_comm.GetOSVersion(major, minor, update))
     return true;
-  // We failed to get the host OS version, defer to the base
-  // implementation to correctly invalidate the arguments.
+  // We failed to get the host OS version, defer to the base implementation to
+  // correctly invalidate the arguments.
   return Process::GetHostOSVersion(major, minor, update);
 }
 
@@ -4460,8 +4409,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         }
 
         // Only update the register set name if we didn't get a "reg_set"
+        // attribute. "set_name" will be empty if we didn't have a "reg_set"
         // attribute.
-        // "set_name" will be empty if we didn't have a "reg_set" attribute.
         if (!set_name && !gdb_group.empty())
           set_name.SetCString(gdb_group.c_str());
 
@@ -4488,8 +4437,8 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 
 } // namespace {}
 
-// query the target of gdb-remote for extended target information
-// return:  'true'  on success
+// query the target of gdb-remote for extended target information return:
+// 'true'  on success
 //          'false' on failure
 bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   // Make sure LLDB has an XML parser it can use first
@@ -4576,10 +4525,9 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
       uint32_t cur_reg_num = 0;
       uint32_t reg_offset = 0;
 
-      // Don't use Process::GetABI, this code gets called from DidAttach, and in
-      // that context we haven't
-      // set the Target's architecture yet, so the ABI is also potentially
-      // incorrect.
+      // Don't use Process::GetABI, this code gets called from DidAttach, and
+      // in that context we haven't set the Target's architecture yet, so the
+      // ABI is also potentially incorrect.
       ABISP abi_to_use_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
       for (auto &feature_node : feature_nodes) {
         ParseRegisters(feature_node, target_info, this->m_register_info,
@@ -4920,8 +4868,8 @@ void ProcessGDBRemote::ModulesDidLoad(ModuleList &module_list) {
   // do anything
   Process::ModulesDidLoad(module_list);
 
-  // After loading shared libraries, we can ask our remote GDB server if
-  // it needs any symbols.
+  // After loading shared libraries, we can ask our remote GDB server if it
+  // needs any symbols.
   m_gdb_comm.ServeSymbolLookups(this);
 }
 
@@ -4979,8 +4927,8 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
           has_used_usec = true;
           usec_value.getAsInteger(0, curr_used_usec);
         } else {
-          // We didn't find what we want, it is probably
-          // an older version. Bail out.
+          // We didn't find what we want, it is probably an older version. Bail
+          // out.
           profileDataExtractor.SetFilePos(input_file_pos);
         }
       }
@@ -5002,8 +4950,8 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
             ((real_used_usec > 0) || (HasAssignedIndexIDToThread(thread_id)));
 
         if (good_first_time || good_subsequent_time) {
-          // We try to avoid doing too many index id reservation,
-          // resulting in fast increase of index ids.
+          // We try to avoid doing too many index id reservation, resulting in
+          // fast increase of index ids.
 
           output_stream << name << ":";
           int32_t index_id = AssignIndexIDToThread(thread_id);
@@ -5063,8 +5011,7 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
     return StructuredData::ObjectSP();
   }
 
-  // This is an asynchronous JSON packet, destined for a
-  // StructuredDataPlugin.
+  // This is an asynchronous JSON packet, destined for a StructuredDataPlugin.
   StructuredData::ObjectSP json_sp = StructuredData::ParseJSON(packet);
   if (log) {
     if (json_sp) {

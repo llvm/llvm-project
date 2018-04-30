@@ -89,10 +89,9 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   CommandObject *cmd_obj;
   const size_t argc = command.GetArgumentCount();
 
-  // 'help' doesn't take any arguments, other than command names.  If argc is 0,
-  // we show the user
-  // all commands (aliases and user commands if asked for).  Otherwise every
-  // argument must be the name of a command or a sub-command.
+  // 'help' doesn't take any arguments, other than command names.  If argc is
+  // 0, we show the user all commands (aliases and user commands if asked for).
+  // Otherwise every argument must be the name of a command or a sub-command.
   if (argc == 0) {
     uint32_t cmd_types = CommandInterpreter::eCommandTypesBuiltin;
     if (m_options.m_show_aliases)
@@ -225,8 +224,8 @@ int CommandObjectHelp::HandleCompletion(Args &input, int &cursor_index,
     CommandObject *cmd_obj = m_interpreter.GetCommandObject(input[0].ref);
 
     // The command that they are getting help on might be ambiguous, in which
-    // case we should complete that,
-    // otherwise complete with the command the user is getting help on...
+    // case we should complete that, otherwise complete with the command the
+    // user is getting help on...
 
     if (cmd_obj) {
       input.Shift();

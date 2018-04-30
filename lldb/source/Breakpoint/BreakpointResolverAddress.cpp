@@ -100,11 +100,10 @@ BreakpointResolverAddress::SerializeToStructuredData() {
 }
 
 void BreakpointResolverAddress::ResolveBreakpoint(SearchFilter &filter) {
-  // If the address is not section relative, then we should not try to
-  // re-resolve it, it is just some
-  // random address and we wouldn't know what to do on reload.  But if it is
-  // section relative, we need to
-  // re-resolve it since the section it's in may have shifted on re-run.
+  // If the address is not section relative, then we should not try to re-
+  // resolve it, it is just some random address and we wouldn't know what to do
+  // on reload.  But if it is section relative, we need to re-resolve it since
+  // the section it's in may have shifted on re-run.
   bool re_resolve = false;
   if (m_addr.GetSection() || m_module_filespec)
     re_resolve = true;
@@ -137,8 +136,8 @@ BreakpointResolverAddress::SearchCallback(SearchFilter &filter,
   if (filter.AddressPasses(m_addr)) {
     if (m_breakpoint->GetNumLocations() == 0) {
       // If the address is just an offset, and we're given a module, see if we
-      // can find the appropriate module
-      // loaded in the binary, and fix up m_addr to use that.
+      // can find the appropriate module loaded in the binary, and fix up
+      // m_addr to use that.
       if (!m_addr.IsSectionOffset() && m_module_filespec) {
         Target &target = m_breakpoint->GetTarget();
         ModuleSpec module_spec(m_module_filespec);

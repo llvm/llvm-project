@@ -275,11 +275,6 @@ std::string getIslCompatibleName(const std::string &Prefix,
                                  const std::string &Middle,
                                  const std::string &Suffix);
 
-// Make isl::give available in polly namespace. We do this as there was
-// previously a function polly::give() which did the very same thing and we
-// did not want yet to introduce the isl:: prefix to each call of give.
-using isl::give;
-
 inline llvm::DiagnosticInfoOptimizationBase &
 operator<<(llvm::DiagnosticInfoOptimizationBase &OS,
            const isl::union_map &Obj) {

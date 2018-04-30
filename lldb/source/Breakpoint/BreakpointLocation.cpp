@@ -110,8 +110,8 @@ void BreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
   if (thread_id != LLDB_INVALID_THREAD_ID)
     GetLocationOptions()->SetThreadID(thread_id);
   else {
-    // If we're resetting this to an invalid thread id, then
-    // don't make an options pointer just to do that.
+    // If we're resetting this to an invalid thread id, then don't make an
+    // options pointer just to do that.
     if (m_options_ap.get() != nullptr)
       m_options_ap->SetThreadID(thread_id);
   }
@@ -132,8 +132,8 @@ void BreakpointLocation::SetThreadIndex(uint32_t index) {
   if (index != 0)
     GetLocationOptions()->GetThreadSpec()->SetIndex(index);
   else {
-    // If we're resetting this to an invalid thread id, then
-    // don't make an options pointer just to do that.
+    // If we're resetting this to an invalid thread id, then don't make an
+    // options pointer just to do that.
     if (m_options_ap.get() != nullptr)
       m_options_ap->GetThreadSpec()->SetIndex(index);
   }
@@ -154,8 +154,8 @@ void BreakpointLocation::SetThreadName(const char *thread_name) {
   if (thread_name != nullptr)
     GetLocationOptions()->GetThreadSpec()->SetName(thread_name);
   else {
-    // If we're resetting this to an invalid thread id, then
-    // don't make an options pointer just to do that.
+    // If we're resetting this to an invalid thread id, then don't make an
+    // options pointer just to do that.
     if (m_options_ap.get() != nullptr)
       m_options_ap->GetThreadSpec()->SetName(thread_name);
   }
@@ -176,8 +176,8 @@ void BreakpointLocation::SetQueueName(const char *queue_name) {
   if (queue_name != nullptr)
     GetLocationOptions()->GetThreadSpec()->SetQueueName(queue_name);
   else {
-    // If we're resetting this to an invalid thread id, then
-    // don't make an options pointer just to do that.
+    // If we're resetting this to an invalid thread id, then don't make an
+    // options pointer just to do that.
     if (m_options_ap.get() != nullptr)
       m_options_ap->GetThreadSpec()->SetQueueName(queue_name);
   }
@@ -203,8 +203,8 @@ bool BreakpointLocation::InvokeCallback(StoppointCallbackContext *context) {
 
 void BreakpointLocation::SetCallback(BreakpointHitCallback callback,
                                      void *baton, bool is_synchronous) {
-  // The default "Baton" class will keep a copy of "baton" and won't free
-  // or delete it when it goes goes out of scope.
+  // The default "Baton" class will keep a copy of "baton" and won't free or
+  // delete it when it goes goes out of scope.
   GetLocationOptions()->SetCallback(
       callback, std::make_shared<UntypedBaton>(baton), is_synchronous);
   SendBreakpointLocationChangedEvent(eBreakpointEventTypeCommandChanged);
@@ -283,8 +283,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   }
 
   // We need to make sure the user sees any parse errors in their condition, so
-  // we'll hook the
-  // constructor errors up to the debugger's Async I/O.
+  // we'll hook the constructor errors up to the debugger's Async I/O.
 
   ValueObjectSP result_value_sp;
 
@@ -372,9 +371,9 @@ bool BreakpointLocation::IgnoreCountShouldStop() {
 }
 
 BreakpointOptions *BreakpointLocation::GetLocationOptions() {
-  // If we make the copy we don't copy the callbacks because that is potentially
-  // expensive and we don't want to do that for the simple case where someone is
-  // just disabling the location.
+  // If we make the copy we don't copy the callbacks because that is
+  // potentially expensive and we don't want to do that for the simple case
+  // where someone is just disabling the location.
   if (m_options_ap.get() == nullptr)
     m_options_ap.reset(
         new BreakpointOptions(false));
@@ -479,9 +478,8 @@ bool BreakpointLocation::ClearBreakpointSite() {
   if (m_bp_site_sp.get()) {
     ProcessSP process_sp(m_owner.GetTarget().GetProcessSP());
     // If the process exists, get it to remove the owner, it will remove the
-    // physical implementation
-    // of the breakpoint as well if there are no more owners.  Otherwise just
-    // remove this owner.
+    // physical implementation of the breakpoint as well if there are no more
+    // owners.  Otherwise just remove this owner.
     if (process_sp)
       process_sp->RemoveOwnerFromBreakpointSite(GetBreakpoint().GetID(),
                                                 GetID(), m_bp_site_sp);
@@ -499,8 +497,8 @@ void BreakpointLocation::GetDescription(Stream *s,
   SymbolContext sc;
 
   // If the description level is "initial" then the breakpoint is printing out
-  // our initial state,
-  // and we should let it decide how it wants to print our label.
+  // our initial state, and we should let it decide how it wants to print our
+  // label.
   if (level != eDescriptionLevelInitial) {
     s->Indent();
     BreakpointID::GetCanonicalReference(s, m_owner.GetID(), GetID());

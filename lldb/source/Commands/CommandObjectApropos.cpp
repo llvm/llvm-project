@@ -53,8 +53,8 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   if (argc == 1) {
     auto search_word = args[0].ref;
     if (!search_word.empty()) {
-      // The bulk of the work must be done inside the Command Interpreter, since
-      // the command dictionary is private.
+      // The bulk of the work must be done inside the Command Interpreter,
+      // since the command dictionary is private.
       StringList commands_found;
       StringList commands_help;
 

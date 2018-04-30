@@ -134,8 +134,7 @@ public:
                                        lldb::SBType type);
 
   // this has no address! GetAddress() and GetLoadAddress() as well as
-  // AddressOf()
-  // on the return of this call all return invalid
+  // AddressOf() on the return of this call all return invalid
   lldb::SBValue CreateValueFromData(const char *name, lldb::SBData data,
                                     lldb::SBType type);
 

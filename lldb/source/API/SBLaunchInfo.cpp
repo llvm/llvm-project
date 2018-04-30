@@ -148,8 +148,8 @@ void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
 }
 
 const char *SBLaunchInfo::GetShell() {
-  // Constify this string so that it is saved in the string pool.  Otherwise
-  // it would be freed when this function goes out of scope.
+  // Constify this string so that it is saved in the string pool.  Otherwise it
+  // would be freed when this function goes out of scope.
   ConstString shell(m_opaque_sp->GetShell().GetPath().c_str());
   return shell.AsCString();
 }

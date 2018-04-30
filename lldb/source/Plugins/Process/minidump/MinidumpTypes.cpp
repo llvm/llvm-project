@@ -55,10 +55,9 @@ lldb_private::minidump::parseMinidumpString(llvm::ArrayRef<uint8_t> &data) {
     return llvm::None;
 
   auto source_start = reinterpret_cast<const llvm::UTF16 *>(data.data());
-  // source_length is the length of the string in bytes
-  // we need the length of the string in UTF-16 characters/code points (16 bits
-  // per char)
-  // that's why it's divided by 2
+  // source_length is the length of the string in bytes we need the length of
+  // the string in UTF-16 characters/code points (16 bits per char) that's why
+  // it's divided by 2
   const auto source_end = source_start + source_length / 2;
   // resize to worst case length
   result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT * source_length / 2);

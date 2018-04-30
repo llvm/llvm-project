@@ -128,9 +128,7 @@ Status OptionValueDictionary::SetArgs(const Args &args,
 
       if (key.front() == '[') {
         // Key name starts with '[', so the key value must be in single or
-        // double quotes like:
-        // ['<key>']
-        // ["<key>"]
+        // double quotes like: ['<key>'] ["<key>"]
         if ((key.size() > 2) && (key.back() == ']')) {
           // Strip leading '[' and trailing ']'
           key = key.substr(1, key.size() - 2);
@@ -286,8 +284,8 @@ OptionValueDictionary::GetValueForKey(const ConstString &key) const {
 bool OptionValueDictionary::SetValueForKey(const ConstString &key,
                                            const lldb::OptionValueSP &value_sp,
                                            bool can_replace) {
-  // Make sure the value_sp object is allowed to contain
-  // values of the type passed in...
+  // Make sure the value_sp object is allowed to contain values of the type
+  // passed in...
   if (value_sp && (m_type_mask & value_sp->GetTypeAsMask())) {
     if (!can_replace) {
       collection::const_iterator pos = m_values.find(key);

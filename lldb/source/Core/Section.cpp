@@ -27,8 +27,8 @@ class DataExtractor;
 using namespace lldb;
 using namespace lldb_private;
 
-static const char *GetSectionTypeAsCString(lldb::SectionType sect_type) {
-  switch (sect_type) {
+const char *Section::GetTypeAsCString() const {
+  switch (m_type) {
   case eSectionTypeInvalid:
     return "invalid";
   case eSectionTypeCode:
@@ -117,6 +117,8 @@ static const char *GetSectionTypeAsCString(lldb::SectionType sect_type) {
     return "go-symtab";
   case eSectionTypeAbsoluteAddress:
     return "absolute";
+  case eSectionTypeDWARFGNUDebugAltLink:
+    return "dwarf-gnu-debugaltlink";
   case eSectionTypeOther:
     return "regular";
   }
@@ -175,9 +177,9 @@ Section::~Section() {
 addr_t Section::GetFileAddress() const {
   SectionSP parent_sp(GetParent());
   if (parent_sp) {
-    // This section has a parent which means m_file_addr is an offset into
-    // the parent section, so the file address for this section is the file
-    // address of the parent plus the offset
+    // This section has a parent which means m_file_addr is an offset into the
+    // parent section, so the file address for this section is the file address
+    // of the parent plus the offset
     return parent_sp->GetFileAddress() + m_file_addr;
   }
   // This section has no parent, so m_file_addr is the file base address
@@ -283,8 +285,7 @@ int Section::Compare(const Section &a, const Section &b) {
 void Section::Dump(Stream *s, Target *target, uint32_t depth) const {
   //    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
   s->Indent();
-  s->Printf("0x%8.8" PRIx64 " %-16s ", GetID(),
-            GetSectionTypeAsCString(m_type));
+  s->Printf("0x%8.8" PRIx64 " %-16s ", GetID(), GetTypeAsCString());
   bool resolved = true;
   addr_t addr = LLDB_INVALID_ADDRESS;
 
@@ -557,10 +558,8 @@ SectionSP SectionList::FindSectionContainingFileAddress(addr_t vm_addr,
     Section *sect = sect_iter->get();
     if (sect->ContainsFileAddress(vm_addr)) {
       // The file address is in this section. We need to make sure one of our
-      // child
-      // sections doesn't contain this address as well as obeying the depth
-      // limit
-      // that was passed in.
+      // child sections doesn't contain this address as well as obeying the
+      // depth limit that was passed in.
       if (depth > 0)
         sect_sp = sect->GetChildren().FindSectionContainingFileAddress(
             vm_addr, depth - 1);

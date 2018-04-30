@@ -9,18 +9,15 @@
 #ifndef liblldb_SafeMachO_h_
 #define liblldb_SafeMachO_h_
 
-// This header file is required to work around collisions between the defines in
-// mach/machine.h, and enum members
-// of the same name in llvm's MachO.h.  If you want to use llvm/Support/MachO.h,
-// use this file instead.
-// The caveats are:
-// 1) You can only use the MachO.h enums, you can't use the defines.  That won't
-// make a difference since the values
+// This header file is required to work around collisions between the defines
+// in mach/machine.h, and enum members of the same name in llvm's MachO.h.  If
+// you want to use llvm/Support/MachO.h, use this file instead. The caveats
+// are: 1) You can only use the MachO.h enums, you can't use the defines.  That
+// won't make a difference since the values
 //    are the same.
 // 2) If you need any header file that relies on mach/machine.h, you must
-// include that first.
-// 3) This isn't a total solution, it doesn't undef every define that MachO.h
-// has borrowed from various system headers,
+// include that first. 3) This isn't a total solution, it doesn't undef every
+// define that MachO.h has borrowed from various system headers,
 //    only the ones that come from mach/machine.h because that is the one we
 //    ended up pulling in from various places.
 //

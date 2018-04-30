@@ -25,18 +25,18 @@ namespace {
 /// @result Whether the flattened schedule is the same as the expected schedule.
 bool checkFlatten(const char *ScheduleStr, const char *ExpectedStr) {
   auto *Ctx = isl_ctx_alloc();
-  isl_bool Success;
+  bool Success;
 
   {
-    auto Schedule = give(isl_union_map_read_from_str(Ctx, ScheduleStr));
-    auto Expected = give(isl_union_map_read_from_str(Ctx, ExpectedStr));
+    auto Schedule = isl::union_map(Ctx, ScheduleStr);
+    auto Expected = isl::union_map(Ctx, ExpectedStr);
 
     auto Result = flattenSchedule(std::move(Schedule));
-    Success = isl_union_map_is_equal(Result.keep(), Expected.keep());
+    Success = Result.is_equal(Expected);
   }
 
   isl_ctx_free(Ctx);
-  return Success == isl_bool_true;
+  return Success;
 }
 
 TEST(Flatten, FlattenTrivial) {

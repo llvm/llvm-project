@@ -137,29 +137,28 @@ NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
 Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
                                             uint32_t watch_flags,
                                             bool hardware) {
-  // This default implementation assumes setting the watchpoint for
-  // the process will require setting the watchpoint for each of the
-  // threads.  Furthermore, it will track watchpoints set for the
-  // process and will add them to each thread that is attached to
-  // via the (FIXME implement) OnThreadAttached () method.
+  // This default implementation assumes setting the watchpoint for the process
+  // will require setting the watchpoint for each of the threads.  Furthermore,
+  // it will track watchpoints set for the process and will add them to each
+  // thread that is attached to via the (FIXME implement) OnThreadAttached ()
+  // method.
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // Update the thread list
   UpdateThreads();
 
-  // Keep track of the threads we successfully set the watchpoint
-  // for.  If one of the thread watchpoint setting operations fails,
-  // back off and remove the watchpoint for all the threads that
-  // were successfully set so we get back to a consistent state.
+  // Keep track of the threads we successfully set the watchpoint for.  If one
+  // of the thread watchpoint setting operations fails, back off and remove the
+  // watchpoint for all the threads that were successfully set so we get back
+  // to a consistent state.
   std::vector<NativeThreadProtocol *> watchpoint_established_threads;
 
-  // Tell each thread to set a watchpoint.  In the event that
-  // hardware watchpoints are requested but the SetWatchpoint fails,
-  // try to set a software watchpoint as a fallback.  It's
-  // conceivable that if there are more threads than hardware
-  // watchpoints available, some of the threads will fail to set
-  // hardware watchpoints while software ones may be available.
+  // Tell each thread to set a watchpoint.  In the event that hardware
+  // watchpoints are requested but the SetWatchpoint fails, try to set a
+  // software watchpoint as a fallback.  It's conceivable that if there are
+  // more threads than hardware watchpoints available, some of the threads will
+  // fail to set hardware watchpoints while software ones may be available.
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   for (const auto &thread : m_threads) {
     assert(thread && "thread list should not have a NULL thread!");
@@ -167,8 +166,8 @@ Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
     Status thread_error =
         thread->SetWatchpoint(addr, size, watch_flags, hardware);
     if (thread_error.Fail() && hardware) {
-      // Try software watchpoints since we failed on hardware watchpoint setting
-      // and we may have just run out of hardware watchpoints.
+      // Try software watchpoints since we failed on hardware watchpoint
+      // setting and we may have just run out of hardware watchpoints.
       thread_error = thread->SetWatchpoint(addr, size, watch_flags, false);
       if (thread_error.Success())
         LLDB_LOG(log,
@@ -176,13 +175,12 @@ Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
     }
 
     if (thread_error.Success()) {
-      // Remember that we set this watchpoint successfully in
-      // case we need to clear it later.
+      // Remember that we set this watchpoint successfully in case we need to
+      // clear it later.
       watchpoint_established_threads.push_back(thread.get());
     } else {
-      // Unset the watchpoint for each thread we successfully
-      // set so that we get back to a consistent state of "not
-      // set" for the watchpoint.
+      // Unset the watchpoint for each thread we successfully set so that we
+      // get back to a consistent state of "not set" for the watchpoint.
       for (auto unwatch_thread_sp : watchpoint_established_threads) {
         Status remove_error = unwatch_thread_sp->RemoveWatchpoint(addr);
         if (remove_error.Fail())
@@ -208,9 +206,9 @@ Status NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
 
     const Status thread_error = thread->RemoveWatchpoint(addr);
     if (thread_error.Fail()) {
-      // Keep track of the first thread error if any threads
-      // fail. We want to try to remove the watchpoint from
-      // every thread, though, even if one or more have errors.
+      // Keep track of the first thread error if any threads fail. We want to
+      // try to remove the watchpoint from every thread, though, even if one or
+      // more have errors.
       if (!overall_error.Fail())
         overall_error = thread_error;
     }
@@ -226,9 +224,9 @@ NativeProcessProtocol::GetHardwareBreakpointMap() const {
 
 Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
                                                     size_t size) {
-  // This default implementation assumes setting a hardware breakpoint for
-  // this process will require setting same hardware breakpoint for each
-  // of its existing threads. New thread will do the same once created.
+  // This default implementation assumes setting a hardware breakpoint for this
+  // process will require setting same hardware breakpoint for each of its
+  // existing threads. New thread will do the same once created.
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // Update the thread list
@@ -254,13 +252,13 @@ Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
 
     Status thread_error = thread->SetHardwareBreakpoint(addr, size);
     if (thread_error.Success()) {
-      // Remember that we set this breakpoint successfully in
-      // case we need to clear it later.
+      // Remember that we set this breakpoint successfully in case we need to
+      // clear it later.
       breakpoint_established_threads.push_back(thread.get());
     } else {
-      // Unset the breakpoint for each thread we successfully
-      // set so that we get back to a consistent state of "not
-      // set" for this hardware breakpoint.
+      // Unset the breakpoint for each thread we successfully set so that we
+      // get back to a consistent state of "not set" for this hardware
+      // breakpoint.
       for (auto rollback_thread_sp : breakpoint_established_threads) {
         Status remove_error =
             rollback_thread_sp->RemoveHardwareBreakpoint(addr);
@@ -320,8 +318,8 @@ bool NativeProcessProtocol::UnregisterNativeDelegate(
       remove(m_delegates.begin(), m_delegates.end(), &native_delegate),
       m_delegates.end());
 
-  // We removed the delegate if the count of delegates shrank after
-  // removing all copies of the given native_delegate from the vector.
+  // We removed the delegate if the count of delegates shrank after removing
+  // all copies of the given native_delegate from the vector.
   return m_delegates.size() < initial_size;
 }
 
@@ -410,8 +408,8 @@ void NativeProcessProtocol::SetState(lldb::StateType state,
 
     // Give process a chance to do any stop id bump processing, such as
     // clearing cached data that is invalidated each time the process runs.
-    // Note if/when we support some threads running, we'll end up needing
-    // to manage this per thread and per process.
+    // Note if/when we support some threads running, we'll end up needing to
+    // manage this per thread and per process.
     DoStopIDBumped(m_stop_id);
   }
 

@@ -384,8 +384,7 @@ private:
   //------------------------------------------------------------------
   // Constructors and Destructors
   //
-  // Only the Breakpoint can make breakpoint locations, and it owns
-  // them.
+  // Only the Breakpoint can make breakpoint locations, and it owns them.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------

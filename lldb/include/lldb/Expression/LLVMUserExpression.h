@@ -39,12 +39,11 @@ namespace lldb_private {
 class LLVMUserExpression : public UserExpression {
 public:
   // The IRPasses struct is filled in by a runtime after an expression is
-  // compiled and can be used to to run
-  // fixups/analysis passes as required. EarlyPasses are run on the generated
-  // module before lldb runs its own IR
+  // compiled and can be used to to run fixups/analysis passes as required.
+  // EarlyPasses are run on the generated module before lldb runs its own IR
   // fixups and inserts instrumentation code/pointer checks. LatePasses are run
-  // after the module has been processed by
-  // llvm, before the module is assembled and run in the ThreadPlan.
+  // after the module has been processed by llvm, before the module is
+  // assembled and run in the ThreadPlan.
   struct IRPasses {
     IRPasses() : EarlyPasses(nullptr), LatePasses(nullptr){};
     std::shared_ptr<llvm::legacy::PassManager> EarlyPasses;

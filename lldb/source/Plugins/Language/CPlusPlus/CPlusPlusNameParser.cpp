@@ -25,8 +25,8 @@ Optional<ParsedFunction> CPlusPlusNameParser::ParseAsFunctionDefinition() {
   m_next_token_index = 0;
   Optional<ParsedFunction> result(None);
 
-  // Try to parse the name as function without a return type specified
-  // e.g. main(int, char*[])
+  // Try to parse the name as function without a return type specified e.g.
+  // main(int, char*[])
   {
     Bookmark start_position = SetBookmark();
     result = ParseFunctionImpl(false);
@@ -34,8 +34,8 @@ Optional<ParsedFunction> CPlusPlusNameParser::ParseAsFunctionDefinition() {
       return result;
   }
 
-  // Try to parse the name as function with function pointer return type
-  // e.g. void (*get_func(const char*))()
+  // Try to parse the name as function with function pointer return type e.g.
+  // void (*get_func(const char*))()
   result = ParseFuncPtr(true);
   if (result)
     return result;
@@ -183,13 +183,13 @@ bool CPlusPlusNameParser::ConsumeTemplateArgs() {
   Advance();
 
   // Consuming template arguments is a bit trickier than consuming function
-  // arguments, because '<' '>' brackets are not always trivially balanced.
-  // In some rare cases tokens '<' and '>' can appear inside template arguments
-  // as arithmetic or shift operators not as template brackets.
-  // Examples: std::enable_if<(10u)<(64), bool>
+  // arguments, because '<' '>' brackets are not always trivially balanced. In
+  // some rare cases tokens '<' and '>' can appear inside template arguments as
+  // arithmetic or shift operators not as template brackets. Examples:
+  // std::enable_if<(10u)<(64), bool>
   //           f<A<operator<(X,Y)::Subclass>>
-  // Good thing that compiler makes sure that really ambiguous cases of
-  // '>' usage should be enclosed within '()' brackets.
+  // Good thing that compiler makes sure that really ambiguous cases of '>'
+  // usage should be enclosed within '()' brackets.
   int template_counter = 1;
   bool can_open_template = false;
   while (HasMoreTokens() && template_counter > 0) {
@@ -208,9 +208,9 @@ bool CPlusPlusNameParser::ConsumeTemplateArgs() {
     case tok::less:
       // '<' is an attempt to open a subteamplte
       // check if parser is at the point where it's actually possible,
-      // otherwise it's just a part of an expression like 'sizeof(T)<(10)'.
-      // No need to do the same for '>' because compiler actually makes sure
-      // that '>' always surrounded by brackets to avoid ambiguity.
+      // otherwise it's just a part of an expression like 'sizeof(T)<(10)'. No
+      // need to do the same for '>' because compiler actually makes sure that
+      // '>' always surrounded by brackets to avoid ambiguity.
       if (can_open_template)
         ++template_counter;
       can_open_template = false;
@@ -388,10 +388,9 @@ void CPlusPlusNameParser::SkipFunctionQualifiers() {
 bool CPlusPlusNameParser::ConsumeBuiltinType() {
   bool result = false;
   bool continue_parsing = true;
-  // Built-in types can be made of a few keywords
-  // like 'unsigned long long int'. This function
-  // consumes all built-in type keywords without
-  // checking if they make sense like 'unsigned char void'.
+  // Built-in types can be made of a few keywords like 'unsigned long long
+  // int'. This function consumes all built-in type keywords without checking
+  // if they make sense like 'unsigned char void'.
   while (continue_parsing && HasMoreTokens()) {
     switch (Peek().getKind()) {
     case tok::kw_short:

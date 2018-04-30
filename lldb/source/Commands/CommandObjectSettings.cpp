@@ -220,10 +220,8 @@ protected:
     if (error.Success()) {
       // FIXME this is the same issue as the one in commands script import
       // we could be setting target.load-script-from-symbol-file which would
-      // cause
-      // Python scripts to be loaded, which could run LLDB commands
-      // (e.g. settings set target.process.python-os-plugin-path) and cause a
-      // crash
+      // cause Python scripts to be loaded, which could run LLDB commands (e.g.
+      // settings set target.process.python-os-plugin-path) and cause a crash
       // if we did not clear the command's exe_ctx first
       ExecutionContext exe_ctx(m_exe_ctx);
       m_exe_ctx.Clear();
@@ -920,8 +918,8 @@ protected:
       return false;
     }
 
-    // Do not perform cmd_args.Shift() since StringRef is manipulating the
-    // raw character string later on.
+    // Do not perform cmd_args.Shift() since StringRef is manipulating the raw
+    // character string later on.
 
     // Split the raw command into var_name and value pair.
     llvm::StringRef raw_str(command);

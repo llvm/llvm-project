@@ -126,8 +126,8 @@ FILE *File::GetStream() {
       const char *mode = GetStreamOpenModeFromOptions(m_options);
       if (mode) {
         if (!m_should_close_fd) {
-// We must duplicate the file descriptor if we don't own it because
-// when you call fdopen, the stream will own the fd
+// We must duplicate the file descriptor if we don't own it because when you
+// call fdopen, the stream will own the fd
 #ifdef _WIN32
           m_descriptor = ::_dup(GetDescriptor());
 #else
@@ -139,8 +139,8 @@ FILE *File::GetStream() {
         m_stream =
             llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode);
 
-        // If we got a stream, then we own the stream and should no
-        // longer own the descriptor because fclose() will close it for us
+        // If we got a stream, then we own the stream and should no longer own
+        // the descriptor because fclose() will close it for us
 
         if (m_stream) {
           m_own_stream = true;

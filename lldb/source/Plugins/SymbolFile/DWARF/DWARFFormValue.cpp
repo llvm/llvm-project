@@ -299,8 +299,8 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
                                const DWARFUnit *cu) {
   uint8_t ref_addr_size;
   switch (form) {
-  // Blocks if inlined data that have a length field and the data bytes
-  // inlined in the .debug_info
+  // Blocks if inlined data that have a length field and the data bytes inlined
+  // in the .debug_info
   case DW_FORM_exprloc:
   case DW_FORM_block: {
     dw_uleb128_t size = debug_info_data.GetULEB128(offset_ptr);

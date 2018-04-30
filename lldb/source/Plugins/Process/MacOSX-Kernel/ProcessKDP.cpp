@@ -172,10 +172,10 @@ ProcessKDP::ProcessKDP(TargetSP target_sp, ListenerSP listener_sp)
 //----------------------------------------------------------------------
 ProcessKDP::~ProcessKDP() {
   Clear();
-  // We need to call finalize on the process before destroying ourselves
-  // to make sure all of the broadcaster cleanup goes as planned. If we
-  // destruct this class, then Process::~Process() might have problems
-  // trying to fully destroy the broadcaster.
+  // We need to call finalize on the process before destroying ourselves to
+  // make sure all of the broadcaster cleanup goes as planned. If we destruct
+  // this class, then Process::~Process() might have problems trying to fully
+  // destroy the broadcaster.
   Finalize();
 }
 
@@ -226,9 +226,9 @@ bool ProcessKDP::GetHostArchitecture(ArchSpec &arch) {
 Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
   Status error;
 
-  // Don't let any JIT happen when doing KDP as we can't allocate
-  // memory and we don't want to be mucking with threads that might
-  // already be handling exceptions
+  // Don't let any JIT happen when doing KDP as we can't allocate memory and we
+  // don't want to be mucking with threads that might already be handling
+  // exceptions
   SetCanJIT(false);
 
   if (remote_url.empty()) {
@@ -282,16 +282,15 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
 
           if (m_comm.RemoteIsEFI()) {
             // Select an invalid plugin name for the dynamic loader so one
-            // doesn't get used
-            // since EFI does its own manual loading via python scripting
+            // doesn't get used since EFI does its own manual loading via
+            // python scripting
             static ConstString g_none_dynamic_loader("none");
             m_dyld_plugin_name = g_none_dynamic_loader;
 
             if (kernel_uuid.IsValid()) {
-              // If EFI passed in a UUID= try to lookup UUID
-              // The slide will not be provided. But the UUID
-              // lookup will be used to launch EFI debug scripts
-              // from the dSYM, that can load all of the symbols.
+              // If EFI passed in a UUID= try to lookup UUID The slide will not
+              // be provided. But the UUID lookup will be used to launch EFI
+              // debug scripts from the dSYM, that can load all of the symbols.
               ModuleSpec module_spec;
               module_spec.GetUUID() = kernel_uuid;
               module_spec.GetArchitecture() = target.GetArchitecture();
@@ -443,8 +442,8 @@ Status ProcessKDP::DoResume() {
                   StateAsCString(thread_resume_state));
     switch (thread_resume_state) {
     case eStateSuspended:
-      // Nothing to do here when a thread will stay suspended
-      // we just leave the CPU mask bit set to zero for the thread
+      // Nothing to do here when a thread will stay suspended we just leave the
+      // CPU mask bit set to zero for the thread
       if (log)
         log->Printf("ProcessKDP::DoResume() = suspended???");
       break;
@@ -535,8 +534,8 @@ bool ProcessKDP::UpdateThreadList(ThreadList &old_thread_list,
 }
 
 void ProcessKDP::RefreshStateAfterStop() {
-  // Let all threads recover from stopping and do any clean up based
-  // on the previous thread state (if any).
+  // Let all threads recover from stopping and do any clean up based on the
+  // previous thread state (if any).
   m_thread_list.RefreshStateAfterStop();
 }
 
@@ -545,9 +544,9 @@ Status ProcessKDP::DoHalt(bool &caused_stop) {
 
   if (m_comm.IsRunning()) {
     if (m_destroy_in_process) {
-      // If we are attemping to destroy, we need to not return an error to
-      // Halt or DoDestroy won't get called.
-      // We are also currently running, so send a process stopped event
+      // If we are attemping to destroy, we need to not return an error to Halt
+      // or DoDestroy won't get called. We are also currently running, so send
+      // a process stopped event
       SetPrivateState(eStateStopped);
     } else {
       error.SetErrorString("KDP cannot interrupt a running kernel");
@@ -563,8 +562,8 @@ Status ProcessKDP::DoDetach(bool keep_stopped) {
     log->Printf("ProcessKDP::DoDetach(keep_stopped = %i)", keep_stopped);
 
   if (m_comm.IsRunning()) {
-    // We are running and we can't interrupt a running kernel, so we need
-    // to just close the connection to the kernel and hope for the best
+    // We are running and we can't interrupt a running kernel, so we need to
+    // just close the connection to the kernel and hope for the best
   } else {
     // If we are going to keep the target stopped, then don't send the
     // disconnect message.

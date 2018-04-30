@@ -377,13 +377,13 @@ public:
   //------------------------------------------------------------------
   virtual Symbol *ResolveSymbolForAddress(const Address &so_addr,
                                           bool verify_unique) {
-    // Typically overridden to lazily add stripped symbols recoverable from
-    // the exception handling unwind information (i.e. without parsing
-    // the entire eh_frame section.
+    // Typically overridden to lazily add stripped symbols recoverable from the
+    // exception handling unwind information (i.e. without parsing the entire
+    // eh_frame section.
     //
-    // The availability of LC_FUNCTION_STARTS allows ObjectFileMachO
-    // to efficiently add stripped symbols when the symbol table is
-    // first constructed.  Poorer cousins are PECoff and ELF.
+    // The availability of LC_FUNCTION_STARTS allows ObjectFileMachO to
+    // efficiently add stripped symbols when the symbol table is first
+    // constructed.  Poorer cousins are PECoff and ELF.
     return nullptr;
   }
 
@@ -791,10 +791,9 @@ public:
     return m_strata;
   }
 
-  // When an object file is in memory, subclasses should try and lock
-  // the process weak pointer. If the process weak pointer produces a
-  // valid ProcessSP, then subclasses can call this function to read
-  // memory.
+  // When an object file is in memory, subclasses should try and lock the
+  // process weak pointer. If the process weak pointer produces a valid
+  // ProcessSP, then subclasses can call this function to read memory.
   static lldb::DataBufferSP ReadMemory(const lldb::ProcessSP &process_sp,
                                        lldb::addr_t addr, size_t byte_size);
 
@@ -814,8 +813,8 @@ public:
                                  size_t dst_len);
 
   // This function will transparently decompress section data if the section if
-  // compressed. Note that for compressed section the resulting data size may be
-  // larger than what Section::GetFileSize reports.
+  // compressed. Note that for compressed section the resulting data size may
+  // be larger than what Section::GetFileSize reports.
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 

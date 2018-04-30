@@ -123,8 +123,8 @@ public:
 
 private:
   //------------------------------------------------------------------
-  // This object uses a std::vector<uint8_t> to store its data. This
-  // takes care of free the data when the object is deleted.
+  // This object uses a std::vector<uint8_t> to store its data. This takes care
+  // of free the data when the object is deleted.
   //------------------------------------------------------------------
   typedef std::vector<uint8_t> buffer_t; ///< Buffer type
   buffer_t m_data; ///< The heap based buffer where data is stored

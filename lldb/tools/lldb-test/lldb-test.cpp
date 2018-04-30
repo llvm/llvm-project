@@ -213,6 +213,7 @@ static void dumpModules(Debugger &Dbg) {
       assert(S);
       Printer.formatLine("Index: {0}", I);
       Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
+      Printer.formatLine("Type: {0}", S->GetTypeAsCString());
       Printer.formatLine("VM size: {0}", S->GetByteSize());
       Printer.formatLine("File size: {0}", S->GetFileSize());
 

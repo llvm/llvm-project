@@ -16,20 +16,19 @@
 
 namespace lldb_private {
 
-// Inherit from UserID in case pushing/popping all register values can be
-// done using a 64 bit integer that holds a baton/cookie instead of actually
-// having to read all register values into a buffer
+// Inherit from UserID in case pushing/popping all register values can be done
+// using a 64 bit integer that holds a baton/cookie instead of actually having
+// to read all register values into a buffer
 class RegisterCheckpoint : public UserID {
 public:
   enum class Reason {
     // An expression is about to be run on the thread if the protocol that
     // talks to the debuggee supports checkpointing the registers using a
-    // push/pop then the UserID base class in the RegisterCheckpoint can
-    // be used to store the baton/cookie that refers to the remote saved
-    // state.
+    // push/pop then the UserID base class in the RegisterCheckpoint can be
+    // used to store the baton/cookie that refers to the remote saved state.
     eExpression,
-    // The register checkpoint wants the raw register bytes, so they must
-    // be read into m_data_sp, or the save/restore checkpoint should fail.
+    // The register checkpoint wants the raw register bytes, so they must be
+    // read into m_data_sp, or the save/restore checkpoint should fail.
     eDataBackup
   };
 

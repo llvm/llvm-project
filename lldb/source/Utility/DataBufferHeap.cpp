@@ -22,8 +22,7 @@ using namespace lldb_private;
 DataBufferHeap::DataBufferHeap() : m_data() {}
 
 //----------------------------------------------------------------------
-// Initialize this class with "n" characters and fill the buffer
-// with "ch".
+// Initialize this class with "n" characters and fill the buffer with "ch".
 //----------------------------------------------------------------------
 DataBufferHeap::DataBufferHeap(lldb::offset_t n, uint8_t ch) : m_data() {
   if (n < m_data.max_size())
@@ -31,8 +30,7 @@ DataBufferHeap::DataBufferHeap(lldb::offset_t n, uint8_t ch) : m_data() {
 }
 
 //----------------------------------------------------------------------
-// Initialize this class with a copy of the "n" bytes from the "bytes"
-// buffer.
+// Initialize this class with a copy of the "n" bytes from the "bytes" buffer.
 //----------------------------------------------------------------------
 DataBufferHeap::DataBufferHeap(const void *src, lldb::offset_t src_len)
     : m_data() {
@@ -40,22 +38,21 @@ DataBufferHeap::DataBufferHeap(const void *src, lldb::offset_t src_len)
 }
 
 //----------------------------------------------------------------------
-// Virtual destructor since this class inherits from a pure virtual
-// base class.
+// Virtual destructor since this class inherits from a pure virtual base class.
 //----------------------------------------------------------------------
 DataBufferHeap::~DataBufferHeap() = default;
 
 //----------------------------------------------------------------------
-// Return a pointer to the bytes owned by this object, or nullptr if
-// the object contains no bytes.
+// Return a pointer to the bytes owned by this object, or nullptr if the object
+// contains no bytes.
 //----------------------------------------------------------------------
 uint8_t *DataBufferHeap::GetBytes() {
   return (m_data.empty() ? nullptr : m_data.data());
 }
 
 //----------------------------------------------------------------------
-// Return a const pointer to the bytes owned by this object, or nullptr
-// if the object contains no bytes.
+// Return a const pointer to the bytes owned by this object, or nullptr if the
+// object contains no bytes.
 //----------------------------------------------------------------------
 const uint8_t *DataBufferHeap::GetBytes() const {
   return (m_data.empty() ? nullptr : m_data.data());
@@ -67,8 +64,8 @@ const uint8_t *DataBufferHeap::GetBytes() const {
 uint64_t DataBufferHeap::GetByteSize() const { return m_data.size(); }
 
 //----------------------------------------------------------------------
-// Sets the number of bytes that this object should be able to
-// contain. This can be used prior to copying data into the buffer.
+// Sets the number of bytes that this object should be able to contain. This
+// can be used prior to copying data into the buffer.
 //----------------------------------------------------------------------
 uint64_t DataBufferHeap::SetByteSize(uint64_t new_size) {
   m_data.resize(new_size);

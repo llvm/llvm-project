@@ -65,17 +65,16 @@ ArmUnwindInfo::ArmUnwindInfo(ObjectFile &objfile, SectionSP &arm_exidx,
   }
 
   // Sort the entries in the exidx section. The entries should be sorted inside
-  // the section but
-  // some old compiler isn't sorted them.
+  // the section but some old compiler isn't sorted them.
   std::sort(m_exidx_entries.begin(), m_exidx_entries.end());
 }
 
 ArmUnwindInfo::~ArmUnwindInfo() {}
 
-// Read a byte from the unwind instruction stream with the given offset.
-// Custom function is required because have to red in order of significance
-// within their containing
-// word (most significant byte first) and in increasing word address order.
+// Read a byte from the unwind instruction stream with the given offset. Custom
+// function is required because have to red in order of significance within
+// their containing word (most significant byte first) and in increasing word
+// address order.
 uint8_t ArmUnwindInfo::GetByteAtOffset(const uint32_t *data,
                                        uint16_t offset) const {
   uint32_t value = data[offset / 4];
@@ -276,8 +275,8 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
       return false;
     } else if ((byte1 & 0xff) == 0xc8) {
       // 11001000 sssscccc
-      // Pop VFP double precision registers D[16+ssss]-D[16+ssss+cccc] saved (as
-      // if) by FSTMFDD (see remarks d,e)
+      // Pop VFP double precision registers D[16+ssss]-D[16+ssss+cccc] saved
+      // (as if) by FSTMFDD (see remarks d,e)
       if (byte_offset >= byte_count)
         return false;
 

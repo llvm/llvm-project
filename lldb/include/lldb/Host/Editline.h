@@ -23,8 +23,8 @@
 // broken, which is why we're
 //    working around it here.
 // c) When resizing the terminal window, if the cursor moves between rows
-// libedit will get confused.
-// d) The incremental search uses escape to cancel input, so it's confused by
+// libedit will get confused. d) The incremental search uses escape to cancel
+// input, so it's confused by
 // ANSI sequences starting with escape.
 // e) Emoji support is fairly terrible, presumably it doesn't understand
 // composed characters?
@@ -38,11 +38,10 @@
 #include <vector>
 
 // components needed to handle wide characters ( <codecvt>, codecvt_utf8,
-// libedit built with '--enable-widec' )
-// are available on some platforms. The wchar_t versions of libedit functions
-// will only be
-// used in cases where this is true.  This is a compile time dependecy, for now
-// selected per target Platform
+// libedit built with '--enable-widec' ) are available on some platforms. The
+// wchar_t versions of libedit functions will only be used in cases where this
+// is true.  This is a compile time dependecy, for now selected per target
+// Platform
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
     defined(__OpenBSD__)
 #define LLDB_EDITLINE_USE_WCHAR 1

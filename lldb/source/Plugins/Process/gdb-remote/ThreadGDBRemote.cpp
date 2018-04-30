@@ -80,10 +80,9 @@ void ThreadGDBRemote::SetQueueInfo(std::string &&queue_name,
 
 const char *ThreadGDBRemote::GetQueueName() {
   // If our cached queue info is valid, then someone called
-  // ThreadGDBRemote::SetQueueInfo(...)
-  // with valid information that was gleaned from the stop reply packet. In this
-  // case we trust
-  // that the info is valid in m_dispatch_queue_name without refetching it
+  // ThreadGDBRemote::SetQueueInfo(...) with valid information that was gleaned
+  // from the stop reply packet. In this case we trust that the info is valid
+  // in m_dispatch_queue_name without refetching it
   if (CachedQueueInfoIsValid()) {
     if (m_dispatch_queue_name.empty())
       return nullptr;
@@ -115,10 +114,9 @@ const char *ThreadGDBRemote::GetQueueName() {
 
 QueueKind ThreadGDBRemote::GetQueueKind() {
   // If our cached queue info is valid, then someone called
-  // ThreadGDBRemote::SetQueueInfo(...)
-  // with valid information that was gleaned from the stop reply packet. In this
-  // case we trust
-  // that the info is valid in m_dispatch_queue_name without refetching it
+  // ThreadGDBRemote::SetQueueInfo(...) with valid information that was gleaned
+  // from the stop reply packet. In this case we trust that the info is valid
+  // in m_dispatch_queue_name without refetching it
   if (CachedQueueInfoIsValid()) {
     return m_queue_kind;
   }
@@ -141,10 +139,9 @@ QueueKind ThreadGDBRemote::GetQueueKind() {
 
 queue_id_t ThreadGDBRemote::GetQueueID() {
   // If our cached queue info is valid, then someone called
-  // ThreadGDBRemote::SetQueueInfo(...)
-  // with valid information that was gleaned from the stop reply packet. In this
-  // case we trust
-  // that the info is valid in m_dispatch_queue_name without refetching it
+  // ThreadGDBRemote::SetQueueInfo(...) with valid information that was gleaned
+  // from the stop reply packet. In this case we trust that the info is valid
+  // in m_dispatch_queue_name without refetching it
   if (CachedQueueInfoIsValid())
     return m_queue_serial_number;
 
@@ -275,11 +272,11 @@ void ThreadGDBRemote::RefreshStateAfterStop() {
   // Invalidate all registers in our register context. We don't set "force" to
   // true because the stop reply packet might have had some register values
   // that were expedited and these will already be copied into the register
-  // context by the time this function gets called. The GDBRemoteRegisterContext
-  // class has been made smart enough to detect when it needs to invalidate
-  // which registers are valid by putting hooks in the register read and
-  // register supply functions where they check the process stop ID and do
-  // the right thing.
+  // context by the time this function gets called. The
+  // GDBRemoteRegisterContext class has been made smart enough to detect when
+  // it needs to invalidate which registers are valid by putting hooks in the
+  // register read and register supply functions where they check the process
+  // stop ID and do the right thing.
   const bool force = false;
   GetRegisterContext()->InvalidateIfNeeded(force);
 }
@@ -310,7 +307,8 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
     if (process_sp) {
       ProcessGDBRemote *gdb_process =
           static_cast<ProcessGDBRemote *>(process_sp.get());
-      // read_all_registers_at_once will be true if 'p' packet is not supported.
+      // read_all_registers_at_once will be true if 'p' packet is not
+      // supported.
       bool read_all_registers_at_once =
           !gdb_process->GetGDBRemote().GetpPacketSupported(GetID());
       reg_ctx_sp.reset(new GDBRemoteRegisterContext(

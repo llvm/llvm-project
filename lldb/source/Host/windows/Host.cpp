@@ -35,8 +35,7 @@ using namespace lldb_private;
 namespace {
 bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
   // Open the PE File as a binary file, and parse just enough information to
-  // determine the
-  // machine type.
+  // determine the machine type.
   File imageBinary(executable.GetPath().c_str(), File::eOpenOptionRead,
                    lldb::eFilePermissionsUserRead);
   imageBinary.SeekFromStart(0x3c);
@@ -63,8 +62,8 @@ bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
 }
 
 bool GetExecutableForProcess(const AutoHandle &handle, std::string &path) {
-  // Get the process image path.  MAX_PATH isn't long enough, paths can actually
-  // be up to 32KB.
+  // Get the process image path.  MAX_PATH isn't long enough, paths can
+  // actually be up to 32KB.
   std::vector<wchar_t> buffer(PATH_MAX);
   DWORD dwSize = buffer.size();
   if (!::QueryFullProcessImageNameW(handle.get(), 0, &buffer[0], &dwSize))
@@ -75,10 +74,9 @@ bool GetExecutableForProcess(const AutoHandle &handle, std::string &path) {
 void GetProcessExecutableAndTriple(const AutoHandle &handle,
                                    ProcessInstanceInfo &process) {
   // We may not have permissions to read the path from the process.  So start
-  // off by
-  // setting the executable file to whatever Toolhelp32 gives us, and then try
-  // to
-  // enhance this with more detailed information, but fail gracefully.
+  // off by setting the executable file to whatever Toolhelp32 gives us, and
+  // then try to enhance this with more detailed information, but fail
+  // gracefully.
   std::string executable;
   llvm::Triple triple;
   triple.setVendor(llvm::Triple::PC);

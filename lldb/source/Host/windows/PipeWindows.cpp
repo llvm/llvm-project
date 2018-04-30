@@ -40,11 +40,9 @@ PipeWindows::PipeWindows() {
 PipeWindows::~PipeWindows() { Close(); }
 
 Status PipeWindows::CreateNew(bool child_process_inherit) {
-  // Even for anonymous pipes, we open a named pipe.  This is because you cannot
-  // get
-  // overlapped i/o on Windows without using a named pipe.  So we synthesize a
-  // unique
-  // name.
+  // Even for anonymous pipes, we open a named pipe.  This is because you
+  // cannot get overlapped i/o on Windows without using a named pipe.  So we
+  // synthesize a unique name.
   uint32_t serial = g_pipe_serial.fetch_add(1);
   std::string pipe_name;
   llvm::raw_string_ostream pipe_name_stream(pipe_name);
@@ -65,8 +63,8 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   std::string pipe_path = "\\\\.\\Pipe\\";
   pipe_path.append(name);
 
-  // Always open for overlapped i/o.  We implement blocking manually in Read and
-  // Write.
+  // Always open for overlapped i/o.  We implement blocking manually in Read
+  // and Write.
   DWORD read_mode = FILE_FLAG_OVERLAPPED;
   m_read = ::CreateNamedPipeA(
       pipe_path.c_str(), PIPE_ACCESS_INBOUND | read_mode,
@@ -250,12 +248,10 @@ Status PipeWindows::ReadWithTimeout(void *buf, size_t size,
   DWORD wait_result = ::WaitForSingleObject(m_read_overlapped.hEvent, timeout);
   if (wait_result != WAIT_OBJECT_0) {
     // The operation probably failed.  However, if it timed out, we need to
-    // cancel the I/O.
-    // Between the time we returned from WaitForSingleObject and the time we
-    // call CancelIoEx,
-    // the operation may complete.  If that hapens, CancelIoEx will fail and
-    // return ERROR_NOT_FOUND.
-    // If that happens, the original operation should be considered to have been
+    // cancel the I/O. Between the time we returned from WaitForSingleObject
+    // and the time we call CancelIoEx, the operation may complete.  If that
+    // hapens, CancelIoEx will fail and return ERROR_NOT_FOUND. If that
+    // happens, the original operation should be considered to have been
     // successful.
     bool failed = true;
     DWORD failure_error = ::GetLastError();
@@ -268,9 +264,8 @@ Status PipeWindows::ReadWithTimeout(void *buf, size_t size,
       return Status(failure_error, eErrorTypeWin32);
   }
 
-  // Now we call GetOverlappedResult setting bWait to false, since we've already
-  // waited
-  // as long as we're willing to.
+  // Now we call GetOverlappedResult setting bWait to false, since we've
+  // already waited as long as we're willing to.
   if (!GetOverlappedResult(m_read, &m_read_overlapped, &sys_bytes_read, FALSE))
     return Status(::GetLastError(), eErrorTypeWin32);
 

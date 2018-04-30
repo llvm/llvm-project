@@ -334,8 +334,8 @@ UndefinedBehaviorSanitizerRuntime::GetBacktracesFromExtendedStopInfo(
   std::string stop_reason_description = GetStopReasonDescription(info);
   new_thread_sp->SetName(stop_reason_description.c_str());
 
-  // Save this in the Process' ExtendedThreadList so a strong pointer
-  // retains the object
+  // Save this in the Process' ExtendedThreadList so a strong pointer retains
+  // the object
   process_sp->GetExtendedThreadList().AddThread(new_thread_sp);
   threads->AddThread(new_thread_sp);
 

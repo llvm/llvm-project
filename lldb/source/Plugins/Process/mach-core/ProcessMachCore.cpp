@@ -91,11 +91,10 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
 
   // For now we are just making sure the file exists for a given module
   if (!m_core_module_sp && m_core_file.Exists()) {
-    // Don't add the Target's architecture to the ModuleSpec - we may be working
-    // with a core file that doesn't have the correct cpusubtype in the header
-    // but we should still try to use it -
-    // ModuleSpecList::FindMatchingModuleSpec
-    // enforces a strict arch mach.
+    // Don't add the Target's architecture to the ModuleSpec - we may be
+    // working with a core file that doesn't have the correct cpusubtype in the
+    // header but we should still try to use it -
+    // ModuleSpecList::FindMatchingModuleSpec enforces a strict arch mach.
     ModuleSpec core_module_spec(m_core_file);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
                                              NULL, NULL, NULL));
@@ -125,10 +124,10 @@ ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
 //----------------------------------------------------------------------
 ProcessMachCore::~ProcessMachCore() {
   Clear();
-  // We need to call finalize on the process before destroying ourselves
-  // to make sure all of the broadcaster cleanup goes as planned. If we
-  // destruct this class, then Process::~Process() might have problems
-  // trying to fully destroy the broadcaster.
+  // We need to call finalize on the process before destroying ourselves to
+  // make sure all of the broadcaster cleanup goes as planned. If we destruct
+  // this class, then Process::~Process() might have problems trying to fully
+  // destroy the broadcaster.
   Finalize();
 }
 
@@ -162,11 +161,10 @@ bool ProcessMachCore::GetDynamicLoaderAddress(lldb::addr_t addr) {
   // header.magic, header.filetype);
   if (header.magic == llvm::MachO::MH_MAGIC ||
       header.magic == llvm::MachO::MH_MAGIC_64) {
-    // Check MH_EXECUTABLE to see if we can find the mach image
-    // that contains the shared library list. The dynamic loader
-    // (dyld) is what contains the list for user applications,
-    // and the mach kernel contains a global that has the list
-    // of kexts to load
+    // Check MH_EXECUTABLE to see if we can find the mach image that contains
+    // the shared library list. The dynamic loader (dyld) is what contains the
+    // list for user applications, and the mach kernel contains a global that
+    // has the list of kexts to load
     switch (header.filetype) {
     case llvm::MachO::MH_DYLINKER:
       // printf("0x%16.16" PRIx64 ": file_type = MH_DYLINKER\n", vaddr);
@@ -272,13 +270,10 @@ Status ProcessMachCore::DoLoadCore() {
       } else {
         m_core_aranges.Append(range_entry);
       }
-      // Some core files don't fill in the permissions correctly. If that is the
-      // case
-      // assume read + execute so clients don't think the memory is not
-      // readable,
-      // or executable. The memory isn't writable since this plug-in doesn't
-      // implement
-      // DoWriteMemory.
+      // Some core files don't fill in the permissions correctly. If that is
+      // the case assume read + execute so clients don't think the memory is
+      // not readable, or executable. The memory isn't writable since this
+      // plug-in doesn't implement DoWriteMemory.
       uint32_t permissions = section->GetPermissions();
       if (permissions == 0)
         permissions = lldb::ePermissionsReadable | lldb::ePermissionsExecutable;
@@ -309,8 +304,8 @@ Status ProcessMachCore::DoLoadCore() {
   }
   
   // This checks for the presence of an LC_IDENT string in a core file;
-  // LC_IDENT is very obsolete and should not be used in new code, but
-  // if the load command is present, let's use the contents.
+  // LC_IDENT is very obsolete and should not be used in new code, but if the
+  // load command is present, let's use the contents.
   std::string corefile_identifier = core_objfile->GetIdentifierString();
   if (found_main_binary_definitively == false 
       && corefile_identifier.find("Darwin Kernel") != std::string::npos) {
@@ -342,16 +337,12 @@ Status ProcessMachCore::DoLoadCore() {
   if (found_main_binary_definitively == false
       && (m_dyld_addr == LLDB_INVALID_ADDRESS
           || m_mach_kernel_addr == LLDB_INVALID_ADDRESS)) {
-    // We need to locate the main executable in the memory ranges
-    // we have in the core file.  We need to search for both a user-process dyld
-    // binary
+    // We need to locate the main executable in the memory ranges we have in
+    // the core file.  We need to search for both a user-process dyld binary
     // and a kernel binary in memory; we must look at all the pages in the
-    // binary so
-    // we don't miss one or the other.  Step through all memory segments
-    // searching for
-    // a kernel binary and for a user process dyld -- we'll decide which to
-    // prefer
-    // later if both are present.
+    // binary so we don't miss one or the other.  Step through all memory
+    // segments searching for a kernel binary and for a user process dyld --
+    // we'll decide which to prefer later if both are present.
 
     const size_t num_core_aranges = m_core_aranges.GetSize();
     for (size_t i = 0; i < num_core_aranges; ++i) {
@@ -369,13 +360,10 @@ Status ProcessMachCore::DoLoadCore() {
   if (found_main_binary_definitively == false 
        && m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
     // In the case of multiple kernel images found in the core file via
-    // exhaustive
-    // search, we may not pick the correct one.  See if the
-    // DynamicLoaderDarwinKernel's
-    // search heuristics might identify the correct one.
-    // Most of the time, I expect the address from SearchForDarwinKernel() will
-    // be the
-    // same as the address we found via exhaustive search.
+    // exhaustive search, we may not pick the correct one.  See if the
+    // DynamicLoaderDarwinKernel's search heuristics might identify the correct
+    // one. Most of the time, I expect the address from SearchForDarwinKernel()
+    // will be the same as the address we found via exhaustive search.
 
     if (GetTarget().GetArchitecture().IsValid() == false &&
         m_core_module_sp.get()) {
@@ -383,13 +371,11 @@ Status ProcessMachCore::DoLoadCore() {
     }
 
     // SearchForDarwinKernel will end up calling back into this this class in
-    // the GetImageInfoAddress
-    // method which will give it the m_mach_kernel_addr/m_dyld_addr it already
-    // has.  Save that aside
-    // and set m_mach_kernel_addr/m_dyld_addr to an invalid address temporarily
-    // so
-    // DynamicLoaderDarwinKernel does a real search for the kernel using its own
-    // heuristics.
+    // the GetImageInfoAddress method which will give it the
+    // m_mach_kernel_addr/m_dyld_addr it already has.  Save that aside and set
+    // m_mach_kernel_addr/m_dyld_addr to an invalid address temporarily so
+    // DynamicLoaderDarwinKernel does a real search for the kernel using its
+    // own heuristics.
 
     addr_t saved_mach_kernel_addr = m_mach_kernel_addr;
     addr_t saved_user_dyld_addr = m_dyld_addr;
@@ -410,8 +396,8 @@ Status ProcessMachCore::DoLoadCore() {
     }
   }
 
-  // If we found both a user-process dyld and a kernel binary, we need to decide
-  // which to prefer.
+  // If we found both a user-process dyld and a kernel binary, we need to
+  // decide which to prefer.
   if (GetCorefilePreference() == eKernelCorefile) {
     if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
       if (log)
@@ -444,18 +430,13 @@ Status ProcessMachCore::DoLoadCore() {
 
   if (m_dyld_plugin_name != DynamicLoaderMacOSXDYLD::GetPluginNameStatic()) {
     // For non-user process core files, the permissions on the core file
-    // segments are usually
-    // meaningless, they may be just "read", because we're dealing with kernel
-    // coredumps or
-    // early startup coredumps and the dumper is grabbing pages of memory
-    // without knowing
-    // what they are.  If they aren't marked as "exeuctable", that can break the
-    // unwinder
-    // which will check a pc value to see if it is in an executable segment and
-    // stop the
+    // segments are usually meaningless, they may be just "read", because we're
+    // dealing with kernel coredumps or early startup coredumps and the dumper
+    // is grabbing pages of memory without knowing what they are.  If they
+    // aren't marked as "exeuctable", that can break the unwinder which will
+    // check a pc value to see if it is in an executable segment and stop the
     // backtrace early if it is not ("executable" and "unknown" would both be
-    // fine, but
-    // "not executable" will break the unwinder).
+    // fine, but "not executable" will break the unwinder).
     size_t core_range_infos_size = m_core_range_infos.GetSize();
     for (size_t i = 0; i < core_range_infos_size; i++) {
       VMRangeToPermissions::Entry *ent =
@@ -464,8 +445,8 @@ Status ProcessMachCore::DoLoadCore() {
     }
   }
 
-  // Even if the architecture is set in the target, we need to override
-  // it to match the core file which is always single arch.
+  // Even if the architecture is set in the target, we need to override it to
+  // match the core file which is always single arch.
   ArchSpec arch(m_core_module_sp->GetArchitecture());
   if (arch.GetCore() == ArchSpec::eCore_x86_32_i486) {
     arch = Platform::GetAugmentedArchSpec(GetTarget().GetPlatform().get(), "i386");
@@ -488,8 +469,7 @@ bool ProcessMachCore::UpdateThreadList(ThreadList &old_thread_list,
                                        ThreadList &new_thread_list) {
   if (old_thread_list.GetSize(false) == 0) {
     // Make up the thread the first time this is called so we can setup our one
-    // and only
-    // core thread state.
+    // and only core thread state.
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
@@ -508,8 +488,8 @@ bool ProcessMachCore::UpdateThreadList(ThreadList &old_thread_list,
 }
 
 void ProcessMachCore::RefreshStateAfterStop() {
-  // Let all threads recover from stopping and do any clean up based
-  // on the previous thread state (if any).
+  // Let all threads recover from stopping and do any clean up based on the
+  // previous thread state (if any).
   m_thread_list.RefreshStateAfterStop();
   // SetThreadStopInfo (m_last_stop_packet);
 }
@@ -529,8 +509,8 @@ bool ProcessMachCore::WarnBeforeDetach() const { return false; }
 //------------------------------------------------------------------
 size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
                                    Status &error) {
-  // Don't allow the caching that lldb_private::Process::ReadMemory does
-  // since in core files we have it all cached our our core file anyway.
+  // Don't allow the caching that lldb_private::Process::ReadMemory does since
+  // in core files we have it all cached our our core file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
@@ -546,19 +526,17 @@ size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
     //            Address    Size       File off   File size
     //            ---------- ---------- ---------- ----------
     // LC_SEGMENT 0x000f6000 0x00001000 0x1d509ee8 0x00001000 --- ---   0
-    // 0x00000000 __TEXT
-    // LC_SEGMENT 0x0f600000 0x00100000 0x1d50aee8 0x00100000 --- ---   0
-    // 0x00000000 __TEXT
-    // LC_SEGMENT 0x000f7000 0x00001000 0x1d60aee8 0x00001000 --- ---   0
-    // 0x00000000 __TEXT
+    // 0x00000000 __TEXT LC_SEGMENT 0x0f600000 0x00100000 0x1d50aee8 0x00100000
+    // --- ---   0 0x00000000 __TEXT LC_SEGMENT 0x000f7000 0x00001000
+    // 0x1d60aee8 0x00001000 --- ---   0 0x00000000 __TEXT
     //
     // Any if the user executes the following command:
     //
     // (lldb) mem read 0xf6ff0
     //
-    // We would attempt to read 32 bytes from 0xf6ff0 but would only
-    // get 16 unless we loop through consecutive memory ranges that are
-    // contiguous in the address space, but not in the file data.
+    // We would attempt to read 32 bytes from 0xf6ff0 but would only get 16
+    // unless we loop through consecutive memory ranges that are contiguous in
+    // the address space, but not in the file data.
     //----------------------------------------------------------------------
     while (bytes_read < size) {
       const addr_t curr_addr = addr + bytes_read;
@@ -641,8 +619,8 @@ void ProcessMachCore::Initialize() {
 }
 
 addr_t ProcessMachCore::GetImageInfoAddress() {
-  // If we found both a user-process dyld and a kernel binary, we need to decide
-  // which to prefer.
+  // If we found both a user-process dyld and a kernel binary, we need to
+  // decide which to prefer.
   if (GetCorefilePreference() == eKernelCorefile) {
     if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
       return m_mach_kernel_addr;

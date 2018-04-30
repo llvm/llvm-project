@@ -381,13 +381,10 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   ReportAllocations(*m_execution_engine_ap);
 
   // We have to do this after calling ReportAllocations because for the MCJIT,
-  // getGlobalValueAddress
-  // will cause the JIT to perform all relocations.  That can only be done once,
-  // and has to happen
-  // after we do the remapping from local -> remote.
-  // That means we don't know the local address of the Variables, but we don't
-  // need that for anything,
-  // so that's okay.
+  // getGlobalValueAddress will cause the JIT to perform all relocations.  That
+  // can only be done once, and has to happen after we do the remapping from
+  // local -> remote. That means we don't know the local address of the
+  // Variables, but we don't need that for anything, so that's okay.
 
   std::function<void(llvm::GlobalValue &)> RegisterOneValue = [this](
       llvm::GlobalValue &val) {
@@ -398,8 +395,8 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
       lldb::addr_t remote_addr = GetRemoteAddressForLocal(var_ptr_addr);
 
       // This is a really unfortunae API that sometimes returns local addresses
-      // and sometimes returns remote addresses, based on whether
-      // the variable was relocated during ReportAllocations or not.
+      // and sometimes returns remote addresses, based on whether the variable
+      // was relocated during ReportAllocations or not.
 
       if (remote_addr == LLDB_INVALID_ADDRESS) {
         remote_addr = var_ptr_addr;
@@ -895,8 +892,8 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
     if (get_external_load_address(load_address, sc_list, sc)) {
       return load_address;
     }
-    // if there are any searches we try after this, add an sc_list.Clear() in an
-    // "else" clause here
+    // if there are any searches we try after this, add an sc_list.Clear() in
+    // an "else" clause here
 
     if (best_internal_load_address != LLDB_INVALID_ADDRESS) {
       return best_internal_load_address;
@@ -1113,6 +1110,7 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
   case lldb::eSectionTypeDWARFAppleTypes:
   case lldb::eSectionTypeDWARFAppleNamespaces:
   case lldb::eSectionTypeDWARFAppleObjC:
+  case lldb::eSectionTypeDWARFGNUDebugAltLink:
     error.Clear();
     break;
   default:

@@ -53,11 +53,11 @@ public:
 
   SymbolContextScope *GetSymbolContextScope() const { return m_owner_scope; }
 
-  // Since a variable can have a basename "i" and also a mangled
-  // named "_ZN12_GLOBAL__N_11iE" and a demangled mangled name
-  // "(anonymous namespace)::i", this function will allow a generic match
-  // function that can be called by commands and expression parsers to make
-  // sure we match anything we come across.
+  // Since a variable can have a basename "i" and also a mangled named
+  // "_ZN12_GLOBAL__N_11iE" and a demangled mangled name "(anonymous
+  // namespace)::i", this function will allow a generic match function that can
+  // be called by commands and expression parsers to make sure we match
+  // anything we come across.
   bool NameMatches(const ConstString &name) const;
 
   bool NameMatches(const RegularExpression &regex) const;
