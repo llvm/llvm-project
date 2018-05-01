@@ -11,6 +11,7 @@
 #include "lldb/Expression/IRExecutionUnit.h"
 
 #include "lldb/Core/Value.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -80,35 +81,6 @@ void ClangPersistentVariables::RemovePersistentVariable(
     if (value == m_next_persistent_variable_id - 1)
       m_next_persistent_variable_id--;
   }
-}
-
-ConstString
-ClangPersistentVariables::GetNextPersistentVariableName(bool is_error) {
-  char name_cstr[256];
-
-  const char *prefix = "$";
-
-  /* THIS NEEDS TO BE HANDLED BY SWIFT-SPECIFIC CODE
-      switch (language_type)
-      {
-      default:
-          break;
-      case lldb::eLanguageTypePLI:
-      case lldb::eLanguageTypeSwift:
-          if (is_error)
-              prefix = "$E";
-          else
-              prefix = "$R";
-          break;
-      }
-   */
-
-  ::snprintf(name_cstr, sizeof(name_cstr), "%s%u", prefix,
-             is_error ? m_next_persistent_error_id++
-                      : m_next_persistent_variable_id++);
-
-  ConstString name(name_cstr);
-  return name;
 }
 
 void ClangPersistentVariables::RegisterPersistentDecl(const ConstString &name,

@@ -104,19 +104,21 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
   if (persistent) {
     lldb::LanguageType lang = ast_type.GetMinimumLanguage();
     PersistentExpressionState *persistent_expression_state;
-    auto target = thread.CalculateTarget();
+    Target &target = *thread.CalculateTarget();
     if (lang == lldb::eLanguageTypeSwift)
       persistent_expression_state = 
-        target->GetSwiftPersistentExpressionState(thread);
+        target.GetSwiftPersistentExpressionState(thread);
     else
       persistent_expression_state =
-         target->GetPersistentExpressionStateForLanguage(lang);
+        target.GetPersistentExpressionStateForLanguage(lang);
     
     if (!persistent_expression_state)
       return ValueObjectSP();
 
-    ConstString persistent_variable_name(
-        persistent_expression_state->GetNextPersistentVariableName());
+    auto prefix = persistent_expression_state->GetPersistentVariablePrefix();
+    ConstString persistent_variable_name =
+        persistent_expression_state->GetNextPersistentVariableName(target,
+                                                                   prefix);
 
     lldb::ValueObjectSP const_valobj_sp;
 

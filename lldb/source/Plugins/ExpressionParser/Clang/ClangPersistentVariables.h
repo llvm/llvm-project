@@ -64,22 +64,11 @@ public:
       const CompilerType &compiler_type, lldb::ByteOrder byte_order,
       uint32_t addr_byte_size) override;
 
-  //----------------------------------------------------------------------
-  /// Return the next entry in the sequence of strings "$0", "$1", ... for
-  /// use naming persistent expression convenience variables.
-  ///
-  /// @param[in] language_type
-  ///     The language for the expression, which can affect the prefix
-  ///
-  /// @param[in] is_error
-  ///     If true, an error variable name is produced.
-  ///
-  /// @return
-  ///     A string that contains the next persistent variable name.
-  //----------------------------------------------------------------------
-  ConstString GetNextPersistentVariableName(bool is_error = false) override;
-
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
+  llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error) const override {
+    return "$";
+  }
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.

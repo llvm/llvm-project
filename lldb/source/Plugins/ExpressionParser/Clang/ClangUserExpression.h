@@ -192,7 +192,7 @@ private:
 
   class ResultDelegate : public Materializer::PersistentVariableDelegate {
   public:
-    ResultDelegate();
+    ResultDelegate(lldb::TargetSP target) : m_target_sp(target) {}
     ConstString GetName() override;
     void DidDematerialize(lldb::ExpressionVariableSP &variable) override;
 
@@ -202,6 +202,7 @@ private:
   private:
     PersistentExpressionState *m_persistent_state;
     lldb::ExpressionVariableSP m_variable;
+    lldb::TargetSP m_target_sp;
   };
 
   ResultDelegate m_result_delegate;
