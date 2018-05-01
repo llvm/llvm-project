@@ -524,3 +524,41 @@ class SettingsCommandTestCase(TestBase):
                              "target.process.extra-startup-command",
                              "target.process.thread.step-avoid-regexp",
                              "target.process.thread.trace-thread"])
+
+    # settings under an ".experimental" domain should have two properties:
+    #   1. If the name does not exist with "experimental" in the name path,
+    #      the name lookup should try to find it without "experimental".  So
+    #      a previously-experimental setting that has been promoted to a 
+    #      "real" setting will still be set by the original name.
+    #   2. Changing a setting with .experimental., name, where the setting
+    #      does not exist either with ".experimental." or without, should
+    #      not generate an error.  So if an experimental setting is removed,
+    #      people who may have that in their ~/.lldbinit files should not see
+    #      any errors.
+    def test_experimental_settings(self):
+        cmdinterp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+
+        # Set target.arg0 to a known value, check that we can retrieve it via
+        # the actual name and via .experimental.
+        self.expect('settings set target.arg0 first-value')
+        self.expect('settings show target.arg0', substrs=['first-value'])
+        self.expect('settings show target.experimental.arg0', substrs=['first-value'], error=False)
+
+        # Set target.arg0 to a new value via a target.experimental.arg0 name,
+        # verify that we can read it back via both .experimental., and not.
+        self.expect('settings set target.experimental.arg0 second-value', error=False)
+        self.expect('settings show target.arg0', substrs=['second-value'])
+        self.expect('settings show target.experimental.arg0', substrs=['second-value'], error=False)
+
+        # showing & setting an undefined .experimental. setting should generate no errors.
+        self.expect('settings show target.experimental.setting-which-does-not-exist', patterns=['^\s$'], error=False)
+        self.expect('settings set target.experimental.setting-which-does-not-exist true', error=False)
+
+        # A domain component before .experimental. which does not exist should give an error
+        # But the code does not yet do that.
+        # self.expect('settings set target.setting-which-does-not-exist.experimental.arg0 true', error=True)
+
+        # finally, confirm that trying to set a setting that does not exist still fails.
+        # (SHOWING a setting that does not exist does not currently yield an error.)
+        self.expect('settings set target.setting-which-does-not-exist true', error=True)
