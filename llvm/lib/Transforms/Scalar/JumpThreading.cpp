@@ -752,6 +752,8 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessors(
     CmpInst::Predicate Pred = Cmp->getPredicate();
 
     PHINode *PN = dyn_cast<PHINode>(CmpLHS);
+    if (!PN)
+      PN = dyn_cast<PHINode>(CmpRHS);
     if (PN && PN->getParent() == BB) {
       const DataLayout &DL = PN->getModule()->getDataLayout();
       // We can do this simplification if any comparisons fold to true or false.
@@ -762,12 +764,22 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessors(
         LVI->enableDT();
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         BasicBlock *PredBB = PN->getIncomingBlock(i);
-        Value *LHS = PN->getIncomingValue(i);
-        Value *RHS = CmpRHS->DoPHITranslation(BB, PredBB);
-
+        Value *LHS, *RHS;
+        if (PN == CmpLHS) {
+          LHS = PN->getIncomingValue(i);
+          RHS = CmpRHS->DoPHITranslation(BB, PredBB);
+        } else {
+          LHS = CmpLHS->DoPHITranslation(BB, PredBB);
+          RHS = PN->getIncomingValue(i);
+        }
         Value *Res = SimplifyCmpInst(Pred, LHS, RHS, {DL});
         if (!Res) {
           if (!isa<Constant>(RHS))
+            continue;
+
+          // getPredicateOnEdge call will make no sense if LHS is defined in BB.
+          auto LHSInst = dyn_cast<Instruction>(LHS);
+          if (LHSInst && LHSInst->getParent() == BB)
             continue;
 
           LazyValueInfo::Tristate

@@ -46,7 +46,7 @@
 namespace llvm {
 namespace cflaa {
 
-/// \brief The Program Expression Graph (PEG) of CFL analysis
+/// The Program Expression Graph (PEG) of CFL analysis
 /// CFLGraph is auxiliary data structure used by CFL-based alias analysis to
 /// describe flow-insensitive pointer-related behaviors. Given an LLVM function,
 /// the main purpose of this graph is to abstract away unrelated facts and
@@ -154,7 +154,7 @@ public:
   }
 };
 
-///\brief A builder class used to create CFLGraph instance from a given function
+///A builder class used to create CFLGraph instance from a given function
 /// The CFL-AA that uses this builder must provide its own type as a template
 /// argument. This is necessary for interprocedural processing: CFLGraphBuilder
 /// needs a way of obtaining the summary of other functions when callinsts are

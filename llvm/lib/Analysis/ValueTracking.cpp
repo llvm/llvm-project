@@ -1754,7 +1754,7 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   return false;
 }
 
-/// \brief Test whether a GEP's result is known to be non-null.
+/// Test whether a GEP's result is known to be non-null.
 ///
 /// Uses properties inherent in a GEP to try to determine whether it is known
 /// to be non-null.
@@ -3380,7 +3380,7 @@ uint64_t llvm::GetStringLength(const Value *V, unsigned CharSize) {
   return Len == ~0ULL ? 1 : Len;
 }
 
-/// \brief \p PN defines a loop-variant pointer to an object.  Check if the
+/// \p PN defines a loop-variant pointer to an object.  Check if the
 /// previous iteration of the loop was referring to the same object as \p PN.
 static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
                                          const LoopInfo *LI) {
@@ -3729,7 +3729,7 @@ OverflowResult llvm::computeOverflowForUnsignedAdd(const Value *LHS,
   return OverflowResult::MayOverflow;
 }
 
-/// \brief Return true if we can prove that adding the two values of the
+/// Return true if we can prove that adding the two values of the
 /// knownbits will not overflow.
 /// Otherwise return false.
 static bool checkRippleForSignedAdd(const KnownBits &LHSKnown,

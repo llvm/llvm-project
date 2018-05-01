@@ -119,7 +119,7 @@ extern template class AllAnalysesOn<LazyCallGraph::SCC>;
 
 extern template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 
-/// \brief The CGSCC analysis manager.
+/// The CGSCC analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
 /// documentation. This type serves as a convenient way to refer to this
@@ -140,7 +140,7 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
 extern template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                                   LazyCallGraph &, CGSCCUpdateResult &>;
 
-/// \brief The CGSCC pass manager.
+/// The CGSCC pass manager.
 ///
 /// See the documentation for the PassManager template for details. It runs
 /// a sequence of SCC passes over each SCC that the manager is run over. This
@@ -175,10 +175,10 @@ public:
   explicit Result(CGSCCAnalysisManager &InnerAM, LazyCallGraph &G)
       : InnerAM(&InnerAM), G(&G) {}
 
-  /// \brief Accessor for the analysis manager.
+  /// Accessor for the analysis manager.
   CGSCCAnalysisManager &getManager() { return *InnerAM; }
 
-  /// \brief Handler for invalidation of the Module.
+  /// Handler for invalidation of the Module.
   ///
   /// If the proxy analysis itself is preserved, then we assume that the set of
   /// SCCs in the Module hasn't changed. Thus any pointers to SCCs in the
@@ -302,7 +302,7 @@ struct CGSCCUpdateResult {
       &InlinedInternalEdges;
 };
 
-/// \brief The core module pass which does a post-order walk of the SCCs and
+/// The core module pass which does a post-order walk of the SCCs and
 /// runs a CGSCC pass over each one.
 ///
 /// Designed to allow composition of a CGSCCPass(Manager) and
@@ -338,7 +338,7 @@ public:
     return *this;
   }
 
-  /// \brief Runs the CGSCC pass across every SCC in the module.
+  /// Runs the CGSCC pass across every SCC in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     // Setup the CGSCC analysis manager from its proxy.
     CGSCCAnalysisManager &CGAM =
@@ -494,7 +494,7 @@ private:
   CGSCCPassT Pass;
 };
 
-/// \brief A function to deduce a function pass type and wrap it in the
+/// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename CGSCCPassT>
 ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>
@@ -517,7 +517,7 @@ public:
   public:
     explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
 
-    /// \brief Accessor for the analysis manager.
+    /// Accessor for the analysis manager.
     FunctionAnalysisManager &getManager() { return *FAM; }
 
     bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
@@ -552,7 +552,7 @@ LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
     LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
     CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR);
 
-/// \brief Adaptor that maps from a SCC to its functions.
+/// Adaptor that maps from a SCC to its functions.
 ///
 /// Designed to allow composition of a FunctionPass(Manager) and
 /// a CGSCCPassManager. Note that if this pass is constructed with a pointer
@@ -585,7 +585,7 @@ public:
     return *this;
   }
 
-  /// \brief Runs the function pass across every function in the module.
+  /// Runs the function pass across every function in the module.
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR) {
     // Setup the function analysis manager from its proxy.
@@ -652,7 +652,7 @@ private:
   FunctionPassT Pass;
 };
 
-/// \brief A function to deduce a function pass type and wrap it in the
+/// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor<FunctionPassT>
@@ -824,7 +824,7 @@ private:
   int MaxIterations;
 };
 
-/// \brief A function to deduce a function pass type and wrap it in the
+/// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename PassT>
 DevirtSCCRepeatedPass<PassT> createDevirtSCCRepeatedPass(PassT Pass,

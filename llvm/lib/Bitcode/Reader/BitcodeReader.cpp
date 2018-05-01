@@ -533,7 +533,7 @@ public:
   Error materializeModule() override;
   std::vector<StructType *> getIdentifiedStructTypes() const override;
 
-  /// \brief Main interface to parsing a bitcode buffer.
+  /// Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
   Error parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata = false,
                          bool IsImporting = false);
@@ -1202,7 +1202,7 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
   }
 }
 
-/// \brief This fills an AttrBuilder object with the LLVM attributes that have
+/// This fills an AttrBuilder object with the LLVM attributes that have
 /// been decoded from the given integer. This function must stay in sync with
 /// 'encodeLLVMAttributesForBitcode'.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
@@ -5705,7 +5705,7 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
   }
 }
 
-/// \brief Get a lazy one-at-time loading module from bitcode.
+/// Get a lazy one-at-time loading module from bitcode.
 ///
 /// This isn't always used in a lazy context.  In particular, it's also used by
 /// \a parseModule().  If this is truly lazy, then we need to eagerly pull

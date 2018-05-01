@@ -974,7 +974,7 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
   return true;
 }
 
-/// \brief Expand response files on a command line recursively using the given
+/// Expand response files on a command line recursively using the given
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv,

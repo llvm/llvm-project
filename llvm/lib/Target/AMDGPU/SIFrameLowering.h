@@ -66,7 +66,7 @@ private:
     SIMachineFunctionInfo *MFI,
     MachineFunction &MF) const;
 
-  /// \brief Emits debugger prologue.
+  /// Emits debugger prologue.
   void emitDebuggerPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const;
 
   // Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.

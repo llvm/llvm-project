@@ -47,7 +47,7 @@ template <typename T> struct MappingTraits;
 
 } // end namespace yaml
 
-/// \brief Class to accumulate and hold information about a callee.
+/// Class to accumulate and hold information about a callee.
 struct CalleeInfo {
   enum class HotnessType : uint8_t {
     Unknown = 0,
@@ -218,16 +218,16 @@ template <> struct DenseMapInfo<ValueInfo> {
   static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
 };
 
-/// \brief Function and variable summary information to aid decisions and
+/// Function and variable summary information to aid decisions and
 /// implementation of importing.
 class GlobalValueSummary {
 public:
-  /// \brief Sububclass discriminator (for dyn_cast<> et al.)
+  /// Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
 
   /// Group flags (Linkage, NotEligibleToImport, etc.) as a bitfield.
   struct GVFlags {
-    /// \brief The linkage type of the associated global value.
+    /// The linkage type of the associated global value.
     ///
     /// One use is to flag values that have local linkage types and need to
     /// have module identifier appended before placing into the combined
@@ -269,7 +269,7 @@ private:
   /// GUID includes the module level id in the hash.
   GlobalValue::GUID OriginalName = 0;
 
-  /// \brief Path of module IR containing value's definition, used to locate
+  /// Path of module IR containing value's definition, used to locate
   /// module during importing.
   ///
   /// This is only used during parsing of the combined index, or when
@@ -350,7 +350,7 @@ public:
   friend class ModuleSummaryIndex;
 };
 
-/// \brief Alias summary information.
+/// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
   GlobalValueSummary *AliaseeSummary;
   // AliaseeGUID is only set and accessed when we are building a combined index
@@ -397,7 +397,7 @@ inline GlobalValueSummary *GlobalValueSummary::getBaseObject() {
   return this;
 }
 
-/// \brief Function summary information to aid decisions and implementation of
+/// Function summary information to aid decisions and implementation of
 /// importing.
 class FunctionSummary : public GlobalValueSummary {
 public:
@@ -613,7 +613,7 @@ template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
   }
 };
 
-/// \brief Global variable summary information to aid decisions and
+/// Global variable summary information to aid decisions and
 /// implementation of importing.
 ///
 /// Currently this doesn't add anything to the base \p GlobalValueSummary,

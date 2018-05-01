@@ -151,21 +151,29 @@ def  : WriteRes<WriteFLoad,         [SKLPort23]> { let Latency = 6; }
 def  : WriteRes<WriteFStore,        [SKLPort237, SKLPort4]>;
 def  : WriteRes<WriteFMove,         [SKLPort015]>;
 
-defm : SKLWriteResPair<WriteFAdd,   [SKLPort1], 3>; // Floating point add/sub.
-defm : SKLWriteResPair<WriteFCmp,  [SKLPort01], 4, [1], 1, 6>; // Floating point compare.
-defm : SKLWriteResPair<WriteFCom,   [SKLPort0], 2>; // Floating point compare to flags.
-defm : SKLWriteResPair<WriteFMul,   [SKLPort0], 5>; // Floating point multiplication.
-defm : SKLWriteResPair<WriteFDiv,   [SKLPort0], 12>; // 10-14 cycles. // Floating point division.
-defm : SKLWriteResPair<WriteFSqrt,  [SKLPort0], 15>; // Floating point square root.
-defm : SKLWriteResPair<WriteFRcp,   [SKLPort0], 4>; // Floating point reciprocal estimate.
-defm : SKLWriteResPair<WriteFRsqrt, [SKLPort0], 4>; // Floating point reciprocal square root estimate.
+defm : SKLWriteResPair<WriteFAdd,   [SKLPort1],  3, [1], 1, 5>; // Floating point add/sub.
+defm : SKLWriteResPair<WriteFAddY,  [SKLPort1],  3, [1], 1, 7>; // Floating point add/sub (YMM/ZMM).
+defm : SKLWriteResPair<WriteFCmp,  [SKLPort01],  4, [1], 1, 6>; // Floating point compare.
+defm : SKLWriteResPair<WriteFCmpY, [SKLPort01],  4, [1], 1, 7>; // Floating point compare (YMM/ZMM).
+defm : SKLWriteResPair<WriteFCom,   [SKLPort0],  2>; // Floating point compare to flags.
+defm : SKLWriteResPair<WriteFMul,   [SKLPort0],  5, [1], 1, 5>; // Floating point multiplication.
+defm : SKLWriteResPair<WriteFMulY,  [SKLPort0],  5, [1], 1, 7>; // Floating point multiplication (YMM/ZMM).
+defm : SKLWriteResPair<WriteFDiv,   [SKLPort0], 12, [1], 1, 5>; // 10-14 cycles. // Floating point division.
+defm : SKLWriteResPair<WriteFDivY,  [SKLPort0], 12, [1], 1, 7>; // 10-14 cycles. // Floating point division (YMM/ZMM).
+defm : SKLWriteResPair<WriteFSqrt,  [SKLPort0], 15, [1], 1, 5>; // Floating point square root.
+defm : SKLWriteResPair<WriteFSqrtY, [SKLPort0], 15, [1], 1, 7>; // Floating point square root (YMM/ZMM).
+defm : SKLWriteResPair<WriteFRcp,   [SKLPort0], 4, [1], 1, 5>; // Floating point reciprocal estimate.
+defm : SKLWriteResPair<WriteFRcpY,  [SKLPort0], 4, [1], 1, 5>; // Floating point reciprocal estimate (YMM/ZMM).
+defm : SKLWriteResPair<WriteFRsqrt, [SKLPort0], 4, [1], 1, 5>; // Floating point reciprocal square root estimate.
+defm : SKLWriteResPair<WriteFRsqrtY,[SKLPort0], 4, [1], 1, 5>; // Floating point reciprocal square root estimate (YMM/ZMM).
 defm : SKLWriteResPair<WriteFMA,    [SKLPort01], 4, [1], 1, 6>; // Fused Multiply Add.
 defm : SKLWriteResPair<WriteFMAS,   [SKLPort01], 4, [1], 1, 5>; // Fused Multiply Add (Scalar).
 defm : SKLWriteResPair<WriteFMAY,   [SKLPort01], 4, [1], 1, 7>; // Fused Multiply Add (YMM/ZMM).
 defm : SKLWriteResPair<WriteFSign,   [SKLPort0], 1>; // Floating point fabs/fchs.
 defm : SKLWriteResPair<WriteFLogic,  [SKLPort015], 1, [1], 1, 6>; // Floating point and/or/xor logicals.
 defm : SKLWriteResPair<WriteFLogicY, [SKLPort015], 1, [1], 1, 7>; // Floating point and/or/xor logicals (YMM/ZMM).
-defm : SKLWriteResPair<WriteFShuffle,  [SKLPort5],  1>; // Floating point vector shuffles.
+defm : SKLWriteResPair<WriteFShuffle,  [SKLPort5], 1, [1], 1, 5>; // Floating point vector shuffles.
+defm : SKLWriteResPair<WriteFShuffleY, [SKLPort5], 1, [1], 1, 7>; // Floating point vector shuffles (YMM/ZMM).
 defm : SKLWriteResPair<WriteFVarShuffle,  [SKLPort5],  1>; // Floating point vector shuffles.
 defm : SKLWriteResPair<WriteFVarShuffleY, [SKLPort5],  1>; // Floating point vector shuffles.
 defm : SKLWriteResPair<WriteFBlend,  [SKLPort015], 1, [1], 1, 6>; // Floating point vector blends.
@@ -1519,9 +1527,7 @@ def: InstRW<[SKLWriteResGroup108], (instregex "FCOM32m",
                                               "VPBLENDWYrmi",
                                               "VPBROADCASTBYrm",
                                               "VPBROADCASTWYrm",
-                                              "VPERMILPDYmi",
                                               "VPERMILPDYrm",
-                                              "VPERMILPSYmi",
                                               "VPERMILPSYrm",
                                               "VPMOVSXBDYrm",
                                               "VPMOVSXBQYrm",
@@ -1537,13 +1543,7 @@ def: InstRW<[SKLWriteResGroup108], (instregex "FCOM32m",
                                               "VPUNPCKLBWYrm",
                                               "VPUNPCKLDQYrm",
                                               "VPUNPCKLQDQYrm",
-                                              "VPUNPCKLWDYrm",
-                                              "VSHUFPDYrmi",
-                                              "VSHUFPSYrmi",
-                                              "VUNPCKHPDYrm",
-                                              "VUNPCKHPSYrm",
-                                              "VUNPCKLPDYrm",
-                                              "VUNPCKLPSYrm")>;
+                                              "VPUNPCKLWDYrm")>;
 
 def SKLWriteResGroup109 : SchedWriteRes<[SKLPort01,SKLPort23]> {
   let Latency = 8;
@@ -1931,16 +1931,10 @@ def: InstRW<[SKLWriteResGroup147], (instregex "VADDPDYrm",
                                               "VADDPSYrm",
                                               "VADDSUBPDYrm",
                                               "VADDSUBPSYrm",
-                                              "VCMPPDYrmi",
-                                              "VCMPPSYrmi",
                                               "VCVTDQ2PSYrm",
                                               "VCVTPS2DQYrm",
                                               "VCVTPS2PDYrm",
                                               "VCVTTPS2DQYrm",
-                                              "VMAX(C?)PDYrm",
-                                              "VMAX(C?)PSYrm",
-                                              "VMIN(C?)PDYrm",
-                                              "VMIN(C?)PSYrm",
                                               "VMULPDYrm",
                                               "VMULPSYrm",
                                               "VPMADDUBSWYrm",

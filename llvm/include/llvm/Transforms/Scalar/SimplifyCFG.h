@@ -46,7 +46,7 @@ public:
   /// Construct a pass with optional optimizations.
   SimplifyCFGPass(const SimplifyCFGOptions &PassOptions);
 
-  /// \brief Run the pass over the function.
+  /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

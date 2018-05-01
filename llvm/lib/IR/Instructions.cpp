@@ -2081,7 +2081,7 @@ bool CastInst::isLosslessCast() const {
 /// # bitcast i32* %x to i8*
 /// # bitcast <2 x i32> %x to <4 x i16> 
 /// # ptrtoint i32* %x to i32     ; on 32-bit plaforms only
-/// @brief Determine if the described cast is a no-op.
+/// Determine if the described cast is a no-op.
 bool CastInst::isNoopCast(Instruction::CastOps Opcode,
                           Type *SrcTy,
                           Type *DestTy,
@@ -2449,7 +2449,7 @@ CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty,
   return CreatePointerBitCastOrAddrSpaceCast(S, Ty, Name, InsertAtEnd);
 }
 
-/// @brief Create a BitCast or a PtrToInt cast instruction
+/// Create a BitCast or a PtrToInt cast instruction
 CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty,
                                       const Twine &Name,
                                       Instruction *InsertBefore) {

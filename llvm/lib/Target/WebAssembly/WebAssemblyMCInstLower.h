@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares the class to lower WebAssembly MachineInstrs to
+/// This file declares the class to lower WebAssembly MachineInstrs to
 /// their corresponding MCInst records.
 ///
 //===----------------------------------------------------------------------===//

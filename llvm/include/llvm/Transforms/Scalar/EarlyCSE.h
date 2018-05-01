@@ -21,7 +21,7 @@ namespace llvm {
 
 class Function;
 
-/// \brief A simple and fast domtree-based CSE pass.
+/// A simple and fast domtree-based CSE pass.
 ///
 /// This pass does a simple depth-first walk over the dominator tree,
 /// eliminating trivially redundant instructions and using instsimplify to
@@ -31,7 +31,7 @@ class Function;
 struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
   EarlyCSEPass(bool UseMemorySSA = false) : UseMemorySSA(UseMemorySSA) {}
 
-  /// \brief Run the pass over the function.
+  /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   bool UseMemorySSA;

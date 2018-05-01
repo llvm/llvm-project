@@ -576,7 +576,7 @@ public:
     return hasProperty(MCID::FoldableAsLoad, Type);
   }
 
-  /// \brief Return true if this instruction behaves
+  /// Return true if this instruction behaves
   /// the same way as the generic REG_SEQUENCE instructions.
   /// E.g., on ARM,
   /// dX VMOVDRR rY, rZ
@@ -590,7 +590,7 @@ public:
     return hasProperty(MCID::RegSequence, Type);
   }
 
-  /// \brief Return true if this instruction behaves
+  /// Return true if this instruction behaves
   /// the same way as the generic EXTRACT_SUBREG instructions.
   /// E.g., on ARM,
   /// rX, rY VMOVRRD dZ
@@ -605,7 +605,7 @@ public:
     return hasProperty(MCID::ExtractSubreg, Type);
   }
 
-  /// \brief Return true if this instruction behaves
+  /// Return true if this instruction behaves
   /// the same way as the generic INSERT_SUBREG instructions.
   /// E.g., on ARM,
   /// dX = VSETLNi32 dY, rZ, Imm
@@ -1049,7 +1049,7 @@ public:
                         const TargetInstrInfo *TII,
                         const TargetRegisterInfo *TRI) const;
 
-  /// \brief Applies the constraints (def/use) implied by this MI on \p Reg to
+  /// Applies the constraints (def/use) implied by this MI on \p Reg to
   /// the given \p CurRC.
   /// If \p ExploreBundle is set and MI is part of a bundle, all the
   /// instructions inside the bundle will be taken into account. In other words,
@@ -1066,7 +1066,7 @@ public:
       const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
       bool ExploreBundle = false) const;
 
-  /// \brief Applies the constraints (def/use) implied by the \p OpIdx operand
+  /// Applies the constraints (def/use) implied by the \p OpIdx operand
   /// to the given \p CurRC.
   ///
   /// Returns the register class that satisfies both \p CurRC and the
@@ -1363,7 +1363,7 @@ private:
   /// Slow path for hasProperty when we're dealing with a bundle.
   bool hasPropertyInBundle(unsigned Mask, QueryType Type) const;
 
-  /// \brief Implements the logic of getRegClassConstraintEffectForVReg for the
+  /// Implements the logic of getRegClassConstraintEffectForVReg for the
   /// this MI and the given operand index \p OpIdx.
   /// If the related operand does not constrained Reg, this returns CurRC.
   const TargetRegisterClass *getRegClassConstraintEffectForVRegImpl(

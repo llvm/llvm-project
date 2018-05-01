@@ -70,13 +70,13 @@ public:
   /// value is non-zero.
   static bool hasExtendedReg(const MachineInstr &MI);
 
-  /// \brief Does this instruction set its full destination register to zero?
+  /// Does this instruction set its full destination register to zero?
   static bool isGPRZero(const MachineInstr &MI);
 
-  /// \brief Does this instruction rename a GPR without modifying bits?
+  /// Does this instruction rename a GPR without modifying bits?
   static bool isGPRCopy(const MachineInstr &MI);
 
-  /// \brief Does this instruction rename an FPR without modifying bits?
+  /// Does this instruction rename an FPR without modifying bits?
   static bool isFPRCopy(const MachineInstr &MI);
 
   /// Return true if this is load/store scales or extends its register offset.
@@ -100,7 +100,7 @@ public:
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
 
-  /// \brief Return the opcode that set flags when possible.  The caller is
+  /// Return the opcode that set flags when possible.  The caller is
   /// responsible for ensuring the opc has a flag setting equivalent.
   static unsigned convertToFlagSettingOpc(unsigned Opc, bool &Is64Bit);
 
@@ -121,7 +121,7 @@ public:
   /// Return the immediate offset of the base register in a load/store \p LdSt.
   MachineOperand &getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const;
 
-  /// \brief Returns true if opcode \p Opc is a memory operation. If it is, set
+  /// Returns true if opcode \p Opc is a memory operation. If it is, set
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
   /// For unscaled instructions, \p Scale is set to 1.
@@ -269,7 +269,7 @@ public:
   bool isFalkorShiftExtFast(const MachineInstr &MI) const;
 
 private:
-  /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
+  /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
   /// \param MBB A \p MachineBasicBlock in an outlined function.
@@ -299,14 +299,14 @@ bool rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                               unsigned FrameReg, int &Offset,
                               const AArch64InstrInfo *TII);
 
-/// \brief Use to report the frame offset status in isAArch64FrameOffsetLegal.
+/// Use to report the frame offset status in isAArch64FrameOffsetLegal.
 enum AArch64FrameOffsetStatus {
   AArch64FrameOffsetCannotUpdate = 0x0, ///< Offset cannot apply.
   AArch64FrameOffsetIsLegal = 0x1,      ///< Offset is legal.
   AArch64FrameOffsetCanUpdate = 0x2     ///< Offset can apply, at least partly.
 };
 
-/// \brief Check if the @p Offset is a valid frame offset for @p MI.
+/// Check if the @p Offset is a valid frame offset for @p MI.
 /// The returned value reports the validity of the frame offset for @p MI.
 /// It uses the values defined by AArch64FrameOffsetStatus for that.
 /// If result == AArch64FrameOffsetCannotUpdate, @p MI cannot be updated to

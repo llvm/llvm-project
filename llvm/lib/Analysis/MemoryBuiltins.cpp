@@ -217,7 +217,7 @@ static bool hasNoAliasAttr(const Value *V, bool LookThroughBitCast) {
   return CS && CS.hasRetAttr(Attribute::NoAlias);
 }
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
 bool llvm::isAllocationFn(const Value *V, const TargetLibraryInfo *TLI,
@@ -225,7 +225,7 @@ bool llvm::isAllocationFn(const Value *V, const TargetLibraryInfo *TLI,
   return getAllocationData(V, AnyAlloc, TLI, LookThroughBitCast).hasValue();
 }
 
-/// \brief Tests if a value is a call or invoke to a function that returns a
+/// Tests if a value is a call or invoke to a function that returns a
 /// NoAlias pointer (including malloc/calloc/realloc/strdup-like functions).
 bool llvm::isNoAliasFn(const Value *V, const TargetLibraryInfo *TLI,
                        bool LookThroughBitCast) {
@@ -235,21 +235,21 @@ bool llvm::isNoAliasFn(const Value *V, const TargetLibraryInfo *TLI,
          hasNoAliasAttr(V, LookThroughBitCast);
 }
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates uninitialized memory (such as malloc).
 bool llvm::isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                           bool LookThroughBitCast) {
   return getAllocationData(V, MallocLike, TLI, LookThroughBitCast).hasValue();
 }
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates zero-filled memory (such as calloc).
 bool llvm::isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                           bool LookThroughBitCast) {
   return getAllocationData(V, CallocLike, TLI, LookThroughBitCast).hasValue();
 }
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
 bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                                   bool LookThroughBitCast) {
@@ -257,7 +257,7 @@ bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                            LookThroughBitCast).hasValue();
 }
 
-/// \brief Tests if a value is a call or invoke to a library function that
+/// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
 bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                          bool LookThroughBitCast) {
@@ -427,7 +427,7 @@ static APInt getSizeWithOverflow(const SizeOffsetType &Data) {
   return Data.first - Data.second;
 }
 
-/// \brief Compute the size of the object pointed by Ptr. Returns true and the
+/// Compute the size of the object pointed by Ptr. Returns true and the
 /// object size in Size if successful, and false otherwise.
 /// If RoundToAlign is true, then Size is rounded up to the alignment of
 /// allocas, byval arguments, and global variables.

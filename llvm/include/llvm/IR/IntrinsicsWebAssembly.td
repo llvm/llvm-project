@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines all of the WebAssembly-specific intrinsics.
+/// This file defines all of the WebAssembly-specific intrinsics.
 ///
 //===----------------------------------------------------------------------===//
 

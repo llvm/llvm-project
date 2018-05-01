@@ -215,7 +215,7 @@ public:
   /// anything was changed.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  /// \brief Get the base register and byte offset of a load/store instr.
+  /// Get the base register and byte offset of a load/store instr.
   bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
                              int64_t &Offset,
                              const TargetRegisterInfo *TRI) const override;

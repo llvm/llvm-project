@@ -45,7 +45,7 @@ using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 /// compute a normal dominator tree.
 ///
 class MachineDominatorTree : public MachineFunctionPass {
-  /// \brief Helper structure used to hold all the basic blocks
+  /// Helper structure used to hold all the basic blocks
   /// involved in the split of a critical edge.
   struct CriticalEdge {
     MachineBasicBlock *FromBB;
@@ -53,12 +53,12 @@ class MachineDominatorTree : public MachineFunctionPass {
     MachineBasicBlock *NewBB;
   };
 
-  /// \brief Pile up all the critical edges to be split.
+  /// Pile up all the critical edges to be split.
   /// The splitting of a critical edge is local and thus, it is possible
   /// to apply several of those changes at the same time.
   mutable SmallVector<CriticalEdge, 32> CriticalEdgesToSplit;
 
-  /// \brief Remember all the basic blocks that are inserted during
+  /// Remember all the basic blocks that are inserted during
   /// edge splitting.
   /// Invariant: NewBBs == all the basic blocks contained in the NewBB
   /// field of all the elements of CriticalEdgesToSplit.
@@ -69,7 +69,7 @@ class MachineDominatorTree : public MachineFunctionPass {
   /// The DominatorTreeBase that is used to compute a normal dominator tree
   std::unique_ptr<DomTreeBase<MachineBasicBlock>> DT;
 
-  /// \brief Apply all the recorded critical edges to the DT.
+  /// Apply all the recorded critical edges to the DT.
   /// This updates the underlying DT information in a way that uses
   /// the fast query path of DT as much as possible.
   ///
@@ -228,7 +228,7 @@ public:
 
   void print(raw_ostream &OS, const Module*) const override;
 
-  /// \brief Record that the critical edge (FromBB, ToBB) has been
+  /// Record that the critical edge (FromBB, ToBB) has been
   /// split with NewBB.
   /// This is best to use this method instead of directly update the
   /// underlying information, because this helps mitigating the

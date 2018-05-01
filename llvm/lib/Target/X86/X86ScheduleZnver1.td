@@ -194,7 +194,9 @@ def : WriteRes<WriteFLoad,              [ZnAGU]> { let Latency = 8; }
 defm : ZnWriteResFpuPair<WriteFHAdd,     [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFHAddY,    [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFAdd,      [ZnFPU0],  3>;
+defm : ZnWriteResFpuPair<WriteFAddY,     [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFCmp,      [ZnFPU0],  3>;
+defm : ZnWriteResFpuPair<WriteFCmpY,     [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFCom,      [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFBlend,    [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteFBlendY,   [ZnFPU01], 1>;
@@ -205,19 +207,25 @@ defm : ZnWriteResFpuPair<WriteCvtI2F,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtF2F,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtF2I,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 15>;
+defm : ZnWriteResFpuPair<WriteFDivY,     [ZnFPU3], 15>;
 defm : ZnWriteResFpuPair<WriteFSign,     [ZnFPU3],  2>;
 defm : ZnWriteResFpuPair<WriteFLogic,    [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteFLogicY,   [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteFShuffle,  [ZnFPU12], 1>;
+defm : ZnWriteResFpuPair<WriteFShuffleY, [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFVarShuffle, [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFVarShuffleY,[ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFMul,      [ZnFPU0],  5>;
+defm : ZnWriteResFpuPair<WriteFMulY,     [ZnFPU0],  5>;
 defm : ZnWriteResFpuPair<WriteFMA,       [ZnFPU03], 5>;
 defm : ZnWriteResFpuPair<WriteFMAS,      [ZnFPU03], 5>;
 defm : ZnWriteResFpuPair<WriteFMAY,      [ZnFPU03], 5>;
 defm : ZnWriteResFpuPair<WriteFRcp,      [ZnFPU01], 5>;
+defm : ZnWriteResFpuPair<WriteFRcpY,     [ZnFPU01], 5>;
 defm : ZnWriteResFpuPair<WriteFRsqrt,    [ZnFPU01], 5>;
+defm : ZnWriteResFpuPair<WriteFRsqrtY,   [ZnFPU01], 5>;
 defm : ZnWriteResFpuPair<WriteFSqrt,     [ZnFPU3], 20>;
+defm : ZnWriteResFpuPair<WriteFSqrtY,    [ZnFPU3], 20>;
 def  : WriteRes<WriteCvtF2FSt, [ZnFPU3, ZnAGU]>;
 
 // Vector integer operations which uses FPU units

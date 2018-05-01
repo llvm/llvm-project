@@ -288,7 +288,7 @@ class Value;
     return GetUnderlyingObject(const_cast<Value *>(V), DL, MaxLookup);
   }
 
-  /// \brief This method is similar to GetUnderlyingObject except that it can
+  /// This method is similar to GetUnderlyingObject except that it can
   /// look through phi and select instructions and return multiple objects.
   ///
   /// If LoopInfo is passed, loop phis are further analyzed.  If a pointer
@@ -461,7 +461,7 @@ class Value;
   /// the parent of I.
   bool programUndefinedIfFullPoison(const Instruction *PoisonI);
 
-  /// \brief Specific patterns of select instructions we can match.
+  /// Specific patterns of select instructions we can match.
   enum SelectPatternFlavor {
     SPF_UNKNOWN = 0,
     SPF_SMIN,                   /// Signed minimum
@@ -474,7 +474,7 @@ class Value;
     SPF_NABS                    /// Negated absolute value
   };
 
-  /// \brief Behavior when a floating point min/max is given one NaN and one
+  /// Behavior when a floating point min/max is given one NaN and one
   /// non-NaN as input.
   enum SelectPatternNaNBehavior {
     SPNB_NA = 0,                /// NaN behavior not applicable.

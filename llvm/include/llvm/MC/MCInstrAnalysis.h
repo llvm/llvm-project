@@ -60,7 +60,7 @@ public:
     return Info->get(Inst.getOpcode()).isTerminator();
   }
 
-  /// \brief Given a branch instruction try to get the address the branch
+  /// Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.
   virtual bool
   evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,

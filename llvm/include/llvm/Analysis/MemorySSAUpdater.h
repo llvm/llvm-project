@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// \brief An automatic updater for MemorySSA that handles arbitrary insertion,
+// An automatic updater for MemorySSA that handles arbitrary insertion,
 // deletion, and moves.  It performs phi insertion where necessary, and
 // automatically updates the MemorySSA IR to be correct.
 // While updating loads or removing instructions is often easy enough to not
@@ -96,7 +96,7 @@ public:
   // the edge cases right, and the above calls already operate in near-optimal
   // time bounds.
 
-  /// \brief Create a MemoryAccess in MemorySSA at a specified point in a block,
+  /// Create a MemoryAccess in MemorySSA at a specified point in a block,
   /// with a specified clobbering definition.
   ///
   /// Returns the new MemoryAccess.
@@ -113,7 +113,7 @@ public:
                                        const BasicBlock *BB,
                                        MemorySSA::InsertionPlace Point);
 
-  /// \brief Create a MemoryAccess in MemorySSA before or after an existing
+  /// Create a MemoryAccess in MemorySSA before or after an existing
   /// MemoryAccess.
   ///
   /// Returns the new MemoryAccess.
@@ -130,7 +130,7 @@ public:
                                           MemoryAccess *Definition,
                                           MemoryAccess *InsertPt);
 
-  /// \brief Remove a MemoryAccess from MemorySSA, including updating all
+  /// Remove a MemoryAccess from MemorySSA, including updating all
   /// definitions and uses.
   /// This should be called when a memory instruction that has a MemoryAccess
   /// associated with it is erased from the program.  For example, if a store or

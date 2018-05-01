@@ -212,7 +212,7 @@ static cl::opt<bool>
 
 namespace {
 
-/// \brief A helper class for separating a constant offset from a GEP index.
+/// A helper class for separating a constant offset from a GEP index.
 ///
 /// In real programs, a GEP index may be more complicated than a simple addition
 /// of something and a constant integer which can be trivially splitted. For
@@ -339,7 +339,7 @@ private:
   const DominatorTree *DT;
 };
 
-/// \brief A pass that tries to split every GEP in the function into a variadic
+/// A pass that tries to split every GEP in the function into a variadic
 /// base and a constant offset. It is a FunctionPass because searching for the
 /// constant offset may inspect other basic blocks.
 class SeparateConstOffsetFromGEP : public FunctionPass {

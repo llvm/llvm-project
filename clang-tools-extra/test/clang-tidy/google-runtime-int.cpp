@@ -72,3 +72,20 @@ void fff() {
   B a, b;
   a = b;
 }
+
+__attribute__((__format__ (__printf__, 1, 2)))
+void myprintf(const char* s, ...);
+
+void doprint_no_warning() {
+  uint64 foo = 23;
+  myprintf("foo %lu %lu", (unsigned long)42, (unsigned long)foo);
+}
+
+void myprintf_no_attribute(const char* s, ...);
+
+void doprint_warning() {
+  uint64 foo = 23;
+  myprintf_no_attribute("foo %lu %lu", (unsigned long)42, (unsigned long)foo);
+// CHECK-MESSAGES: [[@LINE-1]]:41: warning: consider replacing 'unsigned long'
+// CHECK-MESSAGES: [[@LINE-2]]:60: warning: consider replacing 'unsigned long'
+}

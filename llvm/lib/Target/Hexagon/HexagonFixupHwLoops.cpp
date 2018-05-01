@@ -60,12 +60,12 @@ namespace {
     }
 
   private:
-    /// \brief Check the offset between each loop instruction and
+    /// Check the offset between each loop instruction and
     /// the loop basic block to determine if we can use the LOOP instruction
     /// or if we need to set the LC/SA registers explicitly.
     bool fixupLoopInstrs(MachineFunction &MF);
 
-    /// \brief Replace loop instruction with the constant extended
+    /// Replace loop instruction with the constant extended
     /// version if the loop label is too far from the loop instruction.
     void useExtLoopInstr(MachineFunction &MF,
                          MachineBasicBlock::iterator &MII);
@@ -81,7 +81,7 @@ FunctionPass *llvm::createHexagonFixupHwLoops() {
   return new HexagonFixupHwLoops();
 }
 
-/// \brief Returns true if the instruction is a hardware loop instruction.
+/// Returns true if the instruction is a hardware loop instruction.
 static bool isHardwareLoop(const MachineInstr &MI) {
   return MI.getOpcode() == Hexagon::J2_loop0r ||
          MI.getOpcode() == Hexagon::J2_loop0i ||
@@ -95,7 +95,7 @@ bool HexagonFixupHwLoops::runOnMachineFunction(MachineFunction &MF) {
   return fixupLoopInstrs(MF);
 }
 
-/// \brief For Hexagon, if the loop label is to far from the
+/// For Hexagon, if the loop label is to far from the
 /// loop instruction then we need to set the LC0 and SA0 registers
 /// explicitly instead of using LOOP(start,count).  This function
 /// checks the distance, and generates register assignments if needed.
@@ -166,7 +166,7 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
   return Changed;
 }
 
-/// \brief Replace loop instructions with the constant extended version.
+/// Replace loop instructions with the constant extended version.
 void HexagonFixupHwLoops::useExtLoopInstr(MachineFunction &MF,
                                           MachineBasicBlock::iterator &MII) {
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();

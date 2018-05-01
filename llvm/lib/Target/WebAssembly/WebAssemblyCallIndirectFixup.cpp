@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file converts pseudo call_indirect instructions into real
+/// This file converts pseudo call_indirect instructions into real
 /// call_indirects.
 ///
 /// The order of arguments for a call_indirect is the arguments to the function

@@ -348,7 +348,7 @@ public:
                              unsigned SubIdx, const MachineInstr &Orig,
                              const TargetRegisterInfo &TRI) const;
 
-  /// \brief Clones instruction or the whole instruction bundle \p Orig and
+  /// Clones instruction or the whole instruction bundle \p Orig and
   /// insert into \p MBB before \p InsertBefore. The target may update operands
   /// that are required to be unique.
   ///
@@ -1006,7 +1006,7 @@ protected:
     return nullptr;
   }
 
-  /// \brief Target-dependent implementation of getRegSequenceInputs.
+  /// Target-dependent implementation of getRegSequenceInputs.
   ///
   /// \returns true if it is possible to build the equivalent
   /// REG_SEQUENCE inputs with the pair \p MI, \p DefIdx. False otherwise.
@@ -1020,7 +1020,7 @@ protected:
     return false;
   }
 
-  /// \brief Target-dependent implementation of getExtractSubregInputs.
+  /// Target-dependent implementation of getExtractSubregInputs.
   ///
   /// \returns true if it is possible to build the equivalent
   /// EXTRACT_SUBREG inputs with the pair \p MI, \p DefIdx. False otherwise.
@@ -1034,7 +1034,7 @@ protected:
     return false;
   }
 
-  /// \brief Target-dependent implementation of getInsertSubregInputs.
+  /// Target-dependent implementation of getInsertSubregInputs.
   ///
   /// \returns true if it is possible to build the equivalent
   /// INSERT_SUBREG inputs with the pair \p MI, \p DefIdx. False otherwise.
@@ -1456,7 +1456,7 @@ public:
     return 0;
   }
 
-  /// \brief Return the minimum clearance before an instruction that reads an
+  /// Return the minimum clearance before an instruction that reads an
   /// unused register.
   ///
   /// For example, AVX instructions may copy part of a register operand into
@@ -1523,7 +1523,7 @@ public:
     return false;
   }
 
-  /// \brief Return the value to use for the MachineCSE's LookAheadLimit,
+  /// Return the value to use for the MachineCSE's LookAheadLimit,
   /// which is a heuristic used for CSE'ing phys reg defs.
   virtual unsigned getMachineCSELookAheadLimit() const {
     // The default lookahead is small to prevent unprofitable quadratic
@@ -1595,21 +1595,21 @@ public:
   /// Returns true if the target implements the MachineOutliner.
   virtual bool useMachineOutliner() const { return false; }
 
-  /// \brief Describes the number of instructions that it will take to call and
+  /// Describes the number of instructions that it will take to call and
   /// construct a frame for a given outlining candidate.
   struct MachineOutlinerInfo {
     /// Number of instructions to call an outlined function for this candidate.
     unsigned CallOverhead;
 
-    /// \brief Number of instructions to construct an outlined function frame
+    /// Number of instructions to construct an outlined function frame
     /// for this candidate.
     unsigned FrameOverhead;
 
-    /// \brief Represents the specific instructions that must be emitted to
+    /// Represents the specific instructions that must be emitted to
     /// construct a call to this candidate.
     unsigned CallConstructionID;
 
-    /// \brief Represents the specific instructions that must be emitted to
+    /// Represents the specific instructions that must be emitted to
     /// construct a frame for this candidate's outlined function.
     unsigned FrameConstructionID;
 
@@ -1622,7 +1622,7 @@ public:
           FrameConstructionID(FrameConstructionID) {}
   };
 
-  /// \brief Returns a \p MachineOutlinerInfo struct containing target-specific
+  /// Returns a \p MachineOutlinerInfo struct containing target-specific
   /// information for a set of outlining candidates.
   virtual MachineOutlinerInfo getOutlininingCandidateInfo(
       std::vector<
@@ -1646,7 +1646,7 @@ public:
         "Target didn't implement TargetInstrInfo::getOutliningType!");
   }
 
-  /// \brief Returns target-defined flags defining properties of the MBB for
+  /// Returns target-defined flags defining properties of the MBB for
   /// the outliner.
   virtual unsigned getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
     return 0x0;
@@ -1698,7 +1698,7 @@ private:
   unsigned ReturnOpcode;
 };
 
-/// \brief Provide DenseMapInfo for TargetInstrInfo::RegSubRegPair.
+/// Provide DenseMapInfo for TargetInstrInfo::RegSubRegPair.
 template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
   using RegInfo = DenseMapInfo<unsigned>;
 
@@ -1712,7 +1712,7 @@ template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
                                           RegInfo::getTombstoneKey());
   }
 
-  /// \brief Reuse getHashValue implementation from
+  /// Reuse getHashValue implementation from
   /// std::pair<unsigned, unsigned>.
   static unsigned getHashValue(const TargetInstrInfo::RegSubRegPair &Val) {
     std::pair<unsigned, unsigned> PairVal = std::make_pair(Val.Reg, Val.SubReg);

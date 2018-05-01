@@ -43,7 +43,7 @@ class raw_ostream;
 namespace llvm {
 namespace objcarc {
 
-/// \brief Erase the given instruction.
+/// Erase the given instruction.
 ///
 /// Many ObjC calls return their argument verbatim,
 /// so if it's such a call and the return value has users, replace them with the

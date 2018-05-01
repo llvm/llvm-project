@@ -387,7 +387,7 @@ public:
   /// We assume that a single function will not exceed 65535 LOC.
   static unsigned getOffset(const DILocation *DIL);
 
-  /// \brief Get the FunctionSamples of the inline instance where DIL originates
+  /// Get the FunctionSamples of the inline instance where DIL originates
   /// from.
   ///
   /// The FunctionSamples of the instruction (Machine or IR) associated to

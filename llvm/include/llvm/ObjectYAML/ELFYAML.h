@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares classes for handling the YAML representation
+/// This file declares classes for handling the YAML representation
 /// of ELF.
 ///
 //===----------------------------------------------------------------------===//

@@ -283,7 +283,7 @@ static bool isOpcWithIntImmediate(SDNode *N, unsigned Opc, unsigned& Imm) {
          isInt32Immediate(N->getOperand(1).getNode(), Imm);
 }
 
-/// \brief Check whether a particular node is a constant value representable as
+/// Check whether a particular node is a constant value representable as
 /// (N * Scale) where (N in [\p RangeMin, \p RangeMax).
 ///
 /// \param ScaledConstant [out] - On success, the pre-scaled constant value.
@@ -1496,7 +1496,7 @@ bool ARMDAGToDAGISel::tryT2IndexedLoad(SDNode *N) {
   return false;
 }
 
-/// \brief Form a GPRPair pseudo register from a pair of GPR regs.
+/// Form a GPRPair pseudo register from a pair of GPR regs.
 SDNode *ARMDAGToDAGISel::createGPRPairNode(EVT VT, SDValue V0, SDValue V1) {
   SDLoc dl(V0.getNode());
   SDValue RegClass =
@@ -1507,7 +1507,7 @@ SDNode *ARMDAGToDAGISel::createGPRPairNode(EVT VT, SDValue V0, SDValue V1) {
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, dl, VT, Ops);
 }
 
-/// \brief Form a D register from a pair of S registers.
+/// Form a D register from a pair of S registers.
 SDNode *ARMDAGToDAGISel::createSRegPairNode(EVT VT, SDValue V0, SDValue V1) {
   SDLoc dl(V0.getNode());
   SDValue RegClass =
@@ -1518,7 +1518,7 @@ SDNode *ARMDAGToDAGISel::createSRegPairNode(EVT VT, SDValue V0, SDValue V1) {
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, dl, VT, Ops);
 }
 
-/// \brief Form a quad register from a pair of D registers.
+/// Form a quad register from a pair of D registers.
 SDNode *ARMDAGToDAGISel::createDRegPairNode(EVT VT, SDValue V0, SDValue V1) {
   SDLoc dl(V0.getNode());
   SDValue RegClass = CurDAG->getTargetConstant(ARM::QPRRegClassID, dl,
@@ -1529,7 +1529,7 @@ SDNode *ARMDAGToDAGISel::createDRegPairNode(EVT VT, SDValue V0, SDValue V1) {
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, dl, VT, Ops);
 }
 
-/// \brief Form 4 consecutive D registers from a pair of Q registers.
+/// Form 4 consecutive D registers from a pair of Q registers.
 SDNode *ARMDAGToDAGISel::createQRegPairNode(EVT VT, SDValue V0, SDValue V1) {
   SDLoc dl(V0.getNode());
   SDValue RegClass = CurDAG->getTargetConstant(ARM::QQPRRegClassID, dl,
@@ -1540,7 +1540,7 @@ SDNode *ARMDAGToDAGISel::createQRegPairNode(EVT VT, SDValue V0, SDValue V1) {
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, dl, VT, Ops);
 }
 
-/// \brief Form 4 consecutive S registers.
+/// Form 4 consecutive S registers.
 SDNode *ARMDAGToDAGISel::createQuadSRegsNode(EVT VT, SDValue V0, SDValue V1,
                                    SDValue V2, SDValue V3) {
   SDLoc dl(V0.getNode());
@@ -1555,7 +1555,7 @@ SDNode *ARMDAGToDAGISel::createQuadSRegsNode(EVT VT, SDValue V0, SDValue V1,
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, dl, VT, Ops);
 }
 
-/// \brief Form 4 consecutive D registers.
+/// Form 4 consecutive D registers.
 SDNode *ARMDAGToDAGISel::createQuadDRegsNode(EVT VT, SDValue V0, SDValue V1,
                                    SDValue V2, SDValue V3) {
   SDLoc dl(V0.getNode());
@@ -1570,7 +1570,7 @@ SDNode *ARMDAGToDAGISel::createQuadDRegsNode(EVT VT, SDValue V0, SDValue V1,
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, dl, VT, Ops);
 }
 
-/// \brief Form 4 consecutive Q registers.
+/// Form 4 consecutive Q registers.
 SDNode *ARMDAGToDAGISel::createQuadQRegsNode(EVT VT, SDValue V0, SDValue V1,
                                    SDValue V2, SDValue V3) {
   SDLoc dl(V0.getNode());

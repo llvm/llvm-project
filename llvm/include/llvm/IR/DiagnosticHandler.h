@@ -18,7 +18,7 @@
 namespace llvm {
 class DiagnosticInfo;
 
-/// \brief This is the base class for diagnostic handling in LLVM.
+/// This is the base class for diagnostic handling in LLVM.
 /// The handleDiagnostics method must be overriden by the subclasses to handle
 /// diagnostic. The *RemarkEnabled methods can be overriden to control
 /// which remarks are enabled.

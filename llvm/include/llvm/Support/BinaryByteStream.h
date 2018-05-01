@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-/// \brief An implementation of BinaryStream which holds its entire data set
+/// An implementation of BinaryStream which holds its entire data set
 /// in a single contiguous buffer.  BinaryByteStream guarantees that no read
 /// operation will ever incur a copy.  Note that BinaryByteStream does not
 /// own the underlying buffer.
@@ -69,7 +69,7 @@ protected:
   ArrayRef<uint8_t> Data;
 };
 
-/// \brief An implementation of BinaryStream whose data is backed by an llvm
+/// An implementation of BinaryStream whose data is backed by an llvm
 /// MemoryBuffer object.  MemoryBufferByteStream owns the MemoryBuffer in
 /// question.  As with BinaryByteStream, reading from a MemoryBufferByteStream
 /// will never cause a copy.
@@ -83,7 +83,7 @@ public:
   std::unique_ptr<MemoryBuffer> MemBuffer;
 };
 
-/// \brief An implementation of BinaryStream which holds its entire data set
+/// An implementation of BinaryStream which holds its entire data set
 /// in a single contiguous buffer.  As with BinaryByteStream, the mutable
 /// version also guarantees that no read operation will ever incur a copy,
 /// and similarly it does not own the underlying buffer.
@@ -131,7 +131,7 @@ private:
   BinaryByteStream ImmutableStream;
 };
 
-/// \brief An implementation of WritableBinaryStream which can write at its end
+/// An implementation of WritableBinaryStream which can write at its end
 /// causing the underlying data to grow.  This class owns the underlying data.
 class AppendingBinaryByteStream : public WritableBinaryStream {
   std::vector<uint8_t> Data;
@@ -193,7 +193,7 @@ public:
 
   Error commit() override { return Error::success(); }
 
-  /// \brief Return the properties of this stream.
+  /// Return the properties of this stream.
   virtual BinaryStreamFlags getFlags() const override {
     return BSF_Write | BSF_Append;
   }
@@ -201,7 +201,7 @@ public:
   MutableArrayRef<uint8_t> data() { return Data; }
 };
 
-/// \brief An implementation of WritableBinaryStream backed by an llvm
+/// An implementation of WritableBinaryStream backed by an llvm
 /// FileOutputBuffer.
 class FileBufferByteStream : public WritableBinaryStream {
 private:

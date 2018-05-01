@@ -45,7 +45,7 @@
 
 using namespace llvm;
 
-/// \brief Attempt to read the lock file with the given name, if it exists.
+/// Attempt to read the lock file with the given name, if it exists.
 ///
 /// \param LockFileName The name of the lock file to read.
 ///

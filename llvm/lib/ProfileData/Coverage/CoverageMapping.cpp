@@ -292,7 +292,7 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
 
 namespace {
 
-/// \brief Distributes functions into instantiation sets.
+/// Distributes functions into instantiation sets.
 ///
 /// An instantiation set is a collection of functions that have the same source
 /// code, ie, template functions specializations.

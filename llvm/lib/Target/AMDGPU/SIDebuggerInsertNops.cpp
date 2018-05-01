@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Inserts one nop instruction for each high level source statement for
+/// Inserts one nop instruction for each high level source statement for
 /// debugger usage.
 ///
 /// Tools, such as a debugger, need to pause execution based on user input (i.e.

@@ -395,7 +395,7 @@ static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
   return true;
 }
 
-/// \brief Check whether it is safe to if-convert this phi node.
+/// Check whether it is safe to if-convert this phi node.
 ///
 /// Phi nodes with constant expressions that can trap are not safe to if
 /// convert.
@@ -429,7 +429,7 @@ static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
   return Ty1;
 }
 
-/// \brief Check that the instruction has outside loop users and is not an
+/// Check that the instruction has outside loop users and is not an
 /// identified reduction variable.
 static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
                                SmallPtrSetImpl<Value *> &AllowedExit) {

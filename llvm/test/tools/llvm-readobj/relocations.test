@@ -291,18 +291,18 @@ WASM-NEXT:   Section (4) CODE {
 WASM-NEXT:     Relocation {
 WASM-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_SLEB (4)
 WASM-NEXT:       Offset: 0x4
-WASM-NEXT:       Index: 0x1
+WASM-NEXT:       Symbol: .L.str
 WASM-NEXT:       Addend: 0
 WASM-NEXT:     }
 WASM-NEXT:     Relocation {
 WASM-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 WASM-NEXT:       Offset: 0xA
-WASM-NEXT:       Index: 0x2
+WASM-NEXT:       Symbol: puts
 WASM-NEXT:     }
 WASM-NEXT:     Relocation {
 WASM-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 WASM-NEXT:       Offset: 0x11
-WASM-NEXT:       Index: 0x3
+WASM-NEXT:       Symbol: SomeOtherFunction
 WASM-NEXT:     }
 WASM-NEXT:   }
 WASM-NEXT: ]

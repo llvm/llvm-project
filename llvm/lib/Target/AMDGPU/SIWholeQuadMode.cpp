@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This pass adds instructions to enable whole quad mode for pixel
+/// This pass adds instructions to enable whole quad mode for pixel
 /// shaders, and whole wavefront mode for all programs.
 ///
 /// Whole quad mode is required for derivative computations, but it interferes

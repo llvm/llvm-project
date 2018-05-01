@@ -1351,7 +1351,7 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
   } while (true);
 }
 
-/// \brief Creates node of binary operation with the same attributes as the
+/// Creates node of binary operation with the same attributes as the
 /// specified one but with other operands.
 static Value *CreateBinOpAsGiven(BinaryOperator &Inst, Value *LHS, Value *RHS,
                                  InstCombiner::BuilderTy &B) {
@@ -1362,7 +1362,7 @@ static Value *CreateBinOpAsGiven(BinaryOperator &Inst, Value *LHS, Value *RHS,
   return BO;
 }
 
-/// \brief Makes transformation of binary operation specific for vector types.
+/// Makes transformation of binary operation specific for vector types.
 /// \param Inst Binary operator to transform.
 /// \return Pointer to node that must replace the original binary operator, or
 ///         null pointer if no transformation was made.
@@ -2207,7 +2207,7 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
   return nullptr;
 }
 
-/// \brief Move the call to free before a NULL test.
+/// Move the call to free before a NULL test.
 ///
 /// Check if this free is accessed after its argument has been test
 /// against NULL (property 0).
@@ -3211,7 +3211,7 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
   return MadeIRChange;
 }
 
-/// \brief Populate the IC worklist from a function, and prune any dead basic
+/// Populate the IC worklist from a function, and prune any dead basic
 /// blocks discovered in the process.
 ///
 /// This also does basic constant propagation and other forward fixing to make

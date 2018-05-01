@@ -121,7 +121,7 @@ private:
   /// Indicate that this basic block is the entry block of a cleanup funclet.
   bool IsCleanupFuncletEntry = false;
 
-  /// \brief since getSymbol is a relatively heavy-weight operation, the symbol
+  /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 

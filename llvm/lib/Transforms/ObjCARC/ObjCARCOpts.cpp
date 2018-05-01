@@ -77,7 +77,7 @@ using namespace llvm::objcarc;
 /// \defgroup ARCUtilities Utility declarations/definitions specific to ARC.
 /// @{
 
-/// \brief This is similar to GetRCIdentityRoot but it stops as soon
+/// This is similar to GetRCIdentityRoot but it stops as soon
 /// as it finds a value with multiple uses.
 static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
   // ConstantData (like ConstantPointerNull and UndefValue) is used across
@@ -175,7 +175,7 @@ STATISTIC(NumReleasesAfterOpt,
 
 namespace {
 
-  /// \brief Per-BasicBlock state.
+  /// Per-BasicBlock state.
   class BBState {
     /// The number of unique control paths from the entry which can reach this
     /// block.
@@ -466,7 +466,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, BBState &BBInfo) {
 
 namespace {
 
-  /// \brief The main ARC optimization pass.
+  /// The main ARC optimization pass.
   class ObjCARCOpt : public FunctionPass {
     bool Changed;
     ProvenanceAnalysis PA;

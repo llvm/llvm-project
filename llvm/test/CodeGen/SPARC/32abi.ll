@@ -178,34 +178,34 @@ define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
 ;; endian, since the 64-bit math needs to be split
 ; CHECK-LABEL: i64arg:
 ; CHECK:  save %sp, -96, %sp
-; CHECK-BE: ld [%fp+100], %g2
-; CHECK-BE-NEXT: ld [%fp+96], %g3
-; CHECK-BE-NEXT: ld [%fp+92], %g4
+; CHECK-BE: ld [%fp+104], %g2
+; CHECK-BE-NEXT: ld [%fp+100], %g3
+; CHECK-BE-NEXT: ld [%fp+96], %g4
+; CHECK-BE-NEXT: ld [%fp+92], %l0
 ; CHECK-BE-NEXT: addcc %i1, %i2, %i1
 ; CHECK-BE-NEXT: addxcc %i0, 0, %i0
 ; CHECK-BE-NEXT: addcc %i4, %i1, %i1
 ; CHECK-BE-NEXT: addxcc %i3, %i0, %i0
-; CHECK-BE-NEXT: addcc %g4, %i1, %i1
-; CHECK-BE-NEXT: ld [%fp+104], %i2
+; CHECK-BE-NEXT: addcc %l0, %i1, %i1
 ; CHECK-BE-NEXT: addxcc %i5, %i0, %i0
+; CHECK-BE-NEXT: addcc %g3, %i1, %i1
+; CHECK-BE-NEXT: addxcc %g4, %i0, %i0
 ; CHECK-BE-NEXT: addcc %g2, %i1, %i1
-; CHECK-BE-NEXT: addxcc %g3, %i0, %i0
-; CHECK-BE-NEXT: addcc %i2, %i1, %i1
 ; CHECK-BE-NEXT: addxcc %i0, 0, %i0
 ;
-; CHECK-LE: ld [%fp+96], %g2
-; CHECK-LE-NEXT: ld [%fp+100], %g3
-; CHECK-LE-NEXT: ld [%fp+92], %g4
+; CHECK-LE: ld [%fp+104], %g2
+; CHECK-LE-NEXT: ld [%fp+96], %g3
+; CHECK-LE-NEXT: ld [%fp+100], %g4
+; CHECK-LE-NEXT: ld [%fp+92], %l0
 ; CHECK-LE-NEXT: addcc %i0, %i2, %i0
 ; CHECK-LE-NEXT: addxcc %i1, 0, %i1
 ; CHECK-LE-NEXT: addcc %i3, %i0, %i0
 ; CHECK-LE-NEXT: addxcc %i4, %i1, %i1
 ; CHECK-LE-NEXT: addcc %i5, %i0, %i0
-; CHECK-LE-NEXT: ld [%fp+104], %i2
+; CHECK-LE-NEXT: addxcc %l0, %i1, %i1
+; CHECK-LE-NEXT: addcc %g3, %i0, %i0
 ; CHECK-LE-NEXT: addxcc %g4, %i1, %i1
 ; CHECK-LE-NEXT: addcc %g2, %i0, %i0
-; CHECK-LE-NEXT: addxcc %g3, %i1, %i1
-; CHECK-LE-NEXT: addcc %i2, %i0, %i0
 ; CHECK-LE-NEXT: addxcc %i1, 0, %i1
 ; CHECK-NEXT: restore
 

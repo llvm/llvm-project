@@ -74,7 +74,7 @@ private:
   /// Also break dependencies on partial defs and undef uses.
   void processDefs(MachineInstr *MI);
 
-  /// \brief Helps avoid false dependencies on undef registers by updating the
+  /// Helps avoid false dependencies on undef registers by updating the
   /// machine instructions' undef operand to use a register that the instruction
   /// is truly dependent on, or use a register with clearance higher than Pref.
   /// Returns true if it was able to find a true dependency, thus not requiring
@@ -82,11 +82,11 @@ private:
   bool pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
     unsigned Pref);
 
-  /// \brief Return true to if it makes sense to break dependence on a partial
+  /// Return true to if it makes sense to break dependence on a partial
   /// def or undef use.
   bool shouldBreakDependence(MachineInstr *, unsigned OpIdx, unsigned Pref);
 
-  /// \brief Break false dependencies on undefined register reads.
+  /// Break false dependencies on undefined register reads.
   /// Walk the block backward computing precise liveness. This is expensive, so
   /// we only do it on demand. Note that the occurrence of undefined register
   /// reads that should be broken is very rare, but when they occur we may have

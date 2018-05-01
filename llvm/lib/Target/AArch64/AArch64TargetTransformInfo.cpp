@@ -38,7 +38,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
-/// \brief Calculate the cost of materializing a 64-bit value. This helper
+/// Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
 int AArch64TTIImpl::getIntImmCost(int64_t Val) {
@@ -54,7 +54,7 @@ int AArch64TTIImpl::getIntImmCost(int64_t Val) {
   return (64 - LZ + 15) / 16;
 }
 
-/// \brief Calculate the cost of materializing the given constant.
+/// Calculate the cost of materializing the given constant.
 int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 

@@ -28,7 +28,7 @@ class DispatchUnit;
 class Scheduler;
 class Backend;
 
-/// \brief Manages hardware register files, and tracks data dependencies
+/// Manages hardware register files, and tracks data dependencies
 /// between registers.
 class RegisterFile {
   const llvm::MCRegisterInfo &MRI;
@@ -155,7 +155,7 @@ public:
 #endif
 };
 
-/// \brief tracks which instructions are in-flight (i.e. dispatched but not
+/// tracks which instructions are in-flight (i.e. dispatched but not
 /// retired) in the OoO backend.
 ///
 /// This class checks on every cycle if/which instructions can be retired.
@@ -217,7 +217,7 @@ public:
 #endif
 };
 
-// \brief Implements the hardware dispatch logic.
+// Implements the hardware dispatch logic.
 //
 // This class is responsible for the dispatch stage, in which instructions are
 // dispatched in groups to the Scheduler.  An instruction can be dispatched if

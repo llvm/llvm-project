@@ -23,7 +23,7 @@ namespace llvm {
 class MCAsmInfo;
 class raw_ostream;
 
-/// \brief This represents an "assembler immediate".
+/// This represents an "assembler immediate".
 ///
 ///  In its most general form, this can hold ":Kind:(SymbolA - SymbolB +
 ///  imm64)".  Not all targets supports relocations of this general form, but we
@@ -49,13 +49,13 @@ public:
   const MCSymbolRefExpr *getSymB() const { return SymB; }
   uint32_t getRefKind() const { return RefKind; }
 
-  /// \brief Is this an absolute (as opposed to relocatable) value.
+  /// Is this an absolute (as opposed to relocatable) value.
   bool isAbsolute() const { return !SymA && !SymB; }
 
-  /// \brief Print the value to the stream \p OS.
+  /// Print the value to the stream \p OS.
   void print(raw_ostream &OS) const;
 
-  /// \brief Print the value to stderr.
+  /// Print the value to stderr.
   void dump() const;
 
   MCSymbolRefExpr::VariantKind getAccessVariant() const;

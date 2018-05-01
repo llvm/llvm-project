@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Late peephole optimizations for WebAssembly.
+/// Late peephole optimizations for WebAssembly.
 ///
 //===----------------------------------------------------------------------===//
 

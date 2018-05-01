@@ -90,7 +90,7 @@ public:
       Units.set(*Unit);
   }
 
-  /// \brief Adds register units covered by physical register \p Reg that are
+  /// Adds register units covered by physical register \p Reg that are
   /// part of the lanemask \p Mask.
   void addRegMasked(unsigned Reg, LaneBitmask Mask) {
     for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {

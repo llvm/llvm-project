@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Fix bitcasted functions.
+/// Fix bitcasted functions.
 ///
 /// WebAssembly requires caller and callee signatures to match, however in LLVM,
 /// some amount of slop is vaguely permitted. Detect mismatch by looking for

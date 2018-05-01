@@ -507,7 +507,7 @@ public:
       });
   }
 
-  /// \brief Accumulate the constant address offset of this GEP if possible.
+  /// Accumulate the constant address offset of this GEP if possible.
   ///
   /// This routine accepts an APInt into which it will accumulate the constant
   /// offset of this GEP if the GEP is in fact constant. If the GEP is not

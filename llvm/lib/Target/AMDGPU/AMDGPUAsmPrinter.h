@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU Assembly printer class.
+/// AMDGPU Assembly printer class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -135,7 +135,7 @@ private:
       const MachineFunction &MF,
       const SIProgramInfo &ProgramInfo) const;
 
-  /// \brief Emit register usage information so that the GPU driver
+  /// Emit register usage information so that the GPU driver
   /// can correctly setup the GPU state.
   void EmitProgramInfoR600(const MachineFunction &MF);
   void EmitProgramInfoSI(const MachineFunction &MF,
@@ -160,16 +160,16 @@ public:
   bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  /// \brief Wrapper for MCInstLowering.lowerOperand() for the tblgen'erated
+  /// Wrapper for MCInstLowering.lowerOperand() for the tblgen'erated
   /// pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
 
-  /// \brief Lower the specified LLVM Constant to an MCExpr.
+  /// Lower the specified LLVM Constant to an MCExpr.
   /// The AsmPrinter::lowerConstantof does not know how to lower
   /// addrspacecast, therefore they should be lowered by this function.
   const MCExpr *lowerConstant(const Constant *CV) override;
 
-  /// \brief tblgen'erated driver function for lowering simple MI->MC pseudo
+  /// tblgen'erated driver function for lowering simple MI->MC pseudo
   /// instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);

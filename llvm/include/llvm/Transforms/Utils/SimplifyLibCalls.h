@@ -30,7 +30,7 @@ class BasicBlock;
 class Function;
 class OptimizationRemarkEmitter;
 
-/// \brief This class implements simplifications for calls to fortified library
+/// This class implements simplifications for calls to fortified library
 /// functions (__st*cpy_chk, __memcpy_chk, __memmove_chk, __memset_chk), to,
 /// when possible, replace them with their non-checking counterparts.
 /// Other optimizations can also be done, but it's possible to disable them and
@@ -45,7 +45,7 @@ public:
   FortifiedLibCallSimplifier(const TargetLibraryInfo *TLI,
                              bool OnlyLowerUnknownSize = false);
 
-  /// \brief Take the given call instruction and return a more
+  /// Take the given call instruction and return a more
   /// optimal value to replace the instruction with or 0 if a more
   /// optimal form can't be found.
   /// The call must not be an indirect call.
@@ -60,7 +60,7 @@ private:
   Value *optimizeStrpCpyChk(CallInst *CI, IRBuilder<> &B, LibFunc Func);
   Value *optimizeStrpNCpyChk(CallInst *CI, IRBuilder<> &B, LibFunc Func);
 
-  /// \brief Checks whether the call \p CI to a fortified libcall is foldable
+  /// Checks whether the call \p CI to a fortified libcall is foldable
   /// to the non-fortified version.
   bool isFortifiedCallFoldable(CallInst *CI, unsigned ObjSizeOp,
                                unsigned SizeOp, bool isString);
@@ -78,13 +78,13 @@ private:
   bool UnsafeFPShrink;
   function_ref<void(Instruction *, Value *)> Replacer;
 
-  /// \brief Internal wrapper for RAUW that is the default implementation.
+  /// Internal wrapper for RAUW that is the default implementation.
   ///
   /// Other users may provide an alternate function with this signature instead
   /// of this one.
   static void replaceAllUsesWithDefault(Instruction *I, Value *With);
 
-  /// \brief Replace an instruction's uses with a value using our replacer.
+  /// Replace an instruction's uses with a value using our replacer.
   void replaceAllUsesWith(Instruction *I, Value *With);
 
 public:

@@ -350,7 +350,7 @@ void printIndexStats() {
   }
 }
 
-/// \brief List symbols in each IR file.
+/// List symbols in each IR file.
 ///
 /// The main point here is to provide lit-testable coverage for the LTOModule
 /// functionality that's exposed by the C API to list symbols.  Moreover, this

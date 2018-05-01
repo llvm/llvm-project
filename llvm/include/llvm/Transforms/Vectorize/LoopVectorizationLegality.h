@@ -115,7 +115,7 @@ public:
   unsigned getIsVectorized() const { return IsVectorized.Value; }
   enum ForceKind getForce() const { return (ForceKind)Force.Value; }
 
-  /// \brief If hints are provided that force vectorization, use the AlwaysPrint
+  /// If hints are provided that force vectorization, use the AlwaysPrint
   /// pass name to force the frontend to print the diagnostic.
   const char *vectorizeAnalysisPassName() const;
 
@@ -162,7 +162,7 @@ private:
   OptimizationRemarkEmitter &ORE;
 };
 
-/// \brief This holds vectorization requirements that must be verified late in
+/// This holds vectorization requirements that must be verified late in
 /// the process. The requirements are set by legalize and costmodel. Once
 /// vectorization has been determined to be possible and profitable the
 /// requirements can be verified by looking for metadata or compiler options.
@@ -382,7 +382,7 @@ private:
                                   RemarkName, TheLoop, I);
   }
 
-  /// \brief If an access has a symbolic strides, this maps the pointer value to
+  /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
   const ValueToValueMap *getSymbolicStrides() {
     // FIXME: Currently, the set of symbolic strides is sometimes queried before

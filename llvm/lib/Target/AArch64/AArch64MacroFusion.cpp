@@ -255,7 +255,7 @@ static bool isCCSelectPair(const MachineInstr *FirstMI,
   return false;
 }
 
-/// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
+/// Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,

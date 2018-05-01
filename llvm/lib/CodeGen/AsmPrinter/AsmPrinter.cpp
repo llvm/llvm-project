@@ -1186,7 +1186,7 @@ void AsmPrinter::EmitFunctionBody() {
   OutStreamer->AddBlankLine();
 }
 
-/// \brief Compute the number of Global Variables that uses a Constant.
+/// Compute the number of Global Variables that uses a Constant.
 static unsigned getNumGlobalVariableUses(const Constant *C) {
   if (!C)
     return 0;
@@ -1201,7 +1201,7 @@ static unsigned getNumGlobalVariableUses(const Constant *C) {
   return NumUses;
 }
 
-/// \brief Only consider global GOT equivalents if at least one user is a
+/// Only consider global GOT equivalents if at least one user is a
 /// cstexpr inside an initializer of another global variables. Also, don't
 /// handle cstexpr inside instructions. During global variable emission,
 /// candidates are skipped and are emitted later in case at least one cstexpr
@@ -1224,7 +1224,7 @@ static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
   return NumGOTEquivUsers > 0;
 }
 
-/// \brief Unnamed constant global variables solely contaning a pointer to
+/// Unnamed constant global variables solely contaning a pointer to
 /// another globals variable is equivalent to a GOT table entry; it contains the
 /// the address of another symbol. Optimize it and replace accesses to these
 /// "GOT equivalents" by using the GOT entry for the final global instead.
@@ -1245,7 +1245,7 @@ void AsmPrinter::computeGlobalGOTEquivs(Module &M) {
   }
 }
 
-/// \brief Constant expressions using GOT equivalent globals may not be eligible
+/// Constant expressions using GOT equivalent globals may not be eligible
 /// for PC relative GOT entry conversion, in such cases we need to emit such
 /// globals we previously omitted in EmitGlobalVariable.
 void AsmPrinter::emitGlobalGOTEquivs() {
@@ -2405,7 +2405,7 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
   }
 }
 
-/// \brief Transform a not absolute MCExpr containing a reference to a GOT
+/// Transform a not absolute MCExpr containing a reference to a GOT
 /// equivalent global, by a target specific GOT pc relative access to the
 /// final symbol.
 static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,

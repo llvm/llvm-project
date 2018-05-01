@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the WebAssembly-specific subclass of TargetMachine.
+/// This file defines the WebAssembly-specific subclass of TargetMachine.
 ///
 //===----------------------------------------------------------------------===//
 

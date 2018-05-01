@@ -1593,7 +1593,7 @@ static bool isOpcodeHandled(const SDNode *N) {
   }
 }
 
-/// \brief Return the weight of an SDNode
+/// Return the weight of an SDNode
 int HexagonDAGToDAGISel::getWeight(SDNode *N) {
   if (!isOpcodeHandled(N))
     return 1;

@@ -130,7 +130,7 @@ Pass *llvm::createAlwaysInlinerLegacyPass(bool InsertLifetime) {
   return new AlwaysInlinerLegacyPass(InsertLifetime);
 }
 
-/// \brief Get the inline cost for the always-inliner.
+/// Get the inline cost for the always-inliner.
 ///
 /// The always inliner *only* handles functions which are marked with the
 /// attribute to force inlining. As such, it is dramatically simpler and avoids

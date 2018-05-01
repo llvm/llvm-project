@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief SI Implementation of TargetInstrInfo.
+/// SI Implementation of TargetInstrInfo.
 //
 //===----------------------------------------------------------------------===//
 
@@ -89,7 +89,7 @@ static SDValue findChainOperand(SDNode *Load) {
   return LastOp;
 }
 
-/// \brief Returns true if both nodes have the same value for the given
+/// Returns true if both nodes have the same value for the given
 ///        operand \p Op, or if both nodes do not have this operand.
 static bool nodesHaveSameOperandValue(SDNode *N0, SDNode* N1, unsigned OpName) {
   unsigned Opc0 = N0->getMachineOpcode();

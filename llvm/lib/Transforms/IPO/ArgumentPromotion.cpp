@@ -738,7 +738,7 @@ static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
   return true;
 }
 
-/// \brief Checks if a type could have padding bytes.
+/// Checks if a type could have padding bytes.
 static bool isDenselyPacked(Type *type, const DataLayout &DL) {
   // There is no size information, so be conservative.
   if (!type->isSized())
@@ -772,7 +772,7 @@ static bool isDenselyPacked(Type *type, const DataLayout &DL) {
   return true;
 }
 
-/// \brief Checks if the padding bytes of an argument could be accessed.
+/// Checks if the padding bytes of an argument could be accessed.
 static bool canPaddingBeAccessed(Argument *arg) {
   assert(arg->hasByValAttr());
 

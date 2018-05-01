@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief Helper struct which prints trimmed and aligned columns.
+/// Helper struct which prints trimmed and aligned columns.
 struct Column {
   enum TrimKind { NoTrim, WidthTrim, RightTrim };
 
@@ -91,7 +91,7 @@ size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10,
                               16, 16, 10, 12, 18, 10};
 size_t FunctionReportColumns[] = {25, 10, 8, 8, 10, 8, 8};
 
-/// \brief Adjust column widths to fit long file paths and function names.
+/// Adjust column widths to fit long file paths and function names.
 void adjustColumnWidths(ArrayRef<StringRef> Files,
                         ArrayRef<StringRef> Functions) {
   for (StringRef Filename : Files)
@@ -101,7 +101,7 @@ void adjustColumnWidths(ArrayRef<StringRef> Files,
         std::max(FunctionReportColumns[0], Funcname.size());
 }
 
-/// \brief Prints a horizontal divider long enough to cover the given column
+/// Prints a horizontal divider long enough to cover the given column
 /// widths.
 void renderDivider(ArrayRef<size_t> ColumnWidths, raw_ostream &OS) {
   size_t Length = std::accumulate(ColumnWidths.begin(), ColumnWidths.end(), 0);
@@ -109,7 +109,7 @@ void renderDivider(ArrayRef<size_t> ColumnWidths, raw_ostream &OS) {
     OS << '-';
 }
 
-/// \brief Return the color which correponds to the coverage percentage of a
+/// Return the color which correponds to the coverage percentage of a
 /// certain metric.
 template <typename T>
 raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
@@ -119,7 +119,7 @@ raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
                                           : raw_ostream::RED;
 }
 
-/// \brief Get the number of redundant path components in each path in \p Paths.
+/// Get the number of redundant path components in each path in \p Paths.
 unsigned getNumRedundantPathComponents(ArrayRef<std::string> Paths) {
   // To start, set the number of redundant path components to the maximum
   // possible value.
@@ -148,7 +148,7 @@ unsigned getNumRedundantPathComponents(ArrayRef<std::string> Paths) {
   return NumRedundant;
 }
 
-/// \brief Determine the length of the longest redundant prefix of the paths in
+/// Determine the length of the longest redundant prefix of the paths in
 /// \p Paths.
 unsigned getRedundantPrefixLen(ArrayRef<std::string> Paths) {
   // If there's at most one path, no path components are redundant.

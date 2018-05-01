@@ -14,7 +14,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:    %vec.ind = phi <2 x i32> [ <i32 190, i32 191>, %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; CHECK:         [[TMP3:%.*]] = add i64 %index, 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* %A, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> %vec.ind, <2 x i32>* [[TMP6]], align 4
 ; CHECK:         %index.next = add i64 %index, 2
@@ -107,7 +107,7 @@ loopexit:
 ; UNROLL:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; UNROLL-NOT:   add i64 {{.*}}, 4
 ; UNROLL:       %[[g1:.+]] = getelementptr inbounds i64, i64* %a, i64 %index
-; UNROLL:       getelementptr i64, i64* %[[g1]], i64 2
+; UNROLL:       getelementptr inbounds i64, i64* %[[g1]], i64 2
 
 define i64 @scalarize_induction_variable_01(i64 *%a, i64 %n) {
 entry:
@@ -353,7 +353,7 @@ for.end:
 ; UNROLL:   %[[I2:.+]] = or i32 %index, 2
 ; UNROLL:   %[[E0:.+]] = sext i32 %index to i64
 ; UNROLL:   %[[G0:.+]] = getelementptr inbounds i32, i32* %a, i64 %[[E0]]
-; UNROLL:   getelementptr i32, i32* %[[G0]], i64 2
+; UNROLL:   getelementptr inbounds i32, i32* %[[G0]], i64 2
 ; UNROLL: pred.udiv.if:
 ; UNROLL:   udiv i32 {{.*}}, %index
 ; UNROLL: pred.udiv.if{{[0-9]+}}:
@@ -711,7 +711,7 @@ exit:
 ; CHECK:   %offset.idx = add i32 %i, %index
 ; CHECK:   %[[A1:.*]] = add i32 %offset.idx, 0
 ; CHECK:   %[[G1:.*]] = getelementptr inbounds i32, i32* %a, i32 %[[A1]]
-; CHECK:   %[[G3:.*]] = getelementptr i32, i32* %[[G1]], i32 0
+; CHECK:   %[[G3:.*]] = getelementptr inbounds i32, i32* %[[G1]], i32 0
 ; CHECK:   %[[B1:.*]] = bitcast i32* %[[G3]] to <2 x i32>*
 ; CHECK:   store <2 x i32> %vec.ind, <2 x i32>* %[[B1]]
 ; CHECK:   %index.next = add i32 %index, 2
@@ -751,7 +751,7 @@ exit:
 ; UNROLL:   %[[G1:.*]] = getelementptr inbounds i32, i32* %a, i64 %[[S1]]
 ; UNROLL:   %[[B1:.*]] = bitcast i32* %[[G1]] to <2 x i32>*
 ; UNROLL:   store <2 x i32> %vec.ind, <2 x i32>* %[[B1]]
-; UNROLL:   %[[G2:.*]] = getelementptr i32, i32* %[[G1]], i64 2
+; UNROLL:   %[[G2:.*]] = getelementptr inbounds i32, i32* %[[G1]], i64 2
 ; UNROLL:   %[[B2:.*]] = bitcast i32* %[[G2]] to <2 x i32>*
 ; UNROLL:   store <2 x i32> %step.add, <2 x i32>* %[[B2]]
 ; UNROLL:   %index.next = add i32 %index, 4
@@ -780,7 +780,7 @@ exit:
 ; CHECK:         [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 2>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
 ; CHECK:         [[TMP3:%.*]] = add i64 %index, 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* %a, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    %index.next = add i64 %index, 2

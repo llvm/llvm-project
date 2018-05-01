@@ -46,12 +46,12 @@ class Value;
 
 namespace orc {
 
-/// @brief Target-independent base class for compile callback management.
+/// Target-independent base class for compile callback management.
 class JITCompileCallbackManager {
 public:
   using CompileFtor = std::function<JITTargetAddress()>;
 
-  /// @brief Handle to a newly created compile callback. Can be used to get an
+  /// Handle to a newly created compile callback. Can be used to get an
   ///        IR constant representing the address of the trampoline, and to set
   ///        the compile action for the callback.
   class CompileCallbackInfo {
@@ -69,7 +69,7 @@ public:
     CompileFtor &Compile;
   };
 
-  /// @brief Construct a JITCompileCallbackManager.
+  /// Construct a JITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
   JITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
@@ -77,7 +77,7 @@ public:
 
   virtual ~JITCompileCallbackManager() = default;
 
-  /// @brief Execute the callback for the given trampoline id. Called by the JIT
+  /// Execute the callback for the given trampoline id. Called by the JIT
   ///        to compile functions on demand.
   JITTargetAddress executeCompileCallback(JITTargetAddress TrampolineAddr) {
     auto I = ActiveTrampolines.find(TrampolineAddr);
@@ -104,7 +104,7 @@ public:
     return ErrorHandlerAddress;
   }
 
-  /// @brief Reserve a compile callback.
+  /// Reserve a compile callback.
   Expected<CompileCallbackInfo> getCompileCallback() {
     if (auto TrampolineAddrOrErr = getAvailableTrampolineAddr()) {
       const auto &TrampolineAddr = *TrampolineAddrOrErr;
@@ -114,14 +114,14 @@ public:
       return TrampolineAddrOrErr.takeError();
   }
 
-  /// @brief Get a CompileCallbackInfo for an existing callback.
+  /// Get a CompileCallbackInfo for an existing callback.
   CompileCallbackInfo getCompileCallbackInfo(JITTargetAddress TrampolineAddr) {
     auto I = ActiveTrampolines.find(TrampolineAddr);
     assert(I != ActiveTrampolines.end() && "Not an active trampoline.");
     return CompileCallbackInfo(I->first, I->second);
   }
 
-  /// @brief Release a compile callback.
+  /// Release a compile callback.
   ///
   ///   Note: Callbacks are auto-released after they execute. This method should
   /// only be called to manually release a callback that is not going to
@@ -158,11 +158,11 @@ private:
   virtual void anchor();
 };
 
-/// @brief Manage compile callbacks for in-process JITs.
+/// Manage compile callbacks for in-process JITs.
 template <typename TargetT>
 class LocalJITCompileCallbackManager : public JITCompileCallbackManager {
 public:
-  /// @brief Construct a InProcessJITCompileCallbackManager.
+  /// Construct a InProcessJITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
   LocalJITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
@@ -229,38 +229,38 @@ private:
   std::vector<sys::OwningMemoryBlock> TrampolineBlocks;
 };
 
-/// @brief Base class for managing collections of named indirect stubs.
+/// Base class for managing collections of named indirect stubs.
 class IndirectStubsManager {
 public:
-  /// @brief Map type for initializing the manager. See init.
+  /// Map type for initializing the manager. See init.
   using StubInitsMap = StringMap<std::pair<JITTargetAddress, JITSymbolFlags>>;
 
   virtual ~IndirectStubsManager() = default;
 
-  /// @brief Create a single stub with the given name, target address and flags.
+  /// Create a single stub with the given name, target address and flags.
   virtual Error createStub(StringRef StubName, JITTargetAddress StubAddr,
                            JITSymbolFlags StubFlags) = 0;
 
-  /// @brief Create StubInits.size() stubs with the given names, target
+  /// Create StubInits.size() stubs with the given names, target
   ///        addresses, and flags.
   virtual Error createStubs(const StubInitsMap &StubInits) = 0;
 
-  /// @brief Find the stub with the given name. If ExportedStubsOnly is true,
+  /// Find the stub with the given name. If ExportedStubsOnly is true,
   ///        this will only return a result if the stub's flags indicate that it
   ///        is exported.
   virtual JITSymbol findStub(StringRef Name, bool ExportedStubsOnly) = 0;
 
-  /// @brief Find the implementation-pointer for the stub.
+  /// Find the implementation-pointer for the stub.
   virtual JITSymbol findPointer(StringRef Name) = 0;
 
-  /// @brief Change the value of the implementation pointer for the stub.
+  /// Change the value of the implementation pointer for the stub.
   virtual Error updatePointer(StringRef Name, JITTargetAddress NewAddr) = 0;
 
 private:
   virtual void anchor();
 };
 
-/// @brief IndirectStubsManager implementation for the host architecture, e.g.
+/// IndirectStubsManager implementation for the host architecture, e.g.
 ///        OrcX86_64. (See OrcArchitectureSupport.h).
 template <typename TargetT>
 class LocalIndirectStubsManager : public IndirectStubsManager {
@@ -354,7 +354,7 @@ private:
   StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
 };
 
-/// @brief Create a local compile callback manager.
+/// Create a local compile callback manager.
 ///
 /// The given target triple will determine the ABI, and the given
 /// ErrorHandlerAddress will be used by the resulting compile callback
@@ -363,36 +363,36 @@ std::unique_ptr<JITCompileCallbackManager>
 createLocalCompileCallbackManager(const Triple &T,
                                   JITTargetAddress ErrorHandlerAddress);
 
-/// @brief Create a local indriect stubs manager builder.
+/// Create a local indriect stubs manager builder.
 ///
 /// The given target triple will determine the ABI.
 std::function<std::unique_ptr<IndirectStubsManager>()>
 createLocalIndirectStubsManagerBuilder(const Triple &T);
 
-/// @brief Build a function pointer of FunctionType with the given constant
+/// Build a function pointer of FunctionType with the given constant
 ///        address.
 ///
 ///   Usage example: Turn a trampoline address into a function pointer constant
 /// for use in a stub.
 Constant *createIRTypedAddress(FunctionType &FT, JITTargetAddress Addr);
 
-/// @brief Create a function pointer with the given type, name, and initializer
+/// Create a function pointer with the given type, name, and initializer
 ///        in the given Module.
 GlobalVariable *createImplPointer(PointerType &PT, Module &M, const Twine &Name,
                                   Constant *Initializer);
 
-/// @brief Turn a function declaration into a stub function that makes an
+/// Turn a function declaration into a stub function that makes an
 ///        indirect call using the given function pointer.
 void makeStub(Function &F, Value &ImplPointer);
 
-/// @brief Raise linkage types and rename as necessary to ensure that all
+/// Raise linkage types and rename as necessary to ensure that all
 ///        symbols are accessible for other modules.
 ///
 ///   This should be called before partitioning a module to ensure that the
 /// partitions retain access to each other's symbols.
 void makeAllSymbolsExternallyAccessible(Module &M);
 
-/// @brief Clone a function declaration into a new module.
+/// Clone a function declaration into a new module.
 ///
 ///   This function can be used as the first step towards creating a callback
 /// stub (see makeStub), or moving a function body (see moveFunctionBody).
@@ -407,7 +407,7 @@ void makeAllSymbolsExternallyAccessible(Module &M);
 Function *cloneFunctionDecl(Module &Dst, const Function &F,
                             ValueToValueMapTy *VMap = nullptr);
 
-/// @brief Move the body of function 'F' to a cloned function declaration in a
+/// Move the body of function 'F' to a cloned function declaration in a
 ///        different module (See related cloneFunctionDecl).
 ///
 ///   If the target function declaration is not supplied via the NewF parameter
@@ -419,11 +419,11 @@ void moveFunctionBody(Function &OrigF, ValueToValueMapTy &VMap,
                       ValueMaterializer *Materializer = nullptr,
                       Function *NewF = nullptr);
 
-/// @brief Clone a global variable declaration into a new module.
+/// Clone a global variable declaration into a new module.
 GlobalVariable *cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
                                         ValueToValueMapTy *VMap = nullptr);
 
-/// @brief Move global variable GV from its parent module to cloned global
+/// Move global variable GV from its parent module to cloned global
 ///        declaration in a different module.
 ///
 ///   If the target global declaration is not supplied via the NewGV parameter
@@ -436,11 +436,11 @@ void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
                                    ValueMaterializer *Materializer = nullptr,
                                    GlobalVariable *NewGV = nullptr);
 
-/// @brief Clone a global alias declaration into a new module.
+/// Clone a global alias declaration into a new module.
 GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap);
 
-/// @brief Clone module flags metadata into the destination module.
+/// Clone module flags metadata into the destination module.
 void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
                               ValueToValueMapTy &VMap);
 

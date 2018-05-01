@@ -11,10 +11,13 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RAW_STRING_LITERAL_H
 
 #include "../ClangTidy.h"
+#include <bitset>
 
 namespace clang {
 namespace tidy {
 namespace modernize {
+
+using CharsBitSet = std::bitset<1 << CHAR_BIT>;
 
 /// This check replaces string literals with escaped characters to
 /// raw string literals.
@@ -35,6 +38,7 @@ private:
       const StringLiteral *Literal, StringRef Replacement);
 
   std::string DelimiterStem;
+  CharsBitSet DisallowedChars;
   const bool ReplaceShorterLiterals;
 };
 

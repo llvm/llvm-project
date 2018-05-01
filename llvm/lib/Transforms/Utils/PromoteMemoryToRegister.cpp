@@ -178,13 +178,13 @@ struct RenamePassData {
   LocationVector Locations;
 };
 
-/// \brief This assigns and keeps a per-bb relative ordering of load/store
+/// This assigns and keeps a per-bb relative ordering of load/store
 /// instructions in the block that directly load or store an alloca.
 ///
 /// This functionality is important because it avoids scanning large basic
 /// blocks multiple times when promoting many allocas in the same block.
 class LargeBlockInfo {
-  /// \brief For each instruction that we track, keep the index of the
+  /// For each instruction that we track, keep the index of the
   /// instruction.
   ///
   /// The index starts out as the number of the instruction from the start of
@@ -243,7 +243,7 @@ struct PromoteMem2Reg {
   /// Reverse mapping of Allocas.
   DenseMap<AllocaInst *, unsigned> AllocaLookup;
 
-  /// \brief The PhiNodes we're adding.
+  /// The PhiNodes we're adding.
   ///
   /// That map is used to simplify some Phi nodes as we iterate over it, so
   /// it should have deterministic iterators.  We could use a MapVector, but
@@ -347,7 +347,7 @@ static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
   }
 }
 
-/// \brief Rewrite as many loads as possible given a single store.
+/// Rewrite as many loads as possible given a single store.
 ///
 /// When there is only a single store, we can use the domtree to trivially
 /// replace all of the dominated loads with the stored value. Do so, and return
@@ -779,7 +779,7 @@ void PromoteMem2Reg::run() {
   NewPhiNodes.clear();
 }
 
-/// \brief Determine which blocks the value is live in.
+/// Determine which blocks the value is live in.
 ///
 /// These are blocks which lead to uses.  Knowing this allows us to avoid
 /// inserting PHI nodes into blocks which don't lead to uses (thus, the
@@ -853,7 +853,7 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
   }
 }
 
-/// \brief Queue a phi-node to be added to a basic-block for a specific Alloca.
+/// Queue a phi-node to be added to a basic-block for a specific Alloca.
 ///
 /// Returns true if there wasn't already a phi-node for that variable
 bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
@@ -885,7 +885,7 @@ static void updateForIncomingValueLocation(PHINode *PN, DebugLoc DL,
     PN->setDebugLoc(DL);
 }
 
-/// \brief Recursively traverse the CFG of the function, renaming loads and
+/// Recursively traverse the CFG of the function, renaming loads and
 /// stores to the allocas which we are promoting.
 ///
 /// IncomingVals indicates what value each Alloca contains on exit from the

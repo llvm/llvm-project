@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This pass lowers the pseudo control flow instructions to real
+/// This pass lowers the pseudo control flow instructions to real
 /// machine instructions.
 ///
 /// All control flow is handled using predicated instructions and

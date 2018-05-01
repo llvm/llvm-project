@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a CFG stacking pass.
+/// This file implements a CFG stacking pass.
 ///
 /// This pass inserts BLOCK and LOOP markers to mark the start of scopes, since
 /// scope boundaries serve as the labels for WebAssembly's control transfers.

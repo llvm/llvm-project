@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Interface definition of the TargetLowering class that is common
+/// Interface definition of the TargetLowering class that is common
 /// to all AMD GPUs.
 //
 //===----------------------------------------------------------------------===//
@@ -44,7 +44,7 @@ protected:
 
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-  /// \brief Split a vector store into multiple scalar stores.
+  /// Split a vector store into multiple scalar stores.
   /// \returns The resulting chain.
 
   SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) const;
@@ -108,10 +108,10 @@ protected:
   SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
-  /// \brief Split a vector load into 2 loads of half the vector.
+  /// Split a vector load into 2 loads of half the vector.
   SDValue SplitVectorLoad(SDValue Op, SelectionDAG &DAG) const;
 
-  /// \brief Split a vector store into 2 stores of half the vector.
+  /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
@@ -227,7 +227,7 @@ public:
   virtual SDNode *PostISelFolding(MachineSDNode *N,
                                   SelectionDAG &DAG) const = 0;
 
-  /// \brief Determine which of the bits specified in \p Mask are known to be
+  /// Determine which of the bits specified in \p Mask are known to be
   /// either zero or one and return them in the \p KnownZero and \p KnownOne
   /// bitsets.
   void computeKnownBitsForTargetNode(const SDValue Op,
@@ -240,7 +240,7 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
-  /// \brief Helper function that adds Reg to the LiveIn list of the DAG's
+  /// Helper function that adds Reg to the LiveIn list of the DAG's
   /// MachineFunction.
   ///
   /// \returns a RegisterSDNode representing Reg if \p RawReg is true, otherwise
@@ -288,7 +288,7 @@ public:
     GRID_OFFSET,
   };
 
-  /// \brief Helper function that returns the byte offset of the given
+  /// Helper function that returns the byte offset of the given
   /// type of implicit parameter.
   uint32_t getImplicitParameterOffset(const AMDGPUMachineFunction *MFI,
                                       const ImplicitParameter Param) const;

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief SI implementation of the TargetRegisterInfo class.
+/// SI implementation of the TargetRegisterInfo class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1370,7 +1370,7 @@ bool SIRegisterInfo::shouldRewriteCopySrc(
   return getCommonSubClass(DefRC, SrcRC) != nullptr;
 }
 
-/// \brief Returns a register that is not used at any point in the function.
+/// Returns a register that is not used at any point in the function.
 ///        If all registers are used, then this function will return
 //         AMDGPU::NoRegister.
 unsigned

@@ -6154,7 +6154,7 @@ unsigned X86::getCMovFromCond(CondCode CC, unsigned RegBytes,
   }
 }
 
-/// \brief Get the VPCMP immediate if the opcodes are swapped.
+/// Get the VPCMP immediate if the opcodes are swapped.
 unsigned X86::getSwappedVPCMPImm(unsigned Imm) {
   switch (Imm) {
   default: llvm_unreachable("Unreachable!");
@@ -6172,7 +6172,7 @@ unsigned X86::getSwappedVPCMPImm(unsigned Imm) {
   return Imm;
 }
 
-/// \brief Get the VPCOM immediate if the opcodes are swapped.
+/// Get the VPCOM immediate if the opcodes are swapped.
 unsigned X86::getSwappedVPCOMImm(unsigned Imm) {
   switch (Imm) {
   default: llvm_unreachable("Unreachable!");

@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-/// \brief Provides write only access to a subclass of `WritableBinaryStream`.
+/// Provides write only access to a subclass of `WritableBinaryStream`.
 /// Provides bounds checking and helpers for writing certain common data types
 /// such as null-terminated strings, integers in various flavors of endianness,
 /// etc.  Can be subclassed to provide reading and writing of custom datatypes,

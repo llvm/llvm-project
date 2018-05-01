@@ -198,10 +198,10 @@ namespace {
 
 class BlockChain;
 
-/// \brief Type for our function-wide basic block -> block chain mapping.
+/// Type for our function-wide basic block -> block chain mapping.
 using BlockToChainMapType = DenseMap<const MachineBasicBlock *, BlockChain *>;
 
-/// \brief A chain of blocks which will be laid out contiguously.
+/// A chain of blocks which will be laid out contiguously.
 ///
 /// This is the datastructure representing a chain of consecutive blocks that
 /// are profitable to layout together in order to maximize fallthrough
@@ -213,13 +213,13 @@ using BlockToChainMapType = DenseMap<const MachineBasicBlock *, BlockChain *>;
 /// them. They participate in a block-to-chain mapping, which is updated
 /// automatically as chains are merged together.
 class BlockChain {
-  /// \brief The sequence of blocks belonging to this chain.
+  /// The sequence of blocks belonging to this chain.
   ///
   /// This is the sequence of blocks for a particular chain. These will be laid
   /// out in-order within the function.
   SmallVector<MachineBasicBlock *, 4> Blocks;
 
-  /// \brief A handle to the function-wide basic block to block chain mapping.
+  /// A handle to the function-wide basic block to block chain mapping.
   ///
   /// This is retained in each block chain to simplify the computation of child
   /// block chains for SCC-formation and iteration. We store the edges to child
@@ -228,7 +228,7 @@ class BlockChain {
   BlockToChainMapType &BlockToChain;
 
 public:
-  /// \brief Construct a new BlockChain.
+  /// Construct a new BlockChain.
   ///
   /// This builds a new block chain representing a single basic block in the
   /// function. It also registers itself as the chain that block participates
@@ -239,15 +239,15 @@ public:
     BlockToChain[BB] = this;
   }
 
-  /// \brief Iterator over blocks within the chain.
+  /// Iterator over blocks within the chain.
   using iterator = SmallVectorImpl<MachineBasicBlock *>::iterator;
   using const_iterator = SmallVectorImpl<MachineBasicBlock *>::const_iterator;
 
-  /// \brief Beginning of blocks within the chain.
+  /// Beginning of blocks within the chain.
   iterator begin() { return Blocks.begin(); }
   const_iterator begin() const { return Blocks.begin(); }
 
-  /// \brief End of blocks within the chain.
+  /// End of blocks within the chain.
   iterator end() { return Blocks.end(); }
   const_iterator end() const { return Blocks.end(); }
 
@@ -261,7 +261,7 @@ public:
     return false;
   }
 
-  /// \brief Merge a block chain into this one.
+  /// Merge a block chain into this one.
   ///
   /// This routine merges a block chain into this one. It takes care of forming
   /// a contiguous sequence of basic blocks, updating the edge list, and
@@ -293,14 +293,14 @@ public:
   }
 
 #ifndef NDEBUG
-  /// \brief Dump the blocks in this chain.
+  /// Dump the blocks in this chain.
   LLVM_DUMP_METHOD void dump() {
     for (MachineBasicBlock *MBB : *this)
       MBB->dump();
   }
 #endif // NDEBUG
 
-  /// \brief Count of predecessors of any block within the chain which have not
+  /// Count of predecessors of any block within the chain which have not
   /// yet been scheduled.  In general, we will delay scheduling this chain
   /// until those predecessors are scheduled (or we find a sufficiently good
   /// reason to override this heuristic.)  Note that when forming loop chains,
@@ -313,7 +313,7 @@ public:
 };
 
 class MachineBlockPlacement : public MachineFunctionPass {
-  /// \brief A type for a block filter set.
+  /// A type for a block filter set.
   using BlockFilterSet = SmallSetVector<const MachineBasicBlock *, 16>;
 
   /// Pair struct containing basic block and taildup profitiability
@@ -329,47 +329,47 @@ class MachineBlockPlacement : public MachineFunctionPass {
     MachineBasicBlock *Dest;
   };
 
-  /// \brief work lists of blocks that are ready to be laid out
+  /// work lists of blocks that are ready to be laid out
   SmallVector<MachineBasicBlock *, 16> BlockWorkList;
   SmallVector<MachineBasicBlock *, 16> EHPadWorkList;
 
   /// Edges that have already been computed as optimal.
   DenseMap<const MachineBasicBlock *, BlockAndTailDupResult> ComputedEdges;
 
-  /// \brief Machine Function
+  /// Machine Function
   MachineFunction *F;
 
-  /// \brief A handle to the branch probability pass.
+  /// A handle to the branch probability pass.
   const MachineBranchProbabilityInfo *MBPI;
 
-  /// \brief A handle to the function-wide block frequency pass.
+  /// A handle to the function-wide block frequency pass.
   std::unique_ptr<BranchFolder::MBFIWrapper> MBFI;
 
-  /// \brief A handle to the loop info.
+  /// A handle to the loop info.
   MachineLoopInfo *MLI;
 
-  /// \brief Preferred loop exit.
+  /// Preferred loop exit.
   /// Member variable for convenience. It may be removed by duplication deep
   /// in the call stack.
   MachineBasicBlock *PreferredLoopExit;
 
-  /// \brief A handle to the target's instruction info.
+  /// A handle to the target's instruction info.
   const TargetInstrInfo *TII;
 
-  /// \brief A handle to the target's lowering info.
+  /// A handle to the target's lowering info.
   const TargetLoweringBase *TLI;
 
-  /// \brief A handle to the post dominator tree.
+  /// A handle to the post dominator tree.
   MachinePostDominatorTree *MPDT;
 
-  /// \brief Duplicator used to duplicate tails during placement.
+  /// Duplicator used to duplicate tails during placement.
   ///
   /// Placement decisions can open up new tail duplication opportunities, but
   /// since tail duplication affects placement decisions of later blocks, it
   /// must be done inline.
   TailDuplicator TailDup;
 
-  /// \brief Allocator and owner of BlockChain structures.
+  /// Allocator and owner of BlockChain structures.
   ///
   /// We build BlockChains lazily while processing the loop structure of
   /// a function. To reduce malloc traffic, we allocate them using this
@@ -378,7 +378,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// the chains.
   SpecificBumpPtrAllocator<BlockChain> ChainAllocator;
 
-  /// \brief Function wide BasicBlock to BlockChain mapping.
+  /// Function wide BasicBlock to BlockChain mapping.
   ///
   /// This mapping allows efficiently moving from any given basic block to the
   /// BlockChain it participates in, if any. We use it to, among other things,
@@ -441,7 +441,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
       MachineFunction::iterator &PrevUnplacedBlockIt,
       const BlockFilterSet *BlockFilter);
 
-  /// \brief Add a basic block to the work list if it is appropriate.
+  /// Add a basic block to the work list if it is appropriate.
   ///
   /// If the optional parameter BlockFilter is provided, only MBB
   /// present in the set will be added to the worklist. If nullptr
@@ -545,7 +545,7 @@ INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
                     "Branch Probability Basic Block Placement", false, false)
 
 #ifndef NDEBUG
-/// \brief Helper to print the name of a MBB.
+/// Helper to print the name of a MBB.
 ///
 /// Only used by debug logging.
 static std::string getBlockName(const MachineBasicBlock *BB) {
@@ -558,7 +558,7 @@ static std::string getBlockName(const MachineBasicBlock *BB) {
 }
 #endif
 
-/// \brief Mark a chain's successors as having one fewer preds.
+/// Mark a chain's successors as having one fewer preds.
 ///
 /// When a chain is being merged into the "placed" chain, this routine will
 /// quickly walk the successors of each block in the chain and mark them as
@@ -574,7 +574,7 @@ void MachineBlockPlacement::markChainSuccessors(
   }
 }
 
-/// \brief Mark a single block's successors as having one fewer preds.
+/// Mark a single block's successors as having one fewer preds.
 ///
 /// Under normal circumstances, this is only called by markChainSuccessors,
 /// but if a block that was to be placed is completely tail-duplicated away,
@@ -1439,7 +1439,7 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
   return false;
 }
 
-/// \brief Select the best successor for a block.
+/// Select the best successor for a block.
 ///
 /// This looks across all successors of a particular block and attempts to
 /// select the "best" one to be the layout successor. It only considers direct
@@ -1555,7 +1555,7 @@ MachineBlockPlacement::selectBestSuccessor(
   return BestSucc;
 }
 
-/// \brief Select the best block from a worklist.
+/// Select the best block from a worklist.
 ///
 /// This looks through the provided worklist as a list of candidate basic
 /// blocks and select the most profitable one to place. The definition of
@@ -1627,7 +1627,7 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
   return BestBlock;
 }
 
-/// \brief Retrieve the first unplaced basic block.
+/// Retrieve the first unplaced basic block.
 ///
 /// This routine is called when we are unable to use the CFG to walk through
 /// all of the basic blocks and form a chain due to unnatural loops in the CFG.
@@ -1754,7 +1754,7 @@ void MachineBlockPlacement::buildChain(
                << getBlockName(*Chain.begin()) << "\n");
 }
 
-/// \brief Find the best loop top block for layout.
+/// Find the best loop top block for layout.
 ///
 /// Look for a block which is strictly better than the loop header for laying
 /// out at the top of the loop. This looks for one and only one pattern:
@@ -1823,7 +1823,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   return BestPred;
 }
 
-/// \brief Find the best loop exiting block for layout.
+/// Find the best loop exiting block for layout.
 ///
 /// This routine implements the logic to analyze the loop looking for the best
 /// block to layout at the top of the loop. Typically this is done to maximize
@@ -1941,7 +1941,7 @@ MachineBlockPlacement::findBestLoopExit(const MachineLoop &L,
   return ExitingBB;
 }
 
-/// \brief Attempt to rotate an exiting block to the bottom of the loop.
+/// Attempt to rotate an exiting block to the bottom of the loop.
 ///
 /// Once we have built a chain, try to rotate it to line up the hot exit block
 /// with fallthrough out of the loop if doing so doesn't introduce unnecessary
@@ -2019,7 +2019,7 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
   std::rotate(LoopChain.begin(), std::next(ExitIt), LoopChain.end());
 }
 
-/// \brief Attempt to rotate a loop based on profile data to reduce branch cost.
+/// Attempt to rotate a loop based on profile data to reduce branch cost.
 ///
 /// With profile data, we can determine the cost in terms of missed fall through
 /// opportunities when rotating a loop chain and select the best rotation.
@@ -2166,7 +2166,7 @@ void MachineBlockPlacement::rotateLoopWithProfile(
   }
 }
 
-/// \brief Collect blocks in the given loop that are to be placed.
+/// Collect blocks in the given loop that are to be placed.
 ///
 /// When profile data is available, exclude cold blocks from the returned set;
 /// otherwise, collect all blocks in the loop.
@@ -2202,7 +2202,7 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   return LoopBlockSet;
 }
 
-/// \brief Forms basic block chains from the natural loop structures.
+/// Forms basic block chains from the natural loop structures.
 ///
 /// These chains are designed to preserve the existing *structure* of the code
 /// as much as possible. We can then stitch the chains together in a way which
@@ -2834,17 +2834,17 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
 namespace {
 
-/// \brief A pass to compute block placement statistics.
+/// A pass to compute block placement statistics.
 ///
 /// A separate pass to compute interesting statistics for evaluating block
 /// placement. This is separate from the actual placement pass so that they can
 /// be computed in the absence of any placement transformations or when using
 /// alternative placement strategies.
 class MachineBlockPlacementStats : public MachineFunctionPass {
-  /// \brief A handle to the branch probability pass.
+  /// A handle to the branch probability pass.
   const MachineBranchProbabilityInfo *MBPI;
 
-  /// \brief A handle to the function-wide block frequency pass.
+  /// A handle to the function-wide block frequency pass.
   const MachineBlockFrequencyInfo *MBFI;
 
 public:

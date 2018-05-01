@@ -476,7 +476,7 @@ void MCAssembler::writeFragmentPadding(const MCFragment &F, uint64_t FSize,
   }
 }
 
-/// \brief Write the fragment \p F to the output file.
+/// Write the fragment \p F to the output file.
 static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
                           const MCFragment &F) {
   MCObjectWriter *OW = Asm.getWriterPtr();

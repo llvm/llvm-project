@@ -74,30 +74,30 @@ public:
     return CUs;
   }
 
-  /// \brief Compute the size and offset of a DIE given an incoming Offset.
+  /// Compute the size and offset of a DIE given an incoming Offset.
   unsigned computeSizeAndOffset(DIE &Die, unsigned Offset);
 
-  /// \brief Compute the size and offset of all the DIEs.
+  /// Compute the size and offset of all the DIEs.
   void computeSizeAndOffsets();
 
-  /// \brief Compute the size and offset of all the DIEs in the given unit.
+  /// Compute the size and offset of all the DIEs in the given unit.
   /// \returns The size of the root DIE.
   unsigned computeSizeAndOffsetsForUnit(DwarfUnit *TheU);
 
-  /// \brief Add a unit to the list of CUs.
+  /// Add a unit to the list of CUs.
   void addUnit(std::unique_ptr<DwarfCompileUnit> U);
 
   /// Emit the string table offsets header.
   void emitStringOffsetsTableHeader(MCSection *Section);
 
-  /// \brief Emit all of the units to the section listed with the given
+  /// Emit all of the units to the section listed with the given
   /// abbreviation section.
   void emitUnits(bool UseOffsets);
 
-  /// \brief Emit the given unit to its section.
+  /// Emit the given unit to its section.
   void emitUnit(DwarfUnit *U, bool UseOffsets);
 
-  /// \brief Emit a set of abbreviations to the specific section.
+  /// Emit a set of abbreviations to the specific section.
   void emitAbbrevs(MCSection *);
 
   /// Emit all of the strings to the section given. If OffsetSection is
@@ -107,7 +107,7 @@ public:
   void emitStrings(MCSection *StrSection, MCSection *OffsetSection = nullptr,
                    bool UseRelativeOffsets = false);
 
-  /// \brief Returns the string pool.
+  /// Returns the string pool.
   DwarfStringPool &getStringPool() { return StrPool; }
 
   MCSymbol *getStringOffsetsStartSym() const { return StringOffsetsStartSym; }

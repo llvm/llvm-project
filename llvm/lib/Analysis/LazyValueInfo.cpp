@@ -1222,7 +1222,7 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
   return ValueLatticeElement::getOverdefined();
 }
 
-/// \brief Compute the value of Val on the edge BBFrom -> BBTo. Returns false if
+/// Compute the value of Val on the edge BBFrom -> BBTo. Returns false if
 /// Val is not constrained on the edge.  Result is unspecified if return value
 /// is false.
 static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
@@ -1347,7 +1347,7 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
   return false;
 }
 
-/// \brief Compute the value of Val on the edge BBFrom -> BBTo or the value at
+/// Compute the value of Val on the edge BBFrom -> BBTo or the value at
 /// the basic block if the edge does not constrain Val.
 bool LazyValueInfoImpl::getEdgeValue(Value *Val, BasicBlock *BBFrom,
                                      BasicBlock *BBTo,

@@ -912,7 +912,7 @@ void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
 namespace CU {
 
-/// \brief Compact unwind encoding values.
+/// Compact unwind encoding values.
 enum CompactUnwindEncodings {
   UNWIND_ARM_MODE_MASK                         = 0x0F000000,
   UNWIND_ARM_MODE_FRAME                        = 0x01000000,

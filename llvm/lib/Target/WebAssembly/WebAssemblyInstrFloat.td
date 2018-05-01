@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly Floating-point operand code-gen constructs.
+/// WebAssembly Floating-point operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

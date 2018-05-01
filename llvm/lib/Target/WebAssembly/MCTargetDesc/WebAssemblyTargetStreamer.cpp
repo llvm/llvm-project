@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines WebAssembly-specific target streamer classes.
+/// This file defines WebAssembly-specific target streamer classes.
 /// These are for implementing support for target-specific assembly directives.
 ///
 //===----------------------------------------------------------------------===//

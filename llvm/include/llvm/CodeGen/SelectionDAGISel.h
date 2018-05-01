@@ -280,7 +280,7 @@ public:
   void SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
                         unsigned TableSize);
 
-  /// \brief Return true if complex patterns for this target can mutate the
+  /// Return true if complex patterns for this target can mutate the
   /// DAG.
   virtual bool ComplexPatternFuncMutatesDAG() const {
     return false;
@@ -309,10 +309,10 @@ private:
   /// instruction selected, false if no code should be emitted for it.
   bool PrepareEHLandingPad();
 
-  /// \brief Perform instruction selection on all basic blocks in the function.
+  /// Perform instruction selection on all basic blocks in the function.
   void SelectAllBasicBlocks(const Function &Fn);
 
-  /// \brief Perform instruction selection on a single basic block, for
+  /// Perform instruction selection on a single basic block, for
   /// instructions between \p Begin and \p End.  \p HadTailCall will be set
   /// to true if a call in the block was translated as a tail call.
   void SelectBasicBlock(BasicBlock::const_iterator Begin,
@@ -322,7 +322,7 @@ private:
 
   void CodeGenAndEmitDAG();
 
-  /// \brief Generate instructions for lowering the incoming arguments of the
+  /// Generate instructions for lowering the incoming arguments of the
   /// given function.
   void LowerArguments(const Function &F);
 

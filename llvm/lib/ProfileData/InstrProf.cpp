@@ -603,7 +603,7 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
 #include "llvm/ProfileData/InstrProfData.inc"
 
 /*!
- * \brief ValueProfRecordClosure Interface implementation for  InstrProfRecord
+ * ValueProfRecordClosure Interface implementation for  InstrProfRecord
  *  class. These C wrappers are used as adaptors so that C++ code can be
  *  invoked as callbacks.
  */

@@ -452,7 +452,7 @@ enum OperandType {
 };
 #undef ENUM_ENTRY
 
-/// \brief The specification for how to extract and interpret one operand.
+/// The specification for how to extract and interpret one operand.
 struct OperandSpecifier {
   uint8_t encoding;
   uint8_t type;

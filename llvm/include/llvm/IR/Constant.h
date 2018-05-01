@@ -38,7 +38,7 @@ class APInt;
 /// structurally equivalent constants will always have the same address.
 /// Constants are created on demand as needed and never deleted: thus clients
 /// don't have to worry about the lifetime of the objects.
-/// @brief LLVM Constant Representation
+/// LLVM Constant Representation
 class Constant : public User {
 protected:
   Constant(Type *ty, ValueTy vty, Use *Ops, unsigned NumOps)
@@ -153,7 +153,7 @@ public:
 
   /// @returns the value for an integer or vector of integer constant of the
   /// given type that has all its bits set to true.
-  /// @brief Get the all ones value
+  /// Get the all ones value
   static Constant *getAllOnesValue(Type* Ty);
 
   /// Return the value for an integer or pointer constant, or a vector thereof,

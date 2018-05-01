@@ -8,7 +8,7 @@
 //==-----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Defines an instruction selector for the AMDGPU target.
+/// Defines an instruction selector for the AMDGPU target.
 //
 //===----------------------------------------------------------------------===//
 
@@ -244,14 +244,14 @@ INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
 INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "isel",
                     "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 
-/// \brief This pass converts a legalized DAG into a AMDGPU-specific
+/// This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAMDGPUISelDag(TargetMachine *TM,
                                         CodeGenOpt::Level OptLevel) {
   return new AMDGPUDAGToDAGISel(TM, OptLevel);
 }
 
-/// \brief This pass converts a legalized DAG into a R600-specific
+/// This pass converts a legalized DAG into a R600-specific
 // DAG, ready for instruction scheduling.
 FunctionPass *llvm::createR600ISelDag(TargetMachine *TM,
                                       CodeGenOpt::Level OptLevel) {
@@ -287,7 +287,7 @@ bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
   return false;
 }
 
-/// \brief Determine the register class for \p OpNo
+/// Determine the register class for \p OpNo
 /// \returns The register class of the virtual register that will be used for
 /// the given operand number \OpNo or NULL if the register class cannot be
 /// determined.

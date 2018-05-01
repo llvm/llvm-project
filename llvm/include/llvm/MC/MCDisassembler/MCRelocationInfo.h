@@ -21,7 +21,7 @@ namespace llvm {
 class MCContext;
 class MCExpr;
 
-/// \brief Create MCExprs from relocations found in an object file.
+/// Create MCExprs from relocations found in an object file.
 class MCRelocationInfo {
 protected:
   MCContext &Ctx;
@@ -32,7 +32,7 @@ public:
   MCRelocationInfo &operator=(const MCRelocationInfo &) = delete;
   virtual ~MCRelocationInfo();
 
-  /// \brief Create an MCExpr for the target-specific \p VariantKind.
+  /// Create an MCExpr for the target-specific \p VariantKind.
   /// The VariantKinds are defined in llvm-c/Disassembler.h.
   /// Used by MCExternalSymbolizer.
   /// \returns If possible, an MCExpr corresponding to VariantKind, else 0.
