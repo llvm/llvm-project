@@ -72,7 +72,10 @@ public:
     ISAVersion8_0_3,
     ISAVersion8_1_0,
     ISAVersion9_0_0,
-    ISAVersion9_0_2
+    ISAVersion9_0_1,
+    ISAVersion9_0_2,
+    ISAVersion9_0_4,
+    ISAVersion9_0_6
   };
 
   enum TrapHandlerAbi {
@@ -150,6 +153,7 @@ protected:
   bool HasIntClamp;
   bool HasVOP3PInsts;
   bool HasMadMixInsts;
+  bool HasFmaMixInsts;
   bool HasMovrel;
   bool HasVGPRIndexMode;
   bool HasScalarStores;
@@ -162,6 +166,7 @@ protected:
   bool HasSDWAMac;
   bool HasSDWAOutModsVOPC;
   bool HasDPP;
+  bool HasDLInsts;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
   bool FlatGlobalInsts;
@@ -327,6 +332,10 @@ public:
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
+  }
+
+  bool hasFmaMixInsts() const {
+    return HasFmaMixInsts;
   }
 
   bool hasCARRY() const {
@@ -532,6 +541,10 @@ public:
 
   bool vmemWriteNeedsExpWaitcnt() const {
     return getGeneration() < SEA_ISLANDS;
+  }
+
+  bool hasDLInsts() const {
+    return HasDLInsts;
   }
 
   /// \brief Returns the offset in bytes from the start of the input buffer

@@ -28,9 +28,8 @@ exit:
 ; Check that we do not fold across an aliasing store.
 define void @f2(i8 *%src) {
 ; CHECK-LABEL: f2:
-; CHECK: llc [[REG:%r[0-5]]], 0(%r2)
-; CHECK-DAG: mvi 0(%r2), 0
-; CHECK-DAG: tmll [[REG]], 1
+; CHECK: tm 0(%r2), 1
+; CHECK: mvi 0(%r2), 0
 ; CHECK: ber %r14
 ; CHECK: br %r14
 entry:

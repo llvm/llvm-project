@@ -1706,11 +1706,6 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
   for (auto R = B.begin(); R != It; ++R) {
     Clobbers.clear();
     LPR.stepForward(*R, Clobbers);
-    // Dead defs are recorded in Clobbers, but are not automatically removed
-    // from the live set.
-    for (auto &C : Clobbers)
-      if (C.second->isReg() && C.second->isDead())
-        LPR.removeReg(C.first);
   }
 
   DebugLoc DL = MI->getDebugLoc();

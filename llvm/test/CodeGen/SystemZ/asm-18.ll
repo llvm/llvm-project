@@ -748,3 +748,78 @@ define void @f34(i32 *%ptr1, i32 *%ptr2) {
   store i32 %sel2, i32 *%ptr1
   ret void
 }
+
+; Test immediate addition with overflow involving high registers.
+define void @f35() {
+; CHECK-LABEL: f35:
+; CHECK: stepa [[REG:%r[0-5]]]
+; CHECK: aih [[REG]], -32768
+; CHECK: ipm [[REGCC:%r[0-5]]]
+; CHECK: afi [[REGCC]], 1342177280
+; CHECK: srl [[REGCC]], 31
+; CHECK: stepb [[REG]], [[REGCC]]
+; CHECK: aih [[REG]], 1
+; CHECK: ipm [[REGCC:%r[0-5]]]
+; CHECK: afi [[REGCC]], 1342177280
+; CHECK: srl [[REGCC]], 31
+; CHECK: stepc [[REG]], [[REGCC]]
+; CHECK: aih [[REG]], 32767
+; CHECK: ipm [[REGCC:%r[0-5]]]
+; CHECK: afi [[REGCC]], 1342177280
+; CHECK: srl [[REGCC]], 31
+; CHECK: stepd [[REG]], [[REGCC]]
+; CHECK: br %r14
+  %res1 = call i32 asm "stepa $0", "=h"()
+  %t1 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %res1, i32 -32768)
+  %val1 = extractvalue {i32, i1} %t1, 0
+  %obit1 = extractvalue {i32, i1} %t1, 1
+  %res2 = call i32 asm "stepb $0, $2", "=h,h,d"(i32 %val1, i1 %obit1)
+  %t2 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %res2, i32 1)
+  %val2 = extractvalue {i32, i1} %t2, 0
+  %obit2 = extractvalue {i32, i1} %t2, 1
+  %res3 = call i32 asm "stepc $0, $2", "=h,h,d"(i32 %val2, i1 %obit2)
+  %t3 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %res3, i32 32767)
+  %val3 = extractvalue {i32, i1} %t3, 0
+  %obit3 = extractvalue {i32, i1} %t3, 1
+  call void asm sideeffect "stepd $0, $1", "h,d"(i32 %val3, i1 %obit3)
+  ret void
+}
+
+; Test large immediate addition with overflow involving high registers.
+define void @f36() {
+; CHECK-LABEL: f36:
+; CHECK: stepa [[REG:%r[0-5]]]
+; CHECK: aih [[REG]], -2147483648
+; CHECK: ipm [[REGCC:%r[0-5]]]
+; CHECK: afi [[REGCC]], 1342177280
+; CHECK: srl [[REGCC]], 31
+; CHECK: stepb [[REG]], [[REGCC]]
+; CHECK: aih [[REG]], 1
+; CHECK: ipm [[REGCC:%r[0-5]]]
+; CHECK: afi [[REGCC]], 1342177280
+; CHECK: srl [[REGCC]], 31
+; CHECK: stepc [[REG]], [[REGCC]]
+; CHECK: aih [[REG]], 2147483647
+; CHECK: ipm [[REGCC:%r[0-5]]]
+; CHECK: afi [[REGCC]], 1342177280
+; CHECK: srl [[REGCC]], 31
+; CHECK: stepd [[REG]], [[REGCC]]
+; CHECK: br %r14
+  %res1 = call i32 asm "stepa $0", "=h"()
+  %t1 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %res1, i32 -2147483648)
+  %val1 = extractvalue {i32, i1} %t1, 0
+  %obit1 = extractvalue {i32, i1} %t1, 1
+  %res2 = call i32 asm "stepb $0, $2", "=h,h,d"(i32 %val1, i1 %obit1)
+  %t2 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %res2, i32 1)
+  %val2 = extractvalue {i32, i1} %t2, 0
+  %obit2 = extractvalue {i32, i1} %t2, 1
+  %res3 = call i32 asm "stepc $0, $2", "=h,h,d"(i32 %val2, i1 %obit2)
+  %t3 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %res3, i32 2147483647)
+  %val3 = extractvalue {i32, i1} %t3, 0
+  %obit3 = extractvalue {i32, i1} %t3, 1
+  call void asm sideeffect "stepd $0, $1", "h,d"(i32 %val3, i1 %obit3)
+  ret void
+}
+
+declare {i32, i1} @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
+

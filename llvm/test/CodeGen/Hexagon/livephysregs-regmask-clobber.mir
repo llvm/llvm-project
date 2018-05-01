@@ -1,0 +1,39 @@
+# RUN: llc -march=hexagon -verify-machineinstrs -run-pass prologepilog -o - %s | FileCheck %s
+
+# The PS_vstorerw_ai of W0 would normally expand into stores of V0 and V1,
+# but both are clobbered by the regmask. Only V0 is re-defined before the
+# store, so only V0 should be stored. LivePhysRegs didn't correctly remove
+# registers clobbered by regmasks, so V1 also appeared to be live and was
+# stored as well. This resulted in the "using undefined physical register"
+# error.
+
+# This will fail to compile with -verify-machineinstrs, but we can also check
+# directly if the output is correct.
+
+# CHECK: J2_call &__hexagon_divsi3
+# CHECK: $v0 = V6_lvsplatw
+# CHECK: V6_vS32b_ai $r29, 128, {{.*}} $v0
+# CHECK-NOT: V6_vS32b_ai $r29, 192, {{.*}} $v1
+
+name: f0
+tracksRegLiveness: true
+stack:
+  - { id: 0, offset: 0, size: 128, alignment: 128 }
+  - { id: 1, offset: 128, size: 128, alignment: 128 }
+  - { id: 2, offset: 384, size: 128, alignment: 128 }
+body: |
+  bb.0:
+    renamable $r0 = PS_fi %stack.0, 0
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    renamable $w0 = PS_vloadrw_ai %stack.2, 0 :: (load 128 from %stack.2)
+    V6_vS32b_ai killed renamable $r0, 0, renamable $v1 :: (store 64 into %stack.0, align 128)
+    $r0 = A2_tfrsi 0
+    renamable $r1 = L2_loadri_io %stack.0, 4 :: (load 4 from %stack.0 + 4)
+    J2_call &__hexagon_divsi3, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit-def $r29, implicit-def $r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    renamable $v0 = V6_lvsplatw killed renamable $r0
+    PS_vstorerw_ai %stack.1, 0, killed renamable $w0 :: (store 128 into %stack.1)
+...
+
+
+

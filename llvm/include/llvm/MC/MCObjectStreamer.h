@@ -89,7 +89,7 @@ public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
 
   MCAssembler &getAssembler() { return *Assembler; }
-
+  MCAssembler *getAssemblerPtr() override;
   /// \name MCStreamer Interface
   /// @{
 

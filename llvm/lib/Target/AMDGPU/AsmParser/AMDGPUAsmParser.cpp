@@ -4601,12 +4601,14 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
   }
 
-  // special case v_mac_{f16, f32}:
+  // Special case v_mac_{f16, f32} and v_fmac_f32 (gfx906):
   // it has src2 register operand that is tied to dst operand
   // we don't allow modifiers for this operand in assembler so src2_modifiers
-  // should be 0
-  if (Opc == AMDGPU::V_MAC_F32_e64_si || Opc == AMDGPU::V_MAC_F32_e64_vi ||
-      Opc == AMDGPU::V_MAC_F16_e64_vi) {
+  // should be 0.
+  if (Opc == AMDGPU::V_MAC_F32_e64_si ||
+      Opc == AMDGPU::V_MAC_F32_e64_vi ||
+      Opc == AMDGPU::V_MAC_F16_e64_vi ||
+      Opc == AMDGPU::V_FMAC_F32_e64_vi) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2

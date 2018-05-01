@@ -96,6 +96,7 @@ public:
                           const SectionAddrMap &Addrs) const;
   bool evaluateAsAbsolute(int64_t &Res) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
+  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
 
   bool evaluateKnownAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;

@@ -196,6 +196,7 @@ void MachineFunction::clear() {
   // Do call MachineBasicBlock destructors, it contains std::vectors.
   for (iterator I = begin(), E = end(); I != E; I = BasicBlocks.erase(I))
     I->Insts.clearAndLeakNodesUnsafely();
+  MBBNumbering.clear();
 
   InstructionRecycler.clear(Allocator);
   OperandRecycler.clear(Allocator);

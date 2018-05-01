@@ -344,7 +344,10 @@ public:
     delete reader;
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
+  bool runOnMachineFunction(MachineFunction &F) override {
+    nvptxSubtarget = &F.getSubtarget<NVPTXSubtarget>();
+    return AsmPrinter::runOnMachineFunction(F);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>();
@@ -354,6 +357,9 @@ public:
   bool ignoreLoc(const MachineInstr &);
 
   std::string getVirtualRegisterName(unsigned) const;
+
+  DebugLoc prevDebugLoc;
+  void emitLineNumberAsDotLoc(const MachineInstr &);
 };
 
 } // end namespace llvm

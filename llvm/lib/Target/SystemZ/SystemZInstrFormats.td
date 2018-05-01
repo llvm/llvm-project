@@ -3690,7 +3690,7 @@ class CompareRR<string mnemonic, bits<8> opcode, SDPatternOperator operator,
                 RegisterOperand cls1, RegisterOperand cls2>
   : InstRR<opcode, (outs), (ins cls1:$R1, cls2:$R2),
            mnemonic#"\t$R1, $R2",
-           [(operator cls1:$R1, cls2:$R2)]> {
+           [(set CC, (operator cls1:$R1, cls2:$R2))]> {
   let OpKey = mnemonic#cls1;
   let OpType = "reg";
   let isCompare = 1;
@@ -3700,7 +3700,7 @@ class CompareRRE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  RegisterOperand cls1, RegisterOperand cls2>
   : InstRRE<opcode, (outs), (ins cls1:$R1, cls2:$R2),
             mnemonic#"\t$R1, $R2",
-            [(operator cls1:$R1, cls2:$R2)]> {
+            [(set CC, (operator cls1:$R1, cls2:$R2))]> {
   let OpKey = mnemonic#cls1;
   let OpType = "reg";
   let isCompare = 1;
@@ -3710,7 +3710,7 @@ class CompareRI<string mnemonic, bits<12> opcode, SDPatternOperator operator,
                 RegisterOperand cls, Immediate imm>
   : InstRIa<opcode, (outs), (ins cls:$R1, imm:$I2),
             mnemonic#"\t$R1, $I2",
-            [(operator cls:$R1, imm:$I2)]> {
+            [(set CC, (operator cls:$R1, imm:$I2))]> {
   let isCompare = 1;
 }
 
@@ -3718,7 +3718,7 @@ class CompareRIL<string mnemonic, bits<12> opcode, SDPatternOperator operator,
                  RegisterOperand cls, Immediate imm>
   : InstRILa<opcode, (outs), (ins cls:$R1, imm:$I2),
              mnemonic#"\t$R1, $I2",
-             [(operator cls:$R1, imm:$I2)]> {
+             [(set CC, (operator cls:$R1, imm:$I2))]> {
   let isCompare = 1;
 }
 
@@ -3726,7 +3726,7 @@ class CompareRILPC<string mnemonic, bits<12> opcode, SDPatternOperator operator,
                    RegisterOperand cls, SDPatternOperator load>
   : InstRILb<opcode, (outs), (ins cls:$R1, pcrel32:$RI2),
              mnemonic#"\t$R1, $RI2",
-             [(operator cls:$R1, (load pcrel32:$RI2))]> {
+             [(set CC, (operator cls:$R1, (load pcrel32:$RI2)))]> {
   let isCompare = 1;
   let mayLoad = 1;
   // We want PC-relative addresses to be tried ahead of BD and BDX addresses.
@@ -3740,7 +3740,7 @@ class CompareRX<string mnemonic, bits<8> opcode, SDPatternOperator operator,
                 AddressingMode mode = bdxaddr12only>
   : InstRXa<opcode, (outs), (ins cls:$R1, mode:$XBD2),
             mnemonic#"\t$R1, $XBD2",
-            [(operator cls:$R1, (load mode:$XBD2))]> {
+            [(set CC, (operator cls:$R1, (load mode:$XBD2)))]> {
   let OpKey = mnemonic#"r"#cls;
   let OpType = "mem";
   let isCompare = 1;
@@ -3752,7 +3752,7 @@ class CompareRXE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  RegisterOperand cls, SDPatternOperator load, bits<5> bytes>
   : InstRXE<opcode, (outs), (ins cls:$R1, bdxaddr12only:$XBD2),
             mnemonic#"\t$R1, $XBD2",
-            [(operator cls:$R1, (load bdxaddr12only:$XBD2))]> {
+            [(set CC, (operator cls:$R1, (load bdxaddr12only:$XBD2)))]> {
   let OpKey = mnemonic#"r"#cls;
   let OpType = "mem";
   let isCompare = 1;
@@ -3766,7 +3766,7 @@ class CompareRXY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  AddressingMode mode = bdxaddr20only>
   : InstRXYa<opcode, (outs), (ins cls:$R1, mode:$XBD2),
              mnemonic#"\t$R1, $XBD2",
-             [(operator cls:$R1, (load mode:$XBD2))]> {
+             [(set CC, (operator cls:$R1, (load mode:$XBD2)))]> {
   let OpKey = mnemonic#"r"#cls;
   let OpType = "mem";
   let isCompare = 1;
@@ -3826,7 +3826,7 @@ class CompareSI<string mnemonic, bits<8> opcode, SDPatternOperator operator,
                 AddressingMode mode = bdaddr12only>
   : InstSI<opcode, (outs), (ins mode:$BD1, imm:$I2),
            mnemonic#"\t$BD1, $I2",
-           [(operator (load mode:$BD1), imm:$I2)]> {
+           [(set CC, (operator (load mode:$BD1), imm:$I2))]> {
   let isCompare = 1;
   let mayLoad = 1;
 }
@@ -3835,7 +3835,7 @@ class CompareSIL<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  SDPatternOperator load, Immediate imm>
   : InstSIL<opcode, (outs), (ins bdaddr12only:$BD1, imm:$I2),
             mnemonic#"\t$BD1, $I2",
-            [(operator (load bdaddr12only:$BD1), imm:$I2)]> {
+            [(set CC, (operator (load bdaddr12only:$BD1), imm:$I2))]> {
   let isCompare = 1;
   let mayLoad = 1;
 }
@@ -3845,7 +3845,7 @@ class CompareSIY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  AddressingMode mode = bdaddr20only>
   : InstSIY<opcode, (outs), (ins mode:$BD1, imm:$I2),
             mnemonic#"\t$BD1, $I2",
-            [(operator (load mode:$BD1), imm:$I2)]> {
+            [(set CC, (operator (load mode:$BD1), imm:$I2))]> {
   let isCompare = 1;
   let mayLoad = 1;
 }
@@ -3866,7 +3866,7 @@ class CompareVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                   TypedReg tr, bits<4> type>
   : InstVRRa<opcode, (outs), (ins tr.op:$V1, tr.op:$V2),
              mnemonic#"\t$V1, $V2",
-             [(operator (tr.vt tr.op:$V1), (tr.vt tr.op:$V2))]> {
+             [(set CC, (operator (tr.vt tr.op:$V1), (tr.vt tr.op:$V2)))]> {
   let isCompare = 1;
   let M3 = type;
   let M4 = 0;
@@ -3895,13 +3895,25 @@ class CompareVRRh<string mnemonic, bits<16> opcode>
   let isCompare = 1;
 }
 
+class TestInherentS<string mnemonic, bits<16> opcode,
+                    SDPatternOperator operator>
+  : InstS<opcode, (outs), (ins), mnemonic, [(set CC, (operator))]> {
+  let BD2 = 0;
+}
+
 class TestRXE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
               RegisterOperand cls>
   : InstRXE<opcode, (outs), (ins cls:$R1, bdxaddr12only:$XBD2),
             mnemonic#"\t$R1, $XBD2",
-            [(operator cls:$R1, bdxaddr12only:$XBD2)]> {
+            [(set CC, (operator cls:$R1, bdxaddr12only:$XBD2))]> {
   let M3 = 0;
 }
+
+class TestBinarySIL<string mnemonic, bits<16> opcode,
+                    SDPatternOperator operator, Immediate imm>
+  : InstSIL<opcode, (outs), (ins bdaddr12only:$BD1, imm:$I2),
+            mnemonic#"\t$BD1, $I2",
+            [(set CC, (operator bdaddr12only:$BD1, imm:$I2))]>;
 
 class TestRSL<string mnemonic, bits<16> opcode>
   : InstRSLa<opcode, (outs), (ins bdladdr12onlylen4:$BDL1),
@@ -4529,11 +4541,6 @@ class Pseudo<dag outs, dag ins, list<dag> pattern>
   let isCodeGenOnly = 1;
 }
 
-// Like SideEffectBinarySIL, but expanded later.
-class SideEffectBinarySILPseudo<SDPatternOperator operator, Immediate imm>
-  : Pseudo<(outs), (ins bdaddr12only:$BD1, imm:$I2),
-           [(operator bdaddr12only:$BD1, imm:$I2)]>;
-
 // Like UnaryRI, but expanded after RA depending on the choice of register.
 class UnaryRIPseudo<SDPatternOperator operator, RegisterOperand cls,
                     Immediate imm>
@@ -4593,7 +4600,8 @@ multiclass BinaryRIAndKPseudo<string key, SDPatternOperator operator,
 // Like CompareRI, but expanded after RA depending on the choice of register.
 class CompareRIPseudo<SDPatternOperator operator, RegisterOperand cls,
                       Immediate imm>
-  : Pseudo<(outs), (ins cls:$R1, imm:$I2), [(operator cls:$R1, imm:$I2)]> {
+  : Pseudo<(outs), (ins cls:$R1, imm:$I2),
+           [(set CC, (operator cls:$R1, imm:$I2))]> {
   let isCompare = 1;
 }
 
@@ -4602,12 +4610,17 @@ class CompareRXYPseudo<SDPatternOperator operator, RegisterOperand cls,
                        SDPatternOperator load, bits<5> bytes,
                        AddressingMode mode = bdxaddr20only>
   : Pseudo<(outs), (ins cls:$R1, mode:$XBD2),
-           [(operator cls:$R1, (load mode:$XBD2))]> {
+           [(set CC, (operator cls:$R1, (load mode:$XBD2)))]> {
   let mayLoad = 1;
   let Has20BitOffset = 1;
   let HasIndex = 1;
   let AccessBytes = bytes;
 }
+
+// Like TestBinarySIL, but expanded later.
+class TestBinarySILPseudo<SDPatternOperator operator, Immediate imm>
+  : Pseudo<(outs), (ins bdaddr12only:$BD1, imm:$I2),
+           [(set CC, (operator bdaddr12only:$BD1, imm:$I2))]>;
 
 // Like CondBinaryRRF, but expanded after RA depending on the choice of
 // register.
@@ -4690,17 +4703,13 @@ class SelectWrapper<ValueType vt, RegisterOperand cls>
                                             imm32zx4:$valid, imm32zx4:$cc))]> {
   let usesCustomInserter = 1;
   let hasNoSchedulingInfo = 1;
-  // Although the instructions used by these nodes do not in themselves
-  // change CC, the insertion requires new blocks, and CC cannot be live
-  // across them.
-  let Defs = [CC];
   let Uses = [CC];
 }
 
 // Stores $new to $addr if $cc is true ("" case) or false (Inv case).
 multiclass CondStores<RegisterOperand cls, SDPatternOperator store,
                       SDPatternOperator load, AddressingMode mode> {
-  let Defs = [CC], Uses = [CC], usesCustomInserter = 1, hasNoSchedulingInfo = 1,
+  let Uses = [CC], usesCustomInserter = 1, hasNoSchedulingInfo = 1,
       mayLoad = 1, mayStore = 1 in {
     def "" : Pseudo<(outs),
                     (ins cls:$new, mode:$addr, imm32zx4:$valid, imm32zx4:$cc),
@@ -4782,6 +4791,22 @@ multiclass MemorySS<string mnemonic, bits<8> opcode,
   }
 }
 
+// The same, but setting a CC result as comparion operator.
+multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
+                          SDPatternOperator sequence, SDPatternOperator loop> {
+  def "" : SideEffectBinarySSa<mnemonic, opcode>;
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+    def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                       imm64:$length),
+                           [(set CC, (sequence bdaddr12only:$dest, bdaddr12only:$src,
+                                               imm64:$length))]>;
+    def Loop : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                   imm64:$length, GR64:$count256),
+                      [(set CC, (loop bdaddr12only:$dest, bdaddr12only:$src,
+                                      imm64:$length, GR64:$count256))]>;
+  }
+}
+
 // Define an instruction that operates on two strings, both terminated
 // by the character in R0.  The instruction processes a CPU-determinated
 // number of bytes at a time and sets CC to 3 if the instruction needs
@@ -4851,7 +4876,8 @@ class BinaryAliasVRRf<RegisterOperand cls>
 // An alias of a CompareRI, but with different register sizes.
 class CompareAliasRI<SDPatternOperator operator, RegisterOperand cls,
                      Immediate imm>
-  : Alias<4, (outs), (ins cls:$R1, imm:$I2), [(operator cls:$R1, imm:$I2)]> {
+  : Alias<4, (outs), (ins cls:$R1, imm:$I2),
+          [(set CC, (operator cls:$R1, imm:$I2))]> {
   let isCompare = 1;
 }
 
