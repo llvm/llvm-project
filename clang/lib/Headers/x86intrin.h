@@ -100,4 +100,9 @@
 #include <waitpkgintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || \
+  defined(__MOVDIRI__) || defined(__MOVDIR64B__)
+#include <movdirintrin.h>
+#endif
+
 #endif /* __X86INTRIN_H */

@@ -301,6 +301,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_64BIT_XD_OPSIZE;
     else if (OpSize == X86Local::OpSize16 && OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_XS_OPSIZE;
+    else if (AdSize == X86Local::AdSize32 && OpPrefix == X86Local::PD)
+      insnContext = IC_64BIT_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 && AdSize == X86Local::AdSize32)
       insnContext = IC_64BIT_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD)
@@ -328,6 +330,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_XD_ADSIZE;
     else if (AdSize == X86Local::AdSize16 && OpPrefix == X86Local::XS)
       insnContext = IC_XS_ADSIZE;
+    else if (AdSize == X86Local::AdSize16 && OpPrefix == X86Local::PD)
+      insnContext = IC_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 && AdSize == X86Local::AdSize16)
       insnContext = IC_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD)
