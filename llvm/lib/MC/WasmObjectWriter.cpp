@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
@@ -35,6 +36,29 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mc"
+
+static std::string toString(wasm::WasmSymbolType type) {
+  switch (type) {
+  case wasm::WASM_SYMBOL_TYPE_FUNCTION:
+    return "WASM_SYMBOL_TYPE_FUNCTION";
+  case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+    return "WASM_SYMBOL_TYPE_GLOBAL";
+  case wasm::WASM_SYMBOL_TYPE_DATA:
+    return "WASM_SYMBOL_TYPE_DATA";
+  case wasm::WASM_SYMBOL_TYPE_SECTION:
+    return "WASM_SYMBOL_TYPE_SECTION";
+  }
+}
+
+static std::string relocTypetoString(uint32_t type) {
+  switch (type) {
+#define WASM_RELOC(NAME, VALUE) case VALUE: return #NAME;
+#include "llvm/BinaryFormat/WasmRelocs.def"
+#undef WASM_RELOC
+  default:
+    llvm_unreachable("uknown reloc type");
+  }
+}
 
 namespace {
 
@@ -162,8 +186,8 @@ struct WasmRelocationEntry {
   }
 
   void print(raw_ostream &Out) const {
-    Out << "Off=" << Offset << ", Sym=" << *Symbol << ", Addend=" << Addend
-        << ", Type=" << Type
+    Out << relocTypetoString(Type)
+        << " Off=" << Offset << ", Sym=" << *Symbol << ", Addend=" << Addend
         << ", FixupSection=" << FixupSection->getSectionName();
   }
 
@@ -213,7 +237,7 @@ class WasmObjectWriter : public MCObjectWriter {
   DenseMap<const MCSymbolWasm *, uint32_t> TableIndices;
   // Maps function/global symbols to the (shared) Symbol index space.
   DenseMap<const MCSymbolWasm *, uint32_t> SymbolIndices;
-  // Maps function/global symbols to the function/global Wasm index space.
+  // Maps function/global symbols to the function/global/section index space.
   DenseMap<const MCSymbolWasm *, uint32_t> WasmIndices;
   // Maps data symbols to the Wasm segment and offset/size with the segment.
   DenseMap<const MCSymbolWasm *, wasm::WasmDataReference> DataLocations;
@@ -1234,11 +1258,11 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       continue;
 
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
-    DEBUG(dbgs() << "MCSymbol: '" << S << "'"
+    DEBUG(dbgs() << "MCSymbol: " << toString(WS.getType())
+                 << " '" << S << "'"
                  << " isDefined=" << S.isDefined()
                  << " isExternal=" << S.isExternal()
                  << " isTemporary=" << S.isTemporary()
-                 << " isFunction=" << WS.isFunction()
                  << " isWeak=" << WS.isWeak()
                  << " isHidden=" << WS.isHidden()
                  << " isVariable=" << WS.isVariable() << "\n");
@@ -1283,7 +1307,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         continue;
 
       if (!WS.isDefined()) {
-        DEBUG(dbgs() << "  -> segment index: -1");
+        DEBUG(dbgs() << "  -> segment index: -1" << "\n");
         continue;
       }
 
@@ -1305,8 +1329,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
           static_cast<uint32_t>(Layout.getSymbolOffset(WS)),
           static_cast<uint32_t>(Size)};
       DataLocations[&WS] = Ref;
-      DEBUG(dbgs() << "  -> segment index: " << Ref.Segment);
-    } else {
+      DEBUG(dbgs() << "  -> segment index: " << Ref.Segment << "\n");
+    } else if (WS.isGlobal()) {
       // A "true" Wasm global (currently just __stack_pointer)
       if (WS.isDefined())
         report_fatal_error("don't yet support defined globals");
@@ -1314,6 +1338,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       // An import; the index was assigned above
       DEBUG(dbgs() << "  -> global index: " << WasmIndices.find(&WS)->second
                    << "\n");
+    } else {
+      assert(WS.isSection());
     }
   }
 

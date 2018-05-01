@@ -968,9 +968,9 @@ const size_t k_num_fpu_registers = llvm::array_lengthof(g_fpu_regnums);
 const size_t k_num_exc_registers = llvm::array_lengthof(g_exc_regnums);
 
 //----------------------------------------------------------------------
-// Register set definitions. The first definitions at register set index
-// of zero is for all registers, followed by other registers sets. The
-// register information for the all register set need not be filled in.
+// Register set definitions. The first definitions at register set index of
+// zero is for all registers, followed by other registers sets. The register
+// information for the all register set need not be filled in.
 //----------------------------------------------------------------------
 static const RegisterSet g_reg_sets[] = {
     {

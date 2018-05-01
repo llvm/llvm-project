@@ -13,11 +13,14 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "XRefs.h"
+#include "gmock/gmock.h"
+#include "index/FileIndex.h"
+#include "index/SymbolCollector.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Index/IndexingAction.h"
 #include "llvm/Support/Path.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -37,15 +40,31 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
 };
 
 // FIXME: this is duplicated with FileIndexTests. Share it.
-ParsedAST build(StringRef Code) {
-  auto CI = createInvocationFromCommandLine(
-      {"clang", "-xc++", testPath("Foo.cpp").c_str()});
-  auto Buf = MemoryBuffer::getMemBuffer(Code);
+ParsedAST build(StringRef MainCode, StringRef HeaderCode = "") {
+  auto HeaderPath = testPath("foo.h");
+  auto MainPath = testPath("foo.cpp");
+  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
+      new vfs::InMemoryFileSystem());
+  VFS->addFile(MainPath, 0, llvm::MemoryBuffer::getMemBuffer(MainCode));
+  VFS->addFile(HeaderPath, 0, llvm::MemoryBuffer::getMemBuffer(HeaderCode));
+  std::vector<const char *> Cmd = {"clang", "-xc++", MainPath.c_str()};
+  if (!HeaderCode.empty()) {
+    std::vector<const char *> args = {"-include", HeaderPath.c_str()};
+    Cmd.insert(Cmd.begin() + 1, args.begin(), args.end());
+  }
+  auto CI = createInvocationFromCommandLine(Cmd);
+
+  auto Buf = MemoryBuffer::getMemBuffer(MainCode);
   auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
-                              std::make_shared<PCHContainerOperations>(),
-                              vfs::getRealFileSystem());
+                              std::make_shared<PCHContainerOperations>(), VFS);
   assert(AST.hasValue());
   return std::move(*AST);
+}
+
+std::unique_ptr<SymbolIndex> buildIndex(StringRef MainCode,
+                                        StringRef HeaderCode) {
+  auto AST = build(MainCode, HeaderCode);
+  return MemIndex::build(indexAST(&AST));
 }
 
 // Extracts ranges from an annotated example, and constructs a matcher for a
@@ -105,6 +124,65 @@ TEST(HighlightsTest, All) {
 }
 
 MATCHER_P(RangeIs, R, "") { return arg.range == R; }
+
+TEST(GoToDefinition, WithIndex) {
+  Annotations SymbolHeader(R"cpp(
+        class $forward[[Forward]];
+        class $foo[[Foo]] {};
+
+        void $f1[[f1]]();
+
+        inline void $f2[[f2]]() {}
+      )cpp");
+  Annotations SymbolCpp(R"cpp(
+      class $forward[[forward]] {};
+      void  $f1[[f1]]() {}
+    )cpp");
+
+  auto Index = buildIndex(SymbolCpp.code(), SymbolHeader.code());
+  auto runFindDefinitionsWithIndex = [&Index](const Annotations &Main) {
+    auto AST = build(/*MainCode=*/Main.code(),
+                     /*HeaderCode=*/"");
+    return clangd::findDefinitions(AST, Main.point(), Index.get());
+  };
+
+  Annotations Test(R"cpp(// only declaration in AST.
+        void [[f1]]();
+        int main() {
+          ^f1();
+        }
+      )cpp");
+  EXPECT_THAT(runFindDefinitionsWithIndex(Test),
+              testing::ElementsAreArray(
+                  {RangeIs(SymbolCpp.range("f1")), RangeIs(Test.range())}));
+
+  Test = Annotations(R"cpp(// definition in AST.
+        void [[f1]]() {}
+        int main() {
+          ^f1();
+        }
+      )cpp");
+  EXPECT_THAT(runFindDefinitionsWithIndex(Test),
+              testing::ElementsAreArray(
+                  {RangeIs(Test.range()), RangeIs(SymbolHeader.range("f1"))}));
+
+  Test = Annotations(R"cpp(// forward declaration in AST.
+        class [[Foo]];
+        F^oo* create();
+      )cpp");
+  EXPECT_THAT(runFindDefinitionsWithIndex(Test),
+              testing::ElementsAreArray(
+                  {RangeIs(SymbolHeader.range("foo")), RangeIs(Test.range())}));
+
+  Test = Annotations(R"cpp(// defintion in AST.
+        class [[Forward]] {};
+        F^orward create();
+      )cpp");
+  EXPECT_THAT(runFindDefinitionsWithIndex(Test),
+              testing::ElementsAreArray({
+                  RangeIs(Test.range()), RangeIs(SymbolHeader.range("forward")),
+              }));
+}
 
 TEST(GoToDefinition, All) {
   const char *Tests[] = {

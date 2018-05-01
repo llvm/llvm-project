@@ -2554,7 +2554,10 @@ int BoUpSLP::getSpillCost() {
         continue;
       }
 
-      if (isa<CallInst>(&*PrevInstIt) && &*PrevInstIt != PrevInst) {
+      // Debug informations don't impact spill cost.
+      if ((isa<CallInst>(&*PrevInstIt) &&
+           !isa<DbgInfoIntrinsic>(&*PrevInstIt)) &&
+          &*PrevInstIt != PrevInst) {
         SmallVector<Type*, 4> V;
         for (auto *II : LiveValues)
           V.push_back(VectorType::get(II->getType(), BundleWidth));

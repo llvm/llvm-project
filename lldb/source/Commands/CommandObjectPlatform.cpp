@@ -385,8 +385,8 @@ protected:
         Status error;
 
         if (platform_sp->IsConnected()) {
-          // Cache the instance name if there is one since we are
-          // about to disconnect and the name might go with it.
+          // Cache the instance name if there is one since we are about to
+          // disconnect and the name might go with it.
           const char *hostname_cstr = platform_sp->GetHostname();
           std::string hostname;
           if (hostname_cstr)
@@ -867,8 +867,8 @@ public:
     // argument entry.
     arg2.push_back(file_arg_host);
 
-    // Push the data for the first and the second arguments into the m_arguments
-    // vector.
+    // Push the data for the first and the second arguments into the
+    // m_arguments vector.
     m_arguments.push_back(arg1);
     m_arguments.push_back(arg2);
   }
@@ -1059,8 +1059,8 @@ protected:
 
       if (argc > 0) {
         if (m_options.launch_info.GetExecutableFile()) {
-          // We already have an executable file, so we will use this
-          // and all arguments to this function are extra arguments
+          // We already have an executable file, so we will use this and all
+          // arguments to this function are extra arguments
           m_options.launch_info.GetArguments().AppendArguments(args);
         } else {
           // We don't have any file yet, so the first argument is our
@@ -1574,8 +1574,7 @@ public:
         // Are we in the name?
 
         // Look to see if there is a -P argument provided, and if so use that
-        // plugin, otherwise
-        // use the default plugin.
+        // plugin, otherwise use the default plugin.
 
         const char *partial_name = nullptr;
         partial_name = input.GetArgumentAtIndex(opt_arg_pos);

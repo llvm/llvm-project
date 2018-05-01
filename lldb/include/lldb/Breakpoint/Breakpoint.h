@@ -214,8 +214,8 @@ public:
   void Dump(Stream *s) override;
 
   //------------------------------------------------------------------
-  // The next set of methods provide ways to tell the breakpoint to update
-  // it's location list - usually done when modules appear or disappear.
+  // The next set of methods provide ways to tell the breakpoint to update it's
+  // location list - usually done when modules appear or disappear.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
@@ -287,8 +287,8 @@ public:
                       lldb::ModuleSP new_module_sp);
 
   //------------------------------------------------------------------
-  // The next set of methods provide access to the breakpoint locations
-  // for this breakpoint.
+  // The next set of methods provide access to the breakpoint locations for
+  // this breakpoint.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
@@ -744,10 +744,10 @@ protected:
   void DecrementIgnoreCount();
 
   // BreakpointLocation::IgnoreCountShouldStop &
-  // Breakpoint::IgnoreCountShouldStop can only be called once per stop,
-  // and BreakpointLocation::IgnoreCountShouldStop should be tested first, and
-  // if it returns false we should
-  // continue, otherwise we should test Breakpoint::IgnoreCountShouldStop.
+  // Breakpoint::IgnoreCountShouldStop can only be called once per stop, and
+  // BreakpointLocation::IgnoreCountShouldStop should be tested first, and if
+  // it returns false we should continue, otherwise we should test
+  // Breakpoint::IgnoreCountShouldStop.
 
   bool IgnoreCountShouldStop();
 
@@ -760,8 +760,7 @@ protected:
 
 private:
   // This one should only be used by Target to copy breakpoints from target to
-  // target - primarily from the dummy
-  // target to prime new targets.
+  // target - primarily from the dummy target to prime new targets.
   Breakpoint(Target &new_target, Breakpoint &bp_to_copy_from);
 
   //------------------------------------------------------------------
@@ -782,9 +781,9 @@ private:
   BreakpointPreconditionSP m_precondition_sp; // The precondition is a
                                               // breakpoint-level hit filter
                                               // that can be used
-  // to skip certain breakpoint hits.  For instance, exception breakpoints
-  // use this to limit the stop to certain exception classes, while leaving
-  // the condition & callback free for user specification.
+  // to skip certain breakpoint hits.  For instance, exception breakpoints use
+  // this to limit the stop to certain exception classes, while leaving the
+  // condition & callback free for user specification.
   std::unique_ptr<BreakpointOptions>
       m_options_up; // Settable breakpoint options
   BreakpointLocationList

@@ -67,8 +67,8 @@ public:
   void SetBlocksize(lldb::offset_t blocksize) { m_blocksize = blocksize; }
 
   //----------------------------------------------------------------------
-  // Get permissions as a uint32_t that is a mask of one or more bits from
-  // the lldb::Permissions
+  // Get permissions as a uint32_t that is a mask of one or more bits from the
+  // lldb::Permissions
   //----------------------------------------------------------------------
   uint32_t GetLLDBPermissions() const {
     uint32_t permissions = 0;
@@ -82,8 +82,8 @@ public:
   }
 
   //----------------------------------------------------------------------
-  // Set permissions from a uint32_t that contains one or more bits from
-  // the lldb::Permissions
+  // Set permissions from a uint32_t that contains one or more bits from the
+  // lldb::Permissions
   //----------------------------------------------------------------------
   void SetLLDBPermissions(uint32_t permissions) {
     m_read = (permissions & lldb::ePermissionsReadable) ? eYes : eNo;

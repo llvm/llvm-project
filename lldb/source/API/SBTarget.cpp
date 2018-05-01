@@ -84,8 +84,8 @@ Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
     const auto state = process_sp->GetState();
     if (process_sp->IsAlive() && state == eStateConnected) {
       // If we are already connected, then we have already specified the
-      // listener, so if a valid listener is supplied, we need to error out
-      // to let the client know.
+      // listener, so if a valid listener is supplied, we need to error out to
+      // let the client know.
       if (attach_info.GetListener())
         return Status("process is connected and already has a listener, pass "
                       "empty listener");
@@ -288,8 +288,8 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
 
     if (state == eStateConnected) {
       // If we are already connected, then we have already specified the
-      // listener, so if a valid listener is supplied, we need to error out
-      // to let the client know.
+      // listener, so if a valid listener is supplied, we need to error out to
+      // let the client know.
       if (listener.IsValid()) {
         error.SetErrorString("process is connected and already has a listener, "
                              "pass empty listener");
@@ -1543,9 +1543,9 @@ const char *SBTarget::GetTriple() {
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::string triple(target_sp->GetArchitecture().GetTriple().str());
-    // Unique the string so we don't run into ownership issues since
-    // the const strings put the string into the string pool once and
-    // the strings never comes out
+    // Unique the string so we don't run into ownership issues since the const
+    // strings put the string into the string pool once and the strings never
+    // comes out
     ConstString const_triple(triple.c_str());
     return const_triple.GetCString();
   }
@@ -1695,8 +1695,8 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
       }
     }
 
-    // Didn't find the type in the symbols; try the Objective-C runtime
-    // if one is installed
+    // Didn't find the type in the symbols; try the Objective-C runtime if one
+    // is installed
 
     ProcessSP process_sp(target_sp->GetProcessSP());
 

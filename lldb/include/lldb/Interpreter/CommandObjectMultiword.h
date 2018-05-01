@@ -87,8 +87,8 @@ public:
 
   ~CommandObjectProxy() override;
 
-  // Subclasses must provide a command object that will be transparently
-  // used for this object.
+  // Subclasses must provide a command object that will be transparently used
+  // for this object.
   virtual CommandObject *GetProxyCommandObject() = 0;
 
   llvm::StringRef GetHelpLong() override;

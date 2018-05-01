@@ -25,28 +25,25 @@
 
 namespace lldb_private {
 
-// The UnwindPlan object specifies how to unwind out of a function - where
-// this function saves the caller's register values before modifying them
-// (for non-volatile aka saved registers) and how to find this frame's
-// Canonical Frame Address (CFA).
+// The UnwindPlan object specifies how to unwind out of a function - where this
+// function saves the caller's register values before modifying them (for non-
+// volatile aka saved registers) and how to find this frame's Canonical Frame
+// Address (CFA).
 
-// Most commonly, registers are saved on the stack, offset some bytes from
-// the Canonical Frame Address, or CFA, which is the starting address of
-// this function's stack frame (the CFA is same as the eh_frame's CFA,
-// whatever that may be on a given architecture).
-// The CFA address for the stack frame does not change during
-// the lifetime of the function.
+// Most commonly, registers are saved on the stack, offset some bytes from the
+// Canonical Frame Address, or CFA, which is the starting address of this
+// function's stack frame (the CFA is same as the eh_frame's CFA, whatever that
+// may be on a given architecture). The CFA address for the stack frame does
+// not change during the lifetime of the function.
 
 // Internally, the UnwindPlan is structured as a vector of register locations
 // organized by code address in the function, showing which registers have been
-// saved at that point and where they are saved.
-// It can be thought of as the expanded table form of the DWARF CFI
-// encoded information.
+// saved at that point and where they are saved. It can be thought of as the
+// expanded table form of the DWARF CFI encoded information.
 
 // Other unwind information sources will be converted into UnwindPlans before
-// being added to a FuncUnwinders object.  The unwind source may be
-// an eh_frame FDE, a DWARF debug_frame FDE, or assembly language based
-// prologue analysis.
+// being added to a FuncUnwinders object.  The unwind source may be an eh_frame
+// FDE, a DWARF debug_frame FDE, or assembly language based prologue analysis.
 // The UnwindPlan is the canonical form of this information that the unwinder
 // code will use when walking the stack.
 
@@ -371,12 +368,10 @@ public:
   void InsertRow(const RowSP &row_sp, bool replace_existing = false);
 
   // Returns a pointer to the best row for the given offset into the function's
-  // instructions.
-  // If offset is -1 it indicates that the function start is unknown - the final
-  // row in the UnwindPlan is returned.
-  // In practice, the UnwindPlan for a function with no known start address will
-  // be the architectural default
-  // UnwindPlan which will only have one row.
+  // instructions. If offset is -1 it indicates that the function start is
+  // unknown - the final row in the UnwindPlan is returned. In practice, the
+  // UnwindPlan for a function with no known start address will be the
+  // architectural default UnwindPlan which will only have one row.
   UnwindPlan::RowSP GetRowForFunctionOffset(int offset) const;
 
   lldb::RegisterKind GetRegisterKind() const { return m_register_kind; }
@@ -427,15 +422,13 @@ public:
   }
 
   // Is this UnwindPlan valid at all instructions?  If not, then it is assumed
-  // valid at call sites,
-  // e.g. for exception handling.
+  // valid at call sites, e.g. for exception handling.
   lldb_private::LazyBool GetUnwindPlanValidAtAllInstructions() const {
     return m_plan_is_valid_at_all_instruction_locations;
   }
 
   // Is this UnwindPlan valid at all instructions?  If not, then it is assumed
-  // valid at call sites,
-  // e.g. for exception handling.
+  // valid at call sites, e.g. for exception handling.
   void SetUnwindPlanValidAtAllInstructions(
       lldb_private::LazyBool valid_at_all_insn) {
     m_plan_is_valid_at_all_instruction_locations = valid_at_all_insn;

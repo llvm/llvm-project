@@ -97,9 +97,9 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
         return error;
       exe_module_sp.reset();
     }
-    // No valid architecture was specified or the exact ARM slice wasn't
-    // found so ask the platform for the architectures that we should be
-    // using (in the correct order) and see if we can find a match that way
+    // No valid architecture was specified or the exact ARM slice wasn't found
+    // so ask the platform for the architectures that we should be using (in
+    // the correct order) and see if we can find a match that way
     StreamString arch_names;
     for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
              idx, resolved_module_spec.GetArchitecture());
@@ -183,8 +183,8 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
                                    &builtin_sdk_directory_infos);
 
       // Only add SDK directories that have symbols in them, some SDKs only
-      // contain
-      // developer disk images and no symbols, so they aren't useful to us.
+      // contain developer disk images and no symbols, so they aren't useful to
+      // us.
       FileSpec sdk_symbols_symlink_fspec;
       for (const auto &sdk_directory_info : builtin_sdk_directory_infos) {
         sdk_symbols_symlink_fspec = sdk_directory_info.directory;
@@ -244,8 +244,8 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
   if (UpdateSDKDirectoryInfosIfNeeded()) {
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
 
-    // Check to see if the user specified a build string. If they did, then
-    // be sure to match it.
+    // Check to see if the user specified a build string. If they did, then be
+    // sure to match it.
     std::vector<bool> check_sdk_info(num_sdk_infos, true);
     ConstString build(m_sdk_build);
     if (build) {
@@ -253,8 +253,8 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
         check_sdk_info[i] = m_sdk_directory_infos[i].build == build;
     }
 
-    // If we are connected we can find the version of the OS the platform
-    // us running on and select the right SDK
+    // If we are connected we can find the version of the OS the platform us
+    // running on and select the right SDK
     uint32_t major, minor, update;
     if (GetOSVersion(major, minor, update)) {
       if (UpdateSDKDirectoryInfosIfNeeded()) {
@@ -366,8 +366,8 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() 
     }
   }
   // We should have put a single NULL character into
-  // m_device_support_directory_for_os_version
-  // or it should have a valid path if the code gets here
+  // m_device_support_directory_for_os_version or it should have a valid path
+  // if the code gets here
   assert(m_device_support_directory_for_os_version.empty() == false);
   if (m_device_support_directory_for_os_version[0])
     return m_device_support_directory_for_os_version.c_str();
@@ -492,10 +492,9 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
     bool *did_create_ptr) {
-  // For iOS, the SDK files are all cached locally on the host
-  // system. So first we ask for the file in the cached SDK,
-  // then we attempt to get a shared module for the right architecture
-  // with the right UUID.
+  // For iOS, the SDK files are all cached locally on the host system. So first
+  // we ask for the file in the cached SDK, then we attempt to get a shared
+  // module for the right architecture with the right UUID.
   const FileSpec &platform_file = module_spec.GetFileSpec();
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
@@ -510,8 +509,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
 
     // If we are connected we migth be able to correctly deduce the SDK
-    // directory
-    // using the OS build.
+    // directory using the OS build.
     const uint32_t connected_sdk_idx = GetConnectedSDKIndex();
     if (connected_sdk_idx < num_sdk_infos) {
       LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
@@ -528,8 +526,8 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       }
     }
 
-    // Try the last SDK index if it is set as most files from an SDK
-    // will tend to be valid in that same SDK.
+    // Try the last SDK index if it is set as most files from an SDK will tend
+    // to be valid in that same SDK.
     if (m_last_module_sdk_idx < num_sdk_infos) {
       LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
                 m_sdk_directory_infos[m_last_module_sdk_idx].directory);
@@ -544,9 +542,9 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       }
     }
 
-    // First try for an exact match of major, minor and update:
-    // If a particalar SDK version was specified via --version or --build, look
-    // for a match on disk.
+    // First try for an exact match of major, minor and update: If a particalar
+    // SDK version was specified via --version or --build, look for a match on
+    // disk.
     const SDKDirectoryInfo *current_sdk_info =
         GetSDKDirectoryForCurrentOSVersion();
     const uint32_t current_sdk_idx =
@@ -570,8 +568,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     // Second try all SDKs that were found.
     for (uint32_t sdk_idx = 0; sdk_idx < num_sdk_infos; ++sdk_idx) {
       if (m_last_module_sdk_idx == sdk_idx) {
-        // Skip the last module SDK index if we already searched
-        // it above
+        // Skip the last module SDK index if we already searched it above
         continue;
       }
       LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
@@ -582,8 +579,8 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
 
         error = ResolveExecutable(platform_module_spec, module_sp, NULL);
         if (module_sp) {
-          // Remember the index of the last SDK that we found a file
-          // in in case the wrong SDK was selected.
+          // Remember the index of the last SDK that we found a file in in case
+          // the wrong SDK was selected.
           m_last_module_sdk_idx = sdk_idx;
           error.Clear();
           return error;

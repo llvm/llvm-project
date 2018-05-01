@@ -33,12 +33,10 @@
 namespace lldb_private {
 
 // this file (and its. cpp) contain the low-level implementation of LLDB Data
-// Visualization
-// class DataVisualization is the high-level front-end of this feature
-// clients should refer to that class as the entry-point into the data
-// formatters
-// unless they have a good reason to bypass it and prefer to use this file's
-// objects directly
+// Visualization class DataVisualization is the high-level front-end of this
+// feature clients should refer to that class as the entry-point into the data
+// formatters unless they have a good reason to bypass it and prefer to use
+// this file's objects directly
 
 class FormatManager : public IFormatChangeListener {
   typedef FormatMap<ConstString, TypeSummaryImpl> NamedSummariesMap;
@@ -175,24 +173,22 @@ public:
 
   static const char *GetFormatAsCString(lldb::Format format);
 
-  // if the user tries to add formatters for, say, "struct Foo"
-  // those will not match any type because of the way we strip qualifiers from
-  // typenames
-  // this method looks for the case where the user is adding a
-  // "class","struct","enum" or "union" Foo
-  // and strips the unnecessary qualifier
+  // if the user tries to add formatters for, say, "struct Foo" those will not
+  // match any type because of the way we strip qualifiers from typenames this
+  // method looks for the case where the user is adding a
+  // "class","struct","enum" or "union" Foo and strips the unnecessary
+  // qualifier
   static ConstString GetValidTypeName(const ConstString &type);
 
   // when DataExtractor dumps a vectorOfT, it uses a predefined format for each
-  // item
-  // this method returns it, or eFormatInvalid if vector_format is not a
+  // item this method returns it, or eFormatInvalid if vector_format is not a
   // vectorOf
   static lldb::Format GetSingleItemFormat(lldb::Format vector_format);
 
-  // this returns true if the ValueObjectPrinter is *highly encouraged*
-  // to actually represent this ValueObject in one-liner format
-  // If this object has a summary formatter, however, we should not
-  // try and do one-lining, just let the summary do the right thing
+  // this returns true if the ValueObjectPrinter is *highly encouraged* to
+  // actually represent this ValueObject in one-liner format If this object has
+  // a summary formatter, however, we should not try and do one-lining, just
+  // let the summary do the right thing
   bool ShouldPrintAsOneLiner(ValueObject &valobj);
 
   void Changed() override;
@@ -249,15 +245,12 @@ private:
 
   TypeCategoryMap &GetCategories() { return m_categories_map; }
 
-  // These functions are meant to initialize formatters that are very
-  // low-level/global in nature
-  // and do not naturally belong in any language. The intent is that most
-  // formatters go in
-  // language-specific categories. Eventually, the runtimes should also be
-  // allowed to vend their
-  // own formatters, and then one could put formatters that depend on specific
-  // library load events
-  // in the language runtimes, on an as-needed basis
+  // These functions are meant to initialize formatters that are very low-
+  // level/global in nature and do not naturally belong in any language. The
+  // intent is that most formatters go in language-specific categories.
+  // Eventually, the runtimes should also be allowed to vend their own
+  // formatters, and then one could put formatters that depend on specific
+  // library load events in the language runtimes, on an as-needed basis
   void LoadSystemFormatters();
 
   void LoadVectorFormatters();

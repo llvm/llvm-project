@@ -55,8 +55,7 @@ CommandObjectSP CommandObjectMultiword::GetSubcommandSP(llvm::StringRef sub_cmd,
 
       if (num_matches == 1) {
         // Cleaner, but slightly less efficient would be to call back into this
-        // function, since I now
-        // know I have an exact match...
+        // function, since I now know I have an exact match...
 
         sub_cmd = matches->GetStringAtIndex(0);
         pos = m_subcommand_dict.find(sub_cmd);
@@ -121,8 +120,8 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   CommandObject *sub_cmd_obj = GetSubcommandObject(sub_command, &matches);
   if (sub_cmd_obj != nullptr) {
     // Now call CommandObject::Execute to process options in `rest_of_line`.
-    // From there the command-specific version of Execute will be called,
-    // with the processed arguments.
+    // From there the command-specific version of Execute will be called, with
+    // the processed arguments.
 
     args.Shift();
     sub_cmd_obj->Execute(args_string, result);
@@ -156,8 +155,8 @@ bool CommandObjectMultiword::Execute(const char *args_string,
 }
 
 void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {
-  // First time through here, generate the help text for the object and
-  // push it to the return result object as well
+  // First time through here, generate the help text for the object and push it
+  // to the return result object as well
 
   CommandObject::GenerateHelpText(output_stream);
   output_stream.PutCString("\nThe following subcommands are supported:\n\n");

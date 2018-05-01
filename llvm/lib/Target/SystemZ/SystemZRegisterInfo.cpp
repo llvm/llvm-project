@@ -315,3 +315,11 @@ SystemZRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SystemZFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? SystemZ::R11D : SystemZ::R15D;
 }
+
+const TargetRegisterClass *
+SystemZRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
+  if (RC == &SystemZ::CCRRegClass)
+    return &SystemZ::GR32BitRegClass;
+  return RC;
+}
+

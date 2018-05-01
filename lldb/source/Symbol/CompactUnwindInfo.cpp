@@ -262,8 +262,7 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
   if (m_unwindinfo_data_computed == false) {
     if (m_section_sp->IsEncrypted()) {
       // Can't get section contents of a protected/encrypted section until we
-      // have a live
-      // process and can read them out of memory.
+      // have a live process and can read them out of memory.
       if (process_sp.get() == nullptr)
         return;
       m_section_contents_if_encrypted.reset(
@@ -329,11 +328,10 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
       return;
     }
 
-    // Parse the basic information from the indexes
-    // We wait to scan the second level page info until it's needed
+    // Parse the basic information from the indexes We wait to scan the second
+    // level page info until it's needed
 
-    // struct unwind_info_section_header_index_entry
-    // {
+    // struct unwind_info_section_header_index_entry {
     //     uint32_t        functionOffset;
     //     uint32_t        secondLevelPagesSectionOffset;
     //     uint32_t        lsdaIndexArraySectionOffset;
@@ -388,8 +386,7 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
 uint32_t CompactUnwindInfo::GetLSDAForFunctionOffset(uint32_t lsda_offset,
                                                      uint32_t lsda_count,
                                                      uint32_t function_offset) {
-  // struct unwind_info_section_header_lsda_index_entry
-  // {
+  // struct unwind_info_section_header_lsda_index_entry {
   //         uint32_t        functionOffset;
   //         uint32_t        lsdaOffset;
   // };
@@ -419,8 +416,7 @@ lldb::offset_t CompactUnwindInfo::BinarySearchRegularSecondPage(
     uint32_t entry_page_offset, uint32_t entry_count, uint32_t function_offset,
     uint32_t *entry_func_start_offset, uint32_t *entry_func_end_offset) {
   // typedef uint32_t compact_unwind_encoding_t;
-  // struct unwind_info_regular_second_level_entry
-  // {
+  // struct unwind_info_regular_second_level_entry {
   //     uint32_t                    functionOffset;
   //     compact_unwind_encoding_t    encoding;
 
@@ -539,9 +535,9 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
 
   auto next_it = it + 1;
   if (next_it != m_indexes.end()) {
-    // initialize the function offset end range to be the start of the
-    // next index offset.  If we find an entry which is at the end of
-    // the index table, this will establish the range end.
+    // initialize the function offset end range to be the start of the next
+    // index offset.  If we find an entry which is at the end of the index
+    // table, this will establish the range end.
     unwind_info.valid_range_offset_end = next_it->function_offset;
   }
 
@@ -554,15 +550,13 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
       &offset); // UNWIND_SECOND_LEVEL_REGULAR or UNWIND_SECOND_LEVEL_COMPRESSED
 
   if (kind == UNWIND_SECOND_LEVEL_REGULAR) {
-    // struct unwind_info_regular_second_level_page_header
-    // {
+    // struct unwind_info_regular_second_level_page_header {
     //     uint32_t    kind;    // UNWIND_SECOND_LEVEL_REGULAR
     //     uint16_t    entryPageOffset;
     //     uint16_t    entryCount;
 
     // typedef uint32_t compact_unwind_encoding_t;
-    // struct unwind_info_regular_second_level_entry
-    // {
+    // struct unwind_info_regular_second_level_entry {
     //     uint32_t                    functionOffset;
     //     compact_unwind_encoding_t    encoding;
 
@@ -612,8 +606,7 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
     }
     return true;
   } else if (kind == UNWIND_SECOND_LEVEL_COMPRESSED) {
-    // struct unwind_info_compressed_second_level_page_header
-    // {
+    // struct unwind_info_compressed_second_level_page_header {
     //     uint32_t    kind;    // UNWIND_SECOND_LEVEL_COMPRESSED
     //     uint16_t    entryPageOffset;         // offset from this 2nd lvl page
     //     idx to array of entries
@@ -721,8 +714,8 @@ enum x86_64_eh_regnum {
            // enough
 };
 
-// Convert the compact_unwind_info.h register numbering scheme
-// to eRegisterKindEHFrame (eh_frame) register numbering scheme.
+// Convert the compact_unwind_info.h register numbering scheme to
+// eRegisterKindEHFrame (eh_frame) register numbering scheme.
 uint32_t translate_to_eh_frame_regnum_x86_64(uint32_t unwind_regno) {
   switch (unwind_regno) {
   case UNWIND_X86_64_REG_RBX:
@@ -802,9 +795,8 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
 
   case UNWIND_X86_64_MODE_STACK_IND: {
     // The clang in Xcode 6 is emitting incorrect compact unwind encodings for
-    // this
-    // style of unwind.  It was fixed in llvm r217020.
-    // The clang in Xcode 7 has this fixed.
+    // this style of unwind.  It was fixed in llvm r217020. The clang in Xcode
+    // 7 has this fixed.
     return false;
   } break;
 
@@ -861,17 +853,17 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
 
     if (register_count > 0) {
 
-      // We need to include (up to) 6 registers in 10 bits.
-      // That would be 18 bits if we just used 3 bits per reg to indicate
-      // the order they're saved on the stack.
+      // We need to include (up to) 6 registers in 10 bits. That would be 18
+      // bits if we just used 3 bits per reg to indicate the order they're
+      // saved on the stack.
       //
       // This is done with Lehmer code permutation, e.g. see
-      // http://stackoverflow.com/questions/1506078/fast-permutation-number-permutation-mapping-algorithms
+      // http://stackoverflow.com/questions/1506078/fast-permutation-number-
+      // permutation-mapping-algorithms
       int permunreg[6] = {0, 0, 0, 0, 0, 0};
 
-      // This decodes the variable-base number in the 10 bits
-      // and gives us the Lehmer code sequence which can then
-      // be decoded.
+      // This decodes the variable-base number in the 10 bits and gives us the
+      // Lehmer code sequence which can then be decoded.
 
       switch (register_count) {
       case 6:
@@ -923,8 +915,8 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
         break;
       }
 
-      // Decode the Lehmer code for this permutation of
-      // the registers v. http://en.wikipedia.org/wiki/Lehmer_code
+      // Decode the Lehmer code for this permutation of the registers v.
+      // http://en.wikipedia.org/wiki/Lehmer_code
 
       int registers[6] = {UNWIND_X86_64_REG_NONE, UNWIND_X86_64_REG_NONE,
                           UNWIND_X86_64_REG_NONE, UNWIND_X86_64_REG_NONE,
@@ -993,8 +985,8 @@ enum i386_eh_regnum {
           // enough
 };
 
-// Convert the compact_unwind_info.h register numbering scheme
-// to eRegisterKindEHFrame (eh_frame) register numbering scheme.
+// Convert the compact_unwind_info.h register numbering scheme to
+// eRegisterKindEHFrame (eh_frame) register numbering scheme.
 uint32_t translate_to_eh_frame_regnum_i386(uint32_t unwind_regno) {
   switch (unwind_regno) {
   case UNWIND_X86_REG_EBX:
@@ -1123,17 +1115,17 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
 
     if (register_count > 0) {
 
-      // We need to include (up to) 6 registers in 10 bits.
-      // That would be 18 bits if we just used 3 bits per reg to indicate
-      // the order they're saved on the stack.
+      // We need to include (up to) 6 registers in 10 bits. That would be 18
+      // bits if we just used 3 bits per reg to indicate the order they're
+      // saved on the stack.
       //
       // This is done with Lehmer code permutation, e.g. see
-      // http://stackoverflow.com/questions/1506078/fast-permutation-number-permutation-mapping-algorithms
+      // http://stackoverflow.com/questions/1506078/fast-permutation-number-
+      // permutation-mapping-algorithms
       int permunreg[6] = {0, 0, 0, 0, 0, 0};
 
-      // This decodes the variable-base number in the 10 bits
-      // and gives us the Lehmer code sequence which can then
-      // be decoded.
+      // This decodes the variable-base number in the 10 bits and gives us the
+      // Lehmer code sequence which can then be decoded.
 
       switch (register_count) {
       case 6:
@@ -1185,8 +1177,8 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
         break;
       }
 
-      // Decode the Lehmer code for this permutation of
-      // the registers v. http://en.wikipedia.org/wiki/Lehmer_code
+      // Decode the Lehmer code for this permutation of the registers v.
+      // http://en.wikipedia.org/wiki/Lehmer_code
 
       int registers[6] = {UNWIND_X86_REG_NONE, UNWIND_X86_REG_NONE,
                           UNWIND_X86_REG_NONE, UNWIND_X86_REG_NONE,
@@ -1260,14 +1252,10 @@ enum arm64_eh_regnum {
   pc = 32,
 
   // Compact unwind encodes d8-d15 but we don't have eh_frame / dwarf reg #'s
-  // for the 64-bit
-  // fp regs.  Normally in DWARF it's context sensitive - so it knows it is
-  // fetching a
-  // 32- or 64-bit quantity from reg v8 to indicate s0 or d0 - but the unwinder
-  // is operating
-  // at a lower level and we'd try to fetch 128 bits if we were told that v8
-  // were stored on
-  // the stack...
+  // for the 64-bit fp regs.  Normally in DWARF it's context sensitive - so it
+  // knows it is fetching a 32- or 64-bit quantity from reg v8 to indicate s0
+  // or d0 - but the unwinder is operating at a lower level and we'd try to
+  // fetch 128 bits if we were told that v8 were stored on the stack...
   v8 = 72,
   v9 = 73,
   v10 = 74,

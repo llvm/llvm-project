@@ -32,6 +32,11 @@ int baz2();
 int baz4() { return 5; }
 
 #pragma omp declare target
+struct S {
+  int a;
+  S(int a) : a(a) {}
+};
+
 int foo() { return 0; }
 int b = 15;
 int d;
@@ -47,6 +52,7 @@ int maini1() {
 #pragma omp target map(tofrom \
                        : a, b)
   {
+    S s(a);
     static long aaa = 23;
     a = foo() + bar() + b + c + d + aa + aaa;
   }

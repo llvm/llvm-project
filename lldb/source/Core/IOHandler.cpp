@@ -256,9 +256,8 @@ int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
       matches.LongestCommonPrefix(common_prefix);
       const size_t partial_name_len = strlen(word_start);
 
-      // If we matched a unique single command, add a space...
-      // Only do this if the completer told us this was a complete word,
-      // however...
+      // If we matched a unique single command, add a space... Only do this if
+      // the completer told us this was a complete word, however...
       if (num_matches == 1 && word_complete) {
         common_prefix.push_back(' ');
       }
@@ -321,8 +320,7 @@ IOHandlerEditline::IOHandlerEditline(
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
     if (indent_chars) {
       // The delegate does support indentation, hook it up so when any
-      // indentation
-      // character is typed, the delegate gets a chance to fix it
+      // indentation character is typed, the delegate gets a chance to fix it
       m_editline_ap->SetFixIndentationCallback(FixIndentationCallback, this,
                                                indent_chars);
     }
@@ -408,8 +406,8 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
         }
       }
       m_editing = false;
-      // We might have gotten a newline on a line by itself
-      // make sure to return true in this case.
+      // We might have gotten a newline on a line by itself make sure to return
+      // true in this case.
       return got_line;
     } else {
       // No more input file, we are done...
@@ -545,9 +543,8 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
   return success;
 }
 
-// Each IOHandler gets to run until it is done. It should read data
-// from the "in" and place output into "out" and "err and return
-// when done.
+// Each IOHandler gets to run until it is done. It should read data from the
+// "in" and place output into "out" and "err and return when done.
 void IOHandlerEditline::Run() {
   std::string line;
   while (IsActive()) {
@@ -635,8 +632,7 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
   }
 }
 
-// we may want curses to be disabled for some builds
-// for instance, windows
+// we may want curses to be disabled for some builds for instance, windows
 #ifndef LLDB_DISABLE_CURSES
 
 #define KEY_RETURN 10
@@ -738,9 +734,8 @@ struct Rect {
     origin.y += h;
   }
 
-  // Return a status bar rectangle which is the last line of
-  // this rectangle. This rectangle will be modified to not
-  // include the status bar area.
+  // Return a status bar rectangle which is the last line of this rectangle.
+  // This rectangle will be modified to not include the status bar area.
   Rect MakeStatusBar() {
     Rect status_bar;
     if (size.height > 1) {
@@ -753,9 +748,8 @@ struct Rect {
     return status_bar;
   }
 
-  // Return a menubar rectangle which is the first line of
-  // this rectangle. This rectangle will be modified to not
-  // include the menubar area.
+  // Return a menubar rectangle which is the first line of this rectangle. This
+  // rectangle will be modified to not include the menubar area.
   Rect MakeMenuBar() {
     Rect menubar;
     if (size.height > 1) {
@@ -1204,12 +1198,10 @@ public:
         return result;
     }
 
-    // Then check for any windows that want any keys
-    // that weren't handled. This is typically only
-    // for a menubar.
-    // Make a copy of the subwindows in case any HandleChar()
-    // functions muck with the subwindows. If we don't do this,
-    // we can crash when iterating over the subwindows.
+    // Then check for any windows that want any keys that weren't handled. This
+    // is typically only for a menubar. Make a copy of the subwindows in case
+    // any HandleChar() functions muck with the subwindows. If we don't do
+    // this, we can crash when iterating over the subwindows.
     Windows subwindows(m_subwindows);
     for (auto subwindow_sp : subwindows) {
       if (!subwindow_sp->m_can_activate) {
@@ -1396,8 +1388,8 @@ public:
   }
 
   MenuActionResult Action() {
-    // Call the recursive action so it can try to handle it
-    // with the menu delegate, and if not, try our parent menu
+    // Call the recursive action so it can try to handle it with the menu
+    // delegate, and if not, try our parent menu
     return ActionPrivate(*this);
   }
 
@@ -1666,9 +1658,9 @@ HandleCharResult Menu::WindowDelegateHandleChar(Window &window, int key) {
     }
 
     if (run_menu_sp) {
-      // Run the action on this menu in case we need to populate the
-      // menu with dynamic content and also in case check marks, and
-      // any other menu decorations need to be calculated
+      // Run the action on this menu in case we need to populate the menu with
+      // dynamic content and also in case check marks, and any other menu
+      // decorations need to be calculated
       if (run_menu_sp->Action() == MenuActionResult::Quit)
         return eQuitApplication;
 
@@ -1782,12 +1774,11 @@ public:
     bool done = false;
     int delay_in_tenths_of_a_second = 1;
 
-    // Alas the threading model in curses is a bit lame so we need to
-    // resort to polling every 0.5 seconds. We could poll for stdin
-    // ourselves and then pass the keys down but then we need to
-    // translate all of the escape sequences ourselves. So we resort to
-    // polling for input because we need to receive async process events
-    // while in this loop.
+    // Alas the threading model in curses is a bit lame so we need to resort to
+    // polling every 0.5 seconds. We could poll for stdin ourselves and then
+    // pass the keys down but then we need to translate all of the escape
+    // sequences ourselves. So we resort to polling for input because we need
+    // to receive async process events while in this loop.
 
     halfdelay(delay_in_tenths_of_a_second); // Poll using some number of tenths
                                             // of seconds seconds when calling
@@ -1808,9 +1799,9 @@ public:
     while (!done) {
       if (update) {
         m_window_sp->Draw(false);
-        // All windows should be calling Window::DeferredRefresh() instead
-        // of Window::Refresh() so we can do a single update and avoid
-        // any screen blinking
+        // All windows should be calling Window::DeferredRefresh() instead of
+        // Window::Refresh() so we can do a single update and avoid any screen
+        // blinking
         update_panels();
 
         // Cursor hiding isn't working on MacOSX, so hide it in the top left
@@ -1822,8 +1813,8 @@ public:
       }
 
 #if defined(__APPLE__)
-      // Terminal.app doesn't map its function keys correctly, F1-F4 default to:
-      // \033OP, \033OQ, \033OR, \033OS, so lets take care of this here if
+      // Terminal.app doesn't map its function keys correctly, F1-F4 default
+      // to: \033OP, \033OQ, \033OR, \033OS, so lets take care of this here if
       // possible
       int ch;
       if (escape_chars.empty())
@@ -1986,8 +1977,8 @@ struct Row {
       parent->DrawTreeForChild(window, this, 0);
 
     if (might_have_children) {
-      // It we can get UTF8 characters to work we should try to use the "symbol"
-      // UTF8 string below
+      // It we can get UTF8 characters to work we should try to use the
+      // "symbol" UTF8 string below
       //            const char *symbol = "";
       //            if (row.expanded)
       //                symbol = "\xe2\x96\xbd ";
@@ -1995,14 +1986,14 @@ struct Row {
       //                symbol = "\xe2\x96\xb7 ";
       //            window.PutCString (symbol);
 
-      // The ACS_DARROW and ACS_RARROW don't look very nice they are just a
-      // 'v' or '>' character...
+      // The ACS_DARROW and ACS_RARROW don't look very nice they are just a 'v'
+      // or '>' character...
       //            if (expanded)
       //                window.PutChar (ACS_DARROW);
       //            else
       //                window.PutChar (ACS_RARROW);
-      // Since we can't find any good looking right arrow/down arrow
-      // symbols, just use a diamond...
+      // Since we can't find any good looking right arrow/down arrow symbols,
+      // just use a diamond...
       window.PutChar(ACS_DIAMOND);
       window.PutChar(ACS_HLINE);
     }
@@ -2102,9 +2093,8 @@ public:
 
     const bool expanded = IsExpanded();
 
-    // The root item must calculate its children,
-    // or we must calculate the number of children
-    // if the item is expanded
+    // The root item must calculate its children, or we must calculate the
+    // number of children if the item is expanded
     if (m_parent == nullptr || expanded)
       GetNumChildren();
 
@@ -2137,8 +2127,7 @@ public:
 
       if (m_might_have_children) {
         // It we can get UTF8 characters to work we should try to use the
-        // "symbol"
-        // UTF8 string below
+        // "symbol" UTF8 string below
         //            const char *symbol = "";
         //            if (row.expanded)
         //                symbol = "\xe2\x96\xbd ";
@@ -2152,8 +2141,8 @@ public:
         //                window.PutChar (ACS_DARROW);
         //            else
         //                window.PutChar (ACS_RARROW);
-        // Since we can't find any good looking right arrow/down arrow
-        // symbols, just use a diamond...
+        // Since we can't find any good looking right arrow/down arrow symbols,
+        // just use a diamond...
         window.PutChar(ACS_DIAMOND);
         window.PutChar(ACS_HLINE);
       }
@@ -2176,8 +2165,8 @@ public:
 
     if (IsExpanded()) {
       for (auto &item : m_children) {
-        // If we displayed all the rows and item.Draw() returns
-        // false we are done drawing and can exit this for loop
+        // If we displayed all the rows and item.Draw() returns false we are
+        // done drawing and can exit this for loop
         if (!item.Draw(window, first_visible_row, selected_row_idx, row_idx,
                        num_rows_left))
           break;
@@ -2287,10 +2276,9 @@ public:
       m_num_rows = 0;
       m_root.CalculateRowIndexes(m_num_rows);
 
-      // If we unexpanded while having something selected our
-      // total number of rows is less than the num visible rows,
-      // then make sure we show all the rows by setting the first
-      // visible row accordingly.
+      // If we unexpanded while having something selected our total number of
+      // rows is less than the num visible rows, then make sure we show all the
+      // rows by setting the first visible row accordingly.
       if (m_first_visible_row > 0 && m_num_rows < num_visible_rows)
         m_first_visible_row = 0;
 
@@ -2696,10 +2684,9 @@ public:
     const int num_visible_rows = NumVisibleRows();
     const int num_rows = CalculateTotalNumberRows(m_rows);
 
-    // If we unexpanded while having something selected our
-    // total number of rows is less than the num visible rows,
-    // then make sure we show all the rows by setting the first
-    // visible row accordingly.
+    // If we unexpanded while having something selected our total number of
+    // rows is less than the num visible rows, then make sure we show all the
+    // rows by setting the first visible row accordingly.
     if (m_first_visible_row > 0 && num_rows < num_visible_rows)
       m_first_visible_row = 0;
 
@@ -2715,8 +2702,8 @@ public:
 
     // Get the selected row
     m_selected_row = GetRowForRowIndex(m_selected_row_idx);
-    // Keep the cursor on the selected row so the highlight and the cursor
-    // are always on the same line
+    // Keep the cursor on the selected row so the highlight and the cursor are
+    // always on the same line
     if (m_selected_row)
       window.MoveCursor(m_selected_row->x, m_selected_row->y);
 
@@ -3128,8 +3115,8 @@ public:
       if (process && process->IsAlive())
         return true; // Don't do any updating if we are running
       else {
-        // Update the values with an empty list if there
-        // is no process or the process isn't alive anymore
+        // Update the values with an empty list if there is no process or the
+        // process isn't alive anymore
         SetValues(value_list);
       }
     }
@@ -3393,8 +3380,8 @@ HandleCharResult HelpDialogDelegate::WindowDelegateHandleChar(Window &window,
 
   if (num_lines <= num_visible_lines) {
     done = true;
-    // If we have all lines visible and don't need scrolling, then any
-    // key press will cause us to exit
+    // If we have all lines visible and don't need scrolling, then any key
+    // press will cause us to exit
   } else {
     switch (key) {
     case KEY_UP:
@@ -3607,8 +3594,8 @@ public:
 
     case eMenuID_Process: {
       // Populate the menu with all of the threads if the process is stopped
-      // when
-      // the Process menu gets selected and is about to display its submenu.
+      // when the Process menu gets selected and is about to display its
+      // submenu.
       Menus &submenus = menu.GetSubmenus();
       ExecutionContext exe_ctx =
           m_debugger.GetCommandInterpreter().GetExecutionContext();
@@ -3643,8 +3630,8 @@ public:
                               nullptr, menu_char, thread_sp->GetID())));
         }
       } else if (submenus.size() > 7) {
-        // Remove the separator and any other thread submenu items
-        // that were previously added
+        // Remove the separator and any other thread submenu items that were
+        // previously added
         submenus.erase(submenus.begin() + 7, submenus.end());
       }
       // Since we are adding and removing items we need to recalculate the name
@@ -3672,8 +3659,8 @@ public:
           registers_bounds.size.width = source_bounds.size.width;
           registers_window_sp->SetBounds(registers_bounds);
         } else {
-          // We have no registers window showing so give the bottom
-          // area back to the source view
+          // We have no registers window showing so give the bottom area back
+          // to the source view
           source_window_sp->Resize(source_bounds.size.width,
                                    source_bounds.size.height +
                                        variables_bounds.size.height);
@@ -3722,8 +3709,8 @@ public:
                                           registers_window_sp->GetWidth(),
                                       variables_bounds.size.height);
         } else {
-          // We have no variables window showing so give the bottom
-          // area back to the source view
+          // We have no variables window showing so give the bottom area back
+          // to the source view
           source_window_sp->Resize(source_bounds.size.width,
                                    source_bounds.size.height +
                                        registers_window_sp->GetHeight());
@@ -3732,9 +3719,9 @@ public:
       } else {
         Rect new_regs_rect;
         if (variables_window_sp) {
-          // We have a variables window, split it into two columns
-          // where the left hand side will be the variables and the
-          // right hand side will be the registers
+          // We have a variables window, split it into two columns where the
+          // left hand side will be the variables and the right hand side will
+          // be the registers
           const Rect variables_bounds = variables_window_sp->GetBounds();
           Rect new_vars_rect;
           variables_bounds.VerticalSplitPercentage(0.50, new_vars_rect,
@@ -3946,8 +3933,8 @@ public:
             m_selected_line = m_pc_line;
 
           if (m_file_sp && m_file_sp->FileSpecMatches(m_sc.line_entry.file)) {
-            // Same file, nothing to do, we should either have the
-            // lines or not (source file missing)
+            // Same file, nothing to do, we should either have the lines or not
+            // (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {
               if (m_selected_line >= m_first_visible_line + num_visible_lines)
                 m_first_visible_line = m_selected_line - 10;
@@ -4628,8 +4615,8 @@ void IOHandlerCursesGUI::Activate() {
 
     WindowSP menubar_window_sp =
         main_window_sp->CreateSubWindow("Menubar", menubar_bounds, false);
-    // Let the menubar get keys if the active window doesn't handle the
-    // keys that are typed so it can respond to menubar key presses.
+    // Let the menubar get keys if the active window doesn't handle the keys
+    // that are typed so it can respond to menubar key presses.
     menubar_window_sp->SetCanBeActive(
         false); // Don't let the menubar become the active window
     menubar_window_sp->SetDelegate(menubar_sp);

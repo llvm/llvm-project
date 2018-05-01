@@ -95,6 +95,8 @@ unsigned AMDGPUTargetStreamer::getMACH(StringRef GPU) const {
       // AMDGCN GFX9.
       .Case("gfx900", ELF::EF_AMDGPU_MACH_AMDGCN_GFX900)
       .Case("gfx902", ELF::EF_AMDGPU_MACH_AMDGCN_GFX902)
+      .Case("gfx904", ELF::EF_AMDGPU_MACH_AMDGCN_GFX904)
+      .Case("gfx906", ELF::EF_AMDGPU_MACH_AMDGCN_GFX906)
       // Not specified processor.
       .Default(ELF::EF_AMDGPU_MACH_NONE);
 }

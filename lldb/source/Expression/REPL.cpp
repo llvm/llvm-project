@@ -243,10 +243,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
                   IOHandler::Type::REPL, IOHandler::Type::CommandInterpreter)) {
             // We typed "quit" or an alias to quit so we need to check if the
             // command interpreter is above us and tell it that it is done as
-            // well
-            // so we don't drop back into the command interpreter if we have
-            // already
-            // quit
+            // well so we don't drop back into the command interpreter if we
+            // have already quit
             lldb::IOHandlerSP io_handler_sp(ci.GetIOHandler());
             if (io_handler_sp)
               io_handler_sp->SetIsDone(true);
@@ -444,8 +442,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       }
     }
 
-    // Don't complain about the REPL process going away if we are in the process
-    // of quitting.
+    // Don't complain about the REPL process going away if we are in the
+    // process of quitting.
     if (!did_quit && (!process_sp || !process_sp->IsAlive())) {
       error_sp->Printf(
           "error: REPL process is no longer alive, exiting REPL\n");
@@ -542,11 +540,9 @@ Status REPL::RunLoop() {
 
   debugger.PushIOHandler(io_handler_sp);
 
-  // Check if we are in dedicated REPL mode where LLDB was start with the
-  // "--repl" option
-  // from the command line. Currently we know this by checking if the debugger
-  // already
-  // has a IOHandler thread.
+  // Check if we are in dedicated REPL mode where LLDB was start with the "--
+  // repl" option from the command line. Currently we know this by checking if
+  // the debugger already has a IOHandler thread.
   if (!debugger.HasIOHandlerThread()) {
     // The debugger doesn't have an existing IOHandler thread, so this must be
     // dedicated REPL mode...
@@ -566,8 +562,8 @@ Status REPL::RunLoop() {
   io_handler_sp->WaitForPop();
 
   if (m_dedicated_repl_mode) {
-    // If we were in dedicated REPL mode we would have started the
-    // IOHandler thread, and we should kill our process
+    // If we were in dedicated REPL mode we would have started the IOHandler
+    // thread, and we should kill our process
     lldb::ProcessSP process_sp = m_target.GetProcessSP();
     if (process_sp && process_sp->IsAlive())
       process_sp->Destroy(false);

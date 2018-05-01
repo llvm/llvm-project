@@ -26,8 +26,8 @@ public:
 
   // This constructor plus the init() method below allow for the placeholder
   // creation of an invalid object initially, possibly to be filled in.  It
-  // would be more consistent to have three Set* methods to set the three
-  // data that the object needs.
+  // would be more consistent to have three Set* methods to set the three data
+  // that the object needs.
   RegisterNumber();
 
   void init(lldb_private::Thread &thread, lldb::RegisterKind kind,

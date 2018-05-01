@@ -411,7 +411,8 @@ void DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
   // instruction. The assumption is that a zero-latency instruction doesn't
   // require to be issued to the scheduler for execution. More importantly, it
   // doesn't have to wait on the register input operands.
-  if (NewInst->getDesc().MaxLatency)
+  const InstrDesc &Desc = NewInst->getDesc();
+  if (Desc.MaxLatency || !Desc.Resources.empty())
     for (std::unique_ptr<ReadState> &RS : NewInst->getUses())
       updateRAWDependencies(*RS, STI);
 

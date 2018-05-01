@@ -211,6 +211,8 @@ class MCStreamer {
   /// requires.
   unsigned NextWinCFIID = 0;
 
+  bool UseAssemblerInfoForParsing;
+
 protected:
   MCStreamer(MCContext &Ctx);
 
@@ -246,6 +248,11 @@ public:
   virtual void reset();
 
   MCContext &getContext() const { return Context; }
+
+  virtual MCAssembler *getAssemblerPtr() { return nullptr; }
+
+  void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
+  bool getUseAssemblerInfoForParsing() { return UseAssemblerInfoForParsing; }
 
   MCTargetStreamer *getTargetStreamer() {
     return TargetStreamer.get();

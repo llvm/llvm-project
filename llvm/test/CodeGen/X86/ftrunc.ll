@@ -356,9 +356,8 @@ define <4 x double> @trunc_signed_v4f64(<4 x double> %x) nounwind {
   ret <4 x double> %r
 }
 
-; The attribute name is subject to change, but the fold may be
-; guarded to allow existing code to continue working based on its
-; assumptions of float->int overflow.
+; The fold may be guarded to allow existing code to continue 
+; working based on its assumptions of float->int overflow.
 
 define float @trunc_unsigned_f32_disable_via_attr(float %x) #1 {
 ; SSE2-LABEL: trunc_unsigned_f32_disable_via_attr:
@@ -413,5 +412,5 @@ define double @trunc_signed_f64_disable_via_attr(double %x) #1 {
   ret double %r
 }
 
-attributes #1 = { nounwind "fp-cast-overflow-workaround"="true" }
+attributes #1 = { nounwind "strict-float-cast-overflow"="false" }
 

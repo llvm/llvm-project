@@ -44,8 +44,8 @@ ThreadPlanCallUserExpression::ThreadPlanCallUserExpression(
     lldb::UserExpressionSP &user_expression_sp)
     : ThreadPlanCallFunction(thread, function, CompilerType(), args, options),
       m_user_expression_sp(user_expression_sp) {
-  // User expressions are generally "User generated" so we should set them up to
-  // stop when done.
+  // User expressions are generally "User generated" so we should set them up
+  // to stop when done.
   SetIsMasterPlan(true);
   SetOkayToDiscard(false);
 }

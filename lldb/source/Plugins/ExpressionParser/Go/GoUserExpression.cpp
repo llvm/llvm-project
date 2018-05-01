@@ -400,8 +400,7 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitIdent(const GoASTIdent *e) {
         val = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
       else {
         // When a variable is on the heap instead of the stack, go records a
-        // variable
-        // '&x' instead of 'x'.
+        // variable '&x' instead of 'x'.
         var_sp = var_list_sp->FindVariable(ConstString("&" + varname));
         if (var_sp) {
           val = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);

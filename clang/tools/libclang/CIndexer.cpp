@@ -17,7 +17,6 @@
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Path.h"

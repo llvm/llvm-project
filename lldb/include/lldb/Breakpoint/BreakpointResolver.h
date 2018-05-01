@@ -171,8 +171,8 @@ public:
     UnknownResolver
   };
 
-  // Translate the Ty to name for serialization,
-  // the "+2" is one for size vrs. index, and one for UnknownResolver.
+  // Translate the Ty to name for serialization, the "+2" is one for size vrs.
+  // index, and one for UnknownResolver.
   static const char *g_ty_to_name[LastKnownResolverType + 2];
 
   //------------------------------------------------------------------
@@ -199,8 +199,8 @@ public:
 
 protected:
   // Used for serializing resolver options:
-  // The options in this enum and the strings in the
-  // g_option_names must be kept in sync.
+  // The options in this enum and the strings in the g_option_names must be
+  // kept in sync.
   enum class OptionNames : uint32_t {
     AddressOffset = 0,
     ExactMatch,

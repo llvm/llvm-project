@@ -19,12 +19,9 @@ using namespace lldb_private;
 
 // A helper function for argument parsing.
 // Parses the initial part of the first argument using normal double quote
-// rules:
-// backslash escapes the double quote and itself. The parsed string is appended
-// to the second
-// argument. The function returns the unparsed portion of the string, starting
-// at the closing
-// quote.
+// rules: backslash escapes the double quote and itself. The parsed string is
+// appended to the second argument. The function returns the unparsed portion
+// of the string, starting at the closing quote.
 static llvm::StringRef ParseDoubleQuotes(llvm::StringRef quoted,
                                          std::string &result) {
   // Inside double quotes, '\' and '"' are special.
@@ -49,8 +46,7 @@ static llvm::StringRef ParseDoubleQuotes(llvm::StringRef quoted,
     }
 
     // If the character after the backslash is not a whitelisted escapable
-    // character, we
-    // leave the character sequence untouched.
+    // character, we leave the character sequence untouched.
     if (strchr(k_escapable_characters, quoted.front()) == nullptr)
       result += '\\';
 
@@ -84,10 +80,10 @@ ParseSingleArgument(llvm::StringRef command) {
   // strings.
   std::string arg;
 
-  // Since we can have multiple quotes that form a single command
-  // in a command like: "Hello "world'!' (which will make a single
-  // argument "Hello world!") we remember the first quote character
-  // we encounter and use that for the quote character.
+  // Since we can have multiple quotes that form a single command in a command
+  // like: "Hello "world'!' (which will make a single argument "Hello world!")
+  // we remember the first quote character we encounter and use that for the
+  // quote character.
   char first_quote_char = '\0';
 
   bool arg_complete = false;
@@ -110,8 +106,7 @@ ParseSingleArgument(llvm::StringRef command) {
       }
 
       // If the character after the backslash is not a whitelisted escapable
-      // character, we
-      // leave the character sequence untouched.
+      // character, we leave the character sequence untouched.
       if (strchr(" \t\\'\"`", command.front()) == nullptr)
         arg += '\\';
 
@@ -122,8 +117,8 @@ ParseSingleArgument(llvm::StringRef command) {
 
     case ' ':
     case '\t':
-      // We are not inside any quotes, we just found a space after an
-      // argument. We are done.
+      // We are not inside any quotes, we just found a space after an argument.
+      // We are done.
       arg_complete = true;
       break;
 
@@ -138,8 +133,7 @@ ParseSingleArgument(llvm::StringRef command) {
         command = ParseDoubleQuotes(command, arg);
       else {
         // For single quotes, we simply skip ahead to the matching quote
-        // character
-        // (or the end of the string).
+        // character (or the end of the string).
         size_t quoted = command.find(special);
         arg += command.substr(0, quoted);
         command = command.substr(quoted);
@@ -274,9 +268,9 @@ char **Args::GetArgumentVector() {
   assert(!m_argv.empty());
   // TODO: functions like execve and posix_spawnp exhibit undefined behavior
   // when argv or envp is null.  So the code below is actually wrong.  However,
-  // other code in LLDB depends on it being null.  The code has been acting this
-  // way for some time, so it makes sense to leave it this way until someone
-  // has the time to come along and fix it.
+  // other code in LLDB depends on it being null.  The code has been acting
+  // this way for some time, so it makes sense to leave it this way until
+  // someone has the time to come along and fix it.
   return (m_argv.size() > 1) ? m_argv.data() : nullptr;
 }
 
@@ -555,17 +549,17 @@ void Args::EncodeEscapeSequences(const char *src, std::string &dst) {
         case '0':
           // 1 to 3 octal chars
           {
-            // Make a string that can hold onto the initial zero char,
-            // up to 3 octal digits, and a terminating NULL.
+            // Make a string that can hold onto the initial zero char, up to 3
+            // octal digits, and a terminating NULL.
             char oct_str[5] = {'\0', '\0', '\0', '\0', '\0'};
 
             int i;
             for (i = 0; (p[i] >= '0' && p[i] <= '7') && i < 4; ++i)
               oct_str[i] = p[i];
 
-            // We don't want to consume the last octal character since
-            // the main for loop will do this for us, so we advance p by
-            // one less than i (even if i is zero)
+            // We don't want to consume the last octal character since the main
+            // for loop will do this for us, so we advance p by one less than i
+            // (even if i is zero)
             p += i - 1;
             unsigned long octal_value = ::strtoul(oct_str, nullptr, 8);
             if (octal_value <= UINT8_MAX) {
@@ -596,8 +590,8 @@ void Args::EncodeEscapeSequences(const char *src, std::string &dst) {
           break;
 
         default:
-          // Just desensitize any other character by just printing what
-          // came after the '\'
+          // Just desensitize any other character by just printing what came
+          // after the '\'
           dst.append(1, *p);
           break;
         }

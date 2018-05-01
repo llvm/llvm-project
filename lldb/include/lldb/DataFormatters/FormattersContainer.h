@@ -43,12 +43,10 @@ public:
   virtual uint32_t GetCurrentRevision() = 0;
 };
 
-// if the user tries to add formatters for, say, "struct Foo"
-// those will not match any type because of the way we strip qualifiers from
-// typenames
-// this method looks for the case where the user is adding a
-// "class","struct","enum" or "union" Foo
-// and strips the unnecessary qualifier
+// if the user tries to add formatters for, say, "struct Foo" those will not
+// match any type because of the way we strip qualifiers from typenames this
+// method looks for the case where the user is adding a "class","struct","enum"
+// or "union" Foo and strips the unnecessary qualifier
 static inline ConstString GetValidTypeName_Impl(const ConstString &type) {
   if (type.IsEmpty())
     return type;

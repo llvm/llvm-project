@@ -84,9 +84,9 @@ Status TargetList::CreateTargetInternal(
   Status error;
   PlatformSP platform_sp;
 
-  // This is purposely left empty unless it is specified by triple_cstr.
-  // If not initialized via triple_cstr, then the currently selected platform
-  // will set the architecture correctly.
+  // This is purposely left empty unless it is specified by triple_cstr. If not
+  // initialized via triple_cstr, then the currently selected platform will set
+  // the architecture correctly.
   const ArchSpec arch(triple_str);
   if (!triple_str.empty()) {
     if (!arch.IsValid()) {
@@ -123,8 +123,7 @@ Status TargetList::CreateTargetInternal(
     module_spec.GetFileSpec().SetFile(user_exe_path, true);
 
     // Resolve the executable in case we are given a path to a application
-    // bundle
-    // like a .app bundle on MacOSX
+    // bundle like a .app bundle on MacOSX
     Host::ResolveExecutableInBundle(module_spec.GetFileSpec());
 
     lldb::offset_t file_offset = 0;
@@ -140,7 +139,8 @@ Status TargetList::CreateTargetInternal(
             if (platform_arch.IsCompatibleMatch(
                     matching_module_spec.GetArchitecture())) {
               // If the OS or vendor weren't specified, then adopt the module's
-              // architecture so that the platform matching can be more accurate
+              // architecture so that the platform matching can be more
+              // accurate
               if (!platform_arch.TripleOSWasSpecified() ||
                   !platform_arch.TripleVendorWasSpecified()) {
                 prefer_platform_arch = true;
@@ -194,7 +194,8 @@ Status TargetList::CreateTargetInternal(
                 }
               }
 
-              // Next check the host platform it if wasn't already checked above
+              // Next check the host platform it if wasn't already checked
+              // above
               if (host_platform_sp &&
                   (!platform_sp ||
                    host_platform_sp->GetName() != platform_sp->GetName())) {
@@ -275,8 +276,7 @@ Status TargetList::CreateTargetInternal(
     }
   } else if (platform_arch.IsValid()) {
     // if "arch" isn't valid, yet "platform_arch" is, it means we have an
-    // executable file with
-    // a single architecture which should be used
+    // executable file with a single architecture which should be used
     ArchSpec fixed_platform_arch;
     if (!platform_sp->IsCompatibleArchitecture(platform_arch, false,
                                                &fixed_platform_arch)) {
@@ -410,8 +410,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
                                              sizeof(resolved_bundle_exe_path));
     }
   } else {
-    // No file was specified, just create an empty target with any arch
-    // if a valid arch was specified
+    // No file was specified, just create an empty target with any arch if a
+    // valid arch was specified
     target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
   }
 

@@ -66,9 +66,8 @@ UnixSignals::~UnixSignals() = default;
 
 void UnixSignals::Reset() {
   // This builds one standard set of Unix Signals.  If yours aren't quite in
-  // this
-  // order, you can either subclass this class, and use Add & Remove to change
-  // them
+  // this order, you can either subclass this class, and use Add & Remove to
+  // change them
   // or you can subclass and build them afresh in your constructor;
   //
   // Note: the signals below are the Darwin signals.  Do not change these!
@@ -306,8 +305,8 @@ UnixSignals::GetFilteredSignals(llvm::Optional<bool> should_suppress,
     bool signal_notify = false;
     GetSignalInfo(signo, signal_suppress, signal_stop, signal_notify);
 
-    // If any of filtering conditions are not met,
-    // we move on to the next signal.
+    // If any of filtering conditions are not met, we move on to the next
+    // signal.
     if (should_suppress.hasValue() &&
         signal_suppress != should_suppress.getValue())
       continue;

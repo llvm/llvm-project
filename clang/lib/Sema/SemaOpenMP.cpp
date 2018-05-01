@@ -12962,7 +12962,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
   if (!LD)
     LD = D;
   if (LD && !LD->hasAttr<OMPDeclareTargetDeclAttr>() &&
-      (isa<VarDecl>(LD) || isa<FunctionDecl>(LD))) {
+      ((isa<VarDecl>(LD) && !isa<ParmVarDecl>(LD)) || isa<FunctionDecl>(LD))) {
     // Outlined declaration is not declared target.
     if (LD->isOutOfLine()) {
       SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);

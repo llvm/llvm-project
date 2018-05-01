@@ -1367,6 +1367,16 @@ def : GCNPat<
 >;
 }
 
+let OtherPredicates = [HasDLInsts] in {
+def : GCNPat <
+  (fma (f32 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+       (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)),
+       (f32 (VOP3NoMods f32:$src2))),
+  (V_FMAC_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+                  SRCMODS.NONE, $src2, $clamp, $omod)
+>;
+} // End OtherPredicates = [HasDLInsts]
+
 
 // Allow integer inputs
 class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : GCNPat<

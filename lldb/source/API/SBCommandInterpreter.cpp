@@ -272,8 +272,8 @@ int SBCommandInterpreter::HandleCompletion(
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int num_completions = 0;
 
-  // Sanity check the arguments that are passed in:
-  // cursor & last_char have to be within the current_line.
+  // Sanity check the arguments that are passed in: cursor & last_char have to
+  // be within the current_line.
   if (current_line == nullptr || cursor == nullptr || last_char == nullptr)
     return 0;
 

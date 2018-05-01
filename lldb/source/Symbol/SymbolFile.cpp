@@ -30,8 +30,7 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
   if (obj_file != nullptr) {
 
     // We need to test the abilities of this section list. So create what it
-    // would
-    // be with this new obj_file.
+    // would be with this new obj_file.
     lldb::ModuleSP module_sp(obj_file->GetModule());
     if (module_sp) {
       // Default to the main module section list.
@@ -60,16 +59,16 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
         if (sym_file_abilities > best_symfile_abilities) {
           best_symfile_abilities = sym_file_abilities;
           best_symfile_ap.reset(curr_symfile_ap.release());
-          // If any symbol file parser has all of the abilities, then
-          // we should just stop looking.
+          // If any symbol file parser has all of the abilities, then we should
+          // just stop looking.
           if ((kAllAbilities & sym_file_abilities) == kAllAbilities)
             break;
         }
       }
     }
     if (best_symfile_ap.get()) {
-      // Let the winning symbol file parser initialize itself more
-      // completely now that it has been chosen
+      // Let the winning symbol file parser initialize itself more completely
+      // now that it has been chosen
       best_symfile_ap->InitializeObject();
     }
   }

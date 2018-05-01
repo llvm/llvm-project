@@ -71,9 +71,9 @@ bool ValueObjectCast::UpdateValue() {
     m_value.SetCompilerType(compiler_type);
     SetAddressTypeOfChildren(m_parent->GetAddressTypeOfChildren());
     if (!CanProvideValue()) {
-      // this value object represents an aggregate type whose
-      // children have values, but this object does not. So we
-      // say we are changed if our location has changed.
+      // this value object represents an aggregate type whose children have
+      // values, but this object does not. So we say we are changed if our
+      // location has changed.
       SetValueDidChange(m_value.GetValueType() != old_value.GetValueType() ||
                         m_value.GetScalar() != old_value.GetScalar());
     }

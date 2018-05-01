@@ -118,9 +118,9 @@ Status PlatformRemoteGDBServer::ResolveExecutable(
         return error;
       exe_module_sp.reset();
     }
-    // No valid architecture was specified or the exact arch wasn't
-    // found so ask the platform for the architectures that we should be
-    // using (in the correct order) and see if we can find a match that way
+    // No valid architecture was specified or the exact arch wasn't found so
+    // ask the platform for the architectures that we should be using (in the
+    // correct order) and see if we can find a match that way
     StreamString arch_names;
     for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
              idx, resolved_module_spec.GetArchitecture());
@@ -277,8 +277,7 @@ bool PlatformRemoteGDBServer::SetRemoteWorkingDirectory(
     const FileSpec &working_dir) {
   if (IsConnected()) {
     // Clear the working directory it case it doesn't get set correctly. This
-    // will
-    // for use to re-read it
+    // will for use to re-read it
     Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
     if (log)
       log->Printf("PlatformRemoteGDBServer::SetRemoteWorkingDirectory('%s')",
@@ -540,9 +539,8 @@ bool PlatformRemoteGDBServer::LaunchGDBServer(lldb::pid_t &pid,
   bool launch_result = false;
   if (remote_triple.getVendor() == llvm::Triple::Apple &&
       remote_triple.getOS() == llvm::Triple::IOS) {
-    // When remote debugging to iOS, we use a USB mux that always talks
-    // to localhost, so we will need the remote debugserver to accept
-    // connections
+    // When remote debugging to iOS, we use a USB mux that always talks to
+    // localhost, so we will need the remote debugserver to accept connections
     // only from localhost, no matter what our current hostname is
     launch_result =
         m_gdb_client.LaunchGDBServer("127.0.0.1", pid, port, socket_name);
@@ -740,8 +738,8 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   if (m_remote_signals_sp)
     return m_remote_signals_sp;
 
-  // If packet not implemented or JSON failed to parse,
-  // we'll guess the signal set based on the remote architecture.
+  // If packet not implemented or JSON failed to parse, we'll guess the signal
+  // set based on the remote architecture.
   m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
   StringExtractorGDBRemote response;

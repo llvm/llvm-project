@@ -100,8 +100,8 @@
 */
 
 // if you want the version checking to work on other OS/compiler, define
-// appropriate IMPL_DEPRECATED/IMPL_TOONEW
-// and define LLDB_API_CHECK_VERSIONING_WORKS when you are ready to go live
+// appropriate IMPL_DEPRECATED/IMPL_TOONEW and define
+// LLDB_API_CHECK_VERSIONING_WORKS when you are ready to go live
 #if defined(__APPLE__) && defined(__clang__)
 #define LLDB_API_IMPL_DEPRECATED __attribute__((deprecated))
 #define LLDB_API_IMPL_TOONEW __attribute__((unavailable))

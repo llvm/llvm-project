@@ -1242,6 +1242,11 @@ public:
                                     unsigned FI, const DebugLoc &DL,
                                     unsigned O);
 
+  /// Creates a VReg SDDbgValue node.
+  SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
+                              unsigned VReg, bool IsIndirect,
+                              const DebugLoc &DL, unsigned O);
+
   /// Transfer debug values from one node to another, while optionally
   /// generating fragment expressions for split-up values. If \p InvalidateDbg
   /// is set, debug values are invalidated after they are transferred.

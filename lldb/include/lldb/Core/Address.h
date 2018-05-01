@@ -531,11 +531,11 @@ public:
   bool CalculateSymbolContextLineEntry(LineEntry &line_entry) const;
 
   //------------------------------------------------------------------
-  // Returns true if the section should be valid, but isn't because
-  // the shared pointer to the section can't be reconstructed from
-  // a weak pointer that contains a valid weak reference to a section.
-  // Returns false if the section weak pointer has no reference to
-  // a section, or if the section is still valid
+  // Returns true if the section should be valid, but isn't because the shared
+  // pointer to the section can't be reconstructed from a weak pointer that
+  // contains a valid weak reference to a section. Returns false if the section
+  // weak pointer has no reference to a section, or if the section is still
+  // valid
   //------------------------------------------------------------------
   bool SectionWasDeleted() const;
 
@@ -547,29 +547,27 @@ protected:
   lldb::addr_t m_offset; ///< Offset into section if \a m_section_wp is valid...
 
   //------------------------------------------------------------------
-  // Returns true if the m_section_wp once had a reference to a valid
-  // section shared pointer, but no longer does. This can happen if
-  // we have an address from a module that gets unloaded and deleted.
-  // This function should only be called if GetSection() returns an
-  // empty shared pointer and you want to know if this address used to
-  // have a valid section.
+  // Returns true if the m_section_wp once had a reference to a valid section
+  // shared pointer, but no longer does. This can happen if we have an address
+  // from a module that gets unloaded and deleted. This function should only be
+  // called if GetSection() returns an empty shared pointer and you want to
+  // know if this address used to have a valid section.
   //------------------------------------------------------------------
   bool SectionWasDeletedPrivate() const;
 };
 
 //----------------------------------------------------------------------
 // NOTE: Be careful using this operator. It can correctly compare two
-// addresses from the same Module correctly. It can't compare two
-// addresses from different modules in any meaningful way, but it will
-// compare the module pointers.
+// addresses from the same Module correctly. It can't compare two addresses
+// from different modules in any meaningful way, but it will compare the module
+// pointers.
 //
 // To sum things up:
-// - works great for addresses within the same module
-// - it works for addresses across multiple modules, but don't expect the
+// - works great for addresses within the same module - it works for addresses
+// across multiple modules, but don't expect the
 //   address results to make much sense
 //
-// This basically lets Address objects be used in ordered collection
-// classes.
+// This basically lets Address objects be used in ordered collection classes.
 //----------------------------------------------------------------------
 bool operator<(const Address &lhs, const Address &rhs);
 bool operator>(const Address &lhs, const Address &rhs);

@@ -93,6 +93,19 @@ enum NodeType : unsigned {
   SDIVREM,
   UDIVREM,
 
+  // Add/subtract with overflow/carry.  These have the same operands as
+  // the corresponding standard operations, except with the carry flag
+  // replaced by a condition code value.
+  SADDO, SSUBO, UADDO, USUBO, ADDCARRY, SUBCARRY,
+
+  // Set the condition code from a boolean value in operand 0.
+  // Operand 1 is a mask of all condition-code values that may result of this
+  // operation, operand 2 is a mask of condition-code values that may result
+  // if the boolean is true.
+  // Note that this operation is always optimized away, we will never
+  // generate any code for it.
+  GET_CCMASK,
+
   // Use a series of MVCs to copy bytes from one memory location to another.
   // The operands are:
   // - the target address
@@ -142,11 +155,11 @@ enum NodeType : unsigned {
 
   // Transaction begin.  The first operand is the chain, the second
   // the TDB pointer, and the third the immediate control field.
-  // Returns chain and glue.
+  // Returns CC value and chain.
   TBEGIN,
   TBEGIN_NOFLOAT,
 
-  // Transaction end.  Just the chain operand.  Returns chain and glue.
+  // Transaction end.  Just the chain operand.  Returns CC value and chain.
   TEND,
 
   // Create a vector constant by filling byte N of the result with bit
@@ -308,8 +321,8 @@ enum NodeType : unsigned {
   // Operand 5: the width of the field in bits (8 or 16)
   ATOMIC_CMP_SWAPW,
 
-  // Atomic compare-and-swap returning glue (condition code).
-  // Val, OUTCHAIN, glue = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
+  // Atomic compare-and-swap returning CC value.
+  // Val, CC, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
   ATOMIC_CMP_SWAP,
 
   // 128-bit atomic load.
@@ -321,7 +334,7 @@ enum NodeType : unsigned {
   ATOMIC_STORE_128,
 
   // 128-bit atomic compare-and-swap.
-  // Val, OUTCHAIN, glue = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
+  // Val, CC, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
   ATOMIC_CMP_SWAP_128,
 
   // Byte swapping load.
@@ -548,6 +561,8 @@ private:
   SDValue lowerUMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerXALUO(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
@@ -590,6 +605,7 @@ private:
   SDValue combineSHIFTROT(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
 
   // If the last instruction before MBBI in MBB was some form of COMPARE,
   // try to replace it with a COMPARE AND BRANCH just before MBBI.
@@ -601,8 +617,7 @@ private:
                                   MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
-  MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB,
-                                unsigned LOCROpcode) const;
+  MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;

@@ -90,9 +90,8 @@ bool ObjCLanguage::MethodName::SetName(llvm::StringRef name, bool strict) {
   if (name.empty())
     return IsValid(strict);
 
-  // If "strict" is true. then the method must be specified with a
-  // '+' or '-' at the beginning. If "strict" is false, then the '+'
-  // or '-' can be omitted
+  // If "strict" is true. then the method must be specified with a '+' or '-'
+  // at the beginning. If "strict" is false, then the '+' or '-' can be omitted
   bool valid_prefix = false;
 
   if (name.size() > 1 && (name[0] == '+' || name[0] == '-')) {
@@ -134,8 +133,8 @@ const ConstString &ObjCLanguage::MethodName::GetClassName() {
       if (paren_pos) {
         m_class.SetCStringWithLength(class_start, paren_pos - class_start);
       } else {
-        // No '(' was found in the full name, we can definitively say
-        // that our category was valid (and empty).
+        // No '(' was found in the full name, we can definitively say that our
+        // category was valid (and empty).
         m_category_is_valid = true;
         const char *space_pos = strchr(full, ' ');
         if (space_pos) {
@@ -164,8 +163,8 @@ const ConstString &ObjCLanguage::MethodName::GetClassNameWithCategory() {
         // contain a '(', then we can also fill in the m_class
         if (!m_class && strchr(m_class_category.GetCString(), '(') == nullptr) {
           m_class = m_class_category;
-          // No '(' was found in the full name, we can definitively say
-          // that our category was valid (and empty).
+          // No '(' was found in the full name, we can definitively say that
+          // our category was valid (and empty).
           m_category_is_valid = true;
         }
       }
@@ -796,8 +795,8 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       objc_category_sp, lldb_private::formatters::NSTimeZoneSummaryProvider,
       "NSTimeZone summary provider", ConstString("__NSTimeZone"), appkit_flags);
 
-  // CFAbsoluteTime is actually a double rather than a pointer to an object
-  // we do not care about the numeric value, since it is probably meaningless to
+  // CFAbsoluteTime is actually a double rather than a pointer to an object we
+  // do not care about the numeric value, since it is probably meaningless to
   // users
   appkit_flags.SetDontShowValue(true);
   AddCXXSummary(objc_category_sp,

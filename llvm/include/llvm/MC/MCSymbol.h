@@ -316,6 +316,8 @@ public:
     Index = Value;
   }
 
+  bool isUnset() const { return SymbolContents == SymContentsUnset; }
+
   uint64_t getOffset() const {
     assert((SymbolContents == SymContentsUnset ||
             SymbolContents == SymContentsOffset) &&

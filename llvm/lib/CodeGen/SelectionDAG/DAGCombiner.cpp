@@ -10915,8 +10915,8 @@ static SDValue foldFPToIntToFP(SDNode *N, SelectionDAG &DAG,
   // unexpected results. Ie, programs may be relying on the platform-specific
   // undefined behavior when the float-to-int conversion overflows.
   const Function &F = DAG.getMachineFunction().getFunction();
-  Attribute CastWorkaround = F.getFnAttribute("fp-cast-overflow-workaround");
-  if (CastWorkaround.getValueAsString().equals("true"))
+  Attribute StrictOverflow = F.getFnAttribute("strict-float-cast-overflow");
+  if (StrictOverflow.getValueAsString().equals("false"))
     return SDValue();
 
   // We only do this if the target has legal ftrunc. Otherwise, we'd likely be

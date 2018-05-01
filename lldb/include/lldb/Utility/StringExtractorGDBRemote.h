@@ -188,8 +188,8 @@ public:
 
   bool IsErrorResponse() const;
 
-  // Returns zero if the packet isn't a EXX packet where XX are two hex
-  // digits. Otherwise the error encoded in XX is returned.
+  // Returns zero if the packet isn't a EXX packet where XX are two hex digits.
+  // Otherwise the error encoded in XX is returned.
   uint8_t GetError();
 
   lldb_private::Status GetStatus();

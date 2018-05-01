@@ -337,8 +337,8 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
         // Attach to the requested process.
         // An attach will cause the thread to stop with a SIGSTOP.
         if ((status = PtraceWrapper(PTRACE_ATTACH, tid)).Fail()) {
-          // No such thread. The thread may have exited.
-          // More error handling may be needed.
+          // No such thread. The thread may have exited. More error handling
+          // may be needed.
           if (status.GetError() == ESRCH) {
             it = tids_to_attach.erase(it);
             continue;
@@ -348,11 +348,11 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
 
         int wpid =
             llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, nullptr, __WALL);
-        // Need to use __WALL otherwise we receive an error with errno=ECHLD
-        // At this point we should have a thread stopped if waitpid succeeds.
+        // Need to use __WALL otherwise we receive an error with errno=ECHLD At
+        // this point we should have a thread stopped if waitpid succeeds.
         if (wpid < 0) {
-          // No such thread. The thread may have exited.
-          // More error handling may be needed.
+          // No such thread. The thread may have exited. More error handling
+          // may be needed.
           if (errno == ESRCH) {
             it = tids_to_attach.erase(it);
             continue;
@@ -397,8 +397,8 @@ Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
   // appropriate ptrace flags here (PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK)
   ptrace_opts |= PTRACE_O_TRACECLONE;
 
-  // Have the tracer notify us before execve returns
-  // (needed to disable legacy SIGTRAP generation)
+  // Have the tracer notify us before execve returns (needed to disable legacy
+  // SIGTRAP generation)
   ptrace_opts |= PTRACE_O_TRACEEXEC;
 
   return PtraceWrapper(PTRACE_SETOPTIONS, pid, nullptr, (void *)ptrace_opts);
@@ -438,8 +438,8 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
   auto thread_sp = GetThreadByID(pid);
 
   if (!thread_sp) {
-    // Normally, the only situation when we cannot find the thread is if we have
-    // just received a new thread notification. This is indicated by
+    // Normally, the only situation when we cannot find the thread is if we
+    // have just received a new thread notification. This is indicated by
     // GetSignalInfo() returning si_code == SI_USER and si_pid == 0
     LLDB_LOG(log, "received notification about an unknown tid {0}.", pid);
 
@@ -471,15 +471,15 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
       MonitorSignal(info, *thread_sp, exited);
   } else {
     if (info_err.GetError() == EINVAL) {
-      // This is a group stop reception for this tid.
-      // We can reach here if we reinject SIGSTOP, SIGSTP, SIGTTIN or SIGTTOU
-      // into the tracee, triggering the group-stop mechanism. Normally
-      // receiving these would stop the process, pending a SIGCONT. Simulating
-      // this state in a debugger is hard and is generally not needed (one use
-      // case is debugging background task being managed by a shell). For
-      // general use, it is sufficient to stop the process in a signal-delivery
-      // stop which happens before the group stop. This done by MonitorSignal
-      // and works correctly for all signals.
+      // This is a group stop reception for this tid. We can reach here if we
+      // reinject SIGSTOP, SIGSTP, SIGTTIN or SIGTTOU into the tracee,
+      // triggering the group-stop mechanism. Normally receiving these would
+      // stop the process, pending a SIGCONT. Simulating this state in a
+      // debugger is hard and is generally not needed (one use case is
+      // debugging background task being managed by a shell). For general use,
+      // it is sufficient to stop the process in a signal-delivery stop which
+      // happens before the group stop. This done by MonitorSignal and works
+      // correctly for all signals.
       LLDB_LOG(log,
                "received a group stop for pid {0} tid {1}. Transparent "
                "handling of group stops not supported, resuming the "
@@ -505,8 +505,8 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
 
       if (is_main_thread) {
         // Notify the delegate - our process is not available but appears to
-        // have been killed outside
-        // our control.  Is eStateExited the right exit state in this case?
+        // have been killed outside our control.  Is eStateExited the right
+        // exit state in this case?
         SetExitStatus(status, true);
         SetState(StateType::eStateExited, true);
       } else {
@@ -575,19 +575,14 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
 
   switch (info.si_code) {
   // TODO: these two cases are required if we want to support tracing of the
-  // inferiors' children.  We'd need this to debug a monitor.
-  // case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
-  // case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
+  // inferiors' children.  We'd need this to debug a monitor. case (SIGTRAP |
+  // (PTRACE_EVENT_FORK << 8)): case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
 
   case (SIGTRAP | (PTRACE_EVENT_CLONE << 8)): {
     // This is the notification on the parent thread which informs us of new
-    // thread
-    // creation.
-    // We don't want to do anything with the parent thread so we just resume it.
-    // In case we
-    // want to implement "break on thread creation" functionality, we would need
-    // to stop
-    // here.
+    // thread creation. We don't want to do anything with the parent thread so
+    // we just resume it. In case we want to implement "break on thread
+    // creation" functionality, we would need to stop here.
 
     unsigned long event_message = 0;
     if (GetEventMessage(thread.GetID(), &event_message).Fail()) {
@@ -637,10 +632,10 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
   }
 
   case (SIGTRAP | (PTRACE_EVENT_EXIT << 8)): {
-    // The inferior process or one of its threads is about to exit.
-    // We don't want to do anything with the thread so we just resume it. In
-    // case we want to implement "break on thread exit" functionality, we would
-    // need to stop here.
+    // The inferior process or one of its threads is about to exit. We don't
+    // want to do anything with the thread so we just resume it. In case we
+    // want to implement "break on thread exit" functionality, we would need to
+    // stop here.
 
     unsigned long data = 0;
     if (GetEventMessage(thread.GetID(), &data).Fail())
@@ -658,8 +653,8 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
       // Due to a kernel bug, we may sometimes get this stop after the inferior
       // gets a SIGKILL. This confuses our state tracking logic in
       // ResumeThread(), since normally, we should not be receiving any ptrace
-      // events while the inferior is stopped. This makes sure that the inferior
-      // is resumed and exits normally.
+      // events while the inferior is stopped. This makes sure that the
+      // inferior is resumed and exits normally.
       state = eStateRunning;
     }
     ResumeThread(thread, state, LLDB_INVALID_SIGNAL_NUMBER);
@@ -705,8 +700,8 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
 
   case SI_KERNEL:
 #if defined __mips__
-    // For mips there is no special signal for watchpoint
-    // So we check for watchpoint in kernel trap
+    // For mips there is no special signal for watchpoint So we check for
+    // watchpoint in kernel trap
     {
       // If a watchpoint was hit, report it
       uint32_t wp_index;
@@ -782,8 +777,8 @@ void NativeProcessLinux::MonitorWatchpoint(NativeThreadLinux &thread,
   LLDB_LOG(log, "received watchpoint event, pid = {0}, wp_index = {1}",
            thread.GetID(), wp_index);
 
-  // Mark the thread as stopped at watchpoint.
-  // The address is at (lldb::addr_t)info->si_addr if we need it.
+  // Mark the thread as stopped at watchpoint. The address is at
+  // (lldb::addr_t)info->si_addr if we need it.
   thread.SetStoppedByWatchpoint(wp_index);
 
   // We need to tell all other running threads before we notify the delegate
@@ -799,8 +794,8 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
   // POSIX says that process behaviour is undefined after it ignores a SIGFPE,
-  // SIGILL, SIGSEGV, or SIGBUS *unless* that signal was generated by a
-  // kill(2) or raise(3).  Similarly for tgkill(2) on Linux.
+  // SIGILL, SIGSEGV, or SIGBUS *unless* that signal was generated by a kill(2)
+  // or raise(3).  Similarly for tgkill(2) on Linux.
   //
   // IOW, user generated signals never generate what we consider to be a
   // "crash".
@@ -819,22 +814,22 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
     // This is a tgkill()-based stop.
     LLDB_LOG(log, "pid {0} tid {1}, thread stopped", GetID(), thread.GetID());
 
-    // Check that we're not already marked with a stop reason.
-    // Note this thread really shouldn't already be marked as stopped - if we
-    // were, that would imply that the kernel signaled us with the thread
-    // stopping which we handled and marked as stopped, and that, without an
-    // intervening resume, we received another stop.  It is more likely that we
-    // are missing the marking of a run state somewhere if we find that the
-    // thread was marked as stopped.
+    // Check that we're not already marked with a stop reason. Note this thread
+    // really shouldn't already be marked as stopped - if we were, that would
+    // imply that the kernel signaled us with the thread stopping which we
+    // handled and marked as stopped, and that, without an intervening resume,
+    // we received another stop.  It is more likely that we are missing the
+    // marking of a run state somewhere if we find that the thread was marked
+    // as stopped.
     const StateType thread_state = thread.GetState();
     if (!StateIsStoppedState(thread_state, false)) {
       // An inferior thread has stopped because of a SIGSTOP we have sent it.
       // Generally, these are not important stops and we don't want to report
       // them as they are just used to stop other threads when one thread (the
       // one with the *real* stop reason) hits a breakpoint (watchpoint,
-      // etc...). However, in the case of an asynchronous Interrupt(), this *is*
-      // the real stop reason, so we leave the signal intact if this is the
-      // thread that was chosen as the triggering thread.
+      // etc...). However, in the case of an asynchronous Interrupt(), this
+      // *is* the real stop reason, so we leave the signal intact if this is
+      // the thread that was chosen as the triggering thread.
       if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID) {
         if (m_pending_notification_tid == thread.GetID())
           thread.SetStoppedBySignal(SIGSTOP, &info);
@@ -863,8 +858,8 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
     return;
   }
 
-  // Check if debugger should stop at this signal or just ignore it
-  // and resume the inferior.
+  // Check if debugger should stop at this signal or just ignore it and resume
+  // the inferior.
   if (m_signals_to_ignore.find(signo) != m_signals_to_ignore.end()) {
      ResumeThread(thread, thread.GetState(), signo);
      return;
@@ -915,9 +910,9 @@ static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
     return true;
   }
 
-  // The emulator only fill in the dwarf regsiter numbers (and in some case
-  // the generic register numbers). Get the full register info from the
-  // register context based on the dwarf register numbers.
+  // The emulator only fill in the dwarf regsiter numbers (and in some case the
+  // generic register numbers). Get the full register info from the register
+  // context based on the dwarf register numbers.
   const RegisterInfo *full_reg_info =
       emulator_baton->m_reg_context.GetRegisterInfo(
           eRegisterKindDWARF, reg_info->kinds[eRegisterKindDWARF]);
@@ -1001,8 +996,8 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
     else
       next_flags = ReadFlags(register_context);
   } else if (pc_it == baton.m_register_values.end()) {
-    // Emulate instruction failed and it haven't changed PC. Advance PC
-    // with the size of the current opcode because the emulation of all
+    // Emulate instruction failed and it haven't changed PC. Advance PC with
+    // the size of the current opcode because the emulation of all
     // PC modifying instruction should be successful. The failure most
     // likely caused by a not supported instruction which don't modify PC.
     next_pc = register_context.GetPC() + emulator_ap->GetOpcode().GetByteSize();
@@ -1033,8 +1028,8 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
     error = SetSoftwareBreakpoint(next_pc, 0);
   }
 
-  // If setting the breakpoint fails because next_pc is out of
-  // the address space, ignore it and let the debugee segfault.
+  // If setting the breakpoint fails because next_pc is out of the address
+  // space, ignore it and let the debugee segfault.
   if (error.GetError() == EIO || error.GetError() == EFAULT) {
     return Status();
   } else if (error.Fail())
@@ -1165,8 +1160,8 @@ Status NativeProcessLinux::Signal(int signo) {
 }
 
 Status NativeProcessLinux::Interrupt() {
-  // Pick a running thread (or if none, a not-dead stopped thread) as
-  // the chosen thread that will be the stop-reason thread.
+  // Pick a running thread (or if none, a not-dead stopped thread) as the
+  // chosen thread that will be the stop-reason thread.
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
   NativeThreadProtocol *running_thread = nullptr;
@@ -1174,15 +1169,15 @@ Status NativeProcessLinux::Interrupt() {
 
   LLDB_LOG(log, "selecting running thread for interrupt target");
   for (const auto &thread : m_threads) {
-    // If we have a running or stepping thread, we'll call that the
-    // target of the interrupt.
+    // If we have a running or stepping thread, we'll call that the target of
+    // the interrupt.
     const auto thread_state = thread->GetState();
     if (thread_state == eStateRunning || thread_state == eStateStepping) {
       running_thread = thread.get();
       break;
     } else if (!stopped_thread && StateIsStoppedState(thread_state, true)) {
-      // Remember the first non-dead stopped thread.  We'll use that as a backup
-      // if there are no running threads.
+      // Remember the first non-dead stopped thread.  We'll use that as a
+      // backup if there are no running threads.
       stopped_thread = thread.get();
     }
   }
@@ -1251,9 +1246,8 @@ ParseMemoryRegionInfoFromProcMapsLine(llvm::StringRef &maps_line,
   StringExtractor line_extractor(maps_line);
 
   // Format: {address_start_hex}-{address_end_hex} perms offset  dev   inode
-  // pathname
-  // perms: rwxp   (letter is present if set, '-' if not, final character is
-  // p=private, s=shared).
+  // pathname perms: rwxp   (letter is present if set, '-' if not, final
+  // character is p=private, s=shared).
 
   // Parse out the starting address
   lldb::addr_t start_address = line_extractor.GetHexMaxU64(false, 0);
@@ -1334,8 +1328,8 @@ Status NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // the virtual address space,
   // with no perms if it is not mapped.
 
-  // Use an approach that reads memory regions from /proc/{pid}/maps.
-  // Assume proc maps entries are in ascending order.
+  // Use an approach that reads memory regions from /proc/{pid}/maps. Assume
+  // proc maps entries are in ascending order.
   // FIXME assert if we find differently.
 
   if (m_supports_mem_region == LazyBool::eLazyBoolNo) {
@@ -1386,10 +1380,8 @@ Status NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
   }
 
   // If we made it here, we didn't find an entry that contained the given
-  // address. Return the
-  // load_addr as start and the amount of bytes betwwen load address and the end
-  // of the memory as
-  // size.
+  // address. Return the load_addr as start and the amount of bytes betwwen
+  // load address and the end of the memory as size.
   range_info.GetRange().SetRangeBase(load_addr);
   range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
   range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
@@ -1434,8 +1426,8 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
 
   if (m_mem_region_cache.empty()) {
     // No entries after attempting to read them.  This shouldn't happen if
-    // /proc/{pid}/maps is supported. Assume we don't support map entries
-    // via procfs.
+    // /proc/{pid}/maps is supported. Assume we don't support map entries via
+    // procfs.
     m_supports_mem_region = LazyBool::eLazyBoolNo;
     LLDB_LOG(log,
              "failed to find any procfs maps entries, assuming no support "
@@ -1462,8 +1454,8 @@ void NativeProcessLinux::DoStopIDBumped(uint32_t newBumpId) {
 Status NativeProcessLinux::AllocateMemory(size_t size, uint32_t permissions,
                                           lldb::addr_t &addr) {
 // FIXME implementing this requires the equivalent of
-// InferiorCallPOSIX::InferiorCallMmap, which depends on
-// functional ThreadPlans working with Native*Protocol.
+// InferiorCallPOSIX::InferiorCallMmap, which depends on functional ThreadPlans
+// working with Native*Protocol.
 #if 1
   return Status("not implemented yet");
 #else
@@ -1478,8 +1470,7 @@ Status NativeProcessLinux::AllocateMemory(size_t size, uint32_t permissions,
     prot |= eMmapProtExec;
 
   // TODO implement this directly in NativeProcessLinux
-  // (and lift to NativeProcessPOSIX if/when that class is
-  // refactored out).
+  // (and lift to NativeProcessPOSIX if/when that class is refactored out).
   if (InferiorCallMmap(this, addr, 0, size, prot,
                        eMmapFlagsAnon | eMmapFlagsPrivate, -1, 0)) {
     m_addr_to_mmap_size[addr] = size;
@@ -1505,10 +1496,9 @@ lldb::addr_t NativeProcessLinux::GetSharedLibraryInfoAddress() {
 }
 
 size_t NativeProcessLinux::UpdateThreads() {
-  // The NativeProcessLinux monitoring threads are always up to date
-  // with respect to thread state and they keep the thread list
-  // populated properly. All this method needs to do is return the
-  // thread count.
+  // The NativeProcessLinux monitoring threads are always up to date with
+  // respect to thread state and they keep the thread list populated properly.
+  // All this method needs to do is return the thread count.
   return m_threads.size();
 }
 
@@ -1647,9 +1637,9 @@ NativeProcessLinux::GetCrashReasonForSIGSEGV(const siginfo_t *info)
         assert(false && "unexpected si_code for SIGSEGV");
         break;
     case SI_KERNEL:
-        // Linux will occasionally send spurious SI_KERNEL codes.
-        // (this is poorly documented in sigaction)
-        // One way to get this is via unaligned SIMD loads.
+        // Linux will occasionally send spurious SI_KERNEL codes. (this is
+        // poorly documented in sigaction) One way to get this is via unaligned
+        // SIMD loads.
         reason = ProcessMessage::eInvalidAddress; // for lack of anything better
         break;
     case SEGV_MAPERR:
@@ -1785,8 +1775,7 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                       size_t &bytes_read) {
   if (ProcessVmReadvSupported()) {
     // The process_vm_readv path is about 50 times faster than ptrace api. We
-    // want to use
-    // this syscall if it is supported.
+    // want to use this syscall if it is supported.
 
     const ::pid_t pid = GetID();
 
@@ -2093,12 +2082,11 @@ Status NativeProcessLinux::ResumeThread(NativeThreadLinux &thread,
   Log *const log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
   LLDB_LOG(log, "tid: {0}", thread.GetID());
 
-  // Before we do the resume below, first check if we have a pending
-  // stop notification that is currently waiting for
-  // all threads to stop.  This is potentially a buggy situation since
-  // we're ostensibly waiting for threads to stop before we send out the
-  // pending notification, and here we are resuming one before we send
-  // out the pending stop notification.
+  // Before we do the resume below, first check if we have a pending stop
+  // notification that is currently waiting for all threads to stop.  This is
+  // potentially a buggy situation since we're ostensibly waiting for threads
+  // to stop before we send out the pending notification, and here we are
+  // resuming one before we send out the pending stop notification.
   if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID) {
     LLDB_LOG(log,
              "about to resume tid {0} per explicit request but we have a "
@@ -2107,8 +2095,8 @@ Status NativeProcessLinux::ResumeThread(NativeThreadLinux &thread,
              thread.GetID(), m_pending_notification_tid);
   }
 
-  // Request a resume.  We expect this to be synchronous and the system
-  // to reflect it is running after this completes.
+  // Request a resume.  We expect this to be synchronous and the system to
+  // reflect it is running after this completes.
   switch (state) {
   case eStateRunning: {
     const auto resume_result = thread.Resume(signo);
@@ -2137,8 +2125,8 @@ void NativeProcessLinux::StopRunningThreads(const lldb::tid_t triggering_tid) {
 
   m_pending_notification_tid = triggering_tid;
 
-  // Request a stop for all the thread stops that need to be stopped
-  // and are not already known to be stopped.
+  // Request a stop for all the thread stops that need to be stopped and are
+  // not already known to be stopped.
   for (const auto &thread : m_threads) {
     if (StateIsRunningState(thread->GetState()))
       static_cast<NativeThreadLinux *>(thread.get())->RequestStop();
@@ -2184,8 +2172,7 @@ void NativeProcessLinux::ThreadWasCreated(NativeThreadLinux &thread) {
   if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID &&
       StateIsRunningState(thread.GetState())) {
     // We will need to wait for this new thread to stop as well before firing
-    // the
-    // notification.
+    // the notification.
     thread.RequestStop();
   }
 }
@@ -2221,9 +2208,8 @@ void NativeProcessLinux::SigchldHandler() {
   }
 }
 
-// Wrapper for ptrace to catch errors and log calls.
-// Note that ptrace sets errno on error because -1 can be a valid result (i.e.
-// for PTRACE_PEEK*)
+// Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
+// errno on error because -1 can be a valid result (i.e. for PTRACE_PEEK*)
 Status NativeProcessLinux::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
                                          void *data, size_t data_size,
                                          long *result) {
@@ -2421,8 +2407,8 @@ Status NativeProcessLinux::StopTracingForThread(lldb::tid_t thread) {
   }
 
   if (iter->second->GetTraceID() == m_pt_proces_trace_id) {
-    // traceid maps to the whole process so we have to erase it from the
-    // thread group.
+    // traceid maps to the whole process so we have to erase it from the thread
+    // group.
     LLDB_LOG(log, "traceid maps to process");
     m_pt_traced_thread_group.erase(thread);
   }
@@ -2473,8 +2459,8 @@ Status NativeProcessLinux::StopProcessorTracingOnThread(lldb::user_id_t traceid,
   if (thread == LLDB_INVALID_THREAD_ID) {
     for (auto& iter : m_processor_trace_monitor) {
       if (iter.second->GetTraceID() == traceid) {
-        // Stopping a trace instance for an individual thread
-        // hence there will only be one traceid that can match.
+        // Stopping a trace instance for an individual thread hence there will
+        // only be one traceid that can match.
         m_processor_trace_monitor.erase(iter.first);
         return error;
       }
@@ -2504,8 +2490,8 @@ Status NativeProcessLinux::StopProcessorTracingOnThread(lldb::user_id_t traceid,
   LLDB_LOG(log, "UID - {0} , Thread -{1}", traceid, thread);
 
   if (traceid == m_pt_proces_trace_id) {
-    // traceid maps to the whole process so we have to erase it from the
-    // thread group.
+    // traceid maps to the whole process so we have to erase it from the thread
+    // group.
     LLDB_LOG(log, "traceid maps to process");
     m_pt_traced_thread_group.erase(thread);
   }

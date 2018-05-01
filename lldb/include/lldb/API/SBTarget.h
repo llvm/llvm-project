@@ -775,8 +775,7 @@ public:
                                           const void *buf, size_t size);
 
   // The "WithFlavor" is necessary to keep SWIG from getting confused about
-  // overloaded arguments when
-  // using the buf + size -> Python Object magic.
+  // overloaded arguments when using the buf + size -> Python Object magic.
 
   lldb::SBInstructionList GetInstructionsWithFlavor(lldb::SBAddress base_addr,
                                                     const char *flavor_string,
@@ -829,8 +828,8 @@ protected:
   friend class SBValue;
 
   //------------------------------------------------------------------
-  // Constructors are private, use static Target::Create function to
-  // create an instance of this class.
+  // Constructors are private, use static Target::Create function to create an
+  // instance of this class.
   //------------------------------------------------------------------
 
   lldb::TargetSP GetSP() const;

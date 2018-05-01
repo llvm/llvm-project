@@ -2332,41 +2332,41 @@ defm PANDN : PDI_binop_all<0xDF, "pandn", X86andnp, v2i64, v4i64,
 /// There are no patterns here because isel prefers integer versions for SSE2
 /// and later. There are SSE1 v4f32 patterns later.
 multiclass sse12_fp_packed_logical<bits<8> opc, string OpcodeStr,
-                                   SDNode OpNode> {
+                                   SDNode OpNode, X86SchedWriteWidths sched> {
   let Predicates = [HasAVX, NoVLX] in {
   defm V#NAME#PSY : sse12_fp_packed_logical_rm<opc, VR256, SSEPackedSingle,
-        !strconcat(OpcodeStr, "ps"), f256mem, WriteFLogicY,
+        !strconcat(OpcodeStr, "ps"), f256mem, sched.YMM,
         [], [], 0>, PS, VEX_4V, VEX_L, VEX_WIG;
 
   defm V#NAME#PDY : sse12_fp_packed_logical_rm<opc, VR256, SSEPackedDouble,
-        !strconcat(OpcodeStr, "pd"), f256mem, WriteFLogicY,
+        !strconcat(OpcodeStr, "pd"), f256mem, sched.YMM,
         [], [], 0>, PD, VEX_4V, VEX_L, VEX_WIG;
 
   defm V#NAME#PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
-       !strconcat(OpcodeStr, "ps"), f128mem, WriteFLogic,
+       !strconcat(OpcodeStr, "ps"), f128mem, sched.XMM,
        [], [], 0>, PS, VEX_4V, VEX_WIG;
 
   defm V#NAME#PD : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedDouble,
-       !strconcat(OpcodeStr, "pd"), f128mem, WriteFLogic,
+       !strconcat(OpcodeStr, "pd"), f128mem, sched.XMM,
        [], [], 0>, PD, VEX_4V, VEX_WIG;
   }
 
   let Constraints = "$src1 = $dst" in {
     defm PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
-         !strconcat(OpcodeStr, "ps"), f128mem, WriteFLogic,
+         !strconcat(OpcodeStr, "ps"), f128mem, sched.XMM,
          [], []>, PS;
 
     defm PD : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedDouble,
-         !strconcat(OpcodeStr, "pd"), f128mem, WriteFLogic,
+         !strconcat(OpcodeStr, "pd"), f128mem, sched.XMM,
          [], []>, PD;
   }
 }
 
-defm AND  : sse12_fp_packed_logical<0x54, "and", and>;
-defm OR   : sse12_fp_packed_logical<0x56, "or", or>;
-defm XOR  : sse12_fp_packed_logical<0x57, "xor", xor>;
+defm AND  : sse12_fp_packed_logical<0x54, "and", and, SchedWriteFLogic>;
+defm OR   : sse12_fp_packed_logical<0x56, "or", or, SchedWriteFLogic>;
+defm XOR  : sse12_fp_packed_logical<0x57, "xor", xor, SchedWriteFLogic>;
 let isCommutable = 0 in
-  defm ANDN : sse12_fp_packed_logical<0x55, "andn", X86andnp>;
+  defm ANDN : sse12_fp_packed_logical<0x55, "andn", X86andnp, SchedWriteFLogic>;
 
 // If only AVX1 is supported, we need to handle integer operations with
 // floating point instructions since the integer versions aren't available.
@@ -6053,42 +6053,42 @@ let ExeDomain = d, Constraints = !if(Is2Addr, "$src1 = $dst", "") in {
 let Predicates = [HasAVX] in {
   defm VBLENDPS : SS41I_blend_rmi<0x0C, "vblendps", X86Blendi, v4f32,
                                   VR128, loadv4f32, f128mem, 0, SSEPackedSingle,
-                                  WriteFBlend, BlendCommuteImm4>,
+                                  SchedWriteFBlend.XMM, BlendCommuteImm4>,
                                   VEX_4V, VEX_WIG;
   defm VBLENDPSY : SS41I_blend_rmi<0x0C, "vblendps", X86Blendi, v8f32,
                                    VR256, loadv8f32, f256mem, 0, SSEPackedSingle,
-                                   WriteFBlendY, BlendCommuteImm8>,
+                                   SchedWriteFBlend.YMM, BlendCommuteImm8>,
                                    VEX_4V, VEX_L, VEX_WIG;
   defm VBLENDPD : SS41I_blend_rmi<0x0D, "vblendpd", X86Blendi, v2f64,
                                   VR128, loadv2f64, f128mem, 0, SSEPackedDouble,
-                                  WriteFBlend, BlendCommuteImm2>,
+                                  SchedWriteFBlend.XMM, BlendCommuteImm2>,
                                   VEX_4V, VEX_WIG;
   defm VBLENDPDY : SS41I_blend_rmi<0x0D, "vblendpd", X86Blendi, v4f64,
                                    VR256, loadv4f64, f256mem, 0, SSEPackedDouble,
-                                   WriteFBlendY, BlendCommuteImm4>,
+                                   SchedWriteFBlend.YMM, BlendCommuteImm4>,
                                    VEX_4V, VEX_L, VEX_WIG;
   defm VPBLENDW : SS41I_blend_rmi<0x0E, "vpblendw", X86Blendi, v8i16,
                                   VR128, loadv2i64, i128mem, 0, SSEPackedInt,
-                                  WriteBlend, BlendCommuteImm8>,
+                                  SchedWriteBlend.XMM, BlendCommuteImm8>,
                                   VEX_4V, VEX_WIG;
 }
 
 let Predicates = [HasAVX2] in {
   defm VPBLENDWY : SS41I_blend_rmi<0x0E, "vpblendw", X86Blendi, v16i16,
                                    VR256, loadv4i64, i256mem, 0, SSEPackedInt,
-                                   WriteBlend, BlendCommuteImm8>,
+                                   SchedWriteBlend.YMM, BlendCommuteImm8>,
                                    VEX_4V, VEX_L, VEX_WIG;
 }
 
 defm BLENDPS : SS41I_blend_rmi<0x0C, "blendps", X86Blendi, v4f32,
                                VR128, memopv4f32, f128mem, 1, SSEPackedSingle,
-                               WriteFBlend, BlendCommuteImm4>;
+                               SchedWriteFBlend.XMM, BlendCommuteImm4>;
 defm BLENDPD : SS41I_blend_rmi<0x0D, "blendpd", X86Blendi, v2f64,
                                VR128, memopv2f64, f128mem, 1, SSEPackedDouble,
-                               WriteFBlend, BlendCommuteImm2>;
+                               SchedWriteFBlend.XMM, BlendCommuteImm2>;
 defm PBLENDW : SS41I_blend_rmi<0x0E, "pblendw", X86Blendi, v8i16,
                                VR128, memopv2i64, i128mem, 1, SSEPackedInt,
-                               WriteBlend, BlendCommuteImm8>;
+                               SchedWriteBlend.XMM, BlendCommuteImm8>;
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
 // more efficient to generate a blend with immediate instead of an insert*128.
@@ -6135,28 +6135,28 @@ let Predicates = [HasAVX] in {
 let ExeDomain = SSEPackedDouble in {
 defm VBLENDVPD  : SS41I_quaternary_int_avx<0x4B, "vblendvpd", VR128, f128mem,
                                            loadv2f64, int_x86_sse41_blendvpd,
-                                           WriteFVarBlend>;
+                                           SchedWriteFVarBlend.XMM>;
 defm VBLENDVPDY : SS41I_quaternary_int_avx<0x4B, "vblendvpd", VR256, f256mem,
                                   loadv4f64, int_x86_avx_blendv_pd_256,
-                                  WriteFVarBlendY>, VEX_L;
+                                  SchedWriteFVarBlend.YMM>, VEX_L;
 } // ExeDomain = SSEPackedDouble
 let ExeDomain = SSEPackedSingle in {
 defm VBLENDVPS  : SS41I_quaternary_int_avx<0x4A, "vblendvps", VR128, f128mem,
                                            loadv4f32, int_x86_sse41_blendvps,
-                                           WriteFVarBlend>;
+                                           SchedWriteFVarBlend.XMM>;
 defm VBLENDVPSY : SS41I_quaternary_int_avx<0x4A, "vblendvps", VR256, f256mem,
                                   loadv8f32, int_x86_avx_blendv_ps_256,
-                                  WriteFVarBlendY>, VEX_L;
+                                  SchedWriteFVarBlend.YMM>, VEX_L;
 } // ExeDomain = SSEPackedSingle
 defm VPBLENDVB  : SS41I_quaternary_int_avx<0x4C, "vpblendvb", VR128, i128mem,
                                            loadv2i64, int_x86_sse41_pblendvb,
-                                           WriteVarBlend>;
+                                           SchedWriteVarBlend.XMM>;
 }
 
 let Predicates = [HasAVX2] in {
 defm VPBLENDVBY : SS41I_quaternary_int_avx<0x4C, "vpblendvb", VR256, i256mem,
                                       loadv4i64, int_x86_avx2_pblendvb,
-                                      WriteVarBlend>, VEX_L;
+                                      SchedWriteVarBlend.YMM>, VEX_L;
 }
 
 let Predicates = [HasAVX] in {
@@ -6265,12 +6265,12 @@ let Uses = [XMM0], Constraints = "$src1 = $dst" in {
 
 let ExeDomain = SSEPackedDouble in
 defm BLENDVPD : SS41I_ternary_int<0x15, "blendvpd", memopv2f64, f128mem,
-                                  int_x86_sse41_blendvpd, WriteFVarBlend>;
+                                  int_x86_sse41_blendvpd, SchedWriteFVarBlend.XMM>;
 let ExeDomain = SSEPackedSingle in
 defm BLENDVPS : SS41I_ternary_int<0x14, "blendvps", memopv4f32, f128mem,
-                                  int_x86_sse41_blendvps, WriteFVarBlend>;
+                                  int_x86_sse41_blendvps, SchedWriteFVarBlend.XMM>;
 defm PBLENDVB : SS41I_ternary_int<0x10, "pblendvb", memopv2i64, i128mem,
-                                  int_x86_sse41_pblendvb, WriteVarBlend>;
+                                  int_x86_sse41_pblendvb, SchedWriteVarBlend.XMM>;
 
 // Aliases with the implicit xmm0 argument
 def : InstAlias<"blendvpd\t{$src2, $dst|$dst, $src2}",
@@ -7120,18 +7120,18 @@ multiclass avx_permil<bits<8> opc_rm, bits<8> opc_rmi, string OpcodeStr,
 let ExeDomain = SSEPackedSingle in {
   defm VPERMILPS  : avx_permil<0x0C, 0x04, "vpermilps", VR128, f128mem, i128mem,
                                loadv2i64, v4f32, v4i32, WriteFShuffle,
-                               WriteFVarShuffle>;
+                               SchedWriteFVarShuffle.XMM>;
   defm VPERMILPSY : avx_permil<0x0C, 0x04, "vpermilps", VR256, f256mem, i256mem,
                                loadv4i64, v8f32, v8i32, WriteFShuffle,
-                               WriteFVarShuffleY>, VEX_L;
+                               SchedWriteFVarShuffle.YMM>, VEX_L;
 }
 let ExeDomain = SSEPackedDouble in {
   defm VPERMILPD  : avx_permil<0x0D, 0x05, "vpermilpd", VR128, f128mem, i128mem,
                                loadv2i64, v2f64, v2i64, WriteFShuffle,
-                               WriteFVarShuffle>;
+                               SchedWriteFVarShuffle.XMM>;
   defm VPERMILPDY : avx_permil<0x0D, 0x05, "vpermilpd", VR256, f256mem, i256mem,
                                loadv4i64, v4f64, v4i64, WriteFShuffle,
-                               WriteFVarShuffleY>, VEX_L;
+                               SchedWriteFVarShuffle.YMM>, VEX_L;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7307,11 +7307,12 @@ multiclass AVX2_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                             (commuteXForm imm:$src3))>;
 }
 
-defm VPBLENDD : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v4i32, WriteBlend,
-                               VR128, loadv2i64, i128mem, BlendCommuteImm4>;
-defm VPBLENDDY : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v8i32, WriteBlend,
-                                VR256, loadv4i64, i256mem, BlendCommuteImm8>,
-                                VEX_L;
+defm VPBLENDD : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v4i32,
+                               SchedWriteBlend.XMM, VR128, loadv2i64, i128mem,
+                               BlendCommuteImm4>;
+defm VPBLENDDY : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v8i32,
+                                SchedWriteBlend.YMM, VR256, loadv4i64, i256mem,
+                                BlendCommuteImm8>, VEX_L;
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
 // more efficient to generate a blend with immediate instead of an insert*128.

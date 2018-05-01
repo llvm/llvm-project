@@ -12,8 +12,8 @@ class UnwindTable;
 
 class FuncUnwinders {
 public:
-  // FuncUnwinders objects are used to track UnwindPlans for a function
-  // (named or not - really just an address range)
+  // FuncUnwinders objects are used to track UnwindPlans for a function (named
+  // or not - really just an address range)
 
   // We'll record four different UnwindPlans for each address range:
   //
@@ -28,8 +28,8 @@ public:
   //      available for some reason.
 
   // Additionally, FuncUnwinds object can be asked where the prologue
-  // instructions are finished for migrating breakpoints past the
-  // stack frame setup instructions when we don't have line table information.
+  // instructions are finished for migrating breakpoints past the stack frame
+  // setup instructions when we don't have line table information.
 
   FuncUnwinders(lldb_private::UnwindTable &unwind_table, AddressRange range);
 
@@ -38,10 +38,8 @@ public:
   // current_offset is the byte offset into the function.
   // 0 means no instructions have executed yet.  -1 means the offset is unknown.
   // On architectures where the pc points to the next instruction that will
-  // execute, this
-  // offset value will have already been decremented by 1 to stay within the
-  // bounds of the
-  // correct function body.
+  // execute, this offset value will have already been decremented by 1 to stay
+  // within the bounds of the correct function body.
   lldb::UnwindPlanSP GetUnwindPlanAtCallSite(Target &target,
                                              int current_offset);
 
@@ -69,24 +67,19 @@ public:
   // A function may have a Language Specific Data Area specified -- a block of
   // data in
   // the object file which is used in the processing of an exception throw /
-  // catch.
-  // If any of the UnwindPlans have the address of the LSDA region for this
-  // function,
-  // this will return it.
+  // catch. If any of the UnwindPlans have the address of the LSDA region for
+  // this function, this will return it.
   Address GetLSDAAddress(Target &target);
 
   // A function may have a Personality Routine associated with it -- used in the
   // processing of throwing an exception.  If any of the UnwindPlans have the
-  // address of the personality routine, this will return it.  Read the
-  // target-pointer
-  // at this address to get the personality function address.
+  // address of the personality routine, this will return it.  Read the target-
+  // pointer at this address to get the personality function address.
   Address GetPersonalityRoutinePtrAddress(Target &target);
 
   // The following methods to retrieve specific unwind plans should rarely be
-  // used.
-  // Instead, clients should ask for the *behavior* they are looking for, using
-  // one
-  // of the above UnwindPlan retrieval methods.
+  // used. Instead, clients should ask for the *behavior* they are looking for,
+  // using one of the above UnwindPlan retrieval methods.
 
   lldb::UnwindPlanSP GetAssemblyUnwindPlan(Target &target, Thread &thread,
                                            int current_offset);
@@ -116,11 +109,11 @@ public:
 private:
   lldb::UnwindAssemblySP GetUnwindAssemblyProfiler(Target &target);
 
-  // Do a simplistic comparison for the register restore rule for getting
-  // the caller's pc value on two UnwindPlans -- returns LazyBoolYes if
-  // they have the same unwind rule for the pc, LazyBoolNo if they do not
-  // have the same unwind rule for the pc, and LazyBoolCalculate if it was
-  // unable to determine this for some reason.
+  // Do a simplistic comparison for the register restore rule for getting the
+  // caller's pc value on two UnwindPlans -- returns LazyBoolYes if they have
+  // the same unwind rule for the pc, LazyBoolNo if they do not have the same
+  // unwind rule for the pc, and LazyBoolCalculate if it was unable to
+  // determine this for some reason.
   lldb_private::LazyBool CompareUnwindPlansForIdenticalInitialPCLocation(
       Thread &thread, const lldb::UnwindPlanSP &a, const lldb::UnwindPlanSP &b);
 
@@ -143,8 +136,8 @@ private:
   lldb::UnwindPlanSP m_unwind_plan_arch_default_sp;
   lldb::UnwindPlanSP m_unwind_plan_arch_default_at_func_entry_sp;
 
-  // Fetching the UnwindPlans can be expensive - if we've already attempted
-  // to get one & failed, don't try again.
+  // Fetching the UnwindPlans can be expensive - if we've already attempted to
+  // get one & failed, don't try again.
   bool m_tried_unwind_plan_assembly : 1, m_tried_unwind_plan_eh_frame : 1,
       m_tried_unwind_plan_debug_frame : 1,
       m_tried_unwind_plan_eh_frame_augmented : 1,

@@ -147,9 +147,9 @@ enum {
    sizeof(RegisterContextDarwin_i386::FPU))
 
 // These macros will auto define the register name, alt name, register size,
-// register offset, encoding, format and native register. This ensures that
-// the register state structures are defined correctly and have the correct
-// sizes and offsets.
+// register offset, encoding, format and native register. This ensures that the
+// register state structures are defined correctly and have the correct sizes
+// and offsets.
 #define DEFINE_GPR(reg, alt)                                                   \
   #reg, alt, sizeof(((RegisterContextDarwin_i386::GPR *) NULL)->reg),          \
                     GPR_OFFSET(reg), eEncodingUint, eFormatHex
@@ -464,9 +464,9 @@ const size_t k_num_fpu_registers = llvm::array_lengthof(g_fpu_regnums);
 const size_t k_num_exc_registers = llvm::array_lengthof(g_exc_regnums);
 
 //----------------------------------------------------------------------
-// Register set definitions. The first definitions at register set index
-// of zero is for all registers, followed by other registers sets. The
-// register information for the all register set need not be filled in.
+// Register set definitions. The first definitions at register set index of
+// zero is for all registers, followed by other registers sets. The register
+// information for the all register set need not be filled in.
 //----------------------------------------------------------------------
 static const RegisterSet g_reg_sets[] = {
     {
@@ -680,8 +680,7 @@ bool RegisterContextDarwin_i386::ReadRegister(const RegisterInfo *reg_info,
   case fpu_stmm6:
   case fpu_stmm7:
     // These values don't fit into scalar types,
-    // RegisterContext::ReadRegisterBytes() must be used for these
-    // registers
+    // RegisterContext::ReadRegisterBytes() must be used for these registers
     //::memcpy (reg_value.value.vector.uint8, fpu.stmm[reg - fpu_stmm0].bytes,
     //10);
     return false;
@@ -695,8 +694,7 @@ bool RegisterContextDarwin_i386::ReadRegister(const RegisterInfo *reg_info,
   case fpu_xmm6:
   case fpu_xmm7:
     // These values don't fit into scalar types,
-    // RegisterContext::ReadRegisterBytes()
-    // must be used for these registers
+    // RegisterContext::ReadRegisterBytes() must be used for these registers
     //::memcpy (reg_value.value.vector.uint8, fpu.xmm[reg - fpu_xmm0].bytes,
     //16);
     return false;
@@ -799,8 +797,7 @@ bool RegisterContextDarwin_i386::WriteRegister(const RegisterInfo *reg_info,
   case fpu_stmm6:
   case fpu_stmm7:
     // These values don't fit into scalar types,
-    // RegisterContext::ReadRegisterBytes()
-    // must be used for these registers
+    // RegisterContext::ReadRegisterBytes() must be used for these registers
     ::memcpy(fpu.stmm[reg - fpu_stmm0].bytes, value.GetBytes(),
              value.GetByteSize());
     return false;
@@ -814,8 +811,7 @@ bool RegisterContextDarwin_i386::WriteRegister(const RegisterInfo *reg_info,
   case fpu_xmm6:
   case fpu_xmm7:
     // These values don't fit into scalar types,
-    // RegisterContext::ReadRegisterBytes()
-    // must be used for these registers
+    // RegisterContext::ReadRegisterBytes() must be used for these registers
     ::memcpy(fpu.xmm[reg - fpu_xmm0].bytes, value.GetBytes(),
              value.GetByteSize());
     return false;

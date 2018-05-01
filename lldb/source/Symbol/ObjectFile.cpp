@@ -50,10 +50,9 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
 
       const bool file_exists = file->Exists();
       if (!data_sp) {
-        // We have an object name which most likely means we have
-        // a .o file in a static archive (.a file). Try and see if
-        // we have a cached archive first without reading any data
-        // first
+        // We have an object name which most likely means we have a .o file in
+        // a static archive (.a file). Try and see if we have a cached archive
+        // first without reading any data first
         if (file_exists && module_sp->GetObjectName()) {
           for (uint32_t idx = 0;
                (create_object_container_callback =
@@ -72,10 +71,10 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
               return object_file_sp;
           }
         }
-        // Ok, we didn't find any containers that have a named object, now
-        // lets read the first 512 bytes from the file so the object file
-        // and object container plug-ins can use these bytes to see if they
-        // can parse this file.
+        // Ok, we didn't find any containers that have a named object, now lets
+        // read the first 512 bytes from the file so the object file and object
+        // container plug-ins can use these bytes to see if they can parse this
+        // file.
         if (file_size > 0) {
           data_sp =
               DataBufferLLVM::CreateSliceFromPath(file->GetPath(), 512, file_offset);
@@ -98,11 +97,12 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
             file = &archive_file;
             module_sp->SetFileSpecAndObjectName(archive_file, archive_object);
             // Check if this is a object container by iterating through all
-            // object
-            // container plugin instances and then trying to get an object file
-            // from the container plugins since we had a name. Also, don't read
+            // object container plugin instances and then trying to get an
+            // object file from the container plugins since we had a name.
+            // Also, don't read
             // ANY data in case there is data cached in the container plug-ins
-            // (like BSD archives caching the contained objects within an file).
+            // (like BSD archives caching the contained objects within an
+            // file).
             for (uint32_t idx = 0;
                  (create_object_container_callback =
                       PluginManager::GetObjectContainerCreateCallbackAtIndex(
@@ -119,8 +119,8 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
               if (object_file_sp.get())
                 return object_file_sp;
             }
-            // We failed to find any cached object files in the container
-            // plug-ins, so lets read the first 512 bytes and try again below...
+            // We failed to find any cached object files in the container plug-
+            // ins, so lets read the first 512 bytes and try again below...
             data_sp = DataBufferLLVM::CreateSliceFromPath(archive_file.GetPath(),
                                                      512, file_offset);
           }
@@ -128,8 +128,8 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
       }
 
       if (data_sp && data_sp->GetByteSize() > 0) {
-        // Check if this is a normal object file by iterating through
-        // all object file plugin instances.
+        // Check if this is a normal object file by iterating through all
+        // object file plugin instances.
         ObjectFileCreateInstance create_object_file_callback;
         for (uint32_t idx = 0;
              (create_object_file_callback =
@@ -142,9 +142,9 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
             return object_file_sp;
         }
 
-        // Check if this is a object container by iterating through
-        // all object container plugin instances and then trying to get
-        // an object file from the container.
+        // Check if this is a object container by iterating through all object
+        // container plugin instances and then trying to get an object file
+        // from the container.
         for (uint32_t idx = 0;
              (create_object_container_callback =
                   PluginManager::GetObjectContainerCreateCallbackAtIndex(
@@ -163,8 +163,8 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
       }
     }
   }
-  // We didn't find it, so clear our shared pointer in case it
-  // contains anything and return an empty shared pointer
+  // We didn't find it, so clear our shared pointer in case it contains
+  // anything and return an empty shared pointer
   object_file_sp.reset();
   return object_file_sp;
 }
@@ -185,8 +185,8 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
                        static_cast<void *>(process_sp.get()), header_addr);
     uint32_t idx;
 
-    // Check if this is a normal object file by iterating through
-    // all object file plugin instances.
+    // Check if this is a normal object file by iterating through all object
+    // file plugin instances.
     ObjectFileCreateMemoryInstance create_callback;
     for (idx = 0;
          (create_callback =
@@ -200,8 +200,8 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     }
   }
 
-  // We didn't find it, so clear our shared pointer in case it
-  // contains anything and return an empty shared pointer
+  // We didn't find it, so clear our shared pointer in case it contains
+  // anything and return an empty shared pointer
   object_file_sp.reset();
   return object_file_sp;
 }
@@ -378,10 +378,8 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
             return eAddressClassUnknown;
           case eSectionTypeAbsoluteAddress:
             // In case of absolute sections decide the address class based on
-            // the symbol
-            // type because the section type isn't specify if it is a code or a
-            // data
-            // section.
+            // the symbol type because the section type isn't specify if it is
+            // a code or a data section.
             break;
           }
         }
@@ -470,16 +468,14 @@ DataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
 size_t ObjectFile::GetData(lldb::offset_t offset, size_t length,
                            DataExtractor &data) const {
   // The entire file has already been mmap'ed into m_data, so just copy from
-  // there
-  // as the back mmap buffer will be shared with shared pointers.
+  // there as the back mmap buffer will be shared with shared pointers.
   return data.SetData(m_data, offset, length);
 }
 
 size_t ObjectFile::CopyData(lldb::offset_t offset, size_t length,
                             void *dst) const {
   // The entire file has already been mmap'ed into m_data, so just copy from
-  // there
-  // Note that the data remains in target byte order.
+  // there Note that the data remains in target byte order.
   return m_data.CopyData(offset, length, dst);
 }
 
@@ -559,8 +555,8 @@ size_t ObjectFile::ReadSectionData(Section *section,
     return GetData(section->GetFileOffset(), section->GetFileSize(),
                    section_data);
   } else {
-    // The object file now contains a full mmap'ed copy of the object file data,
-    // so just use this
+    // The object file now contains a full mmap'ed copy of the object file
+    // data, so just use this
     if (!section->IsRelocated())
       RelocateSection(section);
 
