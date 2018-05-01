@@ -6413,3 +6413,15 @@ let TargetPrefix = "x86" in {
   def int_x86_tpause : GCCBuiltin<"__builtin_ia32_tpause">,
               Intrinsic<[llvm_i8_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
 }
+
+//===----------------------------------------------------------------------===//
+// Direct Move Instructions
+
+let TargetPrefix = "x86" in {
+  def int_x86_directstore32 : GCCBuiltin<"__builtin_ia32_directstore_u32">,
+      Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], []>;
+  def int_x86_directstore64 : GCCBuiltin<"__builtin_ia32_directstore_u64">,
+      Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty], []>;
+  def int_x86_movdir64b : GCCBuiltin<"__builtin_ia32_movdir64b">,
+      Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], []>;
+}

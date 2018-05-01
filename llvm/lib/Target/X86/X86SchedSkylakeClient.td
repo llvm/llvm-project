@@ -189,6 +189,7 @@ def  : WriteRes<WriteVecMove,         [SKLPort015]>;
 
 defm : SKLWriteResPair<WriteVecALU,   [SKLPort15],  1>; // Vector integer ALU op, no logicals.
 defm : SKLWriteResPair<WriteVecLogic, [SKLPort015], 1, [1], 1, 6>; // Vector integer and/or/xor.
+defm : SKLWriteResPair<WriteVecLogicY,[SKLPort015], 1, [1], 1, 7>; // Vector integer and/or/xor (YMM/ZMM).
 defm : SKLWriteResPair<WriteVecShift, [SKLPort0],  1>; // Vector integer shifts.
 defm : SKLWriteResPair<WriteVecIMul,  [SKLPort0],   5>; // Vector integer multiply.
 defm : SKLWriteResPair<WritePMULLD,   [SKLPort01], 10, [2], 2, 6>;
@@ -397,9 +398,7 @@ def: InstRW<[SKLWriteResGroup3], (instregex "COMP_FST0r",
                                             "UCOM_FPr",
                                             "UCOM_Fr",
                                             "(V?)MOV64toPQIrr",
-                                            "(V?)MOVDI2PDIrr",
-                                            "(V?)PSLLDQ(Y?)ri",
-                                            "(V?)PSRLDQ(Y?)ri")>;
+                                            "(V?)MOVDI2PDIrr")>;
 
 def SKLWriteResGroup4 : SchedWriteRes<[SKLPort6]> {
   let Latency = 1;
@@ -1611,17 +1610,13 @@ def: InstRW<[SKLWriteResGroup110], (instregex "VMASKMOVPDYrm",
                                               "VPADDDYrm",
                                               "VPADDQYrm",
                                               "VPADDWYrm",
-                                              "VPANDNYrm",
-                                              "VPANDYrm",
                                               "VPBLENDDYrmi",
                                               "VPMASKMOVDYrm",
                                               "VPMASKMOVQYrm",
-                                              "VPORYrm",
                                               "VPSUBBYrm",
                                               "VPSUBDYrm",
                                               "VPSUBQYrm",
-                                              "VPSUBWYrm",
-                                              "VPXORYrm")>;
+                                              "VPSUBWYrm")>;
 
 def SKLWriteResGroup112 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23]> {
   let Latency = 8;

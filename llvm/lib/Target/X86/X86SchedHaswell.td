@@ -188,6 +188,7 @@ def  : WriteRes<WriteVecMove,        [HWPort015]>;
 
 defm : HWWriteResPair<WriteVecShift, [HWPort0],  1>;
 defm : HWWriteResPair<WriteVecLogic, [HWPort015], 1, [1], 1, 6>;
+defm : HWWriteResPair<WriteVecLogicY,[HWPort015], 1, [1], 1, 7>;
 defm : HWWriteResPair<WriteVecALU,   [HWPort15],  1>;
 defm : HWWriteResPair<WriteVecIMul,  [HWPort0],   5>;
 defm : HWWriteResPair<WritePMULLD,   [HWPort0], 10, [2], 2, 6>;
@@ -723,9 +724,7 @@ def: InstRW<[HWWriteResGroup4], (instregex "MMX_MOVD64rr",
                                            "MMX_MOVD64to64rr",
                                            "MMX_MOVQ2DQrr",
                                            "(V?)MOV64toPQIrr",
-                                           "(V?)MOVDI2PDIrr",
-                                           "(V?)PSLLDQ(Y?)ri",
-                                           "(V?)PSRLDQ(Y?)ri")>;
+                                           "(V?)MOVDI2PDIrr")>;
 
 def HWWriteResGroup5 : SchedWriteRes<[HWPort6]> {
   let Latency = 1;
@@ -1073,11 +1072,7 @@ def HWWriteResGroup17_2 : SchedWriteRes<[HWPort23,HWPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup17_2], (instregex "VPANDNYrm",
-                                              "VPANDYrm",
-                                              "VPBLENDDYrmi",
-                                              "VPORYrm",
-                                              "VPXORYrm")>;
+def: InstRW<[HWWriteResGroup17_2], (instregex "VPBLENDDYrmi")>;
 
 def HWWriteResGroup18 : SchedWriteRes<[HWPort23,HWPort0156]> {
   let Latency = 6;

@@ -2829,7 +2829,7 @@ define <8 x float> @ubto8f32(<8 x i32> %a) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpandd {{.*}}(%rip){1to8}, %ymm0, %ymm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpandd {{.*}}(%rip){1to8}, %ymm0, %ymm0 # sched: [8:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: ubto8f32:

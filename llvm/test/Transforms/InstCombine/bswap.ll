@@ -116,7 +116,7 @@ define i32 @bswap32_and_first(i32 %x) {
   ret i32 %bswap
 }
 
-; FIXME: Extra use should not prevent matching to bswap.
+; Extra use should not prevent matching to bswap.
 ; swaphalf = (x << 16 | x >> 16)
 ; ((swaphalf & 0x00ff00ff) << 8) | ((swaphalf >> 8) & 0x00ff00ff)
 
@@ -126,10 +126,7 @@ define i32 @bswap32_and_first_extra_use(i32 %x) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 %x, 16
 ; CHECK-NEXT:    [[SWAPHALF:%.*]] = or i32 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    [[T:%.*]] = and i32 [[SWAPHALF]], 16711935
-; CHECK-NEXT:    [[TSHL:%.*]] = shl nuw i32 [[T]], 8
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[SWAPHALF]], 8
-; CHECK-NEXT:    [[BAND:%.*]] = and i32 [[B]], 16711935
-; CHECK-NEXT:    [[BSWAP:%.*]] = or i32 [[TSHL]], [[BAND]]
+; CHECK-NEXT:    [[BSWAP:%.*]] = call i32 @llvm.bswap.i32(i32 %x)
 ; CHECK-NEXT:    call void @extra_use(i32 [[T]])
 ; CHECK-NEXT:    ret i32 [[BSWAP]]
 ;

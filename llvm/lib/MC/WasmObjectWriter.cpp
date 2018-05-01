@@ -48,6 +48,7 @@ static std::string toString(wasm::WasmSymbolType type) {
   case wasm::WASM_SYMBOL_TYPE_SECTION:
     return "WASM_SYMBOL_TYPE_SECTION";
   }
+  llvm_unreachable("unknown symbol type");
 }
 
 static std::string relocTypetoString(uint32_t type) {

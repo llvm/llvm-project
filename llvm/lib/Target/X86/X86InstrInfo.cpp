@@ -3954,13 +3954,14 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MOV32rm:
   case X86::MOVSSrm:
   case X86::VMOVSSZrm:
+  case X86::VMOVSSrm:
   case X86::KMOVDkm:
     MemBytes = 4;
     return true;
   case X86::MOV64rm:
   case X86::LD_Fp64m:
   case X86::MOVSDrm:
-  case X86::VMOVSSrm:
+  case X86::VMOVSDrm:
   case X86::VMOVSDZrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
@@ -3973,7 +3974,6 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MOVUPDrm:
   case X86::MOVDQArm:
   case X86::MOVDQUrm:
-  case X86::VMOVSDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:

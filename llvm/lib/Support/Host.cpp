@@ -1261,6 +1261,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;
   Features["rdpid"]           = HasLeaf7 && ((ECX >> 22) & 1);
   Features["cldemote"]        = HasLeaf7 && ((ECX >> 25) & 1);
+  Features["movdiri"]         = HasLeaf7 && ((ECX >> 27) & 1);
+  Features["movdir64b"]       = HasLeaf7 && ((ECX >> 28) & 1);
 
   Features["ibt"] = HasLeaf7 && ((EDX >> 20) & 1);
 

@@ -156,6 +156,7 @@ def  : WriteRes<WriteVecMove,        [SLM_FPC_RSV01]>;
 
 defm : SLMWriteResPair<WriteVecShift, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecLogic, [SLM_FPC_RSV01], 1>;
+defm : SLMWriteResPair<WriteVecLogicY,[SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecALU,   [SLM_FPC_RSV01],  1>;
 defm : SLMWriteResPair<WriteVecIMul,  [SLM_FPC_RSV0],   4>;
 // FIXME: The below is closer to correct, but caused some perf regressions.

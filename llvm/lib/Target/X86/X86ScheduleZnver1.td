@@ -227,6 +227,7 @@ def  : WriteRes<WriteVecLoad,             [ZnAGU]> { let Latency = 8; }
 
 defm : ZnWriteResFpuPair<WriteVecShift,   [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecLogic,   [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteVecLogicY,  [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WritePHAdd,      [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecALU,     [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecIMul,    [ZnFPU0],  4>;

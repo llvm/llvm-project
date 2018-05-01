@@ -126,6 +126,7 @@ def  WriteVecStore : SchedWrite;
 def  WriteVecMove  : SchedWrite;
 defm WriteVecALU   : X86SchedWritePair; // Vector integer ALU op, no logicals.
 defm WriteVecLogic : X86SchedWritePair; // Vector integer and/or/xor logicals.
+defm WriteVecLogicY: X86SchedWritePair; // Vector integer and/or/xor logicals (YMM/ZMM).
 defm WriteVecShift : X86SchedWritePair; // Vector integer shifts.
 defm WriteVecIMul  : X86SchedWritePair; // Vector integer multiply.
 defm WritePMULLD : X86SchedWritePair; // PMULLD
@@ -225,7 +226,7 @@ def SchedWriteVecALU
  : X86SchedWriteWidths<WriteVecALU, WriteVecALU, WriteVecALU, WriteVecALU>;
 def SchedWriteVecLogic
  : X86SchedWriteWidths<WriteVecLogic, WriteVecLogic,
-                       WriteVecLogic, WriteVecLogic>;
+                       WriteVecLogicY, WriteVecLogicY>;
 def SchedWriteVecShift
  : X86SchedWriteWidths<WriteVecShift, WriteVecShift,
                        WriteVecShift, WriteVecShift>;

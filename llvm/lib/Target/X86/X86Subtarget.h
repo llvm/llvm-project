@@ -209,6 +209,12 @@ protected:
   /// Processor has Cache Line Demote instruction
   bool HasCLDEMOTE;
 
+  /// Processor has MOVDIRI instruction (direct store integer).
+  bool HasMOVDIRI;
+
+  /// Processor has MOVDIR64B instruction (direct store 64 bytes).
+  bool HasMOVDIR64B;
+
   /// Processor has Prefetch with intent to Write instruction
   bool HasPREFETCHWT1;
 
@@ -582,6 +588,8 @@ public:
   bool hasMWAITX() const { return HasMWAITX; }
   bool hasCLZERO() const { return HasCLZERO; }
   bool hasCLDEMOTE() const { return HasCLDEMOTE; }
+  bool hasMOVDIRI() const { return HasMOVDIRI; }
+  bool hasMOVDIR64B() const { return HasMOVDIR64B; }
   bool isSHLDSlow() const { return IsSHLDSlow; }
   bool isPMULLDSlow() const { return IsPMULLDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }

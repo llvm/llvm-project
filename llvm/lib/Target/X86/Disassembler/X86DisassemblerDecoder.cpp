@@ -1057,14 +1057,15 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
   }
 
   /*
-   * Absolute moves and umonitor need special handling.
+   * Absolute moves, umonitor, and movdir64b need special handling.
    * -For 16-bit mode because the meaning of the AdSize and OpSize prefixes are
    *  inverted w.r.t.
    * -For 32-bit mode we need to ensure the ADSIZE prefix is observed in
    *  any position.
    */
   if ((insn->opcodeType == ONEBYTE && ((insn->opcode & 0xFC) == 0xA0)) ||
-      (insn->opcodeType == TWOBYTE && (insn->opcode == 0xAE))) {
+      (insn->opcodeType == TWOBYTE && (insn->opcode == 0xAE)) ||
+      (insn->opcodeType == THREEBYTE_38 && insn->opcode == 0xF8)) {
     /* Make sure we observed the prefixes in any position. */
     if (insn->hasAdSize)
       attrMask |= ATTR_ADSIZE;
@@ -1074,6 +1075,7 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
     /* In 16-bit, invert the attributes. */
     if (insn->mode == MODE_16BIT) {
       attrMask ^= ATTR_ADSIZE;
+
       /* The OpSize attribute is only valid with the absolute moves. */
       if (insn->opcodeType == ONEBYTE && ((insn->opcode & 0xFC) == 0xA0))
         attrMask ^= ATTR_OPSIZE;

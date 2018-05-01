@@ -1675,7 +1675,18 @@ Instruction *InstCombiner::MatchBSwap(BinaryOperator &I) {
   bool OrOfAnds = match(Op0, m_And(m_Value(), m_Value())) &&
                   match(Op1, m_And(m_Value(), m_Value()));
 
-  if (!OrOfOrs && !OrOfShifts && !OrOfAnds)
+  // (A << B) | (C & D)                              -> bswap if possible.
+  // The bigger pattern here is ((A & C1) << C2) | ((B >> C2) & C1), which is a
+  // part of the bswap idiom for specific values of C1, C2 (e.g. C1 = 16711935,
+  // C2 = 8 for i32).
+  // This pattern can occur when the operands of the 'or' are not canonicalized
+  // for some reason (not having only one use, for example).
+  bool OrOfAndAndSh = (match(Op0, m_LogicalShift(m_Value(), m_Value())) &&
+                       match(Op1, m_And(m_Value(), m_Value()))) ||
+                      (match(Op0, m_And(m_Value(), m_Value())) &&
+                       match(Op1, m_LogicalShift(m_Value(), m_Value())));
+
+  if (!OrOfOrs && !OrOfShifts && !OrOfAnds && !OrOfAndAndSh)
     return nullptr;
 
   SmallVector<Instruction*, 4> Insts;
