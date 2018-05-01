@@ -85,166 +85,6 @@ static void replaceLoopUsesWithConstant(Loop &L, Value &LIC,
   }
 }
 
-/// Update the IDom for a basic block whose predecessor set has changed.
-///
-/// This routine is designed to work when the domtree update is relatively
-/// localized by leveraging a known common dominator, often a loop header.
-///
-/// FIXME: Should consider hand-rolling a slightly more efficient non-DFS
-/// approach here as we can do that easily by persisting the candidate IDom's
-/// dominating set between each predecessor.
-///
-/// FIXME: Longer term, many uses of this can be replaced by an incremental
-/// domtree update strategy that starts from a known dominating block and
-/// rebuilds that subtree.
-static bool updateIDomWithKnownCommonDominator(BasicBlock *BB,
-                                               BasicBlock *KnownDominatingBB,
-                                               DominatorTree &DT) {
-  assert(pred_begin(BB) != pred_end(BB) &&
-         "This routine does not handle unreachable blocks!");
-
-  BasicBlock *OrigIDom = DT[BB]->getIDom()->getBlock();
-
-  BasicBlock *IDom = *pred_begin(BB);
-  assert(DT.dominates(KnownDominatingBB, IDom) &&
-         "Bad known dominating block!");
-
-  // Walk all of the other predecessors finding the nearest common dominator
-  // until all predecessors are covered or we reach the loop header. The loop
-  // header necessarily dominates all loop exit blocks in loop simplified form
-  // so we can early-exit the moment we hit that block.
-  for (auto PI = std::next(pred_begin(BB)), PE = pred_end(BB);
-       PI != PE && IDom != KnownDominatingBB; ++PI) {
-    assert(DT.dominates(KnownDominatingBB, *PI) &&
-           "Bad known dominating block!");
-    IDom = DT.findNearestCommonDominator(IDom, *PI);
-  }
-
-  if (IDom == OrigIDom)
-    return false;
-
-  DT.changeImmediateDominator(BB, IDom);
-  return true;
-}
-
-// Note that we don't currently use the IDFCalculator here for two reasons:
-// 1) It computes dominator tree levels for the entire function on each run
-//    of 'compute'. While this isn't terrible, given that we expect to update
-//    relatively small subtrees of the domtree, it isn't necessarily the right
-//    tradeoff.
-// 2) The interface doesn't fit this usage well. It doesn't operate in
-//    append-only, and builds several sets that we don't need.
-//
-// FIXME: Neither of these issues are a big deal and could be addressed with
-// some amount of refactoring of IDFCalculator. That would allow us to share
-// the core logic here (which is solving the same core problem).
-static void appendDomFrontier(DomTreeNode *Node,
-                              SmallSetVector<BasicBlock *, 4> &Worklist,
-                              SmallVectorImpl<DomTreeNode *> &DomNodes,
-                              SmallPtrSetImpl<BasicBlock *> &DomSet) {
-  assert(DomNodes.empty() && "Must start with no dominator nodes.");
-  assert(DomSet.empty() && "Must start with an empty dominator set.");
-
-  // First flatten this subtree into sequence of nodes by doing a pre-order
-  // walk.
-  DomNodes.push_back(Node);
-  // We intentionally re-evaluate the size as each node can add new children.
-  // Because this is a tree walk, this cannot add any duplicates.
-  for (int i = 0; i < (int)DomNodes.size(); ++i)
-    DomNodes.insert(DomNodes.end(), DomNodes[i]->begin(), DomNodes[i]->end());
-
-  // Now create a set of the basic blocks so we can quickly test for
-  // dominated successors. We could in theory use the DFS numbers of the
-  // dominator tree for this, but we want this to remain predictably fast
-  // even while we mutate the dominator tree in ways that would invalidate
-  // the DFS numbering.
-  for (DomTreeNode *InnerN : DomNodes)
-    DomSet.insert(InnerN->getBlock());
-
-  // Now re-walk the nodes, appending every successor of every node that isn't
-  // in the set. Note that we don't append the node itself, even though if it
-  // is a successor it does not strictly dominate itself and thus it would be
-  // part of the dominance frontier. The reason we don't append it is that
-  // the node passed in came *from* the worklist and so it has already been
-  // processed.
-  for (DomTreeNode *InnerN : DomNodes)
-    for (BasicBlock *SuccBB : successors(InnerN->getBlock()))
-      if (!DomSet.count(SuccBB))
-        Worklist.insert(SuccBB);
-
-  DomNodes.clear();
-  DomSet.clear();
-}
-
-/// Update the dominator tree after unswitching a particular former exit block.
-///
-/// This handles the full update of the dominator tree after hoisting a block
-/// that previously was an exit block (or split off of an exit block) up to be
-/// reached from the new immediate dominator of the preheader.
-///
-/// The common case is simple -- we just move the unswitched block to have an
-/// immediate dominator of the old preheader. But in complex cases, there may
-/// be other blocks reachable from the unswitched block that are immediately
-/// dominated by some node between the unswitched one and the old preheader.
-/// All of these also need to be hoisted in the dominator tree. We also want to
-/// minimize queries to the dominator tree because each step of this
-/// invalidates any DFS numbers that would make queries fast.
-static void updateDTAfterUnswitch(BasicBlock *UnswitchedBB, BasicBlock *OldPH,
-                                  DominatorTree &DT) {
-  DomTreeNode *OldPHNode = DT[OldPH];
-  DomTreeNode *UnswitchedNode = DT[UnswitchedBB];
-  // If the dominator tree has already been updated for this unswitched node,
-  // we're done. This makes it easier to use this routine if there are multiple
-  // paths to the same unswitched destination.
-  if (UnswitchedNode->getIDom() == OldPHNode)
-    return;
-
-  // First collect the domtree nodes that we are hoisting over. These are the
-  // set of nodes which may have children that need to be hoisted as well.
-  SmallPtrSet<DomTreeNode *, 4> DomChain;
-  for (auto *IDom = UnswitchedNode->getIDom(); IDom != OldPHNode;
-       IDom = IDom->getIDom())
-    DomChain.insert(IDom);
-
-  // The unswitched block ends up immediately dominated by the old preheader --
-  // regardless of whether it is the loop exit block or split off of the loop
-  // exit block.
-  DT.changeImmediateDominator(UnswitchedNode, OldPHNode);
-
-  // For everything that moves up the dominator tree, we need to examine the
-  // dominator frontier to see if it additionally should move up the dominator
-  // tree. This lambda appends the dominator frontier for a node on the
-  // worklist.
-  SmallSetVector<BasicBlock *, 4> Worklist;
-
-  // Scratch data structures reused by domfrontier finding.
-  SmallVector<DomTreeNode *, 4> DomNodes;
-  SmallPtrSet<BasicBlock *, 4> DomSet;
-
-  // Append the initial dom frontier nodes.
-  appendDomFrontier(UnswitchedNode, Worklist, DomNodes, DomSet);
-
-  // Walk the worklist. We grow the list in the loop and so must recompute size.
-  for (int i = 0; i < (int)Worklist.size(); ++i) {
-    auto *BB = Worklist[i];
-
-    DomTreeNode *Node = DT[BB];
-    assert(!DomChain.count(Node) &&
-           "Cannot be dominated by a block you can reach!");
-
-    // If this block had an immediate dominator somewhere in the chain
-    // we hoisted over, then its position in the domtree needs to move as it is
-    // reachable from a node hoisted over this chain.
-    if (!DomChain.count(Node->getIDom()))
-      continue;
-
-    DT.changeImmediateDominator(Node, OldPHNode);
-
-    // Now add this node's dominator frontier to the worklist as well.
-    appendDomFrontier(Node, Worklist, DomNodes, DomSet);
-  }
-}
-
 /// Check that all the LCSSA PHI nodes in the loop exit block have trivial
 /// incoming values along this edge.
 static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
@@ -424,12 +264,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
                                               *ParentBB, *OldPH);
 
   // Now we need to update the dominator tree.
-  updateDTAfterUnswitch(UnswitchedBB, OldPH, DT);
-  // But if we split something off of the loop exit block then we also removed
-  // one of the predecessors for the loop exit block and may need to update its
-  // idom.
-  if (UnswitchedBB != LoopExitBB)
-    updateIDomWithKnownCommonDominator(LoopExitBB, L.getHeader(), DT);
+  DT.applyUpdates(
+      {{DT.Delete, ParentBB, UnswitchedBB}, {DT.Insert, OldPH, UnswitchedBB}});
 
   // Since this is an i1 condition we can also trivially replace uses of it
   // within the loop with a constant.
@@ -574,7 +410,6 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
           SplitBlock(DefaultExitBB, &DefaultExitBB->front(), &DT, &LI);
       rewritePHINodesForExitAndUnswitchedBlocks(*DefaultExitBB, *SplitBB,
                                                 *ParentBB, *OldPH);
-      updateIDomWithKnownCommonDominator(DefaultExitBB, L.getHeader(), DT);
       DefaultExitBB = SplitExitBBMap[DefaultExitBB] = SplitBB;
     }
   }
@@ -601,7 +436,6 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
       SplitExitBB = SplitBlock(ExitBB, &ExitBB->front(), &DT, &LI);
       rewritePHINodesForExitAndUnswitchedBlocks(*ExitBB, *SplitExitBB,
                                                 *ParentBB, *OldPH);
-      updateIDomWithKnownCommonDominator(ExitBB, L.getHeader(), DT);
     }
     // Update the case pair to point to the split block.
     CasePair.second = SplitExitBB;
@@ -614,14 +448,12 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     BasicBlock *UnswitchedBB = CasePair.second;
 
     NewSI->addCase(CaseVal, UnswitchedBB);
-    updateDTAfterUnswitch(UnswitchedBB, OldPH, DT);
   }
 
   // If the default was unswitched, re-point it and add explicit cases for
   // entering the loop.
   if (DefaultExitBB) {
     NewSI->setDefaultDest(DefaultExitBB);
-    updateDTAfterUnswitch(DefaultExitBB, OldPH, DT);
 
     // We removed all the exit cases, so we just copy the cases to the
     // unswitched switch.
@@ -638,6 +470,22 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     SI.eraseFromParent();
     BranchInst::Create(CommonSuccBB, BB);
   }
+
+  // Walk the unswitched exit blocks and the unswitched split blocks and update
+  // the dominator tree based on the CFG edits. While we are walking unordered
+  // containers here, the API for applyUpdates takes an unordered list of
+  // updates and requires them to not contain duplicates.
+  SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
+  for (auto *UnswitchedExitBB : UnswitchedExitBBs) {
+    DTUpdates.push_back({DT.Delete, ParentBB, UnswitchedExitBB});
+    DTUpdates.push_back({DT.Insert, OldPH, UnswitchedExitBB});
+  }
+  for (auto SplitUnswitchedPair : SplitExitBBMap) {
+    auto *UnswitchedBB = SplitUnswitchedPair.second;
+    DTUpdates.push_back({DT.Delete, ParentBB, UnswitchedBB});
+    DTUpdates.push_back({DT.Insert, OldPH, UnswitchedBB});
+  }
+  DT.applyUpdates(DTUpdates);
 
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));
   ++NumTrivial;
@@ -883,9 +731,13 @@ static BasicBlock *buildClonedLoopBlocks(
             PN.removeIncomingValue(LoopBB, /*DeletePHIIfEmpty*/ false);
 
   // Record the domtree updates for the new blocks.
-  for (auto *ClonedBB : NewBlocks)
+  SmallPtrSet<BasicBlock *, 4> SuccSet;
+  for (auto *ClonedBB : NewBlocks) {
     for (auto *SuccBB : successors(ClonedBB))
-      DTUpdates.push_back({DominatorTree::Insert, ClonedBB, SuccBB});
+      if (SuccSet.insert(SuccBB).second)
+        DTUpdates.push_back({DominatorTree::Insert, ClonedBB, SuccBB});
+    SuccSet.clear();
+  }
 
   return ClonedPH;
 }

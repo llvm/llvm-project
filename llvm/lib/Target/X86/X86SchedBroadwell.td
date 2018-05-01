@@ -191,7 +191,8 @@ def  : WriteRes<WriteVecStore,       [BWPort237, BWPort4]>;
 def  : WriteRes<WriteVecMove,        [BWPort015]>;
 
 defm : BWWriteResPair<WriteVecALU,   [BWPort15],  1>; // Vector integer ALU op, no logicals.
-defm : BWWriteResPair<WriteVecLogic, [BWPort015], 1>; // Vector integer and/or/xor.
+defm : BWWriteResPair<WriteVecLogic, [BWPort015], 1, [1], 1, 5>; // Vector integer and/or/xor.
+defm : BWWriteResPair<WriteVecLogicY,[BWPort015], 1, [1], 1, 6>; // Vector integer and/or/xor (YMM/ZMM).
 defm : BWWriteResPair<WriteVecShift, [BWPort0],  1>; // Vector integer shifts.
 defm : BWWriteResPair<WriteVecIMul,  [BWPort0],   5>; // Vector integer multiply.
 defm : BWWriteResPair<WritePMULLD,   [BWPort0], 10, [2], 2, 5>; // PMULLD
@@ -386,9 +387,7 @@ def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVD64rr",
                                            "MMX_MOVD64to64rr",
                                            "MMX_MOVQ2DQrr",
                                            "(V?)MOV64toPQIrr",
-                                           "(V?)MOVDI2PDIrr",
-                                           "(V?)PSLLDQ(Y?)ri",
-                                           "(V?)PSRLDQ(Y?)ri")>;
+                                           "(V?)MOVDI2PDIrr")>;
 
 def BWWriteResGroup4 : SchedWriteRes<[BWPort6]> {
   let Latency = 1;
@@ -1164,11 +1163,7 @@ def BWWriteResGroup77 : SchedWriteRes<[BWPort23,BWPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[BWWriteResGroup77], (instregex "VPANDNYrm",
-                                            "VPANDYrm",
-                                            "VPBLENDDYrmi",
-                                            "VPORYrm",
-                                            "VPXORYrm")>;
+def: InstRW<[BWWriteResGroup77], (instregex "VPBLENDDYrmi")>;
 
 def BWWriteResGroup79 : SchedWriteRes<[BWPort5,BWPort23]> {
   let Latency = 7;

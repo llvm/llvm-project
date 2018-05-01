@@ -2296,32 +2296,33 @@ multiclass PDI_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass PDI_binop_all<bits<8> opc, string OpcodeStr, SDNode Opcode,
                          ValueType OpVT128, ValueType OpVT256,
-                         X86FoldableSchedWrite sched, bit IsCommutable,
+                         X86SchedWriteWidths sched, bit IsCommutable,
                          Predicate prd> {
 let Predicates = [HasAVX, prd] in
   defm V#NAME : PDI_binop_rm<opc, !strconcat("v", OpcodeStr), Opcode, OpVT128,
-                    VR128, loadv2i64, i128mem, sched, IsCommutable, 0>, VEX_4V, VEX_WIG;
+                             VR128, loadv2i64, i128mem, sched.XMM,
+                             IsCommutable, 0>, VEX_4V, VEX_WIG;
 
 let Constraints = "$src1 = $dst" in
   defm NAME : PDI_binop_rm<opc, OpcodeStr, Opcode, OpVT128, VR128,
-                           memopv2i64, i128mem, sched, IsCommutable, 1>;
+                           memopv2i64, i128mem, sched.XMM, IsCommutable, 1>;
 
 let Predicates = [HasAVX2, prd] in
   defm V#NAME#Y : PDI_binop_rm<opc, !strconcat("v", OpcodeStr), Opcode,
-                               OpVT256, VR256, loadv4i64, i256mem, sched,
+                               OpVT256, VR256, loadv4i64, i256mem, sched.YMM,
                                IsCommutable, 0>, VEX_4V, VEX_L, VEX_WIG;
 }
 
 // These are ordered here for pattern ordering requirements with the fp versions
 
 defm PAND  : PDI_binop_all<0xDB, "pand", and, v2i64, v4i64,
-                           WriteVecLogic, 1, NoVLX>;
+                           SchedWriteVecLogic, 1, NoVLX>;
 defm POR   : PDI_binop_all<0xEB, "por", or, v2i64, v4i64,
-                           WriteVecLogic, 1, NoVLX>;
+                           SchedWriteVecLogic, 1, NoVLX>;
 defm PXOR  : PDI_binop_all<0xEF, "pxor", xor, v2i64, v4i64,
-                           WriteVecLogic, 1, NoVLX>;
+                           SchedWriteVecLogic, 1, NoVLX>;
 defm PANDN : PDI_binop_all<0xDF, "pandn", X86andnp, v2i64, v4i64,
-                           WriteVecLogic, 0, NoVLX>;
+                           SchedWriteVecLogic, 0, NoVLX>;
 
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Logical Instructions
@@ -3305,57 +3306,57 @@ multiclass PDI_binop_rm2<bits<8> opc, string OpcodeStr, SDNode OpNode,
 } // ExeDomain = SSEPackedInt
 
 defm PADDB   : PDI_binop_all<0xFC, "paddb", add, v16i8, v32i8,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PADDW   : PDI_binop_all<0xFD, "paddw", add, v8i16, v16i16,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PADDD   : PDI_binop_all<0xFE, "paddd", add, v4i32, v8i32,
-                             WriteVecALU, 1, NoVLX>;
+                             SchedWriteVecALU, 1, NoVLX>;
 defm PADDQ   : PDI_binop_all<0xD4, "paddq", add, v2i64, v4i64,
-                             WriteVecALU, 1, NoVLX>;
+                             SchedWriteVecALU, 1, NoVLX>;
 defm PADDSB  : PDI_binop_all<0xEC, "paddsb", X86adds, v16i8, v32i8,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PADDSW  : PDI_binop_all<0xED, "paddsw", X86adds, v8i16, v16i16,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PADDUSB : PDI_binop_all<0xDC, "paddusb", X86addus, v16i8, v32i8,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PADDUSW : PDI_binop_all<0xDD, "paddusw", X86addus, v8i16, v16i16,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PMULLW  : PDI_binop_all<0xD5, "pmullw", mul, v8i16, v16i16,
-                             WriteVecIMul, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecIMul, 1, NoVLX_Or_NoBWI>;
 defm PMULHUW : PDI_binop_all<0xE4, "pmulhuw", mulhu, v8i16, v16i16,
-                             WriteVecIMul, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecIMul, 1, NoVLX_Or_NoBWI>;
 defm PMULHW  : PDI_binop_all<0xE5, "pmulhw", mulhs, v8i16, v16i16,
-                             WriteVecIMul, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecIMul, 1, NoVLX_Or_NoBWI>;
 defm PSUBB   : PDI_binop_all<0xF8, "psubb", sub, v16i8, v32i8,
-                             WriteVecALU, 0, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
 defm PSUBW   : PDI_binop_all<0xF9, "psubw", sub, v8i16, v16i16,
-                             WriteVecALU, 0, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
 defm PSUBD   : PDI_binop_all<0xFA, "psubd", sub, v4i32, v8i32,
-                             WriteVecALU, 0, NoVLX>;
+                             SchedWriteVecALU, 0, NoVLX>;
 defm PSUBQ   : PDI_binop_all<0xFB, "psubq", sub, v2i64, v4i64,
-                             WriteVecALU, 0, NoVLX>;
+                             SchedWriteVecALU, 0, NoVLX>;
 defm PSUBSB  : PDI_binop_all<0xE8, "psubsb", X86subs, v16i8, v32i8,
-                             WriteVecALU, 0, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
 defm PSUBSW  : PDI_binop_all<0xE9, "psubsw", X86subs, v8i16, v16i16,
-                             WriteVecALU, 0, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
 defm PSUBUSB : PDI_binop_all<0xD8, "psubusb", X86subus, v16i8, v32i8,
-                             WriteVecALU, 0, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
 defm PSUBUSW : PDI_binop_all<0xD9, "psubusw", X86subus, v8i16, v16i16,
-                             WriteVecALU, 0, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
 defm PMINUB  : PDI_binop_all<0xDA, "pminub", umin, v16i8, v32i8,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PMINSW  : PDI_binop_all<0xEA, "pminsw", smin, v8i16, v16i16,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PMAXUB  : PDI_binop_all<0xDE, "pmaxub", umax, v16i8, v32i8,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PMAXSW  : PDI_binop_all<0xEE, "pmaxsw", smax, v8i16, v16i16,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PAVGB   : PDI_binop_all<0xE0, "pavgb", X86avg, v16i8, v32i8,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PAVGW   : PDI_binop_all<0xE3, "pavgw", X86avg, v8i16, v16i16,
-                             WriteVecALU, 1, NoVLX_Or_NoBWI>;
+                             SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PMULUDQ : PDI_binop_all<0xF4, "pmuludq", X86pmuludq, v2i64, v4i64,
-                             WriteVecIMul, 1, NoVLX>;
+                             SchedWriteVecIMul, 1, NoVLX>;
 
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in
 defm VPMADDWD : PDI_binop_rm2<0xF5, "vpmaddwd", X86vpmaddwd, v4i32, v8i16, VR128,
@@ -3446,16 +3447,17 @@ multiclass PDI_binop_ri<bits<8> opc, Format ImmForm, string OpcodeStr,
 }
 
 multiclass PDI_binop_ri_all<bits<8> opc, Format ImmForm, string OpcodeStr,
-                            SDNode OpNode, X86FoldableSchedWrite sched> {
+                            SDNode OpNode, X86SchedWriteWidths sched> {
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in
   defm V#NAME : PDI_binop_ri<opc, ImmForm, !strconcat("v", OpcodeStr), OpNode,
-                             VR128, v16i8, sched, 0>, VEX_4V, VEX_WIG;
+                             VR128, v16i8, sched.XMM, 0>, VEX_4V, VEX_WIG;
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in
   defm V#NAME#Y : PDI_binop_ri<opc, ImmForm, !strconcat("v", OpcodeStr), OpNode,
-                               VR256, v32i8, sched, 0>,
+                               VR256, v32i8, sched.YMM, 0>,
                                VEX_4V, VEX_L, VEX_WIG;
 let Constraints = "$src1 = $dst" in
-  defm NAME : PDI_binop_ri<opc, ImmForm, OpcodeStr, OpNode, VR128, v16i8, sched>;
+  defm NAME : PDI_binop_ri<opc, ImmForm, OpcodeStr, OpNode, VR128, v16i8,
+                           sched.XMM>;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -3481,9 +3483,10 @@ let ExeDomain = SSEPackedInt in {
   defm PSRAD : PDI_binop_rmi_all<0xE2, 0x72, MRM4r, "psrad", X86vsra, X86vsrai,
                                  v4i32, v8i32, v4i32, WriteVecShift, NoVLX>;
 
-  defm PSLLDQ : PDI_binop_ri_all<0x73, MRM7r, "pslldq", X86vshldq, WriteVecShift>;
-  defm PSRLDQ : PDI_binop_ri_all<0x73, MRM3r, "psrldq", X86vshrdq, WriteVecShift>;
-  // PSRADQri doesn't exist in SSE[1-3].
+  defm PSLLDQ : PDI_binop_ri_all<0x73, MRM7r, "pslldq", X86vshldq,
+                                 SchedWriteShuffle>;
+  defm PSRLDQ : PDI_binop_ri_all<0x73, MRM3r, "psrldq", X86vshrdq,
+                                 SchedWriteShuffle>;
 } // ExeDomain = SSEPackedInt
 
 //===---------------------------------------------------------------------===//
@@ -3491,17 +3494,17 @@ let ExeDomain = SSEPackedInt in {
 //===---------------------------------------------------------------------===//
 
 defm PCMPEQB : PDI_binop_all<0x74, "pcmpeqb", X86pcmpeq, v16i8, v32i8,
-                             WriteVecALU, 1, TruePredicate>;
+                             SchedWriteVecALU, 1, TruePredicate>;
 defm PCMPEQW : PDI_binop_all<0x75, "pcmpeqw", X86pcmpeq, v8i16, v16i16,
-                             WriteVecALU, 1, TruePredicate>;
+                             SchedWriteVecALU, 1, TruePredicate>;
 defm PCMPEQD : PDI_binop_all<0x76, "pcmpeqd", X86pcmpeq, v4i32, v8i32,
-                             WriteVecALU, 1, TruePredicate>;
+                             SchedWriteVecALU, 1, TruePredicate>;
 defm PCMPGTB : PDI_binop_all<0x64, "pcmpgtb", X86pcmpgt, v16i8, v32i8,
-                             WriteVecALU, 0, TruePredicate>;
+                             SchedWriteVecALU, 0, TruePredicate>;
 defm PCMPGTW : PDI_binop_all<0x65, "pcmpgtw", X86pcmpgt, v8i16, v16i16,
-                             WriteVecALU, 0, TruePredicate>;
+                             SchedWriteVecALU, 0, TruePredicate>;
 defm PCMPGTD : PDI_binop_all<0x66, "pcmpgtd", X86pcmpgt, v4i32, v8i32,
-                             WriteVecALU, 0, TruePredicate>;
+                             SchedWriteVecALU, 0, TruePredicate>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Integer Shuffle Instructions
@@ -4182,7 +4185,7 @@ def MOVPQI2QImr : S2I<0xD6, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
 
 // For disassembler only
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
-    SchedRW = [WriteVecLogic] in {
+    SchedRW = [SchedWriteVecLogic.XMM] in {
 def VMOVPQI2QIrr : VS2I<0xD6, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
                      "movq\t{$src, $dst|$dst, $src}", []>, VEX, VEX_WIG;
 def MOVPQI2QIrr : S2I<0xD6, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
@@ -4224,7 +4227,7 @@ let Predicates = [UseSSE2], AddedComplexity = 20 in {
 // Moving from XMM to XMM and clear upper 64 bits. Note, there is a bug in
 // IA32 document. movq xmm1, xmm2 does clear the high bits.
 //
-let ExeDomain = SSEPackedInt, SchedRW = [WriteVecLogic] in {
+let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecLogic.XMM] in {
 let AddedComplexity = 15 in
 def VMOVZPQILo2PQIrr : I<0x7E, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                         "vmovq\t{$src, $dst|$dst, $src}",
@@ -5648,56 +5651,61 @@ let Defs = [EFLAGS], Predicates = [HasAVX] in {
 def VPTESTrr  : SS48I<0x17, MRMSrcReg, (outs), (ins VR128:$src1, VR128:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS, (X86ptest VR128:$src1, (v2i64 VR128:$src2)))]>,
-                Sched<[WriteVecLogic]>, VEX, VEX_WIG;
+                Sched<[SchedWriteVecLogic.XMM]>, VEX, VEX_WIG;
 def VPTESTrm  : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS,(X86ptest VR128:$src1, (loadv2i64 addr:$src2)))]>,
-                Sched<[WriteVecLogicLd, ReadAfterLd]>, VEX, VEX_WIG;
+                Sched<[SchedWriteVecLogic.XMM.Folded, ReadAfterLd]>,
+                VEX, VEX_WIG;
 
 def VPTESTYrr : SS48I<0x17, MRMSrcReg, (outs), (ins VR256:$src1, VR256:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS, (X86ptest VR256:$src1, (v4i64 VR256:$src2)))]>,
-                Sched<[WriteVecLogic]>, VEX, VEX_L, VEX_WIG;
+                Sched<[SchedWriteVecLogic.YMM]>, VEX, VEX_L, VEX_WIG;
 def VPTESTYrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR256:$src1, i256mem:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS,(X86ptest VR256:$src1, (loadv4i64 addr:$src2)))]>,
-                Sched<[WriteVecLogicLd, ReadAfterLd]>, VEX, VEX_L, VEX_WIG;
+                Sched<[SchedWriteVecLogic.YMM.Folded, ReadAfterLd]>,
+                VEX, VEX_L, VEX_WIG;
 }
 
 let Defs = [EFLAGS] in {
 def PTESTrr : SS48I<0x17, MRMSrcReg, (outs), (ins VR128:$src1, VR128:$src2),
               "ptest\t{$src2, $src1|$src1, $src2}",
               [(set EFLAGS, (X86ptest VR128:$src1, (v2i64 VR128:$src2)))]>,
-              Sched<[WriteVecLogic]>;
+              Sched<[SchedWriteVecLogic.XMM]>;
 def PTESTrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
               "ptest\t{$src2, $src1|$src1, $src2}",
               [(set EFLAGS, (X86ptest VR128:$src1, (memopv2i64 addr:$src2)))]>,
-              Sched<[WriteVecLogicLd, ReadAfterLd]>;
+              Sched<[SchedWriteVecLogic.XMM.Folded, ReadAfterLd]>;
 }
 
 // The bit test instructions below are AVX only
 multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
-                       X86MemOperand x86memop, PatFrag mem_frag, ValueType vt> {
+                       X86MemOperand x86memop, PatFrag mem_frag, ValueType vt,
+                       X86FoldableSchedWrite sched> {
   def rr : SS48I<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
             !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
             [(set EFLAGS, (X86testp RC:$src1, (vt RC:$src2)))]>,
-            Sched<[WriteVecLogic]>, VEX;
+            Sched<[sched]>, VEX;
   def rm : SS48I<opc, MRMSrcMem, (outs), (ins RC:$src1, x86memop:$src2),
             !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
             [(set EFLAGS, (X86testp RC:$src1, (mem_frag addr:$src2)))]>,
-            Sched<[WriteVecLogicLd, ReadAfterLd]>, VEX;
+            Sched<[sched.Folded, ReadAfterLd]>, VEX;
 }
 
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
 let ExeDomain = SSEPackedSingle in {
-defm VTESTPS  : avx_bittest<0x0E, "vtestps", VR128, f128mem, loadv4f32, v4f32>;
-defm VTESTPSY : avx_bittest<0x0E, "vtestps", VR256, f256mem, loadv8f32, v8f32>,
-                            VEX_L;
+defm VTESTPS  : avx_bittest<0x0E, "vtestps", VR128, f128mem, loadv4f32, v4f32,
+                            SchedWriteVecLogic.XMM>;
+defm VTESTPSY : avx_bittest<0x0E, "vtestps", VR256, f256mem, loadv8f32, v8f32,
+                            SchedWriteVecLogic.YMM>, VEX_L;
 }
 let ExeDomain = SSEPackedDouble in {
-defm VTESTPD  : avx_bittest<0x0F, "vtestpd", VR128, f128mem, loadv2f64, v2f64>;
-defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64>,
-                            VEX_L;
+defm VTESTPD  : avx_bittest<0x0F, "vtestpd", VR128, f128mem, loadv2f64, v2f64,
+                            SchedWriteVecLogic.XMM>;
+defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64,
+                            SchedWriteVecLogic.YMM>, VEX_L;
 }
 }
 

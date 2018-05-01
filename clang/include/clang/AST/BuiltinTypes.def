@@ -72,6 +72,9 @@ UNSIGNED_TYPE(UChar, UnsignedCharTy)
 // 'wchar_t' for targets where it's unsigned
 SHARED_SINGLETON_TYPE(UNSIGNED_TYPE(WChar_U, WCharTy))
 
+// 'char8_t' in C++20 (proposed)
+UNSIGNED_TYPE(Char8, Char8Ty)
+
 // 'char16_t' in C++
 UNSIGNED_TYPE(Char16, Char16Ty)
 

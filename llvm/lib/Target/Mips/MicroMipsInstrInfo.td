@@ -948,45 +948,53 @@ let DecoderNamespace = "MicroMips", DecoderMethod = "DecodeJumpTargetMM" in
                       J_FM_MM<0x35>, AdditionalRequires<[RelocNotPIC]>,
                       IsBranch, ISA_MICROMIPS32_NOT_MIPS32R6;
 
-let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
+let DecoderNamespace = "MicroMips" in {
   let DecoderMethod = "DecodeJumpTargetMM" in {
-    def JAL_MM      : MMRel, JumpLink<"jal", calltarget_mm>, J_FM_MM<0x3d>;
-    def JALX_MM     : MMRel, JumpLink<"jalx", calltarget>, J_FM_MM<0x3c>;
+    def JAL_MM      : MMRel, JumpLink<"jal", calltarget_mm>, J_FM_MM<0x3d>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+    def JALX_MM     : MMRel, JumpLink<"jalx", calltarget>, J_FM_MM<0x3c>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
   }
   def JR_MM : MMRel, IndirectBranch<"jr", GPR32Opnd>, JR_FM_MM<0x3c>,
               ISA_MICROMIPS32_NOT_MIPS32R6;
-  def JALR_MM : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM_MM<0x03c>;
+  def JALR_MM : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM_MM<0x03c>,
+                ISA_MICROMIPS32_NOT_MIPS32R6;
 
   /// Jump Instructions - Short Delay Slot
-  def JALS_MM   : JumpLinkMM<"jals", calltarget_mm>, J_FM_MM<0x1d>;
-  def JALRS_MM  : JumpLinkRegMM<"jalrs", GPR32Opnd>, JALR_FM_MM<0x13c>;
+  def JALS_MM   : JumpLinkMM<"jals", calltarget_mm>, J_FM_MM<0x1d>,
+                  ISA_MICROMIPS32_NOT_MIPS32R6;
+  def JALRS_MM  : JumpLinkRegMM<"jalrs", GPR32Opnd>, JALR_FM_MM<0x13c>,
+                  ISA_MICROMIPS32_NOT_MIPS32R6;
 
   /// Branch Instructions
   def BEQ_MM  : MMRel, CBranch<"beq", brtarget_mm, seteq, GPR32Opnd>,
-                BEQ_FM_MM<0x25>;
+                BEQ_FM_MM<0x25>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BNE_MM  : MMRel, CBranch<"bne", brtarget_mm, setne, GPR32Opnd>,
-                BEQ_FM_MM<0x2d>;
+                BEQ_FM_MM<0x2d>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BGEZ_MM : MMRel, CBranchZero<"bgez", brtarget_mm, setge, GPR32Opnd>,
-                BGEZ_FM_MM<0x2>;
+                BGEZ_FM_MM<0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BGTZ_MM : MMRel, CBranchZero<"bgtz", brtarget_mm, setgt, GPR32Opnd>,
-                BGEZ_FM_MM<0x6>;
+                BGEZ_FM_MM<0x6>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BLEZ_MM : MMRel, CBranchZero<"blez", brtarget_mm, setle, GPR32Opnd>,
-                BGEZ_FM_MM<0x4>;
+                BGEZ_FM_MM<0x4>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BLTZ_MM : MMRel, CBranchZero<"bltz", brtarget_mm, setlt, GPR32Opnd>,
-                BGEZ_FM_MM<0x0>;
+                BGEZ_FM_MM<0x0>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BGEZAL_MM : MMRel, BGEZAL_FT<"bgezal", brtarget_mm, GPR32Opnd>,
-                  BGEZAL_FM_MM<0x03>;
+                  BGEZAL_FM_MM<0x03>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BLTZAL_MM : MMRel, BGEZAL_FT<"bltzal", brtarget_mm, GPR32Opnd>,
-                  BGEZAL_FM_MM<0x01>;
+                  BGEZAL_FM_MM<0x01>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def BAL_BR_MM : BAL_BR_Pseudo<BGEZAL_MM, brtarget_mm>,
+                  ISA_MICROMIPS32_NOT_MIPS32R6;
 
   /// Branch Instructions - Short Delay Slot
   def BGEZALS_MM : BranchCompareToZeroLinkMM<"bgezals", brtarget_mm,
-                                             GPR32Opnd>, BGEZAL_FM_MM<0x13>;
+                                             GPR32Opnd>, BGEZAL_FM_MM<0x13>,
+                   ISA_MICROMIPS32_NOT_MIPS32R6;
   def BLTZALS_MM : BranchCompareToZeroLinkMM<"bltzals", brtarget_mm,
-                                             GPR32Opnd>, BGEZAL_FM_MM<0x11>;
-}
-def B_MM    : UncondBranch<BEQ_MM, brtarget_mm>, IsBranch, ISA_MICROMIPS;
-let DecoderNamespace = "MicroMips" in {
+                                             GPR32Opnd>, BGEZAL_FM_MM<0x11>,
+                   ISA_MICROMIPS32_NOT_MIPS32R6;
+  def B_MM    : UncondBranch<BEQ_MM, brtarget_mm>, IsBranch,
+                ISA_MICROMIPS32_NOT_MIPS32R6;
 
   /// Control Instructions
   def SYNC_MM    : MMRel, SYNC_FT<"sync">, SYNC_FM_MM, ISA_MICROMIPS;
@@ -1213,7 +1221,7 @@ def : MipsPat<(atomic_load_16 addr:$a),
               (LH_MM addr:$a)>;
 
 defm : BrcondPats<GPR32, BEQ_MM, BEQ_MM, BNE_MM, SLT_MM, SLTu_MM, SLTi_MM,
-                  SLTiu_MM, ZERO>;
+                  SLTiu_MM, ZERO>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, ZERO>;
 defm : SetlePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>;
@@ -1323,6 +1331,8 @@ let Predicates = [InMicroMips] in {
   def : MipsInstAlias<"break", (BREAK_MM 0, 0), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"break $imm", (BREAK_MM uimm10:$imm, 0), 1>,
         ISA_MICROMIPS;
+  def : MipsInstAlias<"bal $offset", (BGEZAL_MM ZERO, brtarget_mm:$offset), 1>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
 }
 def : MipsInstAlias<"hypcall", (HYPCALL_MM 0), 1>,
                     ISA_MICROMIPS32R5, ASE_VIRT;

@@ -665,6 +665,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::SChar:
     Encoding = llvm::dwarf::DW_ATE_signed_char;
     break;
+  case BuiltinType::Char8:
   case BuiltinType::Char16:
   case BuiltinType::Char32:
     Encoding = llvm::dwarf::DW_ATE_UTF;

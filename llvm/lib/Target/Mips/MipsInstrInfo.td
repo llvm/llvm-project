@@ -1649,9 +1649,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     PseudoInstExpansion<(JumpInst RO:$rs)>;
 }
 
-class BAL_BR_Pseudo<Instruction RealInst> :
-  PseudoSE<(outs), (ins brtarget:$offset), [], II_BCCZAL>,
-  PseudoInstExpansion<(RealInst ZERO, brtarget:$offset)> {
+class BAL_BR_Pseudo<Instruction RealInst, DAGOperand opnd> :
+  PseudoSE<(outs), (ins opnd:$offset), [], II_BCCZAL>,
+  PseudoInstExpansion<(RealInst ZERO, opnd:$offset)> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
@@ -2146,54 +2146,61 @@ let AdditionalPredicates = [NotInMicroMips] in {
 def LL : LLBase<"ll", GPR32Opnd>, LW_FM<0x30>, PTR_32, ISA_MIPS2_NOT_32R6_64R6;
 def SC : SCBase<"sc", GPR32Opnd>, LW_FM<0x38>, PTR_32, ISA_MIPS2_NOT_32R6_64R6;
 }
-
 /// Jump and Branch Instructions
+let AdditionalPredicates = [NotInMicroMips, RelocNotPIC] in
 def J       : MMRel, JumpFJ<jmptarget, "j", br, bb, "j">, FJ<2>,
-              AdditionalRequires<[RelocNotPIC, NotInMicroMips]>, IsBranch;
+              IsBranch, ISA_MIPS1;
+
+let AdditionalPredicates = [NotInMicroMips] in {
 def JR      : MMRel, IndirectBranch<"jr", GPR32Opnd>, MTLO_FM<8>, ISA_MIPS1_NOT_32R6_64R6;
-def BEQ     : MMRel, CBranch<"beq", brtarget, seteq, GPR32Opnd>, BEQ_FM<4>;
+def BEQ     : MMRel, CBranch<"beq", brtarget, seteq, GPR32Opnd>, BEQ_FM<4>,
+              ISA_MIPS1;
 def BEQL    : MMRel, CBranchLikely<"beql", brtarget, GPR32Opnd>,
               BEQ_FM<20>, ISA_MIPS2_NOT_32R6_64R6;
-def BNE     : MMRel, CBranch<"bne", brtarget, setne, GPR32Opnd>, BEQ_FM<5>;
+def BNE     : MMRel, CBranch<"bne", brtarget, setne, GPR32Opnd>, BEQ_FM<5>,
+              ISA_MIPS1;
 def BNEL    : MMRel, CBranchLikely<"bnel", brtarget, GPR32Opnd>,
               BEQ_FM<21>, ISA_MIPS2_NOT_32R6_64R6;
 def BGEZ    : MMRel, CBranchZero<"bgez", brtarget, setge, GPR32Opnd>,
-              BGEZ_FM<1, 1>;
+              BGEZ_FM<1, 1>, ISA_MIPS1;
 def BGEZL   : MMRel, CBranchZeroLikely<"bgezl", brtarget, GPR32Opnd>,
               BGEZ_FM<1, 3>, ISA_MIPS2_NOT_32R6_64R6;
 def BGTZ    : MMRel, CBranchZero<"bgtz", brtarget, setgt, GPR32Opnd>,
-              BGEZ_FM<7, 0>;
+              BGEZ_FM<7, 0>, ISA_MIPS1;
 def BGTZL   : MMRel, CBranchZeroLikely<"bgtzl", brtarget, GPR32Opnd>,
               BGEZ_FM<23, 0>, ISA_MIPS2_NOT_32R6_64R6;
 def BLEZ    : MMRel, CBranchZero<"blez", brtarget, setle, GPR32Opnd>,
-              BGEZ_FM<6, 0>;
+              BGEZ_FM<6, 0>, ISA_MIPS1;
 def BLEZL   : MMRel, CBranchZeroLikely<"blezl", brtarget, GPR32Opnd>,
               BGEZ_FM<22, 0>, ISA_MIPS2_NOT_32R6_64R6;
 def BLTZ    : MMRel, CBranchZero<"bltz", brtarget, setlt, GPR32Opnd>,
-              BGEZ_FM<1, 0>;
+              BGEZ_FM<1, 0>, ISA_MIPS1;
 def BLTZL   : MMRel, CBranchZeroLikely<"bltzl", brtarget, GPR32Opnd>,
               BGEZ_FM<1, 2>, ISA_MIPS2_NOT_32R6_64R6;
-def B       : UncondBranch<BEQ, brtarget>,
-              AdditionalRequires<[NotInMicroMips]>;
+def B       : UncondBranch<BEQ, brtarget>, ISA_MIPS1;
 
-def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>;
-let AdditionalPredicates = [NotInMicroMips, NoIndirectJumpGuards] in {
-  def JALR : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM;
-  def JALRPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR, RA>;
+def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>, ISA_MIPS1;
+
 }
 
-def JALX : MMRel, JumpLink<"jalx", calltarget>, FJ<0x1D>,
-           ISA_MIPS32_NOT_32R6_64R6;
-def BGEZAL : MMRel, BGEZAL_FT<"bgezal", brtarget, GPR32Opnd>, BGEZAL_FM<0x11>,
-             ISA_MIPS1_NOT_32R6_64R6;
-def BGEZALL : MMRel, BGEZAL_FT<"bgezall", brtarget, GPR32Opnd>,
-              BGEZAL_FM<0x13>, ISA_MIPS2_NOT_32R6_64R6;
-def BLTZAL : MMRel, BGEZAL_FT<"bltzal", brtarget, GPR32Opnd>, BGEZAL_FM<0x10>,
-             ISA_MIPS1_NOT_32R6_64R6;
-def BLTZALL : MMRel, BGEZAL_FT<"bltzall", brtarget, GPR32Opnd>,
-              BGEZAL_FM<0x12>, ISA_MIPS2_NOT_32R6_64R6;
-def BAL_BR : BAL_BR_Pseudo<BGEZAL>;
+let AdditionalPredicates = [NotInMicroMips, NoIndirectJumpGuards] in {
+  def JALR : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM, ISA_MIPS1;
+  def JALRPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR, RA>, ISA_MIPS1;
+}
 
+let AdditionalPredicates = [NotInMicroMips] in {
+  def JALX : MMRel, JumpLink<"jalx", calltarget>, FJ<0x1D>,
+             ISA_MIPS32_NOT_32R6_64R6;
+  def BGEZAL : MMRel, BGEZAL_FT<"bgezal", brtarget, GPR32Opnd>, BGEZAL_FM<0x11>,
+               ISA_MIPS1_NOT_32R6_64R6;
+  def BGEZALL : MMRel, BGEZAL_FT<"bgezall", brtarget, GPR32Opnd>,
+                BGEZAL_FM<0x13>, ISA_MIPS2_NOT_32R6_64R6;
+  def BLTZAL : MMRel, BGEZAL_FT<"bltzal", brtarget, GPR32Opnd>, BGEZAL_FM<0x10>,
+               ISA_MIPS1_NOT_32R6_64R6;
+  def BLTZALL : MMRel, BGEZAL_FT<"bltzall", brtarget, GPR32Opnd>,
+                BGEZAL_FM<0x12>, ISA_MIPS2_NOT_32R6_64R6;
+  def BAL_BR : BAL_BR_Pseudo<BGEZAL, brtarget>;
+}
 let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips] in {
   def TAILCALL : TailCall<J, jmptarget>;
 }

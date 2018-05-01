@@ -1777,6 +1777,7 @@ public:
   bool isBooleanType() const;
   bool isCharType() const;
   bool isWideCharType() const;
+  bool isChar8Type() const;
   bool isChar16Type() const;
   bool isChar32Type() const;
   bool isAnyCharacterType() const;

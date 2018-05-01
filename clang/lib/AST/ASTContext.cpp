@@ -1151,6 +1151,9 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   WIntTy = getFromTargetType(Target.getWIntType());
 
+  // C++20 (proposed)
+  InitBuiltinType(Char8Ty,              BuiltinType::Char8);
+
   if (LangOpts.CPlusPlus) // C++0x 3.9.1p5, extension for C++
     InitBuiltinType(Char16Ty,           BuiltinType::Char16);
   else // C99
@@ -1739,6 +1742,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     case BuiltinType::Char_U:
     case BuiltinType::UChar:
     case BuiltinType::SChar:
+    case BuiltinType::Char8:
       Width = Target->getCharWidth();
       Align = Target->getCharAlign();
       break;
@@ -5456,6 +5460,7 @@ QualType ASTContext::getPromotedIntegerType(QualType Promotable) const {
     // FIXME: Is there some better way to compute this?
     if (BT->getKind() == BuiltinType::WChar_S ||
         BT->getKind() == BuiltinType::WChar_U ||
+        BT->getKind() == BuiltinType::Char8 ||
         BT->getKind() == BuiltinType::Char16 ||
         BT->getKind() == BuiltinType::Char32) {
       bool FromIsSigned = BT->getKind() == BuiltinType::WChar_S;
@@ -6202,6 +6207,7 @@ static char getObjCEncodingForPrimitiveKind(const ASTContext *C,
     switch (kind) {
     case BuiltinType::Void:       return 'v';
     case BuiltinType::Bool:       return 'B';
+    case BuiltinType::Char8:
     case BuiltinType::Char_U:
     case BuiltinType::UChar:      return 'C';
     case BuiltinType::Char16:

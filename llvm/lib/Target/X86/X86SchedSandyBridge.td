@@ -168,6 +168,7 @@ def  : WriteRes<WriteVecMove,        [SBPort05]>;
 
 defm : SBWriteResPair<WriteVecShift, [SBPort5], 1>;
 defm : SBWriteResPair<WriteVecLogic, [SBPort015], 1, [1], 1, 6>;
+defm : SBWriteResPair<WriteVecLogicY,[SBPort015], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteVecALU,   [SBPort1], 3>;
 defm : SBWriteResPair<WriteVecIMul,  [SBPort0], 5>;
 defm : SBWriteResPair<WritePMULLD,   [SBPort0], 5, [1], 1, 6>; // TODO this is probably wrong for 256/512-bit for the "generic" model

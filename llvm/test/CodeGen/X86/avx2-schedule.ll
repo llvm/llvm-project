@@ -1368,7 +1368,7 @@ define <4 x i64> @test_pand(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pand:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpand %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1417,7 +1417,7 @@ define <4 x i64> @test_pandn(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pandn:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpandn %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [7:0.50]
+; GENERIC-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [8:0.50]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5039,7 +5039,7 @@ define <4 x i64> @test_por(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_por:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7065,7 +7065,7 @@ define <4 x i64> @test_pxor(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_pxor:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpxor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; GENERIC-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

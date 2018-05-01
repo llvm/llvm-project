@@ -407,6 +407,7 @@ defm : JWriteResFpuPair<WriteVarShuffle,  [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteBlend,       [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteVecLogicY,   [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteShuffle256,  [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarShuffle256, [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteVarVecShift, [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.

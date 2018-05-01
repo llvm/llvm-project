@@ -2687,6 +2687,9 @@ static void RenderCharacterOptions(const ArgList &Args, const llvm::Triple &T,
     CmdArgs.push_back("-fno-signed-char");
   }
 
+  if (Args.hasFlag(options::OPT_fchar8__t, options::OPT_fno_char8__t, false))
+    CmdArgs.push_back("-fchar8_t");
+
   if (const Arg *A = Args.getLastArg(options::OPT_fshort_wchar,
                                      options::OPT_fno_short_wchar)) {
     if (A->getOption().matches(options::OPT_fshort_wchar)) {

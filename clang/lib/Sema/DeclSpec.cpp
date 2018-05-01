@@ -329,6 +329,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_auto_type:
     case TST_bool:
     case TST_char:
+    case TST_char8:
     case TST_char16:
     case TST_char32:
     case TST_class:
@@ -499,6 +500,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_void:        return "void";
   case DeclSpec::TST_char:        return "char";
   case DeclSpec::TST_wchar:       return Policy.MSWChar ? "__wchar_t" : "wchar_t";
+  case DeclSpec::TST_char8:       return "char8_t";
   case DeclSpec::TST_char16:      return "char16_t";
   case DeclSpec::TST_char32:      return "char32_t";
   case DeclSpec::TST_int:         return "int";
@@ -1202,7 +1204,9 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       StorageClassSpec == SCS_auto)
     S.Diag(StorageClassSpecLoc, diag::warn_auto_storage_class)
       << FixItHint::CreateRemoval(StorageClassSpecLoc);
-  if (TypeSpecType == TST_char16 || TypeSpecType == TST_char32)
+  if (TypeSpecType == TST_char8)
+    S.Diag(TSTLoc, diag::warn_cxx17_compat_unicode_type);
+  else if (TypeSpecType == TST_char16 || TypeSpecType == TST_char32)
     S.Diag(TSTLoc, diag::warn_cxx98_compat_unicode_type)
       << (TypeSpecType == TST_char16 ? "char16_t" : "char32_t");
   if (Constexpr_specified)
