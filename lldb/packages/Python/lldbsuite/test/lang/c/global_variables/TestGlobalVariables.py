@@ -77,7 +77,6 @@ class GlobalVariablesTestCase(TestBase):
                     substrs=['42'])
 
         # Check that GLOBAL scopes are indicated for the variables.
-        self.runCmd("frame variable --show-types --scope --show-globals --no-args")
         self.expect(
             "frame variable --show-types --scope --show-globals --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
