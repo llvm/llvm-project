@@ -7388,7 +7388,7 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
     const unsigned Align = MinAlign(LN0->getAlignment(), Offset);
 
     SDValue SplitLoad = DAG.getExtLoad(
-        ExtType, DL, SplitDstVT, LN0->getChain(), BasePtr,
+        ExtType, SDLoc(LN0), SplitDstVT, LN0->getChain(), BasePtr,
         LN0->getPointerInfo().getWithOffset(Offset), SplitSrcVT, Align,
         LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
 
