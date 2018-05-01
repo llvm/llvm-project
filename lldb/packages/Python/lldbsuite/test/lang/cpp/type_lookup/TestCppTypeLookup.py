@@ -10,7 +10,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import decorators
 
-class TestTypeLookup(TestBase):
+class TestCppTypeLookup(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
