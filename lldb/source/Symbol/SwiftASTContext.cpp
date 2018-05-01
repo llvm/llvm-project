@@ -155,32 +155,6 @@ static inline swift::CanType GetCanonicalSwiftType(CompilerType type) {
   return ((swift::TypeBase *)type.GetOpaqueQualType())->getCanonicalType();
 }
 
-struct EnumElementInfo {
-  CompilerType clang_type;
-  lldb_private::ConstString name;
-  uint64_t byte_size;
-  uint32_t value;       // The value for this enumeration element
-  uint32_t extra_value; // If not UINT32_MAX, then this value is an extra value
-  // that appears at offset 0 to tell one or more empty
-  // enums apart. This value will only be filled in if there
-  // are one ore more enum elements that have a non-zero byte size
-
-  EnumElementInfo()
-      : clang_type(), name(), byte_size(0), extra_value(UINT32_MAX) {}
-
-  void Dump(Stream &strm) const {
-    strm.Printf("<%2" PRIu64 "> %4u", byte_size, value);
-    if (extra_value != UINT32_MAX)
-      strm.Printf("%4u: ", extra_value);
-    else
-      strm.Printf("    : ");
-    strm.Printf("case %s", name.GetCString());
-    if (clang_type)
-      strm.Printf("%s", clang_type.GetTypeName().AsCString("<no type name>"));
-    strm.EOL();
-  }
-};
-
 class SwiftEnumDescriptor;
 
 typedef std::shared_ptr<SwiftEnumDescriptor> SwiftEnumDescriptorSP;
