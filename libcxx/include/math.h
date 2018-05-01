@@ -483,6 +483,20 @@ typename std::enable_if<
 isinf(_A1) _NOEXCEPT
 { return false; }
 
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+isinf(float __lcpp_x) _NOEXCEPT { return __libcpp_isinf(__lcpp_x); }
+
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+bool
+isinf(double __lcpp_x) _NOEXCEPT { return __libcpp_isinf(__lcpp_x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+isinf(long double __lcpp_x) _NOEXCEPT { return __libcpp_isinf(__lcpp_x); }
+#endif
+
 #endif  // isinf
 
 // isnan
@@ -512,6 +526,20 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename std::enable_if<std::is_integral<_A1>::value, bool>::type
 isnan(_A1) _NOEXCEPT
 { return false; }
+
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+isnan(float __lcpp_x) _NOEXCEPT { return __libcpp_isnan(__lcpp_x); }
+
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+bool
+isnan(double __lcpp_x) _NOEXCEPT { return __libcpp_isnan(__lcpp_x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+isnan(long double __lcpp_x) _NOEXCEPT { return __libcpp_isnan(__lcpp_x); }
+#endif
 
 #endif  // isnan
 
