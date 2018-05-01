@@ -24,9 +24,8 @@ namespace lldb_private {
 
 class ThreadPlanCallFunction : public ThreadPlan {
   // Create a thread plan to call a function at the address passed in the
-  // "function"
-  // argument.  If you plan to call GetReturnValueObject, then pass in the
-  // return type, otherwise just pass in an invalid CompilerType.
+  // "function" argument.  If you plan to call GetReturnValueObject, then pass
+  // in the return type, otherwise just pass in an invalid CompilerType.
 public:
   ThreadPlanCallFunction(Thread &thread, const Address &function,
                          const CompilerType &return_type,
@@ -69,27 +68,23 @@ public:
     return m_return_valobj_sp;
   }
 
-  // Return the stack pointer that the function received
-  // on entry.  Any stack address below this should be
-  // considered invalid after the function has been
-  // cleaned up.
+  // Return the stack pointer that the function received on entry.  Any stack
+  // address below this should be considered invalid after the function has
+  // been cleaned up.
   lldb::addr_t GetFunctionStackPointer() { return m_function_sp; }
 
-  // Classes that derive from FunctionCaller, and implement
-  // their own WillPop methods should call this so that the
-  // thread state gets restored if the plan gets discarded.
+  // Classes that derive from FunctionCaller, and implement their own WillPop
+  // methods should call this so that the thread state gets restored if the
+  // plan gets discarded.
   void WillPop() override;
 
   // If the thread plan stops mid-course, this will be the stop reason that
-  // interrupted us.
-  // Once DoTakedown is called, this will be the real stop reason at the end of
-  // the function call.
-  // If it hasn't been set for one or the other of these reasons, we'll return
-  // the PrivateStopReason.
-  // This is needed because we want the CallFunction thread plans not to show up
-  // as the stop reason.
-  // But if something bad goes wrong, it is nice to be able to tell the user
-  // what really happened.
+  // interrupted us. Once DoTakedown is called, this will be the real stop
+  // reason at the end of the function call. If it hasn't been set for one or
+  // the other of these reasons, we'll return the PrivateStopReason. This is
+  // needed because we want the CallFunction thread plans not to show up as the
+  // stop reason. But if something bad goes wrong, it is nice to be able to
+  // tell the user what really happened.
 
   lldb::StopInfoSP GetRealStopInfo() override {
     if (m_real_stop_info_sp)
@@ -140,9 +135,9 @@ protected:
   Thread::ThreadStateCheckpoint m_stored_thread_state;
   lldb::StopInfoSP
       m_real_stop_info_sp; // In general we want to hide call function
-                           // thread plans, but for reporting purposes,
-                           // it's nice to know the real stop reason.
-                           // This gets set in DoTakedown.
+                           // thread plans, but for reporting purposes, it's
+                           // nice to know the real stop reason. This gets set
+                           // in DoTakedown.
   StreamString m_constructor_errors;
   lldb::ValueObjectSP m_return_valobj_sp; // If this contains a valid pointer,
                                           // use the ABI to extract values when

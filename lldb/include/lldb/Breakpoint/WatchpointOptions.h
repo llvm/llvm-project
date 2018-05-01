@@ -69,15 +69,13 @@ public:
   // Callbacks
   //
   // Watchpoint callbacks come in two forms, synchronous and asynchronous.
-  // Synchronous callbacks will get
-  // run before any of the thread plans are consulted, and if they return false
-  // the target will continue
-  // "under the radar" of the thread plans.  There are a couple of restrictions
-  // to synchronous callbacks:
-  // 1) They should NOT resume the target themselves.  Just return false if you
-  // want the target to restart.
-  // 2) Watchpoints with synchronous callbacks can't have conditions (or rather,
-  // they can have them, but they
+  // Synchronous callbacks will get run before any of the thread plans are
+  // consulted, and if they return false the target will continue "under the
+  // radar" of the thread plans.  There are a couple of restrictions to
+  // synchronous callbacks: 1) They should NOT resume the target themselves.
+  // Just return false if you want the target to restart. 2) Watchpoints with
+  // synchronous callbacks can't have conditions (or rather, they can have
+  // them, but they
   //    won't do anything.  Ditto with ignore counts, etc...  You are supposed
   //    to control that all through the
   //    callback.
@@ -118,8 +116,8 @@ public:
   //------------------------------------------------------------------
   void ClearCallback();
 
-  // The rest of these functions are meant to be used only within the watchpoint
-  // handling mechanism.
+  // The rest of these functions are meant to be used only within the
+  // watchpoint handling mechanism.
 
   //------------------------------------------------------------------
   /// Use this function to invoke the callback for a specific stop.

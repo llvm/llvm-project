@@ -1287,6 +1287,109 @@ def int_amdgcn_ds_bpermute :
   GCCBuiltin<"__builtin_amdgcn_ds_bpermute">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
+//===----------------------------------------------------------------------===//
+// Deep learning intrinsics.
+//===----------------------------------------------------------------------===//
+
+// f32 %r = llvm.amdgcn.fdot2(v2f16 %a, v2f16 %b, f32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
+def int_amdgcn_fdot2 :
+  GCCBuiltin<"__builtin_amdgcn_fdot2">,
+  Intrinsic<
+    [llvm_float_ty], // %r
+    [
+      llvm_v2f16_ty, // %a
+      llvm_v2f16_ty, // %b
+      llvm_float_ty  // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+// i32 %r = llvm.amdgcn.sdot2(v2i16 %a, v2i16 %b, i32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
+def int_amdgcn_sdot2 :
+  GCCBuiltin<"__builtin_amdgcn_sdot2">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_v2i16_ty, // %a
+      llvm_v2i16_ty, // %b
+      llvm_i32_ty    // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+// u32 %r = llvm.amdgcn.udot2(v2u16 %a, v2u16 %b, u32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
+def int_amdgcn_udot2 :
+  GCCBuiltin<"__builtin_amdgcn_udot2">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_v2i16_ty, // %a
+      llvm_v2i16_ty, // %b
+      llvm_i32_ty    // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+// i32 %r = llvm.amdgcn.sdot4(v4i8 (as i32) %a, v4i8 (as i32) %b, i32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] + %c
+def int_amdgcn_sdot4 :
+  GCCBuiltin<"__builtin_amdgcn_sdot4">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_i32_ty, // %a
+      llvm_i32_ty, // %b
+      llvm_i32_ty  // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+// u32 %r = llvm.amdgcn.udot4(v4u8 (as u32) %a, v4u8 (as u32) %b, u32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] + %c
+def int_amdgcn_udot4 :
+  GCCBuiltin<"__builtin_amdgcn_udot4">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_i32_ty, // %a
+      llvm_i32_ty, // %b
+      llvm_i32_ty  // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+// i32 %r = llvm.amdgcn.sdot8(v8i4 (as i32) %a, v8i4 (as i32) %b, i32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] +
+//        %a[4] * %b[4] + %a[5] * %b[5] + %a[6] * %b[6] + %a[7] * %b[7] + %c
+def int_amdgcn_sdot8 :
+  GCCBuiltin<"__builtin_amdgcn_sdot8">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_i32_ty, // %a
+      llvm_i32_ty, // %b
+      llvm_i32_ty  // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+// u32 %r = llvm.amdgcn.udot8(v8u4 (as u32) %a, v8u4 (as u32) %b, u32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] +
+//        %a[4] * %b[4] + %a[5] * %b[5] + %a[6] * %b[6] + %a[7] * %b[7] + %c
+def int_amdgcn_udot8 :
+  GCCBuiltin<"__builtin_amdgcn_udot8">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_i32_ty, // %a
+      llvm_i32_ty, // %b
+      llvm_i32_ty  // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

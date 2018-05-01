@@ -237,13 +237,13 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
     }
 
     // We have valid range starting & ending breakpoint IDs.  Go through all
-    // the breakpoints in the target and find all the breakpoints that fit
-    // into this range, and add them to new_args.
+    // the breakpoints in the target and find all the breakpoints that fit into
+    // this range, and add them to new_args.
 
     // Next check to see if we have location id's.  If so, make sure the
-    // start_bp_id and end_bp_id are for the same breakpoint; otherwise we
-    // have an illegal range: breakpoint id ranges that specify bp locations
-    // are NOT allowed to cross major bp id numbers.
+    // start_bp_id and end_bp_id are for the same breakpoint; otherwise we have
+    // an illegal range: breakpoint id ranges that specify bp locations are NOT
+    // allowed to cross major bp id numbers.
 
     if ((start_loc_id != LLDB_INVALID_BREAK_ID) ||
         (end_loc_id != LLDB_INVALID_BREAK_ID)) {

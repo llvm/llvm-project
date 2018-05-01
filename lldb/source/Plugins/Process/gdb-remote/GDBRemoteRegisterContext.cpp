@@ -39,9 +39,9 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
     GDBRemoteDynamicRegisterInfo &reg_info, bool read_all_at_once)
     : RegisterContext(thread, concrete_frame_idx), m_reg_info(reg_info),
       m_reg_valid(), m_reg_data(), m_read_all_at_once(read_all_at_once) {
-  // Resize our vector of bools to contain one bool for every register.
-  // We will use these boolean values to know when a register value
-  // is valid in m_reg_data.
+  // Resize our vector of bools to contain one bool for every register. We will
+  // use these boolean values to know when a register value is valid in
+  // m_reg_data.
   m_reg_valid.resize(reg_info.GetNumRegisters());
 
   // Make a heap based buffer that is big enough to store all registers
@@ -119,8 +119,8 @@ bool GDBRemoteRegisterContext::PrivateSetRegisterValue(
   if (success) {
     SetRegisterIsValid(reg, true);
   } else if (data.size() > 0) {
-    // Only set register is valid to false if we copied some bytes, else
-    // leave it as it was.
+    // Only set register is valid to false if we copied some bytes, else leave
+    // it as it was.
     SetRegisterIsValid(reg, false);
   }
   return success;
@@ -133,11 +133,9 @@ bool GDBRemoteRegisterContext::PrivateSetRegisterValue(uint32_t reg,
     return false;
 
   // Early in process startup, we can get a thread that has an invalid byte
-  // order
-  // because the process hasn't been completely set up yet (see the ctor where
-  // the
-  // byte order is setfrom the process).  If that's the case, we can't set the
-  // value here.
+  // order because the process hasn't been completely set up yet (see the ctor
+  // where the byte order is setfrom the process).  If that's the case, we
+  // can't set the value here.
   if (m_reg_data.GetByteOrder() == eByteOrderInvalid) {
     return false;
   }
@@ -149,8 +147,7 @@ bool GDBRemoteRegisterContext::PrivateSetRegisterValue(uint32_t reg,
   DataExtractor data(buffer_sp, endian::InlHostByteOrder(), sizeof(void *));
 
   // If our register context and our register info disagree, which should never
-  // happen, don't
-  // overwrite past the end of the buffer.
+  // happen, don't overwrite past the end of the buffer.
   if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
     return false;
 
@@ -219,8 +216,7 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
     }
     if (reg_info->value_regs) {
       // Process this composite register request by delegating to the
-      // constituent
-      // primordial registers.
+      // constituent primordial registers.
 
       // Index of the primordial register.
       bool success = true;
@@ -228,8 +224,8 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
         const uint32_t prim_reg = reg_info->value_regs[idx];
         if (prim_reg == LLDB_INVALID_REGNUM)
           break;
-        // We have a valid primordial register as our constituent.
-        // Grab the corresponding register info.
+        // We have a valid primordial register as our constituent. Grab the
+        // corresponding register info.
         const RegisterInfo *prim_reg_info = GetRegisterInfoAtIndex(prim_reg);
         if (prim_reg_info == NULL)
           success = false;
@@ -242,8 +238,7 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
 
       if (success) {
         // If we reach this point, all primordial register requests have
-        // succeeded.
-        // Validate this composite register.
+        // succeeded. Validate this composite register.
         SetRegisterIsValid(reg_info, true);
       }
     } else {
@@ -262,16 +257,14 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
            reg_info->byte_offset + reg_info->byte_size);
 #endif
     // If our register context and our register info disagree, which should
-    // never happen, don't
-    // read past the end of the buffer.
+    // never happen, don't read past the end of the buffer.
     if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
       return false;
 
-    // If we aren't extracting into our own buffer (which
-    // only happens when this function is called from
-    // ReadRegisterValue(uint32_t, Scalar&)) then
-    // we transfer bytes from our buffer into the data
-    // buffer that was passed in
+    // If we aren't extracting into our own buffer (which only happens when
+    // this function is called from ReadRegisterValue(uint32_t, Scalar&)) then
+    // we transfer bytes from our buffer into the data buffer that was passed
+    // in
 
     data.SetByteOrder(m_reg_data.GetByteOrder());
     data.SetData(m_reg_data, reg_info->byte_offset, reg_info->byte_size);
@@ -321,8 +314,7 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
 #endif
 
   // If our register context and our register info disagree, which should never
-  // happen, don't
-  // overwrite past the end of the buffer.
+  // happen, don't overwrite past the end of the buffer.
   if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
     return false;
 
@@ -358,12 +350,10 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
         bool success = true;
 
         if (reg_info->value_regs) {
-          // This register is part of another register. In this case we read the
-          // actual
-          // register data for any "value_regs", and once all that data is read,
-          // we will
-          // have enough data in our register context bytes for the value of
-          // this register
+          // This register is part of another register. In this case we read
+          // the actual register data for any "value_regs", and once all that
+          // data is read, we will have enough data in our register context
+          // bytes for the value of this register
 
           // Invalidate this composite register first.
 
@@ -371,8 +361,8 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
             const uint32_t reg = reg_info->value_regs[idx];
             if (reg == LLDB_INVALID_REGNUM)
               break;
-            // We have a valid primordial register as our constituent.
-            // Grab the corresponding register info.
+            // We have a valid primordial register as our constituent. Grab the
+            // corresponding register info.
             const RegisterInfo *value_reg_info = GetRegisterInfoAtIndex(reg);
             if (value_reg_info == NULL)
               success = false;
@@ -385,8 +375,7 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
         }
 
         // Check if writing this register will invalidate any other register
-        // values?
-        // If so, invalidate them
+        // values? If so, invalidate them
         if (reg_info->invalidate_regs) {
           for (uint32_t idx = 0, reg = reg_info->invalidate_regs[0];
                reg != LLDB_INVALID_REGNUM;
@@ -548,26 +537,22 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
         return true;
 
       uint32_t num_restored = 0;
-      // We need to manually go through all of the registers and
-      // restore them manually
+      // We need to manually go through all of the registers and restore them
+      // manually
       DataExtractor restore_data(data_sp, m_reg_data.GetByteOrder(),
                                  m_reg_data.GetAddressByteSize());
 
       const RegisterInfo *reg_info;
 
-      // The g packet contents may either include the slice registers (registers
-      // defined in
-      // terms of other registers, e.g. eax is a subset of rax) or not.  The
-      // slice registers
-      // should NOT be in the g packet, but some implementations may incorrectly
-      // include them.
+      // The g packet contents may either include the slice registers
+      // (registers defined in terms of other registers, e.g. eax is a subset
+      // of rax) or not.  The slice registers should NOT be in the g packet,
+      // but some implementations may incorrectly include them.
       //
       // If the slice registers are included in the packet, we must step over
-      // the slice registers
-      // when parsing the packet -- relying on the RegisterInfo byte_offset
-      // field would be incorrect.
-      // If the slice registers are not included, then using the byte_offset
-      // values into the
+      // the slice registers when parsing the packet -- relying on the
+      // RegisterInfo byte_offset field would be incorrect. If the slice
+      // registers are not included, then using the byte_offset values into the
       // data buffer is the best way to find individual register values.
 
       uint64_t size_including_slice_registers = 0;
@@ -591,21 +576,17 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
       } else if (size_not_including_slice_registers ==
                  restore_data.GetByteSize()) {
         // The size of the packet is the same as concatenating all of the
-        // registers sequentially,
-        // skipping the slice registers
+        // registers sequentially, skipping the slice registers
         use_byte_offset_into_buffer = true;
       } else if (size_including_slice_registers == restore_data.GetByteSize()) {
         // The slice registers are present in the packet (when they shouldn't
-        // be).
-        // Don't try to use the RegisterInfo byte_offset into the restore_data,
-        // it will
-        // point to the wrong place.
+        // be). Don't try to use the RegisterInfo byte_offset into the
+        // restore_data, it will point to the wrong place.
         use_byte_offset_into_buffer = false;
       } else {
         // None of our expected sizes match the actual g packet data we're
-        // looking at.
-        // The most conservative approach here is to use the running total byte
-        // offset.
+        // looking at. The most conservative approach here is to use the
+        // running total byte offset.
         use_byte_offset_into_buffer = false;
       }
 
@@ -664,11 +645,9 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
         if (reg_info->value_regs) // skip registers that are slices of real
                                   // registers
           continue;
-        // Skip the fpsr and fpcr floating point status/control register writing
-        // to
-        // work around a bug in an older version of debugserver that would lead
-        // to
-        // register context corruption when writing fpsr/fpcr.
+        // Skip the fpsr and fpcr floating point status/control register
+        // writing to work around a bug in an older version of debugserver that
+        // would lead to register context corruption when writing fpsr/fpcr.
         if (arm64_debugserver && (strcmp(reg_info->name, "fpsr") == 0 ||
                                   strcmp(reg_info->name, "fpcr") == 0)) {
           continue;
@@ -752,8 +731,8 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
   static uint32_t g_q14_regs[] = {71, 72, LLDB_INVALID_REGNUM}; // (d28, d29)
   static uint32_t g_q15_regs[] = {73, 74, LLDB_INVALID_REGNUM}; // (d30, d31)
 
-  // This is our array of composite registers, with each element coming from the
-  // above register mappings.
+  // This is our array of composite registers, with each element coming from
+  // the above register mappings.
   static uint32_t *g_composites[] = {
       g_d0_regs,  g_d1_regs,  g_d2_regs,  g_d3_regs,  g_d4_regs,  g_d5_regs,
       g_d6_regs,  g_d7_regs,  g_d8_regs,  g_d9_regs,  g_d10_regs, g_d11_regs,
@@ -884,21 +863,17 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
   if (from_scratch) {
     // Calculate the offsets of the registers
     // Note that the layout of the "composite" registers (d0-d15 and q0-q15)
-    // which comes after the
-    // "primordial" registers is important.  This enables us to calculate the
-    // offset of the composite
-    // register by using the offset of its first primordial register.  For
-    // example, to calculate the
-    // offset of q0, use s0's offset.
+    // which comes after the "primordial" registers is important.  This enables
+    // us to calculate the offset of the composite register by using the offset
+    // of its first primordial register.  For example, to calculate the offset
+    // of q0, use s0's offset.
     if (g_register_infos[2].byte_offset == 0) {
       uint32_t byte_offset = 0;
       for (i = 0; i < num_registers; ++i) {
         // For primordial registers, increment the byte_offset by the byte_size
-        // to arrive at the
-        // byte_offset for the next register.  Otherwise, we have a composite
-        // register whose
-        // offset can be calculated by consulting the offset of its first
-        // primordial register.
+        // to arrive at the byte_offset for the next register.  Otherwise, we
+        // have a composite register whose offset can be calculated by
+        // consulting the offset of its first primordial register.
         if (!g_register_infos[i].value_regs) {
           g_register_infos[i].byte_offset = byte_offset;
           byte_offset += g_register_infos[i].byte_size;
@@ -933,8 +908,8 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
     RegisterInfo *g_comp_register_infos = g_register_infos + num_common_regs;
 
     // First we need to validate that all registers that we already have match
-    // the non composite regs.
-    // If so, then we can add the registers, else we need to bail
+    // the non composite regs. If so, then we can add the registers, else we
+    // need to bail
     bool match = true;
     if (num_dynamic_regs == num_common_regs) {
       for (i = 0; match && i < num_dynamic_regs; ++i) {
@@ -970,9 +945,8 @@ void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {
             // Find a matching primordial register info entry.
             if (reg_info && reg_info->name &&
                 ::strcasecmp(reg_info->name, reg_name) == 0) {
-              // The name matches the existing primordial entry.
-              // Find and assign the offset, and then add this composite
-              // register entry.
+              // The name matches the existing primordial entry. Find and
+              // assign the offset, and then add this composite register entry.
               g_comp_register_infos[i].byte_offset = reg_info->byte_offset;
               name.SetCString(g_comp_register_infos[i].name);
               AddRegister(g_comp_register_infos[i], name, alt_name,

@@ -595,7 +595,7 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
     if (StOther == 0 || StOther == 1)
       return SymVA - P;
 
-    return SymVA - P + (1 << StOther);
+    return SymVA - P + (1LL << StOther);
   }
   case R_PPC_TOC:
     return getPPC64TocBase() + A;

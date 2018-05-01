@@ -28,8 +28,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
-// ThreadPlanBase: This one always stops, and never has anything particular
-// to do.
+// ThreadPlanBase: This one always stops, and never has anything particular to
+// do.
 // FIXME: The "signal handling" policies should probably go here.
 //----------------------------------------------------------------------
 
@@ -59,8 +59,8 @@ void ThreadPlanBase::GetDescription(Stream *s, lldb::DescriptionLevel level) {
 bool ThreadPlanBase::ValidatePlan(Stream *error) { return true; }
 
 bool ThreadPlanBase::DoPlanExplainsStop(Event *event_ptr) {
-  // The base plan should defer to its tracer, since by default it
-  // always handles the stop.
+  // The base plan should defer to its tracer, since by default it always
+  // handles the stop.
   if (TracerExplainsStop())
     return false;
   else
@@ -99,10 +99,9 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
     case eStopReasonBreakpoint:
     case eStopReasonWatchpoint:
       if (stop_info_sp->ShouldStopSynchronous(event_ptr)) {
-        // If we are going to stop for a breakpoint, then unship the other plans
-        // at this point.  Don't force the discard, however, so Master plans can
-        // stay
-        // in place if they want to.
+        // If we are going to stop for a breakpoint, then unship the other
+        // plans at this point.  Don't force the discard, however, so Master
+        // plans can stay in place if they want to.
         if (log)
           log->Printf(
               "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
@@ -112,9 +111,8 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
         return true;
       }
       // If we aren't going to stop at this breakpoint, and it is internal,
-      // don't report this stop or the subsequent running event.
-      // Otherwise we will post the stopped & running, but the stopped event
-      // will get marked
+      // don't report this stop or the subsequent running event. Otherwise we
+      // will post the stopped & running, but the stopped event will get marked
       // with "restarted" so the UI will know to wait and expect the consequent
       // "running".
       if (stop_info_sp->ShouldNotify(event_ptr)) {
@@ -131,10 +129,9 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
       break;
 
     case eStopReasonException:
-      // If we crashed, discard thread plans and stop.  Don't force the discard,
-      // however,
-      // since on rerun the target may clean up this exception and continue
-      // normally from there.
+      // If we crashed, discard thread plans and stop.  Don't force the
+      // discard, however, since on rerun the target may clean up this
+      // exception and continue normally from there.
       if (log)
         log->Printf(
             "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
@@ -144,10 +141,9 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
       return true;
 
     case eStopReasonExec:
-      // If we crashed, discard thread plans and stop.  Don't force the discard,
-      // however,
-      // since on rerun the target may clean up this exception and continue
-      // normally from there.
+      // If we crashed, discard thread plans and stop.  Don't force the
+      // discard, however, since on rerun the target may clean up this
+      // exception and continue normally from there.
       if (log)
         log->Printf(
             "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
@@ -198,8 +194,7 @@ bool ThreadPlanBase::WillStop() { return true; }
 bool ThreadPlanBase::DoWillResume(lldb::StateType resume_state,
                                   bool current_plan) {
   // Reset these to the default values so we don't set them wrong, then not get
-  // asked
-  // for a while, then return the wrong answer.
+  // asked for a while, then return the wrong answer.
   m_run_vote = eVoteNoOpinion;
   m_stop_vote = eVoteNo;
   return true;

@@ -322,7 +322,7 @@ def AtomWrite0_1 : SchedWriteRes<[AtomPort0]> {
   let Latency = 1;
   let ResourceCycles = [1];
 }
-def : InstRW<[AtomWrite0_1], (instrs FXAM,
+def : InstRW<[AtomWrite0_1], (instrs FXAM, LD_Frr,
                                      BSWAP32r, BSWAP64r,
                                      DEC8m, DEC16m, DEC32m, DEC64m,
                                      INC8m, INC16m, INC32m, INC64m,
@@ -336,8 +336,7 @@ def : InstRW<[AtomWrite0_1], (instrs FXAM,
                                      MOV64toSDrr)>;
 def : InstRW<[AtomWrite0_1], (instregex "(ADC|ADD|AND|NEG|NOT|OR|SBB|SUB|XOR)(8|16|32|64)m",
                                         "(RCL|RCR|ROL|ROR|SAR|SHL|SHR)(8|16|32|64)m",
-                                        "MOV(S|Z)X(32|64)rr(8|8_NOREX|16)",
-                                        "LD_F(P)?(16|32|64)?(m|rr)")>;
+                                        "MOV(S|Z)X(32|64)rr(8|8_NOREX|16)")>;
 
 def AtomWrite0_3 : SchedWriteRes<[AtomPort0]> {
   let Latency = 3;

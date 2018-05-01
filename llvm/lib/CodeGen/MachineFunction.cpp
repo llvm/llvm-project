@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -195,6 +196,7 @@ void MachineFunction::clear() {
   // Do call MachineBasicBlock destructors, it contains std::vectors.
   for (iterator I = begin(), E = end(); I != E; I = BasicBlocks.erase(I))
     I->Insts.clearAndLeakNodesUnsafely();
+  MBBNumbering.clear();
 
   InstructionRecycler.clear(Allocator);
   OperandRecycler.clear(Allocator);

@@ -20,6 +20,7 @@
 #include "CoroInternal.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Analysis/Utils/Local.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"

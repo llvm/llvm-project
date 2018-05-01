@@ -342,8 +342,8 @@ protected:
           frame_idx += m_options.relative_frame_offset;
         else {
           if (frame_idx == 0) {
-            // If you are already at the bottom of the stack, then just warn and
-            // don't reset the frame.
+            // If you are already at the bottom of the stack, then just warn
+            // and don't reset the frame.
             result.AppendError("Already at the bottom of the stack.");
             result.SetStatus(eReturnStatusFailed);
             return false;
@@ -504,16 +504,15 @@ protected:
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    // No need to check "frame" for validity as eCommandRequiresFrame ensures it
-    // is valid
+    // No need to check "frame" for validity as eCommandRequiresFrame ensures
+    // it is valid
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     Stream &s = result.GetOutputStream();
 
     // Be careful about the stack frame, if any summary formatter runs code, it
-    // might clear the StackFrameList
-    // for the thread.  So hold onto a shared pointer to the frame so it stays
-    // alive.
+    // might clear the StackFrameList for the thread.  So hold onto a shared
+    // pointer to the frame so it stays alive.
 
     VariableList *variable_list =
         frame->GetVariableList(m_option_variable.show_globals);
@@ -547,8 +546,8 @@ protected:
       if (!command.empty()) {
         VariableList regex_var_list;
 
-        // If we have any args to the variable command, we will make
-        // variable objects from them...
+        // If we have any args to the variable command, we will make variable
+        // objects from them...
         for (auto &entry : command) {
           if (m_option_variable.use_regex) {
             const size_t regex_start_index = regex_var_list.GetSize();
@@ -677,14 +676,13 @@ protected:
             if (m_option_variable.show_scope)
               scope_string = GetScopeString(var_sp).str();
 
-            // Use the variable object code to make sure we are
-            // using the same APIs as the public API will be
-            // using...
+            // Use the variable object code to make sure we are using the same
+            // APIs as the public API will be using...
             valobj_sp = frame->GetValueObjectForFrameVariable(
                 var_sp, m_varobj_options.use_dynamic);
             if (valobj_sp) {
-              // When dumping all variables, don't print any variables
-              // that are not in scope to avoid extra unneeded output
+              // When dumping all variables, don't print any variables that are
+              // not in scope to avoid extra unneeded output
               if (valobj_sp->IsInScope()) {
                 if (!valobj_sp->GetTargetSP()
                          ->GetDisplayRuntimeSupportValues() &&

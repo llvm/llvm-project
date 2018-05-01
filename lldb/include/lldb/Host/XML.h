@@ -100,8 +100,8 @@ public:
   void ForEachSiblingElement(NodeCallback const &callback) const;
 
   //----------------------------------------------------------------------
-  // Iterate through only the sibling nodes that are elements and whose
-  // name matches \a name.
+  // Iterate through only the sibling nodes that are elements and whose name
+  // matches \a name.
   //----------------------------------------------------------------------
   void ForEachSiblingElementWithName(const char *name,
                                      NodeCallback const &callback) const;
@@ -137,8 +137,8 @@ public:
                    const char *url = "untitled.xml");
 
   //----------------------------------------------------------------------
-  // If \a name is nullptr, just get the root element node, else only return
-  // a value XMLNode if the name of the root element matches \a name.
+  // If \a name is nullptr, just get the root element node, else only return a
+  // value XMLNode if the name of the root element matches \a name.
   //----------------------------------------------------------------------
   XMLNode GetRootElement(const char *required_name = nullptr);
 
@@ -176,12 +176,11 @@ public:
   StructuredData::ObjectSP GetStructuredData();
 
 protected:
-  // Using a node returned from GetValueNode() extract its value as a
-  // string (if possible). Array and dictionary nodes will return false
-  // as they have no string value. Boolean nodes will return true and
-  // \a value will be "true" or "false" as the string value comes from
-  // the element name itself. All other nodes will return the text
-  // content of the XMLNode.
+  // Using a node returned from GetValueNode() extract its value as a string
+  // (if possible). Array and dictionary nodes will return false as they have
+  // no string value. Boolean nodes will return true and \a value will be
+  // "true" or "false" as the string value comes from the element name itself.
+  // All other nodes will return the text content of the XMLNode.
   static bool ExtractStringFromValueNode(const XMLNode &node,
                                          std::string &value);
 

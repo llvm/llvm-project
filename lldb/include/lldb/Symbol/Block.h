@@ -403,8 +403,8 @@ public:
   uint32_t GetRangeIndexContainingAddress(const Address &addr);
 
   //------------------------------------------------------------------
-  // Since blocks might have multiple discontiguous address ranges,
-  // we need to be able to get at any of the address ranges in a block.
+  // Since blocks might have multiple discontiguous address ranges, we need to
+  // be able to get at any of the address ranges in a block.
   //------------------------------------------------------------------
   bool GetRangeAtIndex(uint32_t range_idx, AddressRange &range);
 

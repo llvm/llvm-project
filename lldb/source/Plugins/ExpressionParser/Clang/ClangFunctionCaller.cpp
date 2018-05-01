@@ -101,14 +101,12 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
   m_wrapper_function_text.append(" (*fn_ptr) (");
 
   // Get the number of arguments.  If we have a function type and it is
-  // prototyped,
-  // trust that, otherwise use the values we were given.
+  // prototyped, trust that, otherwise use the values we were given.
 
   // FIXME: This will need to be extended to handle Variadic functions.  We'll
   // need
   // to pull the defined arguments out of the function, then add the types from
-  // the
-  // arguments list for the variable arguments.
+  // the arguments list for the variable arguments.
 
   uint32_t num_args = UINT32_MAX;
   bool trust_function = false;

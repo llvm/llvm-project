@@ -43,8 +43,8 @@ public:
 
   static size_t GetConstCStringLength(const char *ccstr) {
     if (ccstr != nullptr) {
-      // Since the entry is read only, and we derive the entry entirely from the
-      // pointer, we don't need the lock.
+      // Since the entry is read only, and we derive the entry entirely from
+      // the pointer, we don't need the lock.
       const StringPoolEntryType &entry = GetStringMapEntryFromKeyData(ccstr);
       return entry.getKey().size();
     }
@@ -155,9 +155,8 @@ public:
   }
 
   //------------------------------------------------------------------
-  // Return the size in bytes that this object and any items in its
-  // collection of uniqued strings + data count values takes in
-  // memory.
+  // Return the size in bytes that this object and any items in its collection
+  // of uniqued strings + data count values takes in memory.
   //------------------------------------------------------------------
   size_t MemorySize() const {
     size_t mem_size = sizeof(Pool);
@@ -184,15 +183,14 @@ protected:
 };
 
 //----------------------------------------------------------------------
-// Frameworks and dylibs aren't supposed to have global C++
-// initializers so we hide the string pool in a static function so
-// that it will get initialized on the first call to this static
-// function.
+// Frameworks and dylibs aren't supposed to have global C++ initializers so we
+// hide the string pool in a static function so that it will get initialized on
+// the first call to this static function.
 //
-// Note, for now we make the string pool a pointer to the pool, because
-// we can't guarantee that some objects won't get destroyed after the
-// global destructor chain is run, and trying to make sure no destructors
-// touch ConstStrings is difficult.  So we leak the pool instead.
+// Note, for now we make the string pool a pointer to the pool, because we
+// can't guarantee that some objects won't get destroyed after the global
+// destructor chain is run, and trying to make sure no destructors touch
+// ConstStrings is difficult.  So we leak the pool instead.
 //----------------------------------------------------------------------
 static Pool &StringPool() {
   static llvm::once_flag g_pool_initialization_flag;
@@ -246,8 +244,8 @@ bool ConstString::Equals(const ConstString &lhs, const ConstString &rhs,
     return true;
 
   // Since the pointers weren't equal, and identical ConstStrings always have
-  // identical pointers,
-  // the result must be false for case sensitive equality test.
+  // identical pointers, the result must be false for case sensitive equality
+  // test.
   if (case_sensitive)
     return false;
 

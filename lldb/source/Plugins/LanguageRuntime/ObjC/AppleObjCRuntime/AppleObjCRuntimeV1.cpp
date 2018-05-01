@@ -42,8 +42,7 @@ AppleObjCRuntimeV1::AppleObjCRuntimeV1(Process *process)
       m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS) {}
 
 // for V1 runtime we just try to return a class name as that is the minimum
-// level of support
-// required for the data formatters to work
+// level of support required for the data formatters to work
 bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
@@ -383,8 +382,8 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
 
               ObjCISA isa;
               if (bucket_isa_count == 1) {
-                // When we only have one entry in the bucket, the bucket data is
-                // the "isa"
+                // When we only have one entry in the bucket, the bucket data
+                // is the "isa"
                 isa = bucket_data;
                 if (isa) {
                   if (!ISAIsCached(isa)) {
@@ -402,8 +401,7 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                 }
               } else {
                 // When we have more than one entry in the bucket, the bucket
-                // data is a pointer
-                // to an array of "isa" values
+                // data is a pointer to an array of "isa" values
                 addr_t isa_addr = bucket_data;
                 for (uint32_t isa_idx = 0; isa_idx < bucket_isa_count;
                      ++isa_idx, isa_addr += addr_size) {

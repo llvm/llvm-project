@@ -137,10 +137,10 @@ CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
 CODEGENOPT(FlushDenorm       , 1, 0) ///< Allow FP denorm numbers to be flushed to zero
 CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
 
-/// Disable a float-to-int-to-float cast optimization. This attempts to generate
-/// code as if the result of an overflowing conversion matches the overflowing
-/// behavior of a target's native float-to-int conversion instructions.
-CODEGENOPT(FPCastOverflowWorkaround, 1, 0)
+/// When false, this attempts to generate code as if the result of an
+/// overflowing conversion matches the overflowing behavior of a target's native
+/// float-to-int conversion instructions.
+CODEGENOPT(StrictFloatCastOverflow, 1, 1)
 
 CODEGENOPT(UniformWGSize     , 1, 0) ///< -cl-uniform-work-group-size
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.

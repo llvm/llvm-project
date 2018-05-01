@@ -15,6 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 // C's ?: operator for floating-point operands.
+let Predicates = [FeatureVector] in {
+  def SelectVR32 : SelectWrapper<f32, VR32>;
+  def SelectVR64 : SelectWrapper<f64, VR64>;
+}
 def SelectF32  : SelectWrapper<f32, FP32>;
 def SelectF64  : SelectWrapper<f64, FP64>;
 let Predicates = [FeatureNoVectorEnhancements1] in

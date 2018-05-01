@@ -3272,12 +3272,17 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   VT = VT.getScalarType();
 
   switch (VT.getSimpleVT().SimpleTy) {
-  case MVT::f32:
+  case MVT::f32: {
     // This is as fast on some subtargets. However, we always have full rate f32
     // mad available which returns the same result as the separate operations
     // which we should prefer over fma. We can't use this if we want to support
     // denormals, so only report this in these cases.
-    return Subtarget->hasFP32Denormals() && Subtarget->hasFastFMAF32();
+    if (Subtarget->hasFP32Denormals())
+      return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
+
+    // If the subtarget has v_fmac_f32, that's just as good as v_mac_f32.
+    return Subtarget->hasFastFMAF32() && Subtarget->hasDLInsts();
+  }
   case MVT::f64:
     return true;
   case MVT::f16:

@@ -80,8 +80,8 @@ public:
   ///     false if not (or the function is not JIT compiled)
   //------------------------------------------------------------------
   bool ContainsAddress(lldb::addr_t address) {
-    // nothing is both >= LLDB_INVALID_ADDRESS and < LLDB_INVALID_ADDRESS,
-    // so this always returns false if the function is not JIT compiled yet
+    // nothing is both >= LLDB_INVALID_ADDRESS and < LLDB_INVALID_ADDRESS, so
+    // this always returns false if the function is not JIT compiled yet
     return (address >= m_jit_start_addr && address < m_jit_end_addr);
   }
 
@@ -116,10 +116,9 @@ public:
   //------------------------------------------------------------------
   bool NeedsVariableResolution() override { return false; }
 
-  // This makes the function caller function.
-  // Pass in the ThreadSP if you have one available, compilation can end up
-  // calling code (e.g. to look up indirect
-  // functions) and we don't want this to wander onto another thread.
+  // This makes the function caller function. Pass in the ThreadSP if you have
+  // one available, compilation can end up calling code (e.g. to look up
+  // indirect functions) and we don't want this to wander onto another thread.
   FunctionCaller *MakeFunctionCaller(const CompilerType &return_type,
                                      const ValueList &arg_value_list,
                                      lldb::ThreadSP compilation_thread,

@@ -150,9 +150,8 @@ GDBRemoteCommunication::~GDBRemoteCommunication() {
     Disconnect();
   }
 
-  // Stop the communications read thread which is used to parse all
-  // incoming packets.  This function will block until the read
-  // thread returns.
+  // Stop the communications read thread which is used to parse all incoming
+  // packets.  This function will block until the read thread returns.
   if (m_read_thread_enabled)
     StopReadThread();
 }
@@ -217,12 +216,10 @@ GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
         }
       }
 
-      // If logging was just enabled and we have history, then dump out what
-      // we have to the log so we get the historical context. The Dump() call
-      // that
+      // If logging was just enabled and we have history, then dump out what we
+      // have to the log so we get the historical context. The Dump() call that
       // logs all of the packet will set a boolean so that we don't dump this
-      // more
-      // than once
+      // more than once
       if (!m_history.DidDumpToLog())
         m_history.Dump(log);
 
@@ -303,8 +300,8 @@ GDBRemoteCommunication::ReadPacket(StringExtractorGDBRemote &response,
 
 // This function is called when a packet is requested.
 // A whole packet is popped from the packet queue and returned to the caller.
-// Packets are placed into this queue from the communication read thread.
-// See GDBRemoteCommunication::AppendBytesToCache.
+// Packets are placed into this queue from the communication read thread. See
+// GDBRemoteCommunication::AppendBytesToCache.
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::PopPacketFromQueue(StringExtractorGDBRemote &response,
                                            Timeout<std::micro> timeout) {
@@ -424,11 +421,9 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                   break;
                 } else if (successful_responses == 1) {
                   // We got something else back as the first successful
-                  // response, it probably is
-                  // the  response to the packet we actually wanted, so copy it
-                  // over if this
-                  // is the first success and continue to try to get the qEcho
-                  // response
+                  // response, it probably is the  response to the packet we
+                  // actually wanted, so copy it over if this is the first
+                  // success and continue to try to get the qEcho response
                   packet = echo_response;
                   got_actual_response = true;
                 }
@@ -441,14 +436,13 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
           }
 
           // We weren't able to sync back up with the server, we must abort
-          // otherwise
-          // all responses might not be from the right packets...
+          // otherwise all responses might not be from the right packets...
           if (sync_success) {
             // We timed out, but were able to recover
             if (got_actual_response) {
               // We initially timed out, but we did get a response that came in
-              // before the successful
-              // reply to our qEcho packet, so lets say everything is fine...
+              // before the successful reply to our qEcho packet, so lets say
+              // everything is fine...
               return PacketResult::Success;
             }
           } else {
@@ -490,10 +484,9 @@ bool GDBRemoteCommunication::DecompressPacket() {
 
   size_t pkt_size = m_bytes.size();
 
-  // Smallest possible compressed packet is $N#00 - an uncompressed empty reply,
-  // most commonly indicating
-  // an unsupported packet.  Anything less than 5 characters, it's definitely
-  // not a compressed packet.
+  // Smallest possible compressed packet is $N#00 - an uncompressed empty
+  // reply, most commonly indicating an unsupported packet.  Anything less than
+  // 5 characters, it's definitely not a compressed packet.
   if (pkt_size < 5)
     return true;
 
@@ -522,17 +515,15 @@ bool GDBRemoteCommunication::DecompressPacket() {
       1; // The first character of the two hex checksum characters
 
   // Normally size_of_first_packet == m_bytes.size() but m_bytes may contain
-  // multiple packets.
-  // size_of_first_packet is the size of the initial packet which we'll replace
-  // with the decompressed
-  // version of, leaving the rest of m_bytes unmodified.
+  // multiple packets. size_of_first_packet is the size of the initial packet
+  // which we'll replace with the decompressed version of, leaving the rest of
+  // m_bytes unmodified.
   size_t size_of_first_packet = hash_mark_idx + 3;
 
   // Compressed packets ("$C") start with a base10 number which is the size of
-  // the uncompressed payload,
-  // then a : and then the compressed data.  e.g. $C1024:<binary>#00
-  // Update content_start and content_length to only include the <binary> part
-  // of the packet.
+  // the uncompressed payload, then a : and then the compressed data.  e.g.
+  // $C1024:<binary>#00 Update content_start and content_length to only include
+  // the <binary> part of the packet.
 
   uint64_t decompressed_bufsize = ULONG_MAX;
   if (m_bytes[1] == 'C') {
@@ -581,15 +572,14 @@ bool GDBRemoteCommunication::DecompressPacket() {
   }
 
   if (m_bytes[1] == 'N') {
-    // This packet was not compressed -- delete the 'N' character at the
-    // start and the packet may be processed as-is.
+    // This packet was not compressed -- delete the 'N' character at the start
+    // and the packet may be processed as-is.
     m_bytes.erase(1, 1);
     return true;
   }
 
-  // Reverse the gdb-remote binary escaping that was done to the compressed text
-  // to
-  // guard characters like '$', '#', '}', etc.
+  // Reverse the gdb-remote binary escaping that was done to the compressed
+  // text to guard characters like '$', '#', '}', etc.
   std::vector<uint8_t> unescaped_content;
   unescaped_content.reserve(content_length);
   size_t i = content_start;
@@ -630,12 +620,10 @@ bool GDBRemoteCommunication::DecompressPacket() {
     else if (m_compression_type == CompressionType::LZMA)
       compression_type = COMPRESSION_LZMA;
 
-    // If we have the expected size of the decompressed payload, we can allocate
-    // the right-sized buffer and do it.  If we don't have that information,
-    // we'll
-    // need to try decoding into a big buffer and if the buffer wasn't big
-    // enough,
-    // increase it and try again.
+    // If we have the expected size of the decompressed payload, we can
+    // allocate the right-sized buffer and do it.  If we don't have that
+    // information, we'll need to try decoding into a big buffer and if the
+    // buffer wasn't big enough, increase it and try again.
 
     if (decompressed_bufsize != ULONG_MAX && decompressed_buffer != nullptr) {
       decompressed_bytes = compression_decode_buffer(
@@ -723,9 +711,8 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
   // Parse up the packets into gdb remote packets
   if (!m_bytes.empty()) {
-    // end_idx must be one past the last valid packet byte. Start
-    // it off with an invalid value that is the same as the current
-    // index.
+    // end_idx must be one past the last valid packet byte. Start it off with
+    // an invalid value that is the same as the current index.
     size_t content_start = 0;
     size_t content_length = 0;
     size_t total_length = 0;
@@ -760,7 +747,8 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
             checksum_idx = hash_pos + 1;
             // Skip the dollar sign
             content_start = 1;
-            // Don't include the # in the content or the $ in the content length
+            // Don't include the # in the content or the $ in the content
+            // length
             content_length = hash_pos - 1;
 
             total_length =
@@ -774,11 +762,10 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
       break;
 
     default: {
-      // We have an unexpected byte and we need to flush all bad
-      // data that is in m_bytes, so we need to find the first
-      // byte that is a '+' (ACK), '-' (NACK), \x03 (CTRL+C interrupt),
-      // or '$' character (start of packet header) or of course,
-      // the end of the data in m_bytes...
+      // We have an unexpected byte and we need to flush all bad data that is
+      // in m_bytes, so we need to find the first byte that is a '+' (ACK), '-'
+      // (NACK), \x03 (CTRL+C interrupt), or '$' character (start of packet
+      // header) or of course, the end of the data in m_bytes...
       const size_t bytes_len = m_bytes.size();
       bool done = false;
       uint32_t idx;
@@ -819,16 +806,14 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
       if (log) {
         // If logging was just enabled and we have history, then dump out what
         // we have to the log so we get the historical context. The Dump() call
-        // that
-        // logs all of the packet will set a boolean so that we don't dump this
-        // more
-        // than once
+        // that logs all of the packet will set a boolean so that we don't dump
+        // this more than once
         if (!m_history.DidDumpToLog())
           m_history.Dump(log);
 
         bool binary = false;
-        // Only detect binary for packets that start with a '$' and have a '#CC'
-        // checksum
+        // Only detect binary for packets that start with a '$' and have a
+        // '#CC' checksum
         if (m_bytes[0] == '$' && total_length > 4) {
           for (size_t i = 0; !binary && i < total_length; ++i) {
             unsigned char c = m_bytes[i];
@@ -851,8 +836,8 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
             // Remove binary escaped bytes when displaying the packet...
             const char ch = m_bytes[i];
             if (ch == 0x7d) {
-              // 0x7d is the escape character.  The next character is to
-              // be XOR'd with 0x20.
+              // 0x7d is the escape character.  The next character is to be
+              // XOR'd with 0x20.
               const char escapee = m_bytes[++i] ^ 0x20;
               strm.Printf("%2.2x", escapee);
             } else {
@@ -880,26 +865,25 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
       // Clear packet_str in case there is some existing data in it.
       packet_str.clear();
-      // Copy the packet from m_bytes to packet_str expanding the
-      // run-length encoding in the process.
-      // Reserve enough byte for the most common case (no RLE used)
+      // Copy the packet from m_bytes to packet_str expanding the run-length
+      // encoding in the process. Reserve enough byte for the most common case
+      // (no RLE used)
       packet_str.reserve(m_bytes.length());
       for (std::string::const_iterator c = m_bytes.begin() + content_start;
            c != m_bytes.begin() + content_end; ++c) {
         if (*c == '*') {
-          // '*' indicates RLE. Next character will give us the
-          // repeat count and previous character is what is to be
-          // repeated.
+          // '*' indicates RLE. Next character will give us the repeat count
+          // and previous character is what is to be repeated.
           char char_to_repeat = packet_str.back();
           // Number of time the previous character is repeated
           int repeat_count = *++c + 3 - ' ';
-          // We have the char_to_repeat and repeat_count. Now push
-          // it in the packet.
+          // We have the char_to_repeat and repeat_count. Now push it in the
+          // packet.
           for (int i = 0; i < repeat_count; ++i)
             packet_str.push_back(char_to_repeat);
         } else if (*c == 0x7d) {
-          // 0x7d is the escape character.  The next character is to
-          // be XOR'd with 0x20.
+          // 0x7d is the escape character.  The next character is to be XOR'd
+          // with 0x20.
           char escapee = *++c ^ 0x20;
           packet_str.push_back(escapee);
         } else {
@@ -1009,8 +993,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   char debugserver_path[PATH_MAX];
   FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
 
-  // Always check to see if we have an environment override for the path
-  // to the debugserver to use and use it if we do.
+  // Always check to see if we have an environment override for the path to the
+  // debugserver to use and use it if we do.
   const char *env_debugserver_path = getenv("LLDB_DEBUGSERVER_PATH");
   if (env_debugserver_path) {
     debugserver_file_spec.SetFile(env_debugserver_path, false);
@@ -1022,8 +1006,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     debugserver_file_spec = g_debugserver_file_spec;
   bool debugserver_exists = debugserver_file_spec.Exists();
   if (!debugserver_exists) {
-    // The debugserver binary is in the LLDB.framework/Resources
-    // directory.
+    // The debugserver binary is in the LLDB.framework/Resources directory.
     if (HostInfo::GetLLDBPath(ePathTypeSupportExecutableDir,
                               debugserver_file_spec)) {
       debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
@@ -1049,8 +1032,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
                         __FUNCTION__, debugserver_file_spec.GetPath().c_str());
         }
         // Don't cache the platform specific GDB server binary as it could
-        // change
-        // from platform to platform
+        // change from platform to platform
         g_debugserver_file_spec.Clear();
       }
     }
@@ -1098,14 +1080,14 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     // once data is written to the pipe, debug server is up and running.
     Pipe socket_pipe;
 
-    // port is null when debug server should listen on domain socket -
-    // we're not interested in port value but rather waiting for debug server
-    // to become available.
+    // port is null when debug server should listen on domain socket - we're
+    // not interested in port value but rather waiting for debug server to
+    // become available.
     if (pass_comm_fd == -1) {
       if (url) {
-// Create a temporary file to get the stdout/stderr and redirect the
-// output of the command into this file. We will later read this file
-// if all goes well and fill the data into "command_output_ptr"
+// Create a temporary file to get the stdout/stderr and redirect the output of
+// the command into this file. We will later read this file if all goes well
+// and fill the data into "command_output_ptr"
 #if defined(__APPLE__)
         // Binding to port zero, we need to figure out what port it ends up
         // using using a named pipe...
@@ -1138,8 +1120,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 #endif
       } else {
         // No host and port given, so lets listen on our end and make the
-        // debugserver
-        // connect to us..
+        // debugserver connect to us..
         error = StartListenThread("127.0.0.1", 0);
         if (error.Fail()) {
           if (log)
@@ -1341,14 +1322,11 @@ GDBRemoteCommunication::ScopedTimeout::~ScopedTimeout() {
 }
 
 // This function is called via the Communications class read thread when bytes
-// become available
-// for this connection. This function will consume all incoming bytes and try to
-// parse whole
-// packets as they become available. Full packets are placed in a queue, so that
-// all packet
-// requests can simply pop from this queue. Async notification packets will be
-// dispatched
-// immediately to the ProcessGDBRemote Async thread via an event.
+// become available for this connection. This function will consume all
+// incoming bytes and try to parse whole packets as they become available. Full
+// packets are placed in a queue, so that all packet requests can simply pop
+// from this queue. Async notification packets will be dispatched immediately
+// to the ProcessGDBRemote Async thread via an event.
 void GDBRemoteCommunication::AppendBytesToCache(const uint8_t *bytes,
                                                 size_t len, bool broadcast,
                                                 lldb::ConnectionStatus status) {
@@ -1357,8 +1335,8 @@ void GDBRemoteCommunication::AppendBytesToCache(const uint8_t *bytes,
   while (true) {
     PacketType type = CheckForPacket(bytes, len, packet);
 
-    // scrub the data so we do not pass it back to CheckForPacket
-    // on future passes of the loop
+    // scrub the data so we do not pass it back to CheckForPacket on future
+    // passes of the loop
     bytes = nullptr;
     len = 0;
 
@@ -1382,8 +1360,8 @@ void GDBRemoteCommunication::AppendBytesToCache(const uint8_t *bytes,
       // put this packet into an event
       const char *pdata = packet.GetStringRef().c_str();
 
-      // as the communication class, we are a broadcaster and the
-      // async thread is tuned to listen to us
+      // as the communication class, we are a broadcaster and the async thread
+      // is tuned to listen to us
       BroadcastEvent(eBroadcastBitGdbReadThreadGotNotify,
                      new EventDataBytes(pdata));
     }

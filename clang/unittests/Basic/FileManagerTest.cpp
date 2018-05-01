@@ -12,7 +12,6 @@
 #include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
 

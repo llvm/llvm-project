@@ -5552,11 +5552,7 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
     VectorizationCostTy BlockCost;
 
     // For each instruction in the old loop.
-    for (Instruction &I : *BB) {
-      // Skip dbg intrinsics.
-      if (isa<DbgInfoIntrinsic>(I))
-        continue;
-
+    for (Instruction &I : BB->instructionsWithoutDebug()) {
       // Skip ignored values.
       if (ValuesToIgnore.count(&I) ||
           (VF > 1 && VecValuesToIgnore.count(&I)))
@@ -6864,13 +6860,12 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range,
 
     // Organize the ingredients to vectorize from current basic block in the
     // right order.
-    for (Instruction &I : *BB) {
+    for (Instruction &I : BB->instructionsWithoutDebug()) {
       Instruction *Instr = &I;
 
       // First filter out irrelevant instructions, to ensure no recipes are
       // built for them.
-      if (isa<BranchInst>(Instr) || isa<DbgInfoIntrinsic>(Instr) ||
-          DeadInstructions.count(Instr))
+      if (isa<BranchInst>(Instr) || DeadInstructions.count(Instr))
         continue;
 
       // I is a member of an InterleaveGroup for Range.Start. If it's an adjunct

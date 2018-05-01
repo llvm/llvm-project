@@ -125,8 +125,8 @@ public:
     // prologue
     eContextPushRegisterOnStack,
 
-    // Exclusively used when restoring a register off the stack as part of
-    // the epilogue
+    // Exclusively used when restoring a register off the stack as part of the
+    // epilogue
     eContextPopRegisterOffStack,
 
     // Add or subtract a value from the stack
@@ -135,8 +135,8 @@ public:
     // Adjust the frame pointer for the current frame
     eContextSetFramePointer,
 
-    // Typically in an epilogue sequence.  Copy the frame pointer back
-    // into the stack pointer, use SP for CFA calculations again.
+    // Typically in an epilogue sequence.  Copy the frame pointer back into the
+    // stack pointer, use SP for CFA calculations again.
     eContextRestoreStackPointer,
 
     // Add or subtract a value from a base address register (other than SP)
@@ -159,8 +159,8 @@ public:
     // Used when performing an absolute branch where the
     eContextAbsoluteBranchRegister,
 
-    // Used when performing a supervisor call to an operating system to
-    // provide a service:
+    // Used when performing a supervisor call to an operating system to provide
+    // a service:
     eContextSupervisorCall,
 
     // Used when performing a MemU operation to read the PC-relative offset
@@ -360,9 +360,8 @@ public:
                                         const RegisterValue &reg_value);
 
   // Type to represent the condition of an instruction. The UINT32 value is
-  // reserved for the
-  // unconditional case and all other value can be used in an architecture
-  // dependent way.
+  // reserved for the unconditional case and all other value can be used in an
+  // architecture dependent way.
   typedef uint32_t InstructionCondition;
   static const InstructionCondition UnconditionalCondition = UINT32_MAX;
 

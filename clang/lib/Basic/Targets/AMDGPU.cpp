@@ -133,6 +133,10 @@ bool AMDGPUTargetInfo::initFeatureMap(
       CPU = "gfx600";
 
     switch (parseAMDGCNName(CPU).Kind) {
+    case GK_GFX906:
+      Features["dl-insts"] = true;
+      LLVM_FALLTHROUGH;
+    case GK_GFX904:
     case GK_GFX902:
     case GK_GFX900:
       Features["gfx9-insts"] = true;

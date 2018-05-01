@@ -720,6 +720,8 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     else
       AddOperand(MIB, Op, (*MIB).getNumOperands(), &II, VRBaseMap,
                  /*IsDebug=*/true, /*IsClone=*/false, /*IsCloned=*/false);
+  } else if (SD->getKind() == SDDbgValue::VREG) {
+    MIB.addReg(SD->getVReg(), RegState::Debug);
   } else if (SD->getKind() == SDDbgValue::CONST) {
     const Value *V = SD->getConst();
     if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {

@@ -117,7 +117,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter %s' fails on executable file which is specified via unknown path."""
 
         # Prepare path to executable
-        path = "unknown_dir/%s" % self.myexe
+        path = "unknown_dir" + self.myexe
 
         self.spawnLldbMi(args="%s" % path)
 

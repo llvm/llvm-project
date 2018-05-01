@@ -736,10 +736,10 @@ bool ABIMacOSX_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
   uint32_t sp_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
 
-  // When writing a register value down to memory, the register info used
-  // to write memory just needs to have the correct size of a 32 bit register,
-  // the actual register it pertains to is not important, just the size needs
-  // to be correct. Here we use "eax"...
+  // When writing a register value down to memory, the register info used to
+  // write memory just needs to have the correct size of a 32 bit register, the
+  // actual register it pertains to is not important, just the size needs to be
+  // correct. Here we use "eax"...
   const RegisterInfo *reg_info_32 = reg_ctx->GetRegisterInfoByName("eax");
   if (!reg_info_32)
     return false; // TODO this should actually never happen
@@ -828,8 +828,8 @@ bool ABIMacOSX_i386::GetArgumentValues(Thread &thread,
     if (!value)
       return false;
 
-    // We currently only support extracting values with Clang QualTypes.
-    // Do we care about others?
+    // We currently only support extracting values with Clang QualTypes. Do we
+    // care about others?
     CompilerType compiler_type(value->GetCompilerType());
     if (compiler_type) {
       bool is_signed;
@@ -1075,12 +1075,13 @@ bool ABIMacOSX_i386::RegisterIsVolatile(const RegisterInfo *reg_info) {
 }
 
 // v.
-// http://developer.apple.com/library/mac/#documentation/developertools/Conceptual/LowLevelABI/130-IA-32_Function_Calling_Conventions/IA32.html#//apple_ref/doc/uid/TP40002492-SW4
+// http://developer.apple.com/library/mac/#documentation/developertools/Conceptual/LowLevelABI/130
+// -IA-
+// 32_Function_Calling_Conventions/IA32.html#//apple_ref/doc/uid/TP40002492-SW4
 //
 // This document ("OS X ABI Function Call Guide", chapter "IA-32 Function
-// Calling Conventions")
-// says that the following registers on i386 are preserved aka non-volatile aka
-// callee-saved:
+// Calling Conventions") says that the following registers on i386 are
+// preserved aka non-volatile aka callee-saved:
 //
 // ebx, ebp, esi, edi, esp
 

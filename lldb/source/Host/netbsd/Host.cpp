@@ -192,9 +192,8 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
       continue;
 
     // Every thread is a process in NetBSD, but all the threads of a single
-    // process have the same pid. Do not store the process info in the
-    // result list if a process with given identifier is already registered
-    // there.
+    // process have the same pid. Do not store the process info in the result
+    // list if a process with given identifier is already registered there.
     if (proc_kinfo[i].p_nlwps > 1) {
       bool already_registered = false;
       for (size_t pi = 0; pi < process_infos.GetSize(); pi++) {

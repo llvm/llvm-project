@@ -248,8 +248,8 @@ bool EmulateInstructionPPC64::EmulateLD(uint32_t opcode) {
 
   int32_t ids = llvm::SignExtend32<16>(ds << 2);
 
-  // For now, tracking only loads from 0(r1) to r1
-  // (0(r1) is the ABI defined location to save previous SP)
+  // For now, tracking only loads from 0(r1) to r1 (0(r1) is the ABI defined
+  // location to save previous SP)
   if (ra != gpr_r1_ppc64le || rt != gpr_r1_ppc64le || ids != 0)
     return false;
 
@@ -294,8 +294,8 @@ bool EmulateInstructionPPC64::EmulateSTD(uint32_t opcode) {
   LLDB_LOG(log, "EmulateSTD: {0:X+8}: std{1} r{2}, {3}(r{4})", m_addr,
            u ? "u" : "", rs, ids, ra);
 
-  // Make sure that r0 is really holding LR value
-  // (this won't catch unlikely cases, such as r0 being overwritten after mfspr)
+  // Make sure that r0 is really holding LR value (this won't catch unlikely
+  // cases, such as r0 being overwritten after mfspr)
   uint32_t rs_num = rs;
   if (rs == gpr_r0_ppc64le) {
     uint64_t lr =

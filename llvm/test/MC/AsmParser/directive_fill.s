@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple i386-unknown-unknown %s 2> %t.err | FileCheck %s
 # RUN: FileCheck --check-prefix=CHECK-WARNINGS %s < %t.err
-# RUN: llvm-mc -triple i386-unknown-unknown -filetype=obj -o %t.o %s 2> %t.err
-# RUN: FileCheck --check-prefix=OBJ-WARNINGS %s < %t.err
+# RUN: llvm-mc -triple i386-unknown-unknown -filetype=obj -o %t.o %s 2> %t.err2
+# RUN: FileCheck --check-prefix=OBJ-WARNINGS %s < %t.err2
 
 # CHECK: TEST0:
 # CHECK: .fill 1, 1, 0xa

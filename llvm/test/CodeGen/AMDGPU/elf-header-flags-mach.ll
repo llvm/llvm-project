@@ -44,6 +44,8 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=stoney < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX810 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx900 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX900 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx902 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX902 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx904 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX904 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx906 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX906 %s
 
 ; ARCH-R600: Arch: r600
 ; ARCH-GCN:  Arch: amdgcn
@@ -81,6 +83,8 @@
 ; GFX900:        EF_AMDGPU_MACH_AMDGCN_GFX900 (0x2C)
 ; GFX902:        EF_AMDGPU_MACH_AMDGCN_GFX902 (0x2D)
 ; GFX902-NEXT:   EF_AMDGPU_XNACK              (0x100)
+; GFX904:        EF_AMDGPU_MACH_AMDGCN_GFX904 (0x2E)
+; GFX906:        EF_AMDGPU_MACH_AMDGCN_GFX906 (0x2F)
 ; ALL:         ]
 
 define amdgpu_kernel void @elf_header() {

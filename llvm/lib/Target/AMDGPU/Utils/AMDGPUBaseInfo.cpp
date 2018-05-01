@@ -221,6 +221,10 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
     return {9, 0, 0};
   if (Features.test(FeatureISAVersion9_0_2))
     return {9, 0, 2};
+  if (Features.test(FeatureISAVersion9_0_4))
+    return {9, 0, 4};
+  if (Features.test(FeatureISAVersion9_0_6))
+    return {9, 0, 6};
   if (Features.test(FeatureGFX9))
     return {9, 0, 0};
 

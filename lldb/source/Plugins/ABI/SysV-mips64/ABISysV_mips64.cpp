@@ -661,8 +661,8 @@ bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (log)
     log->Printf("Writing r25: 0x%" PRIx64, (uint64_t)func_addr);
 
-  // All callers of position independent functions must place the address of the
-  // called function in t9 (r25)
+  // All callers of position independent functions must place the address of
+  // the called function in t9 (r25)
   if (!reg_ctx->WriteRegisterFromUnsigned(r25_info, func_addr))
     return false;
 
@@ -1035,10 +1035,9 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         }
       }
 
-      // If we reach here, it means this structure either contains more than two
-      // fields or
-      // it contains at least one non floating point type.
-      // In that case, all fields are returned in GP return registers.
+      // If we reach here, it means this structure either contains more than
+      // two fields or it contains at least one non floating point type. In
+      // that case, all fields are returned in GP return registers.
       for (uint32_t idx = 0; idx < num_children; idx++) {
         uint64_t field_bit_offset = 0;
         bool is_signed;
@@ -1049,8 +1048,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         const size_t field_byte_width =
             field_compiler_type.GetByteSize(nullptr);
 
-        // if we don't know the size of the field (e.g. invalid type), just bail
-        // out
+        // if we don't know the size of the field (e.g. invalid type), just
+        // bail out
         if (field_byte_width == 0)
           break;
 
@@ -1078,16 +1077,15 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
             }
           }
           // We already have consumed at-least 8 bytes that means r2 is done,
-          // and this field will be in r3.
-          // Check if this field can fit in r3.
+          // and this field will be in r3. Check if this field can fit in r3.
           else if (integer_bytes + field_byte_width + padding <= 16) {
             integer_bytes = integer_bytes + field_byte_width + padding;
             use_r3 = 1;
           } else {
-            // There isn't any space left for this field, this should not happen
-            // as we have already checked
-            // the overall size is not greater than 16 bytes. For now, return a
-            // nullptr return value object.
+            // There isn't any space left for this field, this should not
+            // happen as we have already checked the overall size is not
+            // greater than 16 bytes. For now, return a nullptr return value
+            // object.
             return return_valobj_sp;
           }
         }
@@ -1123,15 +1121,16 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         sucess = 1;
       }
       if (sucess) {
-        // The result is in our data buffer.  Create a variable object out of it
+        // The result is in our data buffer.  Create a variable object out of
+        // it
         return_valobj_sp = ValueObjectConstResult::Create(
             &thread, return_compiler_type, ConstString(""), return_ext);
       }
       return return_valobj_sp;
     }
 
-    // Any structure/vector greater than 16 bytes in size is returned in memory.
-    // The pointer to that memory is returned in r2.
+    // Any structure/vector greater than 16 bytes in size is returned in
+    // memory. The pointer to that memory is returned in r2.
     uint64_t mem_address = reg_ctx->ReadRegisterAsUnsigned(
         reg_ctx->GetRegisterInfoByName("r2", 0), 0);
 

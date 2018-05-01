@@ -11,8 +11,8 @@
 
 #if defined(ENABLE_SP_LOGGING)
 
-// If ENABLE_SP_LOGGING is defined, then log all shared pointer assignments
-// and allow them to be queried using a pointer by a call to:
+// If ENABLE_SP_LOGGING is defined, then log all shared pointer assignments and
+// allow them to be queried using a pointer by a call to:
 #include <assert.h>
 #include <execinfo.h>
 
@@ -96,8 +96,8 @@ extern "C" void track_sp(void *sp_this, void *ptr, long use_count) {
 namespace lldb {
 
 void dump_sp_refs(void *ptr) {
-  // Use a specially crafted call to "track_sp" which will
-  // dump info on all live shared pointers that reference "ptr"
+  // Use a specially crafted call to "track_sp" which will dump info on all
+  // live shared pointers that reference "ptr"
   track_sp(NULL, ptr, 0);
 }
 }

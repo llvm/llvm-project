@@ -11,6 +11,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGLOCENTRY_H
 
 #include "DebugLocStream.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/MC/MCSymbol.h"

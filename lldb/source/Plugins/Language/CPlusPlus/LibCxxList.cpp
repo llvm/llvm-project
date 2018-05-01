@@ -206,8 +206,7 @@ bool AbstractListFrontEnd::HasLoop(size_t count) {
 
   if (m_loop_detected == 0) {
     // This is the first time we are being run (after the last update). Set up
-    // the loop
-    // invariant for the first element.
+    // the loop invariant for the first element.
     m_slow_runner = ListEntry(m_head).next();
     m_fast_runner = m_slow_runner.next();
     m_loop_detected = 1;
@@ -215,9 +214,8 @@ bool AbstractListFrontEnd::HasLoop(size_t count) {
 
   // Loop invariant:
   // Loop detection has been run over the first m_loop_detected elements. If
-  // m_slow_runner ==
-  // m_fast_runner then the loop has been detected after m_loop_detected
-  // elements.
+  // m_slow_runner == m_fast_runner then the loop has been detected after
+  // m_loop_detected elements.
   const size_t steps_to_run = std::min(count, m_count);
   while (m_loop_detected < steps_to_run && m_slow_runner && m_fast_runner &&
          m_slow_runner != m_fast_runner) {

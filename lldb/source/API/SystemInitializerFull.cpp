@@ -138,11 +138,10 @@ extern "C" void init_lldb(void);
 #define LLDBSwigPyInit init_lldb
 #endif
 
-// these are the Pythonic implementations of the required callbacks
-// these are scripting-language specific, which is why they belong here
-// we still need to use function pointers to them instead of relying
-// on linkage-time resolution because the SWIG stuff and this file
-// get built at different times
+// these are the Pythonic implementations of the required callbacks these are
+// scripting-language specific, which is why they belong here we still need to
+// use function pointers to them instead of relying on linkage-time resolution
+// because the SWIG stuff and this file get built at different times
 extern "C" bool LLDBSwigPythonBreakpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame,
@@ -262,10 +261,9 @@ void SystemInitializerFull::Initialize() {
 #if !defined(LLDB_DISABLE_PYTHON)
   InitializeSWIG();
 
-  // ScriptInterpreterPython::Initialize() depends on things like HostInfo being
-  // initialized
-  // so it can compute the python directory etc, so we need to do this after
-  // SystemInitializerCommon::Initialize().
+  // ScriptInterpreterPython::Initialize() depends on things like HostInfo
+  // being initialized so it can compute the python directory etc, so we need
+  // to do this after SystemInitializerCommon::Initialize().
   ScriptInterpreterPython::Initialize();
 #endif
 
@@ -363,8 +361,8 @@ void SystemInitializerFull::Initialize() {
   DynamicLoaderDarwinKernel::Initialize();
 #endif
 
-  // This plugin is valid on any host that talks to a Darwin remote.
-  // It shouldn't be limited to __APPLE__.
+  // This plugin is valid on any host that talks to a Darwin remote. It
+  // shouldn't be limited to __APPLE__.
   StructuredDataDarwinLog::Initialize();
 
   //----------------------------------------------------------------------
@@ -382,8 +380,8 @@ void SystemInitializerFull::Initialize() {
   // Scan for any system or user LLDB plug-ins
   PluginManager::Initialize();
 
-  // The process settings need to know about installed plug-ins, so the Settings
-  // must be initialized
+  // The process settings need to know about installed plug-ins, so the
+  // Settings must be initialized
   // AFTER PluginManager::Initialize is called.
 
   Debugger::SettingsInitialize();

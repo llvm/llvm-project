@@ -237,9 +237,9 @@ Status PlatformWindows::ResolveExecutable(
             resolved_module_spec.GetArchitecture().GetArchitectureName());
       }
     } else {
-      // No valid architecture was specified, ask the platform for
-      // the architectures that we should be using (in the correct order)
-      // and see if we can find a match that way
+      // No valid architecture was specified, ask the platform for the
+      // architectures that we should be using (in the correct order) and see
+      // if we can find a match that way
       StreamString arch_names;
       for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
                idx, resolved_module_spec.GetArchitecture());
@@ -413,29 +413,23 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
                                         Debugger &debugger, Target *target,
                                         Status &error) {
   // Windows has special considerations that must be followed when launching or
-  // attaching to a process.  The
-  // key requirement is that when launching or attaching to a process, you must
-  // do it from the same the thread
-  // that will go into a permanent loop which will then receive debug events
-  // from the process.  In particular,
-  // this means we can't use any of LLDB's generic mechanisms to do it for us,
-  // because it doesn't have the
-  // special knowledge required for setting up the background thread or passing
-  // the right flags.
+  // attaching to a process.  The key requirement is that when launching or
+  // attaching to a process, you must do it from the same the thread that will
+  // go into a permanent loop which will then receive debug events from the
+  // process.  In particular, this means we can't use any of LLDB's generic
+  // mechanisms to do it for us, because it doesn't have the special knowledge
+  // required for setting up the background thread or passing the right flags.
   //
   // Another problem is that that LLDB's standard model for debugging a process
-  // is to first launch it, have
-  // it stop at the entry point, and then attach to it.  In Windows this doesn't
-  // quite work, you have to
-  // specify as an argument to CreateProcess() that you're going to debug the
-  // process.  So we override DebugProcess
-  // here to handle this.  Launch operations go directly to the process plugin,
-  // and attach operations almost go
-  // directly to the process plugin (but we hijack the events first).  In
-  // essence, we encapsulate all the logic
-  // of Launching and Attaching in the process plugin, and
-  // PlatformWindows::DebugProcess is just a pass-through
-  // to get to the process plugin.
+  // is to first launch it, have it stop at the entry point, and then attach to
+  // it.  In Windows this doesn't quite work, you have to specify as an
+  // argument to CreateProcess() that you're going to debug the process.  So we
+  // override DebugProcess here to handle this.  Launch operations go directly
+  // to the process plugin, and attach operations almost go directly to the
+  // process plugin (but we hijack the events first).  In essence, we
+  // encapsulate all the logic of Launching and Attaching in the process
+  // plugin, and PlatformWindows::DebugProcess is just a pass-through to get to
+  // the process plugin.
 
   if (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) {
     // This is a process attach.  Don't need to launch anything.
@@ -538,8 +532,8 @@ Status PlatformWindows::GetSharedModule(
   module_sp.reset();
 
   if (IsRemote()) {
-    // If we have a remote platform always, let it try and locate
-    // the shared module first.
+    // If we have a remote platform always, let it try and locate the shared
+    // module first.
     if (m_remote_platform_sp) {
       error = m_remote_platform_sp->GetSharedModule(
           module_spec, process, module_sp, module_search_paths_ptr,

@@ -1926,15 +1926,16 @@ Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('isAssignmentOperator0')"><a name="isAssignmentOperator0Anchor">isAssignmentOperator</a></td></tr>
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('isAssignmentOperator0')"><a name="isAssignmentOperator0Anchor">isAssignmentOperator</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isAssignmentOperator0"><pre>Matches all kinds of assignment operators.
 
 Example 1: matches a += b (matcher = binaryOperator(isAssignmentOperator()))
   if (a == b)
     a += b;
 
-Example 2: matches s1 = s2 (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
-  struct S { S& operator=(const S&); };
+Example 2: matches s1 = s2
+           (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
+  struct S { S&amp; operator=(const S&amp;); };
   void x() { S s1, s2; s1 = s2; })
 </pre></td></tr>
 
@@ -2319,15 +2320,16 @@ Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXOp
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXOperatorCallExpr.html">CXXOperatorCallExpr</a>&gt;</td><td class="name" onclick="toggle('isAssignmentOperator1')"><a name="isAssignmentOperator1Anchor">isAssignmentOperator</a></td></tr>
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXOperatorCallExpr.html">CXXOperatorCallExpr</a>&gt;</td><td class="name" onclick="toggle('isAssignmentOperator1')"><a name="isAssignmentOperator1Anchor">isAssignmentOperator</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isAssignmentOperator1"><pre>Matches all kinds of assignment operators.
 
 Example 1: matches a += b (matcher = binaryOperator(isAssignmentOperator()))
   if (a == b)
     a += b;
 
-Example 2: matches s1 = s2 (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
-  struct S { S& operator=(const S&); };
+Example 2: matches s1 = s2
+           (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
+  struct S { S&amp; operator=(const S&amp;); };
   void x() { S s1, s2; s1 = s2; })
 </pre></td></tr>
 

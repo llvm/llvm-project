@@ -47,8 +47,7 @@ CrashReason GetCrashReasonForSIGSEGV(const siginfo_t &info) {
 #ifdef SI_KERNEL
   case SI_KERNEL:
     // Some platforms will occasionally send nonstandard spurious SI_KERNEL
-    // codes.
-    // One way to get this is via unaligned SIMD loads.
+    // codes. One way to get this is via unaligned SIMD loads.
     return CrashReason::eInvalidAddress; // for lack of anything better
 #endif
   case SEGV_MAPERR:

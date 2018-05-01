@@ -19,7 +19,6 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -31,13 +30,7 @@
 #include "llvm/Support/Process.h"
 #include <cstdio>
 
-// Include the necessary headers to interface with the Windows registry and
-// environment.
-#if defined(_WIN32)
-#define USE_WIN32
-#endif
-
-#ifdef USE_WIN32
+#ifdef _WIN32
   #define WIN32_LEAN_AND_MEAN
   #define NOGDI
   #ifndef NOMINMAX
@@ -476,7 +469,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // their own link.exe which may come first.
     linkPath = FindVisualStudioExecutable(TC, "link.exe");
 
-#ifdef USE_WIN32
+#ifdef _WIN32
     // When cross-compiling with VS2017 or newer, link.exe expects to have
     // its containing bin directory at the top of PATH, followed by the
     // native target bin directory.
@@ -841,7 +834,7 @@ MSVCToolChain::getSubDirectoryPath(SubDirectoryType Type,
   return Path.str();
 }
 
-#ifdef USE_WIN32
+#ifdef _WIN32
 static bool readFullStringValue(HKEY hkey, const char *valueName,
                                 std::string &value) {
   std::wstring WideValueName;
@@ -885,7 +878,7 @@ static bool readFullStringValue(HKEY hkey, const char *valueName,
 /// characters are compared.  This function only searches HKLM.
 static bool getSystemRegistryString(const char *keyPath, const char *valueName,
                                     std::string &value, std::string *phValue) {
-#ifndef USE_WIN32
+#ifndef _WIN32
   return false;
 #else
   HKEY hRootKey = HKEY_LOCAL_MACHINE;
@@ -967,7 +960,7 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
     }
   }
   return returnValue;
-#endif // USE_WIN32
+#endif // _WIN32
 }
 
 // Find the most recent version of Universal CRT or Windows 10 SDK.
@@ -1128,7 +1121,7 @@ static VersionTuple getMSVCVersionFromTriple(const llvm::Triple &Triple) {
 
 static VersionTuple getMSVCVersionFromExe(const std::string &BinDir) {
   VersionTuple Version;
-#ifdef USE_WIN32
+#ifdef _WIN32
   SmallString<128> ClExe(BinDir);
   llvm::sys::path::append(ClExe, "cl.exe");
 

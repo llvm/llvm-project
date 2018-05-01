@@ -3,8 +3,7 @@
 //                   The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
-// License.
-// See LICENSE.TXT for details.
+// License. See LICENSE.TXT for details.
 //===----------------------------------------------------------------------===//
 
 #include "ABISysV_i386.h"
@@ -56,8 +55,8 @@ using namespace lldb_private;
 
 // DWARF Register Number Mapping
 // See Table 2.14 of the reference document (specified on top of this file)
-// Comment: Table 2.14 is followed till 'mm' entries.
-// After that, all entries are ignored here.
+// Comment: Table 2.14 is followed till 'mm' entries. After that, all entries
+// are ignored here.
 
 enum dwarf_regnums {
   dwarf_eax = 0,
@@ -228,12 +227,10 @@ bool ABISysV_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
   uint32_t sp_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
 
-  // While using register info to write a register value to memory, the register
-  // info
-  // just needs to have the correct size of a 32 bit register, the actual
-  // register it
-  // pertains to is not important, just the size needs to be correct.
-  // "eax" is used here for this purpose.
+  // While using register info to write a register value to memory, the
+  // register info just needs to have the correct size of a 32 bit register,
+  // the actual register it pertains to is not important, just the size needs
+  // to be correct. "eax" is used here for this purpose.
   const RegisterInfo *reg_info_32 = reg_ctx->GetRegisterInfoByName("eax");
   if (!reg_info_32)
     return false; // TODO this should actually never happen
@@ -364,8 +361,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   }
 
   // Following "IF ELSE" block categorizes various 'Fundamental Data Types'.
-  // The terminology 'Fundamental Data Types' used here is adopted from
-  // Table 2.1 of the reference document (specified on top of this file)
+  // The terminology 'Fundamental Data Types' used here is adopted from Table
+  // 2.1 of the reference document (specified on top of this file)
 
   if (type_flags & eTypeIsPointer) // 'Pointer'
   {
@@ -390,8 +387,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       default:
         break;
       case 16:
-        // For clang::BuiltinType::UInt128 & Int128
-        // ToDo: Need to decide how to handle it
+        // For clang::BuiltinType::UInt128 & Int128 ToDo: Need to decide how to
+        // handle it
         break;
       case 8: {
         uint32_t raw_value_low = data.GetMaxU32(&offset, 4);
@@ -470,8 +467,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         error.SetErrorString("Implementation is missing for this clang type.");
       }
     } else {
-      // Neither 'Integral' nor 'Floating Point'. If flow reaches here
-      // then check type_flags. This type_flags is not a valid type.
+      // Neither 'Integral' nor 'Floating Point'. If flow reaches here then
+      // check type_flags. This type_flags is not a valid type.
       error.SetErrorString("Invalid clang type");
     }
   } else {
@@ -508,8 +505,8 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
       reg_ctx->GetRegisterInfoByName("edx", 0)->kinds[eRegisterKindLLDB];
 
   // Following "IF ELSE" block categorizes various 'Fundamental Data Types'.
-  // The terminology 'Fundamental Data Types' used here is adopted from
-  // Table 2.1 of the reference document (specified on top of this file)
+  // The terminology 'Fundamental Data Types' used here is adopted from Table
+  // 2.1 of the reference document (specified on top of this file)
 
   if (type_flags & eTypeIsPointer) // 'Pointer'
   {
@@ -543,8 +540,8 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
         break;
 
       case 16:
-        // For clang::BuiltinType::UInt128 & Int128
-        // ToDo: Need to decide how to handle it
+        // For clang::BuiltinType::UInt128 & Int128 ToDo: Need to decide how to
+        // handle it
         break;
 
       case 8:
@@ -612,8 +609,8 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
               success = true;
             } else if (byte_size == 8) // double is 8 bytes
             {
-              // On Android Platform: long double is also 8 bytes
-              // It will be handled here only.
+              // On Android Platform: long double is also 8 bytes It will be
+              // handled here only.
               double value_double = (double)value_long_double;
               value.GetScalar() = value_double;
               success = true;
@@ -639,8 +636,8 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
       }
     } else // Neither 'Integral' nor 'Floating Point'
     {
-      // If flow reaches here then check type_flags
-      // This type_flags is unhandled
+      // If flow reaches here then check type_flags This type_flags is
+      // unhandled
     }
   } else if (type_flags & eTypeIsComplex) // 'Complex Floating Point'
   {
@@ -797,9 +794,9 @@ bool ABISysV_i386::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   return true;
 }
 
-// According to "Register Usage" in reference document (specified on top
-// of this source file) ebx, ebp, esi, edi and esp registers are preserved
-// i.e. non-volatile i.e. callee-saved on i386
+// According to "Register Usage" in reference document (specified on top of
+// this source file) ebx, ebp, esi, edi and esp registers are preserved i.e.
+// non-volatile i.e. callee-saved on i386
 bool ABISysV_i386::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   if (!reg_info)
     return false;

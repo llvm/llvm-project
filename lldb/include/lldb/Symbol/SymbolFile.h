@@ -26,10 +26,10 @@ public:
   //------------------------------------------------------------------
   // Symbol file ability bits.
   //
-  // Each symbol file can claim to support one or more symbol file
-  // abilities. These get returned from SymbolFile::GetAbilities().
-  // These help us to determine which plug-in will be best to load
-  // the debug information found in files.
+  // Each symbol file can claim to support one or more symbol file abilities.
+  // These get returned from SymbolFile::GetAbilities(). These help us to
+  // determine which plug-in will be best to load the debug information found
+  // in files.
   //------------------------------------------------------------------
   enum Abilities {
     CompileUnits = (1u << 0),

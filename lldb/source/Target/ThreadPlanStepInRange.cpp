@@ -35,8 +35,7 @@ uint32_t ThreadPlanStepInRange::s_default_flag_values =
 
 //----------------------------------------------------------------------
 // ThreadPlanStepInRange: Step through a stack range, either stepping over or
-// into
-// based on the value of \a type.
+// into based on the value of \a type.
 //----------------------------------------------------------------------
 
 ThreadPlanStepInRange::ThreadPlanStepInRange(
@@ -164,15 +163,14 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
   if (m_virtual_step) {
     // If we've just completed a virtual step, all we need to do is check for a
-    // ShouldStopHere plan, and otherwise
-    // we're done.
+    // ShouldStopHere plan, and otherwise we're done.
     // FIXME - This can be both a step in and a step out.  Probably should
     // record which in the m_virtual_step.
     m_sub_plan_sp = CheckShouldStopHereAndQueueStepOut(eFrameCompareYounger);
   } else {
     // Stepping through should be done running other threads in general, since
-    // we're setting a breakpoint and
-    // continuing.  So only stop others if we are explicitly told to do so.
+    // we're setting a breakpoint and continuing.  So only stop others if we
+    // are explicitly told to do so.
 
     bool stop_others = (m_stop_others == lldb::eOnlyThisThread);
 
@@ -185,9 +183,8 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
       // A caveat to this is if we think the frame is older but we're actually
       // in a trampoline.
       // I'm going to make the assumption that you wouldn't RETURN to a
-      // trampoline.  So if we are
-      // in a trampoline we think the frame is older because the trampoline
-      // confused the backtracer.
+      // trampoline.  So if we are in a trampoline we think the frame is older
+      // because the trampoline confused the backtracer.
       m_sub_plan_sp = m_thread.QueueThreadPlanForStepThrough(m_stack_id, false,
                                                              stop_others);
       if (!m_sub_plan_sp) {
@@ -204,19 +201,15 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
             "Thought I stepped out, but in fact arrived at a trampoline.");
       }
     } else if (frame_order == eFrameCompareEqual && InSymbol()) {
-      // If we are not in a place we should step through, we're done.
-      // One tricky bit here is that some stubs don't push a frame, so we have
-      // to check
-      // both the case of a frame that is younger, or the same as this frame.
-      // However, if the frame is the same, and we are still in the symbol we
-      // started
-      // in, the we don't need to do this.  This first check isn't strictly
-      // necessary,
-      // but it is more efficient.
+      // If we are not in a place we should step through, we're done. One
+      // tricky bit here is that some stubs don't push a frame, so we have to
+      // check both the case of a frame that is younger, or the same as this
+      // frame. However, if the frame is the same, and we are still in the
+      // symbol we started in, the we don't need to do this.  This first check
+      // isn't strictly necessary, but it is more efficient.
 
       // If we're still in the range, keep going, either by running to the next
-      // branch breakpoint, or by
-      // stepping.
+      // branch breakpoint, or by stepping.
       if (InRange()) {
         SetNextBranchBreakpoint();
         return false;
@@ -244,15 +237,13 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
         log->Printf("No step through plan found.");
     }
 
-    // If not, give the "should_stop" callback a chance to push a plan to get us
-    // out of here.
-    // But only do that if we actually have stepped in.
+    // If not, give the "should_stop" callback a chance to push a plan to get
+    // us out of here. But only do that if we actually have stepped in.
     if (!m_sub_plan_sp && frame_order == eFrameCompareYounger)
       m_sub_plan_sp = CheckShouldStopHereAndQueueStepOut(frame_order);
 
     // If we've stepped in and we are going to stop here, check to see if we
-    // were asked to
-    // run past the prologue, and if so do that.
+    // were asked to run past the prologue, and if so do that.
 
     if (!m_sub_plan_sp && frame_order == eFrameCompareYounger &&
         m_step_past_prologue) {
@@ -413,8 +404,8 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
       SymbolContext sc = frame->GetSymbolContext(
           eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
       if (sc.symbol != nullptr) {
-        // First try an exact match, since that's cheap with ConstStrings.  Then
-        // do a strstr compare.
+        // First try an exact match, since that's cheap with ConstStrings.
+        // Then do a strstr compare.
         if (step_in_range_plan->m_step_into_target == sc.GetFunctionName()) {
           should_stop_here = true;
         } else {
@@ -449,25 +440,19 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
 
 bool ThreadPlanStepInRange::DoPlanExplainsStop(Event *event_ptr) {
   // We always explain a stop.  Either we've just done a single step, in which
-  // case we'll do our ordinary processing, or we stopped for some
-  // reason that isn't handled by our sub-plans, in which case we want to just
-  // stop right
-  // away.
-  // In general, we don't want to mark the plan as complete for unexplained
-  // stops.
-  // For instance, if you step in to some code with no debug info, so you step
-  // out
-  // and in the course of that hit a breakpoint, then you want to stop & show
-  // the user
-  // the breakpoint, but not unship the step in plan, since you still may want
-  // to complete that
-  // plan when you continue.  This is particularly true when doing "step in to
-  // target function."
+  // case we'll do our ordinary processing, or we stopped for some reason that
+  // isn't handled by our sub-plans, in which case we want to just stop right
+  // away. In general, we don't want to mark the plan as complete for
+  // unexplained stops. For instance, if you step in to some code with no debug
+  // info, so you step out and in the course of that hit a breakpoint, then you
+  // want to stop & show the user the breakpoint, but not unship the step in
+  // plan, since you still may want to complete that plan when you continue.
+  // This is particularly true when doing "step in to target function."
   // stepping.
   //
-  // The only variation is that if we are doing "step by running to next branch"
-  // in which case
-  // if we hit our branch breakpoint we don't set the plan to complete.
+  // The only variation is that if we are doing "step by running to next
+  // branch" in which case if we hit our branch breakpoint we don't set the
+  // plan to complete.
 
   bool return_value = false;
 

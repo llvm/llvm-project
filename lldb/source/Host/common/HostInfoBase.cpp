@@ -33,19 +33,19 @@ using namespace lldb_private;
 
 namespace {
 //----------------------------------------------------------------------
-// The HostInfoBaseFields is a work around for windows not supporting
-// static variables correctly in a thread safe way. Really each of the
-// variables in HostInfoBaseFields should live in the functions in which
-// they are used and each one should be static, but the work around is
-// in place to avoid this restriction. Ick.
+// The HostInfoBaseFields is a work around for windows not supporting static
+// variables correctly in a thread safe way. Really each of the variables in
+// HostInfoBaseFields should live in the functions in which they are used and
+// each one should be static, but the work around is in place to avoid this
+// restriction. Ick.
 //----------------------------------------------------------------------
 
 struct HostInfoBaseFields {
   ~HostInfoBaseFields() {
     if (m_lldb_process_tmp_dir.Exists()) {
       // Remove the LLDB temporary directory if we have one. Set "recurse" to
-      // true to all files that were created for the LLDB process can be cleaned
-      // up.
+      // true to all files that were created for the LLDB process can be
+      // cleaned up.
       llvm::sys::fs::remove_directories(m_lldb_process_tmp_dir.GetPath());
     }
   }
@@ -354,8 +354,8 @@ bool HostInfoBase::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 bool HostInfoBase::ComputeClangDirectory(FileSpec &file_spec) { return false; }
 
 bool HostInfoBase::ComputeUserPluginsDirectory(FileSpec &file_spec) {
-  // TODO(zturner): Figure out how to compute the user plugins directory for all
-  // platforms.
+  // TODO(zturner): Figure out how to compute the user plugins directory for
+  // all platforms.
   return false;
 }
 

@@ -148,3 +148,11 @@ def : ProcessorModel<"gfx900", SIQuarterSpeedModel,
 def : ProcessorModel<"gfx902", SIQuarterSpeedModel,
   [FeatureISAVersion9_0_2]
 >;
+
+def : ProcessorModel<"gfx904", SIQuarterSpeedModel,
+  [FeatureISAVersion9_0_4]
+>;
+
+def : ProcessorModel<"gfx906", SIQuarterSpeedModel,
+  [FeatureISAVersion9_0_6]
+>;

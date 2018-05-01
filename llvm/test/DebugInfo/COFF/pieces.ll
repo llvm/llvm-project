@@ -42,19 +42,20 @@
 ; ASM:         xorl    %esi, %esi
 ; ASM:         .p2align        4, 0x90
 ; ASM: .LBB0_3:                                # %for.body
-; ASM: [[ox_start:\.Ltmp[0-9]+]]:
+; ASM: [[oy_ox_start:\.Ltmp[0-9]+]]:
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $edi
+; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi
 ; ASM:        .cv_loc 0 1 13 11               # t.c:13:11
 ; ASM:        movl    %edi, %ecx
 ; ASM:        callq   g
 ; ASM:        movl    %eax, %edi
-; ASM: [[oy_start:\.Ltmp[0-9]+]]:
+; ASM: [[ox_start:\.Ltmp[0-9]+]]:
 ; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $edi
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi
 ; ASM:         .cv_loc 0 1 14 11               # t.c:14:11
 ; ASM:         movl    %esi, %ecx
 ; ASM:         callq   g
 ; ASM:         movl    %eax, %esi
+; ASM: [[oy_start:\.Ltmp[0-9]+]]:
 ; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi
 ; ASM:         cmpl    n(%rip), %eax
 ; ASM:         jl      .LBB0_3
@@ -101,6 +102,8 @@
 ; ASM:        .asciz  "loop_csr"              # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
+; ASM:        .cv_def_range    [[oy_ox_start]] [[ox_start]], "C\021\030\000\000\000\000\000\000\000"
+; ASM:        .cv_def_range    [[oy_ox_start]] [[oy_start]], "C\021\027\000\000\000\004\000\000\000"
 ; ASM:        .cv_def_range    [[ox_start]] .Lfunc_end0, "C\021\030\000\000\000\000\000\000\000"
 ; ASM:        .cv_def_range    [[oy_start]] [[oy_end]], "C\021\027\000\000\000\004\000\000\000"
 

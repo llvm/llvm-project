@@ -170,8 +170,7 @@ ObjCLanguageRuntime::GetDescriptorIterator(const ConstString &name) {
     UpdateISAToDescriptorMap();
     if (m_hash_to_isa_map.empty()) {
       // No name hashes were provided, we need to just linearly power through
-      // the
-      // names and find a match
+      // the names and find a match
       for (ISAToDescriptorIterator pos = m_isa_to_descriptor.begin();
            pos != end; ++pos) {
         if (pos->second->GetClassName() == name)
@@ -239,9 +238,9 @@ ObjCLanguageRuntime::GetClassDescriptorFromClassName(
 ObjCLanguageRuntime::ClassDescriptorSP
 ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
   ClassDescriptorSP objc_class_sp;
-  // if we get an invalid VO (which might still happen when playing around
-  // with pointers returned by the expression parser, don't consider this
-  // a valid ObjC object)
+  // if we get an invalid VO (which might still happen when playing around with
+  // pointers returned by the expression parser, don't consider this a valid
+  // ObjC object)
   if (valobj.GetCompilerType().IsValid()) {
     addr_t isa_pointer = valobj.GetPointerValue();
     if (isa_pointer != LLDB_INVALID_ADDRESS) {

@@ -79,9 +79,8 @@ public:
   // SFINAE to avoid having ambiguous overloads because of the implicit type
   // promotion. If we
   // would have constructors only with int64_t, uint64_t and double types then
-  // constructing a
-  // JSONNumber from an int32_t (or any other similar type) would fail to
-  // compile.
+  // constructing a JSONNumber from an int32_t (or any other similar type)
+  // would fail to compile.
 
   template <typename T, typename std::enable_if<
                             std::is_integral<T>::value &&

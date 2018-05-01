@@ -21,9 +21,9 @@ namespace lldb_private {
 // ProcessInfo
 //
 // A base class for information for a process. This can be used to fill
-// out information for a process prior to launching it, or it can be
-// used for an instance of a process and can be filled in with the
-// existing values for that process.
+// out information for a process prior to launching it, or it can be used for
+// an instance of a process and can be filled in with the existing values for
+// that process.
 //----------------------------------------------------------------------
 class ProcessInfo {
 public:
@@ -88,9 +88,8 @@ public:
 protected:
   FileSpec m_executable;
   std::string m_arg0; // argv[0] if supported. If empty, then use m_executable.
-  // Not all process plug-ins support specifying an argv[0]
-  // that differs from the resolved platform executable
-  // (which is in m_executable)
+  // Not all process plug-ins support specifying an argv[0] that differs from
+  // the resolved platform executable (which is in m_executable)
   Args m_arguments; // All program arguments except argv[0]
   Environment m_environment;
   uint32_t m_uid;

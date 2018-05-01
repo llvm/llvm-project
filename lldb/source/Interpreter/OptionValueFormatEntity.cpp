@@ -64,12 +64,10 @@ Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
     // Check if the string starts with a quote character after removing leading
-    // and trailing spaces.
-    // If it does start with a quote character, make sure it ends with the same
-    // quote character
-    // and remove the quotes before we parse the format string. If the string
-    // doesn't start with
-    // a quote, leave the string alone and parse as is.
+    // and trailing spaces. If it does start with a quote character, make sure
+    // it ends with the same quote character and remove the quotes before we
+    // parse the format string. If the string doesn't start with a quote, leave
+    // the string alone and parse as is.
     llvm::StringRef trimmed_value_str = value_str.trim();
     if (!trimmed_value_str.empty()) {
       const char first_char = trimmed_value_str[0];

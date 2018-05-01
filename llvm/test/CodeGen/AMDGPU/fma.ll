@@ -1,4 +1,5 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cedar -verify-machineinstrs < %s
 ; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=juniper -verify-machineinstrs < %s
@@ -16,6 +17,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}fma_f32:
 ; SI: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX906: v_fmac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
 ; EG: MEM_RAT_{{.*}} STORE_{{.*}} [[RES:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}},
 ; EG: FMA {{\*? *}}[[RES]]
@@ -29,9 +31,19 @@ define amdgpu_kernel void @fma_f32(float addrspace(1)* %out, float addrspace(1)*
   ret void
 }
 
+; GCN-LABEL: {{^}}fmac_to_3addr_f32:
+; GCN: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
+define float @fmac_to_3addr_f32(float %r0, float %r1, float %r2) {
+  %r3 = tail call float @llvm.fma.f32(float %r0, float %r1, float %r2)
+  ret float %r3
+}
+
 ; FUNC-LABEL: {{^}}fma_v2f32:
 ; SI: v_fma_f32
 ; SI: v_fma_f32
+
+; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX906: v_fmac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
 ; EG: MEM_RAT_{{.*}} STORE_{{.*}} [[RES:T[0-9]]].[[CHLO:[XYZW]]][[CHHI:[XYZW]]], {{T[0-9]\.[XYZW]}},
 ; EG-DAG: FMA {{\*? *}}[[RES]].[[CHLO]]
@@ -51,6 +63,10 @@ define amdgpu_kernel void @fma_v2f32(<2 x float> addrspace(1)* %out, <2 x float>
 ; SI: v_fma_f32
 ; SI: v_fma_f32
 ; SI: v_fma_f32
+; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX906: v_fmac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+$}}
+; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
 
 ; EG: MEM_RAT_{{.*}} STORE_{{.*}} [[RES:T[0-9]]].{{[XYZW][XYZW][XYZW][XYZW]}}, {{T[0-9]\.[XYZW]}},
 ; EG-DAG: FMA {{\*? *}}[[RES]].X
@@ -95,5 +111,36 @@ define amdgpu_kernel void @fma_commute_mul_s_f32(float addrspace(1)* noalias %ou
 
   %fma = call float @llvm.fma.f32(float %a, float %b, float %c)
   store float %fma, float addrspace(1)* %out.gep, align 4
+  ret void
+}
+
+; Without special casing the inline constant check for v_fmac_f32's
+; src2, this fails to fold the 1.0 into an fma.
+
+; FUNC-LABEL: {{^}}fold_inline_imm_into_fmac_src2_f32:
+; GFX906: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GFX906: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
+
+; GFX906: v_add_f32_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
+; GFX906: v_fma_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
+define amdgpu_kernel void @fold_inline_imm_into_fmac_src2_f32(float addrspace(1)* %out, float addrspace(1)* %a, float addrspace(1)* %b) nounwind {
+bb:
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid.ext = sext i32 %tid to i64
+  %gep.a = getelementptr inbounds float, float addrspace(1)* %a, i64 %tid.ext
+  %gep.b = getelementptr inbounds float, float addrspace(1)* %b, i64 %tid.ext
+  %gep.out = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
+  %tmp = load volatile float, float addrspace(1)* %gep.a
+  %tmp1 = load volatile float, float addrspace(1)* %gep.b
+  %tmp2 = fadd contract float %tmp, %tmp
+  %tmp3 = fmul contract float %tmp2, 4.0
+  %tmp4 = fsub contract float 1.0, %tmp3
+  %tmp5 = fadd contract float %tmp4, %tmp1
+  %tmp6 = fadd contract float %tmp1, %tmp1
+  %tmp7 = fmul contract float %tmp6, %tmp
+  %tmp8 = fsub contract float 1.0, %tmp7
+  %tmp9 = fmul contract float %tmp8, 8.0
+  %tmp10 = fadd contract float %tmp5, %tmp9
+  store float %tmp10, float addrspace(1)* %gep.out
   ret void
 }

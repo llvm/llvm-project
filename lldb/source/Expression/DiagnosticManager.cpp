@@ -22,9 +22,8 @@ void DiagnosticManager::Dump(Log *log) {
 
   std::string str = GetString();
 
-  // GetString() puts a separator after each diagnostic.
-  // We want to remove the last '\n' because log->PutCString will add one for
-  // us.
+  // GetString() puts a separator after each diagnostic. We want to remove the
+  // last '\n' because log->PutCString will add one for us.
 
   if (str.size() && str.back() == '\n') {
     str.pop_back();
