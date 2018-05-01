@@ -9,6 +9,7 @@
 
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
@@ -79,4 +80,14 @@ void PersistentExpressionState::RegisterExecutionUnit(
                     global_var.m_name.GetCString(), global_var.m_remote_addr);
     }
   }
+}
+
+ConstString PersistentExpressionState::GetNextPersistentVariableName(
+    Target &target, llvm::StringRef Prefix) {
+  llvm::SmallString<64> name;
+  {
+    llvm::raw_svector_ostream os(name);
+    os << Prefix << target.GetNextPersistentVariableIndex();
+  }
+  return ConstString(name);
 }

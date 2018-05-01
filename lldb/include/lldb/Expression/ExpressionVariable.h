@@ -239,7 +239,12 @@ public:
                            lldb::ByteOrder byte_order,
                            uint32_t addr_byte_size) = 0;
 
-  virtual ConstString GetNextPersistentVariableName() = 0;
+  /// Return a new persistent variable name with the specified prefix.
+  ConstString GetNextPersistentVariableName(Target &target,
+                                            llvm::StringRef prefix);
+
+  virtual llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error = false) const = 0;
 
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;

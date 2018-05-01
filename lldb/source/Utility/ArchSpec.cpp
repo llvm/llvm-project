@@ -9,6 +9,7 @@
 
 #include "lldb/Utility/ArchSpec.h"
 
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StringList.h"
@@ -978,6 +979,10 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
         if (m_triple.getArch() == llvm::Triple::UnknownArch)
           m_triple.setArch(core_def->machine);
       }
+    } else {
+      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_PLATFORM));
+      if (log)
+        log->Printf("Unable to find a core definition for cpu 0x%" PRIx32 " sub %" PRId32, cpu, sub);
     }
   }
   CoreUpdated(update_triple);

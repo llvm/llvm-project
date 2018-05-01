@@ -664,8 +664,8 @@ fdivr ST(1)
 
 // CHECK: fxsave64 (%rax)
 // CHECK: fxrstor64 (%rax)
-fxsave64 opaque ptr [rax]
-fxrstor64 opaque ptr [rax]
+fxsave64 [rax]
+fxrstor64 [rax]
 
 .bss
 .globl _g0

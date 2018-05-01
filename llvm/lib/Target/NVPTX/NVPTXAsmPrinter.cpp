@@ -93,6 +93,16 @@ using namespace llvm;
 
 #define DEPOTNAME "__local_depot"
 
+static cl::opt<bool>
+EmitLineNumbers("nvptx-emit-line-numbers", cl::Hidden,
+                cl::desc("NVPTX Specific: Emit Line numbers even without -G"),
+                cl::init(true));
+
+static cl::opt<bool>
+InterleaveSrc("nvptx-emit-src", cl::ZeroOrMore, cl::Hidden,
+              cl::desc("NVPTX Specific: Emit source line in ptx file"),
+              cl::init(false));
+
 /// DiscoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
 static void
@@ -141,7 +151,56 @@ VisitGlobalVariableForEmission(const GlobalVariable *GV,
   Visiting.erase(GV);
 }
 
+void NVPTXAsmPrinter::emitLineNumberAsDotLoc(const MachineInstr &MI) {
+  if (!EmitLineNumbers)
+    return;
+  if (ignoreLoc(MI))
+    return;
+
+  const DebugLoc &curLoc = MI.getDebugLoc();
+
+  if (!prevDebugLoc && !curLoc)
+    return;
+
+  if (prevDebugLoc == curLoc)
+    return;
+
+  prevDebugLoc = curLoc;
+
+  if (!curLoc)
+    return;
+
+  auto *Scope = cast_or_null<DIScope>(curLoc.getScope());
+  if (!Scope)
+     return;
+
+  StringRef fileName(Scope->getFilename());
+  StringRef dirName(Scope->getDirectory());
+  SmallString<128> FullPathName = dirName;
+  if (!dirName.empty() && !sys::path::is_absolute(fileName)) {
+    sys::path::append(FullPathName, fileName);
+    fileName = FullPathName;
+  }
+
+  if (filenameMap.find(fileName) == filenameMap.end())
+    return;
+
+  // Emit the line from the source file.
+  if (InterleaveSrc)
+    this->emitSrcInText(fileName, curLoc.getLine());
+
+  std::stringstream temp;
+  temp << "\t.loc " << filenameMap[fileName] << " " << curLoc.getLine()
+       << " " << curLoc.getCol();
+  OutStreamer->EmitRawText(temp.str());
+}
+
 void NVPTXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() == NVPTX::CUDA)
+    emitLineNumberAsDotLoc(*MI);
+
   MCInst Inst;
   lowerToMCInst(MI, Inst);
   EmitToStreamer(*OutStreamer, Inst);
@@ -446,7 +505,7 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
     emitGlobals(*MF->getFunction().getParent());
     GlobalsEmitted = true;
   }
-
+  
   // Set up
   MRI = &MF->getRegInfo();
   F = &MF->getFunction();
@@ -467,25 +526,14 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
 
   OutStreamer->EmitRawText(O.str());
 
-  VRegMapping.clear();
-  // Emit open brace for function body.
-  OutStreamer->EmitRawText(StringRef("{\n"));
-  setAndEmitFunctionVirtualRegisters(*MF);
-}
-
-bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
-  nvptxSubtarget = &F.getSubtarget<NVPTXSubtarget>();
-  bool Result = AsmPrinter::runOnMachineFunction(F);
-  // Emit closing brace for the body of function F.
-  // The closing brace must be emitted here because we need to emit additional
-  // debug labels/data after the last basic block.
-  // We need to emit the closing brace here because we don't have function that
-  // finished emission of the function body.
-  OutStreamer->EmitRawText(StringRef("}\n"));
-  return Result;
+  prevDebugLoc = DebugLoc();
 }
 
 void NVPTXAsmPrinter::EmitFunctionBodyStart() {
+  VRegMapping.clear();
+  OutStreamer->EmitRawText(StringRef("{\n"));
+  setAndEmitFunctionVirtualRegisters(*MF);
+
   SmallString<128> Str;
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
@@ -493,6 +541,7 @@ void NVPTXAsmPrinter::EmitFunctionBodyStart() {
 }
 
 void NVPTXAsmPrinter::EmitFunctionBodyEnd() {
+  OutStreamer->EmitRawText(StringRef("}\n"));
   VRegMapping.clear();
 }
 
@@ -769,6 +818,42 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
   }
 }
 
+void NVPTXAsmPrinter::recordAndEmitFilenames(Module &M) {
+  DebugInfoFinder DbgFinder;
+  DbgFinder.processModule(M);
+
+  unsigned i = 1;
+  for (const DICompileUnit *DIUnit : DbgFinder.compile_units()) {
+    StringRef Filename = DIUnit->getFilename();
+    StringRef Dirname = DIUnit->getDirectory();
+    SmallString<128> FullPathName = Dirname;
+    if (!Dirname.empty() && !sys::path::is_absolute(Filename)) {
+      sys::path::append(FullPathName, Filename);
+      Filename = FullPathName;
+    }
+    if (filenameMap.find(Filename) != filenameMap.end())
+      continue;
+    filenameMap[Filename] = i;
+    OutStreamer->EmitDwarfFileDirective(i, "", Filename);
+    ++i;
+  }
+
+  for (DISubprogram *SP : DbgFinder.subprograms()) {
+    StringRef Filename = SP->getFilename();
+    StringRef Dirname = SP->getDirectory();
+    SmallString<128> FullPathName = Dirname;
+    if (!Dirname.empty() && !sys::path::is_absolute(Filename)) {
+      sys::path::append(FullPathName, Filename);
+      Filename = FullPathName;
+    }
+    if (filenameMap.find(Filename) != filenameMap.end())
+      continue;
+    filenameMap[Filename] = i;
+    OutStreamer->EmitDwarfFileDirective(i, "", Filename);
+    ++i;
+  }
+}
+
 static bool isEmptyXXStructor(GlobalVariable *GV) {
   if (!GV) return true;
   const ConstantArray *InitList = dyn_cast<ConstantArray>(GV->getInitializer());
@@ -804,12 +889,23 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   SmallString<128> Str1;
   raw_svector_ostream OS1(Str1);
 
+  MMI = getAnalysisIfAvailable<MachineModuleInfo>();
+
   // We need to call the parent's one explicitly.
-  bool Result = AsmPrinter::doInitialization(M);
+  //bool Result = AsmPrinter::doInitialization(M);
+
+  // Initialize TargetLoweringObjectFile since we didn't do in
+  // AsmPrinter::doInitialization either right above or where it's commented out
+  // below.
+  const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
+      .Initialize(OutContext, TM);
 
   // Emit header before any dwarf directives are emitted below.
   emitHeader(M, OS1, STI);
   OutStreamer->EmitRawText(OS1.str());
+
+  // Already commented out
+  //bool Result = AsmPrinter::doInitialization(M);
 
   // Emit module-level inline asm if it exists.
   if (!M.getModuleInlineAsm().empty()) {
@@ -821,9 +917,13 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
     OutStreamer->AddBlankLine();
   }
 
-  GlobalsEmitted = false;
+  // If we're not NVCL we're CUDA, go ahead and emit filenames.
+  if (TM.getTargetTriple().getOS() != Triple::NVCL)
+    recordAndEmitFilenames(M);
 
-  return Result;
+  GlobalsEmitted = false;
+    
+  return false; // success
 }
 
 void NVPTXAsmPrinter::emitGlobals(const Module &M) {
@@ -875,9 +975,8 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
   if (NTM.getDrvInterface() == NVPTX::NVCL)
     O << ", texmode_independent";
 
-  // FIXME: remove comment once debug info is properly supported.
-  if (MMI && MMI->hasDebugInfo())
-    O << "//, debug";
+  if (MAI->doesSupportDebugInformation())
+    O << ", debug";
 
   O << "\n";
 
@@ -892,8 +991,6 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
 }
 
 bool NVPTXAsmPrinter::doFinalization(Module &M) {
-  bool HasDebugInfo = MMI && MMI->hasDebugInfo();
-
   // If we did not emit any functions, then the global declarations have not
   // yet been emitted.
   if (!GlobalsEmitted) {
@@ -928,11 +1025,6 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   clearAnnotationCache(&M);
 
   delete[] gv_array;
-  // FIXME: remove comment once debug info is properly supported.
-  // Close the last emitted section
-  if (HasDebugInfo)
-    OutStreamer->EmitRawText("//\t}");
-
   return ret;
 
   //bool Result = AsmPrinter::doFinalization(M);

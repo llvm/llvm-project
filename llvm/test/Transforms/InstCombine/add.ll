@@ -480,15 +480,14 @@ define i32 @test28(i32 %X) {
 define i32 @test29(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:    [[TMP_2:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP_6:%.*]] = add i32 [[TMP_2]], [[X]]
-; CHECK-NEXT:    [[TMP_7:%.*]] = and i32 [[TMP_6]], 63
+; CHECK-NEXT:    [[TMP_7:%.*]] = and i32 [[X]], 63
 ; CHECK-NEXT:    [[TMP_9:%.*]] = and i32 [[TMP_2]], -64
 ; CHECK-NEXT:    [[TMP_10:%.*]] = or i32 [[TMP_7]], [[TMP_9]]
 ; CHECK-NEXT:    ret i32 [[TMP_10]]
 ;
   %tmp.2 = sub i32 %x, %y
   %tmp.2.mask = and i32 %tmp.2, 63
-  %tmp.6 = add i32 %tmp.2.mask, %x
+  %tmp.6 = add i32 %tmp.2.mask, %y
   %tmp.7 = and i32 %tmp.6, 63
   %tmp.9 = and i32 %tmp.2, -64
   %tmp.10 = or i32 %tmp.7, %tmp.9
