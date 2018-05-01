@@ -60,9 +60,9 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         # This initially fails with the shared scratch context and is
         # then retried with the per-dylib scratch context.
-        self.expect("p bar", "expected result", substrs=["42"])
-        self.expect("p $R0", "expected result", substrs=["42"])
-        self.expect("p $R1", "expected result", substrs=["42"])
+        self.expect("p bar", "expected result", substrs=["$R0", "42"])
+        self.expect("p $R0", "expected result", substrs=["$R2", "42"])
+        self.expect("p $R2", "expected result", substrs=["$R4", "42"])
         
         # This works by accident because the search paths are in the right order.
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
@@ -70,8 +70,8 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         process.Continue()
         self.expect("fr var foo", "expected result", substrs=["23"])
         self.expect("p foo", "expected result", substrs=["23"])
-        self.expect("p $R0", "expected result", substrs=["23"])
-        self.expect("p $R1", "expected result", substrs=["23"])
+        self.expect("p $R6", "expected result", substrs=["23"])
+        self.expect("p $R8", "expected result", substrs=["23"])
 
 if __name__ == '__main__':
     import atexit

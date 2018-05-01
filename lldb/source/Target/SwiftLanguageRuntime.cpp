@@ -3130,11 +3130,14 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
     auto *exe_scope = ctx.GetBestExecutionContextScope();
     if (!exe_scope)
       return error_valobj_sp;
+    Target &target = m_process->GetTarget();
     auto *persistent_state =
-        m_process->GetTarget().GetSwiftPersistentExpressionState(*exe_scope);
+        target.GetSwiftPersistentExpressionState(*exe_scope);
 
+    const bool is_error = true;
+    auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
     ConstString persistent_variable_name(
-        persistent_state->GetNextPersistentVariableName(true));
+        persistent_state->GetNextPersistentVariableName(target, prefix));
 
     lldb::ValueObjectSP const_valobj_sp;
 

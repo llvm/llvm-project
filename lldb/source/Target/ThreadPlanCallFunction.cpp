@@ -540,8 +540,10 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
             GetTarget().GetPersistentExpressionStateForLanguage(
                 eLanguageTypeSwift);
         const bool is_error = true;
+        auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
         ConstString persistent_variable_name(
-            persistent_state->GetNextPersistentVariableName(is_error));
+            persistent_state->GetNextPersistentVariableName(GetTarget(),
+                                                            prefix));
         m_return_valobj_sp =
             SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
                 frame_sp, persistent_variable_name);
