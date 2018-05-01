@@ -7849,7 +7849,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
     if (DoXform) {
       LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N), VT,
+      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(LN0), VT,
                                        LN0->getChain(),
                                        LN0->getBasePtr(), N0.getValueType(),
                                        LN0->getMemOperand());
