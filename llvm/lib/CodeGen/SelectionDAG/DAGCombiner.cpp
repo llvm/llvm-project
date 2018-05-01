@@ -7462,6 +7462,33 @@ SDValue DAGCombiner::matchVSelectOpSizesWithSetCC(SDNode *Cast) {
   return DAG.getNode(ISD::VSELECT, DL, VT, SetCC, CastA, CastB);
 }
 
+// fold ([s|z]ext ([s|z]extload x)) -> ([s|z]ext (truncate ([s|z]extload x)))
+// fold ([s|z]ext (     extload x)) -> ([s|z]ext (truncate ([s|z]extload x)))
+static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
+                                     const TargetLowering &TLI, EVT VT,
+                                     bool LegalOperations, SDNode *N,
+                                     SDValue N0, ISD::LoadExtType ExtLoadType) {
+  SDNode *N0Node = N0.getNode();
+  bool isAExtLoad = (ExtLoadType == ISD::SEXTLOAD) ? ISD::isSEXTLoad(N0Node)
+                                                   : ISD::isZEXTLoad(N0Node);
+  if ((!isAExtLoad && !ISD::isEXTLoad(N0Node)) ||
+      !ISD::isUNINDEXEDLoad(N0Node) || !N0.hasOneUse())
+    return {};
+
+  LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+  EVT MemVT = LN0->getMemoryVT();
+  if ((LegalOperations || LN0->isVolatile()) &&
+      !TLI.isLoadExtLegal(ExtLoadType, VT, MemVT))
+    return {};
+
+  SDValue ExtLoad =
+      DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
+                     LN0->getBasePtr(), MemVT, LN0->getMemOperand());
+  Combiner.CombineTo(N, ExtLoad);
+  DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+  return SDValue(N, 0); // Return N so it doesn't get rechecked!
+}
+
 SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -7563,22 +7590,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (SDValue ExtLoad = CombineExtLoad(N))
     return ExtLoad;
 
-  // fold (sext (sextload x)) -> (sext (truncate (sextload x)))
-  // fold (sext ( extload x)) -> (sext (truncate (sextload x)))
-  if ((ISD::isSEXTLoad(N0.getNode()) || ISD::isEXTLoad(N0.getNode())) &&
-      ISD::isUNINDEXEDLoad(N0.getNode()) && N0.hasOneUse()) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    EVT MemVT = LN0->getMemoryVT();
-    if ((!LegalOperations && !LN0->isVolatile()) ||
-        TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, MemVT)) {
-      SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
-                                       LN0->getBasePtr(), MemVT,
-                                       LN0->getMemOperand());
-      CombineTo(N, ExtLoad);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
-    }
-  }
+  // Try to simplify (sext (sextload x)).
+  if (SDValue foldedExt = tryToFoldExtOfExtload(
+          DAG, *this, TLI, VT, LegalOperations, N, N0, ISD::SEXTLOAD))
+    return foldedExt;
 
   // fold (sext (and/or/xor (load x), cst)) ->
   //      (and/or/xor (sextload x), (sext cst))
@@ -7928,23 +7943,10 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     }
   }
 
-  // fold (zext (zextload x)) -> (zext (truncate (zextload x)))
-  // fold (zext ( extload x)) -> (zext (truncate (zextload x)))
-  if ((ISD::isZEXTLoad(N0.getNode()) || ISD::isEXTLoad(N0.getNode())) &&
-      ISD::isUNINDEXEDLoad(N0.getNode()) && N0.hasOneUse()) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    EVT MemVT = LN0->getMemoryVT();
-    if ((!LegalOperations && !LN0->isVolatile()) ||
-        TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT)) {
-      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N), VT,
-                                       LN0->getChain(),
-                                       LN0->getBasePtr(), MemVT,
-                                       LN0->getMemOperand());
-      CombineTo(N, ExtLoad);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
-    }
-  }
+  // Try to simplify (zext (zextload x)).
+  if (SDValue foldedExt = tryToFoldExtOfExtload(
+          DAG, *this, TLI, VT, LegalOperations, N, N0, ISD::ZEXTLOAD))
+    return foldedExt;
 
   if (N0.getOpcode() == ISD::SETCC) {
     // Only do this before legalize for now.
