@@ -4194,7 +4194,6 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
               variable_list_sp = sc.comp_unit->GetVariableList(false);
               if (variable_list_sp.get() == NULL) {
                 variable_list_sp.reset(new VariableList());
-                sc.comp_unit->SetVariableList(variable_list_sp);
               }
             } else {
               GetObjectFile()->GetModule()->ReportError(

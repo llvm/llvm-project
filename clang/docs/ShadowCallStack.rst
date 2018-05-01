@@ -137,7 +137,7 @@ Generates the following x86_64 assembly when compiled with ``-O2``:
 .. code-block:: gas
 
     push   %rax
-    callq  foo
+    callq  bar
     add    $0x1,%eax
     pop    %rcx
     retq
@@ -165,7 +165,7 @@ assembly:
     mov    %gs:(%r11),%r11
     mov    %r10,%gs:(%r11)
     push   %rax
-    callq  foo
+    callq  bar
     add    $0x1,%eax
     pop    %rcx
     xor    %r11,%r11
