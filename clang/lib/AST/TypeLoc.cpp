@@ -317,6 +317,8 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::Char_U:
   case BuiltinType::Char_S:
     return TST_char;
+  case BuiltinType::Char8:
+    return TST_char8;
   case BuiltinType::Char16:
     return TST_char16;
   case BuiltinType::Char32:

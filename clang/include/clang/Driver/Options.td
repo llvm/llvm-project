@@ -1051,10 +1051,12 @@ def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Form fused FP ops (e.g. FMAs): fast (everywhere)"
   " | on (according to FP_CONTRACT pragma, default) | off (never fuse)">, Values<"fast,on,off">;
 
-def ffp_cast_overflow_workaround : Flag<["-"],
-  "ffp-cast-overflow-workaround">, Group<f_Group>, Flags<[CC1Option]>;
-def fno_fp_cast_overflow_workaround : Flag<["-"],
-  "fno-fp-cast-overflow-workaround">, Group<f_Group>, Flags<[CC1Option]>;
+def fstrict_float_cast_overflow : Flag<["-"],
+  "fstrict-float-cast-overflow">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Assume that overflowing float-to-int casts are undefined (default)">;
+def fno_strict_float_cast_overflow : Flag<["-"],
+  "fno-strict-float-cast-overflow">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Relax language rules and try to match the behavior of the target's native float-to-int conversion instructions">;
 
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
@@ -1196,7 +1198,7 @@ def fthinlto_index_EQ : Joined<["-"], "fthinlto-index=">,
 def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
                                 Group<f_Group>, Flags<[DriverOption, CoreOption]>;
 def fmerge_all_constants : Flag<["-"], "fmerge-all-constants">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Allow merging of constants">;
+  Flags<[CC1Option, CoreOption]>, HelpText<"Allow merging of constants">;
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>;
 def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">;
@@ -1545,6 +1547,10 @@ def frtti : Flag<["-"], "frtti">, Group<f_Group>;
 def : Flag<["-"], "fsched-interblock">, Group<clang_ignored_f_Group>;
 def fshort_enums : Flag<["-"], "fshort-enums">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Allocate to an enum type only as many bytes as it needs for the declared range of possible values">;
+def fchar8__t : Flag<["-"], "fchar8_t">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Enable C++ builtin type char8_t">;
+def fno_char8__t : Flag<["-"], "fno-char8_t">, Group<f_Group>,
+  HelpText<"Disable C++ builtin type char8_t">;
 def fshort_wchar : Flag<["-"], "fshort-wchar">, Group<f_Group>,
   HelpText<"Force wchar_t to be a short unsigned int">;
 def fno_short_wchar : Flag<["-"], "fno-short-wchar">, Group<f_Group>,

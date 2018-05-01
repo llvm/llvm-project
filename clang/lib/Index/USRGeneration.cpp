@@ -650,6 +650,8 @@ void USRGenerator::VisitType(QualType T) {
           c = 'b'; break;
         case BuiltinType::UChar:
           c = 'c'; break;
+        case BuiltinType::Char8:
+          c = 'u'; break; // FIXME: Check this doesn't collide
         case BuiltinType::Char16:
           c = 'q'; break;
         case BuiltinType::Char32:

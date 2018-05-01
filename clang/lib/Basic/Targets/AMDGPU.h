@@ -78,9 +78,11 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     GK_GFX810,
     GK_GFX900,
     GK_GFX902,
+    GK_GFX904,
+    GK_GFX906,
 
     GK_AMDGCN_FIRST = GK_GFX600,
-    GK_AMDGCN_LAST = GK_GFX902,
+    GK_AMDGCN_LAST = GK_GFX906,
   };
 
   struct GPUInfo {
@@ -127,7 +129,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     {{"cayman"},  {"cayman"},  GK_CAYMAN,  true,  false, false, false, false},
     {{"turks"},   {"turks"},   GK_TURKS,   false, false, false, false, false},
   };
-  static constexpr GPUInfo AMDGCNGPUs[30] = {
+  static constexpr GPUInfo AMDGCNGPUs[32] = {
   // Name           Canonical    Kind        Has   Has    Has    Has   Has
   //                Name                     FMAF  Fast   LDEXPF FP64  Fast
   //                                               FMAF                FMA
@@ -161,6 +163,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     {{"stoney"},    {"gfx810"},  GK_GFX810,  true, false, true,  true, true},
     {{"gfx900"},    {"gfx900"},  GK_GFX900,  true, true,  true,  true, true},
     {{"gfx902"},    {"gfx902"},  GK_GFX900,  true, true,  true,  true, true},
+    {{"gfx904"},    {"gfx904"},  GK_GFX904,  true, true,  true,  true, true},
+    {{"gfx906"},    {"gfx906"},  GK_GFX906,  true, true,  true,  true, true},
   };
 
   static GPUInfo parseR600Name(StringRef Name);

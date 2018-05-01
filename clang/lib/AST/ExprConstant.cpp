@@ -7326,6 +7326,7 @@ static int EvaluateBuiltinClassifyType(const CallExpr *E,
       return pointer_type_class;
 
     case BuiltinType::WChar_U:
+    case BuiltinType::Char8:
     case BuiltinType::Char16:
     case BuiltinType::Char32:
     case BuiltinType::ObjCId:

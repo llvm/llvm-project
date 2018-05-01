@@ -29,8 +29,10 @@ class GoPersistentExpressionState : public PersistentExpressionState {
 public:
   GoPersistentExpressionState();
 
-  ConstString GetNextPersistentVariableName() override;
-
+  llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error) const override {
+    return "$go";
+  }
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
   lldb::addr_t LookupSymbol(const ConstString &name) override {

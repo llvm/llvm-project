@@ -121,6 +121,18 @@ TARGET_BUILTIN(__builtin_amdgcn_mov_dpp, "iiIiIiIiIb", "nc", "dpp")
 TARGET_BUILTIN(__builtin_amdgcn_fmed3h, "hhhh", "nc", "gfx9-insts")
 
 //===----------------------------------------------------------------------===//
+// Deep learning builtins.
+//===----------------------------------------------------------------------===//
+
+TARGET_BUILTIN(__builtin_amdgcn_fdot2, "fV2hV2hf", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot2, "SiV2SsV2SsSi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot2, "UiV2UsV2UsUi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot4, "SiSiSiSi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot4, "UiUiUiUi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot8, "SiSiSiSi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot8, "UiUiUiUi", "nc", "dl-insts")
+
+//===----------------------------------------------------------------------===//
 // Special builtins.
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_read_exec, "LUi", "nc")

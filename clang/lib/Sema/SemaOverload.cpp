@@ -7707,6 +7707,8 @@ class BuiltinOperatorOverloadBuilder {
     ArithmeticTypes.push_back(S.Context.BoolTy);
     ArithmeticTypes.push_back(S.Context.CharTy);
     ArithmeticTypes.push_back(S.Context.WCharTy);
+    if (S.Context.getLangOpts().Char8)
+      ArithmeticTypes.push_back(S.Context.Char8Ty);
     ArithmeticTypes.push_back(S.Context.Char16Ty);
     ArithmeticTypes.push_back(S.Context.Char32Ty);
     ArithmeticTypes.push_back(S.Context.SignedCharTy);

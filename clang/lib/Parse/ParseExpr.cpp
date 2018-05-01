@@ -1224,6 +1224,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::annot_decltype:
   case tok::kw_char:
   case tok::kw_wchar_t:
+  case tok::kw_char8_t:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_bool:

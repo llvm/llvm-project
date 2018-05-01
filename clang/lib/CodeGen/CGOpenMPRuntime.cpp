@@ -898,6 +898,9 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
 
 static llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
 isDeclareTargetDeclaration(const ValueDecl *VD) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(VD))
+    if (!MD->isStatic())
+      return llvm::None;
   for (const Decl *D : VD->redecls()) {
     if (!D->hasAttrs())
       continue;

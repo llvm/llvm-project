@@ -260,6 +260,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //   BOOLSUPPORT - This is a keyword if 'bool' is a built-in type
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
 //   WCHARSUPPORT - This is a keyword if 'wchar_t' is a built-in type
+//   CHAR8SUPPORT - This is a keyword if 'char8_t' is a built-in type
 //
 KEYWORD(auto                        , KEYALL)
 KEYWORD(break                       , KEYALL)
@@ -379,6 +380,9 @@ KEYWORD(co_yield                    , KEYCOROUTINES)
 // C++ modules TS keywords
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
+
+// C++ char8_t proposal
+KEYWORD(char8_t                     , CHAR8SUPPORT)
 
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)

@@ -590,6 +590,7 @@
 // RUN:     -fstandalone-debug \
 // RUN:     -flimit-debug-info \
 // RUN:     -flto \
+// RUN:     -fmerge-all-constants \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 

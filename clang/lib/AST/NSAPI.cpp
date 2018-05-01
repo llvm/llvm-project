@@ -436,6 +436,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   case BuiltinType::Void:
   case BuiltinType::WChar_U:
   case BuiltinType::WChar_S:
+  case BuiltinType::Char8:
   case BuiltinType::Char16:
   case BuiltinType::Char32:
   case BuiltinType::Int128:
