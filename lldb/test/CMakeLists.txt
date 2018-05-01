@@ -199,21 +199,9 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRA
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_DOTEST_ARGS_STR "${LLDB_DOTEST_ARGS_STR}")
 
-# FIXME: A better layering should enable us to access in lit/CMakeLists.txt
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lit/Suite/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg)
-# We need to rename the configured lit.site.cfg so we can expand the generate
-# expressions later and configure_lit_site_cfg remembers the file name.
-file(RENAME
-  ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg
-  ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg.configured)
-# We need this to expand the generator expressions.
-file(GENERATE
-  OUTPUT
-  ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg
-  INPUT
-  ${CMAKE_CURRENT_BINARY_DIR}/../lit/Suite/lit.site.cfg.configured)
 
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.
