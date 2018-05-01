@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
 // RUN: %clang_cc1 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS -fsized-deallocation
 // RUN: %clang_cc1 -fcoroutines-ts -DNO_EXCEPTIONS -DCOROUTINES -verify -fsized-deallocation %s
+// RUN: %clang_cc1 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify -fsized-deallocation %s
 
 // expected-no-diagnostics
 
@@ -241,4 +242,10 @@
 
 #if defined(COROUTINES) ? check(coroutines, 201703L, 201703L, 201703L, 201703L) : check(coroutines, 0, 0, 0, 0)
 #error "wrong value for __cpp_coroutines"
+#endif
+
+// --- not-yet-standard features --
+
+#if defined(CHAR8_T) ? check(char8_t, 201803, 201803, 201803, 201803) : check(char8_t, 0, 0, 0, 0)
+#error "wrong value for __cpp_char8_t"
 #endif

@@ -49,6 +49,8 @@ enum StringInitFailureKind {
   SIF_NarrowStringIntoWideChar,
   SIF_WideStringIntoChar,
   SIF_IncompatWideStringIntoWideChar,
+  SIF_UTF8StringIntoPlainChar,
+  SIF_PlainStringIntoUTF8Char,
   SIF_Other
 };
 
@@ -77,12 +79,21 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
       Context.getCanonicalType(AT->getElementType()).getUnqualifiedType();
 
   switch (SL->getKind()) {
-  case StringLiteral::Ascii:
   case StringLiteral::UTF8:
+    // char8_t array can be initialized with a UTF-8 string.
+    if (ElemTy->isChar8Type())
+      return SIF_None;
+    LLVM_FALLTHROUGH;
+  case StringLiteral::Ascii:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
-      return SIF_None;
+      return (SL->getKind() == StringLiteral::UTF8 &&
+              Context.getLangOpts().Char8)
+                 ? SIF_UTF8StringIntoPlainChar
+                 : SIF_None;
+    if (ElemTy->isChar8Type())
+      return SIF_PlainStringIntoUTF8Char;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_NarrowStringIntoWideChar;
     return SIF_Other;
@@ -94,7 +105,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   case StringLiteral::UTF16:
     if (Context.typesAreCompatible(Context.Char16Ty, ElemTy))
       return SIF_None;
-    if (ElemTy->isCharType())
+    if (ElemTy->isCharType() || ElemTy->isChar8Type())
       return SIF_WideStringIntoChar;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
@@ -102,7 +113,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   case StringLiteral::UTF32:
     if (Context.typesAreCompatible(Context.Char32Ty, ElemTy))
       return SIF_None;
-    if (ElemTy->isCharType())
+    if (ElemTy->isCharType() || ElemTy->isChar8Type())
       return SIF_WideStringIntoChar;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
@@ -110,7 +121,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   case StringLiteral::Wide:
     if (Context.typesAreCompatible(Context.getWideCharType(), ElemTy))
       return SIF_None;
-    if (ElemTy->isCharType())
+    if (ElemTy->isCharType() || ElemTy->isChar8Type())
       return SIF_WideStringIntoChar;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
@@ -3185,6 +3196,8 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_NarrowStringIntoWideCharArray:
   case FK_WideStringIntoCharArray:
   case FK_IncompatWideStringIntoWideChar:
+  case FK_PlainStringIntoUTF8Char:
+  case FK_UTF8StringIntoPlainChar:
   case FK_AddressOfOverloadFailed: // FIXME: Could do better
   case FK_NonConstLValueReferenceBindingToTemporary:
   case FK_NonConstLValueReferenceBindingToBitfield:
@@ -5361,6 +5374,12 @@ void InitializationSequence::InitializeFrom(Sema &S,
         return;
       case SIF_IncompatWideStringIntoWideChar:
         SetFailed(FK_IncompatWideStringIntoWideChar);
+        return;
+      case SIF_PlainStringIntoUTF8Char:
+        SetFailed(FK_PlainStringIntoUTF8Char);
+        return;
+      case SIF_UTF8StringIntoPlainChar:
+        SetFailed(FK_UTF8StringIntoPlainChar);
         return;
       case SIF_Other:
         break;
@@ -7591,6 +7610,17 @@ bool InitializationSequence::Diagnose(Sema &S,
     S.Diag(Kind.getLocation(),
            diag::err_array_init_incompat_wide_string_into_wchar);
     break;
+  case FK_PlainStringIntoUTF8Char:
+    S.Diag(Kind.getLocation(),
+           diag::err_array_init_plain_string_into_char8_t);
+    S.Diag(Args.front()->getLocStart(),
+           diag::note_array_init_plain_string_into_char8_t)
+      << FixItHint::CreateInsertion(Args.front()->getLocStart(), "u8");
+    break;
+  case FK_UTF8StringIntoPlainChar:
+    S.Diag(Kind.getLocation(),
+           diag::err_array_init_utf8_string_into_char);
+    break;
   case FK_ArrayTypeMismatch:
   case FK_NonConstantArrayInit:
     S.Diag(Kind.getLocation(),
@@ -7998,6 +8028,14 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_IncompatWideStringIntoWideChar:
       OS << "incompatible wide string into wide char array";
+      break;
+
+    case FK_PlainStringIntoUTF8Char:
+      OS << "plain string literal into char8_t array";
+      break;
+
+    case FK_UTF8StringIntoPlainChar:
+      OS << "u8 string literal into char array";
       break;
 
     case FK_ArrayTypeMismatch:

@@ -1082,6 +1082,11 @@ public:
 
   lldb::ExpressionVariableSP GetPersistentVariable(const ConstString &name);
 
+  /// Return the next available number for numbered persistent variables.
+  unsigned GetNextPersistentVariableIndex() {
+    return m_next_persistent_variable_index++;
+  }
+
   lldb::addr_t GetPersistentSymbol(const ConstString &name);
 
   //------------------------------------------------------------------
@@ -1271,6 +1276,7 @@ protected:
   bool m_valid;
   bool m_suppress_stop_hooks;
   bool m_is_dummy_target;
+  unsigned m_next_persistent_variable_index = 0;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

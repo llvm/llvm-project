@@ -273,6 +273,7 @@ public:
   static const TST TST_void = clang::TST_void;
   static const TST TST_char = clang::TST_char;
   static const TST TST_wchar = clang::TST_wchar;
+  static const TST TST_char8 = clang::TST_char8;
   static const TST TST_char16 = clang::TST_char16;
   static const TST TST_char32 = clang::TST_char32;
   static const TST TST_int = clang::TST_int;

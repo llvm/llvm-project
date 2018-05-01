@@ -861,13 +861,16 @@ void ClangASTSource::FindExternalVisibleDecls(
 
     TypeList types;
     SymbolContext null_sc;
-    const bool exact_match = false;
+    const bool exact_match = true;
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
     if (module_sp && namespace_decl)
       module_sp->FindTypesInNamespace(null_sc, name, &namespace_decl, 1, types);
-    else
-      m_target->GetImages().FindTypes(null_sc, name, exact_match, 1,
+    else {
+      SymbolContext sc;
+      sc.module_sp = module_sp;
+      m_target->GetImages().FindTypes(sc, name, exact_match, 1,
                                       searched_symbol_files, types);
+    }
 
     if (size_t num_types = types.GetSize()) {
       for (size_t ti = 0; ti < num_types; ++ti) {

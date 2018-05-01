@@ -952,6 +952,12 @@ public:
     /// literal.
     FK_IncompatWideStringIntoWideChar,
 
+    /// \brief Initializing char8_t array with plain string literal.
+    FK_PlainStringIntoUTF8Char,
+
+    /// \brief Initializing char array with UTF-8 string literal.
+    FK_UTF8StringIntoPlainChar,
+
     /// \brief Array type mismatch.
     FK_ArrayTypeMismatch,
 

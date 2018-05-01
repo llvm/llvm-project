@@ -1052,6 +1052,7 @@ Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   case tok::kw_class:
   case tok::kw_typename:
   case tok::kw_wchar_t:
+  case tok::kw_char8_t:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw__Decimal32:
@@ -1523,6 +1524,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       
   case tok::kw_char:
   case tok::kw_wchar_t:
+  case tok::kw_char8_t:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_bool:
@@ -1614,6 +1616,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
     // simple-type-specifier
   case tok::kw_char:
   case tok::kw_wchar_t:
+  case tok::kw_char8_t:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_bool:

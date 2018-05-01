@@ -47,6 +47,7 @@ namespace clang {
     TST_void,
     TST_char,
     TST_wchar,        // C++ wchar_t
+    TST_char8,        // C++20 char8_t (proposed)
     TST_char16,       // C++11 char16_t
     TST_char32,       // C++11 char32_t
     TST_int,

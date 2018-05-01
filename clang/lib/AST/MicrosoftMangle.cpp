@@ -1918,6 +1918,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     Out << "$$T";
     break;
 
+  case BuiltinType::Char8:
   case BuiltinType::Float16:
     mangleArtificalTagType(TTK_Struct, "_Float16", {"__clang"});
     break;

@@ -1277,6 +1277,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.getUnsignedWCharType();
     }
     break;
+  case DeclSpec::TST_char8:
+      assert(DS.getTypeSpecSign() == DeclSpec::TSS_unspecified &&
+        "Unknown TSS value");
+      Result = Context.Char8Ty;
+    break;
   case DeclSpec::TST_char16:
       assert(DS.getTypeSpecSign() == DeclSpec::TSS_unspecified &&
         "Unknown TSS value");
