@@ -132,6 +132,10 @@ ltrw 64(%edx,%eax)
 // CHECK: encoding: [0x0f,0x00,0x1a]         
 ltrw (%edx) 
 
+// CHECK: sldtw %ax 
+// CHECK: encoding: [0x66,0x0f,0x00,0xc0]         
+sldtw %ax 
+
 // CHECK: sldtl %eax 
 // CHECK: encoding: [0x0f,0x00,0xc0]         
 sldtl %eax 

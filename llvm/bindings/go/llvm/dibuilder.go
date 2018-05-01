@@ -297,7 +297,7 @@ func (d *DIBuilder) CreateBasicType(t DIBasicType) Metadata {
 		d.ref,
 		name,
 		C.size_t(len(t.Name)),
-		C.unsigned(t.SizeInBits),
+		C.ulong(t.SizeInBits),
 		C.unsigned(t.Encoding),
 	)
 	return Metadata{C: result}
@@ -319,7 +319,7 @@ func (d *DIBuilder) CreatePointerType(t DIPointerType) Metadata {
 	result := C.LLVMDIBuilderCreatePointerType(
 		d.ref,
 		t.Pointee.C,
-		C.unsigned(t.SizeInBits),
+		C.ulong(t.SizeInBits),
 		C.unsigned(t.AlignInBits),
 		C.unsigned(t.AddressSpace),
 		name,
@@ -381,7 +381,7 @@ func (d *DIBuilder) CreateStructType(scope Metadata, t DIStructType) Metadata {
 		C.size_t(len(t.Name)),
 		t.File.C,
 		C.unsigned(t.Line),
-		C.unsigned(t.SizeInBits),
+		C.ulong(t.SizeInBits),
 		C.unsigned(t.AlignInBits),
 		C.LLVMDIFlags(t.Flags),
 		t.DerivedFrom.C,
@@ -424,7 +424,7 @@ func (d *DIBuilder) CreateReplaceableCompositeType(scope Metadata, t DIReplaceab
 		t.File.C,
 		C.unsigned(t.Line),
 		C.unsigned(t.RuntimeLang),
-		C.unsigned(t.SizeInBits),
+		C.ulong(t.SizeInBits),
 		C.unsigned(t.AlignInBits),
 		C.LLVMDIFlags(t.Flags),
 		uniqueID,
@@ -456,9 +456,9 @@ func (d *DIBuilder) CreateMemberType(scope Metadata, t DIMemberType) Metadata {
 		C.size_t(len(t.Name)),
 		t.File.C,
 		C.unsigned(t.Line),
-		C.unsigned(t.SizeInBits),
+		C.ulong(t.SizeInBits),
 		C.unsigned(t.AlignInBits),
-		C.unsigned(t.OffsetInBits),
+		C.ulong(t.OffsetInBits),
 		C.LLVMDIFlags(t.Flags),
 		t.Type.C,
 	)
@@ -488,7 +488,7 @@ func (d *DIBuilder) CreateArrayType(t DIArrayType) Metadata {
 	subscripts, length := llvmMetadataRefs(subscriptsSlice)
 	result := C.LLVMDIBuilderCreateArrayType(
 		d.ref,
-		C.unsigned(t.SizeInBits),
+		C.ulong(t.SizeInBits),
 		C.unsigned(t.AlignInBits),
 		t.ElementType.C,
 		subscripts,

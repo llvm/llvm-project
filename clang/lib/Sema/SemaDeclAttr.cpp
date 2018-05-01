@@ -7533,7 +7533,7 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     SourceLocation StmtEndLoc =
         SM.getExpansionRange(
               (LastStmtOfUse ? LastStmtOfUse : StmtOfUse)->getLocEnd())
-            .second;
+            .getEnd();
     if (SM.getFileID(IfInsertionLoc) != SM.getFileID(StmtEndLoc))
       return;
 

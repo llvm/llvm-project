@@ -30,8 +30,6 @@ using namespace llgs_tests;
 TestClient::TestClient(std::unique_ptr<Connection> Conn) {
   SetConnection(Conn.release());
   SetPacketTimeout(std::chrono::seconds(10));
-
-  SendAck(); // Send this as a handshake.
 }
 
 TestClient::~TestClient() {
@@ -39,6 +37,18 @@ TestClient::~TestClient() {
     return;
 
   EXPECT_THAT_ERROR(SendMessage("k"), Succeeded());
+}
+
+Error TestClient::initializeConnection() {
+  if (SendAck() == 0)
+    return make_error<StringError>("Sending initial ACK failed.",
+                                   inconvertibleErrorCode());
+
+  if (Error E = SendMessage("QStartNoAckMode"))
+    return E;
+
+  m_send_acks = false;
+  return Error::success();
 }
 
 Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log) {
@@ -96,6 +106,9 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
   listen_socket.Accept(accept_socket);
   auto Conn = llvm::make_unique<ConnectionFileDescriptor>(accept_socket);
   auto Client = std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
+
+  if (Error E = Client->initializeConnection())
+    return std::move(E);
 
   if (!InferiorArgs.empty()) {
     if (Error E = Client->queryProcess())

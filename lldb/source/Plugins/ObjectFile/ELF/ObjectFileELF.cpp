@@ -1823,6 +1823,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       static ConstString g_sect_name_arm_exidx(".ARM.exidx");
       static ConstString g_sect_name_arm_extab(".ARM.extab");
       static ConstString g_sect_name_go_symtab(".gosymtab");
+      static ConstString g_sect_name_dwarf_gnu_debugaltlink(".gnu_debugaltlink");
 
       SectionType sect_type = eSectionTypeOther;
 
@@ -1913,6 +1914,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeARMextab;
       else if (name == g_sect_name_go_symtab)
         sect_type = eSectionTypeGoSymtab;
+      else if (name == g_sect_name_dwarf_gnu_debugaltlink)
+        sect_type = eSectionTypeDWARFGNUDebugAltLink;
 
       const uint32_t permissions =
           ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0u) |
@@ -1945,6 +1948,16 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         // named
         // sections being "Code" or "Data".
         sect_type = kalimbaSectionType(m_header, header);
+      }
+
+      // In common case ELF code section can have arbitrary name (for example,
+      // we can specify it using section attribute for particular function) so
+      // assume that section is a code section if it has SHF_EXECINSTR flag set
+      // and has SHT_PROGBITS type.
+      if (eSectionTypeOther == sect_type &&
+          llvm::ELF::SHT_PROGBITS == header.sh_type &&
+          (header.sh_flags & SHF_EXECINSTR)) {
+        sect_type = eSectionTypeCode;
       }
 
       const uint32_t target_bytes_size =

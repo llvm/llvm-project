@@ -2,33 +2,57 @@
 
 # XRay runtime library implementation files.
 set(XRAY_SOURCES
-  xray_init.cc
-  xray_flags.cc
-  xray_interface.cc
-  xray_log_interface.cc
-  xray_utils.cc)
+    xray_init.cc
+    xray_flags.cc
+    xray_interface.cc
+    xray_log_interface.cc
+    xray_utils.cc)
 
 # Implementation files for all XRay modes.
 set(XRAY_FDR_MODE_SOURCES
-  xray_buffer_queue.cc
-  xray_fdr_logging.cc)
+    xray_buffer_queue.cc
+    xray_fdr_logging.cc)
 
 set(XRAY_BASIC_MODE_SOURCES
-  xray_inmemory_log.cc)
+    xray_inmemory_log.cc)
+
 
 # Implementation files for all XRay architectures.
-set(aarch64_SOURCES xray_AArch64.cc xray_trampoline_AArch64.S)
-set(arm_SOURCES xray_arm.cc xray_trampoline_arm.S)
-set(armhf_SOURCES ${arm_SOURCES})
-set(mips_SOURCES xray_mips.cc xray_trampoline_mips.S)
-set(mipsel_SOURCES xray_mips.cc xray_trampoline_mips.S)
-set(mips64_SOURCES xray_mips64.cc xray_trampoline_mips64.S)
-set(mips64el_SOURCES xray_mips64.cc xray_trampoline_mips64.S)
+set(x86_64_SOURCES
+    xray_x86_64.cc
+    xray_trampoline_x86_64.S)
+
+set(arm_SOURCES
+    xray_arm.cc
+    xray_trampoline_arm.S)
+
+set(armhf_SOURCES
+    ${arm_SOURCES})
+
+set(aarch64_SOURCES
+    xray_AArch64.cc
+    xray_trampoline_AArch64.S)
+
+set(mips_SOURCES
+    xray_mips.cc
+    xray_trampoline_mips.S)
+
+set(mipsel_SOURCES
+    xray_mips.cc
+    xray_trampoline_mips.S)
+
+set(mips64_SOURCES
+    xray_mips64.cc
+    xray_trampoline_mips64.S)
+
+set(mips64el_SOURCES
+    xray_mips64.cc
+    xray_trampoline_mips64.S)
+
 set(powerpc64le_SOURCES
     xray_powerpc64.cc
     xray_trampoline_powerpc64.cc
     xray_trampoline_powerpc64_asm.S)
-set(x86_64_SOURCES xray_x86_64.cc xray_trampoline_x86_64.S)
 
 # Now put it all together...
 include_directories(..)

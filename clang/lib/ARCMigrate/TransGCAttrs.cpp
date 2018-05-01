@@ -92,7 +92,7 @@ public:
     ASTContext &Ctx = MigrateCtx.Pass.Ctx;
     SourceManager &SM = Ctx.getSourceManager();
     if (Loc.isMacroID())
-      Loc = SM.getImmediateExpansionRange(Loc).first;
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
     SmallString<32> Buf;
     bool Invalid = false;
     StringRef Spell = Lexer::getSpelling(
@@ -287,7 +287,8 @@ static void checkAllAtProps(MigrationContext &MigrateCtx,
     SourceLocation Loc = ATLs[i].first.getAttrNameLoc();
     if (Loc.isMacroID())
       Loc = MigrateCtx.Pass.Ctx.getSourceManager()
-                                         .getImmediateExpansionRange(Loc).first;
+                .getImmediateExpansionRange(Loc)
+                .getBegin();
     TA.remove(Loc);
     TA.clearDiagnostic(diag::err_objc_property_attr_mutually_exclusive, AtLoc);
     TA.clearDiagnostic(diag::err_arc_inconsistent_property_ownership,

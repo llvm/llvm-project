@@ -2917,6 +2917,14 @@ def : MnemonicAlias<"sgdt", "sgdtq", "att">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"sidt", "sidtw", "att">, Requires<[In16BitMode]>;
 def : MnemonicAlias<"sidt", "sidtl", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"sidt", "sidtq", "att">, Requires<[In64BitMode]>;
+def : MnemonicAlias<"lgdt", "lgdtw", "intel">, Requires<[In16BitMode]>;
+def : MnemonicAlias<"lgdt", "lgdtd", "intel">, Requires<[In32BitMode]>;
+def : MnemonicAlias<"lidt", "lidtw", "intel">, Requires<[In16BitMode]>;
+def : MnemonicAlias<"lidt", "lidtd", "intel">, Requires<[In32BitMode]>;
+def : MnemonicAlias<"sgdt", "sgdtw", "intel">, Requires<[In16BitMode]>;
+def : MnemonicAlias<"sgdt", "sgdtd", "intel">, Requires<[In32BitMode]>;
+def : MnemonicAlias<"sidt", "sidtw", "intel">, Requires<[In16BitMode]>;
+def : MnemonicAlias<"sidt", "sidtd", "intel">, Requires<[In32BitMode]>;
 
 
 // Floating point stack aliases.
@@ -3151,10 +3159,7 @@ def : InstAlias<"fsub{r|}p\t{%st(0), $op|$op, st(0)}", (SUB_FPrST0 RST:$op)>;
 def : InstAlias<"fdiv{|r}p\t{%st(0), $op|$op, st(0)}", (DIVR_FPrST0 RST:$op)>;
 def : InstAlias<"fdiv{r|}p\t{%st(0), $op|$op, st(0)}", (DIV_FPrST0 RST:$op)>;
 
-// We accept "fnstsw %eax" even though it only writes %ax.
-def : InstAlias<"fnstsw\t{%eax|eax}", (FNSTSW16r)>;
-def : InstAlias<"fnstsw\t{%al|al}" , (FNSTSW16r)>;
-def : InstAlias<"fnstsw"     , (FNSTSW16r)>;
+def : InstAlias<"fnstsw"     , (FNSTSW16r), 0>;
 
 // lcall and ljmp aliases.  This seems to be an odd mapping in 64-bit mode, but
 // this is compatible with what GAS does.
@@ -3167,12 +3172,9 @@ def : InstAlias<"ljmp\t$seg, $off",  (FARJMP16i  i16imm:$off, i16imm:$seg), 0>, 
 def : InstAlias<"lcall\t{*}$dst",    (FARCALL16m opaque32mem:$dst), 0>, Requires<[In16BitMode]>;
 def : InstAlias<"ljmp\t{*}$dst",     (FARJMP16m  opaque32mem:$dst), 0>, Requires<[In16BitMode]>;
 
-def : InstAlias<"call\t{*}$dst",     (CALL64m i64mem:$dst), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"jmp\t{*}$dst",      (JMP64m  i64mem:$dst), 0>, Requires<[In64BitMode]>;
-def : InstAlias<"call\t{*}$dst",     (CALL32m i32mem:$dst), 0>, Requires<[In32BitMode]>;
-def : InstAlias<"jmp\t{*}$dst",      (JMP32m  i32mem:$dst), 0>, Requires<[In32BitMode]>;
-def : InstAlias<"call\t{*}$dst",     (CALL16m i16mem:$dst), 0>, Requires<[In16BitMode]>;
-def : InstAlias<"jmp\t{*}$dst",      (JMP16m  i16mem:$dst), 0>, Requires<[In16BitMode]>;
+def : InstAlias<"jmp\t{*}$dst",      (JMP64m  i64mem:$dst), 0, "att">, Requires<[In64BitMode]>;
+def : InstAlias<"jmp\t{*}$dst",      (JMP32m  i32mem:$dst), 0, "att">, Requires<[In32BitMode]>;
+def : InstAlias<"jmp\t{*}$dst",      (JMP16m  i16mem:$dst), 0, "att">, Requires<[In16BitMode]>;
 
 
 // "imul <imm>, B" is an alias for "imul <imm>, B, B".
@@ -3213,12 +3215,6 @@ def : InstAlias<"callw\t$seg, $off", (FARCALL16i i16imm:$off, i16imm:$seg)>, Req
 def : InstAlias<"jmpw\t$seg, $off",  (FARJMP16i  i16imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 def : InstAlias<"calll\t$seg, $off", (FARCALL32i i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 def : InstAlias<"jmpl\t$seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
-
-// Force mov without a suffix with a segment and mem to prefer the 'l' form of
-// the move.  All segment/mem forms are equivalent, this has the shortest
-// encoding.
-def : InstAlias<"mov\t{$mem, $seg|$seg, $mem}", (MOV16sm SEGMENT_REG:$seg, i16mem:$mem), 0>;
-def : InstAlias<"mov\t{$seg, $mem|$mem, $seg}", (MOV16ms i16mem:$mem, SEGMENT_REG:$seg), 0>;
 
 // Match 'movq <largeimm>, <reg>' as an alias for movabsq.
 def : InstAlias<"mov{q}\t{$imm, $reg|$reg, $imm}", (MOV64ri GR64:$reg, i64imm:$imm), 0>;

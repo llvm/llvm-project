@@ -547,6 +547,10 @@ u32 CurrentStackId(ThreadState *thr, uptr pc) {
 }
 
 void TraceSwitch(ThreadState *thr) {
+#if !SANITIZER_GO
+  if (ctx->after_multithreaded_fork)
+    return;
+#endif
   thr->nomalloc++;
   Trace *thr_trace = ThreadTrace(thr->tid);
   Lock l(&thr_trace->mtx);

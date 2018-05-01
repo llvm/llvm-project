@@ -656,6 +656,7 @@ enum SectionType {
   eSectionTypeGoSymtab,
   eSectionTypeAbsoluteAddress, // Dummy section for symbols with absolute
                                // address
+  eSectionTypeDWARFGNUDebugAltLink,
   eSectionTypeOther
 };
 

@@ -262,41 +262,54 @@ static SourceLocation
 retrieveMacroLocation(SourceLocation Loc, FileID MacroFileID,
                       FileID CaretFileID,
                       const SmallVectorImpl<FileID> &CommonArgExpansions,
-                      bool IsBegin, const SourceManager *SM) {
+                      bool IsBegin, const SourceManager *SM,
+                      bool &IsTokenRange) {
   assert(SM->getFileID(Loc) == MacroFileID);
   if (MacroFileID == CaretFileID)
     return Loc;
   if (!Loc.isMacroID())
     return {};
 
-  SourceLocation MacroLocation, MacroArgLocation;
+  CharSourceRange MacroRange, MacroArgRange;
 
   if (SM->isMacroArgExpansion(Loc)) {
     // Only look at the immediate spelling location of this macro argument if
     // the other location in the source range is also present in that expansion.
     if (std::binary_search(CommonArgExpansions.begin(),
                            CommonArgExpansions.end(), MacroFileID))
-      MacroLocation = SM->getImmediateSpellingLoc(Loc);
-    MacroArgLocation = IsBegin ? SM->getImmediateExpansionRange(Loc).first
-                               : SM->getImmediateExpansionRange(Loc).second;
+      MacroRange =
+          CharSourceRange(SM->getImmediateSpellingLoc(Loc), IsTokenRange);
+    MacroArgRange = SM->getImmediateExpansionRange(Loc);
   } else {
-    MacroLocation = IsBegin ? SM->getImmediateExpansionRange(Loc).first
-                            : SM->getImmediateExpansionRange(Loc).second;
-    MacroArgLocation = SM->getImmediateSpellingLoc(Loc);
+    MacroRange = SM->getImmediateExpansionRange(Loc);
+    MacroArgRange =
+        CharSourceRange(SM->getImmediateSpellingLoc(Loc), IsTokenRange);
   }
 
+  SourceLocation MacroLocation =
+      IsBegin ? MacroRange.getBegin() : MacroRange.getEnd();
   if (MacroLocation.isValid()) {
     MacroFileID = SM->getFileID(MacroLocation);
+    bool TokenRange = IsBegin ? IsTokenRange : MacroRange.isTokenRange();
     MacroLocation =
         retrieveMacroLocation(MacroLocation, MacroFileID, CaretFileID,
-                              CommonArgExpansions, IsBegin, SM);
-    if (MacroLocation.isValid())
+                              CommonArgExpansions, IsBegin, SM, TokenRange);
+    if (MacroLocation.isValid()) {
+      IsTokenRange = TokenRange;
       return MacroLocation;
+    }
   }
 
+  // If we moved the end of the range to an expansion location, we now have
+  // a range of the same kind as the expansion range.
+  if (!IsBegin)
+    IsTokenRange = MacroArgRange.isTokenRange();
+
+  SourceLocation MacroArgLocation =
+      IsBegin ? MacroArgRange.getBegin() : MacroArgRange.getEnd();
   MacroFileID = SM->getFileID(MacroArgLocation);
   return retrieveMacroLocation(MacroArgLocation, MacroFileID, CaretFileID,
-                               CommonArgExpansions, IsBegin, SM);
+                               CommonArgExpansions, IsBegin, SM, IsTokenRange);
 }
 
 /// Walk up the chain of macro expansions and collect the FileIDs identifying the
@@ -310,7 +323,7 @@ static void getMacroArgExpansionFileIDs(SourceLocation Loc,
       Loc = SM->getImmediateSpellingLoc(Loc);
     } else {
       auto ExpRange = SM->getImmediateExpansionRange(Loc);
-      Loc = IsBegin ? ExpRange.first : ExpRange.second;
+      Loc = IsBegin ? ExpRange.getBegin() : ExpRange.getEnd();
     }
   }
 }
@@ -364,14 +377,16 @@ mapDiagnosticRanges(FullSourceLoc CaretLoc, ArrayRef<CharSourceRange> Ranges,
     llvm::SmallDenseMap<FileID, SourceLocation> BeginLocsMap;
     while (Begin.isMacroID() && BeginFileID != EndFileID) {
       BeginLocsMap[BeginFileID] = Begin;
-      Begin = SM->getImmediateExpansionRange(Begin).first;
+      Begin = SM->getImmediateExpansionRange(Begin).getBegin();
       BeginFileID = SM->getFileID(Begin);
     }
 
     // Then, crawl the expansion chain for the end of the range.
     if (BeginFileID != EndFileID) {
       while (End.isMacroID() && !BeginLocsMap.count(EndFileID)) {
-        End = SM->getImmediateExpansionRange(End).second;
+        auto Exp = SM->getImmediateExpansionRange(End);
+        IsTokenRange = Exp.isTokenRange();
+        End = Exp.getEnd();
         EndFileID = SM->getFileID(End);
       }
       if (End.isMacroID()) {
@@ -384,9 +399,11 @@ mapDiagnosticRanges(FullSourceLoc CaretLoc, ArrayRef<CharSourceRange> Ranges,
     SmallVector<FileID, 4> CommonArgExpansions;
     computeCommonMacroArgExpansionFileIDs(Begin, End, SM, CommonArgExpansions);
     Begin = retrieveMacroLocation(Begin, BeginFileID, CaretLocFileID,
-                                  CommonArgExpansions, /*IsBegin=*/true, SM);
+                                  CommonArgExpansions, /*IsBegin=*/true, SM,
+                                  IsTokenRange);
     End = retrieveMacroLocation(End, BeginFileID, CaretLocFileID,
-                                CommonArgExpansions, /*IsBegin=*/false, SM);
+                                CommonArgExpansions, /*IsBegin=*/false, SM,
+                                IsTokenRange);
     if (Begin.isInvalid() || End.isInvalid()) continue;
 
     // Return the spelling location of the beginning and end of the range.
@@ -511,29 +528,31 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
                                              ArrayRef<CharSourceRange> Ranges,
                                              ArrayRef<FixItHint> Hints) {
   assert(Loc.isValid() && "must have a valid source location here");
+  const SourceManager &SM = Loc.getManager();
+  SourceLocation L = Loc;
 
   // Produce a stack of macro backtraces.
-  SmallVector<FullSourceLoc, 8> LocationStack;
+  SmallVector<SourceLocation, 8> LocationStack;
   unsigned IgnoredEnd = 0;
-  while (Loc.isMacroID()) {
+  while (L.isMacroID()) {
     // If this is the expansion of a macro argument, point the caret at the
     // use of the argument in the definition of the macro, not the expansion.
-    if (Loc.isMacroArgExpansion())
-      LocationStack.push_back(Loc.getImmediateExpansionRange().first);
+    if (SM.isMacroArgExpansion(L))
+      LocationStack.push_back(SM.getImmediateExpansionRange(L).getBegin());
     else
-      LocationStack.push_back(Loc);
+      LocationStack.push_back(L);
 
-    if (checkRangesForMacroArgExpansion(Loc, Ranges))
+    if (checkRangesForMacroArgExpansion(FullSourceLoc(L, SM), Ranges))
       IgnoredEnd = LocationStack.size();
 
-    Loc = Loc.getImmediateMacroCallerLoc();
+    L = SM.getImmediateMacroCallerLoc(L);
 
     // Once the location no longer points into a macro, try stepping through
     // the last found location.  This sometimes produces additional useful
     // backtraces.
-    if (Loc.isFileID())
-      Loc = LocationStack.back().getImmediateMacroCallerLoc();
-    assert(Loc.isValid() && "must have a valid source location here");
+    if (L.isFileID())
+      L = SM.getImmediateMacroCallerLoc(LocationStack.back());
+    assert(L.isValid() && "must have a valid source location here");
   }
 
   LocationStack.erase(LocationStack.begin(),
@@ -544,7 +563,7 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   if (MacroDepth <= MacroLimit || MacroLimit == 0) {
     for (auto I = LocationStack.rbegin(), E = LocationStack.rend();
          I != E; ++I)
-      emitSingleMacroExpansion(*I, Level, Ranges);
+      emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges);
     return;
   }
 
@@ -554,7 +573,7 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   for (auto I = LocationStack.rbegin(),
             E = LocationStack.rbegin() + MacroStartMessages;
        I != E; ++I)
-    emitSingleMacroExpansion(*I, Level, Ranges);
+    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges);
 
   SmallString<200> MessageStorage;
   llvm::raw_svector_ostream Message(MessageStorage);
@@ -566,7 +585,7 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   for (auto I = LocationStack.rend() - MacroEndMessages,
             E = LocationStack.rend();
        I != E; ++I)
-    emitSingleMacroExpansion(*I, Level, Ranges);
+    emitSingleMacroExpansion(FullSourceLoc(*I, SM), Level, Ranges);
 }
 
 DiagnosticNoteRenderer::~DiagnosticNoteRenderer() = default;

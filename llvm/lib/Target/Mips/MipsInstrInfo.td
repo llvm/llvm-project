@@ -2037,23 +2037,21 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 /// Load and Store Instructions
 ///  aligned
-def LB  : LoadMemory<"lb", GPR32Opnd, mem_simmptr, sextloadi8, II_LB>, MMRel,
-          LW_FM<0x20>;
-def LBu : LoadMemory<"lbu", GPR32Opnd, mem_simmptr, zextloadi8, II_LBU,
-                     addrDefault>, MMRel, LW_FM<0x24>;
 let AdditionalPredicates = [NotInMicroMips] in {
+  def LB  : LoadMemory<"lb", GPR32Opnd, mem_simmptr, sextloadi8, II_LB>, MMRel,
+            LW_FM<0x20>;
+  def LBu : LoadMemory<"lbu", GPR32Opnd, mem_simmptr, zextloadi8, II_LBU,
+                       addrDefault>, MMRel, LW_FM<0x24>;
   def LH  : LoadMemory<"lh", GPR32Opnd, mem_simm16, sextloadi16, II_LH,
                        addrDefault>, MMRel, LW_FM<0x21>;
   def LHu : LoadMemory<"lhu", GPR32Opnd, mem_simm16, zextloadi16, II_LHU>,
             MMRel, LW_FM<0x25>;
   def LW  : StdMMR6Rel, Load<"lw", GPR32Opnd, load, II_LW, addrDefault>, MMRel,
             LW_FM<0x23>;
-}
-def SB  : StdMMR6Rel, Store<"sb", GPR32Opnd, truncstorei8, II_SB>, MMRel,
-          LW_FM<0x28>;
-def SH  : Store<"sh", GPR32Opnd, truncstorei16, II_SH>, MMRel, LW_FM<0x29>;
-let AdditionalPredicates = [NotInMicroMips] in {
-def SW  : Store<"sw", GPR32Opnd, store, II_SW>, MMRel, LW_FM<0x2b>;
+  def SB  : StdMMR6Rel, Store<"sb", GPR32Opnd, truncstorei8, II_SB>, MMRel,
+            LW_FM<0x28>;
+  def SH  : Store<"sh", GPR32Opnd, truncstorei16, II_SH>, MMRel, LW_FM<0x29>;
+  def SW  : Store<"sw", GPR32Opnd, store, II_SW>, MMRel, LW_FM<0x2b>;
 }
 
 /// load/store left/right
@@ -3021,9 +3019,9 @@ def : MipsPat<(not GPR32:$in),
 }
 
 // extended loads
-def : MipsPat<(i32 (extloadi1  addr:$src)), (LBu addr:$src)>;
-def : MipsPat<(i32 (extloadi8  addr:$src)), (LBu addr:$src)>;
 let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(i32 (extloadi1  addr:$src)), (LBu addr:$src)>;
+  def : MipsPat<(i32 (extloadi8  addr:$src)), (LBu addr:$src)>;
   def : MipsPat<(i32 (extloadi16 addr:$src)), (LHu addr:$src)>;
 }
 
@@ -3126,10 +3124,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 // Load halfword/word patterns.
 let AddedComplexity = 40 in {
-  def : LoadRegImmPat<LBu, i32, zextloadi8>;
   let AdditionalPredicates = [NotInMicroMips] in {
-    def : LoadRegImmPat<LH, i32, sextloadi16>;
-    def : LoadRegImmPat<LW, i32, load>;
+    def : LoadRegImmPat<LBu, i32, zextloadi8>, ISA_MIPS1;
+    def : LoadRegImmPat<LHu, i32, zextloadi16>, ISA_MIPS1;
+    def : LoadRegImmPat<LB, i32, sextloadi8>, ISA_MIPS1;
+    def : LoadRegImmPat<LH, i32, sextloadi16>, ISA_MIPS1;
+    def : LoadRegImmPat<LW, i32, load>, ISA_MIPS1;
   }
 }
 

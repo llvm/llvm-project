@@ -132,3 +132,27 @@ ld1sh   { z0.d }, p0/z, [x0, z0.d, sxtw #1]
 // CHECK-ENCODING: [0x00,0x00,0xe0,0xc4]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 00 e0 c4 <unknown>
+
+ld1sh   { z31.s }, p7/z, [z31.s, #62]
+// CHECK-INST: ld1sh   { z31.s }, p7/z, [z31.s, #62]
+// CHECK-ENCODING: [0xff,0x9f,0xbf,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 9f bf 84 <unknown>
+
+ld1sh   { z0.s }, p0/z, [z0.s]
+// CHECK-INST: ld1sh   { z0.s }, p0/z, [z0.s]
+// CHECK-ENCODING: [0x00,0x80,0xa0,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 a0 84 <unknown>
+
+ld1sh   { z31.d }, p7/z, [z31.d, #62]
+// CHECK-INST: ld1sh   { z31.d }, p7/z, [z31.d, #62]
+// CHECK-ENCODING: [0xff,0x9f,0xbf,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 9f bf c4 <unknown>
+
+ld1sh   { z0.d }, p0/z, [z0.d]
+// CHECK-INST: ld1sh   { z0.d }, p0/z, [z0.d]
+// CHECK-ENCODING: [0x00,0x80,0xa0,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 a0 c4 <unknown>
