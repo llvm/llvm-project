@@ -394,19 +394,19 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X32-NEXT:    vmovdqa {{.*#+}} ymm3 = [33,0,63,0,33,0,63,0]
 ; X32-NEXT:    vextractf128 $1, %ymm3, %xmm4
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm5 = [0,2147483648,0,2147483648]
-; X32-NEXT:    vpsrlq %xmm4, %xmm5, %xmm6
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm7
-; X32-NEXT:    vpsrlq %xmm4, %xmm7, %xmm4
-; X32-NEXT:    vpxor %xmm6, %xmm4, %xmm4
-; X32-NEXT:    vpsubq %xmm6, %xmm4, %xmm4
+; X32-NEXT:    vextractf128 $1, %ymm2, %xmm6
+; X32-NEXT:    vpsrlq %xmm4, %xmm6, %xmm6
+; X32-NEXT:    vpsrlq %xmm4, %xmm5, %xmm4
+; X32-NEXT:    vpxor %xmm4, %xmm6, %xmm6
+; X32-NEXT:    vpsubq %xmm4, %xmm6, %xmm4
 ; X32-NEXT:    vpsrlq %xmm3, %xmm5, %xmm5
 ; X32-NEXT:    vpsrlq %xmm3, %xmm2, %xmm2
+; X32-NEXT:    vpmovsxdq 16(%ebp), %xmm3
 ; X32-NEXT:    vpxor %xmm5, %xmm2, %xmm2
 ; X32-NEXT:    vpsubq %xmm5, %xmm2, %xmm2
+; X32-NEXT:    vpmovsxdq 8(%ebp), %xmm5
 ; X32-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
-; X32-NEXT:    vpmovsxdq 8(%ebp), %xmm3
-; X32-NEXT:    vpmovsxdq 16(%ebp), %xmm4
-; X32-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; X32-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
 ; X32-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; X32-NEXT:    vextractf128 $1, %ymm0, %xmm5
 ; X32-NEXT:    vpcmpeqq %xmm4, %xmm5, %xmm4
