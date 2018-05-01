@@ -157,7 +157,7 @@ private:
 
   class ResultDelegate : public Materializer::PersistentVariableDelegate {
   public:
-    ResultDelegate(SwiftUserExpression &, bool is_error);
+    ResultDelegate(lldb::TargetSP target, SwiftUserExpression &, bool is_error);
     ConstString GetName() override;
     void DidDematerialize(lldb::ExpressionVariableSP &variable) override;
 
@@ -165,10 +165,11 @@ private:
     lldb::ExpressionVariableSP &GetVariable();
 
   private:
+    lldb::TargetSP m_target_sp;
     SwiftUserExpression &m_user_expression;
-    bool m_is_error;
     PersistentExpressionState *m_persistent_state;
     lldb::ExpressionVariableSP m_variable;
+    bool m_is_error;
   };
 
   ResultDelegate m_result_delegate;

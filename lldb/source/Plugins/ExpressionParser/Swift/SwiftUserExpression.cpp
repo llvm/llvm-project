@@ -50,7 +50,8 @@ SwiftUserExpression::SwiftUserExpression(
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
                          options),
       m_type_system_helper(*m_target_wp.lock().get()),
-      m_result_delegate(*this, false), m_error_delegate(*this, true),
+      m_result_delegate(exe_scope.CalculateTarget(), *this, false),
+      m_error_delegate(exe_scope.CalculateTarget(), *this, true),
       m_persistent_variable_delegate(*this) {}
 
 SwiftUserExpression::~SwiftUserExpression() {}
@@ -630,11 +631,14 @@ lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
 }
 
 SwiftUserExpression::ResultDelegate::ResultDelegate(
-    SwiftUserExpression &user_expression, bool is_error)
-    : m_user_expression(user_expression), m_is_error(is_error) {}
+    lldb::TargetSP target, SwiftUserExpression &user_expression, bool is_error)
+    : m_target_sp(target), m_user_expression(user_expression),
+      m_is_error(is_error) {}
 
 ConstString SwiftUserExpression::ResultDelegate::GetName() {
-  return m_persistent_state->GetNextPersistentVariableName(m_is_error);
+  auto prefix = m_persistent_state->GetPersistentVariablePrefix(m_is_error);
+  return m_persistent_state->GetNextPersistentVariableName(*m_target_sp,
+                                                           prefix);
 }
 
 void SwiftUserExpression::ResultDelegate::DidDematerialize(
