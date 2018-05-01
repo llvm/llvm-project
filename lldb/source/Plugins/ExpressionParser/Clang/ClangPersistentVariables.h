@@ -54,16 +54,11 @@ public:
       const CompilerType &compiler_type, lldb::ByteOrder byte_order,
       uint32_t addr_byte_size) override;
 
-  //----------------------------------------------------------------------
-  /// Return the next entry in the sequence of strings "$0", "$1", ... for
-  /// use naming persistent expression convenience variables.
-  ///
-  /// @return
-  ///     A string that contains the next persistent variable name.
-  //----------------------------------------------------------------------
-  ConstString GetNextPersistentVariableName() override;
-
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
+  llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error) const override {
+    return "$";
+  }
 
   void RegisterPersistentDecl(const ConstString &name, clang::NamedDecl *decl);
 
