@@ -85,25 +85,6 @@ void SwiftPersistentExpressionState::RemovePersistentVariable(
   }
 }
 
-ConstString
-SwiftPersistentExpressionState::GetNextPersistentVariableName(bool is_error) {
-  char name_cstr[256];
-
-  const char *prefix = nullptr;
-
-  if (is_error)
-    prefix = "$E";
-  else
-    prefix = "$R";
-
-  ::snprintf(name_cstr, sizeof(name_cstr), "%s%u", prefix,
-             is_error ? m_next_persistent_error_id++
-                      : m_next_persistent_variable_id++);
-
-  ConstString name(name_cstr);
-  return name;
-}
-
 bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
     swift::Decl *lhs_decl, swift::Decl *rhs_decl) {
   swift::DeclKind lhs_kind = lhs_decl->getKind();

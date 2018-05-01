@@ -651,15 +651,6 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitCallExpr(
 GoPersistentExpressionState::GoPersistentExpressionState()
     : PersistentExpressionState(eKindGo) {}
 
-GoPersistentExpressionState::GetNextPersistentVariableName(bool is_error) {
-  char name_cstr[256];
-  // We can't use the same variable format as clang.
-  ::snprintf(name_cstr, sizeof(name_cstr), "$go%u",
-             m_next_persistent_variable_id++);
-  ConstString name(name_cstr);
-  return name;
-}
-
 void GoPersistentExpressionState::RemovePersistentVariable(
     lldb::ExpressionVariableSP variable) {
   RemoveVariable(variable);
