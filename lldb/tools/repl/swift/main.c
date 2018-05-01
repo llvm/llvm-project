@@ -15,26 +15,36 @@
 #include <dlfcn.h>
 #endif
 
-#ifdef __gnu_linux__
+#if defined(__linux__)
 #include <dlfcn.h>
 #endif
 
 #define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
 
-__attribute__((optnone))
+#if !defined(__has_attribute)
+#define __has_attribute(attribute) 0
+#endif
+
+#if __has_attribute(__optnone__)
+#define SWIFT_REPL_NOOPT __attribute__((__optnone__))
+#else
+#define SWIFT_REPL_NOOPT
+#endif
+
+SWIFT_REPL_NOOPT
 int REPL_MAIN() {
   return 0;
 }
 
-__attribute__((optnone))
+SWIFT_REPL_NOOPT
 int main() {
 #ifdef __APPLE__
   // Force loading of libswiftCore.dylib, which is not linked at build time.
   dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
-#else
+#elif defined(__linux__)
   dlopen("libswiftCore.so", RTLD_LAZY);
 #endif
-  
+
 #ifdef __APPLE__
   // This code will be run when running the REPL. A breakpoint will be set at
   // "repl_main" and we will hit that breakpoint and then allow REPL statements
