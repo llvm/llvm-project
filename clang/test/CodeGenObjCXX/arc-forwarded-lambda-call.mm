@@ -10,6 +10,17 @@ void test0(id x) {
   // CHECK-NEXT: ret i8* [[T2]]
 }
 
+// Check that the delegating block invoke function doesn't destruct the Weak
+// object that is passed.
+
+// CHECK-LABEL: define internal void @___Z8testWeakv_block_invoke(
+// CHECK: call void @"_ZZ8testWeakvENK3$_2clE4Weak"(
+// CHECK-NEXT: ret void
+
+// CHECK-LABEL: define internal void @"_ZZ8testWeakvENK3$_2clE4Weak"(
+// CHECK: call void @_ZN4WeakD1Ev(
+// CHECK-NEXT: ret void
+
 id test1_rv;
 
 void test1() {
@@ -20,4 +31,13 @@ void test1() {
   // CHECK-NEXT: [[T1:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T0]])
   // CHECK-NEXT: [[T2:%.*]] = tail call i8* @objc_autoreleaseReturnValue(i8* [[T1]])
   // CHECK-NEXT: ret i8* [[T2]]
+}
+
+struct Weak {
+  __weak id x;
+};
+
+void testWeak() {
+  extern void testWeak_helper(void (^)(Weak));
+  testWeak_helper([](Weak){});
 }
