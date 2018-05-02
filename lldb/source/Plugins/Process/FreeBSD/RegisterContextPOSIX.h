@@ -20,7 +20,7 @@
 //------------------------------------------------------------------------------
 /// @class POSIXBreakpointProtocol
 ///
-/// @brief Extends RegisterClass with a few virtual operations useful on POSIX.
+/// Extends RegisterClass with a few virtual operations useful on POSIX.
 class POSIXBreakpointProtocol {
 public:
   POSIXBreakpointProtocol() { m_watchpoints_initialized = false; }

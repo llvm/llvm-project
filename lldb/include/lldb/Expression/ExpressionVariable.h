@@ -126,7 +126,7 @@ public:
 //----------------------------------------------------------------------
 /// @class ExpressionVariableList ExpressionVariable.h
 /// "lldb/Expression/ExpressionVariable.h"
-/// @brief A list of variable references.
+/// A list of variable references.
 ///
 /// This class stores variables internally, acting as the permanent store.
 //----------------------------------------------------------------------

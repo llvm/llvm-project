@@ -12,7 +12,7 @@
 
 //----------------------------------------------------------------------
 /// @class HostInfo HostInfo.h "lldb/Host/HostInfo.h"
-/// @brief A class that provides host computer information.
+/// A class that provides host computer information.
 ///
 /// HostInfo is a class that answers information about the host operating
 /// system.  Note that HostInfo is NOT intended to be used to manipulate or
@@ -22,15 +22,16 @@
 /// HostInfoWindows) in a separate file, and then typedefed to HostInfo here.
 /// Users of the class reference it as HostInfo::method().
 ///
-/// Not all hosts provide the same functionality.  It is important that methods
-/// only be implemented at the lowest level at which they make sense.  It should
-/// be up to the clients of the class to ensure that they not attempt to call a
-/// method which doesn't make sense for a particular platform.  For example,
-/// when implementing a method that only makes sense on a posix-compliant
-/// system, implement it on HostInfoPosix, and not on HostInfoBase with a
-/// default implementation.  This way, users of HostInfo are required to think
-/// about the implications of calling a particular method and if used in a
-/// context where the method doesn't make sense, will generate a compiler error.
+/// Not all hosts provide the same functionality.  It is important that
+/// methods only be implemented at the lowest level at which they make sense.
+/// It should be up to the clients of the class to ensure that they not
+/// attempt to call a method which doesn't make sense for a particular
+/// platform.  For example, when implementing a method that only makes sense
+/// on a posix-compliant system, implement it on HostInfoPosix, and not on
+/// HostInfoBase with a default implementation.  This way, users of HostInfo
+/// are required to think about the implications of calling a particular
+/// method and if used in a context where the method doesn't make sense, will
+/// generate a compiler error.
 ///
 //----------------------------------------------------------------------
 

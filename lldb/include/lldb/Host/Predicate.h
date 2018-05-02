@@ -38,8 +38,8 @@ typedef enum {
 
 //----------------------------------------------------------------------
 /// @class Predicate Predicate.h "lldb/Host/Predicate.h"
-/// @brief A C++ wrapper class for providing threaded access to a value
-/// of type T.
+/// A C++ wrapper class for providing threaded access to a value of
+/// type T.
 ///
 /// A templatized class that provides multi-threaded access to a value
 /// of type T. Threads can efficiently wait for bits within T to be set

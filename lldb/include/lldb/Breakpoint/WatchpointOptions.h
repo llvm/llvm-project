@@ -25,8 +25,8 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class WatchpointOptions WatchpointOptions.h
-/// "lldb/Breakpoint/WatchpointOptions.h"
-/// @brief Class that manages the options on a watchpoint.
+/// "lldb/Breakpoint/WatchpointOptions.h" Class that manages the options on a
+/// watchpoint.
 //----------------------------------------------------------------------
 
 class WatchpointOptions {
@@ -166,8 +166,7 @@ public:
 
   //------------------------------------------------------------------
   /// Return the current thread spec for this option. This will return nullptr
-  /// if the no thread
-  /// specifications have been set for this Option yet.
+  /// if the no thread specifications have been set for this Option yet.
   /// @return
   ///     The thread specification pointer for this option, or nullptr if none
   ///     has
@@ -176,8 +175,8 @@ public:
   const ThreadSpec *GetThreadSpecNoCreate() const;
 
   //------------------------------------------------------------------
-  /// Returns a pointer to the ThreadSpec for this option, creating it.
-  /// if it hasn't been created already.   This API is used for setting the
+  /// Returns a pointer to the ThreadSpec for this option, creating it. if it
+  /// hasn't been created already.   This API is used for setting the
   /// ThreadSpec items for this option.
   //------------------------------------------------------------------
   ThreadSpec *GetThreadSpec();

@@ -76,7 +76,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Debugger Debugger.h "lldb/Core/Debugger.h"
-/// @brief A class to manage flag bits.
+/// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
 //----------------------------------------------------------------------
@@ -169,10 +169,9 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the target list.
   ///
-  /// The target list is part of the global debugger object. This
-  /// the single debugger shared instance to control where targets
-  /// get created and to allow for tracking and searching for targets
-  /// based on certain criteria.
+  /// The target list is part of the global debugger object. This the single
+  /// debugger shared instance to control where targets get created and to
+  /// allow for tracking and searching for targets based on certain criteria.
   ///
   /// @return
   ///     A global shared target list.

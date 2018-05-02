@@ -26,15 +26,15 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class LLVMUserExpression LLVMUserExpression.h
-/// "lldb/Expression/LLVMUserExpression.h"
-/// @brief Encapsulates a one-time expression for use in lldb.
+/// "lldb/Expression/LLVMUserExpression.h" Encapsulates a one-time expression
+/// for use in lldb.
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
-/// and as a backend for the expr command.  LLVMUserExpression is a virtual base
-/// class that encapsulates the objects needed to parse and JIT an expression.
-/// The actual parsing part will be provided by the specific implementations
-/// of LLVMUserExpression - which will be vended through the appropriate
-/// TypeSystem.
+/// and as a backend for the expr command.  LLVMUserExpression is a virtual
+/// base class that encapsulates the objects needed to parse and JIT an
+/// expression. The actual parsing part will be provided by the specific
+/// implementations of LLVMUserExpression - which will be vended through the
+/// appropriate TypeSystem.
 //----------------------------------------------------------------------
 class LLVMUserExpression : public UserExpression {
 public:
