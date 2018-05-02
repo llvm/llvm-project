@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements several utility functions for WebAssembly.
+/// This file implements several utility functions for WebAssembly.
 ///
 //===----------------------------------------------------------------------===//
 

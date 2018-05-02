@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This file does AMD library function optimizations.
+/// This file does AMD library function optimizations.
 //
 //===----------------------------------------------------------------------===//
 

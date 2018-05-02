@@ -5538,7 +5538,7 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   return false;
 }
 
-/// \brief Given a mnemonic, split out possible predication code and carry
+/// Given a mnemonic, split out possible predication code and carry
 /// setting letters to form a canonical mnemonic and flags.
 //
 // FIXME: Would be nice to autogen this.
@@ -5629,7 +5629,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
   return Mnemonic;
 }
 
-/// \brief Given a canonical mnemonic, determine if the instruction ever allows
+/// Given a canonical mnemonic, determine if the instruction ever allows
 /// inclusion of carry set or predication code operands.
 //
 // FIXME: It would be nice to autogen this.
@@ -5683,7 +5683,7 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic, StringRef FullInst,
     CanAcceptPredicationCode = true;
 }
 
-// \brief Some Thumb instructions have two operand forms that are not
+// Some Thumb instructions have two operand forms that are not
 // available as three operand, convert to two operand form if possible.
 //
 // FIXME: We would really like to be able to tablegen'erate this.

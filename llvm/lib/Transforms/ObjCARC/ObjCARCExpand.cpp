@@ -47,7 +47,7 @@ using namespace llvm;
 using namespace llvm::objcarc;
 
 namespace {
-  /// \brief Early ARC transformations.
+  /// Early ARC transformations.
   class ObjCARCExpand : public FunctionPass {
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool doInitialization(Module &M) override;

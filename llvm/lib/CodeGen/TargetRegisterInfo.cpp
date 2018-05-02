@@ -345,7 +345,7 @@ getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
   return BestRC;
 }
 
-/// \brief Check if the registers defined by the pair (RegisterClass, SubReg)
+/// Check if the registers defined by the pair (RegisterClass, SubReg)
 /// share the same register file.
 static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
                                   const TargetRegisterClass *DefRC,

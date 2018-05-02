@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU Machine Module Info.
+/// AMDGPU Machine Module Info.
 ///
 //
 //===----------------------------------------------------------------------===//
@@ -30,14 +30,14 @@ private:
   // All supported memory/synchronization scopes can be found here:
   //   http://llvm.org/docs/AMDGPUUsage.html#memory-scopes
 
-  /// \brief Agent synchronization scope ID.
+  /// Agent synchronization scope ID.
   SyncScope::ID AgentSSID;
-  /// \brief Workgroup synchronization scope ID.
+  /// Workgroup synchronization scope ID.
   SyncScope::ID WorkgroupSSID;
-  /// \brief Wavefront synchronization scope ID.
+  /// Wavefront synchronization scope ID.
   SyncScope::ID WavefrontSSID;
 
-  /// \brief In AMDGPU target synchronization scopes are inclusive, meaning a
+  /// In AMDGPU target synchronization scopes are inclusive, meaning a
   /// larger synchronization scope is inclusive of a smaller synchronization
   /// scope.
   ///
@@ -74,7 +74,7 @@ public:
     return WavefrontSSID;
   }
 
-  /// \brief In AMDGPU target synchronization scopes are inclusive, meaning a
+  /// In AMDGPU target synchronization scopes are inclusive, meaning a
   /// larger synchronization scope is inclusive of a smaller synchronization
   /// scope.
   ///

@@ -50,7 +50,7 @@ template <typename DomTreeT>
 struct SemiNCAInfo;
 }  // namespace DomTreeBuilder
 
-/// \brief Base class for the actual dominator tree node.
+/// Base class for the actual dominator tree node.
 template <class NodeT> class DomTreeNodeBase {
   friend class PostDominatorTree;
   friend class DominatorTreeBase<NodeT, false>;
@@ -237,7 +237,7 @@ template <typename DomTreeT>
 bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL);
 }  // namespace DomTreeBuilder
 
-/// \brief Core dominator tree base class.
+/// Core dominator tree base class.
 ///
 /// This class is a generic template over graph nodes. It is instantiated for
 /// various graphs in the LLVM IR or in the code generator.
@@ -858,7 +858,7 @@ protected:
     return IDom != nullptr;
   }
 
-  /// \brief Wipe this tree's state without releasing any resources.
+  /// Wipe this tree's state without releasing any resources.
   ///
   /// This is essentially a post-move helper only. It leaves the object in an
   /// assignable and destroyable state, but otherwise invalid.

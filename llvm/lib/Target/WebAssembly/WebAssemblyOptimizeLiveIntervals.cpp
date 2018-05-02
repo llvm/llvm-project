@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Optimize LiveIntervals for use in a post-RA context.
+/// Optimize LiveIntervals for use in a post-RA context.
 //
 /// LiveIntervals normally runs before register allocation when the code is
 /// only recently lowered out of SSA form, so it's uncommon for registers to

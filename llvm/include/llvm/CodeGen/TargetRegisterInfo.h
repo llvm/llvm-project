@@ -971,7 +971,7 @@ public:
   //===--------------------------------------------------------------------===//
   /// Subtarget Hooks
 
-  /// \brief SrcRC and DstRC will be morphed into NewRC if this returns true.
+  /// SrcRC and DstRC will be morphed into NewRC if this returns true.
   virtual bool shouldCoalesce(MachineInstr *MI,
                               const TargetRegisterClass *SrcRC,
                               unsigned SubReg,
@@ -1174,11 +1174,11 @@ Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
 Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 
-/// \brief Create Printable object to print virtual registers and physical
+/// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
 Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
-/// \brief Create Printable object to print register classes or register banks
+/// Create Printable object to print register classes or register banks
 /// on a \ref raw_ostream.
 Printable printRegClassOrBank(unsigned Reg, const MachineRegisterInfo &RegInfo,
                               const TargetRegisterInfo *TRI);

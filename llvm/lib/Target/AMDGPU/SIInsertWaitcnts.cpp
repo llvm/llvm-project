@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Insert wait instructions for memory reads and writes.
+/// Insert wait instructions for memory reads and writes.
 ///
 /// Memory reads and writes are issued asynchronously, so we need to insert
 /// S_WAITCNT instructions when we want to access any of their results or
@@ -843,7 +843,7 @@ static bool readsVCCZ(const MachineInstr &MI) {
          !MI.getOperand(1).isUndef();
 }
 
-/// \brief Given wait count encodings checks if LHS is stronger than RHS.
+/// Given wait count encodings checks if LHS is stronger than RHS.
 bool SIInsertWaitcnts::isWaitcntStronger(unsigned LHS, unsigned RHS) {
   if (AMDGPU::decodeVmcnt(IV, LHS) > AMDGPU::decodeVmcnt(IV, RHS))
     return false;
@@ -854,7 +854,7 @@ bool SIInsertWaitcnts::isWaitcntStronger(unsigned LHS, unsigned RHS) {
   return true;
 }
 
-/// \brief Given wait count encodings create a new encoding which is stronger
+/// Given wait count encodings create a new encoding which is stronger
 /// or equal to both.
 unsigned SIInsertWaitcnts::combineWaitcnt(unsigned LHS, unsigned RHS) {
   unsigned VmCnt = std::min(AMDGPU::decodeVmcnt(IV, LHS),
@@ -866,7 +866,7 @@ unsigned SIInsertWaitcnts::combineWaitcnt(unsigned LHS, unsigned RHS) {
   return AMDGPU::encodeWaitcnt(IV, VmCnt, ExpCnt, LgkmCnt);
 }
 
-///  \brief Generate s_waitcnt instruction to be placed before cur_Inst.
+///  Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
 ///  but instructions of different types can complete out of order.
 ///  We rely on this in-order completion

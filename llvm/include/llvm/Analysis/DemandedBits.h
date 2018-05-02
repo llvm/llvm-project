@@ -96,15 +96,15 @@ class DemandedBitsAnalysis : public AnalysisInfoMixin<DemandedBitsAnalysis> {
   static AnalysisKey Key;
 
 public:
-  /// \brief Provide the result type for this analysis pass.
+  /// Provide the result type for this analysis pass.
   using Result = DemandedBits;
 
-  /// \brief Run the analysis pass over a function and produce demanded bits
+  /// Run the analysis pass over a function and produce demanded bits
   /// information.
   DemandedBits run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Printer pass for DemandedBits
+/// Printer pass for DemandedBits
 class DemandedBitsPrinterPass : public PassInfoMixin<DemandedBitsPrinterPass> {
   raw_ostream &OS;
 

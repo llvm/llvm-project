@@ -26,7 +26,7 @@ class HWEventListener;
 class HWInstructionEvent;
 class HWStallEvent;
 
-/// \brief An out of order backend for a specific subtarget.
+/// An out of order backend for a specific subtarget.
 ///
 /// It emulates an out-of-order execution of instructions. Instructions are
 /// fetched from a MCInst sequence managed by an object of class SourceMgr.

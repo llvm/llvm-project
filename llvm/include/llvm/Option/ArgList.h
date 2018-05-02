@@ -356,7 +356,7 @@ public:
     return MakeArgStringRef(Str.toStringRef(Buf));
   }
 
-  /// \brief Create an arg string for (\p LHS + \p RHS), reusing the
+  /// Create an arg string for (\p LHS + \p RHS), reusing the
   /// string at \p Index if possible.
   const char *GetOrMakeJoinedArgString(unsigned Index, StringRef LHS,
                                         StringRef RHS) const;

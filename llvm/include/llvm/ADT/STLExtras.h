@@ -711,7 +711,7 @@ detail::concat_range<ValueT, RangeTs...> concat(RangeTs &&... Ranges) {
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
 
-/// \brief Function object to check whether the first component of a std::pair
+/// Function object to check whether the first component of a std::pair
 /// compares less than the first component of another std::pair.
 struct less_first {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
@@ -719,7 +719,7 @@ struct less_first {
   }
 };
 
-/// \brief Function object to check whether the second component of a std::pair
+/// Function object to check whether the second component of a std::pair
 /// compares less than the second component of another std::pair.
 struct less_second {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
@@ -729,14 +729,14 @@ struct less_second {
 
 // A subset of N3658. More stuff can be added as-needed.
 
-/// \brief Represents a compile-time sequence of integers.
+/// Represents a compile-time sequence of integers.
 template <class T, T... I> struct integer_sequence {
   using value_type = T;
 
   static constexpr size_t size() { return sizeof...(I); }
 };
 
-/// \brief Alias for the common case of a sequence of size_ts.
+/// Alias for the common case of a sequence of size_ts.
 template <size_t... I>
 struct index_sequence : integer_sequence<std::size_t, I...> {};
 
@@ -745,7 +745,7 @@ struct build_index_impl : build_index_impl<N - 1, N - 1, I...> {};
 template <std::size_t... I>
 struct build_index_impl<0, I...> : index_sequence<I...> {};
 
-/// \brief Creates a compile-time integer sequence for a parameter pack.
+/// Creates a compile-time integer sequence for a parameter pack.
 template <class... Ts>
 struct index_sequence_for : build_index_impl<sizeof...(Ts)> {};
 
@@ -754,7 +754,7 @@ struct index_sequence_for : build_index_impl<sizeof...(Ts)> {};
 template <int N> struct rank : rank<N - 1> {};
 template <> struct rank<0> {};
 
-/// \brief traits class for checking whether type T is one of any of the given
+/// traits class for checking whether type T is one of any of the given
 /// types in the variadic list.
 template <typename T, typename... Ts> struct is_one_of {
   static const bool value = false;
@@ -766,7 +766,7 @@ struct is_one_of<T, U, Ts...> {
       std::is_same<T, U>::value || is_one_of<T, Ts...>::value;
 };
 
-/// \brief traits class for checking whether type T is a base class for all
+/// traits class for checking whether type T is a base class for all
 ///  the given types in the variadic list.
 template <typename T, typename... Ts> struct are_base_of {
   static const bool value = true;
@@ -1005,7 +1005,7 @@ auto lower_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
   return std::lower_bound(adl_begin(Range), adl_end(Range), I);
 }
 
-/// \brief Given a range of type R, iterate the entire range and return a
+/// Given a range of type R, iterate the entire range and return a
 /// SmallVector with elements of the vector.  This is useful, for example,
 /// when you want to iterate a range and then sort the results.
 template <unsigned Size, typename R>
@@ -1032,7 +1032,7 @@ void erase_if(Container &C, UnaryPredicate P) {
 
 // Implement make_unique according to N3656.
 
-/// \brief Constructs a `new T()` with the given args and returns a
+/// Constructs a `new T()` with the given args and returns a
 ///        `unique_ptr<T>` which owns the object.
 ///
 /// Example:
@@ -1045,7 +1045,7 @@ make_unique(Args &&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
-/// \brief Constructs a `new T[n]` with the given args and returns a
+/// Constructs a `new T[n]` with the given args and returns a
 ///        `unique_ptr<T[]>` which owns the object.
 ///
 /// \param n size of the new array.

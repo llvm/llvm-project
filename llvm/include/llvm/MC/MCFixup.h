@@ -19,7 +19,7 @@
 namespace llvm {
 class MCExpr;
 
-/// \brief Extensible enumeration to represent the type of a fixup.
+/// Extensible enumeration to represent the type of a fixup.
 enum MCFixupKind {
   FK_Data_1 = 0, ///< A one-byte fixup.
   FK_Data_2,     ///< A two-byte fixup.
@@ -49,7 +49,7 @@ enum MCFixupKind {
   MaxTargetFixupKind = (1 << 8)
 };
 
-/// \brief Encode information on a single operation to perform on a byte
+/// Encode information on a single operation to perform on a byte
 /// sequence (e.g., an encoded instruction) which requires assemble- or run-
 /// time patching.
 ///
@@ -97,7 +97,7 @@ public:
 
   const MCExpr *getValue() const { return Value; }
 
-  /// \brief Return the generic fixup kind for a value with the given size. It
+  /// Return the generic fixup kind for a value with the given size. It
   /// is an error to pass an unsupported size.
   static MCFixupKind getKindForSize(unsigned Size, bool isPCRel) {
     switch (Size) {

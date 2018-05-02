@@ -48,7 +48,7 @@ private:
 public:
   VPBuilder() {}
 
-  /// \brief This specifies that created VPInstructions should be appended to
+  /// This specifies that created VPInstructions should be appended to
   /// the end of the specified block.
   void setInsertPoint(VPBasicBlock *TheBB) {
     assert(TheBB && "Attempting to set a null insert point");

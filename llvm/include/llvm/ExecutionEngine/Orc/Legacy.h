@@ -32,7 +32,7 @@ private:
   SymbolResolver &R;
 };
 
-/// @brief Use the given legacy-style FindSymbol function (i.e. a function that
+/// Use the given legacy-style FindSymbol function (i.e. a function that
 ///        takes a const std::string& or StringRef and returns a JITSymbol) to
 ///        find the flags for each symbol in Symbols and store their flags in
 ///        SymbolFlags. If any JITSymbol returned by FindSymbol is in an error
@@ -58,7 +58,7 @@ Expected<SymbolNameSet> lookupFlagsWithLegacyFn(SymbolFlagsMap &SymbolFlags,
   return SymbolsNotFound;
 }
 
-/// @brief Use the given legacy-style FindSymbol function (i.e. a function that
+/// Use the given legacy-style FindSymbol function (i.e. a function that
 ///        takes a const std::string& or StringRef and returns a JITSymbol) to
 ///        find the address and flags for each symbol in Symbols and store the
 ///        result in Query. If any JITSymbol returned by FindSymbol is in an
@@ -92,7 +92,7 @@ SymbolNameSet lookupWithLegacyFn(AsynchronousSymbolQuery &Query,
   return SymbolsNotFound;
 }
 
-/// @brief An ORC SymbolResolver implementation that uses a legacy
+/// An ORC SymbolResolver implementation that uses a legacy
 ///        findSymbol-like function to perform lookup;
 template <typename LegacyLookupFn>
 class LegacyLookupFnResolver final : public SymbolResolver {

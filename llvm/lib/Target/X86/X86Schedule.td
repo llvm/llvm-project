@@ -91,13 +91,20 @@ def  WriteFLoad  : SchedWrite;
 def  WriteFStore : SchedWrite;
 def  WriteFMove  : SchedWrite;
 defm WriteFAdd   : X86SchedWritePair; // Floating point add/sub.
+defm WriteFAddY  : X86SchedWritePair; // Floating point add/sub (YMM/ZMM).
 defm WriteFCmp   : X86SchedWritePair; // Floating point compare.
+defm WriteFCmpY  : X86SchedWritePair; // Floating point compare (YMM/ZMM).
 defm WriteFCom   : X86SchedWritePair; // Floating point compare to flags.
 defm WriteFMul   : X86SchedWritePair; // Floating point multiplication.
+defm WriteFMulY  : X86SchedWritePair; // Floating point multiplication (YMM/ZMM).
 defm WriteFDiv   : X86SchedWritePair; // Floating point division.
+defm WriteFDivY  : X86SchedWritePair; // Floating point division (YMM/ZMM).
 defm WriteFSqrt  : X86SchedWritePair; // Floating point square root.
+defm WriteFSqrtY : X86SchedWritePair; // Floating point square root (YMM/ZMM).
 defm WriteFRcp   : X86SchedWritePair; // Floating point reciprocal estimate.
+defm WriteFRcpY  : X86SchedWritePair; // Floating point reciprocal estimate (YMM/ZMM).
 defm WriteFRsqrt : X86SchedWritePair; // Floating point reciprocal square root estimate.
+defm WriteFRsqrtY: X86SchedWritePair; // Floating point reciprocal square root estimate (YMM/ZMM).
 defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
 defm WriteFMAS   : X86SchedWritePair; // Fused Multiply Add (Scalar).
 defm WriteFMAY   : X86SchedWritePair; // Fused Multiply Add (YMM/ZMM).
@@ -105,6 +112,7 @@ defm WriteFSign  : X86SchedWritePair; // Floating point fabs/fchs.
 defm WriteFLogic  : X86SchedWritePair; // Floating point and/or/xor logicals.
 defm WriteFLogicY : X86SchedWritePair; // Floating point and/or/xor logicals (YMM/ZMM).
 defm WriteFShuffle  : X86SchedWritePair; // Floating point vector shuffles.
+defm WriteFShuffleY : X86SchedWritePair; // Floating point vector shuffles (YMM/ZMM).
 defm WriteFVarShuffle  : X86SchedWritePair; // Floating point vector variable shuffles.
 defm WriteFVarShuffleY : X86SchedWritePair; // Floating point vector variable shuffles (YMM/ZMM).
 defm WriteFBlend  : X86SchedWritePair; // Floating point vector blends.
@@ -200,19 +208,25 @@ def WriteNop : SchedWrite;
 
 // Vector width wrappers.
 def SchedWriteFAdd
- : X86SchedWriteWidths<WriteFAdd, WriteFAdd, WriteFAdd, WriteFAdd>;
+ : X86SchedWriteWidths<WriteFAdd, WriteFAdd, WriteFAddY, WriteFAddY>;
 def SchedWriteFCmp
- : X86SchedWriteWidths<WriteFCmp, WriteFCmp, WriteFCmp, WriteFCmp>;
+ : X86SchedWriteWidths<WriteFCmp, WriteFCmp, WriteFCmpY, WriteFCmpY>;
 def SchedWriteFMul
- : X86SchedWriteWidths<WriteFMul, WriteFMul, WriteFMul, WriteFMul>;
+ : X86SchedWriteWidths<WriteFMul, WriteFMul, WriteFMulY, WriteFMulY>;
 def SchedWriteFDiv
- : X86SchedWriteWidths<WriteFDiv, WriteFDiv, WriteFDiv, WriteFDiv>;
+ : X86SchedWriteWidths<WriteFDiv, WriteFDiv, WriteFDivY, WriteFDivY>;
+def SchedWriteFSqrt
+ : X86SchedWriteWidths<WriteFSqrt, WriteFSqrt, WriteFSqrtY, WriteFSqrtY>;
+def SchedWriteFRcp
+ : X86SchedWriteWidths<WriteFRcp, WriteFRcp, WriteFRcpY, WriteFRcpY>;
+def SchedWriteFRsqrt
+ : X86SchedWriteWidths<WriteFRsqrt, WriteFRsqrt, WriteFRsqrtY, WriteFRsqrtY>;
 def SchedWriteFLogic
  : X86SchedWriteWidths<WriteFLogic, WriteFLogic, WriteFLogicY, WriteFLogicY>;
 
 def SchedWriteFShuffle
  : X86SchedWriteWidths<WriteFShuffle, WriteFShuffle,
-                       WriteFShuffle, WriteFShuffle>;
+                       WriteFShuffleY, WriteFShuffleY>;
 def SchedWriteFVarShuffle
  : X86SchedWriteWidths<WriteFVarShuffle, WriteFVarShuffle,
                        WriteFVarShuffleY, WriteFVarShuffleY>;
@@ -230,12 +244,21 @@ def SchedWriteVecLogic
 def SchedWriteVecShift
  : X86SchedWriteWidths<WriteVecShift, WriteVecShift,
                        WriteVecShift, WriteVecShift>;
+def SchedWriteVarVecShift
+ : X86SchedWriteWidths<WriteVarVecShift, WriteVarVecShift,
+                       WriteVarVecShift, WriteVarVecShift>;
 def SchedWriteVecIMul
  : X86SchedWriteWidths<WriteVecIMul, WriteVecIMul,
                        WriteVecIMul, WriteVecIMul>;
 def SchedWritePMULLD
  : X86SchedWriteWidths<WritePMULLD, WritePMULLD,
                        WritePMULLD, WritePMULLD>;
+def SchedWriteMPSAD
+ : X86SchedWriteWidths<WriteMPSAD, WriteMPSAD,
+                       WriteMPSAD, WriteMPSAD>;
+def SchedWritePSADBW
+ : X86SchedWriteWidths<WritePSADBW, WritePSADBW,
+                       WritePSADBW, WritePSADBW>;
 
 def SchedWriteShuffle
  : X86SchedWriteWidths<WriteShuffle, WriteShuffle,

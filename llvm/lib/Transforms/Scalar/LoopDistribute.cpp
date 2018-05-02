@@ -111,7 +111,7 @@ STATISTIC(NumLoopsDistributed, "Number of loops distributed");
 
 namespace {
 
-/// \brief Maintains the set of instructions of the loop for a partition before
+/// Maintains the set of instructions of the loop for a partition before
 /// cloning.  After cloning, it hosts the new loop.
 class InstPartition {
   using InstructionSet = SmallPtrSet<Instruction *, 8>;
@@ -122,20 +122,20 @@ public:
     Set.insert(I);
   }
 
-  /// \brief Returns whether this partition contains a dependence cycle.
+  /// Returns whether this partition contains a dependence cycle.
   bool hasDepCycle() const { return DepCycle; }
 
-  /// \brief Adds an instruction to this partition.
+  /// Adds an instruction to this partition.
   void add(Instruction *I) { Set.insert(I); }
 
-  /// \brief Collection accessors.
+  /// Collection accessors.
   InstructionSet::iterator begin() { return Set.begin(); }
   InstructionSet::iterator end() { return Set.end(); }
   InstructionSet::const_iterator begin() const { return Set.begin(); }
   InstructionSet::const_iterator end() const { return Set.end(); }
   bool empty() const { return Set.empty(); }
 
-  /// \brief Moves this partition into \p Other.  This partition becomes empty
+  /// Moves this partition into \p Other.  This partition becomes empty
   /// after this.
   void moveTo(InstPartition &Other) {
     Other.Set.insert(Set.begin(), Set.end());
@@ -143,7 +143,7 @@ public:
     Other.DepCycle |= DepCycle;
   }
 
-  /// \brief Populates the partition with a transitive closure of all the
+  /// Populates the partition with a transitive closure of all the
   /// instructions that the seeded instructions dependent on.
   void populateUsedSet() {
     // FIXME: We currently don't use control-dependence but simply include all
@@ -166,7 +166,7 @@ public:
     }
   }
 
-  /// \brief Clones the original loop.
+  /// Clones the original loop.
   ///
   /// Updates LoopInfo and DominatorTree using the information that block \p
   /// LoopDomBB dominates the loop.
@@ -179,27 +179,27 @@ public:
     return ClonedLoop;
   }
 
-  /// \brief The cloned loop.  If this partition is mapped to the original loop,
+  /// The cloned loop.  If this partition is mapped to the original loop,
   /// this is null.
   const Loop *getClonedLoop() const { return ClonedLoop; }
 
-  /// \brief Returns the loop where this partition ends up after distribution.
+  /// Returns the loop where this partition ends up after distribution.
   /// If this partition is mapped to the original loop then use the block from
   /// the loop.
   const Loop *getDistributedLoop() const {
     return ClonedLoop ? ClonedLoop : OrigLoop;
   }
 
-  /// \brief The VMap that is populated by cloning and then used in
+  /// The VMap that is populated by cloning and then used in
   /// remapinstruction to remap the cloned instructions.
   ValueToValueMapTy &getVMap() { return VMap; }
 
-  /// \brief Remaps the cloned instructions using VMap.
+  /// Remaps the cloned instructions using VMap.
   void remapInstructions() {
     remapInstructionsInBlocks(ClonedLoopBlocks, VMap);
   }
 
-  /// \brief Based on the set of instructions selected for this partition,
+  /// Based on the set of instructions selected for this partition,
   /// removes the unnecessary ones.
   void removeUnusedInsts() {
     SmallVector<Instruction *, 8> Unused;
@@ -239,30 +239,30 @@ public:
   }
 
 private:
-  /// \brief Instructions from OrigLoop selected for this partition.
+  /// Instructions from OrigLoop selected for this partition.
   InstructionSet Set;
 
-  /// \brief Whether this partition contains a dependence cycle.
+  /// Whether this partition contains a dependence cycle.
   bool DepCycle;
 
-  /// \brief The original loop.
+  /// The original loop.
   Loop *OrigLoop;
 
-  /// \brief The cloned loop.  If this partition is mapped to the original loop,
+  /// The cloned loop.  If this partition is mapped to the original loop,
   /// this is null.
   Loop *ClonedLoop = nullptr;
 
-  /// \brief The blocks of ClonedLoop including the preheader.  If this
+  /// The blocks of ClonedLoop including the preheader.  If this
   /// partition is mapped to the original loop, this is empty.
   SmallVector<BasicBlock *, 8> ClonedLoopBlocks;
 
-  /// \brief These gets populated once the set of instructions have been
+  /// These gets populated once the set of instructions have been
   /// finalized. If this partition is mapped to the original loop, these are not
   /// set.
   ValueToValueMapTy VMap;
 };
 
-/// \brief Holds the set of Partitions.  It populates them, merges them and then
+/// Holds the set of Partitions.  It populates them, merges them and then
 /// clones the loops.
 class InstPartitionContainer {
   using InstToPartitionIdT = DenseMap<Instruction *, int>;
@@ -271,10 +271,10 @@ public:
   InstPartitionContainer(Loop *L, LoopInfo *LI, DominatorTree *DT)
       : L(L), LI(LI), DT(DT) {}
 
-  /// \brief Returns the number of partitions.
+  /// Returns the number of partitions.
   unsigned getSize() const { return PartitionContainer.size(); }
 
-  /// \brief Adds \p Inst into the current partition if that is marked to
+  /// Adds \p Inst into the current partition if that is marked to
   /// contain cycles.  Otherwise start a new partition for it.
   void addToCyclicPartition(Instruction *Inst) {
     // If the current partition is non-cyclic.  Start a new one.
@@ -284,7 +284,7 @@ public:
       PartitionContainer.back().add(Inst);
   }
 
-  /// \brief Adds \p Inst into a partition that is not marked to contain
+  /// Adds \p Inst into a partition that is not marked to contain
   /// dependence cycles.
   ///
   //  Initially we isolate memory instructions into as many partitions as
@@ -293,7 +293,7 @@ public:
     PartitionContainer.emplace_back(Inst, L);
   }
 
-  /// \brief Merges adjacent non-cyclic partitions.
+  /// Merges adjacent non-cyclic partitions.
   ///
   /// The idea is that we currently only want to isolate the non-vectorizable
   /// partition.  We could later allow more distribution among these partition
@@ -303,7 +303,7 @@ public:
         [](const InstPartition *P) { return !P->hasDepCycle(); });
   }
 
-  /// \brief If a partition contains only conditional stores, we won't vectorize
+  /// If a partition contains only conditional stores, we won't vectorize
   /// it.  Try to merge it with a previous cyclic partition.
   void mergeNonIfConvertible() {
     mergeAdjacentPartitionsIf([&](const InstPartition *Partition) {
@@ -323,14 +323,14 @@ public:
     });
   }
 
-  /// \brief Merges the partitions according to various heuristics.
+  /// Merges the partitions according to various heuristics.
   void mergeBeforePopulating() {
     mergeAdjacentNonCyclic();
     if (!DistributeNonIfConvertible)
       mergeNonIfConvertible();
   }
 
-  /// \brief Merges partitions in order to ensure that no loads are duplicated.
+  /// Merges partitions in order to ensure that no loads are duplicated.
   ///
   /// We can't duplicate loads because that could potentially reorder them.
   /// LoopAccessAnalysis provides dependency information with the context that
@@ -398,7 +398,7 @@ public:
     return true;
   }
 
-  /// \brief Sets up the mapping between instructions to partitions.  If the
+  /// Sets up the mapping between instructions to partitions.  If the
   /// instruction is duplicated across multiple partitions, set the entry to -1.
   void setupPartitionIdOnInstructions() {
     int PartitionID = 0;
@@ -416,14 +416,14 @@ public:
     }
   }
 
-  /// \brief Populates the partition with everything that the seeding
+  /// Populates the partition with everything that the seeding
   /// instructions require.
   void populateUsedSet() {
     for (auto &P : PartitionContainer)
       P.populateUsedSet();
   }
 
-  /// \brief This performs the main chunk of the work of cloning the loops for
+  /// This performs the main chunk of the work of cloning the loops for
   /// the partitions.
   void cloneLoops() {
     BasicBlock *OrigPH = L->getLoopPreheader();
@@ -470,13 +470,13 @@ public:
           Curr->getDistributedLoop()->getExitingBlock());
   }
 
-  /// \brief Removes the dead instructions from the cloned loops.
+  /// Removes the dead instructions from the cloned loops.
   void removeUnusedInsts() {
     for (auto &Partition : PartitionContainer)
       Partition.removeUnusedInsts();
   }
 
-  /// \brief For each memory pointer, it computes the partitionId the pointer is
+  /// For each memory pointer, it computes the partitionId the pointer is
   /// used in.
   ///
   /// This returns an array of int where the I-th entry corresponds to I-th
@@ -543,10 +543,10 @@ public:
 private:
   using PartitionContainerT = std::list<InstPartition>;
 
-  /// \brief List of partitions.
+  /// List of partitions.
   PartitionContainerT PartitionContainer;
 
-  /// \brief Mapping from Instruction to partition Id.  If the instruction
+  /// Mapping from Instruction to partition Id.  If the instruction
   /// belongs to multiple partitions the entry contains -1.
   InstToPartitionIdT InstToPartitionId;
 
@@ -554,7 +554,7 @@ private:
   LoopInfo *LI;
   DominatorTree *DT;
 
-  /// \brief The control structure to merge adjacent partitions if both satisfy
+  /// The control structure to merge adjacent partitions if both satisfy
   /// the \p Predicate.
   template <class UnaryPredicate>
   void mergeAdjacentPartitionsIf(UnaryPredicate Predicate) {
@@ -575,7 +575,7 @@ private:
   }
 };
 
-/// \brief For each memory instruction, this class maintains difference of the
+/// For each memory instruction, this class maintains difference of the
 /// number of unsafe dependences that start out from this instruction minus
 /// those that end here.
 ///
@@ -619,7 +619,7 @@ private:
   AccessesType Accesses;
 };
 
-/// \brief The actual class performing the per-loop work.
+/// The actual class performing the per-loop work.
 class LoopDistributeForLoop {
 public:
   LoopDistributeForLoop(Loop *L, Function *F, LoopInfo *LI, DominatorTree *DT,
@@ -628,7 +628,7 @@ public:
     setForced();
   }
 
-  /// \brief Try to distribute an inner-most loop.
+  /// Try to distribute an inner-most loop.
   bool processLoop(std::function<const LoopAccessInfo &(Loop &)> &GetLAA) {
     assert(L->empty() && "Only process inner loops.");
 
@@ -793,7 +793,7 @@ public:
     return true;
   }
 
-  /// \brief Provide diagnostics then \return with false.
+  /// Provide diagnostics then \return with false.
   bool fail(StringRef RemarkName, StringRef Message) {
     LLVMContext &Ctx = F->getContext();
     bool Forced = isForced().getValueOr(false);
@@ -826,7 +826,7 @@ public:
     return false;
   }
 
-  /// \brief Return if distribution forced to be enabled/disabled for the loop.
+  /// Return if distribution forced to be enabled/disabled for the loop.
   ///
   /// If the optional has a value, it indicates whether distribution was forced
   /// to be enabled (true) or disabled (false).  If the optional has no value
@@ -834,7 +834,7 @@ public:
   const Optional<bool> &isForced() const { return IsForced; }
 
 private:
-  /// \brief Filter out checks between pointers from the same partition.
+  /// Filter out checks between pointers from the same partition.
   ///
   /// \p PtrToPartition contains the partition number for pointers.  Partition
   /// number -1 means that the pointer is used in multiple partitions.  In this
@@ -873,7 +873,7 @@ private:
     return Checks;
   }
 
-  /// \brief Check whether the loop metadata is forcing distribution to be
+  /// Check whether the loop metadata is forcing distribution to be
   /// enabled/disabled.
   void setForced() {
     Optional<const MDOperand *> Value =
@@ -896,7 +896,7 @@ private:
   ScalarEvolution *SE;
   OptimizationRemarkEmitter *ORE;
 
-  /// \brief Indicates whether distribution is forced to be enabled/disabled for
+  /// Indicates whether distribution is forced to be enabled/disabled for
   /// the loop.
   ///
   /// If the optional has a value, it indicates whether distribution was forced
@@ -939,7 +939,7 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
 
 namespace {
 
-/// \brief The pass class.
+/// The pass class.
 class LoopDistributeLegacy : public FunctionPass {
 public:
   static char ID;

@@ -90,10 +90,10 @@ public:
     assert(BlockScope.empty() && CurAbbrevs.empty() && "Block imbalance");
   }
 
-  /// \brief Retrieve the current position in the stream, in bits.
+  /// Retrieve the current position in the stream, in bits.
   uint64_t GetCurrentBitNo() const { return GetBufferOffset() * 8 + CurBit; }
 
-  /// \brief Retrieve the number of bits currently used to encode an abbrev ID.
+  /// Retrieve the number of bits currently used to encode an abbrev ID.
   unsigned GetAbbrevIDWidth() const { return CurCodeSize; }
 
   //===--------------------------------------------------------------------===//

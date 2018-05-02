@@ -30,7 +30,7 @@ class Type;
 /// Module (intermediate representation) with the corresponding features. Note
 /// that this does not verify that the generated Module is valid, so you should
 /// run the verifier after parsing the file to check that it is okay.
-/// \brief Parse LLVM Assembly from a file
+/// Parse LLVM Assembly from a file
 /// \param Filename The name of the file to parse
 /// \param Error Error result info.
 /// \param Context Context in which to allocate globals info.
@@ -50,7 +50,7 @@ parseAssemblyFile(StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
 /// Module (intermediate representation) with the corresponding features. Note
 /// that this does not verify that the generated Module is valid, so you should
 /// run the verifier after parsing the file to check that it is okay.
-/// \brief Parse LLVM Assembly from a string
+/// Parse LLVM Assembly from a string
 /// \param AsmString The string containing assembly
 /// \param Error Error result info.
 /// \param Context Context in which to allocate globals info.
@@ -68,7 +68,7 @@ std::unique_ptr<Module> parseAssemblyString(StringRef AsmString,
                                             StringRef DataLayoutString = "");
 
 /// parseAssemblyFile and parseAssemblyString are wrappers around this function.
-/// \brief Parse LLVM Assembly from a MemoryBuffer.
+/// Parse LLVM Assembly from a MemoryBuffer.
 /// \param F The MemoryBuffer containing assembly
 /// \param Err Error result info.
 /// \param Slots The optional slot mapping that will be initialized during

@@ -73,19 +73,19 @@ ConstantFoldCompareInstOperands(unsigned Predicate, Constant *LHS,
                                 Constant *RHS, const DataLayout &DL,
                                 const TargetLibraryInfo *TLI = nullptr);
 
-/// \brief Attempt to constant fold a binary operation with the specified
+/// Attempt to constant fold a binary operation with the specified
 /// operands.  If it fails, it returns a constant expression of the specified
 /// operands.
 Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
                                        Constant *RHS, const DataLayout &DL);
 
-/// \brief Attempt to constant fold a select instruction with the specified
+/// Attempt to constant fold a select instruction with the specified
 /// operands. The constant result is returned if successful; if not, null is
 /// returned.
 Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
                                         Constant *V2);
 
-/// \brief Attempt to constant fold a cast with the specified operand.  If it
+/// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
 Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
                                   const DataLayout &DL);
@@ -96,25 +96,25 @@ Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
 Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
                                              ArrayRef<unsigned> Idxs);
 
-/// \brief Attempt to constant fold an extractvalue instruction with the
+/// Attempt to constant fold an extractvalue instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.
 Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
                                               ArrayRef<unsigned> Idxs);
 
-/// \brief Attempt to constant fold an insertelement instruction with the
+/// Attempt to constant fold an insertelement instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.
 Constant *ConstantFoldInsertElementInstruction(Constant *Val,
                                                Constant *Elt,
                                                Constant *Idx);
 
-/// \brief Attempt to constant fold an extractelement instruction with the
+/// Attempt to constant fold an extractelement instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.
 Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 
-/// \brief Attempt to constant fold a shufflevector instruction with the
+/// Attempt to constant fold a shufflevector instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.
 Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
@@ -153,7 +153,7 @@ Constant *ConstantFoldCall(ImmutableCallSite CS, Function *F,
 Constant *ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
                                          const DataLayout &DL);
 
-/// \brief Check whether the given call has no side-effects.
+/// Check whether the given call has no side-effects.
 /// Specifically checks for math routimes which sometimes set errno.
 bool isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI);
 }

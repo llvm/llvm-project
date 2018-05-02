@@ -682,7 +682,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   llvm_unreachable("unknown architecture");
 }
 
-/// \brief Construct a triple from the string representation provided.
+/// Construct a triple from the string representation provided.
 ///
 /// This stores the string representation and parses the various pieces into
 /// enum members.
@@ -711,7 +711,7 @@ Triple::Triple(const Twine &Str)
     ObjectFormat = getDefaultFormat(*this);
 }
 
-/// \brief Construct a triple from string representations of the architecture,
+/// Construct a triple from string representations of the architecture,
 /// vendor, and OS.
 ///
 /// This joins each argument into a canonical string representation and parses
@@ -727,7 +727,7 @@ Triple::Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr)
   ObjectFormat = getDefaultFormat(*this);
 }
 
-/// \brief Construct a triple from string representations of the architecture,
+/// Construct a triple from string representations of the architecture,
 /// vendor, OS, and environment.
 ///
 /// This joins each argument into a canonical string representation and parses

@@ -54,7 +54,7 @@ class TypedInit;
 
 class RecTy {
 public:
-  /// \brief Subclass discriminator (for dyn_cast<> et al.)
+  /// Subclass discriminator (for dyn_cast<> et al.)
   enum RecTyKind {
     BitRecTyKind,
     BitsRecTyKind,
@@ -287,7 +287,7 @@ RecTy *resolveTypes(RecTy *T1, RecTy *T2);
 
 class Init {
 protected:
-  /// \brief Discriminator enum (for isa<>, dyn_cast<>, et al.)
+  /// Discriminator enum (for isa<>, dyn_cast<>, et al.)
   ///
   /// This enum is laid out by a preorder traversal of the inheritance
   /// hierarchy, and does not contain an entry for abstract classes, as per

@@ -73,7 +73,7 @@ private:
   void EmitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
   void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
-  /// \brief Merge the content of the fragment \p EF into the fragment \p DF.
+  /// Merge the content of the fragment \p EF into the fragment \p DF.
   void mergeFragment(MCDataFragment *, MCDataFragment *);
 
   bool SeenIdent;

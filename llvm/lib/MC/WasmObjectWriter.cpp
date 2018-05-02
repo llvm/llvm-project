@@ -37,6 +37,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mc"
 
+#if !defined(NDEBUG)
 static std::string toString(wasm::WasmSymbolType type) {
   switch (type) {
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
@@ -50,6 +51,7 @@ static std::string toString(wasm::WasmSymbolType type) {
   }
   llvm_unreachable("unknown symbol type");
 }
+#endif
 
 static std::string relocTypetoString(uint32_t type) {
   switch (type) {

@@ -45,7 +45,7 @@ enum {
   FIXED_NUM_SGPRS_FOR_INIT_BUG = 96
 };
 
-/// \brief Instruction set architecture version.
+/// Instruction set architecture version.
 struct IsaVersion {
   unsigned Major;
   unsigned Minor;
@@ -55,7 +55,7 @@ struct IsaVersion {
 /// \returns Isa version for given subtarget \p Features.
 IsaVersion getIsaVersion(const FeatureBitset &Features);
 
-/// \brief Streams isa version string for given subtarget \p STI into \p Stream.
+/// Streams isa version string for given subtarget \p STI into \p Stream.
 void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
 
 /// \returns True if given subtarget \p Features support code object version 3,
@@ -221,7 +221,7 @@ unsigned decodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 /// \returns Decoded Lgkmcnt from given \p Waitcnt for given isa \p Version.
 unsigned decodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 
-/// \brief Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
+/// Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
 /// \p Version, and writes decoded values into \p Vmcnt, \p Expcnt and
 /// \p Lgkmcnt respectively.
 ///
@@ -245,7 +245,7 @@ unsigned encodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
 unsigned encodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
                        unsigned Lgkmcnt);
 
-/// \brief Encodes \p Vmcnt, \p Expcnt and \p Lgkmcnt into Waitcnt for given isa
+/// Encodes \p Vmcnt, \p Expcnt and \p Lgkmcnt into Waitcnt for given isa
 /// \p Version.
 ///
 /// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are encoded as follows:
@@ -292,36 +292,36 @@ bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 
-/// \brief Is Reg - scalar register
+/// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
 
-/// \brief Is there any intersection between registers
+/// Is there any intersection between registers
 bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
 
-/// \brief Convert hardware register \p Reg to a pseudo register
+/// Convert hardware register \p Reg to a pseudo register
 LLVM_READNONE
 unsigned mc2PseudoReg(unsigned Reg);
 
-/// \brief Can this operand also contain immediate values?
+/// Can this operand also contain immediate values?
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
-/// \brief Is this floating-point operand?
+/// Is this floating-point operand?
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
-/// \brief Does this opearnd support only inlinable literals?
+/// Does this opearnd support only inlinable literals?
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
-/// \brief Get the size in bits of a register from the register class \p RC.
+/// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(unsigned RCID);
 
-/// \brief Get the size in bits of a register from the register class \p RC.
+/// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
 
-/// \brief Get size of register operand
+/// Get size of register operand
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo);
 
@@ -358,7 +358,7 @@ inline unsigned getOperandSize(const MCInstrDesc &Desc, unsigned OpNo) {
   return getOperandSize(Desc.OpInfo[OpNo]);
 }
 
-/// \brief Is this literal inlinable
+/// Is this literal inlinable
 LLVM_READNONE
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
 

@@ -39,7 +39,7 @@ using testing::Invoke;
 using testing::WithArgs;
 using testing::_;
 
-/// \brief A CRTP base for analysis mock handles
+/// A CRTP base for analysis mock handles
 ///
 /// This class reconciles mocking with the value semantics implementation of the
 /// AnalysisManager. Analysis mock handles should derive from this class and
@@ -110,7 +110,7 @@ protected:
   }
 };
 
-/// \brief A CRTP base for pass mock handles
+/// A CRTP base for pass mock handles
 ///
 /// This class reconciles mocking with the value semantics implementation of the
 /// PassManager. Pass mock handles should derive from this class and

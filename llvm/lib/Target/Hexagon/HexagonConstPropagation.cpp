@@ -713,7 +713,7 @@ void MachineConstPropagator::visitNonBranch(const MachineInstr &MI) {
   }
 }
 
-// \brief Starting at a given branch, visit remaining branches in the block.
+// Starting at a given branch, visit remaining branches in the block.
 // Traverse over the subsequent branches for as long as the preceding one
 // can fall through. Add all the possible targets to the flow work queue,
 // including the potential fall-through to the layout-successor block.

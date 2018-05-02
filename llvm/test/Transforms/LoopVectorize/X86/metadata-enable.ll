@@ -2076,12 +2076,12 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ; O1VEC2-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; O1VEC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; O1VEC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[TMP0]]
-; O1VEC2-NEXT:    [[TMP2:%.*]] = getelementptr i32, i32* [[TMP1]], i32 0
+; O1VEC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i32 0
 ; O1VEC2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
 ; O1VEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
 ; O1VEC2-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT2]]
 ; O1VEC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP0]]
-; O1VEC2-NEXT:    [[TMP6:%.*]] = getelementptr i32, i32* [[TMP5]], i32 0
+; O1VEC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
 ; O1VEC2-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; O1VEC2-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP7]], align 4
 ; O1VEC2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
@@ -2121,12 +2121,12 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ; OzVEC2-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; OzVEC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; OzVEC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[TMP0]]
-; OzVEC2-NEXT:    [[TMP2:%.*]] = getelementptr i32, i32* [[TMP1]], i32 0
+; OzVEC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i32 0
 ; OzVEC2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
 ; OzVEC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
 ; OzVEC2-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT2]]
 ; OzVEC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP0]]
-; OzVEC2-NEXT:    [[TMP6:%.*]] = getelementptr i32, i32* [[TMP5]], i32 0
+; OzVEC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
 ; OzVEC2-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; OzVEC2-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP7]], align 4
 ; OzVEC2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4

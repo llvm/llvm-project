@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Fix up code to meet LiveInterval's requirements.
+/// Fix up code to meet LiveInterval's requirements.
 ///
 /// Some CodeGen passes don't preserve LiveInterval's requirements, because
 /// they run after register allocation and it isn't important. However,

@@ -28,7 +28,7 @@
 using namespace llvm;
 
 namespace {
-/// \brief NVPTXAssignValidGlobalNames
+/// NVPTXAssignValidGlobalNames
 class NVPTXAssignValidGlobalNames : public ModulePass {
 public:
   static char ID;
@@ -36,7 +36,7 @@ public:
 
   bool runOnModule(Module &M) override;
 
-  /// \brief Clean up the name to remove symbols invalid in PTX.
+  /// Clean up the name to remove symbols invalid in PTX.
   std::string cleanUpName(StringRef Name);
 };
 }

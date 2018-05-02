@@ -1,0 +1,3 @@
+RUN: %cpp_compiler %S/AcquireCrashStateTest.cpp -o %t
+RUN: %t 2>&1 | FileCheck %s
+CHECK-NOT: fuzz target exited

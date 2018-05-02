@@ -97,11 +97,17 @@ div.d $f0, $f2, $f4         # CHECK: div.d $f0, $f2, $f4    # encoding: [0x54,0x
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FDIV_D32_MM
 divu $zero, $9, $7          # CHECK: divu $zero, $9, $7     # encoding: [0x00,0xe9,0xbb,0x3c]
 sll $4, $3, 7               # CHECK: sll $4, $3, 7          # encoding: [0x00,0x83,0x38,0x00]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLL_MM
 sllv $2, $3, $5             # CHECK: sllv $2, $3, $5        # encoding: [0x00,0x65,0x10,0x10]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLLV_MM
 sra $4, $3, 7               # CHECK: sra $4, $3, 7          # encoding: [0x00,0x83,0x38,0x80]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRA_MM
 srav $2, $3, $5             # CHECK: srav $2, $3, $5        # encoding: [0x00,0x65,0x10,0x90]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRAV_MM
 srl $4, $3, 7               # CHECK: srl $4, $3, 7          # encoding: [0x00,0x83,0x38,0x40]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRL_MM
 srlv $2, $3, $5             # CHECK: srlv $2, $3, $5        # encoding: [0x00,0x65,0x10,0x50]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRLV_MM
 rotr $9, $6, 7              # CHECK: rotr $9, $6, 7         # encoding: [0x01,0x26,0x38,0xc0]
 rotrv $9, $6, $7            # CHECK: rotrv $9, $6, $7       # encoding: [0x00,0xc7,0x48,0xd0]
 lb $5, 8($4)                # CHECK: lb $5, 8($4)           # encoding: [0x1c,0xa4,0x00,0x08]

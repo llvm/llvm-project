@@ -23,7 +23,7 @@ namespace llvm {
 class Function;
 class Value;
 
-/// \brief Structure to hold a use-list order.
+/// Structure to hold a use-list order.
 struct UseListOrder {
   const Value *V = nullptr;
   const Function *F = nullptr;

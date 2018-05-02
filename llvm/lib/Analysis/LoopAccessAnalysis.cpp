@@ -92,7 +92,7 @@ static cl::opt<unsigned, true> RuntimeMemoryCheckThreshold(
     cl::location(VectorizerParams::RuntimeMemoryCheckThreshold), cl::init(8));
 unsigned VectorizerParams::RuntimeMemoryCheckThreshold;
 
-/// \brief The maximum iterations used to merge memory checks
+/// The maximum iterations used to merge memory checks
 static cl::opt<unsigned> MemoryCheckMergeThreshold(
     "memory-check-merge-threshold", cl::Hidden,
     cl::desc("Maximum number of comparisons done when trying to merge "
@@ -102,7 +102,7 @@ static cl::opt<unsigned> MemoryCheckMergeThreshold(
 /// Maximum SIMD width.
 const unsigned VectorizerParams::MaxVectorWidth = 64;
 
-/// \brief We collect dependences up to this threshold.
+/// We collect dependences up to this threshold.
 static cl::opt<unsigned>
     MaxDependences("max-dependences", cl::Hidden,
                    cl::desc("Maximum number of dependences collected by "
@@ -124,7 +124,7 @@ static cl::opt<bool> EnableMemAccessVersioning(
     "enable-mem-access-versioning", cl::init(true), cl::Hidden,
     cl::desc("Enable symbolic stride memory access versioning"));
 
-/// \brief Enable store-to-load forwarding conflict detection. This option can
+/// Enable store-to-load forwarding conflict detection. This option can
 /// be disabled for correctness testing.
 static cl::opt<bool> EnableForwardingConflictDetection(
     "store-to-load-forwarding-conflict-detection", cl::Hidden,
@@ -490,13 +490,13 @@ void RuntimePointerChecking::print(raw_ostream &OS, unsigned Depth) const {
 
 namespace {
 
-/// \brief Analyses memory accesses in a loop.
+/// Analyses memory accesses in a loop.
 ///
 /// Checks whether run time pointer checks are needed and builds sets for data
 /// dependence checking.
 class AccessAnalysis {
 public:
-  /// \brief Read or write access location.
+  /// Read or write access location.
   typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
   typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
 
@@ -506,7 +506,7 @@ public:
       : DL(Dl), AST(*AA), LI(LI), DepCands(DA), IsRTCheckAnalysisNeeded(false),
         PSE(PSE) {}
 
-  /// \brief Register a load  and whether it is only read from.
+  /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, bool IsReadOnly) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
     AST.add(Ptr, MemoryLocation::UnknownSize, Loc.AATags);
@@ -515,14 +515,14 @@ public:
       ReadOnlyPtr.insert(Ptr);
   }
 
-  /// \brief Register a store.
+  /// Register a store.
   void addStore(MemoryLocation &Loc) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
     AST.add(Ptr, MemoryLocation::UnknownSize, Loc.AATags);
     Accesses.insert(MemAccessInfo(Ptr, true));
   }
 
-  /// \brief Check if we can emit a run-time no-alias check for \p Access.
+  /// Check if we can emit a run-time no-alias check for \p Access.
   ///
   /// Returns true if we can emit a run-time no alias check for \p Access.
   /// If we can check this access, this also adds it to a dependence set and
@@ -537,7 +537,7 @@ public:
                             unsigned ASId, bool ShouldCheckStride,
                             bool Assume);
 
-  /// \brief Check whether we can check the pointers at runtime for
+  /// Check whether we can check the pointers at runtime for
   /// non-intersection.
   ///
   /// Returns true if we need no check or if we do and we can generate them
@@ -546,13 +546,13 @@ public:
                        Loop *TheLoop, const ValueToValueMap &Strides,
                        bool ShouldCheckWrap = false);
 
-  /// \brief Goes over all memory accesses, checks whether a RT check is needed
+  /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
   void buildDependenceSets() {
     processMemAccesses();
   }
 
-  /// \brief Initial processing of memory accesses determined that we need to
+  /// Initial processing of memory accesses determined that we need to
   /// perform dependency checking.
   ///
   /// Note that this can later be cleared if we retry memcheck analysis without
@@ -570,7 +570,7 @@ public:
 private:
   typedef SetVector<MemAccessInfo> PtrAccessSet;
 
-  /// \brief Go over all memory access and check whether runtime pointer checks
+  /// Go over all memory access and check whether runtime pointer checks
   /// are needed and build sets of dependency check candidates.
   void processMemAccesses();
 
@@ -596,7 +596,7 @@ private:
   /// dependence check.
   MemoryDepChecker::DepCandidates &DepCands;
 
-  /// \brief Initial processing of memory accesses determined that we may need
+  /// Initial processing of memory accesses determined that we may need
   /// to add memchecks.  Perform the analysis to determine the necessary checks.
   ///
   /// Note that, this is different from isDependencyCheckNeeded.  When we retry
@@ -611,7 +611,7 @@ private:
 
 } // end anonymous namespace
 
-/// \brief Check whether a pointer can participate in a runtime bounds check.
+/// Check whether a pointer can participate in a runtime bounds check.
 /// If \p Assume, try harder to prove that we can compute the bounds of \p Ptr
 /// by adding run-time checks (overflow checks) if necessary.
 static bool hasComputableBounds(PredicatedScalarEvolution &PSE,
@@ -634,7 +634,7 @@ static bool hasComputableBounds(PredicatedScalarEvolution &PSE,
   return AR->isAffine();
 }
 
-/// \brief Check whether a pointer address cannot wrap.
+/// Check whether a pointer address cannot wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE,
                      const ValueToValueMap &Strides, Value *Ptr, Loop *L) {
   const SCEV *PtrScev = PSE.getSCEV(Ptr);
@@ -931,7 +931,7 @@ static bool isInBoundsGep(Value *Ptr) {
   return false;
 }
 
-/// \brief Return true if an AddRec pointer \p Ptr is unsigned non-wrapping,
+/// Return true if an AddRec pointer \p Ptr is unsigned non-wrapping,
 /// i.e. monotonically increasing/decreasing.
 static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
                            PredicatedScalarEvolution &PSE, const Loop *L) {
@@ -979,7 +979,7 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
   return false;
 }
 
-/// \brief Check whether the access through \p Ptr has a constant stride.
+/// Check whether the access through \p Ptr has a constant stride.
 int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
                            const Loop *Lp, const ValueToValueMap &StridesMap,
                            bool Assume, bool ShouldCheckWrap) {
@@ -1372,7 +1372,7 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   return false;
 }
 
-/// \brief Check the dependence for two accesses with the same stride \p Stride.
+/// Check the dependence for two accesses with the same stride \p Stride.
 /// \p Distance is the positive distance and \p TypeByteSize is type size in
 /// bytes.
 ///
@@ -2025,7 +2025,7 @@ static Instruction *getFirstInst(Instruction *FirstInst, Value *V,
 
 namespace {
 
-/// \brief IR Values for the lower and upper bounds of a pointer evolution.  We
+/// IR Values for the lower and upper bounds of a pointer evolution.  We
 /// need to use value-handles because SCEV expansion can invalidate previously
 /// expanded values.  Thus expansion of a pointer can invalidate the bounds for
 /// a previous one.
@@ -2036,7 +2036,7 @@ struct PointerBounds {
 
 } // end anonymous namespace
 
-/// \brief Expand code for the lower and upper bound of the pointer group \p CG
+/// Expand code for the lower and upper bound of the pointer group \p CG
 /// in \p TheLoop.  \return the values for the bounds.
 static PointerBounds
 expandBounds(const RuntimePointerChecking::CheckingPtrGroup *CG, Loop *TheLoop,
@@ -2074,7 +2074,7 @@ expandBounds(const RuntimePointerChecking::CheckingPtrGroup *CG, Loop *TheLoop,
   }
 }
 
-/// \brief Turns a collection of checks into a collection of expanded upper and
+/// Turns a collection of checks into a collection of expanded upper and
 /// lower bounds for both pointers in the check.
 static SmallVector<std::pair<PointerBounds, PointerBounds>, 4> expandBounds(
     const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &PointerChecks,

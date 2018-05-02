@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains signature information for runtime libcalls.
+/// This file contains signature information for runtime libcalls.
 ///
 /// CodeGen uses external symbols, which it refers to by name. The WebAssembly
 /// target needs type information for all functions. This file contains a big

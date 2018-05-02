@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a pass that transforms irreducible control flow
+/// This file implements a pass that transforms irreducible control flow
 /// into reducible control flow. Irreducible control flow means multiple-entry
 /// loops; they appear as CFG cycles that are not recorded in MachineLoopInfo
 /// due to being unnatural.

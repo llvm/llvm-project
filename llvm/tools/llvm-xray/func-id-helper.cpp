@@ -1,4 +1,4 @@
-//===- xray-fc-account.cc - XRay Function Call Accounting Tool ------------===//
+//===- xray-fc-account.cpp: XRay Function Call Accounting Tool ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

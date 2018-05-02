@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains code to lower XCore MachineInstrs to their
+/// This file contains code to lower XCore MachineInstrs to their
 /// corresponding MCInst records.
 ///
 //===----------------------------------------------------------------------===//

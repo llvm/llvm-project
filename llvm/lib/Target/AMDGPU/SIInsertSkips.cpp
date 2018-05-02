@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This pass inserts branches on the 0 exec mask over divergent branches
+/// This pass inserts branches on the 0 exec mask over divergent branches
 /// branches when it's expected that jumping over the untaken control flow will
 /// be cheaper than having every workitem no-op through it.
 //

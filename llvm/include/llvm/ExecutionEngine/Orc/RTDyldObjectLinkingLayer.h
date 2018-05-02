@@ -41,7 +41,7 @@ public:
 
 protected:
 
-  /// @brief Holds an object to be allocated/linked as a unit in the JIT.
+  /// Holds an object to be allocated/linked as a unit in the JIT.
   ///
   /// An instance of this class will be created for each object added
   /// via JITObjectLayer::addObject. Deleting the instance (via
@@ -81,7 +81,7 @@ protected:
   };
 };
 
-/// @brief Bare bones object linking layer.
+/// Bare bones object linking layer.
 ///
 ///   This class is intended to be used as the base layer for a JIT. It allows
 /// object files to be loaded into memory, linked, and the addresses of their
@@ -92,12 +92,12 @@ public:
 
   using RTDyldObjectLinkingLayerBase::ObjectPtr;
 
-  /// @brief Functor for receiving object-loaded notifications.
+  /// Functor for receiving object-loaded notifications.
   using NotifyLoadedFtor =
       std::function<void(VModuleKey, const object::ObjectFile &Obj,
                          const RuntimeDyld::LoadedObjectInfo &)>;
 
-  /// @brief Functor for receiving finalization notifications.
+  /// Functor for receiving finalization notifications.
   using NotifyFinalizedFtor = std::function<void(VModuleKey)>;
 
 private:
@@ -235,7 +235,7 @@ public:
 
   using ResourcesGetter = std::function<Resources(VModuleKey)>;
 
-  /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
+  /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
   RTDyldObjectLinkingLayer(
       ExecutionSession &ES, ResourcesGetter GetResources,
@@ -246,7 +246,7 @@ public:
         NotifyFinalized(std::move(NotifyFinalized)), ProcessAllSections(false) {
   }
 
-  /// @brief Set the 'ProcessAllSections' flag.
+  /// Set the 'ProcessAllSections' flag.
   ///
   /// If set to true, all sections in each object file will be allocated using
   /// the memory manager, rather than just the sections required for execution.
@@ -256,7 +256,7 @@ public:
     this->ProcessAllSections = ProcessAllSections;
   }
 
-  /// @brief Add an object to the JIT.
+  /// Add an object to the JIT.
   Error addObject(VModuleKey K, ObjectPtr ObjBuffer) {
 
     auto Obj =
@@ -275,7 +275,7 @@ public:
     return Error::success();
   }
 
-  /// @brief Remove the object associated with VModuleKey K.
+  /// Remove the object associated with VModuleKey K.
   ///
   ///   All memory allocated for the object will be freed, and the sections and
   /// symbols it provided will no longer be available. No attempt is made to
@@ -290,7 +290,7 @@ public:
     return Error::success();
   }
 
-  /// @brief Search for the given named symbol.
+  /// Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it exists.
@@ -304,7 +304,7 @@ public:
     return nullptr;
   }
 
-  /// @brief Search for the given named symbol in the context of the loaded
+  /// Search for the given named symbol in the context of the loaded
   ///        object represented by the VModuleKey K.
   /// @param K The VModuleKey for the object to search in.
   /// @param Name The name of the symbol to search for.
@@ -317,7 +317,7 @@ public:
     return LinkedObjects[K]->getSymbol(Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Map section addresses for the object associated with the
+  /// Map section addresses for the object associated with the
   ///        VModuleKey K.
   void mapSectionAddress(VModuleKey K, const void *LocalAddress,
                          JITTargetAddress TargetAddr) {
@@ -325,7 +325,7 @@ public:
     LinkedObjects[K]->mapSectionAddress(LocalAddress, TargetAddr);
   }
 
-  /// @brief Immediately emit and finalize the object represented by the given
+  /// Immediately emit and finalize the object represented by the given
   ///        VModuleKey.
   /// @param K VModuleKey for object to emit/finalize.
   Error emitAndFinalize(VModuleKey K) {

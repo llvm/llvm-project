@@ -39,7 +39,7 @@ public:
   /// @}
 };
 
-/// \brief Construct a new Wasm writer instance.
+/// Construct a new Wasm writer instance.
 ///
 /// \param MOTW - The target specific Wasm writer subclass.
 /// \param OS - The stream to write to.

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Lower @llvm.global_dtors.
+/// Lower @llvm.global_dtors.
 ///
 /// WebAssembly doesn't have a builtin way to invoke static destructors.
 /// Implement @llvm.global_dtors by creating wrapper functions that are

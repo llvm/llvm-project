@@ -85,7 +85,7 @@ public:
 /// stack offsets of the object, eliminating all MO_FrameIndex operands from
 /// the program.
 ///
-/// @brief Abstract Stack Frame Information
+/// Abstract Stack Frame Information
 class MachineFrameInfo {
 
   // Represent a single object allocated on the stack.

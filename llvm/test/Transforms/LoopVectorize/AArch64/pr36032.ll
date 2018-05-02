@@ -78,11 +78,11 @@ define void @_Z1dv() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[CONV]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [6 x i8], [6 x i8]* @c, i64 0, i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, i8* [[TMP22]], i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, i8* [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8* [[TMP23]] to <4 x i8>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP24]], align 1, !alias.scope !0
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, i8* [[TMP25]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, i8* [[TMP25]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i8* [[TMP26]] to <4 x i8>*
 ; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], <4 x i8>* [[TMP27]], align 1, !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4

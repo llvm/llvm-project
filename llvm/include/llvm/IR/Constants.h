@@ -80,7 +80,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// This is the shared class of boolean and integer constants. This class
 /// represents both boolean and integral constants.
-/// @brief Class for constant integers.
+/// Class for constant integers.
 class ConstantInt final : public ConstantData {
   friend class Constant;
 
@@ -107,7 +107,7 @@ public:
   /// to fit the type, unless isSigned is true, in which case the value will
   /// be interpreted as a 64-bit signed integer and sign-extended to fit
   /// the type.
-  /// @brief Get a ConstantInt for a specific value.
+  /// Get a ConstantInt for a specific value.
   static ConstantInt *get(IntegerType *Ty, uint64_t V,
                           bool isSigned = false);
 
@@ -115,7 +115,7 @@ public:
   /// value V will be canonicalized to a an unsigned APInt. Accessing it with
   /// either getSExtValue() or getZExtValue() will yield a correctly sized and
   /// signed value for the type Ty.
-  /// @brief Get a ConstantInt for a specific signed value.
+  /// Get a ConstantInt for a specific signed value.
   static ConstantInt *getSigned(IntegerType *Ty, int64_t V);
   static Constant *getSigned(Type *Ty, int64_t V);
 
@@ -134,7 +134,7 @@ public:
 
   /// Return the constant as an APInt value reference. This allows clients to
   /// obtain a full-precision copy of the value.
-  /// @brief Return the constant's value.
+  /// Return the constant's value.
   inline const APInt &getValue() const {
     return Val;
   }
@@ -145,7 +145,7 @@ public:
   /// Return the constant as a 64-bit unsigned integer value after it
   /// has been zero extended as appropriate for the type of this constant. Note
   /// that this method can assert if the value does not fit in 64 bits.
-  /// @brief Return the zero extended value.
+  /// Return the zero extended value.
   inline uint64_t getZExtValue() const {
     return Val.getZExtValue();
   }
@@ -153,7 +153,7 @@ public:
   /// Return the constant as a 64-bit integer value after it has been sign
   /// extended as appropriate for the type of this constant. Note that
   /// this method can assert if the value does not fit in 64 bits.
-  /// @brief Return the sign extended value.
+  /// Return the sign extended value.
   inline int64_t getSExtValue() const {
     return Val.getSExtValue();
   }
@@ -161,7 +161,7 @@ public:
   /// A helper method that can be used to determine if the constant contained
   /// within is equal to a constant.  This only works for very small values,
   /// because this is all that can be represented with all types.
-  /// @brief Determine if this constant's value is same as an unsigned char.
+  /// Determine if this constant's value is same as an unsigned char.
   bool equalsInt(uint64_t V) const {
     return Val == V;
   }
@@ -181,7 +181,7 @@ public:
   /// the signed version avoids callers having to convert a signed quantity
   /// to the appropriate unsigned type before calling the method.
   /// @returns true if V is a valid value for type Ty
-  /// @brief Determine if the value is in range for the given type.
+  /// Determine if the value is in range for the given type.
   static bool isValueValidForType(Type *Ty, uint64_t V);
   static bool isValueValidForType(Type *Ty, int64_t V);
 
@@ -197,7 +197,7 @@ public:
   /// This is just a convenience method to make client code smaller for a
   /// common case. It also correctly performs the comparison without the
   /// potential for an assertion from getZExtValue().
-  /// @brief Determine if the value is one.
+  /// Determine if the value is one.
   bool isOne() const {
     return Val.isOneValue();
   }
@@ -205,7 +205,7 @@ public:
   /// This function will return true iff every bit in this constant is set
   /// to true.
   /// @returns true iff this constant's bits are all set to true.
-  /// @brief Determine if the value is all ones.
+  /// Determine if the value is all ones.
   bool isMinusOne() const {
     return Val.isAllOnesValue();
   }
@@ -214,7 +214,7 @@ public:
   /// value that may be represented by the constant's type.
   /// @returns true iff this is the largest value that may be represented
   /// by this type.
-  /// @brief Determine if the value is maximal.
+  /// Determine if the value is maximal.
   bool isMaxValue(bool isSigned) const {
     if (isSigned)
       return Val.isMaxSignedValue();
@@ -226,7 +226,7 @@ public:
   /// value that may be represented by this constant's type.
   /// @returns true if this is the smallest value that may be represented by
   /// this type.
-  /// @brief Determine if the value is minimal.
+  /// Determine if the value is minimal.
   bool isMinValue(bool isSigned) const {
     if (isSigned)
       return Val.isMinSignedValue();
@@ -238,7 +238,7 @@ public:
   /// active bits bigger than 64 bits or a value greater than the given uint64_t
   /// value.
   /// @returns true iff this constant is greater or equal to the given number.
-  /// @brief Determine if the value is greater or equal to the given number.
+  /// Determine if the value is greater or equal to the given number.
   bool uge(uint64_t Num) const {
     return Val.uge(Num);
   }
@@ -247,12 +247,12 @@ public:
   /// return it, otherwise return the limit value.  This causes the value
   /// to saturate to the limit.
   /// @returns the min of the value of the constant and the specified value
-  /// @brief Get the constant's value with a saturation limit
+  /// Get the constant's value with a saturation limit
   uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
     return Val.getLimitedValue(Limit);
   }
 
-  /// @brief Methods to support type inquiry through isa, cast, and dyn_cast.
+  /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
     return V->getValueID() == ConstantIntVal;
   }
@@ -815,7 +815,7 @@ public:
   /// Return the ConstantTokenNone.
   static ConstantTokenNone *get(LLVMContext &Context);
 
-  /// @brief Methods to support type inquiry through isa, cast, and dyn_cast.
+  /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
     return V->getValueID() == ConstantTokenNoneVal;
   }
@@ -1022,7 +1022,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
 
-  /// \brief Convenience function for getting a Cast operation.
+  /// Convenience function for getting a Cast operation.
   ///
   /// \param ops The opcode for the conversion
   /// \param C  The constant to be converted
@@ -1031,62 +1031,62 @@ public:
   static Constant *getCast(unsigned ops, Constant *C, Type *Ty,
                            bool OnlyIfReduced = false);
 
-  // @brief Create a ZExt or BitCast cast constant expression
+  // Create a ZExt or BitCast cast constant expression
   static Constant *getZExtOrBitCast(
     Constant *C,   ///< The constant to zext or bitcast
     Type *Ty ///< The type to zext or bitcast C to
   );
 
-  // @brief Create a SExt or BitCast cast constant expression
+  // Create a SExt or BitCast cast constant expression
   static Constant *getSExtOrBitCast(
     Constant *C,   ///< The constant to sext or bitcast
     Type *Ty ///< The type to sext or bitcast C to
   );
 
-  // @brief Create a Trunc or BitCast cast constant expression
+  // Create a Trunc or BitCast cast constant expression
   static Constant *getTruncOrBitCast(
     Constant *C,   ///< The constant to trunc or bitcast
     Type *Ty ///< The type to trunc or bitcast C to
   );
 
-  /// @brief Create a BitCast, AddrSpaceCast, or a PtrToInt cast constant
+  /// Create a BitCast, AddrSpaceCast, or a PtrToInt cast constant
   /// expression.
   static Constant *getPointerCast(
     Constant *C,   ///< The pointer value to be casted (operand 0)
     Type *Ty ///< The type to which cast should be made
   );
 
-  /// @brief Create a BitCast or AddrSpaceCast for a pointer type depending on
+  /// Create a BitCast or AddrSpaceCast for a pointer type depending on
   /// the address space.
   static Constant *getPointerBitCastOrAddrSpaceCast(
     Constant *C,   ///< The constant to addrspacecast or bitcast
     Type *Ty ///< The type to bitcast or addrspacecast C to
   );
 
-  /// @brief Create a ZExt, Bitcast or Trunc for integer -> integer casts
+  /// Create a ZExt, Bitcast or Trunc for integer -> integer casts
   static Constant *getIntegerCast(
     Constant *C,    ///< The integer constant to be casted
     Type *Ty, ///< The integer type to cast to
     bool isSigned   ///< Whether C should be treated as signed or not
   );
 
-  /// @brief Create a FPExt, Bitcast or FPTrunc for fp -> fp casts
+  /// Create a FPExt, Bitcast or FPTrunc for fp -> fp casts
   static Constant *getFPCast(
     Constant *C,    ///< The integer constant to be casted
     Type *Ty ///< The integer type to cast to
   );
 
-  /// @brief Return true if this is a convert constant expression
+  /// Return true if this is a convert constant expression
   bool isCast() const;
 
-  /// @brief Return true if this is a compare constant expression
+  /// Return true if this is a compare constant expression
   bool isCompare() const;
 
-  /// @brief Return true if this is an insertvalue or extractvalue expression,
+  /// Return true if this is an insertvalue or extractvalue expression,
   /// and the getIndices() method may be used.
   bool hasIndices() const;
 
-  /// @brief Return true if this is a getelementptr expression and all
+  /// Return true if this is a getelementptr expression and all
   /// the index operands are compile-time known integers within the
   /// corresponding notional static array extents. Note that this is
   /// not equivalant to, a subset of, or a superset of the "inbounds"
@@ -1106,7 +1106,7 @@ public:
   static Constant *get(unsigned Opcode, Constant *C1, Constant *C2,
                        unsigned Flags = 0, Type *OnlyIfReducedTy = nullptr);
 
-  /// \brief Return an ICmp or FCmp comparison operator constant expression.
+  /// Return an ICmp or FCmp comparison operator constant expression.
   ///
   /// \param OnlyIfReduced see \a getWithOperands() docs.
   static Constant *getCompare(unsigned short pred, Constant *C1, Constant *C2,

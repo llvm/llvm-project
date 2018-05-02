@@ -915,7 +915,7 @@ define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 12(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index:
@@ -960,7 +960,7 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 13(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 13(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index_2:
@@ -1016,7 +1016,7 @@ define i32 @load_i32_by_i8_zaext_loads(i8* %arg, i32 %arg1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 12(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zaext_loads:
@@ -1072,7 +1072,7 @@ define i32 @load_i32_by_i8_zsext_loads(i8* %arg, i32 %arg1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 12(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zsext_loads:

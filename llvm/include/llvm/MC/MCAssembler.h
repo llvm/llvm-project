@@ -130,7 +130,7 @@ private:
   // refactoring too.
   mutable SmallPtrSet<const MCSymbol *, 32> ThumbFuncs;
 
-  /// \brief The bundle alignment size currently set in the assembler.
+  /// The bundle alignment size currently set in the assembler.
   ///
   /// By default it's 0, which means bundling is disabled.
   unsigned BundleAlignSize;
@@ -178,11 +178,11 @@ private:
   bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF,
                                const MCAsmLayout &Layout) const;
 
-  /// \brief Perform one layout iteration and return true if any offsets
+  /// Perform one layout iteration and return true if any offsets
   /// were adjusted.
   bool layoutOnce(MCAsmLayout &Layout);
 
-  /// \brief Perform one layout iteration of the given section and return true
+  /// Perform one layout iteration of the given section and return true
   /// if any offsets were adjusted.
   bool layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec);
 
@@ -431,7 +431,7 @@ public:
       FileNames.push_back(FileName);
   }
 
-  /// \brief Write the necessary bundle padding to the given object writer.
+  /// Write the necessary bundle padding to the given object writer.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
   void writeFragmentPadding(const MCFragment &F, uint64_t FSize,
                             MCObjectWriter *OW) const;
@@ -441,7 +441,7 @@ public:
   void dump() const;
 };
 
-/// \brief Compute the amount of padding required before the fragment \p F to
+/// Compute the amount of padding required before the fragment \p F to
 /// obey bundling restrictions, where \p FOffset is the fragment's offset in
 /// its section and \p FSize is the fragment's size.
 uint64_t computeBundlePadding(const MCAssembler &Assembler, const MCFragment *F,

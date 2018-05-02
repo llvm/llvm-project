@@ -70,7 +70,7 @@ private:
   /// AllocaInst triggers a stack protector.
   SSPLayoutMap Layout;
 
-  /// \brief The minimum size of buffers that will receive stack smashing
+  /// The minimum size of buffers that will receive stack smashing
   /// protection when -fstack-protection is used.
   unsigned SSPBufferSize = 0;
 
@@ -107,7 +107,7 @@ private:
   bool ContainsProtectableArray(Type *Ty, bool &IsLarge, bool Strong = false,
                                 bool InStruct = false) const;
 
-  /// \brief Check whether a stack allocation has its address taken.
+  /// Check whether a stack allocation has its address taken.
   bool HasAddressTaken(const Instruction *AI);
 
   /// RequiresStackProtector - Check whether or not this function needs a

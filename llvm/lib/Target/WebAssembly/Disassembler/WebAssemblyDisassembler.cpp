@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file is part of the WebAssembly Disassembler.
+/// This file is part of the WebAssembly Disassembler.
 ///
 /// It contains code to translate the data produced by the decoder into
 /// MCInsts.

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file is part of the ARC Disassembler.
+/// This file is part of the ARC Disassembler.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,7 +31,7 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 namespace {
 
-/// \brief A disassembler class for ARC.
+/// A disassembler class for ARC.
 class ARCDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<MCInstrInfo const> const MCII;

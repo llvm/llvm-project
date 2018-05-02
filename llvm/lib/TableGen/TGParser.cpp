@@ -2387,7 +2387,7 @@ bool TGParser::ParseBody(Record *CurRec) {
   return false;
 }
 
-/// \brief Apply the current let bindings to \a CurRec.
+/// Apply the current let bindings to \a CurRec.
 /// \returns true on error, false otherwise.
 bool TGParser::ApplyLetStack(Record *CurRec) {
   for (SmallVectorImpl<LetRecord> &LetInfo : LetStack)

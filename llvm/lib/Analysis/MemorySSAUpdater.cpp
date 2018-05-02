@@ -424,7 +424,7 @@ void MemorySSAUpdater::moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
   return moveTo(What, BB, Where);
 }
 
-/// \brief If all arguments of a MemoryPHI are defined by the same incoming
+/// If all arguments of a MemoryPHI are defined by the same incoming
 /// argument, return that argument.
 static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
   MemoryAccess *MA = nullptr;

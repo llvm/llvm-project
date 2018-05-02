@@ -301,7 +301,7 @@ namespace llvm {
   /// StackSlotColoring - This pass performs stack slot coloring.
   extern char &StackSlotColoringID;
 
-  /// \brief This pass lays out funclets contiguously.
+  /// This pass lays out funclets contiguously.
   extern char &FuncletLayoutID;
 
   /// This pass inserts the XRay instrumentation sleds if they are supported by
@@ -311,7 +311,7 @@ namespace llvm {
   /// This pass inserts FEntry calls
   extern char &FEntryInserterID;
 
-  /// \brief This pass implements the "patchable-function" attribute.
+  /// This pass implements the "patchable-function" attribute.
   extern char &PatchableFunctionID;
 
   /// createStackProtectorPass - This pass adds stack protectors to functions.

@@ -32,7 +32,7 @@
 namespace llvm {
 namespace object {
 
-/// @brief Base class for object file relocation visitors.
+/// Base class for object file relocation visitors.
 class RelocVisitor {
 public:
   explicit RelocVisitor(const ObjectFile &Obj) : ObjToVisit(Obj) {}

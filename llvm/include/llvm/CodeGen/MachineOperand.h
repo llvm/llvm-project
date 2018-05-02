@@ -677,7 +677,7 @@ public:
   /// should stay in sync with the hash_value overload below.
   bool isIdenticalTo(const MachineOperand &Other) const;
 
-  /// \brief MachineOperand hash_value overload.
+  /// MachineOperand hash_value overload.
   ///
   /// Note that this includes the same information in the hash that
   /// isIdenticalTo uses for comparison. It is thus suited for use in hash

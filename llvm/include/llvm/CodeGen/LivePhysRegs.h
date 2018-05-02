@@ -44,7 +44,7 @@ class MachineOperand;
 class MachineRegisterInfo;
 class raw_ostream;
 
-/// \brief A set of physical registers with utility functions to track liveness
+/// A set of physical registers with utility functions to track liveness
 /// when walking backward/forward through a basic block.
 class LivePhysRegs {
   const TargetRegisterInfo *TRI = nullptr;
@@ -84,7 +84,7 @@ public:
       LiveRegs.insert(*SubRegs);
   }
 
-  /// \brief Removes a physical register, all its sub-registers, and all its
+  /// Removes a physical register, all its sub-registers, and all its
   /// super-registers from the set.
   void removeReg(unsigned Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
@@ -98,7 +98,7 @@ public:
         SmallVectorImpl<std::pair<unsigned, const MachineOperand*>> *Clobbers =
         nullptr);
 
-  /// \brief Returns true if register \p Reg is contained in the set. This also
+  /// Returns true if register \p Reg is contained in the set. This also
   /// works if only the super register of \p Reg has been defined, because
   /// addReg() always adds all sub-registers to the set as well.
   /// Note: Returns false if just some sub registers are live, use available()
@@ -155,7 +155,7 @@ public:
   void dump() const;
 
 private:
-  /// \brief Adds live-in registers from basic block \p MBB, taking associated
+  /// Adds live-in registers from basic block \p MBB, taking associated
   /// lane masks into consideration.
   void addBlockLiveIns(const MachineBasicBlock &MBB);
 
@@ -169,7 +169,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
   return OS;
 }
 
-/// \brief Computes registers live-in to \p MBB assuming all of its successors
+/// Computes registers live-in to \p MBB assuming all of its successors
 /// live-in lists are up-to-date. Puts the result into the given LivePhysReg
 /// instance \p LiveRegs.
 void computeLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB);

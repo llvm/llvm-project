@@ -157,7 +157,7 @@ inline std::string fromHex(StringRef Input) {
   return Output;
 }
 
-/// \brief Convert the string \p S to an integer of the specified type using
+/// Convert the string \p S to an integer of the specified type using
 /// the radix \p Base.  If \p Base is 0, auto-detects the radix.
 /// Returns true if the number was successfully converted, false otherwise.
 template <typename N> bool to_integer(StringRef S, N &Num, unsigned Base = 0) {

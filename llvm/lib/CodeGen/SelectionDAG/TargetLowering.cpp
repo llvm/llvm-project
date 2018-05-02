@@ -96,7 +96,7 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
   return true;
 }
 
-/// \brief Set CallLoweringInfo attribute flags based on a call instruction
+/// Set CallLoweringInfo attribute flags based on a call instruction
 /// and called function attributes.
 void TargetLoweringBase::ArgListEntry::setAttributes(ImmutableCallSite *CS,
                                                      unsigned ArgIdx) {
@@ -3310,7 +3310,7 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
   }
 }
 
-/// \brief Given an exact SDIV by a constant, create a multiplication
+/// Given an exact SDIV by a constant, create a multiplication
 /// with the multiplicative inverse of the constant.
 static SDValue BuildExactSDIV(const TargetLowering &TLI, SDValue Op1, APInt d,
                               const SDLoc &dl, SelectionDAG &DAG,
@@ -3352,7 +3352,7 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   return SDValue();
 }
 
-/// \brief Given an ISD::SDIV node expressing a divide by constant,
+/// Given an ISD::SDIV node expressing a divide by constant,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
 /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
@@ -3416,7 +3416,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, const APInt &Divisor,
   return DAG.getNode(ISD::ADD, dl, VT, Q, T);
 }
 
-/// \brief Given an ISD::UDIV node expressing a divide by constant,
+/// Given an ISD::UDIV node expressing a divide by constant,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
 /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".

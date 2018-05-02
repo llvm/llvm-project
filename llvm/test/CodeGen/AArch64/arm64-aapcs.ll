@@ -24,36 +24,35 @@ define [2 x i64] @test_i64x2_align(i32, [2 x i64] %arg, i32 %after) {
 
 @var64 = global i64 0, align 8
 
-  ; Check stack slots are 64-bit at all times.
+; Check stack slots are 64-bit at all times.
 define void @test_stack_slots([8 x i32], i1 %bool, i8 %char, i16 %short,
                                 i32 %int, i64 %long) {
+; CHECK-LABEL: test_stack_slots:
+; CHECK-DAG: ldr w[[ext1:[0-9]+]], [sp, #24]
+; CHECK-DAG: ldrh w[[ext2:[0-9]+]], [sp, #16]
+; CHECK-DAG: ldrb w[[ext3:[0-9]+]], [sp, #8]
+; CHECK-DAG: ldr x[[ext4:[0-9]+]], [sp, #32]
+; CHECK-DAG: ldrb w[[ext5:[0-9]+]], [sp]
+; CHECK-DAG: and x[[ext5]], x[[ext5]], #0x1
+
   %ext_bool = zext i1 %bool to i64
   store volatile i64 %ext_bool, i64* @var64, align 8
-  ; Part of last store. Blasted scheduler.
-; CHECK: ldr [[LONG:x[0-9]+]], [sp, #32]
-
-; CHECK: ldrb w[[EXT:[0-9]+]], [sp]
-
-; CHECK: and x[[EXTED:[0-9]+]], x[[EXT]], #0x1
-; CHECK: str x[[EXTED]], [{{x[0-9]+}}, :lo12:var64]
+; CHECK: str x[[ext5]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_char = zext i8 %char to i64
   store volatile i64 %ext_char, i64* @var64, align 8
-; CHECK: ldrb w[[EXT:[0-9]+]], [sp, #8]
-; CHECK: str x[[EXT]], [{{x[0-9]+}}, :lo12:var64]
+; CHECK: str x[[ext3]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_short = zext i16 %short to i64
   store volatile i64 %ext_short, i64* @var64, align 8
-; CHECK: ldrh w[[EXT:[0-9]+]], [sp, #16]
-; CHECK: str x[[EXT]], [{{x[0-9]+}}, :lo12:var64]
+; CHECK: str x[[ext2]], [{{x[0-9]+}}, :lo12:var64]
 
   %ext_int = zext i32 %int to i64
   store volatile i64 %ext_int, i64* @var64, align 8
-; CHECK: ldr{{b?}} w[[EXT:[0-9]+]], [sp, #24]
-; CHECK: str x[[EXT]], [{{x[0-9]+}}, :lo12:var64]
+; CHECK: str x[[ext1]], [{{x[0-9]+}}, :lo12:var64]
 
   store volatile i64 %long, i64* @var64, align 8
-; CHECK: str [[LONG]], [{{x[0-9]+}}, :lo12:var64]
+; CHECK: str x[[ext4]], [{{x[0-9]+}}, :lo12:var64]
 
   ret void
 }

@@ -54,7 +54,7 @@ inline bool operator<(const ValueEntry &LHS, const ValueEntry &RHS) {
   return LHS.Rank > RHS.Rank; // Sort so that highest rank goes to start.
 }
 
-/// \brief Utility class representing a base and exponent pair which form one
+/// Utility class representing a base and exponent pair which form one
 /// factor of some product.
 struct Factor {
   Value *Base;

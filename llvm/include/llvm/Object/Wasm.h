@@ -89,7 +89,7 @@ public:
   }
 
   void print(raw_ostream &Out) const {
-    Out << "Name=" << Info.Name << ", Kind=" << Info.Kind
+    Out << "Name=" << Info.Name << ", Kind=" << int(Info.Kind)
         << ", Flags=" << Info.Flags;
     if (!isTypeData()) {
       Out << ", ElemIndex=" << Info.ElementIndex;

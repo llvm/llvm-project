@@ -65,7 +65,7 @@ class TargetMachine;
 
 extern cl::opt<unsigned> PartialUnrollingThreshold;
 
-/// \brief Base class which can be used to help build a TTI implementation.
+/// Base class which can be used to help build a TTI implementation.
 ///
 /// This class provides as much implementation of the TTI interface as is
 /// possible using the target independent parts of the code generator.
@@ -101,12 +101,12 @@ private:
     return Cost;
   }
 
-  /// \brief Local query method delegates up to T which *must* implement this!
+  /// Local query method delegates up to T which *must* implement this!
   const TargetSubtargetInfo *getST() const {
     return static_cast<const T *>(this)->getST();
   }
 
-  /// \brief Local query method delegates up to T which *must* implement this!
+  /// Local query method delegates up to T which *must* implement this!
   const TargetLoweringBase *getTLI() const {
     return static_cast<const T *>(this)->getTLI();
   }
@@ -1204,7 +1204,7 @@ public:
     return SingleCallCost;
   }
 
-  /// \brief Compute a cost of the given call instruction.
+  /// Compute a cost of the given call instruction.
   ///
   /// Compute the cost of calling function F with return type RetTy and
   /// argument types Tys. F might be nullptr, in this case the cost of an
@@ -1365,7 +1365,7 @@ public:
   /// @}
 };
 
-/// \brief Concrete BasicTTIImpl that can be used if no further customization
+/// Concrete BasicTTIImpl that can be used if no further customization
 /// is needed.
 class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
   using BaseT = BasicTTIImplBase<BasicTTIImpl>;

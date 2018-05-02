@@ -197,7 +197,7 @@ defaultListDAGScheduler("default", "Best scheduler for the target",
 namespace llvm {
 
   //===--------------------------------------------------------------------===//
-  /// \brief This class is used by SelectionDAGISel to temporarily override
+  /// This class is used by SelectionDAGISel to temporarily override
   /// the optimization level on a per-function basis.
   class OptLevelChanger {
     SelectionDAGISel &IS;
@@ -2835,7 +2835,7 @@ struct MatchScope {
   bool HasChainNodesMatched;
 };
 
-/// \\brief A DAG update listener to keep the matching state
+/// \A DAG update listener to keep the matching state
 /// (i.e. RecordedNodes and MatchScope) uptodate if the target is allowed to
 /// change the DAG while matching.  X86 addressing mode matcher is an example
 /// for this.

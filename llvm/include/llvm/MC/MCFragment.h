@@ -56,7 +56,7 @@ protected:
   bool HasInstructions;
 
 private:
-  /// \brief Should this fragment be aligned to the end of a bundle?
+  /// Should this fragment be aligned to the end of a bundle?
   bool AlignToBundleEnd;
 
   uint8_t BundlePadding;
@@ -110,26 +110,26 @@ public:
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
 
-  /// \brief Does this fragment have instructions emitted into it? By default
+  /// Does this fragment have instructions emitted into it? By default
   /// this is false, but specific fragment types may set it to true.
   bool hasInstructions() const { return HasInstructions; }
 
-  /// \brief Should this fragment be placed at the end of an aligned bundle?
+  /// Should this fragment be placed at the end of an aligned bundle?
   bool alignToBundleEnd() const { return AlignToBundleEnd; }
   void setAlignToBundleEnd(bool V) { AlignToBundleEnd = V; }
 
-  /// \brief Get the padding size that must be inserted before this fragment.
+  /// Get the padding size that must be inserted before this fragment.
   /// Used for bundling. By default, no padding is inserted.
   /// Note that padding size is restricted to 8 bits. This is an optimization
   /// to reduce the amount of space used for each fragment. In practice, larger
   /// padding should never be required.
   uint8_t getBundlePadding() const { return BundlePadding; }
 
-  /// \brief Set the padding size for this fragment. By default it's a no-op,
+  /// Set the padding size for this fragment. By default it's a no-op,
   /// and only some fragments have a meaningful implementation.
   void setBundlePadding(uint8_t N) { BundlePadding = N; }
 
-  /// \brief Return true if given frgment has FT_Dummy type.
+  /// Return true if given frgment has FT_Dummy type.
   bool isDummy() const { return Kind == FT_Dummy; }
 
   void dump() const;

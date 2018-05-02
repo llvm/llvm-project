@@ -105,7 +105,7 @@ static bool fuseInstructionPair(ScheduleDAGMI &DAG, SUnit &FirstSU,
 
 namespace {
 
-/// \brief Post-process the DAG to create cluster edges between instrs that may
+/// Post-process the DAG to create cluster edges between instrs that may
 /// be fused by the processor into a single operation.
 class MacroFusion : public ScheduleDAGMutation {
   ShouldSchedulePredTy shouldScheduleAdjacent;
@@ -135,7 +135,7 @@ void MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
     scheduleAdjacentImpl(*DAG, DAG->ExitSU);
 }
 
-/// \brief Implement the fusion of instr pairs in the scheduling DAG,
+/// Implement the fusion of instr pairs in the scheduling DAG,
 /// anchored at the instr in AnchorSU..
 bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGMI &DAG, SUnit &AnchorSU) {
   const MachineInstr &AnchorMI = *AnchorSU.getInstr();

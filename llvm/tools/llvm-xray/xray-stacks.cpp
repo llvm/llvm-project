@@ -1,4 +1,4 @@
-//===- xray-stacks.cc - XRay Function Call Stack Accounting ---------------===//
+//===- xray-stacks.cpp: XRay Function Call Stack Accounting ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

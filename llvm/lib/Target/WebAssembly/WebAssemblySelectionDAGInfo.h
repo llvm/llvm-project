@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the WebAssembly subclass for
+/// This file defines the WebAssembly subclass for
 /// SelectionDAGTargetInfo.
 ///
 //===----------------------------------------------------------------------===//

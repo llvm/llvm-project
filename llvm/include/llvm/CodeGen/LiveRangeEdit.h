@@ -117,7 +117,7 @@ private:
   /// registers are created.
   void MRI_NoteNewVirtualRegister(unsigned VReg) override;
 
-  /// \brief Check if MachineOperand \p MO is a last use/kill either in the
+  /// Check if MachineOperand \p MO is a last use/kill either in the
   /// main live range of \p LI or in one of the matching subregister ranges.
   bool useIsKill(const LiveInterval &LI, const MachineOperand &MO) const;
 

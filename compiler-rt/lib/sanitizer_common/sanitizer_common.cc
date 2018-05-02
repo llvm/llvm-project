@@ -14,6 +14,7 @@
 #include "sanitizer_common.h"
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_allocator_internal.h"
+#include "sanitizer_atomic.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_placement_new.h"
@@ -341,6 +342,12 @@ extern "C" {
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_report_error_summary,
                              const char *error_summary) {
   Printf("%s\n", error_summary);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __sanitizer_acquire_crash_state() {
+  static atomic_uint8_t in_crash_state = {};
+  return !atomic_exchange(&in_crash_state, 1, memory_order_relaxed);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

@@ -39,7 +39,7 @@ class raw_pwrite_stream;
     virtual bool recordRelocation(const MCFixup &) const { return true; }
   };
 
-  /// \brief Construct a new Win COFF writer instance.
+  /// Construct a new Win COFF writer instance.
   ///
   /// \param MOTW - The target specific WinCOFF writer subclass.
   /// \param OS - The stream to write to.

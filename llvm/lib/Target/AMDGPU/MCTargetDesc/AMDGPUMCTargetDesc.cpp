@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This file provides AMDGPU specific target descriptions.
+/// This file provides AMDGPU specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 

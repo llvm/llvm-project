@@ -826,7 +826,7 @@ static bool isLifetimeStart(const Instruction *Inst) {
   return false;
 }
 
-/// \brief Try to locate the three instruction involved in a missed
+/// Try to locate the three instruction involved in a missed
 /// load-elimination case that is due to an intervening store.
 static void reportMayClobberedLoad(LoadInst *LI, MemDepResult DepInfo,
                                    DominatorTree *DT,

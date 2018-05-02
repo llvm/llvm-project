@@ -114,7 +114,7 @@ static bool shouldHaveDiscriminator(const Instruction *I) {
   return !isa<IntrinsicInst>(I) || isa<MemIntrinsic>(I);
 }
 
-/// \brief Assign DWARF discriminators.
+/// Assign DWARF discriminators.
 ///
 /// To assign discriminators, we examine the boundaries of every
 /// basic block and its successors. Suppose there is a basic block B1

@@ -856,7 +856,7 @@ Value *FAddCombine::createAddendVal(const FAddend &Opnd, bool &NeedNeg) {
   return createFMul(OpndVal, Coeff.getValue(Instr->getType()));
 }
 
-/// \brief Return true if we can prove that:
+/// Return true if we can prove that:
 ///    (sub LHS, RHS)  === (sub nsw LHS, RHS)
 /// This basically requires proving that the add in the original type would not
 /// overflow to change the sign bit or have a carry out.
@@ -884,7 +884,7 @@ bool InstCombiner::willNotOverflowSignedSub(const Value *LHS,
   return false;
 }
 
-/// \brief Return true if we can prove that:
+/// Return true if we can prove that:
 ///    (sub LHS, RHS)  === (sub nuw LHS, RHS)
 bool InstCombiner::willNotOverflowUnsignedSub(const Value *LHS,
                                               const Value *RHS,

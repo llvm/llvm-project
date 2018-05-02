@@ -140,7 +140,7 @@ namespace {
 
 using ValueToAddrSpaceMapTy = DenseMap<const Value *, unsigned>;
 
-/// \brief InferAddressSpaces
+/// InferAddressSpaces
 class InferAddressSpaces : public FunctionPass {
   /// Target specific address space which uses of should be replaced if
   /// possible.

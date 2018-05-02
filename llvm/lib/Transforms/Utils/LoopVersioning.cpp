@@ -248,7 +248,7 @@ void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
 }
 
 namespace {
-/// \brief Also expose this is a pass.  Currently this is only used for
+/// Also expose this is a pass.  Currently this is only used for
 /// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
 /// array accesses from the loop.
 class LoopVersioningPass : public FunctionPass {

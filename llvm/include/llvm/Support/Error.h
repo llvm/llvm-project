@@ -505,7 +505,7 @@ public:
       getErrorStorage()->~error_type();
   }
 
-  /// \brief Return false if there is an error.
+  /// Return false if there is an error.
   explicit operator bool() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     Unchecked = HasError;
@@ -513,24 +513,24 @@ public:
     return !HasError;
   }
 
-  /// \brief Returns a reference to the stored T value.
+  /// Returns a reference to the stored T value.
   reference get() {
     assertIsChecked();
     return *getStorage();
   }
 
-  /// \brief Returns a const reference to the stored T value.
+  /// Returns a const reference to the stored T value.
   const_reference get() const {
     assertIsChecked();
     return const_cast<Expected<T> *>(this)->get();
   }
 
-  /// \brief Check that this Expected<T> is an error of type ErrT.
+  /// Check that this Expected<T> is an error of type ErrT.
   template <typename ErrT> bool errorIsA() const {
     return HasError && (*getErrorStorage())->template isA<ErrT>();
   }
 
-  /// \brief Take ownership of the stored error.
+  /// Take ownership of the stored error.
   /// After calling this the Expected<T> is in an indeterminate state that can
   /// only be safely destructed. No further calls (beside the destructor) should
   /// be made on the Expected<T> vaule.
@@ -541,25 +541,25 @@ public:
     return HasError ? Error(std::move(*getErrorStorage())) : Error::success();
   }
 
-  /// \brief Returns a pointer to the stored T value.
+  /// Returns a pointer to the stored T value.
   pointer operator->() {
     assertIsChecked();
     return toPointer(getStorage());
   }
 
-  /// \brief Returns a const pointer to the stored T value.
+  /// Returns a const pointer to the stored T value.
   const_pointer operator->() const {
     assertIsChecked();
     return toPointer(getStorage());
   }
 
-  /// \brief Returns a reference to the stored T value.
+  /// Returns a reference to the stored T value.
   reference operator*() {
     assertIsChecked();
     return *getStorage();
   }
 
-  /// \brief Returns a const reference to the stored T value.
+  /// Returns a const reference to the stored T value.
   const_reference operator*() const {
     assertIsChecked();
     return *getStorage();

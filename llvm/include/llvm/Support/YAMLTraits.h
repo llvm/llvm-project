@@ -1311,7 +1311,7 @@ public:
   Output(raw_ostream &, void *Ctxt = nullptr, int WrapColumn = 70);
   ~Output() override;
 
-  /// \brief Set whether or not to output optional values which are equal
+  /// Set whether or not to output optional values which are equal
   /// to the default value.  By default, when outputting if you attempt
   /// to write a value that is equal to the default, the value gets ignored.
   /// Sometimes, it is useful to be able to see these in the resulting YAML
