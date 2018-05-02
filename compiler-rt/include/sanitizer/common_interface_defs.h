@@ -65,6 +65,11 @@ extern "C" {
   void __sanitizer_unaligned_store32(void *p, uint32_t x);
   void __sanitizer_unaligned_store64(void *p, uint64_t x);
 
+  // Returns 1 on the first call, then returns 0 thereafter.  Called by the tool
+  // to ensure only one report is printed when multiple errors occur
+  // simultaneously.
+  int __sanitizer_acquire_crash_state();
+
   // Annotate the current state of a contiguous container, such as
   // std::vector, std::string or similar.
   // A contiguous container is a container that keeps all of its elements

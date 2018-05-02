@@ -4914,8 +4914,6 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Char_S:
     case clang::BuiltinType::SChar:
     case clang::BuiltinType::WChar_S:
-    case clang::BuiltinType::Char16:
-    case clang::BuiltinType::Char32:
     case clang::BuiltinType::Short:
     case clang::BuiltinType::Int:
     case clang::BuiltinType::Long:
@@ -4926,6 +4924,9 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Char_U:
     case clang::BuiltinType::UChar:
     case clang::BuiltinType::WChar_U:
+    case clang::BuiltinType::Char8:
+    case clang::BuiltinType::Char16:
+    case clang::BuiltinType::Char32:
     case clang::BuiltinType::UShort:
     case clang::BuiltinType::UInt:
     case clang::BuiltinType::ULong:

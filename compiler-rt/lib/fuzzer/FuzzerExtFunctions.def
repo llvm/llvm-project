@@ -29,6 +29,7 @@ EXT_FUNC(LLVMFuzzerCustomCrossOver, size_t,
 EXT_FUNC(__lsan_enable, void, (), false);
 EXT_FUNC(__lsan_disable, void, (), false);
 EXT_FUNC(__lsan_do_recoverable_leak_check, int, (), false);
+EXT_FUNC(__sanitizer_acquire_crash_state, bool, (), true);
 EXT_FUNC(__sanitizer_install_malloc_and_free_hooks, int,
          (void (*malloc_hook)(const volatile void *, size_t),
           void (*free_hook)(const volatile void *)),
