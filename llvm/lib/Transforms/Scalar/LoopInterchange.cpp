@@ -620,13 +620,13 @@ bool LoopInterchangeLegality::areAllUsesReductions(Instruction *Ins, Loop *L) {
 
 bool LoopInterchangeLegality::containsUnsafeInstructionsInHeader(
     BasicBlock *BB) {
-  for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
+  for (Instruction &I : *BB) {
     // Load corresponding to reduction PHI's are safe while concluding if
     // tightly nested.
-    if (LoadInst *L = dyn_cast<LoadInst>(I)) {
+    if (LoadInst *L = dyn_cast<LoadInst>(&I)) {
       if (!areAllUsesReductions(L, InnerLoop))
         return true;
-    } else if (I->mayHaveSideEffects() || I->mayReadFromMemory())
+    } else if (I.mayHaveSideEffects() || I.mayReadFromMemory())
       return true;
   }
   return false;
@@ -634,13 +634,13 @@ bool LoopInterchangeLegality::containsUnsafeInstructionsInHeader(
 
 bool LoopInterchangeLegality::containsUnsafeInstructionsInLatch(
     BasicBlock *BB) {
-  for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
+  for (Instruction &I : *BB) {
     // Stores corresponding to reductions are safe while concluding if tightly
     // nested.
-    if (StoreInst *L = dyn_cast<StoreInst>(I)) {
+    if (StoreInst *L = dyn_cast<StoreInst>(&I)) {
       if (!isa<PHINode>(L->getOperand(0)))
         return true;
-    } else if (I->mayHaveSideEffects() || I->mayReadFromMemory())
+    } else if (I.mayHaveSideEffects() || I.mayReadFromMemory())
       return true;
   }
   return false;
@@ -706,14 +706,13 @@ bool LoopInterchangeLegality::findInductionAndReductions(
     SmallVector<PHINode *, 8> &Reductions) {
   if (!L->getLoopLatch() || !L->getLoopPredecessor())
     return false;
-  for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
+  for (PHINode &PHI : L->getHeader()->phis()) {
     RecurrenceDescriptor RD;
     InductionDescriptor ID;
-    PHINode *PHI = cast<PHINode>(I);
-    if (InductionDescriptor::isInductionPHI(PHI, L, SE, ID))
-      Inductions.push_back(PHI);
-    else if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD))
-      Reductions.push_back(PHI);
+    if (InductionDescriptor::isInductionPHI(&PHI, L, SE, ID))
+      Inductions.push_back(&PHI);
+    else if (RecurrenceDescriptor::isReductionPHI(&PHI, L, RD))
+      Reductions.push_back(&PHI);
     else {
       DEBUG(
           dbgs() << "Failed to recognize PHI as an induction or reduction.\n");
@@ -724,12 +723,11 @@ bool LoopInterchangeLegality::findInductionAndReductions(
 }
 
 static bool containsSafePHI(BasicBlock *Block, bool isOuterLoopExitBlock) {
-  for (auto I = Block->begin(); isa<PHINode>(I); ++I) {
-    PHINode *PHI = cast<PHINode>(I);
+  for (PHINode &PHI : Block->phis()) {
     // Reduction lcssa phi will have only 1 incoming block that from loop latch.
-    if (PHI->getNumIncomingValues() > 1)
+    if (PHI.getNumIncomingValues() > 1)
       return false;
-    Instruction *Ins = dyn_cast<Instruction>(PHI->getIncomingValue(0));
+    Instruction *Ins = dyn_cast<Instruction>(PHI.getIncomingValue(0));
     if (!Ins)
       return false;
     // Incoming value for lcssa phi's in outer loop exit can only be inner loop
@@ -1170,13 +1168,11 @@ bool LoopInterchangeProfitability::isProfitable(unsigned InnerLoopId,
 
 void LoopInterchangeTransform::removeChildLoop(Loop *OuterLoop,
                                                Loop *InnerLoop) {
-  for (Loop::iterator I = OuterLoop->begin(), E = OuterLoop->end(); I != E;
-       ++I) {
-    if (*I == InnerLoop) {
-      OuterLoop->removeChildLoop(I);
+  for (Loop *L : *OuterLoop)
+    if (L == InnerLoop) {
+      OuterLoop->removeChildLoop(L);
       return;
     }
-  }
   llvm_unreachable("Couldn't find loop");
 }
 
@@ -1343,12 +1339,11 @@ static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
 void LoopInterchangeTransform::updateIncomingBlock(BasicBlock *CurrBlock,
                                                    BasicBlock *OldPred,
                                                    BasicBlock *NewPred) {
-  for (auto I = CurrBlock->begin(); isa<PHINode>(I); ++I) {
-    PHINode *PHI = cast<PHINode>(I);
-    unsigned Num = PHI->getNumIncomingValues();
+  for (PHINode &PHI : CurrBlock->phis()) {
+    unsigned Num = PHI.getNumIncomingValues();
     for (unsigned i = 0; i < Num; ++i) {
-      if (PHI->getIncomingBlock(i) == OldPred)
-        PHI->setIncomingBlock(i, NewPred);
+      if (PHI.getIncomingBlock(i) == OldPred)
+        PHI.setIncomingBlock(i, NewPred);
     }
   }
 }
@@ -1442,10 +1437,9 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   // Adjust PHI nodes in InnerLoopLatchSuccessor. Update all uses of PHI with
   // the value and remove this PHI node from inner loop.
   SmallVector<PHINode *, 8> LcssaVec;
-  for (auto I = InnerLoopLatchSuccessor->begin(); isa<PHINode>(I); ++I) {
-    PHINode *LcssaPhi = cast<PHINode>(I);
-    LcssaVec.push_back(LcssaPhi);
-  }
+  for (PHINode &P : InnerLoopLatchSuccessor->phis())
+    LcssaVec.push_back(&P);
+
   for (PHINode *P : LcssaVec) {
     Value *Incoming = P->getIncomingValueForBlock(InnerLoopLatch);
     P->replaceAllUsesWith(Incoming);

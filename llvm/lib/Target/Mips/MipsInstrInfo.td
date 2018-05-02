@@ -2010,24 +2010,22 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def NOR   : MMRel, StdMMR6Rel, LogicNOR<"nor", GPR32Opnd>, ADD_FM<0, 0x27>;
 }
 
-/// Shift Instructions
 let AdditionalPredicates = [NotInMicroMips] in {
-def SLL  : MMRel, shift_rotate_imm<"sll", uimm5, GPR32Opnd, II_SLL, shl,
-                                   immZExt5>, SRA_FM<0, 0>;
-def SRL  : MMRel, shift_rotate_imm<"srl", uimm5, GPR32Opnd, II_SRL, srl,
-                                   immZExt5>, SRA_FM<2, 0>;
-def SRA  : MMRel, shift_rotate_imm<"sra", uimm5, GPR32Opnd, II_SRA, sra,
-                                   immZExt5>, SRA_FM<3, 0>;
-def SLLV : MMRel, shift_rotate_reg<"sllv", GPR32Opnd, II_SLLV, shl>,
-           SRLV_FM<4, 0>;
-def SRLV : MMRel, shift_rotate_reg<"srlv", GPR32Opnd, II_SRLV, srl>,
-           SRLV_FM<6, 0>;
-def SRAV : MMRel, shift_rotate_reg<"srav", GPR32Opnd, II_SRAV, sra>,
-           SRLV_FM<7, 0>;
-}
+  /// Shift Instructions
+  def SLL  : MMRel, shift_rotate_imm<"sll", uimm5, GPR32Opnd, II_SLL, shl,
+                                     immZExt5>, SRA_FM<0, 0>, ISA_MIPS1;
+  def SRL  : MMRel, shift_rotate_imm<"srl", uimm5, GPR32Opnd, II_SRL, srl,
+                                     immZExt5>, SRA_FM<2, 0>, ISA_MIPS1;
+  def SRA  : MMRel, shift_rotate_imm<"sra", uimm5, GPR32Opnd, II_SRA, sra,
+                                     immZExt5>, SRA_FM<3, 0>, ISA_MIPS1;
+  def SLLV : MMRel, shift_rotate_reg<"sllv", GPR32Opnd, II_SLLV, shl>,
+             SRLV_FM<4, 0>, ISA_MIPS1;
+  def SRLV : MMRel, shift_rotate_reg<"srlv", GPR32Opnd, II_SRLV, srl>,
+             SRLV_FM<6, 0>, ISA_MIPS1;
+  def SRAV : MMRel, shift_rotate_reg<"srav", GPR32Opnd, II_SRAV, sra>,
+             SRLV_FM<7, 0>, ISA_MIPS1;
 
-// Rotate Instructions
-let AdditionalPredicates = [NotInMicroMips] in {
+  // Rotate Instructions
   def ROTR  : MMRel, shift_rotate_imm<"rotr", uimm5, GPR32Opnd, II_ROTR, rotr,
                                       immZExt5>,
               SRA_FM<2, 1>, ISA_MIPS32R2;

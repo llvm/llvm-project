@@ -769,17 +769,17 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   /// Shift Instructions
   def SLL_MM   : MMRel, shift_rotate_imm<"sll", uimm5, GPR32Opnd, II_SLL>,
-                 SRA_FM_MM<0, 0>;
+                 SRA_FM_MM<0, 0>, ISA_MICROMIPS;
   def SRL_MM   : MMRel, shift_rotate_imm<"srl", uimm5, GPR32Opnd, II_SRL>,
-                 SRA_FM_MM<0x40, 0>;
+                 SRA_FM_MM<0x40, 0>, ISA_MICROMIPS;
   def SRA_MM   : MMRel, shift_rotate_imm<"sra", uimm5, GPR32Opnd, II_SRA>,
-                 SRA_FM_MM<0x80, 0>;
+                 SRA_FM_MM<0x80, 0>, ISA_MICROMIPS;
   def SLLV_MM  : MMRel, shift_rotate_reg<"sllv", GPR32Opnd, II_SLLV>,
-                 SRLV_FM_MM<0x10, 0>;
+                 SRLV_FM_MM<0x10, 0>, ISA_MICROMIPS;
   def SRLV_MM  : MMRel, shift_rotate_reg<"srlv", GPR32Opnd, II_SRLV>,
-                 SRLV_FM_MM<0x50, 0>;
+                 SRLV_FM_MM<0x50, 0>, ISA_MICROMIPS;
   def SRAV_MM  : MMRel, shift_rotate_reg<"srav", GPR32Opnd, II_SRAV>,
-                 SRLV_FM_MM<0x90, 0>;
+                 SRLV_FM_MM<0x90, 0>, ISA_MICROMIPS;
   def ROTR_MM  : MMRel, shift_rotate_imm<"rotr", uimm5, GPR32Opnd, II_ROTR>,
                  SRA_FM_MM<0xc0, 0> {
     list<dag> Pattern = [(set GPR32Opnd:$rd,

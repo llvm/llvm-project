@@ -244,12 +244,21 @@ def SchedWriteVecLogic
 def SchedWriteVecShift
  : X86SchedWriteWidths<WriteVecShift, WriteVecShift,
                        WriteVecShift, WriteVecShift>;
+def SchedWriteVarVecShift
+ : X86SchedWriteWidths<WriteVarVecShift, WriteVarVecShift,
+                       WriteVarVecShift, WriteVarVecShift>;
 def SchedWriteVecIMul
  : X86SchedWriteWidths<WriteVecIMul, WriteVecIMul,
                        WriteVecIMul, WriteVecIMul>;
 def SchedWritePMULLD
  : X86SchedWriteWidths<WritePMULLD, WritePMULLD,
                        WritePMULLD, WritePMULLD>;
+def SchedWriteMPSAD
+ : X86SchedWriteWidths<WriteMPSAD, WriteMPSAD,
+                       WriteMPSAD, WriteMPSAD>;
+def SchedWritePSADBW
+ : X86SchedWriteWidths<WritePSADBW, WritePSADBW,
+                       WritePSADBW, WritePSADBW>;
 
 def SchedWriteShuffle
  : X86SchedWriteWidths<WriteShuffle, WriteShuffle,

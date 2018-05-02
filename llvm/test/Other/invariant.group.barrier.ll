@@ -14,16 +14,17 @@ entry:
     store i8 42, i8* %ptr, !invariant.group !0
 ; CHECK: call i8* @llvm.invariant.group.barrier.p0i8
     %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
-; CHECK-NOT: call i8* @llvm.invariant.group.barrier.p0i8
+; FIXME: This one could be CSE
+; CHECK: call i8* @llvm.invariant.group.barrier
     %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
 ; CHECK: call void @clobber(i8* {{.*}}%ptr)
     call void @clobber(i8* %ptr)
 
 ; CHECK: call void @use(i8* {{.*}}%ptr2)
     call void @use(i8* %ptr2)
-; CHECK: call void @use(i8* {{.*}}%ptr2)
+; CHECK: call void @use(i8* {{.*}}%ptr3)
     call void @use(i8* %ptr3)
-; CHECK: load i8, i8* %ptr2, {{.*}}!invariant.group
+; CHECK: load i8, i8* %ptr3, {{.*}}!invariant.group
     %v = load i8, i8* %ptr3, !invariant.group !0
 
     ret i8 %v
@@ -51,10 +52,30 @@ entry:
     ret i8 %v
 }
 
+; CHECK-LABEL: define i8 @unoptimizable2()
+define i8 @unoptimizable2() {
+    %ptr = alloca i8
+    store i8 42, i8* %ptr, !invariant.group !0
+; CHECK: call i8* @llvm.invariant.group.barrier
+    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+    store i8 43, i8* %ptr
+; CHECK: call i8* @llvm.invariant.group.barrier
+    %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call void @clobber(i8* {{.*}}%ptr)
+    call void @clobber(i8* %ptr)
+; CHECK: call void @use(i8* {{.*}}%ptr2)
+    call void @use(i8* %ptr2)
+; CHECK: call void @use(i8* {{.*}}%ptr3)
+    call void @use(i8* %ptr3)
+; CHECK: load i8, i8* %ptr3, {{.*}}!invariant.group
+    %v = load i8, i8* %ptr3, !invariant.group !0
+    ret i8 %v
+}
+
 declare void @use(i8* readonly)
 
 declare void @clobber(i8*)
-; CHECK: Function Attrs: argmemonly nounwind readonly
+; CHECK: Function Attrs: inaccessiblememonly nounwind{{$}}
 ; CHECK-NEXT: declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
 declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
 

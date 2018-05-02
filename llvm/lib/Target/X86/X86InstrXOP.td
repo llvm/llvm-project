@@ -66,11 +66,11 @@ multiclass xop2op256<bits<8> opc, string OpcodeStr, Intrinsic Int,
                      PatFrag memop> {
   def Yrr : IXOP<opc, MRMSrcReg, (outs VR256:$dst), (ins VR256:$src),
            !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-           [(set VR256:$dst, (Int VR256:$src))]>, XOP, VEX_L, Sched<[WriteFAdd]>;
+           [(set VR256:$dst, (Int VR256:$src))]>, XOP, VEX_L, Sched<[WriteFAddY]>;
   def Yrm : IXOP<opc, MRMSrcMem, (outs VR256:$dst), (ins f256mem:$src),
            !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
            [(set VR256:$dst, (Int (bitconvert (memop addr:$src))))]>, XOP, VEX_L,
-           Sched<[WriteFAddLd, ReadAfterLd]>;
+           Sched<[WriteFAddYLd, ReadAfterLd]>;
 }
 
 let ExeDomain = SSEPackedSingle in {

@@ -228,9 +228,8 @@ void Fuzzer::StaticFileSizeExceedCallback() {
 }
 
 void Fuzzer::CrashCallback() {
-  if (EF->__sanitizer_acquire_crash_state &&
-      !EF->__sanitizer_acquire_crash_state())
-    return;
+  if (EF->__sanitizer_acquire_crash_state)
+    EF->__sanitizer_acquire_crash_state();
   Printf("==%lu== ERROR: libFuzzer: deadly signal\n", GetPid());
   if (EF->__sanitizer_print_stack_trace)
     EF->__sanitizer_print_stack_trace();

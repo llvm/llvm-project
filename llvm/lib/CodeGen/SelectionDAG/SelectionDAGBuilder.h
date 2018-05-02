@@ -1048,6 +1048,11 @@ struct RegsForValue {
   void AddInlineAsmOperands(unsigned Kind, bool HasMatching,
                             unsigned MatchingIdx, const SDLoc &dl,
                             SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
+
+  /// Check if the total RegCount is greater than one.
+  bool occupiesMultipleRegs() const {
+    return std::accumulate(RegCount.begin(), RegCount.end(), 0) > 1;
+  }
 };
 
 } // end namespace llvm

@@ -11,6 +11,7 @@
 // scheduling and other instruction cost heuristics.
 //
 //===----------------------------------------------------------------------===//
+
 def BroadwellModel : SchedMachineModel {
   // All x86 instructions are modeled as a single micro-op, and BW can decode 4
   // instructions per cycle.
@@ -155,9 +156,9 @@ def  : WriteRes<WriteFStore,       [BWPort237, BWPort4]>;
 def  : WriteRes<WriteFMove,        [BWPort5]>;
 
 defm : BWWriteResPair<WriteFAdd,   [BWPort1],  3, [1], 1, 5>; // Floating point add/sub.
-defm : BWWriteResPair<WriteFAddY,  [BWPort1],  3, [1], 1, 7>; // Floating point add/sub (YMM/ZMM).
+defm : BWWriteResPair<WriteFAddY,  [BWPort1],  3, [1], 1, 6>; // Floating point add/sub (YMM/ZMM).
 defm : BWWriteResPair<WriteFCmp,   [BWPort1],  3, [1], 1, 5>; // Floating point compare.
-defm : BWWriteResPair<WriteFCmpY,  [BWPort1],  3, [1], 1, 7>; // Floating point compare (YMM/ZMM).
+defm : BWWriteResPair<WriteFCmpY,  [BWPort1],  3, [1], 1, 6>; // Floating point compare (YMM/ZMM).
 defm : BWWriteResPair<WriteFCom,   [BWPort1],  3>; // Floating point compare to flags.
 defm : BWWriteResPair<WriteFMul,   [BWPort0],  5, [1], 1, 5>; // Floating point multiplication.
 defm : BWWriteResPair<WriteFMulY,  [BWPort0],  5, [1], 1, 7>; // Floating point multiplication (YMM/ZMM).
@@ -1368,20 +1369,8 @@ def BWWriteResGroup101 : SchedWriteRes<[BWPort1,BWPort23]> {
 }
 def: InstRW<[BWWriteResGroup101], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                              "ILD_F(16|32|64)m",
-                                             "VADDPDYrm",
-                                             "VADDPSYrm",
-                                             "VADDSUBPDYrm",
-                                             "VADDSUBPSYrm",
-                                             "VCMPPDYrmi",
-                                             "VCMPPSYrmi",
                                              "VCVTPS2DQYrm",
-                                             "VCVTTPS2DQYrm",
-                                             "VMAX(C?)PDYrm",
-                                             "VMAX(C?)PSYrm",
-                                             "VMIN(C?)PDYrm",
-                                             "VMIN(C?)PSYrm",
-                                             "VSUBPDYrm",
-                                             "VSUBPSYrm")>;
+                                             "VCVTTPS2DQYrm")>;
 
 def BWWriteResGroup102 : SchedWriteRes<[BWPort5,BWPort23]> {
   let Latency = 9;

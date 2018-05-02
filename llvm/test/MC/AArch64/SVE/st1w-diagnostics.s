@@ -85,3 +85,96 @@ st1w z0.s, p0, [x0, w0, uxtw]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #2'
 // CHECK-NEXT: st1w z0.s, p0, [x0, w0, uxtw]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + vector addressing modes
+
+st1w z0.d, p0, [x0, z0.h]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: st1w z0.d, p0, [x0, z0.h]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: st1w z0.d, p0, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.s, p0, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: st1w z0.s, p0, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.s, p0, [x0, z0.s, uxtw #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw) #2'
+// CHECK-NEXT: st1w z0.s, p0, [x0, z0.s, uxtw #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.s, p0, [x0, z0.s, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw) #2'
+// CHECK-NEXT: st1w z0.s, p0, [x0, z0.s, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [x0, z0.d, lsl #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (lsl|uxtw|sxtw) #2'
+// CHECK-NEXT: st1w z0.d, p0, [x0, z0.d, lsl #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [x0, z0.d, sxtw #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (lsl|uxtw|sxtw) #2'
+// CHECK-NEXT: st1w z0.d, p0, [x0, z0.d, sxtw #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid vector + immediate addressing modes
+
+st1w z0.s, p0, [z0.s, #-1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.s, p0, [z0.s, #-1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.s, p0, [z0.s, #-4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.s, p0, [z0.s, #-4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.s, p0, [z0.s, #125]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.s, p0, [z0.s, #125]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.s, p0, [z0.s, #128]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.s, p0, [z0.s, #128]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.s, p0, [z0.s, #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.s, p0, [z0.s, #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [z0.d, #-1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.d, p0, [z0.d, #-1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [z0.d, #-4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.d, p0, [z0.d, #-4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [z0.d, #125]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.d, p0, [z0.d, #125]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [z0.d, #128]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.d, p0, [z0.d, #128]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1w z0.d, p0, [z0.d, #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK-NEXT: st1w z0.d, p0, [z0.d, #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
