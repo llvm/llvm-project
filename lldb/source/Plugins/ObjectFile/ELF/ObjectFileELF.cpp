@@ -113,7 +113,7 @@ const elf_word LLDB_NT_GNU_ABI_OS_SOLARIS = 0x02;
 
 //===----------------------------------------------------------------------===//
 /// @class ELFRelocation
-/// @brief Generic wrapper for ELFRel and ELFRela.
+/// Generic wrapper for ELFRel and ELFRela.
 ///
 /// This helper class allows us to parse both ELFRel and ELFRela relocation
 /// entries in a generic manner.

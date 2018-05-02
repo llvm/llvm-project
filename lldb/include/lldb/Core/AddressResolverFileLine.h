@@ -31,10 +31,9 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class AddressResolverFileLine AddressResolverFileLine.h
-/// "lldb/Core/AddressResolverFileLine.h"
-/// @brief This class finds address for source file and line.  Optionally, it
-/// will look for inlined
-/// instances of the file and line specification.
+/// "lldb/Core/AddressResolverFileLine.h" This class finds address for source
+/// file and line.  Optionally, it will look for inlined instances of the file
+/// and line specification.
 //----------------------------------------------------------------------
 
 class AddressResolverFileLine : public AddressResolver {

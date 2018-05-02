@@ -18,18 +18,17 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ASTResultSynthesizer ASTResultSynthesizer.h
-/// "lldb/Expression/ASTResultSynthesizer.h"
-/// @brief Adds a result variable declaration to the ASTs for an expression.
+/// "lldb/Expression/ASTResultSynthesizer.h" Adds a result variable
+/// declaration to the ASTs for an expression.
 ///
 /// Users expect the expression "i + 3" to return a result, even if a result
 /// variable wasn't specifically declared.  To fulfil this requirement, LLDB
-/// adds
-/// a result variable to the expression, transforming it to
-/// "int $__lldb_expr_result = i + 3."  The IR transformers ensure that the
+/// adds a result variable to the expression, transforming it to "int
+/// $__lldb_expr_result = i + 3."  The IR transformers ensure that the
 /// resulting variable is mapped to the right piece of memory.
-/// ASTResultSynthesizer's job is to add the variable and its initialization to
-/// the ASTs for the expression, and it does so by acting as a SemaConsumer for
-/// Clang.
+/// ASTResultSynthesizer's job is to add the variable and its initialization
+/// to the ASTs for the expression, and it does so by acting as a SemaConsumer
+/// for Clang.
 //----------------------------------------------------------------------
 class ASTResultSynthesizer : public clang::SemaConsumer {
 public:
@@ -68,8 +67,8 @@ public:
   void Initialize(clang::ASTContext &Context) override;
 
   //----------------------------------------------------------------------
-  /// Examine a list of Decls to find the function $__lldb_expr and
-  /// transform its code
+  /// Examine a list of Decls to find the function $__lldb_expr and transform
+  /// its code
   ///
   /// @param[in] D
   ///     The list of Decls to search.  These may contain LinkageSpecDecls,
@@ -124,8 +123,8 @@ public:
 
 private:
   //----------------------------------------------------------------------
-  /// Hunt the given Decl for FunctionDecls named $__lldb_expr, recursing
-  /// as necessary through LinkageSpecDecls, and calling SynthesizeResult on
+  /// Hunt the given Decl for FunctionDecls named $__lldb_expr, recursing as
+  /// necessary through LinkageSpecDecls, and calling SynthesizeResult on
   /// anything that was found
   ///
   /// @param[in] D
@@ -164,8 +163,8 @@ private:
   bool SynthesizeBodyResult(clang::CompoundStmt *Body, clang::DeclContext *DC);
 
   //----------------------------------------------------------------------
-  /// Given a DeclContext for a function or method, find all types
-  /// declared in the context and record any persistent types found.
+  /// Given a DeclContext for a function or method, find all types declared in
+  /// the context and record any persistent types found.
   ///
   /// @param[in] FunDeclCtx
   ///     The context for the function to process.
@@ -173,8 +172,8 @@ private:
   void RecordPersistentTypes(clang::DeclContext *FunDeclCtx);
 
   //----------------------------------------------------------------------
-  /// Given a TypeDecl, if it declares a type whose name starts with a
-  /// dollar sign, register it as a pointer type in the target's scratch
+  /// Given a TypeDecl, if it declares a type whose name starts with a dollar
+  /// sign, register it as a pointer type in the target's scratch
   /// AST context.
   ///
   /// @param[in] Body

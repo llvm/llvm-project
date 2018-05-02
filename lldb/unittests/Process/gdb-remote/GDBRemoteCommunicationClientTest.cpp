@@ -6,12 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include <future>
-
-#include "GDBRemoteTestUtils.h"
-
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
+#include "GDBRemoteTestUtils.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/StructuredData.h"
@@ -19,6 +17,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
+#include <future>
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
@@ -43,10 +43,12 @@ void Handle_QThreadSuffixSupported(MockServer &server, bool supported) {
     ASSERT_EQ(PacketResult::Success, server.SendUnimplementedResponse(nullptr));
 }
 
-void HandlePacket(MockServer &server, StringRef expected, StringRef response) {
+void HandlePacket(MockServer &server,
+                  const testing::Matcher<const std::string &> &expected,
+                  StringRef response) {
   StringExtractorGDBRemote request;
   ASSERT_EQ(PacketResult::Success, server.GetPacket(request));
-  ASSERT_EQ(expected, request.GetStringRef());
+  ASSERT_THAT(request.GetStringRef(), expected);
   ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
 }
 
@@ -323,12 +325,22 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
 
-  // name is: /foo/bar.so
   HandlePacket(server,
       "qMemoryRegionInfo:a000",
       "start:a000;size:2000;permissions:rx;name:2f666f6f2f6261722e736f;");
+  if (XMLDocument::XMLEnabled()) {
+    // In case we have XML support, this will also do a "qXfer:memory-map".
+    // Preceeded by a query for supported extensions. Pretend we don't support
+    // that.
+    HandlePacket(server, testing::StartsWith("qSupported:"), "");
+  }
   EXPECT_TRUE(result.get().Success());
-
+  EXPECT_EQ(addr, region_info.GetRange().GetRangeBase());
+  EXPECT_EQ(0x2000u, region_info.GetRange().GetByteSize());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetReadable());
+  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetWritable());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetExecutable());
+  EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
@@ -339,6 +351,12 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
   });
 
   HandlePacket(server, "qMemoryRegionInfo:4000", "start:4000;size:0000;");
+  if (XMLDocument::XMLEnabled()) {
+    // In case we have XML support, this will also do a "qXfer:memory-map".
+    // Preceeded by a query for supported extensions. Pretend we don't support
+    // that.
+    HandlePacket(server, testing::StartsWith("qSupported:"), "");
+  }
   EXPECT_FALSE(result.get().Success());
 }
 

@@ -1386,6 +1386,10 @@ static size_t DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list) {
         ObjectFile *objfile = module->GetObjectFile();
         if (objfile)
           objfile->Dump(&strm);
+        else {
+          strm.Format("No object file for module: {0:F}\n",
+                      module->GetFileSpec());
+        }
       }
     }
     strm.IndentLess();

@@ -30,23 +30,23 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class AddressRange AddressRange.h "lldb/Core/AddressRange.h"
-/// @brief A section + offset based address range class.
+/// A section + offset based address range class.
 //----------------------------------------------------------------------
 class AddressRange {
 public:
   //------------------------------------------------------------------
   /// Default constructor.
   ///
-  /// Initialize with a invalid section (NULL), an invalid
-  /// offset (LLDB_INVALID_ADDRESS), and zero byte size.
+  /// Initialize with a invalid section (NULL), an invalid offset
+  /// (LLDB_INVALID_ADDRESS), and zero byte size.
   //------------------------------------------------------------------
   AddressRange();
 
   //------------------------------------------------------------------
   /// Construct with a section pointer, offset, and byte_size.
   ///
-  /// Initialize the address with the supplied \a section, \a
-  /// offset and \a byte_size.
+  /// Initialize the address with the supplied \a section, \a offset and \a
+  /// byte_size.
   ///
   /// @param[in] section
   ///     A section pointer to a valid lldb::Section, or NULL if the
@@ -64,8 +64,8 @@ public:
   //------------------------------------------------------------------
   /// Construct with a virtual address, section list and byte size.
   ///
-  /// Initialize and resolve the address with the supplied virtual
-  /// address \a file_addr, and byte size \a byte_size.
+  /// Initialize and resolve the address with the supplied virtual address \a
+  /// file_addr, and byte size \a byte_size.
   ///
   /// @param[in] file_addr
   ///     A virtual address.
@@ -82,8 +82,8 @@ public:
   //------------------------------------------------------------------
   /// Construct with a Address object address and byte size.
   ///
-  /// Initialize by copying the section offset address in \a so_addr,
-  /// and setting the byte size to \a byte_size.
+  /// Initialize by copying the section offset address in \a so_addr, and
+  /// setting the byte size to \a byte_size.
   ///
   /// @param[in] so_addr
   ///     A section offset address object.
@@ -135,8 +135,8 @@ public:
   //    Contains (const Address *so_addr_ptr) const;
 
   //------------------------------------------------------------------
-  /// Check if a section offset \a so_addr when represented as a file
-  /// address is contained within this object's file address range.
+  /// Check if a section offset \a so_addr when represented as a file address
+  /// is contained within this object's file address range.
   ///
   /// @param[in] so_addr
   ///     A section offset address object reference.
@@ -149,8 +149,8 @@ public:
   bool ContainsFileAddress(const Address &so_addr) const;
 
   //------------------------------------------------------------------
-  /// Check if the resolved file address \a file_addr is contained
-  /// within this object's file address range.
+  /// Check if the resolved file address \a file_addr is contained within this
+  /// object's file address range.
   ///
   /// @param[in] so_addr
   ///     A section offset address object reference.
@@ -163,8 +163,8 @@ public:
   bool ContainsFileAddress(lldb::addr_t file_addr) const;
 
   //------------------------------------------------------------------
-  /// Check if a section offset \a so_addr when represented as a load
-  /// address is contained within this object's load address range.
+  /// Check if a section offset \a so_addr when represented as a load address
+  /// is contained within this object's load address range.
   ///
   /// @param[in] so_addr
   ///     A section offset address object reference.
@@ -177,8 +177,8 @@ public:
   bool ContainsLoadAddress(const Address &so_addr, Target *target) const;
 
   //------------------------------------------------------------------
-  /// Check if the resolved load address \a load_addr is contained
-  /// within this object's load address range.
+  /// Check if the resolved load address \a load_addr is contained within this
+  /// object's load address range.
   ///
   /// @param[in] so_addr
   ///     A section offset address object reference.
@@ -193,10 +193,10 @@ public:
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s. There are many ways to display a section
-  /// offset based address range, and \a style lets the user choose
-  /// how the base address gets displayed.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s. There are many ways to display a section offset based address
+  /// range, and \a style lets the user choose how the base address gets
+  /// displayed.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -219,11 +219,11 @@ public:
   //------------------------------------------------------------------
   /// Dump a debug description of this object to a Stream.
   ///
-  /// Dump a debug description of the contents of this object to the
-  /// supplied stream \a s.
+  /// Dump a debug description of the contents of this object to the supplied
+  /// stream \a s.
   ///
-  /// The debug description contains verbose internal state such
-  /// and pointer values, reference counts, etc.
+  /// The debug description contains verbose internal state such and pointer
+  /// values, reference counts, etc.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.

@@ -33,17 +33,18 @@ class Stream;
 
 //----------------------------------------------------------------------
 /// @class DynamicCheckerFunctions IRDynamicChecks.h
-/// "lldb/Expression/IRDynamicChecks.h"
-/// @brief Encapsulates dynamic check functions used by expressions.
+/// "lldb/Expression/IRDynamicChecks.h" Encapsulates dynamic check functions
+/// used by expressions.
 ///
 /// Each of the utility functions encapsulated in this class is responsible
-/// for validating some data that an expression is about to use.  Examples are:
+/// for validating some data that an expression is about to use.  Examples
+/// are:
 ///
-/// a = *b;     // check that b is a valid pointer
-/// [b init];   // check that b is a valid object to send "init" to
+/// a = *b;     // check that b is a valid pointer [b init];   // check that b
+/// is a valid object to send "init" to
 ///
-/// The class installs each checker function into the target process and
-/// makes it available to IRDynamicChecks to use.
+/// The class installs each checker function into the target process and makes
+/// it available to IRDynamicChecks to use.
 //----------------------------------------------------------------------
 class DynamicCheckerFunctions {
 public:
@@ -58,8 +59,8 @@ public:
   ~DynamicCheckerFunctions();
 
   //------------------------------------------------------------------
-  /// Install the utility functions into a process.  This binds the
-  /// instance of DynamicCheckerFunctions to that process.
+  /// Install the utility functions into a process.  This binds the instance
+  /// of DynamicCheckerFunctions to that process.
   ///
   /// @param[in] diagnostic_manager
   ///     A diagnostic manager to report errors to.
@@ -81,16 +82,16 @@ public:
 };
 
 //----------------------------------------------------------------------
-/// @class IRDynamicChecks IRDynamicChecks.h "lldb/Expression/IRDynamicChecks.h"
-/// @brief Adds dynamic checks to a user-entered expression to reduce its
-/// likelihood of crashing
+/// @class IRDynamicChecks IRDynamicChecks.h
+/// "lldb/Expression/IRDynamicChecks.h" Adds dynamic checks to a user-entered
+/// expression to reduce its likelihood of crashing
 ///
 /// When an IR function is executed in the target process, it may cause
-/// crashes or hangs by dereferencing NULL pointers, trying to call Objective-C
-/// methods on objects that do not respond to them, and so forth.
+/// crashes or hangs by dereferencing NULL pointers, trying to call
+/// Objective-C methods on objects that do not respond to them, and so forth.
 ///
-/// IRDynamicChecks adds calls to the functions in DynamicCheckerFunctions
-/// to appropriate locations in an expression's IR.
+/// IRDynamicChecks adds calls to the functions in DynamicCheckerFunctions to
+/// appropriate locations in an expression's IR.
 //----------------------------------------------------------------------
 class IRDynamicChecks : public llvm::ModulePass {
 public:

@@ -29,14 +29,12 @@ namespace lldb_private {
 class SymbolContextScope;
 
 //----------------------------------------------------------------------
-/// @class SymbolContext SymbolContext.h "lldb/Symbol/SymbolContext.h"
-/// @brief Defines a symbol context baton that can be handed other debug
-/// core functions.
+/// @class SymbolContext SymbolContext.h "lldb/Symbol/SymbolContext.h" Defines
+/// a symbol context baton that can be handed other debug core functions.
 ///
-/// Many debugger functions require a context when doing lookups. This
-/// class provides a common structure that can be used as the result
-/// of a query that can contain a single result. Examples of such
-/// queries include
+/// Many debugger functions require a context when doing lookups. This class
+/// provides a common structure that can be used as the result of a query that
+/// can contain a single result. Examples of such queries include
 ///     @li Looking up a load address.
 //----------------------------------------------------------------------
 class SymbolContext {
@@ -44,14 +42,14 @@ public:
   //------------------------------------------------------------------
   /// Default constructor.
   ///
-  /// Initialize all pointer members to nullptr and all struct members
-  /// to their default state.
+  /// Initialize all pointer members to nullptr and all struct members to
+  /// their default state.
   //------------------------------------------------------------------
   SymbolContext();
 
   //------------------------------------------------------------------
-  /// Construct with an object that knows how to reconstruct its
-  /// symbol context.
+  /// Construct with an object that knows how to reconstruct its symbol
+  /// context.
   ///
   /// @param[in] sc_scope
   ///     A symbol context scope object that knows how to reconstruct
@@ -60,8 +58,8 @@ public:
   explicit SymbolContext(SymbolContextScope *sc_scope);
 
   //------------------------------------------------------------------
-  /// Construct with module, and optional compile unit, function,
-  /// block, line table, line entry and symbol.
+  /// Construct with module, and optional compile unit, function, block, line
+  /// table, line entry and symbol.
   ///
   /// Initialize all pointer to the specified values.
   ///
@@ -112,8 +110,8 @@ public:
   //------------------------------------------------------------------
   /// Assignment operator.
   ///
-  /// Copies the address value from another SymbolContext object \a
-  /// rhs into \a this object.
+  /// Copies the address value from another SymbolContext object \a rhs into
+  /// \a this object.
   ///
   /// @param[in] rhs
   ///     A const SymbolContext object reference to copy.
@@ -126,16 +124,16 @@ public:
   //------------------------------------------------------------------
   /// Clear the object's state.
   ///
-  /// Resets all pointer members to nullptr, and clears any class objects
-  /// to their default state.
+  /// Resets all pointer members to nullptr, and clears any class objects to
+  /// their default state.
   //------------------------------------------------------------------
   void Clear(bool clear_target);
 
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -145,13 +143,12 @@ public:
   //------------------------------------------------------------------
   /// Dump the stop context in this object to a Stream.
   ///
-  /// Dump the best description of this object to the stream. The
-  /// information displayed depends on the amount and quality of the
-  /// information in this context. If a module, function, file and
-  /// line number are available, they will be dumped. If only a
-  /// module and function or symbol name with offset is available,
-  /// that will be output. Else just the address at which the target
-  /// was stopped will be displayed.
+  /// Dump the best description of this object to the stream. The information
+  /// displayed depends on the amount and quality of the information in this
+  /// context. If a module, function, file and line number are available, they
+  /// will be dumped. If only a module and function or symbol name with offset
+  /// is available, that will be output. Else just the address at which the
+  /// target was stopped will be displayed.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -267,21 +264,21 @@ public:
   lldb::LanguageType GetLanguage() const;
 
   //------------------------------------------------------------------
-  /// Find a block that defines the function represented by this
-  /// symbol context.
+  /// Find a block that defines the function represented by this symbol
+  /// context.
   ///
-  /// If this symbol context points to a block that is an inlined
-  /// function, or is contained within an inlined function, the block
-  /// that defines the inlined function is returned.
+  /// If this symbol context points to a block that is an inlined function, or
+  /// is contained within an inlined function, the block that defines the
+  /// inlined function is returned.
   ///
-  /// If this symbol context has no block in it, or the block is not
-  /// itself an inlined function block or contained within one, we
-  /// return the top level function block.
+  /// If this symbol context has no block in it, or the block is not itself an
+  /// inlined function block or contained within one, we return the top level
+  /// function block.
   ///
-  /// This is a handy function to call when you want to get the block
-  /// whose variable list will include the arguments for the function
-  /// that is represented by this symbol context (whether the function
-  /// is an inline function or not).
+  /// This is a handy function to call when you want to get the block whose
+  /// variable list will include the arguments for the function that is
+  /// represented by this symbol context (whether the function is an inline
+  /// function or not).
   ///
   /// @return
   ///     The block object pointer that defines the function that is
@@ -290,8 +287,8 @@ public:
   Block *GetFunctionBlock();
 
   //------------------------------------------------------------------
-  /// If this symbol context represents a function that is a method,
-  /// return true and provide information about the method.
+  /// If this symbol context represents a function that is a method, return
+  /// true and provide information about the method.
   ///
   /// @param[out] language
   ///     If \b true is returned, the language for the method.
@@ -313,8 +310,7 @@ public:
                              ConstString &language_object_name);
 
   //------------------------------------------------------------------
-  /// Sorts the types in TypeMap according to SymbolContext
-  /// to TypeList
+  /// Sorts the types in TypeMap according to SymbolContext to TypeList
   ///
   //------------------------------------------------------------------
   void SortTypeList(TypeMap &type_map, TypeList &type_list) const;
@@ -322,8 +318,8 @@ public:
   //------------------------------------------------------------------
   /// Find a name of the innermost function for the symbol context.
   ///
-  /// For instance, if the symbol context contains an inlined block,
-  /// it will return the inlined function name.
+  /// For instance, if the symbol context contains an inlined block, it will
+  /// return the inlined function name.
   ///
   /// @param[in] prefer_mangled
   ///    if \btrue, then the mangled name will be returned if there
@@ -339,14 +335,13 @@ public:
   //------------------------------------------------------------------
   /// Get the line entry that corresponds to the function.
   ///
-  /// If the symbol context contains an inlined block, the line entry
-  /// for the start address of the inlined function will be returned,
-  /// otherwise the line entry for the start address of the function
-  /// will be returned. This can be used after doing a
-  /// Module::FindFunctions(...) or ModuleList::FindFunctions(...)
-  /// call in order to get the correct line table information for
-  /// the symbol context.
-  /// it will return the inlined function name.
+  /// If the symbol context contains an inlined block, the line entry for the
+  /// start address of the inlined function will be returned, otherwise the
+  /// line entry for the start address of the function will be returned. This
+  /// can be used after doing a Module::FindFunctions(...) or
+  /// ModuleList::FindFunctions(...) call in order to get the correct line
+  /// table information for the symbol context. it will return the inlined
+  /// function name.
   ///
   /// @param[in] prefer_mangled
   ///    if \btrue, then the mangled name will be returned if there
@@ -361,8 +356,8 @@ public:
   //------------------------------------------------------------------
   /// Find the block containing the inlined block that contains this block.
   ///
-  /// For instance, if the symbol context contains an inlined block,
-  /// it will return the inlined function name.
+  /// For instance, if the symbol context contains an inlined block, it will
+  /// return the inlined function name.
   ///
   /// @param[in] curr_frame_pc
   ///    The address within the block of this object.
@@ -440,11 +435,11 @@ private:
 
 //----------------------------------------------------------------------
 /// @class SymbolContextList SymbolContext.h "lldb/Symbol/SymbolContext.h"
-/// @brief Defines a list of symbol context objects.
+/// Defines a list of symbol context objects.
 ///
-/// This class provides a common structure that can be used to contain
-/// the result of a query that can contain a multiple results. Examples
-/// of such queries include:
+/// This class provides a common structure that can be used to contain the
+/// result of a query that can contain a multiple results. Examples of such
+/// queries include:
 ///     @li Looking up a function by name.
 ///     @li Finding all addresses for a specified file and line number.
 //----------------------------------------------------------------------
@@ -491,8 +486,8 @@ public:
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of each symbol context in
-  /// the list to the supplied stream \a s.
+  /// Dump a description of the contents of each symbol context in the list to
+  /// the supplied stream \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -502,8 +497,8 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for a symbol context at index \a idx.
   ///
-  /// Dump a description of the contents of each symbol context in
-  /// the list to the supplied stream \a s.
+  /// Dump a description of the contents of each symbol context in the list to
+  /// the supplied stream \a s.
   ///
   /// @param[in] idx
   ///     The zero based index into the symbol context list.
@@ -521,8 +516,8 @@ public:
   //------------------------------------------------------------------
   /// Direct reference accessor for a symbol context at index \a idx.
   ///
-  /// The index \a idx must be a valid index, no error checking will
-  /// be done to ensure that it is valid.
+  /// The index \a idx must be a valid index, no error checking will be done
+  /// to ensure that it is valid.
   ///
   /// @param[in] idx
   ///     The zero based index into the symbol context list.

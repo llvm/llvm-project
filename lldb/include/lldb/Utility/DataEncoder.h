@@ -23,13 +23,12 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DataEncoder DataEncoder.h "lldb/Core/DataEncoder.h"
-/// @brief An binary data encoding class.
+/// @class DataEncoder DataEncoder.h "lldb/Core/DataEncoder.h" An binary data
+/// encoding class.
 ///
-/// DataEncoder is a class that can encode binary data (swapping if needed)
-/// to a data buffer. The data buffer can be caller owned, or can be
-/// shared data that can be shared between multiple DataEncoder or
-/// DataEncoder instances.
+/// DataEncoder is a class that can encode binary data (swapping if needed) to
+/// a data buffer. The data buffer can be caller owned, or can be shared data
+/// that can be shared between multiple DataEncoder or DataEncoder instances.
 ///
 /// @see DataBuffer
 //----------------------------------------------------------------------
@@ -45,9 +44,8 @@ public:
   //------------------------------------------------------------------
   /// Construct with a buffer that is owned by the caller.
   ///
-  /// This constructor allows us to use data that is owned by the
-  /// caller. The data must stay around as long as this object is
-  /// valid.
+  /// This constructor allows us to use data that is owned by the caller. The
+  /// data must stay around as long as this object is valid.
   ///
   /// @param[in] data
   ///     A pointer to caller owned data.
@@ -67,10 +65,10 @@ public:
   //------------------------------------------------------------------
   /// Construct with shared data.
   ///
-  /// Copies the data shared pointer which adds a reference to the
-  /// contained in \a data_sp. The shared data reference is reference
-  /// counted to ensure the data lives as long as anyone still has a
-  /// valid shared pointer to the data in \a data_sp.
+  /// Copies the data shared pointer which adds a reference to the contained
+  /// in \a data_sp. The shared data reference is reference counted to ensure
+  /// the data lives as long as anyone still has a valid shared pointer to the
+  /// data in \a data_sp.
   ///
   /// @param[in] data_sp
   ///     A shared pointer to data.
@@ -87,26 +85,24 @@ public:
   //------------------------------------------------------------------
   /// Destructor
   ///
-  /// If this object contains a valid shared data reference, the
-  /// reference count on the data will be decremented, and if zero,
-  /// the data will be freed.
+  /// If this object contains a valid shared data reference, the reference
+  /// count on the data will be decremented, and if zero, the data will be
+  /// freed.
   //------------------------------------------------------------------
   ~DataEncoder();
 
   //------------------------------------------------------------------
   /// Clears the object state.
   ///
-  /// Clears the object contents back to a default invalid state, and
-  /// release any references to shared data that this object may
-  /// contain.
+  /// Clears the object contents back to a default invalid state, and release
+  /// any references to shared data that this object may contain.
   //------------------------------------------------------------------
   void Clear();
 
   //------------------------------------------------------------------
   /// Get the current address size.
   ///
-  /// Return the size in bytes of any address values this object will
-  /// extract.
+  /// Return the size in bytes of any address values this object will extract.
   ///
   /// @return
   ///     The size in bytes of address values that will be extracted.
@@ -135,8 +131,7 @@ public:
   //------------------------------------------------------------------
   /// Get the shared data offset.
   ///
-  /// Get the offset of the first byte of data in the shared data (if
-  /// any).
+  /// Get the offset of the first byte of data in the shared data (if any).
   ///
   /// @return
   ///     If this object contains shared data, this function returns
@@ -189,11 +184,10 @@ public:
   //------------------------------------------------------------------
   /// Encode an unsigned integer of size \a byte_size to \a offset.
   ///
-  /// Encode a single integer value at \a offset and return the offset
-  /// that follows the newly encoded integer when the data is successfully
-  /// encoded into the existing data. There must be enough room in the
-  /// data, else UINT32_MAX will be returned to indicate that encoding
-  /// failed.
+  /// Encode a single integer value at \a offset and return the offset that
+  /// follows the newly encoded integer when the data is successfully encoded
+  /// into the existing data. There must be enough room in the data, else
+  /// UINT32_MAX will be returned to indicate that encoding failed.
   ///
   /// @param[in] offset
   ///     The offset within the contained data at which to put the
@@ -233,15 +227,14 @@ public:
   uint32_t PutData(uint32_t offset, const void *src, uint32_t src_len);
 
   //------------------------------------------------------------------
-  /// Encode an address in the existing buffer at \a offset bytes into
-  /// the buffer.
+  /// Encode an address in the existing buffer at \a offset bytes into the
+  /// buffer.
   ///
-  /// Encode a single address (honoring the m_addr_size member) to
-  /// the data and return the next offset where subsequent data would
-  /// go.
-  /// pointed to by \a offset_ptr. The size of the extracted address
-  /// comes from the \a m_addr_size member variable and should be
-  /// set correctly prior to extracting any address values.
+  /// Encode a single address (honoring the m_addr_size member) to the data
+  /// and return the next offset where subsequent data would go. pointed to by
+  /// \a offset_ptr. The size of the extracted address comes from the \a
+  /// m_addr_size member variable and should be set correctly prior to
+  /// extracting any address values.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -259,8 +252,7 @@ public:
   //------------------------------------------------------------------
   /// Put a C string to \a offset.
   ///
-  /// Encodes a C string into the existing data including the
-  /// terminating
+  /// Encodes a C string into the existing data including the terminating
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -282,8 +274,8 @@ public:
   //------------------------------------------------------------------
   /// Set the address byte size.
   ///
-  /// Set the size in bytes that will be used when extracting any
-  /// address and pointer values from data contained in this object.
+  /// Set the size in bytes that will be used when extracting any address and
+  /// pointer values from data contained in this object.
   ///
   /// @param[in] addr_size
   ///     The size in bytes to use when extracting addresses.
@@ -293,11 +285,10 @@ public:
   //------------------------------------------------------------------
   /// Set data with a buffer that is caller owned.
   ///
-  /// Use data that is owned by the caller when extracting values.
-  /// The data must stay around as long as this object, or any object
-  /// that copies a subset of this object's data, is valid. If \a
-  /// bytes is NULL, or \a length is zero, this object will contain
-  /// no data.
+  /// Use data that is owned by the caller when extracting values. The data
+  /// must stay around as long as this object, or any object that copies a
+  /// subset of this object's data, is valid. If \a bytes is NULL, or \a
+  /// length is zero, this object will contain no data.
   ///
   /// @param[in] bytes
   ///     A pointer to caller owned data.
@@ -316,15 +307,14 @@ public:
   //------------------------------------------------------------------
   /// Adopt a subset of shared data in \a data_sp.
   ///
-  /// Copies the data shared pointer which adds a reference to the
-  /// contained in \a data_sp. The shared data reference is reference
-  /// counted to ensure the data lives as long as anyone still has a
-  /// valid shared pointer to the data in \a data_sp. The byte order
-  /// and address byte size settings remain the same. If
-  /// \a offset is not a valid offset in \a data_sp, then no reference
-  /// to the shared data will be added. If there are not \a length
-  /// bytes available in \a data starting at \a offset, the length
-  /// will be truncated to contains as many bytes as possible.
+  /// Copies the data shared pointer which adds a reference to the contained
+  /// in \a data_sp. The shared data reference is reference counted to ensure
+  /// the data lives as long as anyone still has a valid shared pointer to the
+  /// data in \a data_sp. The byte order and address byte size settings remain
+  /// the same. If \a offset is not a valid offset in \a data_sp, then no
+  /// reference to the shared data will be added. If there are not \a length
+  /// bytes available in \a data starting at \a offset, the length will be
+  /// truncated to contains as many bytes as possible.
   ///
   /// @param[in] data_sp
   ///     A shared pointer to data.
@@ -344,8 +334,8 @@ public:
   //------------------------------------------------------------------
   /// Set the byte_order value.
   ///
-  /// Sets the byte order of the data to extract. Extracted values
-  /// will be swapped if necessary when decoding.
+  /// Sets the byte order of the data to extract. Extracted values will be
+  /// swapped if necessary when decoding.
   ///
   /// @param[in] byte_order
   ///     The byte order value to use when extracting data.

@@ -21,16 +21,16 @@
 namespace lldb_private {
 //----------------------------------------------------------------------
 /// @class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
-/// @brief A class that describes a compilation unit.
+/// A class that describes a compilation unit.
 ///
 /// A representation of a compilation unit, or compiled source file.
-/// The UserID of the compile unit is specified by the SymbolFile
-/// plug-in and can have any value as long as the value is unique
-/// within the Module that owns this compile units.
+/// The UserID of the compile unit is specified by the SymbolFile plug-in and
+/// can have any value as long as the value is unique within the Module that
+/// owns this compile units.
 ///
-/// Each compile unit has a list of functions, global and static
-/// variables, support file list (include files and inlined source
-/// files), and a line table.
+/// Each compile unit has a list of functions, global and static variables,
+/// support file list (include files and inlined source files), and a line
+/// table.
 //----------------------------------------------------------------------
 class CompileUnit : public std::enable_shared_from_this<CompileUnit>,
                     public ModuleChild,
@@ -41,9 +41,9 @@ public:
   //------------------------------------------------------------------
   /// Construct with a module, path, UID and language.
   ///
-  /// Initialize the compile unit given the owning \a module, a path
-  /// to convert into a FileSpec, the SymbolFile plug-in supplied
-  /// \a uid, and the source language type.
+  /// Initialize the compile unit given the owning \a module, a path to
+  /// convert into a FileSpec, the SymbolFile plug-in supplied \a uid, and the
+  /// source language type.
   ///
   /// @param[in] module
   ///     The parent module that owns this compile unit. This value
@@ -81,9 +81,9 @@ public:
   //------------------------------------------------------------------
   /// Construct with a module, file spec, UID and language.
   ///
-  /// Initialize the compile unit given the owning \a module, a path
-  /// to convert into a FileSpec, the SymbolFile plug-in supplied
-  /// \a uid, and the source language type.
+  /// Initialize the compile unit given the owning \a module, a path to
+  /// convert into a FileSpec, the SymbolFile plug-in supplied \a uid, and the
+  /// source language type.
   ///
   /// @param[in] module
   ///     The parent module that owns this compile unit. This value
@@ -127,8 +127,8 @@ public:
   //------------------------------------------------------------------
   /// Add a function to this compile unit.
   ///
-  /// Typically called by the SymbolFile plug-ins as they partially
-  /// parse the debug information.
+  /// Typically called by the SymbolFile plug-ins as they partially parse the
+  /// debug information.
   ///
   /// @param[in] function_sp
   ///     A shared pointer to the Function object.
@@ -163,13 +163,12 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
 
   //------------------------------------------------------------------
-  /// Get a shared pointer to a function in this compile unit by
-  /// index.
+  /// Get a shared pointer to a function in this compile unit by index.
   ///
-  /// Typically called when iterating though all functions in a
-  /// compile unit after all functions have been parsed. This provides
-  /// raw access to the function shared pointer list and will not
-  /// cause the SymbolFile plug-in to parse any unparsed functions.
+  /// Typically called when iterating though all functions in a compile unit
+  /// after all functions have been parsed. This provides raw access to the
+  /// function shared pointer list and will not cause the SymbolFile plug-in
+  /// to parse any unparsed functions.
   ///
   /// @param[in] idx
   ///     An index into the function list.
@@ -195,16 +194,15 @@ public:
   //------------------------------------------------------------------
   /// Find the line entry by line and optional inlined file spec.
   ///
-  /// Finds the first line entry that has an index greater than
-  /// \a start_idx that matches \a line. If \a file_spec_ptr
-  /// is NULL, then the search matches line entries whose file matches
-  /// the file for the compile unit. If \a file_spec_ptr is
-  /// not NULL, line entries must match the specified file spec (for
-  /// inlined line table entries).
+  /// Finds the first line entry that has an index greater than \a start_idx
+  /// that matches \a line. If \a file_spec_ptr is NULL, then the search
+  /// matches line entries whose file matches the file for the compile unit.
+  /// If \a file_spec_ptr is not NULL, line entries must match the specified
+  /// file spec (for inlined line table entries).
   ///
-  /// Multiple calls to this function can find all entries that match
-  /// a given file and line by starting with \a start_idx equal to zero,
-  /// and calling this function back with the return value + 1.
+  /// Multiple calls to this function can find all entries that match a given
+  /// file and line by starting with \a start_idx equal to zero, and calling
+  /// this function back with the return value + 1.
   ///
   /// @param[in] start_idx
   ///     The zero based index at which to start looking for matches.
@@ -237,10 +235,9 @@ public:
   //------------------------------------------------------------------
   /// Get the line table for the compile unit.
   ///
-  /// Called by clients and the SymbolFile plug-in. The SymbolFile
-  /// plug-ins use this function to determine if the line table has
-  /// be parsed yet. Clients use this function to get the line table
-  /// from a compile unit.
+  /// Called by clients and the SymbolFile plug-in. The SymbolFile plug-ins
+  /// use this function to determine if the line table has be parsed yet.
+  /// Clients use this function to get the line table from a compile unit.
   ///
   /// @return
   ///     The line table object pointer, or NULL if this line table
@@ -253,8 +250,8 @@ public:
   //------------------------------------------------------------------
   /// Get the compile unit's support file list.
   ///
-  /// The support file list is used by the line table, and any objects
-  /// that have valid Declaration objects.
+  /// The support file list is used by the line table, and any objects that
+  /// have valid Declaration objects.
   ///
   /// @return
   ///     A support file list object.
@@ -264,8 +261,8 @@ public:
   //------------------------------------------------------------------
   /// Get the compile unit's imported module list.
   ///
-  /// This reports all the imports that the compile unit made,
-  /// including the current module.
+  /// This reports all the imports that the compile unit made, including the
+  /// current module.
   ///
   /// @return
   ///     A list of imported module names.
@@ -275,9 +272,8 @@ public:
   //------------------------------------------------------------------
   /// Get the SymbolFile plug-in user data.
   ///
-  /// SymbolFile plug-ins can store user data to internal state or
-  /// objects to quickly allow them to parse more information for a
-  /// given object.
+  /// SymbolFile plug-ins can store user data to internal state or objects to
+  /// quickly allow them to parse more information for a given object.
   ///
   /// @return
   ///     The user data stored with the CompileUnit when it was
@@ -288,9 +284,9 @@ public:
   //------------------------------------------------------------------
   /// Get the variable list for a compile unit.
   ///
-  /// Called by clients to get the variable list for a compile unit.
-  /// The variable list will contain all global and static variables
-  /// that were defined at the compile unit level.
+  /// Called by clients to get the variable list for a compile unit. The
+  /// variable list will contain all global and static variables that were
+  /// defined at the compile unit level.
   ///
   /// @param[in] can_create
   ///     If \b true, the variable list will be parsed on demand. If
@@ -309,9 +305,8 @@ public:
   //------------------------------------------------------------------
   /// Finds a function by user ID.
   ///
-  /// Typically used by SymbolFile plug-ins when partially parsing
-  /// the debug information to see if the function has been parsed
-  /// yet.
+  /// Typically used by SymbolFile plug-ins when partially parsing the debug
+  /// information to see if the function has been parsed yet.
   ///
   /// @param[in] uid
   ///     The user ID of the function to find. This value is supplied
@@ -328,10 +323,9 @@ public:
   //------------------------------------------------------------------
   /// Set the line table for the compile unit.
   ///
-  /// Called by the SymbolFile plug-in when if first parses the line
-  /// table and hands ownership of the line table to this object. The
-  /// compile unit owns the line table object and will delete the
-  /// object when it is deleted.
+  /// Called by the SymbolFile plug-in when if first parses the line table and
+  /// hands ownership of the line table to this object. The compile unit owns
+  /// the line table object and will delete the object when it is deleted.
   ///
   /// @param[in] line_table
   ///     A line table object pointer that this object now owns.
@@ -343,9 +337,8 @@ public:
   //------------------------------------------------------------------
   /// Set accessor for the variable list.
   ///
-  /// Called by the SymbolFile plug-ins after they have parsed the
-  /// variable lists and are ready to hand ownership of the list over
-  /// to this object.
+  /// Called by the SymbolFile plug-ins after they have parsed the variable
+  /// lists and are ready to hand ownership of the list over to this object.
   ///
   /// @param[in] variable_list_sp
   ///     A shared pointer to a VariableList.
@@ -355,9 +348,8 @@ public:
   //------------------------------------------------------------------
   /// Resolve symbol contexts by file and line.
   ///
-  /// Given a file in \a file_spec, and a line number, find all
-  /// instances and append them to the supplied symbol context list
-  /// \a sc_list.
+  /// Given a file in \a file_spec, and a line number, find all instances and
+  /// append them to the supplied symbol context list \a sc_list.
   ///
   /// @param[in] file_spec
   ///     A file specification. If \a file_spec contains no directory
@@ -405,10 +397,10 @@ public:
   //------------------------------------------------------------------
   /// Get whether compiler optimizations were enabled for this compile unit
   ///
-  /// "optimized" means that the debug experience may be difficult
-  /// for the user to understand.  Variables may not be available when
-  /// the developer would expect them, stepping through the source lines
-  /// in the function may appear strange, etc.
+  /// "optimized" means that the debug experience may be difficult for the
+  /// user to understand.  Variables may not be available when the developer
+  /// would expect them, stepping through the source lines in the function may
+  /// appear strange, etc.
   ///
   /// @return
   ///     Returns 'true' if this compile unit was compiled with
