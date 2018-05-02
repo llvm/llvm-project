@@ -4778,6 +4778,13 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
     return false;
 
+  // Don't outline from functions with section markings; the program could
+  // expect that all the code is in the named section.
+  // FIXME: Allow outlining from multiple functions with the same section
+  // marking.
+  if (F.hasSection())
+    return false;
+
   // Outlining from functions with redzones is unsafe since the outliner may
   // modify the stack. Check if hasRedZone is true or unknown; if yes, don't
   // outline from it.
@@ -5133,6 +5140,9 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     return It;
   }
 
+  // We want to return the spot where we inserted the call.
+  MachineBasicBlock::iterator CallPt;
+
   // We have a default call. Save the link register.
   MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
                               .addReg(AArch64::SP, RegState::Define)
@@ -5145,7 +5155,7 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   // Insert the call.
   It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::BL))
                           .addGlobalAddress(M.getNamedValue(MF.getName())));
-
+  CallPt = It;
   It++;
 
   // Restore the link register.
@@ -5156,5 +5166,5 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
                                .addImm(16);
   It = MBB.insert(It, LDRXpost);
 
-  return It;
+  return CallPt;
 }
