@@ -38,6 +38,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for GetLogIfAn...
 #include "lldb/Utility/RegularExpression.h"
@@ -321,18 +322,28 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
 }
 
 const lldb_private::UUID &Module::GetUUID() {
-  if (!m_did_parse_uuid.load()) {
+  if (!m_did_set_uuid.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    if (!m_did_parse_uuid.load()) {
+    if (!m_did_set_uuid.load()) {
       ObjectFile *obj_file = GetObjectFile();
 
       if (obj_file != nullptr) {
         obj_file->GetUUID(&m_uuid);
-        m_did_parse_uuid = true;
+        m_did_set_uuid = true;
       }
     }
   }
   return m_uuid;
+}
+
+void Module::SetUUID(const lldb_private::UUID &uuid) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_did_set_uuid) {
+    m_uuid = uuid;
+    m_did_set_uuid = true;
+  } else {
+    lldbassert(!"Attempting to overwrite the existing module UUID");
+  }
 }
 
 TypeSystem *Module::GetTypeSystemForLanguage(LanguageType language) {

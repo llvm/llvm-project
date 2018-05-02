@@ -213,6 +213,11 @@ public:
 
 protected:
   CodeGenModule &CGM;
+  StringRef FirstSeparator, Separator;
+
+  /// Constructor allowing to redefine the name separator for the variables.
+  explicit CGOpenMPRuntime(CodeGenModule &CGM, StringRef FirstSeparator,
+                           StringRef Separator);
 
   /// \brief Creates offloading entry for the provided entry ID \a ID,
   /// address \a Addr, size \a Size, and flags \a Flags.
@@ -724,9 +729,13 @@ private:
                             Address Shareds, const OMPTaskDataTy &Data);
 
 public:
-  explicit CGOpenMPRuntime(CodeGenModule &CGM);
+  explicit CGOpenMPRuntime(CodeGenModule &CGM)
+      : CGOpenMPRuntime(CGM, ".", ".") {}
   virtual ~CGOpenMPRuntime() {}
   virtual void clear();
+
+  /// Get the platform-specific name separator.
+  std::string getName(ArrayRef<StringRef> Parts) const;
 
   /// Emit code for the specified user defined reduction construct.
   virtual void emitUserDefinedReduction(CodeGenFunction *CGF,
@@ -1496,7 +1505,7 @@ public:
 
   /// Marks the declaration as alread emitted for the device code and returns
   /// true, if it was marked already, and false, otherwise.
-  bool markAsGlobalTarget(const FunctionDecl *D);
+  bool markAsGlobalTarget(GlobalDecl GD);
 
 };
 

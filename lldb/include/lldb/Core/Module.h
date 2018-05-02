@@ -93,22 +93,20 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Module Module.h "lldb/Core/Module.h"
-/// @brief A class that describes an executable image and its associated
+/// A class that describes an executable image and its associated
 ///        object and symbol files.
 ///
 /// The module is designed to be able to select a single slice of an
-/// executable image as it would appear on disk and during program
-/// execution.
+/// executable image as it would appear on disk and during program execution.
 ///
 /// Modules control when and if information is parsed according to which
 /// accessors are called. For example the object file (ObjectFile)
-/// representation will only be parsed if the object file is requested
-/// using the Module::GetObjectFile() is called. The debug symbols
-/// will only be parsed if the symbol vendor (SymbolVendor) is
-/// requested using the Module::GetSymbolVendor() is called.
+/// representation will only be parsed if the object file is requested using
+/// the Module::GetObjectFile() is called. The debug symbols will only be
+/// parsed if the symbol vendor (SymbolVendor) is requested using the
+/// Module::GetSymbolVendor() is called.
 ///
-/// The module will parse more detailed information as more queries are
-/// made.
+/// The module will parse more detailed information as more queries are made.
 //----------------------------------------------------------------------
 class Module : public std::enable_shared_from_this<Module>,
                public SymbolContextScope {
@@ -128,8 +126,8 @@ public:
   //------------------------------------------------------------------
   /// Construct with file specification and architecture.
   ///
-  /// Clients that wish to share modules with other targets should
-  /// use ModuleList::GetSharedModule().
+  /// Clients that wish to share modules with other targets should use
+  /// ModuleList::GetSharedModule().
   ///
   /// @param[in] file_spec
   ///     The file specification for the on disk representation of
@@ -168,13 +166,13 @@ public:
   bool MatchesModuleSpec(const ModuleSpec &module_ref);
 
   //------------------------------------------------------------------
-  /// Set the load address for all sections in a module to be the
-  /// file address plus \a slide.
+  /// Set the load address for all sections in a module to be the file address
+  /// plus \a slide.
   ///
-  /// Many times a module will be loaded in a target with a constant
-  /// offset applied to all top level sections. This function can
-  /// set the load address for all top level sections to be the
-  /// section file address + offset.
+  /// Many times a module will be loaded in a target with a constant offset
+  /// applied to all top level sections. This function can set the load
+  /// address for all top level sections to be the section file address +
+  /// offset.
   ///
   /// @param[in] target
   ///     The target in which to apply the section load addresses.
@@ -224,19 +222,18 @@ public:
   //------------------------------------------------------------------
   /// Get the module path and object name.
   ///
-  /// Modules can refer to object files. In this case the specification
-  /// is simple and would return the path to the file:
+  /// Modules can refer to object files. In this case the specification is
+  /// simple and would return the path to the file:
   ///
   ///     "/usr/lib/foo.dylib"
   ///
-  /// Modules can be .o files inside of a BSD archive (.a file). In
-  /// this case, the object specification will look like:
+  /// Modules can be .o files inside of a BSD archive (.a file). In this case,
+  /// the object specification will look like:
   ///
   ///     "/usr/lib/foo.a(bar.o)"
   ///
-  /// There are many places where logging wants to log this fully
-  /// qualified specification, so we centralize this functionality
-  /// here.
+  /// There are many places where logging wants to log this fully qualified
+  /// specification, so we centralize this functionality here.
   ///
   /// @return
   ///     The object path + object name if there is one.
@@ -246,11 +243,10 @@ public:
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s. The dumped content will be only what has
-  /// been loaded or parsed up to this point at which this function
-  /// is called, so this is a good way to see what has been parsed
-  /// in a module.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s. The dumped content will be only what has been loaded or parsed up
+  /// to this point at which this function is called, so this is a good way to
+  /// see what has been parsed in a module.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -315,8 +311,8 @@ public:
   //------------------------------------------------------------------
   /// Find compile units by partial or full path.
   ///
-  /// Finds all compile units that match \a path in all of the modules
-  /// and returns the results in \a sc_list.
+  /// Finds all compile units that match \a path in all of the modules and
+  /// returns the results in \a sc_list.
   ///
   /// @param[in] path
   ///     The name of the function we are looking for.
@@ -341,8 +337,7 @@ public:
   ///
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
-  /// containing function.  If it is not inlined, then the block will
-  /// be NULL.
+  /// containing function.  If it is not inlined, then the block will be NULL.
   ///
   /// @param[in] name
   ///     The name of the compile unit we are looking for.
@@ -378,8 +373,7 @@ public:
   ///
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
-  /// containing function.  If it is not inlined, then the block will
-  /// be NULL.
+  /// containing function.  If it is not inlined, then the block will be NULL.
   ///
   /// @param[in] regex
   ///     A regular expression to use when matching the name.
@@ -486,22 +480,20 @@ public:
   //------------------------------------------------------------------
   /// Find types by name.
   ///
-  /// Type lookups in modules go through the SymbolVendor (which will
-  /// use one or more SymbolFile subclasses). The SymbolFile needs to
-  /// be able to lookup types by basename and not the fully qualified
-  /// typename. This allows the type accelerator tables to stay small,
-  /// even with heavily templatized C++. The type search will then
-  /// narrow down the search results. If "exact_match" is true, then
-  /// the type search will only match exact type name matches. If
-  /// "exact_match" is false, the type will match as long as the base
-  /// typename matches and as long as any immediate containing
-  /// namespaces/class scopes that are specified match. So to search
-  /// for a type "d" in "b::c", the name "b::c::d" can be specified
-  /// and it will match any class/namespace "b" which contains a
-  /// class/namespace "c" which contains type "d". We do this to
-  /// allow users to not always have to specify complete scoping on
-  /// all expressions, but it also allows for exact matching when
-  /// required.
+  /// Type lookups in modules go through the SymbolVendor (which will use one
+  /// or more SymbolFile subclasses). The SymbolFile needs to be able to
+  /// lookup types by basename and not the fully qualified typename. This
+  /// allows the type accelerator tables to stay small, even with heavily
+  /// templatized C++. The type search will then narrow down the search
+  /// results. If "exact_match" is true, then the type search will only match
+  /// exact type name matches. If "exact_match" is false, the type will match
+  /// as long as the base typename matches and as long as any immediate
+  /// containing namespaces/class scopes that are specified match. So to
+  /// search for a type "d" in "b::c", the name "b::c::d" can be specified and
+  /// it will match any class/namespace "b" which contains a class/namespace
+  /// "c" which contains type "d". We do this to allow users to not always
+  /// have to specify complete scoping on all expressions, but it also allows
+  /// for exact matching when required.
   ///
   /// @param[in] sc
   ///     A symbol context that scopes where to extract a type list
@@ -534,9 +526,9 @@ public:
                              const ConstString &type_name, bool exact_match);
 
   //------------------------------------------------------------------
-  /// Find types by name that are in a namespace. This function is
-  /// used by the expression parser when searches need to happen in
-  /// an exact namespace scope.
+  /// Find types by name that are in a namespace. This function is used by the
+  /// expression parser when searches need to happen in an exact namespace
+  /// scope.
   ///
   /// @param[in] sc
   ///     A symbol context that scopes where to extract a type list
@@ -571,9 +563,9 @@ public:
   //------------------------------------------------------------------
   /// Get const accessor for the module file specification.
   ///
-  /// This function returns the file for the module on the host system
-  /// that is running LLDB. This can differ from the path on the
-  /// platform since we might be doing remote debugging.
+  /// This function returns the file for the module on the host system that is
+  /// running LLDB. This can differ from the path on the platform since we
+  /// might be doing remote debugging.
   ///
   /// @return
   ///     A const reference to the file specification object.
@@ -583,14 +575,13 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the module platform file specification.
   ///
-  /// Platform file refers to the path of the module as it is known on
-  /// the remote system on which it is being debugged. For local
-  /// debugging this is always the same as Module::GetFileSpec(). But
-  /// remote debugging might mention a file "/usr/lib/liba.dylib"
-  /// which might be locally downloaded and cached. In this case the
-  /// platform file could be something like:
-  /// "/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib"
-  /// The file could also be cached in a local developer kit directory.
+  /// Platform file refers to the path of the module as it is known on the
+  /// remote system on which it is being debugged. For local debugging this is
+  /// always the same as Module::GetFileSpec(). But remote debugging might
+  /// mention a file "/usr/lib/liba.dylib" which might be locally downloaded
+  /// and cached. In this case the platform file could be something like:
+  /// "/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib" The
+  /// file could also be cached in a local developer kit directory.
   ///
   /// @return
   ///     A const reference to the file specification object.
@@ -630,8 +621,8 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Tells whether this module is capable of being the main executable
-  /// for a process.
+  /// Tells whether this module is capable of being the main executable for a
+  /// process.
   ///
   /// @return
   ///     \b true if it is, \b false otherwise.
@@ -639,9 +630,9 @@ public:
   bool IsExecutable();
 
   //------------------------------------------------------------------
-  /// Tells whether this module has been loaded in the target passed in.
-  /// This call doesn't distinguish between whether the module is loaded
-  /// by the dynamic loader, or by a "target module add" type call.
+  /// Tells whether this module has been loaded in the target passed in. This
+  /// call doesn't distinguish between whether the module is loaded by the
+  /// dynamic loader, or by a "target module add" type call.
   ///
   /// @param[in] target
   ///    The target to check whether this is loaded in.
@@ -672,9 +663,8 @@ public:
   //------------------------------------------------------------------
   /// Get the object file representation for the current architecture.
   ///
-  /// If the object file has not been located or parsed yet, this
-  /// function will find the best ObjectFile plug-in that can parse
-  /// Module::m_file.
+  /// If the object file has not been located or parsed yet, this function
+  /// will find the best ObjectFile plug-in that can parse Module::m_file.
   ///
   /// @return
   ///     If Module::m_file does not exist, or no plug-in was found
@@ -687,12 +677,12 @@ public:
   virtual ObjectFile *GetObjectFile();
 
   //------------------------------------------------------------------
-  /// Get the unified section list for the module. This is the section
-  /// list created by the module's object file and any debug info and
-  /// symbol files created by the symbol vendor.
+  /// Get the unified section list for the module. This is the section list
+  /// created by the module's object file and any debug info and symbol files
+  /// created by the symbol vendor.
   ///
-  /// If the symbol vendor has not been loaded yet, this function
-  /// will return the section list for the object file.
+  /// If the symbol vendor has not been loaded yet, this function will return
+  /// the section list for the object file.
   ///
   /// @return
   ///     Unified module section list.
@@ -700,13 +690,13 @@ public:
   virtual SectionList *GetSectionList();
 
   //------------------------------------------------------------------
-  /// Notify the module that the file addresses for the Sections have
-  /// been updated.
+  /// Notify the module that the file addresses for the Sections have been
+  /// updated.
   ///
-  /// If the Section file addresses for a module are updated, this
-  /// method should be called.  Any parts of the module, object file,
-  /// or symbol file that has cached those file addresses must invalidate
-  /// or update its cache.
+  /// If the Section file addresses for a module are updated, this method
+  /// should be called.  Any parts of the module, object file, or symbol file
+  /// that has cached those file addresses must invalidate or update its
+  /// cache.
   //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged();
 
@@ -715,12 +705,11 @@ public:
   //------------------------------------------------------------------
   /// Load an object file from memory.
   ///
-  /// If available, the size of the object file in memory may be
-  /// passed to avoid additional round trips to process memory.
-  /// If the size is not provided, a default value is used. This
-  /// value should be large enough to enable the ObjectFile plugins
-  /// to read the header of the object file without going back to the
-  /// process.
+  /// If available, the size of the object file in memory may be passed to
+  /// avoid additional round trips to process memory. If the size is not
+  /// provided, a default value is used. This value should be large enough to
+  /// enable the ObjectFile plugins to read the header of the object file
+  /// without going back to the process.
   ///
   /// @return
   ///     The object file loaded from memory or nullptr, if the operation
@@ -732,9 +721,8 @@ public:
   //------------------------------------------------------------------
   /// Get the symbol vendor interface for the current architecture.
   ///
-  /// If the symbol vendor file has not been located yet, this
-  /// function will find the best SymbolVendor plug-in that can
-  /// use the current object file.
+  /// If the symbol vendor file has not been located yet, this function will
+  /// find the best SymbolVendor plug-in that can use the current object file.
   ///
   /// @return
   ///     If this module does not have a valid object file, or no
@@ -757,11 +745,11 @@ public:
   TypeList *GetTypeList();
 
   //------------------------------------------------------------------
-  /// Get a pointer to the UUID value contained in this object.
+  /// Get a reference to the UUID value contained in this object.
   ///
-  /// If the executable image file doesn't not have a UUID value built
-  /// into the file format, an MD5 checksum of the entire file, or
-  /// slice of the file for the current architecture should be used.
+  /// If the executable image file doesn't not have a UUID value built into
+  /// the file format, an MD5 checksum of the entire file, or slice of the
+  /// file for the current architecture should be used.
   ///
   /// @return
   ///     A const pointer to the internal copy of the UUID value in
@@ -774,14 +762,13 @@ public:
   /// A debugging function that will cause everything in a module to
   /// be parsed.
   ///
-  /// All compile units will be parsed, along with all globals and
-  /// static variables and all functions for those compile units.
-  /// All types, scopes, local variables, static variables, global
-  /// variables, and line tables will be parsed. This can be used
-  /// prior to dumping a module to see a complete list of the
-  /// resulting debug information that gets parsed, or as a debug
-  /// function to ensure that the module can consume all of the
-  /// debug data the symbol vendor provides.
+  /// All compile units will be parsed, along with all globals and static
+  /// variables and all functions for those compile units. All types, scopes,
+  /// local variables, static variables, global variables, and line tables
+  /// will be parsed. This can be used prior to dumping a module to see a
+  /// complete list of the resulting debug information that gets parsed, or as
+  /// a debug function to ensure that the module can consume all of the debug
+  /// data the symbol vendor provides.
   //------------------------------------------------------------------
   void ParseAllDebugSymbols();
 
@@ -790,17 +777,16 @@ public:
   //------------------------------------------------------------------
   /// Resolve the symbol context for the given address.
   ///
-  /// Tries to resolve the matching symbol context based on a lookup
-  /// from the current symbol vendor.  If the lazy lookup fails,
-  /// an attempt is made to parse the eh_frame section to handle
-  /// stripped symbols.  If this fails, an attempt is made to resolve
-  /// the symbol to the previous address to handle the case of a
-  /// function with a tail call.
+  /// Tries to resolve the matching symbol context based on a lookup from the
+  /// current symbol vendor.  If the lazy lookup fails, an attempt is made to
+  /// parse the eh_frame section to handle stripped symbols.  If this fails,
+  /// an attempt is made to resolve the symbol to the previous address to
+  /// handle the case of a function with a tail call.
   ///
-  /// Use properties of the modified SymbolContext to inspect any
-  /// resolved target, module, compilation unit, symbol, function,
-  /// function block or line entry.  Use the return value to determine
-  /// which of these properties have been modified.
+  /// Use properties of the modified SymbolContext to inspect any resolved
+  /// target, module, compilation unit, symbol, function, function block or
+  /// line entry.  Use the return value to determine which of these properties
+  /// have been modified.
   ///
   /// @param[in] so_addr
   ///     A load address to resolve.
@@ -835,15 +821,14 @@ public:
   //------------------------------------------------------------------
   /// Resolve items in the symbol context for a given file and line.
   ///
-  /// Tries to resolve \a file_path and \a line to a list of matching
-  /// symbol contexts.
+  /// Tries to resolve \a file_path and \a line to a list of matching symbol
+  /// contexts.
   ///
-  /// The line table entries contains addresses that can be used to
-  /// further resolve the values in each match: the function, block,
-  /// symbol. Care should be taken to minimize the amount of
-  /// information that is requested to only what is needed --
-  /// typically the module, compile unit, line table and line table
-  /// entry are sufficient.
+  /// The line table entries contains addresses that can be used to further
+  /// resolve the values in each match: the function, block, symbol. Care
+  /// should be taken to minimize the amount of information that is requested
+  /// to only what is needed -- typically the module, compile unit, line table
+  /// and line table entry are sufficient.
   ///
   /// @param[in] file_path
   ///     A path to a source file to match. If \a file_path does not
@@ -882,15 +867,14 @@ public:
   //------------------------------------------------------------------
   /// Resolve items in the symbol context for a given file and line.
   ///
-  /// Tries to resolve \a file_spec and \a line to a list of matching
-  /// symbol contexts.
+  /// Tries to resolve \a file_spec and \a line to a list of matching symbol
+  /// contexts.
   ///
-  /// The line table entries contains addresses that can be used to
-  /// further resolve the values in each match: the function, block,
-  /// symbol. Care should be taken to minimize the amount of
-  /// information that is requested to only what is needed --
-  /// typically the module, compile unit, line table and line table
-  /// entry are sufficient.
+  /// The line table entries contains addresses that can be used to further
+  /// resolve the values in each match: the function, block, symbol. Care
+  /// should be taken to minimize the amount of information that is requested
+  /// to only what is needed -- typically the module, compile unit, line table
+  /// and line table entry are sufficient.
   ///
   /// @param[in] file_spec
   ///     A file spec to a source file to match. If \a file_path does
@@ -976,14 +960,13 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Finds a source file given a file spec using the module source
-  /// path remappings (if any).
+  /// Finds a source file given a file spec using the module source path
+  /// remappings (if any).
   ///
   /// Tries to resolve \a orig_spec by checking the module source path
-  /// remappings. It makes sure the file exists, so this call can be
-  /// expensive if the remappings are on a network file system, so
-  /// use this function sparingly (not in a tight debug info parsing
-  /// loop).
+  /// remappings. It makes sure the file exists, so this call can be expensive
+  /// if the remappings are on a network file system, so use this function
+  /// sparingly (not in a tight debug info parsing loop).
   ///
   /// @param[in] orig_spec
   ///     The original source file path to try and remap.
@@ -1001,9 +984,9 @@ public:
   //------------------------------------------------------------------
   /// Remaps a source file given \a path into \a new_path.
   ///
-  /// Remaps \a path if any source remappings match. This function
-  /// does NOT stat the file system so it can be used in tight loops
-  /// where debug info is being parsed.
+  /// Remaps \a path if any source remappings match. This function does NOT
+  /// stat the file system so it can be used in tight loops where debug info
+  /// is being parsed.
   ///
   /// @param[in] path
   ///     The original source file path to try and remap.
@@ -1020,27 +1003,26 @@ public:
 
   //----------------------------------------------------------------------
   /// @class LookupInfo Module.h "lldb/Core/Module.h"
-  /// @brief A class that encapsulates name lookup information.
+  /// A class that encapsulates name lookup information.
   ///
-  /// Users can type a wide variety of partial names when setting
-  /// breakpoints by name or when looking for functions by name.
-  /// SymbolVendor and SymbolFile objects are only required to implement
-  /// name lookup for function basenames and for fully mangled names.
-  /// This means if the user types in a partial name, we must reduce this
-  /// to a name lookup that will work with all SymbolFile objects. So we
-  /// might reduce a name lookup to look for a basename, and then prune
-  /// out any results that don't match.
+  /// Users can type a wide variety of partial names when setting breakpoints
+  /// by name or when looking for functions by name. SymbolVendor and
+  /// SymbolFile objects are only required to implement name lookup for
+  /// function basenames and for fully mangled names. This means if the user
+  /// types in a partial name, we must reduce this to a name lookup that will
+  /// work with all SymbolFile objects. So we might reduce a name lookup to
+  /// look for a basename, and then prune out any results that don't match.
   ///
-  /// The "m_name" member variable represents the name as it was typed
-  /// by the user. "m_lookup_name" will be the name we actually search
-  /// for through the symbol or objects files. Lanaguage is included in
-  /// case we need to filter results by language at a later date. The
-  /// "m_name_type_mask" member variable tells us what kinds of names we
-  /// are looking for and can help us prune out unwanted results.
+  /// The "m_name" member variable represents the name as it was typed by the
+  /// user. "m_lookup_name" will be the name we actually search for through
+  /// the symbol or objects files. Lanaguage is included in case we need to
+  /// filter results by language at a later date. The "m_name_type_mask"
+  /// member variable tells us what kinds of names we are looking for and can
+  /// help us prune out unwanted results.
   ///
   /// Function lookups are done in Module.cpp, ModuleList.cpp and in
-  /// BreakpointResolverName.cpp and they all now use this class to do
-  /// lookups correctly.
+  /// BreakpointResolverName.cpp and they all now use this class to do lookups
+  /// correctly.
   //----------------------------------------------------------------------
   class LookupInfo {
   public:
@@ -1129,7 +1111,7 @@ protected:
 
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symbol_vendor{false};
-  std::atomic<bool> m_did_parse_uuid{false};
+  std::atomic<bool> m_did_set_uuid{false};
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
                                     /// was initially opened.
@@ -1139,9 +1121,9 @@ protected:
   ///
   /// Tries to resolve \a vm_addr as a file address (if \a
   /// vm_addr_is_file_addr is true) or as a load address if \a
-  /// vm_addr_is_file_addr is false) in the symbol vendor.
-  /// \a resolve_scope indicates what clients wish to resolve
-  /// and can be used to limit the scope of what is parsed.
+  /// vm_addr_is_file_addr is false) in the symbol vendor. \a resolve_scope
+  /// indicates what clients wish to resolve and can be used to limit the
+  /// scope of what is parsed.
   ///
   /// @param[in] vm_addr
   ///     The load virtual address to resolve.
@@ -1178,6 +1160,8 @@ protected:
                                         SymbolContextList &sc_list);
 
   bool SetArchitecture(const ArchSpec &new_arch);
+
+  void SetUUID(const lldb_private::UUID &uuid);
 
   SectionList *GetUnifiedSectionList();
 

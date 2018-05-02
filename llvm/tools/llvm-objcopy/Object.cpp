@@ -194,12 +194,7 @@ void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
           " cannot be removed because it is referenced by the symbol table " +
           this->Name);
   }
-  auto Iter =
-      std::remove_if(std::begin(Symbols), std::end(Symbols),
-                     [=](const SymPtr &Sym) { return Sym->DefinedIn == Sec; });
-  Size -= (std::end(Symbols) - Iter) * this->EntrySize;
-  Symbols.erase(Iter, std::end(Symbols));
-  assignIndices();
+  removeSymbols([Sec](const Symbol &Sym) { return Sym.DefinedIn == Sec; });
 }
 
 void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
@@ -208,6 +203,15 @@ void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
   std::stable_partition(
       std::begin(Symbols), std::end(Symbols),
       [](const SymPtr &Sym) { return Sym->Binding == STB_LOCAL; });
+  assignIndices();
+}
+
+void SymbolTableSection::removeSymbols(function_ref<bool(Symbol &)> ToRemove) {
+  Symbols.erase(
+      std::remove_if(std::begin(Symbols), std::end(Symbols),
+                     [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
+      std::end(Symbols));
+  Size = Symbols.size() * EntrySize;
   assignIndices();
 }
 

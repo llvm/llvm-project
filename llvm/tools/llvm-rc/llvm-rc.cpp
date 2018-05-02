@@ -24,6 +24,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -129,21 +130,43 @@ int main(int Argc, const char **Argv) {
     }
   }
 
-  SearchParams Params;
+  WriterParams Params;
   SmallString<128> InputFile(InArgsInfo[0]);
   llvm::sys::fs::make_absolute(InputFile);
   Params.InputFilePath = InputFile;
   Params.Include = InputArgs.getAllArgValues(OPT_INCLUDE);
   Params.NoInclude = InputArgs.getAllArgValues(OPT_NOINCLUDE);
 
+  if (InputArgs.hasArg(OPT_CODEPAGE)) {
+    if (InputArgs.getLastArgValue(OPT_CODEPAGE)
+            .getAsInteger(10, Params.CodePage))
+      fatalError("Invalid code page: " +
+                 InputArgs.getLastArgValue(OPT_CODEPAGE));
+    switch (Params.CodePage) {
+    case CpAcp:
+    case CpWin1252:
+    case CpUtf8:
+      break;
+    default:
+      fatalError(
+          "Unsupported code page, only 0, 1252 and 65001 are supported!");
+    }
+  }
+
   std::unique_ptr<ResourceFileWriter> Visitor;
   bool IsDryRun = InputArgs.hasArg(OPT_DRY_RUN);
 
   if (!IsDryRun) {
     auto OutArgsInfo = InputArgs.getAllArgValues(OPT_FILEOUT);
+    if (OutArgsInfo.empty()) {
+      SmallString<128> OutputFile = InputFile;
+      llvm::sys::path::replace_extension(OutputFile, "res");
+      OutArgsInfo.push_back(OutputFile.str());
+    }
+
     if (OutArgsInfo.size() != 1)
       fatalError(
-          "Exactly one output file should be provided (using /FO flag).");
+          "No more than one output file should be provided (using /FO flag).");
 
     std::error_code EC;
     auto FOut =

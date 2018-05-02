@@ -411,9 +411,13 @@ defm : JWriteResFpuPair<WriteMPSAD,       [JFPU0, JVIMUL], 3, [1, 2]>;
 defm : JWriteResFpuPair<WritePSADBW,      [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU0,  JVALU], 2>;
 defm : JWriteResFpuPair<WriteShuffle,     [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteShuffleY,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarShuffle,  [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : JWriteResFpuPair<WriteVarShuffleY, [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteBlend,       [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteBlendY,      [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : JWriteResFpuPair<WriteVarBlendY,   [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecLogicY,   [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteShuffle256,  [JFPU01, JVALU], 1>;

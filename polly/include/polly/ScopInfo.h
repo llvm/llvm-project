@@ -1716,6 +1716,9 @@ private:
   /// The underlying Region.
   Region &R;
 
+  /// The name of the SCoP (identical to the regions name)
+  std::string name;
+
   /// The ID to be assigned to the next Scop in a function
   static int NextScopID;
 
@@ -2452,7 +2455,7 @@ public:
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
 
-  const StringRef getName() const { return R.getNameStr(); }
+  const StringRef getName() const { return name; }
 
   using array_iterator = ArrayInfoSetTy::iterator;
   using const_array_iterator = ArrayInfoSetTy::const_iterator;

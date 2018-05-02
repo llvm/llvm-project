@@ -82,7 +82,7 @@ static bool matchMaskedCmpOp(Value *V, std::pair<Value *, APInt> &Result) {
     Result.first = Candidate;
 
   // Fill in the mask bit derived from the shift constant.
-  Result.second |= (1 << BitIndex);
+  Result.second.setBit(BitIndex);
   return Result.first == Candidate;
 }
 

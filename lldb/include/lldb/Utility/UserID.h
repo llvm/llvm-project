@@ -20,14 +20,14 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class UserID UserID.h "lldb/Core/UserID.h"
-/// @brief A mix in class that contains a generic user ID.
+/// A mix in class that contains a generic user ID.
 ///
-/// UserID is designed as a mix in class that can contain an integer
-/// based unique identifier for a variety of objects in lldb.
+/// UserID is designed as a mix in class that can contain an integer based
+/// unique identifier for a variety of objects in lldb.
 ///
-/// The value for this identifier is chosen by each parser plug-in. A
-/// value should be chosen that makes sense for each kind of object
-/// and should allow quick access to further and more in depth parsing.
+/// The value for this identifier is chosen by each parser plug-in. A value
+/// should be chosen that makes sense for each kind of object and should allow
+/// quick access to further and more in depth parsing.
 ///
 /// Symbol table entries can use this to store the original symbol table
 /// index, functions can use it to store the symbol table index or the
@@ -68,11 +68,9 @@ struct UserID {
   void SetID(lldb::user_id_t uid) { m_uid = uid; }
 
   //------------------------------------------------------------------
-  /// Unary predicate function object that can search for a matching
-  /// user ID.
+  /// Unary predicate function object that can search for a matching user ID.
   ///
-  /// Function object that can be used on any class that inherits
-  /// from UserID:
+  /// Function object that can be used on any class that inherits from UserID:
   /// \code
   /// iterator pos;
   /// pos = std::find_if (coll.begin(), coll.end(), UserID::IDMatches(blockID));

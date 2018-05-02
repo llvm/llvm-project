@@ -43,21 +43,20 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class FileSpec FileSpec.h "lldb/Host/FileSpec.h"
-/// @brief A file utility class.
+/// A file utility class.
 ///
 /// A file specification class that divides paths up into a directory
-/// and basename. These string values of the paths are put into uniqued
-/// string pools for fast comparisons and efficient memory usage.
+/// and basename. These string values of the paths are put into uniqued string
+/// pools for fast comparisons and efficient memory usage.
 ///
-/// Another reason the paths are split into the directory and basename
-/// is to allow efficient debugger searching. Often in a debugger the
-/// user types in the basename of the file, for example setting a
-/// breakpoint by file and line, or specifying a module (shared library)
-/// to limit the scope in which to execute a command. The user rarely
-/// types in a full path. When the paths are already split up, it makes
-/// it easy for us to compare only the basenames of a lot of file
-/// specifications without having to split up the file path each time
-/// to get to the basename.
+/// Another reason the paths are split into the directory and basename is to
+/// allow efficient debugger searching. Often in a debugger the user types in
+/// the basename of the file, for example setting a breakpoint by file and
+/// line, or specifying a module (shared library) to limit the scope in which
+/// to execute a command. The user rarely types in a full path. When the paths
+/// are already split up, it makes it easy for us to compare only the
+/// basenames of a lot of file specifications without having to split up the
+/// file path each time to get to the basename.
 //----------------------------------------------------------------------
 class FileSpec {
 public:
@@ -72,8 +71,8 @@ public:
   //------------------------------------------------------------------
   /// Constructor with path.
   ///
-  /// Takes a path to a file which can be just a filename, or a full
-  /// path. If \a path is not nullptr or empty, this function will call
+  /// Takes a path to a file which can be just a filename, or a full path. If
+  /// \a path is not nullptr or empty, this function will call
   /// FileSpec::SetFile (const char *path, bool resolve).
   ///
   /// @param[in] path
@@ -95,8 +94,7 @@ public:
   //------------------------------------------------------------------
   /// Copy constructor
   ///
-  /// Makes a copy of the uniqued directory and filename strings from
-  /// \a rhs.
+  /// Makes a copy of the uniqued directory and filename strings from \a rhs.
   ///
   /// @param[in] rhs
   ///     A const FileSpec object reference to copy.
@@ -106,8 +104,8 @@ public:
   //------------------------------------------------------------------
   /// Copy constructor
   ///
-  /// Makes a copy of the uniqued directory and filename strings from
-  /// \a rhs if it is not nullptr.
+  /// Makes a copy of the uniqued directory and filename strings from \a rhs
+  /// if it is not nullptr.
   ///
   /// @param[in] rhs
   ///     A const FileSpec object pointer to copy if non-nullptr.
@@ -126,8 +124,7 @@ public:
   //------------------------------------------------------------------
   /// Assignment operator.
   ///
-  /// Makes a copy of the uniqued directory and filename strings from
-  /// \a rhs.
+  /// Makes a copy of the uniqued directory and filename strings from \a rhs.
   ///
   /// @param[in] rhs
   ///     A const FileSpec object reference to assign to this object.
@@ -185,8 +182,8 @@ public:
   //------------------------------------------------------------------
   /// Convert to pointer operator.
   ///
-  /// This allows code to check a FileSpec object to see if it
-  /// contains anything valid using code such as:
+  /// This allows code to check a FileSpec object to see if it contains
+  /// anything valid using code such as:
   ///
   /// @code
   /// FileSpec file_spec(...);
@@ -203,8 +200,8 @@ public:
   //------------------------------------------------------------------
   /// Logical NOT operator.
   ///
-  /// This allows code to check a FileSpec object to see if it is
-  /// invalid using code such as:
+  /// This allows code to check a FileSpec object to see if it is invalid
+  /// using code such as:
   ///
   /// @code
   /// FileSpec file_spec(...);
@@ -221,20 +218,19 @@ public:
   //------------------------------------------------------------------
   /// Clears the object state.
   ///
-  /// Clear this object by releasing both the directory and filename
-  /// string values and reverting them to empty strings.
+  /// Clear this object by releasing both the directory and filename string
+  /// values and reverting them to empty strings.
   //------------------------------------------------------------------
   void Clear();
 
   //------------------------------------------------------------------
   /// Compare two FileSpec objects.
   ///
-  /// If \a full is true, then both the directory and the filename
-  /// must match. If \a full is false, then the directory names for
-  /// \a lhs and \a rhs are only compared if they are both not empty.
-  /// This allows a FileSpec object to only contain a filename
-  /// and it can match FileSpec objects that have matching
-  /// filenames with different paths.
+  /// If \a full is true, then both the directory and the filename must match.
+  /// If \a full is false, then the directory names for \a lhs and \a rhs are
+  /// only compared if they are both not empty. This allows a FileSpec object
+  /// to only contain a filename and it can match FileSpec objects that have
+  /// matching filenames with different paths.
   ///
   /// @param[in] lhs
   ///     A const reference to the Left Hand Side object to compare.
@@ -270,9 +266,9 @@ public:
   //------------------------------------------------------------------
   /// Dump this object to a Stream.
   ///
-  /// Dump the object to the supplied stream \a s. If the object
-  /// contains a valid directory name, it will be displayed followed
-  /// by a directory delimiter, and the filename.
+  /// Dump the object to the supplied stream \a s. If the object contains a
+  /// valid directory name, it will be displayed followed by a directory
+  /// delimiter, and the filename.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -302,8 +298,8 @@ public:
   /// Call into the Host to see if it can help find the file (e.g. by
   /// searching paths set in the environment, etc.).
   ///
-  /// If found, sets the value of m_directory to the directory where
-  /// the file was found.
+  /// If found, sets the value of m_directory to the directory where the file
+  /// was found.
   ///
   /// @return
   ///     \b true if was able to find the file using expanded search
@@ -313,8 +309,8 @@ public:
 
   //------------------------------------------------------------------
   /// Canonicalize this file path (basically running the static
-  /// FileSpec::Resolve method on it). Useful if you asked us not to
-  /// resolve the file path when you set the file.
+  /// FileSpec::Resolve method on it). Useful if you asked us not to resolve
+  /// the file path when you set the file.
   //------------------------------------------------------------------
   bool ResolvePath();
 
@@ -355,9 +351,8 @@ public:
   const ConstString &GetFilename() const;
 
   //------------------------------------------------------------------
-  /// Returns true if the filespec represents an implementation source
-  /// file (files with a ".c", ".cpp", ".m", ".mm" (many more)
-  /// extension).
+  /// Returns true if the filespec represents an implementation source file
+  /// (files with a ".c", ".cpp", ".m", ".mm" (many more) extension).
   ///
   /// @return
   ///     \b true if the filespec represents an implementation source
@@ -386,9 +381,8 @@ public:
   //------------------------------------------------------------------
   /// Extract the full path to the file.
   ///
-  /// Extract the directory and path into a fixed buffer. This is
-  /// needed as the directory and path are stored in separate string
-  /// values.
+  /// Extract the directory and path into a fixed buffer. This is needed as
+  /// the directory and path are stored in separate string values.
   ///
   /// @param[out] path
   ///     The buffer in which to place the extracted full path.
@@ -435,10 +429,10 @@ public:
   //------------------------------------------------------------------
   /// Extract the extension of the file.
   ///
-  /// Returns a ConstString that represents the extension of the filename
-  /// for this FileSpec object. If this object does not represent a file,
-  /// or the filename has no extension, ConstString(nullptr) is returned.
-  /// The dot ('.') character is not returned as part of the extension
+  /// Returns a ConstString that represents the extension of the filename for
+  /// this FileSpec object. If this object does not represent a file, or the
+  /// filename has no extension, ConstString(nullptr) is returned. The dot
+  /// ('.') character is not returned as part of the extension
   ///
   /// @return
   ///     Returns the extension of the file as a ConstString object.
@@ -449,8 +443,8 @@ public:
   /// Return the filename without the extension part
   ///
   /// Returns a ConstString that represents the filename of this object
-  /// without the extension part (e.g. for a file named "foo.bar", "foo"
-  /// is returned)
+  /// without the extension part (e.g. for a file named "foo.bar", "foo" is
+  /// returned)
   ///
   /// @return
   ///     Returns the filename without extension
@@ -461,9 +455,8 @@ public:
   //------------------------------------------------------------------
   /// Return the current permissions of the path.
   ///
-  /// Returns a bitmask for the current permissions of the file
-  /// ( zero or more of the permission bits defined in
-  /// File::Permissions).
+  /// Returns a bitmask for the current permissions of the file ( zero or more
+  /// of the permission bits defined in File::Permissions).
   ///
   /// @return
   ///     Zero if the file doesn't exist or we are unable to get
@@ -475,9 +468,9 @@ public:
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// Return the size in bytes that this object takes in memory. This
-  /// returns the size in bytes of this object, not any shared string
-  /// values it may refer to.
+  /// Return the size in bytes that this object takes in memory. This returns
+  /// the size in bytes of this object, not any shared string values it may
+  /// refer to.
   ///
   /// @return
   ///     The number of bytes that this object occupies in memory.
@@ -489,9 +482,9 @@ public:
   //------------------------------------------------------------------
   /// Change the file specified with a new path.
   ///
-  /// Update the contents of this object with a new path. The path will
-  /// be split up into a directory and filename and stored as uniqued
-  /// string values for quick comparison and efficient memory usage.
+  /// Update the contents of this object with a new path. The path will be
+  /// split up into a directory and filename and stored as uniqued string
+  /// values for quick comparison and efficient memory usage.
   ///
   /// @param[in] path
   ///     A full, partial, or relative path to a file.
@@ -511,11 +504,11 @@ public:
   //------------------------------------------------------------------
   /// Set if the file path has been resolved or not.
   ///
-  /// If you know a file path is already resolved and avoided passing
-  /// a \b true parameter for any functions that take a "bool
-  /// resolve_path" parameter, you can set the value manually using
-  /// this call to make sure we don't try and resolve it later, or try
-  /// and resolve a path that has already been resolved.
+  /// If you know a file path is already resolved and avoided passing a \b
+  /// true parameter for any functions that take a "bool resolve_path"
+  /// parameter, you can set the value manually using this call to make sure
+  /// we don't try and resolve it later, or try and resolve a path that has
+  /// already been resolved.
   ///
   /// @param[in] is_resolved
   ///     A boolean value that will replace the current value that

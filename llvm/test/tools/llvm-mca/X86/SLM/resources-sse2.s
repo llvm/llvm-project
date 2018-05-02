@@ -679,7 +679,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     343.00 8.00   223.00 92.00  4.50   4.50   131.00
+# CHECK-NEXT:  -     412.00 8.00   154.00 92.00  4.50   4.50 131.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    	Instructions:
@@ -932,7 +932,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     	shufpd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   	shufpd	$1, (%rax), %xmm2
 # CHECK-NEXT:  -     70.00   -     1.00    -      -      -      -     	sqrtpd	%xmm0, %xmm2
-# CHECK-NEXT:  -     1.00    -     70.00   -      -      -     1.00   	sqrtpd	(%rax), %xmm2
+# CHECK-NEXT:  -     70.00   -     1.00    -      -      -     1.00   	sqrtpd	(%rax), %xmm2
 # CHECK-NEXT:  -     35.00   -     1.00    -      -      -      -     	sqrtsd	%xmm0, %xmm2
 # CHECK-NEXT:  -     35.00   -     1.00    -      -      -     1.00   	sqrtsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     	subpd	%xmm0, %xmm2

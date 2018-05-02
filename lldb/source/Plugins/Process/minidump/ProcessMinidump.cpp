@@ -46,8 +46,11 @@ using namespace minidump;
 //------------------------------------------------------------------
 class PlaceholderModule : public Module {
 public:
-  PlaceholderModule(const FileSpec &file_spec, const ArchSpec &arch) :
-    Module(file_spec, arch) {}
+  PlaceholderModule(const ModuleSpec &module_spec) :
+    Module(module_spec.GetFileSpec(), module_spec.GetArchitecture()) {
+    if (module_spec.GetUUID().IsValid())
+      SetUUID(module_spec.GetUUID());
+  }
 
   // Creates a synthetic module section covering the whole module image (and
   // sets the section load address as well)
@@ -321,9 +324,10 @@ void ProcessMinidump::ReadModuleList() {
       m_is_wow64 = true;
     }
 
+    const auto uuid = m_minidump_parser.GetModuleUUID(module);
     const auto file_spec =
         FileSpec(name.getValue(), true, GetArchitecture().GetTriple());
-    ModuleSpec module_spec = file_spec;
+    ModuleSpec module_spec(file_spec, uuid);
     Status error;
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
     if (!module_sp || error.Fail()) {
@@ -335,7 +339,7 @@ void ProcessMinidump::ReadModuleList() {
       // translations (ex. identifing the module for a stack frame PC) and
       // modules/sections commands (ex. target modules list, ...)
       auto placeholder_module =
-          std::make_shared<PlaceholderModule>(file_spec, GetArchitecture());
+          std::make_shared<PlaceholderModule>(module_spec);
       placeholder_module->CreateImageSection(module, GetTarget());
       module_sp = placeholder_module;
       GetTarget().GetImages().Append(module_sp);

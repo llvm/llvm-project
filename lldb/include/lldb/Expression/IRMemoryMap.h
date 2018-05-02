@@ -20,19 +20,19 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class IRMemoryMap IRMemoryMap.h "lldb/Expression/IRMemoryMap.h"
-/// @brief Encapsulates memory that may exist in the process but must
+/// Encapsulates memory that may exist in the process but must
 ///     also be available in the host process.
 ///
-/// This class encapsulates a group of memory objects that must be readable
-/// or writable from the host process regardless of whether the process
-/// exists.  This allows the IR interpreter as well as JITted code to access
-/// the same memory.  All allocations made by this class are represented as
-/// disjoint intervals.
+/// This class encapsulates a group of memory objects that must be readable or
+/// writable from the host process regardless of whether the process exists.
+/// This allows the IR interpreter as well as JITted code to access the same
+/// memory.  All allocations made by this class are represented as disjoint
+/// intervals.
 ///
 /// Point queries against this group of memory objects can be made by the
-/// address in the tar at which they reside.  If the inferior does not
-/// exist, allocations still get made-up addresses.  If an inferior appears
-/// at some point, then those addresses need to be re-mapped.
+/// address in the tar at which they reside.  If the inferior does not exist,
+/// allocations still get made-up addresses.  If an inferior appears at some
+/// point, then those addresses need to be re-mapped.
 //----------------------------------------------------------------------
 class IRMemoryMap {
 public:

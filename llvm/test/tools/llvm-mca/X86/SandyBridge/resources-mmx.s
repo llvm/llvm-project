@@ -210,11 +210,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      3     1.00                    	pcmpgtw	%mm0, %mm2
 # CHECK-NEXT:  2      8     1.00    *               	pcmpgtw	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                    	pmaddwd	%mm0, %mm2
-# CHECK-NEXT:  2      11    1.00    *               	pmaddwd	(%rax), %mm2
+# CHECK-NEXT:  2      10    1.00    *               	pmaddwd	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                    	pmulhw	%mm0, %mm2
-# CHECK-NEXT:  2      11    1.00    *               	pmulhw	(%rax), %mm2
+# CHECK-NEXT:  2      10    1.00    *               	pmulhw	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                    	pmullw	%mm0, %mm2
-# CHECK-NEXT:  2      11    1.00    *               	pmullw	(%rax), %mm2
+# CHECK-NEXT:  2      10    1.00    *               	pmullw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.33                    	por	%mm0, %mm2
 # CHECK-NEXT:  2      6     0.50    *               	por	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                    	pslld	$1, %mm2

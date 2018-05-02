@@ -431,8 +431,10 @@ const char *GetEnv(const char *name) {
 }
 
 uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
-  const char *argv0 = StoredArgv[0];
-  if (!argv0) argv0 = "<UNKNOWN>";
+  const char *argv0 = "<UNKNOWN>";
+  if (StoredArgv && StoredArgv[0]) {
+    argv0 = StoredArgv[0];
+  }
   internal_strncpy(buf, argv0, buf_len);
   return internal_strlen(buf);
 }

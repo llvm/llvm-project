@@ -28,15 +28,15 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointSite BreakpointSite.h "lldb/Breakpoint/BreakpointSite.h"
-/// @brief Class that manages the actual breakpoint that will be inserted
-/// into the running program.
+/// Class that manages the actual breakpoint that will be inserted into the
+/// running program.
 ///
-/// The BreakpointSite class handles the physical breakpoint that is
-/// actually inserted in the target program.  As such, it is also the
-/// one that  gets hit, when the program stops. It keeps a list of all
-/// BreakpointLocations that share this physical site. When the
-/// breakpoint is hit, all the locations are informed by the breakpoint
-/// site. Breakpoint sites are owned by the process.
+/// The BreakpointSite class handles the physical breakpoint that is actually
+/// inserted in the target program.  As such, it is also the one that  gets
+/// hit, when the program stops. It keeps a list of all BreakpointLocations
+/// that share this physical site. When the breakpoint is hit, all the
+/// locations are informed by the breakpoint site. Breakpoint sites are owned
+/// by the process.
 //----------------------------------------------------------------------
 
 class BreakpointSite : public std::enable_shared_from_this<BreakpointSite>,
@@ -101,10 +101,9 @@ public:
   /// Tells whether the current breakpoint site is enabled or not
   ///
   /// This is a low-level enable bit for the breakpoint sites.  If a
-  /// breakpoint site has no enabled owners, it should just get
-  /// removed.  This enable/disable is for the low-level target code
-  /// to enable and disable breakpoint sites when single stepping,
-  /// etc.
+  /// breakpoint site has no enabled owners, it should just get removed.  This
+  /// enable/disable is for the low-level target code to enable and disable
+  /// breakpoint sites when single stepping, etc.
   //------------------------------------------------------------------
   bool IsEnabled() const;
 
@@ -118,8 +117,7 @@ public:
 
   //------------------------------------------------------------------
   /// Enquires of the breakpoint locations that produced this breakpoint site
-  /// whether
-  /// we should stop at this location.
+  /// whether we should stop at this location.
   ///
   /// @param[in] context
   ///    This contains the information about this stop.
@@ -138,9 +136,8 @@ public:
   void Dump(Stream *s) const override;
 
   //------------------------------------------------------------------
-  /// The "Owners" are the breakpoint locations that share this
-  /// breakpoint site. The method adds the \a owner to this breakpoint
-  /// site's owner list.
+  /// The "Owners" are the breakpoint locations that share this breakpoint
+  /// site. The method adds the \a owner to this breakpoint site's owner list.
   ///
   /// @param[in] context
   ///    \a owner is the Breakpoint Location to add.
@@ -148,8 +145,8 @@ public:
   void AddOwner(const lldb::BreakpointLocationSP &owner);
 
   //------------------------------------------------------------------
-  /// This method returns the number of breakpoint locations currently
-  /// located at this breakpoint site.
+  /// This method returns the number of breakpoint locations currently located
+  /// at this breakpoint site.
   ///
   /// @return
   ///    The number of owners.
@@ -157,10 +154,10 @@ public:
   size_t GetNumberOfOwners();
 
   //------------------------------------------------------------------
-  /// This method returns the breakpoint location at index \a index
-  /// located at this breakpoint site.  The owners are listed ordinally
-  /// from 0 to GetNumberOfOwners() - 1 so you can use this method to iterate
-  /// over the owners
+  /// This method returns the breakpoint location at index \a index located at
+  /// this breakpoint site.  The owners are listed ordinally from 0 to
+  /// GetNumberOfOwners() - 1 so you can use this method to iterate over the
+  /// owners
   ///
   /// @param[in] index
   ///     The index in the list of owners for which you wish the owner location.
@@ -183,9 +180,9 @@ public:
   size_t CopyOwnersList(BreakpointLocationCollection &out_collection);
 
   //------------------------------------------------------------------
-  /// Check whether the owners of this breakpoint site have any
-  /// thread specifiers, and if yes, is \a thread contained in any
-  /// of these specifiers.
+  /// Check whether the owners of this breakpoint site have any thread
+  /// specifiers, and if yes, is \a thread contained in any of these
+  /// specifiers.
   ///
   /// @param[in] thread
   ///     The thread against which to test.
@@ -198,9 +195,9 @@ public:
 
   //------------------------------------------------------------------
   /// Print a description of this breakpoint site to the stream \a s.
-  /// GetDescription tells you about the breakpoint site's owners.
-  /// Use BreakpointSite::Dump(Stream *) to get information about the
-  /// breakpoint site itself.
+  /// GetDescription tells you about the breakpoint site's owners. Use
+  /// BreakpointSite::Dump(Stream *) to get information about the breakpoint
+  /// site itself.
   ///
   /// @param[in] s
   ///     The stream to which to print the description.
@@ -226,7 +223,8 @@ public:
   bool IsBreakpointAtThisSite(lldb::break_id_t bp_id);
 
   //------------------------------------------------------------------
-  /// Tell whether ALL the breakpoints in the location collection are internal.
+  /// Tell whether ALL the breakpoints in the location collection are
+  /// internal.
   ///
   /// @result
   ///     \b true if all breakpoint locations are owned by internal breakpoints,
@@ -249,7 +247,8 @@ private:
   void BumpHitCounts();
 
   //------------------------------------------------------------------
-  /// The method removes the owner at \a break_loc_id from this breakpoint list.
+  /// The method removes the owner at \a break_loc_id from this breakpoint
+  /// list.
   ///
   /// @param[in] context
   ///    \a break_loc_id is the Breakpoint Location to remove.

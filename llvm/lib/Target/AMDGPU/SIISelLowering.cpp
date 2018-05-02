@@ -6755,7 +6755,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     return SDValue();
   }
 
-  if (VT != MVT::i32)
+  if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())
     return SDValue();
 
   // add x, zext (setcc) => addcarry x, 0, setcc

@@ -779,6 +779,57 @@ multiclass sve_mem_sst_vi_ptrs<bits<3> opc, string asm, RegisterOperand listty,
                   (!cast<Instruction>(NAME # _IMM) listty:$Zt, PPR3bAny:$Pg, zprty:$Zn, 0), 1>;
 }
 
+class sve_mem_z_spill<string asm>
+: I<(outs), (ins ZPRAny:$Zt, GPR64sp:$Rn, simm9:$imm9),
+  asm, "\t$Zt, [$Rn, $imm9, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rn;
+  bits<5> Zt;
+  bits<9> imm9;
+  let Inst{31-22} = 0b1110010110;
+  let Inst{21-16} = imm9{8-3};
+  let Inst{15-13} = 0b010;
+  let Inst{12-10} = imm9{2-0};
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayStore = 1;
+}
+
+multiclass sve_mem_z_spill<string asm> {
+  def NAME : sve_mem_z_spill<asm>;
+
+  def : InstAlias<asm # "\t$Zt, [$Rn]",
+                  (!cast<Instruction>(NAME) ZPRAny:$Zt, GPR64sp:$Rn, 0), 1>;
+}
+
+class sve_mem_p_spill<string asm>
+: I<(outs), (ins PPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9),
+  asm, "\t$Pt, [$Rn, $imm9, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pt;
+  bits<5> Rn;
+  bits<9> imm9;
+  let Inst{31-22} = 0b1110010110;
+  let Inst{21-16} = imm9{8-3};
+  let Inst{15-13} = 0b000;
+  let Inst{12-10} = imm9{2-0};
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = Pt;
+
+  let mayStore = 1;
+}
+
+multiclass sve_mem_p_spill<string asm> {
+  def NAME : sve_mem_p_spill<asm>;
+
+  def : InstAlias<asm # "\t$Pt, [$Rn]",
+                  (!cast<Instruction>(NAME) PPRAny:$Pt, GPR64sp:$Rn, 0), 1>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Permute - Predicates Group
 //===----------------------------------------------------------------------===//
@@ -1149,6 +1200,57 @@ multiclass sve_mem_32b_gld_vi_32_ptrs<bits<4> opc, string asm, Operand imm_ty> {
                   (!cast<Instruction>(NAME # _IMM_REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
                   (!cast<Instruction>(NAME # _IMM_REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, 0), 1>;
+}
+
+class sve_mem_z_fill<string asm>
+: I<(outs ZPRAny:$Zt), (ins GPR64sp:$Rn, simm9:$imm9),
+  asm, "\t$Zt, [$Rn, $imm9, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rn;
+  bits<5> Zt;
+  bits<9> imm9;
+  let Inst{31-22} = 0b1000010110;
+  let Inst{21-16} = imm9{8-3};
+  let Inst{15-13} = 0b010;
+  let Inst{12-10} = imm9{2-0};
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+}
+
+multiclass sve_mem_z_fill<string asm> {
+  def NAME : sve_mem_z_fill<asm>;
+
+  def : InstAlias<asm # "\t$Zt, [$Rn]",
+                  (!cast<Instruction>(NAME) ZPRAny:$Zt, GPR64sp:$Rn, 0), 1>;
+}
+
+class sve_mem_p_fill<string asm>
+: I<(outs PPRAny:$Pt), (ins GPR64sp:$Rn, simm9:$imm9),
+  asm, "\t$Pt, [$Rn, $imm9, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pt;
+  bits<5> Rn;
+  bits<9> imm9;
+  let Inst{31-22} = 0b1000010110;
+  let Inst{21-16} = imm9{8-3};
+  let Inst{15-13} = 0b000;
+  let Inst{12-10} = imm9{2-0};
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = Pt;
+
+  let mayLoad = 1;
+}
+
+multiclass sve_mem_p_fill<string asm> {
+  def NAME : sve_mem_p_fill<asm>;
+
+  def : InstAlias<asm # "\t$Pt, [$Rn]",
+                  (!cast<Instruction>(NAME) PPRAny:$Pt, GPR64sp:$Rn, 0), 1>;
 }
 
 //===----------------------------------------------------------------------===//
