@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-pc-win32 | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 

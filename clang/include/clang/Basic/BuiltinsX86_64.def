@@ -94,6 +94,7 @@ TARGET_BUILTIN(__builtin_ia32_cvtsi2sd64, "V2dV2dLLiIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtsi2ss64, "V4fV4fLLiIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtusi2sd64, "V2dV2dULLiIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtusi2ss64, "V4fV4fULLiIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_directstore_u64, "vULi*ULi", "", "movdiri")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

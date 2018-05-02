@@ -1883,6 +1883,10 @@ TARGET_BUILTIN(__builtin_ia32_clzero, "vv*", "", "clzero")
 // CLDEMOTE
 TARGET_BUILTIN(__builtin_ia32_cldemote, "vvC*", "", "cldemote")
 
+// Direct Move
+TARGET_BUILTIN(__builtin_ia32_directstore_u32, "vUi*Ui", "", "movdiri")
+TARGET_BUILTIN(__builtin_ia32_movdir64b, "vv*vC*", "", "movdir64b")
+
 // MSVC
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")

@@ -2496,6 +2496,10 @@ X86
 
 .. option:: -mmovbe, -mno-movbe
 
+.. option:: -mmovdiri, -mno-movdiri
+
+.. option:: -mmovdir64b, -mno-movdir64b
+
 .. option:: -mmpx, -mno-mpx
 
 .. option:: -mmwaitx, -mno-mwaitx
