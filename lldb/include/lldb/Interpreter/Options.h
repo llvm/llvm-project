@@ -52,15 +52,13 @@ static inline bool isprint8(int ch) {
 
 //----------------------------------------------------------------------
 /// @class Options Options.h "lldb/Interpreter/Options.h"
-/// @brief A command line option parsing protocol class.
+/// A command line option parsing protocol class.
 ///
-/// Options is designed to be subclassed to contain all needed
-/// options for a given command. The options can be parsed by calling the Parse
-/// function.
+/// Options is designed to be subclassed to contain all needed options for a
+/// given command. The options can be parsed by calling the Parse function.
 ///
-/// The options are specified using the format defined for the libc
-/// options parsing function getopt_long_only:
-/// \code
+/// The options are specified using the format defined for the libc options
+/// parsing function getopt_long_only: \code
 ///     #include <getopt.h>
 ///     int getopt_long_only(int argc, char * const *argv, const char
 ///     *optstring, const struct option *longopts, int *longindex);
@@ -124,8 +122,8 @@ public:
   /// Parse the provided arguments.
   ///
   /// The parsed options are set via calls to SetOptionValue. In case of a
-  /// successful parse, the function returns a copy of the input arguments with
-  /// the parsed options removed. Otherwise, it returns an error.
+  /// successful parse, the function returns a copy of the input arguments
+  /// with the parsed options removed. Otherwise, it returns an error.
   ///
   /// param[in] platform_sp
   ///   The platform used for option validation.  This is necessary
@@ -175,8 +173,8 @@ public:
                                 ExecutionContext *execution_context) = 0;
 
   //------------------------------------------------------------------
-  /// Handles the generic bits of figuring out whether we are in an
-  /// option, and if so completing it.
+  /// Handles the generic bits of figuring out whether we are in an option,
+  /// and if so completing it.
   ///
   /// @param[in] input
   ///    The command line parsed into words
@@ -203,8 +201,8 @@ public:
   ///     The array of matches returned.
   ///
   /// FIXME: This is the wrong return value, since we also need to
-  /// make a distinction between total number of matches, and the
-  /// window the user wants returned.
+  /// make a distinction between total number of matches, and the window the
+  /// user wants returned.
   ///
   /// @return
   ///     \btrue if we were in an option, \bfalse otherwise.
@@ -217,8 +215,8 @@ public:
                               lldb_private::StringList &matches);
 
   //------------------------------------------------------------------
-  /// Handles the generic bits of figuring out whether we are in an
-  /// option, and if so completing it.
+  /// Handles the generic bits of figuring out whether we are in an option,
+  /// and if so completing it.
   ///
   /// @param[in] interpreter
   ///    The command interpreter doing the completion.
@@ -255,8 +253,8 @@ public:
   ///     The array of matches returned.
   ///
   /// FIXME: This is the wrong return value, since we also need to
-  /// make a distinction between total number of matches, and the
-  /// window the user wants returned.
+  /// make a distinction between total number of matches, and the window the
+  /// user wants returned.
   ///
   /// @return
   ///     \btrue if we were in an option, \bfalse otherwise.
@@ -343,8 +341,8 @@ public:
   //----------------------------------------------------------------------
   /// Append options from a OptionGroup class.
   ///
-  /// Append all options from \a group using the exact same option groups
-  /// that each option is defined with.
+  /// Append all options from \a group using the exact same option groups that
+  /// each option is defined with.
   ///
   /// @param[in] group
   ///     A group of options to take option values from and copy their
@@ -355,9 +353,9 @@ public:
   //----------------------------------------------------------------------
   /// Append options from a OptionGroup class.
   ///
-  /// Append options from \a group that have a usage mask that has any bits
-  /// in "src_mask" set. After the option definition is copied into the
-  /// options definitions in this class, set the usage_mask to "dst_mask".
+  /// Append options from \a group that have a usage mask that has any bits in
+  /// "src_mask" set. After the option definition is copied into the options
+  /// definitions in this class, set the usage_mask to "dst_mask".
   ///
   /// @param[in] group
   ///     A group of options to take option values from and copy their

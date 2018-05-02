@@ -32,16 +32,16 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Connection Connection.h "lldb/Utility/Connection.h"
-/// @brief A communication connection class.
+/// A communication connection class.
 ///
 /// A class that implements that actual communication functions for
-/// connecting/disconnecting, reading/writing, and waiting for bytes
-/// to become available from a two way communication connection.
+/// connecting/disconnecting, reading/writing, and waiting for bytes to become
+/// available from a two way communication connection.
 ///
-/// This class is designed to only do very simple communication
-/// functions. Instances can be instantiated and given to a
-/// Communication class to perform communications where clients can
-/// listen for broadcasts, and perform other higher level communications.
+/// This class is designed to only do very simple communication functions.
+/// Instances can be instantiated and given to a Communication class to
+/// perform communications where clients can listen for broadcasts, and
+/// perform other higher level communications.
 //----------------------------------------------------------------------
 class Connection {
 public:
@@ -51,8 +51,8 @@ public:
   Connection() = default;
 
   //------------------------------------------------------------------
-  /// Virtual destructor since this class gets subclassed and handed
-  /// to a Communication object.
+  /// Virtual destructor since this class gets subclassed and handed to a
+  /// Communication object.
   //------------------------------------------------------------------
   virtual ~Connection();
 
@@ -79,8 +79,7 @@ public:
                                          Status *error_ptr) = 0;
 
   //------------------------------------------------------------------
-  /// Disconnect the communications connection if one is currently
-  /// connected.
+  /// Disconnect the communications connection if one is currently connected.
   ///
   /// @param[out] error_ptr
   ///     A pointer to an error object that should be given an
@@ -138,8 +137,8 @@ public:
                       lldb::ConnectionStatus &status, Status *error_ptr) = 0;
 
   //------------------------------------------------------------------
-  /// The actual write function that attempts to write to the
-  /// communications protocol.
+  /// The actual write function that attempts to write to the communications
+  /// protocol.
   ///
   /// Subclasses must override this function.
   ///
@@ -190,10 +189,9 @@ public:
   //------------------------------------------------------------------
   /// Returns the underlying IOObject used by the Connection.
   ///
-  /// The IOObject can be used to wait for data to become available
-  /// on the connection. If the Connection does not use IOObjects (and
-  /// hence does not support waiting) this function should return a
-  /// null pointer.
+  /// The IOObject can be used to wait for data to become available on the
+  /// connection. If the Connection does not use IOObjects (and hence does not
+  /// support waiting) this function should return a null pointer.
   ///
   /// @return
   ///     The underlying IOObject used for reading.

@@ -30,21 +30,21 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Block Block.h "lldb/Symbol/Block.h"
-/// @brief A class that describes a single lexical block.
+/// A class that describes a single lexical block.
 ///
 /// A Function object owns a BlockList object which owns one or more
-/// Block objects. The BlockList object contains a section offset
-/// address range, and Block objects contain one or more ranges
-/// which are offsets into that range. Blocks are can have discontiguous
-/// ranges within the BlockList address range, and each block can
-/// contain child blocks each with their own sets of ranges.
+/// Block objects. The BlockList object contains a section offset address
+/// range, and Block objects contain one or more ranges which are offsets into
+/// that range. Blocks are can have discontiguous ranges within the BlockList
+/// address range, and each block can contain child blocks each with their own
+/// sets of ranges.
 ///
-/// Each block has a variable list that represents local, argument, and
-/// static variables that are scoped to the block.
+/// Each block has a variable list that represents local, argument, and static
+/// variables that are scoped to the block.
 ///
-/// Inlined functions are represented by attaching a
-/// InlineFunctionInfo shared pointer object to a block. Inlined
-/// functions are represented as named blocks.
+/// Inlined functions are represented by attaching a InlineFunctionInfo shared
+/// pointer object to a block. Inlined functions are represented as named
+/// blocks.
 //----------------------------------------------------------------------
 class Block : public UserID, public SymbolContextScope {
 public:
@@ -54,10 +54,9 @@ public:
   //------------------------------------------------------------------
   /// Construct with a User ID \a uid, \a depth.
   ///
-  /// Initialize this block with the specified UID \a uid. The
-  /// \a depth in the \a block_list is used to represent the parent,
-  /// sibling, and child block information and also allows for partial
-  /// parsing at the block level.
+  /// Initialize this block with the specified UID \a uid. The \a depth in the
+  /// \a block_list is used to represent the parent, sibling, and child block
+  /// information and also allows for partial parsing at the block level.
   ///
   /// @param[in] uid
   ///     The UID for a given block. This value is given by the
@@ -146,8 +145,7 @@ public:
   bool Contains(const Range &range) const;
 
   //------------------------------------------------------------------
-  /// Check if this object contains "block" as a child block at any
-  /// depth.
+  /// Check if this object contains "block" as a child block at any depth.
   ///
   /// @param[in] block
   ///     A potential child block.
@@ -256,8 +254,8 @@ public:
   lldb::VariableListSP GetBlockVariableList(bool can_create);
 
   //------------------------------------------------------------------
-  /// Get the variable list for this block and optionally all child
-  /// blocks if \a get_child_variables is \b true.
+  /// Get the variable list for this block and optionally all child blocks if
+  /// \a get_child_variables is \b true.
   ///
   /// @param[in] get_child_variables
   ///     If \b true, all variables from all child blocks will be
@@ -286,8 +284,8 @@ public:
                                 VariableList *variable_list);
 
   //------------------------------------------------------------------
-  /// Appends the variables from this block, and optionally from all
-  /// parent blocks, to \a variable_list.
+  /// Appends the variables from this block, and optionally from all parent
+  /// blocks, to \a variable_list.
   ///
   /// @param[in] can_create
   ///     If \b true, the variables can be parsed if they already
@@ -334,8 +332,8 @@ public:
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// Returns the cost of this object plus any owned objects from the
-  /// ranges, variables, and inline function information.
+  /// Returns the cost of this object plus any owned objects from the ranges,
+  /// variables, and inline function information.
   ///
   /// @return
   ///     The number of bytes that this object occupies in memory.
@@ -374,9 +372,8 @@ public:
   //------------------------------------------------------------------
   /// Set accessor for the variable list.
   ///
-  /// Called by the SymbolFile plug-ins after they have parsed the
-  /// variable lists and are ready to hand ownership of the list over
-  /// to this object.
+  /// Called by the SymbolFile plug-ins after they have parsed the variable
+  /// lists and are ready to hand ownership of the list over to this object.
   ///
   /// @param[in] variable_list_sp
   ///     A shared pointer to a VariableList.

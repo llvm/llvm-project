@@ -27,22 +27,20 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointLocation BreakpointLocation.h
-/// "lldb/Breakpoint/BreakpointLocation.h"
-/// @brief Class that manages one unique (by address) instance of a logical
-/// breakpoint.
+/// "lldb/Breakpoint/BreakpointLocation.h" Class that manages one unique (by
+/// address) instance of a logical breakpoint.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 /// General Outline:
 /// A breakpoint location is defined by the breakpoint that produces it,
-/// and the address that resulted in this particular instantiation.
-/// Each breakpoint location also may have a breakpoint site if its
-/// address has been loaded into the program.
-/// Finally it has a settable options object.
+/// and the address that resulted in this particular instantiation. Each
+/// breakpoint location also may have a breakpoint site if its address has
+/// been loaded into the program. Finally it has a settable options object.
 ///
 /// FIXME: Should we also store some fingerprint for the location, so
-/// we can map one location to the "equivalent location" on rerun?  This
-/// would be useful if you've set options on the locations.
+/// we can map one location to the "equivalent location" on rerun?  This would
+/// be useful if you've set options on the locations.
 //----------------------------------------------------------------------
 
 class BreakpointLocation
@@ -52,22 +50,19 @@ public:
   ~BreakpointLocation() override;
 
   //------------------------------------------------------------------
-  /// Gets the load address for this breakpoint location
-  /// @return
+  /// Gets the load address for this breakpoint location @return
   ///     Returns breakpoint location load address, \b
   ///     LLDB_INVALID_ADDRESS if not yet set.
   //------------------------------------------------------------------
   lldb::addr_t GetLoadAddress() const override;
 
   //------------------------------------------------------------------
-  /// Gets the Address for this breakpoint location
-  /// @return
+  /// Gets the Address for this breakpoint location @return
   ///     Returns breakpoint location Address.
   //------------------------------------------------------------------
   Address &GetAddress();
   //------------------------------------------------------------------
-  /// Gets the Breakpoint that created this breakpoint location
-  /// @return
+  /// Gets the Breakpoint that created this breakpoint location @return
   ///     Returns the owning breakpoint.
   //------------------------------------------------------------------
   Breakpoint &GetBreakpoint();
@@ -75,12 +70,11 @@ public:
   Target &GetTarget();
 
   //------------------------------------------------------------------
-  /// Determines whether we should stop due to a hit at this
-  /// breakpoint location.
+  /// Determines whether we should stop due to a hit at this breakpoint
+  /// location.
   ///
-  /// Side Effects: This may evaluate the breakpoint condition, and
-  /// run the callback.  So this command may do a considerable amount
-  /// of work.
+  /// Side Effects: This may evaluate the breakpoint condition, and run the
+  /// callback.  So this command may do a considerable amount of work.
   ///
   /// @return
   ///     \b true if this breakpoint location thinks we should stop,
@@ -93,8 +87,7 @@ public:
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// If \a enable is \b true, enable the breakpoint, if \b false
-  /// disable it.
+  /// If \a enable is \b true, enable the breakpoint, if \b false disable it.
   //------------------------------------------------------------------
   void SetEnabled(bool enabled);
 
@@ -138,8 +131,8 @@ public:
   //------------------------------------------------------------------
   /// Set the callback action invoked when the breakpoint is hit.
   ///
-  /// The callback will return a bool indicating whether the target
-  /// should stop at this breakpoint or not.
+  /// The callback will return a bool indicating whether the target should
+  /// stop at this breakpoint or not.
   ///
   /// @param[in] callback
   ///     The method that will get called when the breakpoint is hit.
@@ -213,8 +206,8 @@ public:
   bool ResolveBreakpointSite();
 
   //------------------------------------------------------------------
-  /// Clear this breakpoint location's breakpoint site - for instance
-  /// when disabling the breakpoint.
+  /// Clear this breakpoint location's breakpoint site - for instance when
+  /// disabling the breakpoint.
   ///
   /// @return
   ///     \b true if there was a breakpoint site to be cleared, \b false
@@ -223,8 +216,7 @@ public:
   bool ClearBreakpointSite();
 
   //------------------------------------------------------------------
-  /// Return whether this breakpoint location has a breakpoint site.
-  /// @return
+  /// Return whether this breakpoint location has a breakpoint site. @return
   ///     \b true if there was a breakpoint site for this breakpoint
   ///     location, \b false otherwise.
   //------------------------------------------------------------------
@@ -237,8 +229,7 @@ public:
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Print a description of this breakpoint location to the stream
-  /// \a s.
+  /// Print a description of this breakpoint location to the stream \a s.
   ///
   /// @param[in] s
   ///     The stream to which to print the description.
@@ -259,8 +250,8 @@ public:
   //------------------------------------------------------------------
   /// Use this to set location specific breakpoint options.
   ///
-  /// It will create a copy of the containing breakpoint's options if
-  /// that hasn't been done already
+  /// It will create a copy of the containing breakpoint's options if that
+  /// hasn't been done already
   ///
   /// @return
   ///    A pointer to the breakpoint options.
@@ -302,8 +293,7 @@ public:
 
   //------------------------------------------------------------------
   /// Returns whether we should resolve Indirect functions in setting the
-  /// breakpoint site
-  /// for this location.
+  /// breakpoint site for this location.
   ///
   /// @return
   ///     \b true if the breakpoint SITE for this location should be set on the
@@ -315,8 +305,7 @@ public:
 
   //------------------------------------------------------------------
   /// Returns whether the address set in the breakpoint site for this location
-  /// was found by resolving
-  /// an indirect symbol.
+  /// was found by resolving an indirect symbol.
   ///
   /// @return
   ///     \b true or \b false as given in the description above.
@@ -327,8 +316,7 @@ public:
 
   //------------------------------------------------------------------
   /// Returns whether the address set in the breakpoint location was re-routed
-  /// to the target of a
-  /// re-exported symbol.
+  /// to the target of a re-exported symbol.
   ///
   /// @return
   ///     \b true or \b false as given in the description above.
@@ -339,10 +327,8 @@ public:
 
   //------------------------------------------------------------------
   /// Returns whether the two breakpoint locations might represent "equivalent
-  /// locations".
-  /// This is used when modules changed to determine if a Location in the old
-  /// module might
-  /// be the "same as" the input location.
+  /// locations". This is used when modules changed to determine if a Location
+  /// in the old module might be the "same as" the input location.
   ///
   /// @param[in] location
   ///    The location to compare against.

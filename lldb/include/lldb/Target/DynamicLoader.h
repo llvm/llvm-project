@@ -48,24 +48,21 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class DynamicLoader DynamicLoader.h "lldb/Target/DynamicLoader.h"
-/// @brief A plug-in interface definition class for dynamic loaders.
+/// A plug-in interface definition class for dynamic loaders.
 ///
 /// Dynamic loader plug-ins track image (shared library) loading and
-/// unloading. The class is initialized given a live process that is
-/// halted at its entry point or just after attaching.
+/// unloading. The class is initialized given a live process that is halted at
+/// its entry point or just after attaching.
 ///
-/// Dynamic loader plug-ins can track the process by registering
-/// callbacks using the:
-/// Process::RegisterNotificationCallbacks (const Notifications&)
+/// Dynamic loader plug-ins can track the process by registering callbacks
+/// using the: Process::RegisterNotificationCallbacks (const Notifications&)
 /// function.
 ///
-/// Breakpoints can also be set in the process which can register
-/// functions that get called using:
-/// Process::BreakpointSetCallback (lldb::user_id_t, BreakpointHitCallback, void
-/// *).
-/// These breakpoint callbacks return a boolean value that indicates if
-/// the process should continue or halt and should return the global
-/// setting for this using:
+/// Breakpoints can also be set in the process which can register functions
+/// that get called using: Process::BreakpointSetCallback (lldb::user_id_t,
+/// BreakpointHitCallback, void *). These breakpoint callbacks return a
+/// boolean value that indicates if the process should continue or halt and
+/// should return the global setting for this using:
 /// DynamicLoader::StopWhenImagesChange() const.
 //----------------------------------------------------------------------
 class DynamicLoader : public PluginInterface {
@@ -73,9 +70,8 @@ public:
   //------------------------------------------------------------------
   /// Find a dynamic loader plugin for a given process.
   ///
-  /// Scans the installed DynamicLoader plug-ins and tries to find
-  /// an instance that can be used to track image changes in \a
-  /// process.
+  /// Scans the installed DynamicLoader plug-ins and tries to find an instance
+  /// that can be used to track image changes in \a process.
   ///
   /// @param[in] process
   ///     The process for which to try and locate a dynamic loader
@@ -95,45 +91,44 @@ public:
   //------------------------------------------------------------------
   /// Destructor.
   ///
-  /// The destructor is virtual since this class is designed to be
-  /// inherited from by the plug-in instance.
+  /// The destructor is virtual since this class is designed to be inherited
+  /// from by the plug-in instance.
   //------------------------------------------------------------------
   virtual ~DynamicLoader() override;
 
   //------------------------------------------------------------------
   /// Called after attaching a process.
   ///
-  /// Allow DynamicLoader plug-ins to execute some code after
-  /// attaching to a process.
+  /// Allow DynamicLoader plug-ins to execute some code after attaching to a
+  /// process.
   //------------------------------------------------------------------
   virtual void DidAttach() = 0;
 
   //------------------------------------------------------------------
   /// Called after launching a process.
   ///
-  /// Allow DynamicLoader plug-ins to execute some code after
-  /// the process has stopped for the first time on launch.
+  /// Allow DynamicLoader plug-ins to execute some code after the process has
+  /// stopped for the first time on launch.
   //------------------------------------------------------------------
   virtual void DidLaunch() = 0;
 
   //------------------------------------------------------------------
-  /// Helper function that can be used to detect when a process has
-  /// called exec and is now a new and different process. This can
-  /// be called when necessary to try and detect the exec. The process
-  /// might be able to answer this question, but sometimes it might
-  /// not be able and the dynamic loader often knows what the program
-  /// entry point is. So the process and the dynamic loader can work
-  /// together to detect this.
+  /// Helper function that can be used to detect when a process has called
+  /// exec and is now a new and different process. This can be called when
+  /// necessary to try and detect the exec. The process might be able to
+  /// answer this question, but sometimes it might not be able and the dynamic
+  /// loader often knows what the program entry point is. So the process and
+  /// the dynamic loader can work together to detect this.
   //------------------------------------------------------------------
   virtual bool ProcessDidExec() { return false; }
   //------------------------------------------------------------------
   /// Get whether the process should stop when images change.
   ///
-  /// When images (executables and shared libraries) get loaded or
-  /// unloaded, often debug sessions will want to try and resolve or
-  /// unresolve breakpoints that are set in these images. Any
-  /// breakpoints set by DynamicLoader plug-in instances should
-  /// return this value to ensure consistent debug session behaviour.
+  /// When images (executables and shared libraries) get loaded or unloaded,
+  /// often debug sessions will want to try and resolve or unresolve
+  /// breakpoints that are set in these images. Any breakpoints set by
+  /// DynamicLoader plug-in instances should return this value to ensure
+  /// consistent debug session behaviour.
   ///
   /// @return
   ///     Returns \b true if the process should stop when images
@@ -144,11 +139,11 @@ public:
   //------------------------------------------------------------------
   /// Set whether the process should stop when images change.
   ///
-  /// When images (executables and shared libraries) get loaded or
-  /// unloaded, often debug sessions will want to try and resolve or
-  /// unresolve breakpoints that are set in these images. The default
-  /// is set so that the process stops when images change, but this
-  /// can be overridden using this function callback.
+  /// When images (executables and shared libraries) get loaded or unloaded,
+  /// often debug sessions will want to try and resolve or unresolve
+  /// breakpoints that are set in these images. The default is set so that the
+  /// process stops when images change, but this can be overridden using this
+  /// function callback.
   ///
   /// @param[in] stop
   ///     Boolean value that indicates whether the process should stop
@@ -157,8 +152,8 @@ public:
   void SetStopWhenImagesChange(bool stop);
 
   //------------------------------------------------------------------
-  /// Provides a plan to step through the dynamic loader trampoline
-  /// for the current state of \a thread.
+  /// Provides a plan to step through the dynamic loader trampoline for the
+  /// current state of \a thread.
   ///
   ///
   /// @param[in] stop_others
@@ -173,12 +168,9 @@ public:
 
   //------------------------------------------------------------------
   /// Some dynamic loaders provide features where there are a group of symbols
-  /// "equivalent to"
-  /// a given symbol one of which will be chosen when the symbol is bound.  If
-  /// you want to
-  /// set a breakpoint on one of these symbols, you really need to set it on all
-  /// the
-  /// equivalent symbols.
+  /// "equivalent to" a given symbol one of which will be chosen when the
+  /// symbol is bound.  If you want to set a breakpoint on one of these
+  /// symbols, you really need to set it on all the equivalent symbols.
   ///
   ///
   /// @param[in] original_symbol
@@ -201,13 +193,12 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Ask if it is ok to try and load or unload an shared library
-  /// (image).
+  /// Ask if it is ok to try and load or unload an shared library (image).
   ///
-  /// The dynamic loader often knows when it would be ok to try and
-  /// load or unload a shared library. This function call allows the
-  /// dynamic loader plug-ins to check any current dyld state to make
-  /// sure it is an ok time to load a shared library.
+  /// The dynamic loader often knows when it would be ok to try and load or
+  /// unload a shared library. This function call allows the dynamic loader
+  /// plug-ins to check any current dyld state to make sure it is an ok time
+  /// to load a shared library.
   ///
   /// @return
   ///     \b true if it is currently ok to try and load a shared
@@ -216,20 +207,20 @@ public:
   virtual Status CanLoadImage() = 0;
 
   //------------------------------------------------------------------
-  /// Ask if the eh_frame information for the given SymbolContext should
-  /// be relied on even when it's the first frame in a stack unwind.
+  /// Ask if the eh_frame information for the given SymbolContext should be
+  /// relied on even when it's the first frame in a stack unwind.
   ///
-  /// The CFI instructions from the eh_frame section are normally only
-  /// valid at call sites -- places where a program could throw an
-  /// exception and need to unwind out.  But some Modules may be known
-  /// to the system as having reliable eh_frame information at all call
-  /// sites.  This would be the case if the Module's contents are largely
-  /// hand-written assembly with hand-written eh_frame information.
-  /// Normally when unwinding from a function at the beginning of a stack
-  /// unwind lldb will examine the assembly instructions to understand
-  /// how the stack frame is set up and where saved registers are stored.
-  /// But with hand-written assembly this is not reliable enough -- we need
-  /// to consult those function's hand-written eh_frame information.
+  /// The CFI instructions from the eh_frame section are normally only valid
+  /// at call sites -- places where a program could throw an exception and
+  /// need to unwind out.  But some Modules may be known to the system as
+  /// having reliable eh_frame information at all call sites.  This would be
+  /// the case if the Module's contents are largely hand-written assembly with
+  /// hand-written eh_frame information. Normally when unwinding from a
+  /// function at the beginning of a stack unwind lldb will examine the
+  /// assembly instructions to understand how the stack frame is set up and
+  /// where saved registers are stored. But with hand-written assembly this is
+  /// not reliable enough -- we need to consult those function's hand-written
+  /// eh_frame information.
   ///
   /// @return
   ///     \b True if the symbol context should use eh_frame instructions
@@ -271,17 +262,17 @@ public:
   //------------------------------------------------------------------
   /// Get information about the shared cache for a process, if possible.
   ///
-  /// On some systems (e.g. Darwin based systems), a set of libraries
-  /// that are common to most processes may be put in a single region
-  /// of memory and mapped into every process, this is called the
-  /// shared cache, as a performance optimization.
+  /// On some systems (e.g. Darwin based systems), a set of libraries that are
+  /// common to most processes may be put in a single region of memory and
+  /// mapped into every process, this is called the shared cache, as a
+  /// performance optimization.
   ///
   /// Many targets will not have the concept of a shared cache.
   ///
-  /// Depending on how the DynamicLoader gathers information about the
-  /// shared cache, it may be able to only return basic information -
-  /// like the UUID of the cache - or it may be able to return additional
-  /// information about the cache.
+  /// Depending on how the DynamicLoader gathers information about the shared
+  /// cache, it may be able to only return basic information - like the UUID
+  /// of the cache - or it may be able to return additional information about
+  /// the cache.
   ///
   /// @param[out] base_address
   ///     The base address (load address) of the shared cache.

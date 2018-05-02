@@ -26,24 +26,19 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointResolver BreakpointResolver.h
-/// "lldb/Breakpoint/BreakpointResolver.h"
-/// @brief This class works with SearchFilter to resolve logical breakpoints to
-/// their
-/// of concrete breakpoint locations.
+/// "lldb/Breakpoint/BreakpointResolver.h" This class works with SearchFilter
+/// to resolve logical breakpoints to their of concrete breakpoint locations.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 /// General Outline:
-/// The BreakpointResolver is a Searcher.  In that protocol,
-/// the SearchFilter asks the question "At what depth of the symbol context
-/// descent do you want your callback to get called?" of the filter.  The
-/// resolver
-/// answers this question (in the GetDepth method) and provides the resolution
-/// callback.
+/// The BreakpointResolver is a Searcher.  In that protocol, the SearchFilter
+/// asks the question "At what depth of the symbol context descent do you want
+/// your callback to get called?" of the filter.  The resolver answers this
+/// question (in the GetDepth method) and provides the resolution callback.
 /// Each Breakpoint has a BreakpointResolver, and it calls either
-/// ResolveBreakpoint
-/// or ResolveBreakpointInModules to tell it to look for new breakpoint
-/// locations.
+/// ResolveBreakpoint or ResolveBreakpointInModules to tell it to look for new
+/// breakpoint locations.
 //----------------------------------------------------------------------
 
 class BreakpointResolver : public Searcher {
@@ -53,8 +48,7 @@ public:
   //------------------------------------------------------------------
   /// The breakpoint resolver need to have a breakpoint for "ResolveBreakpoint
   /// to make sense.  It can be constructed without a breakpoint, but you have
-  /// to
-  /// call SetBreakpoint before ResolveBreakpoint.
+  /// to call SetBreakpoint before ResolveBreakpoint.
   ///
   /// @param[in] bkpt
   ///   The breakpoint that owns this resolver.
@@ -82,9 +76,9 @@ public:
   void SetBreakpoint(Breakpoint *bkpt);
 
   //------------------------------------------------------------------
-  /// This updates the offset for this breakpoint.  All the locations currently
-  /// set for this breakpoint will have their offset adjusted when this is
-  /// called.
+  /// This updates the offset for this breakpoint.  All the locations
+  /// currently set for this breakpoint will have their offset adjusted when
+  /// this is called.
   ///
   /// @param[in] offset
   ///   The offset to add to all locations.
@@ -92,9 +86,9 @@ public:
   void SetOffset(lldb::addr_t offset);
 
   //------------------------------------------------------------------
-  /// This updates the offset for this breakpoint.  All the locations currently
-  /// set for this breakpoint will have their offset adjusted when this is
-  /// called.
+  /// This updates the offset for this breakpoint.  All the locations
+  /// currently set for this breakpoint will have their offset adjusted when
+  /// this is called.
   ///
   /// @param[in] offset
   ///   The offset to add to all locations.
@@ -103,8 +97,7 @@ public:
 
   //------------------------------------------------------------------
   /// In response to this method the resolver scans all the modules in the
-  /// breakpoint's
-  /// target, and adds any new locations it finds.
+  /// breakpoint's target, and adds any new locations it finds.
   ///
   /// @param[in] filter
   ///   The filter that will manage the search for this resolver.
@@ -113,8 +106,7 @@ public:
 
   //------------------------------------------------------------------
   /// In response to this method the resolver scans the modules in the module
-  /// list
-  /// \a modules, and adds any new locations it finds.
+  /// list \a modules, and adds any new locations it finds.
   ///
   /// @param[in] filter
   ///   The filter that will manage the search for this resolver.
@@ -157,8 +149,8 @@ public:
 
   //------------------------------------------------------------------
   //------------------------------------------------------------------
-  /// An enumeration for keeping track of the concrete subclass that
-  /// is actually instantiated. Values of this enumeration are kept in the
+  /// An enumeration for keeping track of the concrete subclass that is
+  /// actually instantiated. Values of this enumeration are kept in the
   /// BreakpointResolver's SubclassID field. They are used for concrete type
   /// identification.
   enum ResolverTy {
@@ -227,12 +219,10 @@ public:
 
 protected:
   //------------------------------------------------------------------
-  /// SetSCMatchesByLine - Takes a symbol context list of matches which
-  /// supposedly represent the same file and
-  /// line number in a CU, and find the nearest actual line number that matches,
-  /// and then filter down the
-  /// matching addresses to unique entries, and skip the prologue if asked to do
-  /// so, and then set
+  /// Takes a symbol context list of matches which supposedly represent the
+  /// same file and line number in a CU, and find the nearest actual line
+  /// number that matches, and then filter down the matching addresses to
+  /// unique entries, and skip the prologue if asked to do so, and then set
   /// breakpoint locations in this breakpoint for all the resultant addresses.
   void SetSCMatchesByLine(SearchFilter &filter, SymbolContextList &sc_list,
                           bool skip_prologue, llvm::StringRef log_ident);

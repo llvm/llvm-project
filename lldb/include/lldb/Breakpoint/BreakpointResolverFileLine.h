@@ -20,10 +20,9 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointResolverFileLine BreakpointResolverFileLine.h
-/// "lldb/Breakpoint/BreakpointResolverFileLine.h"
-/// @brief This class sets breakpoints by file and line.  Optionally, it will
-/// look for inlined
-/// instances of the file and line specification.
+/// "lldb/Breakpoint/BreakpointResolverFileLine.h" This class sets breakpoints
+/// by file and line.  Optionally, it will look for inlined instances of the
+/// file and line specification.
 //----------------------------------------------------------------------
 
 class BreakpointResolverFileLine : public BreakpointResolver {

@@ -25,7 +25,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class WatchpointList WatchpointList.h "lldb/Breakpoint/WatchpointList.h"
-/// @brief This class is used by Watchpoint to manage a list of watchpoints,
+/// This class is used by Watchpoint to manage a list of watchpoints,
 //  each watchpoint in the list has a unique ID, and is unique by Address as
 //  well.
 //----------------------------------------------------------------------
@@ -70,9 +70,8 @@ public:
   void DumpWithLevel(Stream *s, lldb::DescriptionLevel description_level) const;
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the watchpoint at address
-  /// \a addr -
-  /// const version.
+  /// Returns a shared pointer to the watchpoint at address \a addr - const
+  /// version.
   ///
   /// @param[in] addr
   ///     The address to look for.
@@ -84,9 +83,8 @@ public:
   const lldb::WatchpointSP FindByAddress(lldb::addr_t addr) const;
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the watchpoint with watchpoint spec
-  /// \a spec -
-  /// const version.
+  /// Returns a shared pointer to the watchpoint with watchpoint spec \a spec
+  /// - const version.
   ///
   /// @param[in] spec
   ///     The watchpoint spec to look for.
@@ -98,8 +96,7 @@ public:
   const lldb::WatchpointSP FindBySpec(std::string spec) const;
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the watchpoint with id
-  /// \a watchID, const
+  /// Returns a shared pointer to the watchpoint with id \a watchID, const
   /// version.
   ///
   /// @param[in] watchID
@@ -112,8 +109,7 @@ public:
   lldb::WatchpointSP FindByID(lldb::watch_id_t watchID) const;
 
   //------------------------------------------------------------------
-  /// Returns the watchpoint id to the watchpoint
-  /// at address \a addr.
+  /// Returns the watchpoint id to the watchpoint at address \a addr.
   ///
   /// @param[in] addr
   ///     The address to match.
@@ -124,8 +120,8 @@ public:
   lldb::watch_id_t FindIDByAddress(lldb::addr_t addr);
 
   //------------------------------------------------------------------
-  /// Returns the watchpoint id to the watchpoint
-  /// with watchpoint spec \a spec.
+  /// Returns the watchpoint id to the watchpoint with watchpoint spec \a
+  /// spec.
   ///
   /// @param[in] spec
   ///     The watchpoint spec to match.

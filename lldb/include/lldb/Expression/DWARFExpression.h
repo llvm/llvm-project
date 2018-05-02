@@ -23,17 +23,17 @@ class DWARFUnit;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DWARFExpression DWARFExpression.h "lldb/Expression/DWARFExpression.h"
-/// @brief Encapsulates a DWARF location expression and interprets it.
+/// @class DWARFExpression DWARFExpression.h
+/// "lldb/Expression/DWARFExpression.h" Encapsulates a DWARF location
+/// expression and interprets it.
 ///
 /// DWARF location expressions are used in two ways by LLDB.  The first
-/// use is to find entities specified in the debug information, since
-/// their locations are specified in precisely this language.  The second
-/// is to interpret expressions without having to run the target in cases
-/// where the overhead from copying JIT-compiled code into the target is
-/// too high or where the target cannot be run.  This class encapsulates
-/// a single DWARF location expression or a location list and interprets
-/// it.
+/// use is to find entities specified in the debug information, since their
+/// locations are specified in precisely this language.  The second is to
+/// interpret expressions without having to run the target in cases where the
+/// overhead from copying JIT-compiled code into the target is too high or
+/// where the target cannot be run.  This class encapsulates a single DWARF
+/// location expression or a location list and interprets it.
 //----------------------------------------------------------------------
 class DWARFExpression {
 public:
@@ -130,12 +130,12 @@ public:
 
   //------------------------------------------------------------------
   /// If a location is not a location list, return true if the location
-  /// contains a DW_OP_addr () opcode in the stream that matches \a
-  /// file_addr. If file_addr is LLDB_INVALID_ADDRESS, the this
-  /// function will return true if the variable there is any DW_OP_addr
-  /// in a location that (yet still is NOT a location list). This helps
-  /// us detect if a variable is a global or static variable since
-  /// there is no other indication from DWARF debug info.
+  /// contains a DW_OP_addr () opcode in the stream that matches \a file_addr.
+  /// If file_addr is LLDB_INVALID_ADDRESS, the this function will return true
+  /// if the variable there is any DW_OP_addr in a location that (yet still is
+  /// NOT a location list). This helps us detect if a variable is a global or
+  /// static variable since there is no other indication from DWARF debug
+  /// info.
   ///
   /// @param[in] op_addr_idx
   ///     The DW_OP_addr index to retrieve in case there is more than
@@ -161,8 +161,8 @@ public:
           &link_address_callback);
 
   //------------------------------------------------------------------
-  /// Make the expression parser read its location information from a
-  /// given data source.  Does not change the offset and length
+  /// Make the expression parser read its location information from a given
+  /// data source.  Does not change the offset and length
   ///
   /// @param[in] data
   ///     A data extractor configured to read the DWARF location expression's
@@ -171,8 +171,8 @@ public:
   void SetOpcodeData(const DataExtractor &data);
 
   //------------------------------------------------------------------
-  /// Make the expression parser read its location information from a
-  /// given data source
+  /// Make the expression parser read its location information from a given
+  /// data source
   ///
   /// @param[in] module_sp
   ///     The module that defines the DWARF expression.
@@ -193,16 +193,15 @@ public:
   //------------------------------------------------------------------
   /// Copy the DWARF location expression into a local buffer.
   ///
-  /// It is a good idea to copy the data so we don't keep the entire
-  /// object file worth of data around just for a few bytes of location
-  /// expression. LLDB typically will mmap the entire contents of debug
-  /// information files, and if we use SetOpcodeData, it will get a
-  /// shared reference to all of this data for the and cause the object
-  /// file to have to stay around. Even worse, a very very large ".a"
-  /// that contains one or more .o files could end up being referenced.
-  /// Location lists are typically small so even though we are copying
-  /// the data, it shouldn't amount to that much for the variables we
-  /// end up parsing.
+  /// It is a good idea to copy the data so we don't keep the entire object
+  /// file worth of data around just for a few bytes of location expression.
+  /// LLDB typically will mmap the entire contents of debug information files,
+  /// and if we use SetOpcodeData, it will get a shared reference to all of
+  /// this data for the and cause the object file to have to stay around. Even
+  /// worse, a very very large ".a" that contains one or more .o files could
+  /// end up being referenced. Location lists are typically small so even
+  /// though we are copying the data, it shouldn't amount to that much for the
+  /// variables we end up parsing.
   ///
   /// @param[in] module_sp
   ///     The module that defines the DWARF expression.
@@ -254,8 +253,8 @@ public:
 
   //------------------------------------------------------------------
   /// Wrapper for the static evaluate function that accepts an
-  /// ExecutionContextScope instead of an ExecutionContext and uses
-  /// member variables to populate many operands
+  /// ExecutionContextScope instead of an ExecutionContext and uses member
+  /// variables to populate many operands
   //------------------------------------------------------------------
   bool Evaluate(ExecutionContextScope *exe_scope,
                 lldb::addr_t loclist_base_load_addr,
@@ -263,8 +262,8 @@ public:
                 Value &result, Status *error_ptr) const;
 
   //------------------------------------------------------------------
-  /// Wrapper for the static evaluate function that uses member
-  /// variables to populate many operands
+  /// Wrapper for the static evaluate function that uses member variables to
+  /// populate many operands
   //------------------------------------------------------------------
   bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                 lldb::addr_t loclist_base_load_addr,

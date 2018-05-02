@@ -44,7 +44,7 @@ protected:
 
 //----------------------------------------------------------------------
 /// @class State Terminal.h "lldb/Host/Terminal.h"
-/// @brief A terminal state saving/restoring class.
+/// A terminal state saving/restoring class.
 ///
 /// This class can be used to remember the terminal state for a file
 /// descriptor and later restore that state as it originally was.
@@ -64,9 +64,9 @@ public:
   //------------------------------------------------------------------
   /// Save the TTY state for \a fd.
   ///
-  /// Save the current state of the TTY for the file descriptor "fd"
-  /// and if "save_process_group" is true, attempt to save the process
-  /// group info for the TTY.
+  /// Save the current state of the TTY for the file descriptor "fd" and if
+  /// "save_process_group" is true, attempt to save the process group info for
+  /// the TTY.
   ///
   /// @param[in] fd
   ///     The file descriptor to save the state of.
@@ -84,8 +84,8 @@ public:
   //------------------------------------------------------------------
   /// Restore the TTY state to the cached state.
   ///
-  /// Restore the state of the TTY using the cached values from a
-  /// previous call to TerminalState::Save(int,bool).
+  /// Restore the state of the TTY using the cached values from a previous
+  /// call to TerminalState::Save(int,bool).
   ///
   /// @return
   ///     Returns \b true if the TTY state was successfully restored,
@@ -147,7 +147,7 @@ protected:
 
 //----------------------------------------------------------------------
 /// @class TerminalStateSwitcher Terminal.h "lldb/Host/Terminal.h"
-/// @brief A TTY state switching class.
+/// A TTY state switching class.
 ///
 /// This class can be used to remember 2 TTY states for a given file
 /// descriptor and switch between the two states.
@@ -182,10 +182,9 @@ public:
   bool Restore(uint32_t idx) const;
 
   //------------------------------------------------------------------
-  /// Save the TTY state information for the state at index \a idx.
-  /// The TTY state is saved for the file descriptor \a fd and
-  /// the process group information will also be saved if requested
-  /// by \a save_process_group.
+  /// Save the TTY state information for the state at index \a idx. The TTY
+  /// state is saved for the file descriptor \a fd and the process group
+  /// information will also be saved if requested by \a save_process_group.
   ///
   /// @param[in] idx
   ///     The index into the state array where the state should be
