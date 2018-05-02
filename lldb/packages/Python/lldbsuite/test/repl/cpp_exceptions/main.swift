@@ -1,3 +1,7 @@
-import CppLib
+import Wrapper
 
-f_with_exceptions() // Set a breakpoint here
+func main() {
+    call_cpp() // Set a breakpoint here
+}
+
+main()
