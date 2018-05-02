@@ -37,6 +37,7 @@
 #include "swift/Frontend/Frontend.h"
 #include "swift/IDE/REPLCodeCompletion.h"
 #include "swift/IDE/Utils.h"
+#include "swift/SIL/SILModule.h"
 
 using namespace lldb;
 using namespace lldb_private;
