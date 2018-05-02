@@ -202,12 +202,23 @@ Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef value) {
   Status error;
   const bool will_modify = true;
+  llvm::SmallVector<llvm::StringRef, 8> components;
+  name.split(components, '.');
+  bool name_contains_experimental = false;
+  for (const auto &part : components)
+    if (Properties::IsSettingExperimental(part))
+      name_contains_experimental = true;
+
+  
   lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
   if (value_sp)
     error = value_sp->SetValueFromString(value, op);
   else {
-    if (error.AsCString() == nullptr)
+    // Don't set an error if the path contained .experimental. - those are
+    // allowed to be missing and should silently fail.
+    if (name_contains_experimental == false && error.AsCString() == nullptr) {
       error.SetErrorStringWithFormat("invalid value path '%s'", name.str().c_str());
+    }
   }
   return error;
 }
