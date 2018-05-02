@@ -204,7 +204,7 @@ static bool PerformAutoImport(SwiftASTContext &swift_ast_context,
 
   CompileUnit *compile_unit = sc.comp_unit;
 
-  if (compile_unit)
+  if (compile_unit && compile_unit->GetLanguage() == lldb::eLanguageTypeSwift)
     cu_modules = &compile_unit->GetImportedModules();
 
   llvm::SmallVector<swift::ModuleDecl::ImportedModule, 2> imported_modules;
