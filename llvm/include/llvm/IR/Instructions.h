@@ -1719,7 +1719,7 @@ public:
     return Attrs.getDereferenceableOrNullBytes(i);
   }
 
-  /// @brief Determine if the return value is marked with NoAlias attribute.
+  /// Determine if the return value is marked with NoAlias attribute.
   bool returnDoesNotAlias() const {
     return Attrs.hasAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
   }
@@ -1763,7 +1763,7 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attribute::WriteOnly);
   }
 
-  /// @brief Determine if the call can access memmory only using pointers based
+  /// Determine if the call can access memmory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const {
     return hasFnAttr(Attribute::ArgMemOnly);
@@ -1772,7 +1772,7 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attribute::ArgMemOnly);
   }
 
-  /// @brief Determine if the function may only access memory that is
+  /// Determine if the function may only access memory that is
   /// inaccessible from the IR.
   bool onlyAccessesInaccessibleMemory() const {
     return hasFnAttr(Attribute::InaccessibleMemOnly);
@@ -1781,7 +1781,7 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attribute::InaccessibleMemOnly);
   }
 
-  /// @brief Determine if the function may only access memory that is
+  /// Determine if the function may only access memory that is
   /// either inaccessible from the IR or pointed to by its arguments.
   bool onlyAccessesInaccessibleMemOrArgMem() const {
     return hasFnAttr(Attribute::InaccessibleMemOrArgMemOnly);

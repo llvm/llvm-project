@@ -708,7 +708,7 @@ Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
 #endif
 }
 
-/// @brief Look up a symbol by searching a list of VSOs.
+/// Look up a symbol by searching a list of VSOs.
 Expected<JITEvaluatedSymbol>
 lookup(const std::vector<VSO *> VSOs, SymbolStringPtr Name,
        MaterializationDispatcher DispatchMaterialization) {

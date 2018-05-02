@@ -172,6 +172,10 @@ public:
                            const Function *Callee) const;
 
   unsigned getInliningThresholdMultiplier() { return 9; }
+
+  int getArithmeticReductionCost(unsigned Opcode,
+                                 Type *Ty,
+                                 bool IsPairwise);
 };
 
 } // end namespace llvm

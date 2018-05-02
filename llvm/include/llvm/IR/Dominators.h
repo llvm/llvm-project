@@ -121,7 +121,7 @@ template <> struct DenseMapInfo<BasicBlockEdge> {
   }
 };
 
-/// \brief Concrete subclass of DominatorTreeBase that is used to compute a
+/// Concrete subclass of DominatorTreeBase that is used to compute a
 /// normal dominator tree.
 ///
 /// Definition: A block is said to be forward statically reachable if there is
@@ -153,7 +153,7 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   // Ensure base-class overloads are visible.
   using Base::dominates;
 
-  /// \brief Return true if Def dominates a use in User.
+  /// Return true if Def dominates a use in User.
   ///
   /// This performs the special checks necessary if Def and User are in the same
   /// basic block. Note that Def doesn't dominate a use in Def itself!
@@ -171,7 +171,7 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   // Ensure base class overloads are visible.
   using Base::isReachableFromEntry;
 
-  /// \brief Provide an overload for a Use.
+  /// Provide an overload for a Use.
   bool isReachableFromEntry(const Use &U) const;
 
   // Pop up a GraphViz/gv window with the Dominator Tree rendered using `dot`.
@@ -221,20 +221,20 @@ template <> struct GraphTraits<DominatorTree*>
   }
 };
 
-/// \brief Analysis pass which computes a \c DominatorTree.
+/// Analysis pass which computes a \c DominatorTree.
 class DominatorTreeAnalysis : public AnalysisInfoMixin<DominatorTreeAnalysis> {
   friend AnalysisInfoMixin<DominatorTreeAnalysis>;
   static AnalysisKey Key;
 
 public:
-  /// \brief Provide the result typedef for this analysis pass.
+  /// Provide the result typedef for this analysis pass.
   using Result = DominatorTree;
 
-  /// \brief Run the analysis pass over a function and produce a dominator tree.
+  /// Run the analysis pass over a function and produce a dominator tree.
   DominatorTree run(Function &F, FunctionAnalysisManager &);
 };
 
-/// \brief Printer pass for the \c DominatorTree.
+/// Printer pass for the \c DominatorTree.
 class DominatorTreePrinterPass
     : public PassInfoMixin<DominatorTreePrinterPass> {
   raw_ostream &OS;
@@ -245,12 +245,12 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Verifier pass for the \c DominatorTree.
+/// Verifier pass for the \c DominatorTree.
 struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Legacy analysis pass which computes a \c DominatorTree.
+/// Legacy analysis pass which computes a \c DominatorTree.
 class DominatorTreeWrapperPass : public FunctionPass {
   DominatorTree DT;
 
@@ -278,7 +278,7 @@ public:
 };
 
 //===-------------------------------------
-/// \brief Class to defer updates to a DominatorTree.
+/// Class to defer updates to a DominatorTree.
 ///
 /// Definition: Applying updates to every edge insertion and deletion is
 /// expensive and not necessary. When one needs the DominatorTree for analysis
@@ -308,40 +308,40 @@ class DeferredDominance {
 public:
   DeferredDominance(DominatorTree &DT_) : DT(DT_) {}
 
-  /// \brief Queues multiple updates and discards duplicates.
+  /// Queues multiple updates and discards duplicates.
   void applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates);
 
-  /// \brief Helper method for a single edge insertion. It's almost always
+  /// Helper method for a single edge insertion. It's almost always
   /// better to batch updates and call applyUpdates to quickly remove duplicate
   /// edges. This is best used when there is only a single insertion needed to
   /// update Dominators.
   void insertEdge(BasicBlock *From, BasicBlock *To);
 
-  /// \brief Helper method for a single edge deletion. It's almost always better
+  /// Helper method for a single edge deletion. It's almost always better
   /// to batch updates and call applyUpdates to quickly remove duplicate edges.
   /// This is best used when there is only a single deletion needed to update
   /// Dominators.
   void deleteEdge(BasicBlock *From, BasicBlock *To);
 
-  /// \brief Delays the deletion of a basic block until a flush() event.
+  /// Delays the deletion of a basic block until a flush() event.
   void deleteBB(BasicBlock *DelBB);
 
-  /// \brief Returns true if DelBB is awaiting deletion at a flush() event.
+  /// Returns true if DelBB is awaiting deletion at a flush() event.
   bool pendingDeletedBB(BasicBlock *DelBB);
 
-  /// \brief Returns true if pending DT updates are queued for a flush() event.
+  /// Returns true if pending DT updates are queued for a flush() event.
   bool pending();
 
-  /// \brief Flushes all pending updates and block deletions. Returns a
+  /// Flushes all pending updates and block deletions. Returns a
   /// correct DominatorTree reference to be used by the caller for analysis.
   DominatorTree &flush();
 
-  /// \brief Drops all internal state and forces a (slow) recalculation of the
+  /// Drops all internal state and forces a (slow) recalculation of the
   /// DominatorTree based on the current state of the LLVM IR in F. This should
   /// only be used in corner cases such as the Entry block of F being deleted.
   void recalculate(Function &F);
 
-  /// \brief Debug method to help view the state of pending updates.
+  /// Debug method to help view the state of pending updates.
   LLVM_DUMP_METHOD void dump() const;
 
 private:

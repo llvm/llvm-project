@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a register stacking pass.
+/// This file implements a register stacking pass.
 ///
 /// This pass reorders instructions to put register uses and defs in an order
 /// such that they form single-use expression trees. Registers fitting this form

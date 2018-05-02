@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines an instruction selector for the WebAssembly target.
+/// This file defines an instruction selector for the WebAssembly target.
 ///
 //===----------------------------------------------------------------------===//
 

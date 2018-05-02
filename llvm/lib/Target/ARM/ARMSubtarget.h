@@ -598,7 +598,7 @@ public:
   bool hasFullFP16() const { return HasFullFP16; }
 
   bool hasFuseAES() const { return HasFuseAES; }
-  /// \brief Return true if the CPU supports any kind of instruction fusion.
+  /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const { return hasFuseAES(); }
 
   const Triple &getTargetTriple() const { return TargetTriple; }

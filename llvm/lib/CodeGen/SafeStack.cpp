@@ -143,14 +143,14 @@ class SafeStack {
   /// might expect to appear on the stack on most common targets.
   enum { StackAlignment = 16 };
 
-  /// \brief Return the value of the stack canary.
+  /// Return the value of the stack canary.
   Value *getStackGuard(IRBuilder<> &IRB, Function &F);
 
-  /// \brief Load stack guard from the frame and check if it has changed.
+  /// Load stack guard from the frame and check if it has changed.
   void checkStackGuard(IRBuilder<> &IRB, Function &F, ReturnInst &RI,
                        AllocaInst *StackGuardSlot, Value *StackGuard);
 
-  /// \brief Find all static allocas, dynamic allocas, return instructions and
+  /// Find all static allocas, dynamic allocas, return instructions and
   /// stack restore points (exception unwind blocks and setjmp calls) in the
   /// given function and append them to the respective vectors.
   void findInsts(Function &F, SmallVectorImpl<AllocaInst *> &StaticAllocas,
@@ -159,11 +159,11 @@ class SafeStack {
                  SmallVectorImpl<ReturnInst *> &Returns,
                  SmallVectorImpl<Instruction *> &StackRestorePoints);
 
-  /// \brief Calculate the allocation size of a given alloca. Returns 0 if the
+  /// Calculate the allocation size of a given alloca. Returns 0 if the
   /// size can not be statically determined.
   uint64_t getStaticAllocaAllocationSize(const AllocaInst* AI);
 
-  /// \brief Allocate space for all static allocas in \p StaticAllocas,
+  /// Allocate space for all static allocas in \p StaticAllocas,
   /// replace allocas with pointers into the unsafe stack and generate code to
   /// restore the stack pointer before all return instructions in \p Returns.
   ///
@@ -176,7 +176,7 @@ class SafeStack {
                                         Instruction *BasePointer,
                                         AllocaInst *StackGuardSlot);
 
-  /// \brief Generate code to restore the stack after all stack restore points
+  /// Generate code to restore the stack after all stack restore points
   /// in \p StackRestorePoints.
   ///
   /// \returns A local variable in which to maintain the dynamic top of the
@@ -186,7 +186,7 @@ class SafeStack {
                            ArrayRef<Instruction *> StackRestorePoints,
                            Value *StaticTop, bool NeedDynamicTop);
 
-  /// \brief Replace all allocas in \p DynamicAllocas with code to allocate
+  /// Replace all allocas in \p DynamicAllocas with code to allocate
   /// space dynamically on the unsafe stack and store the dynamic unsafe stack
   /// top to \p DynamicTop if non-null.
   void moveDynamicAllocasToUnsafeStack(Function &F, Value *UnsafeStackPtr,

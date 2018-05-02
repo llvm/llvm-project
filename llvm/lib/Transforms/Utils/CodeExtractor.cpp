@@ -78,7 +78,7 @@ static cl::opt<bool>
 AggregateArgsOpt("aggregate-extracted-args", cl::Hidden,
                  cl::desc("Aggregate arguments to code-extracted functions"));
 
-/// \brief Test whether a block is valid for extraction.
+/// Test whether a block is valid for extraction.
 bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB,
                                               bool AllowVarArgs) {
   // Landing pads must be in the function where they were inserted for cleanup.
@@ -130,7 +130,7 @@ bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB,
   return true;
 }
 
-/// \brief Build a set of blocks to extract if the input blocks are viable.
+/// Build a set of blocks to extract if the input blocks are viable.
 static SetVector<BasicBlock *>
 buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                         bool AllowVarArgs) {

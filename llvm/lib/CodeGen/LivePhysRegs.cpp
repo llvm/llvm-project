@@ -24,7 +24,7 @@
 using namespace llvm;
 
 
-/// \brief Remove all registers from the set that get clobbered by the register
+/// Remove all registers from the set that get clobbered by the register
 /// mask.
 /// The clobbers set will be the list of live registers clobbered
 /// by the regmask.

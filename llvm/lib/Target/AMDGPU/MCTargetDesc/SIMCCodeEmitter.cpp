@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief The SI code emitter produces machine code that can be executed
+/// The SI code emitter produces machine code that can be executed
 /// directly on the GPU device.
 //
 //===----------------------------------------------------------------------===//
@@ -43,7 +43,7 @@ namespace {
 class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
   const MCRegisterInfo &MRI;
 
-  /// \brief Encode an fp or int literal
+  /// Encode an fp or int literal
   uint32_t getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
                           const MCSubtargetInfo &STI) const;
 
@@ -54,7 +54,7 @@ public:
   SIMCCodeEmitter(const SIMCCodeEmitter &) = delete;
   SIMCCodeEmitter &operator=(const SIMCCodeEmitter &) = delete;
 
-  /// \brief Encode the instruction and write it to the OS.
+  /// Encode the instruction and write it to the OS.
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
@@ -64,7 +64,7 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const override;
 
-  /// \brief Use a fixup to encode the simm16 field for SOPP branch
+  /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   unsigned getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,

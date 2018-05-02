@@ -356,26 +356,26 @@ public:
 
   using base_list_type::sort;
 
-  /// \brief Get the previous node, or \c nullptr for the list head.
+  /// Get the previous node, or \c nullptr for the list head.
   pointer getPrevNode(reference N) const {
     auto I = N.getIterator();
     if (I == begin())
       return nullptr;
     return &*std::prev(I);
   }
-  /// \brief Get the previous node, or \c nullptr for the list head.
+  /// Get the previous node, or \c nullptr for the list head.
   const_pointer getPrevNode(const_reference N) const {
     return getPrevNode(const_cast<reference >(N));
   }
 
-  /// \brief Get the next node, or \c nullptr for the list tail.
+  /// Get the next node, or \c nullptr for the list tail.
   pointer getNextNode(reference N) const {
     auto Next = std::next(N.getIterator());
     if (Next == end())
       return nullptr;
     return &*Next;
   }
-  /// \brief Get the next node, or \c nullptr for the list tail.
+  /// Get the next node, or \c nullptr for the list tail.
   const_pointer getNextNode(const_reference N) const {
     return getNextNode(const_cast<reference >(N));
   }

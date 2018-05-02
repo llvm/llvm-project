@@ -907,6 +907,14 @@ isDeclareTargetDeclaration(const ValueDecl *VD) {
     if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
       return Attr->getMapType();
   }
+  if (const auto *V = dyn_cast<VarDecl>(VD)) {
+    if (const VarDecl *TD = V->getTemplateInstantiationPattern())
+      return isDeclareTargetDeclaration(TD);
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
+    if (const auto *TD = FD->getTemplateInstantiationPattern())
+      return isDeclareTargetDeclaration(TD);
+  }
+
   return llvm::None;
 }
 
@@ -7795,7 +7803,8 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   scanForTargetRegionsFunctions(FD->getBody(), CGM.getMangledName(GD));
 
   // Do not to emit function if it is not marked as declare target.
-  return !isDeclareTargetDeclaration(FD);
+  return !isDeclareTargetDeclaration(FD) &&
+         AlreadyEmittedTargetFunctions.count(FD->getCanonicalDecl()) == 0;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the interfaces that WebAssembly uses to lower LLVM
+/// This file defines the interfaces that WebAssembly uses to lower LLVM
 /// code into a selection DAG.
 ///
 //===----------------------------------------------------------------------===//

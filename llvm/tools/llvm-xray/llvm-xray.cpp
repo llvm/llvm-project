@@ -1,4 +1,4 @@
-//===- llvm-xray.cc - XRay Tool Main Program ------------------------------===//
+//===- llvm-xray.cpp: XRay Tool Main Program ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

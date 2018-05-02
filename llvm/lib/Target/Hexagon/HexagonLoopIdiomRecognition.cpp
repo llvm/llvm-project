@@ -2295,7 +2295,7 @@ CleanupAndExit:
   return true;
 }
 
-// \brief Check if the instructions in Insts, together with their dependencies
+// Check if the instructions in Insts, together with their dependencies
 // cover the loop in the sense that the loop could be safely eliminated once
 // the instructions in Insts are removed.
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,

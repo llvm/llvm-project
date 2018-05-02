@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-/// \brief This is the common base class of value handles.
+/// This is the common base class of value handles.
 ///
 /// ValueHandle's are smart pointers to Value's that have special behavior when
 /// the value is deleted or ReplaceAllUsesWith'd.  See the specific handles
@@ -31,7 +31,7 @@ class ValueHandleBase {
   friend class Value;
 
 protected:
-  /// \brief This indicates what sub class the handle actually is.
+  /// This indicates what sub class the handle actually is.
   ///
   /// This is to avoid having a vtable for the light-weight handle pointers. The
   /// fully general Callback version does have a vtable.
@@ -101,10 +101,10 @@ protected:
            V != DenseMapInfo<Value *>::getTombstoneKey();
   }
 
-  /// \brief Remove this ValueHandle from its current use list.
+  /// Remove this ValueHandle from its current use list.
   void RemoveFromUseList();
 
-  /// \brief Clear the underlying pointer without clearing the use list.
+  /// Clear the underlying pointer without clearing the use list.
   ///
   /// This should only be used if a derived class has manually removed the
   /// handle from the use list.
@@ -121,20 +121,20 @@ private:
   HandleBaseKind getKind() const { return PrevPair.getInt(); }
   void setPrevPtr(ValueHandleBase **Ptr) { PrevPair.setPointer(Ptr); }
 
-  /// \brief Add this ValueHandle to the use list for V.
+  /// Add this ValueHandle to the use list for V.
   ///
   /// List is the address of either the head of the list or a Next node within
   /// the existing use list.
   void AddToExistingUseList(ValueHandleBase **List);
 
-  /// \brief Add this ValueHandle to the use list after Node.
+  /// Add this ValueHandle to the use list after Node.
   void AddToExistingUseListAfter(ValueHandleBase *Node);
 
-  /// \brief Add this ValueHandle to the use list for V.
+  /// Add this ValueHandle to the use list for V.
   void AddToUseList();
 };
 
-/// \brief A nullable Value handle that is nullable.
+/// A nullable Value handle that is nullable.
 ///
 /// This is a value handle that points to a value, and nulls itself
 /// out if that value is deleted.
@@ -172,7 +172,7 @@ template <> struct simplify_type<const WeakVH> {
   static SimpleType getSimplifiedValue(const WeakVH &WVH) { return WVH; }
 };
 
-/// \brief Value handle that is nullable, but tries to track the Value.
+/// Value handle that is nullable, but tries to track the Value.
 ///
 /// This is a value handle that tries hard to point to a Value, even across
 /// RAUW operations, but will null itself out if the value is destroyed.  this
@@ -219,7 +219,7 @@ template <> struct simplify_type<const WeakTrackingVH> {
   }
 };
 
-/// \brief Value handle that asserts if the Value is deleted.
+/// Value handle that asserts if the Value is deleted.
 ///
 /// This is a Value Handle that points to a value and asserts out if the value
 /// is destroyed while the handle is still live.  This is very useful for
@@ -318,7 +318,7 @@ struct isPodLike<AssertingVH<T>> {
 #endif
 };
 
-/// \brief Value handle that tracks a Value across RAUW.
+/// Value handle that tracks a Value across RAUW.
 ///
 /// TrackingVH is designed for situations where a client needs to hold a handle
 /// to a Value (or subclass) across some operations which may move that value,
@@ -379,7 +379,7 @@ public:
   ValueTy &operator*() const { return *getValPtr(); }
 };
 
-/// \brief Value handle with callbacks on RAUW and destruction.
+/// Value handle with callbacks on RAUW and destruction.
 ///
 /// This is a value handle that allows subclasses to define callbacks that run
 /// when the underlying Value has RAUW called on it or is destroyed.  This
@@ -405,7 +405,7 @@ public:
     return getValPtr();
   }
 
-  /// \brief Callback for Value destruction.
+  /// Callback for Value destruction.
   ///
   /// Called when this->getValPtr() is destroyed, inside ~Value(), so you
   /// may call any non-virtual Value method on getValPtr(), but no subclass
@@ -418,7 +418,7 @@ public:
   /// Value that's being destroyed.
   virtual void deleted() { setValPtr(nullptr); }
 
-  /// \brief Callback for Value RAUW.
+  /// Callback for Value RAUW.
   ///
   /// Called when this->getValPtr()->replaceAllUsesWith(new_value) is called,
   /// _before_ any of the uses have actually been replaced.  If WeakTrackingVH

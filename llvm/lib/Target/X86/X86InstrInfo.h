@@ -70,15 +70,15 @@ enum CondCode {
 // Turn condition code into conditional branch opcode.
 unsigned GetCondBranchFromCond(CondCode CC);
 
-/// \brief Return a pair of condition code for the given predicate and whether
+/// Return a pair of condition code for the given predicate and whether
 /// the instruction operands should be swaped to match the condition code.
 std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 
-/// \brief Return a set opcode for the given condition and whether it has
+/// Return a set opcode for the given condition and whether it has
 /// a memory operand.
 unsigned getSETFromCond(CondCode CC, bool HasMemoryOperand = false);
 
-/// \brief Return a cmov opcode for the given condition, register size in
+/// Return a cmov opcode for the given condition, register size in
 /// bytes, and operand type.
 unsigned getCMovFromCond(CondCode CC, unsigned RegBytes,
                          bool HasMemoryOperand = false);
@@ -96,10 +96,10 @@ CondCode getCondFromCMovOpc(unsigned Opc);
 /// e.g. turning COND_E to COND_NE.
 CondCode GetOppositeBranchCondition(CondCode CC);
 
-/// \brief Get the VPCMP immediate if the opcodes are swapped.
+/// Get the VPCMP immediate if the opcodes are swapped.
 unsigned getSwappedVPCMPImm(unsigned Imm);
 
-/// \brief Get the VPCOM immediate if the opcodes are swapped.
+/// Get the VPCOM immediate if the opcodes are swapped.
 unsigned getSwappedVPCOMImm(unsigned Imm);
 
 } // namespace X86

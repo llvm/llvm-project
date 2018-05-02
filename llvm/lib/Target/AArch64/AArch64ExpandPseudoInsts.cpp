@@ -83,7 +83,7 @@ char AArch64ExpandPseudo::ID = 0;
 INITIALIZE_PASS(AArch64ExpandPseudo, "aarch64-expand-pseudo",
                 AARCH64_EXPAND_PSEUDO_NAME, false, false)
 
-/// \brief Transfer implicit operands on the pseudo instruction to the
+/// Transfer implicit operands on the pseudo instruction to the
 /// instructions created from the expansion.
 static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &UseMI,
                            MachineInstrBuilder &DefMI) {
@@ -99,7 +99,7 @@ static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &UseMI,
   }
 }
 
-/// \brief Helper function which extracts the specified 16-bit chunk from a
+/// Helper function which extracts the specified 16-bit chunk from a
 /// 64-bit value.
 static uint64_t getChunk(uint64_t Imm, unsigned ChunkIdx) {
   assert(ChunkIdx < 4 && "Out of range chunk index specified!");
@@ -107,7 +107,7 @@ static uint64_t getChunk(uint64_t Imm, unsigned ChunkIdx) {
   return (Imm >> (ChunkIdx * 16)) & 0xFFFF;
 }
 
-/// \brief Helper function which replicates a 16-bit chunk within a 64-bit
+/// Helper function which replicates a 16-bit chunk within a 64-bit
 /// value. Indices correspond to element numbers in a v4i16.
 static uint64_t replicateChunk(uint64_t Imm, unsigned FromIdx, unsigned ToIdx) {
   assert((FromIdx < 4) && (ToIdx < 4) && "Out of range chunk index specified!");
@@ -121,7 +121,7 @@ static uint64_t replicateChunk(uint64_t Imm, unsigned FromIdx, unsigned ToIdx) {
   return Imm | Chunk;
 }
 
-/// \brief Helper function which tries to materialize a 64-bit value with an
+/// Helper function which tries to materialize a 64-bit value with an
 /// ORR + MOVK instruction sequence.
 static bool tryOrrMovk(uint64_t UImm, uint64_t OrrImm, MachineInstr &MI,
                        MachineBasicBlock &MBB,
@@ -158,7 +158,7 @@ static bool tryOrrMovk(uint64_t UImm, uint64_t OrrImm, MachineInstr &MI,
   return false;
 }
 
-/// \brief Check whether the given 16-bit chunk replicated to full 64-bit width
+/// Check whether the given 16-bit chunk replicated to full 64-bit width
 /// can be materialized with an ORR instruction.
 static bool canUseOrr(uint64_t Chunk, uint64_t &Encoding) {
   Chunk = (Chunk << 48) | (Chunk << 32) | (Chunk << 16) | Chunk;
@@ -166,7 +166,7 @@ static bool canUseOrr(uint64_t Chunk, uint64_t &Encoding) {
   return AArch64_AM::processLogicalImmediate(Chunk, 64, Encoding);
 }
 
-/// \brief Check for identical 16-bit chunks within the constant and if so
+/// Check for identical 16-bit chunks within the constant and if so
 /// materialize them with a single ORR instruction. The remaining one or two
 /// 16-bit chunks will be materialized with MOVK instructions.
 ///
@@ -260,7 +260,7 @@ static bool tryToreplicateChunks(uint64_t UImm, MachineInstr &MI,
   return false;
 }
 
-/// \brief Check whether this chunk matches the pattern '1...0...'. This pattern
+/// Check whether this chunk matches the pattern '1...0...'. This pattern
 /// starts a contiguous sequence of ones if we look at the bits from the LSB
 /// towards the MSB.
 static bool isStartChunk(uint64_t Chunk) {
@@ -270,7 +270,7 @@ static bool isStartChunk(uint64_t Chunk) {
   return isMask_64(~Chunk);
 }
 
-/// \brief Check whether this chunk matches the pattern '0...1...' This pattern
+/// Check whether this chunk matches the pattern '0...1...' This pattern
 /// ends a contiguous sequence of ones if we look at the bits from the LSB
 /// towards the MSB.
 static bool isEndChunk(uint64_t Chunk) {
@@ -280,7 +280,7 @@ static bool isEndChunk(uint64_t Chunk) {
   return isMask_64(Chunk);
 }
 
-/// \brief Clear or set all bits in the chunk at the given index.
+/// Clear or set all bits in the chunk at the given index.
 static uint64_t updateImm(uint64_t Imm, unsigned Idx, bool Clear) {
   const uint64_t Mask = 0xFFFF;
 
@@ -294,7 +294,7 @@ static uint64_t updateImm(uint64_t Imm, unsigned Idx, bool Clear) {
   return Imm;
 }
 
-/// \brief Check whether the constant contains a sequence of contiguous ones,
+/// Check whether the constant contains a sequence of contiguous ones,
 /// which might be interrupted by one or two chunks. If so, materialize the
 /// sequence of contiguous ones with an ORR instruction.
 /// Materialize the chunks which are either interrupting the sequence or outside
@@ -423,7 +423,7 @@ static bool trySequenceOfOnes(uint64_t UImm, MachineInstr &MI,
   return true;
 }
 
-/// \brief Expand a MOVi32imm or MOVi64imm pseudo instruction to one or more
+/// Expand a MOVi32imm or MOVi64imm pseudo instruction to one or more
 /// real move-immediate instructions to synthesize the immediate.
 bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
@@ -778,7 +778,7 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   return true;
 }
 
-/// \brief If MBBI references a pseudo instruction that should be expanded here,
+/// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
@@ -990,7 +990,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   return false;
 }
 
-/// \brief Iterate over the instructions in basic block MBB and expand any
+/// Iterate over the instructions in basic block MBB and expand any
 /// pseudo instructions.  Return true if anything was modified.
 bool AArch64ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
@@ -1014,7 +1014,7 @@ bool AArch64ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-/// \brief Returns an instance of the pseudo instruction expansion pass.
+/// Returns an instance of the pseudo instruction expansion pass.
 FunctionPass *llvm::createAArch64ExpandPseudoPass() {
   return new AArch64ExpandPseudo();
 }

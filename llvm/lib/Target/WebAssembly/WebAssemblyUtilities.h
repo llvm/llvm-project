@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the declaration of the WebAssembly-specific
+/// This file contains the declaration of the WebAssembly-specific
 /// utility functions.
 ///
 //===----------------------------------------------------------------------===//

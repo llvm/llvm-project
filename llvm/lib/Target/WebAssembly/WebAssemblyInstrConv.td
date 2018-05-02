@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly datatype conversions, truncations, reinterpretations,
+/// WebAssembly datatype conversions, truncations, reinterpretations,
 /// promotions, and demotions operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//

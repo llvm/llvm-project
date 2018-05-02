@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a tool that can parse the YAML optimization
+/// This file implements a tool that can parse the YAML optimization
 /// records and generate an optimization summary annotated source listing
 /// report.
 ///

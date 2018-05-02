@@ -426,7 +426,7 @@ public:
     return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
   }
 
-  /// \brief Returns the physical register reserved for use as the resource
+  /// Returns the physical register reserved for use as the resource
   /// descriptor for scratch accesses.
   unsigned getScratchRSrcReg() const {
     return ScratchRSrcReg;
@@ -586,7 +586,7 @@ public:
     return DebuggerWorkGroupIDStackObjectIndices[Dim];
   }
 
-  /// \brief Sets stack object index for \p Dim's work group ID to \p ObjectIdx.
+  /// Sets stack object index for \p Dim's work group ID to \p ObjectIdx.
   void setDebuggerWorkGroupIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
     assert(Dim < 3);
     DebuggerWorkGroupIDStackObjectIndices[Dim] = ObjectIdx;
@@ -598,7 +598,7 @@ public:
     return DebuggerWorkItemIDStackObjectIndices[Dim];
   }
 
-  /// \brief Sets stack object index for \p Dim's work item ID to \p ObjectIdx.
+  /// Sets stack object index for \p Dim's work item ID to \p ObjectIdx.
   void setDebuggerWorkItemIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
     assert(Dim < 3);
     DebuggerWorkItemIDStackObjectIndices[Dim] = ObjectIdx;

@@ -201,7 +201,7 @@ namespace llvm {
     LLVM_NODISCARD
     int compare_numeric(StringRef RHS) const;
 
-    /// \brief Determine the edit distance between this string and another
+    /// Determine the edit distance between this string and another
     /// string.
     ///
     /// \param Other the string to compare this string against.
@@ -912,7 +912,7 @@ namespace llvm {
 
   /// @}
 
-  /// \brief Compute a hash_code for a StringRef.
+  /// Compute a hash_code for a StringRef.
   LLVM_NODISCARD
   hash_code hash_value(StringRef S);
 

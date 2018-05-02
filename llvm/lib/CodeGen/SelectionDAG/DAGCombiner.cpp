@@ -122,7 +122,7 @@ namespace {
     bool LegalTypes = false;
     bool ForCodeSize;
 
-    /// \brief Worklist of all of the nodes that need to be simplified.
+    /// Worklist of all of the nodes that need to be simplified.
     ///
     /// This must behave as a stack -- new nodes to process are pushed onto the
     /// back and when processing we pop off of the back.
@@ -131,14 +131,14 @@ namespace {
     /// due to nodes being deleted from the underlying DAG.
     SmallVector<SDNode *, 64> Worklist;
 
-    /// \brief Mapping from an SDNode to its position on the worklist.
+    /// Mapping from an SDNode to its position on the worklist.
     ///
     /// This is used to find and remove nodes from the worklist (by nulling
     /// them) when they are deleted from the underlying DAG. It relies on
     /// stable indices of nodes within the worklist.
     DenseMap<SDNode *, unsigned> WorklistMap;
 
-    /// \brief Set of nodes which have been combined (at least once).
+    /// Set of nodes which have been combined (at least once).
     ///
     /// This is used to allow us to reliably add any operands of a DAG node
     /// which have not yet been combined to the worklist.
@@ -249,7 +249,7 @@ namespace {
     SDValue SplitIndexingFromLoad(LoadSDNode *LD);
     bool SliceUpLoad(SDNode *N);
 
-    /// \brief Replace an ISD::EXTRACT_VECTOR_ELT of a load with a narrowed
+    /// Replace an ISD::EXTRACT_VECTOR_ELT of a load with a narrowed
     ///   load.
     ///
     /// \param EVE ISD::EXTRACT_VECTOR_ELT to be replaced.
@@ -561,7 +561,7 @@ namespace {
     /// affected nodes are stored as a prefix in \p StoreNodes).
     bool MergeConsecutiveStores(StoreSDNode *N);
 
-    /// \brief Try to transform a truncation where C is a constant:
+    /// Try to transform a truncation where C is a constant:
     ///     (trunc (and X, C)) -> (and (trunc X), (trunc C))
     ///
     /// \p N needs to be a truncation and its first operand an AND. Other
@@ -856,7 +856,7 @@ bool DAGCombiner::isOneUseSetCC(SDValue N) const {
   return false;
 }
 
-// \brief Returns the SDNode if it is a constant float BuildVector
+// Returns the SDNode if it is a constant float BuildVector
 // or constant float.
 static SDNode *isConstantFPBuildVectorOrConstantFP(SDValue N) {
   if (isa<ConstantFPSDNode>(N))
@@ -1347,7 +1347,7 @@ bool DAGCombiner::PromoteLoad(SDValue Op) {
   return false;
 }
 
-/// \brief Recursively delete a node which has no uses and any operands for
+/// Recursively delete a node which has no uses and any operands for
 /// which it is the only use.
 ///
 /// Note that this both deletes the nodes and removes them from the worklist.
@@ -6474,7 +6474,7 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   return SDValue();
 }
 
-/// \brief Generate Min/Max node
+/// Generate Min/Max node
 static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
                                    SDValue RHS, SDValue True, SDValue False,
                                    ISD::CondCode CC, const TargetLowering &TLI,
@@ -7560,7 +7560,7 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
     const unsigned Align = MinAlign(LN0->getAlignment(), Offset);
 
     SDValue SplitLoad = DAG.getExtLoad(
-        ExtType, DL, SplitDstVT, LN0->getChain(), BasePtr,
+        ExtType, SDLoc(LN0), SplitDstVT, LN0->getChain(), BasePtr,
         LN0->getPointerInfo().getWithOffset(Offset), SplitSrcVT, Align,
         LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
 
@@ -7706,6 +7706,33 @@ SDValue DAGCombiner::matchVSelectOpSizesWithSetCC(SDNode *Cast) {
   return DAG.getNode(ISD::VSELECT, DL, VT, SetCC, CastA, CastB);
 }
 
+// fold ([s|z]ext ([s|z]extload x)) -> ([s|z]ext (truncate ([s|z]extload x)))
+// fold ([s|z]ext (     extload x)) -> ([s|z]ext (truncate ([s|z]extload x)))
+static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
+                                     const TargetLowering &TLI, EVT VT,
+                                     bool LegalOperations, SDNode *N,
+                                     SDValue N0, ISD::LoadExtType ExtLoadType) {
+  SDNode *N0Node = N0.getNode();
+  bool isAExtLoad = (ExtLoadType == ISD::SEXTLOAD) ? ISD::isSEXTLoad(N0Node)
+                                                   : ISD::isZEXTLoad(N0Node);
+  if ((!isAExtLoad && !ISD::isEXTLoad(N0Node)) ||
+      !ISD::isUNINDEXEDLoad(N0Node) || !N0.hasOneUse())
+    return {};
+
+  LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+  EVT MemVT = LN0->getMemoryVT();
+  if ((LegalOperations || LN0->isVolatile()) &&
+      !TLI.isLoadExtLegal(ExtLoadType, VT, MemVT))
+    return {};
+
+  SDValue ExtLoad =
+      DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
+                     LN0->getBasePtr(), MemVT, LN0->getMemOperand());
+  Combiner.CombineTo(N, ExtLoad);
+  DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+  return SDValue(N, 0); // Return N so it doesn't get rechecked!
+}
+
 SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -7809,22 +7836,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (SDValue ExtLoad = CombineExtLoad(N))
     return ExtLoad;
 
-  // fold (sext (sextload x)) -> (sext (truncate (sextload x)))
-  // fold (sext ( extload x)) -> (sext (truncate (sextload x)))
-  if ((ISD::isSEXTLoad(N0.getNode()) || ISD::isEXTLoad(N0.getNode())) &&
-      ISD::isUNINDEXEDLoad(N0.getNode()) && N0.hasOneUse()) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    EVT MemVT = LN0->getMemoryVT();
-    if ((!LegalOperations && !LN0->isVolatile()) ||
-        TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, MemVT)) {
-      SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
-                                       LN0->getBasePtr(), MemVT,
-                                       LN0->getMemOperand());
-      CombineTo(N, ExtLoad);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
-    }
-  }
+  // Try to simplify (sext (sextload x)).
+  if (SDValue foldedExt = tryToFoldExtOfExtload(
+          DAG, *this, TLI, VT, LegalOperations, N, N0, ISD::SEXTLOAD))
+    return foldedExt;
 
   // fold (sext (and/or/xor (load x), cst)) ->
   //      (and/or/xor (sextload x), (sext cst))
@@ -8094,7 +8109,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
     if (DoXform) {
       LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N), VT,
+      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(LN0), VT,
                                        LN0->getChain(),
                                        LN0->getBasePtr(), N0.getValueType(),
                                        LN0->getMemOperand());
@@ -8184,23 +8199,10 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   if (SDValue ZExtLoad = CombineZExtLogicopShiftLoad(N))
     return ZExtLoad;
 
-  // fold (zext (zextload x)) -> (zext (truncate (zextload x)))
-  // fold (zext ( extload x)) -> (zext (truncate (zextload x)))
-  if ((ISD::isZEXTLoad(N0.getNode()) || ISD::isEXTLoad(N0.getNode())) &&
-      ISD::isUNINDEXEDLoad(N0.getNode()) && N0.hasOneUse()) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    EVT MemVT = LN0->getMemoryVT();
-    if ((!LegalOperations && !LN0->isVolatile()) ||
-        TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT)) {
-      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N), VT,
-                                       LN0->getChain(),
-                                       LN0->getBasePtr(), MemVT,
-                                       LN0->getMemOperand());
-      CombineTo(N, ExtLoad);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
-    }
-  }
+  // Try to simplify (zext (zextload x)).
+  if (SDValue foldedExt = tryToFoldExtOfExtload(
+          DAG, *this, TLI, VT, LegalOperations, N, N0, ISD::ZEXTLOAD))
+    return foldedExt;
 
   if (N0.getOpcode() == ISD::SETCC) {
     // Only do this before legalize for now.
@@ -11954,7 +11956,7 @@ bool DAGCombiner::CombineToPostIndexedLoadStore(SDNode *N) {
   return false;
 }
 
-/// \brief Return the base-pointer arithmetic from an indexed \p LD.
+/// Return the base-pointer arithmetic from an indexed \p LD.
 SDValue DAGCombiner::SplitIndexingFromLoad(LoadSDNode *LD) {
   ISD::MemIndexedMode AM = LD->getAddressingMode();
   assert(AM != ISD::UNINDEXED);
@@ -12116,7 +12118,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
 
 namespace {
 
-/// \brief Helper structure used to slice a load in smaller loads.
+/// Helper structure used to slice a load in smaller loads.
 /// Basically a slice is obtained from the following sequence:
 /// Origin = load Ty1, Base
 /// Shift = srl Ty1 Origin, CstTy Amount
@@ -12129,7 +12131,7 @@ namespace {
 /// SliceTy is deduced from the number of bits that are actually used to
 /// build Inst.
 struct LoadedSlice {
-  /// \brief Helper structure used to compute the cost of a slice.
+  /// Helper structure used to compute the cost of a slice.
   struct Cost {
     /// Are we optimizing for code size.
     bool ForCodeSize;
@@ -12143,7 +12145,7 @@ struct LoadedSlice {
 
     Cost(bool ForCodeSize = false) : ForCodeSize(ForCodeSize) {}
 
-    /// \brief Get the cost of one isolated slice.
+    /// Get the cost of one isolated slice.
     Cost(const LoadedSlice &LS, bool ForCodeSize = false)
         : ForCodeSize(ForCodeSize), Loads(1) {
       EVT TruncType = LS.Inst->getValueType(0);
@@ -12153,7 +12155,7 @@ struct LoadedSlice {
         ZExts = 1;
     }
 
-    /// \brief Account for slicing gain in the current cost.
+    /// Account for slicing gain in the current cost.
     /// Slicing provide a few gains like removing a shift or a
     /// truncate. This method allows to grow the cost of the original
     /// load with the gain from this slice.
@@ -12226,7 +12228,7 @@ struct LoadedSlice {
               unsigned Shift = 0, SelectionDAG *DAG = nullptr)
       : Inst(Inst), Origin(Origin), Shift(Shift), DAG(DAG) {}
 
-  /// \brief Get the bits used in a chunk of bits \p BitWidth large.
+  /// Get the bits used in a chunk of bits \p BitWidth large.
   /// \return Result is \p BitWidth and has used bits set to 1 and
   ///         not used bits set to 0.
   APInt getUsedBits() const {
@@ -12246,14 +12248,14 @@ struct LoadedSlice {
     return UsedBits;
   }
 
-  /// \brief Get the size of the slice to be loaded in bytes.
+  /// Get the size of the slice to be loaded in bytes.
   unsigned getLoadedSize() const {
     unsigned SliceSize = getUsedBits().countPopulation();
     assert(!(SliceSize & 0x7) && "Size is not a multiple of a byte.");
     return SliceSize / 8;
   }
 
-  /// \brief Get the type that will be loaded for this slice.
+  /// Get the type that will be loaded for this slice.
   /// Note: This may not be the final type for the slice.
   EVT getLoadedType() const {
     assert(DAG && "Missing context");
@@ -12261,7 +12263,7 @@ struct LoadedSlice {
     return EVT::getIntegerVT(Ctxt, getLoadedSize() * 8);
   }
 
-  /// \brief Get the alignment of the load used for this slice.
+  /// Get the alignment of the load used for this slice.
   unsigned getAlignment() const {
     unsigned Alignment = Origin->getAlignment();
     unsigned Offset = getOffsetFromBase();
@@ -12270,7 +12272,7 @@ struct LoadedSlice {
     return Alignment;
   }
 
-  /// \brief Check if this slice can be rewritten with legal operations.
+  /// Check if this slice can be rewritten with legal operations.
   bool isLegal() const {
     // An invalid slice is not legal.
     if (!Origin || !Inst || !DAG)
@@ -12314,7 +12316,7 @@ struct LoadedSlice {
     return true;
   }
 
-  /// \brief Get the offset in bytes of this slice in the original chunk of
+  /// Get the offset in bytes of this slice in the original chunk of
   /// bits.
   /// \pre DAG != nullptr.
   uint64_t getOffsetFromBase() const {
@@ -12335,7 +12337,7 @@ struct LoadedSlice {
     return Offset;
   }
 
-  /// \brief Generate the sequence of instructions to load the slice
+  /// Generate the sequence of instructions to load the slice
   /// represented by this object and redirect the uses of this slice to
   /// this new sequence of instructions.
   /// \pre this->Inst && this->Origin are valid Instructions and this
@@ -12373,7 +12375,7 @@ struct LoadedSlice {
     return LastInst;
   }
 
-  /// \brief Check if this slice can be merged with an expensive cross register
+  /// Check if this slice can be merged with an expensive cross register
   /// bank copy. E.g.,
   /// i = load i32
   /// f = bitcast i32 i to float
@@ -12422,7 +12424,7 @@ struct LoadedSlice {
 
 } // end anonymous namespace
 
-/// \brief Check that all bits set in \p UsedBits form a dense region, i.e.,
+/// Check that all bits set in \p UsedBits form a dense region, i.e.,
 /// \p UsedBits looks like 0..0 1..1 0..0.
 static bool areUsedBitsDense(const APInt &UsedBits) {
   // If all the bits are one, this is dense!
@@ -12438,7 +12440,7 @@ static bool areUsedBitsDense(const APInt &UsedBits) {
   return NarrowedUsedBits.isAllOnesValue();
 }
 
-/// \brief Check whether or not \p First and \p Second are next to each other
+/// Check whether or not \p First and \p Second are next to each other
 /// in memory. This means that there is no hole between the bits loaded
 /// by \p First and the bits loaded by \p Second.
 static bool areSlicesNextToEachOther(const LoadedSlice &First,
@@ -12452,7 +12454,7 @@ static bool areSlicesNextToEachOther(const LoadedSlice &First,
   return areUsedBitsDense(UsedBits);
 }
 
-/// \brief Adjust the \p GlobalLSCost according to the target
+/// Adjust the \p GlobalLSCost according to the target
 /// paring capabilities and the layout of the slices.
 /// \pre \p GlobalLSCost should account for at least as many loads as
 /// there is in the slices in \p LoadedSlices.
@@ -12513,7 +12515,7 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
   }
 }
 
-/// \brief Check the profitability of all involved LoadedSlice.
+/// Check the profitability of all involved LoadedSlice.
 /// Currently, it is considered profitable if there is exactly two
 /// involved slices (1) which are (2) next to each other in memory, and
 /// whose cost (\see LoadedSlice::Cost) is smaller than the original load (3).
@@ -12557,7 +12559,7 @@ static bool isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
   return OrigCost > GlobalSlicingCost;
 }
 
-/// \brief If the given load, \p LI, is used only by trunc or trunc(lshr)
+/// If the given load, \p LI, is used only by trunc or trunc(lshr)
 /// operations, split it in the various pieces being extracted.
 ///
 /// This sort of thing is introduced by SROA.

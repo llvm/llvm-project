@@ -136,7 +136,7 @@ public:
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
 
-  /// \brief Generate the compact unwind encoding for the CFI instructions.
+  /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint32_t
       generateCompactUnwindEncoding(ArrayRef<MCCFIInstruction>) const {
     return 0;

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file provides an implementation of debug counters.  Debug
+/// This file provides an implementation of debug counters.  Debug
 /// counters are a tool that let you narrow down a miscompilation to a specific
 /// thing happening.
 ///
@@ -55,7 +55,7 @@ namespace llvm {
 
 class DebugCounter {
 public:
-  /// \brief Returns a reference to the singleton instance.
+  /// Returns a reference to the singleton instance.
   static DebugCounter &instance();
 
   // Used by the command line option parser to push a new value it parsed.

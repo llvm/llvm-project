@@ -28,7 +28,7 @@ public:
 
   TestFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
-  /// \brief Run the analysis pass over the function and return a result.
+  /// Run the analysis pass over the function and return a result.
   Result run(Function &F, FunctionAnalysisManager &AM) {
     ++Runs;
     int Count = 0;

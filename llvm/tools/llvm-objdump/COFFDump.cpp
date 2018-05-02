@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements the COFF-specific dumper for llvm-objdump.
+/// This file implements the COFF-specific dumper for llvm-objdump.
 /// It outputs the Win64 EH data structures as plain text.
 /// The encoding of the unwind codes is described in MSDN:
 /// http://msdn.microsoft.com/en-us/library/ck9asaa9.aspx

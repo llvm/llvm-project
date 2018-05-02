@@ -163,7 +163,7 @@ static const unsigned kRetvalTLSSize = 800;
 // Accesses sizes are powers of two: 1, 2, 4, 8.
 static const size_t kNumberOfAccessSizes = 4;
 
-/// \brief Track origins of uninitialized values.
+/// Track origins of uninitialized values.
 ///
 /// Adds a section to MemorySanitizer report that points to the allocation
 /// (stack or heap) the uninitialized bits came from originally.
@@ -390,7 +390,7 @@ static const PlatformMemoryMapParams NetBSD_X86_MemoryMapParams = {
 
 namespace {
 
-/// \brief An instrumentation pass implementing detection of uninitialized
+/// An instrumentation pass implementing detection of uninitialized
 /// reads.
 ///
 /// MemorySanitizer: instrument the code in module to find
@@ -423,7 +423,7 @@ private:
 
   void initializeCallbacks(Module &M);
 
-  /// \brief Track origins (allocation points) of uninitialized values.
+  /// Track origins (allocation points) of uninitialized values.
   int TrackOrigins;
   bool Recover;
 
@@ -431,64 +431,64 @@ private:
   Type *IntptrTy;
   Type *OriginTy;
 
-  /// \brief Thread-local shadow storage for function parameters.
+  /// Thread-local shadow storage for function parameters.
   GlobalVariable *ParamTLS;
 
-  /// \brief Thread-local origin storage for function parameters.
+  /// Thread-local origin storage for function parameters.
   GlobalVariable *ParamOriginTLS;
 
-  /// \brief Thread-local shadow storage for function return value.
+  /// Thread-local shadow storage for function return value.
   GlobalVariable *RetvalTLS;
 
-  /// \brief Thread-local origin storage for function return value.
+  /// Thread-local origin storage for function return value.
   GlobalVariable *RetvalOriginTLS;
 
-  /// \brief Thread-local shadow storage for in-register va_arg function
+  /// Thread-local shadow storage for in-register va_arg function
   /// parameters (x86_64-specific).
   GlobalVariable *VAArgTLS;
 
-  /// \brief Thread-local shadow storage for va_arg overflow area
+  /// Thread-local shadow storage for va_arg overflow area
   /// (x86_64-specific).
   GlobalVariable *VAArgOverflowSizeTLS;
 
-  /// \brief Thread-local space used to pass origin value to the UMR reporting
+  /// Thread-local space used to pass origin value to the UMR reporting
   /// function.
   GlobalVariable *OriginTLS;
 
-  /// \brief The run-time callback to print a warning.
+  /// The run-time callback to print a warning.
   Value *WarningFn = nullptr;
 
   // These arrays are indexed by log2(AccessSize).
   Value *MaybeWarningFn[kNumberOfAccessSizes];
   Value *MaybeStoreOriginFn[kNumberOfAccessSizes];
 
-  /// \brief Run-time helper that generates a new origin value for a stack
+  /// Run-time helper that generates a new origin value for a stack
   /// allocation.
   Value *MsanSetAllocaOrigin4Fn;
 
-  /// \brief Run-time helper that poisons stack on function entry.
+  /// Run-time helper that poisons stack on function entry.
   Value *MsanPoisonStackFn;
 
-  /// \brief Run-time helper that records a store (or any event) of an
+  /// Run-time helper that records a store (or any event) of an
   /// uninitialized value and returns an updated origin id encoding this info.
   Value *MsanChainOriginFn;
 
-  /// \brief MSan runtime replacements for memmove, memcpy and memset.
+  /// MSan runtime replacements for memmove, memcpy and memset.
   Value *MemmoveFn, *MemcpyFn, *MemsetFn;
 
-  /// \brief Memory map parameters used in application-to-shadow calculation.
+  /// Memory map parameters used in application-to-shadow calculation.
   const MemoryMapParams *MapParams;
 
-  /// \brief Custom memory map parameters used when -msan-shadow-base or
+  /// Custom memory map parameters used when -msan-shadow-base or
   // -msan-origin-base is provided.
   MemoryMapParams CustomMapParams;
 
   MDNode *ColdCallWeights;
 
-  /// \brief Branch weights for origin store.
+  /// Branch weights for origin store.
   MDNode *OriginStoreWeights;
 
-  /// \brief An empty volatile inline asm that prevents callback merge.
+  /// An empty volatile inline asm that prevents callback merge.
   InlineAsm *EmptyAsm;
 
   Function *MsanCtorFunction;
@@ -510,7 +510,7 @@ FunctionPass *llvm::createMemorySanitizerPass(int TrackOrigins, bool Recover) {
   return new MemorySanitizer(TrackOrigins, Recover);
 }
 
-/// \brief Create a non-const global initialized with the given string.
+/// Create a non-const global initialized with the given string.
 ///
 /// Creates a writable global for Str so that we can pass it to the
 /// run-time lib. Runtime uses first 4 bytes of the string to store the
@@ -522,7 +522,7 @@ static GlobalVariable *createPrivateNonConstGlobalForString(Module &M,
                             GlobalValue::PrivateLinkage, StrConst, "");
 }
 
-/// \brief Insert extern declaration of runtime-provided functions and globals.
+/// Insert extern declaration of runtime-provided functions and globals.
 void MemorySanitizer::initializeCallbacks(Module &M) {
   // Only do this once.
   if (WarningFn)
@@ -604,7 +604,7 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
                             /*hasSideEffects=*/true);
 }
 
-/// \brief Module-level initialization.
+/// Module-level initialization.
 ///
 /// inserts a call to __msan_init to the module's constructor list.
 bool MemorySanitizer::doInitialization(Module &M) {
@@ -706,7 +706,7 @@ bool MemorySanitizer::doInitialization(Module &M) {
 
 namespace {
 
-/// \brief A helper class that handles instrumentation of VarArg
+/// A helper class that handles instrumentation of VarArg
 /// functions on a particular platform.
 ///
 /// Implementations are expected to insert the instrumentation
@@ -717,16 +717,16 @@ namespace {
 struct VarArgHelper {
   virtual ~VarArgHelper() = default;
 
-  /// \brief Visit a CallSite.
+  /// Visit a CallSite.
   virtual void visitCallSite(CallSite &CS, IRBuilder<> &IRB) = 0;
 
-  /// \brief Visit a va_start call.
+  /// Visit a va_start call.
   virtual void visitVAStartInst(VAStartInst &I) = 0;
 
-  /// \brief Visit a va_copy call.
+  /// Visit a va_copy call.
   virtual void visitVACopyInst(VACopyInst &I) = 0;
 
-  /// \brief Finalize function instrumentation.
+  /// Finalize function instrumentation.
   ///
   /// This method is called after visiting all interesting (see above)
   /// instructions in a function.
@@ -815,7 +815,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateOr(Origin, IRB.CreateShl(Origin, kOriginSize * 8));
   }
 
-  /// \brief Fill memory range with the given origin value.
+  /// Fill memory range with the given origin value.
   void paintOrigin(IRBuilder<> &IRB, Value *Origin, Value *OriginPtr,
                    unsigned Size, unsigned Alignment) {
     const DataLayout &DL = F.getParent()->getDataLayout();
@@ -915,7 +915,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  /// \brief Helper function to insert a warning at IRB's current insert point.
+  /// Helper function to insert a warning at IRB's current insert point.
   void insertWarningFn(IRBuilder<> &IRB, Value *Origin) {
     if (!Origin)
       Origin = (Value *)IRB.getInt32(0);
@@ -978,7 +978,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     DEBUG(dbgs() << "DONE:\n" << F);
   }
 
-  /// \brief Add MemorySanitizer instrumentation to a function.
+  /// Add MemorySanitizer instrumentation to a function.
   bool runOnFunction() {
     // In the presence of unreachable blocks, we may see Phi nodes with
     // incoming nodes from such blocks. Since InstVisitor skips unreachable
@@ -1019,12 +1019,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return true;
   }
 
-  /// \brief Compute the shadow type that corresponds to a given Value.
+  /// Compute the shadow type that corresponds to a given Value.
   Type *getShadowTy(Value *V) {
     return getShadowTy(V->getType());
   }
 
-  /// \brief Compute the shadow type that corresponds to a given Type.
+  /// Compute the shadow type that corresponds to a given Type.
   Type *getShadowTy(Type *OrigTy) {
     if (!OrigTy->isSized()) {
       return nullptr;
@@ -1055,14 +1055,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IntegerType::get(*MS.C, TypeSize);
   }
 
-  /// \brief Flatten a vector type.
+  /// Flatten a vector type.
   Type *getShadowTyNoVec(Type *ty) {
     if (VectorType *vt = dyn_cast<VectorType>(ty))
       return IntegerType::get(*MS.C, vt->getBitWidth());
     return ty;
   }
 
-  /// \brief Convert a shadow value to it's flattened variant.
+  /// Convert a shadow value to it's flattened variant.
   Value *convertToShadowTyNoVec(Value *V, IRBuilder<> &IRB) {
     Type *Ty = V->getType();
     Type *NoVecTy = getShadowTyNoVec(Ty);
@@ -1070,7 +1070,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateBitCast(V, NoVecTy);
   }
 
-  /// \brief Compute the integer shadow offset that corresponds to a given
+  /// Compute the integer shadow offset that corresponds to a given
   /// application address.
   ///
   /// Offset = (Addr & ~AndMask) ^ XorMask
@@ -1089,7 +1089,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return OffsetLong;
   }
 
-  /// \brief Compute the shadow and origin addresses corresponding to a given
+  /// Compute the shadow and origin addresses corresponding to a given
   /// application address.
   ///
   /// Shadow = ShadowBase + Offset
@@ -1136,7 +1136,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return ret;
   }
 
-  /// \brief Compute the shadow address for a given function argument.
+  /// Compute the shadow address for a given function argument.
   ///
   /// Shadow = ParamTLS+ArgOffset.
   Value *getShadowPtrForArgument(Value *A, IRBuilder<> &IRB,
@@ -1148,7 +1148,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                               "_msarg");
   }
 
-  /// \brief Compute the origin address for a given function argument.
+  /// Compute the origin address for a given function argument.
   Value *getOriginPtrForArgument(Value *A, IRBuilder<> &IRB,
                                  int ArgOffset) {
     if (!MS.TrackOrigins) return nullptr;
@@ -1159,26 +1159,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                               "_msarg_o");
   }
 
-  /// \brief Compute the shadow address for a retval.
+  /// Compute the shadow address for a retval.
   Value *getShadowPtrForRetval(Value *A, IRBuilder<> &IRB) {
     return IRB.CreatePointerCast(MS.RetvalTLS,
                                  PointerType::get(getShadowTy(A), 0),
                                  "_msret");
   }
 
-  /// \brief Compute the origin address for a retval.
+  /// Compute the origin address for a retval.
   Value *getOriginPtrForRetval(IRBuilder<> &IRB) {
     // We keep a single origin for the entire retval. Might be too optimistic.
     return MS.RetvalOriginTLS;
   }
 
-  /// \brief Set SV to be the shadow value for V.
+  /// Set SV to be the shadow value for V.
   void setShadow(Value *V, Value *SV) {
     assert(!ShadowMap.count(V) && "Values may only have one shadow");
     ShadowMap[V] = PropagateShadow ? SV : getCleanShadow(V);
   }
 
-  /// \brief Set Origin to be the origin value for V.
+  /// Set Origin to be the origin value for V.
   void setOrigin(Value *V, Value *Origin) {
     if (!MS.TrackOrigins) return;
     assert(!OriginMap.count(V) && "Values may only have one origin");
@@ -1193,7 +1193,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return Constant::getNullValue(ShadowTy);
   }
 
-  /// \brief Create a clean shadow value for a given value.
+  /// Create a clean shadow value for a given value.
   ///
   /// Clean shadow (all zeroes) means all bits of the value are defined
   /// (initialized).
@@ -1201,7 +1201,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return getCleanShadow(V->getType());
   }
 
-  /// \brief Create a dirty shadow of a given shadow type.
+  /// Create a dirty shadow of a given shadow type.
   Constant *getPoisonedShadow(Type *ShadowTy) {
     assert(ShadowTy);
     if (isa<IntegerType>(ShadowTy) || isa<VectorType>(ShadowTy))
@@ -1220,7 +1220,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     llvm_unreachable("Unexpected shadow type");
   }
 
-  /// \brief Create a dirty shadow for a given value.
+  /// Create a dirty shadow for a given value.
   Constant *getPoisonedShadow(Value *V) {
     Type *ShadowTy = getShadowTy(V);
     if (!ShadowTy)
@@ -1228,12 +1228,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return getPoisonedShadow(ShadowTy);
   }
 
-  /// \brief Create a clean (zero) origin.
+  /// Create a clean (zero) origin.
   Value *getCleanOrigin() {
     return Constant::getNullValue(MS.OriginTy);
   }
 
-  /// \brief Get the shadow value for a given Value.
+  /// Get the shadow value for a given Value.
   ///
   /// This function either returns the value set earlier with setShadow,
   /// or extracts if from ParamTLS (for function arguments).
@@ -1332,12 +1332,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return getCleanShadow(V);
   }
 
-  /// \brief Get the shadow for i-th argument of the instruction I.
+  /// Get the shadow for i-th argument of the instruction I.
   Value *getShadow(Instruction *I, int i) {
     return getShadow(I->getOperand(i));
   }
 
-  /// \brief Get the origin for a value.
+  /// Get the origin for a value.
   Value *getOrigin(Value *V) {
     if (!MS.TrackOrigins) return nullptr;
     if (!PropagateShadow) return getCleanOrigin();
@@ -1353,12 +1353,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return Origin;
   }
 
-  /// \brief Get the origin for i-th argument of the instruction I.
+  /// Get the origin for i-th argument of the instruction I.
   Value *getOrigin(Instruction *I, int i) {
     return getOrigin(I->getOperand(i));
   }
 
-  /// \brief Remember the place where a shadow check should be inserted.
+  /// Remember the place where a shadow check should be inserted.
   ///
   /// This location will be later instrumented with a check that will print a
   /// UMR warning in runtime if the shadow value is not 0.
@@ -1374,7 +1374,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ShadowOriginAndInsertPoint(Shadow, Origin, OrigIns));
   }
 
-  /// \brief Remember the place where a shadow check should be inserted.
+  /// Remember the place where a shadow check should be inserted.
   ///
   /// This location will be later instrumented with a check that will print a
   /// UMR warning in runtime if the value is not fully defined.
@@ -1434,7 +1434,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       InstVisitor<MemorySanitizerVisitor>::visit(I);
   }
 
-  /// \brief Instrument LoadInst
+  /// Instrument LoadInst
   ///
   /// Loads the corresponding shadow and (optionally) origin.
   /// Optionally, checks that the load address is fully defined.
@@ -1470,7 +1470,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  /// \brief Instrument StoreInst
+  /// Instrument StoreInst
   ///
   /// Stores the corresponding shadow and (optionally) origin.
   /// Optionally, checks that the store address is fully defined.
@@ -1589,7 +1589,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitFPExtInst(CastInst& I) { handleShadowOr(I); }
   void visitFPTruncInst(CastInst& I) { handleShadowOr(I); }
 
-  /// \brief Propagate shadow for bitwise AND.
+  /// Propagate shadow for bitwise AND.
   ///
   /// This code is exact, i.e. if, for example, a bit in the left argument
   /// is defined and 0, then neither the value not definedness of the
@@ -1638,7 +1638,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// \brief Default propagation of shadow and/or origin.
+  /// Default propagation of shadow and/or origin.
   ///
   /// This class implements the general case of shadow propagation, used in all
   /// cases where we don't know and/or don't care about what the operation
@@ -1664,7 +1664,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Combiner(MemorySanitizerVisitor *MSV, IRBuilder<> &IRB)
         : IRB(IRB), MSV(MSV) {}
 
-    /// \brief Add a pair of shadow and origin values to the mix.
+    /// Add a pair of shadow and origin values to the mix.
     Combiner &Add(Value *OpShadow, Value *OpOrigin) {
       if (CombineShadow) {
         assert(OpShadow);
@@ -1694,14 +1694,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return *this;
     }
 
-    /// \brief Add an application value to the mix.
+    /// Add an application value to the mix.
     Combiner &Add(Value *V) {
       Value *OpShadow = MSV->getShadow(V);
       Value *OpOrigin = MSV->MS.TrackOrigins ? MSV->getOrigin(V) : nullptr;
       return Add(OpShadow, OpOrigin);
     }
 
-    /// \brief Set the current combined values as the given instruction's shadow
+    /// Set the current combined values as the given instruction's shadow
     /// and origin.
     void Done(Instruction *I) {
       if (CombineShadow) {
@@ -1719,7 +1719,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   using ShadowAndOriginCombiner = Combiner<true>;
   using OriginCombiner = Combiner<false>;
 
-  /// \brief Propagate origin for arbitrary operation.
+  /// Propagate origin for arbitrary operation.
   void setOriginForNaryOp(Instruction &I) {
     if (!MS.TrackOrigins) return;
     IRBuilder<> IRB(&I);
@@ -1737,7 +1737,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Ty->getPrimitiveSizeInBits();
   }
 
-  /// \brief Cast between two shadow types, extending or truncating as
+  /// Cast between two shadow types, extending or truncating as
   /// necessary.
   Value *CreateShadowCast(IRBuilder<> &IRB, Value *V, Type *dstTy,
                           bool Signed = false) {
@@ -1759,7 +1759,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // TODO: handle struct types.
   }
 
-  /// \brief Cast an application value to the type of its own shadow.
+  /// Cast an application value to the type of its own shadow.
   Value *CreateAppToShadowCast(IRBuilder<> &IRB, Value *V) {
     Type *ShadowTy = getShadowTy(V);
     if (V->getType() == ShadowTy)
@@ -1770,7 +1770,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return IRB.CreateBitCast(V, ShadowTy);
   }
 
-  /// \brief Propagate shadow for arbitrary operation.
+  /// Propagate shadow for arbitrary operation.
   void handleShadowOr(Instruction &I) {
     IRBuilder<> IRB(&I);
     ShadowAndOriginCombiner SC(this, IRB);
@@ -1779,7 +1779,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
-  // \brief Handle multiplication by constant.
+  // Handle multiplication by constant.
   //
   // Handle a special case of multiplication by constant that may have one or
   // more zeros in the lower bits. This makes corresponding number of lower bits
@@ -1856,7 +1856,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitSRem(BinaryOperator &I) { handleDiv(I); }
   void visitFRem(BinaryOperator &I) { handleDiv(I); }
 
-  /// \brief Instrument == and != comparisons.
+  /// Instrument == and != comparisons.
   ///
   /// Sometimes the comparison result is known even if some of the bits of the
   /// arguments are not.
@@ -1894,7 +1894,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// \brief Build the lowest possible value of V, taking into account V's
+  /// Build the lowest possible value of V, taking into account V's
   ///        uninitialized bits.
   Value *getLowestPossibleValue(IRBuilder<> &IRB, Value *A, Value *Sa,
                                 bool isSigned) {
@@ -1911,7 +1911,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  /// \brief Build the highest possible value of V, taking into account V's
+  /// Build the highest possible value of V, taking into account V's
   ///        uninitialized bits.
   Value *getHighestPossibleValue(IRBuilder<> &IRB, Value *A, Value *Sa,
                                 bool isSigned) {
@@ -1928,7 +1928,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  /// \brief Instrument relational comparisons.
+  /// Instrument relational comparisons.
   ///
   /// This function does exact shadow propagation for all relational
   /// comparisons of integers, pointers and vectors of those.
@@ -1961,7 +1961,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// \brief Instrument signed relational comparisons.
+  /// Instrument signed relational comparisons.
   ///
   /// Handle sign bit tests: x<0, x>=0, x<=-1, x>-1 by propagating the highest
   /// bit of the shadow. Everything else is delegated to handleShadowOr().
@@ -2045,7 +2045,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitAShr(BinaryOperator &I) { handleShift(I); }
   void visitLShr(BinaryOperator &I) { handleShift(I); }
 
-  /// \brief Instrument llvm.memmove
+  /// Instrument llvm.memmove
   ///
   /// At this point we don't know if llvm.memmove will be inlined or not.
   /// If we don't instrument it and it gets inlined,
@@ -2098,7 +2098,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     VAHelper->visitVACopyInst(I);
   }
 
-  /// \brief Handle vector store-like intrinsics.
+  /// Handle vector store-like intrinsics.
   ///
   /// Instrument intrinsics that look like a simple SIMD store: writes memory,
   /// has 1 pointer argument and 1 vector argument, returns void.
@@ -2122,7 +2122,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return true;
   }
 
-  /// \brief Handle vector load-like intrinsics.
+  /// Handle vector load-like intrinsics.
   ///
   /// Instrument intrinsics that look like a simple SIMD load: reads memory,
   /// has 1 pointer argument, returns a vector.
@@ -2155,7 +2155,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return true;
   }
 
-  /// \brief Handle (SIMD arithmetic)-like intrinsics.
+  /// Handle (SIMD arithmetic)-like intrinsics.
   ///
   /// Instrument intrinsics with any number of arguments of the same type,
   /// equal to the return type. The type should be simple (no aggregates or
@@ -2185,7 +2185,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return true;
   }
 
-  /// \brief Heuristically instrument unknown intrinsics.
+  /// Heuristically instrument unknown intrinsics.
   ///
   /// The main purpose of this code is to do something reasonable with all
   /// random intrinsics we might encounter, most importantly - SIMD intrinsics.
@@ -2235,7 +2235,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(Op));
   }
 
-  // \brief Instrument vector convert instrinsic.
+  // Instrument vector convert instrinsic.
   //
   // This function instruments intrinsics like cvtsi2ss:
   // %Out = int_xxx_cvtyyy(%ConvertOp)
@@ -2338,7 +2338,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateSExt(S2, T);
   }
 
-  // \brief Instrument vector shift instrinsic.
+  // Instrument vector shift instrinsic.
   //
   // This function instruments intrinsics like int_x86_avx2_psll_w.
   // Intrinsic shifts %In by %ShiftSize bits.
@@ -2363,14 +2363,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // \brief Get an X86_MMX-sized vector type.
+  // Get an X86_MMX-sized vector type.
   Type *getMMXVectorTy(unsigned EltSizeInBits) {
     const unsigned X86_MMXSizeInBits = 64;
     return VectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
                            X86_MMXSizeInBits / EltSizeInBits);
   }
 
-  // \brief Returns a signed counterpart for an (un)signed-saturate-and-pack
+  // Returns a signed counterpart for an (un)signed-saturate-and-pack
   // intrinsic.
   Intrinsic::ID getSignedPackIntrinsic(Intrinsic::ID id) {
     switch (id) {
@@ -2401,7 +2401,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // \brief Instrument vector pack instrinsic.
+  // Instrument vector pack instrinsic.
   //
   // This function instruments intrinsics like x86_mmx_packsswb, that
   // packs elements of 2 input vectors into half as many bits with saturation.
@@ -2444,7 +2444,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // \brief Instrument sum-of-absolute-differencies intrinsic.
+  // Instrument sum-of-absolute-differencies intrinsic.
   void handleVectorSadIntrinsic(IntrinsicInst &I) {
     const unsigned SignificantBitsPerResultElement = 16;
     bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
@@ -2463,7 +2463,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // \brief Instrument multiply-add intrinsic.
+  // Instrument multiply-add intrinsic.
   void handleVectorPmaddIntrinsic(IntrinsicInst &I,
                                   unsigned EltSizeInBits = 0) {
     bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
@@ -2478,7 +2478,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // \brief Instrument compare-packed intrinsic.
+  // Instrument compare-packed intrinsic.
   // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
   // all-ones shadow.
   void handleVectorComparePackedIntrinsic(IntrinsicInst &I) {
@@ -2491,7 +2491,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // \brief Instrument compare-scalar intrinsic.
+  // Instrument compare-scalar intrinsic.
   // This handles both cmp* intrinsics which return the result in the first
   // element of a vector, and comi* which return the result as i32.
   void handleVectorCompareScalarIntrinsic(IntrinsicInst &I) {
@@ -3146,7 +3146,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 };
 
-/// \brief AMD64-specific implementation of VarArgHelper.
+/// AMD64-specific implementation of VarArgHelper.
 struct VarArgAMD64Helper : public VarArgHelper {
   // An unfortunate workaround for asymmetric lowering of va_arg stuff.
   // See a comment in visitCallSite for more details.
@@ -3253,7 +3253,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
     IRB.CreateStore(OverflowSize, MS.VAArgOverflowSizeTLS);
   }
 
-  /// \brief Compute the shadow address for a given va_arg.
+  /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(Type *Ty, IRBuilder<> &IRB,
                                    int ArgOffset) {
     Value *Base = IRB.CreatePointerCast(MS.VAArgTLS, MS.IntptrTy);
@@ -3342,7 +3342,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
   }
 };
 
-/// \brief MIPS64-specific implementation of VarArgHelper.
+/// MIPS64-specific implementation of VarArgHelper.
 struct VarArgMIPS64Helper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
@@ -3383,7 +3383,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
     IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
   }
 
-  /// \brief Compute the shadow address for a given va_arg.
+  /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(Type *Ty, IRBuilder<> &IRB,
                                    int ArgOffset) {
     Value *Base = IRB.CreatePointerCast(MS.VAArgTLS, MS.IntptrTy);
@@ -3452,7 +3452,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
   }
 };
 
-/// \brief AArch64-specific implementation of VarArgHelper.
+/// AArch64-specific implementation of VarArgHelper.
 struct VarArgAArch64Helper : public VarArgHelper {
   static const unsigned kAArch64GrArgSize = 64;
   static const unsigned kAArch64VrArgSize = 128;
@@ -3704,7 +3704,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
   }
 };
 
-/// \brief PowerPC64-specific implementation of VarArgHelper.
+/// PowerPC64-specific implementation of VarArgHelper.
 struct VarArgPowerPC64Helper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
@@ -3803,7 +3803,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
     IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
   }
 
-  /// \brief Compute the shadow address for a given va_arg.
+  /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(Type *Ty, IRBuilder<> &IRB,
                                    int ArgOffset) {
     Value *Base = IRB.CreatePointerCast(MS.VAArgTLS, MS.IntptrTy);
@@ -3873,7 +3873,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
   }
 };
 
-/// \brief A no-op implementation of VarArgHelper.
+/// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
   VarArgNoOpHelper(Function &F, MemorySanitizer &MS,
                    MemorySanitizerVisitor &MSV) {}

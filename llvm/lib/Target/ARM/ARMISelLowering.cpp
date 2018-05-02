@@ -2800,7 +2800,7 @@ SDValue ARMTargetLowering::LowerBlockAddress(SDValue Op,
   return DAG.getNode(ARMISD::PIC_ADD, DL, PtrVT, Result, PICLabel);
 }
 
-/// \brief Convert a TLS address reference into the correct sequence of loads
+/// Convert a TLS address reference into the correct sequence of loads
 /// and calls to compute the variable's address for Darwin, and return an
 /// SDValue containing the final node.
 
@@ -9553,7 +9553,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
 }
 
-/// \brief Attaches vregs to MEMCPY that it will use as scratch registers
+/// Attaches vregs to MEMCPY that it will use as scratch registers
 /// when it is expanded into LDM/STM. This is done as a post-isel lowering
 /// instead of as a custom inserter because we need the use list from the SDNode.
 static void attachMEMCPYScratchRegs(const ARMSubtarget *Subtarget,
@@ -11292,7 +11292,7 @@ static SDValue PerformBUILD_VECTORCombine(SDNode *N,
   return DAG.getNode(ISD::BITCAST, dl, VT, BV);
 }
 
-/// \brief Target-specific dag combine xforms for ARMISD::BUILD_VECTOR.
+/// Target-specific dag combine xforms for ARMISD::BUILD_VECTOR.
 static SDValue
 PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // ARMISD::BUILD_VECTOR is introduced when legalizing ISD::BUILD_VECTOR.
@@ -14171,7 +14171,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   return false;
 }
 
-/// \brief Returns true if it is beneficial to convert a load of a constant
+/// Returns true if it is beneficial to convert a load of a constant
 /// to just the constant itself.
 bool ARMTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                           Type *Ty) const {
@@ -14467,7 +14467,7 @@ bool ARMTargetLowering::isLegalInterleavedAccessType(
   return VecSize == 64 || VecSize % 128 == 0;
 }
 
-/// \brief Lower an interleaved load into a vldN intrinsic.
+/// Lower an interleaved load into a vldN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):
 ///        %wide.vec = load <8 x i32>, <8 x i32>* %ptr, align 4
@@ -14585,7 +14585,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   return true;
 }
 
-/// \brief Lower an interleaved store into a vstN intrinsic.
+/// Lower an interleaved store into a vstN intrinsic.
 ///
 /// E.g. Lower an interleaved store (Factor = 3):
 ///        %i.vec = shuffle <8 x i32> %v0, <8 x i32> %v1,
@@ -14783,7 +14783,7 @@ static bool isHomogeneousAggregate(Type *Ty, HABaseType &Base,
   return (Members > 0 && Members <= 4);
 }
 
-/// \brief Return true if a type is an AAPCS-VFP homogeneous aggregate or one of
+/// Return true if a type is an AAPCS-VFP homogeneous aggregate or one of
 /// [N x i32] or [N x i64]. This allows front-ends to skip emitting padding when
 /// passing according to AAPCS rules.
 bool ARMTargetLowering::functionArgumentNeedsConsecutiveRegisters(

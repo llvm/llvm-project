@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a pass that replaces physical registers with
+/// This file implements a pass that replaces physical registers with
 /// virtual registers.
 ///
 /// LLVM expects certain physical registers, such as a stack pointer. However,

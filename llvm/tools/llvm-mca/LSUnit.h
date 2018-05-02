@@ -26,7 +26,7 @@ namespace mca {
 
 struct InstrDesc;
 
-/// \brief A Load/Store Unit implementing a load and store queues.
+/// A Load/Store Unit implementing a load and store queues.
 ///
 /// This class implements a load queue and a store queue to emulate the
 /// out-of-order execution of memory operations.

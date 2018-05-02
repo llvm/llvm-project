@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares the AMDGPU-specific subclass of
+/// This file declares the AMDGPU-specific subclass of
 /// TargetLoweringObjectFile.
 ///
 //===----------------------------------------------------------------------===//

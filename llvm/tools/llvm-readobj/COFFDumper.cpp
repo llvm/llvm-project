@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements the COFF-specific dumper for llvm-readobj.
+/// This file implements the COFF-specific dumper for llvm-readobj.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -63,7 +63,7 @@ class VectorLegalizer {
   /// legalizing the same thing more than once.
   SmallDenseMap<SDValue, SDValue, 64> LegalizedNodes;
 
-  /// \brief Adds a node to the translation cache.
+  /// Adds a node to the translation cache.
   void AddLegalizedOperand(SDValue From, SDValue To) {
     LegalizedNodes.insert(std::make_pair(From, To));
     // If someone requests legalization of the new node, return itself.
@@ -71,55 +71,55 @@ class VectorLegalizer {
       LegalizedNodes.insert(std::make_pair(To, To));
   }
 
-  /// \brief Legalizes the given node.
+  /// Legalizes the given node.
   SDValue LegalizeOp(SDValue Op);
 
-  /// \brief Assuming the node is legal, "legalize" the results.
+  /// Assuming the node is legal, "legalize" the results.
   SDValue TranslateLegalizeResults(SDValue Op, SDValue Result);
 
-  /// \brief Implements unrolling a VSETCC.
+  /// Implements unrolling a VSETCC.
   SDValue UnrollVSETCC(SDValue Op);
 
-  /// \brief Implement expand-based legalization of vector operations.
+  /// Implement expand-based legalization of vector operations.
   ///
   /// This is just a high-level routine to dispatch to specific code paths for
   /// operations to legalize them.
   SDValue Expand(SDValue Op);
 
-  /// \brief Implements expansion for FNEG; falls back to UnrollVectorOp if
+  /// Implements expansion for FNEG; falls back to UnrollVectorOp if
   /// FSUB isn't legal.
   ///
   /// Implements expansion for UINT_TO_FLOAT; falls back to UnrollVectorOp if
   /// SINT_TO_FLOAT and SHR on vectors isn't legal.
   SDValue ExpandUINT_TO_FLOAT(SDValue Op);
 
-  /// \brief Implement expansion for SIGN_EXTEND_INREG using SRL and SRA.
+  /// Implement expansion for SIGN_EXTEND_INREG using SRL and SRA.
   SDValue ExpandSEXTINREG(SDValue Op);
 
-  /// \brief Implement expansion for ANY_EXTEND_VECTOR_INREG.
+  /// Implement expansion for ANY_EXTEND_VECTOR_INREG.
   ///
   /// Shuffles the low lanes of the operand into place and bitcasts to the proper
   /// type. The contents of the bits in the extended part of each element are
   /// undef.
   SDValue ExpandANY_EXTEND_VECTOR_INREG(SDValue Op);
 
-  /// \brief Implement expansion for SIGN_EXTEND_VECTOR_INREG.
+  /// Implement expansion for SIGN_EXTEND_VECTOR_INREG.
   ///
   /// Shuffles the low lanes of the operand into place, bitcasts to the proper
   /// type, then shifts left and arithmetic shifts right to introduce a sign
   /// extension.
   SDValue ExpandSIGN_EXTEND_VECTOR_INREG(SDValue Op);
 
-  /// \brief Implement expansion for ZERO_EXTEND_VECTOR_INREG.
+  /// Implement expansion for ZERO_EXTEND_VECTOR_INREG.
   ///
   /// Shuffles the low lanes of the operand into place and blends zeros into
   /// the remaining lanes, finally bitcasting to the proper type.
   SDValue ExpandZERO_EXTEND_VECTOR_INREG(SDValue Op);
 
-  /// \brief Expand bswap of vectors into a shuffle if legal.
+  /// Expand bswap of vectors into a shuffle if legal.
   SDValue ExpandBSWAP(SDValue Op);
 
-  /// \brief Implement vselect in terms of XOR, AND, OR when blend is not
+  /// Implement vselect in terms of XOR, AND, OR when blend is not
   /// supported by the target.
   SDValue ExpandVSELECT(SDValue Op);
   SDValue ExpandSELECT(SDValue Op);
@@ -131,18 +131,18 @@ class VectorLegalizer {
   SDValue ExpandCTLZ(SDValue Op);
   SDValue ExpandCTTZ_ZERO_UNDEF(SDValue Op);
 
-  /// \brief Implements vector promotion.
+  /// Implements vector promotion.
   ///
   /// This is essentially just bitcasting the operands to a different type and
   /// bitcasting the result back to the original type.
   SDValue Promote(SDValue Op);
 
-  /// \brief Implements [SU]INT_TO_FP vector promotion.
+  /// Implements [SU]INT_TO_FP vector promotion.
   ///
   /// This is a [zs]ext of the input operand to a larger integer type.
   SDValue PromoteINT_TO_FP(SDValue Op);
 
-  /// \brief Implements FP_TO_[SU]INT vector promotion of the result type.
+  /// Implements FP_TO_[SU]INT vector promotion of the result type.
   ///
   /// It is promoted to a larger integer type.  The result is then
   /// truncated back to the original type.
@@ -152,7 +152,7 @@ public:
   VectorLegalizer(SelectionDAG& dag) :
       DAG(dag), TLI(dag.getTargetLoweringInfo()) {}
 
-  /// \brief Begin legalizer the vector operations in the DAG.
+  /// Begin legalizer the vector operations in the DAG.
   bool Run();
 };
 

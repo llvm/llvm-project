@@ -163,7 +163,7 @@ MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize,
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// \brief Memory maps a file descriptor using sys::fs::mapped_file_region.
+/// Memory maps a file descriptor using sys::fs::mapped_file_region.
 ///
 /// This handles converting the offset into a legal offset on the platform.
 template<typename MB>

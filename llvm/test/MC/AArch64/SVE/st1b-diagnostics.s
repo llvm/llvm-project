@@ -83,3 +83,27 @@ st1b { v0.16b }, p0, [x0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: st1b { v0.16b }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + scalar addressing modes
+
+st1b z0.b, p0, [x0, xzr]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st1b z0.b, p0, [x0, xzr]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1b z0.b, p0, [x0, x0, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st1b z0.b, p0, [x0, x0, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1b z0.b, p0, [x0, w0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st1b z0.b, p0, [x0, w0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1b z0.b, p0, [x0, w0, uxtw]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st1b z0.b, p0, [x0, w0, uxtw]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

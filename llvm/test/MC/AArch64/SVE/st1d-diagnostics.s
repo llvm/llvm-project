@@ -39,3 +39,32 @@ st1d { v0.2d }, p0, [x0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: st1d { v0.2d }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + scalar addressing modes
+
+st1d z0.d, p0, [x0, x0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #3'
+// CHECK-NEXT: st1d z0.d, p0, [x0, x0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1d z0.d, p0, [x0, xzr]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #3'
+// CHECK-NEXT: st1d z0.d, p0, [x0, xzr]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1d z0.d, p0, [x0, x0, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #3'
+// CHECK-NEXT: st1d z0.d, p0, [x0, x0, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1d z0.d, p0, [x0, w0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #3'
+// CHECK-NEXT: st1d z0.d, p0, [x0, w0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st1d z0.d, p0, [x0, w0, uxtw]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #3'
+// CHECK-NEXT: st1d z0.d, p0, [x0, w0, uxtw]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

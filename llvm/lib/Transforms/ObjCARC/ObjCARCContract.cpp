@@ -51,7 +51,7 @@ STATISTIC(NumStoreStrongs, "Number objc_storeStrong calls formed");
 //===----------------------------------------------------------------------===//
 
 namespace {
-  /// \brief Late ARC optimizations
+  /// Late ARC optimizations
   ///
   /// These change the IR in a way that makes it difficult to be analyzed by
   /// ObjCARCOpt, so it's run late.

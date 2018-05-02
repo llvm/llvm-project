@@ -1824,7 +1824,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
   return Changed;
 }
 
-/// \brief Determine if we can hoist sink a sole store instruction out of a
+/// Determine if we can hoist sink a sole store instruction out of a
 /// conditional block.
 ///
 /// We are looking for code like the following:
@@ -1885,7 +1885,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
   return nullptr;
 }
 
-/// \brief Speculate a conditional basic block flattening the CFG.
+/// Speculate a conditional basic block flattening the CFG.
 ///
 /// Note that this is a very risky transform currently. Speculating
 /// instructions like this is most often not desirable. Instead, there is an MI

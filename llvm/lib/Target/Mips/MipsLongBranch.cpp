@@ -285,7 +285,7 @@ void MipsLongBranch::expandToLongBranch(MBBInfo &I) {
     const unsigned BalOp =
         Subtarget.hasMips32r6()
             ? Subtarget.inMicroMipsMode() ? Mips::BALC_MMR6 : Mips::BALC
-            : Mips::BAL_BR;
+            : Subtarget.inMicroMipsMode() ? Mips::BAL_BR_MM : Mips::BAL_BR;
 
     if (!ABI.IsN64()) {
       // Pre R6:

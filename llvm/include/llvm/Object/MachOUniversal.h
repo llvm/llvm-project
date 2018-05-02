@@ -34,9 +34,9 @@ class MachOUniversalBinary : public Binary {
 public:
   class ObjectForArch {
     const MachOUniversalBinary *Parent;
-    /// \brief Index of object in the universal binary.
+    /// Index of object in the universal binary.
     uint32_t Index;
-    /// \brief Descriptor of the object.
+    /// Descriptor of the object.
     MachO::fat_arch Header;
     MachO::fat_arch_64 Header64;
 

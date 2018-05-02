@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// \brief This file implements the Attribute, AttributeImpl, AttrBuilder,
+// This file implements the Attribute, AttributeImpl, AttrBuilder,
 // AttributeListImpl, and AttributeList classes.
 //
 //===----------------------------------------------------------------------===//
@@ -1569,7 +1569,7 @@ bool AttrBuilder::operator==(const AttrBuilder &B) {
 // AttributeFuncs Function Defintions
 //===----------------------------------------------------------------------===//
 
-/// \brief Which attributes cannot be applied to a type.
+/// Which attributes cannot be applied to a type.
 AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
   AttrBuilder Incompatible;
 
@@ -1601,7 +1601,7 @@ static bool isEqual(const Function &Caller, const Function &Callee) {
          Callee.getFnAttribute(AttrClass::getKind());
 }
 
-/// \brief Compute the logical AND of the attributes of the caller and the
+/// Compute the logical AND of the attributes of the caller and the
 /// callee.
 ///
 /// This function sets the caller's attribute to false if the callee's attribute
@@ -1613,7 +1613,7 @@ static void setAND(Function &Caller, const Function &Callee) {
     AttrClass::set(Caller, AttrClass::getKind(), false);
 }
 
-/// \brief Compute the logical OR of the attributes of the caller and the
+/// Compute the logical OR of the attributes of the caller and the
 /// callee.
 ///
 /// This function sets the caller's attribute to true if the callee's attribute
@@ -1625,7 +1625,7 @@ static void setOR(Function &Caller, const Function &Callee) {
     AttrClass::set(Caller, AttrClass::getKind(), true);
 }
 
-/// \brief If the inlined function had a higher stack protection level than the
+/// If the inlined function had a higher stack protection level than the
 /// calling function, then bump up the caller's stack protection level.
 static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
   // If upgrading the SSP attribute, clear out the old SSP Attributes first.
@@ -1649,7 +1649,7 @@ static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
     Caller.addFnAttr(Attribute::StackProtect);
 }
 
-/// \brief If the inlined function required stack probes, then ensure that
+/// If the inlined function required stack probes, then ensure that
 /// the calling function has those too.
 static void adjustCallerStackProbes(Function &Caller, const Function &Callee) {
   if (!Caller.hasFnAttribute("probe-stack") &&
@@ -1658,7 +1658,7 @@ static void adjustCallerStackProbes(Function &Caller, const Function &Callee) {
   }
 }
 
-/// \brief If the inlined function defines the size of guard region
+/// If the inlined function defines the size of guard region
 /// on the stack, then ensure that the calling function defines a guard region
 /// that is no larger.
 static void

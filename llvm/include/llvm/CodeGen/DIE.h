@@ -136,7 +136,7 @@ class DIEAbbrevSet {
   /// The bump allocator to use when creating DIEAbbrev objects in the uniqued
   /// storage container.
   BumpPtrAllocator &Alloc;
-  /// \brief FoldingSet that uniques the abbreviations.
+  /// FoldingSet that uniques the abbreviations.
   FoldingSet<DIEAbbrev> AbbreviationsSet;
   /// A list of all the unique abbreviations in use.
   std::vector<DIEAbbrev *> Abbreviations;

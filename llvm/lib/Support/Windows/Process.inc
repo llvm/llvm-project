@@ -158,7 +158,7 @@ static std::error_code ConvertAndPushArg(const wchar_t *Arg,
   return std::error_code();
 }
 
-/// \brief Perform wildcard expansion of Arg, or just push it into Args if it
+/// Perform wildcard expansion of Arg, or just push it into Args if it
 /// doesn't have wildcards or doesn't match any files.
 static std::error_code WildcardExpand(const wchar_t *Arg,
                                       SmallVectorImpl<const char *> &Args,

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This is a target description file for the WebAssembly architecture,
+/// This is a target description file for the WebAssembly architecture,
 /// which is also known as "wasm".
 ///
 //===----------------------------------------------------------------------===//

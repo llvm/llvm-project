@@ -677,7 +677,7 @@ class raw_ostream;
       llvm::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
     }
 
-    /// \brief Free the resources that were required to maintain a SlotIndex.
+    /// Free the resources that were required to maintain a SlotIndex.
     ///
     /// Once an index is no longer needed (for instance because the instruction
     /// at that index has been moved), the resources required to maintain the

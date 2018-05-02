@@ -359,7 +359,7 @@ struct ReadObjTypeTableBuilder {
 }
 static ReadObjTypeTableBuilder CVTypes;
 
-/// @brief Creates an format-specific object file dumper.
+/// Creates an format-specific object file dumper.
 static std::error_code createDumper(const ObjectFile *Obj,
                                     ScopedPrinter &Writer,
                                     std::unique_ptr<ObjDumper> &Result) {
@@ -378,7 +378,7 @@ static std::error_code createDumper(const ObjectFile *Obj,
   return readobj_error::unsupported_obj_file_format;
 }
 
-/// @brief Dumps the specified object file.
+/// Dumps the specified object file.
 static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
   std::unique_ptr<ObjDumper> Dumper;
   if (std::error_code EC = createDumper(Obj, Writer, Dumper))
@@ -482,7 +482,7 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
     Dumper->printStackMap();
 }
 
-/// @brief Dumps each object file in \a Arc;
+/// Dumps each object file in \a Arc;
 static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
   Error Err = Error::success();
   for (auto &Child : Arc->children(Err)) {
@@ -504,7 +504,7 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
     reportError(Arc->getFileName(), std::move(Err));
 }
 
-/// @brief Dumps each object file in \a MachO Universal Binary;
+/// Dumps each object file in \a MachO Universal Binary;
 static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary,
                                      ScopedPrinter &Writer) {
   for (const MachOUniversalBinary::ObjectForArch &Obj : UBinary->objects()) {
@@ -519,7 +519,7 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary,
   }
 }
 
-/// @brief Dumps \a WinRes, Windows Resource (.res) file;
+/// Dumps \a WinRes, Windows Resource (.res) file;
 static void dumpWindowsResourceFile(WindowsResource *WinRes) {
   ScopedPrinter Printer{outs()};
   WindowsRes::Dumper Dumper(WinRes, Printer);
@@ -528,7 +528,7 @@ static void dumpWindowsResourceFile(WindowsResource *WinRes) {
 }
 
 
-/// @brief Opens \a File and dumps it.
+/// Opens \a File and dumps it.
 static void dumpInput(StringRef File) {
   ScopedPrinter Writer(outs());
 

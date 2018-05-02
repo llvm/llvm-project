@@ -286,17 +286,17 @@ struct UnrolledInstStateKeyInfo {
 };
 
 struct EstimatedUnrollCost {
-  /// \brief The estimated cost after unrolling.
+  /// The estimated cost after unrolling.
   unsigned UnrolledCost;
 
-  /// \brief The estimated dynamic cost of executing the instructions in the
+  /// The estimated dynamic cost of executing the instructions in the
   /// rolled form.
   unsigned RolledDynamicCost;
 };
 
 } // end anonymous namespace
 
-/// \brief Figure out if the loop is worth full unrolling.
+/// Figure out if the loop is worth full unrolling.
 ///
 /// Complete loop unrolling can make some loads constant, and we need to know
 /// if that would expose any further optimization opportunities.  This routine

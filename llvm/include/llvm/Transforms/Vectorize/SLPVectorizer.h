@@ -82,7 +82,7 @@ public:
                OptimizationRemarkEmitter *ORE_);
 
 private:
-  /// \brief Collect store and getelementptr instructions and organize them
+  /// Collect store and getelementptr instructions and organize them
   /// according to the underlying object of their pointer operands. We sort the
   /// instructions by their underlying objects to reduce the cost of
   /// consecutive access queries.
@@ -91,23 +91,23 @@ private:
   ///       every time we run into a memory barrier.
   void collectSeedInstructions(BasicBlock *BB);
 
-  /// \brief Try to vectorize a chain that starts at two arithmetic instrs.
+  /// Try to vectorize a chain that starts at two arithmetic instrs.
   bool tryToVectorizePair(Value *A, Value *B, slpvectorizer::BoUpSLP &R);
 
-  /// \brief Try to vectorize a list of operands.
+  /// Try to vectorize a list of operands.
   /// \param UserCost Cost of the user operations of \p VL if they may affect
   /// the cost of the vectorization.
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
                           int UserCost = 0, bool AllowReorder = false);
 
-  /// \brief Try to vectorize a chain that may start at the operands of \p I.
+  /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R);
 
-  /// \brief Vectorize the store instructions collected in Stores.
+  /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
 
-  /// \brief Vectorize the index computations of the getelementptr instructions
+  /// Vectorize the index computations of the getelementptr instructions
   /// collected in GEPs.
   bool vectorizeGEPIndices(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
@@ -133,7 +133,7 @@ private:
   bool vectorizeSimpleInstructions(SmallVectorImpl<WeakVH> &Instructions,
                                    BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
-  /// \brief Scan the basic block and look for patterns that are likely to start
+  /// Scan the basic block and look for patterns that are likely to start
   /// a vectorization chain.
   bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 

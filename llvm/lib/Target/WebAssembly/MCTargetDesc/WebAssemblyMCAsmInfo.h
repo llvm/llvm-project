@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the declaration of the WebAssemblyMCAsmInfo class.
+/// This file contains the declaration of the WebAssemblyMCAsmInfo class.
 ///
 //===----------------------------------------------------------------------===//
 

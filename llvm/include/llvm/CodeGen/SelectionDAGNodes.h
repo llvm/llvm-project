@@ -1765,13 +1765,13 @@ public:
                        unsigned MinSplatBits = 0,
                        bool isBigEndian = false) const;
 
-  /// \brief Returns the splatted value or a null value if this is not a splat.
+  /// Returns the splatted value or a null value if this is not a splat.
   ///
   /// If passed a non-null UndefElements bitvector, it will resize it to match
   /// the vector width and set the bits where elements are undef.
   SDValue getSplatValue(BitVector *UndefElements = nullptr) const;
 
-  /// \brief Returns the splatted constant or null if this is not a constant
+  /// Returns the splatted constant or null if this is not a constant
   /// splat.
   ///
   /// If passed a non-null UndefElements bitvector, it will resize it to match
@@ -1779,7 +1779,7 @@ public:
   ConstantSDNode *
   getConstantSplatNode(BitVector *UndefElements = nullptr) const;
 
-  /// \brief Returns the splatted constant FP or null if this is not a constant
+  /// Returns the splatted constant FP or null if this is not a constant
   /// FP splat.
   ///
   /// If passed a non-null UndefElements bitvector, it will resize it to match
@@ -1787,7 +1787,7 @@ public:
   ConstantFPSDNode *
   getConstantFPSplatNode(BitVector *UndefElements = nullptr) const;
 
-  /// \brief If this is a constant FP splat and the splatted constant FP is an
+  /// If this is a constant FP splat and the splatted constant FP is an
   /// exact power or 2, return the log base 2 integer value.  Otherwise,
   /// return -1.
   ///

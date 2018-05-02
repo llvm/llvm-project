@@ -32,7 +32,7 @@ namespace llvm {
                visit##CLASS_TO_VISIT(static_cast<CLASS_TO_VISIT&>(I))
 
 
-/// @brief Base class for instruction visitors
+/// Base class for instruction visitors
 ///
 /// Instruction visitors are used when you want to perform different actions
 /// for different kinds of instructions without having to use lots of casts

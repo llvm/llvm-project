@@ -23,20 +23,20 @@ namespace orc {
 
 class SymbolStringPtr;
 
-/// @brief String pool for symbol names used by the JIT.
+/// String pool for symbol names used by the JIT.
 class SymbolStringPool {
   friend class SymbolStringPtr;
 public:
-  /// @brief Destroy a SymbolStringPool.
+  /// Destroy a SymbolStringPool.
   ~SymbolStringPool();
 
-  /// @brief Create a symbol string pointer from the given string.
+  /// Create a symbol string pointer from the given string.
   SymbolStringPtr intern(StringRef S);
 
-  /// @brief Remove from the pool any entries that are no longer referenced.
+  /// Remove from the pool any entries that are no longer referenced.
   void clearDeadEntries();
 
-  /// @brief Returns true if the pool is empty.
+  /// Returns true if the pool is empty.
   bool empty() const;
 private:
   using RefCountType = std::atomic<size_t>;
@@ -46,7 +46,7 @@ private:
   PoolMap Pool;
 };
 
-/// @brief Pointer to a pooled string representing a symbol name.
+/// Pointer to a pooled string representing a symbol name.
 class SymbolStringPtr {
   friend class SymbolStringPool;
   friend bool operator==(const SymbolStringPtr &LHS,

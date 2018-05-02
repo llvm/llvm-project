@@ -11,8 +11,8 @@ define void @test_vfrczpd(<2 x double> %a0, <4 x double> %a1, <2 x double> *%a2,
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczpd %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vfrczpd %ymm1, %ymm1 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczpd (%rdi), %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vfrczpd (%rsi), %ymm1 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczpd (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vfrczpd (%rsi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -37,8 +37,8 @@ define void @test_vfrczps(<4 x float> %a0, <4 x double> %a1, <4 x float> *%a2, <
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczps %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vfrczps %ymm1, %ymm1 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczps (%rdi), %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vfrczps (%rsi), %ymm1 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczps (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vfrczps (%rsi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -62,7 +62,7 @@ define void @test_vfrczsd(<2 x double> %a0, <2 x double> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczsd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczsd (%rdi), %xmm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczsd (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -82,7 +82,7 @@ define void @test_vfrczss(<4 x float> %a0, <4 x double> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczss %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczss (%rdi), %xmm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczss (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

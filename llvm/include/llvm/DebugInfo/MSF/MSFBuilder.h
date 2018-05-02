@@ -24,7 +24,7 @@ namespace msf {
 
 class MSFBuilder {
 public:
-  /// \brief Create a new `MSFBuilder`.
+  /// Create a new `MSFBuilder`.
   ///
   /// \param BlockSize The internal block size used by the PDB file.  See
   /// isValidBlockSize() for a list of valid block sizes.

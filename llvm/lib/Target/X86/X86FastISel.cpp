@@ -68,7 +68,7 @@ public:
 
   bool fastSelectInstruction(const Instruction *I) override;
 
-  /// \brief The specified machine instr operand is a vreg, and that
+  /// The specified machine instr operand is a vreg, and that
   /// vreg is being provided by the specified load instruction.  If possible,
   /// try to fold the load as an operand to the instruction, returning true if
   /// possible.
@@ -217,7 +217,7 @@ getX86SSEConditionCode(CmpInst::Predicate Predicate) {
   return std::make_pair(CC, NeedSwap);
 }
 
-/// \brief Adds a complex addressing mode to the given machine instr builder.
+/// Adds a complex addressing mode to the given machine instr builder.
 /// Note, this will constrain the index register.  If its not possible to
 /// constrain the given index register, then a new one will be created.  The
 /// IndexReg field of the addressing mode will be updated to match in this case.
@@ -231,7 +231,7 @@ X86FastISel::addFullAddress(const MachineInstrBuilder &MIB,
   return ::addFullAddress(MIB, AM);
 }
 
-/// \brief Check if it is possible to fold the condition from the XALU intrinsic
+/// Check if it is possible to fold the condition from the XALU intrinsic
 /// into the user. The condition code will only be updated on success.
 bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
                                        const Value *Cond) {
@@ -2019,7 +2019,7 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
   return true;
 }
 
-/// \brief Emit a conditional move instruction (if the are supported) to lower
+/// Emit a conditional move instruction (if the are supported) to lower
 /// the select.
 bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
   // Check if the subtarget supports these instructions.
@@ -2148,7 +2148,7 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
   return true;
 }
 
-/// \brief Emit SSE or AVX instructions to lower the select.
+/// Emit SSE or AVX instructions to lower the select.
 ///
 /// Try to use SSE1/SSE2 instructions to simulate a select without branches.
 /// This lowers fp selects into a CMP/AND/ANDN/OR sequence when the necessary

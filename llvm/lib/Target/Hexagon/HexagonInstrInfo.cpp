@@ -1694,7 +1694,7 @@ HexagonInstrInfo::CreateTargetPostRAHazardRecognizer(
   return TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
 }
 
-/// \brief For a comparison instruction, return the source registers in
+/// For a comparison instruction, return the source registers in
 /// \p SrcReg and \p SrcReg2 if having two register operands, and the value it
 /// compares against in CmpValue. Return true if the comparison instruction
 /// can be analyzed.
@@ -2871,7 +2871,7 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
   return false;
 }
 
-/// \brief Get the base register and byte offset of a load/store instr.
+/// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt,
       unsigned &BaseReg, int64_t &Offset, const TargetRegisterInfo *TRI)
       const {
@@ -2882,7 +2882,7 @@ bool HexagonInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt,
   return BaseReg != 0;
 }
 
-/// \brief Can these instructions execute at the same time in a bundle.
+/// Can these instructions execute at the same time in a bundle.
 bool HexagonInstrInfo::canExecuteInBundle(const MachineInstr &First,
       const MachineInstr &Second) const {
   if (Second.mayStore() && First.getOpcode() == Hexagon::S2_allocframe) {

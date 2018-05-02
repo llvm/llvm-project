@@ -2913,7 +2913,7 @@ static const struct FoldableLoadExtendsStruct {
   { { ARM::UXTB,  ARM::t2UXTB  },   0, 1, MVT::i8  }
 };
 
-/// \brief The specified machine instr operand is a vreg, and that
+/// The specified machine instr operand is a vreg, and that
 /// vreg is being provided by the specified load instruction.  If possible,
 /// try to fold the load as an operand to the instruction, returning true if
 /// successful.

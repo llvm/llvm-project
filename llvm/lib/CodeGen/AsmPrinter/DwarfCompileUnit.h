@@ -83,7 +83,7 @@ class DwarfCompileUnit final : public DwarfUnit {
   DenseMap<const MDNode *, DIE *> AbstractSPDies;
   DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
 
-  /// \brief Construct a DIE for the given DbgVariable without initializing the
+  /// Construct a DIE for the given DbgVariable without initializing the
   /// DbgVariable's DIE reference.
   DIE *constructVariableDIEImpl(const DbgVariable &DV, bool Abstract);
 
@@ -159,7 +159,7 @@ public:
 
   void attachLowHighPC(DIE &D, const MCSymbol *Begin, const MCSymbol *End);
 
-  /// \brief Find DIE for the given subprogram and attach appropriate
+  /// Find DIE for the given subprogram and attach appropriate
   /// DW_AT_low_pc and DW_AT_high_pc attributes. If there are global
   /// variables in this scope then create and insert DIEs for these
   /// variables.
@@ -168,7 +168,7 @@ public:
   void constructScopeDIE(LexicalScope *Scope,
                          SmallVectorImpl<DIE *> &FinalChildren);
 
-  /// \brief A helper function to construct a RangeSpanList for a given
+  /// A helper function to construct a RangeSpanList for a given
   /// lexical scope.
   void addScopeRangeList(DIE &ScopeDIE, SmallVector<RangeSpan, 2> Range);
 
@@ -177,11 +177,11 @@ public:
   void attachRangesOrLowHighPC(DIE &D,
                                const SmallVectorImpl<InsnRange> &Ranges);
 
-  /// \brief This scope represents inlined body of a function. Construct
+  /// This scope represents inlined body of a function. Construct
   /// DIE to represent this concrete inlined copy of the function.
   DIE *constructInlinedScopeDIE(LexicalScope *Scope);
 
-  /// \brief Construct new DW_TAG_lexical_block for this scope and
+  /// Construct new DW_TAG_lexical_block for this scope and
   /// attach DW_AT_low_pc/DW_AT_high_pc labels.
   DIE *constructLexicalScopeDIE(LexicalScope *Scope);
 
@@ -196,14 +196,14 @@ public:
                               SmallVectorImpl<DIE *> &Children,
                               bool *HasNonScopeChildren = nullptr);
 
-  /// \brief Construct a DIE for this subprogram scope.
+  /// Construct a DIE for this subprogram scope.
   void constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
 
-  /// \brief Construct import_module DIE.
+  /// Construct import_module DIE.
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
 
   void finishSubprogramDefinition(const DISubprogram *SP);

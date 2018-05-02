@@ -24,7 +24,7 @@ class MachineBasicBlock;
 class MachineBlockFrequencyInfo;
 class MachineInstr;
 
-/// \brief Common features for diagnostics dealing with optimization remarks
+/// Common features for diagnostics dealing with optimization remarks
 /// that are used by machine passes.
 class DiagnosticInfoMIROptimization : public DiagnosticInfoOptimizationBase {
 public:
@@ -151,7 +151,7 @@ public:
   /// Emit an optimization remark.
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
 
-  /// \brief Whether we allow for extra compile-time budget to perform more
+  /// Whether we allow for extra compile-time budget to perform more
   /// analysis to be more informative.
   ///
   /// This is useful to enable additional missed optimizations to be reported
@@ -164,7 +164,7 @@ public:
             .getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
   }
 
-  /// \brief Take a lambda that returns a remark which will be emitted.  Second
+  /// Take a lambda that returns a remark which will be emitted.  Second
   /// argument is only used to restrict this to functions.
   template <typename T>
   void emit(T RemarkBuilder, decltype(RemarkBuilder()) * = nullptr) {
@@ -192,7 +192,7 @@ private:
   /// Similar but use value from \p OptDiag and update hotness there.
   void computeHotness(DiagnosticInfoMIROptimization &Remark);
 
-  /// \brief Only allow verbose messages if we know we're filtering by hotness
+  /// Only allow verbose messages if we know we're filtering by hotness
   /// (BFI is only set in this case).
   bool shouldEmitVerbose() { return MBFI != nullptr; }
 };

@@ -8,7 +8,7 @@
 //==-----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Interface for the AMDGPU Implementation of the Intrinsic Info class.
+/// Interface for the AMDGPU Implementation of the Intrinsic Info class.
 //
 //===-----------------------------------------------------------------------===//
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINTRINSICINFO_H

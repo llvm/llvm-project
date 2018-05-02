@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly control-flow code-gen constructs.
+/// WebAssembly control-flow code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

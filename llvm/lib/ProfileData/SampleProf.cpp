@@ -88,7 +88,7 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
 
-/// \brief Print the sample record to the stream \p OS indented by \p Indent.
+/// Print the sample record to the stream \p OS indented by \p Indent.
 void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   OS << NumSamples;
   if (hasCalls()) {
@@ -109,7 +109,7 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
-/// \brief Print the samples collected for a function on stream \p OS.
+/// Print the samples collected for a function on stream \p OS.
 void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS << TotalSamples << ", " << TotalHeadSamples << ", " << BodySamples.size()
      << " sampled lines\n";

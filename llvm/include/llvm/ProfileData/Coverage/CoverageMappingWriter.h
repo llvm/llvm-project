@@ -25,7 +25,7 @@ class raw_ostream;
 
 namespace coverage {
 
-/// \brief Writer of the filenames section for the instrumentation
+/// Writer of the filenames section for the instrumentation
 /// based code coverage.
 class CoverageFilenamesSectionWriter {
   ArrayRef<StringRef> Filenames;
@@ -34,11 +34,11 @@ public:
   CoverageFilenamesSectionWriter(ArrayRef<StringRef> Filenames)
       : Filenames(Filenames) {}
 
-  /// \brief Write encoded filenames to the given output stream.
+  /// Write encoded filenames to the given output stream.
   void write(raw_ostream &OS);
 };
 
-/// \brief Writer for instrumentation based coverage mapping data.
+/// Writer for instrumentation based coverage mapping data.
 class CoverageMappingWriter {
   ArrayRef<unsigned> VirtualFileMapping;
   ArrayRef<CounterExpression> Expressions;
@@ -51,7 +51,7 @@ public:
       : VirtualFileMapping(VirtualFileMapping), Expressions(Expressions),
         MappingRegions(MappingRegions) {}
 
-  /// \brief Write encoded coverage mapping data to the given output stream.
+  /// Write encoded coverage mapping data to the given output stream.
   void write(raw_ostream &OS);
 };
 

@@ -101,7 +101,7 @@ public:
   };
   LoopTraversal() {}
 
-  /// \brief Identifies basic blocks that are part of loops and should to be
+  /// Identifies basic blocks that are part of loops and should to be
   ///  visited twice and returns efficient traversal order for all the blocks.
   typedef SmallVector<TraversedMBBInfo, 4> TraversalOrder;
   TraversalOrder traverse(MachineFunction &MF);

@@ -1,4 +1,4 @@
-//===- xray-registry.cc - Implement a command registry. -------------------===//
+//===- xray-registry.cpp: Implement a command registry. -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

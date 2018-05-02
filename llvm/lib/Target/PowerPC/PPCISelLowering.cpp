@@ -1477,7 +1477,7 @@ bool PPC::isVMRGHShuffleMask(ShuffleVectorSDNode *N, unsigned UnitSize,
 }
 
 /**
- * \brief Common function used to match vmrgew and vmrgow shuffles
+ * Common function used to match vmrgew and vmrgow shuffles
  *
  * The indexOffset determines whether to look for even or odd words in
  * the shuffle mask. This is based on the of the endianness of the target
@@ -1534,7 +1534,7 @@ static bool isVMerge(ShuffleVectorSDNode *N, unsigned IndexOffset,
 }
 
 /**
- * \brief Determine if the specified shuffle mask is suitable for the vmrgew or
+ * Determine if the specified shuffle mask is suitable for the vmrgew or
  * vmrgow instructions.
  *
  * \param[in] N The shuffle vector SD Node to analyze
@@ -6887,7 +6887,7 @@ void PPCTargetLowering::LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
   RLI.MPI = MPI;
 }
 
-/// \brief Custom lowers floating point to integer conversions to use
+/// Custom lowers floating point to integer conversions to use
 /// the direct move instructions available in ISA 2.07 to avoid the
 /// need for load/store combinations.
 SDValue PPCTargetLowering::LowerFP_TO_INTDirectMove(SDValue Op,
@@ -7045,7 +7045,7 @@ void PPCTargetLowering::spliceIntoChain(SDValue ResChain,
   DAG.UpdateNodeOperands(TF.getNode(), ResChain, NewResChain);
 }
 
-/// \brief Analyze profitability of direct move
+/// Analyze profitability of direct move
 /// prefer float load to int load plus direct move
 /// when there is no integer use of int load
 bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
@@ -7075,7 +7075,7 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
   return false;
 }
 
-/// \brief Custom lowers integer to floating point conversions to use
+/// Custom lowers integer to floating point conversions to use
 /// the direct move instructions available in ISA 2.07 to avoid the
 /// need for load/store combinations.
 SDValue PPCTargetLowering::LowerINT_TO_FPDirectMove(SDValue Op,
@@ -11611,7 +11611,7 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       ShiftCst);
 }
 
-/// \brief Reduces the number of fp-to-int conversion when building a vector.
+/// Reduces the number of fp-to-int conversion when building a vector.
 ///
 /// If this vector is built out of floating to integer conversions,
 /// transform it to a vector built out of floating point values followed by a
@@ -11691,7 +11691,7 @@ combineElementTruncationToVectorTruncation(SDNode *N,
   return SDValue();
 }
 
-/// \brief Reduce the number of loads when building a vector.
+/// Reduce the number of loads when building a vector.
 ///
 /// Building a vector out of multiple loads can be converted to a load
 /// of the vector type if the loads are consecutive. If the loads are
@@ -13643,7 +13643,7 @@ EVT PPCTargetLowering::getOptimalMemOpType(uint64_t Size,
   return MVT::i32;
 }
 
-/// \brief Returns true if it is beneficial to convert a load of a constant
+/// Returns true if it is beneficial to convert a load of a constant
 /// to just the constant itself.
 bool PPCTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                           Type *Ty) const {

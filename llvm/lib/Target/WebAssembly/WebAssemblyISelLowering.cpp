@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements the WebAssemblyTargetLowering class.
+/// This file implements the WebAssemblyTargetLowering class.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -65,7 +65,7 @@ protected:
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 
 public:
-  /// \brief Information about the loaded object.
+  /// Information about the loaded object.
   class LoadedObjectInfo : public llvm::LoadedObjectInfo {
     friend class RuntimeDyldImpl;
 
@@ -88,7 +88,7 @@ public:
     ObjSectionToIDMap ObjSecToIDMap;
   };
 
-  /// \brief Memory Management.
+  /// Memory Management.
   class MemoryManager {
     friend class RuntimeDyld;
 
@@ -170,7 +170,7 @@ public:
     bool FinalizationLocked = false;
   };
 
-  /// \brief Construct a RuntimeDyld instance.
+  /// Construct a RuntimeDyld instance.
   RuntimeDyld(MemoryManager &MemMgr, JITSymbolResolver &Resolver);
   RuntimeDyld(const RuntimeDyld &) = delete;
   RuntimeDyld &operator=(const RuntimeDyld &) = delete;

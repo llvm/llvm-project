@@ -26,7 +26,7 @@ class MCAsmBackend;
 class raw_ostream;
 class raw_pwrite_stream;
 
-/// \brief Streaming object file generation interface.
+/// Streaming object file generation interface.
 ///
 /// This class provides an implementation of the MCStreamer interface which is
 /// suitable for use with the assembler backend. Specific object file formats
@@ -105,7 +105,7 @@ public:
   void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                        bool = false) override;
 
-  /// \brief Emit an instruction to a special fragment, because this instruction
+  /// Emit an instruction to a special fragment, because this instruction
   /// can change its size during relaxation.
   virtual void EmitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 

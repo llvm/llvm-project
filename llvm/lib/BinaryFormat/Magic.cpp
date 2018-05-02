@@ -31,7 +31,7 @@ static bool startswith(StringRef Magic, const char (&S)[N]) {
   return Magic.startswith(StringRef(S, N - 1));
 }
 
-/// @brief Identify the magic in magic.
+/// Identify the magic in magic.
 file_magic llvm::identify_magic(StringRef Magic) {
   if (Magic.size() < 4)
     return file_magic::unknown;

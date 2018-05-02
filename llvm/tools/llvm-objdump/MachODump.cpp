@@ -6753,7 +6753,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
   return SymbolName;
 }
 
-/// \brief Emits the comments that are stored in the CommentStream.
+/// Emits the comments that are stored in the CommentStream.
 /// Each comment in the CommentStream must end with a newline.
 static void emitComments(raw_svector_ostream &CommentStream,
                          SmallString<128> &CommentsToEmit,

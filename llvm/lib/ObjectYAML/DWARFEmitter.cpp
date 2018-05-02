@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief The DWARF component of yaml2obj. Provided as library code for tests.
+/// The DWARF component of yaml2obj. Provided as library code for tests.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -132,7 +132,7 @@ void DWARFYAML::EmitPubSection(raw_ostream &OS,
 }
 
 namespace {
-/// \brief An extension of the DWARFYAML::ConstVisitor which writes compile
+/// An extension of the DWARFYAML::ConstVisitor which writes compile
 /// units and DIEs to a stream.
 class DumpVisitor : public DWARFYAML::ConstVisitor {
   raw_ostream &OS;

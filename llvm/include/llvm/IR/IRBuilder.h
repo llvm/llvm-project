@@ -54,7 +54,7 @@ class APInt;
 class MDNode;
 class Use;
 
-/// \brief This provides the default implementation of the IRBuilder
+/// This provides the default implementation of the IRBuilder
 /// 'InsertHelper' method that is called whenever an instruction is created by
 /// IRBuilder and needs to be inserted.
 ///
@@ -85,7 +85,7 @@ protected:
   }
 };
 
-/// \brief Common base class shared among various IRBuilders.
+/// Common base class shared among various IRBuilders.
 class IRBuilderBase {
   DebugLoc CurDbgLocation;
 
@@ -111,7 +111,7 @@ public:
   // Builder configuration methods
   //===--------------------------------------------------------------------===//
 
-  /// \brief Clear the insertion point: created instructions will not be
+  /// Clear the insertion point: created instructions will not be
   /// inserted into a block.
   void ClearInsertionPoint() {
     BB = nullptr;
@@ -122,14 +122,14 @@ public:
   BasicBlock::iterator GetInsertPoint() const { return InsertPt; }
   LLVMContext &getContext() const { return Context; }
 
-  /// \brief This specifies that created instructions should be appended to the
+  /// This specifies that created instructions should be appended to the
   /// end of the specified block.
   void SetInsertPoint(BasicBlock *TheBB) {
     BB = TheBB;
     InsertPt = BB->end();
   }
 
-  /// \brief This specifies that created instructions should be inserted before
+  /// This specifies that created instructions should be inserted before
   /// the specified instruction.
   void SetInsertPoint(Instruction *I) {
     BB = I->getParent();
@@ -138,7 +138,7 @@ public:
     SetCurrentDebugLocation(I->getDebugLoc());
   }
 
-  /// \brief This specifies that created instructions should be inserted at the
+  /// This specifies that created instructions should be inserted at the
   /// specified point.
   void SetInsertPoint(BasicBlock *TheBB, BasicBlock::iterator IP) {
     BB = TheBB;
@@ -147,20 +147,20 @@ public:
       SetCurrentDebugLocation(IP->getDebugLoc());
   }
 
-  /// \brief Set location information used by debugging information.
+  /// Set location information used by debugging information.
   void SetCurrentDebugLocation(DebugLoc L) { CurDbgLocation = std::move(L); }
 
-  /// \brief Get location information used by debugging information.
+  /// Get location information used by debugging information.
   const DebugLoc &getCurrentDebugLocation() const { return CurDbgLocation; }
 
-  /// \brief If this builder has a current debug location, set it on the
+  /// If this builder has a current debug location, set it on the
   /// specified instruction.
   void SetInstDebugLocation(Instruction *I) const {
     if (CurDbgLocation)
       I->setDebugLoc(CurDbgLocation);
   }
 
-  /// \brief Get the return type of the current function that we're emitting
+  /// Get the return type of the current function that we're emitting
   /// into.
   Type *getCurrentFunctionReturnType() const;
 
@@ -170,33 +170,33 @@ public:
     BasicBlock::iterator Point;
 
   public:
-    /// \brief Creates a new insertion point which doesn't point to anything.
+    /// Creates a new insertion point which doesn't point to anything.
     InsertPoint() = default;
 
-    /// \brief Creates a new insertion point at the given location.
+    /// Creates a new insertion point at the given location.
     InsertPoint(BasicBlock *InsertBlock, BasicBlock::iterator InsertPoint)
         : Block(InsertBlock), Point(InsertPoint) {}
 
-    /// \brief Returns true if this insert point is set.
+    /// Returns true if this insert point is set.
     bool isSet() const { return (Block != nullptr); }
 
     BasicBlock *getBlock() const { return Block; }
     BasicBlock::iterator getPoint() const { return Point; }
   };
 
-  /// \brief Returns the current insert point.
+  /// Returns the current insert point.
   InsertPoint saveIP() const {
     return InsertPoint(GetInsertBlock(), GetInsertPoint());
   }
 
-  /// \brief Returns the current insert point, clearing it in the process.
+  /// Returns the current insert point, clearing it in the process.
   InsertPoint saveAndClearIP() {
     InsertPoint IP(GetInsertBlock(), GetInsertPoint());
     ClearInsertionPoint();
     return IP;
   }
 
-  /// \brief Sets the current insert point to a previously-saved location.
+  /// Sets the current insert point to a previously-saved location.
   void restoreIP(InsertPoint IP) {
     if (IP.isSet())
       SetInsertPoint(IP.getBlock(), IP.getPoint());
@@ -204,26 +204,26 @@ public:
       ClearInsertionPoint();
   }
 
-  /// \brief Get the floating point math metadata being used.
+  /// Get the floating point math metadata being used.
   MDNode *getDefaultFPMathTag() const { return DefaultFPMathTag; }
 
-  /// \brief Get the flags to be applied to created floating point ops
+  /// Get the flags to be applied to created floating point ops
   FastMathFlags getFastMathFlags() const { return FMF; }
 
-  /// \brief Clear the fast-math flags.
+  /// Clear the fast-math flags.
   void clearFastMathFlags() { FMF.clear(); }
 
-  /// \brief Set the floating point math metadata to be used.
+  /// Set the floating point math metadata to be used.
   void setDefaultFPMathTag(MDNode *FPMathTag) { DefaultFPMathTag = FPMathTag; }
 
-  /// \brief Set the fast-math flags to be used with generated fp-math operators
+  /// Set the fast-math flags to be used with generated fp-math operators
   void setFastMathFlags(FastMathFlags NewFMF) { FMF = NewFMF; }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//
 
-  // \brief RAII object that stores the current insertion point and restores it
+  // RAII object that stores the current insertion point and restores it
   // when the object is destroyed. This includes the debug location.
   class InsertPointGuard {
     IRBuilderBase &Builder;
@@ -245,7 +245,7 @@ public:
     }
   };
 
-  // \brief RAII object that stores the current fast math settings and restores
+  // RAII object that stores the current fast math settings and restores
   // them when the object is destroyed.
   class FastMathFlagGuard {
     IRBuilderBase &Builder;
@@ -269,7 +269,7 @@ public:
   // Miscellaneous creation methods.
   //===--------------------------------------------------------------------===//
 
-  /// \brief Make a new global variable with initializer type i8*
+  /// Make a new global variable with initializer type i8*
   ///
   /// Make a new global variable with an initializer that has array of i8 type
   /// filled in with the null terminated string value specified.  The new global
@@ -278,48 +278,48 @@ public:
   GlobalVariable *CreateGlobalString(StringRef Str, const Twine &Name = "",
                                      unsigned AddressSpace = 0);
 
-  /// \brief Get a constant value representing either true or false.
+  /// Get a constant value representing either true or false.
   ConstantInt *getInt1(bool V) {
     return ConstantInt::get(getInt1Ty(), V);
   }
 
-  /// \brief Get the constant value for i1 true.
+  /// Get the constant value for i1 true.
   ConstantInt *getTrue() {
     return ConstantInt::getTrue(Context);
   }
 
-  /// \brief Get the constant value for i1 false.
+  /// Get the constant value for i1 false.
   ConstantInt *getFalse() {
     return ConstantInt::getFalse(Context);
   }
 
-  /// \brief Get a constant 8-bit value.
+  /// Get a constant 8-bit value.
   ConstantInt *getInt8(uint8_t C) {
     return ConstantInt::get(getInt8Ty(), C);
   }
 
-  /// \brief Get a constant 16-bit value.
+  /// Get a constant 16-bit value.
   ConstantInt *getInt16(uint16_t C) {
     return ConstantInt::get(getInt16Ty(), C);
   }
 
-  /// \brief Get a constant 32-bit value.
+  /// Get a constant 32-bit value.
   ConstantInt *getInt32(uint32_t C) {
     return ConstantInt::get(getInt32Ty(), C);
   }
 
-  /// \brief Get a constant 64-bit value.
+  /// Get a constant 64-bit value.
   ConstantInt *getInt64(uint64_t C) {
     return ConstantInt::get(getInt64Ty(), C);
   }
 
-  /// \brief Get a constant N-bit value, zero extended or truncated from
+  /// Get a constant N-bit value, zero extended or truncated from
   /// a 64-bit value.
   ConstantInt *getIntN(unsigned N, uint64_t C) {
     return ConstantInt::get(getIntNTy(N), C);
   }
 
-  /// \brief Get a constant integer value.
+  /// Get a constant integer value.
   ConstantInt *getInt(const APInt &AI) {
     return ConstantInt::get(Context, AI);
   }
@@ -328,65 +328,65 @@ public:
   // Type creation methods
   //===--------------------------------------------------------------------===//
 
-  /// \brief Fetch the type representing a single bit
+  /// Fetch the type representing a single bit
   IntegerType *getInt1Ty() {
     return Type::getInt1Ty(Context);
   }
 
-  /// \brief Fetch the type representing an 8-bit integer.
+  /// Fetch the type representing an 8-bit integer.
   IntegerType *getInt8Ty() {
     return Type::getInt8Ty(Context);
   }
 
-  /// \brief Fetch the type representing a 16-bit integer.
+  /// Fetch the type representing a 16-bit integer.
   IntegerType *getInt16Ty() {
     return Type::getInt16Ty(Context);
   }
 
-  /// \brief Fetch the type representing a 32-bit integer.
+  /// Fetch the type representing a 32-bit integer.
   IntegerType *getInt32Ty() {
     return Type::getInt32Ty(Context);
   }
 
-  /// \brief Fetch the type representing a 64-bit integer.
+  /// Fetch the type representing a 64-bit integer.
   IntegerType *getInt64Ty() {
     return Type::getInt64Ty(Context);
   }
 
-  /// \brief Fetch the type representing a 128-bit integer.
+  /// Fetch the type representing a 128-bit integer.
   IntegerType *getInt128Ty() { return Type::getInt128Ty(Context); }
 
-  /// \brief Fetch the type representing an N-bit integer.
+  /// Fetch the type representing an N-bit integer.
   IntegerType *getIntNTy(unsigned N) {
     return Type::getIntNTy(Context, N);
   }
 
-  /// \brief Fetch the type representing a 16-bit floating point value.
+  /// Fetch the type representing a 16-bit floating point value.
   Type *getHalfTy() {
     return Type::getHalfTy(Context);
   }
 
-  /// \brief Fetch the type representing a 32-bit floating point value.
+  /// Fetch the type representing a 32-bit floating point value.
   Type *getFloatTy() {
     return Type::getFloatTy(Context);
   }
 
-  /// \brief Fetch the type representing a 64-bit floating point value.
+  /// Fetch the type representing a 64-bit floating point value.
   Type *getDoubleTy() {
     return Type::getDoubleTy(Context);
   }
 
-  /// \brief Fetch the type representing void.
+  /// Fetch the type representing void.
   Type *getVoidTy() {
     return Type::getVoidTy(Context);
   }
 
-  /// \brief Fetch the type representing a pointer to an 8-bit integer value.
+  /// Fetch the type representing a pointer to an 8-bit integer value.
   PointerType *getInt8PtrTy(unsigned AddrSpace = 0) {
     return Type::getInt8PtrTy(Context, AddrSpace);
   }
 
-  /// \brief Fetch the type representing a pointer to an integer value.
+  /// Fetch the type representing a pointer to an integer value.
   IntegerType *getIntPtrTy(const DataLayout &DL, unsigned AddrSpace = 0) {
     return DL.getIntPtrType(Context, AddrSpace);
   }
@@ -395,7 +395,7 @@ public:
   // Intrinsic creation methods
   //===--------------------------------------------------------------------===//
 
-  /// \brief Create and insert a memset to the specified pointer and the
+  /// Create and insert a memset to the specified pointer and the
   /// specified value.
   ///
   /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
@@ -414,7 +414,7 @@ public:
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
 
-  /// \brief Create and insert a memcpy between the specified pointers.
+  /// Create and insert a memcpy between the specified pointers.
   ///
   /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
@@ -437,7 +437,7 @@ public:
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
 
-  /// \brief Create and insert an element unordered-atomic memcpy between the
+  /// Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
   ///
   /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers, respectively.
@@ -461,7 +461,7 @@ public:
       MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
       MDNode *NoAliasTag = nullptr);
 
-  /// \brief Create and insert a memmove between the specified
+  /// Create and insert a memmove between the specified
   /// pointers.
   ///
   /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
@@ -480,51 +480,51 @@ public:
                           MDNode *ScopeTag = nullptr,
                           MDNode *NoAliasTag = nullptr);
 
-  /// \brief Create a vector fadd reduction intrinsic of the source vector.
+  /// Create a vector fadd reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value for ordered reductions.
   CallInst *CreateFAddReduce(Value *Acc, Value *Src);
 
-  /// \brief Create a vector fmul reduction intrinsic of the source vector.
+  /// Create a vector fmul reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value for ordered reductions.
   CallInst *CreateFMulReduce(Value *Acc, Value *Src);
 
-  /// \brief Create a vector int add reduction intrinsic of the source vector.
+  /// Create a vector int add reduction intrinsic of the source vector.
   CallInst *CreateAddReduce(Value *Src);
 
-  /// \brief Create a vector int mul reduction intrinsic of the source vector.
+  /// Create a vector int mul reduction intrinsic of the source vector.
   CallInst *CreateMulReduce(Value *Src);
 
-  /// \brief Create a vector int AND reduction intrinsic of the source vector.
+  /// Create a vector int AND reduction intrinsic of the source vector.
   CallInst *CreateAndReduce(Value *Src);
 
-  /// \brief Create a vector int OR reduction intrinsic of the source vector.
+  /// Create a vector int OR reduction intrinsic of the source vector.
   CallInst *CreateOrReduce(Value *Src);
 
-  /// \brief Create a vector int XOR reduction intrinsic of the source vector.
+  /// Create a vector int XOR reduction intrinsic of the source vector.
   CallInst *CreateXorReduce(Value *Src);
 
-  /// \brief Create a vector integer max reduction intrinsic of the source
+  /// Create a vector integer max reduction intrinsic of the source
   /// vector.
   CallInst *CreateIntMaxReduce(Value *Src, bool IsSigned = false);
 
-  /// \brief Create a vector integer min reduction intrinsic of the source
+  /// Create a vector integer min reduction intrinsic of the source
   /// vector.
   CallInst *CreateIntMinReduce(Value *Src, bool IsSigned = false);
 
-  /// \brief Create a vector float max reduction intrinsic of the source
+  /// Create a vector float max reduction intrinsic of the source
   /// vector.
   CallInst *CreateFPMaxReduce(Value *Src, bool NoNaN = false);
 
-  /// \brief Create a vector float min reduction intrinsic of the source
+  /// Create a vector float min reduction intrinsic of the source
   /// vector.
   CallInst *CreateFPMinReduce(Value *Src, bool NoNaN = false);
 
-  /// \brief Create a lifetime.start intrinsic.
+  /// Create a lifetime.start intrinsic.
   ///
   /// If the pointer isn't i8* it will be converted.
   CallInst *CreateLifetimeStart(Value *Ptr, ConstantInt *Size = nullptr);
 
-  /// \brief Create a lifetime.end intrinsic.
+  /// Create a lifetime.end intrinsic.
   ///
   /// If the pointer isn't i8* it will be converted.
   CallInst *CreateLifetimeEnd(Value *Ptr, ConstantInt *Size = nullptr);
@@ -534,29 +534,29 @@ public:
   /// If the pointer isn't i8* it will be converted.
   CallInst *CreateInvariantStart(Value *Ptr, ConstantInt *Size = nullptr);
 
-  /// \brief Create a call to Masked Load intrinsic
+  /// Create a call to Masked Load intrinsic
   CallInst *CreateMaskedLoad(Value *Ptr, unsigned Align, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");
 
-  /// \brief Create a call to Masked Store intrinsic
+  /// Create a call to Masked Store intrinsic
   CallInst *CreateMaskedStore(Value *Val, Value *Ptr, unsigned Align,
                               Value *Mask);
 
-  /// \brief Create a call to Masked Gather intrinsic
+  /// Create a call to Masked Gather intrinsic
   CallInst *CreateMaskedGather(Value *Ptrs, unsigned Align,
                                Value *Mask = nullptr,
                                Value *PassThru = nullptr,
                                const Twine& Name = "");
 
-  /// \brief Create a call to Masked Scatter intrinsic
+  /// Create a call to Masked Scatter intrinsic
   CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, unsigned Align,
                                 Value *Mask = nullptr);
 
-  /// \brief Create an assume intrinsic call that allows the optimizer to
+  /// Create an assume intrinsic call that allows the optimizer to
   /// assume that the provided condition will be true.
   CallInst *CreateAssumption(Value *Cond);
 
-  /// \brief Create a call to the experimental.gc.statepoint intrinsic to
+  /// Create a call to the experimental.gc.statepoint intrinsic to
   /// start a new statepoint sequence.
   CallInst *CreateGCStatepointCall(uint64_t ID, uint32_t NumPatchBytes,
                                    Value *ActualCallee,
@@ -565,7 +565,7 @@ public:
                                    ArrayRef<Value *> GCArgs,
                                    const Twine &Name = "");
 
-  /// \brief Create a call to the experimental.gc.statepoint intrinsic to
+  /// Create a call to the experimental.gc.statepoint intrinsic to
   /// start a new statepoint sequence.
   CallInst *CreateGCStatepointCall(uint64_t ID, uint32_t NumPatchBytes,
                                    Value *ActualCallee, uint32_t Flags,
@@ -575,7 +575,7 @@ public:
                                    ArrayRef<Value *> GCArgs,
                                    const Twine &Name = "");
 
-  /// \brief Conveninence function for the common case when CallArgs are filled
+  /// Conveninence function for the common case when CallArgs are filled
   /// in using makeArrayRef(CS.arg_begin(), CS.arg_end()); Use needs to be
   /// .get()'ed to get the Value pointer.
   CallInst *CreateGCStatepointCall(uint64_t ID, uint32_t NumPatchBytes,
@@ -584,7 +584,7 @@ public:
                                    ArrayRef<Value *> GCArgs,
                                    const Twine &Name = "");
 
-  /// \brief Create an invoke to the experimental.gc.statepoint intrinsic to
+  /// Create an invoke to the experimental.gc.statepoint intrinsic to
   /// start a new statepoint sequence.
   InvokeInst *
   CreateGCStatepointInvoke(uint64_t ID, uint32_t NumPatchBytes,
@@ -593,7 +593,7 @@ public:
                            ArrayRef<Value *> DeoptArgs,
                            ArrayRef<Value *> GCArgs, const Twine &Name = "");
 
-  /// \brief Create an invoke to the experimental.gc.statepoint intrinsic to
+  /// Create an invoke to the experimental.gc.statepoint intrinsic to
   /// start a new statepoint sequence.
   InvokeInst *CreateGCStatepointInvoke(
       uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
@@ -612,13 +612,13 @@ public:
                            ArrayRef<Value *> DeoptArgs,
                            ArrayRef<Value *> GCArgs, const Twine &Name = "");
 
-  /// \brief Create a call to the experimental.gc.result intrinsic to extract
+  /// Create a call to the experimental.gc.result intrinsic to extract
   /// the result from a call wrapped in a statepoint.
   CallInst *CreateGCResult(Instruction *Statepoint,
                            Type *ResultType,
                            const Twine &Name = "");
 
-  /// \brief Create a call to the experimental.gc.relocate intrinsics to
+  /// Create a call to the experimental.gc.relocate intrinsics to
   /// project the relocated value of one pointer from the statepoint.
   CallInst *CreateGCRelocate(Instruction *Statepoint,
                              int BaseOffset,
@@ -650,7 +650,7 @@ public:
   }
 
 private:
-  /// \brief Create a call to a masked intrinsic with given Id.
+  /// Create a call to a masked intrinsic with given Id.
   CallInst *CreateMaskedIntrinsic(Intrinsic::ID Id, ArrayRef<Value *> Ops,
                                   ArrayRef<Type *> OverloadedTypes,
                                   const Twine &Name = "");
@@ -658,7 +658,7 @@ private:
   Value *getCastedInt8PtrValue(Value *Ptr);
 };
 
-/// \brief This provides a uniform API for creating instructions and inserting
+/// This provides a uniform API for creating instructions and inserting
 /// them into a basic block: either at the end of a BasicBlock, or at a specific
 /// iterator location in a block.
 ///
@@ -720,10 +720,10 @@ public:
     SetInsertPoint(TheBB, IP);
   }
 
-  /// \brief Get the constant folder being used.
+  /// Get the constant folder being used.
   const T &getFolder() { return Folder; }
 
-  /// \brief Insert and return the specified instruction.
+  /// Insert and return the specified instruction.
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
     this->InsertHelper(I, Name, BB, InsertPt);
@@ -731,7 +731,7 @@ public:
     return I;
   }
 
-  /// \brief No-op overload to handle constants.
+  /// No-op overload to handle constants.
   Constant *Insert(Constant *C, const Twine& = "") const {
     return C;
   }
@@ -741,7 +741,7 @@ public:
   //===--------------------------------------------------------------------===//
 
 private:
-  /// \brief Helper to add branch weight and unpredictable metadata onto an
+  /// Helper to add branch weight and unpredictable metadata onto an
   /// instruction.
   /// \returns The annotated instruction.
   template <typename InstTy>
@@ -754,17 +754,17 @@ private:
   }
 
 public:
-  /// \brief Create a 'ret void' instruction.
+  /// Create a 'ret void' instruction.
   ReturnInst *CreateRetVoid() {
     return Insert(ReturnInst::Create(Context));
   }
 
-  /// \brief Create a 'ret <val>' instruction.
+  /// Create a 'ret <val>' instruction.
   ReturnInst *CreateRet(Value *V) {
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  /// \brief Create a sequence of N insertvalue instructions,
+  /// Create a sequence of N insertvalue instructions,
   /// with one Value from the retVals array each, that build a aggregate
   /// return value one value at a time, and a ret instruction to return
   /// the resulting aggregate value.
@@ -778,12 +778,12 @@ public:
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  /// \brief Create an unconditional 'br label X' instruction.
+  /// Create an unconditional 'br label X' instruction.
   BranchInst *CreateBr(BasicBlock *Dest) {
     return Insert(BranchInst::Create(Dest));
   }
 
-  /// \brief Create a conditional 'br Cond, TrueDest, FalseDest'
+  /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction.
   BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            MDNode *BranchWeights = nullptr,
@@ -792,7 +792,7 @@ public:
                                     BranchWeights, Unpredictable));
   }
 
-  /// \brief Create a conditional 'br Cond, TrueDest, FalseDest'
+  /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction. Copy branch meta data if available.
   BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            Instruction *MDSrc) {
@@ -805,7 +805,7 @@ public:
     return Insert(Br);
   }
 
-  /// \brief Create a switch instruction with the specified value, default dest,
+  /// Create a switch instruction with the specified value, default dest,
   /// and with a hint for the number of cases that will be added (for efficient
   /// allocation).
   SwitchInst *CreateSwitch(Value *V, BasicBlock *Dest, unsigned NumCases = 10,
@@ -815,14 +815,14 @@ public:
                                     BranchWeights, Unpredictable));
   }
 
-  /// \brief Create an indirect branch instruction with the specified address
+  /// Create an indirect branch instruction with the specified address
   /// operand, with an optional hint for the number of destinations that will be
   /// added (for efficient allocation).
   IndirectBrInst *CreateIndirectBr(Value *Addr, unsigned NumDests = 10) {
     return Insert(IndirectBrInst::Create(Addr, NumDests));
   }
 
-  /// \brief Create an invoke instruction.
+  /// Create an invoke instruction.
   InvokeInst *CreateInvoke(Value *Callee, BasicBlock *NormalDest,
                            BasicBlock *UnwindDest,
                            ArrayRef<Value *> Args = None,
@@ -1246,7 +1246,7 @@ public:
     return Insert(new AllocaInst(Ty, DL.getAllocaAddrSpace(), ArraySize), Name);
   }
 
-  /// \brief Provided to resolve 'CreateLoad(Ptr, "...")' correctly, instead of
+  /// Provided to resolve 'CreateLoad(Ptr, "...")' correctly, instead of
   /// converting the string to 'bool' for the isVolatile parameter.
   LoadInst *CreateLoad(Value *Ptr, const char *Name) {
     return Insert(new LoadInst(Ptr), Name);
@@ -1268,7 +1268,7 @@ public:
     return Insert(new StoreInst(Val, Ptr, isVolatile));
   }
 
-  /// \brief Provided to resolve 'CreateAlignedLoad(Ptr, Align, "...")'
+  /// Provided to resolve 'CreateAlignedLoad(Ptr, Align, "...")'
   /// correctly, instead of converting the string to 'bool' for the isVolatile
   /// parameter.
   LoadInst *CreateAlignedLoad(Value *Ptr, unsigned Align, const char *Name) {
@@ -1476,7 +1476,7 @@ public:
     return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
   }
 
-  /// \brief Same as CreateGlobalString, but return a pointer with "i8*" type
+  /// Same as CreateGlobalString, but return a pointer with "i8*" type
   /// instead of a pointer to array of i8.
   Value *CreateGlobalStringPtr(StringRef Str, const Twine &Name = "",
                                unsigned AddressSpace = 0) {
@@ -1502,7 +1502,7 @@ public:
     return CreateCast(Instruction::SExt, V, DestTy, Name);
   }
 
-  /// \brief Create a ZExt or Trunc from the integer value V to DestTy. Return
+  /// Create a ZExt or Trunc from the integer value V to DestTy. Return
   /// the value untouched if the type of V is already DestTy.
   Value *CreateZExtOrTrunc(Value *V, Type *DestTy,
                            const Twine &Name = "") {
@@ -1517,7 +1517,7 @@ public:
     return V;
   }
 
-  /// \brief Create a SExt or Trunc from the integer value V to DestTy. Return
+  /// Create a SExt or Trunc from the integer value V to DestTy. Return
   /// the value untouched if the type of V is already DestTy.
   Value *CreateSExtOrTrunc(Value *V, Type *DestTy,
                            const Twine &Name = "") {
@@ -1665,7 +1665,7 @@ public:
     return Insert(CastInst::CreateFPCast(V, DestTy), Name);
   }
 
-  // \brief Provided to resolve 'CreateIntCast(Ptr, Ptr, "...")', giving a
+  // Provided to resolve 'CreateIntCast(Ptr, Ptr, "...")', giving a
   // compile time error, instead of converting the string to bool for the
   // isSigned parameter.
   Value *CreateIntCast(Value *, Type *, const char *) = delete;
@@ -1927,19 +1927,19 @@ public:
   // Utility creation methods
   //===--------------------------------------------------------------------===//
 
-  /// \brief Return an i1 value testing if \p Arg is null.
+  /// Return an i1 value testing if \p Arg is null.
   Value *CreateIsNull(Value *Arg, const Twine &Name = "") {
     return CreateICmpEQ(Arg, Constant::getNullValue(Arg->getType()),
                         Name);
   }
 
-  /// \brief Return an i1 value testing if \p Arg is not null.
+  /// Return an i1 value testing if \p Arg is not null.
   Value *CreateIsNotNull(Value *Arg, const Twine &Name = "") {
     return CreateICmpNE(Arg, Constant::getNullValue(Arg->getType()),
                         Name);
   }
 
-  /// \brief Return the i64 difference between two pointer values, dividing out
+  /// Return the i64 difference between two pointer values, dividing out
   /// the size of the pointed-to objects.
   ///
   /// This is intended to implement C-style pointer subtraction. As such, the
@@ -1957,7 +1957,7 @@ public:
                            Name);
   }
 
-  /// \brief Create an invariant.group.barrier intrinsic call, that stops
+  /// Create an invariant.group.barrier intrinsic call, that stops
   /// optimizer to propagate equality using invariant.group metadata.
   /// If Ptr type is different from pointer to i8, it's casted to pointer to i8
   /// in the same address space before call and casted back to Ptr type after
@@ -1985,7 +1985,7 @@ public:
     return Fn;
   }
 
-  /// \brief Return a vector value that contains \arg V broadcasted to \p
+  /// Return a vector value that contains \arg V broadcasted to \p
   /// NumElts elements.
   Value *CreateVectorSplat(unsigned NumElts, Value *V, const Twine &Name = "") {
     assert(NumElts > 0 && "Cannot splat to an empty vector!");
@@ -2001,7 +2001,7 @@ public:
     return CreateShuffleVector(V, Undef, Zeros, Name + ".splat");
   }
 
-  /// \brief Return a value that has been extracted from a larger integer type.
+  /// Return a value that has been extracted from a larger integer type.
   Value *CreateExtractInteger(const DataLayout &DL, Value *From,
                               IntegerType *ExtractedTy, uint64_t Offset,
                               const Twine &Name) {
@@ -2026,7 +2026,7 @@ public:
   }
 
 private:
-  /// \brief Helper function that creates an assume intrinsic call that
+  /// Helper function that creates an assume intrinsic call that
   /// represents an alignment assumption on the provided Ptr, Mask, Type
   /// and Offset.
   CallInst *CreateAlignmentAssumptionHelper(const DataLayout &DL,
@@ -2055,7 +2055,7 @@ private:
   }
 
 public:
-  /// \brief Create an assume intrinsic call that represents an alignment
+  /// Create an assume intrinsic call that represents an alignment
   /// assumption on the provided pointer.
   ///
   /// An optional offset can be provided, and if it is provided, the offset
@@ -2074,7 +2074,7 @@ public:
                                            OffsetValue);
   }
 
-  /// \brief Create an assume intrinsic call that represents an alignment
+  /// Create an assume intrinsic call that represents an alignment
   /// assumption on the provided pointer.
   ///
   /// An optional offset can be provided, and if it is provided, the offset

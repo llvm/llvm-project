@@ -148,7 +148,7 @@ struct Elf_Shdr_Impl : Elf_Shdr_Base<ELFT> {
   using Elf_Shdr_Base<ELFT>::sh_entsize;
   using Elf_Shdr_Base<ELFT>::sh_size;
 
-  /// @brief Get the number of entities this section contains if it has any.
+  /// Get the number of entities this section contains if it has any.
   unsigned getEntityCount() const {
     if (sh_entsize == 0)
       return 0;

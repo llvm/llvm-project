@@ -173,7 +173,7 @@ private:
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
       uint64_t ObjectAccessSize);
 
-  /// \brief A Heuristic for aliasGEP that searches for a constant offset
+  /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
   ///
   /// GetLinearExpression has some limitations, as generally zext(%x + 1)

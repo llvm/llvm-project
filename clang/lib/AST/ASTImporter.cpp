@@ -6089,9 +6089,13 @@ Expr *ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
   if (!ToMember && E->getMemberDecl())
     return nullptr;
 
-  DeclAccessPair ToFoundDecl = DeclAccessPair::make(
-    dyn_cast<NamedDecl>(Importer.Import(E->getFoundDecl().getDecl())),
-    E->getFoundDecl().getAccess());
+  auto *ToDecl =
+      dyn_cast_or_null<NamedDecl>(Importer.Import(E->getFoundDecl().getDecl()));
+  if (!ToDecl && E->getFoundDecl().getDecl())
+    return nullptr;
+
+  DeclAccessPair ToFoundDecl =
+      DeclAccessPair::make(ToDecl, E->getFoundDecl().getAccess());
 
   DeclarationNameInfo ToMemberNameInfo(
     Importer.Import(E->getMemberNameInfo().getName()),

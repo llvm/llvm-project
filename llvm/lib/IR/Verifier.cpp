@@ -207,7 +207,7 @@ private:
   template <typename... Ts> void WriteTs() {}
 
 public:
-  /// \brief A check failed, so printout out the condition and the message.
+  /// A check failed, so printout out the condition and the message.
   ///
   /// This provides a nice place to put a breakpoint if you want to see why
   /// something is not correct.
@@ -217,7 +217,7 @@ public:
     Broken = true;
   }
 
-  /// \brief A check failed (with values to print).
+  /// A check failed (with values to print).
   ///
   /// This calls the Message-only version so that the above is easier to set a
   /// breakpoint on.
@@ -255,14 +255,14 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
   DominatorTree DT;
 
-  /// \brief When verifying a basic block, keep track of all of the
+  /// When verifying a basic block, keep track of all of the
   /// instructions we have seen so far.
   ///
   /// This allows us to do efficient dominance checks for the case when an
   /// instruction has an operand that is an instruction in the same block.
   SmallPtrSet<Instruction *, 16> InstsInThisBlock;
 
-  /// \brief Keep track of the metadata nodes that have been checked already.
+  /// Keep track of the metadata nodes that have been checked already.
   SmallPtrSet<const Metadata *, 32> MDNodes;
 
   /// Keep track which DISubprogram is attached to which function.
@@ -271,10 +271,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Track all DICompileUnits visited.
   SmallPtrSet<const Metadata *, 2> CUVisited;
 
-  /// \brief The result type for a landingpad.
+  /// The result type for a landingpad.
   Type *LandingPadResultTy;
 
-  /// \brief Whether we've seen a call to @llvm.localescape in this function
+  /// Whether we've seen a call to @llvm.localescape in this function
   /// already.
   bool SawFrameEscape;
 
@@ -4421,7 +4421,7 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   };
 }
 
-/// \brief Carefully grab the subprogram from a local scope.
+/// Carefully grab the subprogram from a local scope.
 ///
 /// This carefully grabs the subprogram from a local scope, avoiding the
 /// built-in assertions that would typically fire.

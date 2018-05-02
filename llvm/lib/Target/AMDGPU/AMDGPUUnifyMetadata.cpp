@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// \brief This pass that unifies multiple OpenCL metadata due to linking.
+// This pass that unifies multiple OpenCL metadata due to linking.
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,7 +37,7 @@ namespace {
 
   } // end namespace kOCLMD
 
-  /// \brief Unify multiple OpenCL metadata due to linking.
+  /// Unify multiple OpenCL metadata due to linking.
   class AMDGPUUnifyMetadata : public ModulePass {
   public:
     static char ID;
@@ -47,7 +47,7 @@ namespace {
   private:
     bool runOnModule(Module &M) override;
 
-    /// \brief Unify version metadata.
+    /// Unify version metadata.
     /// \return true if changes are made.
     /// Assume the named metadata has operands each of which is a pair of
     /// integer constant, e.g.
@@ -82,7 +82,7 @@ namespace {
       return true;
     }
 
-  /// \brief Unify version metadata.
+  /// Unify version metadata.
   /// \return true if changes are made.
   /// Assume the named metadata has operands each of which is a list e.g.
   /// !Name = {!n1, !n2}

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Definition for classes that emit Hexagon machine code from MCInsts
+/// Definition for classes that emit Hexagon machine code from MCInsts
 ///
 //===----------------------------------------------------------------------===//
 
@@ -64,13 +64,13 @@ public:
                                const MCSubtargetInfo &STI,
                                uint32_t Parse) const;
 
-  // \brief TableGen'erated function for getting the
+  // TableGen'erated function for getting the
   // binary encoding for an instruction.
   uint64_t getBinaryCodeForInstr(MCInst const &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  MCSubtargetInfo const &STI) const;
 
-  /// \brief Return binary encoding of operand.
+  /// Return binary encoding of operand.
   unsigned getMachineOpValue(MCInst const &MI, MCOperand const &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              MCSubtargetInfo const &STI) const;

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Insert wait instructions for memory reads and writes.
+/// Insert wait instructions for memory reads and writes.
 ///
 /// Memory reads and writes are issued asynchronously, so we need to insert
 /// S_WAITCNT instructions when we want to access any of their results or
@@ -49,7 +49,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief One variable for each of the hardware counters
+/// One variable for each of the hardware counters
 using Counters = union {
   struct {
     unsigned VM;
@@ -76,32 +76,32 @@ private:
   const MachineRegisterInfo *MRI;
   AMDGPU::IsaInfo::IsaVersion ISA;
 
-  /// \brief Constant zero value
+  /// Constant zero value
   static const Counters ZeroCounts;
 
-  /// \brief Hardware limits
+  /// Hardware limits
   Counters HardwareLimits;
 
-  /// \brief Counter values we have already waited on.
+  /// Counter values we have already waited on.
   Counters WaitedOn;
 
-  /// \brief Counter values that we must wait on before the next counter
+  /// Counter values that we must wait on before the next counter
   /// increase.
   Counters DelayedWaitOn;
 
-  /// \brief Counter values for last instruction issued.
+  /// Counter values for last instruction issued.
   Counters LastIssued;
 
-  /// \brief Registers used by async instructions.
+  /// Registers used by async instructions.
   RegCounters UsedRegs;
 
-  /// \brief Registers defined by async instructions.
+  /// Registers defined by async instructions.
   RegCounters DefinedRegs;
 
-  /// \brief Different export instruction types seen since last wait.
+  /// Different export instruction types seen since last wait.
   unsigned ExpInstrTypesSeen = 0;
 
-  /// \brief Type of the last opcode.
+  /// Type of the last opcode.
   InstType LastOpcodeType;
 
   bool LastInstWritesM0;
@@ -109,42 +109,42 @@ private:
   /// Whether or not we have flat operations outstanding.
   bool IsFlatOutstanding;
 
-  /// \brief Whether the machine function returns void
+  /// Whether the machine function returns void
   bool ReturnsVoid;
 
   /// Whether the VCCZ bit is possibly corrupt
   bool VCCZCorrupt = false;
 
-  /// \brief Get increment/decrement amount for this instruction.
+  /// Get increment/decrement amount for this instruction.
   Counters getHwCounts(MachineInstr &MI);
 
-  /// \brief Is operand relevant for async execution?
+  /// Is operand relevant for async execution?
   bool isOpRelevant(MachineOperand &Op);
 
-  /// \brief Get register interval an operand affects.
+  /// Get register interval an operand affects.
   RegInterval getRegInterval(const TargetRegisterClass *RC,
                              const MachineOperand &Reg) const;
 
-  /// \brief Handle instructions async components
+  /// Handle instructions async components
   void pushInstruction(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator I,
                        const Counters& Increment);
 
-  /// \brief Insert the actual wait instruction
+  /// Insert the actual wait instruction
   bool insertWait(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator I,
                   const Counters &Counts);
 
-  /// \brief Handle existing wait instructions (from intrinsics)
+  /// Handle existing wait instructions (from intrinsics)
   void handleExistingWait(MachineBasicBlock::iterator I);
 
-  /// \brief Do we need def2def checks?
+  /// Do we need def2def checks?
   bool unorderedDefines(MachineInstr &MI);
 
-  /// \brief Resolve all operand dependencies to counter requirements
+  /// Resolve all operand dependencies to counter requirements
   Counters handleOperands(MachineInstr &MI);
 
-  /// \brief Insert S_NOP between an instruction writing M0 and S_SENDMSG.
+  /// Insert S_NOP between an instruction writing M0 and S_SENDMSG.
   void handleSendMsg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I);
 
   /// Return true if there are LGKM instrucitons that haven't been waited on
@@ -435,13 +435,13 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
   return true;
 }
 
-/// \brief helper function for handleOperands
+/// helper function for handleOperands
 static void increaseCounters(Counters &Dst, const Counters &Src) {
   for (unsigned i = 0; i < 3; ++i)
     Dst.Array[i] = std::max(Dst.Array[i], Src.Array[i]);
 }
 
-/// \brief check whether any of the counters is non-zero
+/// check whether any of the counters is non-zero
 static bool countersNonZero(const Counters &Counter) {
   for (unsigned i = 0; i < 3; ++i)
     if (Counter.Array[i])

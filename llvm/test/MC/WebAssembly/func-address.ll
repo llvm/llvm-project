@@ -24,26 +24,30 @@ entry:
   ret void
 }
 
-; CHECK:   Section {
-; CHECK:     Type: ELEM (0x9)
-; CHECK:     Size: 7
-; CHECK:   }
+; CHECK:          Type: ELEM (0x9)
+; CHECK-NEXT:     Size: 7
 
-; CHECK: Relocations [
-; CHECK:   Section (5) CODE {
-; CHECK:     Relocation {
-; CHECK:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
-; CHECK:       Offset: 0x4
-; CHECK:       Index: 0x1
-; CHECK:     }
-; CHECK:     Relocation {
-; CHECK:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
-; CHECK:       Offset: 0xB
-; CHECK:       Index: 0x2
-; CHECK:     }
-; CHECK:     Relocation {
-; CHECK:       Type: R_WEBASSEMBLY_TABLE_INDEX_SLEB (1)
-; CHECK:       Offset: 0x1E
-; CHECK:       Index: 0x5
-; CHECK:     }
-; CHECK:   }
+; CHECK:      Relocations [
+; CHECK-NEXT:   Section (5) CODE {
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+; CHECK-NEXT:       Offset: 0x4
+; CHECK-NEXT:       Symbol: import1
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+; CHECK-NEXT:       Offset: 0xB
+; CHECK-NEXT:       Symbol: import2
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_GLOBAL_INDEX_LEB (7)
+; CHECK-NEXT:       Offset: 0x15
+; CHECK-NEXT:       Symbol: __stack_pointer
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_TABLE_INDEX_SLEB (1)
+; CHECK-NEXT:       Offset: 0x1E
+; CHECK-NEXT:       Symbol: import3
+; CHECK-NEXT:     }
+; CHECK-NEXT:   }
+; CHECK-NEXT: ]

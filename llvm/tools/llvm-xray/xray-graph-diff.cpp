@@ -1,4 +1,4 @@
-//===-- xray-graph-diff.cc - XRay Function Call Graph Renderer ------------===//
+//===-- xray-graph-diff.cpp: XRay Function Call Graph Renderer ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -5257,12 +5257,37 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // PHI nodes have already been selected, so we should know which VReg that
     // is assigns to already.
     if (isa<PHINode>(V)) {
-      auto It = FuncInfo.ValueMap.find(V);
-      if (It != FuncInfo.ValueMap.end()) {
-        unsigned Reg = It->second;
-        SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
-                                  SDNodeOrder);
-        DAG.AddDbgValue(SDV, nullptr, false);
+      auto VMI = FuncInfo.ValueMap.find(V);
+      if (VMI != FuncInfo.ValueMap.end()) {
+        unsigned Reg = VMI->second;
+        // The PHI node may be split up into several MI PHI nodes (in
+        // FunctionLoweringInfo::set).
+        RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
+                         V->getType(), false);
+        if (RFV.occupiesMultipleRegs()) {
+          unsigned I = 0;
+          unsigned Offset = 0;
+          for (auto CountAndVT : zip_first(RFV.RegCount, RFV.RegVTs)) {
+            unsigned RegCount = std::get<0>(CountAndVT);
+            MVT RegisterVT = std::get<1>(CountAndVT);
+            unsigned RegisterSize = RegisterVT.getSizeInBits();
+            for (unsigned E = I + RegCount; I != E; ++I) {
+              auto FragmentExpr = DIExpression::createFragmentExpression(
+                  Expression, Offset, RegisterSize);
+              if (!FragmentExpr)
+                continue;
+              // The vregs are guaranteed to be allocated in sequence.
+              SDV = DAG.getVRegDbgValue(Variable, *FragmentExpr, Reg + I,
+                                        false, dl, SDNodeOrder);
+              DAG.AddDbgValue(SDV, nullptr, false);
+              Offset += RegisterSize;
+            }
+          }
+        } else {
+          SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
+                                    SDNodeOrder);
+          DAG.AddDbgValue(SDV, nullptr, false);
+        }
         return nullptr;
       }
     }
@@ -7758,7 +7783,7 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
   return DAG.getMergeValues(Ops, SL);
 }
 
-/// \brief Populate a CallLowerinInfo (into \p CLI) based on the properties of
+/// Populate a CallLowerinInfo (into \p CLI) based on the properties of
 /// the call being lowered.
 ///
 /// This is a helper for lowering intrinsics that follow a target calling
@@ -7793,7 +7818,7 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
       .setIsPatchPoint(IsPatchPoint);
 }
 
-/// \brief Add a stack map intrinsic call's live variable operands to a stackmap
+/// Add a stack map intrinsic call's live variable operands to a stackmap
 /// or patchpoint target node's operand list.
 ///
 /// Constants are converted to TargetConstants purely as an optimization to
@@ -7829,7 +7854,7 @@ static void addStackMapLiveVars(ImmutableCallSite CS, unsigned StartIdx,
   }
 }
 
-/// \brief Lower llvm.experimental.stackmap directly to its target opcode.
+/// Lower llvm.experimental.stackmap directly to its target opcode.
 void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   // void @llvm.experimental.stackmap(i32 <id>, i32 <numShadowBytes>,
   //                                  [live variables...])
@@ -7892,7 +7917,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   FuncInfo.MF->getFrameInfo().setHasStackMap();
 }
 
-/// \brief Lower llvm.experimental.patchpoint directly to its target opcode.
+/// Lower llvm.experimental.patchpoint directly to its target opcode.
 void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
                                           const BasicBlock *EHPadBB) {
   // void|i64 @llvm.experimental.patchpoint.void|i64(i64 <id>,

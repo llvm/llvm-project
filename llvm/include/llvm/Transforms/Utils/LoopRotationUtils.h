@@ -24,7 +24,7 @@ class ScalarEvolution;
 struct SimplifyQuery;
 class TargetTransformInfo;
 
-/// \brief Convert a loop into a loop with bottom test. It may
+/// Convert a loop into a loop with bottom test. It may
 /// perform loop latch simplication as well if the flag RotationOnly
 /// is false. The flag Threshold represents the size threshold of the loop
 /// header. If the loop header's size exceeds the threshold, the loop rotation

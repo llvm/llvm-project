@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief  This file implements the PredicateInfo analysis, which creates an Extended
+///  This file implements the PredicateInfo analysis, which creates an Extended
 /// SSA form for operations used in branch comparisons and llvm.assume
 /// comparisons.
 ///
@@ -193,7 +193,7 @@ namespace PredicateInfoClasses {
 struct ValueDFS;
 }
 
-/// \brief Encapsulates PredicateInfo, including all data associated with memory
+/// Encapsulates PredicateInfo, including all data associated with memory
 /// accesses.
 class PredicateInfo {
 private:
@@ -275,7 +275,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
-/// \brief Printer pass for \c PredicateInfo.
+/// Printer pass for \c PredicateInfo.
 class PredicateInfoPrinterPass
     : public PassInfoMixin<PredicateInfoPrinterPass> {
   raw_ostream &OS;
@@ -285,7 +285,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Verifier pass for \c PredicateInfo.
+/// Verifier pass for \c PredicateInfo.
 struct PredicateInfoVerifierPass : PassInfoMixin<PredicateInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

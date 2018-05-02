@@ -38,7 +38,7 @@ namespace objcarc {
 class ProvenanceAnalysis;
 
 /// \enum DependenceKind
-/// \brief Defines different dependence kinds among various ARC constructs.
+/// Defines different dependence kinds among various ARC constructs.
 ///
 /// There are several kinds of dependence-like concepts in use here.
 ///

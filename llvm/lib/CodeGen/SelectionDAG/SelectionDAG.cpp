@@ -773,7 +773,7 @@ static void VerifySDNode(SDNode *N) {
 }
 #endif // NDEBUG
 
-/// \brief Insert a newly allocated node into the DAG.
+/// Insert a newly allocated node into the DAG.
 ///
 /// Handles insertion into the all nodes list and CSE map, as well as
 /// verification and other common operations when a new node is allocated.
@@ -5446,7 +5446,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }
 
-/// \brief Lower the call to 'memset' intrinsic function into a series of store
+/// Lower the call to 'memset' intrinsic function into a series of store
 /// operations.
 ///
 /// \param DAG Selection DAG where lowered code is placed.
@@ -8522,7 +8522,7 @@ bool ShuffleVectorSDNode::isSplatMask(const int *Mask, EVT VT) {
   return true;
 }
 
-// \brief Returns the SDNode if it is a constant integer BuildVector
+// Returns the SDNode if it is a constant integer BuildVector
 // or constant integer.
 SDNode *SelectionDAG::isConstantIntBuildVectorOrConstantInt(SDValue N) {
   if (isa<ConstantSDNode>(N))

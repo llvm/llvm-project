@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a CFG sorting pass.
+/// This file implements a CFG sorting pass.
 ///
 /// This pass reorders the blocks in a function to put them into topological
 /// order, ignoring loop backedges, and without any loop being interrupted

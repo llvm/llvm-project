@@ -521,7 +521,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
   return ModRefInfo::ModRef;
 }
 
-/// \brief Return information about whether a particular call site modifies
+/// Return information about whether a particular call site modifies
 /// or reads the specified memory location \p MemLoc before instruction \p I
 /// in a BasicBlock. An ordered basic block \p OBB can be used to speed up
 /// instruction-ordering queries inside the BasicBlock containing \p I.

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a pass which assigns WebAssembly register
+/// This file implements a pass which assigns WebAssembly register
 /// numbers for CodeGen virtual registers.
 ///
 //===----------------------------------------------------------------------===//

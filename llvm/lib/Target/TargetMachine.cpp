@@ -51,7 +51,7 @@ bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;
 }
 
-/// \brief Reset the target options based on the function's attributes.
+/// Reset the target options based on the function's attributes.
 // FIXME: This function needs to go away for a number of reasons:
 // a) global state on the TargetMachine is terrible in general,
 // b) these target options should be passed only on the function

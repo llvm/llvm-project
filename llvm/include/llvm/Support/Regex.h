@@ -86,11 +86,11 @@ namespace llvm {
     std::string sub(StringRef Repl, StringRef String,
                     std::string *Error = nullptr);
 
-    /// \brief If this function returns true, ^Str$ is an extended regular
+    /// If this function returns true, ^Str$ is an extended regular
     /// expression that matches Str and only Str.
     static bool isLiteralERE(StringRef Str);
 
-    /// \brief Turn String into a regex by escaping its special characters.
+    /// Turn String into a regex by escaping its special characters.
     static std::string escape(StringRef String);
 
   private:

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Add implicit use of exec to vector register copies.
+/// Add implicit use of exec to vector register copies.
 ///
 //===----------------------------------------------------------------------===//
 

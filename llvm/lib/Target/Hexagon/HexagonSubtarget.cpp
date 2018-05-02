@@ -322,7 +322,7 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   }
 }
 
-/// \brief Enable use of alias analysis during code generation (during MI
+/// Enable use of alias analysis during code generation (during MI
 /// scheduling, DAGCombine, etc.).
 bool HexagonSubtarget::useAA() const {
   if (OptLevel != CodeGenOpt::None)
@@ -330,7 +330,7 @@ bool HexagonSubtarget::useAA() const {
   return false;
 }
 
-/// \brief Perform target specific adjustments to the latency of a schedule
+/// Perform target specific adjustments to the latency of a schedule
 /// dependency.
 void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
                                              SDep &Dep) const {

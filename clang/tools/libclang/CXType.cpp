@@ -119,6 +119,10 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
     if (auto *ATT = T->getAs<AttributedType>()) {
       return MakeCXType(ATT->getModifiedType(), TU);
     }
+    // Handle paren types as the original type
+    if (auto *PTT = T->getAs<ParenType>()) {
+      return MakeCXType(PTT->getInnerType(), TU);
+    }
 
     ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
     if (Ctx.getLangOpts().ObjC1) {

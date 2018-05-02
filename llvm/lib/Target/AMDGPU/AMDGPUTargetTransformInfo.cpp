@@ -468,6 +468,21 @@ unsigned AMDGPUTTIImpl::getCFInstrCost(unsigned Opcode) {
   }
 }
 
+int AMDGPUTTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+                                              bool IsPairwise) {
+  EVT OrigTy = TLI->getValueType(DL, Ty);
+
+  // Computes cost on targets that have packed math instructions(which support
+  // 16-bit types only).
+  if (IsPairwise ||
+      !ST->hasVOP3PInsts() ||
+      OrigTy.getScalarSizeInBits() != 16)
+    return BaseT::getArithmeticReductionCost(Opcode, Ty, IsPairwise);
+
+  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  return LT.first * getFullRateInstrCost();
+}
+
 int AMDGPUTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                       unsigned Index) {
   switch (Opcode) {

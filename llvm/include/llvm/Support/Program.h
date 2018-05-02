@@ -32,7 +32,7 @@ namespace sys {
   const char EnvPathSeparator = ';';
 #endif
 
-/// @brief This struct encapsulates information about a process.
+/// This struct encapsulates information about a process.
 struct ProcessInfo {
 #if defined(LLVM_ON_UNIX)
   typedef pid_t ProcessId;
@@ -56,7 +56,7 @@ struct ProcessInfo {
   ProcessInfo();
 };
 
-  /// \brief Find the first executable file \p Name in \p Paths.
+  /// Find the first executable file \p Name in \p Paths.
   ///
   /// This does not perform hashing as a shell would but instead stats each PATH
   /// entry individually so should generally be avoided. Core LLVM library

@@ -56,7 +56,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   bool HasUnsafeFPMath = false;
   AMDGPUAS AMDGPUASI;
 
-  /// \brief Copies exact/nsw/nuw flags (if any) from binary operation \p I to
+  /// Copies exact/nsw/nuw flags (if any) from binary operation \p I to
   /// binary operation \p V.
   ///
   /// \returns Binary operation \p V.
@@ -80,7 +80,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// false otherwise.
   bool needsPromotionToI32(const Type *T) const;
 
-  /// \brief Promotes uniform binary operation \p I to equivalent 32 bit binary
+  /// Promotes uniform binary operation \p I to equivalent 32 bit binary
   /// operation.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
@@ -93,7 +93,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// false otherwise.
   bool promoteUniformOpToI32(BinaryOperator &I) const;
 
-  /// \brief Promotes uniform 'icmp' operation \p I to 32 bit 'icmp' operation.
+  /// Promotes uniform 'icmp' operation \p I to 32 bit 'icmp' operation.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
   /// than or equal 16. Promotion is done by sign or zero extending operands to
@@ -102,7 +102,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// \returns True.
   bool promoteUniformOpToI32(ICmpInst &I) const;
 
-  /// \brief Promotes uniform 'select' operation \p I to 32 bit 'select'
+  /// Promotes uniform 'select' operation \p I to 32 bit 'select'
   /// operation.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
@@ -113,7 +113,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// \returns True.
   bool promoteUniformOpToI32(SelectInst &I) const;
 
-  /// \brief Promotes uniform 'bitreverse' intrinsic \p I to 32 bit 'bitreverse'
+  /// Promotes uniform 'bitreverse' intrinsic \p I to 32 bit 'bitreverse'
   /// intrinsic.
   ///
   /// \details \p I's base element bit width must be greater than 1 and less
@@ -125,7 +125,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   ///
   /// \returns True.
   bool promoteUniformBitreverseToI32(IntrinsicInst &I) const;
-  /// \brief Widen a scalar load.
+  /// Widen a scalar load.
   ///
   /// \details \p Widen scalar load for uniform, small type loads from constant
   //  memory / to a full 32-bits and then truncate the input to allow a scalar

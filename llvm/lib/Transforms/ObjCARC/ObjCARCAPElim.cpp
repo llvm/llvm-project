@@ -36,7 +36,7 @@ using namespace llvm::objcarc;
 #define DEBUG_TYPE "objc-arc-ap-elim"
 
 namespace {
-  /// \brief Autorelease pool elimination.
+  /// Autorelease pool elimination.
   class ObjCARCAPElim : public ModulePass {
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool runOnModule(Module &M) override;
