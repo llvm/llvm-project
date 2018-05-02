@@ -1468,13 +1468,6 @@ public:
     return data().HasIrrelevantDestructor;
   }
 
-  /// Determine whether the triviality for the purpose of calls for this class
-  /// is overridden to be trivial because this class or the type of one of its
-  /// subobjects has attribute "trivial_abi".
-  bool hasTrivialABIOverride() const {
-    return canPassInRegisters() && hasNonTrivialDestructor();
-  }
-
   /// \brief Determine whether this class has a non-literal or/ volatile type
   /// non-static data member or base class.
   bool hasNonLiteralTypeFieldsOrBases() const {
