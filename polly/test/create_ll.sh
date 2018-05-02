@@ -2,8 +2,11 @@
 
 LLFILE=`echo $1 | sed -e 's/\.c/.ll/g'`
 LLFILE_TMP=${LLFILE}.tmp
+SOURCE=$1
 
-clang -c -S -emit-llvm -O3 -mllvm -disable-llvm-optzns $1 -o ${LLFILE}
+shift
+
+clang -c -S -emit-llvm -O3 -mllvm -disable-llvm-optzns ${SOURCE} -o ${LLFILE} "$@"
 
 opt -correlated-propagation -mem2reg -instcombine -loop-simplify -indvars \
 -instnamer ${LLFILE} -S -o ${LLFILE_TMP}
@@ -17,7 +20,7 @@ echo '; FIXME: Edit the run line and add checks!' >> ${LLFILE}
 echo ';' >> ${LLFILE}
 echo '; XFAIL: *' >> ${LLFILE}
 echo ';' >> ${LLFILE}
-clang-format $1 | sed -e 's/^[^$]/;    &/' -e 's/^$/;/' >> ${LLFILE}
+clang-format ${SOURCE} | sed -e 's/^[^$]/;    &/' -e 's/^$/;/' >> ${LLFILE}
 echo ';' >> ${LLFILE}
 
 cat ${LLFILE_TMP} >> ${LLFILE}
