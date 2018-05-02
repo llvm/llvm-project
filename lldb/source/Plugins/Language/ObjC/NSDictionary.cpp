@@ -667,11 +667,7 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
 size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
     GetIndexOfChildWithName(const ConstString &name) {
   static const ConstString g_zero("[0]");
-
-  if (name == g_zero)
-    return 0;
-
-  return UINT32_MAX;
+  return name == g_zero ? 0 : UINT32_MAX;
 }
 
 size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
