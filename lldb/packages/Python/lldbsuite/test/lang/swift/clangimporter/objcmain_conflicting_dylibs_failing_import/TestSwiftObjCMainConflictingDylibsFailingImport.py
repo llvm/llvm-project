@@ -55,7 +55,7 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, bar_breakpoint)
 
-        # This works becaue the Module-SwiftASTContext uses the dylib flags.
+        # This works because the Module-SwiftASTContext uses the dylib flags.
         self.expect("fr var bar", "expected result", substrs=["42"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         # This initially fails with the shared scratch context and is
