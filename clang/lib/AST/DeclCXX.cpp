@@ -388,6 +388,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     if (BaseClassDecl->hasVolatileMember())
       setHasVolatileMember(true);
 
+    if (BaseClassDecl->getArgPassingRestrictions() ==
+        RecordDecl::APK_CanNeverPassInRegs)
+      setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+
     // Keep track of the presence of mutable fields.
     if (BaseClassDecl->hasMutableFields()) {
       data().HasMutableFields = true;
@@ -801,7 +805,17 @@ void CXXRecordDecl::addedMember(Decl *D) {
         struct DefinitionData &Data = data();
         Data.PlainOldData = false;
         Data.HasTrivialSpecialMembers = 0;
-        Data.HasTrivialSpecialMembersForCall = 0;
+
+        // __strong or __weak fields do not make special functions non-trivial
+        // for the purpose of calls.
+        Qualifiers::ObjCLifetime LT = T.getQualifiers().getObjCLifetime();
+        if (LT != Qualifiers::OCL_Strong && LT != Qualifiers::OCL_Weak)
+          data().HasTrivialSpecialMembersForCall = 0;
+
+        // Structs with __weak fields should never be passed directly.
+        if (LT == Qualifiers::OCL_Weak)
+          setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+
         Data.HasIrrelevantDestructor = false;
       } else if (!Context.getLangOpts().ObjCAutoRefCount) {
         setHasObjectMember(true);
@@ -966,6 +980,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
           setHasObjectMember(true);
         if (FieldRec->hasVolatileMember())
           setHasVolatileMember(true);
+        if (FieldRec->getArgPassingRestrictions() ==
+            RecordDecl::APK_CanNeverPassInRegs)
+          setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
 
         // C++0x [class]p7:
         //   A standard-layout class is a class that:

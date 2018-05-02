@@ -12302,8 +12302,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       // Try to apply the named return value optimization. We have to check
       // if we can do this here because lambdas keep return statements around
       // to deduce an implicit return type.
-      if (getLangOpts().CPlusPlus && FD->getReturnType()->isRecordType() &&
-          !FD->isDependentContext())
+      if (FD->getReturnType()->isRecordType() &&
+          (!getLangOpts().CPlusPlus || !FD->isDependentContext()))
         computeNRVO(Body, getCurFunction());
     }
 
@@ -15051,10 +15051,17 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       QualType::PrimitiveCopyKind PCK = FT.isNonTrivialToPrimitiveCopy();
       if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
         Record->setNonTrivialToPrimitiveCopy(true);
-      if (FT.isDestructedType())
+      if (FT.isDestructedType()) {
         Record->setNonTrivialToPrimitiveDestroy(true);
-      if (!FT.canPassInRegisters())
-        Record->setCanPassInRegisters(false);
+        Record->setParamDestroyedInCallee(true);
+      }
+
+      if (const auto *RT = FT->getAs<RecordType>()) {
+        if (RT->getDecl()->getArgPassingRestrictions() ==
+            RecordDecl::APK_CanNeverPassInRegs)
+          Record->setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+      } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
+        Record->setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
     }
 
     if (Record && FD->getType().isVolatileQualified())

@@ -1,27 +1,77 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -emit-llvm -o - -DTRIVIALABI %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fobjc-arc  -fobjc-weak -fobjc-runtime-has-weak -fclang-abi-compat=4.0 -emit-llvm -o - -DTRIVIALABI %s | FileCheck %s
+
+// Check that structs consisting solely of __strong or __weak pointer fields are
+// destructed in the callee function and structs consisting solely of __strong
+// pointer fields are passed directly.
 
 // CHECK: %[[STRUCT_STRONGWEAK:.*]] = type { i8*, i8* }
+// CHECK: %[[STRUCT_CONTAINSSTRONGWEAK:.*]] = type { %[[STRUCT_STRONGWEAK]] }
+// CHECK: %[[STRUCT_DERIVEDSTRONGWEAK:.*]] = type { %[[STRUCT_STRONGWEAK]] }
 // CHECK: %[[STRUCT_STRONG:.*]] = type { i8* }
 // CHECK: %[[STRUCT_S:.*]] = type { i8* }
+// CHECK: %[[STRUCT_CONTAINSNONTRIVIAL:.*]] = type { %{{.*}}, i8* }
 
+#ifdef TRIVIALABI
 struct __attribute__((trivial_abi)) StrongWeak {
+#else
+struct StrongWeak {
+#endif
   id fstrong;
   __weak id fweak;
 };
 
+#ifdef TRIVIALABI
+struct __attribute__((trivial_abi)) ContainsStrongWeak {
+#else
+struct ContainsStrongWeak {
+#endif
+  StrongWeak sw;
+};
+
+#ifdef TRIVIALABI
+struct __attribute__((trivial_abi)) DerivedStrongWeak : StrongWeak {
+#else
+struct DerivedStrongWeak : StrongWeak {
+#endif
+};
+
+#ifdef TRIVIALABI
 struct __attribute__((trivial_abi)) Strong {
+#else
+struct Strong {
+#endif
   id fstrong;
 };
 
 template<class T>
+#ifdef TRIVIALABI
 struct __attribute__((trivial_abi)) S {
+#else
+struct S {
+#endif
   T a;
 };
 
+struct NonTrivial {
+  NonTrivial();
+  NonTrivial(const NonTrivial &);
+  ~NonTrivial();
+  int *a;
+};
+
+// This struct is not passed directly nor destructed in the callee because f0
+// has type NonTrivial.
+struct ContainsNonTrivial {
+  NonTrivial f0;
+  id f1;
+};
+
 // CHECK: define void @_Z19testParamStrongWeak10StrongWeak(%[[STRUCT_STRONGWEAK]]* %{{.*}})
-// CHECK-NOT: call
-// CHECK: ret void
+// CHECK: call %struct.StrongWeak* @_ZN10StrongWeakD1Ev(
+// CHECK-NEXT: ret void
 
 void testParamStrongWeak(StrongWeak a) {
 }
@@ -33,7 +83,7 @@ void testParamStrongWeak(StrongWeak a) {
 // CHECK: %[[V0:.*]] = load %[[STRUCT_STRONGWEAK]]*, %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
 // CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakC1ERKS_(%[[STRUCT_STRONGWEAK]]* %[[AGG_TMP]], %[[STRUCT_STRONGWEAK]]* dereferenceable(16) %[[V0]])
 // CHECK: call void @_Z19testParamStrongWeak10StrongWeak(%[[STRUCT_STRONGWEAK]]* %[[AGG_TMP]])
-// CHECK: %[[CALL1:.*]] = call %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakD1Ev(%[[STRUCT_STRONGWEAK]]* %[[AGG_TMP]])
+// CHECK-NOT: call
 // CHECK: ret void
 
 void testCallStrongWeak(StrongWeak *a) {
@@ -49,6 +99,18 @@ void testCallStrongWeak(StrongWeak *a) {
 
 StrongWeak testReturnStrongWeak(StrongWeak *a) {
   return *a;
+}
+
+// CHECK: define void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(%[[STRUCT_CONTAINSSTRONGWEAK]]* %[[A:.*]])
+// CHECK: call %[[STRUCT_CONTAINSSTRONGWEAK]]* @_ZN18ContainsStrongWeakD1Ev(%[[STRUCT_CONTAINSSTRONGWEAK]]* %[[A]])
+
+void testParamContainsStrongWeak(ContainsStrongWeak a) {
+}
+
+// CHECK: define void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(%[[STRUCT_DERIVEDSTRONGWEAK]]* %[[A:.*]])
+// CHECK: call %[[STRUCT_DERIVEDSTRONGWEAK]]* @_ZN17DerivedStrongWeakD1Ev(%[[STRUCT_DERIVEDSTRONGWEAK]]* %[[A]])
+
+void testParamDerivedStrongWeak(DerivedStrongWeak a) {
 }
 
 // CHECK: define void @_Z15testParamStrong6Strong(i64 %[[A_COERCE:.*]])
@@ -97,8 +159,23 @@ Strong testReturnStrong(Strong *a) {
 }
 
 // CHECK: define void @_Z21testParamWeakTemplate1SIU6__weakP11objc_objectE(%[[STRUCT_S]]* %{{.*}})
+// CHECK: call %struct.S* @_ZN1SIU6__weakP11objc_objectED1Ev(
+// CHECK-NEXT: ret void
+
+void testParamWeakTemplate(S<__weak id> a) {
+}
+
+// CHECK: define void @_Z27testParamContainsNonTrivial18ContainsNonTrivial(%[[STRUCT_CONTAINSNONTRIVIAL]]* %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 
-void testParamWeakTemplate(S<__weak id> a) {
+void testParamContainsNonTrivial(ContainsNonTrivial a) {
+}
+
+// CHECK: define void @_Z26testCallContainsNonTrivialP18ContainsNonTrivial(
+// CHECK: call void @_Z27testParamContainsNonTrivial18ContainsNonTrivial(%[[STRUCT_CONTAINSNONTRIVIAL]]* %{{.*}})
+// CHECK: call %struct.ContainsNonTrivial* @_ZN18ContainsNonTrivialD1Ev(%[[STRUCT_CONTAINSNONTRIVIAL]]* %{{.*}})
+
+void testCallContainsNonTrivial(ContainsNonTrivial *a) {
+  testParamContainsNonTrivial(*a);
 }

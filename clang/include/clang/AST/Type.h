@@ -808,11 +808,6 @@ public:
   /// Return true if this is a trivially copyable type (C++0x [basic.types]p9)
   bool isTriviallyCopyableType(const ASTContext &Context) const;
 
-  /// Determine whether this is a class whose triviality for the purpose of
-  /// calls is overridden to be trivial because the class or the type of one of
-  /// its subobjects has attribute "trivial_abi".
-  bool hasTrivialABIOverride() const;
-
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
 
@@ -1153,8 +1148,6 @@ public:
   /// after it is moved, as opposed to a truly destructive move in which the
   /// source object is placed in an uninitialized state.
   PrimitiveCopyKind isNonTrivialToPrimitiveDestructiveMove() const;
-
-  bool canPassInRegisters() const;
 
   enum DestructionKind {
     DK_none,

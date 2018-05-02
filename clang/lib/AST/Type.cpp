@@ -2190,12 +2190,6 @@ bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   return false;
 }
 
-bool QualType::hasTrivialABIOverride() const {
-  if (const auto *RD = getTypePtr()->getAsCXXRecordDecl())
-    return RD->hasTrivialABIOverride();
-  return false;
-}
-
 bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
   return !Context.getLangOpts().ObjCAutoRefCount &&
          Context.getLangOpts().ObjCWeak &&
@@ -2239,17 +2233,6 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
 QualType::PrimitiveCopyKind
 QualType::isNonTrivialToPrimitiveDestructiveMove() const {
   return isNonTrivialToPrimitiveCopy();
-}
-
-bool QualType::canPassInRegisters() const {
-  if (const auto *RT =
-          getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    return RT->getDecl()->canPassInRegisters();
-
-  if (getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
-    return false;
-
-  return true;
 }
 
 bool Type::isLiteralType(const ASTContext &Ctx) const {

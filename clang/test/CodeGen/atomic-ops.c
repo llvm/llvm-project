@@ -186,8 +186,8 @@ struct S {
 struct S fd1(struct S *a) {
   // CHECK-LABEL: @fd1
   // CHECK: [[RETVAL:%.*]] = alloca %struct.S, align 4
-  // CHECK: [[RET:%.*]]    = alloca %struct.S, align 4
-  // CHECK: [[CAST:%.*]]   = bitcast %struct.S* [[RET]] to i64*
+  // CHECK: bitcast %struct.S* {{.*}} to i64*
+  // CHECK: [[CAST:%.*]]  = bitcast %struct.S* [[RETVAL]] to i64*
   // CHECK: [[CALL:%.*]]   = call i64 @__atomic_load_8(
   // CHECK: store i64 [[CALL]], i64* [[CAST]], align 4
   struct S ret;

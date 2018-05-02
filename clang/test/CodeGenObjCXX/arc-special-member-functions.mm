@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
 
 struct ObjCMember {
   id member;
@@ -11,6 +11,59 @@ struct ObjCArrayMember {
 struct ObjCBlockMember {
   int (^bp)(int);
 };
+
+// CHECK: %[[STRUCT_CONTAINSWEAK:.*]] = type { %[[STRUCT_WEAK:.*]] }
+// CHECK: %[[STRUCT_WEAK]] = type { i8* }
+
+// The Weak object that is passed is destructed in this constructor.
+
+// CHECK: define void @_ZN12ContainsWeakC2E4Weak(
+// CHECK: call void @_ZN4WeakC1ERKS_(
+// CHECK: call void @_ZN4WeakD1Ev(
+
+// Check that the Weak object passed to this constructor is not destructed after
+// the delegate constructor is called.
+
+// CHECK: define void @_ZN12ContainsWeakC1E4Weak(
+// CHECK: call void @_ZN12ContainsWeakC2E4Weak(
+// CHECK-NEXT: ret void
+
+struct Weak {
+  Weak(id);
+  __weak id x;
+};
+
+struct ContainsWeak {
+  ContainsWeak(Weak);
+  Weak w;
+};
+
+ContainsWeak::ContainsWeak(Weak a) : w(a) {}
+
+// The Weak object that is passed is destructed in this constructor.
+
+// CHECK: define void @_ZN4BaseC2E4Weak(
+// CHECK: call void @_ZN4WeakD1Ev(
+// CHECK: ret void
+
+// Check that the Weak object passed to this constructor is not destructed after
+// the delegate constructor is called.
+
+// CHECK: define linkonce_odr void @_ZN7DerivedCI14BaseE4Weak(
+// CHECK: call void @_ZN7DerivedCI24BaseE4Weak(
+// CHECK-NEXT: ret void
+
+struct Base {
+  Base(Weak);
+};
+
+Base::Base(Weak a) {}
+
+struct Derived : Base {
+  using Base::Base;
+};
+
+Derived d(Weak(0));
 
 // CHECK-LABEL: define void @_Z42test_ObjCMember_default_construct_destructv(
 void test_ObjCMember_default_construct_destruct() {
@@ -31,6 +84,8 @@ void test_ObjCMember_copy_construct_destruct(ObjCMember m1) {
 void test_ObjCMember_copy_assign(ObjCMember m1, ObjCMember m2) {
   // CHECK: {{call.*_ZN10ObjCMemberaSERKS_}}
   m1 = m2;
+  // CHECK-NEXT: call void @_ZN10ObjCMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN10ObjCMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 
@@ -58,6 +113,8 @@ void test_ObjCArrayMember_copy_construct_destruct(ObjCArrayMember m1) {
 void test_ObjCArrayMember_copy_assign(ObjCArrayMember m1, ObjCArrayMember m2) {
   // CHECK: {{call.*@_ZN15ObjCArrayMemberaSERKS_}}
   m1 = m2;
+  // CHECK-NEXT: call void @_ZN15ObjCArrayMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN15ObjCArrayMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 
@@ -79,7 +136,8 @@ void test_ObjCBlockMember_default_construct_destruct() {
 void test_ObjCBlockMember_copy_construct_destruct(ObjCBlockMember m1) {
   // CHECK: call void @_ZN15ObjCBlockMemberC1ERKS_
   ObjCBlockMember m2 = m1;
-  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 
@@ -87,6 +145,8 @@ void test_ObjCBlockMember_copy_construct_destruct(ObjCBlockMember m1) {
 void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
   // CHECK: {{call.*_ZN15ObjCBlockMemberaSERKS_}}
   m1 = m2;
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
+  // CHECK-NEXT: call void @_ZN15ObjCBlockMemberD1Ev(
   // CHECK-NEXT: ret void
 }
 
@@ -103,6 +163,13 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 // CHECK-NEXT: [[T7:%.*]] = bitcast i32 (i32)* [[T6]] to i8*
 // CHECK-NEXT: call void @objc_release(i8* [[T7]])
 // CHECK-NEXT: ret
+
+// Check that the Weak object passed to this constructor is not destructed after
+// the delegate constructor is called.
+
+// CHECK: define linkonce_odr void @_ZN7DerivedCI24BaseE4Weak(
+// CHECK: call void @_ZN4BaseC2E4Weak(
+// CHECK-NEXT: ret void
 
 // Implicitly-generated default constructor for ObjCMember
 // CHECK-LABEL: define linkonce_odr void @_ZN10ObjCMemberC2Ev
