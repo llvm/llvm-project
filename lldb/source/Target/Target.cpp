@@ -66,6 +66,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#include "swift/SIL/SILModule.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
