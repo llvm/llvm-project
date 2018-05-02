@@ -35,6 +35,7 @@ class TestCppTypeLookup(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", self.main_source_file)
 
+        self.dbg.HandleCommand("settings set target.experimental.inject-local-vars 1")
         # Get frame for current thread
         frame = thread.GetSelectedFrame()
 
