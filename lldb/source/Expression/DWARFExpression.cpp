@@ -1391,6 +1391,9 @@ bool DWARFExpression::Evaluate(
     case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
       stack.back().SetValueType(Value::eValueTypeFileAddress);
+      stack.back().ConvertToLoadAddress(
+          frame->GetSymbolContext(eSymbolContextFunction),
+          frame->CalculateTarget().get());
       break;
 
     //----------------------------------------------------------------------
