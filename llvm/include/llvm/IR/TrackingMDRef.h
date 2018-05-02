@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-/// \brief Tracking metadata reference.
+/// Tracking metadata reference.
 ///
 /// This class behaves like \a TrackingVH, but for metadata.
 class TrackingMDRef {
@@ -70,7 +70,7 @@ public:
     track();
   }
 
-  /// \brief Check whether this has a trivial destructor.
+  /// Check whether this has a trivial destructor.
   ///
   /// If \c MD isn't replaceable, the destructor will be a no-op.
   bool hasTrivialDestructor() const {
@@ -100,7 +100,7 @@ private:
   }
 };
 
-/// \brief Typed tracking ref.
+/// Typed tracking ref.
 ///
 /// Track refererences of a particular type.  It's useful to use this for \a
 /// MDNode and \a ValueAsMetadata.
@@ -135,7 +135,7 @@ public:
   void reset() { Ref.reset(); }
   void reset(T *MD) { Ref.reset(static_cast<Metadata *>(MD)); }
 
-  /// \brief Check whether this has a trivial destructor.
+  /// Check whether this has a trivial destructor.
   bool hasTrivialDestructor() const { return Ref.hasTrivialDestructor(); }
 };
 

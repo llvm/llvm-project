@@ -57,7 +57,7 @@ class Value;
 
 namespace orc {
 
-/// @brief Compile-on-demand layer.
+/// Compile-on-demand layer.
 ///
 ///   When a module is added to this layer a stub is created for each of its
 /// function definitions. The stubs and other global values are immediately
@@ -196,10 +196,10 @@ private:
 
 public:
 
-  /// @brief Module partitioning functor.
+  /// Module partitioning functor.
   using PartitioningFtor = std::function<std::set<Function*>(Function&)>;
 
-  /// @brief Builder for IndirectStubsManagers.
+  /// Builder for IndirectStubsManagers.
   using IndirectStubsManagerBuilderT =
       std::function<std::unique_ptr<IndirectStubsMgrT>()>;
 
@@ -209,7 +209,7 @@ public:
   using SymbolResolverSetter =
       std::function<void(VModuleKey K, std::shared_ptr<SymbolResolver> R)>;
 
-  /// @brief Construct a compile-on-demand layer instance.
+  /// Construct a compile-on-demand layer instance.
   CompileOnDemandLayer(ExecutionSession &ES, BaseLayerT &BaseLayer,
                        SymbolResolverGetter GetSymbolResolver,
                        SymbolResolverSetter SetSymbolResolver,
@@ -230,7 +230,7 @@ public:
       consumeError(removeModule(LogicalDylibs.begin()->first));
   }
 
-  /// @brief Add a module to the compile-on-demand layer.
+  /// Add a module to the compile-on-demand layer.
   Error addModule(VModuleKey K, std::unique_ptr<Module> M) {
 
     assert(!LogicalDylibs.count(K) && "VModuleKey K already in use");
@@ -242,12 +242,12 @@ public:
     return addLogicalModule(I->second, std::move(M));
   }
 
-  /// @brief Add extra modules to an existing logical module.
+  /// Add extra modules to an existing logical module.
   Error addExtraModule(VModuleKey K, std::unique_ptr<Module> M) {
     return addLogicalModule(LogicalDylibs[K], std::move(M));
   }
 
-  /// @brief Remove the module represented by the given key.
+  /// Remove the module represented by the given key.
   ///
   ///   This will remove all modules in the layers below that were derived from
   /// the module represented by K.
@@ -259,7 +259,7 @@ public:
     return Err;
   }
 
-  /// @brief Search for the given named symbol.
+  /// Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it exists.
@@ -275,7 +275,7 @@ public:
     return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Get the address of a symbol provided by this layer, or some layer
+  /// Get the address of a symbol provided by this layer, or some layer
   ///        below this one.
   JITSymbol findSymbolIn(VModuleKey K, const std::string &Name,
                          bool ExportedSymbolsOnly) {
@@ -283,7 +283,7 @@ public:
     return LogicalDylibs[K].findSymbol(BaseLayer, Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Update the stub for the given function to point at FnBodyAddr.
+  /// Update the stub for the given function to point at FnBodyAddr.
   /// This can be used to support re-optimization.
   /// @return true if the function exists and the stub is updated, false
   ///         otherwise.

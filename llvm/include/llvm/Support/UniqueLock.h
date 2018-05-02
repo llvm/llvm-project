@@ -24,7 +24,7 @@ namespace llvm {
   /// an associated mutex, which is guaranteed to be locked upon creation
   /// and unlocked after destruction. unique_lock can also unlock the mutex
   /// and re-lock it freely during its lifetime.
-  /// @brief Guard a section of code with a mutex.
+  /// Guard a section of code with a mutex.
   template<typename MutexT>
   class unique_lock {
     MutexT *M = nullptr;

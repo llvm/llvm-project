@@ -40,7 +40,7 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 namespace {
 
-/// \brief Hexagon disassembler for all Hexagon platforms.
+/// Hexagon disassembler for all Hexagon platforms.
 class HexagonDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<MCInstrInfo const> const MCII;

@@ -139,7 +139,7 @@ namespace {
                                      MachineBasicBlock *From,
                                      MachineBasicBlock *To);
 
-    /// \brief Postpone the splitting of the given critical
+    /// Postpone the splitting of the given critical
     /// edge (\p From, \p To).
     ///
     /// We do not split the edges on the fly. Indeed, this invalidates
@@ -709,7 +709,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   return SuccToSinkTo;
 }
 
-/// \brief Return true if MI is likely to be usable as a memory operation by the
+/// Return true if MI is likely to be usable as a memory operation by the
 /// implicit null check optimization.
 ///
 /// This is a "best effort" heuristic, and should not be relied upon for

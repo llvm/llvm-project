@@ -133,7 +133,7 @@ MDNode *MDBuilder::createTBAARoot(StringRef Name) {
   return MDNode::get(Context, createString(Name));
 }
 
-/// \brief Return metadata for a non-root TBAA node with the given name,
+/// Return metadata for a non-root TBAA node with the given name,
 /// parent in the TBAA tree, and value for 'pointsToConstantMemory'.
 MDNode *MDBuilder::createTBAANode(StringRef Name, MDNode *Parent,
                                   bool isConstant) {
@@ -153,7 +153,7 @@ MDNode *MDBuilder::createAliasScope(StringRef Name, MDNode *Domain) {
   return MDNode::get(Context, {createString(Name), Domain});
 }
 
-/// \brief Return metadata for a tbaa.struct node with the given
+/// Return metadata for a tbaa.struct node with the given
 /// struct field descriptions.
 MDNode *MDBuilder::createTBAAStructNode(ArrayRef<TBAAStructField> Fields) {
   SmallVector<Metadata *, 4> Vals(Fields.size() * 3);
@@ -166,7 +166,7 @@ MDNode *MDBuilder::createTBAAStructNode(ArrayRef<TBAAStructField> Fields) {
   return MDNode::get(Context, Vals);
 }
 
-/// \brief Return metadata for a TBAA struct node in the type DAG
+/// Return metadata for a TBAA struct node in the type DAG
 /// with the given name, a list of pairs (offset, field type in the type DAG).
 MDNode *MDBuilder::createTBAAStructTypeNode(
     StringRef Name, ArrayRef<std::pair<MDNode *, uint64_t>> Fields) {
@@ -180,7 +180,7 @@ MDNode *MDBuilder::createTBAAStructTypeNode(
   return MDNode::get(Context, Ops);
 }
 
-/// \brief Return metadata for a TBAA scalar type node with the
+/// Return metadata for a TBAA scalar type node with the
 /// given name, an offset and a parent in the TBAA type DAG.
 MDNode *MDBuilder::createTBAAScalarTypeNode(StringRef Name, MDNode *Parent,
                                             uint64_t Offset) {
@@ -189,7 +189,7 @@ MDNode *MDBuilder::createTBAAScalarTypeNode(StringRef Name, MDNode *Parent,
                      {createString(Name), Parent, createConstant(Off)});
 }
 
-/// \brief Return metadata for a TBAA tag node with the given
+/// Return metadata for a TBAA tag node with the given
 /// base type, access type and offset relative to the base type.
 MDNode *MDBuilder::createTBAAStructTagNode(MDNode *BaseType, MDNode *AccessType,
                                            uint64_t Offset, bool IsConstant) {

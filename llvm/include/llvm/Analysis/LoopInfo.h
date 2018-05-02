@@ -444,7 +444,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 /// in the CFG are necessarily loops.
 class Loop : public LoopBase<BasicBlock, Loop> {
 public:
-  /// \brief A range representing the start and end location of a loop.
+  /// A range representing the start and end location of a loop.
   class LocRange {
     DebugLoc Start;
     DebugLoc End;
@@ -458,7 +458,7 @@ public:
     const DebugLoc &getStart() const { return Start; }
     const DebugLoc &getEnd() const { return End; }
 
-    /// \brief Check for null.
+    /// Check for null.
     ///
     explicit operator bool() const { return Start && End; }
   };
@@ -935,7 +935,7 @@ template <> struct GraphTraits<Loop *> {
   static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
-/// \brief Analysis pass that exposes the \c LoopInfo for a function.
+/// Analysis pass that exposes the \c LoopInfo for a function.
 class LoopAnalysis : public AnalysisInfoMixin<LoopAnalysis> {
   friend AnalysisInfoMixin<LoopAnalysis>;
   static AnalysisKey Key;
@@ -946,7 +946,7 @@ public:
   LoopInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Printer pass for the \c LoopAnalysis results.
+/// Printer pass for the \c LoopAnalysis results.
 class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
@@ -955,12 +955,12 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Verifier pass for the \c LoopAnalysis results.
+/// Verifier pass for the \c LoopAnalysis results.
 struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief The legacy pass manager's analysis pass to compute loop information.
+/// The legacy pass manager's analysis pass to compute loop information.
 class LoopInfoWrapperPass : public FunctionPass {
   LoopInfo LI;
 
@@ -974,7 +974,7 @@ public:
   LoopInfo &getLoopInfo() { return LI; }
   const LoopInfo &getLoopInfo() const { return LI; }
 
-  /// \brief Calculate the natural loop information for a given function.
+  /// Calculate the natural loop information for a given function.
   bool runOnFunction(Function &F) override;
 
   void verifyAnalysis() const override;

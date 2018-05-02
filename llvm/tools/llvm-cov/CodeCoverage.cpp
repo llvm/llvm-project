@@ -49,66 +49,66 @@ void exportCoverageDataToJson(const coverage::CoverageMapping &CoverageMapping,
                               raw_ostream &OS);
 
 namespace {
-/// \brief The implementation of the coverage tool.
+/// The implementation of the coverage tool.
 class CodeCoverageTool {
 public:
   enum Command {
-    /// \brief The show command.
+    /// The show command.
     Show,
-    /// \brief The report command.
+    /// The report command.
     Report,
-    /// \brief The export command.
+    /// The export command.
     Export
   };
 
   int run(Command Cmd, int argc, const char **argv);
 
 private:
-  /// \brief Print the error message to the error output stream.
+  /// Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
 
-  /// \brief Print the warning message to the error output stream.
+  /// Print the warning message to the error output stream.
   void warning(const Twine &Message, StringRef Whence = "");
 
-  /// \brief Convert \p Path into an absolute path and append it to the list
+  /// Convert \p Path into an absolute path and append it to the list
   /// of collected paths.
   void addCollectedPath(const std::string &Path);
 
-  /// \brief If \p Path is a regular file, collect the path. If it's a
+  /// If \p Path is a regular file, collect the path. If it's a
   /// directory, recursively collect all of the paths within the directory.
   void collectPaths(const std::string &Path);
 
-  /// \brief Return a memory buffer for the given source file.
+  /// Return a memory buffer for the given source file.
   ErrorOr<const MemoryBuffer &> getSourceFile(StringRef SourceFile);
 
-  /// \brief Create source views for the expansions of the view.
+  /// Create source views for the expansions of the view.
   void attachExpansionSubViews(SourceCoverageView &View,
                                ArrayRef<ExpansionRecord> Expansions,
                                const CoverageMapping &Coverage);
 
-  /// \brief Create the source view of a particular function.
+  /// Create the source view of a particular function.
   std::unique_ptr<SourceCoverageView>
   createFunctionView(const FunctionRecord &Function,
                      const CoverageMapping &Coverage);
 
-  /// \brief Create the main source view of a particular source file.
+  /// Create the main source view of a particular source file.
   std::unique_ptr<SourceCoverageView>
   createSourceFileView(StringRef SourceFile, const CoverageMapping &Coverage);
 
-  /// \brief Load the coverage mapping data. Return nullptr if an error occurred.
+  /// Load the coverage mapping data. Return nullptr if an error occurred.
   std::unique_ptr<CoverageMapping> load();
 
-  /// \brief Create a mapping from files in the Coverage data to local copies
+  /// Create a mapping from files in the Coverage data to local copies
   /// (path-equivalence).
   void remapPathNames(const CoverageMapping &Coverage);
 
-  /// \brief Remove input source files which aren't mapped by \p Coverage.
+  /// Remove input source files which aren't mapped by \p Coverage.
   void removeUnmappedInputs(const CoverageMapping &Coverage);
 
-  /// \brief If a demangler is available, demangle all symbol names.
+  /// If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
-  /// \brief Write out a source file view to the filesystem.
+  /// Write out a source file view to the filesystem.
   void writeSourceFileView(StringRef SourceFile, CoverageMapping *Coverage,
                            CoveragePrinter *Printer, bool ShowFilenames);
 

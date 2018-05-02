@@ -63,7 +63,7 @@ SampleProfileWriter::write(const StringMap<FunctionSamples> &ProfileMap) {
   return sampleprof_error::success;
 }
 
-/// \brief Write samples to a text file.
+/// Write samples to a text file.
 ///
 /// Note: it may be tempting to implement this in terms of
 /// FunctionSamples::print().  Please don't.  The dump functionality is intended
@@ -239,7 +239,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   return sampleprof_error::success;
 }
 
-/// \brief Write samples of a top-level function to a binary file.
+/// Write samples of a top-level function to a binary file.
 ///
 /// \returns true if the samples were written successfully, false otherwise.
 std::error_code SampleProfileWriterBinary::write(const FunctionSamples &S) {
@@ -247,7 +247,7 @@ std::error_code SampleProfileWriterBinary::write(const FunctionSamples &S) {
   return writeBody(S);
 }
 
-/// \brief Create a sample profile file writer based on the specified format.
+/// Create a sample profile file writer based on the specified format.
 ///
 /// \param Filename The file to create.
 ///
@@ -268,7 +268,7 @@ SampleProfileWriter::create(StringRef Filename, SampleProfileFormat Format) {
   return create(OS, Format);
 }
 
-/// \brief Create a sample profile stream writer based on the specified format.
+/// Create a sample profile stream writer based on the specified format.
 ///
 /// \param OS The output stream to store the profile data to.
 ///

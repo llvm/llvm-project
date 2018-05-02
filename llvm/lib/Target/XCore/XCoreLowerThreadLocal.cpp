@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains a pass that lowers thread local variables on the
+/// This file contains a pass that lowers thread local variables on the
 ///        XCore.
 ///
 //===----------------------------------------------------------------------===//

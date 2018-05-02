@@ -480,7 +480,7 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
   return IsRelocatable && Value.isAbsolute();
 }
 
-/// \brief Helper method for \see EvaluateSymbolAdd().
+/// Helper method for \see EvaluateSymbolAdd().
 static void AttemptToFoldSymbolOffsetDifference(
     const MCAssembler *Asm, const MCAsmLayout *Layout,
     const SectionAddrMap *Addrs, bool InSet, const MCSymbolRefExpr *&A,
@@ -537,7 +537,7 @@ static void AttemptToFoldSymbolOffsetDifference(
   A = B = nullptr;
 }
 
-/// \brief Evaluate the result of an add between (conceptually) two MCValues.
+/// Evaluate the result of an add between (conceptually) two MCValues.
 ///
 /// This routine conceptually attempts to construct an MCValue:
 ///   Result = (Result_A - Result_B + Result_Cst)

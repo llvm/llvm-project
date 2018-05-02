@@ -99,7 +99,7 @@ EnableShrinkWrapOpt("enable-shrink-wrap", cl::Hidden,
 
 namespace {
 
-/// \brief Class to determine where the safe point to insert the
+/// Class to determine where the safe point to insert the
 /// prologue and epilogue are.
 /// Unlike the paper from Fred C. Chow, PLDI'88, that introduces the
 /// shrink-wrapping term for prologue/epilogue placement, this pass
@@ -153,7 +153,7 @@ class ShrinkWrap : public MachineFunctionPass {
   /// Current MachineFunction.
   MachineFunction *MachineFunc;
 
-  /// \brief Check if \p MI uses or defines a callee-saved register or
+  /// Check if \p MI uses or defines a callee-saved register or
   /// a frame index. If this is the case, this means \p MI must happen
   /// after Save and before Restore.
   bool useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS) const;
@@ -173,14 +173,14 @@ class ShrinkWrap : public MachineFunctionPass {
     return CurrentCSRs;
   }
 
-  /// \brief Update the Save and Restore points such that \p MBB is in
+  /// Update the Save and Restore points such that \p MBB is in
   /// the region that is dominated by Save and post-dominated by Restore
   /// and Save and Restore still match the safe point definition.
   /// Such point may not exist and Save and/or Restore may be null after
   /// this call.
   void updateSaveRestorePoints(MachineBasicBlock &MBB, RegScavenger *RS);
 
-  /// \brief Initialize the pass for \p MF.
+  /// Initialize the pass for \p MF.
   void init(MachineFunction &MF) {
     RCI.runOnMachineFunction(MF);
     MDT = &getAnalysis<MachineDominatorTree>();
@@ -206,7 +206,7 @@ class ShrinkWrap : public MachineFunctionPass {
   /// shrink-wrapping.
   bool ArePointsInteresting() const { return Save != Entry && Save && Restore; }
 
-  /// \brief Check if shrink wrapping is enabled for this target and function.
+  /// Check if shrink wrapping is enabled for this target and function.
   static bool isShrinkWrapEnabled(const MachineFunction &MF);
 
 public:
@@ -232,7 +232,7 @@ public:
 
   StringRef getPassName() const override { return "Shrink Wrapping analysis"; }
 
-  /// \brief Perform the shrink-wrapping analysis and update
+  /// Perform the shrink-wrapping analysis and update
   /// the MachineFrameInfo attached to \p MF with the results.
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
@@ -294,7 +294,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
   return false;
 }
 
-/// \brief Helper function to find the immediate (post) dominator.
+/// Helper function to find the immediate (post) dominator.
 template <typename ListOfBBs, typename DominanceAnalysis>
 static MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
                                    DominanceAnalysis &Dom) {

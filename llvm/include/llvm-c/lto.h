@@ -190,7 +190,7 @@ lto_module_create_from_memory_with_path(const void* mem, size_t length,
                                         const char *path);
 
 /**
- * \brief Loads an object file in its own context.
+ * Loads an object file in its own context.
  *
  * Loads an object file in its own LLVMContext.  This function call is
  * thread-safe.  However, modules created this way should not be merged into an
@@ -205,7 +205,7 @@ lto_module_create_in_local_context(const void *mem, size_t length,
                                    const char *path);
 
 /**
- * \brief Loads an object file in the codegen context.
+ * Loads an object file in the codegen context.
  *
  * Loads an object file into the same context as \c cg.  The module is safe to
  * add using \a lto_codegen_add_module().
@@ -345,7 +345,7 @@ extern lto_code_gen_t
 lto_codegen_create(void);
 
 /**
- * \brief Instantiate a code generator in its own context.
+ * Instantiate a code generator in its own context.
  *
  * Instantiates a code generator in its own context.  Modules added via \a
  * lto_codegen_add_module() must have all been created in the same context,
@@ -539,7 +539,7 @@ lto_codegen_set_should_internalize(lto_code_gen_t cg,
                                    lto_bool_t ShouldInternalize);
 
 /**
- * \brief Set whether to embed uselists in bitcode.
+ * Set whether to embed uselists in bitcode.
  *
  * Sets whether \a lto_codegen_write_merged_modules() should embed uselists in
  * output bitcode.  This should be turned on for all -save-temps output.

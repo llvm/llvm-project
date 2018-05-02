@@ -275,7 +275,7 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   return MCOperand::createExpr(Expr);
 }
 
-/// \brief Simplify FOO $imm, %{al,ax,eax,rax} to FOO $imm, for instruction with
+/// Simplify FOO $imm, %{al,ax,eax,rax} to FOO $imm, for instruction with
 /// a short fixed-register form.
 static void SimplifyShortImmForm(MCInst &Inst, unsigned Opcode) {
   unsigned ImmOp = Inst.getNumOperands() - 1;
@@ -298,7 +298,7 @@ static void SimplifyShortImmForm(MCInst &Inst, unsigned Opcode) {
   Inst.addOperand(Saved);
 }
 
-/// \brief If a movsx instruction has a shorter encoding for the used register
+/// If a movsx instruction has a shorter encoding for the used register
 /// simplify the instruction to use it instead.
 static void SimplifyMOVSX(MCInst &Inst) {
   unsigned NewOpcode = 0;
@@ -326,7 +326,7 @@ static void SimplifyMOVSX(MCInst &Inst) {
   }
 }
 
-/// \brief Simplify things like MOV32rm to MOV32o32a.
+/// Simplify things like MOV32rm to MOV32o32a.
 static void SimplifyShortMoveForm(X86AsmPrinter &Printer, MCInst &Inst,
                                   unsigned Opcode) {
   // Don't make these simplifications in 64-bit mode; other assemblers don't
@@ -1061,7 +1061,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
           .addExpr(tlsRef));
 }
 
-/// \brief Emit the largest nop instruction smaller than or equal to \p NumBytes
+/// Emit the largest nop instruction smaller than or equal to \p NumBytes
 /// bytes.  Return the size of nop emitted.
 static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
                         const MCSubtargetInfo &STI) {
@@ -1163,7 +1163,7 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
   return NopSize;
 }
 
-/// \brief Emit the optimal amount of multi-byte nops on X86.
+/// Emit the optimal amount of multi-byte nops on X86.
 static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
                      const MCSubtargetInfo &STI) {
   unsigned NopsToEmit = NumBytes;

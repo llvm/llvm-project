@@ -52,7 +52,7 @@ const int NoreturnPenalty = 10000;
 const unsigned TotalAllocaSizeRecursiveCaller = 1024;
 }
 
-/// \brief Represents the cost of inlining a function.
+/// Represents the cost of inlining a function.
 ///
 /// This supports special values for functions which should "always" or
 /// "never" be inlined. Otherwise, the cost represents a unitless amount;
@@ -68,10 +68,10 @@ class InlineCost {
     NeverInlineCost = INT_MAX
   };
 
-  /// \brief The estimated cost of inlining this callsite.
+  /// The estimated cost of inlining this callsite.
   const int Cost;
 
-  /// \brief The adjusted threshold against which this cost was computed.
+  /// The adjusted threshold against which this cost was computed.
   const int Threshold;
 
   // Trivial constructor, interesting logic in the factory functions below.
@@ -90,7 +90,7 @@ public:
     return InlineCost(NeverInlineCost, 0);
   }
 
-  /// \brief Test whether the inline cost is low enough for inlining.
+  /// Test whether the inline cost is low enough for inlining.
   explicit operator bool() const {
     return Cost < Threshold;
   }
@@ -99,20 +99,20 @@ public:
   bool isNever() const { return Cost == NeverInlineCost; }
   bool isVariable() const { return !isAlways() && !isNever(); }
 
-  /// \brief Get the inline cost estimate.
+  /// Get the inline cost estimate.
   /// It is an error to call this on an "always" or "never" InlineCost.
   int getCost() const {
     assert(isVariable() && "Invalid access of InlineCost");
     return Cost;
   }
 
-  /// \brief Get the threshold against which the cost was computed
+  /// Get the threshold against which the cost was computed
   int getThreshold() const {
     assert(isVariable() && "Invalid access of InlineCost");
     return Threshold;
   }
 
-  /// \brief Get the cost delta from the threshold for inlining.
+  /// Get the cost delta from the threshold for inlining.
   /// Only valid if the cost is of the variable kind. Returns a negative
   /// value if the cost is too high to inline.
   int getCostDelta() const { return Threshold - getCost(); }
@@ -178,7 +178,7 @@ InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
 /// and the call/return instruction.
 int getCallsiteCost(CallSite CS, const DataLayout &DL);
 
-/// \brief Get an InlineCost object representing the cost of inlining this
+/// Get an InlineCost object representing the cost of inlining this
 /// callsite.
 ///
 /// Note that a default threshold is passed into this function. This threshold
@@ -195,7 +195,7 @@ InlineCost getInlineCost(
     Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE = nullptr);
 
-/// \brief Get an InlineCost with the callee explicitly specified.
+/// Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
 /// pointer. This behaves exactly as the version with no explicit callee
 /// parameter in all other respects.
@@ -207,7 +207,7 @@ getInlineCost(CallSite CS, Function *Callee, const InlineParams &Params,
               Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
               ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE);
 
-/// \brief Minimal filter to detect invalid constructs for inlining.
+/// Minimal filter to detect invalid constructs for inlining.
 bool isInlineViable(Function &Callee);
 }
 

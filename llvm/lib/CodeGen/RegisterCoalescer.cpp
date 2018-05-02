@@ -115,11 +115,11 @@ namespace {
     /// checked for smaller live intervals.
     bool ShrinkMainRange;
 
-    /// \brief True if the coalescer should aggressively coalesce global copies
+    /// True if the coalescer should aggressively coalesce global copies
     /// in favor of keeping local copies.
     bool JoinGlobalCopies;
 
-    /// \brief True if the coalescer should aggressively coalesce fall-thru
+    /// True if the coalescer should aggressively coalesce fall-thru
     /// blocks exclusively containing copies.
     bool JoinSplitEdges;
 

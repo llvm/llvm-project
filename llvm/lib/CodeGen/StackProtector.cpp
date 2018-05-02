@@ -225,7 +225,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
   return false;
 }
 
-/// \brief Check whether or not this function needs a stack protector based
+/// Check whether or not this function needs a stack protector based
 /// upon the stack protector level.
 ///
 /// We use two heuristics: a standard (ssp) and strong (sspstrong).

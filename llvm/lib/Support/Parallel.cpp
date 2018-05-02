@@ -19,7 +19,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief An abstract class that takes closures and runs them asynchronously.
+/// An abstract class that takes closures and runs them asynchronously.
 class Executor {
 public:
   virtual ~Executor() = default;
@@ -40,7 +40,7 @@ Executor *Executor::getDefaultExecutor() {
 }
 
 #elif defined(_MSC_VER)
-/// \brief An Executor that runs tasks via ConcRT.
+/// An Executor that runs tasks via ConcRT.
 class ConcRTExecutor : public Executor {
   struct Taskish {
     Taskish(std::function<void()> Task) : Task(Task) {}
@@ -67,7 +67,7 @@ Executor *Executor::getDefaultExecutor() {
 }
 
 #else
-/// \brief An implementation of an Executor that runs closures on a thread pool
+/// An implementation of an Executor that runs closures on a thread pool
 ///   in filo order.
 class ThreadPoolExecutor : public Executor {
 public:

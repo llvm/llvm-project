@@ -74,7 +74,7 @@ public:
   /// Debug information queries.
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 
-  /// \brief Return GPR register class.
+  /// Return GPR register class.
   virtual const TargetRegisterClass *intRegClass(unsigned Size) const = 0;
 
 private:

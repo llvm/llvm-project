@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Utilities to print analysis info for various kinds of passes.
+/// Utilities to print analysis info for various kinds of passes.
 ///
 //===----------------------------------------------------------------------===//
 

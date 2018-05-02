@@ -449,7 +449,7 @@ ModulePass *llvm::createPGOInstrumentationUseLegacyPass(StringRef Filename) {
 
 namespace {
 
-/// \brief An MST based instrumentation for PGO
+/// An MST based instrumentation for PGO
 ///
 /// Implements a Minimum Spanning Tree (MST) based instrumentation for PGO
 /// in the function level.

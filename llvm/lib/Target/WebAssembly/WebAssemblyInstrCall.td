@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly Call operand code-gen constructs.
+/// WebAssembly Call operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

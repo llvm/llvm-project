@@ -343,10 +343,10 @@ public:
   /// Lower the specified LLVM Constant to an MCExpr.
   virtual const MCExpr *lowerConstant(const Constant *CV);
 
-  /// \brief Print a general LLVM constant to the .s file.
+  /// Print a general LLVM constant to the .s file.
   void EmitGlobalConstant(const DataLayout &DL, const Constant *CV);
 
-  /// \brief Unnamed constant global variables solely contaning a pointer to
+  /// Unnamed constant global variables solely contaning a pointer to
   /// another globals variable act like a global variable "proxy", or GOT
   /// equivalents, i.e., it's only used to hold the address of the latter. One
   /// optimization is to replace accesses to these proxies by using the GOT
@@ -356,7 +356,7 @@ public:
   /// accesses to GOT entries.
   void computeGlobalGOTEquivs(Module &M);
 
-  /// \brief Constant expressions using GOT equivalent globals may not be
+  /// Constant expressions using GOT equivalent globals may not be
   /// eligible for PC relative GOT entry conversion, in such cases we need to
   /// emit the proxies we previously omitted in EmitGlobalVariable.
   void emitGlobalGOTEquivs();
@@ -541,10 +541,10 @@ public:
   // Dwarf Lowering Routines
   //===------------------------------------------------------------------===//
 
-  /// \brief Emit frame instruction to describe the layout of the frame.
+  /// Emit frame instruction to describe the layout of the frame.
   void emitCFIInstruction(const MCCFIInstruction &Inst) const;
 
-  /// \brief Emit Dwarf abbreviation table.
+  /// Emit Dwarf abbreviation table.
   template <typename T> void emitDwarfAbbrevs(const T &Abbrevs) const {
     // For each abbreviation.
     for (const auto &Abbrev : Abbrevs)
@@ -556,7 +556,7 @@ public:
 
   void emitDwarfAbbrev(const DIEAbbrev &Abbrev) const;
 
-  /// \brief Recursively emit Dwarf DIE tree.
+  /// Recursively emit Dwarf DIE tree.
   void emitDwarfDIE(const DIE &Die) const;
 
   //===------------------------------------------------------------------===//

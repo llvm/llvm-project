@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file provides WebAssembly-specific target descriptions.
+/// This file provides WebAssembly-specific target descriptions.
 ///
 //===----------------------------------------------------------------------===//
 

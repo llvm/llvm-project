@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file is part of the WebAssembly Assembler.
+/// This file is part of the WebAssembly Assembler.
 ///
 /// It contains code to translate a parsed .s file into MCInsts.
 ///

@@ -59,10 +59,10 @@ private:
   Impl V = unknown;
 };
 
-/// @brief Identify the type of a binary file based on how magical it is.
+/// Identify the type of a binary file based on how magical it is.
 file_magic identify_magic(StringRef magic);
 
-/// @brief Get and identify \a path's type based on its content.
+/// Get and identify \a path's type based on its content.
 ///
 /// @param path Input path.
 /// @param result Set to the type of file, or file_magic::unknown.

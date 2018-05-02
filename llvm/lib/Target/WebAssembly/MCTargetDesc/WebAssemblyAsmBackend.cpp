@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements the WebAssemblyAsmBackend class.
+/// This file implements the WebAssemblyAsmBackend class.
 ///
 //===----------------------------------------------------------------------===//
 

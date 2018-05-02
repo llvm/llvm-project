@@ -1051,7 +1051,7 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
   return IncV;
 }
 
-/// \brief Hoist the addrec instruction chain rooted in the loop phi above the
+/// Hoist the addrec instruction chain rooted in the loop phi above the
 /// position. This routine assumes that this is possible (has been checked).
 void SCEVExpander::hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
                                   Instruction *Pos, PHINode *LoopPhi) {
@@ -1067,7 +1067,7 @@ void SCEVExpander::hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
   } while (InstToHoist != LoopPhi);
 }
 
-/// \brief Check whether we can cheaply express the requested SCEV in terms of
+/// Check whether we can cheaply express the requested SCEV in terms of
 /// the available PHI SCEV by truncation and/or inversion of the step.
 static bool canBeCheaplyTransformed(ScalarEvolution &SE,
                                     const SCEVAddRecExpr *Phi,

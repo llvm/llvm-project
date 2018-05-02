@@ -8572,7 +8572,7 @@ define <16 x i32> @test2_masked_z_16xi32_perm_mask3(<16 x i32> %vec, <16 x i32> 
 define <16 x i32> @test2_16xi32_perm_mem_mask0(<16 x i32>* %vp) {
 ; GENERIC-LABEL: test2_16xi32_perm_mem_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpermilps {{.*#+}} zmm0 = mem[1,0,1,3,5,4,5,7,9,8,9,11,13,12,13,15] sched: [6:1.00]
+; GENERIC-NEXT:    vpermilps {{.*#+}} zmm0 = mem[1,0,1,3,5,4,5,7,9,8,9,11,13,12,13,15] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test2_16xi32_perm_mem_mask0:
@@ -8700,7 +8700,7 @@ define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask2(<16 x i32>* %vp, <16 x i
 define <16 x i32> @test2_16xi32_perm_mem_mask3(<16 x i32>* %vp) {
 ; GENERIC-LABEL: test2_16xi32_perm_mem_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpermilps {{.*#+}} zmm0 = mem[3,1,1,1,7,5,5,5,11,9,9,9,15,13,13,13] sched: [6:1.00]
+; GENERIC-NEXT:    vpermilps {{.*#+}} zmm0 = mem[3,1,1,1,7,5,5,5,11,9,9,9,15,13,13,13] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test2_16xi32_perm_mem_mask3:
@@ -12199,7 +12199,7 @@ define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask0(<8 x float> %vec1, 
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12220,7 +12220,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask0(<8 x float> %v
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask0:
@@ -12239,7 +12239,7 @@ define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask1(<8 x float> %vec1, 
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12260,7 +12260,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask1(<8 x float> %v
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask1:
@@ -12279,7 +12279,7 @@ define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask2(<8 x float> %vec1, 
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12300,7 +12300,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask2(<8 x float> %v
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask2:
@@ -12333,7 +12333,7 @@ define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask3(<8 x float> %vec1, 
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12354,7 +12354,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask3(<8 x float> %v
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask3:
@@ -12546,7 +12546,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask3(<16 x float> %ve
 define <16 x float> @test_16xfloat_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
 ; GENERIC-LABEL: test_16xfloat_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_unpack_low_mem_mask0:
@@ -12561,7 +12561,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask0(<16 x float> %vec
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12582,7 +12582,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask0(<16 x float>
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask0:
@@ -12601,7 +12601,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask1(<16 x float> %vec
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12622,7 +12622,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask1(<16 x float>
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask1:
@@ -12641,7 +12641,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask2(<16 x float> %vec
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12662,7 +12662,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask2(<16 x float>
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask2:
@@ -12680,7 +12680,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask2(<16 x float>
 define <16 x float> @test_16xfloat_unpack_low_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p) {
 ; GENERIC-LABEL: test_16xfloat_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_unpack_low_mem_mask3:
@@ -12695,7 +12695,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask3(<16 x float> %vec
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -12716,7 +12716,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask3(<16 x float>
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask3:
@@ -13104,7 +13104,7 @@ define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask0(<4 x double> %vec
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13125,7 +13125,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask0(<4 x double>
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask0:
@@ -13144,7 +13144,7 @@ define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask1(<4 x double> %vec
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13165,7 +13165,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask1(<4 x double>
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask1:
@@ -13184,7 +13184,7 @@ define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask2(<4 x double> %vec
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13205,7 +13205,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask2(<4 x double>
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask2:
@@ -13238,7 +13238,7 @@ define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask3(<4 x double> %vec
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13259,7 +13259,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask3(<4 x double>
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask3:
@@ -13451,7 +13451,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask3(<8 x double> %ve
 define <8 x double> @test_8xdouble_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
 ; GENERIC-LABEL: test_8xdouble_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_unpack_low_mem_mask0:
@@ -13466,7 +13466,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask0(<8 x double> %vec
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13487,7 +13487,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask0(<8 x double>
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask0:
@@ -13506,7 +13506,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask1(<8 x double> %vec
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13527,7 +13527,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask1(<8 x double>
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask1:
@@ -13546,7 +13546,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask2(<8 x double> %vec
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13567,7 +13567,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask2(<8 x double>
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask2:
@@ -13585,7 +13585,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask2(<8 x double>
 define <8 x double> @test_8xdouble_unpack_low_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p) {
 ; GENERIC-LABEL: test_8xdouble_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_unpack_low_mem_mask3:
@@ -13600,7 +13600,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask3(<8 x double> %vec
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -13621,7 +13621,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask3(<8 x double>
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [6:1.00]
+; GENERIC-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask3:
@@ -14190,7 +14190,7 @@ define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask0(<8 x float> %vec1,
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14211,7 +14211,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask0(<8 x float> %
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask0:
@@ -14230,7 +14230,7 @@ define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask1(<8 x float> %vec1,
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14251,7 +14251,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask1(<8 x float> %
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask1:
@@ -14270,7 +14270,7 @@ define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask2(<8 x float> %vec1,
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14291,7 +14291,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask2(<8 x float> %
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask2:
@@ -14324,7 +14324,7 @@ define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask3(<8 x float> %vec1,
 ; GENERIC-LABEL: test_8xfloat_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14345,7 +14345,7 @@ define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask3(<8 x float> %
 ; GENERIC-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask3:
@@ -14537,7 +14537,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask3(<16 x float> %v
 define <16 x float> @test_16xfloat_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
 ; GENERIC-LABEL: test_16xfloat_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_unpack_high_mem_mask0:
@@ -14552,7 +14552,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask0(<16 x float> %ve
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14573,7 +14573,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask0(<16 x float
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask0:
@@ -14592,7 +14592,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask1(<16 x float> %ve
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14613,7 +14613,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask1(<16 x float
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask1:
@@ -14632,7 +14632,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask2(<16 x float> %ve
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14653,7 +14653,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask2(<16 x float
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask2:
@@ -14671,7 +14671,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask2(<16 x float
 define <16 x float> @test_16xfloat_unpack_high_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p) {
 ; GENERIC-LABEL: test_16xfloat_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_unpack_high_mem_mask3:
@@ -14686,7 +14686,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask3(<16 x float> %ve
 ; GENERIC-LABEL: test_16xfloat_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -14707,7 +14707,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask3(<16 x float
 ; GENERIC-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask3:
@@ -15095,7 +15095,7 @@ define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask0(<4 x double> %ve
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15116,7 +15116,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask0(<4 x double
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask0:
@@ -15135,7 +15135,7 @@ define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask1(<4 x double> %ve
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15156,7 +15156,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask1(<4 x double
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask1:
@@ -15175,7 +15175,7 @@ define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask2(<4 x double> %ve
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15196,7 +15196,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask2(<4 x double
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask2:
@@ -15229,7 +15229,7 @@ define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask3(<4 x double> %ve
 ; GENERIC-LABEL: test_4xdouble_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm2, %ymm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15250,7 +15250,7 @@ define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask3(<4 x double
 ; GENERIC-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %ymm1, %ymm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask3:
@@ -15442,7 +15442,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask3(<8 x double> %v
 define <8 x double> @test_8xdouble_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
 ; GENERIC-LABEL: test_8xdouble_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_unpack_high_mem_mask0:
@@ -15457,7 +15457,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask0(<8 x double> %ve
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15478,7 +15478,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask0(<8 x double
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask0:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask0:
@@ -15497,7 +15497,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask1(<8 x double> %ve
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15518,7 +15518,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask1(<8 x double
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask1:
@@ -15537,7 +15537,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask2(<8 x double> %ve
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15558,7 +15558,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask2(<8 x double
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask2:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask2:
@@ -15576,7 +15576,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask2(<8 x double
 define <8 x double> @test_8xdouble_unpack_high_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p) {
 ; GENERIC-LABEL: test_8xdouble_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_unpack_high_mem_mask3:
@@ -15591,7 +15591,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask3(<8 x double> %ve
 ; GENERIC-LABEL: test_8xdouble_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -15612,7 +15612,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask3(<8 x double
 ; GENERIC-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask3:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmq %zmm1, %zmm1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [6:1.00]
+; GENERIC-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask3:

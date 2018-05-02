@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements the COFF import library dumper for llvm-readobj.
+/// This file implements the COFF import library dumper for llvm-readobj.
 ///
 //===----------------------------------------------------------------------===//
 

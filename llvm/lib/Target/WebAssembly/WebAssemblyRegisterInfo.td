@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file describes the WebAssembly register classes and some nominal
+/// This file describes the WebAssembly register classes and some nominal
 /// physical registers.
 ///
 //===----------------------------------------------------------------------===//

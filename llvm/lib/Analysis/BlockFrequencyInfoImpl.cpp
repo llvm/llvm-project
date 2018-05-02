@@ -74,7 +74,7 @@ using LoopData = BlockFrequencyInfoImplBase::LoopData;
 using Weight = BlockFrequencyInfoImplBase::Weight;
 using FrequencyData = BlockFrequencyInfoImplBase::FrequencyData;
 
-/// \brief Dithering mass distributer.
+/// Dithering mass distributer.
 ///
 /// This class splits up a single mass into portions by weight, dithering to
 /// spread out error.  No mass is lost.  The dithering precision depends on the
@@ -277,7 +277,7 @@ void BlockFrequencyInfoImplBase::clear() {
   Loops.clear();
 }
 
-/// \brief Clear all memory not needed downstream.
+/// Clear all memory not needed downstream.
 ///
 /// Releases all memory not used downstream.  In particular, saves Freqs.
 static void cleanup(BlockFrequencyInfoImplBase &BFI) {
@@ -362,7 +362,7 @@ bool BlockFrequencyInfoImplBase::addLoopSuccessorsToDist(
   return true;
 }
 
-/// \brief Compute the loop scale for a loop.
+/// Compute the loop scale for a loop.
 void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
   // Compute loop scale.
   DEBUG(dbgs() << "compute-loop-scale: " << getLoopName(Loop) << "\n");
@@ -396,7 +396,7 @@ void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
                << " - scale = " << Loop.Scale << "\n");
 }
 
-/// \brief Package up a loop.
+/// Package up a loop.
 void BlockFrequencyInfoImplBase::packageLoop(LoopData &Loop) {
   DEBUG(dbgs() << "packaging-loop: " << getLoopName(Loop) << "\n");
 
@@ -492,7 +492,7 @@ static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI,
   }
 }
 
-/// \brief Unwrap a loop package.
+/// Unwrap a loop package.
 ///
 /// Visits all the members of a loop, adjusting their BlockData according to
 /// the loop's pseudo-node.
@@ -670,7 +670,7 @@ template <> struct GraphTraits<IrreducibleGraph> {
 
 } // end namespace llvm
 
-/// \brief Find extra irreducible headers.
+/// Find extra irreducible headers.
 ///
 /// Find entry blocks and other blocks with backedges, which exist when \c G
 /// contains irreducible sub-SCCs.

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief TargetRegisterInfo interface that is implemented by all hw codegen
+/// TargetRegisterInfo interface that is implemented by all hw codegen
 /// targets.
 //
 //===----------------------------------------------------------------------===//

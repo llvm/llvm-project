@@ -32,18 +32,18 @@ class PreservedAnalyses;
 class raw_ostream;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 
-/// \brief Create and return a pass that writes the module to the specified
+/// Create and return a pass that writes the module to the specified
 /// \c raw_ostream.
 ModulePass *createPrintModulePass(raw_ostream &OS,
                                   const std::string &Banner = "",
                                   bool ShouldPreserveUseListOrder = false);
 
-/// \brief Create and return a pass that prints functions to the specified
+/// Create and return a pass that prints functions to the specified
 /// \c raw_ostream as they are processed.
 FunctionPass *createPrintFunctionPass(raw_ostream &OS,
                                       const std::string &Banner = "");
 
-/// \brief Create and return a pass that writes the BB to the specified
+/// Create and return a pass that writes the BB to the specified
 /// \c raw_ostream.
 BasicBlockPass *createPrintBasicBlockPass(raw_ostream &OS,
                                           const std::string &Banner = "");
@@ -54,7 +54,7 @@ BasicBlockPass *createPrintBasicBlockPass(raw_ostream &OS,
 /// non-printable characters in it.
 void printLLVMNameWithoutPrefix(raw_ostream &OS, StringRef Name);
 
-/// \brief Pass for printing a Module as LLVM's text IR assembly.
+/// Pass for printing a Module as LLVM's text IR assembly.
 ///
 /// Note: This pass is for use with the new pass manager. Use the create...Pass
 /// functions above to create passes for use with the legacy pass manager.
@@ -73,7 +73,7 @@ public:
   static StringRef name() { return "PrintModulePass"; }
 };
 
-/// \brief Pass for printing a Function as LLVM's text IR assembly.
+/// Pass for printing a Function as LLVM's text IR assembly.
 ///
 /// Note: This pass is for use with the new pass manager. Use the create...Pass
 /// functions above to create passes for use with the legacy pass manager.

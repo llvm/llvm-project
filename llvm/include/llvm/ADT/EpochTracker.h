@@ -24,7 +24,7 @@ namespace llvm {
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 
-/// \brief A base class for data structure classes wishing to make iterators
+/// A base class for data structure classes wishing to make iterators
 /// ("handles") pointing into themselves fail-fast.  When building without
 /// asserts, this class is empty and does nothing.
 ///
@@ -39,15 +39,15 @@ class DebugEpochBase {
 public:
   DebugEpochBase() : Epoch(0) {}
 
-  /// \brief Calling incrementEpoch invalidates all handles pointing into the
+  /// Calling incrementEpoch invalidates all handles pointing into the
   /// calling instance.
   void incrementEpoch() { ++Epoch; }
 
-  /// \brief The destructor calls incrementEpoch to make use-after-free bugs
+  /// The destructor calls incrementEpoch to make use-after-free bugs
   /// more likely to crash deterministically.
   ~DebugEpochBase() { incrementEpoch(); }
 
-  /// \brief A base class for iterator classes ("handles") that wish to poll for
+  /// A base class for iterator classes ("handles") that wish to poll for
   /// iterator invalidating modifications in the underlying data structure.
   /// When LLVM is built without asserts, this class is empty and does nothing.
   ///
@@ -65,12 +65,12 @@ public:
     explicit HandleBase(const DebugEpochBase *Parent)
         : EpochAddress(&Parent->Epoch), EpochAtCreation(Parent->Epoch) {}
 
-    /// \brief Returns true if the DebugEpochBase this Handle is linked to has
+    /// Returns true if the DebugEpochBase this Handle is linked to has
     /// not called incrementEpoch on itself since the creation of this
     /// HandleBase instance.
     bool isHandleInSync() const { return *EpochAddress == EpochAtCreation; }
 
-    /// \brief Returns a pointer to the epoch word stored in the data structure
+    /// Returns a pointer to the epoch word stored in the data structure
     /// this handle points into.  Can be used to check if two iterators point
     /// into the same data structure.
     const void *getEpochAddress() const { return EpochAddress; }

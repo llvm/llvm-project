@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-/// \brief SmallVector-backed MemoryBuffer instance.
+/// SmallVector-backed MemoryBuffer instance.
 ///
 /// This class enables efficient construction of MemoryBuffers from SmallVector
 /// instances. This is useful for MCJIT and Orc, where object files are streamed
@@ -29,7 +29,7 @@ namespace llvm {
 /// MemoryBuffer).
 class SmallVectorMemoryBuffer : public MemoryBuffer {
 public:
-  /// \brief Construct an SmallVectorMemoryBuffer from the given SmallVector
+  /// Construct an SmallVectorMemoryBuffer from the given SmallVector
   /// r-value.
   ///
   /// FIXME: It'd be nice for this to be a non-templated constructor taking a
@@ -42,7 +42,7 @@ public:
     init(this->SV.begin(), this->SV.end(), false);
   }
 
-  /// \brief Construct a named SmallVectorMemoryBuffer from the given
+  /// Construct a named SmallVectorMemoryBuffer from the given
   /// SmallVector r-value and StringRef.
   SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV, StringRef Name)
       : SV(std::move(SV)), BufferName(Name) {

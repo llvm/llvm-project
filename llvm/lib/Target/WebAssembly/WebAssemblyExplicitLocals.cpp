@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file converts any remaining registers into WebAssembly locals.
+/// This file converts any remaining registers into WebAssembly locals.
 ///
 /// After register stackification and register coloring, convert non-stackified
 /// registers into locals, inserting explicit get_local and set_local

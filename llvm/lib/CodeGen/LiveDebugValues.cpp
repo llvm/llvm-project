@@ -65,7 +65,7 @@ using namespace llvm;
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
 
-// \brief If @MI is a DBG_VALUE with debug value described by a defined
+// If @MI is a DBG_VALUE with debug value described by a defined
 // register, returns the number of this register. In the other case, returns 0.
 static unsigned isDbgValueDescribedByReg(const MachineInstr &MI) {
   assert(MI.isDebugValue() && "expected a DBG_VALUE");

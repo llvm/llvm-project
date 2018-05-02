@@ -96,14 +96,14 @@ ExecutionEngine::~ExecutionEngine() {
 }
 
 namespace {
-/// \brief Helper class which uses a value handler to automatically deletes the
+/// Helper class which uses a value handler to automatically deletes the
 /// memory block when the GlobalVariable is destroyed.
 class GVMemoryBlock final : public CallbackVH {
   GVMemoryBlock(const GlobalVariable *GV)
     : CallbackVH(const_cast<GlobalVariable*>(GV)) {}
 
 public:
-  /// \brief Returns the address the GlobalVariable should be written into.  The
+  /// Returns the address the GlobalVariable should be written into.  The
   /// GVMemoryBlock object prefixes that.
   static char *Create(const GlobalVariable *GV, const DataLayout& TD) {
     Type *ElTy = GV->getValueType();
@@ -589,7 +589,7 @@ void *ExecutionEngine::getPointerToGlobal(const GlobalValue *GV) {
   return getPointerToGlobalIfAvailable(GV);
 }
 
-/// \brief Converts a Constant* into a GenericValue, including handling of
+/// Converts a Constant* into a GenericValue, including handling of
 /// ConstantExpr values.
 GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
   // If its undefined, return the garbage.

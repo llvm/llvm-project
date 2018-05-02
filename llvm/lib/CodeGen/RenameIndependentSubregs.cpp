@@ -77,20 +77,20 @@ private:
   /// Split unrelated subregister components and rename them to new vregs.
   bool renameComponents(LiveInterval &LI) const;
 
-  /// \brief Build a vector of SubRange infos and a union find set of
+  /// Build a vector of SubRange infos and a union find set of
   /// equivalence classes.
   /// Returns true if more than 1 equivalence class was found.
   bool findComponents(IntEqClasses &Classes,
                       SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
                       LiveInterval &LI) const;
 
-  /// \brief Distribute the LiveInterval segments into the new LiveIntervals
+  /// Distribute the LiveInterval segments into the new LiveIntervals
   /// belonging to their class.
   void distribute(const IntEqClasses &Classes,
                   const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
                   const SmallVectorImpl<LiveInterval*> &Intervals) const;
 
-  /// \brief Constructs main liverange and add missing undef+dead flags.
+  /// Constructs main liverange and add missing undef+dead flags.
   void computeMainRangesFixFlags(const IntEqClasses &Classes,
       const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
       const SmallVectorImpl<LiveInterval*> &Intervals) const;

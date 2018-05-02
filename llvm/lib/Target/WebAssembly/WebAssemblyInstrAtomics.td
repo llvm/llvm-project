@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly Atomic operand code-gen constructs.
+/// WebAssembly Atomic operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

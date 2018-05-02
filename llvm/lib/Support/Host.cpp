@@ -840,9 +840,9 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::AMDFAM15H_BDVER3;
       break; // "bdver3"; 30h-3Fh: Steamroller
     }
-    if (Model >= 0x10 && Model <= 0x1f) {
+    if ((Model >= 0x10 && Model <= 0x1f) || Model == 0x02) {
       *Subtype = X86::AMDFAM15H_BDVER2;
-      break; // "bdver2"; 10h-1Fh: Piledriver
+      break; // "bdver2"; 02h, 10h-1Fh: Piledriver
     }
     if (Model <= 0x0f) {
       *Subtype = X86::AMDFAM15H_BDVER1;
@@ -1261,6 +1261,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;
   Features["rdpid"]           = HasLeaf7 && ((ECX >> 22) & 1);
   Features["cldemote"]        = HasLeaf7 && ((ECX >> 25) & 1);
+  Features["movdiri"]         = HasLeaf7 && ((ECX >> 27) & 1);
+  Features["movdir64b"]       = HasLeaf7 && ((ECX >> 28) & 1);
 
   Features["ibt"] = HasLeaf7 && ((EDX >> 20) & 1);
 

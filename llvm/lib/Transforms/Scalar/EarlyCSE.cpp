@@ -80,7 +80,7 @@ DEBUG_COUNTER(CSECounter, "early-cse",
 
 namespace {
 
-/// \brief Struct representing the available values in the scoped hash table.
+/// Struct representing the available values in the scoped hash table.
 struct SimpleValue {
   Instruction *Inst;
 
@@ -243,7 +243,7 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
 
 namespace {
 
-/// \brief Struct representing the available call values in the scoped hash
+/// Struct representing the available call values in the scoped hash
 /// table.
 struct CallValue {
   Instruction *Inst;
@@ -309,7 +309,7 @@ bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
 
 namespace {
 
-/// \brief A simple and fast domtree-based CSE pass.
+/// A simple and fast domtree-based CSE pass.
 ///
 /// This pass does a simple depth-first walk over the dominator tree,
 /// eliminating trivially redundant instructions and using instsimplify to
@@ -333,7 +333,7 @@ public:
       ScopedHashTable<SimpleValue, Value *, DenseMapInfo<SimpleValue>,
                       AllocatorTy>;
 
-  /// \brief A scoped hash table of the current values of all of our simple
+  /// A scoped hash table of the current values of all of our simple
   /// scalar expressions.
   ///
   /// As we walk down the domtree, we look to see if instructions are in this:
@@ -388,7 +388,7 @@ public:
                       InvariantMapAllocator>;
   InvariantHTType AvailableInvariants;
 
-  /// \brief A scoped hash table of the current values of read-only call
+  /// A scoped hash table of the current values of read-only call
   /// values.
   ///
   /// It uses the same generation count as loads.
@@ -396,10 +396,10 @@ public:
       ScopedHashTable<CallValue, std::pair<Instruction *, unsigned>>;
   CallHTType AvailableCalls;
 
-  /// \brief This is the current generation of the memory value.
+  /// This is the current generation of the memory value.
   unsigned CurrentGeneration = 0;
 
-  /// \brief Set up the EarlyCSE runner for a particular function.
+  /// Set up the EarlyCSE runner for a particular function.
   EarlyCSE(const DataLayout &DL, const TargetLibraryInfo &TLI,
            const TargetTransformInfo &TTI, DominatorTree &DT,
            AssumptionCache &AC, MemorySSA *MSSA)
@@ -473,7 +473,7 @@ private:
     bool Processed = false;
   };
 
-  /// \brief Wrapper class to handle memory instructions, including loads,
+  /// Wrapper class to handle memory instructions, including loads,
   /// stores and intrinsic loads and stores defined by the target.
   class ParseMemoryInst {
   public:
@@ -1193,7 +1193,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
 
 namespace {
 
-/// \brief A simple and fast domtree-based CSE pass.
+/// A simple and fast domtree-based CSE pass.
 ///
 /// This pass does a simple depth-first walk over the dominator tree,
 /// eliminating trivially redundant instructions and using instsimplify to

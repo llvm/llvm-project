@@ -1215,7 +1215,7 @@ inline APFloat abs(APFloat X) {
   return X;
 }
 
-/// \brief Returns the negated value of the argument.
+/// Returns the negated value of the argument.
 inline APFloat neg(APFloat X) {
   X.changeSign();
   return X;

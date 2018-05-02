@@ -46,7 +46,7 @@
 namespace llvm {
 namespace cflaa {
 
-/// \brief The Program Expression Graph (PEG) of CFL analysis
+/// The Program Expression Graph (PEG) of CFL analysis
 /// CFLGraph is auxiliary data structure used by CFL-based alias analysis to
 /// describe flow-insensitive pointer-related behaviors. Given an LLVM function,
 /// the main purpose of this graph is to abstract away unrelated facts and
@@ -154,7 +154,7 @@ public:
   }
 };
 
-///\brief A builder class used to create CFLGraph instance from a given function
+///A builder class used to create CFLGraph instance from a given function
 /// The CFL-AA that uses this builder must provide its own type as a template
 /// argument. This is necessary for interprocedural processing: CFLGraphBuilder
 /// needs a way of obtaining the summary of other functions when callinsts are
@@ -515,14 +515,16 @@ template <typename CFLAA> class CFLGraphBuilder {
         visitGEP(*GEPOp);
         break;
       }
+
       case Instruction::PtrToInt: {
-        auto *Ptr = CE->getOperand(0);
-        addNode(Ptr, getAttrEscaped());
+        addNode(CE->getOperand(0), getAttrEscaped());
         break;
       }
-      case Instruction::IntToPtr:
+
+      case Instruction::IntToPtr: {
         addNode(CE, getAttrUnknown());
         break;
+      }
 
       case Instruction::BitCast:
       case Instruction::AddrSpaceCast:
@@ -535,48 +537,23 @@ template <typename CFLAA> class CFLGraphBuilder {
       case Instruction::SIToFP:
       case Instruction::FPToUI:
       case Instruction::FPToSI: {
-        auto *Src = CE->getOperand(0);
-        addAssignEdge(Src, CE);
+        addAssignEdge(CE->getOperand(0), CE);
         break;
       }
-      case Instruction::Select: {
-        auto *TrueVal = CE->getOperand(0);
-        auto *FalseVal = CE->getOperand(1);
-        addAssignEdge(TrueVal, CE);
-        addAssignEdge(FalseVal, CE);
-        break;
-      }
-      case Instruction::InsertElement: {
-        auto *Vec = CE->getOperand(0);
-        auto *Val = CE->getOperand(1);
-        addAssignEdge(Vec, CE);
-        addStoreEdge(Val, CE);
-        break;
-      }
-      case Instruction::ExtractElement: {
-        auto *Ptr = CE->getOperand(0);
-        addLoadEdge(Ptr, CE);
-        break;
-      }
+
+      case Instruction::InsertElement:
       case Instruction::InsertValue: {
-        auto *Agg = CE->getOperand(0);
-        auto *Val = CE->getOperand(1);
-        addAssignEdge(Agg, CE);
-        addStoreEdge(Val, CE);
+        addAssignEdge(CE->getOperand(0), CE);
+        addStoreEdge(CE->getOperand(1), CE);
         break;
       }
+
+      case Instruction::ExtractElement:
       case Instruction::ExtractValue: {
-        auto *Ptr = CE->getOperand(0);
-        addLoadEdge(Ptr, CE);
+        addLoadEdge(CE->getOperand(0), CE);
         break;
       }
-      case Instruction::ShuffleVector: {
-        auto *From1 = CE->getOperand(0);
-        auto *From2 = CE->getOperand(1);
-        addAssignEdge(From1, CE);
-        addAssignEdge(From2, CE);
-        break;
-      }
+
       case Instruction::Add:
       case Instruction::Sub:
       case Instruction::FSub:
@@ -596,9 +573,12 @@ template <typename CFLAA> class CFLGraphBuilder {
       case Instruction::AShr:
       case Instruction::ICmp:
       case Instruction::FCmp:
+      case Instruction::Select:
+      case Instruction::ShuffleVector: {
         addAssignEdge(CE->getOperand(0), CE);
         addAssignEdge(CE->getOperand(1), CE);
         break;
+      }
 
       default:
         llvm_unreachable("Unknown instruction type encountered!");

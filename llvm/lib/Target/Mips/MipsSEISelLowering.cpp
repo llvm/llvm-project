@@ -2348,7 +2348,7 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
-/// \brief Check if the given BuildVectorSDNode is a splat.
+/// Check if the given BuildVectorSDNode is a splat.
 /// This method currently relies on DAG nodes being reused when equivalent,
 /// so it's possible for this to return false even when isConstantSplat returns
 /// true.

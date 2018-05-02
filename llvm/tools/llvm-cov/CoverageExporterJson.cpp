@@ -44,10 +44,10 @@
 #include "CoverageExporterJson.h"
 #include "CoverageReport.h"
 
-/// \brief The semantic version combined as a string.
+/// The semantic version combined as a string.
 #define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
 
-/// \brief Unique type identifier for JSON coverage export.
+/// Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
 
 using namespace llvm;

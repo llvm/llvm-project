@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly Memory operand code-gen constructs.
+/// WebAssembly Memory operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

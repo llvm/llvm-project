@@ -42,7 +42,7 @@
 
 namespace mca {
 
-/// \brief A region of assembly code.
+/// A region of assembly code.
 ///
 /// It identifies a sequence of machine instructions.
 class CodeRegion {

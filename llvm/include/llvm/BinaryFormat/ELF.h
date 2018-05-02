@@ -658,8 +658,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_NONE = 0x000,
 
   // R600-based processors.
-  EF_AMDGPU_MACH_R600_FIRST = 0x001,
-  EF_AMDGPU_MACH_R600_LAST = 0x010,
+
   // Radeon HD 2000/3000 Series (R600).
   EF_AMDGPU_MACH_R600_R600 = 0x001,
   EF_AMDGPU_MACH_R600_R630 = 0x002,
@@ -685,9 +684,12 @@ enum : unsigned {
   EF_AMDGPU_MACH_R600_RESERVED_FIRST = 0x011,
   EF_AMDGPU_MACH_R600_RESERVED_LAST = 0x01f,
 
+  // First/last R600-based processors.
+  EF_AMDGPU_MACH_R600_FIRST = EF_AMDGPU_MACH_R600_R600,
+  EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
+
   // AMDGCN-based processors.
-  EF_AMDGPU_MACH_AMDGCN_FIRST = 0x020,
-  EF_AMDGPU_MACH_AMDGCN_LAST = 0x02f,
+
   // AMDGCN GFX6.
   EF_AMDGPU_MACH_AMDGCN_GFX600 = 0x020,
   EF_AMDGPU_MACH_AMDGCN_GFX601 = 0x021,
@@ -711,6 +713,10 @@ enum : unsigned {
   // Reserved for AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_RESERVED0 = 0x027,
   EF_AMDGPU_MACH_AMDGCN_RESERVED1 = 0x030,
+
+  // First/last AMDGCN-based processors.
+  EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX906,
 
   // Indicates if the xnack target feature is enabled for all code contained in
   // the object.

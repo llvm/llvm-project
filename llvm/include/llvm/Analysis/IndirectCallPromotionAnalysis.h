@@ -48,7 +48,7 @@ private:
 public:
   ICallPromotionAnalysis();
 
-  /// \brief Returns reference to array of InstrProfValueData for the given
+  /// Returns reference to array of InstrProfValueData for the given
   /// instruction \p I.
   ///
   /// The \p NumVals, \p TotalCount and \p NumCandidates

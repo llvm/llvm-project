@@ -49,33 +49,33 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// determineCalleeSaves().
   bool HasStackFrame = false;
 
-  /// \brief Amount of stack frame size, not including callee-saved registers.
+  /// Amount of stack frame size, not including callee-saved registers.
   unsigned LocalStackSize;
 
-  /// \brief Amount of stack frame size used for saving callee-saved registers.
+  /// Amount of stack frame size used for saving callee-saved registers.
   unsigned CalleeSavedStackSize;
 
-  /// \brief Number of TLS accesses using the special (combinable)
+  /// Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
   unsigned NumLocalDynamicTLSAccesses = 0;
 
-  /// \brief FrameIndex for start of varargs area for arguments passed on the
+  /// FrameIndex for start of varargs area for arguments passed on the
   /// stack.
   int VarArgsStackIndex = 0;
 
-  /// \brief FrameIndex for start of varargs area for arguments passed in
+  /// FrameIndex for start of varargs area for arguments passed in
   /// general purpose registers.
   int VarArgsGPRIndex = 0;
 
-  /// \brief Size of the varargs area for arguments passed in general purpose
+  /// Size of the varargs area for arguments passed in general purpose
   /// registers.
   unsigned VarArgsGPRSize = 0;
 
-  /// \brief FrameIndex for start of varargs area for arguments passed in
+  /// FrameIndex for start of varargs area for arguments passed in
   /// floating-point registers.
   int VarArgsFPRIndex = 0;
 
-  /// \brief Size of the varargs area for arguments passed in floating-point
+  /// Size of the varargs area for arguments passed in floating-point
   /// registers.
   unsigned VarArgsFPRSize = 0;
 
@@ -91,7 +91,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// other stack allocations.
   bool CalleeSaveStackHasFreeSpace = false;
 
-  /// \brief Has a value when it is known whether or not the function uses a
+  /// Has a value when it is known whether or not the function uses a
   /// redzone, and no value otherwise.
   /// Initialized during frame lowering, unless the function has the noredzone
   /// attribute, in which case it is set to false at construction.

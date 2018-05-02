@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains a printer that converts from our internal
+/// This file contains a printer that converts from our internal
 /// representation of machine-dependent LLVM code to the WebAssembly assembly
 /// language.
 ///

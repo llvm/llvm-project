@@ -31,7 +31,7 @@
 
 namespace llvm {
 
-/// \brief An union-find based Minimum Spanning Tree for CFG
+/// An union-find based Minimum Spanning Tree for CFG
 ///
 /// Implements a Union-find algorithm to compute Minimum Spanning Tree
 /// for a given CFG.

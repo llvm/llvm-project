@@ -35,7 +35,7 @@ public:
                   FunctionAnalysisManager::Invalidator &);
 };
 
-/// \brief Analysis pass which computes a \c PostDominatorTree.
+/// Analysis pass which computes a \c PostDominatorTree.
 class PostDominatorTreeAnalysis
     : public AnalysisInfoMixin<PostDominatorTreeAnalysis> {
   friend AnalysisInfoMixin<PostDominatorTreeAnalysis>;
@@ -43,15 +43,15 @@ class PostDominatorTreeAnalysis
   static AnalysisKey Key;
 
 public:
-  /// \brief Provide the result type for this analysis pass.
+  /// Provide the result type for this analysis pass.
   using Result = PostDominatorTree;
 
-  /// \brief Run the analysis pass over a function and produce a post dominator
+  /// Run the analysis pass over a function and produce a post dominator
   ///        tree.
   PostDominatorTree run(Function &F, FunctionAnalysisManager &);
 };
 
-/// \brief Printer pass for the \c PostDominatorTree.
+/// Printer pass for the \c PostDominatorTree.
 class PostDominatorTreePrinterPass
     : public PassInfoMixin<PostDominatorTreePrinterPass> {
   raw_ostream &OS;

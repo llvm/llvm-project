@@ -198,7 +198,7 @@ static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
 }
 
 namespace {
-/// \brief An assembly annotator class to print must execute information in
+/// An assembly annotator class to print must execute information in
 /// comments.
 class MustExecuteAnnotatedWriter : public AssemblyAnnotationWriter {
   DenseMap<const Value*, SmallVector<Loop*, 4> > MustExec;

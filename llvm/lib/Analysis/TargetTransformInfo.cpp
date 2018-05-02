@@ -31,7 +31,7 @@ static cl::opt<bool> EnableReduxCost("costmodel-reduxcost", cl::init(false),
                                      cl::desc("Recognize reduction patterns."));
 
 namespace {
-/// \brief No-op implementation of the TTI interface using the utility base
+/// No-op implementation of the TTI interface using the utility base
 /// classes.
 ///
 /// This is used when no target specific information is available.

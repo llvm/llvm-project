@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Computations in WWM can overwrite values in inactive channels for
+/// Computations in WWM can overwrite values in inactive channels for
 /// variables that the register allocator thinks are dead. This pass adds fake
 /// uses of those variables to WWM instructions to make sure that they aren't
 /// overwritten.

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief The ELF component of yaml2obj.
+/// The ELF component of yaml2obj.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -103,7 +103,7 @@ static void zero(T &Obj) {
 }
 
 namespace {
-/// \brief "Single point of truth" for the ELF file construction.
+/// "Single point of truth" for the ELF file construction.
 /// TODO: This class still has a ways to go before it is truly a "single
 /// point of truth".
 template <class ELFT>
@@ -117,13 +117,13 @@ class ELFState {
 
   enum class SymtabType { Static, Dynamic };
 
-  /// \brief The future ".strtab" section.
+  /// The future ".strtab" section.
   StringTableBuilder DotStrtab{StringTableBuilder::ELF};
 
-  /// \brief The future ".shstrtab" section.
+  /// The future ".shstrtab" section.
   StringTableBuilder DotShStrtab{StringTableBuilder::ELF};
 
-  /// \brief The future ".dynstr" section.
+  /// The future ".dynstr" section.
   StringTableBuilder DotDynstr{StringTableBuilder::ELF};
 
   NameToIdxMap SN2I;

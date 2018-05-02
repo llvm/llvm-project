@@ -595,7 +595,7 @@ void llvm::sys::RunInterruptHandlers() {
   Cleanup();
 }
 
-/// \brief Find the Windows Registry Key for a given location.
+/// Find the Windows Registry Key for a given location.
 ///
 /// \returns a valid HKEY if the location exists, else NULL.
 static HKEY FindWERKey(const llvm::Twine &RegistryLocation) {
@@ -608,7 +608,7 @@ static HKEY FindWERKey(const llvm::Twine &RegistryLocation) {
   return Key;
 }
 
-/// \brief Populate ResultDirectory with the value for "DumpFolder" for a given
+/// Populate ResultDirectory with the value for "DumpFolder" for a given
 /// Windows Registry key.
 ///
 /// \returns true if a valid value for DumpFolder exists, false otherwise.
@@ -649,7 +649,7 @@ static bool GetDumpFolder(HKEY Key,
   return true;
 }
 
-/// \brief Populate ResultType with a valid MINIDUMP_TYPE based on the value of
+/// Populate ResultType with a valid MINIDUMP_TYPE based on the value of
 /// "DumpType" for a given Windows Registry key.
 ///
 /// According to
@@ -696,7 +696,7 @@ static bool GetDumpType(HKEY Key, MINIDUMP_TYPE &ResultType) {
   return true;
 }
 
-/// \brief Write a Windows dump file containing process information that can be
+/// Write a Windows dump file containing process information that can be
 /// used for post-mortem debugging.
 ///
 /// \returns zero error code if a mini dump created, actual error code

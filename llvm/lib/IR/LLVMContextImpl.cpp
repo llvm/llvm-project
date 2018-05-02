@@ -155,7 +155,7 @@ void Module::dropTriviallyDeadConstantArrays() {
 
 namespace llvm {
 
-/// \brief Make MDOperand transparent for hashing.
+/// Make MDOperand transparent for hashing.
 ///
 /// This overload of an implementation detail of the hashing library makes
 /// MDOperand hash to the same value as a \a Metadata pointer.

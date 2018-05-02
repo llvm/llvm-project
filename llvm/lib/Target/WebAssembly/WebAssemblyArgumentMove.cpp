@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file moves ARGUMENT instructions after ScheduleDAG scheduling.
+/// This file moves ARGUMENT instructions after ScheduleDAG scheduling.
 ///
 /// Arguments are really live-in registers, however, since we use virtual
 /// registers and LLVM doesn't support live-in virtual registers, we're

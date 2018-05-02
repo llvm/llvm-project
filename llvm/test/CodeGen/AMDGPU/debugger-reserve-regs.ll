@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=amdgcn--amdhsa-amdgiz -mcpu=fiji -mattr=+amdgpu-debugger-reserve-regs -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa-amdgiz -mcpu=gfx901 -mattr=+amdgpu-debugger-reserve-regs -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa-amdgiz -mcpu=gfx900 -mattr=+amdgpu-debugger-reserve-regs -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "A5"
 ; CHECK: reserved_vgpr_first = {{[0-9]+}}
 ; CHECK-NEXT: reserved_vgpr_count = 4

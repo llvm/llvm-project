@@ -338,7 +338,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   }
 }
 
-/// \brief Update the branch weights of the latch of a peeled-off loop
+/// Update the branch weights of the latch of a peeled-off loop
 /// iteration.
 /// This sets the branch weights for the latch of the recently peeled off loop
 /// iteration correctly. 
@@ -379,7 +379,7 @@ static void updateBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
   }
 }
 
-/// \brief Clones the body of the loop L, putting it between \p InsertTop and \p
+/// Clones the body of the loop L, putting it between \p InsertTop and \p
 /// InsertBot.
 /// \param IterNumber The serial number of the iteration currently being
 /// peeled off.
@@ -488,7 +488,7 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
     LVMap[KV.first] = KV.second;
 }
 
-/// \brief Peel off the first \p PeelCount iterations of loop \p L.
+/// Peel off the first \p PeelCount iterations of loop \p L.
 ///
 /// Note that this does not peel them off as a single straight-line block.
 /// Rather, each iteration is peeled off separately, and needs to check the

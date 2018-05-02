@@ -379,6 +379,12 @@ def FeatureRetpolineExternalThunk
           "Enable retpoline, but with an externally provided thunk.",
           [FeatureRetpoline]>;
 
+// Direct Move instructions.
+def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
+                                       "Support movdiri instruction">;
+def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
+                                        "Support movdir64b instruction">;
+
 //===----------------------------------------------------------------------===//
 // Register File Description
 //===----------------------------------------------------------------------===//
@@ -629,6 +635,8 @@ class TremontProc<string Name> : ProcModel<Name, SLMModel,
   ProcIntelTRM,
   FeatureCLDEMOTE,
   FeatureGFNI,
+  FeatureMOVDIRI,
+  FeatureMOVDIR64B,
   FeatureRDPID,
   FeatureSGX,
   FeatureWAITPKG

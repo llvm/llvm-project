@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This pass removes redundant S_OR_B64 instructions enabling lanes in
+/// This pass removes redundant S_OR_B64 instructions enabling lanes in
 /// the exec. If two SI_END_CF (lowered as S_OR_B64) come together without any
 /// vector instructions between them we can only keep outer SI_END_CF, given
 /// that CFG is structured and exec bits of the outer end statement are always

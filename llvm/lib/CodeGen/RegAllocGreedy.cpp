@@ -300,17 +300,17 @@ class RAGreedy : public MachineFunctionPass,
     EvicteeInfo Evictees;
 
   public:
-    /// \brief Clear all eviction information.
+    /// Clear all eviction information.
     void clear() { Evictees.clear(); }
 
-    /// \brief  Clear eviction information for the given evictee Vreg.
+    ///  Clear eviction information for the given evictee Vreg.
     /// E.g. when Vreg get's a new allocation, the old eviction info is no
     /// longer relevant.
     /// \param Evictee The evictee Vreg for whom we want to clear collected
     /// eviction info.
     void clearEvicteeInfo(unsigned Evictee) { Evictees.erase(Evictee); }
 
-    /// \brief Track new eviction.
+    /// Track new eviction.
     /// The Evictor vreg has evicted the Evictee vreg from Physreg.
     /// \praram PhysReg The phisical register Evictee was evicted from.
     /// \praram Evictor The evictor Vreg that evicted Evictee.
@@ -937,7 +937,7 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
   return true;
 }
 
-/// \brief Return true if all interferences between VirtReg and PhysReg between
+/// Return true if all interferences between VirtReg and PhysReg between
 /// Start and End can be evicted.
 ///
 /// \param VirtReg Live range that is about to be assigned.
@@ -989,7 +989,7 @@ bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
   return true;
 }
 
-/// \brief Return tthe physical register that will be best
+/// Return tthe physical register that will be best
 /// candidate for eviction by a local split interval that will be created
 /// between Start and End.
 ///
@@ -1381,7 +1381,7 @@ BlockFrequency RAGreedy::calcSpillCost() {
   return Cost;
 }
 
-/// \brief Check if splitting Evictee will create a local split interval in
+/// Check if splitting Evictee will create a local split interval in
 /// basic block number BBNumber that may cause a bad eviction chain. This is
 /// intended to prevent bad eviction sequences like:
 /// movl	%ebp, 8(%esp)           # 4-byte Spill
@@ -1482,7 +1482,7 @@ bool RAGreedy::splitCanCauseEvictionChain(unsigned Evictee,
   return true;
 }
 
-/// \brief Check if splitting VirtRegToSplit will create a local split interval
+/// Check if splitting VirtRegToSplit will create a local split interval
 /// in basic block number BBNumber that may cause a spill.
 ///
 /// \param VirtRegToSplit The register considered to be split.
@@ -2793,7 +2793,7 @@ void RAGreedy::initializeCSRCost() {
     CSRCost = CSRCost.getFrequency() * (ActualEntry / FixedEntry);
 }
 
-/// \brief Collect the hint info for \p Reg.
+/// Collect the hint info for \p Reg.
 /// The results are stored into \p Out.
 /// \p Out is not cleared before being populated.
 void RAGreedy::collectHintInfo(unsigned Reg, HintsInfo &Out) {
@@ -2817,7 +2817,7 @@ void RAGreedy::collectHintInfo(unsigned Reg, HintsInfo &Out) {
   }
 }
 
-/// \brief Using the given \p List, compute the cost of the broken hints if
+/// Using the given \p List, compute the cost of the broken hints if
 /// \p PhysReg was used.
 /// \return The cost of \p List for \p PhysReg.
 BlockFrequency RAGreedy::getBrokenHintFreq(const HintsInfo &List,
@@ -2830,7 +2830,7 @@ BlockFrequency RAGreedy::getBrokenHintFreq(const HintsInfo &List,
   return Cost;
 }
 
-/// \brief Using the register assigned to \p VirtReg, try to recolor
+/// Using the register assigned to \p VirtReg, try to recolor
 /// all the live ranges that are copy-related with \p VirtReg.
 /// The recoloring is then propagated to all the live-ranges that have
 /// been recolored and so on, until no more copies can be coalesced or
@@ -2909,7 +2909,7 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
   } while (!RecoloringCandidates.empty());
 }
 
-/// \brief Try to recolor broken hints.
+/// Try to recolor broken hints.
 /// Broken hints may be repaired by recoloring when an evicted variable
 /// freed up a register for a larger live-range.
 /// Consider the following example:

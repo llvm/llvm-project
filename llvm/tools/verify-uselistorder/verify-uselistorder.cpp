@@ -83,7 +83,7 @@ struct ValueMapping {
   DenseMap<const Value *, unsigned> IDs;
   std::vector<const Value *> Values;
 
-  /// \brief Construct a value mapping for module.
+  /// Construct a value mapping for module.
   ///
   /// Creates mapping from every value in \c M to an ID.  This mapping includes
   /// un-referencable values.
@@ -96,7 +96,7 @@ struct ValueMapping {
   /// mapping, but others -- which wouldn't be serialized -- are not.
   ValueMapping(const Module &M);
 
-  /// \brief Map a value.
+  /// Map a value.
   ///
   /// Maps a value.  If it's a constant, maps all of its operands first.
   void map(const Value *V);

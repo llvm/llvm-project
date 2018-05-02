@@ -78,3 +78,21 @@ st1h    { z31.d }, p7, [sp, #-1, mul vl]
 // CHECK-ENCODING: [0xff,0xff,0xef,0xe4]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff ff ef e4 <unknown>
+
+st1h    { z0.h }, p0, [x0, x0, lsl #1]
+// CHECK-INST: st1h    { z0.h }, p0, [x0, x0, lsl #1]
+// CHECK-ENCODING: [0x00,0x40,0xa0,0xe4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 a0 e4 <unknown>
+
+st1h    { z0.s }, p0, [x0, x0, lsl #1]
+// CHECK-INST: st1h    { z0.s }, p0, [x0, x0, lsl #1]
+// CHECK-ENCODING: [0x00,0x40,0xc0,0xe4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 c0 e4 <unknown>
+
+st1h    { z0.d }, p0, [x0, x0, lsl #1]
+// CHECK-INST: st1h    { z0.d }, p0, [x0, x0, lsl #1]
+// CHECK-ENCODING: [0x00,0x40,0xe0,0xe4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 e0 e4 <unknown>

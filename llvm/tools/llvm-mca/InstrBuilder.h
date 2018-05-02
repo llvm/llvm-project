@@ -24,7 +24,7 @@ namespace mca {
 
 class DispatchUnit;
 
-/// \brief A builder class that knows how to construct Instruction objects.
+/// A builder class that knows how to construct Instruction objects.
 ///
 /// Every llvm-mca Instruction is described by an object of class InstrDesc.
 /// An InstrDesc describes which registers are read/written by the instruction,

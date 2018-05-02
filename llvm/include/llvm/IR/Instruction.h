@@ -590,7 +590,7 @@ public:
   /// be identical.
   /// @returns true if the specified instruction is the same operation as
   /// the current one.
-  /// @brief Determine if one instruction is the same operation as another.
+  /// Determine if one instruction is the same operation as another.
   bool isSameOperationAs(const Instruction *I, unsigned flags = 0) const;
 
   /// Return true if there are any uses of this instruction in blocks other than

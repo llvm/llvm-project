@@ -31,7 +31,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
 
-// \brief If @MI is a DBG_VALUE with debug value described by a
+// If @MI is a DBG_VALUE with debug value described by a
 // defined register, returns the number of this register.
 // In the other case, returns 0.
 static unsigned isDescribedByReg(const MachineInstr &MI) {
@@ -86,7 +86,7 @@ using RegDescribedVarsMap = std::map<unsigned, SmallVector<InlinedVariable, 1>>;
 
 } // end anonymous namespace
 
-// \brief Claim that @Var is not described by @RegNo anymore.
+// Claim that @Var is not described by @RegNo anymore.
 static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
                                 InlinedVariable Var) {
   const auto &I = RegVars.find(RegNo);
@@ -100,7 +100,7 @@ static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
     RegVars.erase(I);
 }
 
-// \brief Claim that @Var is now described by @RegNo.
+// Claim that @Var is now described by @RegNo.
 static void addRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
                                InlinedVariable Var) {
   assert(RegNo != 0U);
@@ -109,7 +109,7 @@ static void addRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
   VarSet.push_back(Var);
 }
 
-// \brief Terminate the location range for variables described by register at
+// Terminate the location range for variables described by register at
 // @I by inserting @ClobberingInstr to their history.
 static void clobberRegisterUses(RegDescribedVarsMap &RegVars,
                                 RegDescribedVarsMap::iterator I,
@@ -122,7 +122,7 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars,
   RegVars.erase(I);
 }
 
-// \brief Terminate the location range for variables described by register
+// Terminate the location range for variables described by register
 // @RegNo by inserting @ClobberingInstr to their history.
 static void clobberRegisterUses(RegDescribedVarsMap &RegVars, unsigned RegNo,
                                 DbgValueHistoryMap &HistMap,
@@ -133,7 +133,7 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars, unsigned RegNo,
   clobberRegisterUses(RegVars, I, HistMap, ClobberingInstr);
 }
 
-// \brief Returns the first instruction in @MBB which corresponds to
+// Returns the first instruction in @MBB which corresponds to
 // the function epilogue, or nullptr if @MBB doesn't contain an epilogue.
 static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
   auto LastMI = MBB.getLastNonDebugInstr();
@@ -155,7 +155,7 @@ static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
   return &*MBB.begin();
 }
 
-// \brief Collect registers that are modified in the function body (their
+// Collect registers that are modified in the function body (their
 // contents is changed outside of the prologue and epilogue).
 static void collectChangingRegs(const MachineFunction *MF,
                                 const TargetRegisterInfo *TRI,

@@ -357,7 +357,7 @@ public:
     return false;
   }
 
-  /// \brief Return the number of bytes for the header of a unit of
+  /// Return the number of bytes for the header of a unit of
   /// UnitType type.
   ///
   /// This function must be called with a valid unit type which in
@@ -407,14 +407,14 @@ public:
   /// getUnitSection - Return the DWARFUnitSection containing this unit.
   const DWARFUnitSectionBase &getUnitSection() const { return UnitSection; }
 
-  /// \brief Returns the number of DIEs in the unit. Parses the unit
+  /// Returns the number of DIEs in the unit. Parses the unit
   /// if necessary.
   unsigned getNumDIEs() {
     extractDIEsIfNeeded(false);
     return DieArray.size();
   }
 
-  /// \brief Return the index of a DIE inside the unit's DIE vector.
+  /// Return the index of a DIE inside the unit's DIE vector.
   ///
   /// It is illegal to call this method with a DIE that hasn't be
   /// created by this unit. In other word, it's illegal to call this
@@ -424,7 +424,7 @@ public:
     return getDIEIndex(D.getDebugInfoEntry());
   }
 
-  /// \brief Return the DIE object at the given index.
+  /// Return the DIE object at the given index.
   DWARFDie getDIEAtIndex(unsigned Index) {
     assert(Index < DieArray.size());
     return DWARFDie(this, &DieArray[Index]);
@@ -434,7 +434,7 @@ public:
   DWARFDie getSibling(const DWARFDebugInfoEntry *Die);
   DWARFDie getFirstChild(const DWARFDebugInfoEntry *Die);
 
-  /// \brief Return the DIE object for a given offset inside the
+  /// Return the DIE object for a given offset inside the
   /// unit's DIE vector.
   ///
   /// The unit needs to have its DIEs extracted for this method to work.

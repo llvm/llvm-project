@@ -80,7 +80,7 @@ STATISTIC(NumLoopLoadEliminted, "Number of loads eliminated by LLE");
 
 namespace {
 
-/// \brief Represent a store-to-forwarding candidate.
+/// Represent a store-to-forwarding candidate.
 struct StoreToLoadForwardingCandidate {
   LoadInst *Load;
   StoreInst *Store;
@@ -88,7 +88,7 @@ struct StoreToLoadForwardingCandidate {
   StoreToLoadForwardingCandidate(LoadInst *Load, StoreInst *Store)
       : Load(Load), Store(Store) {}
 
-  /// \brief Return true if the dependence from the store to the load has a
+  /// Return true if the dependence from the store to the load has a
   /// distance of one.  E.g. A[i+1] = A[i]
   bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE,
                                  Loop *L) const {
@@ -137,7 +137,7 @@ struct StoreToLoadForwardingCandidate {
 
 } // end anonymous namespace
 
-/// \brief Check if the store dominates all latches, so as long as there is no
+/// Check if the store dominates all latches, so as long as there is no
 /// intervening store this value will be loaded in the next iteration.
 static bool doesStoreDominatesAllLatches(BasicBlock *StoreBlock, Loop *L,
                                          DominatorTree *DT) {
@@ -148,21 +148,21 @@ static bool doesStoreDominatesAllLatches(BasicBlock *StoreBlock, Loop *L,
   });
 }
 
-/// \brief Return true if the load is not executed on all paths in the loop.
+/// Return true if the load is not executed on all paths in the loop.
 static bool isLoadConditional(LoadInst *Load, Loop *L) {
   return Load->getParent() != L->getHeader();
 }
 
 namespace {
 
-/// \brief The per-loop class that does most of the work.
+/// The per-loop class that does most of the work.
 class LoadEliminationForLoop {
 public:
   LoadEliminationForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
                          DominatorTree *DT)
       : L(L), LI(LI), LAI(LAI), DT(DT), PSE(LAI.getPSE()) {}
 
-  /// \brief Look through the loop-carried and loop-independent dependences in
+  /// Look through the loop-carried and loop-independent dependences in
   /// this loop and find store->load dependences.
   ///
   /// Note that no candidate is returned if LAA has failed to analyze the loop
@@ -223,14 +223,14 @@ public:
     return Candidates;
   }
 
-  /// \brief Return the index of the instruction according to program order.
+  /// Return the index of the instruction according to program order.
   unsigned getInstrIndex(Instruction *Inst) {
     auto I = InstOrder.find(Inst);
     assert(I != InstOrder.end() && "No index for instruction");
     return I->second;
   }
 
-  /// \brief If a load has multiple candidates associated (i.e. different
+  /// If a load has multiple candidates associated (i.e. different
   /// stores), it means that it could be forwarding from multiple stores
   /// depending on control flow.  Remove these candidates.
   ///
@@ -294,7 +294,7 @@ public:
     });
   }
 
-  /// \brief Given two pointers operations by their RuntimePointerChecking
+  /// Given two pointers operations by their RuntimePointerChecking
   /// indices, return true if they require an alias check.
   ///
   /// We need a check if one is a pointer for a candidate load and the other is
@@ -310,7 +310,7 @@ public:
             (PtrsWrittenOnFwdingPath.count(Ptr2) && CandLoadPtrs.count(Ptr1)));
   }
 
-  /// \brief Return pointers that are possibly written to on the path from a
+  /// Return pointers that are possibly written to on the path from a
   /// forwarding store to a load.
   ///
   /// These pointers need to be alias-checked against the forwarding candidates.
@@ -367,7 +367,7 @@ public:
     return PtrsWrittenOnFwdingPath;
   }
 
-  /// \brief Determine the pointer alias checks to prove that there are no
+  /// Determine the pointer alias checks to prove that there are no
   /// intervening stores.
   SmallVector<RuntimePointerChecking::PointerCheck, 4> collectMemchecks(
       const SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates) {
@@ -401,7 +401,7 @@ public:
     return Checks;
   }
 
-  /// \brief Perform the transformation for a candidate.
+  /// Perform the transformation for a candidate.
   void
   propagateStoredValueToLoadUsers(const StoreToLoadForwardingCandidate &Cand,
                                   SCEVExpander &SEE) {
@@ -437,7 +437,7 @@ public:
     Cand.Load->replaceAllUsesWith(PHI);
   }
 
-  /// \brief Top-level driver for each loop: find store->load forwarding
+  /// Top-level driver for each loop: find store->load forwarding
   /// candidates, add run-time checks and perform transformation.
   bool processLoop() {
     DEBUG(dbgs() << "\nIn \"" << L->getHeader()->getParent()->getName()
@@ -559,7 +559,7 @@ public:
 private:
   Loop *L;
 
-  /// \brief Maps the load/store instructions to their index according to
+  /// Maps the load/store instructions to their index according to
   /// program order.
   DenseMap<Instruction *, unsigned> InstOrder;
 
@@ -600,7 +600,7 @@ eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
 
 namespace {
 
-/// \brief The pass.  Most of the work is delegated to the per-loop
+/// The pass.  Most of the work is delegated to the per-loop
 /// LoadEliminationForLoop class.
 class LoopLoadElimination : public FunctionPass {
 public:

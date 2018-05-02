@@ -1330,7 +1330,7 @@ void LoopInterchangeTransform::splitInnerLoopHeader() {
                   "InnerLoopHeader\n");
 }
 
-/// \brief Move all instructions except the terminator from FromBB right before
+/// Move all instructions except the terminator from FromBB right before
 /// InsertBefore
 static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
   auto &ToList = InsertBefore->getParent()->getInstList();
@@ -1353,7 +1353,7 @@ void LoopInterchangeTransform::updateIncomingBlock(BasicBlock *CurrBlock,
   }
 }
 
-/// \brief Update BI to jump to NewBB instead of OldBB. Records updates to
+/// Update BI to jump to NewBB instead of OldBB. Records updates to
 /// the dominator tree in DTUpdates, if DT should be preserved.
 static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
                             BasicBlock *NewBB,

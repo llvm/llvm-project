@@ -902,7 +902,7 @@ public:
   inline const VPRecipeBase &back() const { return Recipes.back(); }
   inline VPRecipeBase &back() { return Recipes.back(); }
 
-  /// \brief Returns a pointer to a member of the recipe list.
+  /// Returns a pointer to a member of the recipe list.
   static RecipeListTy VPBasicBlock::*getSublistAccess(VPRecipeBase *) {
     return &VPBasicBlock::Recipes;
   }

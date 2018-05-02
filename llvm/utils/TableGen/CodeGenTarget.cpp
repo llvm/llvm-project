@@ -358,7 +358,7 @@ unsigned CodeGenTarget::getNumFixedInstructions() {
   return array_lengthof(FixedInstrs) - 1;
 }
 
-/// \brief Return all of the instructions defined by the target, ordered by
+/// Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
   const auto &Insts = getInstructions();

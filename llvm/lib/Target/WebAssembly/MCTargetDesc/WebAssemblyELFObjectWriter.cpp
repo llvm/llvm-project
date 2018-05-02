@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file handles ELF-specific object emission, converting LLVM's
+/// This file handles ELF-specific object emission, converting LLVM's
 /// internal fixups into the appropriate relocations.
 ///
 //===----------------------------------------------------------------------===//

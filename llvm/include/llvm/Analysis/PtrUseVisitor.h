@@ -47,7 +47,7 @@ namespace llvm {
 
 namespace detail {
 
-/// \brief Implementation of non-dependent functionality for \c PtrUseVisitor.
+/// Implementation of non-dependent functionality for \c PtrUseVisitor.
 ///
 /// See \c PtrUseVisitor for the public interface and detailed comments about
 /// usage. This class is just a helper base class which is not templated and
@@ -55,7 +55,7 @@ namespace detail {
 /// PtrUseVisitor.
 class PtrUseVisitorBase {
 public:
-  /// \brief This class provides information about the result of a visit.
+  /// This class provides information about the result of a visit.
   ///
   /// After walking all the users (recursively) of a pointer, the basic
   /// infrastructure records some commonly useful information such as escape
@@ -64,7 +64,7 @@ public:
   public:
     PtrInfo() : AbortedInfo(nullptr, false), EscapedInfo(nullptr, false) {}
 
-    /// \brief Reset the pointer info, clearing all state.
+    /// Reset the pointer info, clearing all state.
     void reset() {
       AbortedInfo.setPointer(nullptr);
       AbortedInfo.setInt(false);
@@ -72,37 +72,37 @@ public:
       EscapedInfo.setInt(false);
     }
 
-    /// \brief Did we abort the visit early?
+    /// Did we abort the visit early?
     bool isAborted() const { return AbortedInfo.getInt(); }
 
-    /// \brief Is the pointer escaped at some point?
+    /// Is the pointer escaped at some point?
     bool isEscaped() const { return EscapedInfo.getInt(); }
 
-    /// \brief Get the instruction causing the visit to abort.
+    /// Get the instruction causing the visit to abort.
     /// \returns a pointer to the instruction causing the abort if one is
     /// available; otherwise returns null.
     Instruction *getAbortingInst() const { return AbortedInfo.getPointer(); }
 
-    /// \brief Get the instruction causing the pointer to escape.
+    /// Get the instruction causing the pointer to escape.
     /// \returns a pointer to the instruction which escapes the pointer if one
     /// is available; otherwise returns null.
     Instruction *getEscapingInst() const { return EscapedInfo.getPointer(); }
 
-    /// \brief Mark the visit as aborted. Intended for use in a void return.
+    /// Mark the visit as aborted. Intended for use in a void return.
     /// \param I The instruction which caused the visit to abort, if available.
     void setAborted(Instruction *I = nullptr) {
       AbortedInfo.setInt(true);
       AbortedInfo.setPointer(I);
     }
 
-    /// \brief Mark the pointer as escaped. Intended for use in a void return.
+    /// Mark the pointer as escaped. Intended for use in a void return.
     /// \param I The instruction which escapes the pointer, if available.
     void setEscaped(Instruction *I = nullptr) {
       EscapedInfo.setInt(true);
       EscapedInfo.setPointer(I);
     }
 
-    /// \brief Mark the pointer as escaped, and the visit as aborted. Intended
+    /// Mark the pointer as escaped, and the visit as aborted. Intended
     /// for use in a void return.
     /// \param I The instruction which both escapes the pointer and aborts the
     /// visit, if available.
@@ -121,10 +121,10 @@ protected:
   /// \name Visitation infrastructure
   /// @{
 
-  /// \brief The info collected about the pointer being visited thus far.
+  /// The info collected about the pointer being visited thus far.
   PtrInfo PI;
 
-  /// \brief A struct of the data needed to visit a particular use.
+  /// A struct of the data needed to visit a particular use.
   ///
   /// This is used to maintain a worklist fo to-visit uses. This is used to
   /// make the visit be iterative rather than recursive.
@@ -135,10 +135,10 @@ protected:
     APInt Offset;
   };
 
-  /// \brief The worklist of to-visit uses.
+  /// The worklist of to-visit uses.
   SmallVector<UseToVisit, 8> Worklist;
 
-  /// \brief A set of visited uses to break cycles in unreachable code.
+  /// A set of visited uses to break cycles in unreachable code.
   SmallPtrSet<Use *, 8> VisitedUses;
 
   /// @}
@@ -147,14 +147,14 @@ protected:
   /// This state is reset for each instruction visited.
   /// @{
 
-  /// \brief The use currently being visited.
+  /// The use currently being visited.
   Use *U;
 
-  /// \brief True if we have a known constant offset for the use currently
+  /// True if we have a known constant offset for the use currently
   /// being visited.
   bool IsOffsetKnown;
 
-  /// \brief The constant offset of the use if that is known.
+  /// The constant offset of the use if that is known.
   APInt Offset;
 
   /// @}
@@ -163,13 +163,13 @@ protected:
   /// class, we can't create instances directly of this class.
   PtrUseVisitorBase(const DataLayout &DL) : DL(DL) {}
 
-  /// \brief Enqueue the users of this instruction in the visit worklist.
+  /// Enqueue the users of this instruction in the visit worklist.
   ///
   /// This will visit the users with the same offset of the current visit
   /// (including an unknown offset if that is the current state).
   void enqueueUsers(Instruction &I);
 
-  /// \brief Walk the operands of a GEP and adjust the offset as appropriate.
+  /// Walk the operands of a GEP and adjust the offset as appropriate.
   ///
   /// This routine does the heavy lifting of the pointer walk by computing
   /// offsets and looking through GEPs.
@@ -178,7 +178,7 @@ protected:
 
 } // end namespace detail
 
-/// \brief A base class for visitors over the uses of a pointer value.
+/// A base class for visitors over the uses of a pointer value.
 ///
 /// Once constructed, a user can call \c visit on a pointer value, and this
 /// will walk its uses and visit each instruction using an InstVisitor. It also
@@ -216,7 +216,7 @@ public:
                   "Must pass the derived type to this template!");
   }
 
-  /// \brief Recursively visit the uses of the given pointer.
+  /// Recursively visit the uses of the given pointer.
   /// \returns An info struct about the pointer. See \c PtrInfo for details.
   PtrInfo visitPtr(Instruction &I) {
     // This must be a pointer type. Get an integer type suitable to hold

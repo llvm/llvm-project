@@ -415,11 +415,15 @@ DWARFUnit::getInlinedChainForAddress(uint64_t Address,
   DWARFDie SubroutineDIE =
       (DWO ? DWO.get() : this)->getSubroutineForAddress(Address);
 
-  while (SubroutineDIE) {
-    if (SubroutineDIE.isSubroutineDIE())
+  if (!SubroutineDIE)
+    return;
+
+  while (!SubroutineDIE.isSubprogramDIE()) {
+    if (SubroutineDIE.getTag() == DW_TAG_inlined_subroutine)
       InlinedChain.push_back(SubroutineDIE);
     SubroutineDIE  = SubroutineDIE.getParent();
   }
+  InlinedChain.push_back(SubroutineDIE);
 }
 
 const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,

@@ -1,4 +1,4 @@
-//===- xray-converter.cc - XRay Trace Conversion --------------------------===//
+//===- xray-converter.cpp: XRay Trace Conversion --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

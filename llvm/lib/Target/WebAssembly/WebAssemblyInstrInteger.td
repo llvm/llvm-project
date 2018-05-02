@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly Integer operand code-gen constructs.
+/// WebAssembly Integer operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

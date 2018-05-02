@@ -30,3 +30,9 @@ st1d    { z21.d }, p5, [x10, #5, mul vl]
 // CHECK-ENCODING: [0x55,0xf5,0xe5,0xe5]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 55 f5 e5 e5 <unknown>
+
+st1d    { z0.d }, p0, [x0, x0, lsl #3]
+// CHECK-INST: st1d    { z0.d }, p0, [x0, x0, lsl #3]
+// CHECK-ENCODING: [0x00,0x40,0xe0,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 e0 e5 <unknown>

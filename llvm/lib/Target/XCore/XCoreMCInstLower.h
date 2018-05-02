@@ -21,7 +21,7 @@ namespace llvm {
   class Mangler;
   class AsmPrinter;
 
-/// \brief This class is used to lower an MachineInstr into an MCInst.
+/// This class is used to lower an MachineInstr into an MCInst.
 class LLVM_LIBRARY_VISIBILITY XCoreMCInstLower {
   typedef MachineOperand::MachineOperandType MachineOperandType;
   MCContext *Ctx;

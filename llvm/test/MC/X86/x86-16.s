@@ -981,3 +981,11 @@ umonitor %ax
 // CHECK: umonitor %eax
 // CHECK:  encoding: [0x67,0xf3,0x0f,0xae,0xf0]
 umonitor %eax
+
+// CHECK: movdir64b (%esi), %eax
+// CHECK: encoding: [0x67,0x66,0x0f,0x38,0xf8,0x06]
+movdir64b (%esi), %eax
+
+// CHECK: movdir64b (%si), %ax
+// CHECK: encoding: [0x66,0x0f,0x38,0xf8,0x04]
+movdir64b (%si), %ax

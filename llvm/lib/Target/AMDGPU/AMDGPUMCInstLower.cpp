@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Code to lower AMDGPU MachineInstrs to their corresponding MCInst.
+/// Code to lower AMDGPU MachineInstrs to their corresponding MCInst.
 //
 //===----------------------------------------------------------------------===//
 //

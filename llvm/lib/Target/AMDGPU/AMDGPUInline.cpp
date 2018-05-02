@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This is AMDGPU specific replacement of the standard inliner.
+/// This is AMDGPU specific replacement of the standard inliner.
 /// The main purpose is to account for the fact that calls not only expensive
 /// on the AMDGPU, but much more expensive if a private memory pointer is
 /// passed to a function as an argument. In this situation, we are unable to

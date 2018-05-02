@@ -71,7 +71,7 @@ public:
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
-  /// \brief Wrapper for MCInstLowering.lowerOperand() for the
+  /// Wrapper for MCInstLowering.lowerOperand() for the
   /// tblgen'erated pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return MCInstLowering.lowerOperand(MO, MCOp);
@@ -88,7 +88,7 @@ public:
 
   void EmitSled(const MachineInstr &MI, SledKind Kind);
 
-  /// \brief tblgen'erated driver function for lowering simple MI->MC
+  /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
@@ -131,7 +131,7 @@ private:
 
   AArch64FunctionInfo *AArch64FI = nullptr;
 
-  /// \brief Emit the LOHs contained in AArch64FI.
+  /// Emit the LOHs contained in AArch64FI.
   void EmitLOHs();
 
   /// Emit instruction to set float register to zero.

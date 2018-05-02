@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief SI DAG Lowering interface definition
+/// SI DAG Lowering interface definition
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,7 +64,7 @@ class SITargetLowering final : public AMDGPUTargetLowering {
                                                  SelectionDAG &DAG) const;
   SDValue handleD16VData(SDValue VData, SelectionDAG &DAG) const;
 
-  /// \brief Converts \p Op, which must be of floating point type, to the
+  /// Converts \p Op, which must be of floating point type, to the
   /// floating point type \p VT, by either extending or truncating it.
   SDValue getFPExtOrFPTrunc(SelectionDAG &DAG,
                             SDValue Op,
@@ -75,7 +75,7 @@ class SITargetLowering final : public AMDGPUTargetLowering {
     SelectionDAG &DAG, EVT VT, EVT MemVT, const SDLoc &SL, SDValue Val,
     bool Signed, const ISD::InputArg *Arg = nullptr) const;
 
-  /// \brief Custom lowering for ISD::FP_ROUND for MVT::f16.
+  /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
