@@ -24,6 +24,7 @@ add_llvm_tool(llvm-mca
   llvm-mca.cpp
   RegisterFileStatistics.cpp
   ResourcePressureView.cpp
+  RetireControlUnit.cpp
   RetireControlUnitStatistics.cpp
   Scheduler.cpp
   SchedulerStatistics.cpp

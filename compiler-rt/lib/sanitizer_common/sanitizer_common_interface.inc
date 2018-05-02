@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 // Sanitizer Common interface list.
 //===----------------------------------------------------------------------===//
+INTERFACE_FUNCTION(__sanitizer_acquire_crash_state)
 INTERFACE_FUNCTION(__sanitizer_annotate_contiguous_container)
 INTERFACE_FUNCTION(__sanitizer_contiguous_container_find_bad_address)
 INTERFACE_FUNCTION(__sanitizer_set_death_callback)

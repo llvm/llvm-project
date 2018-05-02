@@ -6616,6 +6616,30 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     return DAG.getNode(Vec.getOpcode(), SL, EltVT, Elt);
   }
 
+  // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)
+  //    =>
+  // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
+  // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
+  // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
+  if (Vec.hasOneUse()) {
+    SDLoc SL(N);
+    EVT EltVT = N->getValueType(0);
+    SDValue Idx = N->getOperand(1);
+    unsigned Opc = Vec.getOpcode();
+
+    switch(Opc) {
+    default:
+      return SDValue();
+      // TODO: Support other binary operations.
+    case ISD::FADD:
+    case ISD::ADD:
+      return DAG.getNode(Opc, SL, EltVT,
+                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                     Vec.getOperand(0), Idx),
+                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                     Vec.getOperand(1), Idx));
+    }
+  }
   return SDValue();
 }
 
