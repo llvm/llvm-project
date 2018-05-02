@@ -318,10 +318,10 @@ namespace PR37146 {
 // Check that IRGen doesn't emit calls to synthesized destructors for
 // non-trival C structs.
 
-// WIN32: define dso_local void @"?test@PR37146@@YAXXZ"()
+// WIN32: define void @"\01?test@PR37146@@YAXXZ"()
 // WIN32: call void @llvm.memset.p0i8.i32(
-// WIN32: call i32 @"?getS@PR37146@@YA?AUS@1@XZ"(
-// WIN32: call void @"?func@PR37146@@YAXUS@1@0@Z"(
+// WIN32: call i32 @"\01?getS@PR37146@@YA?AUS@1@XZ"(
+// WIN32: call void @"\01?func@PR37146@@YAXUS@1@0@Z"(
 // WIN32-NEXT: ret void
 // WIN32-NEXT: {{^}$}}
 
