@@ -1,4 +1,4 @@
-//===- xray-extract.cc - XRay Instrumentation Map Extraction --------------===//
+//===- xray-extract.cpp: XRay Instrumentation Map Extraction --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
