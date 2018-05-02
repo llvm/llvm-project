@@ -470,6 +470,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->isNonTrivialToPrimitiveCopy());
   Record.push_back(D->isNonTrivialToPrimitiveDestroy());
   Record.push_back(D->canPassInRegisters());
+  Record.push_back(D->isParamDestroyedInCallee());
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
@@ -1912,6 +1913,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // isNonTrivialToPrimitiveDestroy
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // canPassInRegisters
+  // isParamDestroyedInCallee
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
 
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset

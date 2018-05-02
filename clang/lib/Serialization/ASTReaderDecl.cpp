@@ -743,6 +743,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setNonTrivialToPrimitiveCopy(Record.readInt());
   RD->setNonTrivialToPrimitiveDestroy(Record.readInt());
   RD->setCanPassInRegisters(Record.readInt());
+  RD->setParamDestroyedInCallee(Record.readInt());
   return Redecl;
 }
 
@@ -4116,6 +4117,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
           OldDD && (OldDD->Definition != RD ||
                     !Reader.PendingFakeDefinitionData.count(OldDD));
       RD->setCanPassInRegisters(Record.readInt());
+      RD->setParamDestroyedInCallee(Record.readInt());
       ReadCXXRecordDefinition(RD, /*Update*/true);
 
       // Visible update is handled separately.
