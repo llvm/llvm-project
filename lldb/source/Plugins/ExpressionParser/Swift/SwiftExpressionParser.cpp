@@ -158,7 +158,10 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
   } break;
   case swift::FileUnitKind::SerializedAST:
   case swift::FileUnitKind::ClangModule: {
-    s.PutCString("SerializedAST, ");
+    if (file_unit->getKind() == swift::FileUnitKind::SerializedAST)
+      s.PutCString("Serialized Swift AST, ");
+    else
+      s.PutCString("Clang module, ");
     swift::LoadedFile *loaded_file = llvm::cast<swift::LoadedFile>(file_unit);
     s.Printf("filename = '%s'", loaded_file->getFilename().str().c_str());
   } break;
