@@ -47,27 +47,22 @@ void NoexceptMoveConstructorCheck::check(
     if (isUnresolvedExceptionSpec(ProtoType->getExceptionSpecType()))
       return;
 
-    switch (ProtoType->getNoexceptSpec(*Result.Context)) {
-    case FunctionProtoType::NR_NoNoexcept:
+    if (!isNoexceptExceptionSpec(ProtoType->getExceptionSpecType())) {
       diag(Decl->getLocation(), "move %0s should be marked noexcept")
           << MethodType;
       // FIXME: Add a fixit.
-      break;
-    case FunctionProtoType::NR_Throw:
-      // Don't complain about nothrow(false), but complain on nothrow(expr)
-      // where expr evaluates to false.
-      if (const Expr *E = ProtoType->getNoexceptExpr()) {
-        if (isa<CXXBoolLiteralExpr>(E))
-          break;
+      return;
+    }
+
+    // Don't complain about nothrow(false), but complain on nothrow(expr)
+    // where expr evaluates to false.
+    if (ProtoType->canThrow() == CT_Can) {
+      Expr *E = ProtoType->getNoexceptExpr();
+      if (!isa<CXXBoolLiteralExpr>(ProtoType->getNoexceptExpr())) {
         diag(E->getExprLoc(),
              "noexcept specifier on the move %0 evaluates to 'false'")
             << MethodType;
       }
-      break;
-    case FunctionProtoType::NR_Nothrow:
-    case FunctionProtoType::NR_Dependent:
-    case FunctionProtoType::NR_BadNoexcept:
-      break;
     }
   }
 }

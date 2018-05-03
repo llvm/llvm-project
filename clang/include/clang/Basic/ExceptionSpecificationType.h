@@ -24,7 +24,9 @@ enum ExceptionSpecificationType {
   EST_Dynamic,          ///< throw(T1, T2)
   EST_MSAny,            ///< Microsoft throw(...) extension
   EST_BasicNoexcept,    ///< noexcept
-  EST_ComputedNoexcept, ///< noexcept(expression)
+  EST_DependentNoexcept,///< noexcept(expression), value-dependent
+  EST_NoexceptFalse,    ///< noexcept(expression), evals to 'false'
+  EST_NoexceptTrue,     ///< noexcept(expression), evals to 'true'
   EST_Unevaluated,      ///< not evaluated yet, for special member function
   EST_Uninstantiated,   ///< not instantiated yet
   EST_Unparsed          ///< not parsed yet
@@ -34,8 +36,13 @@ inline bool isDynamicExceptionSpec(ExceptionSpecificationType ESpecType) {
   return ESpecType >= EST_DynamicNone && ESpecType <= EST_MSAny;
 }
 
+inline bool isComputedNoexcept(ExceptionSpecificationType ESpecType) {
+  return ESpecType >= EST_DependentNoexcept &&
+         ESpecType <= EST_NoexceptTrue;
+}
+
 inline bool isNoexceptExceptionSpec(ExceptionSpecificationType ESpecType) {
-  return ESpecType == EST_BasicNoexcept || ESpecType == EST_ComputedNoexcept;
+  return ESpecType == EST_BasicNoexcept || isComputedNoexcept(ESpecType);
 }
 
 inline bool isUnresolvedExceptionSpec(ExceptionSpecificationType ESpecType) {

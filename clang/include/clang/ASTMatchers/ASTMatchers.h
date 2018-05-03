@@ -3760,7 +3760,7 @@ AST_POLYMORPHIC_MATCHER(isNoThrow,
   if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
     return true;
 
-  return FnTy->isNothrow(Finder->getASTContext());
+  return FnTy->isNothrow();
 }
 
 /// \brief Matches constexpr variable and function declarations.

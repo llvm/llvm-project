@@ -1485,7 +1485,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_foutline)) {
+  if (Args.getLastArg(options::OPT_foutline)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-enable-machine-outliner");
   }

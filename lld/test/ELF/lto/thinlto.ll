@@ -31,7 +31,7 @@
 ; RUN: touch %t4.o.thinlto.bc
 ; RUN: chmod 400 %t4.o.thinlto.bc
 ; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t.o %t4.o -o %t5 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: failed to write {{.*}}4.o.thinlto.bc: Permission denied
+; ERR: failed to write {{.*}}4.o.thinlto.bc: {{P|p}}ermission denied
 
 ; First force single-threaded mode
 ; RUN: rm -f %t.lto.o %t1.lto.o
