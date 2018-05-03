@@ -137,7 +137,9 @@ defm WriteVecLogic : X86SchedWritePair; // Vector integer and/or/xor logicals.
 defm WriteVecLogicY: X86SchedWritePair; // Vector integer and/or/xor logicals (YMM/ZMM).
 defm WriteVecShift : X86SchedWritePair; // Vector integer shifts.
 defm WriteVecIMul  : X86SchedWritePair; // Vector integer multiply.
-defm WritePMULLD : X86SchedWritePair; // PMULLD
+defm WriteVecIMulY : X86SchedWritePair; // Vector integer multiply (YMM/ZMM).
+defm WritePMULLD   : X86SchedWritePair; // Vector PMULLD.
+defm WritePMULLDY   : X86SchedWritePair; // Vector PMULLD (YMM/ZMM).
 defm WriteShuffle  : X86SchedWritePair; // Vector shuffles.
 defm WriteShuffleY : X86SchedWritePair; // Vector shuffles (YMM/ZMM).
 defm WriteVarShuffle  : X86SchedWritePair; // Vector variable shuffles.
@@ -146,8 +148,10 @@ defm WriteBlend  : X86SchedWritePair; // Vector blends.
 defm WriteBlendY : X86SchedWritePair; // Vector blends (YMM/ZMM).
 defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.
 defm WriteVarBlendY : X86SchedWritePair; // Vector variable blends (YMM/ZMM).
-defm WritePSADBW : X86SchedWritePair; // Vector PSADBW.
-defm WriteMPSAD : X86SchedWritePair; // Vector MPSAD.
+defm WritePSADBW  : X86SchedWritePair; // Vector PSADBW.
+defm WritePSADBWY : X86SchedWritePair; // Vector PSADBW (YMM/ZMM).
+defm WriteMPSAD  : X86SchedWritePair; // Vector MPSAD.
+defm WriteMPSADY : X86SchedWritePair; // Vector MPSAD (YMM/ZMM).
 defm WritePHMINPOS : X86SchedWritePair; // Vector PHMINPOS.
 
 // Vector insert/extract operations.
@@ -213,6 +217,8 @@ def WriteNop : SchedWrite;
 // Vector width wrappers.
 def SchedWriteFAdd
  : X86SchedWriteWidths<WriteFAdd, WriteFAdd, WriteFAddY, WriteFAddY>;
+def SchedWriteFHAdd
+ : X86SchedWriteWidths<WriteFHAdd, WriteFHAdd, WriteFHAddY, WriteFHAddY>;
 def SchedWriteFCmp
  : X86SchedWriteWidths<WriteFCmp, WriteFCmp, WriteFCmpY, WriteFCmpY>;
 def SchedWriteFMul
@@ -244,6 +250,8 @@ def SchedWriteFVarBlend
 
 def SchedWriteVecALU
  : X86SchedWriteWidths<WriteVecALU, WriteVecALU, WriteVecALU, WriteVecALU>;
+def SchedWritePHAdd
+ : X86SchedWriteWidths<WritePHAdd, WritePHAdd, WritePHAdd, WritePHAdd>;
 def SchedWriteVecLogic
  : X86SchedWriteWidths<WriteVecLogic, WriteVecLogic,
                        WriteVecLogicY, WriteVecLogicY>;
@@ -255,16 +263,16 @@ def SchedWriteVarVecShift
                        WriteVarVecShift, WriteVarVecShift>;
 def SchedWriteVecIMul
  : X86SchedWriteWidths<WriteVecIMul, WriteVecIMul,
-                       WriteVecIMul, WriteVecIMul>;
+                       WriteVecIMulY, WriteVecIMulY>;
 def SchedWritePMULLD
  : X86SchedWriteWidths<WritePMULLD, WritePMULLD,
-                       WritePMULLD, WritePMULLD>;
+                       WritePMULLDY, WritePMULLDY>;
 def SchedWriteMPSAD
  : X86SchedWriteWidths<WriteMPSAD, WriteMPSAD,
-                       WriteMPSAD, WriteMPSAD>;
+                       WriteMPSADY, WriteMPSADY>;
 def SchedWritePSADBW
  : X86SchedWriteWidths<WritePSADBW, WritePSADBW,
-                       WritePSADBW, WritePSADBW>;
+                       WritePSADBWY, WritePSADBWY>;
 
 def SchedWriteShuffle
  : X86SchedWriteWidths<WriteShuffle, WriteShuffle,

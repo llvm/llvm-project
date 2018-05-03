@@ -985,8 +985,8 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
                                             const GEPOperator *GEP2,
                                             uint64_t V2Size,
                                             const DataLayout &DL) {
-  assert(GEP1->getPointerOperand()->stripPointerCastsAndBarriers() ==
-             GEP2->getPointerOperand()->stripPointerCastsAndBarriers() &&
+  assert(GEP1->getPointerOperand()->stripPointerCastsAndInvariantGroups() ==
+             GEP2->getPointerOperand()->stripPointerCastsAndInvariantGroups() &&
          GEP1->getPointerOperandType() == GEP2->getPointerOperandType() &&
          "Expected GEPs with the same pointer operand");
 
@@ -1264,8 +1264,8 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     // If we know the two GEPs are based off of the exact same pointer (and not
     // just the same underlying object), see if that tells us anything about
     // the resulting pointers.
-    if (GEP1->getPointerOperand()->stripPointerCastsAndBarriers() ==
-            GEP2->getPointerOperand()->stripPointerCastsAndBarriers() &&
+    if (GEP1->getPointerOperand()->stripPointerCastsAndInvariantGroups() ==
+            GEP2->getPointerOperand()->stripPointerCastsAndInvariantGroups() &&
         GEP1->getPointerOperandType() == GEP2->getPointerOperandType()) {
       AliasResult R = aliasSameBasePointerGEPs(GEP1, V1Size, GEP2, V2Size, DL);
       // If we couldn't find anything interesting, don't abandon just yet.
@@ -1578,8 +1578,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, uint64_t V1Size,
     return NoAlias;
 
   // Strip off any casts if they exist.
-  V1 = V1->stripPointerCastsAndBarriers();
-  V2 = V2->stripPointerCastsAndBarriers();
+  V1 = V1->stripPointerCastsAndInvariantGroups();
+  V2 = V2->stripPointerCastsAndInvariantGroups();
 
   // If V1 or V2 is undef, the result is NoAlias because we can always pick a
   // value for undef that aliases nothing in the program.

@@ -509,15 +509,16 @@ public:
                          static_cast<const Value *>(this)->stripPointerCasts());
   }
 
-  /// Strip off pointer casts, all-zero GEPs, aliases and barriers.
+  /// Strip off pointer casts, all-zero GEPs, aliases and invariant group
+  /// info.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'. This function should be used only in
   /// Alias analysis.
-  const Value *stripPointerCastsAndBarriers() const;
-  Value *stripPointerCastsAndBarriers() {
+  const Value *stripPointerCastsAndInvariantGroups() const;
+  Value *stripPointerCastsAndInvariantGroups() {
     return const_cast<Value *>(
-        static_cast<const Value *>(this)->stripPointerCastsAndBarriers());
+        static_cast<const Value *>(this)->stripPointerCastsAndInvariantGroups());
   }
 
   /// Strip off pointer casts and all-zero GEPs.

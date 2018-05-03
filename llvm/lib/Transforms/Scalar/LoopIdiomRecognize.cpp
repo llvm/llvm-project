@@ -1196,7 +1196,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
       VarX1 = DefX2->getOperand(0);
       SubOneOp = dyn_cast<BinaryOperator>(DefX2->getOperand(1));
     }
-    if (!SubOneOp)
+    if (!SubOneOp || SubOneOp->getOperand(0) != VarX1)
       return false;
 
     ConstantInt *Dec = dyn_cast<ConstantInt>(SubOneOp->getOperand(1));
