@@ -81,7 +81,7 @@ class TestResilience(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         breakpoint = target.BreakpointCreateBySourceRegex('break', source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
+        self.assertTrue(breakpoint.GetNumLocations() > 1, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
@@ -94,6 +94,17 @@ class TestResilience(TestBase):
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
+        # FIXME: this should work with all flavors!
+        if exe_flavor == "a":
+            self.expect("target var global", DATA_TYPES_DISPLAYED_CORRECTLY,
+                        substrs=["a = 1"])
+        process.Continue()
+
+        self.assertTrue(len(threads) == 1)
+        self.thread = threads[0]
+        self.frame = self.thread.frames[0]
+        self.assertTrue(self.frame, "Frame 0 is valid.")
+        
         # Try 'frame variable'
         var = self.frame.FindVariable("s")
         child = var.GetChildMemberWithName("a")

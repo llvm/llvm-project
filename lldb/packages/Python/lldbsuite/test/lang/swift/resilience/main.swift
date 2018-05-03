@@ -18,4 +18,6 @@ func main() {
   print(a)
 }
 
+let global = S()
+print(global.a) // break here
 main()
