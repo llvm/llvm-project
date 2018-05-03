@@ -12305,7 +12305,14 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
     //  If the type of a list item is a reference to a type T then the type will
     //  be considered to be T for all purposes of this clause.
-    QualType Type = CurDeclaration->getType().getNonReferenceType();
+    auto I = llvm::find_if(
+        CurComponents,
+        [](const OMPClauseMappableExprCommon::MappableComponent &MC) {
+          return MC.getAssociatedDeclaration();
+        });
+    assert(I != CurComponents.end() && "Null decl on map clause.");
+    QualType Type =
+        I->getAssociatedDeclaration()->getType().getNonReferenceType();
 
     // OpenMP 4.5 [2.10.5, target update Construct, Restrictions, p.4]
     // A list item in a to or from clause must have a mappable type.
@@ -12964,21 +12971,23 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
   if (LD && !LD->hasAttr<OMPDeclareTargetDeclAttr>() &&
       ((isa<VarDecl>(LD) && !isa<ParmVarDecl>(LD)) || isa<FunctionDecl>(LD))) {
     // Outlined declaration is not declared target.
-    if (LD->isOutOfLine()) {
-      SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);
-      SemaRef.Diag(SL, diag::note_used_here) << SR;
-    } else {
-      const DeclContext *DC = LD->getDeclContext();
-      while (DC &&
-             (!isa<FunctionDecl>(DC) ||
-              !cast<FunctionDecl>(DC)->hasAttr<OMPDeclareTargetDeclAttr>()))
-        DC = DC->getParent();
-      if (DC)
-        return;
+    if (!isa<FunctionDecl>(LD)) {
+      if (LD->isOutOfLine()) {
+        SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);
+        SemaRef.Diag(SL, diag::note_used_here) << SR;
+      } else {
+        const DeclContext *DC = LD->getDeclContext();
+        while (DC &&
+               (!isa<FunctionDecl>(DC) ||
+                !cast<FunctionDecl>(DC)->hasAttr<OMPDeclareTargetDeclAttr>()))
+          DC = DC->getParent();
+        if (DC)
+          return;
 
-      // Is not declared in target context.
-      SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);
-      SemaRef.Diag(SL, diag::note_used_here) << SR;
+        // Is not declared in target context.
+        SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);
+        SemaRef.Diag(SL, diag::note_used_here) << SR;
+      }
     }
     // Mark decl as declared target to prevent further diagnostic.
     auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(

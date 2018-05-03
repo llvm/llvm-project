@@ -33,7 +33,7 @@
 namespace ptdecoder_private {
 //----------------------------------------------------------------------
 /// @class Instruction
-/// @brief Represents an assembly instruction containing raw
+/// Represents an assembly instruction containing raw
 ///     instruction bytes, instruction address along with information
 ///     regarding execution flow context and Intel(R) Processor Trace
 ///     context.
@@ -83,7 +83,7 @@ private:
 
 //---------------------------------------------------------------------------
 /// @class InstructionList
-/// @brief Represents a list of assembly instructions. Each instruction is of
+/// Represents a list of assembly instructions. Each instruction is of
 ///     type Instruction.
 //---------------------------------------------------------------------------
 class InstructionList {
@@ -113,7 +113,7 @@ private:
 
 //----------------------------------------------------------------------
 /// @class TraceOptions
-/// @brief Provides Intel(R) Processor Trace specific configuration options and
+/// Provides Intel(R) Processor Trace specific configuration options and
 ///     other information obtained by decoding and post-processing the trace
 ///     data. Currently, this information comprises of the total number of
 ///     assembly instructions executed for an inferior.
@@ -147,7 +147,7 @@ private:
 
 //----------------------------------------------------------------------
 /// @class Decoder
-/// @brief This class makes use of Intel(R) Processor Trace hardware feature
+/// This class makes use of Intel(R) Processor Trace hardware feature
 ///     (implememted inside LLDB) to gather trace data for an inferior (being
 ///     debugged with LLDB) to provide meaningful information out of it.
 ///

@@ -34,16 +34,16 @@ template <typename T> class SmallVectorImpl;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class DataExtractor DataExtractor.h "lldb/Core/DataExtractor.h"
-/// @brief An data extractor class.
+/// @class DataExtractor DataExtractor.h "lldb/Core/DataExtractor.h" An data
+/// extractor class.
 ///
-/// DataExtractor is a class that can extract data (swapping if needed)
-/// from a data buffer. The data buffer can be caller owned, or can be
-/// shared data that can be shared between multiple DataExtractor
-/// instances. Multiple DataExtractor objects can share the same data,
-/// yet extract values in different address sizes and byte order modes.
-/// Each object can have a unique position in the shared data and extract
-/// data from different offsets.
+/// DataExtractor is a class that can extract data (swapping if needed) from a
+/// data buffer. The data buffer can be caller owned, or can be shared data
+/// that can be shared between multiple DataExtractor instances. Multiple
+/// DataExtractor objects can share the same data, yet extract values in
+/// different address sizes and byte order modes. Each object can have a
+/// unique position in the shared data and extract data from different
+/// offsets.
 ///
 /// @see DataBuffer
 //----------------------------------------------------------------------
@@ -51,7 +51,7 @@ class DataExtractor {
 public:
   //------------------------------------------------------------------
   /// @typedef DataExtractor::Type
-  /// @brief Type enumerations used in the dump routines.
+  /// Type enumerations used in the dump routines.
   //------------------------------------------------------------------
   typedef enum {
     TypeUInt8,   ///< Format output as unsigned 8 bit integers
@@ -74,9 +74,8 @@ public:
   //------------------------------------------------------------------
   /// Construct with a buffer that is owned by the caller.
   ///
-  /// This constructor allows us to use data that is owned by the
-  /// caller. The data must stay around as long as this object is
-  /// valid.
+  /// This constructor allows us to use data that is owned by the caller. The
+  /// data must stay around as long as this object is valid.
   ///
   /// @param[in] data
   ///     A pointer to caller owned data.
@@ -100,10 +99,10 @@ public:
   //------------------------------------------------------------------
   /// Construct with shared data.
   ///
-  /// Copies the data shared pointer which adds a reference to the
-  /// contained in \a data_sp. The shared data reference is reference
-  /// counted to ensure the data lives as long as anyone still has a
-  /// valid shared pointer to the data in \a data_sp.
+  /// Copies the data shared pointer which adds a reference to the contained
+  /// in \a data_sp. The shared data reference is reference counted to ensure
+  /// the data lives as long as anyone still has a valid shared pointer to the
+  /// data in \a data_sp.
   ///
   /// @param[in] data_sp
   ///     A shared pointer to data.
@@ -123,16 +122,14 @@ public:
   //------------------------------------------------------------------
   /// Construct with a subset of \a data.
   ///
-  /// Initialize this object with a subset of the data bytes in \a
-  /// data. If \a data contains shared data, then a reference to the
-  /// shared data will be added to ensure the shared data stays around
-  /// as long as any objects have references to the shared data. The
-  /// byte order value and the address size settings are copied from \a
-  /// data. If \a offset is not a valid offset in \a data, then no
-  /// reference to the shared data will be added. If there are not
-  /// \a length bytes available in \a data starting at \a offset,
-  /// the length will be truncated to contain as many bytes as
-  /// possible.
+  /// Initialize this object with a subset of the data bytes in \a data. If \a
+  /// data contains shared data, then a reference to the shared data will be
+  /// added to ensure the shared data stays around as long as any objects have
+  /// references to the shared data. The byte order value and the address size
+  /// settings are copied from \a data. If \a offset is not a valid offset in
+  /// \a data, then no reference to the shared data will be added. If there
+  /// are not \a length bytes available in \a data starting at \a offset, the
+  /// length will be truncated to contain as many bytes as possible.
   ///
   /// @param[in] data
   ///     Another DataExtractor object that contains data.
@@ -155,8 +152,8 @@ public:
   /// Assignment operator.
   ///
   /// Copies all data, byte order and address size settings from \a rhs into
-  /// this object. If \a rhs contains shared data, a reference to that
-  /// shared data will be added.
+  /// this object. If \a rhs contains shared data, a reference to that shared
+  /// data will be added.
   ///
   /// @param[in] rhs
   ///     Another DataExtractor object to copy.
@@ -169,9 +166,9 @@ public:
   //------------------------------------------------------------------
   /// Destructor
   ///
-  /// If this object contains a valid shared data reference, the
-  /// reference count on the data will be decremented, and if zero,
-  /// the data will be freed.
+  /// If this object contains a valid shared data reference, the reference
+  /// count on the data will be decremented, and if zero, the data will be
+  /// freed.
   //------------------------------------------------------------------
   virtual ~DataExtractor();
 
@@ -180,19 +177,17 @@ public:
   //------------------------------------------------------------------
   /// Clears the object state.
   ///
-  /// Clears the object contents back to a default invalid state, and
-  /// release any references to shared data that this object may
-  /// contain.
+  /// Clears the object contents back to a default invalid state, and release
+  /// any references to shared data that this object may contain.
   //------------------------------------------------------------------
   void Clear();
 
   //------------------------------------------------------------------
-  /// Dumps the binary data as \a type objects to stream \a s (or to
-  /// Log() if \a s is nullptr) starting \a offset bytes into the data
-  /// and stopping after dumping \a length bytes. The offset into the
-  /// data is displayed at the beginning of each line and can be
-  /// offset by base address \a base_addr. \a num_per_line objects
-  /// will be displayed on each line.
+  /// Dumps the binary data as \a type objects to stream \a s (or to Log() if
+  /// \a s is nullptr) starting \a offset bytes into the data and stopping
+  /// after dumping \a length bytes. The offset into the data is displayed at
+  /// the beginning of each line and can be offset by base address \a
+  /// base_addr. \a num_per_line objects will be displayed on each line.
   ///
   /// @param[in] s
   ///     The stream to dump the output to. If nullptr the output will
@@ -230,8 +225,8 @@ public:
   //------------------------------------------------------------------
   /// Dump a UUID value at \a offset.
   ///
-  /// Dump a UUID starting at \a offset bytes into this object's data.
-  /// If the stream \a s is nullptr, the output will be sent to Log().
+  /// Dump a UUID starting at \a offset bytes into this object's data. If the
+  /// stream \a s is nullptr, the output will be sent to Log().
   ///
   /// @param[in] s
   ///     The stream to dump the output to. If nullptr the output will
@@ -244,13 +239,11 @@ public:
   void DumpUUID(Stream *s, lldb::offset_t offset) const;
 
   //------------------------------------------------------------------
-  /// Extract an arbitrary number of bytes in the specified byte
-  /// order.
+  /// Extract an arbitrary number of bytes in the specified byte order.
   ///
-  /// Attemps to extract \a length bytes starting at \a offset bytes
-  /// into this data in the requested byte order (\a dst_byte_order)
-  /// and place the results in \a dst. \a dst must be at least \a
-  /// length bytes long.
+  /// Attemps to extract \a length bytes starting at \a offset bytes into this
+  /// data in the requested byte order (\a dst_byte_order) and place the
+  /// results in \a dst. \a dst must be at least \a length bytes long.
   ///
   /// @param[in] offset
   ///     The offset in bytes into the contained data at which to
@@ -278,10 +271,10 @@ public:
   //------------------------------------------------------------------
   /// Extract an address from \a *offset_ptr.
   ///
-  /// Extract a single address from the data and update the offset
-  /// pointed to by \a offset_ptr. The size of the extracted address
-  /// comes from the \a m_addr_size member variable and should be
-  /// set correctly prior to extracting any address values.
+  /// Extract a single address from the data and update the offset pointed to
+  /// by \a offset_ptr. The size of the extracted address comes from the \a
+  /// m_addr_size member variable and should be set correctly prior to
+  /// extracting any address values.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -300,8 +293,7 @@ public:
   //------------------------------------------------------------------
   /// Get the current address size.
   ///
-  /// Return the size in bytes of any address values this object will
-  /// extract.
+  /// Return the size in bytes of any address values this object will extract.
   ///
   /// @return
   ///     The size in bytes of address values that will be extracted.
@@ -319,11 +311,10 @@ public:
   //------------------------------------------------------------------
   /// Extract a C string from \a *offset_ptr.
   ///
-  /// Returns a pointer to a C String from the data at the offset
-  /// pointed to by \a offset_ptr. A variable length NULL terminated C
-  /// string will be extracted and the \a offset_ptr will be
-  /// updated with the offset of the byte that follows the NULL
-  /// terminator byte.
+  /// Returns a pointer to a C String from the data at the offset pointed to
+  /// by \a offset_ptr. A variable length NULL terminated C string will be
+  /// extracted and the \a offset_ptr will be updated with the offset of the
+  /// byte that follows the NULL terminator byte.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -343,8 +334,8 @@ public:
   //------------------------------------------------------------------
   /// Extract a C string from \a *offset_ptr with field size \a len.
   ///
-  /// Returns a pointer to a C String from the data at the offset
-  /// pointed to by \a offset_ptr, with a field length of \a len.
+  /// Returns a pointer to a C String from the data at the offset pointed to
+  /// by \a offset_ptr, with a field length of \a len.
   /// A NULL terminated C string will be extracted and the \a offset_ptr
   /// will be updated with the offset of the byte that follows the fixed
   /// length field.
@@ -367,10 +358,10 @@ public:
   //------------------------------------------------------------------
   /// Extract \a length bytes from \a *offset_ptr.
   ///
-  /// Returns a pointer to a bytes in this object's data at the offset
-  /// pointed to by \a offset_ptr. If \a length is zero or too large,
-  /// then the offset pointed to by \a offset_ptr will not be updated
-  /// and nullptr will be returned.
+  /// Returns a pointer to a bytes in this object's data at the offset pointed
+  /// to by \a offset_ptr. If \a length is zero or too large, then the offset
+  /// pointed to by \a offset_ptr will not be updated and nullptr will be
+  /// returned.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -414,17 +405,16 @@ public:
                           void *dst) const;
 
   //------------------------------------------------------------------
-  /// Copy \a dst_len bytes from \a *offset_ptr and ensure the copied
-  /// data is treated as a value that can be swapped to match the
-  /// specified byte order.
+  /// Copy \a dst_len bytes from \a *offset_ptr and ensure the copied data is
+  /// treated as a value that can be swapped to match the specified byte
+  /// order.
   ///
-  /// For values that are larger than the supported integer sizes,
-  /// this function can be used to extract data in a specified byte
-  /// order. It can also be used to copy a smaller integer value from
-  /// to a larger value. The extra bytes left over will be padded
-  /// correctly according to the byte order of this object and the
-  /// \a dst_byte_order. This can be very handy when say copying a
-  /// partial data value into a register.
+  /// For values that are larger than the supported integer sizes, this
+  /// function can be used to extract data in a specified byte order. It can
+  /// also be used to copy a smaller integer value from to a larger value. The
+  /// extra bytes left over will be padded correctly according to the byte
+  /// order of this object and the \a dst_byte_order. This can be very handy
+  /// when say copying a partial data value into a register.
   ///
   /// @param[in] src_offset
   ///     The offset into this data from which to start copying an
@@ -469,8 +459,7 @@ public:
   //------------------------------------------------------------------
   /// Get the shared data offset.
   ///
-  /// Get the offset of the first byte of data in the shared data (if
-  /// any).
+  /// Get the offset of the first byte of data in the shared data (if any).
   ///
   /// @return
   ///     If this object contains shared data, this function returns
@@ -511,10 +500,10 @@ public:
   //------------------------------------------------------------------
   /// Extract an integer of size \a byte_size from \a *offset_ptr.
   ///
-  /// Extract a single integer value and update the offset pointed to
-  /// by \a offset_ptr. The size of the extracted integer is specified
-  /// by the \a byte_size argument. \a byte_size must have a value
-  /// >= 1 and <= 4 since the return value is only 32 bits wide.
+  /// Extract a single integer value and update the offset pointed to by \a
+  /// offset_ptr. The size of the extracted integer is specified by the \a
+  /// byte_size argument. \a byte_size must have a value >= 1 and <= 4 since
+  /// the return value is only 32 bits wide.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -532,14 +521,13 @@ public:
   uint32_t GetMaxU32(lldb::offset_t *offset_ptr, size_t byte_size) const;
 
   //------------------------------------------------------------------
-  /// Extract an unsigned integer of size \a byte_size from \a
-  /// *offset_ptr.
+  /// Extract an unsigned integer of size \a byte_size from \a *offset_ptr.
   ///
-  /// Extract a single unsigned integer value and update the offset
-  /// pointed to by \a offset_ptr. The size of the extracted integer
-  /// is specified by the \a byte_size argument. \a byte_size must
-  /// have a value greater than or equal to one and less than or equal
-  /// to eight since the return value is 64 bits wide.
+  /// Extract a single unsigned integer value and update the offset pointed to
+  /// by \a offset_ptr. The size of the extracted integer is specified by the
+  /// \a byte_size argument. \a byte_size must have a value greater than or
+  /// equal to one and less than or equal to eight since the return value is
+  /// 64 bits wide.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -563,12 +551,11 @@ public:
   //------------------------------------------------------------------
   /// Extract an signed integer of size \a byte_size from \a *offset_ptr.
   ///
-  /// Extract a single signed integer value (sign extending if required)
-  /// and update the offset pointed to by \a offset_ptr. The size of
-  /// the extracted integer is specified by the \a byte_size argument.
-  /// \a byte_size must have a value greater than or equal to one and
-  /// less than or equal to eight since the return value is 64 bits
-  /// wide.
+  /// Extract a single signed integer value (sign extending if required) and
+  /// update the offset pointed to by \a offset_ptr. The size of the extracted
+  /// integer is specified by the \a byte_size argument. \a byte_size must
+  /// have a value greater than or equal to one and less than or equal to
+  /// eight since the return value is 64 bits wide.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -587,15 +574,15 @@ public:
   int64_t GetMaxS64(lldb::offset_t *offset_ptr, size_t byte_size) const;
 
   //------------------------------------------------------------------
-  /// Extract an unsigned integer of size \a byte_size from \a
-  /// *offset_ptr, then extract the bitfield from this value if
-  /// \a bitfield_bit_size is non-zero.
+  /// Extract an unsigned integer of size \a byte_size from \a *offset_ptr,
+  /// then extract the bitfield from this value if \a bitfield_bit_size is
+  /// non-zero.
   ///
-  /// Extract a single unsigned integer value and update the offset
-  /// pointed to by \a offset_ptr. The size of the extracted integer
-  /// is specified by the \a byte_size argument. \a byte_size must
-  /// have a value greater than or equal to one and less than or equal
-  /// to 8 since the return value is 64 bits wide.
+  /// Extract a single unsigned integer value and update the offset pointed to
+  /// by \a offset_ptr. The size of the extracted integer is specified by the
+  /// \a byte_size argument. \a byte_size must have a value greater than or
+  /// equal to one and less than or equal to 8 since the return value is 64
+  /// bits wide.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -627,16 +614,15 @@ public:
                              uint32_t bitfield_bit_offset) const;
 
   //------------------------------------------------------------------
-  /// Extract an signed integer of size \a byte_size from \a
-  /// *offset_ptr, then extract and signe extend the bitfield from
-  /// this value if \a bitfield_bit_size is non-zero.
+  /// Extract an signed integer of size \a byte_size from \a *offset_ptr, then
+  /// extract and signe extend the bitfield from this value if \a
+  /// bitfield_bit_size is non-zero.
   ///
-  /// Extract a single signed integer value (sign extending if required)
-  /// and update the offset pointed to by \a offset_ptr. The size of
-  /// the extracted integer is specified by the \a byte_size argument.
-  /// \a byte_size must have a value greater than or equal to one and
-  /// less than or equal to eight since the return value is 64 bits
-  /// wide.
+  /// Extract a single signed integer value (sign extending if required) and
+  /// update the offset pointed to by \a offset_ptr. The size of the extracted
+  /// integer is specified by the \a byte_size argument. \a byte_size must
+  /// have a value greater than or equal to one and less than or equal to
+  /// eight since the return value is 64 bits wide.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -670,10 +656,10 @@ public:
   //------------------------------------------------------------------
   /// Extract an pointer from \a *offset_ptr.
   ///
-  /// Extract a single pointer from the data and update the offset
-  /// pointed to by \a offset_ptr. The size of the extracted pointer
-  /// comes from the \a m_addr_size member variable and should be
-  /// set correctly prior to extracting any pointer values.
+  /// Extract a single pointer from the data and update the offset pointed to
+  /// by \a offset_ptr. The size of the extracted pointer comes from the \a
+  /// m_addr_size member variable and should be set correctly prior to
+  /// extracting any pointer values.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -699,8 +685,8 @@ public:
   //------------------------------------------------------------------
   /// Extract a uint8_t value from \a *offset_ptr.
   ///
-  /// Extract a single uint8_t from the binary data at the offset
-  /// pointed to by \a offset_ptr, and advance the offset on success.
+  /// Extract a single uint8_t from the binary data at the offset pointed to
+  /// by \a offset_ptr, and advance the offset on success.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -728,9 +714,9 @@ public:
   //------------------------------------------------------------------
   /// Extract \a count uint8_t values from \a *offset_ptr.
   ///
-  /// Extract \a count uint8_t values from the binary data at the
-  /// offset pointed to by \a offset_ptr, and advance the offset on
-  /// success. The extracted values are copied into \a dst.
+  /// Extract \a count uint8_t values from the binary data at the offset
+  /// pointed to by \a offset_ptr, and advance the offset on success. The
+  /// extracted values are copied into \a dst.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -755,8 +741,8 @@ public:
   //------------------------------------------------------------------
   /// Extract a uint16_t value from \a *offset_ptr.
   ///
-  /// Extract a single uint16_t from the binary data at the offset
-  /// pointed to by \a offset_ptr, and update the offset on success.
+  /// Extract a single uint16_t from the binary data at the offset pointed to
+  /// by \a offset_ptr, and update the offset on success.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -773,9 +759,9 @@ public:
   //------------------------------------------------------------------
   /// Extract \a count uint16_t values from \a *offset_ptr.
   ///
-  /// Extract \a count uint16_t values from the binary data at the
-  /// offset pointed to by \a offset_ptr, and advance the offset on
-  /// success. The extracted values are copied into \a dst.
+  /// Extract \a count uint16_t values from the binary data at the offset
+  /// pointed to by \a offset_ptr, and advance the offset on success. The
+  /// extracted values are copied into \a dst.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -800,8 +786,8 @@ public:
   //------------------------------------------------------------------
   /// Extract a uint32_t value from \a *offset_ptr.
   ///
-  /// Extract a single uint32_t from the binary data at the offset
-  /// pointed to by \a offset_ptr, and update the offset on success.
+  /// Extract a single uint32_t from the binary data at the offset pointed to
+  /// by \a offset_ptr, and update the offset on success.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -818,9 +804,9 @@ public:
   //------------------------------------------------------------------
   /// Extract \a count uint32_t values from \a *offset_ptr.
   ///
-  /// Extract \a count uint32_t values from the binary data at the
-  /// offset pointed to by \a offset_ptr, and advance the offset on
-  /// success. The extracted values are copied into \a dst.
+  /// Extract \a count uint32_t values from the binary data at the offset
+  /// pointed to by \a offset_ptr, and advance the offset on success. The
+  /// extracted values are copied into \a dst.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -845,8 +831,8 @@ public:
   //------------------------------------------------------------------
   /// Extract a uint64_t value from \a *offset_ptr.
   ///
-  /// Extract a single uint64_t from the binary data at the offset
-  /// pointed to by \a offset_ptr, and update the offset on success.
+  /// Extract a single uint64_t from the binary data at the offset pointed to
+  /// by \a offset_ptr, and update the offset on success.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -863,9 +849,9 @@ public:
   //------------------------------------------------------------------
   /// Extract \a count uint64_t values from \a *offset_ptr.
   ///
-  /// Extract \a count uint64_t values from the binary data at the
-  /// offset pointed to by \a offset_ptr, and advance the offset on
-  /// success. The extracted values are copied into \a dst.
+  /// Extract \a count uint64_t values from the binary data at the offset
+  /// pointed to by \a offset_ptr, and advance the offset on success. The
+  /// extracted values are copied into \a dst.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -890,10 +876,10 @@ public:
   //------------------------------------------------------------------
   /// Extract a signed LEB128 value from \a *offset_ptr.
   ///
-  /// Extracts an signed LEB128 number from this object's data
-  /// starting at the offset pointed to by \a offset_ptr. The offset
-  /// pointed to by \a offset_ptr will be updated with the offset of
-  /// the byte following the last extracted byte.
+  /// Extracts an signed LEB128 number from this object's data starting at the
+  /// offset pointed to by \a offset_ptr. The offset pointed to by \a
+  /// offset_ptr will be updated with the offset of the byte following the
+  /// last extracted byte.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -910,10 +896,10 @@ public:
   //------------------------------------------------------------------
   /// Extract a unsigned LEB128 value from \a *offset_ptr.
   ///
-  /// Extracts an unsigned LEB128 number from this object's data
-  /// starting at the offset pointed to by \a offset_ptr. The offset
-  /// pointed to by \a offset_ptr will be updated with the offset of
-  /// the byte following the last extracted byte.
+  /// Extracts an unsigned LEB128 number from this object's data starting at
+  /// the offset pointed to by \a offset_ptr. The offset pointed to by \a
+  /// offset_ptr will be updated with the offset of the byte following the
+  /// last extracted byte.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -932,9 +918,9 @@ public:
   //------------------------------------------------------------------
   /// Peek at a C string at \a offset.
   ///
-  /// Peeks at a string in the contained data. No verification is done
-  /// to make sure the entire string lies within the bounds of this
-  /// object's data, only \a offset is verified to be a valid offset.
+  /// Peeks at a string in the contained data. No verification is done to make
+  /// sure the entire string lies within the bounds of this object's data,
+  /// only \a offset is verified to be a valid offset.
   ///
   /// @param[in] offset
   ///     An offset into the data.
@@ -948,8 +934,8 @@ public:
   //------------------------------------------------------------------
   /// Peek at a bytes at \a offset.
   ///
-  /// Returns a pointer to \a length bytes at \a offset as long as
-  /// there are \a length bytes available starting at \a offset.
+  /// Returns a pointer to \a length bytes at \a offset as long as there are
+  /// \a length bytes available starting at \a offset.
   ///
   /// @return
   ///     A non-nullptr data pointer if \a offset is a valid offset and
@@ -965,8 +951,8 @@ public:
   //------------------------------------------------------------------
   /// Set the address byte size.
   ///
-  /// Set the size in bytes that will be used when extracting any
-  /// address and pointer values from data contained in this object.
+  /// Set the size in bytes that will be used when extracting any address and
+  /// pointer values from data contained in this object.
   ///
   /// @param[in] addr_size
   ///     The size in bytes to use when extracting addresses.
@@ -981,11 +967,10 @@ public:
   //------------------------------------------------------------------
   /// Set data with a buffer that is caller owned.
   ///
-  /// Use data that is owned by the caller when extracting values.
-  /// The data must stay around as long as this object, or any object
-  /// that copies a subset of this object's data, is valid. If \a
-  /// bytes is nullptr, or \a length is zero, this object will contain
-  /// no data.
+  /// Use data that is owned by the caller when extracting values. The data
+  /// must stay around as long as this object, or any object that copies a
+  /// subset of this object's data, is valid. If \a bytes is nullptr, or \a
+  /// length is zero, this object will contain no data.
   ///
   /// @param[in] bytes
   ///     A pointer to caller owned data.
@@ -1005,16 +990,14 @@ public:
   //------------------------------------------------------------------
   /// Adopt a subset of \a data.
   ///
-  /// Set this object's data to be a subset of the data bytes in \a
-  /// data. If \a data contains shared data, then a reference to the
-  /// shared data will be added to ensure the shared data stays around
-  /// as long as any objects have references to the shared data. The
-  /// byte order and the address size settings are copied from \a
-  /// data. If \a offset is not a valid offset in \a data, then no
-  /// reference to the shared data will be added. If there are not
-  /// \a length bytes available in \a data starting at \a offset,
-  /// the length will be truncated to contains as many bytes as
-  /// possible.
+  /// Set this object's data to be a subset of the data bytes in \a data. If
+  /// \a data contains shared data, then a reference to the shared data will
+  /// be added to ensure the shared data stays around as long as any objects
+  /// have references to the shared data. The byte order and the address size
+  /// settings are copied from \a data. If \a offset is not a valid offset in
+  /// \a data, then no reference to the shared data will be added. If there
+  /// are not \a length bytes available in \a data starting at \a offset, the
+  /// length will be truncated to contains as many bytes as possible.
   ///
   /// @param[in] data
   ///     Another DataExtractor object that contains data.
@@ -1034,15 +1017,14 @@ public:
   //------------------------------------------------------------------
   /// Adopt a subset of shared data in \a data_sp.
   ///
-  /// Copies the data shared pointer which adds a reference to the
-  /// contained in \a data_sp. The shared data reference is reference
-  /// counted to ensure the data lives as long as anyone still has a
-  /// valid shared pointer to the data in \a data_sp. The byte order
-  /// and address byte size settings remain the same. If
-  /// \a offset is not a valid offset in \a data_sp, then no reference
-  /// to the shared data will be added. If there are not \a length
-  /// bytes available in \a data starting at \a offset, the length
-  /// will be truncated to contains as many bytes as possible.
+  /// Copies the data shared pointer which adds a reference to the contained
+  /// in \a data_sp. The shared data reference is reference counted to ensure
+  /// the data lives as long as anyone still has a valid shared pointer to the
+  /// data in \a data_sp. The byte order and address byte size settings remain
+  /// the same. If \a offset is not a valid offset in \a data_sp, then no
+  /// reference to the shared data will be added. If there are not \a length
+  /// bytes available in \a data starting at \a offset, the length will be
+  /// truncated to contains as many bytes as possible.
   ///
   /// @param[in] data_sp
   ///     A shared pointer to data.
@@ -1063,8 +1045,8 @@ public:
   //------------------------------------------------------------------
   /// Set the byte_order value.
   ///
-  /// Sets the byte order of the data to extract. Extracted values
-  /// will be swapped if necessary when decoding.
+  /// Sets the byte order of the data to extract. Extracted values will be
+  /// swapped if necessary when decoding.
   ///
   /// @param[in] byte_order
   ///     The byte order value to use when extracting data.
@@ -1074,10 +1056,10 @@ public:
   //------------------------------------------------------------------
   /// Skip an LEB128 number at \a *offset_ptr.
   ///
-  /// Skips a LEB128 number (signed or unsigned) from this object's
-  /// data starting at the offset pointed to by \a offset_ptr. The
-  /// offset pointed to by \a offset_ptr will be updated with the
-  /// offset of the byte following the last extracted byte.
+  /// Skips a LEB128 number (signed or unsigned) from this object's data
+  /// starting at the offset pointed to by \a offset_ptr. The offset pointed
+  /// to by \a offset_ptr will be updated with the offset of the byte
+  /// following the last extracted byte.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced

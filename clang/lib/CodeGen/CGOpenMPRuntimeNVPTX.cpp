@@ -61,6 +61,12 @@ enum OpenMPRTLFunctionNVPTX {
   /// lane_offset, int16_t shortCircuit),
   /// void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num));
   OMPRTL_NVPTX__kmpc_parallel_reduce_nowait,
+  /// \brief Call to __kmpc_nvptx_simd_reduce_nowait(kmp_int32
+  /// global_tid, kmp_int32 num_vars, size_t reduce_size, void* reduce_data,
+  /// void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
+  /// lane_offset, int16_t shortCircuit),
+  /// void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num));
+  OMPRTL_NVPTX__kmpc_simd_reduce_nowait,
   /// \brief Call to __kmpc_nvptx_teams_reduce_nowait(int32_t global_tid,
   /// int32_t num_vars, size_t reduce_size, void *reduce_data,
   /// void (*kmp_ShuffleReductFctPtr)(void *rhs, int16_t lane_id, int16_t
@@ -1028,6 +1034,33 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
         FnTy, /*Name=*/"__kmpc_nvptx_parallel_reduce_nowait");
     break;
   }
+  case OMPRTL_NVPTX__kmpc_simd_reduce_nowait: {
+    // Build int32_t kmpc_nvptx_simd_reduce_nowait(kmp_int32 global_tid,
+    // kmp_int32 num_vars, size_t reduce_size, void* reduce_data,
+    // void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
+    // lane_offset, int16_t Algorithm Version),
+    // void (*kmp_InterWarpCopyFctPtr)(void* src, int warp_num));
+    llvm::Type *ShuffleReduceTypeParams[] = {CGM.VoidPtrTy, CGM.Int16Ty,
+                                             CGM.Int16Ty, CGM.Int16Ty};
+    auto *ShuffleReduceFnTy =
+        llvm::FunctionType::get(CGM.VoidTy, ShuffleReduceTypeParams,
+                                /*isVarArg=*/false);
+    llvm::Type *InterWarpCopyTypeParams[] = {CGM.VoidPtrTy, CGM.Int32Ty};
+    auto *InterWarpCopyFnTy =
+        llvm::FunctionType::get(CGM.VoidTy, InterWarpCopyTypeParams,
+                                /*isVarArg=*/false);
+    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+                                CGM.Int32Ty,
+                                CGM.SizeTy,
+                                CGM.VoidPtrTy,
+                                ShuffleReduceFnTy->getPointerTo(),
+                                InterWarpCopyFnTy->getPointerTo()};
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(
+        FnTy, /*Name=*/"__kmpc_nvptx_simd_reduce_nowait");
+    break;
+  }
   case OMPRTL_NVPTX__kmpc_teams_reduce_nowait: {
     // Build int32_t __kmpc_nvptx_teams_reduce_nowait(int32_t global_tid,
     // int32_t num_vars, size_t reduce_size, void *reduce_data,
@@ -1184,7 +1217,8 @@ void CGOpenMPRuntimeNVPTX::emitTargetOutlinedFunction(
 }
 
 CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)
-    : CGOpenMPRuntime(CGM), CurrentExecutionMode(ExecutionMode::Unknown) {
+    : CGOpenMPRuntime(CGM, "_", "$"),
+      CurrentExecutionMode(ExecutionMode::Unknown) {
   if (!CGM.getLangOpts().OpenMPIsDevice)
     llvm_unreachable("OpenMP NVPTX can only handle device code.");
 }
@@ -2702,8 +2736,8 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
 
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
-  // FIXME: Add support for simd reduction.
-  assert((TeamsReduction || ParallelReduction) &&
+  bool SimdReduction = isOpenMPSimdDirective(Options.ReductionKind);
+  assert((TeamsReduction || ParallelReduction || SimdReduction) &&
          "Invalid reduction selection in emitReduction.");
 
   ASTContext &C = CGM.getContext();
@@ -2763,19 +2797,22 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
   llvm::Value *InterWarpCopyFn =
       emitInterWarpCopyFunction(CGM, Privates, ReductionArrayTy, Loc);
 
-  llvm::Value *Res = nullptr;
-  if (ParallelReduction) {
-    llvm::Value *Args[] = {ThreadId,
-                           CGF.Builder.getInt32(RHSExprs.size()),
-                           ReductionArrayTySize,
-                           RL,
-                           ShuffleAndReduceFn,
-                           InterWarpCopyFn};
+  llvm::Value *Args[] = {ThreadId,
+                         CGF.Builder.getInt32(RHSExprs.size()),
+                         ReductionArrayTySize,
+                         RL,
+                         ShuffleAndReduceFn,
+                         InterWarpCopyFn};
 
+  llvm::Value *Res = nullptr;
+  if (ParallelReduction)
     Res = CGF.EmitRuntimeCall(
         createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_parallel_reduce_nowait),
         Args);
-  }
+  else if (SimdReduction)
+    Res = CGF.EmitRuntimeCall(
+        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_simd_reduce_nowait),
+        Args);
 
   if (TeamsReduction) {
     llvm::Value *ScratchPadCopyFn =

@@ -30,7 +30,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class UserExpression UserExpression.h "lldb/Expression/UserExpression.h"
-/// @brief Encapsulates a one-time expression for use in lldb.
+/// Encapsulates a one-time expression for use in lldb.
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
 /// and as a backend for the expr command.  UserExpression is a virtual base
@@ -103,8 +103,8 @@ public:
   bool MatchesContext(ExecutionContext &exe_ctx);
 
   //------------------------------------------------------------------
-  /// Execute the parsed expression by callinng the derived class's
-  /// DoExecute method.
+  /// Execute the parsed expression by callinng the derived class's DoExecute
+  /// method.
   ///
   /// @param[in] diagnostic_manager
   ///     A diagnostic manager to report errors to.
@@ -177,32 +177,29 @@ public:
 
   //------------------------------------------------------------------
   /// Return the function name that should be used for executing the
-  /// expression.  Text() should contain the definition of this
-  /// function.
+  /// expression.  Text() should contain the definition of this function.
   //------------------------------------------------------------------
   const char *FunctionName() override { return "$__lldb_expr"; }
 
   //------------------------------------------------------------------
-  /// Return the language that should be used when parsing.  To use
-  /// the default, return eLanguageTypeUnknown.
+  /// Return the language that should be used when parsing.  To use the
+  /// default, return eLanguageTypeUnknown.
   //------------------------------------------------------------------
   lldb::LanguageType Language() override { return m_language; }
 
   //------------------------------------------------------------------
-  /// Return the desired result type of the function, or
-  /// eResultTypeAny if indifferent.
+  /// Return the desired result type of the function, or eResultTypeAny if
+  /// indifferent.
   //------------------------------------------------------------------
   ResultType DesiredResultType() override { return m_desired_type; }
 
   //------------------------------------------------------------------
-  /// Return true if validation code should be inserted into the
-  /// expression.
+  /// Return true if validation code should be inserted into the expression.
   //------------------------------------------------------------------
   bool NeedsValidation() override { return true; }
 
   //------------------------------------------------------------------
-  /// Return true if external variables in the expression should be
-  /// resolved.
+  /// Return true if external variables in the expression should be resolved.
   //------------------------------------------------------------------
   bool NeedsVariableResolution() override { return true; }
 
@@ -216,8 +213,8 @@ public:
   virtual lldb::ModuleSP GetJITModule() { return lldb::ModuleSP(); }
 
   //------------------------------------------------------------------
-  /// Evaluate one expression in the scratch context of the
-  /// target passed in the exe_ctx and return its result.
+  /// Evaluate one expression in the scratch context of the target passed in
+  /// the exe_ctx and return its result.
   ///
   /// @param[in] exe_ctx
   ///     The execution context to use when evaluating the expression.

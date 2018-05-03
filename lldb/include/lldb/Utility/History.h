@@ -28,7 +28,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class HistorySource History.h "lldb/Core/History.h"
-/// @brief A class that defines history events.
+/// A class that defines history events.
 //----------------------------------------------------------------------
 
 class HistorySource {
@@ -72,11 +72,11 @@ private:
 
 //----------------------------------------------------------------------
 /// @class HistorySourceUInt History.h "lldb/Core/History.h"
-/// @brief A class that defines history events that are represented by
+/// A class that defines history events that are represented by
 /// unsigned integers.
 ///
-/// Any history event that is defined by a unique monotonically
-/// increasing unsigned integer
+/// Any history event that is defined by a unique monotonically increasing
+/// unsigned integer
 //----------------------------------------------------------------------
 
 class HistorySourceUInt : public HistorySource {

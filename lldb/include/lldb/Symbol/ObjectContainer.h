@@ -25,23 +25,23 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ObjectContainer ObjectContainer.h "lldb/Symbol/ObjectContainer.h"
-/// @brief A plug-in interface definition class for object containers.
+/// A plug-in interface definition class for object containers.
 ///
-/// Object containers contain object files from one or more
-/// architectures, and also can contain one or more named objects.
+/// Object containers contain object files from one or more architectures, and
+/// also can contain one or more named objects.
 ///
-/// Typical object containers are static libraries (.a files) that
-/// contain multiple named object files, and universal files that contain
-/// multiple architectures.
+/// Typical object containers are static libraries (.a files) that contain
+/// multiple named object files, and universal files that contain multiple
+/// architectures.
 //----------------------------------------------------------------------
 class ObjectContainer : public PluginInterface, public ModuleChild {
 public:
   //------------------------------------------------------------------
   /// Construct with a parent module, offset, and header data.
   ///
-  /// Object files belong to modules and a valid module must be
-  /// supplied upon construction. The at an offset within a file for
-  /// objects that contain more than one architecture or object.
+  /// Object files belong to modules and a valid module must be supplied upon
+  /// construction. The at an offset within a file for objects that contain
+  /// more than one architecture or object.
   //------------------------------------------------------------------
   ObjectContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
                   lldb::offset_t file_offset, lldb::offset_t length,
@@ -58,18 +58,17 @@ public:
   //------------------------------------------------------------------
   /// Destructor.
   ///
-  /// The destructor is virtual since this class is designed to be
-  /// inherited from by the plug-in instance.
+  /// The destructor is virtual since this class is designed to be inherited
+  /// from by the plug-in instance.
   //------------------------------------------------------------------
   ~ObjectContainer() override = default;
 
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the current contents of this object
-  /// to the supplied stream \a s. The dumping should include the
-  /// section list if it has been parsed, and the symbol table
-  /// if it has been parsed.
+  /// Dump a description of the current contents of this object to the
+  /// supplied stream \a s. The dumping should include the section list if it
+  /// has been parsed, and the symbol table if it has been parsed.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -101,8 +100,8 @@ public:
   //------------------------------------------------------------------
   /// Returns the offset into a file at which this object resides.
   ///
-  /// Some files contain many object files, and this function allows
-  /// access to an object's offset within the file.
+  /// Some files contain many object files, and this function allows access to
+  /// an object's offset within the file.
   ///
   /// @return
   ///     The offset in bytes into the file. Defaults to zero for
@@ -124,10 +123,10 @@ public:
   //------------------------------------------------------------------
   /// Get the number of architectures in this object file.
   ///
-  /// The default implementation returns 1 as for object files that
-  /// contain a single architecture. ObjectContainer instances that
-  /// contain more than one architecture should override this function
-  /// and return an appropriate value.
+  /// The default implementation returns 1 as for object files that contain a
+  /// single architecture. ObjectContainer instances that contain more than
+  /// one architecture should override this function and return an appropriate
+  /// value.
   ///
   /// @return
   ///     The number of architectures contained in this object file.
@@ -137,11 +136,11 @@ public:
   //------------------------------------------------------------------
   /// Attempts to parse the object header.
   ///
-  /// This function is used as a test to see if a given plug-in
-  /// instance can parse the header data already contained in
-  /// ObjectContainer::m_data. If an object file parser does not
-  /// recognize that magic bytes in a header, false should be returned
-  /// and the next plug-in can attempt to parse an object file.
+  /// This function is used as a test to see if a given plug-in instance can
+  /// parse the header data already contained in ObjectContainer::m_data. If
+  /// an object file parser does not recognize that magic bytes in a header,
+  /// false should be returned and the next plug-in can attempt to parse an
+  /// object file.
   ///
   /// @return
   ///     Returns \b true if the header was parsed successfully, \b
@@ -152,14 +151,14 @@ public:
   //------------------------------------------------------------------
   /// Selects an architecture in an object file.
   ///
-  /// Object files that contain a single architecture should verify
-  /// that the specified \a arch matches the architecture in in
-  /// object file and return \b true or \b false accordingly.
+  /// Object files that contain a single architecture should verify that the
+  /// specified \a arch matches the architecture in in object file and return
+  /// \b true or \b false accordingly.
   ///
-  /// Object files that contain more than one architecture should
-  /// attempt to select that architecture, and if successful, clear
-  /// out any previous state from any previously selected architecture
-  /// and prepare to return information for the new architecture.
+  /// Object files that contain more than one architecture should attempt to
+  /// select that architecture, and if successful, clear out any previous
+  /// state from any previously selected architecture and prepare to return
+  /// information for the new architecture.
   ///
   /// @return
   ///     Returns a pointer to the object file of the requested \a
