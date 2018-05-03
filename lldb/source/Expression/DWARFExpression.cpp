@@ -1379,13 +1379,10 @@ bool DWARFExpression::Evaluate(
     // The DW_OP_addr operation has a single operand that encodes a machine
     // address and whose size is the size of an address on the target machine.
     //----------------------------------------------------------------------
-    case DW_OP_addr: {
+    case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
       stack.back().SetValueType(Value::eValueTypeFileAddress);
-      auto sc = frame->GetSymbolContext(eSymbolContextFunction);
-      stack.back().ConvertToLoadAddress(sc);
       break;
-    }
 
     //----------------------------------------------------------------------
     // The DW_OP_addr_sect_offset4 is used for any location expressions in

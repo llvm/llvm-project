@@ -228,9 +228,6 @@ public:
 
   static const char *GetContextTypeAsCString(ContextType context_type);
 
-  /// Convert this value's file address to a load address, if possible.
-  void ConvertToLoadAddress(SymbolContext sc);
-
   bool GetData(DataExtractor &data);
 
   void Clear();
