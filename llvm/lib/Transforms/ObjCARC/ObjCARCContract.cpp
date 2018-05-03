@@ -597,35 +597,35 @@ bool ObjCARCContract::runOnFunction(Function &F) {
         // trivially dominate itself, which would lead us to rewriting its
         // argument in terms of its return value, which would lead to
         // infinite loops in GetArgRCIdentityRoot.
-        if (DT->isReachableFromEntry(U) && DT->dominates(Inst, U)) {
-          Changed = true;
-          Instruction *Replacement = Inst;
-          Type *UseTy = U.get()->getType();
-          if (PHINode *PHI = dyn_cast<PHINode>(U.getUser())) {
-            // For PHI nodes, insert the bitcast in the predecessor block.
-            unsigned ValNo = PHINode::getIncomingValueNumForOperand(OperandNo);
-            BasicBlock *BB = PHI->getIncomingBlock(ValNo);
-            if (Replacement->getType() != UseTy)
-              Replacement = new BitCastInst(Replacement, UseTy, "",
-                                            &BB->back());
-            // While we're here, rewrite all edges for this PHI, rather
-            // than just one use at a time, to minimize the number of
-            // bitcasts we emit.
-            for (unsigned i = 0, e = PHI->getNumIncomingValues(); i != e; ++i)
-              if (PHI->getIncomingBlock(i) == BB) {
-                // Keep the UI iterator valid.
-                if (UI != UE &&
-                    &PHI->getOperandUse(
-                        PHINode::getOperandNumForIncomingValue(i)) == &*UI)
-                  ++UI;
-                PHI->setIncomingValue(i, Replacement);
-              }
-          } else {
-            if (Replacement->getType() != UseTy)
-              Replacement = new BitCastInst(Replacement, UseTy, "",
-                                            cast<Instruction>(U.getUser()));
-            U.set(Replacement);
-          }
+        if (!DT->isReachableFromEntry(U) || !DT->dominates(Inst, U))
+          continue;
+
+        Changed = true;
+        Instruction *Replacement = Inst;
+        Type *UseTy = U.get()->getType();
+        if (PHINode *PHI = dyn_cast<PHINode>(U.getUser())) {
+          // For PHI nodes, insert the bitcast in the predecessor block.
+          unsigned ValNo = PHINode::getIncomingValueNumForOperand(OperandNo);
+          BasicBlock *BB = PHI->getIncomingBlock(ValNo);
+          if (Replacement->getType() != UseTy)
+            Replacement = new BitCastInst(Replacement, UseTy, "", &BB->back());
+          // While we're here, rewrite all edges for this PHI, rather
+          // than just one use at a time, to minimize the number of
+          // bitcasts we emit.
+          for (unsigned i = 0, e = PHI->getNumIncomingValues(); i != e; ++i)
+            if (PHI->getIncomingBlock(i) == BB) {
+              // Keep the UI iterator valid.
+              if (UI != UE &&
+                  &PHI->getOperandUse(
+                      PHINode::getOperandNumForIncomingValue(i)) == &*UI)
+                ++UI;
+              PHI->setIncomingValue(i, Replacement);
+            }
+        } else {
+          if (Replacement->getType() != UseTy)
+            Replacement = new BitCastInst(Replacement, UseTy, "",
+                                          cast<Instruction>(U.getUser()));
+          U.set(Replacement);
         }
       }
     };

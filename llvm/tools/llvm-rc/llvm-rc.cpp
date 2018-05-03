@@ -24,6 +24,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -157,9 +158,15 @@ int main(int Argc, const char **Argv) {
 
   if (!IsDryRun) {
     auto OutArgsInfo = InputArgs.getAllArgValues(OPT_FILEOUT);
+    if (OutArgsInfo.empty()) {
+      SmallString<128> OutputFile = InputFile;
+      llvm::sys::path::replace_extension(OutputFile, "res");
+      OutArgsInfo.push_back(OutputFile.str());
+    }
+
     if (OutArgsInfo.size() != 1)
       fatalError(
-          "Exactly one output file should be provided (using /FO flag).");
+          "No more than one output file should be provided (using /FO flag).");
 
     std::error_code EC;
     auto FOut =

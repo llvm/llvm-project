@@ -8322,7 +8322,7 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
     if (Op == OO_New || Op == OO_Array_New) {
       const FunctionProtoType *Proto
         = FD->getType()->castAs<FunctionProtoType>();
-      if (!Proto->isNothrow(Context, /*ResultIfDependent*/true) &&
+      if (!Proto->isNothrow(/*ResultIfDependent*/true) &&
           CheckNonNullExpr(*this, RetValExp))
         Diag(ReturnLoc, diag::warn_operator_new_returns_null)
           << FD << getLangOpts().CPlusPlus11;

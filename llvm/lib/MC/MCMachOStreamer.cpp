@@ -455,30 +455,7 @@ void MCMachOStreamer::FinishImpl() {
 
   // We have to set the fragment atom associations so we can relax properly for
   // Mach-O.
-
-  // First, scan the symbol table to build a lookup table from fragments to
-  // defining symbols.
-  DenseMap<const MCFragment *, const MCSymbol *> DefiningSymbolMap;
-  for (const MCSymbol &Symbol : getAssembler().symbols()) {
-    if (getAssembler().isSymbolLinkerVisible(Symbol) && Symbol.isInSection() &&
-        !Symbol.isVariable()) {
-      // An atom defining symbol should never be internal to a fragment.
-      assert(Symbol.getOffset() == 0 &&
-             "Invalid offset in atom defining symbol!");
-      DefiningSymbolMap[Symbol.getFragment()] = &Symbol;
-    }
-  }
-
-  // Set the fragment atom associations by tracking the last seen atom defining
-  // symbol.
-  for (MCSection &Sec : getAssembler()) {
-    const MCSymbol *CurrentAtom = nullptr;
-    for (MCFragment &Frag : Sec) {
-      if (const MCSymbol *Symbol = DefiningSymbolMap.lookup(&Frag))
-        CurrentAtom = Symbol;
-      Frag.setAtom(CurrentAtom);
-    }
-  }
+  addFragmentAtoms();
 
   this->MCObjectStreamer::FinishImpl();
 }

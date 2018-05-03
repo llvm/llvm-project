@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -35,8 +36,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <memory>
@@ -886,46 +887,195 @@ Function *GCOVProfiler::insertCounterWriteout(
   Constant *SummaryInfo = getSummaryInfoFunc();
   Constant *EndFile = getEndFileFunc();
 
-  NamedMDNode *CU_Nodes = M->getNamedMetadata("llvm.dbg.cu");
-  if (CU_Nodes) {
-    for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
-      auto *CU = cast<DICompileUnit>(CU_Nodes->getOperand(i));
-
-      // Skip module skeleton (and module) CUs.
-      if (CU->getDWOId())
-        continue;
-
-      std::string FilenameGcda = mangleName(CU, GCovFileType::GCDA);
-      uint32_t CfgChecksum = FileChecksums.empty() ? 0 : FileChecksums[i];
-      Builder.CreateCall(StartFile,
-                         {Builder.CreateGlobalStringPtr(FilenameGcda),
-                          Builder.CreateGlobalStringPtr(ReversedVersion),
-                          Builder.getInt32(CfgChecksum)});
-      for (unsigned j = 0, e = CountersBySP.size(); j != e; ++j) {
-        auto *SP = cast_or_null<DISubprogram>(CountersBySP[j].second);
-        uint32_t FuncChecksum = Funcs.empty() ? 0 : Funcs[j]->getFuncChecksum();
-        Builder.CreateCall(
-            EmitFunction,
-            {Builder.getInt32(j),
-             Options.FunctionNamesInData
-                 ? Builder.CreateGlobalStringPtr(getFunctionName(SP))
-                 : Constant::getNullValue(Builder.getInt8PtrTy()),
-             Builder.getInt32(FuncChecksum),
-             Builder.getInt8(Options.UseCfgChecksum),
-             Builder.getInt32(CfgChecksum)});
-
-        GlobalVariable *GV = CountersBySP[j].first;
-        unsigned Arcs =
-          cast<ArrayType>(GV->getValueType())->getNumElements();
-        Builder.CreateCall(EmitArcs, {Builder.getInt32(Arcs),
-                                      Builder.CreateConstGEP2_64(GV, 0, 0)});
-      }
-      Builder.CreateCall(SummaryInfo, {});
-      Builder.CreateCall(EndFile, {});
-    }
+  NamedMDNode *CUNodes = M->getNamedMetadata("llvm.dbg.cu");
+  if (!CUNodes) {
+    Builder.CreateRetVoid();
+    return WriteoutF;
   }
 
+  // Collect the relevant data into a large constant data structure that we can
+  // walk to write out everything.
+  StructType *StartFileCallArgsTy = StructType::create(
+      {Builder.getInt8PtrTy(), Builder.getInt8PtrTy(), Builder.getInt32Ty()});
+  StructType *EmitFunctionCallArgsTy = StructType::create(
+      {Builder.getInt32Ty(), Builder.getInt8PtrTy(), Builder.getInt32Ty(),
+       Builder.getInt8Ty(), Builder.getInt32Ty()});
+  StructType *EmitArcsCallArgsTy = StructType::create(
+      {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()});
+  StructType *FileInfoTy =
+      StructType::create({StartFileCallArgsTy, Builder.getInt32Ty(),
+                          EmitFunctionCallArgsTy->getPointerTo(),
+                          EmitArcsCallArgsTy->getPointerTo()});
+
+  Constant *Zero32 = Builder.getInt32(0);
+  // Build an explicit array of two zeros for use in ConstantExpr GEP building.
+  Constant *TwoZero32s[] = {Zero32, Zero32};
+
+  SmallVector<Constant *, 8> FileInfos;
+  for (int i : llvm::seq<int>(0, CUNodes->getNumOperands())) {
+    auto *CU = cast<DICompileUnit>(CUNodes->getOperand(i));
+
+    // Skip module skeleton (and module) CUs.
+    if (CU->getDWOId())
+      continue;
+
+    std::string FilenameGcda = mangleName(CU, GCovFileType::GCDA);
+    uint32_t CfgChecksum = FileChecksums.empty() ? 0 : FileChecksums[i];
+    auto *StartFileCallArgs = ConstantStruct::get(
+        StartFileCallArgsTy, {Builder.CreateGlobalStringPtr(FilenameGcda),
+                              Builder.CreateGlobalStringPtr(ReversedVersion),
+                              Builder.getInt32(CfgChecksum)});
+
+    SmallVector<Constant *, 8> EmitFunctionCallArgsArray;
+    SmallVector<Constant *, 8> EmitArcsCallArgsArray;
+    for (int j : llvm::seq<int>(0, CountersBySP.size())) {
+      auto *SP = cast_or_null<DISubprogram>(CountersBySP[j].second);
+      uint32_t FuncChecksum = Funcs.empty() ? 0 : Funcs[j]->getFuncChecksum();
+      EmitFunctionCallArgsArray.push_back(ConstantStruct::get(
+          EmitFunctionCallArgsTy,
+          {Builder.getInt32(j),
+           Options.FunctionNamesInData
+               ? Builder.CreateGlobalStringPtr(getFunctionName(SP))
+               : Constant::getNullValue(Builder.getInt8PtrTy()),
+           Builder.getInt32(FuncChecksum),
+           Builder.getInt8(Options.UseCfgChecksum),
+           Builder.getInt32(CfgChecksum)}));
+
+      GlobalVariable *GV = CountersBySP[j].first;
+      unsigned Arcs = cast<ArrayType>(GV->getValueType())->getNumElements();
+      EmitArcsCallArgsArray.push_back(ConstantStruct::get(
+          EmitArcsCallArgsTy,
+          {Builder.getInt32(Arcs), ConstantExpr::getInBoundsGetElementPtr(
+                                       GV->getValueType(), GV, TwoZero32s)}));
+    }
+    // Create global arrays for the two emit calls.
+    int CountersSize = CountersBySP.size();
+    assert(CountersSize == (int)EmitFunctionCallArgsArray.size() &&
+           "Mismatched array size!");
+    assert(CountersSize == (int)EmitArcsCallArgsArray.size() &&
+           "Mismatched array size!");
+    auto *EmitFunctionCallArgsArrayTy =
+        ArrayType::get(EmitFunctionCallArgsTy, CountersSize);
+    auto *EmitFunctionCallArgsArrayGV = new GlobalVariable(
+        *M, EmitFunctionCallArgsArrayTy, /*isConstant*/ true,
+        GlobalValue::InternalLinkage,
+        ConstantArray::get(EmitFunctionCallArgsArrayTy,
+                           EmitFunctionCallArgsArray),
+        Twine("__llvm_internal_gcov_emit_function_args.") + Twine(i));
+    auto *EmitArcsCallArgsArrayTy =
+        ArrayType::get(EmitArcsCallArgsTy, CountersSize);
+    EmitFunctionCallArgsArrayGV->setUnnamedAddr(
+        GlobalValue::UnnamedAddr::Global);
+    auto *EmitArcsCallArgsArrayGV = new GlobalVariable(
+        *M, EmitArcsCallArgsArrayTy, /*isConstant*/ true,
+        GlobalValue::InternalLinkage,
+        ConstantArray::get(EmitArcsCallArgsArrayTy, EmitArcsCallArgsArray),
+        Twine("__llvm_internal_gcov_emit_arcs_args.") + Twine(i));
+    EmitArcsCallArgsArrayGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+    FileInfos.push_back(ConstantStruct::get(
+        FileInfoTy,
+        {StartFileCallArgs, Builder.getInt32(CountersSize),
+         ConstantExpr::getInBoundsGetElementPtr(EmitFunctionCallArgsArrayTy,
+                                                EmitFunctionCallArgsArrayGV,
+                                                TwoZero32s),
+         ConstantExpr::getInBoundsGetElementPtr(
+             EmitArcsCallArgsArrayTy, EmitArcsCallArgsArrayGV, TwoZero32s)}));
+  }
+
+  // If we didn't find anything to actually emit, bail on out.
+  if (FileInfos.empty()) {
+    Builder.CreateRetVoid();
+    return WriteoutF;
+  }
+
+  // To simplify code, we cap the number of file infos we write out to fit
+  // easily in a 32-bit signed integer. This gives consistent behavior between
+  // 32-bit and 64-bit systems without requiring (potentially very slow) 64-bit
+  // operations on 32-bit systems. It also seems unreasonable to try to handle
+  // more than 2 billion files.
+  if ((int64_t)FileInfos.size() > (int64_t)INT_MAX)
+    FileInfos.resize(INT_MAX);
+
+  // Create a global for the entire data structure so we can walk it more
+  // easily.
+  auto *FileInfoArrayTy = ArrayType::get(FileInfoTy, FileInfos.size());
+  auto *FileInfoArrayGV = new GlobalVariable(
+      *M, FileInfoArrayTy, /*isConstant*/ true, GlobalValue::InternalLinkage,
+      ConstantArray::get(FileInfoArrayTy, FileInfos),
+      "__llvm_internal_gcov_emit_file_info");
+  FileInfoArrayGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+  // Create the CFG for walking this data structure.
+  auto *FileLoopHeader =
+      BasicBlock::Create(*Ctx, "file.loop.header", WriteoutF);
+  auto *CounterLoopHeader =
+      BasicBlock::Create(*Ctx, "counter.loop.header", WriteoutF);
+  auto *FileLoopLatch = BasicBlock::Create(*Ctx, "file.loop.latch", WriteoutF);
+  auto *ExitBB = BasicBlock::Create(*Ctx, "exit", WriteoutF);
+
+  // We always have at least one file, so just branch to the header.
+  Builder.CreateBr(FileLoopHeader);
+
+  // The index into the files structure is our loop induction variable.
+  Builder.SetInsertPoint(FileLoopHeader);
+  PHINode *IV =
+      Builder.CreatePHI(Builder.getInt32Ty(), /*NumReservedValues*/ 2);
+  IV->addIncoming(Builder.getInt32(0), BB);
+  auto *FileInfoPtr =
+      Builder.CreateInBoundsGEP(FileInfoArrayGV, {Builder.getInt32(0), IV});
+  auto *StartFileCallArgsPtr = Builder.CreateStructGEP(FileInfoPtr, 0);
+  Builder.CreateCall(
+      StartFile,
+      {Builder.CreateLoad(Builder.CreateStructGEP(StartFileCallArgsPtr, 0)),
+       Builder.CreateLoad(Builder.CreateStructGEP(StartFileCallArgsPtr, 1)),
+       Builder.CreateLoad(Builder.CreateStructGEP(StartFileCallArgsPtr, 2))});
+  auto *NumCounters =
+      Builder.CreateLoad(Builder.CreateStructGEP(FileInfoPtr, 1));
+  auto *EmitFunctionCallArgsArray =
+      Builder.CreateLoad(Builder.CreateStructGEP(FileInfoPtr, 2));
+  auto *EmitArcsCallArgsArray =
+      Builder.CreateLoad(Builder.CreateStructGEP(FileInfoPtr, 3));
+  auto *EnterCounterLoopCond =
+      Builder.CreateICmpSLT(Builder.getInt32(0), NumCounters);
+  Builder.CreateCondBr(EnterCounterLoopCond, CounterLoopHeader, FileLoopLatch);
+
+  Builder.SetInsertPoint(CounterLoopHeader);
+  auto *JV = Builder.CreatePHI(Builder.getInt32Ty(), /*NumReservedValues*/ 2);
+  JV->addIncoming(Builder.getInt32(0), FileLoopHeader);
+  auto *EmitFunctionCallArgsPtr =
+      Builder.CreateInBoundsGEP(EmitFunctionCallArgsArray, {JV});
+  Builder.CreateCall(
+      EmitFunction,
+      {Builder.CreateLoad(Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 0)),
+       Builder.CreateLoad(Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 1)),
+       Builder.CreateLoad(Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 2)),
+       Builder.CreateLoad(Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 3)),
+       Builder.CreateLoad(
+           Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 4))});
+  auto *EmitArcsCallArgsPtr =
+      Builder.CreateInBoundsGEP(EmitArcsCallArgsArray, {JV});
+  Builder.CreateCall(
+      EmitArcs,
+      {Builder.CreateLoad(Builder.CreateStructGEP(EmitArcsCallArgsPtr, 0)),
+       Builder.CreateLoad(Builder.CreateStructGEP(EmitArcsCallArgsPtr, 1))});
+  auto *NextJV = Builder.CreateAdd(JV, Builder.getInt32(1));
+  auto *CounterLoopCond = Builder.CreateICmpSLT(NextJV, NumCounters);
+  Builder.CreateCondBr(CounterLoopCond, CounterLoopHeader, FileLoopLatch);
+  JV->addIncoming(NextJV, CounterLoopHeader);
+
+  Builder.SetInsertPoint(FileLoopLatch);
+  Builder.CreateCall(SummaryInfo, {});
+  Builder.CreateCall(EndFile, {});
+  auto *NextIV = Builder.CreateAdd(IV, Builder.getInt32(1));
+  auto *FileLoopCond =
+      Builder.CreateICmpSLT(NextIV, Builder.getInt32(FileInfos.size()));
+  Builder.CreateCondBr(FileLoopCond, FileLoopHeader, ExitBB);
+  IV->addIncoming(NextIV, FileLoopLatch);
+
+  Builder.SetInsertPoint(ExitBB);
   Builder.CreateRetVoid();
+
   return WriteoutF;
 }
 

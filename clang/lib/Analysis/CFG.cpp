@@ -2350,7 +2350,7 @@ static bool CanThrow(Expr *E, ASTContext &Ctx) {
   if (FT) {
     if (const FunctionProtoType *Proto = dyn_cast<FunctionProtoType>(FT))
       if (!isUnresolvedExceptionSpec(Proto->getExceptionSpecType()) &&
-          Proto->isNothrow(Ctx))
+          Proto->isNothrow())
         return false;
   }
   return true;

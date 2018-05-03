@@ -42,6 +42,7 @@ bool InputFile::IsInGroup;
 uint32_t InputFile::NextGroupId;
 std::vector<BinaryFile *> elf::BinaryFiles;
 std::vector<BitcodeFile *> elf::BitcodeFiles;
+std::vector<LazyObjFile *> elf::LazyObjFiles;
 std::vector<InputFile *> elf::ObjectFiles;
 std::vector<InputFile *> elf::SharedFiles;
 
@@ -1024,9 +1025,10 @@ BitcodeFile::BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
   // this causes a collision which result in only one of the objects being
   // taken into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage).
-  MemoryBufferRef MBRef(MB.getBuffer(),
-                        Saver.save(ArchiveName + MB.getBufferIdentifier() +
-                                   utostr(OffsetInArchive)));
+  MemoryBufferRef MBRef(
+      MB.getBuffer(),
+      Saver.save(ArchiveName + MB.getBufferIdentifier() +
+                 (ArchiveName.empty() ? "" : utostr(OffsetInArchive))));
   Obj = CHECK(lto::InputFile::create(MBRef), this);
 
   Triple T(Obj->getTargetTriple());
@@ -1128,11 +1130,6 @@ void BinaryFile::parse() {
                      Data.size(), 0, STB_GLOBAL, nullptr, nullptr);
 }
 
-static bool isBitcode(MemoryBufferRef MB) {
-  using namespace sys::fs;
-  return identify_magic(MB.getBuffer()) == file_magic::bitcode;
-}
-
 InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
                                  uint64_t OffsetInArchive) {
   if (isBitcode(MB))
@@ -1168,9 +1165,9 @@ InputFile *elf::createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName) {
 }
 
 MemoryBufferRef LazyObjFile::getBuffer() {
-  if (Seen)
+  if (AddedToLink)
     return MemoryBufferRef();
-  Seen = true;
+  AddedToLink = true;
   return MB;
 }
 

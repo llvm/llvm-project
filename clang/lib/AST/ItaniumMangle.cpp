@@ -2702,7 +2702,7 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
   // Mangle instantiation-dependent exception-specification, if present,
   // per cxx-abi-dev proposal on 2016-10-11.
   if (T->hasInstantiationDependentExceptionSpec()) {
-    if (T->getExceptionSpecType() == EST_ComputedNoexcept) {
+    if (isComputedNoexcept(T->getExceptionSpecType())) {
       Out << "DO";
       mangleExpression(T->getNoexceptExpr());
       Out << "E";
@@ -2713,7 +2713,7 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
         mangleType(ExceptTy);
       Out << "E";
     }
-  } else if (T->isNothrow(getASTContext())) {
+  } else if (T->isNothrow()) {
     Out << "Do";
   }
 

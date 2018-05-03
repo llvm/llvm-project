@@ -3586,15 +3586,11 @@ Parser::tryParseExceptionSpecification(bool Delayed,
     // There is an argument.
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
-    NoexceptType = EST_ComputedNoexcept;
     NoexceptExpr = ParseConstantExpression();
     T.consumeClose();
-    // The argument must be contextually convertible to bool. We use
-    // CheckBooleanCondition for this purpose.
-    // FIXME: Add a proper Sema entry point for this.
     if (!NoexceptExpr.isInvalid()) {
-      NoexceptExpr =
-          Actions.CheckBooleanCondition(KeywordLoc, NoexceptExpr.get());
+      NoexceptExpr = Actions.ActOnNoexceptSpec(KeywordLoc, NoexceptExpr.get(),
+                                               NoexceptType);
       NoexceptRange = SourceRange(KeywordLoc, T.getCloseLocation());
     } else {
       NoexceptType = EST_BasicNoexcept;
