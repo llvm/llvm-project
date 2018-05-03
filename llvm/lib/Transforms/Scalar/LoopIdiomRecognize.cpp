@@ -1199,11 +1199,10 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
     if (!SubOneOp)
       return false;
 
-    Instruction *SubInst = cast<Instruction>(SubOneOp);
-    ConstantInt *Dec = dyn_cast<ConstantInt>(SubInst->getOperand(1));
+    ConstantInt *Dec = dyn_cast<ConstantInt>(SubOneOp->getOperand(1));
     if (!Dec ||
-        !((SubInst->getOpcode() == Instruction::Sub && Dec->isOne()) ||
-          (SubInst->getOpcode() == Instruction::Add &&
+        !((SubOneOp->getOpcode() == Instruction::Sub && Dec->isOne()) ||
+          (SubOneOp->getOpcode() == Instruction::Add &&
            Dec->isMinusOne()))) {
       return false;
     }

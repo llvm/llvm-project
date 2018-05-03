@@ -351,7 +351,7 @@ static void checkThrowInNonThrowingFunc(Sema &S, const FunctionDecl *FD,
 
 static bool isNoexcept(const FunctionDecl *FD) {
   const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  if (FPT->isNothrow(FD->getASTContext()) || FD->hasAttr<NoThrowAttr>())
+  if (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>())
     return true;
   return false;
 }

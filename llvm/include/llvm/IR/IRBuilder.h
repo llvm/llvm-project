@@ -1476,14 +1476,19 @@ public:
     return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
   }
 
+  Value *CreateStructGEP(Value *Ptr, unsigned Idx, const Twine &Name = "") {
+    return CreateConstInBoundsGEP2_32(nullptr, Ptr, 0, Idx, Name);
+  }
+
   /// Same as CreateGlobalString, but return a pointer with "i8*" type
   /// instead of a pointer to array of i8.
-  Value *CreateGlobalStringPtr(StringRef Str, const Twine &Name = "",
-                               unsigned AddressSpace = 0) {
-    GlobalVariable *gv = CreateGlobalString(Str, Name, AddressSpace);
-    Value *zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
-    Value *Args[] = { zero, zero };
-    return CreateInBoundsGEP(gv->getValueType(), gv, Args, Name);
+  Constant *CreateGlobalStringPtr(StringRef Str, const Twine &Name = "",
+                                  unsigned AddressSpace = 0) {
+    GlobalVariable *GV = CreateGlobalString(Str, Name, AddressSpace);
+    Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
+    Constant *Indices[] = {Zero, Zero};
+    return ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
+                                                  Indices);
   }
 
   //===--------------------------------------------------------------------===//

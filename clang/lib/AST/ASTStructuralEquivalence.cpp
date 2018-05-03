@@ -441,7 +441,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                       Proto2->getExceptionType(I)))
           return false;
       }
-    } else if (Proto1->getExceptionSpecType() == EST_ComputedNoexcept) {
+    } else if (isComputedNoexcept(Proto1->getExceptionSpecType())) {
       if (!IsStructurallyEquivalent(Context, Proto1->getNoexceptExpr(),
                                     Proto2->getNoexceptExpr()))
         return false;

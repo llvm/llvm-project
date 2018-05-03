@@ -251,7 +251,9 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     }
     break;
 
-  case EST_ComputedNoexcept:
+  case EST_DependentNoexcept:
+  case EST_NoexceptFalse:
+  case EST_NoexceptTrue:
     I.Fun.NoexceptExpr = NoexceptExpr;
     break;
 

@@ -259,11 +259,11 @@ public:
   template <class ELFT> void parse();
   MemoryBufferRef getBuffer();
   InputFile *fetch();
+  bool AddedToLink = false;
 
 private:
   template <class ELFT> void addElfSymbols();
 
-  bool Seen = false;
   uint64_t OffsetInArchive;
 };
 
@@ -351,8 +351,13 @@ InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
                             uint64_t OffsetInArchive = 0);
 InputFile *createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName);
 
+inline bool isBitcode(MemoryBufferRef MB) {
+  return identify_magic(MB.getBuffer()) == llvm::file_magic::bitcode;
+}
+
 extern std::vector<BinaryFile *> BinaryFiles;
 extern std::vector<BitcodeFile *> BitcodeFiles;
+extern std::vector<LazyObjFile *> LazyObjFiles;
 extern std::vector<InputFile *> ObjectFiles;
 extern std::vector<InputFile *> SharedFiles;
 

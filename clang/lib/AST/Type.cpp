@@ -2800,19 +2800,21 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
       exnSlot[I++] = ExceptionType;
     }
-  } else if (getExceptionSpecType() == EST_ComputedNoexcept) {
+  } else if (isComputedNoexcept(getExceptionSpecType())) {
+    assert(epi.ExceptionSpec.NoexceptExpr && "computed noexcept with no expr");
+    assert((getExceptionSpecType() == EST_DependentNoexcept) ==
+           epi.ExceptionSpec.NoexceptExpr->isValueDependent());
+
     // Store the noexcept expression and context.
     auto **noexSlot = reinterpret_cast<Expr **>(argSlot + NumParams);
     *noexSlot = epi.ExceptionSpec.NoexceptExpr;
 
-    if (epi.ExceptionSpec.NoexceptExpr) {
-      if (epi.ExceptionSpec.NoexceptExpr->isValueDependent() ||
-          epi.ExceptionSpec.NoexceptExpr->isInstantiationDependent())
-        setInstantiationDependent();
+    if (epi.ExceptionSpec.NoexceptExpr->isValueDependent() ||
+        epi.ExceptionSpec.NoexceptExpr->isInstantiationDependent())
+      setInstantiationDependent();
 
-      if (epi.ExceptionSpec.NoexceptExpr->containsUnexpandedParameterPack())
-        setContainsUnexpandedParameterPack();
-    }
+    if (epi.ExceptionSpec.NoexceptExpr->containsUnexpandedParameterPack())
+      setContainsUnexpandedParameterPack();
   } else if (getExceptionSpecType() == EST_Uninstantiated) {
     // Store the function decl from which we will resolve our
     // exception specification.
@@ -2832,7 +2834,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   // then it's a dependent type. This only happens in C++17 onwards.
   if (isCanonicalUnqualified()) {
     if (getExceptionSpecType() == EST_Dynamic ||
-        getExceptionSpecType() == EST_ComputedNoexcept) {
+        getExceptionSpecType() == EST_DependentNoexcept) {
       assert(hasDependentExceptionSpec() && "type should not be canonical");
       setDependent();
     }
@@ -2870,52 +2872,36 @@ bool FunctionProtoType::hasInstantiationDependentExceptionSpec() const {
   return false;
 }
 
-FunctionProtoType::NoexceptResult
-FunctionProtoType::getNoexceptSpec(const ASTContext &ctx) const {
-  ExceptionSpecificationType est = getExceptionSpecType();
-  if (est == EST_BasicNoexcept)
-    return NR_Nothrow;
+CanThrowResult FunctionProtoType::canThrow() const {
+  switch (getExceptionSpecType()) {
+  case EST_Unparsed:
+  case EST_Unevaluated:
+  case EST_Uninstantiated:
+    llvm_unreachable("should not call this with unresolved exception specs");
 
-  if (est != EST_ComputedNoexcept)
-    return NR_NoNoexcept;
-
-  Expr *noexceptExpr = getNoexceptExpr();
-  if (!noexceptExpr)
-    return NR_BadNoexcept;
-  if (noexceptExpr->isValueDependent())
-    return NR_Dependent;
-
-  llvm::APSInt value;
-  bool isICE = noexceptExpr->isIntegerConstantExpr(value, ctx, nullptr,
-                                                   /*evaluated*/false);
-  (void)isICE;
-  assert(isICE && "AST should not contain bad noexcept expressions.");
-
-  return value.getBoolValue() ? NR_Nothrow : NR_Throw;
-}
-
-CanThrowResult FunctionProtoType::canThrow(const ASTContext &Ctx) const {
-  ExceptionSpecificationType EST = getExceptionSpecType();
-  assert(EST != EST_Unevaluated && EST != EST_Uninstantiated);
-  if (EST == EST_DynamicNone || EST == EST_BasicNoexcept)
+  case EST_DynamicNone:
+  case EST_BasicNoexcept:
+  case EST_NoexceptTrue:
     return CT_Cannot;
 
-  if (EST == EST_Dynamic) {
+  case EST_None:
+  case EST_MSAny:
+  case EST_NoexceptFalse:
+    return CT_Can;
+
+  case EST_Dynamic:
     // A dynamic exception specification is throwing unless every exception
     // type is an (unexpanded) pack expansion type.
     for (unsigned I = 0, N = NumExceptions; I != N; ++I)
       if (!getExceptionType(I)->getAs<PackExpansionType>())
         return CT_Can;
     return CT_Dependent;
+
+  case EST_DependentNoexcept:
+    return CT_Dependent;
   }
 
-  if (EST != EST_ComputedNoexcept)
-    return CT_Can;
-
-  NoexceptResult NR = getNoexceptSpec(Ctx);
-  if (NR == NR_Dependent)
-    return CT_Dependent;
-  return NR == NR_Nothrow ? CT_Cannot : CT_Can;
+  llvm_unreachable("unexpected exception specification kind");
 }
 
 bool FunctionProtoType::isTemplateVariadic() const {
@@ -2965,8 +2951,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   if (epi.ExceptionSpec.Type == EST_Dynamic) {
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
-  } else if (epi.ExceptionSpec.Type == EST_ComputedNoexcept &&
-             epi.ExceptionSpec.NoexceptExpr) {
+  } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
     epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {

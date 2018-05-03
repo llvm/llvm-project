@@ -9848,7 +9848,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         else if (auto *MPT = T->getAs<MemberPointerType>())
           T = MPT->getPointeeType();
         if (auto *FPT = T->getAs<FunctionProtoType>())
-          if (FPT->isNothrow(Context))
+          if (FPT->isNothrow())
             return true;
         return false;
       };
