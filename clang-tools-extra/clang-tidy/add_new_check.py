@@ -214,7 +214,7 @@ def add_release_notes(module_path, module, check_name):
           if not line.startswith('----'):
             f.write("""
 - New :doc:`%s
-  <clang-tidy/checks/%s>` check
+  <clang-tidy/checks/%s>` check.
 
   FIXME: add release notes.
 """ % (check_name_dashes, check_name_dashes))
