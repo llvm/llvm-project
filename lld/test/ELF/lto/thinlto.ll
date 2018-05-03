@@ -31,7 +31,7 @@
 ; RUN: touch %t4.o.thinlto.bc
 ; RUN: chmod 400 %t4.o.thinlto.bc
 ; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t.o %t4.o -o %t5 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: failed to write {{.*}}4.o.thinlto.bc: Permission denied
+; ERR: failed to write {{.*}}4.o.thinlto.bc: {{P|p}}ermission denied
 
 ; First force single-threaded mode
 ; RUN: rm -f %t.lto.o %t1.lto.o
@@ -58,8 +58,8 @@
 ; The backend index for this module contains summaries from itself and
 ; Inputs/thinlto.ll, as it imports from the latter.
 ; BACKEND1: <MODULE_STRTAB_BLOCK
-; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}/thinlto.ll.tmp{{.*}}.o'
-; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}/thinlto.ll.tmp{{.*}}.o'
+; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}thinlto.ll.tmp{{.*}}.o'
+; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}thinlto.ll.tmp{{.*}}.o'
 ; BACKEND1-NEXT: </MODULE_STRTAB_BLOCK
 ; BACKEND1: <GLOBALVAL_SUMMARY_BLOCK
 ; BACKEND1: <VERSION
@@ -73,7 +73,7 @@
 ; The backend index for Input/thinlto.ll contains summaries from itself only,
 ; as it does not import anything.
 ; BACKEND2: <MODULE_STRTAB_BLOCK
-; BACKEND2-NEXT: <ENTRY {{.*}} record string = '{{.*}}/thinlto.ll.tmp2.o'
+; BACKEND2-NEXT: <ENTRY {{.*}} record string = '{{.*}}thinlto.ll.tmp2.o'
 ; BACKEND2-NEXT: </MODULE_STRTAB_BLOCK
 ; BACKEND2-NEXT: <GLOBALVAL_SUMMARY_BLOCK
 ; BACKEND2-NEXT: <VERSION

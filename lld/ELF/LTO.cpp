@@ -196,7 +196,9 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   std::tie(OldPrefix, NewPrefix) = Config->ThinLTOPrefixReplace.split(';');
 
   // Create the empty files which, if indexed, will be overwritten later.
-  writeEmptyDistributedBuildOutputs(Obj.getName(), OldPrefix, NewPrefix, false);
+  if (Config->ThinLTOIndexOnly)
+    writeEmptyDistributedBuildOutputs(Obj.getName(), OldPrefix, NewPrefix,
+                                      false);
 
   unsigned SymNum = 0;
   std::vector<Symbol *> Syms = F.getSymbols();

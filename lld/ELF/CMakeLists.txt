@@ -46,6 +46,7 @@ add_lld_library(lldELF
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
+  BitWriter
   Core
   DebugInfoDWARF
   LTO

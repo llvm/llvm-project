@@ -13,6 +13,7 @@ config.python_executable = "@PYTHON_EXECUTABLE@"
 config.cc = "@LLDB_TEST_C_COMPILER@"
 config.cxx = "@LLDB_TEST_CXX_COMPILER@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
+config.have_lld = @LLDB_HAVE_LLD@
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
