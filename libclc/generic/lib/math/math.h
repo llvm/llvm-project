@@ -20,6 +20,13 @@
  * THE SOFTWARE.
  */
 
+#ifndef __CLC_MATH_H_
+#define __CLC_MATH_H_
+
+#include "clc/clcfunc.h"
+#include "clc/as_type.h"
+#include "config.h"
+
 #define SNAN 0x001
 #define QNAN 0x002
 #define NINF 0x004
@@ -66,6 +73,17 @@
 #define MANTLENGTH_SP32   24
 #define BASEDIGITS_SP32   7
 
+_CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x)
+{
+	int ix = as_int(x);
+	if (!__clc_fp32_subnormals_supported() &&
+		((ix & EXPBITS_SP32) == 0) && ((ix & MANTBITS_SP32) != 0)) {
+		ix &= SIGNBIT_SP32;
+		x = as_float(ix);
+	}
+	return x;
+}
+
 #ifdef cl_khr_fp64
 
 #define SIGNBIT_DP64      0x8000000000000000L
@@ -93,3 +111,4 @@
 #endif // cl_khr_fp64
 
 #define ALIGNED(x)	__attribute__((aligned(x)))
+#endif // __CLC_MATH_H_

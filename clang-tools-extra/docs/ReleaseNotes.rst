@@ -162,6 +162,9 @@ Improvements to clang-tidy
   Flags functions that have more than a specified number of variables declared
   in the body.
 
+- The `AnalyzeTemporaryDtors` option was removed, since the corresponding
+  `cfg-temporary-dtors` option of the Static Analyzer now defaults to `true`.
+
 - New alias :doc:`hicpp-avoid-goto
   <clang-tidy/checks/hicpp-avoid-goto>` to :doc:`cppcoreguidelines-avoid-goto
   <clang-tidy/checks/cppcoreguidelines-avoid-goto>`
