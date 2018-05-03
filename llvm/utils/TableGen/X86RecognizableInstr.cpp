@@ -301,6 +301,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_64BIT_XD_OPSIZE;
     else if (OpSize == X86Local::OpSize16 && OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_XS_OPSIZE;
+    else if (AdSize == X86Local::AdSize32 && OpPrefix == X86Local::PD)
+      insnContext = IC_64BIT_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 && AdSize == X86Local::AdSize32)
       insnContext = IC_64BIT_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD)
@@ -328,6 +330,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_XD_ADSIZE;
     else if (AdSize == X86Local::AdSize16 && OpPrefix == X86Local::XS)
       insnContext = IC_XS_ADSIZE;
+    else if (AdSize == X86Local::AdSize16 && OpPrefix == X86Local::PD)
+      insnContext = IC_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 && AdSize == X86Local::AdSize16)
       insnContext = IC_OPSIZE_ADSIZE;
     else if (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD)
@@ -850,10 +854,7 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("VR64",                TYPE_MM64)
   TYPE("i64imm",              TYPE_IMM)
   TYPE("anymem",              TYPE_M)
-  TYPE("opaque32mem",         TYPE_M)
-  TYPE("opaque48mem",         TYPE_M)
-  TYPE("opaque80mem",         TYPE_M)
-  TYPE("opaque512mem",        TYPE_M)
+  TYPE("opaquemem",           TYPE_M)
   TYPE("SEGMENT_REG",         TYPE_SEGMENTREG)
   TYPE("DEBUG_REG",           TYPE_DEBUGREG)
   TYPE("CONTROL_REG",         TYPE_CONTROLREG)
@@ -1085,10 +1086,7 @@ RecognizableInstr::memoryEncodingFromString(const std::string &s,
   ENCODING("lea64_32mem",     ENCODING_RM)
   ENCODING("lea64mem",        ENCODING_RM)
   ENCODING("anymem",          ENCODING_RM)
-  ENCODING("opaque32mem",     ENCODING_RM)
-  ENCODING("opaque48mem",     ENCODING_RM)
-  ENCODING("opaque80mem",     ENCODING_RM)
-  ENCODING("opaque512mem",    ENCODING_RM)
+  ENCODING("opaquemem",       ENCODING_RM)
   ENCODING("vx64mem",         ENCODING_VSIB)
   ENCODING("vx128mem",        ENCODING_VSIB)
   ENCODING("vx256mem",        ENCODING_VSIB)

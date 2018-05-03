@@ -63,16 +63,14 @@ public:
   }
 
   // These two functions are used to implement "push" and "pop" of register
-  // states.  They are used primarily
-  // for expression evaluation, where we need to push a new state (storing the
-  // old one in data_sp) and then
-  // restoring the original state by passing the data_sp we got from
-  // ReadAllRegisters to WriteAllRegisterValues.
-  // ReadAllRegisters will do what is necessary to return a coherent set of
-  // register values for this thread, which
-  // may mean e.g. interrupting a thread that is sitting in a kernel trap.  That
-  // is a somewhat disruptive operation,
-  // so these API's should only be used when this behavior is needed.
+  // states.  They are used primarily for expression evaluation, where we need
+  // to push a new state (storing the old one in data_sp) and then restoring
+  // the original state by passing the data_sp we got from ReadAllRegisters to
+  // WriteAllRegisterValues. ReadAllRegisters will do what is necessary to
+  // return a coherent set of register values for this thread, which may mean
+  // e.g. interrupting a thread that is sitting in a kernel trap.  That is a
+  // somewhat disruptive operation, so these API's should only be used when
+  // this behavior is needed.
 
   virtual bool
   ReadAllRegisterValues(lldb_private::RegisterCheckpoint &reg_checkpoint);

@@ -77,7 +77,8 @@ public:
   void MakeAllocation(IRMemoryMap &map, Status &err) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-    // Allocate a spare memory area to store the persistent variable's contents.
+    // Allocate a spare memory area to store the persistent variable's
+    // contents.
 
     Status allocate_error;
     const bool zero_memory = false;
@@ -230,8 +231,8 @@ public:
               ExpressionVariable::EVIsProgramReference &&
           !m_persistent_variable_sp->m_live_sp) {
         // If the reference comes from the program, then the
-        // ClangExpressionVariable's
-        // live variable data hasn't been set up yet.  Do this now.
+        // ClangExpressionVariable's live variable data hasn't been set up yet.
+        // Do this now.
 
         lldb::addr_t location;
         Status read_error;
@@ -256,10 +257,8 @@ public:
             frame_bottom != LLDB_INVALID_ADDRESS && location >= frame_bottom &&
             location <= frame_top) {
           // If the variable is resident in the stack frame created by the
-          // expression,
-          // then it cannot be relied upon to stay around.  We treat it as
-          // needing
-          // reallocation.
+          // expression, then it cannot be relied upon to stay around.  We
+          // treat it as needing reallocation.
           m_persistent_variable_sp->m_flags |=
               ExpressionVariable::EVIsLLDBAllocated;
           m_persistent_variable_sp->m_flags |=
@@ -889,9 +888,11 @@ public:
       return;
     }
 
-    ConstString name = m_delegate
-                           ? m_delegate->GetName()
-                           : persistent_state->GetNextPersistentVariableName();
+    ConstString name =
+        m_delegate
+            ? m_delegate->GetName()
+            : persistent_state->GetNextPersistentVariableName(
+                  *target_sp, persistent_state->GetPersistentVariablePrefix());
 
     lldb::ExpressionVariableSP ret = persistent_state->CreatePersistentVariable(
         exe_scope, name, m_type, map.GetByteOrder(), map.GetAddressByteSize());

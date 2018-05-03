@@ -1273,6 +1273,12 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
       return Sema::TDK_Underqualified;
     }
 
+    // Do not match a function type with a cv-qualified type.
+    // http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1584
+    if (Arg->isFunctionType() && Param.hasQualifiers()) {
+      return Sema::TDK_NonDeducedMismatch;
+    }
+
     assert(TemplateTypeParm->getDepth() == Info.getDeducedDepth() &&
            "saw template type parameter with wrong depth");
     assert(Arg != S.Context.OverloadTy && "Unresolved overloaded function");

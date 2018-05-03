@@ -121,7 +121,7 @@ static cl::opt<unsigned long long> ClMappingOffset(
 
 namespace {
 
-/// \brief An instrumentation pass implementing detection of addressability bugs
+/// An instrumentation pass implementing detection of addressability bugs
 /// using tagged pointers.
 class HWAddressSanitizer : public FunctionPass {
 public:
@@ -223,7 +223,7 @@ FunctionPass *llvm::createHWAddressSanitizerPass(bool CompileKernel,
   return new HWAddressSanitizer(CompileKernel, Recover);
 }
 
-/// \brief Module-level initialization.
+/// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 bool HWAddressSanitizer::doInitialization(Module &M) {

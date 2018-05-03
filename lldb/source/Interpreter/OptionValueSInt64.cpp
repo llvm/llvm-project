@@ -21,7 +21,8 @@ using namespace lldb_private;
 
 void OptionValueSInt64::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                                   uint32_t dump_mask) {
-  // printf ("%p: DumpValue (exe_ctx=%p, strm, mask) m_current_value = %" PRIi64
+  // printf ("%p: DumpValue (exe_ctx=%p, strm, mask) m_current_value = %"
+  // PRIi64
   // "\n", this, exe_ctx, m_current_value);
   if (dump_mask & eDumpOptionType)
     strm.Printf("(%s)", GetTypeAsCString());

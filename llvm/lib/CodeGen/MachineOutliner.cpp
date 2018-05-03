@@ -101,7 +101,7 @@ static cl::opt<bool> EnableLinkOnceODROutlining(
 
 namespace {
 
-/// \brief An individual sequence of instructions to be replaced with a call to
+/// An individual sequence of instructions to be replaced with a call to
 /// an outlined function.
 struct Candidate {
 private:
@@ -118,7 +118,7 @@ public:
   /// Set to false if the candidate overlapped with another candidate.
   bool InCandidateList = true;
 
-  /// \brief The index of this \p Candidate's \p OutlinedFunction in the list of
+  /// The index of this \p Candidate's \p OutlinedFunction in the list of
   /// \p OutlinedFunctions.
   unsigned FunctionIdx;
 
@@ -143,7 +143,7 @@ public:
   // Return the end index of this candidate.
   unsigned getEndIdx() const { return StartIdx + Len - 1; }
 
-  /// \brief The number of instructions that would be saved by outlining every
+  /// The number of instructions that would be saved by outlining every
   /// candidate of this type.
   ///
   /// This is a fixed value which is not updated during the candidate pruning
@@ -158,14 +158,14 @@ public:
 
   Candidate() {}
 
-  /// \brief Used to ensure that \p Candidates are outlined in an order that
+  /// Used to ensure that \p Candidates are outlined in an order that
   /// preserves the start and end indices of other \p Candidates.
   bool operator<(const Candidate &RHS) const {
     return getStartIdx() > RHS.getStartIdx();
   }
 };
 
-/// \brief The information necessary to create an outlined function for some
+/// The information necessary to create an outlined function for some
 /// class of candidate.
 struct OutlinedFunction {
 
@@ -183,7 +183,7 @@ public:
   /// A number assigned to this function which appears at the end of its name.
   unsigned Name;
 
-  /// \brief The sequence of integers corresponding to the instructions in this
+  /// The sequence of integers corresponding to the instructions in this
   /// function.
   std::vector<unsigned> Sequence;
 
@@ -210,14 +210,14 @@ public:
     return getOccurrenceCount();
   }
 
-  /// \brief Return the number of instructions it would take to outline this
+  /// Return the number of instructions it would take to outline this
   /// function.
   unsigned getOutliningCost() {
     return (OccurrenceCount * MInfo.CallOverhead) + Sequence.size() +
            MInfo.FrameOverhead;
   }
 
-  /// \brief Return the number of instructions that would be saved by outlining
+  /// Return the number of instructions that would be saved by outlining
   /// this function.
   unsigned getBenefit() {
     unsigned NotOutlinedCost = OccurrenceCount * Sequence.size();
@@ -279,7 +279,7 @@ struct SuffixTreeNode {
   /// For all other nodes, this is ignored.
   unsigned SuffixIdx = EmptyIdx;
 
-  /// \brief For internal nodes, a pointer to the internal node representing
+  /// For internal nodes, a pointer to the internal node representing
   /// the same sequence with the first character chopped off.
   ///
   /// This acts as a shortcut in Ukkonen's algorithm. One of the things that
@@ -393,7 +393,7 @@ private:
   /// The end index of each leaf in the tree.
   unsigned LeafEndIdx = -1;
 
-  /// \brief Helper struct which keeps track of the next insertion point in
+  /// Helper struct which keeps track of the next insertion point in
   /// Ukkonen's algorithm.
   struct ActiveState {
     /// The next node to insert at.
@@ -406,7 +406,7 @@ private:
     unsigned Len = 0;
   };
 
-  /// \brief The point the next insertion will take place at in the
+  /// The point the next insertion will take place at in the
   /// construction algorithm.
   ActiveState Active;
 
@@ -453,7 +453,7 @@ private:
     return N;
   }
 
-  /// \brief Set the suffix indices of the leaves to the start indices of their
+  /// Set the suffix indices of the leaves to the start indices of their
   /// respective suffixes. Also stores each leaf in \p LeafVector at its
   /// respective suffix index.
   ///
@@ -491,7 +491,7 @@ private:
     }
   }
 
-  /// \brief Construct the suffix tree for the prefix of the input ending at
+  /// Construct the suffix tree for the prefix of the input ending at
   /// \p EndIdx.
   ///
   /// Used to construct the full suffix tree iteratively. At the end of each
@@ -652,16 +652,16 @@ public:
   }
 };
 
-/// \brief Maps \p MachineInstrs to unsigned integers and stores the mappings.
+/// Maps \p MachineInstrs to unsigned integers and stores the mappings.
 struct InstructionMapper {
 
-  /// \brief The next available integer to assign to a \p MachineInstr that
+  /// The next available integer to assign to a \p MachineInstr that
   /// cannot be outlined.
   ///
   /// Set to -3 for compatability with \p DenseMapInfo<unsigned>.
   unsigned IllegalInstrNumber = -3;
 
-  /// \brief The next available integer to assign to a \p MachineInstr that can
+  /// The next available integer to assign to a \p MachineInstr that can
   /// be outlined.
   unsigned LegalInstrNumber = 0;
 
@@ -676,11 +676,11 @@ struct InstructionMapper {
   /// The vector of unsigned integers that the module is mapped to.
   std::vector<unsigned> UnsignedVec;
 
-  /// \brief Stores the location of the instruction associated with the integer
+  /// Stores the location of the instruction associated with the integer
   /// at index i in \p UnsignedVec for each index i.
   std::vector<MachineBasicBlock::iterator> InstrList;
 
-  /// \brief Maps \p *It to a legal integer.
+  /// Maps \p *It to a legal integer.
   ///
   /// Updates \p InstrList, \p UnsignedVec, \p InstructionIntegerMap,
   /// \p IntegerInstructionMap, and \p LegalInstrNumber.
@@ -743,7 +743,7 @@ struct InstructionMapper {
     return MINumber;
   }
 
-  /// \brief Transforms a \p MachineBasicBlock into a \p vector of \p unsigneds
+  /// Transforms a \p MachineBasicBlock into a \p vector of \p unsigneds
   /// and appends it to \p UnsignedVec and \p InstrList.
   ///
   /// Two instructions are assigned the same integer if they are identical.
@@ -796,7 +796,7 @@ struct InstructionMapper {
   }
 };
 
-/// \brief An interprocedural pass which finds repeated sequences of
+/// An interprocedural pass which finds repeated sequences of
 /// instructions and replaces them with calls to functions.
 ///
 /// Each instruction is mapped to an unsigned integer and placed in a string.
@@ -809,7 +809,7 @@ struct MachineOutliner : public ModulePass {
 
   static char ID;
 
-  /// \brief Set to true if the outliner should consider functions with
+  /// Set to true if the outliner should consider functions with
   /// linkonceodr linkage.
   bool OutlineFromLinkOnceODRs = false;
 
@@ -853,7 +853,7 @@ struct MachineOutliner : public ModulePass {
                  std::vector<std::shared_ptr<Candidate>> &CandidateList,
                  std::vector<OutlinedFunction> &FunctionList);
 
-  /// \brief Replace the sequences of instructions represented by the
+  /// Replace the sequences of instructions represented by the
   /// \p Candidates in \p CandidateList with calls to \p MachineFunctions
   /// described in \p FunctionList.
   ///
@@ -893,7 +893,7 @@ struct MachineOutliner : public ModulePass {
   /// Removes \p C from the candidate list, and updates its \p OutlinedFunction.
   void prune(Candidate &C, std::vector<OutlinedFunction> &FunctionList);
 
-  /// \brief Remove any overlapping candidates that weren't handled by the
+  /// Remove any overlapping candidates that weren't handled by the
   /// suffix tree's pruning method.
   ///
   /// Pruning from the suffix tree doesn't necessarily remove all overlaps.

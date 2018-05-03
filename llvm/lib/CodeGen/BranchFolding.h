@@ -132,7 +132,7 @@ class TargetRegisterInfo;
     LivePhysRegs LiveRegs;
 
   public:
-    /// \brief This class keeps track of branch frequencies of newly created
+    /// This class keeps track of branch frequencies of newly created
     /// blocks and tail-merged blocks.
     class MBFIWrapper {
     public:

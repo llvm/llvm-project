@@ -137,8 +137,8 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
   }
 
   // It's possible that another process creates the target path after we've
-  // verified it's available but before we create it, in which case we
-  // should try again.
+  // verified it's available but before we create it, in which case we should
+  // try again.
   Status error;
   do {
     llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),

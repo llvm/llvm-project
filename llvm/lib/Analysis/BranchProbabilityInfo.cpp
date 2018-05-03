@@ -88,14 +88,14 @@ static const uint32_t LBH_NONTAKEN_WEIGHT = 4;
 // Unlikely edges within a loop are half as likely as other edges
 static const uint32_t LBH_UNLIKELY_WEIGHT = 62;
 
-/// \brief Unreachable-terminating branch taken probability.
+/// Unreachable-terminating branch taken probability.
 ///
 /// This is the probability for a branch being taken to a block that terminates
 /// (eventually) in unreachable. These are predicted as unlikely as possible.
 /// All reachable probability will equally share the remaining part.
 static const BranchProbability UR_TAKEN_PROB = BranchProbability::getRaw(1);
 
-/// \brief Weight for a branch taken going into a cold block.
+/// Weight for a branch taken going into a cold block.
 ///
 /// This is the weight for a branch taken toward a block marked
 /// cold.  A block is marked cold if it's postdominated by a
@@ -103,7 +103,7 @@ static const BranchProbability UR_TAKEN_PROB = BranchProbability::getRaw(1);
 /// are those marked with attribute 'cold'.
 static const uint32_t CC_TAKEN_WEIGHT = 4;
 
-/// \brief Weight for a branch not-taken into a cold block.
+/// Weight for a branch not-taken into a cold block.
 ///
 /// This is the weight for a branch not taken toward a block marked
 /// cold.
@@ -118,20 +118,20 @@ static const uint32_t ZH_NONTAKEN_WEIGHT = 12;
 static const uint32_t FPH_TAKEN_WEIGHT = 20;
 static const uint32_t FPH_NONTAKEN_WEIGHT = 12;
 
-/// \brief Invoke-terminating normal branch taken weight
+/// Invoke-terminating normal branch taken weight
 ///
 /// This is the weight for branching to the normal destination of an invoke
 /// instruction. We expect this to happen most of the time. Set the weight to an
 /// absurdly high value so that nested loops subsume it.
 static const uint32_t IH_TAKEN_WEIGHT = 1024 * 1024 - 1;
 
-/// \brief Invoke-terminating normal branch not-taken weight.
+/// Invoke-terminating normal branch not-taken weight.
 ///
 /// This is the weight for branching to the unwind destination of an invoke
 /// instruction. This is essentially never taken.
 static const uint32_t IH_NONTAKEN_WEIGHT = 1;
 
-/// \brief Add \p BB to PostDominatedByUnreachable set if applicable.
+/// Add \p BB to PostDominatedByUnreachable set if applicable.
 void
 BranchProbabilityInfo::updatePostDominatedByUnreachable(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
@@ -162,7 +162,7 @@ BranchProbabilityInfo::updatePostDominatedByUnreachable(const BasicBlock *BB) {
   PostDominatedByUnreachable.insert(BB);
 }
 
-/// \brief Add \p BB to PostDominatedByColdCall set if applicable.
+/// Add \p BB to PostDominatedByColdCall set if applicable.
 void
 BranchProbabilityInfo::updatePostDominatedByColdCall(const BasicBlock *BB) {
   assert(!PostDominatedByColdCall.count(BB));
@@ -196,7 +196,7 @@ BranchProbabilityInfo::updatePostDominatedByColdCall(const BasicBlock *BB) {
       }
 }
 
-/// \brief Calculate edge weights for successors lead to unreachable.
+/// Calculate edge weights for successors lead to unreachable.
 ///
 /// Predict that a successor which leads necessarily to an
 /// unreachable-terminated block as extremely unlikely.
@@ -340,7 +340,7 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   return true;
 }
 
-/// \brief Calculate edge weights for edges leading to cold blocks.
+/// Calculate edge weights for edges leading to cold blocks.
 ///
 /// A cold block is one post-dominated by  a block with a call to a
 /// cold function.  Those edges are unlikely to be taken, so we give

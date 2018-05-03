@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Custom DAG lowering for SI
+/// Custom DAG lowering for SI
 //
 //===----------------------------------------------------------------------===//
 
@@ -3272,12 +3272,17 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   VT = VT.getScalarType();
 
   switch (VT.getSimpleVT().SimpleTy) {
-  case MVT::f32:
+  case MVT::f32: {
     // This is as fast on some subtargets. However, we always have full rate f32
     // mad available which returns the same result as the separate operations
     // which we should prefer over fma. We can't use this if we want to support
     // denormals, so only report this in these cases.
-    return Subtarget->hasFP32Denormals() && Subtarget->hasFastFMAF32();
+    if (Subtarget->hasFP32Denormals())
+      return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
+
+    // If the subtarget has v_fmac_f32, that's just as good as v_mac_f32.
+    return Subtarget->hasFastFMAF32() && Subtarget->hasDLInsts();
+  }
   case MVT::f64:
     return true;
   case MVT::f16:
@@ -3780,7 +3785,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-/// \brief Helper function for LowerBRCOND
+/// Helper function for LowerBRCOND
 static SDNode *findUser(SDValue Value, unsigned Opcode) {
 
   SDNode *Parent = Value.getNode();
@@ -6611,6 +6616,30 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     return DAG.getNode(Vec.getOpcode(), SL, EltVT, Elt);
   }
 
+  // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)
+  //    =>
+  // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
+  // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
+  // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
+  if (Vec.hasOneUse()) {
+    SDLoc SL(N);
+    EVT EltVT = N->getValueType(0);
+    SDValue Idx = N->getOperand(1);
+    unsigned Opc = Vec.getOpcode();
+
+    switch(Opc) {
+    default:
+      return SDValue();
+      // TODO: Support other binary operations.
+    case ISD::FADD:
+    case ISD::ADD:
+      return DAG.getNode(Opc, SL, EltVT,
+                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                     Vec.getOperand(0), Idx),
+                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                     Vec.getOperand(1), Idx));
+    }
+  }
   return SDValue();
 }
 
@@ -6726,7 +6755,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     return SDValue();
   }
 
-  if (VT != MVT::i32)
+  if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())
     return SDValue();
 
   // add x, zext (setcc) => addcarry x, 0, setcc
@@ -7124,7 +7153,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }
 
-/// \brief Helper function for adjustWritemask
+/// Helper function for adjustWritemask
 static unsigned SubIdx2Lane(unsigned Idx) {
   switch (Idx) {
   default: return 0;
@@ -7135,7 +7164,7 @@ static unsigned SubIdx2Lane(unsigned Idx) {
   }
 }
 
-/// \brief Adjust the writemask of MIMG instructions
+/// Adjust the writemask of MIMG instructions
 SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
                                           SelectionDAG &DAG) const {
   SDNode *Users[4] = { nullptr };
@@ -7257,7 +7286,7 @@ static bool isFrameIndexOp(SDValue Op) {
   return isa<FrameIndexSDNode>(Op);
 }
 
-/// \brief Legalize target independent instructions (e.g. INSERT_SUBREG)
+/// Legalize target independent instructions (e.g. INSERT_SUBREG)
 /// with frame index operands.
 /// LLVM assumes that inputs are to these instructions are registers.
 SDNode *SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
@@ -7304,7 +7333,7 @@ SDNode *SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
   return DAG.UpdateNodeOperands(Node, Ops);
 }
 
-/// \brief Fold the instructions after selecting them.
+/// Fold the instructions after selecting them.
 /// Returns null if users were already updated.
 SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
                                           SelectionDAG &DAG) const {
@@ -7378,7 +7407,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   return Node;
 }
 
-/// \brief Assign the register class depending on the number of
+/// Assign the register class depending on the number of
 /// bits set in the writemask
 void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                      SDNode *Node) const {
@@ -7465,7 +7494,7 @@ MachineSDNode *SITargetLowering::wrapAddr64Rsrc(SelectionDAG &DAG,
   return DAG.getMachineNode(AMDGPU::REG_SEQUENCE, DL, MVT::v4i32, Ops1);
 }
 
-/// \brief Return a resource descriptor with the 'Add TID' bit enabled
+/// Return a resource descriptor with the 'Add TID' bit enabled
 ///        The TID (Thread ID) is multiplied by the stride value (bits [61:48]
 ///        of the resource descriptor) to create an offset, which is added to
 ///        the resource pointer.

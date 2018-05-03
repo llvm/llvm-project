@@ -100,6 +100,7 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
 
       case AMDGPU::V_MAC_F32_e64:
       case AMDGPU::V_MAC_F16_e64:
+      case AMDGPU::V_FMAC_F32_e64:
         if (!isVGPR(Src2, TRI, MRI) ||
             TII->hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
           return false;
@@ -125,7 +126,7 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
          !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp);
 }
 
-/// \brief This function checks \p MI for operands defined by a move immediate
+/// This function checks \p MI for operands defined by a move immediate
 /// instruction and then folds the literal constant into the instruction if it
 /// can. This function assumes that \p MI is a VOP1, VOP2, or VOPC instructions.
 static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,

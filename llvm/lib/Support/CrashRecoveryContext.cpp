@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
@@ -47,7 +47,7 @@ public:
       CurrentContext->set(Next);
   }
 
-  /// \brief Called when the separate crash-recovery thread was finished, to
+  /// Called when the separate crash-recovery thread was finished, to
   /// indicate that we don't need to clear the thread-local CurrentContext.
   void setSwitchedThread() { 
 #if defined(LLVM_ENABLE_THREADS) && LLVM_ENABLE_THREADS != 0

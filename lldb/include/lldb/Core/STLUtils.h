@@ -40,8 +40,8 @@ struct CStringEqualBinaryPredicate {
 };
 
 //----------------------------------------------------------------------
-// Templated type for finding an entry in a std::map<F,S> whose value
-// is equal to something
+// Templated type for finding an entry in a std::map<F,S> whose value is equal
+// to something
 //----------------------------------------------------------------------
 template <class F, class S> class ValueEquals {
 public:

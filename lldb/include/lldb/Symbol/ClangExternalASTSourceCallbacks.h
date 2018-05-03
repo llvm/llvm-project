@@ -60,21 +60,21 @@ public:
   //------------------------------------------------------------------
 
   clang::Decl *GetExternalDecl(uint32_t ID) override {
-    // This method only needs to be implemented if the AST source ever
-    // passes back decl sets as VisibleDeclaration objects.
+    // This method only needs to be implemented if the AST source ever passes
+    // back decl sets as VisibleDeclaration objects.
     return nullptr;
   }
 
   clang::Stmt *GetExternalDeclStmt(uint64_t Offset) override {
-    // This operation is meant to be used via a LazyOffsetPtr.  It only
-    // needs to be implemented if the AST source uses methods like
+    // This operation is meant to be used via a LazyOffsetPtr.  It only needs
+    // to be implemented if the AST source uses methods like
     // FunctionDecl::setLazyBody when building decls.
     return nullptr;
   }
 
   clang::Selector GetExternalSelector(uint32_t ID) override {
-    // This operation only needs to be implemented if the AST source
-    // returns non-zero for GetNumKnownSelectors().
+    // This operation only needs to be implemented if the AST source returns
+    // non-zero for GetNumKnownSelectors().
     return clang::Selector();
   }
 

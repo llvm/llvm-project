@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements an optimization pass using store result values.
+/// This file implements an optimization pass using store result values.
 ///
 /// WebAssembly's store instructions return the stored value. This is to enable
 /// an optimization wherein uses of the stored value can be replaced by uses of

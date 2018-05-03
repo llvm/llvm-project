@@ -18,6 +18,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -167,7 +168,7 @@ void APInt::Profile(FoldingSetNodeID& ID) const {
     ID.AddInteger(U.pVal[i]);
 }
 
-/// @brief Prefix increment operator. Increments the APInt by one.
+/// Prefix increment operator. Increments the APInt by one.
 APInt& APInt::operator++() {
   if (isSingleWord())
     ++U.VAL;
@@ -176,7 +177,7 @@ APInt& APInt::operator++() {
   return clearUnusedBits();
 }
 
-/// @brief Prefix decrement operator. Decrements the APInt by one.
+/// Prefix decrement operator. Decrements the APInt by one.
 APInt& APInt::operator--() {
   if (isSingleWord())
     --U.VAL;
@@ -187,7 +188,7 @@ APInt& APInt::operator--() {
 
 /// Adds the RHS APint to this APInt.
 /// @returns this, after addition of RHS.
-/// @brief Addition assignment operator.
+/// Addition assignment operator.
 APInt& APInt::operator+=(const APInt& RHS) {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord())
@@ -207,7 +208,7 @@ APInt& APInt::operator+=(uint64_t RHS) {
 
 /// Subtracts the RHS APInt from this APInt
 /// @returns this, after subtraction
-/// @brief Subtraction assignment operator.
+/// Subtraction assignment operator.
 APInt& APInt::operator-=(const APInt& RHS) {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord())
@@ -325,7 +326,7 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
     U.pVal[word] = WORD_MAX;
 }
 
-/// @brief Toggle every bit to its opposite value.
+/// Toggle every bit to its opposite value.
 void APInt::flipAllBitsSlowCase() {
   tcComplement(U.pVal, getNumWords());
   clearUnusedBits();
@@ -333,7 +334,7 @@ void APInt::flipAllBitsSlowCase() {
 
 /// Toggle a given bit to its opposite value whose position is given
 /// as "bitPosition".
-/// @brief Toggles a given bit to its opposite value.
+/// Toggles a given bit to its opposite value.
 void APInt::flipBit(unsigned bitPosition) {
   assert(bitPosition < BitWidth && "Out of the bit-width range!");
   if ((*this)[bitPosition]) clearBit(bitPosition);
@@ -907,13 +908,13 @@ APInt APInt::sextOrSelf(unsigned width) const {
 }
 
 /// Arithmetic right-shift this APInt by shiftAmt.
-/// @brief Arithmetic right-shift function.
+/// Arithmetic right-shift function.
 void APInt::ashrInPlace(const APInt &shiftAmt) {
   ashrInPlace((unsigned)shiftAmt.getLimitedValue(BitWidth));
 }
 
 /// Arithmetic right-shift this APInt by shiftAmt.
-/// @brief Arithmetic right-shift function.
+/// Arithmetic right-shift function.
 void APInt::ashrSlowCase(unsigned ShiftAmt) {
   // Don't bother performing a no-op shift.
   if (!ShiftAmt)
@@ -956,19 +957,19 @@ void APInt::ashrSlowCase(unsigned ShiftAmt) {
 }
 
 /// Logical right-shift this APInt by shiftAmt.
-/// @brief Logical right-shift function.
+/// Logical right-shift function.
 void APInt::lshrInPlace(const APInt &shiftAmt) {
   lshrInPlace((unsigned)shiftAmt.getLimitedValue(BitWidth));
 }
 
 /// Logical right-shift this APInt by shiftAmt.
-/// @brief Logical right-shift function.
+/// Logical right-shift function.
 void APInt::lshrSlowCase(unsigned ShiftAmt) {
   tcShiftRight(U.pVal, getNumWords(), ShiftAmt);
 }
 
 /// Left-shift this APInt by shiftAmt.
-/// @brief Left-shift function.
+/// Left-shift function.
 APInt &APInt::operator<<=(const APInt &shiftAmt) {
   // It's undefined behavior in C to shift by BitWidth or greater.
   *this <<= (unsigned)shiftAmt.getLimitedValue(BitWidth);

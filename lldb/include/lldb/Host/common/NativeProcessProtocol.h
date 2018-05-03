@@ -69,8 +69,8 @@ public:
   virtual Status Kill() = 0;
 
   //------------------------------------------------------------------
-  // Tells a process not to stop the inferior on given signals
-  // and just reinject them back.
+  // Tells a process not to stop the inferior on given signals and just
+  // reinject them back.
   //------------------------------------------------------------------
   virtual Status IgnoreSignals(llvm::ArrayRef<int> signals);
 
@@ -421,33 +421,30 @@ protected:
   int m_terminal_fd;
   uint32_t m_stop_id = 0;
 
-  // Set of signal numbers that LLDB directly injects back to inferior
-  // without stopping it.
+  // Set of signal numbers that LLDB directly injects back to inferior without
+  // stopping it.
   llvm::DenseSet<int> m_signals_to_ignore;
 
   // lldb_private::Host calls should be used to launch a process for debugging,
-  // and
-  // then the process should be attached to. When attaching to a process
-  // lldb_private::Host calls should be used to locate the process to attach to,
-  // and then this function should be called.
+  // and then the process should be attached to. When attaching to a process
+  // lldb_private::Host calls should be used to locate the process to attach
+  // to, and then this function should be called.
   NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
                         NativeDelegate &delegate);
 
-  // -----------------------------------------------------------
-  // Internal interface for state handling
+  // ----------------------------------------------------------- Internal
+  // interface for state handling
   // -----------------------------------------------------------
   void SetState(lldb::StateType state, bool notify_delegates = true);
 
-  // Derived classes need not implement this.  It can be used as a
-  // hook to clear internal caches that should be invalidated when
-  // stop ids change.
+  // Derived classes need not implement this.  It can be used as a hook to
+  // clear internal caches that should be invalidated when stop ids change.
   //
-  // Note this function is called with the state mutex obtained
-  // by the caller.
+  // Note this function is called with the state mutex obtained by the caller.
   virtual void DoStopIDBumped(uint32_t newBumpId);
 
-  // -----------------------------------------------------------
-  // Internal interface for software breakpoints
+  // ----------------------------------------------------------- Internal
+  // interface for software breakpoints
   // -----------------------------------------------------------
   Status SetSoftwareBreakpoint(lldb::addr_t addr, uint32_t size_hint);
 

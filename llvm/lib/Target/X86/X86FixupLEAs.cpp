@@ -40,13 +40,13 @@ namespace {
 class FixupLEAPass : public MachineFunctionPass {
   enum RegUsageState { RU_NotUsed, RU_Write, RU_Read };
 
-  /// \brief Loop over all of the instructions in the basic block
+  /// Loop over all of the instructions in the basic block
   /// replacing applicable instructions with LEA instructions,
   /// where appropriate.
   bool processBasicBlock(MachineFunction &MF, MachineFunction::iterator MFI);
 
 
-  /// \brief Given a machine register, look for the instruction
+  /// Given a machine register, look for the instruction
   /// which writes it in the current basic block. If found,
   /// try to replace it with an equivalent LEA instruction.
   /// If replacement succeeds, then also process the newly created
@@ -54,20 +54,20 @@ class FixupLEAPass : public MachineFunctionPass {
   void seekLEAFixup(MachineOperand &p, MachineBasicBlock::iterator &I,
                     MachineFunction::iterator MFI);
 
-  /// \brief Given a memory access or LEA instruction
+  /// Given a memory access or LEA instruction
   /// whose address mode uses a base and/or index register, look for
   /// an opportunity to replace the instruction which sets the base or index
   /// register with an equivalent LEA instruction.
   void processInstruction(MachineBasicBlock::iterator &I,
                           MachineFunction::iterator MFI);
 
-  /// \brief Given a LEA instruction which is unprofitable
+  /// Given a LEA instruction which is unprofitable
   /// on Silvermont try to replace it with an equivalent ADD instruction
   void processInstructionForSLM(MachineBasicBlock::iterator &I,
                                 MachineFunction::iterator MFI);
 
 
-  /// \brief Given a LEA instruction which is unprofitable
+  /// Given a LEA instruction which is unprofitable
   /// on SNB+ try to replace it with other instructions.
   /// According to Intel's Optimization Reference Manual:
   /// " For LEA instructions with three source operands and some specific
@@ -82,23 +82,23 @@ class FixupLEAPass : public MachineFunctionPass {
   MachineInstr *processInstrForSlow3OpLEA(MachineInstr &MI,
                                           MachineFunction::iterator MFI);
 
-  /// \brief Look for LEAs that add 1 to reg or subtract 1 from reg
+  /// Look for LEAs that add 1 to reg or subtract 1 from reg
   /// and convert them to INC or DEC respectively.
   bool fixupIncDec(MachineBasicBlock::iterator &I,
                    MachineFunction::iterator MFI) const;
 
-  /// \brief Determine if an instruction references a machine register
+  /// Determine if an instruction references a machine register
   /// and, if so, whether it reads or writes the register.
   RegUsageState usesRegister(MachineOperand &p, MachineBasicBlock::iterator I);
 
-  /// \brief Step backwards through a basic block, looking
+  /// Step backwards through a basic block, looking
   /// for an instruction which writes a register within
   /// a maximum of INSTR_DISTANCE_THRESHOLD instruction latency cycles.
   MachineBasicBlock::iterator searchBackwards(MachineOperand &p,
                                               MachineBasicBlock::iterator &I,
                                               MachineFunction::iterator MFI);
 
-  /// \brief if an instruction can be converted to an
+  /// if an instruction can be converted to an
   /// equivalent LEA, insert the new instruction into the basic block
   /// and return a pointer to it. Otherwise, return zero.
   MachineInstr *postRAConvertToLEA(MachineFunction::iterator &MFI,
@@ -113,7 +113,7 @@ public:
     initializeFixupLEAPassPass(*PassRegistry::getPassRegistry());
   }
 
-  /// \brief Loop over all of the basic blocks,
+  /// Loop over all of the basic blocks,
   /// replacing instructions by equivalent LEA instructions
   /// if needed and when possible.
   bool runOnMachineFunction(MachineFunction &MF) override;

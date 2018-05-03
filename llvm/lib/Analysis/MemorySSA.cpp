@@ -27,6 +27,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -82,7 +83,7 @@ static cl::opt<bool>
 
 namespace llvm {
 
-/// \brief An assembly annotator class to print Memory SSA information in
+/// An assembly annotator class to print Memory SSA information in
 /// comments.
 class MemorySSAAnnotatedWriter : public AssemblyAnnotationWriter {
   friend class MemorySSA;
@@ -905,7 +906,7 @@ struct RenamePassData {
 
 namespace llvm {
 
-/// \brief A MemorySSAWalker that does AA walks to disambiguate accesses. It no
+/// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
 /// longer does caching on its own,
 /// but the name has been retained for the moment.
 class MemorySSA::CachingWalker final : public MemorySSAWalker {
@@ -951,7 +952,7 @@ void MemorySSA::renameSuccessorPhis(BasicBlock *BB, MemoryAccess *IncomingVal,
   }
 }
 
-/// \brief Rename a single basic block into MemorySSA form.
+/// Rename a single basic block into MemorySSA form.
 /// Uses the standard SSA renaming algorithm.
 /// \returns The new incoming value.
 MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB, MemoryAccess *IncomingVal,
@@ -974,7 +975,7 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB, MemoryAccess *IncomingVal,
   return IncomingVal;
 }
 
-/// \brief This is the standard SSA renaming algorithm.
+/// This is the standard SSA renaming algorithm.
 ///
 /// We walk the dominator tree in preorder, renaming accesses, and then filling
 /// in phi nodes in our successors.
@@ -1023,7 +1024,7 @@ void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
   }
 }
 
-/// \brief This handles unreachable block accesses by deleting phi nodes in
+/// This handles unreachable block accesses by deleting phi nodes in
 /// unreachable blocks, and marking all other unreachable MemoryAccess's as
 /// being uses of the live on entry definition.
 void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
@@ -1524,7 +1525,7 @@ static inline bool isOrdered(const Instruction *I) {
   return false;
 }
 
-/// \brief Helper function to create new memory accesses
+/// Helper function to create new memory accesses
 MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   // The assume intrinsic has a control dependency which we model by claiming
   // that it writes arbitrarily. Ignore that fake memory dependency here.
@@ -1561,7 +1562,7 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   return MUD;
 }
 
-/// \brief Returns true if \p Replacer dominates \p Replacee .
+/// Returns true if \p Replacer dominates \p Replacee .
 bool MemorySSA::dominatesUse(const MemoryAccess *Replacer,
                              const MemoryAccess *Replacee) const {
   if (isa<MemoryUseOrDef>(Replacee))
@@ -1578,7 +1579,7 @@ bool MemorySSA::dominatesUse(const MemoryAccess *Replacer,
   return true;
 }
 
-/// \brief Properly remove \p MA from all of MemorySSA's lookup tables.
+/// Properly remove \p MA from all of MemorySSA's lookup tables.
 void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   assert(MA->use_empty() &&
          "Trying to remove memory access that still has uses");
@@ -1601,7 +1602,7 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
     ValueToMemoryAccess.erase(VMA);
 }
 
-/// \brief Properly remove \p MA from all of MemorySSA's lists.
+/// Properly remove \p MA from all of MemorySSA's lists.
 ///
 /// Because of the way the intrusive list and use lists work, it is important to
 /// do removal in the right order.
@@ -1647,7 +1648,7 @@ void MemorySSA::verifyMemorySSA() const {
   Walker->verify(this);
 }
 
-/// \brief Verify that the order and existence of MemoryAccesses matches the
+/// Verify that the order and existence of MemoryAccesses matches the
 /// order and existence of memory affecting instructions.
 void MemorySSA::verifyOrdering(Function &F) const {
   // Walk all the blocks, comparing what the lookups think and what the access
@@ -1710,7 +1711,7 @@ void MemorySSA::verifyOrdering(Function &F) const {
   }
 }
 
-/// \brief Verify the domination properties of MemorySSA by checking that each
+/// Verify the domination properties of MemorySSA by checking that each
 /// definition dominates all of its uses.
 void MemorySSA::verifyDomination(Function &F) const {
 #ifndef NDEBUG
@@ -1732,7 +1733,7 @@ void MemorySSA::verifyDomination(Function &F) const {
 #endif
 }
 
-/// \brief Verify the def-use lists in MemorySSA, by verifying that \p Use
+/// Verify the def-use lists in MemorySSA, by verifying that \p Use
 /// appears in the use list of \p Def.
 void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
 #ifndef NDEBUG
@@ -1746,7 +1747,7 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
 #endif
 }
 
-/// \brief Verify the immediate use information, by walking all the memory
+/// Verify the immediate use information, by walking all the memory
 /// accesses and verifying that, for each use, it appears in the
 /// appropriate def's use list
 void MemorySSA::verifyDefUses(Function &F) const {
@@ -1792,7 +1793,7 @@ void MemorySSA::renumberBlock(const BasicBlock *B) const {
   BlockNumberingValid.insert(B);
 }
 
-/// \brief Determine, for two memory accesses in the same block,
+/// Determine, for two memory accesses in the same block,
 /// whether \p Dominator dominates \p Dominatee.
 /// \returns True if \p Dominator dominates \p Dominatee.
 bool MemorySSA::locallyDominates(const MemoryAccess *Dominator,
@@ -2000,7 +2001,7 @@ void MemorySSA::CachingWalker::invalidateInfo(MemoryAccess *MA) {
     MUD->resetOptimized();
 }
 
-/// \brief Walk the use-def chains starting at \p MA and find
+/// Walk the use-def chains starting at \p MA and find
 /// the MemoryAccess that actually clobbers Loc.
 ///
 /// \returns our clobbering memory access

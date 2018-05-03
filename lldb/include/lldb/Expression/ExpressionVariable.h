@@ -69,15 +69,12 @@ public:
   void SetName(const ConstString &name) { m_frozen_sp->SetName(name); }
 
   // this function is used to copy the address-of m_live_sp into m_frozen_sp
-  // this is necessary because the results of certain cast and
-  // pointer-arithmetic
-  // operations (such as those described in bugzilla issues 11588 and 11618)
-  // generate
-  // frozen objects that do not have a valid address-of, which can be
-  // troublesome when
-  // using synthetic children providers. Transferring the address-of the live
-  // object
-  // solves these issues and provides the expected user-level behavior
+  // this is necessary because the results of certain cast and pointer-
+  // arithmetic operations (such as those described in bugzilla issues 11588
+  // and 11618) generate frozen objects that do not have a valid address-of,
+  // which can be troublesome when using synthetic children providers.
+  // Transferring the address-of the live object solves these issues and
+  // provides the expected user-level behavior
   void TransferAddress(bool force = false) {
     if (m_live_sp.get() == nullptr)
       return;
@@ -129,7 +126,7 @@ public:
 //----------------------------------------------------------------------
 /// @class ExpressionVariableList ExpressionVariable.h
 /// "lldb/Expression/ExpressionVariable.h"
-/// @brief A list of variable references.
+/// A list of variable references.
 ///
 /// This class stores variables internally, acting as the permanent store.
 //----------------------------------------------------------------------
@@ -242,7 +239,12 @@ public:
                            lldb::ByteOrder byte_order,
                            uint32_t addr_byte_size) = 0;
 
-  virtual ConstString GetNextPersistentVariableName() = 0;
+  /// Return a new persistent variable name with the specified prefix.
+  ConstString GetNextPersistentVariableName(Target &target,
+                                            llvm::StringRef prefix);
+
+  virtual llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error = false) const = 0;
 
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;

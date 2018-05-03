@@ -46,11 +46,14 @@ using namespace minidump;
 //------------------------------------------------------------------
 class PlaceholderModule : public Module {
 public:
-  PlaceholderModule(const FileSpec &file_spec, const ArchSpec &arch) :
-    Module(file_spec, arch) {}
+  PlaceholderModule(const ModuleSpec &module_spec) :
+    Module(module_spec.GetFileSpec(), module_spec.GetArchitecture()) {
+    if (module_spec.GetUUID().IsValid())
+      SetUUID(module_spec.GetUUID());
+  }
 
-  // Creates a synthetic module section covering the whole module image
-  // (and sets the section load address as well)
+  // Creates a synthetic module section covering the whole module image (and
+  // sets the section load address as well)
   void CreateImageSection(const MinidumpModule *module, Target& target) {
     const ConstString section_name(".module_image");
     lldb::SectionSP section_sp(new Section(
@@ -137,10 +140,10 @@ ProcessMinidump::ProcessMinidump(lldb::TargetSP target_sp,
 
 ProcessMinidump::~ProcessMinidump() {
   Clear();
-  // We need to call finalize on the process before destroying ourselves
-  // to make sure all of the broadcaster cleanup goes as planned. If we
-  // destruct this class, then Process::~Process() might have problems
-  // trying to fully destroy the broadcaster.
+  // We need to call finalize on the process before destroying ourselves to
+  // make sure all of the broadcaster cleanup goes as planned. If we destruct
+  // this class, then Process::~Process() might have problems trying to fully
+  // destroy the broadcaster.
   Finalize();
 }
 
@@ -230,8 +233,8 @@ bool ProcessMinidump::WarnBeforeDetach() const { return false; }
 
 size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                    Status &error) {
-  // Don't allow the caching that lldb_private::Process::ReadMemory does
-  // since we have it all cached in our dump file anyway.
+  // Don't allow the caching that lldb_private::Process::ReadMemory does since
+  // we have it all cached in our dump file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
@@ -321,21 +324,22 @@ void ProcessMinidump::ReadModuleList() {
       m_is_wow64 = true;
     }
 
+    const auto uuid = m_minidump_parser.GetModuleUUID(module);
     const auto file_spec =
         FileSpec(name.getValue(), true, GetArchitecture().GetTriple());
-    ModuleSpec module_spec = file_spec;
+    ModuleSpec module_spec(file_spec, uuid);
     Status error;
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
     if (!module_sp || error.Fail()) {
-      // We failed to locate a matching local object file. Fortunately,
-      // the minidump format encodes enough information about each module's
-      // memory range to allow us to create placeholder modules.
+      // We failed to locate a matching local object file. Fortunately, the
+      // minidump format encodes enough information about each module's memory
+      // range to allow us to create placeholder modules.
       //
       // This enables most LLDB functionality involving address-to-module
       // translations (ex. identifing the module for a stack frame PC) and
       // modules/sections commands (ex. target modules list, ...)
       auto placeholder_module =
-          std::make_shared<PlaceholderModule>(file_spec, GetArchitecture());
+          std::make_shared<PlaceholderModule>(module_spec);
       placeholder_module->CreateImageSection(module, GetTarget());
       module_sp = placeholder_module;
       GetTarget().GetImages().Append(module_sp);

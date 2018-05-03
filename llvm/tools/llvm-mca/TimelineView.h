@@ -109,7 +109,7 @@
 
 namespace mca {
 
-/// \brief This class listens to instruction state transition events
+/// This class listens to instruction state transition events
 /// in order to construct a timeline information.
 ///
 /// For every instruction executed by the Backend, this class constructs

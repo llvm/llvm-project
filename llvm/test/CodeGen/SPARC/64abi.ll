@@ -63,14 +63,14 @@ define void @call_intarg(i32 %i0, i8* %i1) {
 ; HARD: faddd %f6,
 ; HARD: fadds %f31, [[F]]
 ; SOFT: save %sp, -176, %sp
+; SOFT: ld [%fp+2299], %i4
+; SOFT: ld [%fp+2307], %i5
 ; SOFT: srl %i0, 0, %o0
 ; SOFT-NEXT: call __extendsfdf2
 ; SOFT: mov  %o0, %o1
 ; SOFT: mov  %i1, %o0
 ; SOFT: mov  %i2, %o0
 ; SOFT: mov  %i3, %o0
-; SOFT: ld [%fp+2299], %o0
-; SOFT: ld [%fp+2307], %o1
 define double @floatarg(float %a0,    ; %f1
                         double %a1,   ; %d2
                         double %a2,   ; %d4

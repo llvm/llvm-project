@@ -30,7 +30,7 @@ namespace sampleprof {
 
 enum SampleProfileFormat { SPF_None = 0, SPF_Text, SPF_Binary, SPF_GCC };
 
-/// \brief Sample-based profile writer. Base class.
+/// Sample-based profile writer. Base class.
 class SampleProfileWriter {
 public:
   virtual ~SampleProfileWriter() = default;
@@ -62,21 +62,21 @@ protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
       : OutputStream(std::move(OS)) {}
 
-  /// \brief Write a file header for the profile file.
+  /// Write a file header for the profile file.
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) = 0;
 
-  /// \brief Output stream where to emit the profile to.
+  /// Output stream where to emit the profile to.
   std::unique_ptr<raw_ostream> OutputStream;
 
-  /// \brief Profile summary.
+  /// Profile summary.
   std::unique_ptr<ProfileSummary> Summary;
 
-  /// \brief Compute summary for this profile.
+  /// Compute summary for this profile.
   void computeSummary(const StringMap<FunctionSamples> &ProfileMap);
 };
 
-/// \brief Sample-based profile writer (text format).
+/// Sample-based profile writer (text format).
 class SampleProfileWriterText : public SampleProfileWriter {
 public:
   std::error_code write(const FunctionSamples &S) override;
@@ -101,7 +101,7 @@ private:
                               SampleProfileFormat Format);
 };
 
-/// \brief Sample-based profile writer (binary format).
+/// Sample-based profile writer (binary format).
 class SampleProfileWriterBinary : public SampleProfileWriter {
 public:
   std::error_code write(const FunctionSamples &S) override;

@@ -170,7 +170,7 @@ private:
   uint64_t TotalUsedSamples = 0;
 };
 
-/// \brief Sample profile pass.
+/// Sample profile pass.
 ///
 /// This pass reads profile data from the file specified by
 /// -sample-profile-file and annotates every affected function with the
@@ -219,25 +219,25 @@ protected:
   void computeDominanceAndLoopInfo(Function &F);
   void clearFunctionData();
 
-  /// \brief Map basic blocks to their computed weights.
+  /// Map basic blocks to their computed weights.
   ///
   /// The weight of a basic block is defined to be the maximum
   /// of all the instruction weights in that block.
   BlockWeightMap BlockWeights;
 
-  /// \brief Map edges to their computed weights.
+  /// Map edges to their computed weights.
   ///
   /// Edge weights are computed by propagating basic block weights in
   /// SampleProfile::propagateWeights.
   EdgeWeightMap EdgeWeights;
 
-  /// \brief Set of visited blocks during propagation.
+  /// Set of visited blocks during propagation.
   SmallPtrSet<const BasicBlock *, 32> VisitedBlocks;
 
-  /// \brief Set of visited edges during propagation.
+  /// Set of visited edges during propagation.
   SmallSet<Edge, 32> VisitedEdges;
 
-  /// \brief Equivalence classes for block weights.
+  /// Equivalence classes for block weights.
   ///
   /// Two blocks BB1 and BB2 are in the same equivalence class if they
   /// dominate and post-dominate each other, and they are in the same loop
@@ -251,7 +251,7 @@ protected:
   /// is one-to-one mapping.
   StringMap<Function *> SymbolMap;
 
-  /// \brief Dominance, post-dominance and loop information.
+  /// Dominance, post-dominance and loop information.
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<PostDomTreeBase<BasicBlock>> PDT;
   std::unique_ptr<LoopInfo> LI;
@@ -259,39 +259,39 @@ protected:
   std::function<AssumptionCache &(Function &)> GetAC;
   std::function<TargetTransformInfo &(Function &)> GetTTI;
 
-  /// \brief Predecessors for each basic block in the CFG.
+  /// Predecessors for each basic block in the CFG.
   BlockEdgeMap Predecessors;
 
-  /// \brief Successors for each basic block in the CFG.
+  /// Successors for each basic block in the CFG.
   BlockEdgeMap Successors;
 
   SampleCoverageTracker CoverageTracker;
 
-  /// \brief Profile reader object.
+  /// Profile reader object.
   std::unique_ptr<SampleProfileReader> Reader;
 
-  /// \brief Samples collected for the body of this function.
+  /// Samples collected for the body of this function.
   FunctionSamples *Samples = nullptr;
 
-  /// \brief Name of the profile file to load.
+  /// Name of the profile file to load.
   std::string Filename;
 
-  /// \brief Flag indicating whether the profile input loaded successfully.
+  /// Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid = false;
 
-  /// \brief Flag indicating if the pass is invoked in ThinLTO compile phase.
+  /// Flag indicating if the pass is invoked in ThinLTO compile phase.
   ///
   /// In this phase, in annotation, we should not promote indirect calls.
   /// Instead, we will mark GUIDs that needs to be annotated to the function.
   bool IsThinLTOPreLink;
 
-  /// \brief Total number of samples collected in this profile.
+  /// Total number of samples collected in this profile.
   ///
   /// This is the sum of all the samples collected in all the functions executed
   /// at runtime.
   uint64_t TotalCollectedSamples = 0;
 
-  /// \brief Optimization Remark Emitter used to emit diagnostic remarks.
+  /// Optimization Remark Emitter used to emit diagnostic remarks.
   OptimizationRemarkEmitter *ORE = nullptr;
 };
 
@@ -473,7 +473,7 @@ void SampleProfileLoader::clearFunctionData() {
 }
 
 #ifndef NDEBUG
-/// \brief Print the weight of edge \p E on stream \p OS.
+/// Print the weight of edge \p E on stream \p OS.
 ///
 /// \param OS  Stream to emit the output to.
 /// \param E  Edge to print.
@@ -482,7 +482,7 @@ void SampleProfileLoader::printEdgeWeight(raw_ostream &OS, Edge E) {
      << "]: " << EdgeWeights[E] << "\n";
 }
 
-/// \brief Print the equivalence class of block \p BB on stream \p OS.
+/// Print the equivalence class of block \p BB on stream \p OS.
 ///
 /// \param OS  Stream to emit the output to.
 /// \param BB  Block to print.
@@ -493,7 +493,7 @@ void SampleProfileLoader::printBlockEquivalence(raw_ostream &OS,
      << "]: " << ((Equiv) ? EquivalenceClass[BB]->getName() : "NONE") << "\n";
 }
 
-/// \brief Print the weight of block \p BB on stream \p OS.
+/// Print the weight of block \p BB on stream \p OS.
 ///
 /// \param OS  Stream to emit the output to.
 /// \param BB  Block to print.
@@ -505,7 +505,7 @@ void SampleProfileLoader::printBlockWeight(raw_ostream &OS,
 }
 #endif
 
-/// \brief Get the weight for an instruction.
+/// Get the weight for an instruction.
 ///
 /// The "weight" of an instruction \p Inst is the number of samples
 /// collected on that instruction at runtime. To retrieve it, we
@@ -570,7 +570,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   return R;
 }
 
-/// \brief Compute the weight of a basic block.
+/// Compute the weight of a basic block.
 ///
 /// The weight of basic block \p BB is the maximum weight of all the
 /// instructions in BB.
@@ -591,7 +591,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getBlockWeight(const BasicBlock *BB) {
   return HasWeight ? ErrorOr<uint64_t>(Max) : std::error_code();
 }
 
-/// \brief Compute and store the weights of every basic block.
+/// Compute and store the weights of every basic block.
 ///
 /// This populates the BlockWeights map by computing
 /// the weights of every basic block in the CFG.
@@ -613,7 +613,7 @@ bool SampleProfileLoader::computeBlockWeights(Function &F) {
   return Changed;
 }
 
-/// \brief Get the FunctionSamples for a call instruction.
+/// Get the FunctionSamples for a call instruction.
 ///
 /// The FunctionSamples of a call/invoke instruction \p Inst is the inlined
 /// instance in which that call instruction is calling to. It contains
@@ -687,7 +687,7 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
   return R;
 }
 
-/// \brief Get the FunctionSamples for an instruction.
+/// Get the FunctionSamples for an instruction.
 ///
 /// The FunctionSamples of an instruction \p Inst is the inlined instance
 /// in which that instruction is coming from. We traverse the inline stack
@@ -739,7 +739,7 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
   return false;
 }
 
-/// \brief Iteratively inline hot callsites of a function.
+/// Iteratively inline hot callsites of a function.
 ///
 /// Iteratively traverse all callsites of the function \p F, and find if
 /// the corresponding inlined instance exists and is hot in profile. If
@@ -840,7 +840,7 @@ bool SampleProfileLoader::inlineHotFunctions(
   return Changed;
 }
 
-/// \brief Find equivalence classes for the given block.
+/// Find equivalence classes for the given block.
 ///
 /// This finds all the blocks that are guaranteed to execute the same
 /// number of times as \p BB1. To do this, it traverses all the
@@ -897,7 +897,7 @@ void SampleProfileLoader::findEquivalencesFor(
   }
 }
 
-/// \brief Find equivalence classes.
+/// Find equivalence classes.
 ///
 /// Since samples may be missing from blocks, we can fill in the gaps by setting
 /// the weights of all the blocks in the same equivalence class to the same
@@ -955,7 +955,7 @@ void SampleProfileLoader::findEquivalenceClasses(Function &F) {
   }
 }
 
-/// \brief Visit the given edge to decide if it has a valid weight.
+/// Visit the given edge to decide if it has a valid weight.
 ///
 /// If \p E has not been visited before, we copy to \p UnknownEdge
 /// and increment the count of unknown edges.
@@ -976,7 +976,7 @@ uint64_t SampleProfileLoader::visitEdge(Edge E, unsigned *NumUnknownEdges,
   return EdgeWeights[E];
 }
 
-/// \brief Propagate weights through incoming/outgoing edges.
+/// Propagate weights through incoming/outgoing edges.
 ///
 /// If the weight of a basic block is known, and there is only one edge
 /// with an unknown weight, we can calculate the weight of that edge.
@@ -1134,7 +1134,7 @@ bool SampleProfileLoader::propagateThroughEdges(Function &F,
   return Changed;
 }
 
-/// \brief Build in/out edge lists for each basic block in the CFG.
+/// Build in/out edge lists for each basic block in the CFG.
 ///
 /// We are interested in unique edges. If a block B1 has multiple
 /// edges to another block B2, we only add a single B1->B2 edge.
@@ -1180,7 +1180,7 @@ static SmallVector<InstrProfValueData, 2> SortCallTargets(
   return R;
 }
 
-/// \brief Propagate weights into edges
+/// Propagate weights into edges
 ///
 /// The following rules are applied to every block BB in the CFG:
 ///
@@ -1342,7 +1342,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
   }
 }
 
-/// \brief Get the line number for the function header.
+/// Get the line number for the function header.
 ///
 /// This looks up function \p F in the current compilation unit and
 /// retrieves the line number where the function is defined. This is
@@ -1377,7 +1377,7 @@ void SampleProfileLoader::computeDominanceAndLoopInfo(Function &F) {
   LI->analyze(*DT);
 }
 
-/// \brief Generate branch weight metadata for all branches in \p F.
+/// Generate branch weight metadata for all branches in \p F.
 ///
 /// Branch weights are computed out of instruction samples using a
 /// propagation heuristic. Propagation proceeds in 3 phases:

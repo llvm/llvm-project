@@ -357,6 +357,19 @@ auto DR1579_lambda_invalid = []() -> GenericMoveOnly<char> {
 };
 } // end namespace dr1579
 
+namespace dr1584 {
+  // Deducing function types from cv-qualified types
+  template<typename T> void f(const T *); // expected-note {{candidate template ignored}}
+  template<typename T> void g(T *, const T * = 0);
+  template<typename T> void h(T *) { T::error; } // expected-error {{no members}}
+  template<typename T> void h(const T *);
+  void i() {
+    f(&i); // expected-error {{no matching function}}
+    g(&i);
+    h(&i); // expected-note {{here}}
+  }
+}
+
 namespace dr1589 {   // dr1589: 3.7 c++11
   // Ambiguous ranking of list-initialization sequences
 

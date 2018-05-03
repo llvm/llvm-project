@@ -236,8 +236,9 @@ lldb_private::Status SelectHelper::Select() {
       error.SetErrorString("timed out");
       return error;
     } else {
-      // One or more descriptors were set, update the FDInfo::select_is_set mask
-      // so users can ask the SelectHelper class so clients can call one of:
+      // One or more descriptors were set, update the FDInfo::select_is_set
+      // mask so users can ask the SelectHelper class so clients can call one
+      // of:
 
       for (auto &pair : m_fd_map) {
         const int fd = pair.first;

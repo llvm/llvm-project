@@ -196,7 +196,7 @@ public:
     return make_range(arg_begin(), arg_end());
   }
 
-  /// \brief Return true if the call or the callee has the given attribute.
+  /// Return true if the call or the callee has the given attribute.
   bool paramHasAttr(unsigned i, Attribute::AttrKind A) const {
     Function *F = getCalledFunction();
     return getCallSite().paramHasAttr(i + CallArgsBeginPos, A) ||

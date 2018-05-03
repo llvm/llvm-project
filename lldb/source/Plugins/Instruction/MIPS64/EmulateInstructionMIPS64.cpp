@@ -1091,13 +1091,10 @@ bool EmulateInstructionMIPS64::Emulate_DADDiu(llvm::MCInst &insn) {
   dst = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   src = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  // If immediate is greater than 2^16 - 1 then clang generate
-  // LUI, (D)ADDIU,(D)SUBU instructions in prolog.
-  // Example
-  // lui    $1, 0x2
-  // daddiu $1, $1, -0x5920
-  // dsubu  $sp, $sp, $1
-  // In this case, (D)ADDIU dst and src will be same and not equal to sp
+  // If immediate is greater than 2^16 - 1 then clang generate LUI,
+  // (D)ADDIU,(D)SUBU instructions in prolog. Example lui    $1, 0x2 daddiu $1,
+  // $1, -0x5920 dsubu  $sp, $sp, $1 In this case, (D)ADDIU dst and src will be
+  // same and not equal to sp
   if (dst == src) {
     Context context;
 

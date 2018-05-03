@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a virtual register coloring pass.
+/// This file implements a virtual register coloring pass.
 ///
 /// WebAssembly doesn't have a fixed number of registers, but it is still
 /// desirable to minimize the total number of registers used in each function.

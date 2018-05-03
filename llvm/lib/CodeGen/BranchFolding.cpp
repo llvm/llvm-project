@@ -1356,6 +1356,51 @@ static DebugLoc getBranchDebugLoc(MachineBasicBlock &MBB) {
   return DebugLoc();
 }
 
+static void copyDebugInfoToPredecessor(const TargetInstrInfo *TII,
+                                       MachineBasicBlock &MBB,
+                                       MachineBasicBlock &PredMBB) {
+  auto InsertBefore = PredMBB.getFirstTerminator();
+  for (MachineInstr &MI : MBB.instrs())
+    if (MI.isDebugValue()) {
+      TII->duplicate(PredMBB, InsertBefore, MI);
+      DEBUG(dbgs() << "Copied debug value from empty block to pred: " << MI);
+    }
+}
+
+static void copyDebugInfoToSuccessor(const TargetInstrInfo *TII,
+                                     MachineBasicBlock &MBB,
+                                     MachineBasicBlock &SuccMBB) {
+  auto InsertBefore = SuccMBB.SkipPHIsAndLabels(SuccMBB.begin());
+  for (MachineInstr &MI : MBB.instrs())
+    if (MI.isDebugValue()) {
+      TII->duplicate(SuccMBB, InsertBefore, MI);
+      DEBUG(dbgs() << "Copied debug value from empty block to succ: " << MI);
+    }
+}
+
+// Try to salvage DBG_VALUE instructions from an otherwise empty block. If such
+// a basic block is removed we would lose the debug information unless we have
+// copied the information to a predecessor/successor.
+//
+// TODO: This function only handles some simple cases. An alternative would be
+// to run a heavier analysis, such as the LiveDebugValues pass, before we do
+// branch folding.
+static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
+                                           MachineBasicBlock &MBB) {
+  assert(IsEmptyBlock(&MBB) && "Expected an empty block (except debug info).");
+  // If this MBB is the only predecessor of a successor it is legal to copy
+  // DBG_VALUE instructions to the beginning of the successor.
+  for (MachineBasicBlock *SuccBB : MBB.successors())
+    if (SuccBB->pred_size() == 1)
+      copyDebugInfoToSuccessor(TII, MBB, *SuccBB);
+  // If this MBB is the only successor of a predecessor it is legal to copy the
+  // DBG_VALUE instructions to the end of the predecessor (just before the
+  // terminators, assuming that the terminator isn't affecting the DBG_VALUE).
+  for (MachineBasicBlock *PredBB : MBB.predecessors())
+    if (PredBB->succ_size() == 1)
+      copyDebugInfoToPredecessor(TII, MBB, *PredBB);
+}
+
 bool BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
   bool MadeChange = false;
   MachineFunction &MF = *MBB->getParent();
@@ -1380,6 +1425,7 @@ ReoptimizeBlock:
   // optimized away.
   if (IsEmptyBlock(MBB) && !MBB->isEHPad() && !MBB->hasAddressTaken() &&
       SameFunclet) {
+    salvageDebugInfoFromEmptyBlock(TII, *MBB);
     // Dead block?  Leave for cleanup later.
     if (MBB->pred_empty()) return MadeChange;
 

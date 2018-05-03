@@ -936,13 +936,36 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
 }
 
 bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
-  // Allow both:
-  // * frame-setup frame-destroy OPCODE
-  // * frame-destroy frame-setup OPCODE
+  // Allow frame and fast math flags for OPCODE
   while (Token.is(MIToken::kw_frame_setup) ||
-         Token.is(MIToken::kw_frame_destroy)) {
-    Flags |= Token.is(MIToken::kw_frame_setup) ? MachineInstr::FrameSetup
-                                               : MachineInstr::FrameDestroy;
+         Token.is(MIToken::kw_frame_destroy) ||
+         Token.is(MIToken::kw_nnan) ||
+         Token.is(MIToken::kw_ninf) ||
+         Token.is(MIToken::kw_nsz) ||
+         Token.is(MIToken::kw_arcp) ||
+         Token.is(MIToken::kw_contract) ||
+         Token.is(MIToken::kw_afn) ||
+         Token.is(MIToken::kw_reassoc)) {
+    // Mine frame and fast math flags
+    if (Token.is(MIToken::kw_frame_setup))
+      Flags |= MachineInstr::FrameSetup;
+    if (Token.is(MIToken::kw_frame_destroy))
+      Flags |= MachineInstr::FrameDestroy;
+    if (Token.is(MIToken::kw_nnan))
+      Flags |= MachineInstr::FmNoNans;
+    if (Token.is(MIToken::kw_ninf))
+      Flags |= MachineInstr::FmNoInfs;
+    if (Token.is(MIToken::kw_nsz))
+      Flags |= MachineInstr::FmNsz;
+    if (Token.is(MIToken::kw_arcp))
+      Flags |= MachineInstr::FmArcp;
+    if (Token.is(MIToken::kw_contract))
+      Flags |= MachineInstr::FmContract;
+    if (Token.is(MIToken::kw_afn))
+      Flags |= MachineInstr::FmAfn;
+    if (Token.is(MIToken::kw_reassoc))
+      Flags |= MachineInstr::FmReassoc;
+
     lex();
   }
   if (Token.isNot(MIToken::Identifier))

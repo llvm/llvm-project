@@ -96,7 +96,7 @@ namespace {
     const HexagonInstrInfo *QII;
     const HexagonRegisterInfo *QRI;
 
-    /// \brief A handle to the branch probability pass.
+    /// A handle to the branch probability pass.
     const MachineBranchProbabilityInfo *MBPI;
 
     bool isNewValueJumpCandidate(const MachineInstr &MI) const;

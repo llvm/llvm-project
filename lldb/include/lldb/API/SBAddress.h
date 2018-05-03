@@ -54,9 +54,9 @@ public:
   lldb::SBSymbolContext GetSymbolContext(uint32_t resolve_scope);
 
   // The following functions grab individual objects for a given address and
-  // are less efficient if you want more than one symbol related objects.
-  // Use one of the following when you want multiple debug symbol related
-  // objects for an address:
+  // are less efficient if you want more than one symbol related objects. Use
+  // one of the following when you want multiple debug symbol related objects
+  // for an address:
   //    lldb::SBSymbolContext SBAddress::GetSymbolContext (uint32_t
   //    resolve_scope);
   //    lldb::SBSymbolContext SBTarget::ResolveSymbolContextForAddress (const

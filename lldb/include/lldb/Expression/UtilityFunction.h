@@ -25,13 +25,13 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class UtilityFunction UtilityFunction.h "lldb/Expression/UtilityFunction.h"
-/// @brief Encapsulates a bit of source code that provides a function that is
-/// callable
+/// @class UtilityFunction UtilityFunction.h
+/// "lldb/Expression/UtilityFunction.h" Encapsulates a bit of source code that
+/// provides a function that is callable
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
-/// and as a backend for the expr command.  UtilityFunction encapsulates
-/// a self-contained function meant to be used from other code.  Utility
+/// and as a backend for the expr command.  UtilityFunction encapsulates a
+/// self-contained function meant to be used from other code.  Utility
 /// functions can perform error-checking for ClangUserExpressions,
 //----------------------------------------------------------------------
 class UtilityFunction : public Expression {
@@ -69,8 +69,7 @@ public:
   /// Check whether the given PC is inside the function
   ///
   /// Especially useful if the function dereferences nullptr to indicate a
-  /// failed
-  /// assert.
+  /// failed assert.
   ///
   /// @param[in] pc
   ///     The program counter to check.
@@ -80,8 +79,8 @@ public:
   ///     false if not (or the function is not JIT compiled)
   //------------------------------------------------------------------
   bool ContainsAddress(lldb::addr_t address) {
-    // nothing is both >= LLDB_INVALID_ADDRESS and < LLDB_INVALID_ADDRESS,
-    // so this always returns false if the function is not JIT compiled yet
+    // nothing is both >= LLDB_INVALID_ADDRESS and < LLDB_INVALID_ADDRESS, so
+    // this always returns false if the function is not JIT compiled yet
     return (address >= m_jit_start_addr && address < m_jit_end_addr);
   }
 
@@ -93,33 +92,29 @@ public:
 
   //------------------------------------------------------------------
   /// Return the function name that should be used for executing the
-  /// expression.  Text() should contain the definition of this
-  /// function.
+  /// expression.  Text() should contain the definition of this function.
   //------------------------------------------------------------------
   const char *FunctionName() override { return m_function_name.c_str(); }
 
   //------------------------------------------------------------------
-  /// Return the object that the parser should use when registering
-  /// local variables. May be nullptr if the Expression doesn't care.
+  /// Return the object that the parser should use when registering local
+  /// variables. May be nullptr if the Expression doesn't care.
   //------------------------------------------------------------------
   ExpressionVariableList *LocalVariables() { return nullptr; }
 
   //------------------------------------------------------------------
-  /// Return true if validation code should be inserted into the
-  /// expression.
+  /// Return true if validation code should be inserted into the expression.
   //------------------------------------------------------------------
   bool NeedsValidation() override { return false; }
 
   //------------------------------------------------------------------
-  /// Return true if external variables in the expression should be
-  /// resolved.
+  /// Return true if external variables in the expression should be resolved.
   //------------------------------------------------------------------
   bool NeedsVariableResolution() override { return false; }
 
-  // This makes the function caller function.
-  // Pass in the ThreadSP if you have one available, compilation can end up
-  // calling code (e.g. to look up indirect
-  // functions) and we don't want this to wander onto another thread.
+  // This makes the function caller function. Pass in the ThreadSP if you have
+  // one available, compilation can end up calling code (e.g. to look up
+  // indirect functions) and we don't want this to wander onto another thread.
   FunctionCaller *MakeFunctionCaller(const CompilerType &return_type,
                                      const ValueList &arg_value_list,
                                      lldb::ThreadSP compilation_thread,

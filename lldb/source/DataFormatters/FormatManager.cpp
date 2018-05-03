@@ -494,8 +494,8 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   if (valobj.GetNumChildren() == 0)
     return false;
 
-  // ask the type if it has any opinion about this
-  // eLazyBoolCalculate == no opinion; other values should be self explanatory
+  // ask the type if it has any opinion about this eLazyBoolCalculate == no
+  // opinion; other values should be self explanatory
   CompilerType compiler_type(valobj.GetCompilerType());
   if (compiler_type.IsValid()) {
     switch (compiler_type.ShouldPrintAsOneLiner(&valobj)) {
@@ -532,8 +532,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
     }
 
     // if we decided to define synthetic children for a type, we probably care
-    // enough
-    // to show them, but avoid nesting children in children
+    // enough to show them, but avoid nesting children in children
     if (child_sp->GetSyntheticChildren().get() != nullptr) {
       ValueObjectSP synth_sp(child_sp->GetSyntheticValue());
       // wait.. wat? just get out of here..

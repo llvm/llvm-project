@@ -23,7 +23,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointList BreakpointList.h "lldb/Breakpoint/BreakpointList.h"
-/// @brief This class manages a list of breakpoints.
+/// This class manages a list of breakpoints.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -91,7 +91,8 @@ public:
   lldb::BreakpointSP GetBreakpointAtIndex(size_t i);
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint with index \a i, const version
+  /// Returns a shared pointer to the breakpoint with index \a i, const
+  /// version
   ///
   /// @param[in] i
   ///   The breakpoint index to seek for.
@@ -138,13 +139,13 @@ public:
   //------------------------------------------------------------------
   /// Removes all invalid breakpoint locations.
   ///
-  /// Removes all breakpoint locations in the list with architectures
-  /// that aren't compatible with \a arch. Also remove any breakpoint
-  /// locations with whose locations have address where the section
-  /// has been deleted (module and object files no longer exist).
+  /// Removes all breakpoint locations in the list with architectures that
+  /// aren't compatible with \a arch. Also remove any breakpoint locations
+  /// with whose locations have address where the section has been deleted
+  /// (module and object files no longer exist).
   ///
-  /// This is typically used after the process calls exec, or anytime
-  /// the architecture of the target changes.
+  /// This is typically used after the process calls exec, or anytime the
+  /// architecture of the target changes.
   ///
   /// @param[in] arch
   ///     If valid, check the module in each breakpoint to make sure
@@ -163,8 +164,8 @@ public:
 
   //------------------------------------------------------------------
   /// Removes all the breakpoints from this list - first checking the
-  /// ePermDelete on the breakpoints.  This call should be used unless you
-  /// are shutting down and need to actually clear them all.
+  /// ePermDelete on the breakpoints.  This call should be used unless you are
+  /// shutting down and need to actually clear them all.
   //------------------------------------------------------------------
   void RemoveAllowed(bool notify);
 

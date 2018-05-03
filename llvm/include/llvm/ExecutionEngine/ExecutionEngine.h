@@ -60,7 +60,7 @@ class ObjectFile;
 
 } // end namespace object
 
-/// \brief Helper class for helping synchronize access to the global address map
+/// Helper class for helping synchronize access to the global address map
 /// table.  Access to this class should be serialized under a mutex.
 class ExecutionEngineState {
 public:
@@ -86,7 +86,7 @@ public:
     return GlobalAddressReverseMap;
   }
 
-  /// \brief Erase an entry from the mapping table.
+  /// Erase an entry from the mapping table.
   ///
   /// \returns The address that \p ToUnmap was happed to.
   uint64_t RemoveMapping(StringRef Name);
@@ -94,7 +94,7 @@ public:
 
 using FunctionCreator = std::function<void *(const std::string &)>;
 
-/// \brief Abstract interface for implementation execution of LLVM modules,
+/// Abstract interface for implementation execution of LLVM modules,
 /// designed to support both interpreter and just-in-time (JIT) compiler
 /// implementations.
 class ExecutionEngine {
@@ -634,7 +634,7 @@ public:
     return *this;
   }
 
-  // \brief Use OrcMCJITReplacement instead of MCJIT. Off by default.
+  // Use OrcMCJITReplacement instead of MCJIT. Off by default.
   void setUseOrcMCJITReplacement(bool UseOrcMCJITReplacement) {
     this->UseOrcMCJITReplacement = UseOrcMCJITReplacement;
   }

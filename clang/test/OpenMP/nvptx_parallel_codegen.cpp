@@ -51,6 +51,14 @@ tx ftemplate(int n) {
     b[2] += 1;
   }
 
+  #pragma omp target
+  {
+    #pragma omp parallel
+    {
+    #pragma omp critical
+    ++a;
+    }
+  }
   return a;
 }
 
@@ -62,7 +70,9 @@ int bar(int n){
   return a;
 }
 
-  // CHECK-NOT: define {{.*}}void {{@__omp_offloading_.+template.+l17}}_worker()
+// CHECK: @"_gomp_critical_user_$var" = common global [8 x i32] zeroinitializer
+
+// CHECK-NOT: define {{.*}}void {{@__omp_offloading_.+template.+l17}}_worker()
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l26}}_worker()
 // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,

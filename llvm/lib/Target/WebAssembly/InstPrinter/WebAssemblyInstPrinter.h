@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This class prints an WebAssembly MCInst to wasm file syntax.
+/// This class prints an WebAssembly MCInst to wasm file syntax.
 ///
 //===----------------------------------------------------------------------===//
 

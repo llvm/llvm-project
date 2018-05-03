@@ -39,13 +39,13 @@ protected:
                                 uint64_t SymOffset, SID SectionID);
 
 private:
-  /// \brief A object file specific relocation resolver
+  /// A object file specific relocation resolver
   /// \param RE The relocation to be resolved
   /// \param Value Target symbol address to apply the relocation action
   uint64_t evaluateRelocation(const RelocationEntry &RE, uint64_t Value,
                               uint64_t Addend);
 
-  /// \brief A object file specific relocation resolver
+  /// A object file specific relocation resolver
   /// \param RE The relocation to be resolved
   /// \param Value Target symbol address to apply the relocation action
   void applyRelocation(const RelocationEntry &RE, uint64_t Value);

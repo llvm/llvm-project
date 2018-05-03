@@ -33,8 +33,8 @@ using namespace clang;
 using namespace lldb_private;
 
 //------------------------------------------------------------------
-// Scoped class that will remove an active lexical decl from the set
-// when it goes out of scope.
+// Scoped class that will remove an active lexical decl from the set when it
+// goes out of scope.
 //------------------------------------------------------------------
 namespace {
 class ScopedLexicalDeclEraser {
@@ -141,8 +141,8 @@ ClangASTSource::~ClangASTSource() {
     m_ast_importer_sp->ForgetDestination(m_ast_context);
 
   // We are in the process of destruction, don't create clang ast context on
-  // demand
-  // by passing false to Target::GetScratchClangASTContext(create_on_demand).
+  // demand by passing false to
+  // Target::GetScratchClangASTContext(create_on_demand).
   ClangASTContext *scratch_clang_ast_context =
       m_target->GetScratchClangASTContext(false);
 
@@ -231,8 +231,8 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
   }
 
   if (!GetLookupsEnabled()) {
-    // Wait until we see a '$' at the start of a name before we start doing
-    // any lookups so we can avoid lookup up all of the builtin types.
+    // Wait until we see a '$' at the start of a name before we start doing any
+    // lookups so we can avoid lookup up all of the builtin types.
     if (!decl_name.empty() && decl_name[0] == '$') {
       SetLookupsEnabled(true);
     } else {
@@ -297,8 +297,8 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
   }
 
   if (!m_ast_importer_sp->CompleteTagDecl(tag_decl)) {
-    // We couldn't complete the type.  Maybe there's a definition
-    // somewhere else that can be completed.
+    // We couldn't complete the type.  Maybe there's a definition somewhere
+    // else that can be completed.
 
     if (log)
       log->Printf("      CTD[%u] Type could not be completed in the module in "
@@ -398,8 +398,8 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
             const_cast<TagDecl *>(tag_type->getDecl());
 
         // We have found a type by basename and we need to make sure the decl
-        // contexts
-        // are the same before we can try to complete this type with another
+        // contexts are the same before we can try to complete this type with
+        // another
         if (!ClangASTContext::DeclsAreEquivalent(tag_decl, candidate_tag_decl))
           continue;
 
@@ -861,13 +861,16 @@ void ClangASTSource::FindExternalVisibleDecls(
 
     TypeList types;
     SymbolContext null_sc;
-    const bool exact_match = false;
+    const bool exact_match = true;
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
     if (module_sp && namespace_decl)
       module_sp->FindTypesInNamespace(null_sc, name, &namespace_decl, 1, types);
-    else
-      m_target->GetImages().FindTypes(null_sc, name, exact_match, 1,
+    else {
+      SymbolContext sc;
+      sc.module_sp = module_sp;
+      m_target->GetImages().FindTypes(sc, name, exact_match, 1,
                                       searched_symbol_files, types);
+    }
 
     if (size_t num_types = types.GetSize()) {
       for (size_t ti = 0; ti < num_types; ++ti) {
@@ -1243,8 +1246,8 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
       break;
 
     // Fall back and check for methods in categories.  If we find methods this
-    // way, we need to check that they're actually in
-    // categories on the desired class.
+    // way, we need to check that they're actually in categories on the desired
+    // class.
 
     SymbolContextList candidate_sc_list;
 
@@ -1591,8 +1594,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
 
   do {
     // Check the runtime only if the debug information didn't have a complete
-    // interface
-    // and nothing was in the modules.
+    // interface and nothing was in the modules.
 
     lldb::ProcessSP process(m_target->GetProcessSP());
 
@@ -1645,12 +1647,9 @@ static bool ImportOffsetMap(llvm::DenseMap<const D *, O> &destination_map,
                             ClangASTSource &source) {
   // When importing fields into a new record, clang has a hard requirement that
   // fields be imported in field offset order.  Since they are stored in a
-  // DenseMap
-  // with a pointer as the key type, this means we cannot simply iterate over
-  // the
-  // map, as the order will be non-deterministic.  Instead we have to sort by
-  // the offset
-  // and then insert in sorted order.
+  // DenseMap with a pointer as the key type, this means we cannot simply
+  // iterate over the map, as the order will be non-deterministic.  Instead we
+  // have to sort by the offset and then insert in sorted order.
   typedef llvm::DenseMap<const D *, O> MapType;
   typedef typename MapType::value_type PairType;
   std::vector<PairType> sorted_items;
@@ -2051,9 +2050,8 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
 
   if (copied_qual_type.getAsOpaquePtr() &&
       copied_qual_type->getCanonicalTypeInternal().isNull())
-    // this shouldn't happen, but we're hardening because the AST importer seems
-    // to be generating bad types
-    // on occasion.
+    // this shouldn't happen, but we're hardening because the AST importer
+    // seems to be generating bad types on occasion.
     return CompilerType();
 
   return CompilerType(m_ast_context, copied_qual_type);
@@ -2156,8 +2154,8 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
       log->Printf("Function type wasn't a FunctionProtoType");
   }
 
-  // If this is an operator (e.g. operator new or operator==), only insert
-  // the declaration we inferred from the symbol if we can provide the correct
+  // If this is an operator (e.g. operator new or operator==), only insert the
+  // declaration we inferred from the symbol if we can provide the correct
   // number of arguments. We shouldn't really inject random decl(s) for
   // functions that are analyzed semantically in a special way, otherwise we
   // will crash in clang.

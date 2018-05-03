@@ -202,7 +202,7 @@ struct FunctionTypeKeyInfo {
   }
 };
 
-/// \brief Structure for hashing arbitrary MDNode operands.
+/// Structure for hashing arbitrary MDNode operands.
 class MDNodeOpsKey {
   ArrayRef<Metadata *> RawOps;
   ArrayRef<MDOperand> Ops;
@@ -257,7 +257,7 @@ template <class NodeTy> struct MDNodeSubsetEqualImpl {
   }
 };
 
-/// \brief DenseMapInfo for MDTuple.
+/// DenseMapInfo for MDTuple.
 ///
 /// Note that we don't need the is-function-local bit, since that's implicit in
 /// the operands.
@@ -274,7 +274,7 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
   }
 };
 
-/// \brief DenseMapInfo for DILocation.
+/// DenseMapInfo for DILocation.
 template <> struct MDNodeKeyImpl<DILocation> {
   unsigned Line;
   unsigned Column;
@@ -298,7 +298,7 @@ template <> struct MDNodeKeyImpl<DILocation> {
   }
 };
 
-/// \brief DenseMapInfo for GenericDINode.
+/// DenseMapInfo for GenericDINode.
 template <> struct MDNodeKeyImpl<GenericDINode> : MDNodeOpsKey {
   unsigned Tag;
   MDString *Header;
@@ -1084,7 +1084,7 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
   }
 };
 
-/// \brief DenseMapInfo for MDNode subclasses.
+/// DenseMapInfo for MDNode subclasses.
 template <class NodeTy> struct MDNodeInfo {
   using KeyTy = MDNodeKeyImpl<NodeTy>;
   using SubsetEqualTy = MDNodeSubsetEqualImpl<NodeTy>;
@@ -1121,7 +1121,7 @@ template <class NodeTy> struct MDNodeInfo {
 #define HANDLE_MDNODE_LEAF(CLASS) using CLASS##Info = MDNodeInfo<CLASS>;
 #include "llvm/IR/Metadata.def"
 
-/// \brief Map-like storage for metadata attachments.
+/// Map-like storage for metadata attachments.
 class MDAttachmentMap {
   SmallVector<std::pair<unsigned, TrackingMDNodeRef>, 2> Attachments;
 
@@ -1129,27 +1129,27 @@ public:
   bool empty() const { return Attachments.empty(); }
   size_t size() const { return Attachments.size(); }
 
-  /// \brief Get a particular attachment (if any).
+  /// Get a particular attachment (if any).
   MDNode *lookup(unsigned ID) const;
 
-  /// \brief Set an attachment to a particular node.
+  /// Set an attachment to a particular node.
   ///
   /// Set the \c ID attachment to \c MD, replacing the current attachment at \c
   /// ID (if anyway).
   void set(unsigned ID, MDNode &MD);
 
-  /// \brief Remove an attachment.
+  /// Remove an attachment.
   ///
   /// Remove the attachment at \c ID, if any.
   void erase(unsigned ID);
 
-  /// \brief Copy out all the attachments.
+  /// Copy out all the attachments.
   ///
   /// Copies all the current attachments into \c Result, sorting by attachment
   /// ID.  This function does \em not clear \c Result.
   void getAll(SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const;
 
-  /// \brief Erase matching attachments.
+  /// Erase matching attachments.
   ///
   /// Erases all attachments matching the \c shouldRemove predicate.
   template <class PredTy> void remove_if(PredTy shouldRemove) {
@@ -1314,7 +1314,7 @@ public:
   int getOrAddScopeRecordIdxEntry(MDNode *N, int ExistingIdx);
   int getOrAddScopeInlinedAtIdxEntry(MDNode *Scope, MDNode *IA,int ExistingIdx);
 
-  /// \brief A set of interned tags for operand bundles.  The StringMap maps
+  /// A set of interned tags for operand bundles.  The StringMap maps
   /// bundle tags to their IDs.
   ///
   /// \see LLVMContext::getOperandBundleTagID
@@ -1357,11 +1357,11 @@ public:
 
   mutable OptPassGate *OPG = nullptr;
 
-  /// \brief Access the object which can disable optional passes and individual
+  /// Access the object which can disable optional passes and individual
   /// optimizations at compile time.
   OptPassGate &getOptPassGate() const;
 
-  /// \brief Set the object which can disable optional passes and individual
+  /// Set the object which can disable optional passes and individual
   /// optimizations at compile time.
   ///
   /// The lifetime of the object must be guaranteed to extend as long as the

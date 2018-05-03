@@ -50,11 +50,11 @@ public:
     return v->isIR();
   }
 
-  /// \brief Finds and returns bitcode embedded in the given object file, or an
+  /// Finds and returns bitcode embedded in the given object file, or an
   /// error code if not found.
   static Expected<MemoryBufferRef> findBitcodeInObject(const ObjectFile &Obj);
 
-  /// \brief Finds and returns bitcode in the given memory buffer (which may
+  /// Finds and returns bitcode in the given memory buffer (which may
   /// be either a bitcode file or a native object file with embedded bitcode),
   /// or an error code if not found.
   static Expected<MemoryBufferRef>

@@ -174,8 +174,8 @@ lldb::ByteOrder RegisterContextPOSIX_s390x::GetByteOrder() {
   return byte_order;
 }
 
-// Used when parsing DWARF and EH frame information and any other
-// object file sections that contain register numbers in them.
+// Used when parsing DWARF and EH frame information and any other object file
+// sections that contain register numbers in them.
 uint32_t RegisterContextPOSIX_s390x::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
   const uint32_t num_regs = GetRegisterCount();

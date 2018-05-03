@@ -164,7 +164,7 @@ public:
       DbgValMap[Node].push_back(V);
   }
 
-  /// \brief Invalidate all DbgValues attached to the node and remove
+  /// Invalidate all DbgValues attached to the node and remove
   /// it from the Node-to-DbgValues map.
   void erase(const SDNode *Node);
 
@@ -486,7 +486,7 @@ public:
   /// the graph.
   void Legalize();
 
-  /// \brief Transforms a SelectionDAG node and any operands to it into a node
+  /// Transforms a SelectionDAG node and any operands to it into a node
   /// that is compatible with the target instruction selector, as indicated by
   /// the TargetLowering object.
   ///
@@ -537,7 +537,7 @@ public:
   //===--------------------------------------------------------------------===//
   // Node creation methods.
 
-  /// \brief Create a ConstantSDNode wrapping a constant value.
+  /// Create a ConstantSDNode wrapping a constant value.
   /// If VT is a vector type, the constant is splatted into a BUILD_VECTOR.
   ///
   /// If only legal types can be produced, this does the necessary
@@ -571,12 +571,12 @@ public:
     return getConstant(Val, DL, VT, true, isOpaque);
   }
 
-  /// \brief Create a true or false constant of type \p VT using the target's
+  /// Create a true or false constant of type \p VT using the target's
   /// BooleanContent for type \p OpVT.
   SDValue getBoolConstant(bool V, const SDLoc &DL, EVT VT, EVT OpVT);
   /// @}
 
-  /// \brief Create a ConstantFPSDNode wrapping a constant value.
+  /// Create a ConstantFPSDNode wrapping a constant value.
   /// If VT is a vector type, the constant is splatted into a BUILD_VECTOR.
   ///
   /// If only legal types can be produced, this does the necessary
@@ -748,7 +748,7 @@ public:
     return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
   }
 
-  /// \brief Returns an ISD::VECTOR_SHUFFLE node semantically equivalent to
+  /// Returns an ISD::VECTOR_SHUFFLE node semantically equivalent to
   /// the shuffle node in input but with swapped operands.
   ///
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
@@ -800,10 +800,10 @@ public:
   /// Create a bitwise NOT operation as (XOR Val, -1).
   SDValue getNOT(const SDLoc &DL, SDValue Val, EVT VT);
 
-  /// \brief Create a logical NOT operation as (XOR Val, BooleanOne).
+  /// Create a logical NOT operation as (XOR Val, BooleanOne).
   SDValue getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT);
 
-  /// \brief Create an add instruction with appropriate flags when used for
+  /// Create an add instruction with appropriate flags when used for
   /// addressing some offset of an object. i.e. if a load is split into multiple
   /// components, create an add nuw from the base pointer to the offset.
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Op, int64_t Offset) {
@@ -1241,6 +1241,11 @@ public:
   SDDbgValue *getFrameIndexDbgValue(DIVariable *Var, DIExpression *Expr,
                                     unsigned FI, const DebugLoc &DL,
                                     unsigned O);
+
+  /// Creates a VReg SDDbgValue node.
+  SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
+                              unsigned VReg, bool IsIndirect,
+                              const DebugLoc &DL, unsigned O);
 
   /// Transfer debug values from one node to another, while optionally
   /// generating fragment expressions for split-up values. If \p InvalidateDbg

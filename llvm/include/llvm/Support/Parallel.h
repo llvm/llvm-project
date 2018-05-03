@@ -100,7 +100,7 @@ void parallel_for_each_n(IndexTy Begin, IndexTy End, FuncTy Fn) {
 #else
 const ptrdiff_t MinParallelSize = 1024;
 
-/// \brief Inclusive median.
+/// Inclusive median.
 template <class RandomAccessIterator, class Comparator>
 RandomAccessIterator medianOf3(RandomAccessIterator Start,
                                RandomAccessIterator End,

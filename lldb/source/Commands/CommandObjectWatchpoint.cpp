@@ -74,8 +74,8 @@ static int32_t WithRSAIndex(llvm::StringRef Arg) {
   return -1;
 }
 
-// Return true if wp_ids is successfully populated with the watch ids.
-// False otherwise.
+// Return true if wp_ids is successfully populated with the watch ids. False
+// otherwise.
 bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
     Target *target, Args &args, std::vector<uint32_t> &wp_ids) {
   // Pre-condition: args.GetArgumentCount() > 0.
@@ -111,8 +111,8 @@ bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
     if (!second.empty())
       StrRefArgs.push_back(second);
   }
-  // Now process the canonical list and fill in the vector of uint32_t's.
-  // If there is any error, return false and the client should ignore wp_ids.
+  // Now process the canonical list and fill in the vector of uint32_t's. If
+  // there is any error, return false and the client should ignore wp_ids.
   uint32_t beg, end, id;
   size_t size = StrRefArgs.size();
   bool in_range = false;
@@ -848,8 +848,8 @@ protected:
     Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
-    // If no argument is present, issue an error message.  There's no way to set
-    // a watchpoint.
+    // If no argument is present, issue an error message.  There's no way to
+    // set a watchpoint.
     if (command.GetArgumentCount() <= 0) {
       result.GetErrorStream().Printf("error: required argument missing; "
                                      "specify your program variable to watch "
@@ -863,8 +863,8 @@ protected:
       m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchWrite;
     }
 
-    // We passed the sanity check for the command.
-    // Proceed to set the watchpoint now.
+    // We passed the sanity check for the command. Proceed to set the
+    // watchpoint now.
     lldb::addr_t addr = 0;
     size_t size = 0;
 
@@ -1072,8 +1072,8 @@ protected:
     if (expr == nullptr)
       expr = raw_command;
 
-    // If no argument is present, issue an error message.  There's no way to set
-    // a watchpoint.
+    // If no argument is present, issue an error message.  There's no way to
+    // set a watchpoint.
     if (command.GetArgumentCount() == 0) {
       result.GetErrorStream().Printf("error: required argument missing; "
                                      "specify an expression to evaulate into "
@@ -1087,8 +1087,8 @@ protected:
       m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchWrite;
     }
 
-    // We passed the sanity check for the command.
-    // Proceed to set the watchpoint now.
+    // We passed the sanity check for the command. Proceed to set the
+    // watchpoint now.
     lldb::addr_t addr = 0;
     size_t size = 0;
 

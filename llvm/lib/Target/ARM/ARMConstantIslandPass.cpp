@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -479,7 +480,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   return MadeChange;
 }
 
-/// \brief Perform the initial placement of the regular constant pool entries.
+/// Perform the initial placement of the regular constant pool entries.
 /// To start with, we put them all at the end of the function.
 void
 ARMConstantIslands::doInitialConstPlacement(std::vector<MachineInstr*> &CPEMIs) {
@@ -539,7 +540,7 @@ ARMConstantIslands::doInitialConstPlacement(std::vector<MachineInstr*> &CPEMIs) 
   DEBUG(BB->dump());
 }
 
-/// \brief Do initial placement of the jump tables. Because Thumb2's TBB and TBH
+/// Do initial placement of the jump tables. Because Thumb2's TBB and TBH
 /// instructions can be made more efficient if the jump table immediately
 /// follows the instruction, it's best to place them immediately next to their
 /// jumps to begin with. In almost all cases they'll never be moved from that
@@ -1928,7 +1929,7 @@ static bool isSimpleIndexCalc(MachineInstr &I, unsigned EntryReg,
   return true;
 }
 
-/// \brief While trying to form a TBB/TBH instruction, we may (if the table
+/// While trying to form a TBB/TBH instruction, we may (if the table
 /// doesn't immediately follow the BR_JT) need access to the start of the
 /// jump-table. We know one instruction that produces such a register; this
 /// function works out whether that definition can be preserved to the BR_JT,
@@ -2016,7 +2017,7 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
   return true;
 }
 
-/// \brief Returns whether CPEMI is the first instruction in the block
+/// Returns whether CPEMI is the first instruction in the block
 /// immediately following JTMI (assumed to be a TBB or TBH terminator). If so,
 /// we can switch the first register to PC and usually remove the address
 /// calculation that preceded it.

@@ -355,11 +355,11 @@ void ClangdServer::dumpAST(PathRef File,
 void ClangdServer::findDefinitions(PathRef File, Position Pos,
                                    Callback<std::vector<Location>> CB) {
   auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS](Callback<std::vector<Location>> CB,
-                          llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos, FS, this](Callback<std::vector<Location>> CB,
+                                llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findDefinitions(InpAST->AST, Pos));
+    CB(clangd::findDefinitions(InpAST->AST, Pos, this->FileIdx.get()));
   };
 
   WorkScheduler.runWithAST("Definitions", File, Bind(Action, std::move(CB)));

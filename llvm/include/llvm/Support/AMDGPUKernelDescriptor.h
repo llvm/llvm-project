@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU kernel descriptor definitions. For more information, visit
+/// AMDGPU kernel descriptor definitions. For more information, visit
 /// https://llvm.org/docs/AMDGPUUsage.html#kernel-descriptor-for-gfx6-gfx9
 //
 //===----------------------------------------------------------------------===//
@@ -38,7 +38,7 @@ namespace llvm {
 namespace AMDGPU {
 namespace HSAKD {
 
-/// \brief Floating point rounding modes.
+/// Floating point rounding modes.
 enum : uint8_t {
   AMDGPU_FLOAT_ROUND_MODE_NEAR_EVEN      = 0,
   AMDGPU_FLOAT_ROUND_MODE_PLUS_INFINITY  = 1,
@@ -46,7 +46,7 @@ enum : uint8_t {
   AMDGPU_FLOAT_ROUND_MODE_ZERO           = 3,
 };
 
-/// \brief Floating point denorm modes.
+/// Floating point denorm modes.
 enum : uint8_t {
   AMDGPU_FLOAT_DENORM_MODE_FLUSH_SRC_DST = 0,
   AMDGPU_FLOAT_DENORM_MODE_FLUSH_DST     = 1,
@@ -54,7 +54,7 @@ enum : uint8_t {
   AMDGPU_FLOAT_DENORM_MODE_FLUSH_NONE    = 3,
 };
 
-/// \brief System VGPR workitem IDs.
+/// System VGPR workitem IDs.
 enum : uint8_t {
   AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X         = 0,
   AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X_Y       = 1,
@@ -62,7 +62,7 @@ enum : uint8_t {
   AMDGPU_SYSTEM_VGPR_WORKITEM_ID_UNDEFINED = 3,
 };
 
-/// \brief Compute program resource register one layout.
+/// Compute program resource register one layout.
 enum ComputePgmRsrc1 {
   AMDGPU_BITS_ENUM_ENTRY(GRANULATED_WORKITEM_VGPR_COUNT, 0, 6),
   AMDGPU_BITS_ENUM_ENTRY(GRANULATED_WAVEFRONT_SGPR_COUNT, 6, 4),
@@ -81,7 +81,7 @@ enum ComputePgmRsrc1 {
   AMDGPU_BITS_ENUM_ENTRY(RESERVED0, 27, 5),
 };
 
-/// \brief Compute program resource register two layout.
+/// Compute program resource register two layout.
 enum ComputePgmRsrc2 {
   AMDGPU_BITS_ENUM_ENTRY(ENABLE_SGPR_PRIVATE_SEGMENT_WAVE_OFFSET, 0, 1),
   AMDGPU_BITS_ENUM_ENTRY(USER_SGPR_COUNT, 1, 5),
@@ -104,7 +104,7 @@ enum ComputePgmRsrc2 {
   AMDGPU_BITS_ENUM_ENTRY(RESERVED1, 31, 1),
 };
 
-/// \brief Kernel descriptor layout. This layout should be kept backwards
+/// Kernel descriptor layout. This layout should be kept backwards
 /// compatible as it is consumed by the command processor.
 struct KernelDescriptor final {
   uint32_t GroupSegmentFixedSize;

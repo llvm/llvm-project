@@ -122,17 +122,17 @@ static inline Value *peekThroughBitcast(Value *V, bool OneUseOnly = false) {
   return V;
 }
 
-/// \brief Add one to a Constant
+/// Add one to a Constant
 static inline Constant *AddOne(Constant *C) {
   return ConstantExpr::getAdd(C, ConstantInt::get(C->getType(), 1));
 }
 
-/// \brief Subtract one from a Constant
+/// Subtract one from a Constant
 static inline Constant *SubOne(Constant *C) {
   return ConstantExpr::getSub(C, ConstantInt::get(C->getType(), 1));
 }
 
-/// \brief Return true if the specified value is free to invert (apply ~ to).
+/// Return true if the specified value is free to invert (apply ~ to).
 /// This happens in cases where the ~ can be eliminated.  If WillInvertAllUses
 /// is true, work under the assumption that the caller intends to remove all
 /// uses of V and only keep uses of ~V.
@@ -178,7 +178,7 @@ static inline bool IsFreeToInvert(Value *V, bool WillInvertAllUses) {
   return false;
 }
 
-/// \brief Specific patterns of overflow check idioms that we match.
+/// Specific patterns of overflow check idioms that we match.
 enum OverflowCheckFlavor {
   OCF_UNSIGNED_ADD,
   OCF_SIGNED_ADD,
@@ -190,7 +190,7 @@ enum OverflowCheckFlavor {
   OCF_INVALID
 };
 
-/// \brief Returns the OverflowCheckFlavor corresponding to a overflow_with_op
+/// Returns the OverflowCheckFlavor corresponding to a overflow_with_op
 /// intrinsic.
 static inline OverflowCheckFlavor
 IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
@@ -212,7 +212,7 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
   }
 }
 
-/// \brief The core instruction combiner logic.
+/// The core instruction combiner logic.
 ///
 /// This class provides both the logic to recursively visit instructions and
 /// combine them.
@@ -220,10 +220,10 @@ class LLVM_LIBRARY_VISIBILITY InstCombiner
     : public InstVisitor<InstCombiner, Instruction *> {
   // FIXME: These members shouldn't be public.
 public:
-  /// \brief A worklist of the instructions that need to be simplified.
+  /// A worklist of the instructions that need to be simplified.
   InstCombineWorklist &Worklist;
 
-  /// \brief An IRBuilder that automatically inserts new instructions into the
+  /// An IRBuilder that automatically inserts new instructions into the
   /// worklist.
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy &Builder;
@@ -261,7 +261,7 @@ public:
         ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
         DL(DL), SQ(DL, &TLI, &DT, &AC), ORE(ORE), LI(LI) {}
 
-  /// \brief Run the combiner over the entire worklist until it is empty.
+  /// Run the combiner over the entire worklist until it is empty.
   ///
   /// \returns true if the IR is changed.
   bool run();
@@ -390,7 +390,7 @@ private:
   /// if it cannot already be eliminated by some other transformation.
   bool shouldOptimizeCast(CastInst *CI);
 
-  /// \brief Try to optimize a sequence of instructions checking if an operation
+  /// Try to optimize a sequence of instructions checking if an operation
   /// on LHS and RHS overflows.
   ///
   /// If this overflow check is done via one of the overflow check intrinsics,
@@ -488,7 +488,7 @@ private:
   Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
                                        bool JoinedByAnd, Instruction &CxtI);
 public:
-  /// \brief Inserts an instruction \p New before instruction \p Old
+  /// Inserts an instruction \p New before instruction \p Old
   ///
   /// Also adds the new instruction to the worklist and returns \p New so that
   /// it is suitable for use as the return from the visitation patterns.
@@ -501,13 +501,13 @@ public:
     return New;
   }
 
-  /// \brief Same as InsertNewInstBefore, but also sets the debug loc.
+  /// Same as InsertNewInstBefore, but also sets the debug loc.
   Instruction *InsertNewInstWith(Instruction *New, Instruction &Old) {
     New->setDebugLoc(Old.getDebugLoc());
     return InsertNewInstBefore(New, Old);
   }
 
-  /// \brief A combiner-aware RAUW-like routine.
+  /// A combiner-aware RAUW-like routine.
   ///
   /// This method is to be used when an instruction is found to be dead,
   /// replaceable with another preexisting expression. Here we add all uses of
@@ -542,7 +542,7 @@ public:
     return InsertValueInst::Create(Struct, Result, 0);
   }
 
-  /// \brief Combiner aware instruction erasure.
+  /// Combiner aware instruction erasure.
   ///
   /// When dealing with an instruction that has side effects or produces a void
   /// value, we can't rely on DCE to delete the instruction. Instead, visit
@@ -613,11 +613,11 @@ public:
   uint64_t MaxArraySizeForCombine;
 
 private:
-  /// \brief Performs a few simplifications for operators which are associative
+  /// Performs a few simplifications for operators which are associative
   /// or commutative.
   bool SimplifyAssociativeOrCommutative(BinaryOperator &I);
 
-  /// \brief Tries to simplify binary operations which some other binary
+  /// Tries to simplify binary operations which some other binary
   /// operation distributes over.
   ///
   /// It does this by either by factorizing out common terms (eg "(A*B)+(A*C)"
@@ -652,7 +652,7 @@ private:
                                ConstantInt *&Less, ConstantInt *&Equal,
                                ConstantInt *&Greater);
 
-  /// \brief Attempts to replace V with a simpler value based on the demanded
+  /// Attempts to replace V with a simpler value based on the demanded
   /// bits.
   Value *SimplifyDemandedUseBits(Value *V, APInt DemandedMask, KnownBits &Known,
                                  unsigned Depth, Instruction *CxtI);
@@ -674,7 +674,7 @@ private:
       Instruction *Shr, const APInt &ShrOp1, Instruction *Shl,
       const APInt &ShlOp1, const APInt &DemandedMask, KnownBits &Known);
 
-  /// \brief Tries to simplify operands to an integer instruction based on its
+  /// Tries to simplify operands to an integer instruction based on its
   /// demanded bits.
   bool SimplifyDemandedInstructionBits(Instruction &Inst);
 
@@ -700,7 +700,7 @@ private:
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
 
-  /// \brief Try to rotate an operation below a PHI node, using PHI nodes for
+  /// Try to rotate an operation below a PHI node, using PHI nodes for
   /// its operands.
   Instruction *FoldPHIArgOpIntoPHI(PHINode &PN);
   Instruction *FoldPHIArgBinOpIntoPHI(PHINode &PN);
@@ -802,7 +802,7 @@ private:
 
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
-  /// \brief Returns a value X such that Val = X * Scale, or null if none.
+  /// Returns a value X such that Val = X * Scale, or null if none.
   ///
   /// If the multiplication is known not to overflow then NoSignedWrap is set.
   Value *Descale(Value *Val, APInt Scale, bool &NoSignedWrap);

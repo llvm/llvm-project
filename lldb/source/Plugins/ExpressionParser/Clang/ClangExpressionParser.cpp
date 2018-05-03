@@ -182,8 +182,7 @@ public:
         m_manager->AddDiagnostic(new_diagnostic);
 
         // Don't store away warning fixits, since the compiler doesn't have
-        // enough
-        // context in an expression for the warning to be useful.
+        // enough context in an expression for the warning to be useful.
         // FIXME: Should we try to filter out FixIts that apply to our generated
         // code, and not the user's expression?
         if (severity == eDiagnosticSeverityError) {
@@ -226,10 +225,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
       m_code_generator(), m_pp_callbacks(nullptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  // We can't compile expressions without a target.  So if the exe_scope is null
-  // or doesn't have a target,
-  // then we just need to get out of here.  I'll lldb_assert and not make any of
-  // the compiler objects since
+  // We can't compile expressions without a target.  So if the exe_scope is
+  // null or doesn't have a target, then we just need to get out of here.  I'll
+  // lldb_assert and not make any of the compiler objects since
   // I can't return errors directly from the constructor.  Further calls will
   // check if the compiler was made and
   // bag out if it wasn't.
@@ -262,14 +260,14 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   const auto target_machine = target_arch.GetMachine();
 
-  // If the expression is being evaluated in the context of an existing
-  // stack frame, we introspect to see if the language runtime is available.
+  // If the expression is being evaluated in the context of an existing stack
+  // frame, we introspect to see if the language runtime is available.
 
   lldb::StackFrameSP frame_sp = exe_scope->CalculateStackFrame();
   lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
 
-  // Make sure the user hasn't provided a preferred execution language
-  // with `expression --language X -- ...`
+  // Make sure the user hasn't provided a preferred execution language with
+  // `expression --language X -- ...`
   if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
     frame_lang = frame_sp->GetLanguage();
 
@@ -281,8 +279,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   }
 
   // 2. Configure the compiler with a set of default options that are
-  // appropriate
-  // for most situations.
+  // appropriate for most situations.
   if (target_arch.IsValid()) {
     std::string triple = target_arch.GetTriple().str();
     m_compiler->getTargetOpts().Triple = triple;
@@ -292,19 +289,17 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   } else {
     // If we get here we don't have a valid target and just have to guess.
     // Sometimes this will be ok to just use the host target triple (when we
-    // evaluate say "2+3", but other
-    // expressions like breakpoint conditions and other things that _are_ target
-    // specific really shouldn't just be
-    // using the host triple. In such a case the language runtime should expose
-    // an overridden options set (3),
-    // below.
+    // evaluate say "2+3", but other expressions like breakpoint conditions and
+    // other things that _are_ target specific really shouldn't just be using
+    // the host triple. In such a case the language runtime should expose an
+    // overridden options set (3), below.
     m_compiler->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
     if (log)
       log->Printf("Using default target triple of %s",
                   m_compiler->getTargetOpts().Triple.c_str());
   }
-  // Now add some special fixes for known architectures:
-  // Any arm32 iOS environment, but not on arm64
+  // Now add some special fixes for known architectures: Any arm32 iOS
+  // environment, but not on arm64
   if (m_compiler->getTargetOpts().Triple.find("arm64") == std::string::npos &&
       m_compiler->getTargetOpts().Triple.find("arm") != std::string::npos &&
       m_compiler->getTargetOpts().Triple.find("ios") != std::string::npos) {
@@ -317,8 +312,8 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     m_compiler->getTargetOpts().Features.push_back("+sse2");
   }
 
-  // Set the target CPU to generate code for.
-  // This will be empty for any CPU that doesn't really need to make a special
+  // Set the target CPU to generate code for. This will be empty for any CPU
+  // that doesn't really need to make a special
   // CPU string.
   m_compiler->getTargetOpts().CPU = target_arch.GetClangTargetCPU();
 
@@ -328,11 +323,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     m_compiler->getTargetOpts().ABI = abi;
 
   // 3. Now allow the runtime to provide custom configuration options for the
-  // target.
-  // In this case, a specialized language runtime is available and we can query
-  // it for extra options.
-  // For 99% of use cases, this will not be needed and should be provided when
-  // basic platform detection is not enough.
+  // target. In this case, a specialized language runtime is available and we
+  // can query it for extra options. For 99% of use cases, this will not be
+  // needed and should be provided when basic platform detection is not enough.
   if (lang_rt)
     overridden_target_opts =
         lang_rt->GetOverrideExprOptions(m_compiler->getTargetOpts());
@@ -378,9 +371,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   case lldb::eLanguageTypeC11:
     // FIXME: the following language option is a temporary workaround,
     // to "ask for C, get C++."
-    // For now, the expression parser must use C++ anytime the
-    // language is a C family language, because the expression parser
-    // uses features of C++ to capture values.
+    // For now, the expression parser must use C++ anytime the language is a C
+    // family language, because the expression parser uses features of C++ to
+    // capture values.
     m_compiler->getLangOpts().CPlusPlus = true;
     break;
   case lldb::eLanguageTypeObjC:
@@ -392,10 +385,10 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
     // Clang now sets as default C++14 as the default standard (with
     // GNU extensions), so we do the same here to avoid mismatches that
-    // cause compiler error when evaluating expressions (e.g. nullptr
-    // not found as it's a C++11 feature). Currently lldb evaluates
-    // C++14 as C++11 (see two lines below) so we decide to be consistent
-    // with that, but this could be re-evaluated in the future.
+    // cause compiler error when evaluating expressions (e.g. nullptr not found
+    // as it's a C++11 feature). Currently lldb evaluates C++14 as C++11 (see
+    // two lines below) so we decide to be consistent with that, but this could
+    // be re-evaluated in the future.
     m_compiler->getLangOpts().CPlusPlus11 = true;
     break;
   case lldb::eLanguageTypeC_plus_plus:
@@ -407,8 +400,8 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   case lldb::eLanguageTypeC_plus_plus_03:
     m_compiler->getLangOpts().CPlusPlus = true;
     // FIXME: the following language option is a temporary workaround,
-    // to "ask for C++, get ObjC++".  Apple hopes to remove this requirement
-    // on non-Apple platforms, but for now it is needed.
+    // to "ask for C++, get ObjC++".  Apple hopes to remove this requirement on
+    // non-Apple platforms, but for now it is needed.
     m_compiler->getLangOpts().ObjC1 = true;
     break;
   case lldb::eLanguageTypeObjC_plus_plus:
@@ -434,10 +427,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
       ArchSpec(m_compiler->getTargetOpts().Triple.c_str())
           .CharIsSignedByDefault();
 
-  // Spell checking is a nice feature, but it ends up completing a
-  // lot of types that we didn't strictly speaking need to complete.
-  // As a result, we spend a long time parsing and importing debug
-  // information.
+  // Spell checking is a nice feature, but it ends up completing a lot of types
+  // that we didn't strictly speaking need to complete. As a result, we spend a
+  // long time parsing and importing debug information.
   m_compiler->getLangOpts().SpellChecking = false;
 
   if (process_sp && m_compiler->getLangOpts().ObjC1) {
@@ -513,8 +505,8 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     m_compiler->getPreprocessor().addPPCallbacks(std::move(pp_callbacks));
   }
 
-  // 8. Most of this we get from the CompilerInstance, but we
-  // also want to give the context an ExternalASTSource.
+  // 8. Most of this we get from the CompilerInstance, but we also want to give
+  // the context an ExternalASTSource.
   m_selector_table.reset(new SelectorTable());
   m_builtin_context.reset(new Builtin::Context());
 

@@ -49,7 +49,6 @@ public:
   }
 
   void printopaquemem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
-    O << "opaque ptr ";
     printMemReference(MI, OpNo, O);
   }
 

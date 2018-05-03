@@ -573,7 +573,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                    	pmullw	%xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *               	pmullw	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                    	pmuludq	%mm0, %mm2
-# CHECK-NEXT:  2      11    1.00    *               	pmuludq	(%rax), %mm2
+# CHECK-NEXT:  2      10    1.00    *               	pmuludq	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                    	pmuludq	%xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *               	pmuludq	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.33                    	por	%xmm0, %xmm2

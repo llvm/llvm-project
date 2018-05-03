@@ -309,41 +309,41 @@ def POPGS32 : I<0xa9, RawFrm, (outs), (ins), "pop{l}\t{%gs|gs}", []>, TB,
                 OpSize32, Requires<[Not64BitMode]>;
 def POPGS64 : I<0xa9, RawFrm, (outs), (ins), "pop{q}\t{%gs|gs}", []>, TB,
                 OpSize32, Requires<[In64BitMode]>;
-                
-def LDS16rm : I<0xc5, MRMSrcMem, (outs GR16:$dst), (ins opaque32mem:$src),
+
+def LDS16rm : I<0xc5, MRMSrcMem, (outs GR16:$dst), (ins opaquemem:$src),
                 "lds{w}\t{$src, $dst|$dst, $src}", []>, OpSize16,
                 Requires<[Not64BitMode]>;
-def LDS32rm : I<0xc5, MRMSrcMem, (outs GR32:$dst), (ins opaque48mem:$src),
+def LDS32rm : I<0xc5, MRMSrcMem, (outs GR32:$dst), (ins opaquemem:$src),
                 "lds{l}\t{$src, $dst|$dst, $src}", []>, OpSize32,
                 Requires<[Not64BitMode]>;
 
-def LSS16rm : I<0xb2, MRMSrcMem, (outs GR16:$dst), (ins opaque32mem:$src),
+def LSS16rm : I<0xb2, MRMSrcMem, (outs GR16:$dst), (ins opaquemem:$src),
                 "lss{w}\t{$src, $dst|$dst, $src}", []>, TB, OpSize16;
-def LSS32rm : I<0xb2, MRMSrcMem, (outs GR32:$dst), (ins opaque48mem:$src),
+def LSS32rm : I<0xb2, MRMSrcMem, (outs GR32:$dst), (ins opaquemem:$src),
                 "lss{l}\t{$src, $dst|$dst, $src}", []>, TB, OpSize32;
-def LSS64rm : RI<0xb2, MRMSrcMem, (outs GR64:$dst), (ins opaque80mem:$src),
+def LSS64rm : RI<0xb2, MRMSrcMem, (outs GR64:$dst), (ins opaquemem:$src),
                  "lss{q}\t{$src, $dst|$dst, $src}", []>, TB;
 
-def LES16rm : I<0xc4, MRMSrcMem, (outs GR16:$dst), (ins opaque32mem:$src),
+def LES16rm : I<0xc4, MRMSrcMem, (outs GR16:$dst), (ins opaquemem:$src),
                 "les{w}\t{$src, $dst|$dst, $src}", []>, OpSize16,
                 Requires<[Not64BitMode]>;
-def LES32rm : I<0xc4, MRMSrcMem, (outs GR32:$dst), (ins opaque48mem:$src),
+def LES32rm : I<0xc4, MRMSrcMem, (outs GR32:$dst), (ins opaquemem:$src),
                 "les{l}\t{$src, $dst|$dst, $src}", []>, OpSize32,
                 Requires<[Not64BitMode]>;
 
-def LFS16rm : I<0xb4, MRMSrcMem, (outs GR16:$dst), (ins opaque32mem:$src),
+def LFS16rm : I<0xb4, MRMSrcMem, (outs GR16:$dst), (ins opaquemem:$src),
                 "lfs{w}\t{$src, $dst|$dst, $src}", []>, TB, OpSize16;
-def LFS32rm : I<0xb4, MRMSrcMem, (outs GR32:$dst), (ins opaque48mem:$src),
+def LFS32rm : I<0xb4, MRMSrcMem, (outs GR32:$dst), (ins opaquemem:$src),
                 "lfs{l}\t{$src, $dst|$dst, $src}", []>, TB, OpSize32;
-def LFS64rm : RI<0xb4, MRMSrcMem, (outs GR64:$dst), (ins opaque80mem:$src),
+def LFS64rm : RI<0xb4, MRMSrcMem, (outs GR64:$dst), (ins opaquemem:$src),
                  "lfs{q}\t{$src, $dst|$dst, $src}", []>, TB;
 
-def LGS16rm : I<0xb5, MRMSrcMem, (outs GR16:$dst), (ins opaque32mem:$src),
+def LGS16rm : I<0xb5, MRMSrcMem, (outs GR16:$dst), (ins opaquemem:$src),
                 "lgs{w}\t{$src, $dst|$dst, $src}", []>, TB, OpSize16;
-def LGS32rm : I<0xb5, MRMSrcMem, (outs GR32:$dst), (ins opaque48mem:$src),
+def LGS32rm : I<0xb5, MRMSrcMem, (outs GR32:$dst), (ins opaquemem:$src),
                 "lgs{l}\t{$src, $dst|$dst, $src}", []>, TB, OpSize32;
 
-def LGS64rm : RI<0xb5, MRMSrcMem, (outs GR64:$dst), (ins opaque80mem:$src),
+def LGS64rm : RI<0xb5, MRMSrcMem, (outs GR64:$dst), (ins opaquemem:$src),
                  "lgs{q}\t{$src, $dst|$dst, $src}", []>, TB;
 
 def VERRr : I<0x00, MRM4r, (outs), (ins GR16:$seg), "verr\t$seg", []>, TB;
@@ -358,17 +358,17 @@ def VERWm : I<0x00, MRM5m, (outs), (ins i16mem:$seg), "verw\t$seg", []>, TB;
 // Descriptor-table support instructions
 
 let SchedRW = [WriteSystem] in {
-def SGDT16m : I<0x01, MRM0m, (outs), (ins opaque48mem:$dst),
+def SGDT16m : I<0x01, MRM0m, (outs), (ins opaquemem:$dst),
                 "sgdtw\t$dst", []>, TB, OpSize16, Requires<[Not64BitMode]>;
-def SGDT32m : I<0x01, MRM0m, (outs), (ins opaque48mem:$dst),
+def SGDT32m : I<0x01, MRM0m, (outs), (ins opaquemem:$dst),
                 "sgdt{l|d}\t$dst", []>, OpSize32, TB, Requires <[Not64BitMode]>;
-def SGDT64m : I<0x01, MRM0m, (outs), (ins opaque80mem:$dst),
+def SGDT64m : I<0x01, MRM0m, (outs), (ins opaquemem:$dst),
                 "sgdt{q}\t$dst", []>, TB, Requires <[In64BitMode]>;
-def SIDT16m : I<0x01, MRM1m, (outs), (ins opaque48mem:$dst),
+def SIDT16m : I<0x01, MRM1m, (outs), (ins opaquemem:$dst),
                 "sidtw\t$dst", []>, TB, OpSize16, Requires<[Not64BitMode]>;
-def SIDT32m : I<0x01, MRM1m, (outs), (ins opaque48mem:$dst),
+def SIDT32m : I<0x01, MRM1m, (outs), (ins opaquemem:$dst),
                 "sidt{l|d}\t$dst", []>, OpSize32, TB, Requires <[Not64BitMode]>;
-def SIDT64m : I<0x01, MRM1m, (outs), (ins opaque80mem:$dst),
+def SIDT64m : I<0x01, MRM1m, (outs), (ins opaquemem:$dst),
                 "sidt{q}\t$dst", []>, TB, Requires <[In64BitMode]>;
 def SLDT16r : I<0x00, MRM0r, (outs GR16:$dst), (ins),
                 "sldt{w}\t$dst", []>, TB, OpSize16;
@@ -383,17 +383,17 @@ def SLDT32r : I<0x00, MRM0r, (outs GR32:$dst), (ins),
 def SLDT64r : RI<0x00, MRM0r, (outs GR64:$dst), (ins),
                  "sldt{q}\t$dst", []>, TB, Requires<[In64BitMode]>;
 
-def LGDT16m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
+def LGDT16m : I<0x01, MRM2m, (outs), (ins opaquemem:$src),
                 "lgdtw\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;
-def LGDT32m : I<0x01, MRM2m, (outs), (ins opaque48mem:$src),
+def LGDT32m : I<0x01, MRM2m, (outs), (ins opaquemem:$src),
                 "lgdt{l|d}\t$src", []>, OpSize32, TB, Requires<[Not64BitMode]>;
-def LGDT64m : I<0x01, MRM2m, (outs), (ins opaque80mem:$src),
+def LGDT64m : I<0x01, MRM2m, (outs), (ins opaquemem:$src),
                 "lgdt{q}\t$src", []>, TB, Requires<[In64BitMode]>;
-def LIDT16m : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
+def LIDT16m : I<0x01, MRM3m, (outs), (ins opaquemem:$src),
                 "lidtw\t$src", []>, TB, OpSize16, Requires<[Not64BitMode]>;
-def LIDT32m : I<0x01, MRM3m, (outs), (ins opaque48mem:$src),
+def LIDT32m : I<0x01, MRM3m, (outs), (ins opaquemem:$src),
                 "lidt{l|d}\t$src", []>, OpSize32, TB, Requires<[Not64BitMode]>;
-def LIDT64m : I<0x01, MRM3m, (outs), (ins opaque80mem:$src),
+def LIDT64m : I<0x01, MRM3m, (outs), (ins opaquemem:$src),
                 "lidt{q}\t$src", []>, TB, Requires<[In64BitMode]>;
 def LLDT16r : I<0x00, MRM2r, (outs), (ins GR16:$src),
                 "lldt{w}\t$src", []>, TB;
@@ -522,40 +522,40 @@ let Uses = [EDX, EAX, ECX] in
 } // HasXSAVE
 
 let Uses = [EDX, EAX] in {
-def XSAVE : I<0xAE, MRM4m, (outs), (ins opaque512mem:$dst),
+def XSAVE : I<0xAE, MRM4m, (outs), (ins opaquemem:$dst),
               "xsave\t$dst",
               [(int_x86_xsave addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVE]>;
-def XSAVE64 : RI<0xAE, MRM4m, (outs), (ins opaque512mem:$dst),
+def XSAVE64 : RI<0xAE, MRM4m, (outs), (ins opaquemem:$dst),
                  "xsave64\t$dst",
                  [(int_x86_xsave64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVE, In64BitMode]>;
-def XRSTOR : I<0xAE, MRM5m, (outs), (ins opaque512mem:$dst),
+def XRSTOR : I<0xAE, MRM5m, (outs), (ins opaquemem:$dst),
                "xrstor\t$dst",
                [(int_x86_xrstor addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVE]>;
-def XRSTOR64 : RI<0xAE, MRM5m, (outs), (ins opaque512mem:$dst),
+def XRSTOR64 : RI<0xAE, MRM5m, (outs), (ins opaquemem:$dst),
                   "xrstor64\t$dst",
                   [(int_x86_xrstor64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVE, In64BitMode]>;
-def XSAVEOPT : I<0xAE, MRM6m, (outs), (ins opaque512mem:$dst),
+def XSAVEOPT : I<0xAE, MRM6m, (outs), (ins opaquemem:$dst),
                  "xsaveopt\t$dst",
                  [(int_x86_xsaveopt addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEOPT]>;
-def XSAVEOPT64 : RI<0xAE, MRM6m, (outs), (ins opaque512mem:$dst),
+def XSAVEOPT64 : RI<0xAE, MRM6m, (outs), (ins opaquemem:$dst),
                     "xsaveopt64\t$dst",
                     [(int_x86_xsaveopt64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEOPT, In64BitMode]>;
-def XSAVEC : I<0xC7, MRM4m, (outs), (ins opaque512mem:$dst),
+def XSAVEC : I<0xC7, MRM4m, (outs), (ins opaquemem:$dst),
                "xsavec\t$dst",
                [(int_x86_xsavec addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVEC]>;
-def XSAVEC64 : RI<0xC7, MRM4m, (outs), (ins opaque512mem:$dst),
+def XSAVEC64 : RI<0xC7, MRM4m, (outs), (ins opaquemem:$dst),
                  "xsavec64\t$dst",
                  [(int_x86_xsavec64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVEC, In64BitMode]>;
-def XSAVES : I<0xC7, MRM5m, (outs), (ins opaque512mem:$dst),
+def XSAVES : I<0xC7, MRM5m, (outs), (ins opaquemem:$dst),
                "xsaves\t$dst",
                [(int_x86_xsaves addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES]>;
-def XSAVES64 : RI<0xC7, MRM5m, (outs), (ins opaque512mem:$dst),
+def XSAVES64 : RI<0xC7, MRM5m, (outs), (ins opaquemem:$dst),
                   "xsaves64\t$dst",
                   [(int_x86_xsaves64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVE, In64BitMode]>;
-def XRSTORS : I<0xC7, MRM3m, (outs), (ins opaque512mem:$dst),
+def XRSTORS : I<0xC7, MRM3m, (outs), (ins opaquemem:$dst),
                 "xrstors\t$dst",
                 [(int_x86_xrstors addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES]>;
-def XRSTORS64 : RI<0xC7, MRM3m, (outs), (ins opaque512mem:$dst),
+def XRSTORS64 : RI<0xC7, MRM3m, (outs), (ins opaquemem:$dst),
                    "xrstors64\t$dst",
                    [(int_x86_xrstors64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES, In64BitMode]>;
 } // Uses

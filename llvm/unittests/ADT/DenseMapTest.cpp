@@ -30,7 +30,7 @@ uint32_t *getTestValue(int i, uint32_t **) {
   return &dummy_arr1[i];
 }
 
-/// \brief A test class that tries to check that construction and destruction
+/// A test class that tries to check that construction and destruction
 /// occur correctly.
 class CtorTester {
   static std::set<CtorTester *> Constructed;

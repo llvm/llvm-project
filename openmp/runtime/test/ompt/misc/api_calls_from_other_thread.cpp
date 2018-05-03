@@ -1,4 +1,4 @@
-// RUN: env OMP_PLACES=cores %libomp-cxx-compile-and-run | FileCheck %s
+// RUN: %libomp-cxx-compile-and-run | FileCheck %s
 // REQUIRES: ompt, linux
 
 #include <thread>
@@ -34,9 +34,9 @@ int main()
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_get_num_places()=0
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_get_num_places()={{[0-9]+}}
 
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_get_place_proc_ids()=0
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_get_place_proc_ids()={{[0-9]+}}
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_get_place_num()=-1
 

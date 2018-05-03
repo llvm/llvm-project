@@ -1763,6 +1763,12 @@ bool Type::isWideCharType() const {
   return false;
 }
 
+bool Type::isChar8Type() const {
+  if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->getKind() == BuiltinType::Char8;
+  return false;
+}
+
 bool Type::isChar16Type() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() == BuiltinType::Char16;
@@ -1785,6 +1791,7 @@ bool Type::isAnyCharacterType() const {
   case BuiltinType::Char_U:
   case BuiltinType::UChar:
   case BuiltinType::WChar_U:
+  case BuiltinType::Char8:
   case BuiltinType::Char16:
   case BuiltinType::Char32:
   case BuiltinType::Char_S:
@@ -2419,6 +2426,7 @@ bool Type::isPromotableIntegerType() const {
     case BuiltinType::UShort:
     case BuiltinType::WChar_S:
     case BuiltinType::WChar_U:
+    case BuiltinType::Char8:
     case BuiltinType::Char16:
     case BuiltinType::Char32:
       return true;
@@ -2655,6 +2663,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case WChar_S:
   case WChar_U:
     return Policy.MSWChar ? "__wchar_t" : "wchar_t";
+  case Char8:
+    return "char8_t";
   case Char16:
     return "char16_t";
   case Char32:

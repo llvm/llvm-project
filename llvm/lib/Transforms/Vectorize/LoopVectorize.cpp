@@ -432,7 +432,7 @@ public:
   void vectorizeMemoryInstruction(Instruction *Instr,
                                   VectorParts *BlockInMask = nullptr);
 
-  /// \brief Set the debug location in the builder using the debug location in
+  /// Set the debug location in the builder using the debug location in
   /// the instruction.
   void setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr);
 
@@ -468,7 +468,7 @@ protected:
   /// vectorizing this phi node.
   void fixReduction(PHINode *Phi);
 
-  /// \brief The Loop exit block may have single value PHI nodes with some
+  /// The Loop exit block may have single value PHI nodes with some
   /// incoming value. While vectorizing we only handled real values
   /// that were defined inside the loop and we should have one value for
   /// each predecessor of its parent basic block. See PR14725.
@@ -586,7 +586,7 @@ protected:
   /// loop.
   void addMetadata(Instruction *To, Instruction *From);
 
-  /// \brief Similar to the previous function but it adds the metadata to a
+  /// Similar to the previous function but it adds the metadata to a
   /// vector of instructions.
   void addMetadata(ArrayRef<Value *> To, Instruction *From);
 
@@ -619,7 +619,7 @@ protected:
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
 
-  /// \brief LoopVersioning.  It's only set up (non-null) if memchecks were
+  /// LoopVersioning.  It's only set up (non-null) if memchecks were
   /// used.
   ///
   /// This is currently only used to add no-alias metadata based on the
@@ -717,7 +717,7 @@ private:
 
 } // end namespace llvm
 
-/// \brief Look for a meaningful debug location on the instruction or it's
+/// Look for a meaningful debug location on the instruction or it's
 /// operands.
 static Instruction *getDebugLocFromInstOrOperands(Instruction *I) {
   if (!I)
@@ -789,7 +789,7 @@ void InnerLoopVectorizer::addMetadata(ArrayRef<Value *> To,
 
 namespace llvm {
 
-/// \brief The group of interleaved loads/stores sharing the same stride and
+/// The group of interleaved loads/stores sharing the same stride and
 /// close to each other.
 ///
 /// Each member in this group has an index starting from 0, and the largest
@@ -833,7 +833,7 @@ public:
   unsigned getAlignment() const { return Align; }
   unsigned getNumMembers() const { return Members.size(); }
 
-  /// \brief Try to insert a new member \p Instr with index \p Index and
+  /// Try to insert a new member \p Instr with index \p Index and
   /// alignment \p NewAlign. The index is related to the leader and it could be
   /// negative if it is the new leader.
   ///
@@ -867,7 +867,7 @@ public:
     return true;
   }
 
-  /// \brief Get the member with the given index \p Index
+  /// Get the member with the given index \p Index
   ///
   /// \returns nullptr if contains no such member.
   Instruction *getMember(unsigned Index) const {
@@ -878,7 +878,7 @@ public:
     return Members.find(Key)->second;
   }
 
-  /// \brief Get the index for the given member. Unlike the key in the member
+  /// Get the index for the given member. Unlike the key in the member
   /// map, the index starts from 0.
   unsigned getIndex(Instruction *Instr) const {
     for (auto I : Members)
@@ -929,7 +929,7 @@ private:
 
 namespace {
 
-/// \brief Drive the analysis of interleaved memory accesses in the loop.
+/// Drive the analysis of interleaved memory accesses in the loop.
 ///
 /// Use this class to analyze interleaved accesses only when we can vectorize
 /// a loop. Otherwise it's meaningless to do analysis as the vectorization
@@ -953,16 +953,16 @@ public:
       delete Ptr;
   }
 
-  /// \brief Analyze the interleaved accesses and collect them in interleave
+  /// Analyze the interleaved accesses and collect them in interleave
   /// groups. Substitute symbolic strides using \p Strides.
   void analyzeInterleaving();
 
-  /// \brief Check if \p Instr belongs to any interleave group.
+  /// Check if \p Instr belongs to any interleave group.
   bool isInterleaved(Instruction *Instr) const {
     return InterleaveGroupMap.count(Instr);
   }
 
-  /// \brief Get the interleave group that \p Instr belongs to.
+  /// Get the interleave group that \p Instr belongs to.
   ///
   /// \returns nullptr if doesn't have such group.
   InterleaveGroup *getInterleaveGroup(Instruction *Instr) const {
@@ -971,7 +971,7 @@ public:
     return nullptr;
   }
 
-  /// \brief Returns true if an interleaved group that may access memory
+  /// Returns true if an interleaved group that may access memory
   /// out-of-bounds requires a scalar epilogue iteration for correctness.
   bool requiresScalarEpilogue() const { return RequiresScalarEpilogue; }
 
@@ -999,7 +999,7 @@ private:
   /// access to a set of dependent sink accesses.
   DenseMap<Instruction *, SmallPtrSet<Instruction *, 2>> Dependences;
 
-  /// \brief The descriptor for a strided memory access.
+  /// The descriptor for a strided memory access.
   struct StrideDescriptor {
     StrideDescriptor() = default;
     StrideDescriptor(int64_t Stride, const SCEV *Scev, uint64_t Size,
@@ -1019,10 +1019,10 @@ private:
     unsigned Align = 0;
   };
 
-  /// \brief A type for holding instructions and their stride descriptors.
+  /// A type for holding instructions and their stride descriptors.
   using StrideEntry = std::pair<Instruction *, StrideDescriptor>;
 
-  /// \brief Create a new interleave group with the given instruction \p Instr,
+  /// Create a new interleave group with the given instruction \p Instr,
   /// stride \p Stride and alignment \p Align.
   ///
   /// \returns the newly created interleave group.
@@ -1034,7 +1034,7 @@ private:
     return InterleaveGroupMap[Instr];
   }
 
-  /// \brief Release the group and remove all the relationships.
+  /// Release the group and remove all the relationships.
   void releaseGroup(InterleaveGroup *Group) {
     for (unsigned i = 0; i < Group->getFactor(); i++)
       if (Instruction *Member = Group->getMember(i))
@@ -1043,28 +1043,28 @@ private:
     delete Group;
   }
 
-  /// \brief Collect all the accesses with a constant stride in program order.
+  /// Collect all the accesses with a constant stride in program order.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
       const ValueToValueMap &Strides);
 
-  /// \brief Returns true if \p Stride is allowed in an interleaved group.
+  /// Returns true if \p Stride is allowed in an interleaved group.
   static bool isStrided(int Stride) {
     unsigned Factor = std::abs(Stride);
     return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
   }
 
-  /// \brief Returns true if \p BB is a predicated block.
+  /// Returns true if \p BB is a predicated block.
   bool isPredicated(BasicBlock *BB) const {
     return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
   }
 
-  /// \brief Returns true if LoopAccessInfo can be used for dependence queries.
+  /// Returns true if LoopAccessInfo can be used for dependence queries.
   bool areDependencesValid() const {
     return LAI && LAI->getDepChecker().getDependences();
   }
 
-  /// \brief Returns true if memory accesses \p A and \p B can be reordered, if
+  /// Returns true if memory accesses \p A and \p B can be reordered, if
   /// necessary, when constructing interleaved groups.
   ///
   /// \p A must precede \p B in program order. We return false if reordering is
@@ -1112,7 +1112,7 @@ private:
     return !Dependences.count(Src) || !Dependences.lookup(Src).count(Sink);
   }
 
-  /// \brief Collect the dependences from LoopAccessInfo.
+  /// Collect the dependences from LoopAccessInfo.
   ///
   /// We process the dependences once during the interleaved access analysis to
   /// enable constant-time dependence queries.
@@ -1207,7 +1207,7 @@ public:
   /// avoid redundant calculations.
   void setCostBasedWideningDecision(unsigned VF);
 
-  /// \brief A struct that represents some properties of the register usage
+  /// A struct that represents some properties of the register usage
   /// of a loop.
   struct RegisterUsage {
     /// Holds the number of loop invariant values that are used in the loop.
@@ -1408,17 +1408,17 @@ public:
   /// access that can be widened.
   bool memoryInstructionCanBeWidened(Instruction *I, unsigned VF = 1);
 
-  /// \brief Check if \p Instr belongs to any interleaved access group.
+  /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) {
     return InterleaveInfo.isInterleaved(Instr);
   }
 
-  /// \brief Get the interleaved access group that \p Instr belongs to.
+  /// Get the interleaved access group that \p Instr belongs to.
   const InterleaveGroup *getInterleavedAccessGroup(Instruction *Instr) {
     return InterleaveInfo.getInterleaveGroup(Instr);
   }
 
-  /// \brief Returns true if an interleaved group requires a scalar iteration
+  /// Returns true if an interleaved group requires a scalar iteration
   /// to handle accesses with gaps.
   bool requiresScalarEpilogue() const {
     return InterleaveInfo.requiresScalarEpilogue();
@@ -2254,6 +2254,10 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
   if (Group->isReverse())
     Index += (VF - 1) * Group->getFactor();
 
+  bool InBounds = false;
+  if (auto *gep = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
+    InBounds = gep->isInBounds();
+
   for (unsigned Part = 0; Part < UF; Part++) {
     Value *NewPtr = getOrCreateScalarValue(Ptr, {Part, 0});
 
@@ -2269,6 +2273,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
     //       A[i+2] = c;     // Member of index 2 (Current instruction)
     // Current pointer is pointed to A[i+2], adjust it to A[i].
     NewPtr = Builder.CreateGEP(NewPtr, Builder.getInt32(-Index));
+    if (InBounds)
+      cast<GetElementPtrInst>(NewPtr)->setIsInBounds(true);
 
     // Cast to the vector pointer type.
     NewPtrs.push_back(Builder.CreateBitCast(NewPtr, PtrTy));
@@ -2405,17 +2411,30 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
   if (isMaskRequired)
     Mask = *BlockInMask;
 
+  bool InBounds = false;
+  if (auto *gep = dyn_cast<GetElementPtrInst>(
+          getLoadStorePointerOperand(Instr)->stripPointerCasts()))
+    InBounds = gep->isInBounds();
+
   const auto CreateVecPtr = [&](unsigned Part, Value *Ptr) -> Value * {
     // Calculate the pointer for the specific unroll-part.
-    Value *PartPtr = Builder.CreateGEP(Ptr, Builder.getInt32(Part * VF));
+    GetElementPtrInst *PartPtr = nullptr;
 
     if (Reverse) {
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.
-      PartPtr = Builder.CreateGEP(Ptr, Builder.getInt32(-Part * VF));
-      PartPtr = Builder.CreateGEP(PartPtr, Builder.getInt32(1 - VF));
+      PartPtr = cast<GetElementPtrInst>(
+          Builder.CreateGEP(Ptr, Builder.getInt32(-Part * VF)));
+      PartPtr->setIsInBounds(InBounds);
+      PartPtr = cast<GetElementPtrInst>(
+          Builder.CreateGEP(PartPtr, Builder.getInt32(1 - VF)));
+      PartPtr->setIsInBounds(InBounds);
       if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
         Mask[Part] = reverseVector(Mask[Part]);
+    } else {
+      PartPtr = cast<GetElementPtrInst>(
+          Builder.CreateGEP(Ptr, Builder.getInt32(Part * VF)));
+      PartPtr->setIsInBounds(InBounds);
     }
 
     return Builder.CreateBitCast(PartPtr, DataTy->getPointerTo(AddressSpace));
@@ -3033,7 +3052,7 @@ struct CSEDenseMapInfo {
 
 } // end anonymous namespace
 
-///\brief Perform cse of induction variable instructions.
+///Perform cse of induction variable instructions.
 static void cse(BasicBlock *BB) {
   // Perform simple cse.
   SmallDenseMap<Instruction *, Instruction *, 4, CSEDenseMapInfo> CSEMap;
@@ -3055,7 +3074,7 @@ static void cse(BasicBlock *BB) {
   }
 }
 
-/// \brief Estimate the overhead of scalarizing an instruction. This is a
+/// Estimate the overhead of scalarizing an instruction. This is a
 /// convenience wrapper for the type-based getScalarizationOverhead API.
 static unsigned getScalarizationOverhead(Instruction *I, unsigned VF,
                                          const TargetTransformInfo &TTI) {
@@ -5586,7 +5605,7 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
   return Cost;
 }
 
-/// \brief Gets Address Access SCEV after verifying that the access pattern
+/// Gets Address Access SCEV after verifying that the access pattern
 /// is loop invariant except the induction variable dependence.
 ///
 /// This SCEV can be sent to the Target in order to estimate the address

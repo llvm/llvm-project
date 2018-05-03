@@ -103,8 +103,7 @@ const char *HostInfoPosix::LookupGroupName(uint32_t gid,
     }
   } else {
     // The threadsafe version isn't currently working for me on darwin, but the
-    // non-threadsafe version
-    // is, so I am calling it below.
+    // non-threadsafe version is, so I am calling it below.
     group_info_ptr = ::getgrgid(gid);
     if (group_info_ptr) {
       group_name.assign(group_info_ptr->gr_name);
@@ -141,8 +140,8 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
   llvm::StringRef parent_path = llvm::sys::path::parent_path(raw_path);
 
   // Most Posix systems (e.g. Linux/*BSD) will attempt to replace a */lib with
-  // */bin as the base directory for helper exe programs.  This will fail if the
-  // /lib and /bin directories are rooted in entirely different trees.
+  // */bin as the base directory for helper exe programs.  This will fail if
+  // the /lib and /bin directories are rooted in entirely different trees.
   if (log)
     log->Printf("HostInfoPosix::ComputePathRelativeToLibrary() attempting to "
                 "derive the %s path from this path: %s",
@@ -192,9 +191,9 @@ bool HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec) {
   lldb_file_spec.GetPath(raw_path, sizeof(raw_path));
 
 #if defined(LLDB_PYTHON_RELATIVE_LIBDIR)
-  // Build the path by backing out of the lib dir, then building
-  // with whatever the real python interpreter uses.  (e.g. lib
-  // for most, lib64 on RHEL x86_64).
+  // Build the path by backing out of the lib dir, then building with whatever
+  // the real python interpreter uses.  (e.g. lib for most, lib64 on RHEL
+  // x86_64).
   char python_path[PATH_MAX];
   ::snprintf(python_path, sizeof(python_path), "%s/../%s", raw_path,
              LLDB_PYTHON_RELATIVE_LIBDIR);

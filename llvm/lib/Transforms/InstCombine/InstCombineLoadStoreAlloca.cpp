@@ -440,7 +440,7 @@ static bool isSupportedAtomicType(Type *Ty) {
   return Ty->isIntegerTy() || Ty->isPointerTy() || Ty->isFloatingPointTy();
 }
 
-/// \brief Helper to combine a load to a new type.
+/// Helper to combine a load to a new type.
 ///
 /// This just does the work of combining a load to a new type. It handles
 /// metadata, etc., and returns the new instruction. The \c NewTy should be the
@@ -507,7 +507,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
   return NewLoad;
 }
 
-/// \brief Combine a store to a new type.
+/// Combine a store to a new type.
 ///
 /// Returns the newly created store instruction.
 static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value *V) {
@@ -584,7 +584,7 @@ static bool isMinMaxWithLoads(Value *V) {
           match(L2, m_Load(m_Specific(LHS))));
 }
 
-/// \brief Combine loads to match the type of their uses' value after looking
+/// Combine loads to match the type of their uses' value after looking
 /// through intervening bitcasts.
 ///
 /// The core idea here is that if the result of a load is used in an operation,
@@ -1087,7 +1087,7 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   return nullptr;
 }
 
-/// \brief Look for extractelement/insertvalue sequence that acts like a bitcast.
+/// Look for extractelement/insertvalue sequence that acts like a bitcast.
 ///
 /// \returns underlying value that was "cast", or nullptr otherwise.
 ///
@@ -1142,7 +1142,7 @@ static Value *likeBitCastFromVector(InstCombiner &IC, Value *V) {
   return U;
 }
 
-/// \brief Combine stores to match the type of value being stored.
+/// Combine stores to match the type of value being stored.
 ///
 /// The core idea here is that the memory does not have any intrinsic type and
 /// where we can we should match the type of a store to the type of value being

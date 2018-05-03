@@ -134,6 +134,10 @@ class ScopedInErrorReport {
   }
 
   ~ScopedInErrorReport() {
+    if (halt_on_error_ && !__sanitizer_acquire_crash_state()) {
+      asanThreadRegistry().Unlock();
+      return;
+    }
     ASAN_ON_ERROR();
     if (current_error_.IsValid()) current_error_.Print();
 

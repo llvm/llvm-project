@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly except_ref operand code-gen constructs.
+/// WebAssembly except_ref operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

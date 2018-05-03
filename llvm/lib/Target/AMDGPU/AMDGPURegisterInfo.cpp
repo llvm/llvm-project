@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Parent TargetRegisterInfo class common to all hw codegen targets.
+/// Parent TargetRegisterInfo class common to all hw codegen targets.
 //
 //===----------------------------------------------------------------------===//
 

@@ -61,7 +61,7 @@ class Type;
 class User;
 class Value;
 
-/// \brief This is a fast-path instruction selection class that generates poor
+/// This is a fast-path instruction selection class that generates poor
 /// code and doesn't support illegal types or non-trivial lowering, but runs
 /// quickly.
 class FastISel {
@@ -78,7 +78,7 @@ public:
     bool IsReturnValueUsed : 1;
     bool IsPatchPoint : 1;
 
-    // \brief IsTailCall Should be modified by implementations of FastLowerCall
+    // IsTailCall Should be modified by implementations of FastLowerCall
     // that perform tail call conversions.
     bool IsTailCall = false;
 
@@ -215,13 +215,13 @@ protected:
   const TargetLibraryInfo *LibInfo;
   bool SkipTargetIndependentISel;
 
-  /// \brief The position of the last instruction for materializing constants
+  /// The position of the last instruction for materializing constants
   /// for use in the current block. It resets to EmitStartPt when it makes sense
   /// (for example, it's usually profitable to avoid function calls between the
   /// definition and the use)
   MachineInstr *LastLocalValue;
 
-  /// \brief The top most instruction in the current block that is allowed for
+  /// The top most instruction in the current block that is allowed for
   /// emitting local variables. LastLocalValue resets to EmitStartPt when it
   /// makes sense (for example, on function calls)
   MachineInstr *EmitStartPt;
@@ -233,56 +233,56 @@ protected:
 public:
   virtual ~FastISel();
 
-  /// \brief Return the position of the last instruction emitted for
+  /// Return the position of the last instruction emitted for
   /// materializing constants for use in the current block.
   MachineInstr *getLastLocalValue() { return LastLocalValue; }
 
-  /// \brief Update the position of the last instruction emitted for
+  /// Update the position of the last instruction emitted for
   /// materializing constants for use in the current block.
   void setLastLocalValue(MachineInstr *I) {
     EmitStartPt = I;
     LastLocalValue = I;
   }
 
-  /// \brief Set the current block to which generated machine instructions will
+  /// Set the current block to which generated machine instructions will
   /// be appended.
   void startNewBlock();
 
   /// Flush the local value map and sink local values if possible.
   void finishBasicBlock();
 
-  /// \brief Return current debug location information.
+  /// Return current debug location information.
   DebugLoc getCurDebugLoc() const { return DbgLoc; }
 
-  /// \brief Do "fast" instruction selection for function arguments and append
+  /// Do "fast" instruction selection for function arguments and append
   /// the machine instructions to the current block. Returns true when
   /// successful.
   bool lowerArguments();
 
-  /// \brief Do "fast" instruction selection for the given LLVM IR instruction
+  /// Do "fast" instruction selection for the given LLVM IR instruction
   /// and append the generated machine instructions to the current block.
   /// Returns true if selection was successful.
   bool selectInstruction(const Instruction *I);
 
-  /// \brief Do "fast" instruction selection for the given LLVM IR operator
+  /// Do "fast" instruction selection for the given LLVM IR operator
   /// (Instruction or ConstantExpr), and append generated machine instructions
   /// to the current block. Return true if selection was successful.
   bool selectOperator(const User *I, unsigned Opcode);
 
-  /// \brief Create a virtual register and arrange for it to be assigned the
+  /// Create a virtual register and arrange for it to be assigned the
   /// value for the given LLVM value.
   unsigned getRegForValue(const Value *V);
 
-  /// \brief Look up the value to see if its value is already cached in a
+  /// Look up the value to see if its value is already cached in a
   /// register. It may be defined by instructions across blocks or defined
   /// locally.
   unsigned lookUpRegForValue(const Value *V);
 
-  /// \brief This is a wrapper around getRegForValue that also takes care of
+  /// This is a wrapper around getRegForValue that also takes care of
   /// truncating or sign-extending the given getelementptr index value.
   std::pair<unsigned, bool> getRegForGEPIndex(const Value *V);
 
-  /// \brief We're checking to see if we can fold \p LI into \p FoldInst. Note
+  /// We're checking to see if we can fold \p LI into \p FoldInst. Note
   /// that we could have a sequence where multiple LLVM IR instructions are
   /// folded into the same machineinstr.  For example we could have:
   ///
@@ -296,7 +296,7 @@ public:
   /// If we succeed folding, return true.
   bool tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst);
 
-  /// \brief The specified machine instr operand is a vreg, and that vreg is
+  /// The specified machine instr operand is a vreg, and that vreg is
   /// being provided by the specified load instruction.  If possible, try to
   /// fold the load as an operand to the instruction, returning true if
   /// possible.
@@ -307,11 +307,11 @@ public:
     return false;
   }
 
-  /// \brief Reset InsertPt to prepare for inserting instructions into the
+  /// Reset InsertPt to prepare for inserting instructions into the
   /// current block.
   void recomputeInsertPt();
 
-  /// \brief Remove all dead instructions between the I and E.
+  /// Remove all dead instructions between the I and E.
   void removeDeadCode(MachineBasicBlock::iterator I,
                       MachineBasicBlock::iterator E);
 
@@ -320,11 +320,11 @@ public:
     DebugLoc DL;
   };
 
-  /// \brief Prepare InsertPt to begin inserting instructions into the local
+  /// Prepare InsertPt to begin inserting instructions into the local
   /// value area and return the old insert position.
   SavePoint enterLocalValueArea();
 
-  /// \brief Reset InsertPt to the given old insert position.
+  /// Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
 
 protected:
@@ -332,45 +332,45 @@ protected:
                     const TargetLibraryInfo *LibInfo,
                     bool SkipTargetIndependentISel = false);
 
-  /// \brief This method is called by target-independent code when the normal
+  /// This method is called by target-independent code when the normal
   /// FastISel process fails to select an instruction. This gives targets a
   /// chance to emit code for anything that doesn't fit into FastISel's
   /// framework. It returns true if it was successful.
   virtual bool fastSelectInstruction(const Instruction *I) = 0;
 
-  /// \brief This method is called by target-independent code to do target-
+  /// This method is called by target-independent code to do target-
   /// specific argument lowering. It returns true if it was successful.
   virtual bool fastLowerArguments();
 
-  /// \brief This method is called by target-independent code to do target-
+  /// This method is called by target-independent code to do target-
   /// specific call lowering. It returns true if it was successful.
   virtual bool fastLowerCall(CallLoweringInfo &CLI);
 
-  /// \brief This method is called by target-independent code to do target-
+  /// This method is called by target-independent code to do target-
   /// specific intrinsic lowering. It returns true if it was successful.
   virtual bool fastLowerIntrinsicCall(const IntrinsicInst *II);
 
-  /// \brief This method is called by target-independent code to request that an
+  /// This method is called by target-independent code to request that an
   /// instruction with the given type and opcode be emitted.
   virtual unsigned fastEmit_(MVT VT, MVT RetVT, unsigned Opcode);
 
-  /// \brief This method is called by target-independent code to request that an
+  /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register operand be emitted.
   virtual unsigned fastEmit_r(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
                               bool Op0IsKill);
 
-  /// \brief This method is called by target-independent code to request that an
+  /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register operands be emitted.
   virtual unsigned fastEmit_rr(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
                                bool Op0IsKill, unsigned Op1, bool Op1IsKill);
 
-  /// \brief This method is called by target-independent code to request that an
+  /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register and immediate
   /// operands be emitted.
   virtual unsigned fastEmit_ri(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
                                bool Op0IsKill, uint64_t Imm);
 
-  /// \brief This method is a wrapper of fastEmit_ri.
+  /// This method is a wrapper of fastEmit_ri.
   ///
   /// It first tries to emit an instruction with an immediate operand using
   /// fastEmit_ri.  If that fails, it materializes the immediate into a register
@@ -378,80 +378,80 @@ protected:
   unsigned fastEmit_ri_(MVT VT, unsigned Opcode, unsigned Op0, bool Op0IsKill,
                         uint64_t Imm, MVT ImmType);
 
-  /// \brief This method is called by target-independent code to request that an
+  /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and immediate operand be emitted.
   virtual unsigned fastEmit_i(MVT VT, MVT RetVT, unsigned Opcode, uint64_t Imm);
 
-  /// \brief This method is called by target-independent code to request that an
+  /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and floating-point immediate
   /// operand be emitted.
   virtual unsigned fastEmit_f(MVT VT, MVT RetVT, unsigned Opcode,
                               const ConstantFP *FPImm);
 
-  /// \brief Emit a MachineInstr with no operands and a result register in the
+  /// Emit a MachineInstr with no operands and a result register in the
   /// given register class.
   unsigned fastEmitInst_(unsigned MachineInstOpcode,
                          const TargetRegisterClass *RC);
 
-  /// \brief Emit a MachineInstr with one register operand and a result register
+  /// Emit a MachineInstr with one register operand and a result register
   /// in the given register class.
   unsigned fastEmitInst_r(unsigned MachineInstOpcode,
                           const TargetRegisterClass *RC, unsigned Op0,
                           bool Op0IsKill);
 
-  /// \brief Emit a MachineInstr with two register operands and a result
+  /// Emit a MachineInstr with two register operands and a result
   /// register in the given register class.
   unsigned fastEmitInst_rr(unsigned MachineInstOpcode,
                            const TargetRegisterClass *RC, unsigned Op0,
                            bool Op0IsKill, unsigned Op1, bool Op1IsKill);
 
-  /// \brief Emit a MachineInstr with three register operands and a result
+  /// Emit a MachineInstr with three register operands and a result
   /// register in the given register class.
   unsigned fastEmitInst_rrr(unsigned MachineInstOpcode,
                             const TargetRegisterClass *RC, unsigned Op0,
                             bool Op0IsKill, unsigned Op1, bool Op1IsKill,
                             unsigned Op2, bool Op2IsKill);
 
-  /// \brief Emit a MachineInstr with a register operand, an immediate, and a
+  /// Emit a MachineInstr with a register operand, an immediate, and a
   /// result register in the given register class.
   unsigned fastEmitInst_ri(unsigned MachineInstOpcode,
                            const TargetRegisterClass *RC, unsigned Op0,
                            bool Op0IsKill, uint64_t Imm);
 
-  /// \brief Emit a MachineInstr with one register operand and two immediate
+  /// Emit a MachineInstr with one register operand and two immediate
   /// operands.
   unsigned fastEmitInst_rii(unsigned MachineInstOpcode,
                             const TargetRegisterClass *RC, unsigned Op0,
                             bool Op0IsKill, uint64_t Imm1, uint64_t Imm2);
 
-  /// \brief Emit a MachineInstr with a floating point immediate, and a result
+  /// Emit a MachineInstr with a floating point immediate, and a result
   /// register in the given register class.
   unsigned fastEmitInst_f(unsigned MachineInstOpcode,
                           const TargetRegisterClass *RC,
                           const ConstantFP *FPImm);
 
-  /// \brief Emit a MachineInstr with two register operands, an immediate, and a
+  /// Emit a MachineInstr with two register operands, an immediate, and a
   /// result register in the given register class.
   unsigned fastEmitInst_rri(unsigned MachineInstOpcode,
                             const TargetRegisterClass *RC, unsigned Op0,
                             bool Op0IsKill, unsigned Op1, bool Op1IsKill,
                             uint64_t Imm);
 
-  /// \brief Emit a MachineInstr with a single immediate operand, and a result
+  /// Emit a MachineInstr with a single immediate operand, and a result
   /// register in the given register class.
   unsigned fastEmitInst_i(unsigned MachineInstrOpcode,
                           const TargetRegisterClass *RC, uint64_t Imm);
 
-  /// \brief Emit a MachineInstr for an extract_subreg from a specified index of
+  /// Emit a MachineInstr for an extract_subreg from a specified index of
   /// a superregister to a specified type.
   unsigned fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0, bool Op0IsKill,
                                       uint32_t Idx);
 
-  /// \brief Emit MachineInstrs to compute the value of Op with all but the
+  /// Emit MachineInstrs to compute the value of Op with all but the
   /// least significant bit set to zero.
   unsigned fastEmitZExtFromI1(MVT VT, unsigned Op0, bool Op0IsKill);
 
-  /// \brief Emit an unconditional branch to the given block, unless it is the
+  /// Emit an unconditional branch to the given block, unless it is the
   /// immediate (fall-through) successor, and update the CFG.
   void fastEmitBranch(MachineBasicBlock *MBB, const DebugLoc &DL);
 
@@ -460,7 +460,7 @@ protected:
   void finishCondBranch(const BasicBlock *BranchBB, MachineBasicBlock *TrueMBB,
                         MachineBasicBlock *FalseMBB);
 
-  /// \brief Update the value map to include the new mapping for this
+  /// Update the value map to include the new mapping for this
   /// instruction, or insert an extra copy to get the result in a previous
   /// determined register.
   ///
@@ -471,26 +471,26 @@ protected:
 
   unsigned createResultReg(const TargetRegisterClass *RC);
 
-  /// \brief Try to constrain Op so that it is usable by argument OpNum of the
+  /// Try to constrain Op so that it is usable by argument OpNum of the
   /// provided MCInstrDesc. If this fails, create a new virtual register in the
   /// correct class and COPY the value there.
   unsigned constrainOperandRegClass(const MCInstrDesc &II, unsigned Op,
                                     unsigned OpNum);
 
-  /// \brief Emit a constant in a register using target-specific logic, such as
+  /// Emit a constant in a register using target-specific logic, such as
   /// constant pool loads.
   virtual unsigned fastMaterializeConstant(const Constant *C) { return 0; }
 
-  /// \brief Emit an alloca address in a register using target-specific logic.
+  /// Emit an alloca address in a register using target-specific logic.
   virtual unsigned fastMaterializeAlloca(const AllocaInst *C) { return 0; }
 
-  /// \brief Emit the floating-point constant +0.0 in a register using target-
+  /// Emit the floating-point constant +0.0 in a register using target-
   /// specific logic.
   virtual unsigned fastMaterializeFloatZero(const ConstantFP *CF) {
     return 0;
   }
 
-  /// \brief Check if \c Add is an add that can be safely folded into \c GEP.
+  /// Check if \c Add is an add that can be safely folded into \c GEP.
   ///
   /// \c Add can be folded into \c GEP if:
   /// - \c Add is an add,
@@ -499,10 +499,10 @@ protected:
   /// - \c Add has a constant operand.
   bool canFoldAddIntoGEP(const User *GEP, const Value *Add);
 
-  /// \brief Test whether the given value has exactly one use.
+  /// Test whether the given value has exactly one use.
   bool hasTrivialKill(const Value *V);
 
-  /// \brief Create a machine mem operand from the given instruction.
+  /// Create a machine mem operand from the given instruction.
   MachineMemOperand *createMachineMemOperandFor(const Instruction *I) const;
 
   CmpInst::Predicate optimizeCmpPredicate(const CmpInst *CI) const;
@@ -525,7 +525,7 @@ protected:
   }
 
   bool lowerCall(const CallInst *I);
-  /// \brief Select and emit code for a binary operator instruction, which has
+  /// Select and emit code for a binary operator instruction, which has
   /// an opcode which directly corresponds to the given ISD opcode.
   bool selectBinaryOp(const User *I, unsigned ISDOpcode);
   bool selectFNeg(const User *I);
@@ -542,7 +542,7 @@ protected:
   bool selectXRayTypedEvent(const CallInst *II);
 
 private:
-  /// \brief Handle PHI nodes in successor blocks.
+  /// Handle PHI nodes in successor blocks.
   ///
   /// Emit code to ensure constants are copied into registers when needed.
   /// Remember the virtual registers that need to be added to the Machine PHI
@@ -551,21 +551,21 @@ private:
   /// correspond to a different MBB than the end.
   bool handlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB);
 
-  /// \brief Helper for materializeRegForValue to materialize a constant in a
+  /// Helper for materializeRegForValue to materialize a constant in a
   /// target-independent way.
   unsigned materializeConstant(const Value *V, MVT VT);
 
-  /// \brief Helper for getRegForVale. This function is called when the value
+  /// Helper for getRegForVale. This function is called when the value
   /// isn't already available in a register and must be materialized with new
   /// instructions.
   unsigned materializeRegForValue(const Value *V, MVT VT);
 
-  /// \brief Clears LocalValueMap and moves the area for the new local variables
+  /// Clears LocalValueMap and moves the area for the new local variables
   /// to the beginning of the block. It helps to avoid spilling cached variables
   /// across heavy instructions like calls.
   void flushLocalValueMap();
 
-  /// \brief Removes dead local value instructions after SavedLastLocalvalue.
+  /// Removes dead local value instructions after SavedLastLocalvalue.
   void removeDeadLocalValueCode(MachineInstr *SavedLastLocalValue);
 
   struct InstOrderMap {
@@ -582,10 +582,10 @@ private:
   void sinkLocalValueMaterialization(MachineInstr &LocalMI, unsigned DefReg,
                                      InstOrderMap &OrderMap);
 
-  /// \brief Insertion point before trying to select the current instruction.
+  /// Insertion point before trying to select the current instruction.
   MachineBasicBlock::iterator SavedInsertPt;
 
-  /// \brief Add a stackmap or patchpoint intrinsic call's live variable
+  /// Add a stackmap or patchpoint intrinsic call's live variable
   /// operands to a stackmap or patchpoint machine instruction.
   bool addStackMapLiveVars(SmallVectorImpl<MachineOperand> &Ops,
                            const CallInst *CI, unsigned StartIdx);

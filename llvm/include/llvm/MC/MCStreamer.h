@@ -170,7 +170,7 @@ private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
 };
 
-/// \brief Streaming machine code generation interface.
+/// Streaming machine code generation interface.
 ///
 /// This interface is intended to provide a programatic interface that is very
 /// similar to the level that an assembler .s file provides.  It has callbacks
@@ -197,11 +197,11 @@ class MCStreamer {
   /// closed. Otherwise, issue an error and return null.
   WinEH::FrameInfo *EnsureValidWinFrameInfo(SMLoc Loc);
 
-  /// \brief Tracks an index to represent the order a symbol was emitted in.
+  /// Tracks an index to represent the order a symbol was emitted in.
   /// Zero means we did not emit that symbol.
   DenseMap<const MCSymbol *, unsigned> SymbolOrdering;
 
-  /// \brief This is stack of current and previous section values saved by
+  /// This is stack of current and previous section values saved by
   /// PushSection.
   SmallVector<std::pair<MCSectionSubPair, MCSectionSubPair>, 4> SectionStack;
 
@@ -210,6 +210,8 @@ class MCStreamer {
   /// code section to unwind info section, which MSVC's incremental linker
   /// requires.
   unsigned NextWinCFIID = 0;
+
+  bool UseAssemblerInfoForParsing;
 
 protected:
   MCStreamer(MCContext &Ctx);
@@ -247,6 +249,11 @@ public:
 
   MCContext &getContext() const { return Context; }
 
+  virtual MCAssembler *getAssemblerPtr() { return nullptr; }
+
+  void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
+  bool getUseAssemblerInfoForParsing() { return UseAssemblerInfoForParsing; }
+
   MCTargetStreamer *getTargetStreamer() {
     return TargetStreamer.get();
   }
@@ -268,19 +275,19 @@ public:
   /// \name Assembly File Formatting.
   /// @{
 
-  /// \brief Return true if this streamer supports verbose assembly and if it is
+  /// Return true if this streamer supports verbose assembly and if it is
   /// enabled.
   virtual bool isVerboseAsm() const { return false; }
 
-  /// \brief Return true if this asm streamer supports emitting unformatted text
+  /// Return true if this asm streamer supports emitting unformatted text
   /// to the .s file with EmitRawText.
   virtual bool hasRawTextSupport() const { return false; }
 
-  /// \brief Is the integrated assembler required for this streamer to function
+  /// Is the integrated assembler required for this streamer to function
   /// correctly?
   virtual bool isIntegratedAssemblerRequired() const { return false; }
 
-  /// \brief Add a textual comment.
+  /// Add a textual comment.
   ///
   /// Typically for comments that can be emitted to the generated .s
   /// file if applicable as a QoI issue to make the output of the compiler
@@ -295,22 +302,22 @@ public:
   /// with a false value.
   virtual void AddComment(const Twine &T, bool EOL = true) {}
 
-  /// \brief Return a raw_ostream that comments can be written to. Unlike
+  /// Return a raw_ostream that comments can be written to. Unlike
   /// AddComment, you are required to terminate comments with \n if you use this
   /// method.
   virtual raw_ostream &GetCommentOS();
 
-  /// \brief Print T and prefix it with the comment string (normally #) and
+  /// Print T and prefix it with the comment string (normally #) and
   /// optionally a tab. This prints the comment immediately, not at the end of
   /// the current line. It is basically a safe version of EmitRawText: since it
   /// only prints comments, the object streamer ignores it instead of asserting.
   virtual void emitRawComment(const Twine &T, bool TabPrefix = true);
 
-  /// \brief Add explicit comment T. T is required to be a valid
+  /// Add explicit comment T. T is required to be a valid
   /// comment in the output and does not need to be escaped.
   virtual void addExplicitComment(const Twine &T);
 
-  /// \brief Emit added explicit comments.
+  /// Emit added explicit comments.
   virtual void emitExplicitComments();
 
   /// AddBlankLine - Emit a blank line to a .s file to pretty it up.
@@ -321,7 +328,7 @@ public:
   /// \name Symbol & Section Management
   /// @{
 
-  /// \brief Return the current section that the streamer is emitting code to.
+  /// Return the current section that the streamer is emitting code to.
   MCSectionSubPair getCurrentSection() const {
     if (!SectionStack.empty())
       return SectionStack.back().first;
@@ -329,32 +336,32 @@ public:
   }
   MCSection *getCurrentSectionOnly() const { return getCurrentSection().first; }
 
-  /// \brief Return the previous section that the streamer is emitting code to.
+  /// Return the previous section that the streamer is emitting code to.
   MCSectionSubPair getPreviousSection() const {
     if (!SectionStack.empty())
       return SectionStack.back().second;
     return MCSectionSubPair();
   }
 
-  /// \brief Returns an index to represent the order a symbol was emitted in.
+  /// Returns an index to represent the order a symbol was emitted in.
   /// (zero if we did not emit that symbol)
   unsigned GetSymbolOrder(const MCSymbol *Sym) const {
     return SymbolOrdering.lookup(Sym);
   }
 
-  /// \brief Update streamer for a new active section.
+  /// Update streamer for a new active section.
   ///
   /// This is called by PopSection and SwitchSection, if the current
   /// section changes.
   virtual void ChangeSection(MCSection *, const MCExpr *);
 
-  /// \brief Save the current and previous section on the section stack.
+  /// Save the current and previous section on the section stack.
   void PushSection() {
     SectionStack.push_back(
         std::make_pair(getCurrentSection(), getPreviousSection()));
   }
 
-  /// \brief Restore the current and previous section from the section stack.
+  /// Restore the current and previous section from the section stack.
   /// Calls ChangeSection as needed.
   ///
   /// Returns false if the stack was empty.
@@ -388,7 +395,7 @@ public:
   virtual void SwitchSection(MCSection *Section,
                              const MCExpr *Subsection = nullptr);
 
-  /// \brief Set the current section where code is being emitted to \p Section.
+  /// Set the current section where code is being emitted to \p Section.
   /// This is required to update CurSection. This version does not call
   /// ChangeSection.
   void SwitchSectionNoChange(MCSection *Section,
@@ -400,18 +407,18 @@ public:
       SectionStack.back().first = MCSectionSubPair(Section, Subsection);
   }
 
-  /// \brief Create the default sections and set the initial one.
+  /// Create the default sections and set the initial one.
   virtual void InitSections(bool NoExecStack);
 
   MCSymbol *endSection(MCSection *Section);
 
-  /// \brief Sets the symbol's section.
+  /// Sets the symbol's section.
   ///
   /// Each emitted symbol will be tracked in the ordering table,
   /// so we can sort on them later.
   void AssignFragment(MCSymbol *Symbol, MCFragment *Fragment);
 
-  /// \brief Emit a label for \p Symbol into the current section.
+  /// Emit a label for \p Symbol into the current section.
   ///
   /// This corresponds to an assembler statement such as:
   ///   foo:
@@ -425,17 +432,17 @@ public:
 
   virtual void EmitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
 
-  /// \brief Note in the output the specified \p Flag.
+  /// Note in the output the specified \p Flag.
   virtual void EmitAssemblerFlag(MCAssemblerFlag Flag);
 
-  /// \brief Emit the given list \p Options of strings as linker
+  /// Emit the given list \p Options of strings as linker
   /// options into the output.
   virtual void EmitLinkerOptions(ArrayRef<std::string> Kind) {}
 
-  /// \brief Note in the output the specified region \p Kind.
+  /// Note in the output the specified region \p Kind.
   virtual void EmitDataRegion(MCDataRegionType Kind) {}
 
-  /// \brief Specify the Mach-O minimum deployment target version.
+  /// Specify the Mach-O minimum deployment target version.
   virtual void EmitVersionMin(MCVersionMinType Type, unsigned Major,
                               unsigned Minor, unsigned Update) {}
 
@@ -446,11 +453,11 @@ public:
 
   void EmitVersionForTarget(const Triple &Target);
 
-  /// \brief Note in the output that the specified \p Func is a Thumb mode
+  /// Note in the output that the specified \p Func is a Thumb mode
   /// function (ARM target only).
   virtual void EmitThumbFunc(MCSymbol *Func);
 
-  /// \brief Emit an assignment of \p Value to \p Symbol.
+  /// Emit an assignment of \p Value to \p Symbol.
   ///
   /// This corresponds to an assembler statement such as:
   ///  symbol = value
@@ -463,7 +470,7 @@ public:
   /// \param Value - The value for the symbol.
   virtual void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value);
 
-  /// \brief Emit an weak reference from \p Alias to \p Symbol.
+  /// Emit an weak reference from \p Alias to \p Symbol.
   ///
   /// This corresponds to an assembler statement such as:
   ///  .weakref alias, symbol
@@ -472,56 +479,56 @@ public:
   /// \param Symbol - The symbol being aliased.
   virtual void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol);
 
-  /// \brief Add the given \p Attribute to \p Symbol.
+  /// Add the given \p Attribute to \p Symbol.
   virtual bool EmitSymbolAttribute(MCSymbol *Symbol,
                                    MCSymbolAttr Attribute) = 0;
 
-  /// \brief Set the \p DescValue for the \p Symbol.
+  /// Set the \p DescValue for the \p Symbol.
   ///
   /// \param Symbol - The symbol to have its n_desc field set.
   /// \param DescValue - The value to set into the n_desc field.
   virtual void EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue);
 
-  /// \brief Start emitting COFF symbol definition
+  /// Start emitting COFF symbol definition
   ///
   /// \param Symbol - The symbol to have its External & Type fields set.
   virtual void BeginCOFFSymbolDef(const MCSymbol *Symbol);
 
-  /// \brief Emit the storage class of the symbol.
+  /// Emit the storage class of the symbol.
   ///
   /// \param StorageClass - The storage class the symbol should have.
   virtual void EmitCOFFSymbolStorageClass(int StorageClass);
 
-  /// \brief Emit the type of the symbol.
+  /// Emit the type of the symbol.
   ///
   /// \param Type - A COFF type identifier (see COFF::SymbolType in X86COFF.h)
   virtual void EmitCOFFSymbolType(int Type);
 
-  /// \brief Marks the end of the symbol definition.
+  /// Marks the end of the symbol definition.
   virtual void EndCOFFSymbolDef();
 
   virtual void EmitCOFFSafeSEH(MCSymbol const *Symbol);
 
-  /// \brief Emits the symbol table index of a Symbol into the current section.
+  /// Emits the symbol table index of a Symbol into the current section.
   virtual void EmitCOFFSymbolIndex(MCSymbol const *Symbol);
 
-  /// \brief Emits a COFF section index.
+  /// Emits a COFF section index.
   ///
   /// \param Symbol - Symbol the section number relocation should point to.
   virtual void EmitCOFFSectionIndex(MCSymbol const *Symbol);
 
-  /// \brief Emits a COFF section relative relocation.
+  /// Emits a COFF section relative relocation.
   ///
   /// \param Symbol - Symbol the section relative relocation should point to.
   virtual void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset);
 
-  /// \brief Emit an ELF .size directive.
+  /// Emit an ELF .size directive.
   ///
   /// This corresponds to an assembler statement such as:
   ///  .size symbol, expression
   virtual void emitELFSize(MCSymbol *Symbol, const MCExpr *Value);
 
-  /// \brief Emit an ELF .symver directive.
+  /// Emit an ELF .symver directive.
   ///
   /// This corresponds to an assembler statement such as:
   ///  .symver _start, foo@@SOME_VERSION
@@ -530,11 +537,11 @@ public:
   virtual void emitELFSymverDirective(StringRef AliasName,
                                       const MCSymbol *Aliasee);
 
-  /// \brief Emit a Linker Optimization Hint (LOH) directive.
+  /// Emit a Linker Optimization Hint (LOH) directive.
   /// \param Args - Arguments of the LOH.
   virtual void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {}
 
-  /// \brief Emit a common symbol.
+  /// Emit a common symbol.
   ///
   /// \param Symbol - The common symbol to emit.
   /// \param Size - The size of the common symbol.
@@ -543,7 +550,7 @@ public:
   virtual void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                 unsigned ByteAlignment) = 0;
 
-  /// \brief Emit a local common (.lcomm) symbol.
+  /// Emit a local common (.lcomm) symbol.
   ///
   /// \param Symbol - The common symbol to emit.
   /// \param Size - The size of the common symbol.
@@ -551,7 +558,7 @@ public:
   virtual void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                      unsigned ByteAlignment);
 
-  /// \brief Emit the zerofill section and an optional symbol.
+  /// Emit the zerofill section and an optional symbol.
   ///
   /// \param Section - The zerofill section to create and or to put the symbol
   /// \param Symbol - The zerofill symbol to emit, if non-NULL.
@@ -561,7 +568,7 @@ public:
   virtual void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                             uint64_t Size = 0, unsigned ByteAlignment = 0) = 0;
 
-  /// \brief Emit a thread local bss (.tbss) symbol.
+  /// Emit a thread local bss (.tbss) symbol.
   ///
   /// \param Section - The thread local common section.
   /// \param Symbol - The thread local common symbol to emit.
@@ -575,7 +582,7 @@ public:
   /// \name Generating Data
   /// @{
 
-  /// \brief Emit the bytes in \p Data into the output.
+  /// Emit the bytes in \p Data into the output.
   ///
   /// This is used to implement assembler directives such as .byte, .ascii,
   /// etc.
@@ -585,7 +592,7 @@ public:
   /// method uses .byte directives instead of .ascii or .asciz for readability.
   virtual void EmitBinaryData(StringRef Data);
 
-  /// \brief Emit the expression \p Value into the output as a native
+  /// Emit the expression \p Value into the output as a native
   /// integer of the given \p Size bytes.
   ///
   /// This is used to implement assembler directives such as .word, .quad,
@@ -600,7 +607,7 @@ public:
 
   void EmitValue(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc());
 
-  /// \brief Special case of EmitValue that avoids the client having
+  /// Special case of EmitValue that avoids the client having
   /// to pass in a MCExpr for constant integers.
   virtual void EmitIntValue(uint64_t Value, unsigned Size);
 
@@ -608,66 +615,66 @@ public:
 
   virtual void EmitSLEB128Value(const MCExpr *Value);
 
-  /// \brief Special case of EmitULEB128Value that avoids the client having to
+  /// Special case of EmitULEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
   void EmitULEB128IntValue(uint64_t Value);
 
-  /// \brief Special case of EmitSLEB128Value that avoids the client having to
+  /// Special case of EmitSLEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
   void EmitSLEB128IntValue(int64_t Value);
 
-  /// \brief Special case of EmitValue that avoids the client having to pass in
+  /// Special case of EmitValue that avoids the client having to pass in
   /// a MCExpr for MCSymbols.
   void EmitSymbolValue(const MCSymbol *Sym, unsigned Size,
                        bool IsSectionRelative = false);
 
-  /// \brief Emit the expression \p Value into the output as a dtprel
+  /// Emit the expression \p Value into the output as a dtprel
   /// (64-bit DTP relative) value.
   ///
   /// This is used to implement assembler directives such as .dtpreldword on
   /// targets that support them.
   virtual void EmitDTPRel64Value(const MCExpr *Value);
 
-  /// \brief Emit the expression \p Value into the output as a dtprel
+  /// Emit the expression \p Value into the output as a dtprel
   /// (32-bit DTP relative) value.
   ///
   /// This is used to implement assembler directives such as .dtprelword on
   /// targets that support them.
   virtual void EmitDTPRel32Value(const MCExpr *Value);
 
-  /// \brief Emit the expression \p Value into the output as a tprel
+  /// Emit the expression \p Value into the output as a tprel
   /// (64-bit TP relative) value.
   ///
   /// This is used to implement assembler directives such as .tpreldword on
   /// targets that support them.
   virtual void EmitTPRel64Value(const MCExpr *Value);
 
-  /// \brief Emit the expression \p Value into the output as a tprel
+  /// Emit the expression \p Value into the output as a tprel
   /// (32-bit TP relative) value.
   ///
   /// This is used to implement assembler directives such as .tprelword on
   /// targets that support them.
   virtual void EmitTPRel32Value(const MCExpr *Value);
 
-  /// \brief Emit the expression \p Value into the output as a gprel64 (64-bit
+  /// Emit the expression \p Value into the output as a gprel64 (64-bit
   /// GP relative) value.
   ///
   /// This is used to implement assembler directives such as .gpdword on
   /// targets that support them.
   virtual void EmitGPRel64Value(const MCExpr *Value);
 
-  /// \brief Emit the expression \p Value into the output as a gprel32 (32-bit
+  /// Emit the expression \p Value into the output as a gprel32 (32-bit
   /// GP relative) value.
   ///
   /// This is used to implement assembler directives such as .gprel32 on
   /// targets that support them.
   virtual void EmitGPRel32Value(const MCExpr *Value);
 
-  /// \brief Emit NumBytes bytes worth of the value specified by FillValue.
+  /// Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
   void emitFill(uint64_t NumBytes, uint8_t FillValue);
 
-  /// \brief Emit \p Size bytes worth of the value specified by \p FillValue.
+  /// Emit \p Size bytes worth of the value specified by \p FillValue.
   ///
   /// This is used to implement assembler directives such as .space or .skip.
   ///
@@ -677,7 +684,7 @@ public:
   virtual void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                         SMLoc Loc = SMLoc());
 
-  /// \brief Emit \p NumValues copies of \p Size bytes. Each \p Size bytes is
+  /// Emit \p NumValues copies of \p Size bytes. Each \p Size bytes is
   /// taken from the lowest order 4 bytes of \p Expr expression.
   ///
   /// This is used to implement assembler directives such as .fill.
@@ -688,11 +695,11 @@ public:
   virtual void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                         SMLoc Loc = SMLoc());
 
-  /// \brief Emit NumBytes worth of zeros.
+  /// Emit NumBytes worth of zeros.
   /// This function properly handles data in virtual sections.
   void EmitZeros(uint64_t NumBytes);
 
-  /// \brief Emit some number of copies of \p Value until the byte alignment \p
+  /// Emit some number of copies of \p Value until the byte alignment \p
   /// ByteAlignment is reached.
   ///
   /// If the number of bytes need to emit for the alignment is not a multiple
@@ -713,7 +720,7 @@ public:
                                     unsigned ValueSize = 1,
                                     unsigned MaxBytesToEmit = 0);
 
-  /// \brief Emit nops until the byte alignment \p ByteAlignment is reached.
+  /// Emit nops until the byte alignment \p ByteAlignment is reached.
   ///
   /// This used to align code where the alignment bytes may be executed.  This
   /// can emit different bytes for different sizes to optimize execution.
@@ -726,7 +733,7 @@ public:
   virtual void EmitCodeAlignment(unsigned ByteAlignment,
                                  unsigned MaxBytesToEmit = 0);
 
-  /// \brief Emit some number of copies of \p Value until the byte offset \p
+  /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
   ///
   /// This is used to implement assembler directives such as .org.
@@ -745,15 +752,15 @@ public:
 
   /// @}
 
-  /// \brief Switch to a new logical file.  This is used to implement the '.file
+  /// Switch to a new logical file.  This is used to implement the '.file
   /// "foo.c"' assembler directive.
   virtual void EmitFileDirective(StringRef Filename);
 
-  /// \brief Emit the "identifiers" directive.  This implements the
+  /// Emit the "identifiers" directive.  This implements the
   /// '.ident "version foo"' assembler directive.
   virtual void EmitIdent(StringRef IdentString) {}
 
-  /// \brief Associate a filename with a specified logical file number.  This
+  /// Associate a filename with a specified logical file number.  This
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
   unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                   StringRef Filename,
@@ -781,7 +788,7 @@ public:
                                        Optional<StringRef> Source,
                                        unsigned CUID = 0);
 
-  /// \brief This implements the DWARF2 '.loc fileno lineno ...' assembler
+  /// This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.
   virtual void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
@@ -795,27 +802,27 @@ public:
                                    ArrayRef<uint8_t> Checksum,
                                    unsigned ChecksumKind);
 
-  /// \brief Introduces a function id for use with .cv_loc.
+  /// Introduces a function id for use with .cv_loc.
   virtual bool EmitCVFuncIdDirective(unsigned FunctionId);
 
-  /// \brief Introduces an inline call site id for use with .cv_loc. Includes
+  /// Introduces an inline call site id for use with .cv_loc. Includes
   /// extra information for inline line table generation.
   virtual bool EmitCVInlineSiteIdDirective(unsigned FunctionId, unsigned IAFunc,
                                            unsigned IAFile, unsigned IALine,
                                            unsigned IACol, SMLoc Loc);
 
-  /// \brief This implements the CodeView '.cv_loc' assembler directive.
+  /// This implements the CodeView '.cv_loc' assembler directive.
   virtual void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                   unsigned Line, unsigned Column,
                                   bool PrologueEnd, bool IsStmt,
                                   StringRef FileName, SMLoc Loc);
 
-  /// \brief This implements the CodeView '.cv_linetable' assembler directive.
+  /// This implements the CodeView '.cv_linetable' assembler directive.
   virtual void EmitCVLinetableDirective(unsigned FunctionId,
                                         const MCSymbol *FnStart,
                                         const MCSymbol *FnEnd);
 
-  /// \brief This implements the CodeView '.cv_inline_linetable' assembler
+  /// This implements the CodeView '.cv_inline_linetable' assembler
   /// directive.
   virtual void EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
                                               unsigned SourceFileId,
@@ -823,16 +830,16 @@ public:
                                               const MCSymbol *FnStartSym,
                                               const MCSymbol *FnEndSym);
 
-  /// \brief This implements the CodeView '.cv_def_range' assembler
+  /// This implements the CodeView '.cv_def_range' assembler
   /// directive.
   virtual void EmitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion);
 
-  /// \brief This implements the CodeView '.cv_stringtable' assembler directive.
+  /// This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void EmitCVStringTableDirective() {}
 
-  /// \brief This implements the CodeView '.cv_filechecksums' assembler directive.
+  /// This implements the CodeView '.cv_filechecksums' assembler directive.
   virtual void EmitCVFileChecksumsDirective() {}
 
   /// This implements the CodeView '.cv_filechecksumoffset' assembler
@@ -904,7 +911,7 @@ public:
 
   virtual void EmitSyntaxDirective();
 
-  /// \brief Emit a .reloc directive.
+  /// Emit a .reloc directive.
   /// Returns true if the relocation could not be emitted because Name is not
   /// known.
   virtual bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
@@ -912,33 +919,33 @@ public:
     return true;
   }
 
-  /// \brief Emit the given \p Instruction into the current section.
+  /// Emit the given \p Instruction into the current section.
   /// PrintSchedInfo == true then schedul comment should be added to output
   virtual void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                                bool PrintSchedInfo = false);
 
-  /// \brief Set the bundle alignment mode from now on in the section.
+  /// Set the bundle alignment mode from now on in the section.
   /// The argument is the power of 2 to which the alignment is set. The
   /// value 0 means turn the bundle alignment off.
   virtual void EmitBundleAlignMode(unsigned AlignPow2);
 
-  /// \brief The following instructions are a bundle-locked group.
+  /// The following instructions are a bundle-locked group.
   ///
   /// \param AlignToEnd - If true, the bundle-locked group will be aligned to
   ///                     the end of a bundle.
   virtual void EmitBundleLock(bool AlignToEnd);
 
-  /// \brief Ends a bundle-locked group.
+  /// Ends a bundle-locked group.
   virtual void EmitBundleUnlock();
 
-  /// \brief If this file is backed by a assembly streamer, this dumps the
+  /// If this file is backed by a assembly streamer, this dumps the
   /// specified string in the output .s file.  This capability is indicated by
   /// the hasRawTextSupport() predicate.  By default this aborts.
   void EmitRawText(const Twine &String);
 
-  /// \brief Streamer specific finalization.
+  /// Streamer specific finalization.
   virtual void FinishImpl();
-  /// \brief Finish emission of machine code.
+  /// Finish emission of machine code.
   void Finish();
 
   virtual bool mayHaveInstructions(MCSection &Sec) const { return true; }

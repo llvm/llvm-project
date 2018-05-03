@@ -105,7 +105,7 @@ class raw_ostream;
         const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex);
   };
 
-  /// \brief Write the specified module to the specified raw output stream.
+  /// Write the specified module to the specified raw output stream.
   ///
   /// For streams where it matters, the given stream should be in "binary"
   /// mode.

@@ -127,14 +127,18 @@ static bool isInlineConstantIfFolded(const SIInstrInfo *TII,
   unsigned Opc = UseMI.getOpcode();
   switch (Opc) {
   case AMDGPU::V_MAC_F32_e64:
-  case AMDGPU::V_MAC_F16_e64: {
+  case AMDGPU::V_MAC_F16_e64:
+  case AMDGPU::V_FMAC_F32_e64: {
     // Special case for mac. Since this is replaced with mad when folded into
     // src2, we need to check the legality for the final instruction.
     int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
     if (static_cast<int>(OpNo) == Src2Idx) {
+      bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e64;
       bool IsF32 = Opc == AMDGPU::V_MAC_F32_e64;
-      const MCInstrDesc &MadDesc
-        = TII->get(IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16);
+
+      unsigned Opc = IsFMA ?
+        AMDGPU::V_FMA_F32 : (IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16);
+      const MCInstrDesc &MadDesc = TII->get(Opc);
       return TII->isInlineConstant(OpToFold, MadDesc.OpInfo[OpNo].OperandType);
     }
     return false;
@@ -224,13 +228,17 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
 
     // Special case for v_mac_{f16, f32}_e64 if we are trying to fold into src2
     unsigned Opc = MI->getOpcode();
-    if ((Opc == AMDGPU::V_MAC_F32_e64 || Opc == AMDGPU::V_MAC_F16_e64) &&
+    if ((Opc == AMDGPU::V_MAC_F32_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
+         Opc == AMDGPU::V_FMAC_F32_e64) &&
         (int)OpNo == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2)) {
+      bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e64;
       bool IsF32 = Opc == AMDGPU::V_MAC_F32_e64;
+      unsigned NewOpc = IsFMA ?
+        AMDGPU::V_FMA_F32 : (IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16);
 
       // Check if changing this to a v_mad_{f16, f32} instruction will allow us
       // to fold the operand.
-      MI->setDesc(TII->get(IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16));
+      MI->setDesc(TII->get(NewOpc));
       bool FoldAsMAD = tryAddToFoldList(FoldList, MI, OpNo, OpToFold, TII);
       if (FoldAsMAD) {
         MI->untieRegOperand(OpNo);

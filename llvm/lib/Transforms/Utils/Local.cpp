@@ -791,7 +791,7 @@ static bool CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ) {
 using PredBlockVector = SmallVector<BasicBlock *, 16>;
 using IncomingValueMap = DenseMap<BasicBlock *, Value *>;
 
-/// \brief Determines the value to use as the phi node input for a block.
+/// Determines the value to use as the phi node input for a block.
 ///
 /// Select between \p OldVal any value that we know flows from \p BB
 /// to a particular phi on the basis of which one (if either) is not
@@ -820,7 +820,7 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
   return OldVal;
 }
 
-/// \brief Create a map from block to value for the operands of a
+/// Create a map from block to value for the operands of a
 /// given phi.
 ///
 /// Create a map from block to value for each non-undef value flowing
@@ -839,7 +839,7 @@ static void gatherIncomingValuesToPhi(PHINode *PN,
   }
 }
 
-/// \brief Replace the incoming undef values to a phi with the values
+/// Replace the incoming undef values to a phi with the values
 /// from a block-to-value map.
 ///
 /// \param PN The phi we are replacing the undefs in.
@@ -859,7 +859,7 @@ static void replaceUndefValuesInPhi(PHINode *PN,
   }
 }
 
-/// \brief Replace a value flowing from a block to a phi with
+/// Replace a value flowing from a block to a phi with
 /// potentially multiple instances of that value flowing from the
 /// block's predecessors to the phi.
 ///

@@ -272,7 +272,8 @@ GoUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   PersistentExpressionState *pv =
       target->GetPersistentExpressionStateForLanguage(eLanguageTypeGo);
   if (pv != nullptr) {
-    result->SetName(pv->GetNextPersistentVariableName());
+    result->SetName(pv->GetNextPersistentVariableName(
+        *target, pv->GetPersistentVariablePrefix()));
     pv->AddVariable(result);
   }
   return lldb::eExpressionCompleted;
@@ -400,8 +401,7 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitIdent(const GoASTIdent *e) {
         val = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
       else {
         // When a variable is on the heap instead of the stack, go records a
-        // variable
-        // '&x' instead of 'x'.
+        // variable '&x' instead of 'x'.
         var_sp = var_list_sp->FindVariable(ConstString("&" + varname));
         if (var_sp) {
           val = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
@@ -650,15 +650,6 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitCallExpr(
 
 GoPersistentExpressionState::GoPersistentExpressionState()
     : PersistentExpressionState(eKindGo) {}
-
-ConstString GoPersistentExpressionState::GetNextPersistentVariableName() {
-  char name_cstr[256];
-  // We can't use the same variable format as clang.
-  ::snprintf(name_cstr, sizeof(name_cstr), "$go%u",
-             m_next_persistent_variable_id++);
-  ConstString name(name_cstr);
-  return name;
-}
 
 void GoPersistentExpressionState::RemovePersistentVariable(
     lldb::ExpressionVariableSP variable) {

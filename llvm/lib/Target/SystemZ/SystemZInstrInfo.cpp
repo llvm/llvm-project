@@ -906,6 +906,23 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Move CC value from/to a GR32.
+  if (SrcReg == SystemZ::CC) {
+    auto MIB = BuildMI(MBB, MBBI, DL, get(SystemZ::IPM), DestReg);
+    if (KillSrc) {
+      const MachineFunction *MF = MBB.getParent();
+      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+      MIB->addRegisterKilled(SrcReg, TRI);
+    }
+    return;
+  }
+  if (DestReg == SystemZ::CC) {
+    BuildMI(MBB, MBBI, DL, get(SystemZ::TMLH))
+      .addReg(SrcReg, getKillRegState(KillSrc))
+      .addImm(3 << (SystemZ::IPM_CC - 16));
+    return;
+  }
+
   // Everything else needs only one instruction.
   unsigned Opcode;
   if (SystemZ::GR64BitRegClass.contains(DestReg, SrcReg))
@@ -1170,6 +1187,36 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
             .addFrameIndex(FrameIndex)
             .addImm(0)
             .addImm(MI.getOperand(2).getImm());
+    transferDeadCC(&MI, BuiltMI);
+    return BuiltMI;
+  }
+
+  if ((Opcode == SystemZ::ALFI && OpNum == 0 &&
+       isInt<8>((int32_t)MI.getOperand(2).getImm())) ||
+      (Opcode == SystemZ::ALGFI && OpNum == 0 &&
+       isInt<8>((int64_t)MI.getOperand(2).getImm()))) {
+    // AL(G)FI %reg, CONST -> AL(G)SI %mem, CONST
+    Opcode = (Opcode == SystemZ::ALFI ? SystemZ::ALSI : SystemZ::ALGSI);
+    MachineInstr *BuiltMI =
+        BuildMI(*InsertPt->getParent(), InsertPt, MI.getDebugLoc(), get(Opcode))
+            .addFrameIndex(FrameIndex)
+            .addImm(0)
+            .addImm((int8_t)MI.getOperand(2).getImm());
+    transferDeadCC(&MI, BuiltMI);
+    return BuiltMI;
+  }
+
+  if ((Opcode == SystemZ::SLFI && OpNum == 0 &&
+       isInt<8>((int32_t)-MI.getOperand(2).getImm())) ||
+      (Opcode == SystemZ::SLGFI && OpNum == 0 &&
+       isInt<8>((int64_t)-MI.getOperand(2).getImm()))) {
+    // SL(G)FI %reg, CONST -> AL(G)SI %mem, -CONST
+    Opcode = (Opcode == SystemZ::SLFI ? SystemZ::ALSI : SystemZ::ALGSI);
+    MachineInstr *BuiltMI =
+        BuildMI(*InsertPt->getParent(), InsertPt, MI.getDebugLoc(), get(Opcode))
+            .addFrameIndex(FrameIndex)
+            .addImm(0)
+            .addImm((int8_t)-MI.getOperand(2).getImm());
     transferDeadCC(&MI, BuiltMI);
     return BuiltMI;
   }

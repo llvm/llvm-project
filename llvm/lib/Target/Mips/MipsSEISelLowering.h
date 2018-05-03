@@ -32,11 +32,11 @@ class TargetRegisterClass;
     explicit MipsSETargetLowering(const MipsTargetMachine &TM,
                                   const MipsSubtarget &STI);
 
-    /// \brief Enable MSA support for the given integer type and Register
+    /// Enable MSA support for the given integer type and Register
     /// class.
     void addMSAIntType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC);
 
-    /// \brief Enable MSA support for the given floating-point type and
+    /// Enable MSA support for the given floating-point type and
     /// Register class.
     void addMSAFloatType(MVT::SimpleValueType Ty,
                          const TargetRegisterClass *RC);
@@ -82,7 +82,7 @@ class TargetRegisterClass;
     SDValue lowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
-    /// \brief Lower VECTOR_SHUFFLE into one of a number of instructions
+    /// Lower VECTOR_SHUFFLE into one of a number of instructions
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
@@ -92,46 +92,46 @@ class TargetRegisterClass;
     MachineBasicBlock *emitMSACBranchPseudo(MachineInstr &MI,
                                             MachineBasicBlock *BB,
                                             unsigned BranchOp) const;
-    /// \brief Emit the COPY_FW pseudo instruction
+    /// Emit the COPY_FW pseudo instruction
     MachineBasicBlock *emitCOPY_FW(MachineInstr &MI,
                                    MachineBasicBlock *BB) const;
-    /// \brief Emit the COPY_FD pseudo instruction
+    /// Emit the COPY_FD pseudo instruction
     MachineBasicBlock *emitCOPY_FD(MachineInstr &MI,
                                    MachineBasicBlock *BB) const;
-    /// \brief Emit the INSERT_FW pseudo instruction
+    /// Emit the INSERT_FW pseudo instruction
     MachineBasicBlock *emitINSERT_FW(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
-    /// \brief Emit the INSERT_FD pseudo instruction
+    /// Emit the INSERT_FD pseudo instruction
     MachineBasicBlock *emitINSERT_FD(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
-    /// \brief Emit the INSERT_([BHWD]|F[WD])_VIDX pseudo instruction
+    /// Emit the INSERT_([BHWD]|F[WD])_VIDX pseudo instruction
     MachineBasicBlock *emitINSERT_DF_VIDX(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned EltSizeInBytes,
                                           bool IsFP) const;
-    /// \brief Emit the FILL_FW pseudo instruction
+    /// Emit the FILL_FW pseudo instruction
     MachineBasicBlock *emitFILL_FW(MachineInstr &MI,
                                    MachineBasicBlock *BB) const;
-    /// \brief Emit the FILL_FD pseudo instruction
+    /// Emit the FILL_FD pseudo instruction
     MachineBasicBlock *emitFILL_FD(MachineInstr &MI,
                                    MachineBasicBlock *BB) const;
-    /// \brief Emit the FEXP2_W_1 pseudo instructions.
+    /// Emit the FEXP2_W_1 pseudo instructions.
     MachineBasicBlock *emitFEXP2_W_1(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
-    /// \brief Emit the FEXP2_D_1 pseudo instructions.
+    /// Emit the FEXP2_D_1 pseudo instructions.
     MachineBasicBlock *emitFEXP2_D_1(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
-    /// \brief Emit the FILL_FW pseudo instruction
+    /// Emit the FILL_FW pseudo instruction
     MachineBasicBlock *emitLD_F16_PSEUDO(MachineInstr &MI,
                                    MachineBasicBlock *BB) const;
-    /// \brief Emit the FILL_FD pseudo instruction
+    /// Emit the FILL_FD pseudo instruction
     MachineBasicBlock *emitST_F16_PSEUDO(MachineInstr &MI,
                                    MachineBasicBlock *BB) const;
-    /// \brief Emit the FEXP2_W_1 pseudo instructions.
+    /// Emit the FEXP2_W_1 pseudo instructions.
     MachineBasicBlock *emitFPEXTEND_PSEUDO(MachineInstr &MI,
                                            MachineBasicBlock *BB,
                                            bool IsFGR64) const;
-    /// \brief Emit the FEXP2_D_1 pseudo instructions.
+    /// Emit the FEXP2_D_1 pseudo instructions.
     MachineBasicBlock *emitFPROUND_PSEUDO(MachineInstr &MI,
                                           MachineBasicBlock *BBi,
                                           bool IsFGR64) const;

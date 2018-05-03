@@ -9,6 +9,7 @@
 
 #include "lldb/Utility/ArchSpec.h"
 
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StringList.h"
@@ -223,8 +224,8 @@ static const CoreDefinition g_core_definitions[] = {
      "kalimba5"}};
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
-// comment out an entry above,
-// you will need to comment out the corresponding ArchSpec::Core enumeration.
+// comment out an entry above, you will need to comment out the corresponding
+// ArchSpec::Core enumeration.
 static_assert(sizeof(g_core_definitions) / sizeof(CoreDefinition) ==
                   ArchSpec::kNumCores,
               "make sure we have one core definition for each core");
@@ -891,9 +892,9 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
   if (GetTriple().getArch() == llvm::Triple::UnknownArch) {
     GetTriple().setArch(other.GetTriple().getArch());
 
-    // MachO unknown64 isn't really invalid as the debugger can
-    // still obtain information from the binary, e.g. line tables.
-    // As such, we don't update the core here.
+    // MachO unknown64 isn't really invalid as the debugger can still obtain
+    // information from the binary, e.g. line tables. As such, we don't update
+    // the core here.
     if (other.GetCore() != eCore_uknownMach64)
       UpdateCore();
   }
@@ -903,9 +904,8 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
       GetTriple().setEnvironment(other.GetTriple().getEnvironment());
   }
   // If this and other are both arm ArchSpecs and this ArchSpec is a generic
-  // "some kind of arm"
-  // spec but the other ArchSpec is a specific arm core, adopt the specific arm
-  // core.
+  // "some kind of arm" spec but the other ArchSpec is a specific arm core,
+  // adopt the specific arm core.
   if (GetTriple().getArch() == llvm::Triple::arm &&
       other.GetTriple().getArch() == llvm::Triple::arm &&
       IsCompatibleMatch(other) && GetCore() == ArchSpec::eCore_arm_generic &&
@@ -931,24 +931,21 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
       if (core_def) {
         m_core = core_def->core;
         update_triple = false;
-        // Always use the architecture name because it might be more descriptive
-        // than the architecture enum ("armv7" -> llvm::Triple::arm).
+        // Always use the architecture name because it might be more
+        // descriptive than the architecture enum ("armv7" ->
+        // llvm::Triple::arm).
         m_triple.setArchName(llvm::StringRef(core_def->name));
         if (arch_type == eArchTypeMachO) {
           m_triple.setVendor(llvm::Triple::Apple);
 
           // Don't set the OS.  It could be simulator, macosx, ios, watchos,
-          // tvos.  We could
-          // get close with the cpu type - but we can't get it right all of the
-          // time.  Better
-          // to leave this unset so other sections of code will set it when they
-          // have more
-          // information.
+          // tvos.  We could get close with the cpu type - but we can't get it
+          // right all of the time.  Better to leave this unset so other
+          // sections of code will set it when they have more information.
           // NB: don't call m_triple.setOS (llvm::Triple::UnknownOS).  That sets
           // the OSName to
           // "unknown" and the ArchSpec::TripleVendorWasSpecified() method says
-          // that any
-          // OSName setting means it was specified.
+          // that any OSName setting means it was specified.
         } else if (arch_type == eArchTypeELF) {
           switch (os) {
           case llvm::ELF::ELFOSABI_AIX:
@@ -977,10 +974,15 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setVendor(llvm::Triple::UnknownVendor);
           m_triple.setOS(llvm::Triple::UnknownOS);
         }
-        // Fall back onto setting the machine type if the arch by name failed...
+        // Fall back onto setting the machine type if the arch by name
+        // failed...
         if (m_triple.getArch() == llvm::Triple::UnknownArch)
           m_triple.setArch(core_def->machine);
       }
+    } else {
+      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_PLATFORM));
+      if (log)
+        log->Printf("Unable to find a core definition for cpu 0x%" PRIx32 " sub %" PRId32, cpu, sub);
     }
   }
   CoreUpdated(update_triple);
@@ -1020,10 +1022,9 @@ static bool isCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
     return true;
 
   // If one of the environment is Android and the other one is EABI then they
-  // are considered to
-  // be compatible. This is required as a workaround for shared libraries
-  // compiled for Android
-  // without the NOTE section indicating that they are using the Android ABI.
+  // are considered to be compatible. This is required as a workaround for
+  // shared libraries compiled for Android without the NOTE section indicating
+  // that they are using the Android ABI.
   if ((lhs == llvm::Triple::Android && rhs == llvm::Triple::EABI) ||
       (rhs == llvm::Triple::Android && lhs == llvm::Triple::EABI) ||
       (lhs == llvm::Triple::GNUEABI && rhs == llvm::Triple::EABI) ||
@@ -1055,8 +1056,8 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
     if (lhs_triple_vendor != rhs_triple_vendor) {
       const bool rhs_vendor_specified = rhs.TripleVendorWasSpecified();
       const bool lhs_vendor_specified = TripleVendorWasSpecified();
-      // Both architectures had the vendor specified, so if they aren't
-      // equal then we return false
+      // Both architectures had the vendor specified, so if they aren't equal
+      // then we return false
       if (rhs_vendor_specified && lhs_vendor_specified)
         return false;
 
@@ -1071,8 +1072,8 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
     if (lhs_triple_os != rhs_triple_os) {
       const bool rhs_os_specified = rhs.TripleOSWasSpecified();
       const bool lhs_os_specified = TripleOSWasSpecified();
-      // Both architectures had the OS specified, so if they aren't
-      // equal then we return false
+      // Both architectures had the OS specified, so if they aren't equal then
+      // we return false
       if (rhs_os_specified && lhs_os_specified)
         return false;
 
@@ -1099,9 +1100,9 @@ void ArchSpec::UpdateCore() {
   const CoreDefinition *core_def = FindCoreDefinition(arch_name);
   if (core_def) {
     m_core = core_def->core;
-    // Set the byte order to the default byte order for an architecture.
-    // This can be modified if needed for cases when cores handle both
-    // big and little endian
+    // Set the byte order to the default byte order for an architecture. This
+    // can be modified if needed for cases when cores handle both big and
+    // little endian
     m_byte_order = core_def->default_byte_order;
   } else {
     Clear();
@@ -1198,9 +1199,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m
-  // Cortex-M3 - ARMv7-M - armv7m
-  // Cortex-M4 - ARMv7E-M - armv7em
+  // Cortex-M0 - ARMv6-M - armv6m Cortex-M3 - ARMv7-M - armv7m Cortex-M4 -
+  // ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv7em:
     if (!enforce_exact_match) {
       if (core2 == ArchSpec::eCore_arm_generic)
@@ -1216,9 +1216,8 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-  // Cortex-M0 - ARMv6-M - armv6m
-  // Cortex-M3 - ARMv7-M - armv7m
-  // Cortex-M4 - ARMv7E-M - armv7em
+  // Cortex-M0 - ARMv6-M - armv6m Cortex-M3 - ARMv7-M - armv7m Cortex-M4 -
+  // ARMv7E-M - armv7em
   case ArchSpec::eCore_arm_armv7m:
     if (!enforce_exact_match) {
       if (core2 == ArchSpec::eCore_arm_generic)
@@ -1466,9 +1465,8 @@ bool ArchSpec::IsAlwaysThumbInstructions() const {
     // Cortex-M0 through Cortex-M7 are ARM processor cores which can only
     // execute thumb instructions.  We map the cores to arch names like this:
     //
-    // Cortex-M0, Cortex-M0+, Cortex-M1:  armv6m
-    // Cortex-M3: armv7m
-    // Cortex-M4, Cortex-M7: armv7em
+    // Cortex-M0, Cortex-M0+, Cortex-M1:  armv6m Cortex-M3: armv7m Cortex-M4,
+    // Cortex-M7: armv7em
 
     if (GetCore() == ArchSpec::Core::eCore_arm_armv7m ||
         GetCore() == ArchSpec::Core::eCore_arm_armv7em ||

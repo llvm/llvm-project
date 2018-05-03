@@ -273,7 +273,7 @@ void DecodeSubVectorBroadcast(unsigned DstNumElts, unsigned SrcNumElts,
       ShuffleMask.push_back(j);
 }
 
-/// \brief Decode a shuffle packed values at 128-bit granularity
+/// Decode a shuffle packed values at 128-bit granularity
 /// (SHUFF32x4/SHUFF64x2/SHUFI32x4/SHUFI64x2)
 /// immediate mask into a shuffle mask.
 void decodeVSHUF64x2FamilyMask(unsigned NumElts, unsigned ScalarSize,

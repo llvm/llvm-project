@@ -435,6 +435,9 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     Str.get()->InitSections(Opts.NoExecStack);
   }
 
+  // Assembly to object compilation should leverage assembly info.
+  Str->setUseAssemblerInfoForParsing(true);
+
   bool Failed = false;
 
   std::unique_ptr<MCAsmParser> Parser(

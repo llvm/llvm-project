@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file sets the p2align operands on load and store instructions.
+/// This file sets the p2align operands on load and store instructions.
 ///
 //===----------------------------------------------------------------------===//
 

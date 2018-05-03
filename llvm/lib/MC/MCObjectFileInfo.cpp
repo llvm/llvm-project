@@ -866,19 +866,19 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   DataSection = Ctx->getWasmSection(".data", SectionKind::getData());
 
   // TODO: Set the section types and flags.
-  DwarfLineSection = Ctx->getWasmSection(".debug_line", SectionKind::getMetadata());
+  DwarfLineSection = Ctx->getWasmSection(".debug_line", SectionKind::getMetadata(), ".debug_line");
   DwarfLineStrSection =
       Ctx->getWasmSection(".debug_line_str", SectionKind::getMetadata());
-  DwarfStrSection = Ctx->getWasmSection(".debug_str", SectionKind::getMetadata());
+  DwarfStrSection = Ctx->getWasmSection(".debug_str", SectionKind::getMetadata(), ".debug_str");
   DwarfLocSection = Ctx->getWasmSection(".debug_loc", SectionKind::getMetadata());
-  DwarfAbbrevSection = Ctx->getWasmSection(".debug_abbrev", SectionKind::getMetadata(), "section_abbrev");
+  DwarfAbbrevSection = Ctx->getWasmSection(".debug_abbrev", SectionKind::getMetadata(), ".section_abbrev");
   DwarfARangesSection = Ctx->getWasmSection(".debug_aranges", SectionKind::getMetadata());
-  DwarfRangesSection = Ctx->getWasmSection(".debug_ranges", SectionKind::getMetadata(), "debug_range");
-  DwarfMacinfoSection = Ctx->getWasmSection(".debug_macinfo", SectionKind::getMetadata(), "debug_macinfo");
+  DwarfRangesSection = Ctx->getWasmSection(".debug_ranges", SectionKind::getMetadata(), ".debug_range");
+  DwarfMacinfoSection = Ctx->getWasmSection(".debug_macinfo", SectionKind::getMetadata(), ".debug_macinfo");
   DwarfAddrSection = Ctx->getWasmSection(".debug_addr", SectionKind::getMetadata());
   DwarfCUIndexSection = Ctx->getWasmSection(".debug_cu_index", SectionKind::getMetadata());
   DwarfTUIndexSection = Ctx->getWasmSection(".debug_tu_index", SectionKind::getMetadata());
-  DwarfInfoSection = Ctx->getWasmSection(".debug_info", SectionKind::getMetadata(), "section_info");
+  DwarfInfoSection = Ctx->getWasmSection(".debug_info", SectionKind::getMetadata(), ".debug_info");
   DwarfFrameSection = Ctx->getWasmSection(".debug_frame", SectionKind::getMetadata());
   DwarfPubNamesSection = Ctx->getWasmSection(".debug_pubnames", SectionKind::getMetadata());
   DwarfPubTypesSection = Ctx->getWasmSection(".debug_pubtypes", SectionKind::getMetadata());

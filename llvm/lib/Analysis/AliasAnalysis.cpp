@@ -521,7 +521,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
   return ModRefInfo::ModRef;
 }
 
-/// \brief Return information about whether a particular call site modifies
+/// Return information about whether a particular call site modifies
 /// or reads the specified memory location \p MemLoc before instruction \p I
 /// in a BasicBlock. An ordered basic block \p OBB can be used to speed up
 /// instruction-ordering queries inside the BasicBlock containing \p I.
@@ -554,7 +554,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
 
   unsigned ArgNo = 0;
   ModRefInfo R = ModRefInfo::NoModRef;
-  bool MustAlias = true;
+  bool IsMustAlias = true;
   // Set flag only if no May found and all operands processed.
   for (auto CI = CS.data_operands_begin(), CE = CS.data_operands_end();
        CI != CE; ++CI, ++ArgNo) {
@@ -572,7 +572,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // assume that the call could touch the pointer, even though it doesn't
     // escape.
     if (AR != MustAlias)
-      MustAlias = false;
+      IsMustAlias = false;
     if (AR == NoAlias)
       continue;
     if (CS.doesNotAccessMemory(ArgNo))
@@ -584,7 +584,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // Not returning MustModRef since we have not seen all the arguments.
     return ModRefInfo::ModRef;
   }
-  return MustAlias ? setMust(R) : clearMust(R);
+  return IsMustAlias ? setMust(R) : clearMust(R);
 }
 
 /// canBasicBlockModify - Return true if it is possible for execution of the

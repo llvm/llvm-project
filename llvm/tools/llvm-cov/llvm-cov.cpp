@@ -23,22 +23,22 @@
 
 using namespace llvm;
 
-/// \brief The main entry point for the 'show' subcommand.
+/// The main entry point for the 'show' subcommand.
 int showMain(int argc, const char *argv[]);
 
-/// \brief The main entry point for the 'report' subcommand.
+/// The main entry point for the 'report' subcommand.
 int reportMain(int argc, const char *argv[]);
 
-/// \brief The main entry point for the 'export' subcommand.
+/// The main entry point for the 'export' subcommand.
 int exportMain(int argc, const char *argv[]);
 
-/// \brief The main entry point for the 'convert-for-testing' subcommand.
+/// The main entry point for the 'convert-for-testing' subcommand.
 int convertForTestingMain(int argc, const char *argv[]);
 
-/// \brief The main entry point for the gcov compatible coverage tool.
+/// The main entry point for the gcov compatible coverage tool.
 int gcovMain(int argc, const char *argv[]);
 
-/// \brief Top level help.
+/// Top level help.
 static int helpMain(int argc, const char *argv[]) {
   errs() << "Usage: llvm-cov {export|gcov|report|show} [OPTION]...\n\n"
          << "Shows code coverage information.\n\n"
@@ -51,7 +51,7 @@ static int helpMain(int argc, const char *argv[]) {
   return 0;
 }
 
-/// \brief Top level version information.
+/// Top level version information.
 static int versionMain(int argc, const char *argv[]) {
   cl::PrintVersionMessage();
   return 0;

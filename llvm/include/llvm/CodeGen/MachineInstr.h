@@ -80,7 +80,21 @@ public:
     FrameDestroy = 1 << 1,              // Instruction is used as a part of
                                         // function frame destruction code.
     BundledPred  = 1 << 2,              // Instruction has bundled predecessors.
-    BundledSucc  = 1 << 3               // Instruction has bundled successors.
+    BundledSucc  = 1 << 3,              // Instruction has bundled successors.
+    FmNoNans     = 1 << 4,              // Instruction does not support Fast
+                                        // math nan values.
+    FmNoInfs     = 1 << 5,              // Instruction does not support Fast
+                                        // math infinity values.
+    FmNsz        = 1 << 6,              // Instruction is not required to retain
+                                        // signed zero values.
+    FmArcp       = 1 << 7,              // Instruction supports Fast math
+                                        // reciprocal approximations.
+    FmContract   = 1 << 8,              // Instruction supports Fast math
+                                        // contraction operations like fma.
+    FmAfn        = 1 << 9,              // Instruction may map to Fast math
+                                        // instrinsic approximation.
+    FmReassoc    = 1 << 10              // Instruction supports Fast math
+                                        // reassociation of operand order.
   };
 
 private:
@@ -93,7 +107,7 @@ private:
   using OperandCapacity = ArrayRecycler<MachineOperand>::Capacity;
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
-  uint8_t Flags = 0;                    // Various bits of additional
+  uint16_t Flags = 0;                   // Various bits of additional
                                         // information about machine
                                         // instruction.
 
@@ -186,7 +200,7 @@ public:
 
   /// Set a MI flag.
   void setFlag(MIFlag Flag) {
-    Flags |= (uint8_t)Flag;
+    Flags |= (uint16_t)Flag;
   }
 
   void setFlags(unsigned flags) {
@@ -197,7 +211,7 @@ public:
 
   /// clearFlag - Clear a MI flag.
   void clearFlag(MIFlag Flag) {
-    Flags &= ~((uint8_t)Flag);
+    Flags &= ~((uint16_t)Flag);
   }
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
@@ -576,7 +590,7 @@ public:
     return hasProperty(MCID::FoldableAsLoad, Type);
   }
 
-  /// \brief Return true if this instruction behaves
+  /// Return true if this instruction behaves
   /// the same way as the generic REG_SEQUENCE instructions.
   /// E.g., on ARM,
   /// dX VMOVDRR rY, rZ
@@ -590,7 +604,7 @@ public:
     return hasProperty(MCID::RegSequence, Type);
   }
 
-  /// \brief Return true if this instruction behaves
+  /// Return true if this instruction behaves
   /// the same way as the generic EXTRACT_SUBREG instructions.
   /// E.g., on ARM,
   /// rX, rY VMOVRRD dZ
@@ -605,7 +619,7 @@ public:
     return hasProperty(MCID::ExtractSubreg, Type);
   }
 
-  /// \brief Return true if this instruction behaves
+  /// Return true if this instruction behaves
   /// the same way as the generic INSERT_SUBREG instructions.
   /// E.g., on ARM,
   /// dX = VSETLNi32 dY, rZ, Imm
@@ -1049,7 +1063,7 @@ public:
                         const TargetInstrInfo *TII,
                         const TargetRegisterInfo *TRI) const;
 
-  /// \brief Applies the constraints (def/use) implied by this MI on \p Reg to
+  /// Applies the constraints (def/use) implied by this MI on \p Reg to
   /// the given \p CurRC.
   /// If \p ExploreBundle is set and MI is part of a bundle, all the
   /// instructions inside the bundle will be taken into account. In other words,
@@ -1066,7 +1080,7 @@ public:
       const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
       bool ExploreBundle = false) const;
 
-  /// \brief Applies the constraints (def/use) implied by the \p OpIdx operand
+  /// Applies the constraints (def/use) implied by the \p OpIdx operand
   /// to the given \p CurRC.
   ///
   /// Returns the register class that satisfies both \p CurRC and the
@@ -1363,7 +1377,7 @@ private:
   /// Slow path for hasProperty when we're dealing with a bundle.
   bool hasPropertyInBundle(unsigned Mask, QueryType Type) const;
 
-  /// \brief Implements the logic of getRegClassConstraintEffectForVReg for the
+  /// Implements the logic of getRegClassConstraintEffectForVReg for the
   /// this MI and the given operand index \p OpIdx.
   /// If the related operand does not constrained Reg, this returns CurRC.
   const TargetRegisterClass *getRegClassConstraintEffectForVRegImpl(

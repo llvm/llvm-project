@@ -740,7 +740,7 @@ PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-/// \brief An assembly annotator class to print PredicateInfo information in
+/// An assembly annotator class to print PredicateInfo information in
 /// comments.
 class PredicateInfoAnnotatedWriter : public AssemblyAnnotationWriter {
   friend class PredicateInfo;

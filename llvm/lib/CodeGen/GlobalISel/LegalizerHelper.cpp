@@ -1042,6 +1042,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     auto &MMO = **MI.memoperands_begin();
 
     if (DstTy.getSizeInBits() == MMO.getSize() /* in bytes */ * 8) {
+      // In the case of G_LOAD, this was a non-extending load already and we're
+      // about to lower to the same instruction.
+      if (MI.getOpcode() == TargetOpcode::G_LOAD)
+          return UnableToLegalize;
       MIRBuilder.buildLoad(DstReg, PtrReg, MMO);
       MI.eraseFromParent();
       return Legalized;

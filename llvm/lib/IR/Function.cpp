@@ -508,7 +508,7 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   return makeArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
 }
 
-/// \brief This does the actual lookup of an intrinsic ID which
+/// This does the actual lookup of an intrinsic ID which
 /// matches the given function name.
 Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
   ArrayRef<const char *> NameTable = findTargetSubtable(Name);

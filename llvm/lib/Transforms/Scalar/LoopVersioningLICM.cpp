@@ -113,7 +113,7 @@ static cl::opt<unsigned> LVLoopDepthThreshold(
         "LoopVersioningLICM's threshold for maximum allowed loop nest/depth"),
     cl::init(2), cl::Hidden);
 
-/// \brief Create MDNode for input string.
+/// Create MDNode for input string.
 static MDNode *createStringMetadata(Loop *TheLoop, StringRef Name, unsigned V) {
   LLVMContext &Context = TheLoop->getHeader()->getContext();
   Metadata *MDs[] = {
@@ -122,7 +122,7 @@ static MDNode *createStringMetadata(Loop *TheLoop, StringRef Name, unsigned V) {
   return MDNode::get(Context, MDs);
 }
 
-/// \brief Set input string into loop metadata by keeping other values intact.
+/// Set input string into loop metadata by keeping other values intact.
 void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                                    unsigned V) {
   SmallVector<Metadata *, 4> MDs(1);
@@ -242,7 +242,7 @@ private:
 
 } // end anonymous namespace
 
-/// \brief Check loop structure and confirms it's good for LoopVersioningLICM.
+/// Check loop structure and confirms it's good for LoopVersioningLICM.
 bool LoopVersioningLICM::legalLoopStructure() {
   // Loop must be in loop simplify form.
   if (!CurLoop->isLoopSimplifyForm()) {
@@ -293,7 +293,7 @@ bool LoopVersioningLICM::legalLoopStructure() {
   return true;
 }
 
-/// \brief Check memory accesses in loop and confirms it's good for
+/// Check memory accesses in loop and confirms it's good for
 /// LoopVersioningLICM.
 bool LoopVersioningLICM::legalLoopMemoryAccesses() {
   bool HasMayAlias = false;
@@ -352,7 +352,7 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
   return true;
 }
 
-/// \brief Check loop instructions safe for Loop versioning.
+/// Check loop instructions safe for Loop versioning.
 /// It returns true if it's safe else returns false.
 /// Consider following:
 /// 1) Check all load store in loop body are non atomic & non volatile.
@@ -403,7 +403,7 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   return true;
 }
 
-/// \brief Check loop instructions and confirms it's good for
+/// Check loop instructions and confirms it's good for
 /// LoopVersioningLICM.
 bool LoopVersioningLICM::legalLoopInstructions() {
   // Resetting counters.
@@ -480,7 +480,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
   return true;
 }
 
-/// \brief It checks loop is already visited or not.
+/// It checks loop is already visited or not.
 /// check loop meta data, if loop revisited return true
 /// else false.
 bool LoopVersioningLICM::isLoopAlreadyVisited() {
@@ -491,7 +491,7 @@ bool LoopVersioningLICM::isLoopAlreadyVisited() {
   return false;
 }
 
-/// \brief Checks legality for LoopVersioningLICM by considering following:
+/// Checks legality for LoopVersioningLICM by considering following:
 /// a) loop structure legality   b) loop instruction legality
 /// c) loop memory access legality.
 /// Return true if legal else returns false.
@@ -546,7 +546,7 @@ bool LoopVersioningLICM::isLegalForVersioning() {
   return true;
 }
 
-/// \brief Update loop with aggressive aliasing assumptions.
+/// Update loop with aggressive aliasing assumptions.
 /// It marks no-alias to any pairs of memory operations by assuming
 /// loop should not have any must-alias memory accesses pairs.
 /// During LoopVersioningLICM legality we ignore loops having must

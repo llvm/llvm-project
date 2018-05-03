@@ -127,5 +127,5 @@ WritableBinaryStreamRef::operator BinaryStreamRef() const {
   return BinaryStreamRef(*BorrowedImpl, ViewOffset, Length);
 }
 
-/// \brief For buffered streams, commits changes to the backing store.
+/// For buffered streams, commits changes to the backing store.
 Error WritableBinaryStreamRef::commit() { return BorrowedImpl->commit(); }

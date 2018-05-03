@@ -26,6 +26,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
@@ -310,12 +311,12 @@ public:
 
 } // namespace
 
-/// \brief Test whether the given value is an Alloca-derived function argument.
+/// Test whether the given value is an Alloca-derived function argument.
 bool CallAnalyzer::isAllocaDerivedArg(Value *V) {
   return SROAArgValues.count(V);
 }
 
-/// \brief Lookup the SROA-candidate argument and cost iterator which V maps to.
+/// Lookup the SROA-candidate argument and cost iterator which V maps to.
 /// Returns false if V does not map to a SROA-candidate.
 bool CallAnalyzer::lookupSROAArgAndCost(
     Value *V, Value *&Arg, DenseMap<Value *, int>::iterator &CostIt) {
@@ -331,7 +332,7 @@ bool CallAnalyzer::lookupSROAArgAndCost(
   return CostIt != SROAArgCosts.end();
 }
 
-/// \brief Disable SROA for the candidate marked by this cost iterator.
+/// Disable SROA for the candidate marked by this cost iterator.
 ///
 /// This marks the candidate as no longer viable for SROA, and adds the cost
 /// savings associated with it back into the inline cost measurement.
@@ -345,7 +346,7 @@ void CallAnalyzer::disableSROA(DenseMap<Value *, int>::iterator CostIt) {
   disableLoadElimination();
 }
 
-/// \brief If 'V' maps to a SROA candidate, disable SROA for it.
+/// If 'V' maps to a SROA candidate, disable SROA for it.
 void CallAnalyzer::disableSROA(Value *V) {
   Value *SROAArg;
   DenseMap<Value *, int>::iterator CostIt;
@@ -353,7 +354,7 @@ void CallAnalyzer::disableSROA(Value *V) {
     disableSROA(CostIt);
 }
 
-/// \brief Accumulate the given cost for a particular SROA candidate.
+/// Accumulate the given cost for a particular SROA candidate.
 void CallAnalyzer::accumulateSROACost(DenseMap<Value *, int>::iterator CostIt,
                                       int InstructionCost) {
   CostIt->second += InstructionCost;
@@ -368,7 +369,7 @@ void CallAnalyzer::disableLoadElimination() {
   }
 }
 
-/// \brief Accumulate a constant GEP offset into an APInt if possible.
+/// Accumulate a constant GEP offset into an APInt if possible.
 ///
 /// Returns false if unable to compute the offset for any reason. Respects any
 /// simplified values known during the analysis of this callsite.
@@ -401,7 +402,7 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
   return true;
 }
 
-/// \brief Use TTI to check whether a GEP is free.
+/// Use TTI to check whether a GEP is free.
 ///
 /// Respects any simplified values known during the analysis of this callsite.
 bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
@@ -542,7 +543,7 @@ bool CallAnalyzer::visitPHI(PHINode &I) {
   return true;
 }
 
-/// \brief Check we can fold GEPs of constant-offset call site argument pointers.
+/// Check we can fold GEPs of constant-offset call site argument pointers.
 /// This requires target data and inbounds GEPs.
 ///
 /// \return true if the specified GEP can be folded.
@@ -1162,7 +1163,7 @@ bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
   return false;
 }
 
-/// \brief Try to simplify a call site.
+/// Try to simplify a call site.
 ///
 /// Takes a concrete function and callsite and tries to actually simplify it by
 /// analyzing the arguments and call itself with instsimplify. Returns true if
@@ -1533,7 +1534,7 @@ bool CallAnalyzer::visitInstruction(Instruction &I) {
   return false;
 }
 
-/// \brief Analyze a basic block for its contribution to the inline cost.
+/// Analyze a basic block for its contribution to the inline cost.
 ///
 /// This method walks the analyzer over every instruction in the given basic
 /// block and accounts for their cost during inlining at this callsite. It
@@ -1610,7 +1611,7 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
   return true;
 }
 
-/// \brief Compute the base pointer and cumulative constant offsets for V.
+/// Compute the base pointer and cumulative constant offsets for V.
 ///
 /// This strips all constant offsets off of V, leaving it the base pointer, and
 /// accumulates the total constant offset applied in the returned constant. It
@@ -1649,7 +1650,7 @@ ConstantInt *CallAnalyzer::stripAndComputeInBoundsConstantOffsets(Value *&V) {
   return cast<ConstantInt>(ConstantInt::get(IntPtrTy, Offset));
 }
 
-/// \brief Find dead blocks due to deleted CFG edges during inlining.
+/// Find dead blocks due to deleted CFG edges during inlining.
 ///
 /// If we know the successor of the current block, \p CurrBB, has to be \p
 /// NextBB, the other successors of \p CurrBB are dead if these successors have
@@ -1687,7 +1688,7 @@ void CallAnalyzer::findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB) {
   }
 }
 
-/// \brief Analyze a call site for potential inlining.
+/// Analyze a call site for potential inlining.
 ///
 /// Returns true if inlining this call is viable, and false if it is not
 /// viable. It computes the cost and adjusts the threshold based on numerous
@@ -1880,7 +1881,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-/// \brief Dump stats about this call's analysis.
+/// Dump stats about this call's analysis.
 LLVM_DUMP_METHOD void CallAnalyzer::dump() {
 #define DEBUG_PRINT_STAT(x) dbgs() << "      " #x ": " << x << "\n"
   DEBUG_PRINT_STAT(NumConstantArgs);
@@ -1900,7 +1901,7 @@ LLVM_DUMP_METHOD void CallAnalyzer::dump() {
 }
 #endif
 
-/// \brief Test that there are no attribute conflicts between Caller and Callee
+/// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(Function *Caller,
                                               Function *Callee,

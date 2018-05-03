@@ -32,9 +32,8 @@ namespace lldb_private {
 // This function really deals with CommandObjectLists, but we didn't make a
 // CommandObjectList class, so I'm sticking it here.  But we really should have
 // such a class.  Anyway, it looks up the commands in the map that match the
-// partial
-// string cmd_str, inserts the matches into matches, and returns the number
-// added.
+// partial string cmd_str, inserts the matches into matches, and returns the
+// number added.
 
 template <typename ValueType>
 int AddNamesMatchingPartialString(const std::map<std::string, ValueType> &in_map,
@@ -138,8 +137,8 @@ public:
 
   void SetSyntax(llvm::StringRef str);
 
-  // override this to return true if you want to enable the user to delete
-  // the Command object from the Command dictionary (aliases have their own
+  // override this to return true if you want to enable the user to delete the
+  // Command object from the Command dictionary (aliases have their own
   // deletion scheme, so they do not need to care about this)
   virtual bool IsRemovable() const { return false; }
 
@@ -149,9 +148,9 @@ public:
 
   virtual bool IsAlias() { return false; }
 
-  // override this to return true if your command is somehow a "dash-dash"
-  // form of some other command (e.g. po is expr -O --); this is a powerful
-  // hint to the help system that one cannot pass options to this command
+  // override this to return true if your command is somehow a "dash-dash" form
+  // of some other command (e.g. po is expr -O --); this is a powerful hint to
+  // the help system that one cannot pass options to this command
   virtual bool IsDashDashCommand() { return false; }
 
   virtual lldb::CommandObjectSP GetSubcommandSP(llvm::StringRef sub_cmd,
@@ -175,10 +174,9 @@ public:
 
   virtual void GenerateHelpText(Stream &result);
 
-  // this is needed in order to allow the SBCommand class to
-  // transparently try and load subcommands - it will fail on
-  // anything but a multiword command, but it avoids us doing
-  // type checkings and casts
+  // this is needed in order to allow the SBCommand class to transparently try
+  // and load subcommands - it will fail on anything but a multiword command,
+  // but it avoids us doing type checkings and casts
   virtual bool LoadSubCommand(llvm::StringRef cmd_name,
                               const lldb::CommandObjectSP &command_obj) {
     return false;
@@ -186,9 +184,9 @@ public:
 
   virtual bool WantsRawCommandString() = 0;
 
-  // By default, WantsCompletion = !WantsRawCommandString.
-  // Subclasses who want raw command string but desire, for example,
-  // argument completion should override this method to return true.
+  // By default, WantsCompletion = !WantsRawCommandString. Subclasses who want
+  // raw command string but desire, for example, argument completion should
+  // override this method to return true.
   virtual bool WantsCompletion() { return !WantsRawCommandString(); }
 
   virtual Options *GetOptions();
@@ -210,10 +208,10 @@ public:
   static const char *GetArgumentName(lldb::CommandArgumentType arg_type);
 
   // Generates a nicely formatted command args string for help command output.
-  // By default, all possible args are taken into account, for example,
-  // '<expr | variable-name>'.  This can be refined by passing a second arg
-  // specifying which option set(s) we are interested, which could then, for
-  // example, produce either '<expr>' or '<variable-name>'.
+  // By default, all possible args are taken into account, for example, '<expr
+  // | variable-name>'.  This can be refined by passing a second arg specifying
+  // which option set(s) we are interested, which could then, for example,
+  // produce either '<expr>' or '<variable-name>'.
   void GetFormattedCommandArguments(Stream &str,
                                     uint32_t opt_set_mask = LLDB_OPT_SET_ALL);
 
@@ -415,18 +413,16 @@ protected:
   }
 
   // This is for use in the command interpreter, when you either want the
-  // selected target, or if no target
-  // is present you want to prime the dummy target with entities that will be
-  // copied over to new targets.
+  // selected target, or if no target is present you want to prime the dummy
+  // target with entities that will be copied over to new targets.
   Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
   Target *GetDummyTarget();
 
-  // If a command needs to use the "current" thread, use this call.
-  // Command objects will have an ExecutionContext to use, and that may or may
-  // not have a thread in it.  If it
-  // does, you should use that by default, if not, then use the
-  // ExecutionContext's target's selected thread, etc...
-  // This call insulates you from the details of this calculation.
+  // If a command needs to use the "current" thread, use this call. Command
+  // objects will have an ExecutionContext to use, and that may or may not have
+  // a thread in it.  If it does, you should use that by default, if not, then
+  // use the ExecutionContext's target's selected thread, etc... This call
+  // insulates you from the details of this calculation.
   Thread *GetDefaultThread();
 
   //------------------------------------------------------------------

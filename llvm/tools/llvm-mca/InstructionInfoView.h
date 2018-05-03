@@ -46,7 +46,7 @@
 
 namespace mca {
 
-/// \brief A view that prints out generic instruction information.
+/// A view that prints out generic instruction information.
 class InstructionInfoView : public View {
   const llvm::MCSubtargetInfo &STI;
   const llvm::MCInstrInfo &MCII;

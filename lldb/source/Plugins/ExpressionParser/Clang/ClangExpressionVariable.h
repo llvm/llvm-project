@@ -41,27 +41,25 @@ class ValueObjectConstResult;
 
 //----------------------------------------------------------------------
 /// @class ClangExpressionVariable ClangExpressionVariable.h
-/// "lldb/Expression/ClangExpressionVariable.h"
-/// @brief Encapsulates one variable for the expression parser.
+/// "lldb/Expression/ClangExpressionVariable.h" Encapsulates one variable for
+/// the expression parser.
 ///
 /// The expression parser uses variables in three different contexts:
 ///
-/// First, it stores persistent variables along with the process for use
-/// in expressions.  These persistent variables contain their own data
-/// and are typed.
-///
-/// Second, in an interpreted expression, it stores the local variables
-/// for the expression along with the expression.  These variables
-/// contain their own data and are typed.
-///
-/// Third, in a JIT-compiled expression, it stores the variables that
-/// the expression needs to have materialized and dematerialized at each
-/// execution.  These do not contain their own data but are named and
+/// First, it stores persistent variables along with the process for use in
+/// expressions.  These persistent variables contain their own data and are
 /// typed.
 ///
-/// This class supports all of these use cases using simple type
-/// polymorphism, and provides necessary support methods.  Its interface
-/// is RTTI-neutral.
+/// Second, in an interpreted expression, it stores the local variables for
+/// the expression along with the expression.  These variables contain their
+/// own data and are typed.
+///
+/// Third, in a JIT-compiled expression, it stores the variables that the
+/// expression needs to have materialized and dematerialized at each
+/// execution.  These do not contain their own data but are named and typed.
+///
+/// This class supports all of these use cases using simple type polymorphism,
+/// and provides necessary support methods.  Its interface is RTTI-neutral.
 //----------------------------------------------------------------------
 class ClangExpressionVariable : public ExpressionVariable {
 public:
@@ -79,8 +77,8 @@ public:
                           lldb::ByteOrder byte_order, uint32_t addr_byte_size);
 
   //----------------------------------------------------------------------
-  /// Utility functions for dealing with ExpressionVariableLists in
-  /// Clang-specific ways
+  /// Utility functions for dealing with ExpressionVariableLists in Clang-
+  /// specific ways
   //----------------------------------------------------------------------
 
   //----------------------------------------------------------------------
@@ -112,9 +110,9 @@ public:
   }
 
   //----------------------------------------------------------------------
-  /// If the variable contains its own data, make a Value point at it.
-  /// If \a exe_ctx in not NULL, the value will be resolved in with
-  /// that execution context.
+  /// If the variable contains its own data, make a Value point at it. If \a
+  /// exe_ctx in not NULL, the value will be resolved in with that execution
+  /// context.
   ///
   /// @param[in] value
   ///     The value to point at the data.
@@ -156,8 +154,8 @@ private:
 
 public:
   //----------------------------------------------------------------------
-  /// Make this variable usable by the parser by allocating space for
-  /// parser-specific variables
+  /// Make this variable usable by the parser by allocating space for parser-
+  /// specific variables
   //----------------------------------------------------------------------
   void EnableParserVars(uint64_t parser_id) {
     m_parser_vars.insert(std::make_pair(parser_id, ParserVars()));

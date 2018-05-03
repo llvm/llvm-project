@@ -126,8 +126,8 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
 
   case 'l':
     frame_line = true;
-    // Disassemble the current source line kind of implies showing mixed
-    // source code context.
+    // Disassemble the current source line kind of implies showing mixed source
+    // code context.
     show_mixed = true;
     some_location_specified = true;
     break;
@@ -205,10 +205,9 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
       execution_context ? execution_context->GetTargetPtr() : nullptr;
 
   // This is a hack till we get the ability to specify features based on
-  // architecture.  For now GetDisassemblyFlavor
-  // is really only valid for x86 (and for the llvm assembler plugin, but I'm
-  // papering over that since that is the
-  // only disassembler plugin we have...
+  // architecture.  For now GetDisassemblyFlavor is really only valid for x86
+  // (and for the llvm assembler plugin, but I'm papering over that since that
+  // is the only disassembler plugin we have...
   if (target) {
     if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86 ||
         target->GetArchitecture().GetTriple().getArch() ==
@@ -375,8 +374,8 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       }
     }
 
-    // Did the "m_options.frame_line" find a valid range already? If so
-    // skip the rest...
+    // Did the "m_options.frame_line" find a valid range already? If so skip
+    // the rest...
     if (range.GetByteSize() == 0) {
       if (m_options.at_pc) {
         if (frame == nullptr) {

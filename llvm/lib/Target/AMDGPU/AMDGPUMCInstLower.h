@@ -36,7 +36,7 @@ public:
 
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
 
-  /// \brief Lower a MachineInstr to an MCInst
+  /// Lower a MachineInstr to an MCInst
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
 
 };

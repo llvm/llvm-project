@@ -256,13 +256,12 @@ public:
       return false;
     }
 
-    // This method must be implemented in any subclasses.
-    // The KeyType is user specified and must somehow result in a string
-    // value. For example, the KeyType might be a string offset in a string
-    // table and subclasses can store their string table as a member of the
-    // subclass and return a valie "const char *" given a "key". The value
-    // could also be a C string pointer, in which case just returning "key"
-    // will suffice.
+    // This method must be implemented in any subclasses. The KeyType is user
+    // specified and must somehow result in a string value. For example, the
+    // KeyType might be a string offset in a string table and subclasses can
+    // store their string table as a member of the subclass and return a valie
+    // "const char *" given a "key". The value could also be a C string
+    // pointer, in which case just returning "key" will suffice.
     virtual const char *GetStringForKeyType(KeyType key) const = 0;
 
     virtual bool ReadHashData(uint32_t hash_data_offset,
@@ -270,19 +269,18 @@ public:
 
     // This method must be implemented in any subclasses and it must try to
     // read one "Pair" at the offset pointed to by the "hash_data_offset_ptr"
-    // parameter. This offset should be updated as bytes are consumed and
-    // a value "Result" enum should be returned. If the "name" matches the
-    // full name for the "pair.key" (which must be filled in by this call),
-    // then the HashData in the pair ("pair.value") should be extracted and
-    // filled in and "eResultKeyMatch" should be returned. If "name" doesn't
-    // match this string for the key, then "eResultKeyMismatch" should be
-    // returned and all data for the current HashData must be consumed or
-    // skipped and the "hash_data_offset_ptr" offset needs to be updated to
-    // point to the next HashData. If the end of the HashData objects for
-    // a given hash value have been reached, then "eResultEndOfHashData"
-    // should be returned. If anything else goes wrong during parsing,
-    // return "eResultError" and the corresponding "Find()" function will
-    // be canceled and return false.
+    // parameter. This offset should be updated as bytes are consumed and a
+    // value "Result" enum should be returned. If the "name" matches the full
+    // name for the "pair.key" (which must be filled in by this call), then the
+    // HashData in the pair ("pair.value") should be extracted and filled in
+    // and "eResultKeyMatch" should be returned. If "name" doesn't match this
+    // string for the key, then "eResultKeyMismatch" should be returned and all
+    // data for the current HashData must be consumed or skipped and the
+    // "hash_data_offset_ptr" offset needs to be updated to point to the next
+    // HashData. If the end of the HashData objects for a given hash value have
+    // been reached, then "eResultEndOfHashData" should be returned. If
+    // anything else goes wrong during parsing, return "eResultError" and the
+    // corresponding "Find()" function will be canceled and return false.
     virtual Result GetHashDataForName(llvm::StringRef name,
                                       lldb::offset_t *hash_data_offset_ptr,
                                       Pair &pair) const = 0;

@@ -783,9 +783,10 @@ static void emitInitWithReductionInitializer(CodeGenFunction &CGF,
     CGF.EmitIgnoredExpr(InitOp);
   } else {
     llvm::Constant *Init = CGF.CGM.EmitNullConstant(Ty);
+    std::string Name = CGF.CGM.getOpenMPRuntime().getName({"init"});
     auto *GV = new llvm::GlobalVariable(
         CGF.CGM.getModule(), Init->getType(), /*isConstant=*/true,
-        llvm::GlobalValue::PrivateLinkage, Init, ".init");
+        llvm::GlobalValue::PrivateLinkage, Init, Name);
     LValue LV = CGF.MakeNaturalAlignAddrLValue(GV, Ty);
     RValue InitRVal;
     switch (CGF.getEvaluationKind(Ty)) {
@@ -904,6 +905,14 @@ isDeclareTargetDeclaration(const ValueDecl *VD) {
     if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
       return Attr->getMapType();
   }
+  if (const auto *V = dyn_cast<VarDecl>(VD)) {
+    if (const VarDecl *TD = V->getTemplateInstantiationPattern())
+      return isDeclareTargetDeclaration(TD);
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
+    if (const auto *TD = FD->getTemplateInstantiationPattern())
+      return isDeclareTargetDeclaration(TD);
+  }
+
   return llvm::None;
 }
 
@@ -1205,8 +1214,10 @@ static FieldDecl *addFieldToRecordDecl(ASTContext &C, DeclContext *DC,
   return Field;
 }
 
-CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
-    : CGM(CGM), OffloadEntriesInfoManager(CGM) {
+CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM, StringRef FirstSeparator,
+                                 StringRef Separator)
+    : CGM(CGM), FirstSeparator(FirstSeparator), Separator(Separator),
+      OffloadEntriesInfoManager(CGM) {
   ASTContext &C = CGM.getContext();
   RecordDecl *RD = C.buildImplicitRecord("ident_t");
   QualType KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
@@ -1233,6 +1244,17 @@ void CGOpenMPRuntime::clear() {
   InternalVars.clear();
 }
 
+std::string CGOpenMPRuntime::getName(ArrayRef<StringRef> Parts) const {
+  SmallString<128> Buffer;
+  llvm::raw_svector_ostream OS(Buffer);
+  StringRef Sep = FirstSeparator;
+  for (StringRef Part : Parts) {
+    OS << Sep << Part;
+    Sep = Separator;
+  }
+  return OS.str();
+}
+
 static llvm::Function *
 emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
                           const Expr *CombinerInitializer, const VarDecl *In,
@@ -1250,9 +1272,10 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   const CGFunctionInfo &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
-  auto *Fn = llvm::Function::Create(
-      FnTy, llvm::GlobalValue::InternalLinkage,
-      IsCombiner ? ".omp_combiner." : ".omp_initializer.", &CGM.getModule());
+  std::string Name = CGM.getOpenMPRuntime().getName(
+      {IsCombiner ? "omp_combiner" : "omp_initializer", ""});
+  auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
+                                    Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
   Fn->removeFnAttr(llvm::Attribute::NoInline);
   Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
@@ -2423,8 +2446,9 @@ CGOpenMPRuntime::getOrCreateThreadPrivateCache(const VarDecl *VD) {
   assert(!CGM.getLangOpts().OpenMPUseTLS ||
          !CGM.getContext().getTargetInfo().isTLSSupported());
   // Lookup the entry, lazily creating it if necessary.
-  return getOrCreateInternalVariable(CGM.Int8PtrPtrTy,
-                                     Twine(CGM.getMangledName(VD), ".cache."));
+  std::string Suffix = getName({"cache", ""});
+  return getOrCreateInternalVariable(
+      CGM.Int8PtrPtrTy, Twine(CGM.getMangledName(VD)).concat(Suffix));
 }
 
 Address CGOpenMPRuntime::getAddrOfThreadPrivate(CodeGenFunction &CGF,
@@ -2490,8 +2514,9 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
       const auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
           CGM.getContext().VoidPtrTy, Args);
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
-      llvm::Function *Fn = CGM.CreateGlobalInitOrDestructFunction(
-          FTy, ".__kmpc_global_ctor_.", FI, Loc);
+      std::string Name = getName({"__kmpc_global_ctor_", ""});
+      llvm::Function *Fn =
+          CGM.CreateGlobalInitOrDestructFunction(FTy, Name, FI, Loc);
       CtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidPtrTy, Fn, FI,
                             Args, Loc, Loc);
       llvm::Value *ArgVal = CtorCGF.EmitLoadOfScalar(
@@ -2522,8 +2547,9 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
       const auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
           CGM.getContext().VoidTy, Args);
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
-      llvm::Function *Fn = CGM.CreateGlobalInitOrDestructFunction(
-          FTy, ".__kmpc_global_dtor_.", FI, Loc);
+      std::string Name = getName({"__kmpc_global_dtor_", ""});
+      llvm::Function *Fn =
+          CGM.CreateGlobalInitOrDestructFunction(FTy, Name, FI, Loc);
       auto NL = ApplyDebugLocation::CreateEmpty(DtorCGF);
       DtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI, Args,
                             Loc, Loc);
@@ -2565,9 +2591,9 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     if (!CGF) {
       auto *InitFunctionTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg*/ false);
+      std::string Name = getName({"__omp_threadprivate_init_", ""});
       llvm::Function *InitFunction = CGM.CreateGlobalInitOrDestructFunction(
-          InitFunctionTy, ".__omp_threadprivate_init_.",
-          CGM.getTypes().arrangeNullaryFunction());
+          InitFunctionTy, Name, CGM.getTypes().arrangeNullaryFunction());
       CodeGenFunction InitCGF(CGM);
       FunctionArgList ArgList;
       InitCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, InitFunction,
@@ -2588,21 +2614,20 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
 static void getTargetEntryUniqueInfo(ASTContext &C, SourceLocation Loc,
                                      unsigned &DeviceID, unsigned &FileID,
                                      unsigned &LineNum) {
-
   SourceManager &SM = C.getSourceManager();
 
   // The loc should be always valid and have a file ID (the user cannot use
   // #pragma directives in macros)
 
   assert(Loc.isValid() && "Source location is expected to be always valid.");
-  assert(Loc.isFileID() && "Source location is expected to refer to a file.");
 
   PresumedLoc PLoc = SM.getPresumedLoc(Loc);
   assert(PLoc.isValid() && "Source location is expected to be always valid.");
 
   llvm::sys::fs::UniqueID ID;
-  if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
-    llvm_unreachable("Source file with target region no longer exists!");
+  if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
+    SM.getDiagnostics().Report(diag::err_cannot_open_file)
+        << PLoc.getFilename() << EC.message();
 
   DeviceID = ID.getDevice();
   FileID = ID.getFile();
@@ -2718,16 +2743,19 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
 Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
                                                           QualType VarType,
                                                           StringRef Name) {
-  llvm::Twine VarName(Name, ".artificial.");
+  std::string Suffix = getName({"artificial", ""});
+  std::string CacheSuffix = getName({"cache", ""});
   llvm::Type *VarLVType = CGF.ConvertTypeForMem(VarType);
-  llvm::Value *GAddr = getOrCreateInternalVariable(VarLVType, VarName);
+  llvm::Value *GAddr =
+      getOrCreateInternalVariable(VarLVType, Twine(Name).concat(Suffix));
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, SourceLocation()),
       getThreadID(CGF, SourceLocation()),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(GAddr, CGM.VoidPtrTy),
       CGF.Builder.CreateIntCast(CGF.getTypeSize(VarType), CGM.SizeTy,
                                 /*IsSigned=*/false),
-      getOrCreateInternalVariable(CGM.VoidPtrPtrTy, VarName + ".cache.")};
+      getOrCreateInternalVariable(
+          CGM.VoidPtrPtrTy, Twine(Name).concat(Suffix).concat(CacheSuffix))};
   return Address(
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           CGF.EmitRuntimeCall(
@@ -2816,9 +2844,8 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
 
     // OutlinedFn(&GTid, &zero, CapturedStruct);
     Address ThreadIDAddr = RT.emitThreadIDAddress(CGF, Loc);
-    Address ZeroAddr =
-        CGF.CreateTempAlloca(CGF.Int32Ty, CharUnits::fromQuantity(4),
-                             /*Name*/ ".zero.addr");
+    Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
+                                                        /*Name*/ ".zero.addr");
     CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
     llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
     OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
@@ -2884,8 +2911,9 @@ CGOpenMPRuntime::getOrCreateInternalVariable(llvm::Type *Ty,
 }
 
 llvm::Value *CGOpenMPRuntime::getCriticalRegionLock(StringRef CriticalName) {
-  llvm::Twine Name(".gomp_critical_user_", CriticalName);
-  return getOrCreateInternalVariable(KmpCriticalNameTy, Name.concat(".var"));
+  std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
+  std::string Name = getName({Prefix, "var"});
+  return getOrCreateInternalVariable(KmpCriticalNameTy, Name);
 }
 
 namespace {
@@ -3032,9 +3060,11 @@ static llvm::Value *emitCopyprivateCopyFunction(
   Args.push_back(&RHSArg);
   const auto &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
-  auto *Fn = llvm::Function::Create(
-      CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
-      ".omp.copyprivate.copy_func", &CGM.getModule());
+  std::string Name =
+      CGM.getOpenMPRuntime().getName({"omp", "copyprivate", "copy_func"});
+  auto *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(CGFI),
+                                    llvm::GlobalValue::InternalLinkage, Name,
+                                    &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
@@ -3586,8 +3616,13 @@ void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
   // If we are emitting code for a target, the entry is already initialized,
   // only has to be registered.
   if (CGM.getLangOpts().OpenMPIsDevice) {
-    assert(hasTargetRegionEntryInfo(DeviceID, FileID, ParentName, LineNum) &&
-           "Entry must exist.");
+    if (!hasTargetRegionEntryInfo(DeviceID, FileID, ParentName, LineNum)) {
+      unsigned DiagID = CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "Unable to find target region on line '%0' in the device code.");
+      CGM.getDiags().Report(DiagID) << LineNum;
+      return;
+    }
     auto &Entry =
         OffloadEntriesTargetRegion[DeviceID][FileID][ParentName][LineNum];
     assert(Entry.isValid() && "Entry not initialized!");
@@ -3697,14 +3732,16 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   // host entries section. These will be defined by the linker.
   llvm::Type *OffloadEntryTy =
       CGM.getTypes().ConvertTypeForMem(getTgtOffloadEntryQTy());
+  std::string EntriesBeginName = getName({"omp_offloading", "entries_begin"});
   auto *HostEntriesBegin = new llvm::GlobalVariable(
       M, OffloadEntryTy, /*isConstant=*/true,
       llvm::GlobalValue::ExternalLinkage, /*Initializer=*/nullptr,
-      ".omp_offloading.entries_begin");
-  auto *HostEntriesEnd = new llvm::GlobalVariable(
-      M, OffloadEntryTy, /*isConstant=*/true,
-      llvm::GlobalValue::ExternalLinkage, /*Initializer=*/nullptr,
-      ".omp_offloading.entries_end");
+      EntriesBeginName);
+  std::string EntriesEndName = getName({"omp_offloading", "entries_end"});
+  auto *HostEntriesEnd =
+      new llvm::GlobalVariable(M, OffloadEntryTy, /*isConstant=*/true,
+                               llvm::GlobalValue::ExternalLinkage,
+                               /*Initializer=*/nullptr, EntriesEndName);
 
   // Create all device images
   auto *DeviceImageTy = cast<llvm::StructType>(
@@ -3715,12 +3752,14 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
 
   for (const llvm::Triple &Device : Devices) {
     StringRef T = Device.getTriple();
+    std::string BeginName = getName({"omp_offloading", "img_start", ""});
     auto *ImgBegin = new llvm::GlobalVariable(
         M, CGM.Int8Ty, /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage,
-        /*Initializer=*/nullptr, Twine(".omp_offloading.img_start.", T));
+        /*Initializer=*/nullptr, Twine(BeginName).concat(T));
+    std::string EndName = getName({"omp_offloading", "img_end", ""});
     auto *ImgEnd = new llvm::GlobalVariable(
         M, CGM.Int8Ty, /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage,
-        /*Initializer=*/nullptr, Twine(".omp_offloading.img_end.", T));
+        /*Initializer=*/nullptr, Twine(EndName).concat(T));
 
     llvm::Constant *Data[] = {ImgBegin, ImgEnd, HostEntriesBegin,
                               HostEntriesEnd};
@@ -3729,10 +3768,11 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   }
 
   // Create device images global array.
+  std::string ImagesName = getName({"omp_offloading", "device_images"});
   llvm::GlobalVariable *DeviceImages =
-    DeviceImagesEntries.finishAndCreateGlobal(".omp_offloading.device_images",
-                                              CGM.getPointerAlign(),
-                                              /*isConstant=*/true);
+      DeviceImagesEntries.finishAndCreateGlobal(ImagesName,
+                                                CGM.getPointerAlign(),
+                                                /*isConstant=*/true);
   DeviceImages->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   // This is a Zero array to be used in the creation of the constant expressions
@@ -3745,8 +3785,9 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
       llvm::ConstantExpr::getGetElementPtr(DeviceImages->getValueType(),
                                            DeviceImages, Index),
       HostEntriesBegin, HostEntriesEnd};
+  std::string Descriptor = getName({"omp_offloading", "descriptor"});
   llvm::GlobalVariable *Desc = createConstantGlobalStruct(
-      CGM, getTgtBinaryDescriptorQTy(), Data, ".omp_offloading.descriptor");
+      CGM, getTgtBinaryDescriptorQTy(), Data, Descriptor);
 
   // Emit code to register or unregister the descriptor at execution
   // startup or closing, respectively.
@@ -3764,8 +3805,8 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
     const auto &FI =
         CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
-    UnRegFn = CGM.CreateGlobalInitOrDestructFunction(
-        FTy, ".omp_offloading.descriptor_unreg", FI);
+    std::string UnregName = getName({"omp_offloading", "descriptor_unreg"});
+    UnRegFn = CGM.CreateGlobalInitOrDestructFunction(FTy, UnregName, FI);
     CGF.StartFunction(GlobalDecl(), C.VoidTy, UnRegFn, FI, Args);
     CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__tgt_unregister_lib),
                         Desc);
@@ -3779,8 +3820,8 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
     CGF.disableDebugInfo();
     const auto &FI = CGM.getTypes().arrangeNullaryFunction();
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
-    RegFn = CGM.CreateGlobalInitOrDestructFunction(
-        FTy, ".omp_offloading.descriptor_reg", FI);
+    std::string Descriptor = getName({"omp_offloading", "descriptor_reg"});
+    RegFn = CGM.CreateGlobalInitOrDestructFunction(FTy, Descriptor, FI);
     CGF.StartFunction(GlobalDecl(), C.VoidTy, RegFn, FI, FunctionArgList());
     CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__tgt_register_lib), Desc);
     // Create a variable to drive the registration and unregistration of the
@@ -3817,10 +3858,10 @@ void CGOpenMPRuntime::createOffloadEntry(
   // Create constant string with the name.
   llvm::Constant *StrPtrInit = llvm::ConstantDataArray::getString(C, Name);
 
-  auto *Str =
-      new llvm::GlobalVariable(M, StrPtrInit->getType(), /*isConstant=*/true,
-                               llvm::GlobalValue::InternalLinkage, StrPtrInit,
-                               ".omp_offloading.entry_name");
+  std::string StringName = getName({"omp_offloading", "entry_name"});
+  auto *Str = new llvm::GlobalVariable(
+      M, StrPtrInit->getType(), /*isConstant=*/true,
+      llvm::GlobalValue::InternalLinkage, StrPtrInit, StringName);
   Str->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *Data[] = {llvm::ConstantExpr::getBitCast(ID, CGM.VoidPtrTy),
@@ -3828,12 +3869,14 @@ void CGOpenMPRuntime::createOffloadEntry(
                             llvm::ConstantInt::get(CGM.SizeTy, Size),
                             llvm::ConstantInt::get(CGM.Int32Ty, Flags),
                             llvm::ConstantInt::get(CGM.Int32Ty, 0)};
-  llvm::GlobalVariable *Entry = createConstantGlobalStruct(
-      CGM, getTgtOffloadEntryQTy(), Data, Twine(".omp_offloading.entry.", Name),
-      Linkage);
+  std::string EntryName = getName({"omp_offloading", "entry", ""});
+  llvm::GlobalVariable *Entry =
+      createConstantGlobalStruct(CGM, getTgtOffloadEntryQTy(), Data,
+                                 Twine(EntryName).concat(Name), Linkage);
 
   // The entry has to be created in the section the linker expects it to be.
-  Entry->setSection(".omp_offloading.entries");
+  std::string Section = getName({"omp_offloading", "entries"});
+  Entry->setSection(Section);
 }
 
 void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
@@ -3928,14 +3971,27 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     if (const auto *CE =
             dyn_cast<OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion>(
                 E)) {
-      assert(CE->getID() && CE->getAddress() &&
-             "Entry ID and Addr are invalid!");
+      if (!CE->getID() || !CE->getAddress()) {
+        unsigned DiagID = CGM.getDiags().getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "Offloading entry for target region is incorect: either the "
+            "address or the ID is invalid.");
+        CGM.getDiags().Report(DiagID);
+        continue;
+      }
       createOffloadEntry(CE->getID(), CE->getAddress(), /*Size=*/0,
                          CE->getFlags(), llvm::GlobalValue::WeakAnyLinkage);
     } else if (const auto *CE =
                    dyn_cast<OffloadEntriesInfoManagerTy::
                                 OffloadEntryInfoDeviceGlobalVar>(E)) {
-      assert(CE->getAddress() && "Entry Addr is invalid!");
+      if (!CE->getAddress()) {
+        unsigned DiagID = CGM.getDiags().getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "Offloading entry for declare target varible is inccorect: the "
+            "address is invalid.");
+        CGM.getDiags().Report(DiagID);
+        continue;
+      }
       createOffloadEntry(CE->getAddress(), CE->getAddress(),
                          CE->getVarSize().getQuantity(), CE->getFlags(),
                          CE->getLinkage());
@@ -3958,15 +4014,23 @@ void CGOpenMPRuntime::loadOffloadInfoMetadata() {
     return;
 
   auto Buf = llvm::MemoryBuffer::getFile(CGM.getLangOpts().OMPHostIRFile);
-  if (Buf.getError())
+  if (auto EC = Buf.getError()) {
+    CGM.getDiags().Report(diag::err_cannot_open_file)
+        << CGM.getLangOpts().OMPHostIRFile << EC.message();
     return;
+  }
 
   llvm::LLVMContext C;
   auto ME = expectedToErrorOrAndEmitErrors(
       C, llvm::parseBitcodeFile(Buf.get()->getMemBufferRef(), C));
 
-  if (ME.getError())
+  if (auto EC = ME.getError()) {
+    unsigned DiagID = CGM.getDiags().getCustomDiagID(
+        DiagnosticsEngine::Error, "Unable to parse host IR file '%0':'%1'");
+    CGM.getDiags().Report(DiagID)
+        << CGM.getLangOpts().OMPHostIRFile << EC.message();
     return;
+  }
 
   llvm::NamedMDNode *MD = ME.get()->getNamedMetadata("omp_offload.info");
   if (!MD)
@@ -4231,9 +4295,9 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
   llvm::FunctionType *TaskEntryTy =
       CGM.getTypes().GetFunctionType(TaskEntryFnInfo);
-  auto *TaskEntry =
-      llvm::Function::Create(TaskEntryTy, llvm::GlobalValue::InternalLinkage,
-                             ".omp_task_entry.", &CGM.getModule());
+  std::string Name = CGM.getOpenMPRuntime().getName({"omp_task_entry", ""});
+  auto *TaskEntry = llvm::Function::Create(
+      TaskEntryTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskEntry, TaskEntryFnInfo);
   TaskEntry->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
@@ -4333,9 +4397,11 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
   llvm::FunctionType *DestructorFnTy =
       CGM.getTypes().GetFunctionType(DestructorFnInfo);
+  std::string Name =
+      CGM.getOpenMPRuntime().getName({"omp_task_destructor", ""});
   auto *DestructorFn =
       llvm::Function::Create(DestructorFnTy, llvm::GlobalValue::InternalLinkage,
-                             ".omp_task_destructor.", &CGM.getModule());
+                             Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), DestructorFn,
                                     DestructorFnInfo);
   DestructorFn->setDoesNotRecurse();
@@ -4425,9 +4491,11 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *TaskPrivatesMapTy =
       CGM.getTypes().GetFunctionType(TaskPrivatesMapFnInfo);
+  std::string Name =
+      CGM.getOpenMPRuntime().getName({"omp_task_privates_map", ""});
   auto *TaskPrivatesMap = llvm::Function::Create(
-      TaskPrivatesMapTy, llvm::GlobalValue::InternalLinkage,
-      ".omp_task_privates_map.", &CGM.getModule());
+      TaskPrivatesMapTy, llvm::GlobalValue::InternalLinkage, Name,
+      &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
   TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
@@ -4617,9 +4685,9 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
   const auto &TaskDupFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *TaskDupTy = CGM.getTypes().GetFunctionType(TaskDupFnInfo);
-  auto *TaskDup =
-      llvm::Function::Create(TaskDupTy, llvm::GlobalValue::InternalLinkage,
-                             ".omp_task_dup.", &CGM.getModule());
+  std::string Name = CGM.getOpenMPRuntime().getName({"omp_task_dup", ""});
+  auto *TaskDup = llvm::Function::Create(
+      TaskDupTy, llvm::GlobalValue::InternalLinkage, Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskDup, TaskDupFnInfo);
   TaskDup->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
@@ -5270,9 +5338,10 @@ llvm::Value *CGOpenMPRuntime::emitReductionFunction(
   Args.push_back(&RHSArg);
   const auto &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
-  auto *Fn = llvm::Function::Create(
-      CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
-      ".omp.reduction.reduction_func", &CGM.getModule());
+  std::string Name = getName({"omp", "reduction", "reduction_func"});
+  auto *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(CGFI),
+                                    llvm::GlobalValue::InternalLinkage, Name,
+                                    &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
@@ -5474,7 +5543,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       Privates, LHSExprs, RHSExprs, ReductionOps);
 
   // 3. Create static kmp_critical_name lock = { 0 };
-  llvm::Value *Lock = getCriticalRegionLock(".reduction");
+  std::string Name = getName({"reduction"});
+  llvm::Value *Lock = getCriticalRegionLock(Name);
 
   // 4. Build res = __kmpc_reduce{_nowait}(<loc>, <gtid>, <n>, sizeof(RedList),
   // RedList, reduce_func, &<lock>);
@@ -5623,10 +5693,11 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       } else {
         // Emit as a critical region.
         auto &&CritRedGen = [E, Loc](CodeGenFunction &CGF, const Expr *,
-                                     const Expr *, const Expr *) {
+                                           const Expr *, const Expr *) {
           CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
+          std::string Name = RT.getName({"atomic_reduction"});
           RT.emitCriticalRegion(
-              CGF, ".atomic_reduction",
+              CGF, Name,
               [=](CodeGenFunction &CGF, PrePostActionTy &Action) {
                 Action.Enter(CGF);
                 emitReductionCombiner(CGF, E);
@@ -5681,9 +5752,10 @@ static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
   if (!D)
     D = cast<VarDecl>(cast<DeclRefExpr>(Ref)->getDecl());
   D = D->getCanonicalDecl();
-  Out << Prefix << "."
-      << (D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D))
-      << "_" << D->getCanonicalDecl()->getLocStart().getRawEncoding();
+  std::string Name = CGM.getOpenMPRuntime().getName(
+      {D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D)});
+  Out << Prefix << Name << "_"
+      << D->getCanonicalDecl()->getLocStart().getRawEncoding();
   return Out.str();
 }
 
@@ -5706,8 +5778,9 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   const auto &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
+  std::string Name = CGM.getOpenMPRuntime().getName({"red_init", ""});
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
-                                    ".red_init.", &CGM.getModule());
+                                    Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
@@ -5782,8 +5855,9 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   const auto &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
+  std::string Name = CGM.getOpenMPRuntime().getName({"red_comb", ""});
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
-                                    ".red_comb.", &CGM.getModule());
+                                    Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
@@ -5851,8 +5925,9 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   const auto &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
+  std::string Name = CGM.getOpenMPRuntime().getName({"red_fini", ""});
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
-                                    ".red_fini.", &CGM.getModule());
+                                    Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
   Fn->setDoesNotRecurse();
   CodeGenFunction CGF(CGM);
@@ -6216,10 +6291,11 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     OutlinedFn->setLinkage(llvm::GlobalValue::ExternalLinkage);
     OutlinedFn->setDSOLocal(false);
   } else {
+    std::string Name = getName({"omp_offload", "region_id"});
     OutlinedFnID = new llvm::GlobalVariable(
         CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
         llvm::GlobalValue::PrivateLinkage,
-        llvm::Constant::getNullValue(CGM.Int8Ty), ".omp_offload.region_id");
+        llvm::Constant::getNullValue(CGM.Int8Ty), Name);
   }
 
   // Register the information for the entry associated with this target region.
@@ -7256,10 +7332,11 @@ emitOffloadingArrays(CodeGenFunction &CGF,
 
       auto *SizesArrayInit = llvm::ConstantArray::get(
           llvm::ArrayType::get(CGM.SizeTy, ConstSizes.size()), ConstSizes);
+      std::string Name = CGM.getOpenMPRuntime().getName({"offload_sizes"});
       auto *SizesArrayGbl = new llvm::GlobalVariable(
           CGM.getModule(), SizesArrayInit->getType(),
           /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-          SizesArrayInit, ".offload_sizes");
+          SizesArrayInit, Name);
       SizesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
       Info.SizesArray = SizesArrayGbl;
     }
@@ -7268,10 +7345,12 @@ emitOffloadingArrays(CodeGenFunction &CGF,
     // fill arrays. Instead, we create an array constant.
     llvm::Constant *MapTypesArrayInit =
         llvm::ConstantDataArray::get(CGF.Builder.getContext(), MapTypes);
+    std::string MaptypesName =
+        CGM.getOpenMPRuntime().getName({"offload_maptypes"});
     auto *MapTypesArrayGbl = new llvm::GlobalVariable(
         CGM.getModule(), MapTypesArrayInit->getType(),
         /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-        MapTypesArrayInit, ".offload_maptypes");
+        MapTypesArrayInit, MaptypesName);
     MapTypesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     Info.MapTypesArray = MapTypesArrayGbl;
 
@@ -7767,7 +7846,8 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   scanForTargetRegionsFunctions(FD->getBody(), CGM.getMangledName(GD));
 
   // Do not to emit function if it is not marked as declare target.
-  return !isDeclareTargetDeclaration(FD);
+  return !isDeclareTargetDeclaration(FD) &&
+         AlreadyEmittedTargetFunctions.count(FD->getCanonicalDecl()) == 0;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
@@ -7851,27 +7931,23 @@ CGOpenMPRuntime::DisableAutoDeclareTargetRAII::~DisableAutoDeclareTargetRAII() {
     CGM.getOpenMPRuntime().ShouldMarkAsGlobal = SavedShouldMarkAsGlobal;
 }
 
-bool CGOpenMPRuntime::markAsGlobalTarget(const FunctionDecl *D) {
+bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
   if (!CGM.getLangOpts().OpenMPIsDevice || !ShouldMarkAsGlobal)
     return true;
 
+  const auto *D = cast<FunctionDecl>(GD.getDecl());
   const FunctionDecl *FD = D->getCanonicalDecl();
   // Do not to emit function if it is marked as declare target as it was already
   // emitted.
   if (isDeclareTargetDeclaration(D)) {
     if (D->hasBody() && AlreadyEmittedTargetFunctions.count(FD) == 0) {
       if (auto *F = dyn_cast_or_null<llvm::Function>(
-              CGM.GetGlobalValue(CGM.getMangledName(D))))
+              CGM.GetGlobalValue(CGM.getMangledName(GD))))
         return !F->isDeclaration();
       return false;
     }
     return true;
   }
-
-  // Do not mark member functions except for static.
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD))
-    if (!Method->isStatic())
-      return true;
 
   return !AlreadyEmittedTargetFunctions.insert(FD).second;
 }

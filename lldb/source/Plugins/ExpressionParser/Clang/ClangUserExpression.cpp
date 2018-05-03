@@ -65,7 +65,8 @@ ClangUserExpression::ClangUserExpression(
                          options),
       m_type_system_helper(*m_target_wp.lock().get(),
                            options.GetExecutionPolicy() ==
-                               eExecutionPolicyTopLevel) {
+                               eExecutionPolicyTopLevel),
+      m_result_delegate(exe_scope.CalculateTarget()) {
   switch (m_language) {
   case lldb::eLanguageTypeC_plus_plus:
     m_allow_cxx = true;
@@ -195,12 +196,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   } else if (clang::FunctionDecl *function_decl =
                  ClangASTContext::DeclContextGetAsFunctionDecl(decl_context)) {
     // We might also have a function that said in the debug information that it
-    // captured an
-    // object pointer.  The best way to deal with getting to the ivars at
-    // present is by pretending
-    // that this is a method of a class in whatever runtime the debug info says
-    // the object pointer
-    // belongs to.  Do that here.
+    // captured an object pointer.  The best way to deal with getting to the
+    // ivars at present is by pretending that this is a method of a class in
+    // whatever runtime the debug info says the object pointer belongs to.  Do
+    // that here.
 
     ClangASTMetadata *metadata =
         ClangASTContext::DeclContextGetMetaData(decl_context, function_decl);
@@ -290,10 +289,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   }
 }
 
-// This is a really nasty hack, meant to fix Objective-C expressions of the form
-// (int)[myArray count].  Right now, because the type information for count is
-// not available, [myArray count] returns id, which can't be directly cast to
-// int without causing a clang error.
+// This is a really nasty hack, meant to fix Objective-C expressions of the
+// form (int)[myArray count].  Right now, because the type information for
+// count is not available, [myArray count] returns id, which can't be directly
+// cast to int without causing a clang error.
 static void ApplyObjcCastHack(std::string &expr) {
 #define OBJC_CAST_HACK_FROM "(int)["
 #define OBJC_CAST_HACK_TO "(int)(long long)["
@@ -463,17 +462,15 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     exe_scope = exe_ctx.GetTargetPtr();
 
   // We use a shared pointer here so we can use the original parser - if it
-  // succeeds
-  // or the rewrite parser we might make if it fails.  But the parser_sp will
-  // never be empty.
+  // succeeds or the rewrite parser we might make if it fails.  But the
+  // parser_sp will never be empty.
 
   ClangExpressionParser parser(exe_scope, *this, generate_debug_info);
 
   unsigned num_errors = parser.Parse(diagnostic_manager);
 
   // Check here for FixItHints.  If there are any try to apply the fixits and
-  // set the fixed text in m_fixed_text
-  // before returning an error.
+  // set the fixed text in m_fixed_text before returning an error.
   if (num_errors) {
     if (diagnostic_manager.HasFixIts()) {
       if (parser.RewriteExpression(diagnostic_manager)) {
@@ -495,8 +492,8 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////
-  // Prepare the output of the parser for execution, evaluating it statically if
-  // possible
+  // Prepare the output of the parser for execution, evaluating it statically
+  // if possible
   //
 
   {
@@ -539,9 +536,9 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       register_execution_unit = true;
     }
 
-    // If there is more than one external function in the execution
-    // unit, it needs to keep living even if it's not top level, because
-    // the result could refer to that function.
+    // If there is more than one external function in the execution unit, it
+    // needs to keep living even if it's not top level, because the result
+    // could refer to that function.
 
     if (m_execution_unit_sp->GetJittedFunctions().size() > 1) {
       register_execution_unit = true;
@@ -667,10 +664,10 @@ void ClangUserExpression::ClangUserExpressionHelper::CommitPersistentDecls() {
   }
 }
 
-ClangUserExpression::ResultDelegate::ResultDelegate() {}
-
 ConstString ClangUserExpression::ResultDelegate::GetName() {
-  return m_persistent_state->GetNextPersistentVariableName();
+  auto prefix = m_persistent_state->GetPersistentVariablePrefix();
+  return m_persistent_state->GetNextPersistentVariableName(*m_target_sp,
+                                                           prefix);
 }
 
 void ClangUserExpression::ResultDelegate::DidDematerialize(

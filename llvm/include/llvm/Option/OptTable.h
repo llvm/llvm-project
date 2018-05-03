@@ -29,7 +29,7 @@ class ArgList;
 class InputArgList;
 class Option;
 
-/// \brief Provide access to the Option info table.
+/// Provide access to the Option info table.
 ///
 /// The OptTable class provides a layer of indirection which allows Option
 /// instance to be created lazily. In the common case, only a few options will
@@ -38,7 +38,7 @@ class Option;
 /// parts of the driver still use Option instances where convenient.
 class OptTable {
 public:
-  /// \brief Entry for a single option instance in the option data table.
+  /// Entry for a single option instance in the option data table.
   struct Info {
     /// A null terminated array of prefix strings to apply to name while
     /// matching.
@@ -57,7 +57,7 @@ public:
   };
 
 private:
-  /// \brief The option information table.
+  /// The option information table.
   std::vector<Info> OptionInfos;
   bool IgnoreCase;
 
@@ -86,36 +86,36 @@ protected:
 public:
   ~OptTable();
 
-  /// \brief Return the total number of option classes.
+  /// Return the total number of option classes.
   unsigned getNumOptions() const { return OptionInfos.size(); }
 
-  /// \brief Get the given Opt's Option instance, lazily creating it
+  /// Get the given Opt's Option instance, lazily creating it
   /// if necessary.
   ///
   /// \return The option, or null for the INVALID option id.
   const Option getOption(OptSpecifier Opt) const;
 
-  /// \brief Lookup the name of the given option.
+  /// Lookup the name of the given option.
   const char *getOptionName(OptSpecifier id) const {
     return getInfo(id).Name;
   }
 
-  /// \brief Get the kind of the given option.
+  /// Get the kind of the given option.
   unsigned getOptionKind(OptSpecifier id) const {
     return getInfo(id).Kind;
   }
 
-  /// \brief Get the group id for the given option.
+  /// Get the group id for the given option.
   unsigned getOptionGroupID(OptSpecifier id) const {
     return getInfo(id).GroupID;
   }
 
-  /// \brief Get the help text to use to describe this option.
+  /// Get the help text to use to describe this option.
   const char *getOptionHelpText(OptSpecifier id) const {
     return getInfo(id).HelpText;
   }
 
-  /// \brief Get the meta-variable name to use when describing
+  /// Get the meta-variable name to use when describing
   /// this options values in the help text.
   const char *getOptionMetaVar(OptSpecifier id) const {
     return getInfo(id).MetaVar;
@@ -174,7 +174,7 @@ public:
   /// \return true in success, and false in fail.
   bool addValues(const char *Option, const char *Values);
 
-  /// \brief Parse a single argument; returning the new argument and
+  /// Parse a single argument; returning the new argument and
   /// updating Index.
   ///
   /// \param [in,out] Index - The current parsing position in the argument
@@ -192,7 +192,7 @@ public:
                    unsigned FlagsToInclude = 0,
                    unsigned FlagsToExclude = 0) const;
 
-  /// \brief Parse an list of arguments into an InputArgList.
+  /// Parse an list of arguments into an InputArgList.
   ///
   /// The resulting InputArgList will reference the strings in [\p ArgBegin,
   /// \p ArgEnd), and their lifetime should extend past that of the returned
@@ -214,7 +214,7 @@ public:
                          unsigned &MissingArgCount, unsigned FlagsToInclude = 0,
                          unsigned FlagsToExclude = 0) const;
 
-  /// \brief Render the help text for an option table.
+  /// Render the help text for an option table.
   ///
   /// \param OS - The stream to write the help text to.
   /// \param Name - The name to use in the usage line.

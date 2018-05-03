@@ -17,6 +17,7 @@
 #define LLVM_CODEGEN_LATENCYPRIORITYQUEUE_H
 
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Config/llvm-config.h"
 
 namespace llvm {
   class LatencyPriorityQueue;

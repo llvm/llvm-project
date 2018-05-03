@@ -66,7 +66,7 @@ std::string llvm::DOT::EscapeString(const std::string &Label) {
   return Str;
 }
 
-/// \brief Get a color string for this node number. Simply round-robin selects
+/// Get a color string for this node number. Simply round-robin selects
 /// from a reasonable number of colors.
 StringRef llvm::DOT::getColorString(unsigned ColorNumber) {
   static const int NumColors = 20;

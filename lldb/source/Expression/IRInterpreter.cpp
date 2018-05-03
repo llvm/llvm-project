@@ -1567,8 +1567,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      // Push all function arguments to the argument list that will
-      // be passed to the call function thread plan
+      // Push all function arguments to the argument list that will be passed
+      // to the call function thread plan
       for (int i = 0; i < numArgs; i++) {
         // Get details of this argument
         llvm::Value *arg_op = call_inst->getArgOperand(i);

@@ -23,14 +23,14 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Args Args.h "lldb/Utility/Args.h"
-/// @brief A command line argument class.
+/// A command line argument class.
 ///
-/// The Args class is designed to be fed a command line. The
-/// command line is copied into an internal buffer and then split up
-/// into arguments. Arguments are space delimited if there are no quotes
-/// (single, double, or backtick quotes) surrounding the argument. Spaces
-/// can be escaped using a \ character to avoid having to surround an
-/// argument that contains a space with quotes.
+/// The Args class is designed to be fed a command line. The command line is
+/// copied into an internal buffer and then split up into arguments. Arguments
+/// are space delimited if there are no quotes (single, double, or backtick
+/// quotes) surrounding the argument. Spaces can be escaped using a \
+/// character to avoid having to surround an argument that contains a space
+/// with quotes.
 //----------------------------------------------------------------------
 class Args {
 public:
@@ -95,18 +95,17 @@ public:
   //------------------------------------------------------------------
   /// Sets the command string contained by this object.
   ///
-  /// The command string will be copied and split up into arguments
-  /// that can be accessed via the accessor functions.
+  /// The command string will be copied and split up into arguments that can
+  /// be accessed via the accessor functions.
   ///
   /// @param[in] command
   ///     A command StringRef that will be copied and split up
   ///     into arguments.
   ///
   /// @see Args::GetArgumentCount() const
-  /// @see Args::GetArgumentAtIndex (size_t) const
-  /// @see Args::GetArgumentVector ()
-  /// @see Args::Shift ()
-  /// @see Args::Unshift (const char *)
+  /// @see Args::GetArgumentAtIndex (size_t) const @see
+  /// Args::GetArgumentVector () @see Args::Shift () @see Args::Unshift (const
+  /// char *)
   //------------------------------------------------------------------
   void SetCommandString(llvm::StringRef command);
 
@@ -124,8 +123,8 @@ public:
   bool empty() const { return GetArgumentCount() == 0; }
 
   //------------------------------------------------------------------
-  /// Gets the NULL terminated C string argument pointer for the
-  /// argument at index \a idx.
+  /// Gets the NULL terminated C string argument pointer for the argument at
+  /// index \a idx.
   ///
   /// @return
   ///     The NULL terminated C string argument pointer if \a idx is a
@@ -147,9 +146,9 @@ public:
   //------------------------------------------------------------------
   /// Gets the argument vector.
   ///
-  /// The value returned by this function can be used by any function
-  /// that takes and vector. The return value is just like \a argv
-  /// in the standard C entry point function:
+  /// The value returned by this function can be used by any function that
+  /// takes and vector. The return value is just like \a argv in the standard
+  /// C entry point function:
   ///     \code
   ///         int main (int argc, const char **argv);
   ///     \endcode
@@ -163,9 +162,9 @@ public:
   //------------------------------------------------------------------
   /// Gets the argument vector.
   ///
-  /// The value returned by this function can be used by any function
-  /// that takes and vector. The return value is just like \a argv
-  /// in the standard C entry point function:
+  /// The value returned by this function can be used by any function that
+  /// takes and vector. The return value is just like \a argv in the standard
+  /// C entry point function:
   ///     \code
   ///         int main (int argc, const char **argv);
   ///     \endcode
@@ -219,8 +218,8 @@ public:
                              char quote_char = '\0');
 
   //------------------------------------------------------------------
-  /// Replaces the argument value at index \a idx to \a arg_cstr
-  /// if \a idx is a valid argument index.
+  /// Replaces the argument value at index \a idx to \a arg_cstr if \a idx is
+  /// a valid argument index.
   ///
   /// @param[in] idx
   ///     The index of the argument that will have its value replaced.
@@ -245,11 +244,11 @@ public:
   void DeleteArgumentAtIndex(size_t idx);
 
   //------------------------------------------------------------------
-  /// Sets the argument vector value, optionally copying all
-  /// arguments into an internal buffer.
+  /// Sets the argument vector value, optionally copying all arguments into an
+  /// internal buffer.
   ///
-  /// Sets the arguments to match those found in \a argv. All argument
-  /// strings will be copied into an internal buffers.
+  /// Sets the arguments to match those found in \a argv. All argument strings
+  /// will be copied into an internal buffers.
   //
   //  FIXME: Handle the quote character somehow.
   //------------------------------------------------------------------
@@ -258,21 +257,20 @@ public:
   void SetArguments(const char **argv);
 
   //------------------------------------------------------------------
-  /// Shifts the first argument C string value of the array off the
-  /// argument array.
+  /// Shifts the first argument C string value of the array off the argument
+  /// array.
   ///
-  /// The string value will be freed, so a copy of the string should
-  /// be made by calling Args::GetArgumentAtIndex (size_t) const
-  /// first and copying the returned value before calling
-  /// Args::Shift().
+  /// The string value will be freed, so a copy of the string should be made
+  /// by calling Args::GetArgumentAtIndex (size_t) const first and copying the
+  /// returned value before calling Args::Shift().
   ///
   /// @see Args::GetArgumentAtIndex (size_t) const
   //------------------------------------------------------------------
   void Shift();
 
   //------------------------------------------------------------------
-  /// Inserts a class owned copy of \a arg_cstr at the beginning of
-  /// the argument vector.
+  /// Inserts a class owned copy of \a arg_cstr at the beginning of the
+  /// argument vector.
   ///
   /// A copy \a arg_cstr will be made.
   ///
@@ -343,11 +341,11 @@ public:
   static void EncodeEscapeSequences(const char *src, std::string &dst);
 
   // ExpandEscapeSequences will change a string of possibly non-printable
-  // characters and expand them into text. So '\n' will turn into two characters
-  // like "\n" which is suitable for human reading. When a character is not
-  // printable and isn't one of the common in escape sequences listed in the
-  // help for EncodeEscapeSequences, then it will be encoded as octal. Printable
-  // characters are left alone.
+  // characters and expand them into text. So '\n' will turn into two
+  // characters like "\n" which is suitable for human reading. When a character
+  // is not printable and isn't one of the common in escape sequences listed in
+  // the help for EncodeEscapeSequences, then it will be encoded as octal.
+  // Printable characters are left alone.
   static void ExpandEscapedCharacters(const char *src, std::string &dst);
 
   static std::string EscapeLLDBCommandArgument(const std::string &arg,

@@ -44,16 +44,15 @@ public:
 
 //----------------------------------------------------------------------
 /// @class ObjectFile ObjectFile.h "lldb/Symbol/ObjectFile.h"
-/// @brief A plug-in interface definition class for object file parsers.
+/// A plug-in interface definition class for object file parsers.
 ///
-/// Object files belong to Module objects and know how to extract
-/// information from executable, shared library, and object (.o) files
-/// used by operating system runtime. The symbol table and section list
-/// for an object file.
+/// Object files belong to Module objects and know how to extract information
+/// from executable, shared library, and object (.o) files used by operating
+/// system runtime. The symbol table and section list for an object file.
 ///
-/// Object files can be represented by the entire file, or by part of a
-/// file. An example of a partial file ObjectFile is one that contains
-/// information for one of multiple architectures in the same file.
+/// Object files can be represented by the entire file, or by part of a file.
+/// An example of a partial file ObjectFile is one that contains information
+/// for one of multiple architectures in the same file.
 ///
 /// Once an architecture is selected the object file information can be
 /// extracted from this abstract class.
@@ -96,9 +95,9 @@ public:
   //------------------------------------------------------------------
   /// Construct with a parent module, offset, and header data.
   ///
-  /// Object files belong to modules and a valid module must be
-  /// supplied upon construction. The at an offset within a file for
-  /// objects that contain more than one architecture or object.
+  /// Object files belong to modules and a valid module must be supplied upon
+  /// construction. The at an offset within a file for objects that contain
+  /// more than one architecture or object.
   //------------------------------------------------------------------
   ObjectFile(const lldb::ModuleSP &module_sp, const FileSpec *file_spec_ptr,
              lldb::offset_t file_offset, lldb::offset_t length,
@@ -110,18 +109,17 @@ public:
   //------------------------------------------------------------------
   /// Destructor.
   ///
-  /// The destructor is virtual since this class is designed to be
-  /// inherited from by the plug-in instance.
+  /// The destructor is virtual since this class is designed to be inherited
+  /// from by the plug-in instance.
   //------------------------------------------------------------------
   ~ObjectFile() override;
 
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the current contents of this object
-  /// to the supplied stream \a s. The dumping should include the
-  /// section list if it has been parsed, and the symbol table
-  /// if it has been parsed.
+  /// Dump a description of the current contents of this object to the
+  /// supplied stream \a s. The dumping should include the section list if it
+  /// has been parsed, and the symbol table if it has been parsed.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -131,9 +129,9 @@ public:
   //------------------------------------------------------------------
   /// Find a ObjectFile plug-in that can parse \a file_spec.
   ///
-  /// Scans all loaded plug-in interfaces that implement versions of
-  /// the ObjectFile plug-in interface and returns the first
-  /// instance that can parse the file.
+  /// Scans all loaded plug-in interfaces that implement versions of the
+  /// ObjectFile plug-in interface and returns the first instance that can
+  /// parse the file.
   ///
   /// @param[in] module
   ///     The parent module that owns this object file.
@@ -161,9 +159,9 @@ public:
   //------------------------------------------------------------------
   /// Find a ObjectFile plug-in that can parse a file in memory.
   ///
-  /// Scans all loaded plug-in interfaces that implement versions of
-  /// the ObjectFile plug-in interface and returns the first
-  /// instance that can parse the file.
+  /// Scans all loaded plug-in interfaces that implement versions of the
+  /// ObjectFile plug-in interface and returns the first instance that can
+  /// parse the file.
   ///
   /// @param[in] module
   ///     The parent module that owns this object file.
@@ -194,9 +192,9 @@ public:
   //------------------------------------------------------------------
   /// Split a path into a file path with object name.
   ///
-  /// For paths like "/tmp/foo.a(bar.o)" we often need to split a path
-  /// up into the actual path name and into the object name so we can
-  /// make a valid object file from it.
+  /// For paths like "/tmp/foo.a(bar.o)" we often need to split a path up into
+  /// the actual path name and into the object name so we can make a valid
+  /// object file from it.
   ///
   /// @param[in] path_with_object
   ///     A path that might contain an archive path with a .o file
@@ -233,13 +231,11 @@ public:
   //------------------------------------------------------------------
   /// Get the address type given a file address in an object file.
   ///
-  /// Many binary file formats know what kinds
-  /// This is primarily for ARM binaries, though it can be applied to
-  /// any executable file format that supports different opcode types
-  /// within the same binary. ARM binaries support having both ARM and
-  /// Thumb within the same executable container. We need to be able
-  /// to get
-  /// @return
+  /// Many binary file formats know what kinds This is primarily for ARM
+  /// binaries, though it can be applied to any executable file format that
+  /// supports different opcode types within the same binary. ARM binaries
+  /// support having both ARM and Thumb within the same executable container.
+  /// We need to be able to get @return
   ///     The size of an address in bytes for the currently selected
   ///     architecture (and object for archives). Returns zero if no
   ///     architecture or object has been selected.
@@ -249,13 +245,11 @@ public:
   //------------------------------------------------------------------
   /// Extract the dependent modules from an object file.
   ///
-  /// If an object file has information about which other images it
-  /// depends on (such as shared libraries), this function will
-  /// provide the list. Since many executables or shared libraries
-  /// may depend on the same files,
-  /// FileSpecList::AppendIfUnique(const FileSpec &) should be
-  /// used to make sure any files that are added are not already in
-  /// the list.
+  /// If an object file has information about which other images it depends on
+  /// (such as shared libraries), this function will provide the list. Since
+  /// many executables or shared libraries may depend on the same files,
+  /// FileSpecList::AppendIfUnique(const FileSpec &) should be used to make
+  /// sure any files that are added are not already in the list.
   ///
   /// @param[out] file_list
   ///     A list of file specification objects that gets dependent
@@ -280,8 +274,8 @@ public:
   //------------------------------------------------------------------
   /// Returns the offset into a file at which this object resides.
   ///
-  /// Some files contain many object files, and this function allows
-  /// access to an object's offset within the file.
+  /// Some files contain many object files, and this function allows access to
+  /// an object's offset within the file.
   ///
   /// @return
   ///     The offset in bytes into the file. Defaults to zero for
@@ -312,8 +306,8 @@ public:
   //------------------------------------------------------------------
   /// Get the name of the cpu, vendor and OS for this object file.
   ///
-  /// This value is a string that represents the target triple where
-  /// the cpu type, the vendor and the OS are encoded into a string.
+  /// This value is a string that represents the target triple where the cpu
+  /// type, the vendor and the OS are encoded into a string.
   ///
   /// @param[out] target_triple
   ///     The string value of the target triple.
@@ -325,11 +319,11 @@ public:
   virtual bool GetArchitecture(ArchSpec &arch) = 0;
 
   //------------------------------------------------------------------
-  /// Gets the section list for the currently selected architecture
-  /// (and object for archives).
+  /// Gets the section list for the currently selected architecture (and
+  /// object for archives).
   ///
-  /// Section list parsing can be deferred by ObjectFile instances
-  /// until this accessor is called the first time.
+  /// Section list parsing can be deferred by ObjectFile instances until this
+  /// accessor is called the first time.
   ///
   /// @return
   ///     The list of sections contained in this object file.
@@ -339,17 +333,17 @@ public:
   virtual void CreateSections(SectionList &unified_section_list) = 0;
 
   //------------------------------------------------------------------
-  /// Notify the ObjectFile that the file addresses in the Sections
-  /// for this module have been changed.
+  /// Notify the ObjectFile that the file addresses in the Sections for this
+  /// module have been changed.
   //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged() {}
 
   //------------------------------------------------------------------
-  /// Gets the symbol table for the currently selected architecture
-  /// (and object for archives).
+  /// Gets the symbol table for the currently selected architecture (and
+  /// object for archives).
   ///
-  /// Symbol table parsing can be deferred by ObjectFile instances
-  /// until this accessor is called the first time.
+  /// Symbol table parsing can be deferred by ObjectFile instances until this
+  /// accessor is called the first time.
   ///
   /// @return
   ///     The symbol table for this object file.
@@ -365,11 +359,11 @@ public:
   //------------------------------------------------------------------
   /// Appends a Symbol for the specified so_addr to the symbol table.
   ///
-  /// If verify_unique is false, the symbol table is not searched
-  /// to determine if a Symbol found at this address has already been
-  /// added to the symbol table.  When verify_unique is true, this
-  /// method resolves the Symbol as the first match in the SymbolTable
-  /// and appends a Symbol only if required/found.
+  /// If verify_unique is false, the symbol table is not searched to determine
+  /// if a Symbol found at this address has already been added to the symbol
+  /// table.  When verify_unique is true, this method resolves the Symbol as
+  /// the first match in the SymbolTable and appends a Symbol only if
+  /// required/found.
   ///
   /// @return
   ///     The resolved symbol or nullptr.  Returns nullptr if a
@@ -377,13 +371,13 @@ public:
   //------------------------------------------------------------------
   virtual Symbol *ResolveSymbolForAddress(const Address &so_addr,
                                           bool verify_unique) {
-    // Typically overridden to lazily add stripped symbols recoverable from
-    // the exception handling unwind information (i.e. without parsing
-    // the entire eh_frame section.
+    // Typically overridden to lazily add stripped symbols recoverable from the
+    // exception handling unwind information (i.e. without parsing the entire
+    // eh_frame section.
     //
-    // The availability of LC_FUNCTION_STARTS allows ObjectFileMachO
-    // to efficiently add stripped symbols when the symbol table is
-    // first constructed.  Poorer cousins are PECoff and ELF.
+    // The availability of LC_FUNCTION_STARTS allows ObjectFileMachO to
+    // efficiently add stripped symbols when the symbol table is first
+    // constructed.  Poorer cousins are PECoff and ELF.
     return nullptr;
   }
 
@@ -415,10 +409,9 @@ public:
   //------------------------------------------------------------------
   /// Gets the UUID for this object file.
   ///
-  /// If the object file format contains a UUID, the value should be
-  /// returned. Else ObjectFile instances should return the MD5
-  /// checksum of all of the bytes for the object file (or memory for
-  /// memory based object files).
+  /// If the object file format contains a UUID, the value should be returned.
+  /// Else ObjectFile instances should return the MD5 checksum of all of the
+  /// bytes for the object file (or memory for memory based object files).
   ///
   /// @return
   ///     Returns \b true if a UUID was successfully extracted into
@@ -429,8 +422,8 @@ public:
   //------------------------------------------------------------------
   /// Gets the symbol file spec list for this object file.
   ///
-  /// If the object file format contains a debug symbol file link,
-  /// the values will be returned in the FileSpecList.
+  /// If the object file format contains a debug symbol file link, the values
+  /// will be returned in the FileSpecList.
   ///
   /// @return
   ///     Returns filespeclist.
@@ -443,8 +436,8 @@ public:
   /// Gets the file spec list of libraries re-exported by this object file.
   ///
   /// If the object file format has the notion of one library re-exporting the
-  /// symbols from another,
-  /// the re-exported libraries will be returned in the FileSpecList.
+  /// symbols from another, the re-exported libraries will be returned in the
+  /// FileSpecList.
   ///
   /// @return
   ///     Returns filespeclist.
@@ -454,8 +447,8 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Sets the load address for an entire module, assuming a rigid
-  /// slide of sections, if possible in the implementation.
+  /// Sets the load address for an entire module, assuming a rigid slide of
+  /// sections, if possible in the implementation.
   ///
   /// @return
   ///     Returns true iff any section's load address changed.
@@ -466,8 +459,8 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Gets whether endian swapping should occur when extracting data
-  /// from this object file.
+  /// Gets whether endian swapping should occur when extracting data from this
+  /// object file.
   ///
   /// @return
   ///     Returns \b true if endian swapping is needed, \b false
@@ -478,11 +471,11 @@ public:
   //------------------------------------------------------------------
   /// Attempts to parse the object header.
   ///
-  /// This function is used as a test to see if a given plug-in
-  /// instance can parse the header data already contained in
-  /// ObjectFile::m_data. If an object file parser does not
-  /// recognize that magic bytes in a header, false should be returned
-  /// and the next plug-in can attempt to parse an object file.
+  /// This function is used as a test to see if a given plug-in instance can
+  /// parse the header data already contained in ObjectFile::m_data. If an
+  /// object file parser does not recognize that magic bytes in a header,
+  /// false should be returned and the next plug-in can attempt to parse an
+  /// object file.
   ///
   /// @return
   ///     Returns \b true if the header was parsed successfully, \b
@@ -493,11 +486,11 @@ public:
   //------------------------------------------------------------------
   /// Returns a reference to the UnwindTable for this ObjectFile
   ///
-  /// The UnwindTable contains FuncUnwinders objects for any function in
-  /// this ObjectFile.  If a FuncUnwinders object hasn't been created yet
-  /// (i.e. the function has yet to be unwound in a stack walk), it
-  /// will be created when requested.  Specifically, we do not create
-  /// FuncUnwinders objects for functions until they are needed.
+  /// The UnwindTable contains FuncUnwinders objects for any function in this
+  /// ObjectFile.  If a FuncUnwinders object hasn't been created yet (i.e. the
+  /// function has yet to be unwound in a stack walk), it will be created when
+  /// requested.  Specifically, we do not create FuncUnwinders objects for
+  /// functions until they are needed.
   ///
   /// @return
   ///     Returns the unwind table for this object file.
@@ -505,21 +498,21 @@ public:
   virtual lldb_private::UnwindTable &GetUnwindTable() { return m_unwind_table; }
 
   //------------------------------------------------------------------
-  /// Returns if the function bounds for symbols in this symbol file
-  /// are likely accurate.
+  /// Returns if the function bounds for symbols in this symbol file are
+  /// likely accurate.
   ///
   /// The unwinder can emulate the instructions of functions to understand
-  /// prologue/epilogue code sequences, where registers are spilled on
-  /// the stack, etc.  This feature relies on having the correct start
-  /// addresses of all functions.  If the ObjectFile has a way to tell
-  /// that symbols have been stripped and there's no way to reconstruct
-  /// start addresses (e.g. LC_FUNCTION_STARTS on Mach-O, or eh_frame
-  /// unwind info), the ObjectFile should indicate that assembly emulation
-  /// should not be used for this module.
+  /// prologue/epilogue code sequences, where registers are spilled on the
+  /// stack, etc.  This feature relies on having the correct start addresses
+  /// of all functions.  If the ObjectFile has a way to tell that symbols have
+  /// been stripped and there's no way to reconstruct start addresses (e.g.
+  /// LC_FUNCTION_STARTS on Mach-O, or eh_frame unwind info), the ObjectFile
+  /// should indicate that assembly emulation should not be used for this
+  /// module.
   ///
-  /// It is uncommon for this to return false.  An ObjectFile needs to
-  /// be sure that symbol start addresses are unavailable before false
-  /// is returned.  If it is unclear, this should return true.
+  /// It is uncommon for this to return false.  An ObjectFile needs to be sure
+  /// that symbol start addresses are unavailable before false is returned.
+  /// If it is unclear, this should return true.
   ///
   /// @return
   ///     Returns true if assembly emulation should be used for this
@@ -547,9 +540,9 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Returns the address of the Entry Point in this object file - if
-  /// the object file doesn't have an entry point (because it is not an
-  /// executable file) then an invalid address is returned.
+  /// Returns the address of the Entry Point in this object file - if the
+  /// object file doesn't have an entry point (because it is not an executable
+  /// file) then an invalid address is returned.
   ///
   /// @return
   ///     Returns the entry address for this module.
@@ -557,14 +550,13 @@ public:
   virtual lldb_private::Address GetEntryPointAddress() { return Address(); }
 
   //------------------------------------------------------------------
-  /// Returns the address that represents the header of this object
-  /// file.
+  /// Returns the address that represents the header of this object file.
   ///
-  /// The header address is defined as where the header for the object
-  /// file is that describes the content of the file. If the header
-  /// doesn't appear in a section that is defined in the object file,
-  /// an address with no section is returned that has the file offset
-  /// set in the m_file_offset member of the lldb_private::Address object.
+  /// The header address is defined as where the header for the object file is
+  /// that describes the content of the file. If the header doesn't appear in
+  /// a section that is defined in the object file, an address with no section
+  /// is returned that has the file offset set in the m_file_offset member of
+  /// the lldb_private::Address object.
   ///
   /// @return
   ///     Returns the entry address for this module.
@@ -576,9 +568,9 @@ public:
   virtual uint32_t GetNumThreadContexts() { return 0; }
 
   //------------------------------------------------------------------
-  /// Some object files may have an identifier string embedded in them,
-  /// e.g. in a Mach-O core file using the LC_IDENT load command (which 
-  /// is obsolete, but can still be found in some old files)
+  /// Some object files may have an identifier string embedded in them, e.g.
+  /// in a Mach-O core file using the LC_IDENT load command (which  is
+  /// obsolete, but can still be found in some old files)
   ///
   /// @return
   ///     Returns the identifier string if one exists, else an empty
@@ -589,11 +581,11 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// When the ObjectFile is a core file, lldb needs to locate the
-  /// "binary" in the core file.  lldb can iterate over the pages looking
-  /// for a valid binary, but some core files may have metadata 
-  /// describing where the main binary is exactly which removes ambiguity
-  /// when there are multiple binaries present in the captured memory pages.
+  /// When the ObjectFile is a core file, lldb needs to locate the "binary" in
+  /// the core file.  lldb can iterate over the pages looking for a valid
+  /// binary, but some core files may have metadata  describing where the main
+  /// binary is exactly which removes ambiguity when there are multiple
+  /// binaries present in the captured memory pages.
   ///
   /// @param[out] address
   ///   If the address of the binary is specified, this will be set.
@@ -620,13 +612,12 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// The object file should be able to calculate its type by looking
-  /// at its file header and possibly the sections or other data in
-  /// the object file. The file type is used in the debugger to help
-  /// select the correct plug-ins for the job at hand, so this is
-  /// important to get right. If any eTypeXXX definitions do not match
-  /// up with the type of file you are loading, please feel free to
-  /// add a new enumeration value.
+  /// The object file should be able to calculate its type by looking at its
+  /// file header and possibly the sections or other data in the object file.
+  /// The file type is used in the debugger to help select the correct plug-
+  /// ins for the job at hand, so this is important to get right. If any
+  /// eTypeXXX definitions do not match up with the type of file you are
+  /// loading, please feel free to add a new enumeration value.
   ///
   /// @return
   ///     The calculated file type for the current object file.
@@ -634,20 +625,19 @@ public:
   virtual Type CalculateType() = 0;
 
   //------------------------------------------------------------------
-  /// In cases where the type can't be calculated (elf files), this
-  /// routine allows someone to explicitly set it. As an example,
-  /// SymbolVendorELF uses this routine to set eTypeDebugInfo when
-  /// loading debug link files.
+  /// In cases where the type can't be calculated (elf files), this routine
+  /// allows someone to explicitly set it. As an example, SymbolVendorELF uses
+  /// this routine to set eTypeDebugInfo when loading debug link files.
   virtual void SetType(Type type) { m_type = type; }
 
   //------------------------------------------------------------------
-  /// The object file should be able to calculate the strata of the
-  /// object file.
+  /// The object file should be able to calculate the strata of the object
+  /// file.
   ///
-  /// Many object files for platforms might be for either user space
-  /// debugging or for kernel debugging. If your object file subclass
-  /// can figure this out, it will help with debugger plug-in selection
-  /// when it comes time to debug.
+  /// Many object files for platforms might be for either user space debugging
+  /// or for kernel debugging. If your object file subclass can figure this
+  /// out, it will help with debugger plug-in selection when it comes time to
+  /// debug.
   ///
   /// @return
   ///     The calculated object file strata for the current object
@@ -658,16 +648,16 @@ public:
   //------------------------------------------------------------------
   /// Get the object file version numbers.
   ///
-  /// Many object files have a set of version numbers that describe
-  /// the version of the executable or shared library. Typically there
-  /// are major, minor and build, but there may be more. This function
-  /// will extract the versions from object files if they are available.
+  /// Many object files have a set of version numbers that describe the
+  /// version of the executable or shared library. Typically there are major,
+  /// minor and build, but there may be more. This function will extract the
+  /// versions from object files if they are available.
   ///
-  /// If \a versions is NULL, or if \a num_versions is 0, the return
-  /// value will indicate how many version numbers are available in
-  /// this object file. Then a subsequent call can be made to this
-  /// function with a value of \a versions and \a num_versions that
-  /// has enough storage to store some or all version numbers.
+  /// If \a versions is NULL, or if \a num_versions is 0, the return value
+  /// will indicate how many version numbers are available in this object
+  /// file. Then a subsequent call can be made to this function with a value
+  /// of \a versions and \a num_versions that has enough storage to store some
+  /// or all version numbers.
   ///
   /// @param[out] versions
   ///     A pointer to an array of uint32_t types that is \a num_versions
@@ -706,14 +696,14 @@ public:
   //------------------------------------------------------------------
   /// Get the minimum OS version this object file can run on.
   ///
-  /// Some object files have information that specifies the minimum OS
-  /// version that they can be used on.
+  /// Some object files have information that specifies the minimum OS version
+  /// that they can be used on.
   ///
-  /// If \a versions is NULL, or if \a num_versions is 0, the return
-  /// value will indicate how many version numbers are available in
-  /// this object file. Then a subsequent call can be made to this
-  /// function with a value of \a versions and \a num_versions that
-  /// has enough storage to store some or all version numbers.
+  /// If \a versions is NULL, or if \a num_versions is 0, the return value
+  /// will indicate how many version numbers are available in this object
+  /// file. Then a subsequent call can be made to this function with a value
+  /// of \a versions and \a num_versions that has enough storage to store some
+  /// or all version numbers.
   ///
   /// @param[out] versions
   ///     A pointer to an array of uint32_t types that is \a num_versions
@@ -767,12 +757,11 @@ public:
   //------------------------------------------------------------------
   /// Return true if this file is a dynamic link editor (dyld)
   ///
-  /// Often times dyld has symbols that mirror symbols in libc and
-  /// other shared libraries (like "malloc" and "free") and the user
-  /// does _not_ want to stop in these shared libraries by default.
-  /// We can ask the ObjectFile if it is such a file and should be
-  /// avoided for things like settings breakpoints and doing function
-  /// lookups for expressions.
+  /// Often times dyld has symbols that mirror symbols in libc and other
+  /// shared libraries (like "malloc" and "free") and the user does _not_ want
+  /// to stop in these shared libraries by default. We can ask the ObjectFile
+  /// if it is such a file and should be avoided for things like settings
+  /// breakpoints and doing function lookups for expressions.
   //------------------------------------------------------------------
   virtual bool GetIsDynamicLinkEditor() { return false; }
 
@@ -791,10 +780,9 @@ public:
     return m_strata;
   }
 
-  // When an object file is in memory, subclasses should try and lock
-  // the process weak pointer. If the process weak pointer produces a
-  // valid ProcessSP, then subclasses can call this function to read
-  // memory.
+  // When an object file is in memory, subclasses should try and lock the
+  // process weak pointer. If the process weak pointer produces a valid
+  // ProcessSP, then subclasses can call this function to read memory.
   static lldb::DataBufferSP ReadMemory(const lldb::ProcessSP &process_sp,
                                        lldb::addr_t addr, size_t byte_size);
 
@@ -814,8 +802,8 @@ public:
                                  size_t dst_len);
 
   // This function will transparently decompress section data if the section if
-  // compressed. Note that for compressed section the resulting data size may be
-  // larger than what Section::GetFileSize reports.
+  // compressed. Note that for compressed section the resulting data size may
+  // be larger than what Section::GetFileSize reports.
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 
@@ -834,9 +822,9 @@ public:
   //------------------------------------------------------------------
   /// Loads this objfile to memory.
   ///
-  /// Loads the bits needed to create an executable image to the memory.
-  /// It is useful with bare-metal targets where target does not have the
-  /// ability to start a process itself.
+  /// Loads the bits needed to create an executable image to the memory. It is
+  /// useful with bare-metal targets where target does not have the ability to
+  /// start a process itself.
   ///
   /// @param[in] target
   ///     Target where to load.
@@ -869,9 +857,9 @@ protected:
   uint32_t m_synthetic_symbol_idx;
 
   //------------------------------------------------------------------
-  /// Sets the architecture for a module.  At present the architecture
-  /// can only be set if it is invalid.  It is not allowed to switch from
-  /// one concrete architecture to another.
+  /// Sets the architecture for a module.  At present the architecture can
+  /// only be set if it is invalid.  It is not allowed to switch from one
+  /// concrete architecture to another.
   ///
   /// @param[in] new_arch
   ///     The architecture this module will be set to.

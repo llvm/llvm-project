@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
@@ -88,7 +89,7 @@ public:
   }
 
   void print(raw_ostream &Out) const {
-    Out << "Name=" << Info.Name << ", Kind=" << Info.Kind
+    Out << "Name=" << Info.Name << ", Kind=" << int(Info.Kind)
         << ", Flags=" << Info.Flags;
     if (!isTypeData()) {
       Out << ", ElemIndex=" << Info.ElementIndex;

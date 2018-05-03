@@ -4465,9 +4465,9 @@ define <16 x i16> @load_sext_16i8_to_16i16(<16 x i8> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_16i8_to_16i16:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxbw 8(%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpmovsxbw 8(%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_sext_16i8_to_16i16:
@@ -4665,9 +4665,9 @@ define <8 x i32> @load_sext_8i16_to_8i32(<8 x i16> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_8i16_to_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpmovsxwd (%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxwd 8(%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpmovsxwd 8(%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxwd (%rdi), %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_sext_8i16_to_8i32:
@@ -4763,9 +4763,9 @@ define <4 x i64> @load_sext_4i32_to_4i64(<4 x i32> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_4i32_to_4i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpmovsxdq (%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxdq 8(%rdi), %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpmovsxdq 8(%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxdq (%rdi), %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_sext_4i32_to_4i64:

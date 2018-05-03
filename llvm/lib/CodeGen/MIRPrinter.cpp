@@ -680,6 +680,20 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "frame-setup ";
   if (MI.getFlag(MachineInstr::FrameDestroy))
     OS << "frame-destroy ";
+  if (MI.getFlag(MachineInstr::FmNoNans))
+    OS << "nnan ";
+  if (MI.getFlag(MachineInstr::FmNoInfs))
+    OS << "ninf ";
+  if (MI.getFlag(MachineInstr::FmNsz))
+    OS << "nsz ";
+  if (MI.getFlag(MachineInstr::FmArcp))
+    OS << "arcp ";
+  if (MI.getFlag(MachineInstr::FmContract))
+    OS << "contract ";
+  if (MI.getFlag(MachineInstr::FmAfn))
+    OS << "afn ";
+  if (MI.getFlag(MachineInstr::FmReassoc))
+    OS << "reassoc ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

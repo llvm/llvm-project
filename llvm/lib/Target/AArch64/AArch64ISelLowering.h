@@ -345,7 +345,7 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
-  /// \brief Return the cost of the scaling factor used in the addressing
+  /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
   /// of the specified type.
   /// If the AM is supported, the return value must be >= 0.
@@ -360,10 +360,10 @@ public:
 
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
 
-  /// \brief Returns false if N is a bit extraction pattern of (X >> C) & Mask.
+  /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
   bool isDesirableToCommuteWithShift(const SDNode *N) const override;
 
-  /// \brief Returns true if it is beneficial to convert a load of a constant
+  /// Returns true if it is beneficial to convert a load of a constant
   /// to just the constant itself.
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override;

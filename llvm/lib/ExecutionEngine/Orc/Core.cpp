@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/Support/Format.h"
 
@@ -707,7 +708,7 @@ Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
 #endif
 }
 
-/// @brief Look up a symbol by searching a list of VSOs.
+/// Look up a symbol by searching a list of VSOs.
 Expected<JITEvaluatedSymbol>
 lookup(const std::vector<VSO *> VSOs, SymbolStringPtr Name,
        MaterializationDispatcher DispatchMaterialization) {

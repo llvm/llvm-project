@@ -19,6 +19,7 @@
 #define LLVM_ANALYSIS_DOMINANCEFRONTIER_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -179,7 +180,7 @@ extern template class DominanceFrontierBase<BasicBlock, false>;
 extern template class DominanceFrontierBase<BasicBlock, true>;
 extern template class ForwardDominanceFrontierBase<BasicBlock>;
 
-/// \brief Analysis pass which computes a \c DominanceFrontier.
+/// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis
     : public AnalysisInfoMixin<DominanceFrontierAnalysis> {
   friend AnalysisInfoMixin<DominanceFrontierAnalysis>;
@@ -187,14 +188,14 @@ class DominanceFrontierAnalysis
   static AnalysisKey Key;
 
 public:
-  /// \brief Provide the result type for this analysis pass.
+  /// Provide the result type for this analysis pass.
   using Result = DominanceFrontier;
 
-  /// \brief Run the analysis pass over a function and produce a dominator tree.
+  /// Run the analysis pass over a function and produce a dominator tree.
   DominanceFrontier run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Printer pass for the \c DominanceFrontier.
+/// Printer pass for the \c DominanceFrontier.
 class DominanceFrontierPrinterPass
     : public PassInfoMixin<DominanceFrontierPrinterPass> {
   raw_ostream &OS;

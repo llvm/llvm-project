@@ -122,9 +122,9 @@ ConstString Symbol::GetDisplayName() const {
 
 ConstString Symbol::GetReExportedSymbolName() const {
   if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString
-    // is used as the offset in the address range base address. We can
-    // then make this back into a string that is the re-exported name.
+    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
+    // as the offset in the address range base address. We can then make this
+    // back into a string that is the re-exported name.
     intptr_t str_ptr = m_addr_range.GetBaseAddress().GetOffset();
     if (str_ptr != 0)
       return ConstString((const char *)str_ptr);
@@ -136,9 +136,9 @@ ConstString Symbol::GetReExportedSymbolName() const {
 
 FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
   if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString
-    // is used as the offset in the address range base address. We can
-    // then make this back into a string that is the re-exported name.
+    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
+    // as the offset in the address range base address. We can then make this
+    // back into a string that is the re-exported name.
     intptr_t str_ptr = m_addr_range.GetByteSize();
     if (str_ptr != 0)
       return FileSpec((const char *)str_ptr, false);
@@ -148,15 +148,15 @@ FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
 
 void Symbol::SetReExportedSymbolName(const ConstString &name) {
   SetType(eSymbolTypeReExported);
-  // For eSymbolTypeReExported, the "const char *" from a ConstString
-  // is used as the offset in the address range base address.
+  // For eSymbolTypeReExported, the "const char *" from a ConstString is used
+  // as the offset in the address range base address.
   m_addr_range.GetBaseAddress().SetOffset((uintptr_t)name.GetCString());
 }
 
 bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
   if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString
-    // is used as the offset in the address range base address.
+    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
+    // as the offset in the address range base address.
     m_addr_range.SetByteSize(
         (uintptr_t)ConstString(fspec.GetPath().c_str()).GetCString());
     return true;
@@ -262,9 +262,8 @@ uint32_t Symbol::GetPrologueByteSize() {
       Function *function = base_address.CalculateSymbolContextFunction();
       if (function) {
         // Functions have line entries which can also potentially have end of
-        // prologue information.
-        // So if this symbol points to a function, use the prologue information
-        // from there.
+        // prologue information. So if this symbol points to a function, use
+        // the prologue information from there.
         m_type_data = function->GetPrologueByteSize();
       } else {
         ModuleSP module_sp(base_address.GetModule());
@@ -280,10 +279,9 @@ uint32_t Symbol::GetPrologueByteSize() {
             Address addr(base_address);
             addr.Slide(m_type_data);
 
-            // Check the first few instructions and look for one that has a line
-            // number that is
-            // different than the first entry. This is also done in
-            // Function::GetPrologueByteSize().
+            // Check the first few instructions and look for one that has a
+            // line number that is different than the first entry. This is also
+            // done in Function::GetPrologueByteSize().
             uint16_t total_offset = m_type_data;
             for (int idx = 0; idx < 6; ++idx) {
               SymbolContext sc_temp;
@@ -293,8 +291,8 @@ uint32_t Symbol::GetPrologueByteSize() {
               if (!(resolved_flags & eSymbolContextLineEntry))
                 break;
 
-              // If this line number is different than our first one, use it and
-              // we're done.
+              // If this line number is different than our first one, use it
+              // and we're done.
               if (sc_temp.line_entry.line != sc.line_entry.line) {
                 m_type_data = total_offset;
                 break;
@@ -309,12 +307,10 @@ uint32_t Symbol::GetPrologueByteSize() {
             }
 
             // Sanity check - this may be a function in the middle of code that
-            // has debug information, but
-            // not for this symbol.  So the line entries surrounding us won't
-            // lie inside our function.
-            // In that case, the line entry will be bigger than we are, so we do
-            // that quick check and
-            // if that is true, we just return 0.
+            // has debug information, but not for this symbol.  So the line
+            // entries surrounding us won't lie inside our function. In that
+            // case, the line entry will be bigger than we are, so we do that
+            // quick check and if that is true, we just return 0.
             if (m_type_data >= m_addr_range.GetByteSize())
               m_type_data = 0;
           } else {
@@ -420,9 +416,9 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
     // Try searching for the module file spec first using the full path
     module_sp = target.GetImages().FindFirstModule(module_spec);
     if (!module_sp) {
-      // Next try and find the module by basename in case environment
-      // variables or other runtime trickery causes shared libraries
-      // to be loaded from alternate paths
+      // Next try and find the module by basename in case environment variables
+      // or other runtime trickery causes shared libraries to be loaded from
+      // alternate paths
       module_spec.GetFileSpec().GetDirectory().Clear();
       module_sp = target.GetImages().FindFirstModule(module_spec);
     }
@@ -430,8 +426,7 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
 
   if (module_sp) {
     // There should not be cycles in the reexport list, but we don't want to
-    // crash if there are so make sure
-    // we haven't seen this before:
+    // crash if there are so make sure we haven't seen this before:
     if (!seen_modules.AppendIfNeeded(module_sp))
       return nullptr;
 
@@ -449,8 +444,8 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
       }
     }
     // If we didn't find the symbol in this module, it may be because this
-    // module re-exports some
-    // whole other library.  We have to search those as well:
+    // module re-exports some whole other library.  We have to search those as
+    // well:
     seen_modules.Append(module_sp);
 
     FileSpecList reexported_libraries =

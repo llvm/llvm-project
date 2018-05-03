@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief WebAssembly instruction format definitions.
+/// WebAssembly instruction format definitions.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -312,7 +312,7 @@ void X86AsmBackend::relaxInstruction(const MCInst &Inst,
   Res.setOpcode(RelaxedOp);
 }
 
-/// \brief Write a sequence of optimal nops to the output, covering \p Count
+/// Write a sequence of optimal nops to the output, covering \p Count
 /// bytes.
 /// \return - true on success, false on failure
 bool X86AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
@@ -487,7 +487,7 @@ namespace CU {
 class DarwinX86AsmBackend : public X86AsmBackend {
   const MCRegisterInfo &MRI;
 
-  /// \brief Number of registers that can be saved in a compact unwind encoding.
+  /// Number of registers that can be saved in a compact unwind encoding.
   enum { CU_NUM_SAVED_REGS = 6 };
 
   mutable unsigned SavedRegs[CU_NUM_SAVED_REGS];
@@ -497,7 +497,7 @@ class DarwinX86AsmBackend : public X86AsmBackend {
   unsigned MoveInstrSize;                ///< Size of a "move" instruction.
   unsigned StackDivide;                  ///< Amount to adjust stack size by.
 protected:
-  /// \brief Size of a "push" instruction for the given register.
+  /// Size of a "push" instruction for the given register.
   unsigned PushInstrSize(unsigned Reg) const {
     switch (Reg) {
       case X86::EBX:
@@ -518,7 +518,7 @@ protected:
     return 1;
   }
 
-  /// \brief Implementation of algorithm to generate the compact unwind encoding
+  /// Implementation of algorithm to generate the compact unwind encoding
   /// for the CFI instructions.
   uint32_t
   generateCompactUnwindEncodingImpl(ArrayRef<MCCFIInstruction> Instrs) const {
@@ -685,7 +685,7 @@ protected:
   }
 
 private:
-  /// \brief Get the compact unwind number for a given register. The number
+  /// Get the compact unwind number for a given register. The number
   /// corresponds to the enum lists in compact_unwind_encoding.h.
   int getCompactUnwindRegNum(unsigned Reg) const {
     static const MCPhysReg CU32BitRegs[7] = {
@@ -702,7 +702,7 @@ private:
     return -1;
   }
 
-  /// \brief Return the registers encoded for a compact encoding with a frame
+  /// Return the registers encoded for a compact encoding with a frame
   /// pointer.
   uint32_t encodeCompactUnwindRegistersWithFrame() const {
     // Encode the registers in the order they were saved --- 3-bits per
@@ -726,7 +726,7 @@ private:
     return RegEnc;
   }
 
-  /// \brief Create the permutation encoding used with frameless stacks. It is
+  /// Create the permutation encoding used with frameless stacks. It is
   /// passed the number of registers to be saved and an array of the registers
   /// saved.
   uint32_t encodeCompactUnwindRegistersWithoutFrame(unsigned RegCount) const {
@@ -820,7 +820,7 @@ public:
                                      MachO::CPU_SUBTYPE_I386_ALL);
   }
 
-  /// \brief Generate the compact unwind encoding for the CFI instructions.
+  /// Generate the compact unwind encoding for the CFI instructions.
   uint32_t generateCompactUnwindEncoding(
                              ArrayRef<MCCFIInstruction> Instrs) const override {
     return generateCompactUnwindEncodingImpl(Instrs);
@@ -840,7 +840,7 @@ public:
                                      MachO::CPU_TYPE_X86_64, Subtype);
   }
 
-  /// \brief Generate the compact unwind encoding for the CFI instructions.
+  /// Generate the compact unwind encoding for the CFI instructions.
   uint32_t generateCompactUnwindEncoding(
                              ArrayRef<MCCFIInstruction> Instrs) const override {
     return generateCompactUnwindEncodingImpl(Instrs);

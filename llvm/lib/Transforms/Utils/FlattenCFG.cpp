@@ -36,16 +36,16 @@ namespace {
 class FlattenCFGOpt {
   AliasAnalysis *AA;
 
-  /// \brief Use parallel-and or parallel-or to generate conditions for
+  /// Use parallel-and or parallel-or to generate conditions for
   /// conditional branches.
   bool FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder);
 
-  /// \brief If \param BB is the merge block of an if-region, attempt to merge
+  /// If \param BB is the merge block of an if-region, attempt to merge
   /// the if-region with an adjacent if-region upstream if two if-regions
   /// contain identical instructions.
   bool MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder);
 
-  /// \brief Compare a pair of blocks: \p Block1 and \p Block2, which
+  /// Compare a pair of blocks: \p Block1 and \p Block2, which
   /// are from two if-regions whose entry blocks are \p Head1 and \p
   /// Head2.  \returns true if \p Block1 and \p Block2 contain identical
   /// instructions, and have no memory reference alias with \p Head2.

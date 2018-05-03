@@ -166,7 +166,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-/// \brief Check if after \p OrigMI the only portion of super register
+/// Check if after \p OrigMI the only portion of super register
 /// of the destination register of \p OrigMI that is alive is that
 /// destination register.
 ///

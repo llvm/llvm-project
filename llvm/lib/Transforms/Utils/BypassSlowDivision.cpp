@@ -173,7 +173,7 @@ Value *FastDivInsertionTask::getReplacement(DivCacheTy &Cache) {
   return isDivisionOp() ? Value.Quotient : Value.Remainder;
 }
 
-/// \brief Check if a value looks like a hash.
+/// Check if a value looks like a hash.
 ///
 /// The routine is expected to detect values computed using the most common hash
 /// algorithms. Typically, hash computations end with one of the following

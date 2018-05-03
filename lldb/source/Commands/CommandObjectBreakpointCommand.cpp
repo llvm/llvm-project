@@ -412,8 +412,8 @@ protected:
           } else {
             BreakpointLocationSP bp_loc_sp(
                 bp->FindLocationByID(cur_bp_id.GetLocationID()));
-            // This breakpoint does have an associated location.
-            // Get its breakpoint options.
+            // This breakpoint does have an associated location. Get its
+            // breakpoint options.
             if (bp_loc_sp)
               bp_options = bp_loc_sp->GetLocationOptions();
           }
@@ -422,9 +422,9 @@ protected:
         }
       }
 
-      // If we are using script language, get the script interpreter
-      // in order to set or collect command callback.  Otherwise, call
-      // the methods associated with this object.
+      // If we are using script language, get the script interpreter in order
+      // to set or collect command callback.  Otherwise, call the methods
+      // associated with this object.
       if (m_options.m_use_script_language) {
         ScriptInterpreter *script_interp = m_interpreter.GetScriptInterpreter();
         // Special handling for one-liner specified inline.
@@ -456,16 +456,15 @@ private:
   std::vector<BreakpointOptions *> m_bp_options_vec; // This stores the
                                                      // breakpoint options that
                                                      // we are currently
-  // collecting commands for.  In the CollectData... calls we need
-  // to hand this off to the IOHandler, which may run asynchronously.
-  // So we have to have some way to keep it alive, and not leak it.
-  // Making it an ivar of the command object, which never goes away
-  // achieves this.  Note that if we were able to run
-  // the same command concurrently in one interpreter we'd have to
-  // make this "per invocation".  But there are many more reasons
-  // why it is not in general safe to do that in lldb at present,
-  // so it isn't worthwhile to come up with a more complex mechanism
-  // to address this particular weakness right now.
+  // collecting commands for.  In the CollectData... calls we need to hand this
+  // off to the IOHandler, which may run asynchronously. So we have to have
+  // some way to keep it alive, and not leak it. Making it an ivar of the
+  // command object, which never goes away achieves this.  Note that if we were
+  // able to run the same command concurrently in one interpreter we'd have to
+  // make this "per invocation".  But there are many more reasons why it is not
+  // in general safe to do that in lldb at present, so it isn't worthwhile to
+  // come up with a more complex mechanism to address this particular weakness
+  // right now.
   static const char *g_reader_instructions;
 };
 

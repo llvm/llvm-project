@@ -8,7 +8,7 @@
 //==-----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU Implementation of the IntrinsicInfo class.
+/// AMDGPU Implementation of the IntrinsicInfo class.
 //
 //===-----------------------------------------------------------------------===//
 

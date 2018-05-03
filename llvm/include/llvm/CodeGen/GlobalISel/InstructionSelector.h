@@ -221,6 +221,7 @@ enum {
   /// Add a temporary register to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - TempRegID - The temporary register ID to add
+  /// - TempRegFlags - The register flags to set
   GIR_AddTempRegister,
   /// Add an immediate to the specified instruction
   /// - InsnID - Instruction ID to modify
@@ -276,6 +277,8 @@ enum {
   /// Increment the rule coverage counter.
   /// - RuleID - The ID of the rule that was covered.
   GIR_Coverage,
+
+  GIU_NumOpcodes,
 };
 
 enum {
@@ -340,6 +343,10 @@ protected:
       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
       const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
       CodeGenCoverage &CoverageInfo) const;
+
+  virtual const int64_t *getMatchTable() const {
+    llvm_unreachable("Should have been overridden by tablegen if used");
+  }
 
   virtual bool testImmPredicate_I64(unsigned, int64_t) const {
     llvm_unreachable("Subclasses must override this to use tablegen");

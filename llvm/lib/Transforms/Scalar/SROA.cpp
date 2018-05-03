@@ -43,6 +43,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/Utils/Local.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -126,7 +127,7 @@ static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
 
 namespace {
 
-/// \brief A custom IRBuilder inserter which prefixes all names, but only in
+/// A custom IRBuilder inserter which prefixes all names, but only in
 /// Assert builds.
 class IRBuilderPrefixedInserter : public IRBuilderDefaultInserter {
   std::string Prefix;
@@ -146,23 +147,23 @@ protected:
   }
 };
 
-/// \brief Provide a type for IRBuilder that drops names in release builds.
+/// Provide a type for IRBuilder that drops names in release builds.
 using IRBuilderTy = IRBuilder<ConstantFolder, IRBuilderPrefixedInserter>;
 
-/// \brief A used slice of an alloca.
+/// A used slice of an alloca.
 ///
 /// This structure represents a slice of an alloca used by some instruction. It
 /// stores both the begin and end offsets of this use, a pointer to the use
 /// itself, and a flag indicating whether we can classify the use as splittable
 /// or not when forming partitions of the alloca.
 class Slice {
-  /// \brief The beginning offset of the range.
+  /// The beginning offset of the range.
   uint64_t BeginOffset = 0;
 
-  /// \brief The ending offset, not included in the range.
+  /// The ending offset, not included in the range.
   uint64_t EndOffset = 0;
 
-  /// \brief Storage for both the use of this slice and whether it can be
+  /// Storage for both the use of this slice and whether it can be
   /// split.
   PointerIntPair<Use *, 1, bool> UseAndIsSplittable;
 
@@ -184,7 +185,7 @@ public:
   bool isDead() const { return getUse() == nullptr; }
   void kill() { UseAndIsSplittable.setPointer(nullptr); }
 
-  /// \brief Support for ordering ranges.
+  /// Support for ordering ranges.
   ///
   /// This provides an ordering over ranges such that start offsets are
   /// always increasing, and within equal start offsets, the end offsets are
@@ -202,7 +203,7 @@ public:
     return false;
   }
 
-  /// \brief Support comparison with a single offset to allow binary searches.
+  /// Support comparison with a single offset to allow binary searches.
   friend LLVM_ATTRIBUTE_UNUSED bool operator<(const Slice &LHS,
                                               uint64_t RHSOffset) {
     return LHS.beginOffset() < RHSOffset;
@@ -228,7 +229,7 @@ template <> struct isPodLike<Slice> { static const bool value = true; };
 
 } // end namespace llvm
 
-/// \brief Representation of the alloca slices.
+/// Representation of the alloca slices.
 ///
 /// This class represents the slices of an alloca which are formed by its
 /// various uses. If a pointer escapes, we can't fully build a representation
@@ -237,16 +238,16 @@ template <> struct isPodLike<Slice> { static const bool value = true; };
 /// starting at a particular offset before splittable slices.
 class llvm::sroa::AllocaSlices {
 public:
-  /// \brief Construct the slices of a particular alloca.
+  /// Construct the slices of a particular alloca.
   AllocaSlices(const DataLayout &DL, AllocaInst &AI);
 
-  /// \brief Test whether a pointer to the allocation escapes our analysis.
+  /// Test whether a pointer to the allocation escapes our analysis.
   ///
   /// If this is true, the slices are never fully built and should be
   /// ignored.
   bool isEscaped() const { return PointerEscapingInstr; }
 
-  /// \brief Support for iterating over the slices.
+  /// Support for iterating over the slices.
   /// @{
   using iterator = SmallVectorImpl<Slice>::iterator;
   using range = iterator_range<iterator>;
@@ -261,10 +262,10 @@ public:
   const_iterator end() const { return Slices.end(); }
   /// @}
 
-  /// \brief Erase a range of slices.
+  /// Erase a range of slices.
   void erase(iterator Start, iterator Stop) { Slices.erase(Start, Stop); }
 
-  /// \brief Insert new slices for this alloca.
+  /// Insert new slices for this alloca.
   ///
   /// This moves the slices into the alloca's slices collection, and re-sorts
   /// everything so that the usual ordering properties of the alloca's slices
@@ -282,10 +283,10 @@ public:
   class partition_iterator;
   iterator_range<partition_iterator> partitions();
 
-  /// \brief Access the dead users for this alloca.
+  /// Access the dead users for this alloca.
   ArrayRef<Instruction *> getDeadUsers() const { return DeadUsers; }
 
-  /// \brief Access the dead operands referring to this alloca.
+  /// Access the dead operands referring to this alloca.
   ///
   /// These are operands which have cannot actually be used to refer to the
   /// alloca as they are outside its range and the user doesn't correct for
@@ -311,11 +312,11 @@ private:
   friend class AllocaSlices::SliceBuilder;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// \brief Handle to alloca instruction to simplify method interfaces.
+  /// Handle to alloca instruction to simplify method interfaces.
   AllocaInst &AI;
 #endif
 
-  /// \brief The instruction responsible for this alloca not having a known set
+  /// The instruction responsible for this alloca not having a known set
   /// of slices.
   ///
   /// When an instruction (potentially) escapes the pointer to the alloca, we
@@ -323,7 +324,7 @@ private:
   /// alloca. This will be null if the alloca slices are analyzed successfully.
   Instruction *PointerEscapingInstr;
 
-  /// \brief The slices of the alloca.
+  /// The slices of the alloca.
   ///
   /// We store a vector of the slices formed by uses of the alloca here. This
   /// vector is sorted by increasing begin offset, and then the unsplittable
@@ -331,7 +332,7 @@ private:
   /// details.
   SmallVector<Slice, 8> Slices;
 
-  /// \brief Instructions which will become dead if we rewrite the alloca.
+  /// Instructions which will become dead if we rewrite the alloca.
   ///
   /// Note that these are not separated by slice. This is because we expect an
   /// alloca to be completely rewritten or not rewritten at all. If rewritten,
@@ -339,7 +340,7 @@ private:
   /// they come from outside of the allocated space.
   SmallVector<Instruction *, 8> DeadUsers;
 
-  /// \brief Operands which will become dead if we rewrite the alloca.
+  /// Operands which will become dead if we rewrite the alloca.
   ///
   /// These are operands that in their particular use can be replaced with
   /// undef when we rewrite the alloca. These show up in out-of-bounds inputs
@@ -350,7 +351,7 @@ private:
   SmallVector<Use *, 8> DeadOperands;
 };
 
-/// \brief A partition of the slices.
+/// A partition of the slices.
 ///
 /// An ephemeral representation for a range of slices which can be viewed as
 /// a partition of the alloca. This range represents a span of the alloca's
@@ -366,32 +367,32 @@ private:
 
   using iterator = AllocaSlices::iterator;
 
-  /// \brief The beginning and ending offsets of the alloca for this
+  /// The beginning and ending offsets of the alloca for this
   /// partition.
   uint64_t BeginOffset, EndOffset;
 
-  /// \brief The start and end iterators of this partition.
+  /// The start and end iterators of this partition.
   iterator SI, SJ;
 
-  /// \brief A collection of split slice tails overlapping the partition.
+  /// A collection of split slice tails overlapping the partition.
   SmallVector<Slice *, 4> SplitTails;
 
-  /// \brief Raw constructor builds an empty partition starting and ending at
+  /// Raw constructor builds an empty partition starting and ending at
   /// the given iterator.
   Partition(iterator SI) : SI(SI), SJ(SI) {}
 
 public:
-  /// \brief The start offset of this partition.
+  /// The start offset of this partition.
   ///
   /// All of the contained slices start at or after this offset.
   uint64_t beginOffset() const { return BeginOffset; }
 
-  /// \brief The end offset of this partition.
+  /// The end offset of this partition.
   ///
   /// All of the contained slices end at or before this offset.
   uint64_t endOffset() const { return EndOffset; }
 
-  /// \brief The size of the partition.
+  /// The size of the partition.
   ///
   /// Note that this can never be zero.
   uint64_t size() const {
@@ -399,7 +400,7 @@ public:
     return EndOffset - BeginOffset;
   }
 
-  /// \brief Test whether this partition contains no slices, and merely spans
+  /// Test whether this partition contains no slices, and merely spans
   /// a region occupied by split slices.
   bool empty() const { return SI == SJ; }
 
@@ -416,7 +417,7 @@ public:
   iterator end() const { return SJ; }
   /// @}
 
-  /// \brief Get the sequence of split slice tails.
+  /// Get the sequence of split slice tails.
   ///
   /// These tails are of slices which start before this partition but are
   /// split and overlap into the partition. We accumulate these while forming
@@ -424,7 +425,7 @@ public:
   ArrayRef<Slice *> splitSliceTails() const { return SplitTails; }
 };
 
-/// \brief An iterator over partitions of the alloca's slices.
+/// An iterator over partitions of the alloca's slices.
 ///
 /// This iterator implements the core algorithm for partitioning the alloca's
 /// slices. It is a forward iterator as we don't support backtracking for
@@ -438,18 +439,18 @@ class AllocaSlices::partition_iterator
                                   Partition> {
   friend class AllocaSlices;
 
-  /// \brief Most of the state for walking the partitions is held in a class
+  /// Most of the state for walking the partitions is held in a class
   /// with a nice interface for examining them.
   Partition P;
 
-  /// \brief We need to keep the end of the slices to know when to stop.
+  /// We need to keep the end of the slices to know when to stop.
   AllocaSlices::iterator SE;
 
-  /// \brief We also need to keep track of the maximum split end offset seen.
+  /// We also need to keep track of the maximum split end offset seen.
   /// FIXME: Do we really?
   uint64_t MaxSplitSliceEndOffset = 0;
 
-  /// \brief Sets the partition to be empty at given iterator, and sets the
+  /// Sets the partition to be empty at given iterator, and sets the
   /// end iterator.
   partition_iterator(AllocaSlices::iterator SI, AllocaSlices::iterator SE)
       : P(SI), SE(SE) {
@@ -459,7 +460,7 @@ class AllocaSlices::partition_iterator
       advance();
   }
 
-  /// \brief Advance the iterator to the next partition.
+  /// Advance the iterator to the next partition.
   ///
   /// Requires that the iterator not be at the end of the slices.
   void advance() {
@@ -614,7 +615,7 @@ public:
   Partition &operator*() { return P; }
 };
 
-/// \brief A forward range over the partitions of the alloca's slices.
+/// A forward range over the partitions of the alloca's slices.
 ///
 /// This accesses an iterator range over the partitions of the alloca's
 /// slices. It computes these partitions on the fly based on the overlapping
@@ -638,7 +639,7 @@ static Value *foldSelectInst(SelectInst &SI) {
   return nullptr;
 }
 
-/// \brief A helper that folds a PHI node or a select.
+/// A helper that folds a PHI node or a select.
 static Value *foldPHINodeOrSelectInst(Instruction &I) {
   if (PHINode *PN = dyn_cast<PHINode>(&I)) {
     // If PN merges together the same value, return that value.
@@ -647,7 +648,7 @@ static Value *foldPHINodeOrSelectInst(Instruction &I) {
   return foldSelectInst(cast<SelectInst>(I));
 }
 
-/// \brief Builder for the alloca slices.
+/// Builder for the alloca slices.
 ///
 /// This class builds a set of alloca slices by recursively visiting the uses
 /// of an alloca and making a slice for each load and store at each offset.
@@ -663,7 +664,7 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   SmallDenseMap<Instruction *, unsigned> MemTransferSliceMap;
   SmallDenseMap<Instruction *, uint64_t> PHIOrSelectSizes;
 
-  /// \brief Set to de-duplicate dead instructions found in the use walk.
+  /// Set to de-duplicate dead instructions found in the use walk.
   SmallPtrSet<Instruction *, 4> VisitedDeadInsts;
 
 public:
@@ -1022,7 +1023,7 @@ private:
 
   void visitSelectInst(SelectInst &SI) { visitPHINodeOrSelectInst(SI); }
 
-  /// \brief Disable SROA entirely if there are unhandled users of the alloca.
+  /// Disable SROA entirely if there are unhandled users of the alloca.
   void visitInstruction(Instruction &I) { PI.setAborted(&I); }
 };
 
@@ -1351,7 +1352,7 @@ static void speculateSelectInstLoads(SelectInst &SI) {
   SI.eraseFromParent();
 }
 
-/// \brief Build a GEP out of a base pointer and indices.
+/// Build a GEP out of a base pointer and indices.
 ///
 /// This will return the BasePtr if that is valid, or build a new GEP
 /// instruction using the IRBuilder if GEP-ing is needed.
@@ -1369,7 +1370,7 @@ static Value *buildGEP(IRBuilderTy &IRB, Value *BasePtr,
                                NamePrefix + "sroa_idx");
 }
 
-/// \brief Get a natural GEP off of the BasePtr walking through Ty toward
+/// Get a natural GEP off of the BasePtr walking through Ty toward
 /// TargetTy without changing the offset of the pointer.
 ///
 /// This routine assumes we've already established a properly offset GEP with
@@ -1418,7 +1419,7 @@ static Value *getNaturalGEPWithType(IRBuilderTy &IRB, const DataLayout &DL,
   return buildGEP(IRB, BasePtr, Indices, NamePrefix);
 }
 
-/// \brief Recursively compute indices for a natural GEP.
+/// Recursively compute indices for a natural GEP.
 ///
 /// This is the recursive step for getNaturalGEPWithOffset that walks down the
 /// element types adding appropriate indices for the GEP.
@@ -1486,7 +1487,7 @@ static Value *getNaturalGEPRecursively(IRBuilderTy &IRB, const DataLayout &DL,
                                   Indices, NamePrefix);
 }
 
-/// \brief Get a natural GEP from a base pointer to a particular offset and
+/// Get a natural GEP from a base pointer to a particular offset and
 /// resulting in a particular type.
 ///
 /// The goal is to produce a "natural" looking GEP that works with the existing
@@ -1521,7 +1522,7 @@ static Value *getNaturalGEPWithOffset(IRBuilderTy &IRB, const DataLayout &DL,
                                   Indices, NamePrefix);
 }
 
-/// \brief Compute an adjusted pointer from Ptr by Offset bytes where the
+/// Compute an adjusted pointer from Ptr by Offset bytes where the
 /// resulting pointer has PointerTy.
 ///
 /// This tries very hard to compute a "natural" GEP which arrives at the offset
@@ -1630,7 +1631,7 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
   return Ptr;
 }
 
-/// \brief Compute the adjusted alignment for a load or store from an offset.
+/// Compute the adjusted alignment for a load or store from an offset.
 static unsigned getAdjustedAlignment(Instruction *I, uint64_t Offset,
                                      const DataLayout &DL) {
   unsigned Alignment;
@@ -1651,7 +1652,7 @@ static unsigned getAdjustedAlignment(Instruction *I, uint64_t Offset,
   return MinAlign(Alignment, Offset);
 }
 
-/// \brief Test whether we can convert a value from the old to the new type.
+/// Test whether we can convert a value from the old to the new type.
 ///
 /// This predicate should be used to guard calls to convertValue in order to
 /// ensure that we only try to convert viable values. The strategy is that we
@@ -1702,7 +1703,7 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy) {
   return true;
 }
 
-/// \brief Generic routine to convert an SSA value to a value of a different
+/// Generic routine to convert an SSA value to a value of a different
 /// type.
 ///
 /// This will try various different casting techniques, such as bitcasts,
@@ -1754,7 +1755,7 @@ static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
   return IRB.CreateBitCast(V, NewTy);
 }
 
-/// \brief Test whether the given slice use can be promoted to a vector.
+/// Test whether the given slice use can be promoted to a vector.
 ///
 /// This function is called to test each entry in a partition which is slated
 /// for a single slice.
@@ -1825,7 +1826,7 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   return true;
 }
 
-/// \brief Test whether the given alloca partitioning and range of slices can be
+/// Test whether the given alloca partitioning and range of slices can be
 /// promoted to a vector.
 ///
 /// This is a quick test to check whether we can rewrite a particular alloca
@@ -1938,7 +1939,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   return nullptr;
 }
 
-/// \brief Test whether a slice of an alloca is valid for integer widening.
+/// Test whether a slice of an alloca is valid for integer widening.
 ///
 /// This implements the necessary checking for the \c isIntegerWideningViable
 /// test below on a single slice of the alloca.
@@ -2016,7 +2017,7 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
   return true;
 }
 
-/// \brief Test whether the given alloca partition's integer operations can be
+/// Test whether the given alloca partition's integer operations can be
 /// widened to promotable ones.
 ///
 /// This is a quick test to check whether we can rewrite the integer loads and
@@ -2191,7 +2192,7 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   return V;
 }
 
-/// \brief Visitor to rewrite instructions using p particular slice of an alloca
+/// Visitor to rewrite instructions using p particular slice of an alloca
 /// to use a new alloca.
 ///
 /// Also implements the rewriting to vector-based accesses when the partition
@@ -2364,7 +2365,7 @@ private:
                           );
   }
 
-  /// \brief Compute suitable alignment to access this slice of the *new*
+  /// Compute suitable alignment to access this slice of the *new*
   /// alloca.
   ///
   /// You can optionally pass a type to this routine and if that type's ABI
@@ -2651,7 +2652,7 @@ private:
     return NewSI->getPointerOperand() == &NewAI && !SI.isVolatile();
   }
 
-  /// \brief Compute an integer value from splatting an i8 across the given
+  /// Compute an integer value from splatting an i8 across the given
   /// number of bytes.
   ///
   /// Note that this routine assumes an i8 is a byte. If that isn't true, don't
@@ -2678,7 +2679,7 @@ private:
     return V;
   }
 
-  /// \brief Compute a vector splat for a given element value.
+  /// Compute a vector splat for a given element value.
   Value *getVectorSplat(Value *V, unsigned NumElements) {
     V = IRB.CreateVectorSplat(NumElements, V, "vsplat");
     DEBUG(dbgs() << "       splat: " << *V << "\n");
@@ -3080,7 +3081,7 @@ private:
 
 namespace {
 
-/// \brief Visitor to rewrite aggregate loads and stores as scalar.
+/// Visitor to rewrite aggregate loads and stores as scalar.
 ///
 /// This pass aggressively rewrites all aggregate loads and stores on
 /// a particular pointer (or any pointer derived from it which we can identify)
@@ -3125,7 +3126,7 @@ private:
   // Conservative default is to not rewrite anything.
   bool visitInstruction(Instruction &I) { return false; }
 
-  /// \brief Generic recursive split emission class.
+  /// Generic recursive split emission class.
   template <typename Derived> class OpSplitter {
   protected:
     /// The builder used to form new instructions.
@@ -3149,7 +3150,7 @@ private:
         : IRB(InsertionPoint), GEPIndices(1, IRB.getInt32(0)), Ptr(Ptr) {}
 
   public:
-    /// \brief Generic recursive split emission routine.
+    /// Generic recursive split emission routine.
     ///
     /// This method recursively splits an aggregate op (load or store) into
     /// scalar or vector ops. It splits recursively until it hits a single value
@@ -3302,7 +3303,7 @@ private:
 
 } // end anonymous namespace
 
-/// \brief Strip aggregate type wrapping.
+/// Strip aggregate type wrapping.
 ///
 /// This removes no-op aggregate types wrapping an underlying type. It will
 /// strip as many layers of types as it can without changing either the type
@@ -3332,7 +3333,7 @@ static Type *stripAggregateTypeWrapping(const DataLayout &DL, Type *Ty) {
   return stripAggregateTypeWrapping(DL, InnerTy);
 }
 
-/// \brief Try to find a partition of the aggregate type passed in for a given
+/// Try to find a partition of the aggregate type passed in for a given
 /// offset and size.
 ///
 /// This recurses through the aggregate type and tries to compute a subtype
@@ -3438,7 +3439,7 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
-/// \brief Pre-split loads and stores to simplify rewriting.
+/// Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
 /// possible. This is important to do as a preprocessing step, as once we
@@ -3937,7 +3938,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
-/// \brief Rewrite an alloca partition's users.
+/// Rewrite an alloca partition's users.
 ///
 /// This routine drives both of the rewriting goals of the SROA pass. It tries
 /// to rewrite uses of an alloca partition to be conducive for SSA value
@@ -4086,7 +4087,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   return NewAI;
 }
 
-/// \brief Walks the slices of an alloca and form partitions based on them,
+/// Walks the slices of an alloca and form partitions based on them,
 /// rewriting each of their uses.
 bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (AS.begin() == AS.end())
@@ -4247,7 +4248,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   return Changed;
 }
 
-/// \brief Clobber a use with undef, deleting the used value if it becomes dead.
+/// Clobber a use with undef, deleting the used value if it becomes dead.
 void SROA::clobberUse(Use &U) {
   Value *OldV = U;
   // Replace the use with an undef value.
@@ -4262,7 +4263,7 @@ void SROA::clobberUse(Use &U) {
     }
 }
 
-/// \brief Analyze an alloca for SROA.
+/// Analyze an alloca for SROA.
 ///
 /// This analyzes the alloca to ensure we can reason about it, builds
 /// the slices of the alloca, and then hands it off to be split and
@@ -4331,7 +4332,7 @@ bool SROA::runOnAlloca(AllocaInst &AI) {
   return Changed;
 }
 
-/// \brief Delete the dead instructions accumulated in this run.
+/// Delete the dead instructions accumulated in this run.
 ///
 /// Recursively deletes the dead instructions we've accumulated. This is done
 /// at the very end to maximize locality of the recursive delete and to
@@ -4373,7 +4374,7 @@ bool SROA::deleteDeadInstructions(
   return Changed;
 }
 
-/// \brief Promote the allocas, using the best available technique.
+/// Promote the allocas, using the best available technique.
 ///
 /// This attempts to promote whatever allocas have been identified as viable in
 /// the PromotableAllocas list. If that list is empty, there is nothing to do.

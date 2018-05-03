@@ -62,6 +62,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -159,25 +160,25 @@ private:
   /// always available for the remat of all the siblings of the original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
-  /// \brief Finds the initial set of vreg intervals to allocate.
+  /// Finds the initial set of vreg intervals to allocate.
   void findVRegIntervalsToAlloc(const MachineFunction &MF, LiveIntervals &LIS);
 
-  /// \brief Constructs an initial graph.
+  /// Constructs an initial graph.
   void initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM, Spiller &VRegSpiller);
 
-  /// \brief Spill the given VReg.
+  /// Spill the given VReg.
   void spillVReg(unsigned VReg, SmallVectorImpl<unsigned> &NewIntervals,
                  MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
                  Spiller &VRegSpiller);
 
-  /// \brief Given a solved PBQP problem maps this solution back to a register
+  /// Given a solved PBQP problem maps this solution back to a register
   /// assignment.
   bool mapPBQPToRegAlloc(const PBQPRAGraph &G,
                          const PBQP::Solution &Solution,
                          VirtRegMap &VRM,
                          Spiller &VRegSpiller);
 
-  /// \brief Postprocessing before final spilling. Sets basic block "live in"
+  /// Postprocessing before final spilling. Sets basic block "live in"
   /// variables.
   void finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
                      VirtRegMap &VRM) const;
@@ -187,7 +188,7 @@ private:
 
 char RegAllocPBQP::ID = 0;
 
-/// @brief Set spill costs for each node in the PBQP reg-alloc graph.
+/// Set spill costs for each node in the PBQP reg-alloc graph.
 class SpillCosts : public PBQPRAConstraint {
 public:
   void apply(PBQPRAGraph &G) override {
@@ -211,7 +212,7 @@ public:
   }
 };
 
-/// @brief Add interference edges between overlapping vregs.
+/// Add interference edges between overlapping vregs.
 class Interference : public PBQPRAConstraint {
 private:
   using AllowedRegVecPtr = const PBQP::RegAlloc::AllowedRegVector *;

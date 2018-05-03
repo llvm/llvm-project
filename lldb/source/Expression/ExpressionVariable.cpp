@@ -9,6 +9,7 @@
 
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
@@ -69,8 +70,8 @@ void PersistentExpressionState::RegisterExecutionUnit(
        execution_unit_sp->GetJittedGlobalVariables()) {
     if (global_var.m_remote_addr != LLDB_INVALID_ADDRESS) {
       // Demangle the name before inserting it, so that lookups by the ConstStr
-      // of the demangled name
-      // will find the mangled one (needed for looking up metadata pointers.)
+      // of the demangled name will find the mangled one (needed for looking up
+      // metadata pointers.)
       Mangled mangler(global_var.m_name);
       mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
       m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;
@@ -79,4 +80,14 @@ void PersistentExpressionState::RegisterExecutionUnit(
                     global_var.m_name.GetCString(), global_var.m_remote_addr);
     }
   }
+}
+
+ConstString PersistentExpressionState::GetNextPersistentVariableName(
+    Target &target, llvm::StringRef Prefix) {
+  llvm::SmallString<64> name;
+  {
+    llvm::raw_svector_ostream os(name);
+    os << Prefix << target.GetNextPersistentVariableIndex();
+  }
+  return ConstString(name);
 }

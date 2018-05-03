@@ -34,9 +34,9 @@ public:
         m_object_name(), m_object_offset(0), m_object_size(0),
         m_source_mappings() {}
 
-  ModuleSpec(const FileSpec &file_spec)
+  ModuleSpec(const FileSpec &file_spec, const UUID& uuid = UUID())
       : m_file(file_spec), m_platform_file(), m_symbol_file(), m_arch(),
-        m_uuid(), m_object_name(), m_object_offset(0),
+        m_uuid(uuid), m_object_name(), m_object_offset(0),
         m_object_size(file_spec.GetByteSize()), m_source_mappings() {}
 
   ModuleSpec(const FileSpec &file_spec, const ArchSpec &arch)
@@ -341,8 +341,8 @@ public:
     m_specs.insert(m_specs.end(), rhs.m_specs.begin(), rhs.m_specs.end());
   }
 
-  // The index "i" must be valid and this can't be used in
-  // multi-threaded code as no mutex lock is taken.
+  // The index "i" must be valid and this can't be used in multi-threaded code
+  // as no mutex lock is taken.
   ModuleSpec &GetModuleSpecRefAtIndex(size_t i) { return m_specs[i]; }
 
   bool GetModuleSpecAtIndex(size_t i, ModuleSpec &module_spec) const {

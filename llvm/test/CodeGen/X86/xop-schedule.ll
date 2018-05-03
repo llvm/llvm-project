@@ -11,8 +11,8 @@ define void @test_vfrczpd(<2 x double> %a0, <4 x double> %a1, <2 x double> *%a2,
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczpd %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vfrczpd %ymm1, %ymm1 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczpd (%rdi), %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vfrczpd (%rsi), %ymm1 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczpd (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vfrczpd (%rsi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -37,8 +37,8 @@ define void @test_vfrczps(<4 x float> %a0, <4 x double> %a1, <4 x float> *%a2, <
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczps %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vfrczps %ymm1, %ymm1 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczps (%rdi), %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vfrczps (%rsi), %ymm1 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczps (%rdi), %xmm0 # sched: [9:1.00]
+; GENERIC-NEXT:    vfrczps (%rsi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -62,7 +62,7 @@ define void @test_vfrczsd(<2 x double> %a0, <2 x double> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczsd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczsd (%rdi), %xmm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczsd (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -82,7 +82,7 @@ define void @test_vfrczss(<4 x float> %a0, <4 x double> *%a1) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vfrczss %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vfrczss (%rdi), %xmm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vfrczss (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -124,8 +124,8 @@ define void @test_vpcmov_256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2, <4 x i
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpcmov (%rdi), %ymm1, %ymm0, %ymm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpcmov %ymm2, (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpcmov (%rdi), %ymm1, %ymm0, %ymm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vpcmov %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -212,8 +212,8 @@ define void @test_vpermil2pd_128(<2 x double> %a0, <2 x double> %a1, <2 x double
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpermil2pd $3, %xmm2, %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpermil2pd $3, %xmm2, (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpermil2pd $3, (%rdi), %xmm1, %xmm0, %xmm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpermil2pd $3, %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpermil2pd $3, (%rdi), %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -234,8 +234,8 @@ define void @test_vpermil2pd_256(<4 x double> %a0, <4 x double> %a1, <4 x double
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpermil2pd $3, %ymm2, %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpermil2pd $3, %ymm2, (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpermil2pd $3, (%rdi), %ymm1, %ymm0, %ymm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpermil2pd $3, %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vpermil2pd $3, (%rdi), %ymm1, %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -258,8 +258,8 @@ define void @test_vpermil2ps_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpermil2ps $3, %xmm2, %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpermil2ps $3, %xmm2, (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpermil2ps $3, (%rdi), %xmm1, %xmm0, %xmm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpermil2ps $3, %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpermil2ps $3, (%rdi), %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -280,8 +280,8 @@ define void @test_vpermil2ps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpermil2ps $3, %ymm2, %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpermil2ps $3, %ymm2, (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpermil2ps $3, (%rdi), %ymm1, %ymm0, %ymm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpermil2ps $3, %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vpermil2ps $3, (%rdi), %ymm1, %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -844,8 +844,8 @@ define void @test_vpperm(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i64> 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpperm %xmm2, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; GENERIC-NEXT:    vpperm (%rdi), %xmm1, %xmm0, %xmm0 # sched: [6:0.50]
-; GENERIC-NEXT:    vpperm %xmm2, (%rdi), %xmm0, %xmm0 # sched: [6:0.50]
+; GENERIC-NEXT:    vpperm (%rdi), %xmm1, %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpperm %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

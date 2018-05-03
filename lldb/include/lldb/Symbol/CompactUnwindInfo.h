@@ -22,23 +22,18 @@
 namespace lldb_private {
 
 // Compact Unwind info is an unwind format used on Darwin.  The unwind
-// instructions
-// for typical compiler-generated functions can be expressed in a 32-bit
-// encoding.
-// The format includes a two-level index so the unwind information for a
-// function
-// can be found by two binary searches in the section.  It can represent both
-// stack frames that use a frame-pointer register and frameless functions, on
-// i386/x86_64 for instance.  When a function is too complex to be represented
-// in
-// the compact unwind format, it calls out to eh_frame unwind instructions.
+// instructions for typical compiler-generated functions can be expressed in a
+// 32-bit encoding. The format includes a two-level index so the unwind
+// information for a function can be found by two binary searches in the
+// section.  It can represent both stack frames that use a frame-pointer
+// register and frameless functions, on i386/x86_64 for instance.  When a
+// function is too complex to be represented in the compact unwind format, it
+// calls out to eh_frame unwind instructions.
 
 // On Mac OS X / iOS, a function will have either a compact unwind
-// representation
-// or an eh_frame representation.  If lldb is going to benefit  from the
-// compiler's
-// description about saved register locations, it must be able to read both
-// sources of information.
+// representation or an eh_frame representation.  If lldb is going to benefit
+// from the compiler's description about saved register locations, it must be
+// able to read both sources of information.
 
 class CompactUnwindInfo {
 public:
@@ -54,9 +49,8 @@ private:
   // The top level index entries of the compact unwind info
   //   (internal representation of struct
   //   unwind_info_section_header_index_entry)
-  // There are relatively few of these (one per 500/1000 functions, depending on
-  // format) so
-  // creating them on first scan will not be too costly.
+  // There are relatively few of these (one per 500/1000 functions, depending
+  // on format) so creating them on first scan will not be too costly.
   struct UnwindIndex {
     uint32_t function_offset; // The offset of the first function covered by
                               // this index
@@ -84,8 +78,7 @@ private:
   };
 
   // An internal object used to store the information we retrieve about a
-  // function --
-  // the encoding bits and possibly the LSDA/personality function.
+  // function -- the encoding bits and possibly the LSDA/personality function.
   struct FunctionInfo {
     uint32_t encoding;    // compact encoding 32-bit value for this function
     Address lsda_address; // the address of the LSDA data for this function

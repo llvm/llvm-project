@@ -49,17 +49,36 @@ class MiniDumpTestCase(TestBase):
         self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
         self.assertTrue(self.process, PROCESS_IS_VALID)
         expected_modules = [
-            r"C:\Windows\System32/MSVCP120D.dll",
-            r"C:\Windows\SysWOW64/kernel32.dll",
-            r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug/fizzbuzz.exe",
-            r"C:\Windows\System32/MSVCR120D.dll",
-            r"C:\Windows\SysWOW64/KERNELBASE.dll",
-            r"C:\Windows\SysWOW64/ntdll.dll",
+            {
+                'filename' : r"C:\Windows\System32/MSVCP120D.dll",
+                'uuid' : '6E51053C-E757-EB40-8D3F-9722C5BD80DD-01000000',
+            },
+            {
+                'filename' : r"C:\Windows\SysWOW64/kernel32.dll",
+                'uuid' : '1B7ECBE5-5E00-1341-AB98-98D6913B52D8-02000000',
+            },
+            {
+                'filename' : r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug/fizzbuzz.exe",
+                'uuid' : '91B7450F-969A-F946-BF8F-2D6076EA421A-11000000',
+            },
+            {
+                'filename' : r"C:\Windows\System32/MSVCR120D.dll",
+                'uuid' : '86FB8263-C446-4640-AE42-8D97B3F91FF2-01000000',
+            },
+            {
+                'filename' : r"C:\Windows\SysWOW64/KERNELBASE.dll",
+                'uuid' : '4152F90B-0DCB-D44B-AC5D-186A6452E522-01000000',
+            },
+            {
+                'filename' : r"C:\Windows\SysWOW64/ntdll.dll",
+                'uuid' : '6A84B0BB-2C40-5240-A16B-67650BBFE6B0-02000000',
+            },
         ]
         self.assertEqual(self.target.GetNumModules(), len(expected_modules))
         for module, expected in zip(self.target.modules, expected_modules):
             self.assertTrue(module.IsValid())
-            self.assertEqual(module.file.fullpath, expected)
+            self.assertEqual(module.file.fullpath, expected['filename'])
+            self.assertEqual(module.GetUUIDString(), expected['uuid'])
 
     @expectedFailureAll(bugnumber="llvm.org/pr35193", hostoslist=["windows"])
     def test_stack_info_in_mini_dump(self):

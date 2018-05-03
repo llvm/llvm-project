@@ -105,9 +105,9 @@ typedef enum SortOrder {
 } SortOrder;
 
 //----------------------------------------------------------------------
-// LazyBool is for boolean values that need to be calculated lazily.
-// Values start off set to eLazyBoolCalculate, and then they can be
-// calculated once and set to eLazyBoolNo or eLazyBoolYes.
+// LazyBool is for boolean values that need to be calculated lazily. Values
+// start off set to eLazyBoolCalculate, and then they can be calculated once
+// and set to eLazyBoolNo or eLazyBoolYes.
 //----------------------------------------------------------------------
 typedef enum LazyBool {
   eLazyBoolCalculate = -1,
@@ -217,8 +217,7 @@ enum class LineStatus {
 enum class TypeValidatorResult : bool { Success = true, Failure = false };
 
 //----------------------------------------------------------------------
-// Enumerations that can be used to specify scopes types when looking up
-// types.
+// Enumerations that can be used to specify scopes types when looking up types.
 //----------------------------------------------------------------------
 enum class CompilerContextKind {
   Invalid = 0,
@@ -235,8 +234,8 @@ enum class CompilerContextKind {
 };
 
 //----------------------------------------------------------------------
-// Enumerations that can be used to specify the kind of metric we're
-// looking at when collecting stats.
+// Enumerations that can be used to specify the kind of metric we're looking at
+// when collecting stats.
 //----------------------------------------------------------------------
 enum StatisticKind {
   ExpressionSuccessful = 0,

@@ -35,7 +35,7 @@
 
 namespace mca {
 
-/// \brief A view that collects and prints a few performance numbers.
+/// A view that collects and prints a few performance numbers.
 class SummaryView : public View {
   const SourceMgr &Source;
   const unsigned DispatchWidth;

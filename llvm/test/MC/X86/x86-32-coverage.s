@@ -10768,3 +10768,27 @@ btcl $4, (%eax)
 // CHECK: tpause %eax
 // CHECK:  encoding: [0x66,0x0f,0xae,0xf0]
 	tpause %eax
+
+// CHECK: movdiri %eax, 64(%edx,%edi)
+// CHECK: # encoding: [0x0f,0x38,0xf9,0x44,0x3a,0x40]
+          movdiri %eax, 64(%edx,%edi)
+
+// CHECK: movdir64b 485498096, %ecx
+// CHECK: # encoding: [0x66,0x0f,0x38,0xf8,0x0d,0xf0,0x1c,0xf0,0x1c]
+          movdir64b 485498096, %ecx
+
+// CHECK: movdir64b 485498096, %cx
+// CHECK: # encoding: [0x67,0x66,0x0f,0x38,0xf8,0x0d,0xf0,0x1c,0xf0,0x1c]
+          movdir64b 485498096, %cx
+
+// CHECK: movdir64b (%edx), %eax
+// CHECK: # encoding: [0x66,0x0f,0x38,0xf8,0x02]
+          movdir64b (%edx), %eax
+
+// CHECK: movdir64b (%esi), %eax
+// CHECK: # encoding: [0x66,0x0f,0x38,0xf8,0x06]
+          movdir64b (%esi), %eax
+
+// CHECK: movdir64b (%si), %ax
+// CHECK: # encoding: [0x67,0x66,0x0f,0x38,0xf8,0x04]
+          movdir64b (%si), %ax

@@ -32,7 +32,8 @@ public:
   enum DbgValueKind {
     SDNODE = 0,             ///< Value is the result of an expression.
     CONST = 1,              ///< Value is a constant.
-    FRAMEIX = 2             ///< Value is contents of a stack location.
+    FRAMEIX = 2,            ///< Value is contents of a stack location.
+    VREG = 3                ///< Value is a virtual register.
   };
 private:
   union {
@@ -42,6 +43,7 @@ private:
     } s;
     const Value *Const;     ///< Valid for constants.
     unsigned FrameIx;       ///< Valid for stack objects.
+    unsigned VReg;          ///< Valid for registers.
   } u;
   DIVariable *Var;
   DIExpression *Expr;
@@ -77,6 +79,14 @@ public:
     u.FrameIx = FI;
   }
 
+  /// Constructor for virtual registers.
+  SDDbgValue(DIVariable *Var, DIExpression *Expr, unsigned VReg, bool indir,
+             DebugLoc dl, unsigned O)
+      : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(indir) {
+    kind = VREG;
+    u.VReg = VReg;
+  }
+
   /// Returns the kind.
   DbgValueKind getKind() const { return kind; }
 
@@ -97,6 +107,9 @@ public:
 
   /// Returns the FrameIx for a stack object
   unsigned getFrameIx() const { assert (kind==FRAMEIX); return u.FrameIx; }
+
+  /// Returns the Virtual Register for a VReg
+  unsigned getVReg() const { assert (kind==VREG); return u.VReg; }
 
   /// Returns whether this is an indirect value.
   bool isIndirect() const { return IsIndirect; }

@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -266,7 +267,7 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-/// \brief Adds register dependencies (data, anti, and output) from this SUnit
+/// Adds register dependencies (data, anti, and output) from this SUnit
 /// to following instructions in the same scheduling region that depend the
 /// physical register referenced at OperIdx.
 void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
@@ -468,7 +469,7 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
     CurrentVRegDefs.insert(VReg2SUnit(Reg, LaneMask, SU));
 }
 
-/// \brief Adds a register data dependency if the instruction that defines the
+/// Adds a register data dependency if the instruction that defines the
 /// virtual register used at OperIdx is mapped to an SUnit. Add a register
 /// antidependency from this SUnit to instructions that occur later in the same
 /// scheduling region if they write the virtual register.
@@ -514,7 +515,7 @@ void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
   }
 }
 
-/// \brief Creates an SUnit for each real instruction, numbered in top-down
+/// Creates an SUnit for each real instruction, numbered in top-down
 /// topological order. The instruction order A < B, implies that no edge exists
 /// from B to A.
 ///
@@ -1212,7 +1213,7 @@ public:
     RootSet[SU->NodeNum] = RData;
   }
 
-  /// \brief Called once for each tree edge after calling visitPostOrderNode on
+  /// Called once for each tree edge after calling visitPostOrderNode on
   /// the predecessor. Increment the parent node's instruction count and
   /// preemptively join this subtree to its parent's if it is small enough.
   void visitPostorderEdge(const SDep &PredDep, const SUnit *Succ) {

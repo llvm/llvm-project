@@ -1129,7 +1129,7 @@ static std::error_code getRelocationValueString(const RelocationRef &Rel,
   llvm_unreachable("unknown object file format");
 }
 
-/// @brief Indicates whether this relocation should hidden when listing
+/// Indicates whether this relocation should hidden when listing
 /// relocations, usually because it is the trailing part of a multipart
 /// relocation that will be printed as part of the leading relocation.
 static bool getHidden(RelocationRef RelRef) {
@@ -2149,7 +2149,7 @@ static void DumpObject(const COFFImportFile *I, const Archive *A) {
     printCOFFSymbolTable(I);
 }
 
-/// @brief Dump each object file in \a a;
+/// Dump each object file in \a a;
 static void DumpArchive(const Archive *a) {
   Error Err = Error::success();
   for (auto &C : a->children(Err)) {
@@ -2170,7 +2170,7 @@ static void DumpArchive(const Archive *a) {
     report_error(a->getFileName(), std::move(Err));
 }
 
-/// @brief Open file and figure out how to dump it.
+/// Open file and figure out how to dump it.
 static void DumpInput(StringRef file) {
 
   // If we are using the Mach-O specific object file parser, then let it parse

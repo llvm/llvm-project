@@ -470,7 +470,7 @@ void RegAllocFast::definePhysReg(MachineBasicBlock::iterator MI,
   }
 }
 
-/// \brief Return the cost of spilling clearing out PhysReg and aliases so it is
+/// Return the cost of spilling clearing out PhysReg and aliases so it is
 /// free for allocation. Returns 0 when PhysReg is free or disabled with all
 /// aliases disabled - it can be allocated directly.
 /// \returns spillImpossible when PhysReg or an alias can't be spilled.
@@ -519,7 +519,7 @@ unsigned RegAllocFast::calcSpillCost(MCPhysReg PhysReg) const {
   return Cost;
 }
 
-/// \brief This method updates local state so that we know that PhysReg is the
+/// This method updates local state so that we know that PhysReg is the
 /// proper container for VirtReg now.  The physical register must not be used
 /// for anything else when this is called.
 void RegAllocFast::assignVirtToPhysReg(LiveReg &LR, MCPhysReg PhysReg) {

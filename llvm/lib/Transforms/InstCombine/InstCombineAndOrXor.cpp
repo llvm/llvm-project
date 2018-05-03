@@ -75,7 +75,7 @@ static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
   return Builder.CreateFCmp(Pred, LHS, RHS);
 }
 
-/// \brief Transform BITWISE_OP(BSWAP(A),BSWAP(B)) or
+/// Transform BITWISE_OP(BSWAP(A),BSWAP(B)) or
 /// BITWISE_OP(BSWAP(A), Constant) to BSWAP(BITWISE_OP(A, B))
 /// \param I Binary operator to transform.
 /// \return Pointer to node that must replace the original binary operator, or
@@ -1675,7 +1675,18 @@ Instruction *InstCombiner::MatchBSwap(BinaryOperator &I) {
   bool OrOfAnds = match(Op0, m_And(m_Value(), m_Value())) &&
                   match(Op1, m_And(m_Value(), m_Value()));
 
-  if (!OrOfOrs && !OrOfShifts && !OrOfAnds)
+  // (A << B) | (C & D)                              -> bswap if possible.
+  // The bigger pattern here is ((A & C1) << C2) | ((B >> C2) & C1), which is a
+  // part of the bswap idiom for specific values of C1, C2 (e.g. C1 = 16711935,
+  // C2 = 8 for i32).
+  // This pattern can occur when the operands of the 'or' are not canonicalized
+  // for some reason (not having only one use, for example).
+  bool OrOfAndAndSh = (match(Op0, m_LogicalShift(m_Value(), m_Value())) &&
+                       match(Op1, m_And(m_Value(), m_Value()))) ||
+                      (match(Op0, m_And(m_Value(), m_Value())) &&
+                       match(Op1, m_LogicalShift(m_Value(), m_Value())));
+
+  if (!OrOfOrs && !OrOfShifts && !OrOfAnds && !OrOfAndAndSh)
     return nullptr;
 
   SmallVector<Instruction*, 4> Insts;
@@ -2412,14 +2423,19 @@ Value *InstCombiner::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
 }
 
 /// If we have a masked merge, in the canonical form of:
+/// (assuming that A only has one use.)
 ///   |        A  |  |B|
 ///   ((x ^ y) & M) ^ y
 ///    |  D  |
 /// * If M is inverted:
 ///      |  D  |
 ///     ((x ^ y) & ~M) ^ y
-///   If A has one use, and, we want to canonicalize it to non-inverted mask:
+///   We can canonicalize by swapping the final xor operand
+///   to eliminate the 'not' of the mask.
 ///     ((x ^ y) & M) ^ x
+/// * If M is a constant, and D has one use, we transform to 'and' / 'or' ops
+///   because that shortens the dependency chain and improves analysis:
+///     (x & M) | (y & ~M)
 static Instruction *visitMaskedMerge(BinaryOperator &I,
                                      InstCombiner::BuilderTy &Builder) {
   Value *B, *X, *D;
@@ -2436,6 +2452,15 @@ static Instruction *visitMaskedMerge(BinaryOperator &I,
     // De-invert the mask and swap the value in B part.
     Value *NewA = Builder.CreateAnd(D, NotM);
     return BinaryOperator::CreateXor(NewA, X);
+  }
+
+  Constant *C;
+  if (D->hasOneUse() && match(M, m_Constant(C))) {
+    // Unfold.
+    Value *LHS = Builder.CreateAnd(X, C);
+    Value *NotC = Builder.CreateNot(C);
+    Value *RHS = Builder.CreateAnd(B, NotC);
+    return BinaryOperator::CreateOr(LHS, RHS);
   }
 
   return nullptr;

@@ -26,7 +26,7 @@
 
 namespace mca {
 
-/// \brief A printer class that knows how to collects statistics on the
+/// A printer class that knows how to collects statistics on the
 /// code analyzed by the llvm-mca tool.
 ///
 /// This class knows how to print out the analysis information collected

@@ -115,14 +115,15 @@ namespace {
     KEYNOOPENCL = 0x02000,
     WCHARSUPPORT = 0x04000,
     HALFSUPPORT = 0x08000,
-    KEYCONCEPTS = 0x10000,
-    KEYOBJC2    = 0x20000,
-    KEYZVECTOR  = 0x40000,
-    KEYCOROUTINES = 0x80000,
-    KEYMODULES = 0x100000,
-    KEYCXX2A = 0x200000,
+    CHAR8SUPPORT = 0x10000,
+    KEYCONCEPTS = 0x20000,
+    KEYOBJC2    = 0x40000,
+    KEYZVECTOR  = 0x80000,
+    KEYCOROUTINES = 0x100000,
+    KEYMODULES = 0x200000,
+    KEYCXX2A = 0x400000,
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX2A,
-    KEYALL = (0x3fffff & ~KEYNOMS18 &
+    KEYALL = (0x7fffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 
@@ -151,6 +152,7 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.Bool && (Flags & BOOLSUPPORT)) return KS_Enabled;
   if (LangOpts.Half && (Flags & HALFSUPPORT)) return KS_Enabled;
   if (LangOpts.WChar && (Flags & WCHARSUPPORT)) return KS_Enabled;
+  if (LangOpts.Char8 && (Flags & CHAR8SUPPORT)) return KS_Enabled;
   if (LangOpts.AltiVec && (Flags & KEYALTIVEC)) return KS_Enabled;
   if (LangOpts.OpenCL && (Flags & KEYOPENCL)) return KS_Enabled;
   if (!LangOpts.CPlusPlus && (Flags & KEYNOCXX)) return KS_Enabled;

@@ -366,6 +366,7 @@ public:
   const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;
   void updateSymbols(function_ref<void(Symbol &)> Callable);
+  void removeSymbols(function_ref<bool(Symbol &)> ToRemove);
 
   void removeSectionReferences(const SectionBase *Sec) override;
   void initialize(SectionTableRef SecTable) override;

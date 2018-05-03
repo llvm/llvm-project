@@ -20,7 +20,7 @@ namespace llvm {
 
 class raw_ostream;
 
-/// \brief Utility for building string tables with deduplicated suffixes.
+/// Utility for building string tables with deduplicated suffixes.
 class StringTableBuilder {
 public:
   enum Kind { ELF, WinCOFF, MachO, RAW, DWARF };
@@ -39,13 +39,13 @@ public:
   StringTableBuilder(Kind K, unsigned Alignment = 1);
   ~StringTableBuilder();
 
-  /// \brief Add a string to the builder. Returns the position of S in the
+  /// Add a string to the builder. Returns the position of S in the
   /// table. The position will be changed if finalize is used.
   /// Can only be used before the table is finalized.
   size_t add(CachedHashStringRef S);
   size_t add(StringRef S) { return add(CachedHashStringRef(S)); }
 
-  /// \brief Analyze the strings and build the final table. No more strings can
+  /// Analyze the strings and build the final table. No more strings can
   /// be added after this point.
   void finalize();
 
@@ -53,7 +53,7 @@ public:
   /// returned by add will still be valid.
   void finalizeInOrder();
 
-  /// \brief Get the offest of a string in the string table. Can only be used
+  /// Get the offest of a string in the string table. Can only be used
   /// after the table is finalized.
   size_t getOffset(CachedHashStringRef S) const;
   size_t getOffset(StringRef S) const {

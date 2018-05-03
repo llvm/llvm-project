@@ -35,6 +35,15 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
 
 MCObjectStreamer::~MCObjectStreamer() {}
 
+// AssemblerPtr is used for evaluation of expressions and causes
+// difference between asm and object outputs. Return nullptr to in
+// inline asm mode to limit divergence to assembly inputs.
+MCAssembler *MCObjectStreamer::getAssemblerPtr() {
+  if (getUseAssemblerInfoForParsing())
+    return Assembler.get();
+  return nullptr;
+}
+
 void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
   if (PendingLabels.empty())
     return;
@@ -49,6 +58,32 @@ void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
     Sym->setOffset(FOffset);
   }
   PendingLabels.clear();
+}
+
+void MCObjectStreamer::addFragmentAtoms() {
+  // First, scan the symbol table to build a lookup table from fragments to
+  // defining symbols.
+  DenseMap<const MCFragment *, const MCSymbol *> DefiningSymbolMap;
+  for (const MCSymbol &Symbol : getAssembler().symbols()) {
+    if (getAssembler().isSymbolLinkerVisible(Symbol) && Symbol.isInSection() &&
+        !Symbol.isVariable()) {
+      // An atom defining symbol should never be internal to a fragment.
+      assert(Symbol.getOffset() == 0 &&
+             "Invalid offset in atom defining symbol!");
+      DefiningSymbolMap[Symbol.getFragment()] = &Symbol;
+    }
+  }
+
+  // Set the fragment atom associations by tracking the last seen atom defining
+  // symbol.
+  for (MCSection &Sec : getAssembler()) {
+    const MCSymbol *CurrentAtom = nullptr;
+    for (MCFragment &Frag : Sec) {
+      if (const MCSymbol *Symbol = DefiningSymbolMap.lookup(&Frag))
+        CurrentAtom = Symbol;
+      Frag.setAtom(CurrentAtom);
+    }
+  }
 }
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
@@ -155,7 +190,7 @@ void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
 
   // Avoid fixups when possible.
   int64_t AbsValue;
-  if (Value->evaluateAsAbsolute(AbsValue, getAssembler())) {
+  if (Value->evaluateAsAbsolute(AbsValue, getAssemblerPtr())) {
     if (!isUIntN(8 * Size, AbsValue) && !isIntN(8 * Size, AbsValue)) {
       getContext().reportError(
           Loc, "value evaluated as " + Twine(AbsValue) + " is out of range.");
@@ -217,7 +252,7 @@ void MCObjectStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc, MCFragment *F) {
 
 void MCObjectStreamer::EmitULEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
     EmitULEB128IntValue(IntValue);
     return;
   }
@@ -226,7 +261,7 @@ void MCObjectStreamer::EmitULEB128Value(const MCExpr *Value) {
 
 void MCObjectStreamer::EmitSLEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
     EmitSLEB128IntValue(IntValue);
     return;
   }
@@ -254,7 +289,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
 
   int64_t IntSubsection = 0;
   if (Subsection &&
-      !Subsection->evaluateAsAbsolute(IntSubsection, getAssembler()))
+      !Subsection->evaluateAsAbsolute(IntSubsection, getAssemblerPtr()))
     report_fatal_error("Cannot evaluate subsection number");
   if (IntSubsection < 0 || IntSubsection > 8192)
     report_fatal_error("Subsection number out of range");
@@ -400,7 +435,7 @@ void MCObjectStreamer::EmitDwarfAdvanceLineAddr(int64_t LineDelta,
   }
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
   int64_t Res;
-  if (AddrDelta->evaluateAsAbsolute(Res, getAssembler())) {
+  if (AddrDelta->evaluateAsAbsolute(Res, getAssemblerPtr())) {
     MCDwarfLineAddr::Emit(this, Assembler->getDWARFLinetableParams(), LineDelta,
                           Res);
     return;
@@ -412,7 +447,7 @@ void MCObjectStreamer::EmitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  const MCSymbol *Label) {
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
   int64_t Res;
-  if (AddrDelta->evaluateAsAbsolute(Res, getAssembler())) {
+  if (AddrDelta->evaluateAsAbsolute(Res, getAssemblerPtr())) {
     MCDwarfFrameEmitter::EmitAdvanceLoc(*this, Res);
     return;
   }
@@ -608,7 +643,7 @@ void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
                                 int64_t Expr, SMLoc Loc) {
   int64_t IntNumValues;
-  if (!NumValues.evaluateAsAbsolute(IntNumValues, getAssembler())) {
+  if (!NumValues.evaluateAsAbsolute(IntNumValues, getAssemblerPtr())) {
     getContext().reportError(Loc, "expected absolute expression");
     return;
   }

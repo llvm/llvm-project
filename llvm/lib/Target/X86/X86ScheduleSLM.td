@@ -130,20 +130,28 @@ def  : WriteRes<WriteFLoad,        [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteFMove,        [SLM_FPC_RSV01]>;
 
 defm : SLMWriteResPair<WriteFAdd,   [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteFAddY,  [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteFCmp,   [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteFCmpY,  [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteFCom,   [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteFMul,   [SLM_FPC_RSV0, SLMFPMultiplier], 5, [1,2]>;
+defm : SLMWriteResPair<WriteFMulY,  [SLM_FPC_RSV0, SLMFPMultiplier], 5, [1,2]>;
 defm : SLMWriteResPair<WriteFDiv,   [SLM_FPC_RSV0, SLMFPDivider], 34, [1,34]>;
+defm : SLMWriteResPair<WriteFDivY,  [SLM_FPC_RSV0, SLMFPDivider], 34, [1,34]>;
 defm : SLMWriteResPair<WriteFRcp,   [SLM_FPC_RSV0], 5>;
+defm : SLMWriteResPair<WriteFRcpY,  [SLM_FPC_RSV0], 5>;
 defm : SLMWriteResPair<WriteFRsqrt, [SLM_FPC_RSV0], 5>;
+defm : SLMWriteResPair<WriteFRsqrtY,[SLM_FPC_RSV0], 5>;
 defm : SLMWriteResPair<WriteFSqrt,  [SLM_FPC_RSV0], 15>;
+defm : SLMWriteResPair<WriteFSqrtY, [SLM_FPC_RSV0], 15>;
 defm : SLMWriteResPair<WriteCvtF2I, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtI2F, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtF2F, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteFSign,  [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteFLogic, [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteFLogicY, [SLM_FPC_RSV01], 1>;
-defm : SLMWriteResPair<WriteFShuffle, [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteFShuffle,  [SLM_FPC_RSV0], 1>;
+defm : SLMWriteResPair<WriteFShuffleY, [SLM_FPC_RSV0], 1>;
 defm : SLMWriteResPair<WriteFVarShuffle, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFVarShuffleY,[SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFBlend,  [SLM_FPC_RSV0],  1>;
@@ -156,14 +164,18 @@ def  : WriteRes<WriteVecMove,        [SLM_FPC_RSV01]>;
 
 defm : SLMWriteResPair<WriteVecShift, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecLogic, [SLM_FPC_RSV01], 1>;
+defm : SLMWriteResPair<WriteVecLogicY,[SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecALU,   [SLM_FPC_RSV01],  1>;
 defm : SLMWriteResPair<WriteVecIMul,  [SLM_FPC_RSV0],   4>;
 // FIXME: The below is closer to correct, but caused some perf regressions.
 //defm : SLMWriteResPair<WritePMULLD,  [SLM_FPC_RSV0],   11, [11], 7>;
 defm : SLMWriteResPair<WritePMULLD,  [SLM_FPC_RSV0],   4>;
 defm : SLMWriteResPair<WriteShuffle,  [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShuffleY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVarShuffleY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteBlendY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
 defm : SLMWriteResPair<WritePSADBW, [SLM_FPC_RSV0],  4>;
 defm : SLMWriteResPair<WritePHMINPOS,  [SLM_FPC_RSV0],   4>;
@@ -281,6 +293,7 @@ def : WriteRes<WriteNop, []>;
 def  : WriteRes<WriteIMulH, [SLM_FPC_RSV0]>;
 defm : SLMWriteResPair<WriteFBlendY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarBlend, [SLM_FPC_RSV0], 1>;
+defm : SLMWriteResPair<WriteVarBlendY,[SLM_FPC_RSV0], 1>;
 defm : SLMWriteResPair<WriteFVarBlend, [SLM_FPC_RSV0], 1>;
 defm : SLMWriteResPair<WriteFVarBlendY, [SLM_FPC_RSV0], 1>;
 defm : SLMWriteResPair<WriteFShuffle256, [SLM_FPC_RSV0],  1>;
@@ -381,7 +394,7 @@ def: InstRW<[SLMriteResGroup12], (instregex "(V?)SQRTSSr")>;
 def SLMriteResGroup13 : SchedWriteRes<[SLM_MEC_RSV,SLM_FPC_RSV0,SLMFPDivider]> {
   let Latency = 74;
   let NumMicroOps = 1;
-  let ResourceCycles = [1,70];
+  let ResourceCycles = [1,1,70];
 }
 def: InstRW<[SLMriteResGroup13], (instregex "(V?)SQRTPDm")>;
 

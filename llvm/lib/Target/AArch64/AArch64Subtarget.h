@@ -243,7 +243,7 @@ public:
   bool hasFuseCCSelect() const { return HasFuseCCSelect; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
 
-  /// \brief Return true if the CPU supports any kind of instruction fusion.
+  /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
            hasFuseAES() || hasFuseCCSelect() || hasFuseLiterals();

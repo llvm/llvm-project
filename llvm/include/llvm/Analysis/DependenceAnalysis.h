@@ -914,7 +914,7 @@ template <typename T> class ArrayRef;
                         SmallVectorImpl<Subscript> &Pair);
   }; // class DependenceInfo
 
-  /// \brief AnalysisPass to compute dependence information in a function
+  /// AnalysisPass to compute dependence information in a function
   class DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
   public:
     typedef DependenceInfo Result;
@@ -925,7 +925,7 @@ template <typename T> class ArrayRef;
     friend struct AnalysisInfoMixin<DependenceAnalysis>;
   }; // class DependenceAnalysis
 
-  /// \brief Legacy pass manager pass to access dependence information
+  /// Legacy pass manager pass to access dependence information
   class DependenceAnalysisWrapperPass : public FunctionPass {
   public:
     static char ID; // Class identification, replacement for typeinfo

@@ -274,10 +274,20 @@ a:
         sgtu      $4, $5, $6           # CHECK: sltu $4, $6, $5        # encoding: [0x00,0xc5,0x20,0x2b]
         sh        $14,-6704($15)
         sll       $4, $5               # CHECK: sllv $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x04]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SLL_MM
         sll       $a3,18               # CHECK: sll $7, $7, 18         # encoding: [0x00,0x07,0x3c,0x80]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SLL_MM
         sll       $a3,$zero,18         # CHECK: sll $7, $zero, 18      # encoding: [0x00,0x00,0x3c,0x80]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SLL_MM
         sll       $a3,$zero,$9         # CHECK: sllv $7, $zero, $9     # encoding: [0x01,0x20,0x38,0x04]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SLL_MM
         sllv      $a3,$zero,$9         # CHECK: sllv $7, $zero, $9     # encoding: [0x01,0x20,0x38,0x04]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLLV
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SLLV_MM
         slt       $s7,$11,$k1          # CHECK: slt $23, $11, $27      # encoding: [0x01,0x7b,0xb8,0x2a]
         slti      $s1,$10,9489         # CHECK: slti $17, $10, 9489    # encoding: [0x29,0x51,0x25,0x11]
         sltiu     $25,$25,-15531       # CHECK: sltiu $25, $25, -15531 # encoding: [0x2f,0x39,0xc3,0x55]
@@ -286,15 +296,35 @@ a:
         sqrt.d    $f17,$f22
         sqrt.s    $f0,$f1
         sra       $4, $5               # CHECK: srav $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x07]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRA
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRA_MM
         sra       $s1,15               # CHECK: sra $17, $17, 15       # encoding: [0x00,0x11,0x8b,0xc3]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRA
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRA_MM
         sra       $s1,$s7,15           # CHECK: sra $17, $23, 15       # encoding: [0x00,0x17,0x8b,0xc3]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRA
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRA_MM
         sra       $s1,$s7,$sp          # CHECK: srav $17, $23, $sp     # encoding: [0x03,0xb7,0x88,0x07]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRA
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRA_MM
         srav      $s1,$s7,$sp          # CHECK: srav $17, $23, $sp     # encoding: [0x03,0xb7,0x88,0x07]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRAV
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRAV_MM
         srl       $4, $5               # CHECK: srlv $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x06]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRL_MM
         srl       $2,7                 # CHECK: srl $2, $2, 7          # encoding: [0x00,0x02,0x11,0xc2]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRL_MM
         srl       $2,$2,7              # CHECK: srl $2, $2, 7          # encoding: [0x00,0x02,0x11,0xc2]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRL_MM
         srl       $25,$s4,$a0          # CHECK: srlv $25, $20, $4      # encoding: [0x00,0x94,0xc8,0x06]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRL
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRL_MM
         srlv      $25,$s4,$a0          # CHECK: srlv $25, $20, $4      # encoding: [0x00,0x94,0xc8,0x06]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SRLV
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SRLV_MM
         ssnop                          # CHECK: ssnop                  # encoding: [0x00,0x00,0x00,0x40]
         sub       $s6,$s3,$12
         sub       $22,$17,-3126        # CHECK: addi $22, $17, 3126    # encoding: [0x22,0x36,0x0c,0x36]

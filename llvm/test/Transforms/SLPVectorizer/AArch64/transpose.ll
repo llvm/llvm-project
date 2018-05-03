@@ -129,8 +129,8 @@ define <4 x i32> @build_vec_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
   ret <4 x i32> %tmp3.3
 }
 
-define <4 x i32> @build_vec_v4i32_reuse(<2 x i32> %v0, <2 x i32> %v1) {
-; CHECK-LABEL: @build_vec_v4i32_reuse(
+define <4 x i32> @build_vec_v4i32_reuse_0(<2 x i32> %v0, <2 x i32> %v1) {
+; CHECK-LABEL: @build_vec_v4i32_reuse_0(
 ; CHECK-NEXT:    [[V0_0:%.*]] = extractelement <2 x i32> %v0, i32 0
 ; CHECK-NEXT:    [[V0_1:%.*]] = extractelement <2 x i32> %v0, i32 1
 ; CHECK-NEXT:    [[V1_0:%.*]] = extractelement <2 x i32> %v1, i32 0
@@ -162,6 +162,48 @@ define <4 x i32> @build_vec_v4i32_reuse(<2 x i32> %v0, <2 x i32> %v1) {
   %tmp3.2 = insertelement <4 x i32> %tmp3.1, i32 %tmp2.0, i32 2
   %tmp3.3 = insertelement <4 x i32> %tmp3.2, i32 %tmp2.1, i32 3
   ret <4 x i32> %tmp3.3
+}
+
+define <4 x i32> @build_vec_v4i32_reuse_1(<2 x i32> %v0, <2 x i32> %v1) {
+; CHECK-LABEL: @build_vec_v4i32_reuse_1(
+; CHECK-NEXT:    [[V0_0:%.*]] = extractelement <2 x i32> %v0, i32 0
+; CHECK-NEXT:    [[V0_1:%.*]] = extractelement <2 x i32> %v0, i32 1
+; CHECK-NEXT:    [[V1_0:%.*]] = extractelement <2 x i32> %v1, i32 0
+; CHECK-NEXT:    [[V1_1:%.*]] = extractelement <2 x i32> %v1, i32 1
+; CHECK-NEXT:    [[TMP0_0:%.*]] = add i32 [[V0_0]], [[V1_0]]
+; CHECK-NEXT:    [[TMP0_1:%.*]] = add i32 [[V0_1]], [[V1_1]]
+; CHECK-NEXT:    [[TMP0_2:%.*]] = xor i32 [[V0_0]], [[V1_0]]
+; CHECK-NEXT:    [[TMP0_3:%.*]] = xor i32 [[V0_1]], [[V1_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[TMP0_0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> undef, i32 [[TMP0_1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1_2:%.*]] = sub i32 [[TMP0_2]], [[TMP0_3]]
+; CHECK-NEXT:    [[TMP1_3:%.*]] = sub i32 [[TMP0_3]], [[TMP0_2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP2_0:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP2_1:%.*]] = insertelement <4 x i32> [[TMP2_0]], i32 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP2_2:%.*]] = insertelement <4 x i32> [[TMP2_1]], i32 [[TMP1_2]], i32 2
+; CHECK-NEXT:    [[TMP2_3:%.*]] = insertelement <4 x i32> [[TMP2_2]], i32 [[TMP1_3]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[TMP2_3]]
+;
+  %v0.0 = extractelement <2 x i32> %v0, i32 0
+  %v0.1 = extractelement <2 x i32> %v0, i32 1
+  %v1.0 = extractelement <2 x i32> %v1, i32 0
+  %v1.1 = extractelement <2 x i32> %v1, i32 1
+  %tmp0.0 = add i32 %v0.0, %v1.0
+  %tmp0.1 = add i32 %v0.1, %v1.1
+  %tmp0.2 = xor i32 %v0.0, %v1.0
+  %tmp0.3 = xor i32 %v0.1, %v1.1
+  %tmp1.0 = sub i32 %tmp0.0, %tmp0.1
+  %tmp1.1 = sub i32 %tmp0.0, %tmp0.1
+  %tmp1.2 = sub i32 %tmp0.2, %tmp0.3
+  %tmp1.3 = sub i32 %tmp0.3, %tmp0.2
+  %tmp2.0 = insertelement <4 x i32> undef, i32 %tmp1.0, i32 0
+  %tmp2.1 = insertelement <4 x i32> %tmp2.0, i32 %tmp1.1, i32 1
+  %tmp2.2 = insertelement <4 x i32> %tmp2.1, i32 %tmp1.2, i32 2
+  %tmp2.3 = insertelement <4 x i32> %tmp2.2, i32 %tmp1.3, i32 3
+  ret <4 x i32> %tmp2.3
 }
 
 define <4 x i32> @build_vec_v4i32_3_binops(<2 x i32> %v0, <2 x i32> %v1) {

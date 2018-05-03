@@ -122,8 +122,8 @@ bool ValueObjectDynamicValue::UpdateValue() {
     return false;
   }
 
-  // Setting our type_sp to NULL will route everything back through our
-  // parent which is equivalent to not using dynamic values.
+  // Setting our type_sp to NULL will route everything back through our parent
+  // which is equivalent to not using dynamic values.
   if (m_use_dynamic == lldb::eNoDynamicValues) {
     m_dynamic_type_info.Clear();
     return true;
@@ -173,8 +173,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   }
 
   // Getting the dynamic value may have run the program a bit, and so marked us
-  // as needing updating, but we really
-  // don't...
+  // as needing updating, but we really don't...
 
   m_update_point.SetUpdated();
 
@@ -192,8 +191,8 @@ bool ValueObjectDynamicValue::UpdateValue() {
   }
 
   // If we don't have a dynamic type, then make ourselves just a echo of our
-  // parent.
-  // Or we could return false, and make ourselves an echo of our parent?
+  // parent. Or we could return false, and make ourselves an echo of our
+  // parent?
   if (!found_dynamic_type) {
     if (m_dynamic_type_info)
       SetValueDidChange(true);
@@ -248,14 +247,14 @@ bool ValueObjectDynamicValue::UpdateValue() {
                 static_cast<void *>(this), GetTypeName().GetCString());
 
   if (m_address.IsValid() && m_dynamic_type_info) {
-    // The variable value is in the Scalar value inside the m_value.
-    // We can point our m_data right to it.
+    // The variable value is in the Scalar value inside the m_value. We can
+    // point our m_data right to it.
     m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
     if (m_error.Success()) {
       if (!CanProvideValue()) {
-        // this value object represents an aggregate type whose
-        // children have values, but this object does not. So we
-        // say we are changed if our location has changed.
+        // this value object represents an aggregate type whose children have
+        // values, but this object does not. So we say we are changed if our
+        // location has changed.
         SetValueDidChange(m_value.GetValueType() != old_value.GetValueType() ||
                           m_value.GetScalar() != old_value.GetScalar());
       }
@@ -287,13 +286,11 @@ bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
     return false;
   }
 
-  // if we are at an offset from our parent, in order to set ourselves correctly
-  // we would need
-  // to change the new value so that it refers to the correct dynamic type. we
-  // choose not to deal
-  // with that - if anything more than a value overwrite is required, you should
-  // be using the
-  // expression parser instead of the value editing facility
+  // if we are at an offset from our parent, in order to set ourselves
+  // correctly we would need to change the new value so that it refers to the
+  // correct dynamic type. we choose not to deal with that - if anything more
+  // than a value overwrite is required, you should be using the expression
+  // parser instead of the value editing facility
   if (my_value != parent_value) {
     // but NULL'ing out a value should always be allowed
     if (strcmp(value_str, "0")) {
@@ -322,13 +319,11 @@ bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  // if we are at an offset from our parent, in order to set ourselves correctly
-  // we would need
-  // to change the new value so that it refers to the correct dynamic type. we
-  // choose not to deal
-  // with that - if anything more than a value overwrite is required, you should
-  // be using the
-  // expression parser instead of the value editing facility
+  // if we are at an offset from our parent, in order to set ourselves
+  // correctly we would need to change the new value so that it refers to the
+  // correct dynamic type. we choose not to deal with that - if anything more
+  // than a value overwrite is required, you should be using the expression
+  // parser instead of the value editing facility
   if (my_value != parent_value) {
     // but NULL'ing out a value should always be allowed
     lldb::offset_t offset = 0;

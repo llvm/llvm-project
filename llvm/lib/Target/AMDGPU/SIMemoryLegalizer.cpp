@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Memory legalizer - implements memory model. More information can be
+/// Memory legalizer - implements memory model. More information can be
 /// found here:
 ///   http://llvm.org/docs/AMDGPUUsage.html#memory-model
 //
@@ -110,7 +110,7 @@ public:
   static Optional<SIMemOpInfo> getAtomicCmpxchgOrRmwInfo(
       const MachineBasicBlock::iterator &MI);
 
-  /// \brief Reports unknown synchronization scope used in \p MI to LLVM
+  /// Reports unknown synchronization scope used in \p MI to LLVM
   /// context.
   static void reportUnknownSyncScope(
       const MachineBasicBlock::iterator &MI);
@@ -118,22 +118,22 @@ public:
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
 private:
-  /// \brief Machine module info.
+  /// Machine module info.
   const AMDGPUMachineModuleInfo *MMI = nullptr;
 
-  /// \brief Instruction info.
+  /// Instruction info.
   const SIInstrInfo *TII = nullptr;
 
-  /// \brief Immediate for "vmcnt(0)".
+  /// Immediate for "vmcnt(0)".
   unsigned Vmcnt0Immediate = 0;
 
-  /// \brief Opcode for cache invalidation instruction (L1).
+  /// Opcode for cache invalidation instruction (L1).
   unsigned VmemSIMDCacheInvalidateOpc = 0;
 
-  /// \brief List of atomic pseudo instructions.
+  /// List of atomic pseudo instructions.
   std::list<MachineBasicBlock::iterator> AtomicPseudoMIs;
 
-  /// \brief Sets named bit (BitName) to "true" if present in \p MI. Returns
+  /// Sets named bit (BitName) to "true" if present in \p MI. Returns
   /// true if \p MI is modified, false otherwise.
   template <uint16_t BitName>
   bool enableNamedBit(const MachineBasicBlock::iterator &MI) const {
@@ -149,44 +149,44 @@ private:
     return true;
   }
 
-  /// \brief Sets GLC bit to "true" if present in \p MI. Returns true if \p MI
+  /// Sets GLC bit to "true" if present in \p MI. Returns true if \p MI
   /// is modified, false otherwise.
   bool enableGLCBit(const MachineBasicBlock::iterator &MI) const {
     return enableNamedBit<AMDGPU::OpName::glc>(MI);
   }
 
-  /// \brief Sets SLC bit to "true" if present in \p MI. Returns true if \p MI
+  /// Sets SLC bit to "true" if present in \p MI. Returns true if \p MI
   /// is modified, false otherwise.
   bool enableSLCBit(const MachineBasicBlock::iterator &MI) const {
     return enableNamedBit<AMDGPU::OpName::slc>(MI);
   }
 
-  /// \brief Inserts "buffer_wbinvl1_vol" instruction \p Before or after \p MI.
+  /// Inserts "buffer_wbinvl1_vol" instruction \p Before or after \p MI.
   /// Always returns true.
   bool insertVmemSIMDCacheInvalidate(MachineBasicBlock::iterator &MI,
                                      bool Before = true) const;
-  /// \brief Inserts "s_waitcnt vmcnt(0)" instruction \p Before or after \p MI.
+  /// Inserts "s_waitcnt vmcnt(0)" instruction \p Before or after \p MI.
   /// Always returns true.
   bool insertWaitcntVmcnt0(MachineBasicBlock::iterator &MI,
                            bool Before = true) const;
 
-  /// \brief Removes all processed atomic pseudo instructions from the current
+  /// Removes all processed atomic pseudo instructions from the current
   /// function. Returns true if current function is modified, false otherwise.
   bool removeAtomicPseudoMIs();
 
-  /// \brief Expands load operation \p MI. Returns true if instructions are
+  /// Expands load operation \p MI. Returns true if instructions are
   /// added/deleted or \p MI is modified, false otherwise.
   bool expandLoad(const SIMemOpInfo &MOI,
                   MachineBasicBlock::iterator &MI);
-  /// \brief Expands store operation \p MI. Returns true if instructions are
+  /// Expands store operation \p MI. Returns true if instructions are
   /// added/deleted or \p MI is modified, false otherwise.
   bool expandStore(const SIMemOpInfo &MOI,
                    MachineBasicBlock::iterator &MI);
-  /// \brief Expands atomic fence operation \p MI. Returns true if
+  /// Expands atomic fence operation \p MI. Returns true if
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicFence(const SIMemOpInfo &MOI,
                          MachineBasicBlock::iterator &MI);
-  /// \brief Expands atomic cmpxchg or rmw operation \p MI. Returns true if
+  /// Expands atomic cmpxchg or rmw operation \p MI. Returns true if
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
                                 MachineBasicBlock::iterator &MI);

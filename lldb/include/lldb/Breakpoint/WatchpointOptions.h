@@ -25,8 +25,8 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class WatchpointOptions WatchpointOptions.h
-/// "lldb/Breakpoint/WatchpointOptions.h"
-/// @brief Class that manages the options on a watchpoint.
+/// "lldb/Breakpoint/WatchpointOptions.h" Class that manages the options on a
+/// watchpoint.
 //----------------------------------------------------------------------
 
 class WatchpointOptions {
@@ -69,15 +69,13 @@ public:
   // Callbacks
   //
   // Watchpoint callbacks come in two forms, synchronous and asynchronous.
-  // Synchronous callbacks will get
-  // run before any of the thread plans are consulted, and if they return false
-  // the target will continue
-  // "under the radar" of the thread plans.  There are a couple of restrictions
-  // to synchronous callbacks:
-  // 1) They should NOT resume the target themselves.  Just return false if you
-  // want the target to restart.
-  // 2) Watchpoints with synchronous callbacks can't have conditions (or rather,
-  // they can have them, but they
+  // Synchronous callbacks will get run before any of the thread plans are
+  // consulted, and if they return false the target will continue "under the
+  // radar" of the thread plans.  There are a couple of restrictions to
+  // synchronous callbacks: 1) They should NOT resume the target themselves.
+  // Just return false if you want the target to restart. 2) Watchpoints with
+  // synchronous callbacks can't have conditions (or rather, they can have
+  // them, but they
   //    won't do anything.  Ditto with ignore counts, etc...  You are supposed
   //    to control that all through the
   //    callback.
@@ -118,8 +116,8 @@ public:
   //------------------------------------------------------------------
   void ClearCallback();
 
-  // The rest of these functions are meant to be used only within the watchpoint
-  // handling mechanism.
+  // The rest of these functions are meant to be used only within the
+  // watchpoint handling mechanism.
 
   //------------------------------------------------------------------
   /// Use this function to invoke the callback for a specific stop.
@@ -168,8 +166,7 @@ public:
 
   //------------------------------------------------------------------
   /// Return the current thread spec for this option. This will return nullptr
-  /// if the no thread
-  /// specifications have been set for this Option yet.
+  /// if the no thread specifications have been set for this Option yet.
   /// @return
   ///     The thread specification pointer for this option, or nullptr if none
   ///     has
@@ -178,8 +175,8 @@ public:
   const ThreadSpec *GetThreadSpecNoCreate() const;
 
   //------------------------------------------------------------------
-  /// Returns a pointer to the ThreadSpec for this option, creating it.
-  /// if it hasn't been created already.   This API is used for setting the
+  /// Returns a pointer to the ThreadSpec for this option, creating it. if it
+  /// hasn't been created already.   This API is used for setting the
   /// ThreadSpec items for this option.
   //------------------------------------------------------------------
   ThreadSpec *GetThreadSpec();

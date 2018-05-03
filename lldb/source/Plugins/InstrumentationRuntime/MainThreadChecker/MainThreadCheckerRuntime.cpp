@@ -267,8 +267,8 @@ MainThreadCheckerRuntime::GetBacktracesFromExtendedStopInfo(
       new HistoryThread(*process_sp, tid, PCs, stop_id, stop_id_is_valid);
   ThreadSP new_thread_sp(history_thread);
   
-  // Save this in the Process' ExtendedThreadList so a strong pointer
-  // retains the object
+  // Save this in the Process' ExtendedThreadList so a strong pointer retains
+  // the object
   process_sp->GetExtendedThreadList().AddThread(new_thread_sp);
   threads->AddThread(new_thread_sp);
 

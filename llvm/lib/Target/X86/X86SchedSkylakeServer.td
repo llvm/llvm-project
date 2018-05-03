@@ -151,23 +151,31 @@ def  : WriteRes<WriteFLoad,         [SKXPort23]> { let Latency = 5; }
 def  : WriteRes<WriteFStore,        [SKXPort237, SKXPort4]>;
 def  : WriteRes<WriteFMove,         [SKXPort015]>;
 
-defm : SKXWriteResPair<WriteFAdd, [SKXPort015], 4, [1], 1, 6>; // Floating point add/sub.
-defm : SKXWriteResPair<WriteFCmp, [SKXPort015], 4, [1], 1, 6>; // Floating point compare.
-defm : SKXWriteResPair<WriteFCom,   [SKXPort0], 2>; // Floating point compare to flags.
-defm : SKXWriteResPair<WriteFMul, [SKXPort015], 4, [1], 1, 6>; // Floating point multiplication.
-defm : SKXWriteResPair<WriteFDiv,   [SKXPort0], 12>; // 10-14 cycles. // Floating point division.
-defm : SKXWriteResPair<WriteFSqrt,  [SKXPort0], 15>; // Floating point square root.
-defm : SKXWriteResPair<WriteFRcp,   [SKXPort0], 4, [1], 1, 6>; // Floating point reciprocal estimate.
-defm : SKXWriteResPair<WriteFRsqrt, [SKXPort0], 4, [1], 1, 6>; // Floating point reciprocal square root estimate.
-defm : SKXWriteResPair<WriteFMA,  [SKXPort015], 4, [1], 1, 6>; // Fused Multiply Add.
-defm : SKXWriteResPair<WriteFMAS, [SKXPort015], 4, [1], 1, 5>; // Fused Multiply Add (Scalar).
-defm : SKXWriteResPair<WriteFMAY, [SKXPort015], 4, [1], 1, 7>; // Fused Multiply Add (YMM/ZMM).
-defm : SKXWriteResPair<WriteFSign,  [SKXPort0], 1>; // Floating point fabs/fchs.
+defm : SKXWriteResPair<WriteFAdd, [SKXPort015],  4, [1], 1, 6>; // Floating point add/sub.
+defm : SKXWriteResPair<WriteFAddY,[SKXPort015],  4, [1], 1, 7>; // Floating point add/sub (YMM/ZMM).
+defm : SKXWriteResPair<WriteFCmp, [SKXPort015],  4, [1], 1, 6>; // Floating point compare.
+defm : SKXWriteResPair<WriteFCmpY,[SKXPort015],  4, [1], 1, 7>; // Floating point compare (YMM/ZMM).
+defm : SKXWriteResPair<WriteFCom,   [SKXPort0],  2>; // Floating point compare to flags.
+defm : SKXWriteResPair<WriteFMul, [SKXPort015],  4, [1], 1, 6>; // Floating point multiplication.
+defm : SKXWriteResPair<WriteFMulY,[SKXPort015],  4, [1], 1, 7>; // Floating point multiplication (YMM/ZMM).
+defm : SKXWriteResPair<WriteFDiv,   [SKXPort0], 12, [1], 1, 5>; // 10-14 cycles. // Floating point division.
+defm : SKXWriteResPair<WriteFDivY,  [SKXPort0], 12, [1], 1, 7>; // 10-14 cycles. // Floating point division (YMM/ZMM).
+defm : SKXWriteResPair<WriteFSqrt,  [SKXPort0], 15, [1], 1, 5>; // Floating point square root.
+defm : SKXWriteResPair<WriteFSqrtY, [SKXPort0], 15, [1], 1, 7>; // Floating point square root (YMM/ZMM).
+defm : SKXWriteResPair<WriteFRcp,   [SKXPort0],  4, [1], 1, 6>; // Floating point reciprocal estimate.
+defm : SKXWriteResPair<WriteFRcpY,  [SKXPort0],  4, [1], 1, 7>; // Floating point reciprocal estimate (YMM/ZMM).
+defm : SKXWriteResPair<WriteFRsqrt, [SKXPort0],  4, [1], 1, 6>; // Floating point reciprocal square root estimate.
+defm : SKXWriteResPair<WriteFRsqrtY,[SKXPort0],  4, [1], 1, 7>; // Floating point reciprocal square root estimate (YMM/ZMM).
+defm : SKXWriteResPair<WriteFMA,  [SKXPort015],  4, [1], 1, 6>; // Fused Multiply Add.
+defm : SKXWriteResPair<WriteFMAS, [SKXPort015],  4, [1], 1, 5>; // Fused Multiply Add (Scalar).
+defm : SKXWriteResPair<WriteFMAY, [SKXPort015],  4, [1], 1, 7>; // Fused Multiply Add (YMM/ZMM).
+defm : SKXWriteResPair<WriteFSign,  [SKXPort0],  1>; // Floating point fabs/fchs.
 defm : SKXWriteResPair<WriteFLogic, [SKXPort015], 1, [1], 1, 6>; // Floating point and/or/xor logicals.
 defm : SKXWriteResPair<WriteFLogicY, [SKXPort015], 1, [1], 1, 7>; // Floating point and/or/xor logicals (YMM/ZMM).
-defm : SKXWriteResPair<WriteFShuffle,  [SKXPort5],  1>; // Floating point vector shuffles.
-defm : SKXWriteResPair<WriteFVarShuffle,  [SKXPort5],  1>; // Floating point vector variable shuffles.
-defm : SKXWriteResPair<WriteFVarShuffleY, [SKXPort5],  1>; // Floating point vector variable shuffles.
+defm : SKXWriteResPair<WriteFShuffle,  [SKXPort5], 1, [1], 1, 6>; // Floating point vector shuffles.
+defm : SKXWriteResPair<WriteFShuffleY, [SKXPort5], 1, [1], 1, 7>; // Floating point vector shuffles (YMM/ZMM).
+defm : SKXWriteResPair<WriteFVarShuffle,  [SKXPort5], 1, [1], 1, 6>; // Floating point vector variable shuffles.
+defm : SKXWriteResPair<WriteFVarShuffleY, [SKXPort5], 1, [1], 1, 7>; // Floating point vector variable shuffles.
 defm : SKXWriteResPair<WriteFBlend, [SKXPort015], 1, [1], 1, 6>; // Floating point vector blends.
 defm : SKXWriteResPair<WriteFBlendY,[SKXPort015], 1, [1], 1, 7>; // Floating point vector blends.
 defm : SKXWriteResPair<WriteFVarBlend, [SKXPort015], 2, [2], 2, 6>; // Fp vector variable blends.
@@ -189,15 +197,20 @@ def  : WriteRes<WriteVecMove,         [SKXPort015]>;
 
 defm : SKXWriteResPair<WriteVecALU,   [SKXPort15],  1>; // Vector integer ALU op, no logicals.
 defm : SKXWriteResPair<WriteVecLogic, [SKXPort015], 1, [1], 1, 6>; // Vector integer and/or/xor.
+defm : SKXWriteResPair<WriteVecLogicY,[SKXPort015], 1, [1], 1, 7>; // Vector integer and/or/xor (YMM/ZMM).
 defm : SKXWriteResPair<WriteVecShift, [SKXPort0],  1>; // Vector integer shifts.
 defm : SKXWriteResPair<WriteVecIMul,  [SKXPort0],   5>; // Vector integer multiply.
 defm : SKXWriteResPair<WritePMULLD,   [SKXPort015], 10, [2], 2, 6>; // Vector integer multiply.
-defm : SKXWriteResPair<WriteShuffle,  [SKXPort5],  1>; // Vector shuffles.
-defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5],  1>; // Vector variable shuffles.
+defm : SKXWriteResPair<WriteShuffle,  [SKXPort5], 1, [1], 1, 5>; // Vector shuffles.
+defm : SKXWriteResPair<WriteShuffleY, [SKXPort5], 1, [1], 1, 7>; // Vector shuffles (YMM/ZMM).
+defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5], 1, [1], 1, 6>; // Vector variable shuffles.
+defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>; // Vector variable shuffles (YMM/ZMM).
 defm : SKXWriteResPair<WriteBlend, [SKXPort5], 1, [1], 1, 6>; // Vector blends.
+defm : SKXWriteResPair<WriteBlendY,[SKXPort5], 1, [1], 1, 7>; // Vector blends (YMM/ZMM).
 defm : SKXWriteResPair<WriteVarBlend, [SKXPort015], 2, [2], 2, 6>; // Vector variable blends.
+defm : SKXWriteResPair<WriteVarBlendY,[SKXPort015], 2, [2], 2, 6>; // Vector variable blends (YMM/ZMM).
 defm : SKXWriteResPair<WriteMPSAD,  [SKXPort5], 4, [2], 2, 6>; // Vector MPSAD.
-defm : SKXWriteResPair<WritePSADBW, [SKXPort5], 3, [1,1], 1, 6>; // Vector PSADBW.
+defm : SKXWriteResPair<WritePSADBW, [SKXPort5], 3, [1], 1, 6>; // Vector PSADBW.
 defm : SKXWriteResPair<WritePHMINPOS, [SKXPort015], 4, [1], 1, 6>; // Vector PHMINPOS.
 
 // Vector insert/extract operations.
@@ -210,6 +223,7 @@ def : WriteRes<WriteVecInsertLd, [SKXPort5,SKXPort23]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
+def: InstRW<[WriteVecInsertLd], (instregex "(V?)MOV(H|L)(PD|PS)rm")>;
 
 def : WriteRes<WriteVecExtract, [SKXPort0,SKXPort5]> {
   let Latency = 3;
@@ -330,10 +344,10 @@ def : WriteRes<WriteCLMulLd, [SKXPort5, SKXPort23]> {
 def : WriteRes<WriteSystem,     [SKXPort0156]> { let Latency = 100; } // def WriteSystem : SchedWrite;
 
 // AVX2.
-defm : SKXWriteResPair<WriteFShuffle256,  [SKXPort5],  3>; // Fp 256-bit width vector shuffles.
-defm : SKXWriteResPair<WriteFVarShuffle256,  [SKXPort5],  3>; // Fp 256-bit width vector variable shuffles.
-defm : SKXWriteResPair<WriteShuffle256,  [SKXPort5],  3>;  // 256-bit width vector shuffles.
-defm : SKXWriteResPair<WriteVarShuffle256,  [SKXPort5],  3>;  // 256-bit width vector variable shuffles.
+defm : SKXWriteResPair<WriteFShuffle256, [SKXPort5], 3, [1], 1, 7>; // Fp 256-bit width vector shuffles.
+defm : SKXWriteResPair<WriteFVarShuffle256, [SKXPort5], 3, [1], 1, 7>; // Fp 256-bit width vector variable shuffles.
+defm : SKXWriteResPair<WriteShuffle256, [SKXPort5], 3, [1], 1, 7>;  // 256-bit width vector shuffles.
+defm : SKXWriteResPair<WriteVarShuffle256, [SKXPort5], 3, [1], 1, 7>;  // 256-bit width vector variable shuffles.
 defm : SKXWriteResPair<WriteVarVecShift,  [SKXPort0, SKXPort5], 2, [2, 1]>; // Variable vector shifts.
 
 // Old microcoded instructions that nobody use.
@@ -445,17 +459,7 @@ def: InstRW<[SKXWriteResGroup3], (instregex "COMP_FST0r",
                                             "VMOV64toPQIZrr",
                                             "VMOV64toPQIrr",
                                             "VMOVDI2PDIZrr",
-                                            "VMOVDI2PDIrr",
-                                            "VPSLLDQYri",
-                                            "VPSLLDQZ128rr",
-                                            "VPSLLDQZ256rr",
-                                            "VPSLLDQZrr",
-                                            "(V?)PSLLDQri",
-                                            "VPSRLDQYri",
-                                            "VPSRLDQZ128rr",
-                                            "VPSRLDQZ256rr",
-                                            "VPSRLDQZrr",
-                                            "(V?)PSRLDQri")>;
+                                            "VMOVDI2PDIrr")>;
 
 def SKXWriteResGroup4 : SchedWriteRes<[SKXPort6]> {
   let Latency = 1;
@@ -1285,57 +1289,18 @@ def: InstRW<[SKXWriteResGroup32], (instregex "(ADD|SUB|SUBR)_FPrST0",
                                              "VPMINUQZ128rr",
                                              "VPMINUQZ256rr",
                                              "VPMINUQZrr",
-                                             "VPMOVQDZ128rr",
-                                             "VPMOVQDZ256rr",
-                                             "VPMOVQDZrr",
                                              "VPMOVSXBDYrr",
-                                             "VPMOVSXBDZ128rr",
-                                             "VPMOVSXBDZ256rr",
-                                             "VPMOVSXBDZrr",
                                              "VPMOVSXBQYrr",
-                                             "VPMOVSXBQZ128rr",
-                                             "VPMOVSXBQZ256rr",
-                                             "VPMOVSXBQZrr",
                                              "VPMOVSXBWYrr",
-                                             "VPMOVSXBWZ128rr",
-                                             "VPMOVSXBWZ256rr",
-                                             "VPMOVSXBWZrr",
                                              "VPMOVSXDQYrr",
-                                             "VPMOVSXDQZ128rr",
-                                             "VPMOVSXDQZ256rr",
-                                             "VPMOVSXDQZrr",
                                              "VPMOVSXWDYrr",
-                                             "VPMOVSXWDZ128rr",
-                                             "VPMOVSXWDZ256rr",
-                                             "VPMOVSXWDZrr",
                                              "VPMOVSXWQYrr",
-                                             "VPMOVSXWQZ128rr",
-                                             "VPMOVSXWQZ256rr",
-                                             "VPMOVSXWQZrr",
                                              "VPMOVZXBDYrr",
-                                             "VPMOVZXBDZ128rr",
-                                             "VPMOVZXBDZ256rr",
-                                             "VPMOVZXBDZrr",
                                              "VPMOVZXBQYrr",
-                                             "VPMOVZXBQZ128rr",
-                                             "VPMOVZXBQZ256rr",
-                                             "VPMOVZXBQZrr",
                                              "VPMOVZXBWYrr",
-                                             "VPMOVZXBWZ128rr",
-                                             "VPMOVZXBWZ256rr",
-                                             "VPMOVZXBWZrr",
                                              "VPMOVZXDQYrr",
-                                             "VPMOVZXDQZ128rr",
-                                             "VPMOVZXDQZ256rr",
-                                             "VPMOVZXDQZrr",
                                              "VPMOVZXWDYrr",
-                                             "VPMOVZXWDZ128rr",
-                                             "VPMOVZXWDZ256rr",
-                                             "VPMOVZXWDZrr",
                                              "VPMOVZXWQYrr",
-                                             "VPMOVZXWQZ128rr",
-                                             "VPMOVZXWQZ256rr",
-                                             "VPMOVZXWQZrr",
                                              "VPSADBWZrr", // TODO: 512-bit ops require ports 0/1 to be joined.
                                              "VPTESTMBZ128rr",
                                              "VPTESTMBZ256rr",
@@ -2190,9 +2155,7 @@ def SKXWriteResGroup92 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup92], (instregex "VINSERTPSZrm(b?)",
-                                             "(V?)INSERTPSrm",
-                                             "VMOVSDZrm(b?)",
+def: InstRW<[SKXWriteResGroup92], (instregex "VMOVSDZrm(b?)",
                                              "VMOVSSZrm(b?)",
                                              "VPACKSSDWZ128rm(b?)",
                                              "(V?)PACKSSDWrm",
@@ -2208,16 +2171,6 @@ def: InstRW<[SKXWriteResGroup92], (instregex "VINSERTPSZrm(b?)",
                                              "VPBROADCASTBrm",
                                              "VPBROADCASTWZ128m(b?)",
                                              "VPBROADCASTWrm",
-                                             "VPERMILPDZ128m(b?)i",
-                                             "VPERMILPDZ128rm(b?)",
-                                             "VPERMILPDmi",
-                                             "VPERMILPDrm",
-                                             "VPERMILPSZ128m(b?)i",
-                                             "VPERMILPSZ128rm(b?)",
-                                             "VPERMILPSmi",
-                                             "VPERMILPSrm",
-                                             "VPSHUFBZ128rm(b?)",
-                                             "(V?)PSHUFBrm",
                                              "VPSHUFDZ128m(b?)i",
                                              "(V?)PSHUFDmi",
                                              "VPSHUFHWZ128mi(b?)",
@@ -2241,19 +2194,14 @@ def: InstRW<[SKXWriteResGroup92], (instregex "VINSERTPSZrm(b?)",
                                              "VPUNPCKLQDQZ128rm(b?)",
                                              "(V?)PUNPCKLQDQrm",
                                              "VPUNPCKLWDZ128rm(b?)",
-                                             "(V?)PUNPCKLWDrm",
-                                             "VSHUFPDZ128rm(b?)i",
-                                             "(V?)SHUFPDrmi",
-                                             "VSHUFPSZ128rm(b?)i",
-                                             "(V?)SHUFPSrmi",
-                                             "VUNPCKHPDZ128rm(b?)",
-                                             "(V?)UNPCKHPDrm",
-                                             "VUNPCKHPSZ128rm(b?)",
-                                             "(V?)UNPCKHPSrm",
-                                             "VUNPCKLPDZ128rm(b?)",
-                                             "(V?)UNPCKLPDrm",
-                                             "VUNPCKLPSZ128rm(b?)",
-                                             "(V?)UNPCKLPSrm")>;
+                                             "(V?)PUNPCKLWDrm")>;
+
+def SKXWriteResGroup92a : SchedWriteRes<[SKXPort5,SKXPort23]> {
+  let Latency = 6;
+  let NumMicroOps = 2;
+  let ResourceCycles = [1,1];
+}
+def: InstRW<[SKXWriteResGroup92a], (instregex "MMX_PSHUFBrm")>;
 
 def SKXWriteResGroup93 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 7;
@@ -2458,7 +2406,6 @@ def: InstRW<[SKXWriteResGroup95], (instregex "VBLENDMPDZ128rm(b?)",
                                              "VPBROADCASTQZ128m(b?)",
                                              "VPMASKMOVDrm",
                                              "VPMASKMOVQrm",
-                                             "VPORrm",
                                              "VPSUBBZ128rm(b?)",
                                              "(V?)PSUBBrm",
                                              "VPSUBDZ128rm(b?)",
@@ -2691,101 +2638,15 @@ def: InstRW<[SKXWriteResGroup119], (instregex "FCOM32m",
                                               "FCOMP64m",
                                               "MMX_PSADBWirm",
                                               "VFPCLASSSDrm(b?)",
-                                              "VPACKSSDWYrm",
-                                              "VPACKSSDWZ256rm(b?)",
-                                              "VPACKSSDWZrm(b?)",
-                                              "VPACKSSWBYrm",
-                                              "VPACKSSWBZ256rm(b?)",
-                                              "VPACKSSWBZrm(b?)",
-                                              "VPACKUSDWYrm",
-                                              "VPACKUSDWZ256rm(b?)",
-                                              "VPACKUSDWZrm(b?)",
-                                              "VPACKUSWBYrm",
-                                              "VPACKUSWBZ256rm(b?)",
-                                              "VPACKUSWBZrm(b?)",
-                                              "VPALIGNRYrmi",
-                                              "VPALIGNRZ256rmi(b?)",
-                                              "VPALIGNRZrmi(b?)",
-                                              "VPBLENDWYrmi",
                                               "VPBROADCASTBYrm",
                                               "VPBROADCASTBZ256m(b?)",
                                               "VPBROADCASTBZm(b?)",
                                               "VPBROADCASTWYrm",
                                               "VPBROADCASTWZ256m(b?)",
                                               "VPBROADCASTWZm(b?)",
-                                              "VPERMILPDYmi",
-                                              "VPERMILPDYrm",
-                                              "VPERMILPDZ256m(b?)i",
-                                              "VPERMILPDZ256rm(b?)",
-                                              "VPERMILPDZm(b?)i",
-                                              "VPERMILPDZrm(b?)",
-                                              "VPERMILPSYmi",
-                                              "VPERMILPSYrm",
-                                              "VPERMILPSZ256m(b?)i",
-                                              "VPERMILPSZ256rm(b?)",
-                                              "VPERMILPSZm(b?)i",
-                                              "VPERMILPSZrm(b?)",
                                               "VPMOVSXBDYrm",
                                               "VPMOVSXBQYrm",
-                                              "VPMOVSXWQYrm",
-                                              "VPSHUFBYrm",
-                                              "VPSHUFBZ256rm(b?)",
-                                              "VPSHUFBZrm(b?)",
-                                              "VPSHUFDYmi",
-                                              "VPSHUFDZ256m(b?)i",
-                                              "VPSHUFDZm(b?)i",
-                                              "VPSHUFHWYmi",
-                                              "VPSHUFHWZ256mi(b?)",
-                                              "VPSHUFHWZmi(b?)",
-                                              "VPSHUFLWYmi",
-                                              "VPSHUFLWZ256mi(b?)",
-                                              "VPSHUFLWZmi(b?)",
-                                              "VPSLLDQZ256rm(b?)",
-                                              "VPSLLDQZrm(b?)",
-                                              "VPSRLDQZ256rm(b?)",
-                                              "VPSRLDQZrm(b?)",
-                                              "VPUNPCKHBWYrm",
-                                              "VPUNPCKHBWZ256rm(b?)",
-                                              "VPUNPCKHBWZrm(b?)",
-                                              "VPUNPCKHDQYrm",
-                                              "VPUNPCKHDQZ256rm(b?)",
-                                              "VPUNPCKHDQZrm(b?)",
-                                              "VPUNPCKHQDQYrm",
-                                              "VPUNPCKHQDQZ256rm(b?)",
-                                              "VPUNPCKHQDQZrm(b?)",
-                                              "VPUNPCKHWDYrm",
-                                              "VPUNPCKHWDZ256rm(b?)",
-                                              "VPUNPCKHWDZrm(b?)",
-                                              "VPUNPCKLBWYrm",
-                                              "VPUNPCKLBWZ256rm(b?)",
-                                              "VPUNPCKLBWZrm(b?)",
-                                              "VPUNPCKLDQYrm",
-                                              "VPUNPCKLDQZ256rm(b?)",
-                                              "VPUNPCKLDQZrm(b?)",
-                                              "VPUNPCKLQDQYrm",
-                                              "VPUNPCKLQDQZ256rm(b?)",
-                                              "VPUNPCKLQDQZrm(b?)",
-                                              "VPUNPCKLWDYrm",
-                                              "VPUNPCKLWDZ256rm(b?)",
-                                              "VPUNPCKLWDZrm(b?)",
-                                              "VSHUFPDYrmi",
-                                              "VSHUFPDZ256rm(b?)i",
-                                              "VSHUFPDZrm(b?)i",
-                                              "VSHUFPSYrmi",
-                                              "VSHUFPSZ256rm(b?)i",
-                                              "VSHUFPSZrm(b?)i",
-                                              "VUNPCKHPDYrm",
-                                              "VUNPCKHPDZ256rm(b?)",
-                                              "VUNPCKHPDZrm(b?)",
-                                              "VUNPCKHPSYrm",
-                                              "VUNPCKHPSZ256rm(b?)",
-                                              "VUNPCKHPSZrm(b?)",
-                                              "VUNPCKLPDYrm",
-                                              "VUNPCKLPDZ256rm(b?)",
-                                              "VUNPCKLPDZrm(b?)",
-                                              "VUNPCKLPSYrm",
-                                              "VUNPCKLPSZ256rm(b?)",
-                                              "VUNPCKLPSZrm(b?)")>;
+                                              "VPMOVSXWQYrm")>;
 
 def SKXWriteResGroup120 : SchedWriteRes<[SKXPort01,SKXPort23]> {
   let Latency = 8;
@@ -3045,16 +2906,6 @@ def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDMPDZ256rm(b?)",
                                               "VPADDWYrm",
                                               "VPADDWZ256rm(b?)",
                                               "VPADDWZrm(b?)",
-                                              "VPANDDZ256rm(b?)",
-                                              "VPANDDZrm(b?)",
-                                              "VPANDNDZ256rm(b?)",
-                                              "VPANDNDZrm(b?)",
-                                              "VPANDNQZ256rm(b?)",
-                                              "VPANDNQZrm(b?)",
-                                              "VPANDNYrm",
-                                              "VPANDQZ256rm(b?)",
-                                              "VPANDQZrm(b?)",
-                                              "VPANDYrm",
                                               "VPBLENDDYrmi",
                                               "VPBLENDMBZ256rm(b?)",
                                               "VPBLENDMBZrm(b?)",
@@ -3070,11 +2921,6 @@ def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDMPDZ256rm(b?)",
                                               "VPBROADCASTQZm(b?)",
                                               "VPMASKMOVDYrm",
                                               "VPMASKMOVQYrm",
-                                              "VPORDZ256rm(b?)",
-                                              "VPORDZrm(b?)",
-                                              "VPORQZ256rm(b?)",
-                                              "VPORQZrm(b?)",
-                                              "VPORYrm",
                                               "VPSUBBYrm",
                                               "VPSUBBZ256rm(b?)",
                                               "VPSUBBZrm(b?)",
@@ -3089,12 +2935,7 @@ def: InstRW<[SKXWriteResGroup121], (instregex "VBLENDMPDZ256rm(b?)",
                                               "VPTERNLOGDZ256rm(b?)i",
                                               "VPTERNLOGDZrm(b?)i",
                                               "VPTERNLOGQZ256rm(b?)i",
-                                              "VPTERNLOGQZrm(b?)i",
-                                              "VPXORDZ256rm(b?)",
-                                              "VPXORDZrm(b?)",
-                                              "VPXORQZ256rm(b?)",
-                                              "VPXORQZrm(b?)",
-                                              "VPXORYrm")>;
+                                              "VPTERNLOGQZrm(b?)i")>;
 
 def SKXWriteResGroup123 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort23]> {
   let Latency = 8;
@@ -3281,35 +3122,22 @@ def SKXWriteResGroup137 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup137], (instregex "ADDSDrm",
-                                              "ADDSSrm",
-                                              "CMPSDrm",
-                                              "CMPSSrm",
-                                              "CVTPS2PDrm",
-                                              "MAX(C?)SDrm",
-                                              "MAX(C?)SSrm",
-                                              "MIN(C?)SDrm",
-                                              "MIN(C?)SSrm",
-                                              "MMX_CVTPS2PIirm",
+def: InstRW<[SKXWriteResGroup137], (instregex "MMX_CVTPS2PIirm",
                                               "MMX_CVTTPS2PIirm",
-                                              "MULSDrm",
-                                              "MULSSrm",
-                                              "SUBSDrm",
-                                              "SUBSSrm",
-                                              "VADDSDrm",
-                                              "VADDSSrm",
-                                              "VCMPSDrm",
-                                              "VCMPSSrm",
+                                              "(V?)ADDSDrm",
+                                              "(V?)ADDSSrm",
+                                              "(V?)CMPSDrm",
+                                              "(V?)CMPSSrm",
                                               "VCVTPH2PSrm",
-                                              "VCVTPS2PDrm",
-                                              "VMAX(C?)SDrm",
-                                              "VMAX(C?)SSrm",
-                                              "VMIN(C?)SDrm",
-                                              "VMIN(C?)SSrm",
-                                              "VMULSDrm",
-                                              "VMULSSrm",
-                                              "VSUBSDrm",
-                                              "VSUBSSrm")>;
+                                              "(V?)CVTPS2PDrm",
+                                              "(V?)MAX(C?)SDrm",
+                                              "(V?)MAX(C?)SSrm",
+                                              "(V?)MIN(C?)SDrm",
+                                              "(V?)MIN(C?)SSrm",
+                                              "(V?)MULSDrm",
+                                              "(V?)MULSSrm",
+                                              "(V?)SUBSDrm",
+                                              "(V?)SUBSSrm")>;
 
 def SKXWriteResGroup138 : SchedWriteRes<[SKXPort0,SKXPort015]> {
   let Latency = 9;
@@ -3426,40 +3254,6 @@ def: InstRW<[SKXWriteResGroup148], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                               "VPCMPUWZrmi(b?)",
                                               "VPCMPWZ256rmi(b?)",
                                               "VPCMPWZrmi(b?)",
-                                              "VPERM2F128rm",
-                                              "VPERM2I128rm",
-                                              "VPERMDYrm",
-                                              "VPERMDZ256rm(b?)",
-                                              "VPERMDZrm(b?)",
-                                              "VPERMI2D256rm(b?)",
-                                              "VPERMI2Drm(b?)",
-                                              "VPERMI2PD256rm(b?)",
-                                              "VPERMI2PDrm(b?)",
-                                              "VPERMI2PS256rm(b?)",
-                                              "VPERMI2PSrm(b?)",
-                                              "VPERMI2Q256rm(b?)",
-                                              "VPERMI2Qrm(b?)",
-                                              "VPERMPDYmi",
-                                              "VPERMPDZ256m(b?)i",
-                                              "VPERMPDZ256rm(b?)",
-                                              "VPERMPDZm(b?)i",
-                                              "VPERMPDZrm(b?)",
-                                              "VPERMPSYrm",
-                                              "VPERMPSZ256rm(b?)",
-                                              "VPERMPSZrm(b?)",
-                                              "VPERMQYmi",
-                                              "VPERMQZ256m(b?)i",
-                                              "VPERMQZ256rm(b?)",
-                                              "VPERMQZm(b?)i",
-                                              "VPERMQZrm(b?)",
-                                              "VPERMT2D256rm(b?)",
-                                              "VPERMT2Drm(b?)",
-                                              "VPERMT2PD256rm(b?)",
-                                              "VPERMT2PDrm(b?)",
-                                              "VPERMT2PS256rm(b?)",
-                                              "VPERMT2PSrm(b?)",
-                                              "VPERMT2Q256rm(b?)",
-                                              "VPERMT2Qrm(b?)",
                                               "VPMAXSQZ256rm(b?)",
                                               "VPMAXSQZrm(b?)",
                                               "VPMAXUQZ256rm(b?)",
@@ -3468,35 +3262,11 @@ def: InstRW<[SKXWriteResGroup148], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                               "VPMINSQZrm(b?)",
                                               "VPMINUQZ256rm(b?)",
                                               "VPMINUQZrm(b?)",
-                                              "VPMOVSXBDZ256rm(b?)",
-                                              "VPMOVSXBDZrm(b?)",
-                                              "VPMOVSXBQZ256rm(b?)",
-                                              "VPMOVSXBQZrm(b?)",
-                                              "VPMOVSXBWZ256rm(b?)",
-                                              "VPMOVSXBWZrm(b?)",
-                                              "VPMOVSXDQZ256rm(b?)",
-                                              "VPMOVSXDQZrm(b?)",
-                                              "VPMOVSXWDZ256rm(b?)",
-                                              "VPMOVSXWDZrm(b?)",
-                                              "VPMOVSXWQZ256rm(b?)",
-                                              "VPMOVSXWQZrm(b?)",
                                               "VPMOVZXBDYrm",
-                                              "VPMOVZXBDZ256rm(b?)",
-                                              "VPMOVZXBDZrm(b?)",
                                               "VPMOVZXBQYrm",
-                                              "VPMOVZXBQZ256rm(b?)",
-                                              "VPMOVZXBQZrm(b?)",
                                               "VPMOVZXBWYrm",
-                                              "VPMOVZXBWZ256rm(b?)",
-                                              "VPMOVZXBWZrm(b?)",
                                               "VPMOVZXDQYrm",
-                                              "VPMOVZXDQZ256rm(b?)",
-                                              "VPMOVZXDQZrm(b?)",
-                                              "VPMOVZXWDZ256rm(b?)",
-                                              "VPMOVZXWDZrm(b?)",
                                               "VPMOVZXWQYrm",
-                                              "VPMOVZXWQZ256rm(b?)",
-                                              "VPMOVZXWQZrm(b?)",
                                               "VPSADBWYrm",
                                               "VPSADBWZ256rm(b?)",
                                               "VPSADBWZrm(b?)",
@@ -3515,15 +3285,7 @@ def: InstRW<[SKXWriteResGroup148], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                               "VPTESTNMQZ256rm(b?)",
                                               "VPTESTNMQZrm(b?)",
                                               "VPTESTNMWZ256rm(b?)",
-                                              "VPTESTNMWZrm(b?)",
-                                              "VSHUFF32X4Z256rm(b?)i",
-                                              "VSHUFF32X4Zrm(b?)i",
-                                              "VSHUFF64X2Z256rm(b?)i",
-                                              "VSHUFF64X2Zrm(b?)i",
-                                              "VSHUFI32X4Z256rm(b?)i",
-                                              "VSHUFI32X4Zrm(b?)i",
-                                              "VSHUFI64X2Z256rm(b?)i",
-                                              "VSHUFI64X2Zrm(b?)i")>;
+                                              "VPTESTNMWZrm(b?)")>;
 
 def SKXWriteResGroup149 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 10;
@@ -3673,30 +3435,14 @@ def SKXWriteResGroup160 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup160], (instregex "MUL_F(32|64)m",
-                                              "VRCP14PDZ256m(b?)",
-                                              "VRCP14PSZ256m(b?)",
-                                              "VRCPPSYm",
-                                              "VRSQRT14PDZ256m(b?)",
-                                              "VRSQRT14PSZ256m(b?)",
-                                              "VRSQRTPSYm")>;
+def: InstRW<[SKXWriteResGroup160], (instregex "MUL_F(32|64)m")>;
 
 def SKXWriteResGroup161 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 11;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup161], (instregex "VADDPDYrm",
-                                              "VADDPDZ256rm(b?)",
-                                              "VADDPDZrm(b?)",
-                                              "VADDPSYrm",
-                                              "VADDPSZ256rm(b?)",
-                                              "VADDPSZrm(b?)",
-                                              "VADDSUBPDYrm",
-                                              "VADDSUBPSYrm",
-                                              "VCMPPDYrmi",
-                                              "VCMPPSYrmi",
-                                              "VCVTDQ2PDZ256rm(b?)",
+def: InstRW<[SKXWriteResGroup161], (instregex "VCVTDQ2PDZ256rm(b?)",
                                               "VCVTDQ2PDZrm(b?)",
                                               "VCVTDQ2PSYrm",
                                               "VCVTDQ2PSZ256rm(b?)",
@@ -3738,36 +3484,6 @@ def: InstRW<[SKXWriteResGroup161], (instregex "VADDPDYrm",
                                               "VCVTUQQ2PDZ256rm(b?)",
                                               "VCVTUQQ2PDZrm(b?)",
                                               "VCVTUQQ2PSZ256rm(b?)",
-                                              "VFIXUPIMMPDZ256rm(b?)i",
-                                              "VFIXUPIMMPDZrm(b?)i",
-                                              "VFIXUPIMMPSZ256rm(b?)i",
-                                              "VFIXUPIMMPSZrm(b?)i",
-                                              "VGETEXPPDZ256m(b?)",
-                                              "VGETEXPPDm(b?)",
-                                              "VGETEXPPSZ256m(b?)",
-                                              "VGETEXPPSm(b?)",
-                                              "VGETMANTPDZ256rm(b?)i",
-                                              "VGETMANTPDZrm(b?)i",
-                                              "VGETMANTPSZ256rm(b?)i",
-                                              "VGETMANTPSZrm(b?)i",
-                                              "VMAX(C?)PDYrm",
-                                              "VMAX(C?)PDZ256rm(b?)",
-                                              "VMAX(C?)PDZrm(b?)",
-                                              "VMAX(C?)PSYrm",
-                                              "VMAX(C?)PSZ256rm(b?)",
-                                              "VMAX(C?)PSZrm(b?)",
-                                              "VMIN(C?)PDYrm",
-                                              "VMIN(C?)PDZ256rm(b?)",
-                                              "VMIN(C?)PDZrm(b?)",
-                                              "VMIN(C?)PSYrm",
-                                              "VMIN(C?)PSZ256rm(b?)",
-                                              "VMIN(C?)PSZrm(b?)",
-                                              "VMULPDYrm",
-                                              "VMULPDZ256rm(b?)",
-                                              "VMULPDZrm(b?)",
-                                              "VMULPSYrm",
-                                              "VMULPSZ256rm(b?)",
-                                              "VMULPSZrm(b?)",
                                               "VPLZCNTDZ256rm(b?)",
                                               "VPLZCNTDZrm(b?)",
                                               "VPLZCNTQZ256rm(b?)",
@@ -3795,25 +3511,7 @@ def: InstRW<[SKXWriteResGroup161], (instregex "VADDPDYrm",
                                               "VPMULLWZrm(b?)",
                                               "VPMULUDQYrm",
                                               "VPMULUDQZ256rm(b?)",
-                                              "VPMULUDQZrm(b?)",
-                                              "VRANGEPDZ256rm(b?)i",
-                                              "VRANGEPDZrm(b?)i",
-                                              "VRANGEPSZ256rm(b?)i",
-                                              "VRANGEPSZrm(b?)i",
-                                              "VREDUCEPDZ256rm(b?)i",
-                                              "VREDUCEPDZrm(b?)i",
-                                              "VREDUCEPSZ256rm(b?)i",
-                                              "VREDUCEPSZrm(b?)i",
-                                              "VSCALEFPDZ256rm(b?)",
-                                              "VSCALEFPDZrm(b?)",
-                                              "VSCALEFPSZ256rm(b?)",
-                                              "VSCALEFPSZrm(b?)",
-                                              "VSUBPDYrm",
-                                              "VSUBPDZ256rm(b?)",
-                                              "VSUBPDZrm(b?)",
-                                              "VSUBPSYrm",
-                                              "VSUBPSZ256rm(b?)",
-                                              "VSUBPSZrm(b?)")>;
+                                              "VPMULUDQZrm(b?)")>;
 
 def SKXWriteResGroup162 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 11;

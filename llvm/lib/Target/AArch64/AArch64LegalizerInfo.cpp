@@ -151,7 +151,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .clampScalar(0, s8, s64)
       .widenScalarToNextPow2(0)
       .lowerIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].Size * 8;
+        return Query.Types[0].isScalar() &&
+               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].Size * 8;
       })
       .clampNumElements(0, v2s32, v2s32);
 

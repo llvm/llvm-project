@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the entry points for global functions defined in
+/// This file contains the entry points for global functions defined in
 /// the LLVM WebAssembly back-end.
 ///
 //===----------------------------------------------------------------------===//

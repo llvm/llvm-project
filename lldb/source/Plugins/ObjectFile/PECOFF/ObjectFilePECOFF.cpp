@@ -236,8 +236,8 @@ bool ObjectFilePECOFF::SetLoadAddress(Target &target, addr_t value,
       size_t sect_idx = 0;
 
       for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
-        // Iterate through the object file sections to find all
-        // of the sections that have SHF_ALLOC in their flag bits.
+        // Iterate through the object file sections to find all of the sections
+        // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
         if (section_sp && !section_sp->IsThreadSpecific()) {
           if (target.GetSectionLoadList().SetSectionLoadAddress(
@@ -268,8 +268,8 @@ uint32_t ObjectFilePECOFF::GetAddressByteSize() const {
 //----------------------------------------------------------------------
 // NeedsEndianSwap
 //
-// Return true if an endian swap needs to occur when extracting data
-// from this file.
+// Return true if an endian swap needs to occur when extracting data from this
+// file.
 //----------------------------------------------------------------------
 bool ObjectFilePECOFF::NeedsEndianSwap() const {
 #if defined(__LITTLE_ENDIAN__)
@@ -552,8 +552,8 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
             // are followed by a 4-byte string table offset. Else these
             // 8 bytes contain the symbol name
             if (symtab_data.GetU32(&offset) == 0) {
-              // Long string that doesn't fit into the symbol table name,
-              // so now we must read the 4 byte string table offset
+              // Long string that doesn't fit into the symbol table name, so
+              // now we must read the 4 byte string table offset
               uint32_t strtab_offset = symtab_data.GetU32(&offset);
               symbol_name_cstr = strtab_data.PeekCStr(strtab_offset);
               symbol_name.assign(symbol_name_cstr);

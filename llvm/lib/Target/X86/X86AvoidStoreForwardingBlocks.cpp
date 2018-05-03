@@ -97,15 +97,15 @@ private:
   SmallVector<MachineInstr *, 2> ForRemoval;
   AliasAnalysis *AA;
 
-  /// \brief Returns couples of Load then Store to memory which look
+  /// Returns couples of Load then Store to memory which look
   ///  like a memcpy.
   void findPotentiallylBlockedCopies(MachineFunction &MF);
-  /// \brief Break the memcpy's load and store into smaller copies
+  /// Break the memcpy's load and store into smaller copies
   /// such that each memory load that was blocked by a smaller store
   /// would now be copied separately.
   void breakBlockedCopies(MachineInstr *LoadInst, MachineInstr *StoreInst,
                           const DisplacementSizeMap &BlockingStoresDispSizeMap);
-  /// \brief Break a copy of size Size to smaller copies.
+  /// Break a copy of size Size to smaller copies.
   void buildCopies(int Size, MachineInstr *LoadInst, int64_t LdDispImm,
                    MachineInstr *StoreInst, int64_t StDispImm,
                    int64_t LMMOffset, int64_t SMMOffset);

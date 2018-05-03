@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Custom DAG lowering for R600
+/// Custom DAG lowering for R600
 //
 //===----------------------------------------------------------------------===//
 
@@ -2116,7 +2116,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
   }
 }
 
-/// \brief Fold the instructions after selecting them
+/// Fold the instructions after selecting them
 SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
                                             SelectionDAG &DAG) const {
   const R600InstrInfo *TII = getSubtarget()->getInstrInfo();

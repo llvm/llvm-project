@@ -52,9 +52,9 @@ class Target;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Searcher SearchFilter.h "lldb/Core/SearchFilter.h"
-/// @brief Class that is driven by the SearchFilter to search the
-/// SymbolContext space of the target program.
+/// @class Searcher SearchFilter.h "lldb/Core/SearchFilter.h" Class that is
+/// driven by the SearchFilter to search the SymbolContext space of the target
+/// program.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -99,10 +99,10 @@ public:
 };
 
 //----------------------------------------------------------------------
-/// @class SearchFilter SearchFilter.h "lldb/Core/SearchFilter.h"
-/// @brief Class descends through the SymbolContext space of the target,
-/// applying a filter at each stage till it reaches the depth specified by
-/// the GetDepth method of the searcher, and calls its callback at that point.
+/// @class SearchFilter SearchFilter.h "lldb/Core/SearchFilter.h" Class
+/// descends through the SymbolContext space of the target, applying a filter
+/// at each stage till it reaches the depth specified by the GetDepth method
+/// of the searcher, and calls its callback at that point.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -110,15 +110,12 @@ public:
 /// Provides the callback and search depth for the SearchFilter search.
 ///
 /// The search is done by cooperation between the search filter and the
-/// searcher.
-/// The search filter does the heavy work of recursing through the SymbolContext
-/// space of the target program's symbol space.  The Searcher specifies the
-/// depth
-/// at which it wants its callback to be invoked.  Note that since the
-/// resolution
-/// of the Searcher may be greater than that of the SearchFilter, before the
-/// Searcher qualifies an address it should pass it to "AddressPasses."
-/// The default implementation is "Everything Passes."
+/// searcher. The search filter does the heavy work of recursing through the
+/// SymbolContext space of the target program's symbol space.  The Searcher
+/// specifies the depth at which it wants its callback to be invoked.  Note
+/// that since the resolution of the Searcher may be greater than that of the
+/// SearchFilter, before the Searcher qualifies an address it should pass it
+/// to "AddressPasses." The default implementation is "Everything Passes."
 //----------------------------------------------------------------------
 
 class SearchFilter {
@@ -172,8 +169,8 @@ public:
   virtual bool AddressPasses(Address &addr);
 
   //------------------------------------------------------------------
-  /// Call this method with a FileSpec to see if \a file spec passes the filter
-  /// as the name of a compilation unit.
+  /// Call this method with a FileSpec to see if \a file spec passes the
+  /// filter as the name of a compilation unit.
   ///
   /// @param[in] fileSpec
   ///    The file spec to check against the filter.
@@ -218,11 +215,10 @@ public:
   virtual void SearchInModuleList(Searcher &searcher, ModuleList &modules);
 
   //------------------------------------------------------------------
-  /// This determines which items are REQUIRED for the filter to pass.
-  /// For instance, if you are filtering by Compilation Unit, obviously
-  /// symbols that have no compilation unit can't pass  So return
-  /// eSymbolContextCU
-  /// and search callbacks can then short cut the search to avoid looking at
+  /// This determines which items are REQUIRED for the filter to pass. For
+  /// instance, if you are filtering by Compilation Unit, obviously symbols
+  /// that have no compilation unit can't pass  So return eSymbolContextCU and
+  /// search callbacks can then short cut the search to avoid looking at
   /// things that obviously won't pass.
   ///
   /// @return
@@ -303,8 +299,7 @@ protected:
                              OptionNames name, FileSpecList &file_list);
 
   // These are utility functions to assist with the search iteration.  They are
-  // used by the
-  // default Search method.
+  // used by the default Search method.
 
   Searcher::CallbackReturn DoModuleIteration(const SymbolContext &context,
                                              Searcher &searcher);
@@ -333,9 +328,9 @@ private:
 
 //----------------------------------------------------------------------
 /// @class SearchFilterForUnconstrainedSearches SearchFilter.h
-/// "lldb/Core/SearchFilter.h"
-/// @brief This is a SearchFilter that searches through all modules.  It also
-/// consults the Target::ModuleIsExcludedForUnconstrainedSearches.
+/// "lldb/Core/SearchFilter.h" This is a SearchFilter that searches through
+/// all modules.  It also consults the
+/// Target::ModuleIsExcludedForUnconstrainedSearches.
 //----------------------------------------------------------------------
 class SearchFilterForUnconstrainedSearches : public SearchFilter {
 public:
@@ -360,8 +355,8 @@ protected:
 };
 
 //----------------------------------------------------------------------
-/// @class SearchFilterByModule SearchFilter.h "lldb/Core/SearchFilter.h"
-/// @brief This is a SearchFilter that restricts the search to a given module.
+/// @class SearchFilterByModule SearchFilter.h "lldb/Core/SearchFilter.h" This
+/// is a SearchFilter that restricts the search to a given module.
 //----------------------------------------------------------------------
 
 class SearchFilterByModule : public SearchFilter {

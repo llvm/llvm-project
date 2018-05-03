@@ -28,13 +28,12 @@ class DataExtractor;
 
 //----------------------------------------------------------------------
 // A class that can carry around a clang ASTContext and a opaque clang
-// QualType. A clang::QualType can be easily reconstructed from an
-// opaque clang type and often the ASTContext is needed when doing
-// various type related tasks, so this class allows both items to travel
-// in a single very lightweight class that can be used. There are many
-// static equivalents of the member functions that allow the ASTContext
-// and the opaque clang QualType to be specified for ease of use and
-// to avoid code duplication.
+// QualType. A clang::QualType can be easily reconstructed from an opaque clang
+// type and often the ASTContext is needed when doing various type related
+// tasks, so this class allows both items to travel in a single very
+// lightweight class that can be used. There are many static equivalents of the
+// member functions that allow the ASTContext and the opaque clang QualType to
+// be specified for ease of use and to avoid code duplication.
 //----------------------------------------------------------------------
 class CompilerType {
 public:
@@ -206,8 +205,7 @@ public:
   CompilerType GetFullyUnqualifiedType() const;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
-  // prototype
-  // Returns a value >= 0 if there is a prototype.
+  // prototype Returns a value >= 0 if there is a prototype.
   int GetFunctionArgumentCount() const;
 
   CompilerType GetFunctionArgumentTypeAtIndex(size_t idx) const;
@@ -220,14 +218,14 @@ public:
 
   //----------------------------------------------------------------------
   // If this type is a reference to a type (L value or R value reference),
-  // return a new type with the reference removed, else return the current
-  // type itself.
+  // return a new type with the reference removed, else return the current type
+  // itself.
   //----------------------------------------------------------------------
   CompilerType GetNonReferenceType() const;
 
   //----------------------------------------------------------------------
-  // If this type is a pointer type, return the type that the pointer
-  // points to, else return an invalid type.
+  // If this type is a pointer type, return the type that the pointer points
+  // to, else return an invalid type.
   //----------------------------------------------------------------------
   CompilerType GetPointeeType() const;
 
@@ -237,44 +235,44 @@ public:
   CompilerType GetPointerType() const;
 
   //----------------------------------------------------------------------
-  // Return a new CompilerType that is a L value reference to this type if
-  // this type is valid and the type system supports L value references,
-  // else return an invalid type.
+  // Return a new CompilerType that is a L value reference to this type if this
+  // type is valid and the type system supports L value references, else return
+  // an invalid type.
   //----------------------------------------------------------------------
   CompilerType GetLValueReferenceType() const;
 
   //----------------------------------------------------------------------
-  // Return a new CompilerType that is a R value reference to this type if
-  // this type is valid and the type system supports R value references,
-  // else return an invalid type.
+  // Return a new CompilerType that is a R value reference to this type if this
+  // type is valid and the type system supports R value references, else return
+  // an invalid type.
   //----------------------------------------------------------------------
   CompilerType GetRValueReferenceType() const;
 
   //----------------------------------------------------------------------
-  // Return a new CompilerType adds a const modifier to this type if
-  // this type is valid and the type system supports const modifiers,
-  // else return an invalid type.
+  // Return a new CompilerType adds a const modifier to this type if this type
+  // is valid and the type system supports const modifiers, else return an
+  // invalid type.
   //----------------------------------------------------------------------
   CompilerType AddConstModifier() const;
 
   //----------------------------------------------------------------------
-  // Return a new CompilerType adds a volatile modifier to this type if
-  // this type is valid and the type system supports volatile modifiers,
-  // else return an invalid type.
+  // Return a new CompilerType adds a volatile modifier to this type if this
+  // type is valid and the type system supports volatile modifiers, else return
+  // an invalid type.
   //----------------------------------------------------------------------
   CompilerType AddVolatileModifier() const;
 
   //----------------------------------------------------------------------
-  // Return a new CompilerType adds a restrict modifier to this type if
-  // this type is valid and the type system supports restrict modifiers,
-  // else return an invalid type.
+  // Return a new CompilerType adds a restrict modifier to this type if this
+  // type is valid and the type system supports restrict modifiers, else return
+  // an invalid type.
   //----------------------------------------------------------------------
   CompilerType AddRestrictModifier() const;
 
   //----------------------------------------------------------------------
-  // Create a typedef to this type using "name" as the name of the typedef
-  // this type is valid and the type system supports typedefs, else return
-  // an invalid type.
+  // Create a typedef to this type using "name" as the name of the typedef this
+  // type is valid and the type system supports typedefs, else return an
+  // invalid type.
   //----------------------------------------------------------------------
   CompilerType CreateTypedef(const char *name,
                              const CompilerDeclContext &decl_ctx) const;
@@ -311,8 +309,8 @@ public:
 
   //----------------------------------------------------------------------
   // If this type is an enumeration, iterate through all of its enumerators
-  // using a callback. If the callback returns true, keep iterating, else
-  // abort the iteration.
+  // using a callback. If the callback returns true, keep iterating, else abort
+  // the iteration.
   //----------------------------------------------------------------------
   void ForEachEnumerator(
       std::function<bool(const CompilerType &integer_type,
@@ -351,8 +349,8 @@ public:
       bool &child_is_deref_of_parent, ValueObject *valobj,
       uint64_t &language_flags) const;
 
-  // Lookup a child given a name. This function will match base class names
-  // and member member names in "clang_type" only, not descendants.
+  // Lookup a child given a name. This function will match base class names and
+  // member member names in "clang_type" only, not descendants.
   uint32_t GetIndexOfChildWithName(const char *name,
                                    bool omit_empty_base_classes) const;
 
@@ -385,8 +383,8 @@ public:
   // Pointers & References
   //------------------------------------------------------------------
 
-  // Converts "s" to a floating point value and place resulting floating
-  // point bytes in the "dst" buffer.
+  // Converts "s" to a floating point value and place resulting floating point
+  // bytes in the "dst" buffer.
   size_t ConvertStringToFloatValue(const char *s, uint8_t *dst,
                                    size_t dst_size) const;
 

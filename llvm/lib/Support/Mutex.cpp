@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/ErrorHandling.h"
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system

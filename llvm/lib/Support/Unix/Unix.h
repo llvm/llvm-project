@@ -56,7 +56,7 @@
 /// This function builds an error message into \p ErrMsg using the \p prefix
 /// string and the Unix error number given by \p errnum. If errnum is -1, the
 /// default then the value of errno is used.
-/// @brief Make an error message
+/// Make an error message
 ///
 /// If the error number can be converted to a string, it will be
 /// separated from prefix by ": ".

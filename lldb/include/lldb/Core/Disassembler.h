@@ -105,8 +105,7 @@ public:
   lldb::AddressClass GetAddressClass();
 
   void SetAddress(const Address &addr) {
-    // Invalidate the address class to lazily discover
-    // it if we need to.
+    // Invalidate the address class to lazily discover it if we need to.
     m_address_class = lldb::eAddressClassInvalid;
     m_address = addr;
   }
@@ -235,11 +234,12 @@ public:
 protected:
   Address m_address; // The section offset address of this instruction
                      // We include an address class in the Instruction class to
-  // allow the instruction specify the eAddressClassCodeAlternateISA
-  // (currently used for thumb), and also to specify data (eAddressClassData).
-  // The usual value will be eAddressClassCode, but often when
-  // disassembling memory, you might run into data. This can
-  // help us to disassemble appropriately.
+                     // allow the instruction specify the
+                     // eAddressClassCodeAlternateISA (currently used for
+                     // thumb), and also to specify data (eAddressClassData).
+                     // The usual value will be eAddressClassCode, but often
+                     // when disassembling memory, you might run into data.
+                     // This can help us to disassemble appropriately.
 private:
   lldb::AddressClass
       m_address_class; // Use GetAddressClass () accessor function!
@@ -365,12 +365,10 @@ public:
   };
 
   // FindPlugin should be lax about the flavor string (it is too annoying to
-  // have various internal uses of the
-  // disassembler fail because the global flavor string gets set wrong.
-  // Instead, if you get a flavor string you
+  // have various internal uses of the disassembler fail because the global
+  // flavor string gets set wrong. Instead, if you get a flavor string you
   // don't understand, use the default.  Folks who care to check can use the
-  // FlavorValidForArchSpec method on the
-  // disassembler they got back.
+  // FlavorValidForArchSpec method on the disassembler they got back.
   static lldb::DisassemblerSP
   FindPlugin(const ArchSpec &arch, const char *flavor, const char *plugin_name);
 
@@ -470,8 +468,8 @@ public:
                                       const char *flavor) = 0;
 
 protected:
-  // SourceLine and SourceLinesToDisplay structures are only used in
-  // the mixed source and assembly display methods internal to this class.
+  // SourceLine and SourceLinesToDisplay structures are only used in the mixed
+  // source and assembly display methods internal to this class.
 
   struct SourceLine {
     FileSpec file;
@@ -494,9 +492,9 @@ protected:
   struct SourceLinesToDisplay {
     std::vector<SourceLine> lines;
 
-    // index of the "current" source line, if we want to highlight that
-    // when displaying the source lines.  (as opposed to the surrounding
-    // source lines provided to give context)
+    // index of the "current" source line, if we want to highlight that when
+    // displaying the source lines.  (as opposed to the surrounding source
+    // lines provided to give context)
     size_t current_source_line;
 
     // Whether to print a blank line at the end of the source lines.
@@ -507,8 +505,8 @@ protected:
     }
   };
 
-  // Get the function's declaration line number, hopefully a line number earlier
-  // than the opening curly brace at the start of the function body.
+  // Get the function's declaration line number, hopefully a line number
+  // earlier than the opening curly brace at the start of the function body.
   static SourceLine GetFunctionDeclLineEntry(const SymbolContext &sc);
 
   // Add the provided SourceLine to the map of filenames-to-source-lines-seen.
@@ -517,14 +515,13 @@ protected:
       std::map<FileSpec, std::set<uint32_t>> &source_lines_seen);
 
   // Given a source line, determine if we should print it when we're doing
-  // mixed source & assembly output.
-  // We're currently using the target.process.thread.step-avoid-regexp setting
-  // (which is used for stepping over inlined STL functions by default) to
-  // determine what source lines to avoid showing.
+  // mixed source & assembly output. We're currently using the
+  // target.process.thread.step-avoid-regexp setting (which is used for
+  // stepping over inlined STL functions by default) to determine what source
+  // lines to avoid showing.
   //
   // Returns true if this source line should be elided (if the source line
-  // should
-  // not be displayed).
+  // should not be displayed).
   static bool
   ElideMixedSourceAndDisassemblyLine(const ExecutionContext &exe_ctx,
                                      const SymbolContext &sc, SourceLine &line);

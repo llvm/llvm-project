@@ -14,7 +14,7 @@
 
 namespace llvm {
 class MCSymbolMachO : public MCSymbol {
-  /// \brief We store the value for the 'desc' symbol field in the
+  /// We store the value for the 'desc' symbol field in the
   /// lowest 16 bits of the implementation defined flags.
   enum MachOSymbolFlags : uint16_t { // See <mach-o/nlist.h>.
     SF_DescFlagsMask                        = 0xFFFF,
@@ -104,7 +104,7 @@ public:
     setFlags(Value & SF_DescFlagsMask);
   }
 
-  /// \brief Get the encoded value of the flags as they will be emitted in to
+  /// Get the encoded value of the flags as they will be emitted in to
   /// the MachO binary
   uint16_t getEncodedFlags(bool EncodeAsAltEntry) const {
     uint16_t Flags = getFlags();

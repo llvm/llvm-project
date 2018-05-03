@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// \brief This post-linking pass replaces the function pointer of enqueued
+// This post-linking pass replaces the function pointer of enqueued
 // block kernel with a global variable (runtime handle) and adds
 // "runtime-handle" attribute to the enqueued block kernel.
 //
@@ -50,7 +50,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief Lower enqueued blocks.
+/// Lower enqueued blocks.
 class AMDGPUOpenCLEnqueuedBlockLowering : public ModulePass {
 public:
   static char ID;

@@ -429,6 +429,15 @@ std::string Linux::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
     return getDriver().SysRoot;
 
+  if (getTriple().isAndroid()) {
+    // Android toolchains typically include a sysroot at ../sysroot relative to
+    // the clang binary.
+    const StringRef ClangDir = getDriver().getInstalledDir();
+    std::string AndroidSysRootPath = (ClangDir + "/../sysroot").str();
+    if (getVFS().exists(AndroidSysRootPath))
+      return AndroidSysRootPath;
+  }
+
   if (!GCCInstallation.isValid() || !tools::isMipsArch(getTriple().getArch()))
     return std::string();
 
@@ -793,13 +802,14 @@ static std::string DetectLibcxxIncludePath(StringRef base) {
 
 void Linux::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const {
+  const std::string& SysRoot = computeSysRoot();
   const std::string LibCXXIncludePathCandidates[] = {
       DetectLibcxxIncludePath(getDriver().Dir + "/../include/c++"),
       // If this is a development, non-installed, clang, libcxx will
       // not be found at ../include/c++ but it likely to be found at
       // one of the following two locations:
-      DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/local/include/c++"),
-      DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/include/c++") };
+      DetectLibcxxIncludePath(SysRoot + "/usr/local/include/c++"),
+      DetectLibcxxIncludePath(SysRoot + "/usr/include/c++") };
   for (const auto &IncludePath : LibCXXIncludePathCandidates) {
     if (IncludePath.empty() || !getVFS().exists(IncludePath))
       continue;

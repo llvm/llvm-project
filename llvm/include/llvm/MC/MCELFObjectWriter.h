@@ -132,7 +132,7 @@ public:
   }
 };
 
-/// \brief Construct a new ELF writer instance.
+/// Construct a new ELF writer instance.
 ///
 /// \param MOTW - The target specific ELF writer subclass.
 /// \param OS - The stream to write to.
