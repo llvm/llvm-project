@@ -107,6 +107,8 @@ Changes to the LLVM IR
   have changed. Alignment is no longer an argument, and are instead conveyed as
   parameter attributes.
 
+* invariant.group.barrier has been renamed to launder.invariant.group.
+
 Changes to the ARM Backend
 --------------------------
 

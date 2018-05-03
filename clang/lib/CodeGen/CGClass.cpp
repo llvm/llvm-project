@@ -1276,7 +1276,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
-      CXXThisValue = Builder.CreateInvariantGroupBarrier(LoadCXXThis());
+      CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
     EmitBaseInitializer(*this, ClassDecl, *B, CtorType);
   }
 
@@ -1293,7 +1293,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
-      CXXThisValue = Builder.CreateInvariantGroupBarrier(LoadCXXThis());
+      CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
     EmitBaseInitializer(*this, ClassDecl, *B, CtorType);
   }
 
@@ -1477,11 +1477,11 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
 
     // Initialize the vtable pointers before entering the body.
     if (!CanSkipVTablePointerInitialization(*this, Dtor)) {
-      // Insert the llvm.invariant.group.barrier intrinsic before initializing
+      // Insert the llvm.launder.invariant.group intrinsic before initializing
       // the vptrs to cancel any previous assumptions we might have made.
       if (CGM.getCodeGenOpts().StrictVTablePointers &&
           CGM.getCodeGenOpts().OptimizationLevel > 0)
-        CXXThisValue = Builder.CreateInvariantGroupBarrier(LoadCXXThis());
+        CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
       InitializeVTablePointers(Dtor->getParent());
     }
 

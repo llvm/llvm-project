@@ -1196,14 +1196,13 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
       VarX1 = DefX2->getOperand(0);
       SubOneOp = dyn_cast<BinaryOperator>(DefX2->getOperand(1));
     }
-    if (!SubOneOp)
+    if (!SubOneOp || SubOneOp->getOperand(0) != VarX1)
       return false;
 
-    Instruction *SubInst = cast<Instruction>(SubOneOp);
-    ConstantInt *Dec = dyn_cast<ConstantInt>(SubInst->getOperand(1));
+    ConstantInt *Dec = dyn_cast<ConstantInt>(SubOneOp->getOperand(1));
     if (!Dec ||
-        !((SubInst->getOpcode() == Instruction::Sub && Dec->isOne()) ||
-          (SubInst->getOpcode() == Instruction::Add &&
+        !((SubOneOp->getOpcode() == Instruction::Sub && Dec->isOne()) ||
+          (SubOneOp->getOpcode() == Instruction::Add &&
            Dec->isMinusOne()))) {
       return false;
     }

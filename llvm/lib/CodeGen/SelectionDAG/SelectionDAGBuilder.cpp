@@ -5257,37 +5257,12 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // PHI nodes have already been selected, so we should know which VReg that
     // is assigns to already.
     if (isa<PHINode>(V)) {
-      auto VMI = FuncInfo.ValueMap.find(V);
-      if (VMI != FuncInfo.ValueMap.end()) {
-        unsigned Reg = VMI->second;
-        // The PHI node may be split up into several MI PHI nodes (in
-        // FunctionLoweringInfo::set).
-        RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
-                         V->getType(), false);
-        if (RFV.occupiesMultipleRegs()) {
-          unsigned I = 0;
-          unsigned Offset = 0;
-          for (auto CountAndVT : zip_first(RFV.RegCount, RFV.RegVTs)) {
-            unsigned RegCount = std::get<0>(CountAndVT);
-            MVT RegisterVT = std::get<1>(CountAndVT);
-            unsigned RegisterSize = RegisterVT.getSizeInBits();
-            for (unsigned E = I + RegCount; I != E; ++I) {
-              auto FragmentExpr = DIExpression::createFragmentExpression(
-                  Expression, Offset, RegisterSize);
-              if (!FragmentExpr)
-                continue;
-              // The vregs are guaranteed to be allocated in sequence.
-              SDV = DAG.getVRegDbgValue(Variable, *FragmentExpr, Reg + I,
-                                        false, dl, SDNodeOrder);
-              DAG.AddDbgValue(SDV, nullptr, false);
-              Offset += RegisterSize;
-            }
-          }
-        } else {
-          SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
-                                    SDNodeOrder);
-          DAG.AddDbgValue(SDV, nullptr, false);
-        }
+      auto It = FuncInfo.ValueMap.find(V);
+      if (It != FuncInfo.ValueMap.end()) {
+        unsigned Reg = It->second;
+        SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
+                                  SDNodeOrder);
+        DAG.AddDbgValue(SDV, nullptr, false);
         return nullptr;
       }
     }
@@ -5735,7 +5710,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   }
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
-  case Intrinsic::invariant_group_barrier:
+  case Intrinsic::launder_invariant_group:
     // Drop the intrinsic, but forward the value
     setValue(&I, getValue(I.getOperand(0)));
     return nullptr;

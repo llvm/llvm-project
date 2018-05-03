@@ -53,7 +53,7 @@ struct DynamicFrom2Virtuals :
 };
 
 // CHECK-NEW-LABEL: define void @_Z12LocalObjectsv()
-// CHECK-NEW-NOT: @llvm.invariant.group.barrier.p0i8(
+// CHECK-NEW-NOT: @llvm.launder.invariant.group.p0i8(
 // CHECK-NEW-LABEL: {{^}}}
 void LocalObjects() {
   DynamicBase1 DB;
@@ -81,20 +81,20 @@ void LocalObjects() {
 
 struct DynamicFromVirtualStatic1;
 // CHECK-CTORS-LABEL: define linkonce_odr void @_ZN25DynamicFromVirtualStatic1C1Ev
-// CHECK-CTORS-NOT: @llvm.invariant.group.barrier.p0i8(
+// CHECK-CTORS-NOT: @llvm.launder.invariant.group.p0i8(
 // CHECK-CTORS-LABEL: {{^}}}
 
 struct DynamicFrom2Virtuals;
 // CHECK-CTORS-LABEL: define linkonce_odr void @_ZN20DynamicFrom2VirtualsC1Ev
-// CHECK-CTORS: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-CTORS: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-CTORS-LABEL: {{^}}}
 
 
 // CHECK-NEW-LABEL: define void @_Z9Pointers1v()
-// CHECK-NEW-NOT: @llvm.invariant.group.barrier.p0i8(
+// CHECK-NEW-NOT: @llvm.launder.invariant.group.p0i8(
 // CHECK-NEW-LABEL: call void @_ZN12DynamicBase1C1Ev(
 
-// CHECK-NEW: %[[THIS3:.*]] = call i8* @llvm.invariant.group.barrier.p0i8(i8* %[[THIS2:.*]])
+// CHECK-NEW: %[[THIS3:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS2:.*]])
 // CHECK-NEW: %[[THIS4:.*]] = bitcast i8* %[[THIS3]] to %[[DynamicDerived:.*]]*
 // CHECK-NEW: call void @_ZN14DynamicDerivedC1Ev(%[[DynamicDerived:.*]]* %[[THIS4]])
 // CHECK-NEW-LABEL: {{^}}}
@@ -109,9 +109,9 @@ void Pointers1() {
 
 // CHECK-NEW-LABEL: define void @_Z14HackingObjectsv()
 // CHECK-NEW:  call void @_ZN12DynamicBase1C1Ev
-// CHECK-NEW:  call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-NEW:  call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-NEW:  call void @_ZN14DynamicDerivedC1Ev(
-// CHECK-NEW:  call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-NEW:  call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-NEW: call void @_ZN12DynamicBase1C1Ev(
 // CHECK-NEW-LABEL: {{^}}}
 void HackingObjects() {
@@ -131,7 +131,7 @@ void HackingObjects() {
 /*** Testing Constructors ***/
 struct DynamicBase1;
 // CHECK-CTORS-LABEL: define linkonce_odr void @_ZN12DynamicBase1C2Ev(
-// CHECK-CTORS-NOT: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-CTORS-NOT: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-CTORS-LABEL: {{^}}}
 
 
@@ -140,7 +140,7 @@ struct DynamicDerived;
 // CHECK-CTORS-LABEL: define linkonce_odr void @_ZN14DynamicDerivedC2Ev(
 // CHECK-CTORS: %[[THIS0:.*]] = load %[[DynamicDerived:.*]]*, %[[DynamicDerived]]** {{.*}}
 // CHECK-CTORS: %[[THIS1:.*]] = bitcast %[[DynamicDerived:.*]]* %[[THIS0]] to i8*
-// CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.invariant.group.barrier.p0i8(i8* %[[THIS1:.*]])
+// CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS1:.*]])
 // CHECK-CTORS: %[[THIS3:.*]] = bitcast i8* %[[THIS2]] to %[[DynamicDerived]]*
 // CHECK-CTORS: %[[THIS4:.*]] = bitcast %[[DynamicDerived]]* %[[THIS3]] to %[[DynamicBase:.*]]*
 // CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[DynamicBase]]* %[[THIS4]])
@@ -154,15 +154,15 @@ struct DynamicDerivedMultiple;
 
 // CHECK-CTORS: %[[THIS0:.*]] = load %[[CLASS:.*]]*, %[[CLASS]]** {{.*}}
 // CHECK-CTORS: %[[THIS1:.*]] = bitcast %[[CLASS:.*]]* %[[THIS0]] to i8*
-// CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.invariant.group.barrier.p0i8(i8* %[[THIS1]])
+// CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS1]])
 // CHECK-CTORS: %[[THIS3:.*]] = bitcast i8* %[[THIS2]] to %[[CLASS]]*
 // CHECK-CTORS: %[[THIS4:.*]] = bitcast %[[CLASS]]* %[[THIS3]] to %[[BASE_CLASS:.*]]*
 // CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[BASE_CLASS]]* %[[THIS4]])
 
-// CHECK-CTORS: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-CTORS: call i8* @llvm.launder.invariant.group.p0i8(
 
 // CHECK-CTORS: call void @_ZN12DynamicBase2C2Ev(
-// CHECK-CTORS-NOT: @llvm.invariant.group.barrier.p0i8
+// CHECK-CTORS-NOT: @llvm.launder.invariant.group.p0i8
 
 
 // CHECK-CTORS: %[[THIS10:.*]] = bitcast %struct.DynamicDerivedMultiple* %[[THIS0]] to i32 (...)***
@@ -177,7 +177,7 @@ struct DynamicDerivedMultiple;
 
 struct DynamicFromStatic;
 // CHECK-CTORS-LABEL: define linkonce_odr void @_ZN17DynamicFromStaticC2Ev(
-// CHECK-CTORS-NOT: @llvm.invariant.group.barrier.p0i8(
+// CHECK-CTORS-NOT: @llvm.launder.invariant.group.p0i8(
 // CHECK-CTORS-LABEL: {{^}}}
 
 struct A {
@@ -206,15 +206,15 @@ void g2(A *a) {
 void UnionsBarriers(U *u) {
   // CHECK-NEW: call void @_Z9changeToBP1U(
   changeToB(u);
-  // CHECK-NEW: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: call void @_Z2g2P1A(%struct.A*
   g2(&u->b);
   // CHECK-NEW: call void @_Z9changeToAP1U(%union.U* 
   changeToA(u);
-  // CHECK-NEW: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // call void @_Z2g2P1A(%struct.A* %a)
   g2(&u->a);
-  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW-NOT: call i8* @llvm.launder.invariant.group.p0i8(i8*
 }
 
 struct HoldingVirtuals {
@@ -233,10 +233,10 @@ void take(AnotherEmpty &);
 
 // CHECK-NEW-LABEL: noBarriers
 void noBarriers(NoVptrs &noVptrs) {
-  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW-NOT: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: 42
   noVptrs.a += 42;
-  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW-NOT: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: call void @_Z4takeR12AnotherEmpty(
   take(noVptrs.empty);
 }
@@ -249,10 +249,10 @@ void take(HoldingVirtuals &);
 
 // CHECK-NEW-LABEL: define void @_Z15UnionsBarriers2R2U2
 void UnionsBarriers2(U2 &u) {
-  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW-NOT: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: 42
   u.z += 42;
-  // CHECK-NEW: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: call void @_Z4takeR15HoldingVirtuals(
   take(u.h);
 }
@@ -279,24 +279,24 @@ void take(VirtualInVBase &);
 void take(VirtualInheritance &);
 
 void UnionsBarrier3(U3 &u) {
-  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW-NOT: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: 42
   u.z += 42;
-  // CHECK-NEW: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: call void @_Z4takeR13VirtualInBase(
   take(u.v1);
-  // CHECK-NEW: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: call void @_Z4takeR13VirtualInBase(
   take(u.v2);
 
-  // CHECK-NEW: call i8* @llvm.invariant.group.barrier.p0i8(i8*
+  // CHECK-NEW: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: call void @_Z4takeR18VirtualInheritance(
   take(u.v3);
 }
 
 /** DTORS **/
 // CHECK-DTORS-LABEL: define linkonce_odr void @_ZN10StaticBaseD2Ev(
-// CHECK-DTORS-NOT: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-DTORS-NOT: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-DTORS-LABEL: {{^}}}
 
 
@@ -305,22 +305,22 @@ void UnionsBarrier3(U3 &u) {
 // CHECK-DTORS-LABEL: {{^}}}
 
 // CHECK-DTORS-LABEL: define linkonce_odr void @_ZN17DynamicFromStaticD2Ev
-// CHECK-DTORS-NOT: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-DTORS-NOT: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-DTORS-LABEL: {{^}}}
 
 
 // CHECK-DTORS-LABEL: define linkonce_odr void @_ZN22DynamicDerivedMultipleD2Ev(
 
 // CHECK-DTORS-LABEL: define linkonce_odr void @_ZN12DynamicBase2D2Ev(
-// CHECK-DTORS: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-DTORS: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-DTORS-LABEL: {{^}}}
 
 // CHECK-DTORS-LABEL: define linkonce_odr void @_ZN12DynamicBase1D2Ev
-// CHECK-DTORS: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-DTORS: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-DTORS-LABEL: {{^}}}
 
 // CHECK-DTORS-LABEL: define linkonce_odr void @_ZN14DynamicDerivedD2Ev
-// CHECK-DTORS-NOT: call i8* @llvm.invariant.group.barrier.p0i8(
+// CHECK-DTORS-NOT: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-DTORS-LABEL: {{^}}}
 
 

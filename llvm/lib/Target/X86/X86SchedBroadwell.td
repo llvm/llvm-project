@@ -203,8 +203,10 @@ defm : BWWriteResPair<WriteVecALU,   [BWPort15],  1>; // Vector integer ALU op, 
 defm : BWWriteResPair<WriteVecLogic, [BWPort015], 1, [1], 1, 5>; // Vector integer and/or/xor.
 defm : BWWriteResPair<WriteVecLogicY,[BWPort015], 1, [1], 1, 6>; // Vector integer and/or/xor (YMM/ZMM).
 defm : BWWriteResPair<WriteVecShift, [BWPort0],  1>; // Vector integer shifts.
-defm : BWWriteResPair<WriteVecIMul,  [BWPort0],   5>; // Vector integer multiply.
-defm : BWWriteResPair<WritePMULLD,   [BWPort0], 10, [2], 2, 5>; // PMULLD
+defm : BWWriteResPair<WriteVecIMul,  [BWPort0],  5, [1], 1, 5>; // Vector integer multiply.
+defm : BWWriteResPair<WriteVecIMulY, [BWPort0],  5, [1], 1, 6>; // Vector integer multiply.
+defm : BWWriteResPair<WritePMULLD,   [BWPort0], 10, [2], 2, 5>; // Vector PMULLD.
+defm : BWWriteResPair<WritePMULLDY,  [BWPort0], 10, [2], 2, 6>; // Vector PMULLD (YMM/ZMM).
 defm : BWWriteResPair<WriteShuffle,  [BWPort5], 1, [1], 1, 5>; // Vector shuffles.
 defm : BWWriteResPair<WriteShuffleY, [BWPort5], 1, [1], 1, 6>; // Vector shuffles (YMM/ZMM).
 defm : BWWriteResPair<WriteVarShuffle, [BWPort5], 1, [1], 1, 5>; // Vector variable shuffles.
@@ -214,8 +216,10 @@ defm : BWWriteResPair<WriteBlendY, [BWPort5], 1, [1], 1, 6>; // Vector blends (Y
 defm : BWWriteResPair<WriteVarBlend,  [BWPort5], 2, [2], 2, 5>; // Vector variable blends.
 defm : BWWriteResPair<WriteVarBlendY, [BWPort5], 2, [2], 2, 6>; // Vector variable blends (YMM/ZMM).
 defm : BWWriteResPair<WriteMPSAD,  [BWPort0, BWPort5], 7, [1, 2], 3, 5>; // Vector MPSAD.
-defm : BWWriteResPair<WritePSADBW,   [BWPort0],   5>; // Vector PSADBW.
-defm : BWWriteResPair<WritePHMINPOS, [BWPort0],   5>; // Vector PHMINPOS.
+defm : BWWriteResPair<WriteMPSADY, [BWPort0, BWPort5], 7, [1, 2], 3, 6>; // Vector MPSAD.
+defm : BWWriteResPair<WritePSADBW,   [BWPort0], 5, [1], 1, 5>; // Vector PSADBW.
+defm : BWWriteResPair<WritePSADBWY,  [BWPort0], 5, [1], 1, 6>; // Vector PSADBW (YMM/ZMM).
+defm : BWWriteResPair<WritePHMINPOS, [BWPort0], 5>; // Vector PHMINPOS.
 
 // Vector insert/extract operations.
 def : WriteRes<WriteVecInsert, [BWPort5]> {
@@ -1504,16 +1508,7 @@ def BWWriteResGroup123 : SchedWriteRes<[BWPort0,BWPort23]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup123], (instregex "MUL_F(32|64)m",
-                                             "VPCMPGTQYrm",
-                                             "VPMADDUBSWYrm",
-                                             "VPMADDWDYrm",
-                                             "VPMULDQYrm",
-                                             "VPMULHRSWYrm",
-                                             "VPMULHUWYrm",
-                                             "VPMULHWYrm",
-                                             "VPMULLWYrm",
-                                             "VPMULUDQYrm",
-                                             "VPSADBWYrm")>;
+                                             "VPCMPGTQYrm")>;
 
 def BWWriteResGroup126 : SchedWriteRes<[BWPort0,BWPort015]> {
   let Latency = 11;
@@ -1594,13 +1589,6 @@ def BWWriteResGroup137_1 : SchedWriteRes<[BWPort0,BWFPDivider]> {
 }
 def: InstRW<[BWWriteResGroup137_1], (instregex "(V?)SQRTSSr")>;
 
-def BWWriteResGroup138 : SchedWriteRes<[BWPort0,BWPort5,BWPort23]> {
-  let Latency = 13;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,2,1];
-}
-def: InstRW<[BWWriteResGroup138], (instregex "VMPSADBWYrmi")>;
-
 def BWWriteResGroup139 : SchedWriteRes<[BWPort0,BWFPDivider]> {
   let Latency = 14;
   let NumMicroOps = 1;
@@ -1680,13 +1668,6 @@ def BWWriteResGroup150 : SchedWriteRes<[BWPort0,BWPort23,BWFPDivider]> {
 }
 def: InstRW<[BWWriteResGroup150], (instregex "(V?)DIVPSrm",
                                              "(V?)DIVSSrm")>;
-
-def BWWriteResGroup151 : SchedWriteRes<[BWPort0,BWPort23]> {
-  let Latency = 16;
-  let NumMicroOps = 3;
-  let ResourceCycles = [2,1];
-}
-def: InstRW<[BWWriteResGroup151], (instregex "VPMULLDYrm")>;
 
 def BWWriteResGroup153 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort06,BWPort15,BWPort0156]> {
   let Latency = 16;

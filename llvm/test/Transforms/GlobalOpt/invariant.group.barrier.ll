@@ -33,7 +33,7 @@ enter:
   store i32 %val, i32* %valptr
   
   %0 = bitcast i32* %valptr to i8*
-  %barr = call i8* @llvm.invariant.group.barrier(i8* %0)
+  %barr = call i8* @llvm.launder.invariant.group(i8* %0)
   %1 = bitcast i8* %barr to i32*
   
   %val2 = load i32, i32* %1
@@ -41,7 +41,7 @@ enter:
   ret void
 }
 
-; We can't step through invariant.group.barrier here, because that would change
+; We can't step through launder.invariant.group here, because that would change
 ; this load in @usage_of_globals()
 ; val = load i32, i32* %ptrVal, !invariant.group !0 
 ; into 
@@ -54,7 +54,7 @@ enter:
   store i32 13, i32* @tmp3, !invariant.group !0
   
   %0 = bitcast i32* @tmp3 to i8*
-  %barr = call i8* @llvm.invariant.group.barrier(i8* %0)
+  %barr = call i8* @llvm.launder.invariant.group(i8* %0)
   %1 = bitcast i8* %barr to i32*
   
   store i32* %1, i32** @ptrToTmp3
@@ -74,6 +74,6 @@ entry:
 
 declare void @changeTmp3ValAndCallBarrierInside()
 
-declare i8* @llvm.invariant.group.barrier(i8*)
+declare i8* @llvm.launder.invariant.group(i8*)
 
 !0 = !{!"something"}

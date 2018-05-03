@@ -5318,7 +5318,7 @@ The experimental ``invariant.group`` metadata may be attached to
 The existence of the ``invariant.group`` metadata on the instruction tells
 the optimizer that every ``load`` and ``store`` to the same pointer operand
 within the same invariant group can be assumed to load or store the same
-value (but see the ``llvm.invariant.group.barrier`` intrinsic which affects
+value (but see the ``llvm.launder.invariant.group`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
 
@@ -5343,13 +5343,13 @@ Examples:
    store i8 %unknownValue, i8* %ptr, !invariant.group !0 ; Can assume that %unknownValue == 42
 
    call void @foo(i8* %ptr)
-   %newPtr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
-   %d = load i8, i8* %newPtr2, !invariant.group !0  ; Can't step through invariant.group.barrier to get value of %ptr
+   %newPtr2 = call i8* @llvm.launder.invariant.group(i8* %ptr)
+   %d = load i8, i8* %newPtr2, !invariant.group !0  ; Can't step through launder.invariant.group to get value of %ptr
 
    ...
    declare void @foo(i8*)
    declare i8* @getPointer(i8*)
-   declare i8* @llvm.invariant.group.barrier(i8*)
+   declare i8* @llvm.launder.invariant.group(i8*)
 
    !0 = !{!"magic ptr"}
    !1 = !{!"other ptr"}
@@ -12908,7 +12908,7 @@ Semantics:
 
 This intrinsic indicates that the memory is mutable again.
 
-'``llvm.invariant.group.barrier``' Intrinsic
+'``llvm.launder.invariant.group``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12919,12 +12919,12 @@ argument.
 
 ::
 
-      declare i8* @llvm.invariant.group.barrier.p0i8(i8* <ptr>)
+      declare i8* @llvm.launder.invariant.group.p0i8(i8* <ptr>)
 
 Overview:
 """""""""
 
-The '``llvm.invariant.group.barrier``' intrinsic can be used when an invariant
+The '``llvm.launder.invariant.group``' intrinsic can be used when an invariant
 established by invariant.group metadata no longer holds, to obtain a new pointer
 value that does not carry the invariant information. It is an experimental
 intrinsic, which means that its semantics might change in the future.
@@ -12933,7 +12933,7 @@ intrinsic, which means that its semantics might change in the future.
 Arguments:
 """"""""""
 
-The ``llvm.invariant.group.barrier`` takes only one argument, which is
+The ``llvm.launder.invariant.group`` takes only one argument, which is
 the pointer to the memory for which the ``invariant.group`` no longer holds.
 
 Semantics:
@@ -12941,6 +12941,7 @@ Semantics:
 
 Returns another pointer that aliases its argument but which is considered different
 for the purposes of ``load``/``store`` ``invariant.group`` metadata.
+It does not read any accessible memory and the execution can be speculated.
 
 .. _constrainedfp:
 
