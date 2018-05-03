@@ -29,6 +29,7 @@ struct Configuration {
   bool Relocatable;
   bool StripAll;
   bool StripDebug;
+  bool StackFirst;
   uint32_t GlobalBase;
   uint32_t InitialMemory;
   uint32_t MaxMemory;
