@@ -326,8 +326,7 @@ unsigned packetSizeSlots(MCSubtargetInfo const &STI);
 unsigned slotsConsumed(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                        MCInst const &MCI);
 
-
-// Pad the bundle with nops to satisfy endloop requirements
+// Pad the bundle with nops to satisfy endloop requirements.
 void padEndloop(MCInst &MCI, MCContext &Context);
 class PredicateInfo {
 public:
