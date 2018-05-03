@@ -46,6 +46,7 @@ const csan_source_loc_t *__csan_get_task_source_loc(const csi_id_t task_id);
 const csan_source_loc_t *__csan_get_task_exit_source_loc(const csi_id_t task_exit_id);
 const csan_source_loc_t *__csan_get_detach_continue_source_loc(const csi_id_t detach_continue_id);
 const csan_source_loc_t *__csan_get_sync_source_loc(const csi_id_t sync_id);
+const csan_source_loc_t *__csan_get_alloca_source_loc(const csi_id_t alloca_id);
 
 const obj_source_loc_t *__csan_get_load_obj_source_loc(const csi_id_t load_id);
 const obj_source_loc_t *__csan_get_store_obj_source_loc(const csi_id_t store_id);

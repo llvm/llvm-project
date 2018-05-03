@@ -437,6 +437,12 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
   }
 }
 
+CILKSAN_API
+void __csi_after_alloca(const csi_id_t alloca_id, const void *addr, uint64_t total_size, uint64_t isStaticAlloca) {
+  cilksan_record_alloc((size_t) addr, total_size);
+  cilksan_clear_shadow_memory((size_t)addr, total_size);
+}
+
 static std::unordered_map<uintptr_t, size_t> malloc_sizes;
 static std::map<uintptr_t, size_t> pages_to_clear;
 

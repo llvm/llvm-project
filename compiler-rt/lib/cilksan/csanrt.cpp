@@ -28,6 +28,7 @@ typedef enum {
   FED_TYPE_TASK_EXIT,
   FED_TYPE_DETACH_CONTINUE,
   FED_TYPE_SYNC,
+  FED_TYPE_ALLOCA,
   NUM_FED_TYPES // Must be last
 } fed_type_t;
 
@@ -344,6 +345,11 @@ const csan_source_loc_t *__csan_get_detach_continue_source_loc(
 CSIRT_API
 const csan_source_loc_t *__csan_get_sync_source_loc(const csi_id_t sync_id) {
   return get_fed_entry(FED_TYPE_SYNC, sync_id);
+}
+
+CSIRT_API
+const csan_source_loc_t *__csan_get_alloca_source_loc(const csi_id_t alloca_id) {
+  return get_fed_entry(FED_TYPE_ALLOCA, alloca_id);
 }
 
 CSIRT_API
