@@ -2159,7 +2159,8 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     bool Inheritable = false;
     for (const auto &Super : llvm::reverse(Supers)) {
       const Record *R = Super.first;
-      if (R->getName() != "TargetSpecificAttr" && SuperName.empty())
+      if (R->getName() != "TargetSpecificAttr" &&
+          R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName();
       if (R->getName() == "InheritableAttr")
         Inheritable = true;
@@ -3528,7 +3529,9 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     emitArgInfo(*I->second, SS);
     SS << ", " << I->second->getValueAsBit("HasCustomParsing");
     SS << ", " << I->second->isSubClassOf("TargetSpecificAttr");
-    SS << ", " << I->second->isSubClassOf("TypeAttr");
+    SS << ", "
+       << (I->second->isSubClassOf("TypeAttr") ||
+           I->second->isSubClassOf("DeclOrTypeAttr"));
     SS << ", " << I->second->isSubClassOf("StmtAttr");
     SS << ", " << IsKnownToGCC(*I->second);
     SS << ", " << PragmaAttributeSupport.isAttributedSupported(*I->second);

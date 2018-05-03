@@ -536,18 +536,15 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     error.SetErrorString("failed to get process ID");
 
   if (error.Success()) {
-    bool timed_out = false;
-    shell_info_sp->process_reaped.WaitForValueEqualTo(
-        true, std::chrono::seconds(timeout_sec), &timed_out);
-    if (timed_out) {
+    if (!shell_info_sp->process_reaped.WaitForValueEqualTo(
+            true, std::chrono::seconds(timeout_sec))) {
       error.SetErrorString("timed out waiting for shell command to complete");
 
       // Kill the process since it didn't complete within the timeout specified
       Kill(pid, SIGKILL);
       // Wait for the monitor callback to get the message
-      timed_out = false;
       shell_info_sp->process_reaped.WaitForValueEqualTo(
-          true, std::chrono::seconds(1), &timed_out);
+          true, std::chrono::seconds(1));
     } else {
       if (status_ptr)
         *status_ptr = shell_info_sp->status;

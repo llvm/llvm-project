@@ -3404,8 +3404,8 @@ declare <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32>, <16 x i32>, <16
 define <16 x i32>@test_int_x86_avx512_mask_prorv_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_prorv_d_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vprorvd %zmm1, %zmm0, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vprorvd %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vprorvd %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
@@ -3424,8 +3424,8 @@ declare <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64>, <8 x i64>, <8 x i
 define <8 x i64>@test_int_x86_avx512_mask_prorv_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_prorv_q_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vprorvq %zmm1, %zmm0, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vprorvq %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vprorvq %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0

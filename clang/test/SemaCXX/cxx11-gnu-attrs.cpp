@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++11 -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++11 -Wno-gcc-compat -verify %s
 
 // Error cases.
 
@@ -18,8 +18,7 @@ int *[[gnu::unused]] attr_on_ptr;
 // expected-warning@-2 {{calling convention '__stdcall' ignored for this target}}
 [[gnu::fastcall]] void pr17424_4() [[gnu::stdcall]];
 // expected-warning@-1 {{calling convention 'fastcall' ignored for this target}}
-// expected-warning@-2 {{attribute 'stdcall' ignored, because it cannot be applied to a type}}
-// expected-warning@-3 {{calling convention 'stdcall' ignored for this target}}
+// expected-warning@-2 {{calling convention 'stdcall' ignored for this target}}
 void pr17424_5 [[gnu::fastcall]]();
 // expected-warning@-1 {{calling convention 'fastcall' ignored for this target}}
 

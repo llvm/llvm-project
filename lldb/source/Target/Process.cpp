@@ -3797,11 +3797,10 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
     bool receipt_received = false;
     if (PrivateStateThreadIsValid()) {
       while (!receipt_received) {
-        bool timed_out = false;
         // Check for a receipt for 2 seconds and then check if the private
         // state thread is still around.
-        receipt_received = event_receipt_sp->WaitForEventReceived(
-            std::chrono::seconds(2), &timed_out);
+        receipt_received =
+            event_receipt_sp->WaitForEventReceived(std::chrono::seconds(2));
         if (!receipt_received) {
           // Check if the private state thread is still around. If it isn't
           // then we are done waiting

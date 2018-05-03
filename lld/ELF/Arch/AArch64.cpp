@@ -289,12 +289,6 @@ void AArch64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     checkInt(Loc, Val, 21, Type);
     or32le(Loc, (Val & 0x1FFFFC) << 3);
     break;
-  case R_AARCH64_LD64_GOT_LO12_NC:
-  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-  case R_AARCH64_TLSDESC_LD64_LO12:
-    checkAlignment(Loc, Val, 8, Type);
-    or32le(Loc, (Val & 0xFF8) << 7);
-    break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
     or32AArch64Imm(Loc, getBits(Val, 0, 11));
     break;
@@ -307,6 +301,9 @@ void AArch64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     or32AArch64Imm(Loc, getBits(Val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
+  case R_AARCH64_LD64_GOT_LO12_NC:
+  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+  case R_AARCH64_TLSDESC_LD64_LO12:
     checkAlignment(Loc, Val, 8, Type);
     or32AArch64Imm(Loc, getBits(Val, 3, 11));
     break;
