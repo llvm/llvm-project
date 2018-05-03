@@ -25,7 +25,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class FileSpecList FileSpecList.h "lldb/Core/FileSpecList.h"
-/// @brief A file collection class.
+/// A file collection class.
 ///
 /// A class that contains a mutable list of FileSpec objects.
 //----------------------------------------------------------------------
@@ -56,8 +56,7 @@ public:
   //------------------------------------------------------------------
   /// Assignment operator.
   ///
-  /// Replace the file list in this object with the file list from
-  /// \a rhs.
+  /// Replace the file list in this object with the file list from \a rhs.
   ///
   /// @param[in] rhs
   ///     A file list object to copy.
@@ -80,8 +79,8 @@ public:
   //------------------------------------------------------------------
   /// Append a FileSpec object if unique.
   ///
-  /// Appends \a file to the end of the file list if it doesn't
-  /// already exist in the file list.
+  /// Appends \a file to the end of the file list if it doesn't already exist
+  /// in the file list.
   ///
   /// @param[in] file
   ///     A new file to append to this file list.
@@ -107,8 +106,8 @@ public:
   //------------------------------------------------------------------
   /// Find a file index.
   ///
-  /// Find the index of the file in the file spec list that matches
-  /// \a file starting \a idx entries into the file spec list.
+  /// Find the index of the file in the file spec list that matches \a file
+  /// starting \a idx entries into the file spec list.
   ///
   /// @param[in] idx
   ///     An index into the file list.
@@ -128,10 +127,9 @@ public:
   //------------------------------------------------------------------
   /// Get file at index.
   ///
-  /// Gets a file from the file list. If \a idx is not a valid index,
-  /// an empty FileSpec object will be returned. The file objects
-  /// that are returned can be tested using
-  /// FileSpec::operator void*().
+  /// Gets a file from the file list. If \a idx is not a valid index, an empty
+  /// FileSpec object will be returned. The file objects that are returned can
+  /// be tested using FileSpec::operator void*().
   ///
   /// @param[in] idx
   ///     An index into the file list.
@@ -146,8 +144,8 @@ public:
   //------------------------------------------------------------------
   /// Get file specification pointer at index.
   ///
-  /// Gets a file from the file list. The file objects that are
-  /// returned can be tested using FileSpec::operator void*().
+  /// Gets a file from the file list. The file objects that are returned can
+  /// be tested using FileSpec::operator void*().
   ///
   /// @param[in] idx
   ///     An index into the file list.
@@ -161,9 +159,9 @@ public:
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
-  /// Return the size in bytes that this object takes in memory. This
-  /// returns the size in bytes of this object, not any shared string
-  /// values it may refer to.
+  /// Return the size in bytes that this object takes in memory. This returns
+  /// the size in bytes of this object, not any shared string values it may
+  /// refer to.
   ///
   /// @return
   ///     The number of bytes that this object occupies in memory.

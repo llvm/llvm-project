@@ -31,10 +31,10 @@ class Scalar;
 
 namespace process_linux {
 /// @class NativeProcessLinux
-/// @brief Manages communication with the inferior (debugee) process.
+/// Manages communication with the inferior (debugee) process.
 ///
-/// Upon construction, this class prepares and launches an inferior process for
-/// debugging.
+/// Upon construction, this class prepares and launches an inferior process
+/// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessLinux : public NativeProcessProtocol {

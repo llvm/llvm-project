@@ -25,7 +25,7 @@
 
 namespace {
 
-/// @brief Represents the collection of qualifiers on a type
+/// Represents the collection of qualifiers on a type
 
 enum Qualifiers {
   QualifierNone = 0,
@@ -37,7 +37,7 @@ enum Qualifiers {
   QualifierPointer = 32
 };
 
-/// @brief Categorizes the recognized operators
+/// Categorizes the recognized operators
 
 enum class OperatorKind {
   Unary,
@@ -50,23 +50,23 @@ enum class OperatorKind {
   NoMatch
 };
 
-/// @brief Represents one of the recognized two-character operator
-/// abbreviations used when parsing operators as names and expressions
+/// Represents one of the recognized two-character operator abbreviations used
+/// when parsing operators as names and expressions
 
 struct Operator {
   const char *name;
   OperatorKind kind;
 };
 
-/// @brief Represents a range of characters in the output buffer, typically for
-/// use with RewriteRange()
+/// Represents a range of characters in the output buffer, typically for use
+/// with RewriteRange()
 
 struct BufferRange {
   int offset;
   int length;
 };
 
-/// @brief Transient state required while parsing a name
+/// Transient state required while parsing a name
 
 struct NameState {
   bool parse_function_params;
@@ -75,12 +75,13 @@ struct NameState {
   BufferRange last_name_range;
 };
 
-/// @brief LLDB's fast C++ demangler
+/// LLDB's fast C++ demangler
 ///
 /// This is an incomplete implementation designed to speed up the demangling
 /// process that is often a bottleneck when LLDB stops a process for the first
 /// time.  Where the implementation doesn't know how to demangle a symbol it
-/// fails gracefully to allow the caller to fall back to the existing demangler.
+/// fails gracefully to allow the caller to fall back to the existing
+/// demangler.
 ///
 /// Over time the full mangling spec should be supported without compromising
 /// performance for the most common cases.
@@ -91,7 +92,7 @@ public:
   // Public API
   //----------------------------------------------------
 
-  /// @brief Create a SymbolDemangler
+  /// Create a SymbolDemangler
   ///
   /// The newly created demangler allocates and owns scratch memory sufficient
   /// for demangling typical symbols.  Additional memory will be allocated if
@@ -107,18 +108,18 @@ public:
     m_owns_m_rewrite_ranges = true;
   }
 
-  /// @brief Create a SymbolDemangler that uses provided scratch memory
+  /// Create a SymbolDemangler that uses provided scratch memory
   ///
   /// The provided memory is not owned by the demangler.  It will be
-  /// overwritten during calls to GetDemangledCopy() but can be used for
-  /// other purposes between calls.  The provided memory will not be freed
-  /// when this instance is destroyed.
+  /// overwritten during calls to GetDemangledCopy() but can be used for other
+  /// purposes between calls.  The provided memory will not be freed when this
+  /// instance is destroyed.
   ///
   /// If demangling a symbol requires additional space it will be allocated
   /// and managed by the demangler instance.
   ///
-  /// @param storage_ptr Valid pointer to at least storage_size bytes of
-  /// space that the SymbolDemangler can use during demangling
+  /// @param storage_ptr Valid pointer to at least storage_size bytes of space
+  /// that the SymbolDemangler can use during demangling
   ///
   /// @param storage_size Number of bytes of space available scratch memory
   /// referenced by storage_ptr
@@ -138,8 +139,8 @@ public:
     m_owns_buffer = false;
   }
 
-  /// @brief Destroys the SymbolDemangler and deallocates any scratch
-  /// memory that it owns
+  /// Destroys the SymbolDemangler and deallocates any scratch memory that it
+  /// owns
 
   ~SymbolDemangler() {
     if (m_owns_buffer)
@@ -153,11 +154,11 @@ public:
   int highwater_buffer = 0;
 #endif
 
-  /// @brief Parses the provided mangled name and returns a newly allocated
+  /// Parses the provided mangled name and returns a newly allocated
   /// demangling
   ///
-  /// @param mangled_name Valid null-terminated C++ mangled name following
-  /// the Itanium C++ ABI mangling specification as implemented by Clang
+  /// @param mangled_name Valid null-terminated C++ mangled name following the
+  /// Itanium C++ ABI mangling specification as implemented by Clang
   ///
   /// @result Newly allocated null-terminated demangled name when demangling
   /// is successful, and nullptr when demangling fails.  The caller is

@@ -21,10 +21,10 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class FunctionInfo Function.h "lldb/Symbol/Function.h"
-/// @brief A class that contains generic function information.
+/// A class that contains generic function information.
 ///
-/// This provides generic function information that gets reused between
-/// inline functions and function types.
+/// This provides generic function information that gets reused between inline
+/// functions and function types.
 //----------------------------------------------------------------------
 class FunctionInfo {
 public:
@@ -67,8 +67,8 @@ public:
   //------------------------------------------------------------------
   /// Compare two function information objects.
   ///
-  /// First compares the method names, and if equal, then compares
-  /// the declaration information.
+  /// First compares the method names, and if equal, then compares the
+  /// declaration information.
   ///
   /// @param[in] lhs
   ///     The Left Hand Side const FunctionInfo object reference.
@@ -86,8 +86,8 @@ public:
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -141,13 +141,13 @@ protected:
 
 //----------------------------------------------------------------------
 /// @class InlineFunctionInfo Function.h "lldb/Symbol/Function.h"
-/// @brief A class that describes information for an inlined function.
+/// A class that describes information for an inlined function.
 //----------------------------------------------------------------------
 class InlineFunctionInfo : public FunctionInfo {
 public:
   //------------------------------------------------------------------
-  /// Construct with the function method name, mangled name, and
-  /// optional declaration information.
+  /// Construct with the function method name, mangled name, and optional
+  /// declaration information.
   ///
   /// @param[in] name
   ///     A C string name for the method name for this function. This
@@ -171,8 +171,8 @@ public:
                      const Declaration *call_decl_ptr);
 
   //------------------------------------------------------------------
-  /// Construct with the function method name, mangled name, and
-  /// optional declaration information.
+  /// Construct with the function method name, mangled name, and optional
+  /// declaration information.
   ///
   /// @param[in] name
   ///     A name for the method name for this function. This value
@@ -202,8 +202,8 @@ public:
   //------------------------------------------------------------------
   /// Compare two inlined function information objects.
   ///
-  /// First compares the FunctionInfo objects, and if equal,
-  /// compares the mangled names.
+  /// First compares the FunctionInfo objects, and if equal, compares the
+  /// mangled names.
   ///
   /// @param[in] lhs
   ///     The Left Hand Side const InlineFunctionInfo object
@@ -223,8 +223,8 @@ public:
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -292,17 +292,15 @@ private:
 
 //----------------------------------------------------------------------
 /// @class Function Function.h "lldb/Symbol/Function.h"
-/// @brief A class that describes a function.
+/// A class that describes a function.
 ///
-/// Functions belong to CompileUnit objects (Function::m_comp_unit),
-/// have unique user IDs (Function::UserID), know how to reconstruct
-/// their symbol context (Function::SymbolContextScope), have a
-/// specific function type (Function::m_type_uid), have a simple
-/// method name (FunctionInfo::m_name), be declared at a specific
-/// location (FunctionInfo::m_declaration), possibly have mangled
-/// names (Function::m_mangled), an optional return type
-/// (Function::m_type), and contains lexical blocks
-/// (Function::m_blocks).
+/// Functions belong to CompileUnit objects (Function::m_comp_unit), have
+/// unique user IDs (Function::UserID), know how to reconstruct their symbol
+/// context (Function::SymbolContextScope), have a specific function type
+/// (Function::m_type_uid), have a simple method name (FunctionInfo::m_name),
+/// be declared at a specific location (FunctionInfo::m_declaration), possibly
+/// have mangled names (Function::m_mangled), an optional return type
+/// (Function::m_type), and contains lexical blocks (Function::m_blocks).
 ///
 /// The function information is split into a few pieces:
 ///     @li The concrete instance information
@@ -311,15 +309,14 @@ private:
 /// The abstract information is found in the function type (Type) that
 /// describes a function information, return type and parameter types.
 ///
-/// The concrete information is the address range information and
-/// specific locations for an instance of this function.
+/// The concrete information is the address range information and specific
+/// locations for an instance of this function.
 //----------------------------------------------------------------------
 class Function : public UserID, public SymbolContextScope {
 public:
   //------------------------------------------------------------------
-  /// Construct with a compile unit, function UID, function type UID,
-  /// optional mangled name, function type, and a section offset
-  /// based address range.
+  /// Construct with a compile unit, function UID, function type UID, optional
+  /// mangled name, function type, and a section offset based address range.
   ///
   /// @param[in] comp_unit
   ///     The compile unit to which this function belongs.
@@ -352,9 +349,8 @@ public:
            Type *func_type, const AddressRange &range);
 
   //------------------------------------------------------------------
-  /// Construct with a compile unit, function UID, function type UID,
-  /// optional mangled name, function type, and a section offset
-  /// based address range.
+  /// Construct with a compile unit, function UID, function type UID, optional
+  /// mangled name, function type, and a section offset based address range.
   ///
   /// @param[in] comp_unit
   ///     The compile unit to which this function belongs.
@@ -408,10 +404,10 @@ public:
 
   lldb::LanguageType GetLanguage() const;
   //------------------------------------------------------------------
-  /// Find the file and line number of the source location of the start
-  /// of the function.  This will use the declaration if present and fall
-  /// back on the line table if that fails.  So there may NOT be a line
-  /// table entry for this source file/line combo.
+  /// Find the file and line number of the source location of the start of the
+  /// function.  This will use the declaration if present and fall back on the
+  /// line table if that fails.  So there may NOT be a line table entry for
+  /// this source file/line combo.
   ///
   /// @param[out] source_file
   ///     The source file.
@@ -422,8 +418,8 @@ public:
   void GetStartLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
 
   //------------------------------------------------------------------
-  /// Find the file and line number of the source location of the end
-  /// of the function.
+  /// Find the file and line number of the source location of the end of the
+  /// function.
   ///
   ///
   /// @param[out] source_file
@@ -497,8 +493,8 @@ public:
   CompilerDeclContext GetDeclContext();
 
   //------------------------------------------------------------------
-  /// Get accessor for the type that describes the function
-  /// return value type, and parameter types.
+  /// Get accessor for the type that describes the function return value type,
+  /// and parameter types.
   ///
   /// @return
   ///     A type object pointer.
@@ -506,8 +502,8 @@ public:
   Type *GetType();
 
   //------------------------------------------------------------------
-  /// Get const accessor for the type that describes the function
-  /// return value type, and parameter types.
+  /// Get const accessor for the type that describes the function return value
+  /// type, and parameter types.
   ///
   /// @return
   ///     A const type object pointer.
@@ -518,10 +514,8 @@ public:
 
   //------------------------------------------------------------------
   /// Get the size of the prologue instructions for this function.  The
-  /// "prologue"
-  /// instructions include any instructions given line number 0 immediately
-  /// following
-  /// the prologue end.
+  /// "prologue" instructions include any instructions given line number 0
+  /// immediately following the prologue end.
   ///
   /// @return
   ///     The size of the prologue.
@@ -531,8 +525,8 @@ public:
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -567,10 +561,10 @@ public:
   ///
   /// The debug information may provide information about whether this
   /// function was compiled with optimization or not.  In this case,
-  /// "optimized" means that the debug experience may be difficult
-  /// for the user to understand.  Variables may not be available when
-  /// the developer would expect them, stepping through the source lines
-  /// in the function may appear strange, etc.
+  /// "optimized" means that the debug experience may be difficult for the
+  /// user to understand.  Variables may not be available when the developer
+  /// would expect them, stepping through the source lines in the function may
+  /// appear strange, etc.
   ///
   /// @return
   ///     Returns 'true' if this function was compiled with
@@ -582,10 +576,10 @@ public:
   //------------------------------------------------------------------
   /// Get whether this function represents a 'top-level' function
   ///
-  /// The concept of a top-level function is language-specific, mostly
-  /// meant to represent the notion of scripting-style code that has
-  /// global visibility of the variables/symbols/functions/...
-  /// defined within the containing file/module
+  /// The concept of a top-level function is language-specific, mostly meant
+  /// to represent the notion of scripting-style code that has global
+  /// visibility of the variables/symbols/functions/... defined within the
+  /// containing file/module
   ///
   /// If stopped in a top-level function, LLDB will expose global variables
   /// as-if locals in the 'frame variable' command

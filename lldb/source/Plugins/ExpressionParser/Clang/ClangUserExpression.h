@@ -35,13 +35,13 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ClangUserExpression ClangUserExpression.h
-/// "lldb/Expression/ClangUserExpression.h"
-/// @brief Encapsulates a single expression for use with Clang
+/// "lldb/Expression/ClangUserExpression.h" Encapsulates a single expression
+/// for use with Clang
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
 /// and as a backend for the expr command.  ClangUserExpression encapsulates
-/// the objects needed to parse and interpret or JIT an expression.  It
-/// uses the Clang parser to produce LLVM IR from the expression.
+/// the objects needed to parse and interpret or JIT an expression.  It uses
+/// the Clang parser to produce LLVM IR from the expression.
 //----------------------------------------------------------------------
 class ClangUserExpression : public LLVMUserExpression {
 public:
@@ -69,8 +69,8 @@ public:
                       bool keep_result_in_memory);
 
     //------------------------------------------------------------------
-    /// Return the object that the parser should allow to access ASTs.
-    /// May be NULL if the ASTs do not need to be transformed.
+    /// Return the object that the parser should allow to access ASTs. May be
+    /// NULL if the ASTs do not need to be transformed.
     ///
     /// @param[in] passthrough
     ///     The ASTConsumer that the returned transformer should send

@@ -335,6 +335,12 @@ let Predicates = [HasSVE] in {
   defm STNT1W_ZRR : sve_mem_cstnt_ss<0b10, "stnt1w", Z_s, ZPR32, GPR64NoXZRshifted32>;
   defm STNT1D_ZRR : sve_mem_cstnt_ss<0b11, "stnt1d", Z_d, ZPR64, GPR64NoXZRshifted64>;
 
+  // Fill/Spill
+  defm LDR_ZXI : sve_mem_z_fill<"ldr">;
+  defm LDR_PXI : sve_mem_p_fill<"ldr">;
+  defm STR_ZXI : sve_mem_z_spill<"str">;
+  defm STR_PXI : sve_mem_p_spill<"str">;
+
   defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1">;
   defm ZIP2_ZZZ : sve_int_perm_bin_perm_zz<0b001, "zip2">;
 

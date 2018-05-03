@@ -223,21 +223,21 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class Broadcaster Broadcaster.h "lldb/Core/Broadcaster.h"
-/// @brief An event broadcasting class.
+/// @class Broadcaster Broadcaster.h "lldb/Core/Broadcaster.h" An event
+/// broadcasting class.
 ///
-/// The Broadcaster class is designed to be subclassed by objects that
-/// wish to vend events in a multi-threaded environment. Broadcaster
-/// objects can each vend 32 events. Each event is represented by a bit
-/// in a 32 bit value and these bits can be set:
+/// The Broadcaster class is designed to be subclassed by objects that wish to
+/// vend events in a multi-threaded environment. Broadcaster objects can each
+/// vend 32 events. Each event is represented by a bit in a 32 bit value and
+/// these bits can be set:
 ///     @see Broadcaster::SetEventBits(uint32_t)
 /// or cleared:
 ///     @see Broadcaster::ResetEventBits(uint32_t)
-/// When an event gets set the Broadcaster object will notify the
-/// Listener object that is listening for the event (if there is one).
+/// When an event gets set the Broadcaster object will notify the Listener
+/// object that is listening for the event (if there is one).
 ///
-/// Subclasses should provide broadcast bit definitions for any events
-/// they vend, typically using an enumeration:
+/// Subclasses should provide broadcast bit definitions for any events they
+/// vend, typically using an enumeration:
 ///     \code
 ///         class Foo : public Broadcaster
 ///         {
@@ -323,12 +323,11 @@ public:
   //------------------------------------------------------------------
   /// Listen for any events specified by \a event_mask.
   ///
-  /// Only one listener can listen to each event bit in a given
-  /// Broadcaster. Once a listener has acquired an event bit, no
-  /// other broadcaster will have access to it until it is
-  /// relinquished by the first listener that gets it. The actual
-  /// event bits that get acquired by \a listener may be different
-  /// from what is requested in \a event_mask, and to track this the
+  /// Only one listener can listen to each event bit in a given Broadcaster.
+  /// Once a listener has acquired an event bit, no other broadcaster will
+  /// have access to it until it is relinquished by the first listener that
+  /// gets it. The actual event bits that get acquired by \a listener may be
+  /// different from what is requested in \a event_mask, and to track this the
   /// actual event bits that are acquired get returned.
   ///
   /// @param[in] listener
@@ -348,8 +347,7 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Get the NULL terminated C string name of this Broadcaster
-  /// object.
+  /// Get the NULL terminated C string name of this Broadcaster object.
   ///
   /// @return
   ///     The NULL terminated C string name of this Broadcaster.
@@ -394,10 +392,10 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Removes a Listener from this broadcasters list and frees the
-  /// event bits specified by \a event_mask that were previously
-  /// acquired by \a listener (assuming \a listener was listening to
-  /// this object) for other listener objects to use.
+  /// Removes a Listener from this broadcasters list and frees the event bits
+  /// specified by \a event_mask that were previously acquired by \a listener
+  /// (assuming \a listener was listening to this object) for other listener
+  /// objects to use.
   ///
   /// @param[in] listener
   ///     A Listener object that previously called AddListener.
@@ -419,10 +417,9 @@ public:
   //------------------------------------------------------------------
   /// Provides a simple mechanism to temporarily redirect events from
   /// broadcaster.  When you call this function passing in a listener and
-  /// event type mask, all events from the broadcaster matching the mask
-  /// will now go to the hijacking listener.
-  /// Only one hijack can occur at a time.  If we need more than this we
-  /// will have to implement a Listener stack.
+  /// event type mask, all events from the broadcaster matching the mask will
+  /// now go to the hijacking listener. Only one hijack can occur at a time.
+  /// If we need more than this we will have to implement a Listener stack.
   ///
   /// @param[in] listener
   ///     A Listener object.  You do not need to call StartListeningForEvents

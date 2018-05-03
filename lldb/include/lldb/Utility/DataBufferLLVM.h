@@ -40,8 +40,8 @@ public:
   char *GetChars() { return reinterpret_cast<char *>(GetBytes()); }
 
 private:
-  /// \brief Construct a DataBufferLLVM from \p Buffer.  \p Buffer must be a
-  /// valid pointer.
+  /// Construct a DataBufferLLVM from \p Buffer.  \p Buffer must be a valid
+  /// pointer.
   explicit DataBufferLLVM(std::unique_ptr<llvm::WritableMemoryBuffer> Buffer);
 
   std::unique_ptr<llvm::WritableMemoryBuffer> Buffer;

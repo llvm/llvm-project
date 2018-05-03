@@ -1391,7 +1391,7 @@ static TemplateParameterList *CreateTemplateParameterList(
 clang::FunctionTemplateDecl *ClangASTContext::CreateFunctionTemplateDecl(
     clang::DeclContext *decl_ctx, clang::FunctionDecl *func_decl,
     const char *name, const TemplateParameterInfos &template_param_infos) {
-  //    /// \brief Create a function template node.
+  //    /// Create a function template node.
   ASTContext *ast = getASTContext();
 
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;

@@ -32,10 +32,10 @@ class ProcessFreeBSD;
 class Operation;
 
 /// @class ProcessMonitor
-/// @brief Manages communication with the inferior (debugee) process.
+/// Manages communication with the inferior (debugee) process.
 ///
-/// Upon construction, this class prepares and launches an inferior process for
-/// debugging.
+/// Upon construction, this class prepares and launches an inferior process
+/// for debugging.
 ///
 /// Changes in the inferior process state are propagated to the associated
 /// ProcessFreeBSD instance by calling ProcessFreeBSD::SendMessage with the
@@ -74,8 +74,7 @@ public:
   /// standard error of this debugee.  Even if stderr and stdout were
   /// redirected on launch it may still happen that data is available on this
   /// descriptor (if the inferior process opens /dev/tty, for example). This
-  /// descriptor is
-  /// closed after a call to StopMonitor().
+  /// descriptor is closed after a call to StopMonitor().
   ///
   /// If this monitor was attached to an existing process this method returns
   /// -1.
@@ -95,8 +94,8 @@ public:
   size_t WriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
                      lldb_private::Status &error);
 
-  /// Reads the contents from the register identified by the given (architecture
-  /// dependent) offset.
+  /// Reads the contents from the register identified by the given
+  /// (architecture dependent) offset.
   ///
   /// This method is provided for use by RegisterContextFreeBSD derivatives.
   bool ReadRegisterValue(lldb::tid_t tid, unsigned offset, const char *reg_name,
@@ -215,8 +214,8 @@ private:
 
   /// @class LauchArgs
   ///
-  /// @brief Simple structure to pass data to the thread responsible for
-  /// launching a child process.
+  /// Simple structure to pass data to the thread responsible for launching a
+  /// child process.
   struct LaunchArgs : OperationArgs {
     LaunchArgs(ProcessMonitor *monitor, lldb_private::Module *module,
                char const **argv, lldb_private::Environment env,

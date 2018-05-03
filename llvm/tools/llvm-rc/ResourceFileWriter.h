@@ -25,15 +25,25 @@ class MemoryBuffer;
 
 namespace rc {
 
-struct SearchParams {
+enum CodePage {
+  CpAcp = 0,        // The current used codepage. Since there's no such
+                    // notion in LLVM what codepage it actually means,
+                    // this only allows ASCII.
+  CpWin1252 = 1252, // A codepage where most 8 bit values correspond to
+                    // unicode code points with the same value.
+  CpUtf8 = 65001,   // UTF-8.
+};
+
+struct WriterParams {
   std::vector<std::string> Include;   // Additional folders to search for files.
   std::vector<std::string> NoInclude; // Folders to exclude from file search.
   StringRef InputFilePath;            // The full path of the input file.
+  int CodePage = CpAcp;               // The codepage for interpreting characters.
 };
 
 class ResourceFileWriter : public Visitor {
 public:
-  ResourceFileWriter(const SearchParams &Params,
+  ResourceFileWriter(const WriterParams &Params,
                      std::unique_ptr<raw_fd_ostream> Stream)
       : Params(Params), FS(std::move(Stream)), IconCursorID(1) {
     assert(FS && "Output stream needs to be provided to the serializator");
@@ -146,7 +156,7 @@ private:
   Error writeVersionInfoBlock(const VersionInfoBlock &);
   Error writeVersionInfoValue(const VersionInfoValue &);
 
-  const SearchParams &Params;
+  const WriterParams &Params;
 
   // Output stream handling.
   std::unique_ptr<raw_fd_ostream> FS;

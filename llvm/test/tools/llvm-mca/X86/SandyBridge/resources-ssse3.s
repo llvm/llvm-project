@@ -147,11 +147,11 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  3      3     1.50                    	phsubw	%xmm0, %xmm2
 # CHECK-NEXT:  4      9     1.50    *               	phsubw	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                    	pmaddubsw	%mm0, %mm2
-# CHECK-NEXT:  2      11    1.00    *               	pmaddubsw	(%rax), %mm2
+# CHECK-NEXT:  2      10    1.00    *               	pmaddubsw	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                    	pmaddubsw	%xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *               	pmaddubsw	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                    	pmulhrsw	%mm0, %mm2
-# CHECK-NEXT:  2      11    1.00    *               	pmulhrsw	(%rax), %mm2
+# CHECK-NEXT:  2      10    1.00    *               	pmulhrsw	(%rax), %mm2
 # CHECK-NEXT:  1      5     1.00                    	pmulhrsw	%xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *               	pmulhrsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                    	pshufb	%mm0, %mm2
