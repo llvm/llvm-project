@@ -30,8 +30,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -512,6 +514,12 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   if (MadeChange)
     return MadeChange;
 
+  // Bail out if the loop has irreducible control flow.
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI))
+    return false;
+
 #ifndef NDEBUG
   // Stop trying after reaching the limit (if any).
   int Limit = CTRLoopLimit;
@@ -570,6 +578,12 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
       continue;
 
     if (SE->getTypeSizeInBits(EC->getType()) > (TM->isPPC64() ? 64 : 32))
+      continue;
+
+    // If this exiting block is contained in a nested loop, it is not eligible
+    // for insertion of the branch-and-decrement since the inner loop would
+    // end up messing up the value in the CTR.
+    if (LI->getLoopFor(*I) != L)
       continue;
 
     // We now have a loop-invariant count of loop iterations (which is not the

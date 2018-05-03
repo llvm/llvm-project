@@ -170,43 +170,40 @@ Sema::ImplicitExceptionSpecification::CalledDecl(SourceLocation CallLoc,
   if (EST == EST_None && Method->hasAttr<NoThrowAttr>())
     EST = EST_BasicNoexcept;
 
-  switch(EST) {
+  switch (EST) {
+  case EST_Unparsed:
+  case EST_Uninstantiated:
+  case EST_Unevaluated:
+    llvm_unreachable("should not see unresolved exception specs here");
+
   // If this function can throw any exceptions, make a note of that.
   case EST_MSAny:
   case EST_None:
+    // FIXME: Whichever we see last of MSAny and None determines our result.
+    // We should make a consistent, order-independent choice here.
     ClearExceptions();
     ComputedEST = EST;
+    return;
+  case EST_NoexceptFalse:
+    ClearExceptions();
+    ComputedEST = EST_None;
     return;
   // FIXME: If the call to this decl is using any of its default arguments, we
   // need to search them for potentially-throwing calls.
   // If this function has a basic noexcept, it doesn't affect the outcome.
   case EST_BasicNoexcept:
+  case EST_NoexceptTrue:
     return;
-  // If we're still at noexcept(true) and there's a nothrow() callee,
+  // If we're still at noexcept(true) and there's a throw() callee,
   // change to that specification.
   case EST_DynamicNone:
     if (ComputedEST == EST_BasicNoexcept)
       ComputedEST = EST_DynamicNone;
     return;
-  // Check out noexcept specs.
-  case EST_ComputedNoexcept:
-  {
-    FunctionProtoType::NoexceptResult NR =
-        Proto->getNoexceptSpec(Self->Context);
-    assert(NR != FunctionProtoType::NR_NoNoexcept &&
-           "Must have noexcept result for EST_ComputedNoexcept.");
-    assert(NR != FunctionProtoType::NR_Dependent &&
-           "Should not generate implicit declarations for dependent cases, "
-           "and don't know how to handle them anyway.");
-    // noexcept(false) -> no spec on the new function
-    if (NR == FunctionProtoType::NR_Throw) {
-      ClearExceptions();
-      ComputedEST = EST_None;
-    }
-    // noexcept(true) won't change anything either.
-    return;
-  }
-  default:
+  case EST_DependentNoexcept:
+    llvm_unreachable(
+        "should not generate implicit declarations for dependent cases");
+  case EST_Dynamic:
     break;
   }
   assert(EST == EST_Dynamic && "EST case not considered earlier.");
@@ -15040,7 +15037,9 @@ bool Sema::checkThisInStaticMemberFunctionExceptionSpec(CXXMethodDecl *Method) {
   case EST_None:
     break;
 
-  case EST_ComputedNoexcept:
+  case EST_DependentNoexcept:
+  case EST_NoexceptFalse:
+  case EST_NoexceptTrue:
     if (!Finder.TraverseStmt(Proto->getNoexceptExpr()))
       return true;
     LLVM_FALLTHROUGH;
@@ -15137,31 +15136,17 @@ void Sema::checkExceptionSpecification(
     return;
   }
 
-  if (EST == EST_ComputedNoexcept) {
-    // If an error occurred, there's no expression here.
-    if (NoexceptExpr) {
-      assert((NoexceptExpr->isTypeDependent() ||
-              NoexceptExpr->getType()->getCanonicalTypeUnqualified() ==
-              Context.BoolTy) &&
-             "Parser should have made sure that the expression is boolean");
-      if (IsTopLevel && NoexceptExpr &&
-          DiagnoseUnexpandedParameterPack(NoexceptExpr)) {
-        ESI.Type = EST_BasicNoexcept;
-        return;
-      }
-
-      if (!NoexceptExpr->isValueDependent()) {
-        ExprResult Result = VerifyIntegerConstantExpression(
-            NoexceptExpr, nullptr, diag::err_noexcept_needs_constant_expression,
-            /*AllowFold*/ false);
-        if (Result.isInvalid()) {
-          ESI.Type = EST_BasicNoexcept;
-          return;
-        }
-        NoexceptExpr = Result.get();
-      }
-      ESI.NoexceptExpr = NoexceptExpr;
+  if (isComputedNoexcept(EST)) {
+    assert((NoexceptExpr->isTypeDependent() ||
+            NoexceptExpr->getType()->getCanonicalTypeUnqualified() ==
+            Context.BoolTy) &&
+           "Parser should have made sure that the expression is boolean");
+    if (IsTopLevel && DiagnoseUnexpandedParameterPack(NoexceptExpr)) {
+      ESI.Type = EST_BasicNoexcept;
+      return;
     }
+
+    ESI.NoexceptExpr = NoexceptExpr;
     return;
   }
 }

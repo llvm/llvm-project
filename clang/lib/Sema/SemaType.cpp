@@ -4677,7 +4677,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             DynamicExceptions.push_back(FTI.Exceptions[I].Ty);
             DynamicExceptionRanges.push_back(FTI.Exceptions[I].Range);
           }
-        } else if (FTI.getExceptionSpecType() == EST_ComputedNoexcept) {
+        } else if (isComputedNoexcept(FTI.getExceptionSpecType())) {
           NoexceptExpr = FTI.NoexceptExpr;
         }
 

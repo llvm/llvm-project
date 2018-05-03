@@ -82,6 +82,7 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
 
   // Lazy object file
   if (auto *F = dyn_cast<LazyObjFile>(File)) {
+    LazyObjFiles.push_back(F);
     F->parse<ELFT>();
     return;
   }

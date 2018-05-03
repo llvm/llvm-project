@@ -5264,30 +5264,23 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
   assert(ESI.Type != EST_Uninstantiated && ESI.Type != EST_Unevaluated);
 
   // Instantiate a dynamic noexcept expression, if any.
-  if (ESI.Type == EST_ComputedNoexcept) {
+  if (isComputedNoexcept(ESI.Type)) {
     EnterExpressionEvaluationContext Unevaluated(
         getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
     ExprResult NoexceptExpr = getDerived().TransformExpr(ESI.NoexceptExpr);
     if (NoexceptExpr.isInvalid())
       return true;
 
-    // FIXME: This is bogus, a noexcept expression is not a condition.
-    NoexceptExpr = getSema().CheckBooleanCondition(Loc, NoexceptExpr.get());
+    ExceptionSpecificationType EST = ESI.Type;
+    NoexceptExpr =
+        getSema().ActOnNoexceptSpec(Loc, NoexceptExpr.get(), EST);
     if (NoexceptExpr.isInvalid())
       return true;
 
-    if (!NoexceptExpr.get()->isValueDependent()) {
-      NoexceptExpr = getSema().VerifyIntegerConstantExpression(
-          NoexceptExpr.get(), nullptr,
-          diag::err_noexcept_needs_constant_expression,
-          /*AllowFold*/false);
-      if (NoexceptExpr.isInvalid())
-        return true;
-    }
-
-    if (ESI.NoexceptExpr != NoexceptExpr.get())
+    if (ESI.NoexceptExpr != NoexceptExpr.get() || EST != ESI.Type)
       Changed = true;
     ESI.NoexceptExpr = NoexceptExpr.get();
+    ESI.Type = EST;
   }
 
   if (ESI.Type != EST_Dynamic)

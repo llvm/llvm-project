@@ -672,7 +672,9 @@ FunctionProtoType::printExceptionSpecification(raw_ostream &OS,
     OS << ')';
   } else if (isNoexceptExceptionSpec(getExceptionSpecType())) {
     OS << " noexcept";
-    if (getExceptionSpecType() == EST_ComputedNoexcept) {
+    // FIXME:Is it useful to print out the expression for a non-dependent
+    // noexcept specification?
+    if (isComputedNoexcept(getExceptionSpecType())) {
       OS << '(';
       if (getNoexceptExpr())
         getNoexceptExpr()->printPretty(OS, nullptr, Policy);

@@ -342,7 +342,7 @@ void Module::SetUUID(const lldb_private::UUID &uuid) {
     m_uuid = uuid;
     m_did_set_uuid = true;
   } else {
-    lldbassert(!"Attempting to overwrite the existing module UUID");
+    lldbassert(0 && "Attempting to overwrite the existing module UUID");
   }
 }
 
