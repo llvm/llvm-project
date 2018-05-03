@@ -590,9 +590,11 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
 }
 
 AvailabilityResult Decl::getAvailability(std::string *Message,
-                                         VersionTuple EnclosingVersion) const {
+                                         VersionTuple EnclosingVersion,
+                                         StringRef *RealizedPlatform) const {
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(this))
-    return FTD->getTemplatedDecl()->getAvailability(Message, EnclosingVersion);
+    return FTD->getTemplatedDecl()->getAvailability(Message, EnclosingVersion,
+                                                    RealizedPlatform);
 
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
@@ -619,8 +621,11 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
       AvailabilityResult AR = CheckAvailability(getASTContext(), Availability,
                                                 Message, EnclosingVersion);
 
-      if (AR == AR_Unavailable)
+      if (AR == AR_Unavailable) {
+        if (RealizedPlatform)
+          *RealizedPlatform = Availability->getPlatform()->getName();
         return AR_Unavailable;
+      }
 
       if (AR > Result) {
         Result = AR;

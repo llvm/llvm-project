@@ -96,6 +96,40 @@ llvm::Optional<std::string> MinidumpParser::GetMinidumpString(uint32_t rva) {
   return parseMinidumpString(arr_ref);
 }
 
+UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
+  auto cv_record =
+      GetData().slice(module->CV_record.rva, module->CV_record.data_size);
+
+  // Read the CV record signature
+  const llvm::support::ulittle32_t *signature = nullptr;
+  Status error = consumeObject(cv_record, signature);
+  if (error.Fail())
+    return UUID();
+
+  const CvSignature cv_signature =
+      static_cast<CvSignature>(static_cast<const uint32_t>(*signature));
+
+  if (cv_signature == CvSignature::Pdb70) {
+    // PDB70 record
+    const CvRecordPdb70 *pdb70_uuid = nullptr;
+    Status error = consumeObject(cv_record, pdb70_uuid);
+    if (!error.Fail())
+      return UUID(pdb70_uuid, sizeof(*pdb70_uuid));
+  } else if (cv_signature == CvSignature::ElfBuildId) {
+    // ELF BuildID (found in Breakpad/Crashpad generated minidumps)
+    //
+    // This is variable-length, but usually 20 bytes
+    // as the binutils ld default is a SHA-1 hash.
+    // (We'll handle only 16 and 20 bytes signatures,
+    // matching LLDB support for UUIDs)
+    //
+    if (cv_record.size() == 16 || cv_record.size() == 20)
+      return UUID(cv_record.data(), cv_record.size());
+  }
+
+  return UUID();
+}
+
 llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
   llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::ThreadList);
 

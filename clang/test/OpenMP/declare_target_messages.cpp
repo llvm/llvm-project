@@ -19,7 +19,7 @@ void f();
 
 #pragma omp declare target link(foo2) // expected-error {{use of undeclared identifier 'foo2'}}
 
-void c(); // expected-warning {{declaration is not declared in any declare target region}}
+void c();
 
 void func() {} // expected-note {{'func' defined here}}
 
@@ -98,7 +98,7 @@ void foo(int p) {
   g += object.method1();
   g += object1.method() + p;
   f();
-  c(); // expected-note {{used here}}
+  c();
 }
 #pragma omp declare target // expected-error {{expected '#pragma omp end declare target'}}
 void foo1() {}

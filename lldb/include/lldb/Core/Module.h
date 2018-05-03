@@ -745,7 +745,7 @@ public:
   TypeList *GetTypeList();
 
   //------------------------------------------------------------------
-  /// Get a pointer to the UUID value contained in this object.
+  /// Get a reference to the UUID value contained in this object.
   ///
   /// If the executable image file doesn't not have a UUID value built into
   /// the file format, an MD5 checksum of the entire file, or slice of the
@@ -1111,7 +1111,7 @@ protected:
 
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symbol_vendor{false};
-  std::atomic<bool> m_did_parse_uuid{false};
+  std::atomic<bool> m_did_set_uuid{false};
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
                                     /// was initially opened.
@@ -1160,6 +1160,8 @@ protected:
                                         SymbolContextList &sc_list);
 
   bool SetArchitecture(const ArchSpec &new_arch);
+
+  void SetUUID(const lldb_private::UUID &uuid);
 
   SectionList *GetUnifiedSectionList();
 
