@@ -676,7 +676,7 @@ const char *Value::GetContextTypeAsCString(ContextType context_type) {
   return "???";
 }
 
-void Value::ConvertToLoadAddress(SymbolContext sc, Target *target) {
+void Value::ConvertToLoadAddress(SymbolContext sc) {
   if (GetValueType() != eValueTypeFileAddress)
     return;
 
@@ -687,12 +687,10 @@ void Value::ConvertToLoadAddress(SymbolContext sc, Target *target) {
   if (file_addr == LLDB_INVALID_ADDRESS)
     return;
 
-  ObjectFile *objfile = sc.module_sp->GetObjectFile();
-  if (!objfile)
+  Address so_addr;
+  if (!sc.module_sp->ResolveFileAddress(file_addr, so_addr))
     return;
-
-  Address so_addr(file_addr, objfile->GetSectionList());
-  lldb::addr_t load_addr = so_addr.GetLoadAddress(target);
+  lldb::addr_t load_addr = so_addr.GetLoadAddress(sc.target_sp.get());
   if (load_addr == LLDB_INVALID_ADDRESS)
     return;
 
