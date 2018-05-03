@@ -528,6 +528,17 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
     }
+    if (Name.startswith("invariant.group.barrier")) {
+      // Rename invariant.group.barrier to launder.invariant.group
+      auto Args = F->getFunctionType()->params();
+      Type* ObjectPtr[1] = {Args[0]};
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+          Intrinsic::launder_invariant_group, ObjectPtr);
+      return true;
+
+    }
+
     break;
   }
   case 'm': {
