@@ -12,7 +12,11 @@
 
 public struct S {
   public var a = 1
-  
+  public var s1 = "i"
+  public var s2 = "am"
+  public var s3 = "large"
+  public var s4 = "!"
+
   public init() {}
 }
 
