@@ -20,6 +20,7 @@ set_target_properties(TestPlugin
   PROPERTIES PREFIX ""
   SUFFIX ".so"
   )
+set_target_properties(TestPlugin PROPERTIES FOLDER "Tests")
 
 if (WIN32 OR CYGWIN OR LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
   llvm_map_components_to_libnames(LLVM_DEPS ${LLVM_LINK_COMPONENTS})

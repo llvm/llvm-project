@@ -156,17 +156,8 @@ void MCWasmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
 }
 
 void MCWasmStreamer::EmitIdent(StringRef IdentString) {
-  MCSection *Comment = getAssembler().getContext().getWasmSection(
-      ".comment", SectionKind::getMetadata());
-  PushSection();
-  SwitchSection(Comment);
-  if (!SeenIdent) {
-    EmitIntValue(0, 1);
-    SeenIdent = true;
-  }
-  EmitBytes(IdentString);
-  EmitIntValue(0, 1);
-  PopSection();
+  // TODO(sbc): Add the ident section once we support mergable strings
+  // sections in the object format
 }
 
 void MCWasmStreamer::EmitInstToFragment(const MCInst &Inst,
@@ -197,6 +188,9 @@ void MCWasmStreamer::EmitInstToData(const MCInst &Inst,
 
 void MCWasmStreamer::FinishImpl() {
   EmitFrames(nullptr);
+
+  // Set fragment atoms so we can map from code fragment to defining symbol
+  addFragmentAtoms();
 
   this->MCObjectStreamer::FinishImpl();
 }

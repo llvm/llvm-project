@@ -96,38 +96,38 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
-; CHECK-NEXT:    Size: 100
+; CHECK-NEXT:    Size: 88
 ; CHECK-NEXT:    Offset: 733
 ; CHECK-NEXT:    Name: linking
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 9
-; CHECK-NEXT:    Offset: 847
+; CHECK-NEXT:    Offset: 835
 ; CHECK-NEXT:    Name: reloc.DATA
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 58
-; CHECK-NEXT:    Offset: 873
+; CHECK-NEXT:    Offset: 861
 ; CHECK-NEXT:    Name: reloc..debug_info
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 955
+; CHECK-NEXT:    Offset: 943
 ; CHECK-NEXT:    Name: reloc..debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 989
+; CHECK-NEXT:    Offset: 977
 ; CHECK-NEXT:    Name: reloc..debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1023
+; CHECK-NEXT:    Offset: 1011
 ; CHECK-NEXT:    Name: reloc..debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
@@ -163,46 +163,6 @@
 ; CHECK-NEXT:]
 ; CHECK-NEXT:Symbols [
 ; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_str
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_abbrev
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_info
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_ranges
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_macinfo
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_pubnames
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_pubtypes
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
-; CHECK-NEXT:    Name: .debug_line
-; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: f2
 ; CHECK-NEXT:    Type: FUNCTION (0x0)
 ; CHECK-NEXT:    Flags: 0x4
@@ -221,6 +181,26 @@
 ; CHECK-NEXT:    Name: ptr2
 ; CHECK-NEXT:    Type: DATA (0x1)
 ; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_str
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_abbrev
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_info
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Symbol {
+; CHECK-NEXT:    Name: .debug_line
+; CHECK-NEXT:    Type: SECTION (0x3)
+; CHECK-NEXT:    Flags: 0x2
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 

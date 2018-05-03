@@ -78,6 +78,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
+// CHECK-NEXT:    const int64_t *getMatchTable() const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
@@ -221,10 +222,16 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT: State.MIs.clear();
 // CHECK-NEXT: State.MIs.push_back(&I);
 
+// CHECK:      if (executeMatchTable(*this, OutMIs, State, ISelInfo, getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures, CoverageInfo)) {
+// CHECK-NEXT:   return true;
+// CHECK-NEXT: }
+
 //===- Test a pattern with multiple ComplexPatterns in multiple instrs ----===//
 //
 
-// CHECK-LABEL: MatchTable0[] = {
+// CHECK: const int64_t *
+// CHECK-LABEL: MyTargetInstructionSelector::getMatchTable() const {
+// CHECK:   MatchTable0[] = {
 // OPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[GRP_LABEL_NUM:[0-9]+]]*/ [[GRP_LABEL:[0-9]+]],
 // OPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
@@ -1100,6 +1107,4 @@ def BR : I<(outs), (ins unknown:$target),
 
 // CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, ISelInfo, MatchTable0, TII, MRI, TRI, RBI, AvailableFeatures, CoverageInfo)) {
-// CHECK-NEXT:    return true;
-// CHECK-NEXT:  }
+// CHECK-NEXT:  return MatchTable0;

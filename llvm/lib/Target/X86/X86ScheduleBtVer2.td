@@ -93,7 +93,7 @@ def : ReadAdvance<ReadAfterLd, 3>;
 // folded loads.
 multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
                             list<ProcResourceKind> ExePorts,
-                            int Lat, list<int> Res = [1], int UOps = 1> {
+                            int Lat, list<int> Res = [], int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -105,14 +105,14 @@ multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
   // latency.
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 3);
-    let ResourceCycles = !listconcat([1], Res);
+    let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
     let NumMicroOps = UOps;
   }
 }
 
 multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
                             list<ProcResourceKind> ExePorts,
-                            int Lat, list<int> Res = [1], int UOps = 1> {
+                            int Lat, list<int> Res = [], int UOps = 1> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -124,7 +124,7 @@ multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
   // latency.
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 5);
-    let ResourceCycles = !listconcat([1], Res);
+    let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
     let NumMicroOps = UOps;
   }
 }
@@ -411,9 +411,13 @@ defm : JWriteResFpuPair<WriteMPSAD,       [JFPU0, JVIMUL], 3, [1, 2]>;
 defm : JWriteResFpuPair<WritePSADBW,      [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU0,  JVALU], 2>;
 defm : JWriteResFpuPair<WriteShuffle,     [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteShuffleY,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarShuffle,  [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : JWriteResFpuPair<WriteVarShuffleY, [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteBlend,       [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteBlendY,      [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : JWriteResFpuPair<WriteVarBlendY,   [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecLogicY,   [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteShuffle256,  [JFPU01, JVALU], 1>;
@@ -451,7 +455,7 @@ def  : WriteRes<WriteMMXMOVMSK, [JFPU0, JFPA, JALU0]> { let Latency = 3; }
 
 defm : JWriteResFpuPair<WriteAESIMC,      [JFPU0, JVIMUL], 2>;
 defm : JWriteResFpuPair<WriteAESKeyGen,   [JFPU0, JVIMUL], 2>;
-defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU0, JVIMUL], 3, [1], 2>;
+defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU0, JVIMUL], 3, [1, 1], 2>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.

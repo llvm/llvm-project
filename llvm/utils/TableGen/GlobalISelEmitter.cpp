@@ -407,6 +407,8 @@ public:
   unsigned size() const { return NumElements; }
 };
 
+class Matcher;
+
 /// Holds the contents of a generated MatchTable to enable formatting and the
 /// necessary index tracking needed to support GIM_Try.
 class MatchTable {
@@ -419,10 +421,11 @@ class MatchTable {
   /// The currently defined labels.
   DenseMap<unsigned, unsigned> LabelMap;
   /// Tracks the sum of MatchTableRecord::NumElements as the table is built.
-  unsigned CurrentSize;
-
+  unsigned CurrentSize = 0;
   /// A unique identifier for a MatchTable label.
-  static unsigned CurrentLabelID;
+  unsigned CurrentLabelID = 0;
+  /// Determines if the table should be instrumented for rule coverage tracking.
+  bool IsWithCoverage;
 
 public:
   static MatchTableRecord LineBreak;
@@ -465,7 +468,12 @@ public:
                                 MatchTableRecord::MTRF_CommaFollows);
   }
 
-  MatchTable(unsigned ID) : ID(ID), CurrentSize(0) {}
+  static MatchTable buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage);
+
+  MatchTable(bool WithCoverage, unsigned ID = 0)
+      : ID(ID), IsWithCoverage(WithCoverage) {}
+
+  bool isWithCoverage() const { return IsWithCoverage; }
 
   void push_back(const MatchTableRecord &Value) {
     if (Value.Flags & MatchTableRecord::MTRF_Label)
@@ -474,7 +482,7 @@ public:
     CurrentSize += Value.size();
   }
 
-  unsigned allocateLabelID() const { return CurrentLabelID++; }
+  unsigned allocateLabelID() { return CurrentLabelID++; }
 
   void defineLabel(unsigned LabelID) {
     LabelMap.insert(std::make_pair(LabelID, CurrentSize));
@@ -518,8 +526,6 @@ public:
     OS << "};\n";
   }
 };
-
-unsigned MatchTable::CurrentLabelID = 0;
 
 MatchTableRecord MatchTable::LineBreak = {
     None, "" /* Emit String */, 0 /* Elements */,
@@ -576,6 +582,15 @@ public:
   virtual void emit(MatchTable &Table) = 0;
   virtual std::unique_ptr<PredicateMatcher> forgetFirstCondition() = 0;
 };
+
+MatchTable MatchTable::buildTable(ArrayRef<Matcher *> Rules,
+                                  bool WithCoverage) {
+  MatchTable Table(WithCoverage);
+  for (Matcher *Rule : Rules)
+    Rule->emit(Table);
+
+  return Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
+}
 
 class GroupMatcher : public Matcher {
   SmallVector<std::unique_ptr<PredicateMatcher>, 8> Conditions;
@@ -2483,7 +2498,7 @@ void RuleMatcher::emit(MatchTable &Table) {
   for (const auto &MA : Actions)
     MA->emitActionOpcodes(Table, *this);
 
-  if (GenerateCoverage)
+  if (Table.isWithCoverage())
     Table << MatchTable::Opcode("GIR_Coverage") << MatchTable::IntValue(RuleID)
           << MatchTable::LineBreak;
 
@@ -2686,8 +2701,11 @@ private:
   ///   # predicate C
   /// \endverbatim
   std::vector<Matcher *> optimizeRules(
-      const std::vector<Matcher *> &Rules,
+      ArrayRef<Matcher *> Rules,
       std::vector<std::unique_ptr<GroupMatcher>> &StorageGroupMatcher);
+
+  MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules, bool Optimize,
+                             bool WithCoverage);
 };
 
 void GlobalISelEmitter::gatherNodeEquivs() {
@@ -3644,7 +3662,7 @@ void GlobalISelEmitter::emitImmPredicates(
 }
 
 std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
-    const std::vector<Matcher *> &Rules,
+    ArrayRef<Matcher *> Rules,
     std::vector<std::unique_ptr<GroupMatcher>> &StorageGroupMatcher) {
   std::vector<Matcher *> OptRules;
   // Start with a stupid grouping for now.
@@ -3673,6 +3691,23 @@ std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
   }
   DEBUG(dbgs() << "NbGroup: " << NbGroup << "\n");
   return OptRules;
+}
+
+MatchTable
+GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
+                                   bool Optimize, bool WithCoverage) {
+  std::vector<Matcher *> InputRules;
+  for (Matcher &Rule : Rules)
+    InputRules.push_back(&Rule);
+
+  if (!Optimize)
+    return MatchTable::buildTable(InputRules, WithCoverage);
+
+  std::vector<std::unique_ptr<GroupMatcher>> StorageGroupMatcher;
+  std::vector<Matcher *> OptRules =
+      optimizeRules(InputRules, StorageGroupMatcher);
+
+  return MatchTable::buildTable(OptRules, WithCoverage);
 }
 
 void GlobalISelEmitter::run(raw_ostream &OS) {
@@ -3767,12 +3802,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "InstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];\n"
      << "  static " << Target.getName()
      << "InstructionSelector::CustomRendererFn CustomRenderers[];\n"
-     << "bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const "
+     << "  bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const "
         "override;\n"
-     << "bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) "
+     << "  bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) "
         "const override;\n"
-     << "bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
+     << "  bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
         "&Imm) const override;\n"
+     << "  const int64_t *getMatchTable() const override;\n"
      << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
 
   OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
@@ -3924,20 +3960,6 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
        << ", // " << Record->getName() << "\n";
   OS << "};\n\n";
 
-  OS << "bool " << Target.getName()
-     << "InstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage "
-        "&CoverageInfo) const {\n"
-     << "  MachineFunction &MF = *I.getParent()->getParent();\n"
-     << "  MachineRegisterInfo &MRI = MF.getRegInfo();\n"
-     << "  // FIXME: This should be computed on a per-function basis rather "
-        "than per-insn.\n"
-     << "  AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, "
-        "&MF);\n"
-     << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n"
-     << "  NewMIVector OutMIs;\n"
-     << "  State.MIs.clear();\n"
-     << "  State.MIs.push_back(&I);\n\n";
-
   std::stable_sort(Rules.begin(), Rules.end(), [&](const RuleMatcher &A,
                                                    const RuleMatcher &B) {
     int ScoreA = RuleMatcherScores[A.getRuleID()];
@@ -3954,31 +3976,37 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     }
     return false;
   });
-  std::vector<std::unique_ptr<GroupMatcher>> StorageGroupMatcher;
 
-  std::vector<Matcher *> InputRules;
-  for (Matcher &Rule : Rules)
-    InputRules.push_back(&Rule);
-
-  std::vector<Matcher *> OptRules =
-      OptimizeMatchTable ? optimizeRules(InputRules, StorageGroupMatcher)
-                         : InputRules;
-
-  MatchTable Table(0);
-  for (Matcher *Rule : OptRules)
-    Rule->emit(Table);
-
-  Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
-  Table.emitDeclaration(OS);
-  OS << "  if (executeMatchTable(*this, OutMIs, State, ISelInfo, ";
-  Table.emitUse(OS);
-  OS << ", TII, MRI, TRI, RBI, AvailableFeatures, CoverageInfo)) {\n"
+  OS << "bool " << Target.getName()
+     << "InstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage "
+        "&CoverageInfo) const {\n"
+     << "  MachineFunction &MF = *I.getParent()->getParent();\n"
+     << "  MachineRegisterInfo &MRI = MF.getRegInfo();\n"
+     << "  // FIXME: This should be computed on a per-function basis rather "
+        "than per-insn.\n"
+     << "  AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, "
+        "&MF);\n"
+     << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n"
+     << "  NewMIVector OutMIs;\n"
+     << "  State.MIs.clear();\n"
+     << "  State.MIs.push_back(&I);\n\n"
+     << "  if (executeMatchTable(*this, OutMIs, State, ISelInfo"
+     << ", getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures"
+     << ", CoverageInfo)) {\n"
      << "    return true;\n"
-     << "  }\n\n";
+     << "  }\n\n"
+     << "  return false;\n"
+     << "}\n\n";
 
-  OS << "  return false;\n"
-     << "}\n"
-     << "#endif // ifdef GET_GLOBALISEL_IMPL\n";
+  const MatchTable Table =
+      buildMatchTable(Rules, OptimizeMatchTable, GenerateCoverage);
+  OS << "const int64_t *" << Target.getName()
+     << "InstructionSelector::getMatchTable() const {\n";
+  Table.emitDeclaration(OS);
+  OS << "  return ";
+  Table.emitUse(OS);
+  OS << ";\n}\n";
+  OS << "#endif // ifdef GET_GLOBALISEL_IMPL\n";
 
   OS << "#ifdef GET_GLOBALISEL_PREDICATES_DECL\n"
      << "PredicateBitset AvailableModuleFeatures;\n"

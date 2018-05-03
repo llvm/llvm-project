@@ -138,3 +138,45 @@ while.end:                                        ; preds = %while.body, %entry
   %c.0.lcssa = phi i32 [ 0, %entry ], [ %inc, %while.body ]
   ret i32 %c.0.lcssa
 }
+
+; The a & (a - 1) in the loop is a & (b - 1) in this code. Make sure we don't
+; convert it.
+define i32 @popcount_bad(i64 %a, i64 %b) nounwind uwtable readnone ssp {
+; CHECK-LABEL: @popcount_bad(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL3]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
+; CHECK:       while.body.preheader:
+; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[C_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[A_ADDR_04:%.*]] = phi i64 [ [[AND:%.*]], [[WHILE_BODY]] ], [ [[A]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[B:%.*]], -1
+; CHECK-NEXT:    [[AND]] = and i64 [[SUB]], [[A_ADDR_04]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
+; CHECK:       while.end.loopexit:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    br label [[WHILE_END]]
+; CHECK:       while.end:
+; CHECK-NEXT:    [[C_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_LCSSA]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i32 [[C_0_LCSSA]]
+;
+entry:
+  %tobool3 = icmp eq i64 %a, 0
+  br i1 %tobool3, label %while.end, label %while.body
+
+while.body:                                       ; preds = %entry, %while.body
+  %c.05 = phi i32 [ %inc, %while.body ], [ 0, %entry ]
+  %a.addr.04 = phi i64 [ %and, %while.body ], [ %a, %entry ]
+  %inc = add nsw i32 %c.05, 1
+  %sub = add i64 %b, -1
+  %and = and i64 %sub, %a.addr.04
+  %tobool = icmp eq i64 %and, 0
+  br i1 %tobool, label %while.end, label %while.body
+
+while.end:                                        ; preds = %while.body, %entry
+  %c.0.lcssa = phi i32 [ 0, %entry ], [ %inc, %while.body ]
+  ret i32 %c.0.lcssa
+}

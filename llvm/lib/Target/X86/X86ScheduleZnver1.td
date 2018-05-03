@@ -100,7 +100,7 @@ def : ReadAdvance<ReadAfterLd, 4>;
 // This multiclass is for folded loads for integer units.
 multiclass ZnWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
-                          int Lat, list<int> Res = [1], int UOps = 1> {
+                          int Lat, list<int> Res = [], int UOps = 1> {
   // Register variant takes 1-cycle on Execution Port.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -112,7 +112,7 @@ multiclass ZnWriteResPair<X86FoldableSchedWrite SchedRW,
   // adds 4 cycles to the latency.
   def : WriteRes<SchedRW.Folded, !listconcat([ZnAGU], ExePorts)> {
     let Latency = !add(Lat, 4);
-    let ResourceCycles = !listconcat([1], Res);
+    let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
     let NumMicroOps = !add(UOps, 1);
   }
 }
@@ -120,7 +120,7 @@ multiclass ZnWriteResPair<X86FoldableSchedWrite SchedRW,
 // This multiclass is for folded loads for floating point units.
 multiclass ZnWriteResFpuPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
-                          int Lat, list<int> Res = [1], int UOps = 1> {
+                          int Lat, list<int> Res = [], int UOps = 1> {
   // Register variant takes 1-cycle on Execution Port.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -132,7 +132,7 @@ multiclass ZnWriteResFpuPair<X86FoldableSchedWrite SchedRW,
   // adds 7 cycles to the latency.
   def : WriteRes<SchedRW.Folded, !listconcat([ZnAGU], ExePorts)> {
     let Latency = !add(Lat, 7);
-    let ResourceCycles = !listconcat([1], Res);
+    let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
     let NumMicroOps = UOps;
   }
 }
@@ -203,6 +203,7 @@ defm : ZnWriteResFpuPair<WriteFBlendY,   [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteFVarBlend, [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteFVarBlendY,[ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteVarBlend,  [ZnFPU0],  1>;
+defm : ZnWriteResFpuPair<WriteVarBlendY, [ZnFPU0],  1>;
 defm : ZnWriteResFpuPair<WriteCvtI2F,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtF2F,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtF2I,    [ZnFPU3],  5>;
@@ -241,8 +242,11 @@ defm : ZnWriteResFpuPair<WriteVecALU,     [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecIMul,    [ZnFPU0],  4>;
 defm : ZnWriteResFpuPair<WritePMULLD,     [ZnFPU0],  4>; // FIXME
 defm : ZnWriteResFpuPair<WriteShuffle,    [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteShuffleY,   [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVarShuffle, [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteVarShuffleY,[ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteBlend,      [ZnFPU01], 1>;
+defm : ZnWriteResFpuPair<WriteBlendY,     [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteShuffle256, [ZnFPU],   2>;
 defm : ZnWriteResFpuPair<WriteVarShuffle256, [ZnFPU],   2>;
 defm : ZnWriteResFpuPair<WritePSADBW,     [ZnFPU0],  3>;

@@ -80,7 +80,21 @@ public:
     FrameDestroy = 1 << 1,              // Instruction is used as a part of
                                         // function frame destruction code.
     BundledPred  = 1 << 2,              // Instruction has bundled predecessors.
-    BundledSucc  = 1 << 3               // Instruction has bundled successors.
+    BundledSucc  = 1 << 3,              // Instruction has bundled successors.
+    FmNoNans     = 1 << 4,              // Instruction does not support Fast
+                                        // math nan values.
+    FmNoInfs     = 1 << 5,              // Instruction does not support Fast
+                                        // math infinity values.
+    FmNsz        = 1 << 6,              // Instruction is not required to retain
+                                        // signed zero values.
+    FmArcp       = 1 << 7,              // Instruction supports Fast math
+                                        // reciprocal approximations.
+    FmContract   = 1 << 8,              // Instruction supports Fast math
+                                        // contraction operations like fma.
+    FmAfn        = 1 << 9,              // Instruction may map to Fast math
+                                        // instrinsic approximation.
+    FmReassoc    = 1 << 10              // Instruction supports Fast math
+                                        // reassociation of operand order.
   };
 
 private:
@@ -93,7 +107,7 @@ private:
   using OperandCapacity = ArrayRecycler<MachineOperand>::Capacity;
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
-  uint8_t Flags = 0;                    // Various bits of additional
+  uint16_t Flags = 0;                   // Various bits of additional
                                         // information about machine
                                         // instruction.
 
@@ -186,7 +200,7 @@ public:
 
   /// Set a MI flag.
   void setFlag(MIFlag Flag) {
-    Flags |= (uint8_t)Flag;
+    Flags |= (uint16_t)Flag;
   }
 
   void setFlags(unsigned flags) {
@@ -197,7 +211,7 @@ public:
 
   /// clearFlag - Clear a MI flag.
   void clearFlag(MIFlag Flag) {
-    Flags &= ~((uint8_t)Flag);
+    Flags &= ~((uint16_t)Flag);
   }
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).

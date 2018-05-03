@@ -139,9 +139,13 @@ defm WriteVecShift : X86SchedWritePair; // Vector integer shifts.
 defm WriteVecIMul  : X86SchedWritePair; // Vector integer multiply.
 defm WritePMULLD : X86SchedWritePair; // PMULLD
 defm WriteShuffle  : X86SchedWritePair; // Vector shuffles.
+defm WriteShuffleY : X86SchedWritePair; // Vector shuffles (YMM/ZMM).
 defm WriteVarShuffle  : X86SchedWritePair; // Vector variable shuffles.
+defm WriteVarShuffleY : X86SchedWritePair; // Vector variable shuffles (YMM/ZMM).
 defm WriteBlend  : X86SchedWritePair; // Vector blends.
+defm WriteBlendY : X86SchedWritePair; // Vector blends (YMM/ZMM).
 defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.
+defm WriteVarBlendY : X86SchedWritePair; // Vector variable blends (YMM/ZMM).
 defm WritePSADBW : X86SchedWritePair; // Vector PSADBW.
 defm WriteMPSAD : X86SchedWritePair; // Vector MPSAD.
 defm WritePHMINPOS : X86SchedWritePair; // Vector PHMINPOS.
@@ -209,10 +213,14 @@ def WriteNop : SchedWrite;
 // Vector width wrappers.
 def SchedWriteFAdd
  : X86SchedWriteWidths<WriteFAdd, WriteFAdd, WriteFAddY, WriteFAddY>;
+def SchedWriteFHAdd
+ : X86SchedWriteWidths<WriteFHAdd, WriteFHAdd, WriteFHAddY, WriteFHAddY>;
 def SchedWriteFCmp
  : X86SchedWriteWidths<WriteFCmp, WriteFCmp, WriteFCmpY, WriteFCmpY>;
 def SchedWriteFMul
  : X86SchedWriteWidths<WriteFMul, WriteFMul, WriteFMulY, WriteFMulY>;
+def SchedWriteFMA
+ : X86SchedWriteWidths<WriteFMAS, WriteFMA, WriteFMAY, WriteFMAY>;
 def SchedWriteFDiv
  : X86SchedWriteWidths<WriteFDiv, WriteFDiv, WriteFDivY, WriteFDivY>;
 def SchedWriteFSqrt
@@ -238,30 +246,41 @@ def SchedWriteFVarBlend
 
 def SchedWriteVecALU
  : X86SchedWriteWidths<WriteVecALU, WriteVecALU, WriteVecALU, WriteVecALU>;
+def SchedWritePHAdd
+ : X86SchedWriteWidths<WritePHAdd, WritePHAdd, WritePHAdd, WritePHAdd>;
 def SchedWriteVecLogic
  : X86SchedWriteWidths<WriteVecLogic, WriteVecLogic,
                        WriteVecLogicY, WriteVecLogicY>;
 def SchedWriteVecShift
  : X86SchedWriteWidths<WriteVecShift, WriteVecShift,
                        WriteVecShift, WriteVecShift>;
+def SchedWriteVarVecShift
+ : X86SchedWriteWidths<WriteVarVecShift, WriteVarVecShift,
+                       WriteVarVecShift, WriteVarVecShift>;
 def SchedWriteVecIMul
  : X86SchedWriteWidths<WriteVecIMul, WriteVecIMul,
                        WriteVecIMul, WriteVecIMul>;
 def SchedWritePMULLD
  : X86SchedWriteWidths<WritePMULLD, WritePMULLD,
                        WritePMULLD, WritePMULLD>;
+def SchedWriteMPSAD
+ : X86SchedWriteWidths<WriteMPSAD, WriteMPSAD,
+                       WriteMPSAD, WriteMPSAD>;
+def SchedWritePSADBW
+ : X86SchedWriteWidths<WritePSADBW, WritePSADBW,
+                       WritePSADBW, WritePSADBW>;
 
 def SchedWriteShuffle
  : X86SchedWriteWidths<WriteShuffle, WriteShuffle,
-                       WriteShuffle, WriteShuffle>;
+                       WriteShuffleY, WriteShuffleY>;
 def SchedWriteVarShuffle
  : X86SchedWriteWidths<WriteVarShuffle, WriteVarShuffle,
-                       WriteVarShuffle, WriteVarShuffle>;
+                       WriteVarShuffleY, WriteVarShuffleY>;
 def SchedWriteBlend
- : X86SchedWriteWidths<WriteBlend, WriteBlend, WriteBlend, WriteBlend>;
+ : X86SchedWriteWidths<WriteBlend, WriteBlend, WriteBlendY, WriteBlendY>;
 def SchedWriteVarBlend
  : X86SchedWriteWidths<WriteVarBlend, WriteVarBlend,
-                       WriteVarBlend, WriteVarBlend>;
+                       WriteVarBlendY, WriteVarBlendY>;
 
 //===----------------------------------------------------------------------===//
 // Generic Processor Scheduler Models.

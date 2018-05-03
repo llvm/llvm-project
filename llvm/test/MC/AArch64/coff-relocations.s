@@ -52,6 +52,15 @@ add x0, x0, :secrel_hi12:foo
 ; IMAGE_REL_ARM64_SECREL_LOW12L
 ldr x0, [x0, :secrel_lo12:foo]
 
+; IMAGE_REL_ARM64_REL21
+adr x0, foo + 0x12345
+
+; IMAGE_REL_ARM64_BRANCH19
+bne target
+
+; IMAGE_REL_ARM64_BRANCH14
+tbz x0, #0, target
+
 ; CHECK: Format: COFF-ARM64
 ; CHECK: Arch: aarch64
 ; CHECK: AddressSize: 64bit
@@ -74,6 +83,9 @@ ldr x0, [x0, :secrel_lo12:foo]
 ; CHECK: 0x40 IMAGE_REL_ARM64_SECREL_LOW12A foo
 ; CHECK: 0x44 IMAGE_REL_ARM64_SECREL_HIGH12A foo
 ; CHECK: 0x48 IMAGE_REL_ARM64_SECREL_LOW12L foo
+; CHECK: 0x4C IMAGE_REL_ARM64_REL21 foo
+; CHECK: 0x50 IMAGE_REL_ARM64_BRANCH19 target
+; CHECK: 0x54 IMAGE_REL_ARM64_BRANCH14 target
 ; CHECK:   }
 ; CHECK: ]
 
@@ -84,3 +96,4 @@ ldr x0, [x0, :secrel_lo12:foo]
 ; DISASM: 40:       00 00 00 91     add     x0, x0, #0
 ; DISASM: 44:       00 00 40 91     add     x0, x0, #0, lsl #12
 ; DISASM: 48:       00 00 40 f9     ldr     x0, [x0]
+; DISASM: 4c:       20 1a 09 30     adr     x0, #74565
