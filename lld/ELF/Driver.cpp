@@ -777,27 +777,37 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   // Parse LTO plugin-related options for compatibility with gold.
   for (auto *Arg : Args.filtered(OPT_plugin_opt)) {
     StringRef S = Arg->getValue();
-    if (S == "disable-verify")
+    if (S == "disable-verify") {
       Config->DisableVerify = true;
-    else if (S == "save-temps")
+    } else if (S == "save-temps") {
       Config->SaveTemps = true;
-    else if (S.startswith("O"))
+    } else if (S.startswith("O")) {
       Config->LTOO = parseInt(S.substr(1), Arg);
-    else if (S.startswith("lto-partitions="))
+    } else if (S.startswith("lto-partitions=")) {
       Config->LTOPartitions = parseInt(S.substr(15), Arg);
-    else if (S.startswith("jobs="))
+    } else if (S.startswith("jobs=")) {
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
-    else if (S.startswith("mcpu="))
+    } else if (S.startswith("mcpu=")) {
       parseClangOption(Saver.save("-" + S), Arg->getSpelling());
-    else if (S == "new-pass-manager")
+    } else if (S == "new-pass-manager") {
       Config->LTONewPassManager = true;
-    else if (S == "debug-pass-manager")
+    } else if (S == "debug-pass-manager") {
       Config->LTODebugPassManager = true;
-    else if (S.startswith("sample-profile="))
-      Config->LTOSampleProfile = S.substr(strlen("sample-profile="));
-    else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
-             !S.startswith("-pass-through=") && !S.startswith("thinlto"))
+    } else if (S.startswith("sample-profile=")) {
+      Config->LTOSampleProfile = S.substr(15);
+    } else if (S == "thinlto-index-only") {
+      Config->ThinLTOIndexOnly = true;
+    } else if (S.startswith("thinlto-index-only=")) {
+      Config->ThinLTOIndexOnly = true;
+      Config->ThinLTOIndexOnlyObjectsFile = S.substr(19);
+    } else if (S.startswith("thinlto-prefix-replace=")) {
+      Config->ThinLTOPrefixReplace = S.substr(23);
+      if (!Config->ThinLTOPrefixReplace.contains(';'))
+        error("thinlto-prefix-replace expects 'old;new' format");
+    } else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
+               !S.startswith("-pass-through=") && !S.startswith("thinlto")) {
       parseClangOption(S, Arg->getSpelling());
+    }
   }
 
   // Parse -mllvm options.
