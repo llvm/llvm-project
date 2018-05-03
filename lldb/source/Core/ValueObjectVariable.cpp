@@ -244,17 +244,17 @@ bool ValueObjectVariable::UpdateValue() {
       case Value::eValueTypeFileAddress:
       case Value::eValueTypeLoadAddress:
       case Value::eValueTypeHostAddress:
-        // The DWARF expression result was an address in the inferior
-        // process. If this variable is an aggregate type, we just need
-        // the address as the main value as all child variable objects
-        // will rely upon this location and add an offset and then read
-        // their own values as needed. If this variable is a simple
-        // type, we read all data for it into m_data.
-        // Make sure this type has a value before we try and read it
+        // The DWARF expression result was an address in the inferior process.
+        // If this variable is an aggregate type, we just need the address as
+        // the main value as all child variable objects will rely upon this
+        // location and add an offset and then read their own values as needed.
+        // If this variable is a simple type, we read all data for it into
+        // m_data. Make sure this type has a value before we try and read it
+
         SymbolContext var_sc;
         variable->CalculateSymbolContext(&var_sc);
         // If we have a file address, convert it to a load address if we can.
-        m_value.ConvertToLoadAddress(var_sc, target);
+        m_value.ConvertToLoadAddress(var_sc);
 
         if (!CanProvideValue()) {
           // this value object represents an aggregate type whose
