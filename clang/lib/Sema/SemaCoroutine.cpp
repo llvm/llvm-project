@@ -1160,7 +1160,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   if (RequiresNoThrowAlloc) {
     const auto *FT = OperatorNew->getType()->getAs<FunctionProtoType>();
-    if (!FT->isNothrow(S.Context, /*ResultIfDependent*/ false)) {
+    if (!FT->isNothrow(/*ResultIfDependent*/ false)) {
       S.Diag(OperatorNew->getLocation(),
              diag::err_coroutine_promise_new_requires_nothrow)
           << OperatorNew;

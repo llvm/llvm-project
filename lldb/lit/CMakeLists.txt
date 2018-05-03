@@ -18,6 +18,24 @@ endif ()
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
+set(LLDB_TEST_DEPS
+  LLDBUnitTests
+  dsymutil
+  lldb
+  lldb-test
+  llvm-config
+  llvm-mc
+  llvm-objcopy
+  )
+
+if(TARGET lld)
+  list(APPEND LLDB_TEST_DEPS lld)
+  set(LLDB_HAVE_LLD 1)
+else()
+  set(LLDB_HAVE_LLD 0)
+endif()
+
+
 if(BUILD_SHARED_LIBS)
   set(ENABLE_SHARED 1)
 else()
@@ -34,16 +52,6 @@ configure_lit_site_cfg(
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
-  )
-
-set(LLDB_TEST_DEPS
-  LLDBUnitTests
-  dsymutil
-  lldb
-  lldb-test
-  llvm-config
-  llvm-mc
-  llvm-objcopy
   )
 
 if(NOT LLDB_BUILT_STANDALONE)

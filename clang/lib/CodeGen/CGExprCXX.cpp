@@ -1696,13 +1696,13 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Type *elementTy = ConvertTypeForMem(allocType);
   Address result = Builder.CreateElementBitCast(allocation, elementTy);
 
-  // Passing pointer through invariant.group.barrier to avoid propagation of
+  // Passing pointer through launder.invariant.group to avoid propagation of
   // vptrs information which may be included in previous type.
   // To not break LTO with different optimizations levels, we do it regardless
   // of optimization level.
   if (CGM.getCodeGenOpts().StrictVTablePointers &&
       allocator->isReservedGlobalPlacementOperator())
-    result = Address(Builder.CreateInvariantGroupBarrier(result.getPointer()),
+    result = Address(Builder.CreateLaunderInvariantGroup(result.getPointer()),
                      result.getAlignment());
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,

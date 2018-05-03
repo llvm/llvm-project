@@ -171,3 +171,9 @@ class SubstituteCaptures:
     def __str__(self):
         return self.substitution
 
+    def __len__(self):
+        return len(self.substitution)
+
+    def __getitem__(self, item):
+        return self.substitution.__getitem__(item)
+

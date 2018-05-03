@@ -1962,28 +1962,26 @@ public:
                            Name);
   }
 
-  /// Create an invariant.group.barrier intrinsic call, that stops
-  /// optimizer to propagate equality using invariant.group metadata.
-  /// If Ptr type is different from pointer to i8, it's casted to pointer to i8
-  /// in the same address space before call and casted back to Ptr type after
-  /// call.
-  Value *CreateInvariantGroupBarrier(Value *Ptr) {
+  /// Create a launder.invariant.group intrinsic call. If Ptr type is
+  /// different from pointer to i8, it's casted to pointer to i8 in the same
+  /// address space before call and casted back to Ptr type after call.
+  Value *CreateLaunderInvariantGroup(Value *Ptr) {
     assert(isa<PointerType>(Ptr->getType()) &&
-           "invariant.group.barrier only applies to pointers.");
+           "launder.invariant.group only applies to pointers.");
     auto *PtrType = Ptr->getType();
     auto *Int8PtrTy = getInt8PtrTy(PtrType->getPointerAddressSpace());
     if (PtrType != Int8PtrTy)
       Ptr = CreateBitCast(Ptr, Int8PtrTy);
     Module *M = BB->getParent()->getParent();
-    Function *FnInvariantGroupBarrier = Intrinsic::getDeclaration(
-        M, Intrinsic::invariant_group_barrier, {Int8PtrTy});
+    Function *FnLaunderInvariantGroup = Intrinsic::getDeclaration(
+        M, Intrinsic::launder_invariant_group, {Int8PtrTy});
 
-    assert(FnInvariantGroupBarrier->getReturnType() == Int8PtrTy &&
-           FnInvariantGroupBarrier->getFunctionType()->getParamType(0) ==
+    assert(FnLaunderInvariantGroup->getReturnType() == Int8PtrTy &&
+           FnLaunderInvariantGroup->getFunctionType()->getParamType(0) ==
                Int8PtrTy &&
-           "InvariantGroupBarrier should take and return the same type");
+           "LaunderInvariantGroup should take and return the same type");
 
-    CallInst *Fn = CreateCall(FnInvariantGroupBarrier, {Ptr});
+    CallInst *Fn = CreateCall(FnLaunderInvariantGroup, {Ptr});
 
     if (PtrType != Int8PtrTy)
       return CreateBitCast(Fn, PtrType);

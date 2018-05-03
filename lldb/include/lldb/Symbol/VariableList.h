@@ -66,6 +66,7 @@ public:
   size_t MemorySize() const;
 
   size_t GetSize() const;
+  bool Empty() const { return m_variables.empty(); }
 
 protected:
   typedef std::vector<lldb::VariableSP> collection;

@@ -499,7 +499,7 @@ namespace {
 enum PointerStripKind {
   PSK_ZeroIndices,
   PSK_ZeroIndicesAndAliases,
-  PSK_ZeroIndicesAndAliasesAndBarriers,
+  PSK_ZeroIndicesAndAliasesAndInvariantGroups,
   PSK_InBoundsConstantIndices,
   PSK_InBounds
 };
@@ -518,7 +518,7 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
       case PSK_ZeroIndicesAndAliases:
-      case PSK_ZeroIndicesAndAliasesAndBarriers:
+      case PSK_ZeroIndicesAndAliasesAndInvariantGroups:
       case PSK_ZeroIndices:
         if (!GEP->hasAllZeroIndices())
           return V;
@@ -546,11 +546,11 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
           V = RV;
           continue;
         }
-        // The result of invariant.group.barrier must alias it's argument,
+        // The result of launder.invariant.group must alias it's argument,
         // but it can't be marked with returned attribute, that's why it needs
         // special case.
-        if (StripKind == PSK_ZeroIndicesAndAliasesAndBarriers &&
-            CS.getIntrinsicID() == Intrinsic::invariant_group_barrier) {
+        if (StripKind == PSK_ZeroIndicesAndAliasesAndInvariantGroups &&
+            CS.getIntrinsicID() == Intrinsic::launder_invariant_group) {
           V = CS.getArgOperand(0);
           continue;
         }
@@ -576,8 +576,8 @@ const Value *Value::stripInBoundsConstantOffsets() const {
   return stripPointerCastsAndOffsets<PSK_InBoundsConstantIndices>(this);
 }
 
-const Value *Value::stripPointerCastsAndBarriers() const {
-  return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliasesAndBarriers>(
+const Value *Value::stripPointerCastsAndInvariantGroups() const {
+  return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliasesAndInvariantGroups>(
       this);
 }
 

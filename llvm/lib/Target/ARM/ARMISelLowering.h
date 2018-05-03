@@ -579,6 +579,10 @@ class VectorType;
 
     void finalizeLowering(MachineFunction &MF) const override;
 
+    /// Return the correct alignment for the current calling convention.
+    unsigned getABIAlignmentForCallingConv(Type *ArgTy,
+                                           DataLayout DL) const override;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

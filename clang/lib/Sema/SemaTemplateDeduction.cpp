@@ -1607,7 +1607,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
                "saw non-type template parameter with wrong depth");
 
         llvm::APSInt Noexcept(1);
-        switch (FunctionProtoArg->canThrow(S.Context)) {
+        switch (FunctionProtoArg->canThrow()) {
         case CT_Cannot:
           Noexcept = 1;
           LLVM_FALLTHROUGH;
