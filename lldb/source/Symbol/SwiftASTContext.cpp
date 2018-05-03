@@ -907,13 +907,80 @@ static std::string &GetDefaultResourceDir() {
 }
 
 
-/// Retrieve the first serialized AST data blob and initialize
-/// the compiler invocation with it. The premise is that the
-/// ClangImporter flags will be the same for all AST blobs in
-/// this library, and search paths can be concatenated later.
-static bool DeserializeCompilerFlags(SwiftASTContext &swift_ast, Module &module,
-                                     std::string &error, bool &got_serialized_options) {
+/// Initialize the compiler invocation with it the search paths from a
+/// serialized AST.
+/// \returns true on success.
+static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
+                                     StringRef section_data_ref, StringRef name,
+                                     llvm::raw_ostream &error) {
+  auto result = invocation.loadFromSerializedAST(section_data_ref);
+  if (result == swift::serialization::Status::Valid)
+    return true;
+
+  error << "While deserializing" << name << ":\n";
+  switch (result) {
+  case swift::serialization::Status::Valid:
+    llvm_unreachable("already checked");
+  case swift::serialization::Status::FormatTooOld:
+    error << "The swift module file format is too old to be used by the "
+             "version of the swift compiler in LLDB\n";
+    break;
+
+  case swift::serialization::Status::FormatTooNew:
+    error << "the swift module file format is too new to be used by this "
+             "version of the swift compiler in LLDB\n";
+    break;
+
+  case swift::serialization::Status::MissingDependency:
+    error << "the swift module file depends on another module that can't be "
+             "loaded\n";
+    break;
+
+  case swift::serialization::Status::MissingShadowedModule:
+    error << "the swift module file is an overlay for a clang module, which "
+             "can't be found\n";
+    break;
+
+  case swift::serialization::Status::FailedToLoadBridgingHeader:
+    error << "the swift module file depends on a bridging header that can't "
+             "be loaded\n";
+    break;
+
+  case swift::serialization::Status::Malformed:
+    error << "the swift module file is malformed\n";
+    break;
+
+  case swift::serialization::Status::MalformedDocumentation:
+    error << "the swift module documentation file is malformed in some way\n";
+    break;
+
+  case swift::serialization::Status::NameMismatch:
+    error << "the swift module file's name does not match the module it is "
+             "being loaded into\n";
+    break;
+
+  case swift::serialization::Status::TargetIncompatible:
+    error << "the swift module file was built for a different target "
+             "platform\n";
+    break;
+
+  case swift::serialization::Status::TargetTooNew:
+    error << "the swift module file was built for a target newer than the "
+             "current target\n";
+    break;
+  }
+  return false;
+}
+
+/// Retrieve the serialized AST data blobs and initialize the compiler
+/// invocation with it the concatenated search paths form the blobs.
+/// \returns true if an error was encountered.
+static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
+                                        Module &module,
+                                        llvm::raw_ostream &error,
+                                        bool &got_serialized_options) {
   got_serialized_options = false;
+  auto &invocation = swift_ast.GetCompilerInvocation();
   SymbolVendor *sym_vendor = module.GetSymbolVendor();
   if (!sym_vendor)
     return false;
@@ -929,65 +996,44 @@ static bool DeserializeCompilerFlags(SwiftASTContext &swift_ast, Module &module,
   if (ast_file_datas.empty())
     return false;
 
-  auto ast_file_data_sp = ast_file_datas.front();
-  llvm::StringRef section_data_ref((const char *)ast_file_data_sp->GetBytes(),
-                                   ast_file_data_sp->GetByteSize());
-  auto result =
-      swift_ast.GetCompilerInvocation().loadFromSerializedAST(section_data_ref);
+  // An AST section consists of one or more AST modules, optionally
+  // with headers. Iterate over all AST modules.
+  for (auto ast_file_data_sp : ast_file_datas) {
+    llvm::StringRef buf((const char *)ast_file_data_sp->GetBytes(),
+                        ast_file_data_sp->GetByteSize());
+    while (!buf.empty()) {
+      std::string last_sdk_path;
+      auto info = swift::serialization::validateSerializedAST(buf);
+      if ((info.status != swift::serialization::Status::Valid) ||
+          (info.bytes == 0) || (info.bytes > buf.size())) {
+        if (log)
+          log->Printf("Unable to load AST for module %s from library: %s.",
+                      info.name.str().c_str(),
+                      module.GetSpecificationDescription().c_str());
+        return true;
+      }
 
-  switch (result) {
-  case swift::serialization::Status::Valid:
-    got_serialized_options = true;
-    return false;
+      if (info.name.empty())
+        continue;
 
-  case swift::serialization::Status::FormatTooOld:
-    error = "the swift module file format is too old to be used by the "
-            "version of the swift compiler in LLDB";
-    return true;
+      StringRef moduleData = buf.substr(0, info.bytes);
+      if (log)
+        last_sdk_path = invocation.getSDKPath();
 
-  case swift::serialization::Status::FormatTooNew:
-    error = "the swift module file format is too new to be used by this "
-            "version of the swift compiler in LLDB";
-    return true;
+      got_serialized_options |=
+          DeserializeCompilerFlags(invocation, moduleData, info.name, error);
 
-  case swift::serialization::Status::MissingDependency:
-    error = "the swift module file depends on another module that can't be "
-            "loaded";
-    return true;
-
-  case swift::serialization::Status::MissingShadowedModule:
-    error = "the swift module file is an overlay for a clang module, which "
-            "can't be found";
-    return true;
-
-  case swift::serialization::Status::FailedToLoadBridgingHeader:
-    error = "the swift module file depends on a bridging header that can't "
-            "be loaded";
-    return true;
-
-  case swift::serialization::Status::Malformed:
-    error = "the swift module file is malformed";
-    return true;
-
-  case swift::serialization::Status::MalformedDocumentation:
-    error = "the swift module documentation file is malformed in some way";
-    return true;
-
-  case swift::serialization::Status::NameMismatch:
-    error = "the swift module file's name does not match the module it is "
-            "being loaded into";
-    return true;
-
-  case swift::serialization::Status::TargetIncompatible:
-    error = "the swift module file was built for a different target "
-            "platform";
-    return true;
-
-  case swift::serialization::Status::TargetTooNew:
-    error = "the swift module file was built for a target newer than the "
-            "current target";
-    return true;
+      if (log && !last_sdk_path.empty() &&
+          invocation.getSDKPath() != last_sdk_path)
+        log->Printf("SDK path mismatch!\n"
+                    "Was \"%s\", found \"%s\" in module %s.",
+                    last_sdk_path.c_str(),
+                    invocation.getSDKPath().str().c_str(),
+                    info.name.str().c_str());
+      buf = buf.substr(info.bytes);
+    }
   }
+  return false;
 }
 
 void SwiftASTContext::RemapClangImporterOptions(
@@ -1092,10 +1138,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   if (sym_vendor) {
     bool got_serialized_options;
-    std::string error;
-    if (DeserializeCompilerFlags(*swift_ast_sp, module, error,
-                                 got_serialized_options)) {
-      swift_ast_sp->m_fatal_errors.SetErrorString(error);
+    llvm::SmallString<0> error;
+    llvm::raw_svector_ostream errs(error);
+
+    if (DeserializeAllCompilerFlags(*swift_ast_sp, module, errs,
+                                    got_serialized_options)) {
+      swift_ast_sp->m_fatal_errors.SetErrorString(error.str());
       return swift_ast_sp;
     }
 
@@ -1366,9 +1414,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   // Attempt to deserialize the compiler flags from the AST.
   if (exe_module_sp) {
-    std::string error;
-    if (DeserializeCompilerFlags(*swift_ast_sp, *exe_module_sp, error,
-                                 got_serialized_options) && log)
+    llvm::SmallString<0> error;
+    llvm::raw_svector_ostream errs(error);
+    bool failed = DeserializeAllCompilerFlags(*swift_ast_sp, *exe_module_sp,
+                                              errs, got_serialized_options);
+
+    if (log && failed)
       log->Printf(
           "Attempt to load compiler options from serialized AST failed: %s",
           error.c_str());
