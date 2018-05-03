@@ -1374,6 +1374,7 @@ bool DWARFExpression::Evaluate(
       }
       log->Printf("0x%8.8" PRIx64 ": %s", op_offset, DW_OP_value_to_name(op));
     }
+
     switch (op) {
     //----------------------------------------------------------------------
     // The DW_OP_addr operation has a single operand that encodes a machine
@@ -1382,6 +1383,11 @@ bool DWARFExpression::Evaluate(
     case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
       stack.back().SetValueType(Value::eValueTypeFileAddress);
+      // Convert the file address to a load address, so subsequent
+      // DWARF operators can operate on it.
+      if (frame)
+        stack.back().ConvertToLoadAddress(module_sp.get(),
+                                          frame->CalculateTarget().get());
       break;
 
     //----------------------------------------------------------------------
