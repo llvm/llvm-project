@@ -285,11 +285,12 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
 }
 
 static Arg *MakeInputArg(DerivedArgList &Args, OptTable &Opts,
-                         StringRef Value) {
+                         StringRef Value, bool Claim = true) {
   Arg *A = new Arg(Opts.getOption(options::OPT_INPUT), Value,
                    Args.getBaseArgs().MakeIndex(Value), Value.data());
   Args.AddSynthesizedArg(A);
-  A->claim();
+  if (Claim)
+    A->claim();
   return A;
 }
 
@@ -357,7 +358,7 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     if (A->getOption().matches(options::OPT__DASH_DASH)) {
       A->claim();
       for (StringRef Val : A->getValues())
-        DAL->append(MakeInputArg(*DAL, *Opts, Val));
+        DAL->append(MakeInputArg(*DAL, *Opts, Val, false));
       continue;
     }
 
@@ -2906,6 +2907,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // this compilation, warn the user about it.
     phases::ID InitialPhase = PL[0];
     if (InitialPhase > FinalPhase) {
+      if (InputArg->isClaimed())
+        continue;
+
       // Claim here to avoid the more general unused warning.
       InputArg->claim();
 

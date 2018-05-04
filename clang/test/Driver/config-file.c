@@ -63,6 +63,7 @@
 //
 // RUN: %clang --config %S/Inputs/config-4.cfg -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-UNUSED
 // CHECK-UNUSED-NOT: argument unused during compilation:
+// CHECK-UNUSED-NOT: 'linker' input unused
 
 
 //--- User directory is searched first.

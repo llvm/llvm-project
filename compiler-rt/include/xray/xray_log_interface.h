@@ -21,27 +21,29 @@
 ///
 /// The high-level usage pattern for these APIs look like the following:
 ///
-///   // Before we try initializing the log implementation, we must set it as
-///   // the log implementation. We provide the function pointers that define
-///   // the various initialization, finalization, and other pluggable hooks
-///   // that we need.
-///   __xray_set_log_impl({...});
+///   // We choose the mode which we'd like to install, and check whether this
+///   // has succeeded. Each mode will have their own set of flags they will
+///   // support, outside of the global XRay configuration options that are
+///   // defined in the XRAY_OPTIONS environment variable.
+///   auto select_status = __xray_log_select_mode("xray-fdr");
+///   if (select_status != XRayLogRegisterStatus::XRAY_REGISTRATION_OK) {
+///     // This failed, we should not proceed with attempting to initialise
+///     // the currently selected mode.
+///     return;
+///   }
 ///
-///   // Once that's done, we can now initialize the implementation. Each
-///   // implementation has a chance to let users customize the implementation
-///   // with a struct that their implementation supports. Roughly this might
-///   // look like:
-///   MyImplementationOptions opts;
-///   opts.enable_feature = true;
-///   ...
-///   auto init_status = __xray_log_init(
-///       BufferSize, MaxBuffers, &opts, sizeof opts);
-///   if (init_status != XRayLogInitStatus::XRAY_LOG_INITIALIZED) {
+///   // Once that's done, we can now attempt to configure the implementation.
+///   // To do this, we provide the string flags configuration for the mode.
+///   auto config_status = __xray_log_init_mode(
+///       "xray-fdr", "verbosity=1 some_flag=1 another_flag=2");
+///   if (config_status != XRayLogInitStatus::XRAY_LOG_INITIALIZED) {
 ///     // deal with the error here, if there is one.
 ///   }
 ///
 ///   // When the log implementation has had the chance to initialize, we can
-///   // now patch the sleds.
+///   // now patch the instrumentation points. Note that we could have patched
+///   // the instrumentation points first, but there's no strict ordering to
+///   // these operations.
 ///   auto patch_status = __xray_patch();
 ///   if (patch_status != XRayPatchingStatus::SUCCESS) {
 ///     // deal with the error here, if it is an error.
@@ -56,12 +58,12 @@
 ///
 ///   // We can optionally wait before flushing the log to give other threads a
 ///   // chance to see that the implementation is already finalized. Also, at
-///   // this point we can optionally unpatch the sleds to reduce overheads at
-///   // runtime.
+///   // this point we can optionally unpatch the instrumentation points to
+///   // reduce overheads at runtime.
 ///   auto unpatch_status = __xray_unpatch();
 ///   if (unpatch_status != XRayPatchingStatus::SUCCESS) {
-//      // deal with the error here, if it is an error.
-//    }
+///     // deal with the error here, if it is an error.
+///   }
 ///
 ///   // If there are logs or data to be flushed somewhere, we can do so only
 ///   // after we've finalized the log. Some implementations may not actually
@@ -193,9 +195,13 @@ struct XRayLogImpl {
   XRayLogFlushStatus (*flush_log)();
 };
 
+/// DEPRECATED: Use the mode registration workflow instead with
+/// __xray_log_register_mode(...) and __xray_log_select_mode(...). See the
+/// documentation for those function.
+///
 /// This function installs a new logging implementation that XRay will use. In
 /// case there are any nullptr members in Impl, XRay will *uninstall any
-/// existing implementations*. It does NOT patch the instrumentation sleds.
+/// existing implementations*. It does NOT patch the instrumentation points.
 ///
 /// NOTE: This function does NOT attempt to finalize the currently installed
 /// implementation. Use with caution.
@@ -245,7 +251,7 @@ const char *__xray_log_get_current_mode();
 
 /// This function removes the currently installed implementation. It will also
 /// uninstall any handlers that have been previously installed. It does NOT
-/// unpatch the instrumentation sleds.
+/// unpatch the instrumentation points.
 ///
 /// NOTE: This function does NOT attempt to finalize the currently installed
 /// implementation. Use with caution.
@@ -260,10 +266,36 @@ const char *__xray_log_get_current_mode();
 /// called while in any other states.
 void __xray_remove_log_impl();
 
+/// DEPRECATED: Use __xray_log_init_mode() instead, and provide all the options
+/// in string form.
 /// Invokes the installed implementation initialization routine. See
 /// XRayLogInitStatus for what the return values mean.
 XRayLogInitStatus __xray_log_init(size_t BufferSize, size_t MaxBuffers,
                                   void *Args, size_t ArgsSize);
+
+/// Invokes the installed initialization routine, which *must* support the
+/// string based form.
+///
+/// NOTE: When this API is used, we still invoke the installed initialization
+/// routine, but we will call it with the following convention to signal that we
+/// are using the string form:
+///
+/// - BufferSize = 0
+/// - MaxBuffers = 0
+/// - ArgsSize = 0
+/// - Args will be the pointer to the character buffer representing the
+///   configuration.
+///
+/// FIXME: Updating the XRayLogImpl struct is an ABI breaking change. When we
+/// are ready to make a breaking change, we should clean this up appropriately.
+XRayLogInitStatus __xray_log_init_mode(const char *Mode, const char *Config);
+
+/// Like __xray_log_init_mode(...) this version allows for providing
+/// configurations that might have non-null-terminated strings. This will
+/// operate similarly to __xray_log_init_mode, with the exception that
+/// |ArgsSize| will be what |ConfigSize| is.
+XRayLogInitStatus __xray_log_init_mode_bin(const char *Mode, const char *Config,
+                                           size_t ConfigSize);
 
 /// Invokes the installed implementation finalization routine. See
 /// XRayLogInitStatus for what the return values mean.
@@ -325,12 +357,16 @@ XRayLogFlushStatus __xray_log_process_buffers(void (*Processor)(const char *,
 
 namespace __xray {
 
+/// DEPRECATED: Use __xray_log_init_mode(...) instead, and provide flag
+/// configuration strings to set the options instead.
 /// Options used by the LLVM XRay FDR logging implementation.
 struct FDRLoggingOptions {
   bool ReportErrors = false;
   int Fd = -1;
 };
 
+/// DEPRECATED: Use __xray_log_init_mode(...) instead, and provide flag
+/// configuration strings to set the options instead.
 /// Options used by the LLVM XRay Basic (Naive) logging implementation.
 struct BasicLoggingOptions {
   int DurationFilterMicros = 0;
