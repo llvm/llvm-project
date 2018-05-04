@@ -166,6 +166,7 @@ protected:
   bool HasSDWAOutModsVOPC;
   bool HasDPP;
   bool HasDLInsts;
+  bool D16PreservesUnusedBits;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
   bool FlatGlobalInsts;
@@ -544,6 +545,10 @@ public:
 
   bool hasDLInsts() const {
     return HasDLInsts;
+  }
+
+  bool d16PreservesUnusedBits() const {
+    return D16PreservesUnusedBits;
   }
 
   /// Returns the offset in bytes from the start of the input buffer

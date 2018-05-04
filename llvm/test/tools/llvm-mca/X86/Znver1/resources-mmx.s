@@ -164,7 +164,7 @@ pxor        (%rax), %mm2
 # CHECK-NEXT: [6]: HasSideEffects
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# CHECK-NEXT:  1      100    -      *      *      * 	emms
+# CHECK-NEXT:  1      2     0.25    *      *      * 	emms
 # CHECK-NEXT:  1      3     1.00                    	movd	%eax, %mm2
 # CHECK-NEXT:  1      8     0.50    *               	movd	(%rax), %mm2
 # CHECK-NEXT:  1      2     1.00                    	movd	%mm0, %ecx
@@ -286,11 +286,11 @@ pxor        (%rax), %mm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 24.00  24.00   -      -      -      -      -     27.00  24.00  28.00  21.00   -
+# CHECK-NEXT: 24.00  24.00   -      -      -      -      -     27.25  24.25  28.25  21.25   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   	Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	emms
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     	emms
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     	movd	%eax, %mm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     	movd	(%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     	movd	%mm0, %ecx

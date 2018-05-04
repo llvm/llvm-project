@@ -101,23 +101,22 @@ multiclass fma3p_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpcodeStr, string PackTy, string Suff,
                        PatFrag MemFrag128, PatFrag MemFrag256,
                        SDNode Op, ValueType OpTy128, ValueType OpTy256,
-                       X86FoldableSchedWrite sched128,
-                       X86FoldableSchedWrite sched256> {
+                       X86SchedWriteWidths sched> {
   defm NAME#213#Suff : fma3p_rm_213<opc213, !strconcat(OpcodeStr, "213", PackTy),
-                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched128>;
+                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched.XMM>;
   defm NAME#231#Suff : fma3p_rm_231<opc231, !strconcat(OpcodeStr, "231", PackTy),
-                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched128>;
+                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched.XMM>;
   defm NAME#132#Suff : fma3p_rm_132<opc132, !strconcat(OpcodeStr, "132", PackTy),
-                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched128>;
+                                    VR128, OpTy128, f128mem, MemFrag128, Op, sched.XMM>;
 
   defm NAME#213#Suff#Y : fma3p_rm_213<opc213, !strconcat(OpcodeStr, "213", PackTy),
-                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched256>,
+                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched.YMM>,
                                       VEX_L;
   defm NAME#231#Suff#Y : fma3p_rm_231<opc231, !strconcat(OpcodeStr, "231", PackTy),
-                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched256>,
+                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched.YMM>,
                                       VEX_L;
   defm NAME#132#Suff#Y : fma3p_rm_132<opc132, !strconcat(OpcodeStr, "132", PackTy),
-                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched256>,
+                                      VR256, OpTy256, f256mem, MemFrag256, Op, sched.YMM>,
                                       VEX_L;
 }
 
@@ -125,45 +124,45 @@ multiclass fma3p_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 let ExeDomain = SSEPackedSingle in {
   defm VFMADD    : fma3p_forms<0x98, 0xA8, 0xB8, "vfmadd", "ps", "PS",
                                loadv4f32, loadv8f32, X86Fmadd, v4f32, v8f32,
-                               WriteFMA, WriteFMAY>;
+                               SchedWriteFMA>;
   defm VFMSUB    : fma3p_forms<0x9A, 0xAA, 0xBA, "vfmsub", "ps", "PS",
                                loadv4f32, loadv8f32, X86Fmsub, v4f32, v8f32,
-                               WriteFMA, WriteFMAY>;
+                               SchedWriteFMA>;
   defm VFMADDSUB : fma3p_forms<0x96, 0xA6, 0xB6, "vfmaddsub", "ps", "PS",
                                loadv4f32, loadv8f32, X86Fmaddsub, v4f32, v8f32,
-                               WriteFMA, WriteFMAY>;
+                               SchedWriteFMA>;
   defm VFMSUBADD : fma3p_forms<0x97, 0xA7, 0xB7, "vfmsubadd", "ps", "PS",
                                loadv4f32, loadv8f32, X86Fmsubadd, v4f32, v8f32,
-                               WriteFMA, WriteFMAY>;
+                               SchedWriteFMA>;
 }
 
 let ExeDomain = SSEPackedDouble in {
   defm VFMADD    : fma3p_forms<0x98, 0xA8, 0xB8, "vfmadd", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmadd, v2f64,
-                               v4f64, WriteFMA, WriteFMAY>, VEX_W;
+                               v4f64, SchedWriteFMA>, VEX_W;
   defm VFMSUB    : fma3p_forms<0x9A, 0xAA, 0xBA, "vfmsub", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmsub, v2f64,
-                               v4f64, WriteFMA, WriteFMAY>, VEX_W;
+                               v4f64, SchedWriteFMA>, VEX_W;
   defm VFMADDSUB : fma3p_forms<0x96, 0xA6, 0xB6, "vfmaddsub", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmaddsub,
-                               v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
+                               v2f64, v4f64, SchedWriteFMA>, VEX_W;
   defm VFMSUBADD : fma3p_forms<0x97, 0xA7, 0xB7, "vfmsubadd", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmsubadd,
-                               v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
+                               v2f64, v4f64, SchedWriteFMA>, VEX_W;
 }
 
 // Fused Negative Multiply-Add
 let ExeDomain = SSEPackedSingle in {
   defm VFNMADD : fma3p_forms<0x9C, 0xAC, 0xBC, "vfnmadd", "ps", "PS", loadv4f32,
-                             loadv8f32, X86Fnmadd, v4f32, v8f32, WriteFMA, WriteFMAY>;
+                             loadv8f32, X86Fnmadd, v4f32, v8f32, SchedWriteFMA>;
   defm VFNMSUB : fma3p_forms<0x9E, 0xAE, 0xBE, "vfnmsub", "ps", "PS", loadv4f32,
-                             loadv8f32, X86Fnmsub, v4f32, v8f32, WriteFMA, WriteFMAY>;
+                             loadv8f32, X86Fnmsub, v4f32, v8f32, SchedWriteFMA>;
 }
 let ExeDomain = SSEPackedDouble in {
   defm VFNMADD : fma3p_forms<0x9C, 0xAC, 0xBC, "vfnmadd", "pd", "PD", loadv2f64,
-                             loadv4f64, X86Fnmadd, v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
+                             loadv4f64, X86Fnmadd, v2f64, v4f64, SchedWriteFMA>, VEX_W;
   defm VFNMSUB : fma3p_forms<0x9E, 0xAE, 0xBE, "vfnmsub", "pd", "PD", loadv2f64,
-                             loadv4f64, X86Fnmsub, v2f64, v4f64, WriteFMA, WriteFMAY>, VEX_W;
+                             loadv4f64, X86Fnmsub, v2f64, v4f64, SchedWriteFMA>, VEX_W;
 }
 
 // All source register operands of FMA opcodes defined in fma3s_rm multiclass
@@ -356,14 +355,14 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 }
 
 defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", X86Fmadds1, X86Fmadd,
-                    WriteFMAS>, VEX_LIG;
+                    SchedWriteFMA.Scl>, VEX_LIG;
 defm VFMSUB : fma3s<0x9B, 0xAB, 0xBB, "vfmsub", X86Fmsubs1, X86Fmsub,
-                    WriteFMAS>, VEX_LIG;
+                    SchedWriteFMA.Scl>, VEX_LIG;
 
 defm VFNMADD : fma3s<0x9D, 0xAD, 0xBD, "vfnmadd", X86Fnmadds1, X86Fnmadd,
-                     WriteFMAS>, VEX_LIG;
+                     SchedWriteFMA.Scl>, VEX_LIG;
 defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86Fnmsubs1, X86Fnmsub,
-                     WriteFMAS>, VEX_LIG;
+                     SchedWriteFMA.Scl>, VEX_LIG;
 
 //===----------------------------------------------------------------------===//
 // FMA4 - AMD 4 operand Fused Multiply-Add instructions
@@ -450,8 +449,7 @@ let hasSideEffects = 0 in
 multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                  ValueType OpVT128, ValueType OpVT256,
                  PatFrag ld_frag128, PatFrag ld_frag256,
-                 X86FoldableSchedWrite sched128,
-                 X86FoldableSchedWrite sched256> {
+                 X86SchedWriteWidths sched> {
   let isCommutable = 1 in
   def rr : FMA4<opc, MRMSrcRegOp4, (outs VR128:$dst),
            (ins VR128:$src1, VR128:$src2, VR128:$src3),
@@ -459,21 +457,21 @@ multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
              (OpVT128 (OpNode VR128:$src1, VR128:$src2, VR128:$src3)))]>,
-           VEX_W, Sched<[sched128]>;
+           VEX_W, Sched<[sched.XMM]>;
   def rm : FMA4<opc, MRMSrcMemOp4, (outs VR128:$dst),
            (ins VR128:$src1, VR128:$src2, f128mem:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst, (OpNode VR128:$src1, VR128:$src2,
                               (ld_frag128 addr:$src3)))]>, VEX_W,
-           Sched<[sched128.Folded, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched.XMM.Folded, ReadAfterLd, ReadAfterLd]>;
   def mr : FMA4<opc, MRMSrcMem, (outs VR128:$dst),
            (ins VR128:$src1, f128mem:$src2, VR128:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
              (OpNode VR128:$src1, (ld_frag128 addr:$src2), VR128:$src3))]>,
-           Sched<[sched128.Folded, ReadAfterLd,
+           Sched<[sched.XMM.Folded, ReadAfterLd,
                   // f128mem:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
@@ -486,21 +484,21 @@ multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst,
              (OpVT256 (OpNode VR256:$src1, VR256:$src2, VR256:$src3)))]>,
-           VEX_W, VEX_L, Sched<[sched256]>;
+           VEX_W, VEX_L, Sched<[sched.YMM]>;
   def Yrm : FMA4<opc, MRMSrcMemOp4, (outs VR256:$dst),
            (ins VR256:$src1, VR256:$src2, f256mem:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst, (OpNode VR256:$src1, VR256:$src2,
                               (ld_frag256 addr:$src3)))]>, VEX_W, VEX_L,
-           Sched<[sched256.Folded, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched.YMM.Folded, ReadAfterLd, ReadAfterLd]>;
   def Ymr : FMA4<opc, MRMSrcMem, (outs VR256:$dst),
            (ins VR256:$src1, f256mem:$src2, VR256:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst, (OpNode VR256:$src1,
                               (ld_frag256 addr:$src2), VR256:$src3))]>, VEX_L,
-           Sched<[sched256.Folded, ReadAfterLd,
+           Sched<[sched.YMM.Folded, ReadAfterLd,
                   // f256mem:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
@@ -512,78 +510,78 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-               Sched<[sched128]>, FoldGenData<NAME#rr>;
+               Sched<[sched.XMM]>, FoldGenData<NAME#rr>;
   def Yrr_REV : FMA4<opc, MRMSrcReg, (outs VR256:$dst),
                 (ins VR256:$src1, VR256:$src2, VR256:$src3),
                 !strconcat(OpcodeStr,
                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-                VEX_L, Sched<[sched256]>, FoldGenData<NAME#Yrr>;
+                VEX_L, Sched<[sched.YMM]>, FoldGenData<NAME#Yrr>;
 } // isCodeGenOnly = 1
 }
 
 let ExeDomain = SSEPackedSingle in {
   // Scalar Instructions
   defm VFMADDSS4  : fma4s<0x6A, "vfmaddss", FR32, f32mem, f32, X86Fmadd, loadf32,
-                          WriteFMAS>,
+                          SchedWriteFMA.Scl>,
                     fma4s_int<0x6A, "vfmaddss", ssmem, v4f32, sse_load_f32,
-                              X86Fmadd4s, WriteFMAS>;
+                              X86Fmadd4s, SchedWriteFMA.Scl>;
   defm VFMSUBSS4  : fma4s<0x6E, "vfmsubss", FR32, f32mem, f32, X86Fmsub, loadf32,
-                          WriteFMAS>,
+                          SchedWriteFMA.Scl>,
                     fma4s_int<0x6E, "vfmsubss", ssmem, v4f32, sse_load_f32,
-                              X86Fmsub4s, WriteFMAS>;
+                              X86Fmsub4s, SchedWriteFMA.Scl>;
   defm VFNMADDSS4 : fma4s<0x7A, "vfnmaddss", FR32, f32mem, f32,
-                          X86Fnmadd, loadf32, WriteFMAS>,
+                          X86Fnmadd, loadf32, SchedWriteFMA.Scl>,
                     fma4s_int<0x7A, "vfnmaddss", ssmem, v4f32, sse_load_f32,
-                              X86Fnmadd4s, WriteFMAS>;
+                              X86Fnmadd4s, SchedWriteFMA.Scl>;
   defm VFNMSUBSS4 : fma4s<0x7E, "vfnmsubss", FR32, f32mem, f32,
-                          X86Fnmsub, loadf32, WriteFMAS>,
+                          X86Fnmsub, loadf32, SchedWriteFMA.Scl>,
                     fma4s_int<0x7E, "vfnmsubss", ssmem, v4f32, sse_load_f32,
-                              X86Fnmsub4s, WriteFMAS>;
+                              X86Fnmsub4s, SchedWriteFMA.Scl>;
   // Packed Instructions
   defm VFMADDPS4    : fma4p<0x68, "vfmaddps", X86Fmadd, v4f32, v8f32,
-                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
+                            loadv4f32, loadv8f32, SchedWriteFMA>;
   defm VFMSUBPS4    : fma4p<0x6C, "vfmsubps", X86Fmsub, v4f32, v8f32,
-                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
+                            loadv4f32, loadv8f32, SchedWriteFMA>;
   defm VFNMADDPS4   : fma4p<0x78, "vfnmaddps", X86Fnmadd, v4f32, v8f32,
-                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
+                            loadv4f32, loadv8f32, SchedWriteFMA>;
   defm VFNMSUBPS4   : fma4p<0x7C, "vfnmsubps", X86Fnmsub, v4f32, v8f32,
-                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
+                            loadv4f32, loadv8f32, SchedWriteFMA>;
   defm VFMADDSUBPS4 : fma4p<0x5C, "vfmaddsubps", X86Fmaddsub, v4f32, v8f32,
-                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
+                            loadv4f32, loadv8f32, SchedWriteFMA>;
   defm VFMSUBADDPS4 : fma4p<0x5E, "vfmsubaddps", X86Fmsubadd, v4f32, v8f32,
-                            loadv4f32, loadv8f32, WriteFMA, WriteFMAY>;
+                            loadv4f32, loadv8f32, SchedWriteFMA>;
 }
 
 let ExeDomain = SSEPackedDouble in {
   // Scalar Instructions
   defm VFMADDSD4  : fma4s<0x6B, "vfmaddsd", FR64, f64mem, f64, X86Fmadd, loadf64,
-                          WriteFMAS>,
+                          SchedWriteFMA.Scl>,
                     fma4s_int<0x6B, "vfmaddsd", sdmem, v2f64, sse_load_f64,
-                              X86Fmadd4s, WriteFMAS>;
+                              X86Fmadd4s, SchedWriteFMA.Scl>;
   defm VFMSUBSD4  : fma4s<0x6F, "vfmsubsd", FR64, f64mem, f64, X86Fmsub, loadf64,
-                          WriteFMAS>,
+                          SchedWriteFMA.Scl>,
                     fma4s_int<0x6F, "vfmsubsd", sdmem, v2f64, sse_load_f64,
-                              X86Fmsub4s, WriteFMAS>;
+                              X86Fmsub4s, SchedWriteFMA.Scl>;
   defm VFNMADDSD4 : fma4s<0x7B, "vfnmaddsd", FR64, f64mem, f64,
-                          X86Fnmadd, loadf64, WriteFMAS>,
+                          X86Fnmadd, loadf64, SchedWriteFMA.Scl>,
                     fma4s_int<0x7B, "vfnmaddsd", sdmem, v2f64, sse_load_f64,
-                              X86Fnmadd4s, WriteFMAS>;
+                              X86Fnmadd4s, SchedWriteFMA.Scl>;
   defm VFNMSUBSD4 : fma4s<0x7F, "vfnmsubsd", FR64, f64mem, f64,
-                          X86Fnmsub, loadf64, WriteFMAS>,
+                          X86Fnmsub, loadf64, SchedWriteFMA.Scl>,
                     fma4s_int<0x7F, "vfnmsubsd", sdmem, v2f64, sse_load_f64,
-                              X86Fnmsub4s, WriteFMAS>;
+                              X86Fnmsub4s, SchedWriteFMA.Scl>;
   // Packed Instructions
   defm VFMADDPD4    : fma4p<0x69, "vfmaddpd", X86Fmadd, v2f64, v4f64,
-                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
+                            loadv2f64, loadv4f64, SchedWriteFMA>;
   defm VFMSUBPD4    : fma4p<0x6D, "vfmsubpd", X86Fmsub, v2f64, v4f64,
-                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
+                            loadv2f64, loadv4f64, SchedWriteFMA>;
   defm VFNMADDPD4   : fma4p<0x79, "vfnmaddpd", X86Fnmadd, v2f64, v4f64,
-                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
+                            loadv2f64, loadv4f64, SchedWriteFMA>;
   defm VFNMSUBPD4   : fma4p<0x7D, "vfnmsubpd", X86Fnmsub, v2f64, v4f64,
-                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
+                            loadv2f64, loadv4f64, SchedWriteFMA>;
   defm VFMADDSUBPD4 : fma4p<0x5D, "vfmaddsubpd", X86Fmaddsub, v2f64, v4f64,
-                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
+                            loadv2f64, loadv4f64, SchedWriteFMA>;
   defm VFMSUBADDPD4 : fma4p<0x5F, "vfmsubaddpd", X86Fmsubadd, v2f64, v4f64,
-                            loadv2f64, loadv4f64, WriteFMA, WriteFMAY>;
+                            loadv2f64, loadv4f64, SchedWriteFMA>;
 }
 

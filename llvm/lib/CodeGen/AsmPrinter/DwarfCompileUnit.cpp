@@ -234,7 +234,7 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     // It would be better if this were unconditional, but malformed input that
     // mixes non-fragments and fragments for the same variable is too expensive
     // to detect in the verifier.
-    if (!DwarfExpr->isMemoryLocation())
+    if (DwarfExpr->isUnknownLocation())
       DwarfExpr->setMemoryLocationKind();
     DwarfExpr->addExpression(Expr);
   }

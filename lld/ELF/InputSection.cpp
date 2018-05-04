@@ -566,24 +566,15 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
   case R_PLT:
     return Sym.getPltVA() + A;
   case R_PLT_PC:
-  case R_PPC_PLT_OPD:
+  case R_PPC_CALL_PLT:
     return Sym.getPltVA() + A - P;
-  case R_PPC_OPD: {
+  case R_PPC_CALL: {
     uint64_t SymVA = Sym.getVA(A);
     // If we have an undefined weak symbol, we might get here with a symbol
     // address of zero. That could overflow, but the code must be unreachable,
     // so don't bother doing anything at all.
     if (!SymVA)
       return 0;
-    if (Out::Opd) {
-      // If this is a local call, and we currently have the address of a
-      // function-descriptor, get the underlying code address instead.
-      uint64_t OpdStart = Out::Opd->Addr;
-      uint64_t OpdEnd = OpdStart + Out::Opd->Size;
-      bool InOpd = OpdStart <= SymVA && SymVA < OpdEnd;
-      if (InOpd)
-        SymVA = read64be(&Out::OpdBuf[SymVA - OpdStart]);
-    }
 
     // PPC64 V2 ABI describes two entry points to a function. The global entry
     // point sets up the TOC base pointer. When calling a local function, the
@@ -749,7 +740,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
     case R_RELAX_TLS_GD_TO_IE_END:
       Target->relaxTlsGdToIe(BufLoc, Type, TargetVA);
       break;
-    case R_PPC_PLT_OPD:
+    case R_PPC_CALL_PLT:
       // Patch a nop (0x60000000) to a ld.
       if (BufLoc + 8 > BufEnd || read32(BufLoc + 4) != 0x60000000) {
         error(getErrorLocation(BufLoc) + "call lacks nop, can't restore toc");

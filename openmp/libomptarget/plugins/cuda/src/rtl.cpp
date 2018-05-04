@@ -80,6 +80,12 @@ struct KernelTy {
       : Func(_Func), ExecutionMode(_ExecutionMode) {}
 };
 
+/// Device envrionment data
+/// Manually sync with the deviceRTL side for now, move to a dedicated header file later.
+struct omptarget_device_environmentTy {
+  int32_t debug_level;
+};
+
 /// List that contains all the kernels.
 /// FIXME: we may need this to be per device and per library.
 std::list<KernelTy> KernelsList;
@@ -484,6 +490,48 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
     __tgt_offload_entry entry = *e;
     entry.addr = (void *)&KernelsList.back();
     DeviceInfo.addOffloadEntry(device_id, entry);
+  }
+
+  // send device environment data to the device
+  {
+    omptarget_device_environmentTy device_env;
+
+    device_env.debug_level = 0;
+
+#ifdef OMPTARGET_DEBUG
+    if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
+      device_env.debug_level = std::stoi(envStr);
+    }
+#endif
+
+    const char * device_env_Name="omptarget_device_environment";
+    CUdeviceptr device_env_Ptr;
+    size_t cusize;
+
+    err = cuModuleGetGlobal(&device_env_Ptr, &cusize, cumod, device_env_Name);
+
+    if (err == CUDA_SUCCESS) {
+      if ((size_t)cusize != sizeof(device_env)) {
+        DP("Global device_environment '%s' - size mismatch (%zu != %zu)\n",
+            device_env_Name, cusize, sizeof(int32_t));
+        CUDA_ERR_STRING(err);
+        return NULL;
+      }
+
+      err = cuMemcpyHtoD(device_env_Ptr, &device_env, cusize);
+      if (err != CUDA_SUCCESS) {
+        DP("Error when copying data from host to device. Pointers: "
+            "host = " DPxMOD ", device = " DPxMOD ", size = %zu\n",
+            DPxPTR(&device_env), DPxPTR(device_env_Ptr), cusize);
+        CUDA_ERR_STRING(err);
+        return NULL;
+      }
+
+      DP("Sending global device environment data %zu bytes\n", (size_t)cusize);
+    } else {
+      DP("Finding global device environment '%s' - symbol missing.\n", device_env_Name);
+      DP("Continue, considering this is a device RTL which does not accept envrionment setting.\n");
+    }
   }
 
   return DeviceInfo.getOffloadEntriesTable(device_id);

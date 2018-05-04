@@ -229,8 +229,7 @@ int AssembleInput(const char *ProgName, MCAsmParser &Parser,
       TheTarget->createMCAsmParser(STI, Parser, MCII, MCOptions));
 
   if (!TAP) {
-    errs() << ProgName
-           << ": error: this target does not support assembly parsing.\n";
+    WithColor::error() << "this target does not support assembly parsing.\n";
     return 1;
   }
 

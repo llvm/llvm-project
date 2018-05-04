@@ -547,7 +547,14 @@ void HexagonExpandCondsets::removeInstr(MachineInstr &MI) {
 void HexagonExpandCondsets::updateLiveness(std::set<unsigned> &RegSet,
       bool Recalc, bool UpdateKills, bool UpdateDeads) {
   UpdateKills |= UpdateDeads;
-  for (auto R : RegSet) {
+  for (unsigned R : RegSet) {
+    if (!TargetRegisterInfo::isVirtualRegister(R)) {
+      assert(TargetRegisterInfo::isPhysicalRegister(R));
+      // There shouldn't be any physical registers as operands, except
+      // possibly reserved registers.
+      assert(MRI->isReserved(R));
+      continue;
+    }
     if (Recalc)
       recalculateLiveInterval(R);
     if (UpdateKills)
