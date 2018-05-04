@@ -1383,18 +1383,21 @@ bool DWARFExpression::Evaluate(
       }
       log->Printf("0x%8.8" PRIx64 ": %s", op_offset, DW_OP_value_to_name(op));
     }
+
     switch (op) {
     //----------------------------------------------------------------------
     // The DW_OP_addr operation has a single operand that encodes a machine
     // address and whose size is the size of an address on the target machine.
     //----------------------------------------------------------------------
-    case DW_OP_addr: {
+    case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
       stack.back().SetValueType(Value::eValueTypeFileAddress);
-      auto sc = frame->GetSymbolContext(eSymbolContextFunction);
-      stack.back().ConvertToLoadAddress(sc);
+      // Convert the file address to a load address, so subsequent
+      // DWARF operators can operate on it.
+      if (frame)
+        stack.back().ConvertToLoadAddress(module_sp.get(),
+                                          frame->CalculateTarget().get());
       break;
-    }
 
     //----------------------------------------------------------------------
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
