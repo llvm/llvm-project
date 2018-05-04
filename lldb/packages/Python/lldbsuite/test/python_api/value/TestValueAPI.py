@@ -61,8 +61,22 @@ class ValueAPITestCase(TestBase):
         list = target.FindGlobalVariables('days_of_week', 1)
         days_of_week = list.GetValueAtIndex(0)
         self.assertTrue(days_of_week, VALID_VARIABLE)
-        self.assertTrue(days_of_week.GetNumChildren() == 7, VALID_VARIABLE)
+        self.assertEqual(days_of_week.GetNumChildren(), 7, VALID_VARIABLE)
         self.DebugSBValue(days_of_week)
+
+        # Use this to test the "child" and "children" accessors:
+        children = days_of_week.children
+        self.assertEqual(len(children), 7, VALID_VARIABLE)
+        for i in range(0, len(children)):
+            day = days_of_week.child[i]
+            list_day = children[i]
+            self.assertNotEqual(day, None)
+            self.assertNotEqual(list_day, None)
+            self.assertEqual(day.GetSummary(), list_day.GetSummary(), VALID_VARIABLE)
+
+        # Spot check the actual value:
+        first_day = days_of_week.child[1]
+        self.assertEqual(first_day.GetSummary(), '"Monday"', VALID_VARIABLE)
 
         # Get global variable 'weekdays'.
         list = target.FindGlobalVariables('weekdays', 1)

@@ -663,7 +663,11 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *Sym) {
     return false;
 
   auto *Sec = cast<InputSectionBase>(Sym->Section);
-  const Elf_Ehdr *Hdr = Sec->template getFile<ELFT>()->getObj().getHeader();
+  ObjFile<ELFT> *File = Sec->template getFile<ELFT>();
+  if (!File)
+    return false;
+
+  const Elf_Ehdr *Hdr = File->getObj().getHeader();
   return (Sym->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
          (Hdr->e_flags & EF_MIPS_PIC);
 }

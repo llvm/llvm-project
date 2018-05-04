@@ -199,6 +199,12 @@ struct Symbol {
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S);
 
+// Computes query-independent quality score for a Symbol.
+// This currently falls in the range [1, ln(#indexed documents)].
+// FIXME: this should probably be split into symbol -> signals
+//        and signals -> score, so it can be reused for Sema completions.
+double quality(const Symbol &S);
+
 // An immutable symbol container that stores a set of symbols.
 // The container will maintain the lifetime of the symbols.
 class SymbolSlab {
