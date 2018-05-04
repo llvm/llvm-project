@@ -208,8 +208,8 @@
 # PPC64-NEXT:   Entry:
 # PPC64-NEXT:   ProgramHeaderOffset: 0x40
 # PPC64-NEXT:   SectionHeaderOffset:
-# PPC64-NEXT:   Flags [ (0x1)
-# PPC64-NEXT:     0x1
+# PPC64-NEXT:   Flags [ (0x2)
+# PPC64-NEXT:     0x2
 # PPC64-NEXT:   ]
 # PPC64-NEXT:   HeaderSize: 64
 # PPC64-NEXT:   ProgramHeaderEntrySize: 56
@@ -366,8 +366,12 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %s -o %taarch64
 # RUN: ld.lld -m aarch64linux %taarch64 -o %t2aarch64
 # RUN: llvm-readobj -file-headers %t2aarch64 | FileCheck --check-prefix=AARCH64 %s
-# RUN: ld.lld %taarch64 -o %t3aarch64
+# RUN: ld.lld -m aarch64elf %taarch64 -o %t3aarch64
 # RUN: llvm-readobj -file-headers %t3aarch64 | FileCheck --check-prefix=AARCH64 %s
+# RUN: ld.lld -m aarch64_elf64_le_vec %taarch64 -o %t4aarch64
+# RUN: llvm-readobj -file-headers %t4aarch64 | FileCheck --check-prefix=AARCH64 %s
+# RUN: ld.lld %taarch64 -o %t5aarch64
+# RUN: llvm-readobj -file-headers %t5aarch64 | FileCheck --check-prefix=AARCH64 %s
 # AARCH64:      ElfHeader {
 # AARCH64-NEXT:   Ident {
 # AARCH64-NEXT:     Magic: (7F 45 4C 46)

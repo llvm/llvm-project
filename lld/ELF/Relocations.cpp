@@ -312,7 +312,7 @@ static bool isAbsoluteValue(const Symbol &Sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
-  return isRelExprOneOf<R_PLT_PC, R_PPC_PLT_OPD, R_PLT, R_PLT_PAGE_PC>(Expr);
+  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT, R_PLT_PAGE_PC>(Expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
@@ -347,7 +347,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                      R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32,
                      R_MIPS_GOT_GP_PC, R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC,
                      R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_PC,
-                     R_TLSGD, R_PPC_PLT_OPD, R_TLSDESC_CALL, R_TLSDESC_PAGE,
+                     R_TLSGD, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE,
                      R_HINT>(E))
     return true;
 
@@ -395,8 +395,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
 
 static RelExpr toPlt(RelExpr Expr) {
   switch (Expr) {
-  case R_PPC_OPD:
-    return R_PPC_PLT_OPD;
+  case R_PPC_CALL:
+    return R_PPC_CALL_PLT;
   case R_PC:
     return R_PLT_PC;
   case R_PAGE_PC:
@@ -414,8 +414,8 @@ static RelExpr fromPlt(RelExpr Expr) {
   switch (Expr) {
   case R_PLT_PC:
     return R_PC;
-  case R_PPC_PLT_OPD:
-    return R_PPC_OPD;
+  case R_PPC_CALL_PLT:
+    return R_PPC_CALL;
   case R_PLT:
     return R_ABS;
   default:

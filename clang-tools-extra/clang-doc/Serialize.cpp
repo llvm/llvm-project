@@ -173,21 +173,23 @@ static RecordDecl *getDeclForType(const QualType &T) {
 
 static void parseFields(RecordInfo &I, const RecordDecl *D) {
   for (const FieldDecl *F : D->fields()) {
-    // FIXME: Set Access to the appropriate value.
-    SymbolID Type;
-    std::string Name;
-    InfoType RefType;
     if (const auto *T = getDeclForType(F->getTypeSourceInfo()->getType())) {
-      Type = getUSRForDecl(T);
-      if (dyn_cast<EnumDecl>(T))
-        RefType = InfoType::IT_enum;
-      else if (dyn_cast<RecordDecl>(T))
-        RefType = InfoType::IT_record;
-      I.Members.emplace_back(Type, RefType, F->getQualifiedNameAsString());
-    } else {
-      Name = F->getTypeSourceInfo()->getType().getAsString();
-      I.Members.emplace_back(Name, F->getQualifiedNameAsString());
+      // Use getAccessUnsafe so that we just get the default AS_none if it's not
+      // valid, as opposed to an assert.
+      if (const auto *N = dyn_cast<EnumDecl>(T)) {
+        I.Members.emplace_back(getUSRForDecl(T), N->getNameAsString(),
+                               InfoType::IT_enum, F->getNameAsString(),
+                               N->getAccessUnsafe());
+        continue;
+      } else if (const auto *N = dyn_cast<RecordDecl>(T)) {
+        I.Members.emplace_back(getUSRForDecl(T), N->getNameAsString(),
+                               InfoType::IT_record, F->getNameAsString(),
+                               N->getAccessUnsafe());
+        continue;
+      }
     }
+    I.Members.emplace_back(F->getTypeSourceInfo()->getType().getAsString(),
+                           F->getNameAsString(), F->getAccessUnsafe());
   }
 }
 
@@ -198,20 +200,19 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
 
 static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
   for (const ParmVarDecl *P : D->parameters()) {
-    SymbolID Type;
-    std::string Name;
-    InfoType RefType;
     if (const auto *T = getDeclForType(P->getOriginalType())) {
-      Type = getUSRForDecl(T);
-      if (dyn_cast<EnumDecl>(T))
-        RefType = InfoType::IT_enum;
-      else if (dyn_cast<RecordDecl>(T))
-        RefType = InfoType::IT_record;
-      I.Params.emplace_back(Type, RefType, P->getQualifiedNameAsString());
-    } else {
-      Name = P->getOriginalType().getAsString();
-      I.Params.emplace_back(Name, P->getQualifiedNameAsString());
+      if (const auto *N = dyn_cast<EnumDecl>(T)) {
+        I.Params.emplace_back(getUSRForDecl(N), N->getNameAsString(),
+                              InfoType::IT_enum, P->getNameAsString());
+        continue;
+      } else if (const auto *N = dyn_cast<RecordDecl>(T)) {
+        I.Params.emplace_back(getUSRForDecl(N), N->getNameAsString(),
+                              InfoType::IT_record, P->getNameAsString());
+        continue;
+      }
     }
+    I.Params.emplace_back(P->getOriginalType().getAsString(),
+                          P->getNameAsString());
   }
 }
 
@@ -220,13 +221,15 @@ static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
     if (B.isVirtual())
       continue;
     if (const auto *P = getDeclForType(B.getType()))
-      I.Parents.emplace_back(getUSRForDecl(P), InfoType::IT_record);
+      I.Parents.emplace_back(getUSRForDecl(P), P->getNameAsString(),
+                             InfoType::IT_record);
     else
       I.Parents.emplace_back(B.getType().getAsString());
   }
   for (const CXXBaseSpecifier &B : D->vbases()) {
     if (const auto *P = getDeclForType(B.getType()))
-      I.VirtualParents.emplace_back(getUSRForDecl(P), InfoType::IT_record);
+      I.VirtualParents.emplace_back(getUSRForDecl(P), P->getNameAsString(),
+                                    InfoType::IT_record);
     else
       I.VirtualParents.emplace_back(B.getType().getAsString());
   }
@@ -239,13 +242,17 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
   const auto *DC = dyn_cast<DeclContext>(D);
   while ((DC = DC->getParent())) {
     if (const auto *N = dyn_cast<NamespaceDecl>(DC))
-      Namespaces.emplace_back(getUSRForDecl(N), InfoType::IT_namespace);
+      Namespaces.emplace_back(getUSRForDecl(N), N->getNameAsString(),
+                              InfoType::IT_namespace);
     else if (const auto *N = dyn_cast<RecordDecl>(DC))
-      Namespaces.emplace_back(getUSRForDecl(N), InfoType::IT_record);
+      Namespaces.emplace_back(getUSRForDecl(N), N->getNameAsString(),
+                              InfoType::IT_record);
     else if (const auto *N = dyn_cast<FunctionDecl>(DC))
-      Namespaces.emplace_back(getUSRForDecl(N), InfoType::IT_function);
+      Namespaces.emplace_back(getUSRForDecl(N), N->getNameAsString(),
+                              InfoType::IT_function);
     else if (const auto *N = dyn_cast<EnumDecl>(DC))
-      Namespaces.emplace_back(getUSRForDecl(N), InfoType::IT_enum);
+      Namespaces.emplace_back(getUSRForDecl(N), N->getNameAsString(),
+                              InfoType::IT_enum);
   }
 }
 
@@ -275,13 +282,14 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
                                  StringRef Filename) {
   populateSymbolInfo(I, D, FC, LineNumber, Filename);
   if (const auto *T = getDeclForType(D->getReturnType())) {
-    I.ReturnType.Type.USR = getUSRForDecl(T);
     if (dyn_cast<EnumDecl>(T))
-      I.ReturnType.Type.RefType = InfoType::IT_enum;
+      I.ReturnType =
+          TypeInfo(getUSRForDecl(T), T->getNameAsString(), InfoType::IT_enum);
     else if (dyn_cast<RecordDecl>(T))
-      I.ReturnType.Type.RefType = InfoType::IT_record;
+      I.ReturnType =
+          TypeInfo(getUSRForDecl(T), T->getNameAsString(), InfoType::IT_record);
   } else {
-    I.ReturnType.Type.UnresolvedName = D->getReturnType().getAsString();
+    I.ReturnType = TypeInfo(D->getReturnType().getAsString());
   }
   parseParameters(I, D);
 }
@@ -317,7 +325,8 @@ std::string emitInfo(const CXXMethodDecl *D, const FullComment *FC,
   FunctionInfo I;
   populateFunctionInfo(I, D, FC, LineNumber, File);
   I.IsMethod = true;
-  I.Parent = Reference(getUSRForDecl(D->getParent()), InfoType::IT_record);
+  I.Parent = Reference{getUSRForDecl(D->getParent()),
+                       D->getParent()->getNameAsString(), InfoType::IT_record};
   I.Access = D->getAccess();
   return serialize(I);
 }

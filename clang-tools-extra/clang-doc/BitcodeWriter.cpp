@@ -14,6 +14,9 @@
 namespace clang {
 namespace doc {
 
+// Empty SymbolID for comparison, so we don't have to construct one every time.
+static const SymbolID EmptySID = SymbolID();
+
 // Since id enums are not zero-indexed, we need to transform the given id into
 // its associated index.
 struct BlockIdToIndexFunctor {
@@ -82,18 +85,6 @@ static void LocationAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
        llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
 }
 
-static void ReferenceAbbrev(std::shared_ptr<llvm::BitCodeAbbrev> &Abbrev) {
-  AbbrevGen(Abbrev,
-            {// 0. Fixed-size integer (ref type)
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                   BitCodeConstants::ReferenceTypeSize),
-             // 1. Fixed-size integer (length of the USR or UnresolvedName)
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed,
-                                   BitCodeConstants::StringLengthSize),
-             // 2. The string blob
-             llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)});
-}
-
 struct RecordIdDsc {
   llvm::StringRef Name;
   AbbrevDsc Abbrev = nullptr;
@@ -124,7 +115,8 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_MEMBER_TYPE_BLOCK_ID, "MemberTypeBlock"},
           {BI_RECORD_BLOCK_ID, "RecordBlock"},
           {BI_FUNCTION_BLOCK_ID, "FunctionBlock"},
-          {BI_COMMENT_BLOCK_ID, "CommentBlock"}};
+          {BI_COMMENT_BLOCK_ID, "CommentBlock"},
+          {BI_REFERENCE_BLOCK_ID, "ReferenceBlock"}};
       assert(Inits.size() == BlockIdCount);
       for (const auto &Init : Inits)
         BlockIdNameMap[Init.first] = Init.second;
@@ -152,38 +144,32 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {COMMENT_ATTRKEY, {"AttrKey", &StringAbbrev}},
           {COMMENT_ATTRVAL, {"AttrVal", &StringAbbrev}},
           {COMMENT_ARG, {"Arg", &StringAbbrev}},
-          {TYPE_REF, {"Type", &ReferenceAbbrev}},
-          {FIELD_TYPE_REF, {"Type", &ReferenceAbbrev}},
           {FIELD_TYPE_NAME, {"Name", &StringAbbrev}},
-          {MEMBER_TYPE_REF, {"Type", &ReferenceAbbrev}},
           {MEMBER_TYPE_NAME, {"Name", &StringAbbrev}},
           {MEMBER_TYPE_ACCESS, {"Access", &IntAbbrev}},
           {NAMESPACE_USR, {"USR", &SymbolIDAbbrev}},
           {NAMESPACE_NAME, {"Name", &StringAbbrev}},
-          {NAMESPACE_NAMESPACE, {"Namespace", &ReferenceAbbrev}},
           {ENUM_USR, {"USR", &SymbolIDAbbrev}},
           {ENUM_NAME, {"Name", &StringAbbrev}},
-          {ENUM_NAMESPACE, {"Namespace", &ReferenceAbbrev}},
           {ENUM_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {ENUM_LOCATION, {"Location", &LocationAbbrev}},
           {ENUM_MEMBER, {"Member", &StringAbbrev}},
           {ENUM_SCOPED, {"Scoped", &BoolAbbrev}},
           {RECORD_USR, {"USR", &SymbolIDAbbrev}},
           {RECORD_NAME, {"Name", &StringAbbrev}},
-          {RECORD_NAMESPACE, {"Namespace", &ReferenceAbbrev}},
           {RECORD_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {RECORD_LOCATION, {"Location", &LocationAbbrev}},
           {RECORD_TAG_TYPE, {"TagType", &IntAbbrev}},
-          {RECORD_PARENT, {"Parent", &ReferenceAbbrev}},
-          {RECORD_VPARENT, {"VParent", &ReferenceAbbrev}},
           {FUNCTION_USR, {"USR", &SymbolIDAbbrev}},
           {FUNCTION_NAME, {"Name", &StringAbbrev}},
-          {FUNCTION_NAMESPACE, {"Namespace", &ReferenceAbbrev}},
           {FUNCTION_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {FUNCTION_LOCATION, {"Location", &LocationAbbrev}},
-          {FUNCTION_PARENT, {"Parent", &ReferenceAbbrev}},
           {FUNCTION_ACCESS, {"Access", &IntAbbrev}},
-          {FUNCTION_IS_METHOD, {"IsMethod", &BoolAbbrev}}};
+          {FUNCTION_IS_METHOD, {"IsMethod", &BoolAbbrev}},
+          {REFERENCE_USR, {"USR", &SymbolIDAbbrev}},
+          {REFERENCE_NAME, {"Name", &StringAbbrev}},
+          {REFERENCE_TYPE, {"RefType", &IntAbbrev}},
+          {REFERENCE_FIELD, {"Field", &IntAbbrev}}};
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
         RecordIdNameMap[Init.first] = Init.second;
@@ -203,28 +189,28 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
           COMMENT_PARAMNAME, COMMENT_CLOSENAME, COMMENT_SELFCLOSING,
           COMMENT_EXPLICIT, COMMENT_ATTRKEY, COMMENT_ATTRVAL, COMMENT_ARG}},
         // Type Block
-        {BI_TYPE_BLOCK_ID, {TYPE_REF}},
+        {BI_TYPE_BLOCK_ID, {}},
         // FieldType Block
-        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_REF, FIELD_TYPE_NAME}},
+        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME}},
         // MemberType Block
-        {BI_MEMBER_TYPE_BLOCK_ID,
-         {MEMBER_TYPE_REF, MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS}},
+        {BI_MEMBER_TYPE_BLOCK_ID, {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
-         {ENUM_USR, ENUM_NAME, ENUM_NAMESPACE, ENUM_DEFLOCATION, ENUM_LOCATION,
-          ENUM_MEMBER, ENUM_SCOPED}},
+         {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_MEMBER,
+          ENUM_SCOPED}},
         // Namespace Block
-        {BI_NAMESPACE_BLOCK_ID,
-         {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_NAMESPACE}},
+        {BI_NAMESPACE_BLOCK_ID, {NAMESPACE_USR, NAMESPACE_NAME}},
         // Record Block
         {BI_RECORD_BLOCK_ID,
-         {RECORD_USR, RECORD_NAME, RECORD_NAMESPACE, RECORD_DEFLOCATION,
-          RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_PARENT, RECORD_VPARENT}},
+         {RECORD_USR, RECORD_NAME, RECORD_DEFLOCATION, RECORD_LOCATION,
+          RECORD_TAG_TYPE}},
         // Function Block
         {BI_FUNCTION_BLOCK_ID,
-         {FUNCTION_USR, FUNCTION_NAME, FUNCTION_NAMESPACE, FUNCTION_DEFLOCATION,
-          FUNCTION_LOCATION, FUNCTION_PARENT, FUNCTION_ACCESS,
-          FUNCTION_IS_METHOD}}};
+         {FUNCTION_USR, FUNCTION_NAME, FUNCTION_DEFLOCATION, FUNCTION_LOCATION,
+          FUNCTION_ACCESS, FUNCTION_IS_METHOD}},
+        // Reference Block
+        {BI_REFERENCE_BLOCK_ID,
+         {REFERENCE_USR, REFERENCE_NAME, REFERENCE_TYPE, REFERENCE_FIELD}}};
 
 // AbbreviationMap
 
@@ -293,7 +279,7 @@ void ClangDocBitcodeWriter::emitRecord(const SymbolID &Sym, RecordId ID) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
   assert(RecordIdNameMap[ID].Abbrev == &SymbolIDAbbrev &&
          "Abbrev type mismatch.");
-  if (!prepRecordData(ID, !Sym.empty()))
+  if (!prepRecordData(ID, Sym != EmptySID))
     return;
   assert(Sym.size() == 20);
   Record.push_back(Sym.size());
@@ -325,26 +311,6 @@ void ClangDocBitcodeWriter::emitRecord(const Location &Loc, RecordId ID) {
   // Stream.EmitRecordWithBlob(Abbrevs.get(ID), Record, Loc.Filename);
   Record.push_back(4);
   Stream.EmitRecordWithBlob(Abbrevs.get(ID), Record, "test");
-}
-
-void ClangDocBitcodeWriter::emitRecord(const Reference &Ref, RecordId ID) {
-  assert(RecordIdNameMap[ID] && "Unknown RecordId.");
-  assert(RecordIdNameMap[ID].Abbrev == &ReferenceAbbrev &&
-         "Abbrev type mismatch.");
-  SmallString<40> StringUSR;
-  StringRef OutString;
-  if (Ref.RefType == InfoType::IT_default)
-    OutString = Ref.UnresolvedName;
-  else {
-    StringUSR = llvm::toHex(llvm::toStringRef(Ref.USR));
-    OutString = StringUSR;
-  }
-  if (!prepRecordData(ID, !OutString.empty()))
-    return;
-  assert(OutString.size() < (1U << BitCodeConstants::StringLengthSize));
-  Record.push_back((int)Ref.RefType);
-  Record.push_back(OutString.size());
-  Stream.EmitRecordWithBlob(Abbrevs.get(ID), Record, OutString);
 }
 
 void ClangDocBitcodeWriter::emitRecord(bool Val, RecordId ID) {
@@ -408,28 +374,37 @@ void ClangDocBitcodeWriter::emitBlockInfo(BlockId BID,
 
 // Block emission
 
+void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
+  if (R.USR == EmptySID && R.Name.empty())
+    return;
+  StreamSubBlockGuard Block(Stream, BI_REFERENCE_BLOCK_ID);
+  emitRecord(R.USR, REFERENCE_USR);
+  emitRecord(R.Name, REFERENCE_NAME);
+  emitRecord((unsigned)R.RefType, REFERENCE_TYPE);
+  emitRecord((unsigned)Field, REFERENCE_FIELD);
+}
+
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TYPE_BLOCK_ID);
-  emitRecord(T.Type, TYPE_REF);
+  emitBlock(T.Type, FieldId::F_type);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const FieldTypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_FIELD_TYPE_BLOCK_ID);
-  emitRecord(T.Type, FIELD_TYPE_REF);
+  emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, FIELD_TYPE_NAME);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_MEMBER_TYPE_BLOCK_ID);
-  emitRecord(T.Type, MEMBER_TYPE_REF);
+  emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_COMMENT_BLOCK_ID);
-  for (const auto &L :
-       std::vector<std::pair<llvm::StringRef, RecordId>>{
+  for (const auto &L : std::vector<std::pair<llvm::StringRef, RecordId>>{
            {I.Kind, COMMENT_KIND},
            {I.Text, COMMENT_TEXT},
            {I.Name, COMMENT_NAME},
@@ -453,7 +428,7 @@ void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   emitRecord(I.USR, X##_USR);                                                  \
   emitRecord(I.Name, X##_NAME);                                                \
   for (const auto &N : I.Namespace)                                            \
-    emitRecord(N, X##_NAMESPACE);                                              \
+    emitBlock(N, FieldId::F_namespace);                                        \
   for (const auto &CI : I.Description)                                         \
     emitBlock(CI);
 
@@ -485,9 +460,9 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   for (const auto &N : I.Members)
     emitBlock(N);
   for (const auto &P : I.Parents)
-    emitRecord(P, RECORD_PARENT);
+    emitBlock(P, FieldId::F_parent);
   for (const auto &P : I.VirtualParents)
-    emitRecord(P, RECORD_VPARENT);
+    emitBlock(P, FieldId::F_vparent);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
@@ -498,7 +473,7 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
     emitRecord(I.DefLoc.getValue(), FUNCTION_DEFLOCATION);
   for (const auto &L : I.Loc)
     emitRecord(L, FUNCTION_LOCATION);
-  emitRecord(I.Parent, FUNCTION_PARENT);
+  emitBlock(I.Parent, FieldId::F_parent);
   emitBlock(I.ReturnType);
   for (const auto &N : I.Params)
     emitBlock(N);
