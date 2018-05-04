@@ -16,6 +16,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
 
 #define DEBUG_TYPE "llvm-mca"
 
@@ -366,7 +367,7 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
   }
 }
 
-void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
+const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -376,15 +377,15 @@ void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   const MCSchedModel &SM = STI.getSchedModel();
 
   // Then obtain the scheduling class information from the instruction.
-  const MCSchedClassDesc &SCDesc =
-      *SM.getSchedClassDesc(MCDesc.getSchedClass());
+  unsigned SchedClassID = MCDesc.getSchedClass();
+  const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
 
   // Create a new empty descriptor.
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
 
   if (SCDesc.isVariant()) {
-    errs() << "warning: don't know how to model variant opcodes.\n"
-           << "note: assume 1 micro opcode.\n";
+    WithColor::warning() << "don't know how to model variant opcodes.\n";
+    WithColor::note() << "assume 1 micro opcode.\n";
     ID->NumMicroOps = 1U;
   } else {
     ID->NumMicroOps = SCDesc.NumMicroOps;
@@ -392,15 +393,15 @@ void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   if (MCDesc.isCall()) {
     // We don't correctly model calls.
-    errs() << "warning: found a call in the input assembly sequence.\n"
-           << "note: call instructions are not correctly modeled. Assume a "
-              "latency of 100cy.\n";
+    WithColor::warning() << "found a call in the input assembly sequence.\n";
+    WithColor::note() << "call instructions are not correctly modeled. "
+                      << "Assume a latency of 100cy.\n";
   }
 
   if (MCDesc.isReturn()) {
-    errs() << "warning: found a return instruction in the input assembly "
-              "sequence.\n"
-           << "note: program counter updates are ignored.\n";
+    WithColor::warning() << "found a return instruction in the input"
+                         << " assembly sequence.\n";
+    WithColor::note() << "program counter updates are ignored.\n";
   }
 
   ID->MayLoad = MCDesc.mayLoad();
@@ -417,16 +418,17 @@ void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Now add the new descriptor.
   Descriptors[Opcode] = std::move(ID);
+  return *Descriptors[Opcode];
 }
 
 const InstrDesc &InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI) {
   if (Descriptors.find_as(MCI.getOpcode()) == Descriptors.end())
-    createInstrDescImpl(MCI);
+    return createInstrDescImpl(MCI);
   return *Descriptors[MCI.getOpcode()];
 }
 
 std::unique_ptr<Instruction>
-InstrBuilder::createInstruction(unsigned Idx, const MCInst &MCI) {
+InstrBuilder::createInstruction(const MCInst &MCI) {
   const InstrDesc &D = getOrCreateInstrDesc(MCI);
   std::unique_ptr<Instruction> NewIS = llvm::make_unique<Instruction>(D);
 

@@ -9542,7 +9542,7 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
 
 static bool isContractable(SDNode *N) {
   SDNodeFlags F = N->getFlags();
-  return F.hasAllowContract() || F.hasUnsafeAlgebra();
+  return F.hasAllowContract() || F.hasAllowReassociation();
 }
 
 /// Try to perform FMA combining on a given FADD node.
@@ -10567,9 +10567,9 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
     return DAG.getNode(ISD::FMA, SDLoc(N), VT, N1, N0, N2);
 
   // TODO: FMA nodes should have flags that propagate to the created nodes.
-  // For now, create a Flags object for use with all unsafe math transforms.
+  // For now, create a Flags object for use with reassociation math transforms.
   SDNodeFlags Flags;
-  Flags.setUnsafeAlgebra(true);
+  Flags.setAllowReassociation(true);
 
   if (Options.UnsafeFPMath) {
     // (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
@@ -10841,9 +10841,9 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
     return SDValue();
 
   // TODO: FSQRT nodes should have flags that propagate to the created nodes.
-  // For now, create a Flags object for use with all unsafe math transforms.
+  // For now, create a Flags object for use with reassociation math transforms.
   SDNodeFlags Flags;
-  Flags.setUnsafeAlgebra(true);
+  Flags.setAllowReassociation(true);
   return buildSqrtEstimate(N0, Flags);
 }
 

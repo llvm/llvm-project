@@ -41,7 +41,10 @@ class InstrBuilder {
 
   llvm::DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
 
-  void createInstrDescImpl(const llvm::MCInst &MCI);
+  const InstrDesc &createInstrDescImpl(const llvm::MCInst &MCI);
+
+  InstrBuilder(const InstrBuilder &) = delete;
+  InstrBuilder &operator=(const InstrBuilder &) = delete;
 
 public:
   InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii)
@@ -59,8 +62,7 @@ public:
     return ProcResourceMasks;
   }
 
-  std::unique_ptr<Instruction> createInstruction(unsigned Idx,
-                                                 const llvm::MCInst &MCI);
+  std::unique_ptr<Instruction> createInstruction(const llvm::MCInst &MCI);
 };
 } // namespace mca
 

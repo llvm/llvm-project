@@ -1,4 +1,4 @@
-//===-- xray_inmemory_log.cc ------------------------------------*- C++ -*-===//
+//===-- xray_basic_logging.cc -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -29,9 +29,10 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "xray/xray_records.h"
+#include "xray_basic_flags.h"
+#include "xray_basic_logging.h"
 #include "xray_defs.h"
 #include "xray_flags.h"
-#include "xray_inmemory_log.h"
 #include "xray_interface_internal.h"
 #include "xray_tsc.h"
 #include "xray_utils.h"
@@ -371,11 +372,6 @@ static void TLDDestructor(void *P) XRAY_NEVER_INSTRUMENT {
 XRayLogInitStatus basicLoggingInit(size_t BufferSize, size_t BufferMax,
                                    void *Options,
                                    size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
-  static bool UNUSED Once = [] {
-    pthread_key_create(&PThreadKey, TLDDestructor);
-    return false;
-  }();
-
   uint8_t Expected = 0;
   if (!__sanitizer::atomic_compare_exchange_strong(
           &BasicInitialized, &Expected, 1, __sanitizer::memory_order_acq_rel)) {
@@ -384,10 +380,45 @@ XRayLogInitStatus basicLoggingInit(size_t BufferSize, size_t BufferMax,
     return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
   }
 
-  if (OptionsSize != sizeof(BasicLoggingOptions)) {
+  static bool UNUSED Once = [] {
+    pthread_key_create(&PThreadKey, TLDDestructor);
+    return false;
+  }();
+
+  if (BufferSize == 0 && BufferMax == 0 && Options != nullptr) {
+    FlagParser P;
+    BasicFlags F;
+    F.setDefaults();
+    registerXRayBasicFlags(&P, &F);
+    P.ParseString(useCompilerDefinedBasicFlags());
+    auto *EnvOpts = GetEnv("XRAY_BASIC_OPTIONS");
+    if (EnvOpts == nullptr)
+      EnvOpts = "";
+
+    P.ParseString(EnvOpts);
+
+    // If XRAY_BASIC_OPTIONS was not defined, then we use the deprecated options
+    // set through XRAY_OPTIONS instead.
+    if (internal_strlen(EnvOpts) == 0) {
+      F.func_duration_threshold_us =
+          flags()->xray_naive_log_func_duration_threshold_us;
+      F.max_stack_depth = flags()->xray_naive_log_max_stack_depth;
+      F.thread_buffer_size = flags()->xray_naive_log_thread_buffer_size;
+    }
+
+    P.ParseString(static_cast<const char *>(Options));
+    GlobalOptions.ThreadBufferSize = F.thread_buffer_size;
+    GlobalOptions.DurationFilterMicros = F.func_duration_threshold_us;
+    GlobalOptions.MaxStackDepth = F.max_stack_depth;
+  } else if (OptionsSize != sizeof(BasicLoggingOptions)) {
     Report("Invalid options size, potential ABI mismatch; expected %d got %d",
            sizeof(BasicLoggingOptions), OptionsSize);
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+  } else {
+    if (Verbosity())
+      Report("XRay Basic: struct-based init is deprecated, please use "
+             "string-based configuration instead.\n");
+    GlobalOptions = *reinterpret_cast<BasicLoggingOptions *>(Options);
   }
 
   static auto UseRealTSC = probeRequiredCPUFeatures();
@@ -395,7 +426,6 @@ XRayLogInitStatus basicLoggingInit(size_t BufferSize, size_t BufferMax,
     Report("WARNING: Required CPU features missing for XRay instrumentation, "
            "using emulation instead.\n");
 
-  GlobalOptions = *reinterpret_cast<BasicLoggingOptions *>(Options);
   __xray_set_handler_arg1(UseRealTSC ? basicLoggingHandleArg1RealTSC
                                      : basicLoggingHandleArg1EmulateTSC);
   __xray_set_handler(UseRealTSC ? basicLoggingHandleArg0RealTSC
@@ -438,19 +468,29 @@ bool basicLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
   };
   auto RegistrationResult = __xray_log_register_mode("xray-basic", Impl);
   if (RegistrationResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK &&
-      __sanitizer::Verbosity())
+      Verbosity())
     Report("Cannot register XRay Basic Mode to 'xray-basic'; error = %d\n",
            RegistrationResult);
   if (flags()->xray_naive_log ||
-      !__sanitizer::internal_strcmp(flags()->xray_mode, "xray-basic")) {
-    __xray_set_log_impl(Impl);
-    BasicLoggingOptions Options;
-    Options.DurationFilterMicros =
-        flags()->xray_naive_log_func_duration_threshold_us;
-    Options.MaxStackDepth = flags()->xray_naive_log_max_stack_depth;
-    Options.ThreadBufferSize = flags()->xray_naive_log_thread_buffer_size;
-    __xray_log_init(flags()->xray_naive_log_thread_buffer_size, 0, &Options,
-                    sizeof(BasicLoggingOptions));
+      !internal_strcmp(flags()->xray_mode, "xray-basic")) {
+    auto SelectResult = __xray_log_select_mode("xray-basic");
+    if (SelectResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK) {
+      if (Verbosity())
+        Report("Failed selecting XRay Basic Mode; error = %d\n", SelectResult);
+      return false;
+    }
+
+    // We initialize the implementation using the data we get from the
+    // XRAY_BASIC_OPTIONS environment variable, at this point of the
+    // implementation.
+    auto *Env = GetEnv("XRAY_BASIC_OPTIONS");
+    auto InitResult =
+        __xray_log_init_mode("xray-basic", Env == nullptr ? "" : Env);
+    if (InitResult != XRayLogInitStatus::XRAY_LOG_INITIALIZED) {
+      if (Verbosity())
+        Report("Failed initializing XRay Basic Mode; error = %d\n", InitResult);
+      return false;
+    }
     static auto UNUSED Once = [] {
       static auto UNUSED &TLD = getThreadLocalData();
       __sanitizer::Atexit(+[] { TLDDestructor(&TLD); });

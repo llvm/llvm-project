@@ -606,14 +606,27 @@ bool ObjCARCContract::runOnFunction(Function &F) {
         if (PHINode *PHI = dyn_cast<PHINode>(U.getUser())) {
           // For PHI nodes, insert the bitcast in the predecessor block.
           unsigned ValNo = PHINode::getIncomingValueNumForOperand(OperandNo);
-          BasicBlock *BB = PHI->getIncomingBlock(ValNo);
-          if (Replacement->getType() != UseTy)
-            Replacement = new BitCastInst(Replacement, UseTy, "", &BB->back());
+          BasicBlock *IncomingBB = PHI->getIncomingBlock(ValNo);
+          if (Replacement->getType() != UseTy) {
+            // A catchswitch is both a pad and a terminator, meaning a basic
+            // block with a catchswitch has no insertion point. Keep going up
+            // the dominator tree until we find a non-catchswitch.
+            BasicBlock *InsertBB = IncomingBB;
+            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHI())) {
+              InsertBB = DT->getNode(InsertBB)->getIDom()->getBlock();
+            }
+
+            assert(DT->dominates(Inst, &InsertBB->back()) &&
+                   "Invalid insertion point for bitcast");
+            Replacement =
+                new BitCastInst(Replacement, UseTy, "", &InsertBB->back());
+          }
+
           // While we're here, rewrite all edges for this PHI, rather
           // than just one use at a time, to minimize the number of
           // bitcasts we emit.
           for (unsigned i = 0, e = PHI->getNumIncomingValues(); i != e; ++i)
-            if (PHI->getIncomingBlock(i) == BB) {
+            if (PHI->getIncomingBlock(i) == IncomingBB) {
               // Keep the UI iterator valid.
               if (UI != UE &&
                   &PHI->getOperandUse(

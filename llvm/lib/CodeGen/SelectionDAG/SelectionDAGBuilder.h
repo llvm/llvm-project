@@ -1053,6 +1053,9 @@ struct RegsForValue {
   bool occupiesMultipleRegs() const {
     return std::accumulate(RegCount.begin(), RegCount.end(), 0) > 1;
   }
+
+  /// Return a list of registers and their sizes.
+  SmallVector<std::pair<unsigned, unsigned>, 4> getRegsAndSizes() const;
 };
 
 } // end namespace llvm

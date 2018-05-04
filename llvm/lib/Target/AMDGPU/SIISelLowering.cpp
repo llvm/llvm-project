@@ -5347,8 +5347,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   SDValue RHS = Op.getOperand(1);
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
-  bool Unsafe = DAG.getTarget().Options.UnsafeFPMath ||
-                Flags.hasUnsafeAlgebra() || Flags.hasAllowReciprocal();
+  bool Unsafe = DAG.getTarget().Options.UnsafeFPMath || Flags.hasAllowReciprocal();
 
   if (!Unsafe && VT == MVT::f32 && Subtarget->hasFP32Denormals())
     return SDValue();
@@ -6698,8 +6697,8 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
 
   const TargetOptions &Options = DAG.getTarget().Options;
   if ((Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
-       (N0->getFlags().hasUnsafeAlgebra() &&
-        N1->getFlags().hasUnsafeAlgebra())) &&
+       (N0->getFlags().hasAllowContract() &&
+        N1->getFlags().hasAllowContract())) &&
       isFMAFasterThanFMulAndFAdd(VT)) {
     return ISD::FMA;
   }

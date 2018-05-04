@@ -3,8 +3,6 @@
 
 ; This tests the propagation of fast-math-flags from IR instructions to SDNodeFlags.
 
-; FIXME: 'afn' and 'reassoc' were dropped. With 'fast', 'reassoc' got renamed to 'unsafe'.
-
 ; CHECK-LABEL: Initial selection DAG: %bb.0 'fmf_transfer:'
 
 ; CHECK:         t5: f32 = fadd nsz t2, t4
@@ -12,9 +10,9 @@
 ; CHECK-NEXT:    t7: f32 = fadd nnan t6, t4
 ; CHECK-NEXT:    t8: f32 = fadd ninf t7, t4
 ; CHECK-NEXT:    t9: f32 = fadd contract t8, t4
-; CHECK-NEXT:    t10: f32 = fadd t9, t4
-; CHECK-NEXT:    t11: f32 = fadd t10, t4
-; CHECK-NEXT:    t12: f32 = fadd unsafe nnan ninf nsz arcp contract t11, t4
+; CHECK-NEXT:    t10: f32 = fadd afn t9, t4
+; CHECK-NEXT:    t11: f32 = fadd reassoc t10, t4
+; CHECK-NEXT:    t12: f32 = fadd nnan ninf nsz arcp contract afn reassoc t11, t4
 
 ; CHECK: Optimized lowered selection DAG: %bb.0 'fmf_transfer:'
 

@@ -1685,8 +1685,11 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
         ESym->st_other |= STO_MIPS_PLT;
       if (isMicroMips()) {
         // Set STO_MIPS_MICROMIPS flag and less-significant bit for
-        // defined microMIPS symbols and shared symbols with PLT record.
-        if (Sym->isDefined() && (Sym->StOther & STO_MIPS_MICROMIPS)) {
+        // a defined microMIPS symbol and symbol should point to its
+        // PLT entry (in case of microMIPS, PLT entries always contain
+        // microMIPS code).
+        if (Sym->isDefined() &&
+            ((Sym->StOther & STO_MIPS_MICROMIPS) || Sym->NeedsPltAddr)) {
           if (StrTabSec.isDynamic())
             ESym->st_value |= 1;
           ESym->st_other |= STO_MIPS_MICROMIPS;

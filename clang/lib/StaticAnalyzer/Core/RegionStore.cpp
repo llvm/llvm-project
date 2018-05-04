@@ -1606,7 +1606,7 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
   const MemRegion* superR = R->getSuperRegion();
 
   // Check if the region is an element region of a string literal.
-  if (const StringRegion *StrR=dyn_cast<StringRegion>(superR)) {
+  if (const StringRegion *StrR = dyn_cast<StringRegion>(superR)) {
     // FIXME: Handle loads from strings where the literal is treated as
     // an integer, e.g., *((unsigned int*)"hello")
     QualType T = Ctx.getAsArrayType(StrR->getValueType())->getElementType();
@@ -1628,6 +1628,27 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
       // used to initialize a larger array.
       char c = (i >= length) ? '\0' : Str->getCodeUnit(i);
       return svalBuilder.makeIntVal(c, T);
+    }
+  } else if (const VarRegion *VR = dyn_cast<VarRegion>(superR)) {
+    // Check if the containing array is const and has an initialized value.
+    const VarDecl *VD = VR->getDecl();
+    // Either the array or the array element has to be const.
+    if (VD->getType().isConstQualified() || R->getElementType().isConstQualified()) {
+      if (const Expr *Init = VD->getInit()) {
+        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
+          // The array index has to be known.
+          if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
+            int64_t i = CI->getValue().getSExtValue();
+            // Return unknown value if index is out of bounds.
+            if (i < 0 || i >= InitList->getNumInits())
+              return UnknownVal();
+
+            if (const Expr *ElemInit = InitList->getInit(i))
+              if (Optional<SVal> V = svalBuilder.getConstantVal(ElemInit))
+                return *V;
+          }
+        }
+      }
     }
   }
 
@@ -1678,7 +1699,28 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const Optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
-  QualType Ty = R->getValueType();
+  // Is the field declared constant and has an in-class initializer?
+  const FieldDecl *FD = R->getDecl();
+  QualType Ty = FD->getType();
+  if (Ty.isConstQualified())
+    if (const Expr *Init = FD->getInClassInitializer())
+      if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
+        return *V;
+
+  // If the containing record was initialized, try to get its constant value.
+  const MemRegion* superR = R->getSuperRegion();
+  if (const auto *VR = dyn_cast<VarRegion>(superR)) {
+    const VarDecl *VD = VR->getDecl();
+    QualType RecordVarTy = VD->getType();
+    // Either the record variable or the field has to be const qualified.
+    if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
+      if (const Expr *Init = VD->getInit())
+        if (const auto *InitList = dyn_cast<InitListExpr>(Init))
+          if (const Expr *FieldInit = InitList->getInit(FD->getFieldIndex()))
+            if (Optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
+              return *V;
+  }
+
   return getBindingForFieldOrElementCommon(B, R, Ty);
 }
 

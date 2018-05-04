@@ -27,6 +27,7 @@
 #include "xray/xray_records.h"
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
+#include "xray_fdr_flags.h"
 #include "xray_fdr_logging_impl.h"
 #include "xray_flags.h"
 #include "xray_tsc.h"
@@ -72,7 +73,7 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
 
   // We wait a number of milliseconds to allow threads to see that we've
   // finalised before attempting to flush the log.
-  __sanitizer::SleepForMillis(flags()->xray_fdr_log_grace_period_ms);
+  __sanitizer::SleepForMillis(fdrFlags()->grace_period_ms);
 
   // We write out the file in the following format:
   //
@@ -83,8 +84,12 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   //      (fixed-sized) and let the tools reading the buffers deal with the data
   //      afterwards.
   //
+  // FIXME: Support the case for letting users handle the data through
+  // __xray_process_buffers(...) and provide an option to skip writing files.
   int Fd = -1;
   {
+    // FIXME: Remove this section of the code, when we remove the struct-based
+    // configuration API.
     __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
     Fd = FDROptions.Fd;
   }
@@ -166,33 +171,6 @@ XRayLogInitStatus fdrLoggingFinalize() XRAY_NEVER_INSTRUMENT {
                             XRayLogInitStatus::XRAY_LOG_FINALIZED,
                             __sanitizer::memory_order_release);
   return XRayLogInitStatus::XRAY_LOG_FINALIZED;
-}
-
-XRayLogInitStatus fdrLoggingReset() XRAY_NEVER_INSTRUMENT {
-  s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_FINALIZED;
-  if (__sanitizer::atomic_compare_exchange_strong(
-          &LoggingStatus, &CurrentStatus,
-          XRayLogInitStatus::XRAY_LOG_INITIALIZED,
-          __sanitizer::memory_order_release))
-    return static_cast<XRayLogInitStatus>(CurrentStatus);
-
-  // Release the in-memory buffer queue.
-  delete BQ;
-  BQ = nullptr;
-
-  // Spin until the flushing status is flushed.
-  s32 CurrentFlushingStatus = XRayLogFlushStatus::XRAY_LOG_FLUSHED;
-  while (__sanitizer::atomic_compare_exchange_weak(
-      &LogFlushStatus, &CurrentFlushingStatus,
-      XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING,
-      __sanitizer::memory_order_release)) {
-    if (CurrentFlushingStatus == XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING)
-      break;
-    CurrentFlushingStatus = XRayLogFlushStatus::XRAY_LOG_FLUSHED;
-  }
-
-  // At this point, we know that the status is flushed, and that we can assume
-  return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
 }
 
 struct TSCAndCPU {
@@ -346,16 +324,12 @@ void fdrLoggingHandleTypedEvent(
   endBufferIfFull();
 }
 
-XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
+XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
                                  void *Options,
                                  size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
-  if (OptionsSize != sizeof(FDRLoggingOptions)) {
-    if (__sanitizer::Verbosity())
-      Report("Cannot initialize FDR logging; wrong size for options: %d\n",
-             OptionsSize);
-    return static_cast<XRayLogInitStatus>(__sanitizer::atomic_load(
-        &LoggingStatus, __sanitizer::memory_order_acquire));
-  }
+  if (Options == nullptr)
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+
   s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
   if (!__sanitizer::atomic_compare_exchange_strong(
           &LoggingStatus, &CurrentStatus,
@@ -366,7 +340,56 @@ XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
     return static_cast<XRayLogInitStatus>(CurrentStatus);
   }
 
-  {
+  // Because of __xray_log_init_mode(...) which guarantees that this will be
+  // called with BufferSize == 0 and BufferMax == 0 we parse the configuration
+  // provided in the Options pointer as a string instead.
+  if (BufferSize == 0 && BufferMax == 0) {
+    if (__sanitizer::Verbosity())
+      Report("Initializing FDR mode with options: %s\n",
+             static_cast<const char *>(Options));
+
+    // TODO: Factor out the flags specific to the FDR mode implementation. For
+    // now, use the global/single definition of the flags, since the FDR mode
+    // flags are already defined there.
+    FlagParser FDRParser;
+    FDRFlags FDRFlags;
+    registerXRayFDRFlags(&FDRParser, &FDRFlags);
+    FDRFlags.setDefaults();
+
+    // Override first from the general XRAY_DEFAULT_OPTIONS compiler-provided
+    // options until we migrate everyone to use the XRAY_FDR_OPTIONS
+    // compiler-provided options.
+    FDRParser.ParseString(useCompilerDefinedFlags());
+    FDRParser.ParseString(useCompilerDefinedFDRFlags());
+    auto *EnvOpts = GetEnv("XRAY_FDR_OPTIONS");
+    if (EnvOpts == nullptr)
+      EnvOpts = "";
+    FDRParser.ParseString(EnvOpts);
+    FDRParser.ParseString(static_cast<const char *>(Options));
+    *fdrFlags() = FDRFlags;
+
+    BufferSize = FDRFlags.buffer_size;
+    BufferMax = FDRFlags.buffer_max;
+
+    // FIXME: Remove this when we fully remove the deprecated flags.
+    if (internal_strlen(EnvOpts) != 0) {
+      flags()->xray_fdr_log_func_duration_threshold_us =
+          FDRFlags.func_duration_threshold_us;
+      flags()->xray_fdr_log_grace_period_ms = FDRFlags.grace_period_ms;
+    }
+  } else if (OptionsSize != sizeof(FDRLoggingOptions)) {
+    // FIXME: This is deprecated, and should really be removed.
+    // At this point we use the flag parser specific to the FDR mode
+    // implementation.
+    if (__sanitizer::Verbosity())
+      Report("Cannot initialize FDR logging; wrong size for options: %d\n",
+             OptionsSize);
+    return static_cast<XRayLogInitStatus>(__sanitizer::atomic_load(
+        &LoggingStatus, __sanitizer::memory_order_acquire));
+  } else {
+    if (__sanitizer::Verbosity())
+      Report("XRay FDR: struct-based init is deprecated, please use "
+             "string-based configuration instead.\n");
     __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
     memcpy(&FDROptions, Options, OptionsSize);
   }

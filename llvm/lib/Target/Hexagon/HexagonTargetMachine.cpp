@@ -134,6 +134,7 @@ namespace llvm {
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
   void initializeHexagonRDFOptPass(PassRegistry&);
+  void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
   void initializeHexagonVExtractPass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
   Pass *createHexagonVectorLoopCarriedReusePass();
@@ -199,6 +200,7 @@ extern "C" void LLVMInitializeHexagonTarget() {
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
   initializeHexagonRDFOptPass(PR);
+  initializeHexagonSplitDoubleRegsPass(PR);
   initializeHexagonVExtractPass(PR);
 }
 

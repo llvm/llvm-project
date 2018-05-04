@@ -64,9 +64,9 @@ body:             |
     ; data into $xmm[0-14] and volatile storing them later, leaving regalloc only
     ; $xmm15 to play with in the middle.
     ; Then, perform two virtreg load-and-store pairs, with the faulty code
-    ; sequence in the middle (MOVSDrm then MOVAPDmr on the same slot). The virtreg
-    ; gets spilt; the corresponding stack slots merged; and faulty code sequence
-    ; eliminated if LLVM is broken.
+    ; sequence in the middle (MOVSDrm then MOVAPDmr on the same slot). The 
+    ; virtreg gets spilt; the corresponding stack slots merged; and faulty code
+    ; sequence eliminated if LLVM is broken.
 
     ; Make first 15 $xmm registers live
     $xmm0 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load 16 from %ir.india)

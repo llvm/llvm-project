@@ -3855,25 +3855,26 @@ defm PINSRW : sse2_pinsrw, PD;
 // SSE2 - Packed Mask Creation
 //===---------------------------------------------------------------------===//
 
-let ExeDomain = SSEPackedInt, SchedRW = [WriteVecMOVMSK] in {
+let ExeDomain = SSEPackedInt in {
 
 def VPMOVMSKBrr  : VPDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
            (ins VR128:$src),
            "pmovmskb\t{$src, $dst|$dst, $src}",
            [(set GR32orGR64:$dst, (X86movmsk (v16i8 VR128:$src)))]>,
-           VEX, VEX_WIG;
+           Sched<[WriteVecMOVMSK]>, VEX, VEX_WIG;
 
 let Predicates = [HasAVX2] in {
 def VPMOVMSKBYrr  : VPDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
            (ins VR256:$src),
            "pmovmskb\t{$src, $dst|$dst, $src}",
            [(set GR32orGR64:$dst, (X86movmsk (v32i8 VR256:$src)))]>,
-           VEX, VEX_L, VEX_WIG;
+           Sched<[WriteVecMOVMSKY]>, VEX, VEX_L, VEX_WIG;
 }
 
 def PMOVMSKBrr : PDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst), (ins VR128:$src),
            "pmovmskb\t{$src, $dst|$dst, $src}",
-           [(set GR32orGR64:$dst, (X86movmsk (v16i8 VR128:$src)))]>;
+           [(set GR32orGR64:$dst, (X86movmsk (v16i8 VR128:$src)))]>,
+           Sched<[WriteVecMOVMSK]>;
 
 } // ExeDomain = SSEPackedInt
 
@@ -5529,27 +5530,27 @@ let Predicates = [HasAVX, NoVLX] in {
   let ExeDomain = SSEPackedSingle in {
     // Intrinsic form
     defm VROUNDPS  : sse41_fp_unop_p<0x08, "vroundps", f128mem, VR128, v4f32,
-                                     loadv4f32, X86VRndScale, SchedWriteFAdd.XMM>,
+                                     loadv4f32, X86VRndScale, SchedWriteFRnd.XMM>,
                                    VEX, VEX_WIG;
     defm VROUNDPSY : sse41_fp_unop_p<0x08, "vroundps", f256mem, VR256, v8f32,
-                                     loadv8f32, X86VRndScale, SchedWriteFAdd.YMM>,
+                                     loadv8f32, X86VRndScale, SchedWriteFRnd.YMM>,
                                    VEX, VEX_L, VEX_WIG;
   }
 
   let ExeDomain = SSEPackedDouble in {
     defm VROUNDPD  : sse41_fp_unop_p<0x09, "vroundpd", f128mem, VR128, v2f64,
-                                     loadv2f64, X86VRndScale, SchedWriteFAdd.XMM>,
+                                     loadv2f64, X86VRndScale, SchedWriteFRnd.XMM>,
                                    VEX, VEX_WIG;
     defm VROUNDPDY : sse41_fp_unop_p<0x09, "vroundpd", f256mem, VR256, v4f64,
-                                     loadv4f64, X86VRndScale, SchedWriteFAdd.YMM>,
+                                     loadv4f64, X86VRndScale, SchedWriteFRnd.YMM>,
                                    VEX, VEX_L, VEX_WIG;
   }
 }
 let Predicates = [HasAVX, NoAVX512] in {
-  defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround", SchedWriteFAdd.Scl,
+  defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround", SchedWriteFRnd.Scl,
                                   v4f32, v2f64, X86RndScales, 0>,
                                   VEX_4V, VEX_LIG, VEX_WIG;
-  defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround", SchedWriteFAdd.Scl>,
+  defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround", SchedWriteFRnd.Scl>,
                                 VEX_4V, VEX_LIG, VEX_WIG;
 }
 
@@ -5624,15 +5625,15 @@ let Predicates = [HasAVX, NoVLX] in {
 
 let ExeDomain = SSEPackedSingle in
 defm ROUNDPS  : sse41_fp_unop_p<0x08, "roundps", f128mem, VR128, v4f32,
-                                memopv4f32, X86VRndScale, SchedWriteFAdd.XMM>;
+                                memopv4f32, X86VRndScale, SchedWriteFRnd.XMM>;
 let ExeDomain = SSEPackedDouble in
 defm ROUNDPD  : sse41_fp_unop_p<0x09, "roundpd", f128mem, VR128, v2f64,
-                                memopv2f64, X86VRndScale, SchedWriteFAdd.XMM>;
+                                memopv2f64, X86VRndScale, SchedWriteFRnd.XMM>;
 
-defm ROUND  : sse41_fp_unop_s<0x0A, 0x0B, "round", SchedWriteFAdd.Scl>;
+defm ROUND  : sse41_fp_unop_s<0x0A, 0x0B, "round", SchedWriteFRnd.Scl>;
 
 let Constraints = "$src1 = $dst" in
-defm ROUND  : sse41_fp_binop_s<0x0A, 0x0B, "round", SchedWriteFAdd.Scl,
+defm ROUND  : sse41_fp_binop_s<0x0A, 0x0B, "round", SchedWriteFRnd.Scl,
                                v4f32, v2f64, X86RndScales>;
 
 let Predicates = [UseSSE41] in {

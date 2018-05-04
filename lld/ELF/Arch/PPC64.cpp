@@ -72,13 +72,9 @@ PPC64::PPC64() {
   GotBaseSymInGotPlt = false;
   GotBaseSymOff = 0x8000;
 
-  if (Config->EKind == ELF64LEKind) {
-    GotHeaderEntriesNum = 1;
-    GotPltHeaderEntriesNum = 2;
-    PltRel = R_PPC64_JMP_SLOT;
-  } else {
-    PltRel = R_PPC64_GLOB_DAT;
-  }
+  GotHeaderEntriesNum = 1;
+  GotPltHeaderEntriesNum = 2;
+  PltRel = R_PPC64_JMP_SLOT;
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
@@ -99,39 +95,53 @@ PPC64::PPC64() {
 }
 
 static uint32_t getEFlags(InputFile *File) {
-  // Get the e_flag from the input file and if it is unspecified, then set it to
-  // the e_flag appropriate for the ABI.
-
-  // We are currently handling both ELF64LE and ELF64BE but eventually will
-  // remove BE support once v2 ABI support is complete.
+  // Get the e_flag from the input file and issue an error if incompatible
+  // e_flag encountered.
+  uint32_t EFlags;
   switch (Config->EKind) {
   case ELF64BEKind:
-    if (uint32_t EFlags =
-        cast<ObjFile<ELF64BE>>(File)->getObj().getHeader()->e_flags)
-      return EFlags;
-    return 1;
+    EFlags = cast<ObjFile<ELF64BE>>(File)->getObj().getHeader()->e_flags;
+    break;
   case ELF64LEKind:
-    if (uint32_t EFlags =
-        cast<ObjFile<ELF64LE>>(File)->getObj().getHeader()->e_flags)
-      return EFlags;
-    return 2;
+    EFlags = cast<ObjFile<ELF64LE>>(File)->getObj().getHeader()->e_flags;
+    break;
   default:
     llvm_unreachable("unknown Config->EKind");
   }
+  if (EFlags > 2) {
+    error("incompatible e_flags: " +  toString(File));
+    return 0;
+  }
+  return EFlags;
 }
 
 uint32_t PPC64::calcEFlags() const {
   assert(!ObjectFiles.empty());
-  uint32_t Ret = getEFlags(ObjectFiles[0]);
 
-  // Verify that all input files have the same e_flags.
-  for (InputFile *F : makeArrayRef(ObjectFiles).slice(1)) {
-    if (Ret == getEFlags(F))
+  uint32_t NonZeroFlag;
+  for (InputFile *F : makeArrayRef(ObjectFiles)) {
+    NonZeroFlag = getEFlags(F);
+    if (NonZeroFlag)
+      break;
+  }
+
+  // Verify that all input files have either the same e_flags, or zero.
+  for (InputFile *F : makeArrayRef(ObjectFiles)) {
+    uint32_t Flag = getEFlags(F);
+    if (Flag == 0 || Flag == NonZeroFlag)
       continue;
-    error("incompatible e_flags: " + toString(F));
+    error(toString(F) + ": ABI version " + Twine(Flag) +
+          " is not compatible with ABI version " + Twine(NonZeroFlag) +
+          " output");
     return 0;
   }
-  return Ret;
+
+  if (NonZeroFlag == 1) {
+    error("PPC64 V1 ABI not supported");
+    return 0;
+  }
+
+  return 2;
 }
 
 RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
@@ -147,7 +157,7 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_TOC:
     return R_PPC_TOC;
   case R_PPC64_REL24:
-    return R_PPC_PLT_OPD;
+    return R_PPC_CALL_PLT;
   case R_PPC64_REL16_LO:
   case R_PPC64_REL16_HA:
     return R_PC;
@@ -157,8 +167,7 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
 }
 
 void PPC64::writeGotHeader(uint8_t *Buf) const {
-  if (Config->EKind == ELF64LEKind)
-    write64(Buf, getPPC64TocBase());
+  write64(Buf, getPPC64TocBase());
 }
 
 void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
@@ -166,37 +175,21 @@ void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                      unsigned RelOff) const {
   uint64_t Off = GotPltEntryAddr - getPPC64TocBase();
 
-  if (Config->EKind == ELF64LEKind) {
-    // The most-common form of the plt stub. This assumes that the toc-pointer
-    // register is properly initalized, and that the stub must save the toc
-    // pointer value to the stack-save slot reserved for it (sp + 24).
-    // There are 2 other variants but we don't have to emit those until we add
-    // support for R_PPC64_REL24_NOTOC and R_PPC64_TOCSAVE relocations.
-    // We are missing a super simple optimization, where if the upper 16 bits of
-    // the offset are zero, then we can omit the addis instruction, and load
-    // r2 + lo-offset directly into r12. I decided to leave this out in the
-    // spirit of keeping it simple until we can link actual non-trivial
-    // programs.
-    write32(Buf +  0, 0xf8410018);                    // std     r2,24(r1)
-    write32(Buf +  4, 0x3d820000 | applyPPCHa(Off));  // addis   r12,r2, X@plt@to@ha
-    write32(Buf +  8, 0xe98c0000 | applyPPCLo(Off));  // ld      r12,X@plt@toc@l(r12)
-    write32(Buf + 12, 0x7d8903a6);                    // mtctr    r12
-    write32(Buf + 16, 0x4e800420);                    // bctr
-  } else {
-    // FIXME: What we should do, in theory, is get the offset of the function
-    // descriptor in the .opd section, and use that as the offset from %r2 (the
-    // TOC-base pointer). Instead, we have the GOT-entry offset, and that will
-    // be a pointer to the function descriptor in the .opd section. Using
-    // this scheme is simpler, but requires an extra indirection per PLT dispatch.
-    write32(Buf, 0xf8410028);                       // std %r2, 40(%r1)
-    write32(Buf + 4, 0x3d620000 | applyPPCHa(Off)); // addis %r11, %r2, X@ha
-    write32(Buf + 8, 0xe98b0000 | applyPPCLo(Off)); // ld %r12, X@l(%r11)
-    write32(Buf + 12, 0xe96c0000);                  // ld %r11,0(%r12)
-    write32(Buf + 16, 0x7d6903a6);                  // mtctr %r11
-    write32(Buf + 20, 0xe84c0008);                  // ld %r2,8(%r12)
-    write32(Buf + 24, 0xe96c0010);                  // ld %r11,16(%r12)
-    write32(Buf + 28, 0x4e800420);                  // bctr
-  }
+  // The most-common form of the plt stub. This assumes that the toc-pointer
+  // register is properly initalized, and that the stub must save the toc
+  // pointer value to the stack-save slot reserved for it (sp + 24).
+  // There are 2 other variants but we don't have to emit those until we add
+  // support for R_PPC64_REL24_NOTOC and R_PPC64_TOCSAVE relocations.
+  // We are missing a super simple optimization, where if the upper 16 bits of
+  // the offset are zero, then we can omit the addis instruction, and load
+  // r2 + lo-offset directly into r12. I decided to leave this out in the
+  // spirit of keeping it simple until we can link actual non-trivial
+  // programs.
+  write32(Buf +  0, 0xf8410018);                    // std     r2,24(r1)
+  write32(Buf +  4, 0x3d820000 | applyPPCHa(Off));  // addis   r12,r2, X@plt@to@ha
+  write32(Buf +  8, 0xe98c0000 | applyPPCLo(Off));  // ld      r12,X@plt@toc@l(r12)
+  write32(Buf + 12, 0x7d8903a6);                    // mtctr    r12
+  write32(Buf + 16, 0x4e800420);                    // bctr
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {

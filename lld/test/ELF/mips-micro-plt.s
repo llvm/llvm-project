@@ -42,6 +42,7 @@
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: Function
 # CHECK-NEXT:     Other [
+# CHECK-NEXT:       STO_MIPS_MICROMIPS
 # CHECK-NEXT:       STO_MIPS_PLT
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Section: Undefined
@@ -50,11 +51,12 @@
 # CHECK:      DynamicSymbols [
 # CHECK:        Symbol {
 # CHECK:          Name: foo0
-# CHECK-NEXT:     Value: 0x20040
+# CHECK-NEXT:     Value: 0x20041
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: Function
 # CHECK-NEXT:     Other [
+# CHECK-NEXT:       STO_MIPS_MICROMIPS
 # CHECK-NEXT:       STO_MIPS_PLT
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Section: Undefined
@@ -76,7 +78,7 @@
 # CHECK-NEXT:     Entry {
 # CHECK-NEXT:       Address:
 # CHECK-NEXT:       Initial: 0x20021
-# CHECK-NEXT:       Value: 0x20040
+# CHECK-NEXT:       Value: 0x20041
 # CHECK-NEXT:       Type: Function
 # CHECK-NEXT:       Section: Undefined
 # CHECK-NEXT:       Name: foo0@
