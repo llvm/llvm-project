@@ -173,6 +173,10 @@ defm : HWWriteResPair<WriteDPPD,  [HWPort0,HWPort1,HWPort5],  9, [1,1,1], 3, 6>;
 defm : HWWriteResPair<WriteDPPS,  [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 6>;
 defm : HWWriteResPair<WriteDPPSY, [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 7>;
 defm : HWWriteResPair<WriteFSign,  [HWPort0], 1>;
+defm : X86WriteRes<WriteFRnd,            [HWPort23],  6, [1],   1>;
+defm : X86WriteRes<WriteFRndY,           [HWPort23],  6, [1],   1>;
+defm : X86WriteRes<WriteFRndLd,  [HWPort1,HWPort23], 12, [2,1], 3>;
+defm : X86WriteRes<WriteFRndYLd, [HWPort1,HWPort23], 13, [2,1], 3>;
 defm : HWWriteResPair<WriteFLogic,  [HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteFLogicY, [HWPort5], 1, [1], 1, 7>;
 defm : HWWriteResPair<WriteFShuffle,  [HWPort5], 1, [1], 1, 6>;
@@ -645,11 +649,7 @@ def: InstRW<[HWWriteResGroup0], (instregex "VBROADCASTSSrm",
                                            "(V?)MOVUPDrm",
                                            "(V?)MOVUPSrm",
                                            "VPBROADCASTDrm",
-                                           "VPBROADCASTQrm",
-                                           "(V?)ROUNDPD(Y?)r",
-                                           "(V?)ROUNDPS(Y?)r",
-                                           "(V?)ROUNDSDr",
-                                           "(V?)ROUNDSSr")>;
+                                           "VPBROADCASTQrm")>;
 
 def HWWriteResGroup0_1 : SchedWriteRes<[HWPort23]> {
   let Latency = 7;
@@ -1760,19 +1760,7 @@ def HWWriteResGroup103 : SchedWriteRes<[HWPort1,HWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[HWWriteResGroup103], (instregex "(ADD|SUB|SUBR)_FI(16|32)m",
-                                             "VROUNDPDYm",
-                                             "VROUNDPSYm")>;
-
-def HWWriteResGroup103_1 : SchedWriteRes<[HWPort1,HWPort23]> {
-  let Latency = 12;
-  let NumMicroOps = 3;
-  let ResourceCycles = [2,1];
-}
-def: InstRW<[HWWriteResGroup103_1], (instregex "(V?)ROUNDPDm",
-                                               "(V?)ROUNDPSm",
-                                               "(V?)ROUNDSDm",
-                                               "(V?)ROUNDSSm")>;
+def: InstRW<[HWWriteResGroup103], (instregex "(ADD|SUB|SUBR)_FI(16|32)m")>;
 
 def HWWriteResGroup104 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
   let Latency = 12;

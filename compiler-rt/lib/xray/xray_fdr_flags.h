@@ -1,4 +1,4 @@
-//===-- xray_flags.h -------------------------------------------*- C++ -*-===//
+//===-- xray_fdr_flags.h ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,34 +7,32 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of XRay, a dynamic runtime instruementation system.
+// This file is a part of XRay, a dynamic runtime instrumentation system.
 //
-// XRay runtime flags.
+// This file defines the flags for the flight-data-recorder mode implementation.
+//
 //===----------------------------------------------------------------------===//
-
-#ifndef XRAY_FLAGS_H
-#define XRAY_FLAGS_H
+#ifndef XRAY_FDR_FLAGS_H
+#define XRAY_FDR_FLAGS_H
 
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 namespace __xray {
 
-struct Flags {
+struct FDRFlags {
 #define XRAY_FLAG(Type, Name, DefaultValue, Description) Type Name;
-#include "xray_flags.inc"
+#include "xray_fdr_flags.inc"
 #undef XRAY_FLAG
 
   void setDefaults();
 };
 
-extern Flags xray_flags_dont_use_directly;
-extern void registerXRayFlags(FlagParser *P, Flags *F);
-const char *useCompilerDefinedFlags();
-inline Flags *flags() { return &xray_flags_dont_use_directly; }
-
-void initializeFlags();
+extern FDRFlags xray_fdr_flags_dont_use_directly;
+extern void registerXRayFDRFlags(FlagParser *P, FDRFlags *F);
+const char *useCompilerDefinedFDRFlags();
+inline FDRFlags *fdrFlags() { return &xray_fdr_flags_dont_use_directly; }
 
 } // namespace __xray
 
-#endif // XRAY_FLAGS_H
+#endif // XRAY_FDR_FLAGS_H

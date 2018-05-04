@@ -7990,7 +7990,7 @@ let Predicates = [HasERI] in {
 }
 
 defm VGETEXP   : avx512_eri_s<0x43, "vgetexp", X86fgetexpRnds,
-                              SchedWriteFAdd.Scl>, T8PD, EVEX_4V;
+                              SchedWriteFRnd.Scl>, T8PD, EVEX_4V;
 /// avx512_fp28_p rcp28ps, rcp28pd, rsqrt28ps, rsqrt28pd
 
 multiclass avx512_fp28_p<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
@@ -8057,9 +8057,9 @@ let Predicates = [HasERI] in {
  defm VRCP28   : avx512_eri<0xCA, "vrcp28", X86rcp28, SchedWriteFRcp>, EVEX;
  defm VEXP2    : avx512_eri<0xC8, "vexp2", X86exp2, SchedWriteFAdd>, EVEX;
 }
-defm VGETEXP   : avx512_eri<0x42, "vgetexp", X86fgetexpRnd, SchedWriteFAdd>,
+defm VGETEXP   : avx512_eri<0x42, "vgetexp", X86fgetexpRnd, SchedWriteFRnd>,
                  avx512_fp_unaryop_packed<0x42, "vgetexp", X86fgetexpRnd,
-                                          SchedWriteFAdd>, EVEX;
+                                          SchedWriteFRnd>, EVEX;
 
 multiclass avx512_sqrt_packed_round<bits<8> opc, string OpcodeStr,
                                     X86FoldableSchedWrite sched, X86VectorVTInfo _>{
@@ -8274,12 +8274,12 @@ multiclass avx512_rndscale_scalar<bits<8> opc, string OpcodeStr,
 }
 
 defm VRNDSCALESS : avx512_rndscale_scalar<0x0A, "vrndscaless",
-                                          SchedWriteFAdd.Scl, f32x_info>,
+                                          SchedWriteFRnd.Scl, f32x_info>,
                                           AVX512AIi8Base, EVEX_4V,
                                           EVEX_CD8<32, CD8VT1>;
 
 defm VRNDSCALESD : avx512_rndscale_scalar<0x0B, "vrndscalesd",
-                                          SchedWriteFAdd.Scl, f64x_info>,
+                                          SchedWriteFRnd.Scl, f64x_info>,
                                           VEX_W, AVX512AIi8Base, EVEX_4V,
                                           EVEX_CD8<64, CD8VT1>;
 
@@ -9381,13 +9381,13 @@ multiclass avx512_common_unary_fp_sae_packed_imm_all<string OpcodeStr,
 }
 
 defm VREDUCE   : avx512_common_unary_fp_sae_packed_imm_all<"vreduce", 0x56, 0x56,
-                              X86VReduce, X86VReduceRnd, SchedWriteFAdd, HasDQI>,
+                              X86VReduce, X86VReduceRnd, SchedWriteFRnd, HasDQI>,
                               AVX512AIi8Base, EVEX;
 defm VRNDSCALE : avx512_common_unary_fp_sae_packed_imm_all<"vrndscale", 0x08, 0x09,
-                              X86VRndScale, X86VRndScaleRnd, SchedWriteFAdd, HasAVX512>,
+                              X86VRndScale, X86VRndScaleRnd, SchedWriteFRnd, HasAVX512>,
                               AVX512AIi8Base, EVEX;
 defm VGETMANT : avx512_common_unary_fp_sae_packed_imm_all<"vgetmant", 0x26, 0x26,
-                              X86VGetMant, X86VGetMantRnd, SchedWriteFAdd, HasAVX512>,
+                              X86VGetMant, X86VGetMantRnd, SchedWriteFRnd, HasAVX512>,
                               AVX512AIi8Base, EVEX;
 
 defm VRANGEPD : avx512_common_fp_sae_packed_imm<"vrangepd", avx512vl_f64_info,
@@ -9407,17 +9407,17 @@ defm VRANGESS: avx512_common_fp_sae_scalar_imm<"vrangess", f32x_info,
       AVX512AIi8Base, VEX_LIG, EVEX_4V, EVEX_CD8<32, CD8VT1>;
 
 defm VREDUCESD: avx512_common_fp_sae_scalar_imm<"vreducesd", f64x_info,
-      0x57, X86Reduces, X86ReducesRnd, SchedWriteFAdd, HasDQI>,
+      0x57, X86Reduces, X86ReducesRnd, SchedWriteFRnd, HasDQI>,
       AVX512AIi8Base, VEX_LIG, EVEX_4V, EVEX_CD8<64, CD8VT1>, VEX_W;
 defm VREDUCESS: avx512_common_fp_sae_scalar_imm<"vreducess", f32x_info,
-      0x57, X86Reduces, X86ReducesRnd, SchedWriteFAdd, HasDQI>,
+      0x57, X86Reduces, X86ReducesRnd, SchedWriteFRnd, HasDQI>,
       AVX512AIi8Base, VEX_LIG, EVEX_4V, EVEX_CD8<32, CD8VT1>;
 
 defm VGETMANTSD: avx512_common_fp_sae_scalar_imm<"vgetmantsd", f64x_info,
-      0x27, X86GetMants, X86GetMantsRnd, SchedWriteFAdd, HasAVX512>,
+      0x27, X86GetMants, X86GetMantsRnd, SchedWriteFRnd, HasAVX512>,
       AVX512AIi8Base, VEX_LIG, EVEX_4V, EVEX_CD8<64, CD8VT1>, VEX_W;
 defm VGETMANTSS: avx512_common_fp_sae_scalar_imm<"vgetmantss", f32x_info,
-      0x27, X86GetMants, X86GetMantsRnd, SchedWriteFAdd, HasAVX512>,
+      0x27, X86GetMants, X86GetMantsRnd, SchedWriteFRnd, HasAVX512>,
       AVX512AIi8Base, VEX_LIG, EVEX_4V, EVEX_CD8<32, CD8VT1>;
 
 let Predicates = [HasAVX512] in {

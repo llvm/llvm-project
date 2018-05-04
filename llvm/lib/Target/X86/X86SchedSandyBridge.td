@@ -160,6 +160,8 @@ defm : SBWriteResPair<WriteCvtF2I, [SBPort1],  3>;
 defm : SBWriteResPair<WriteCvtI2F, [SBPort1],  4>;
 defm : SBWriteResPair<WriteCvtF2F, [SBPort1],  3>;
 defm : SBWriteResPair<WriteFSign,    [SBPort5], 1>;
+defm : SBWriteResPair<WriteFRnd,     [SBPort1], 3, [1], 1, 6>;
+defm : SBWriteResPair<WriteFRndY,    [SBPort1], 3, [1], 1, 7>;
 defm : SBWriteResPair<WriteFLogic,   [SBPort5], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFLogicY,  [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteFShuffle, [SBPort5], 1, [1], 1, 6>;
@@ -1157,11 +1159,7 @@ def SBWriteResGroup90 : SchedWriteRes<[SBPort1,SBPort23]> {
 def: InstRW<[SBWriteResGroup90], (instregex "MMX_CVTPS2PIirm",
                                             "MMX_CVTTPS2PIirm",
                                             "(V?)CVTPS2DQrm",
-                                            "(V?)CVTTPS2DQrm",
-                                            "(V?)ROUNDPDm",
-                                            "(V?)ROUNDPSm",
-                                            "(V?)ROUNDSDm",
-                                            "(V?)ROUNDSSm")>;
+                                            "(V?)CVTTPS2DQrm")>;
 
 def SBWriteResGroup91 : SchedWriteRes<[SBPort23,SBPort05]> {
   let Latency = 9;

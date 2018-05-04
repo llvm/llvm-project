@@ -76,20 +76,20 @@ multiclass xop2op256<bits<8> opc, string OpcodeStr, Intrinsic Int,
 
 let ExeDomain = SSEPackedSingle in {
   defm VFRCZSS : xop2opsld<0x82, "vfrczss", int_x86_xop_vfrcz_ss,
-                           ssmem, sse_load_f32, SchedWriteFAdd.XMM>;
+                           ssmem, sse_load_f32, SchedWriteFRnd.Scl>;
   defm VFRCZPS : xop2op128<0x80, "vfrczps", int_x86_xop_vfrcz_ps, loadv4f32,
-                           SchedWriteFAdd.XMM>;
+                           SchedWriteFRnd.XMM>;
   defm VFRCZPS : xop2op256<0x80, "vfrczps", int_x86_xop_vfrcz_ps_256, loadv8f32,
-                           SchedWriteFAdd.YMM>;
+                           SchedWriteFRnd.YMM>;
 }
 
 let ExeDomain = SSEPackedDouble in {
   defm VFRCZSD : xop2opsld<0x83, "vfrczsd", int_x86_xop_vfrcz_sd,
-                           sdmem, sse_load_f64, SchedWriteFAdd.XMM>;
+                           sdmem, sse_load_f64, SchedWriteFRnd.Scl>;
   defm VFRCZPD : xop2op128<0x81, "vfrczpd", int_x86_xop_vfrcz_pd, loadv2f64,
-                           SchedWriteFAdd.XMM>;
+                           SchedWriteFRnd.XMM>;
   defm VFRCZPD : xop2op256<0x81, "vfrczpd", int_x86_xop_vfrcz_pd_256, loadv4f64,
-                           SchedWriteFAdd.YMM>;
+                           SchedWriteFRnd.YMM>;
 }
 
 multiclass xop3op<bits<8> opc, string OpcodeStr, SDNode OpNode,

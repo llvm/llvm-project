@@ -89,6 +89,11 @@ RelExpr AArch64::getRelExpr(RelType Type, const Symbol &S,
     return R_TLSDESC_CALL;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+  case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
+  case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
+  case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
+  case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
+  case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
     return R_TLS;
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
@@ -290,24 +295,29 @@ void AArch64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     or32le(Loc, (Val & 0x1FFFFC) << 3);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
+  case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
     or32AArch64Imm(Loc, getBits(Val, 0, 11));
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
+  case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
     checkAlignment(Loc, Val, 2, Type);
     or32AArch64Imm(Loc, getBits(Val, 1, 11));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
+  case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
     checkAlignment(Loc, Val, 4, Type);
     or32AArch64Imm(Loc, getBits(Val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+  case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_LD64_LO12:
     checkAlignment(Loc, Val, 8, Type);
     or32AArch64Imm(Loc, getBits(Val, 3, 11));
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
+  case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
     checkAlignment(Loc, Val, 16, Type);
     or32AArch64Imm(Loc, getBits(Val, 4, 11));
     break;
