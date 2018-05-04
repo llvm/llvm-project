@@ -36,14 +36,14 @@ def HWPort7Counter : PfmIssueCounter<HWPort7, ["uops_dispatched_port:port_7"]>;
 
 let SchedModel = BroadwellModel in {
 def BWCycleCounter : PfmCycleCounter<"unhalted_core_cycles">;
-def BWPort0Counter : PfmIssueCounter<BWPort0, ["uops_dispatched_port:port_0"]>;
-def BWPort1Counter : PfmIssueCounter<BWPort1, ["uops_dispatched_port:port_1"]>;
-def BWPort2Counter : PfmIssueCounter<BWPort2, ["uops_dispatched_port:port_2"]>;
-def BWPort3Counter : PfmIssueCounter<BWPort3, ["uops_dispatched_port:port_3"]>;
-def BWPort4Counter : PfmIssueCounter<BWPort4, ["uops_dispatched_port:port_4"]>;
-def BWPort5Counter : PfmIssueCounter<BWPort5, ["uops_dispatched_port:port_5"]>;
-def BWPort6Counter : PfmIssueCounter<BWPort6, ["uops_dispatched_port:port_6"]>;
-def BWPort7Counter : PfmIssueCounter<BWPort7, ["uops_dispatched_port:port_7"]>;
+def BWPort0Counter : PfmIssueCounter<BWPort0, ["uops_executed_port:port_0"]>;
+def BWPort1Counter : PfmIssueCounter<BWPort1, ["uops_executed_port:port_1"]>;
+def BWPort2Counter : PfmIssueCounter<BWPort2, ["uops_executed_port:port_2"]>;
+def BWPort3Counter : PfmIssueCounter<BWPort3, ["uops_executed_port:port_3"]>;
+def BWPort4Counter : PfmIssueCounter<BWPort4, ["uops_executed_port:port_4"]>;
+def BWPort5Counter : PfmIssueCounter<BWPort5, ["uops_executed_port:port_5"]>;
+def BWPort6Counter : PfmIssueCounter<BWPort6, ["uops_executed_port:port_6"]>;
+def BWPort7Counter : PfmIssueCounter<BWPort7, ["uops_executed_port:port_7"]>;
 }
 
 let SchedModel = SkylakeClientModel in {

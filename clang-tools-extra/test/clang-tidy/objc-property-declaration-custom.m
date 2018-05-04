@@ -14,4 +14,5 @@
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: property name 'ABC_custom_prefix' not using lowerCamelCase style or not prefixed in a category, according to the Apple Coding Guidelines [objc-property-declaration]
 @property(assign, nonatomic) int GIFIgnoreStandardAcronym;
 // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: property name 'GIFIgnoreStandardAcronym' not using lowerCamelCase style or not prefixed in a category, according to the Apple Coding Guidelines [objc-property-declaration]
+@property(strong, nonatomic) NSString *TGIF;
 @end

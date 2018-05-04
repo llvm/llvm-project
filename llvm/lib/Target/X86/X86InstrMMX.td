@@ -153,8 +153,7 @@ multiclass sse12_cvt_pint_3addr<bits<8> opc, RegisterClass SrcRC,
 // MMX EMMS Instruction
 //===----------------------------------------------------------------------===//
 
-// FIXME: Is there a better scheduler class for EMMS/FEMMS?
-let SchedRW = [WriteMicrocoded] in
+let SchedRW = [WriteEMMS] in
 def MMX_EMMS  : MMXI<0x77, RawFrm, (outs), (ins), "emms", [(int_x86_mmx_emms)]>;
 
 //===----------------------------------------------------------------------===//

@@ -152,6 +152,16 @@ class TimelineView : public View {
 
   void initialize(unsigned MaxIterations);
 
+  // Display characters for the TimelineView report output.
+  struct DisplayChar {
+    static const char Dispatched = 'D';
+    static const char Executed = 'E';
+    static const char Retired = 'R';
+    static const char Waiting = '='; // Instruction is waiting in the scheduler.
+    static const char Executing = 'e';
+    static const char RetireLag = '-'; // The instruction is waiting to retire.
+  };
+
 public:
   TimelineView(const llvm::MCSubtargetInfo &sti, llvm::MCInstPrinter &Printer,
                const SourceMgr &Sequence, unsigned MaxIterations,

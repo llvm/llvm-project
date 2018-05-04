@@ -40,7 +40,9 @@
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 
 #define DEBUG_TYPE "format-formatter"
 
@@ -1706,7 +1708,8 @@ public:
   // Returns the priority of the category which \p IncludeName belongs to.
   // If \p CheckMainHeader is true and \p IncludeName is a main header, returns
   // 0. Otherwise, returns the priority of the matching category or INT_MAX.
-  int getIncludePriority(StringRef IncludeName, bool CheckMainHeader) {
+  // NOTE: this API is not thread-safe!
+  int getIncludePriority(StringRef IncludeName, bool CheckMainHeader) const {
     int Ret = INT_MAX;
     for (unsigned i = 0, e = CategoryRegexs.size(); i != e; ++i)
       if (CategoryRegexs[i].match(IncludeName)) {
@@ -1739,7 +1742,8 @@ private:
   bool IsMainFile;
   StringRef FileName;
   StringRef FileStem;
-  SmallVector<llvm::Regex, 4> CategoryRegexs;
+  // Regex is not thread-safe.
+  mutable SmallVector<llvm::Regex, 4> CategoryRegexs;
 };
 
 const char IncludeRegexPattern[] =
@@ -2003,10 +2007,228 @@ unsigned getMaxHeaderInsertionOffset(StringRef FileName, StringRef Code,
       });
 }
 
-bool isDeletedHeader(llvm::StringRef HeaderName,
-                     const std::set<llvm::StringRef> &HeadersToDelete) {
-  return HeadersToDelete.count(HeaderName) ||
-         HeadersToDelete.count(HeaderName.trim("\"<>"));
+/// Generates replacements for inserting or deleting #include directives in a
+/// file.
+class HeaderIncludes {
+public:
+  HeaderIncludes(llvm::StringRef FileName, llvm::StringRef Code,
+                 const FormatStyle &Style);
+
+  /// Inserts an #include directive of \p Header into the code. If \p IsAngled
+  /// is true, \p Header will be quoted with <> in the directive; otherwise, it
+  /// will be quoted with "".
+  ///
+  /// When searching for points to insert new header, this ignores #include's
+  /// after the #include block(s) in the beginning of a file to avoid inserting
+  /// headers into code sections where new #include's should not be added by
+  /// default. These code sections include:
+  ///   - raw string literals (containing #include).
+  ///   - #if blocks.
+  ///   - Special #include's among declarations (e.g. functions).
+  ///
+  /// Returns a replacement that inserts the new header into a suitable #include
+  /// block of the same category. This respects the order of the existing
+  /// #includes in the block; if the existing #includes are not already sorted,
+  /// this will simply insert the #include in front of the first #include of the
+  /// same category in the code that should be sorted after \p IncludeName. If
+  /// \p IncludeName already exists (with exactly the same spelling), this
+  /// returns None.
+  llvm::Optional<tooling::Replacement> insert(llvm::StringRef Header,
+                                              bool IsAngled) const;
+
+  /// Removes all existing #includes of \p Header quoted with <> if \p IsAngled
+  /// is true or "" if \p IsAngled is false.
+  /// This doesn't resolve the header file path; it only deletes #includes with
+  /// exactly the same spelling.
+  tooling::Replacements remove(llvm::StringRef Header, bool IsAngled) const;
+
+private:
+  struct Include {
+    Include(StringRef Name, tooling::Range R) : Name(Name), R(R) {}
+
+    // An include header quoted with either <> or "".
+    std::string Name;
+    // The range of the whole line of include directive including any eading
+    // whitespaces and trailing comment.
+    tooling::Range R;
+  };
+
+  void addExistingInclude(Include IncludeToAdd, unsigned NextLineOffset);
+
+  std::string FileName;
+  std::string Code;
+
+  // Map from include name (quotation trimmed) to a list of existing includes
+  // (in case there are more than one) with the name in the current file. <x>
+  // and "x" will be treated as the same header when deleting #includes.
+  llvm::StringMap<llvm::SmallVector<Include, 1>> ExistingIncludes;
+
+  /// Map from priorities of #include categories to all #includes in the same
+  /// category. This is used to find #includes of the same category when
+  /// inserting new #includes. #includes in the same categories are sorted in
+  /// in the order they appear in the source file.
+  /// See comment for "FormatStyle::IncludeCategories" for details about include
+  /// priorities.
+  std::unordered_map<int, llvm::SmallVector<const Include *, 8>>
+      IncludesByPriority;
+
+  int FirstIncludeOffset;
+  // All new headers should be inserted after this offset (e.g. after header
+  // guards, file comment).
+  unsigned MinInsertOffset;
+  // Max insertion offset in the original code. For example, we want to avoid
+  // inserting new #includes into the actual code section (e.g. after a
+  // declaration).
+  unsigned MaxInsertOffset;
+  IncludeCategoryManager Categories;
+  // Record the offset of the end of the last include in each category.
+  std::unordered_map<int, int> CategoryEndOffsets;
+
+  // All possible priorities.
+  std::set<int> Priorities;
+
+  // Matches a whole #include directive.
+  llvm::Regex IncludeRegex;
+};
+
+HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
+                               const FormatStyle &Style)
+    : FileName(FileName), Code(Code), FirstIncludeOffset(-1),
+      MinInsertOffset(
+          getOffsetAfterHeaderGuardsAndComments(FileName, Code, Style)),
+      MaxInsertOffset(MinInsertOffset +
+                      getMaxHeaderInsertionOffset(
+                          FileName, Code.drop_front(MinInsertOffset), Style)),
+      Categories(Style, FileName),
+      IncludeRegex(llvm::Regex(IncludeRegexPattern)) {
+  // Add 0 for main header and INT_MAX for headers that are not in any
+  // category.
+  Priorities = {0, INT_MAX};
+  for (const auto &Category : Style.IncludeCategories)
+    Priorities.insert(Category.Priority);
+  SmallVector<StringRef, 32> Lines;
+  Code.drop_front(MinInsertOffset).split(Lines, "\n");
+
+  unsigned Offset = MinInsertOffset;
+  unsigned NextLineOffset;
+  SmallVector<StringRef, 4> Matches;
+  for (auto Line : Lines) {
+    NextLineOffset = std::min(Code.size(), Offset + Line.size() + 1);
+    if (IncludeRegex.match(Line, &Matches)) {
+      // If this is the last line without trailing newline, we need to make
+      // sure we don't delete across the file boundary.
+      addExistingInclude(
+          Include(Matches[2],
+                  tooling::Range(
+                      Offset, std::min(Line.size() + 1, Code.size() - Offset))),
+          NextLineOffset);
+    }
+    Offset = NextLineOffset;
+  }
+
+  // Populate CategoryEndOfssets:
+  // - Ensure that CategoryEndOffset[Highest] is always populated.
+  // - If CategoryEndOffset[Priority] isn't set, use the next higher value
+  // that is set, up to CategoryEndOffset[Highest].
+  auto Highest = Priorities.begin();
+  if (CategoryEndOffsets.find(*Highest) == CategoryEndOffsets.end()) {
+    if (FirstIncludeOffset >= 0)
+      CategoryEndOffsets[*Highest] = FirstIncludeOffset;
+    else
+      CategoryEndOffsets[*Highest] = MinInsertOffset;
+  }
+  // By this point, CategoryEndOffset[Highest] is always set appropriately:
+  //  - to an appropriate location before/after existing #includes, or
+  //  - to right after the header guard, or
+  //  - to the beginning of the file.
+  for (auto I = ++Priorities.begin(), E = Priorities.end(); I != E; ++I)
+    if (CategoryEndOffsets.find(*I) == CategoryEndOffsets.end())
+      CategoryEndOffsets[*I] = CategoryEndOffsets[*std::prev(I)];
+}
+
+inline StringRef trimInclude(StringRef IncludeName) {
+  return IncludeName.trim("\"<>");
+}
+
+// \p Offset: the start of the line following this include directive.
+void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
+                                        unsigned NextLineOffset) {
+  auto Iter =
+      ExistingIncludes.try_emplace(trimInclude(IncludeToAdd.Name)).first;
+  Iter->second.push_back(std::move(IncludeToAdd));
+  auto &CurInclude = Iter->second.back();
+  // The header name with quotes or angle brackets.
+  // Only record the offset of current #include if we can insert after it.
+  if (CurInclude.R.getOffset() <= MaxInsertOffset) {
+    int Priority = Categories.getIncludePriority(
+        CurInclude.Name, /*CheckMainHeader=*/FirstIncludeOffset < 0);
+    CategoryEndOffsets[Priority] = NextLineOffset;
+    IncludesByPriority[Priority].push_back(&CurInclude);
+    if (FirstIncludeOffset < 0)
+      FirstIncludeOffset = CurInclude.R.getOffset();
+  }
+}
+
+llvm::Optional<tooling::Replacement>
+HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
+  assert(IncludeName == trimInclude(IncludeName));
+  // If a <header> ("header") already exists in code, "header" (<header>) with
+  // different quotation will still be inserted.
+  // FIXME: figure out if this is the best behavior.
+  auto It = ExistingIncludes.find(IncludeName);
+  if (It != ExistingIncludes.end())
+    for (const auto &Inc : It->second)
+      if ((IsAngled && StringRef(Inc.Name).startswith("<")) ||
+          (!IsAngled && StringRef(Inc.Name).startswith("\"")))
+        return llvm::None;
+  std::string Quoted = IsAngled ? ("<" + IncludeName + ">").str()
+                                : ("\"" + IncludeName + "\"").str();
+  StringRef QuotedName = Quoted;
+  int Priority = Categories.getIncludePriority(
+      QuotedName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
+  auto CatOffset = CategoryEndOffsets.find(Priority);
+  assert(CatOffset != CategoryEndOffsets.end());
+  unsigned InsertOffset = CatOffset->second; // Fall back offset
+  auto Iter = IncludesByPriority.find(Priority);
+  if (Iter != IncludesByPriority.end()) {
+    for (const auto *Inc : Iter->second) {
+      if (QuotedName < Inc->Name) {
+        InsertOffset = Inc->R.getOffset();
+        break;
+      }
+    }
+  }
+  assert(InsertOffset <= Code.size());
+  std::string NewInclude = ("#include " + QuotedName + "\n").str();
+  // When inserting headers at end of the code, also append '\n' to the code
+  // if it does not end with '\n'.
+  // FIXME: when inserting multiple #includes at the end of code, only one
+  // newline should be added.
+  if (InsertOffset == Code.size() && (!Code.empty() && Code.back() != '\n'))
+    NewInclude = "\n" + NewInclude;
+  return tooling::Replacement(FileName, InsertOffset, 0, NewInclude);
+}
+
+tooling::Replacements HeaderIncludes::remove(llvm::StringRef IncludeName,
+                                             bool IsAngled) const {
+  assert(IncludeName == trimInclude(IncludeName));
+  tooling::Replacements Result;
+  auto Iter = ExistingIncludes.find(IncludeName);
+  if (Iter == ExistingIncludes.end())
+    return Result;
+  for (const auto &Inc : Iter->second) {
+    if ((IsAngled && StringRef(Inc.Name).startswith("\"")) ||
+        (!IsAngled && StringRef(Inc.Name).startswith("<")))
+      continue;
+    llvm::Error Err = Result.add(tooling::Replacement(
+        FileName, Inc.R.getOffset(), Inc.R.getLength(), ""));
+    if (Err) {
+      auto ErrMsg = "Unexpected conflicts in #include deletions: " +
+                    llvm::toString(std::move(Err));
+      llvm_unreachable(ErrMsg.c_str());
+    }
+  }
+  return Result;
 }
 
 // FIXME: insert empty lines between newly created blocks.
@@ -2037,85 +2259,26 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   if (HeaderInsertions.empty() && HeadersToDelete.empty())
     return Replaces;
 
-  llvm::Regex IncludeRegex(IncludeRegexPattern);
-  llvm::Regex DefineRegex(R"(^[\t\ ]*#[\t\ ]*define[\t\ ]*[^\\]*$)");
-  SmallVector<StringRef, 4> Matches;
 
   StringRef FileName = Replaces.begin()->getFilePath();
-  IncludeCategoryManager Categories(Style, FileName);
+  HeaderIncludes Includes(FileName, Code, Style);
 
-  // Record the offset of the end of the last include in each category.
-  std::map<int, int> CategoryEndOffsets;
-  // All possible priorities.
-  // Add 0 for main header and INT_MAX for headers that are not in any category.
-  std::set<int> Priorities = {0, INT_MAX};
-  for (const auto &Category : Style.IncludeCategories)
-    Priorities.insert(Category.Priority);
-  int FirstIncludeOffset = -1;
-  // All new headers should be inserted after this offset.
-  unsigned MinInsertOffset =
-      getOffsetAfterHeaderGuardsAndComments(FileName, Code, Style);
-  StringRef TrimmedCode = Code.drop_front(MinInsertOffset);
-  // Max insertion offset in the original code.
-  unsigned MaxInsertOffset =
-      MinInsertOffset +
-      getMaxHeaderInsertionOffset(FileName, TrimmedCode, Style);
-  SmallVector<StringRef, 32> Lines;
-  TrimmedCode.split(Lines, '\n');
-  unsigned Offset = MinInsertOffset;
-  unsigned NextLineOffset;
-  std::set<StringRef> ExistingIncludes;
-  for (auto Line : Lines) {
-    NextLineOffset = std::min(Code.size(), Offset + Line.size() + 1);
-    if (IncludeRegex.match(Line, &Matches)) {
-      // The header name with quotes or angle brackets.
-      StringRef IncludeName = Matches[2];
-      ExistingIncludes.insert(IncludeName);
-      // Only record the offset of current #include if we can insert after it.
-      if (Offset <= MaxInsertOffset) {
-        int Category = Categories.getIncludePriority(
-            IncludeName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
-        CategoryEndOffsets[Category] = NextLineOffset;
-        if (FirstIncludeOffset < 0)
-          FirstIncludeOffset = Offset;
-      }
-      if (isDeletedHeader(IncludeName, HeadersToDelete)) {
-        // If this is the last line without trailing newline, we need to make
-        // sure we don't delete across the file boundary.
-        unsigned Length = std::min(Line.size() + 1, Code.size() - Offset);
-        llvm::Error Err =
-            Result.add(tooling::Replacement(FileName, Offset, Length, ""));
-        if (Err) {
-          // Ignore the deletion on conflict.
-          llvm::errs() << "Failed to add header deletion replacement for "
-                       << IncludeName << ": " << llvm::toString(std::move(Err))
-                       << "\n";
-        }
+  for (const auto &Header : HeadersToDelete) {
+    tooling::Replacements Replaces =
+        Includes.remove(trimInclude(Header), Header.startswith("<"));
+    for (const auto &R : Replaces) {
+      auto Err = Result.add(R);
+      if (Err) {
+        // Ignore the deletion on conflict.
+        llvm::errs() << "Failed to add header deletion replacement for "
+                     << Header << ": " << llvm::toString(std::move(Err))
+                     << "\n";
       }
     }
-    Offset = NextLineOffset;
   }
 
-  // Populate CategoryEndOfssets:
-  // - Ensure that CategoryEndOffset[Highest] is always populated.
-  // - If CategoryEndOffset[Priority] isn't set, use the next higher value that
-  //   is set, up to CategoryEndOffset[Highest].
-  auto Highest = Priorities.begin();
-  if (CategoryEndOffsets.find(*Highest) == CategoryEndOffsets.end()) {
-    if (FirstIncludeOffset >= 0)
-      CategoryEndOffsets[*Highest] = FirstIncludeOffset;
-    else
-      CategoryEndOffsets[*Highest] = MinInsertOffset;
-  }
-  // By this point, CategoryEndOffset[Highest] is always set appropriately:
-  //  - to an appropriate location before/after existing #includes, or
-  //  - to right after the header guard, or
-  //  - to the beginning of the file.
-  for (auto I = ++Priorities.begin(), E = Priorities.end(); I != E; ++I)
-    if (CategoryEndOffsets.find(*I) == CategoryEndOffsets.end())
-      CategoryEndOffsets[*I] = CategoryEndOffsets[*std::prev(I)];
-
-  bool NeedNewLineAtEnd = !Code.empty() && Code.back() != '\n';
+  llvm::Regex IncludeRegex = llvm::Regex(IncludeRegexPattern);
+  llvm::SmallVector<StringRef, 4> Matches;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
     bool Matched = IncludeRegex.match(IncludeDirective, &Matches);
@@ -2123,30 +2286,17 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                       "'#include ...'");
     (void)Matched;
     auto IncludeName = Matches[2];
-    if (ExistingIncludes.find(IncludeName) != ExistingIncludes.end()) {
-      DEBUG(llvm::dbgs() << "Skip adding existing include : " << IncludeName
-                         << "\n");
-      continue;
-    }
-    int Category =
-        Categories.getIncludePriority(IncludeName, /*CheckMainHeader=*/true);
-    Offset = CategoryEndOffsets[Category];
-    std::string NewInclude = !IncludeDirective.endswith("\n")
-                                 ? (IncludeDirective + "\n").str()
-                                 : IncludeDirective.str();
-    // When inserting headers at end of the code, also append '\n' to the code
-    // if it does not end with '\n'.
-    if (NeedNewLineAtEnd && Offset == Code.size()) {
-      NewInclude = "\n" + NewInclude;
-      NeedNewLineAtEnd = false;
-    }
-    auto NewReplace = tooling::Replacement(FileName, Offset, 0, NewInclude);
-    auto Err = Result.add(NewReplace);
-    if (Err) {
-      llvm::consumeError(std::move(Err));
-      unsigned NewOffset = Result.getShiftedCodePosition(Offset);
-      NewReplace = tooling::Replacement(FileName, NewOffset, 0, NewInclude);
-      Result = Result.merge(tooling::Replacements(NewReplace));
+    auto Replace =
+        Includes.insert(trimInclude(IncludeName), IncludeName.startswith("<"));
+    if (Replace) {
+      auto Err = Result.add(*Replace);
+      if (Err) {
+        llvm::consumeError(std::move(Err));
+        unsigned NewOffset = Result.getShiftedCodePosition(Replace->getOffset());
+        auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
+                                            Replace->getReplacementText());
+        Result = Result.merge(tooling::Replacements(Shifted));
+      }
     }
   }
   return Result;

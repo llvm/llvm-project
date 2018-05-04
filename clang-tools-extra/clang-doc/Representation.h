@@ -30,11 +30,11 @@ using SymbolID = std::array<uint8_t, 20>;
 
 struct Info;
 enum class InfoType {
+  IT_default,
   IT_namespace,
   IT_record,
   IT_function,
-  IT_enum,
-  IT_default
+  IT_enum
 };
 
 // A representation of a parsed comment.
@@ -42,13 +42,13 @@ struct CommentInfo {
   CommentInfo() = default;
   CommentInfo(CommentInfo &&Other) : Children(std::move(Other.Children)) {}
 
-  SmallString<16>
-      Kind; // Kind of comment (TextComment, InlineCommandComment,
-            // HTMLStartTagComment, HTMLEndTagComment, BlockCommandComment,
-            // ParamCommandComment, TParamCommandComment, VerbatimBlockComment,
-            // VerbatimBlockLineComment, VerbatimLineComment).
-  SmallString<64> Text;      // Text of the comment.
-  SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
+  SmallString<16> Kind; // Kind of comment (TextComment, InlineCommandComment,
+                        // HTMLStartTagComment, HTMLEndTagComment,
+                        // BlockCommandComment, ParamCommandComment,
+                        // TParamCommandComment, VerbatimBlockComment,
+                        // VerbatimBlockLineComment, VerbatimLineComment).
+  SmallString<64> Text; // Text of the comment.
+  SmallString<16> Name; // Name of the comment (for Verbatim and HTML).
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
   SmallString<16> ParamName; // Parameter name (for (T)ParamCommand).
   SmallString<16> CloseName; // Closing tag name (for VerbatimBlock).
@@ -67,20 +67,22 @@ struct CommentInfo {
 
 struct Reference {
   Reference() = default;
-  Reference(llvm::StringRef Name) : UnresolvedName(Name) {}
-  Reference(SymbolID USR, InfoType IT) : USR(USR), RefType(IT) {}
+  Reference(llvm::StringRef Name) : Name(Name) {}
+  Reference(SymbolID USR, StringRef Name, InfoType IT)
+      : USR(USR), Name(Name), RefType(IT) {}
 
-  SymbolID USR;                   // Unique identifer for referenced decl
-  SmallString<16> UnresolvedName; // Name of unresolved type.
-  InfoType RefType =
-      InfoType::IT_default; // Indicates the type of this Reference (namespace,
-                            // record, function, enum, default).
+  SymbolID USR = SymbolID(); // Unique identifer for referenced decl
+  SmallString<16> Name;      // Name of type (possibly unresolved).
+  InfoType RefType = InfoType::IT_default; // Indicates the type of this
+                                           // Reference (namespace, record,
+                                           // function, enum, default).
 };
 
 // A base struct for TypeInfos
 struct TypeInfo {
   TypeInfo() = default;
-  TypeInfo(SymbolID &Type, InfoType IT) : Type(Type, IT) {}
+  TypeInfo(SymbolID Type, StringRef Field, InfoType IT)
+      : Type(Type, Field, IT) {}
   TypeInfo(llvm::StringRef RefName) : Type(RefName) {}
 
   Reference Type; // Referenced type in this info.
@@ -89,8 +91,9 @@ struct TypeInfo {
 // Info for field types.
 struct FieldTypeInfo : public TypeInfo {
   FieldTypeInfo() = default;
-  FieldTypeInfo(SymbolID &Type, InfoType IT, llvm::StringRef Name)
-      : TypeInfo(Type, IT), Name(Name) {}
+  FieldTypeInfo(SymbolID Type, StringRef Field, InfoType IT,
+                llvm::StringRef Name)
+      : TypeInfo(Type, Field, IT), Name(Name) {}
   FieldTypeInfo(llvm::StringRef RefName, llvm::StringRef Name)
       : TypeInfo(RefName), Name(Name) {}
 
@@ -100,15 +103,17 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(SymbolID &Type, InfoType IT, llvm::StringRef Name)
-      : FieldTypeInfo(Type, IT, Name) {}
-  MemberTypeInfo(llvm::StringRef RefName, llvm::StringRef Name)
-      : FieldTypeInfo(RefName, Name) {}
+  MemberTypeInfo(SymbolID Type, StringRef Field, InfoType IT,
+                 llvm::StringRef Name, AccessSpecifier Access)
+      : FieldTypeInfo(Type, Field, IT, Name), Access(Access) {}
+  MemberTypeInfo(llvm::StringRef RefName, llvm::StringRef Name,
+                 AccessSpecifier Access)
+      : FieldTypeInfo(RefName, Name), Access(Access) {}
 
-  AccessSpecifier Access =
-      clang::AccessSpecifier::AS_none; // Access level associated with this
-                                       // info (public, protected, private,
-                                       // none).
+  AccessSpecifier Access = AccessSpecifier::AS_none; // Access level associated
+                                                     // with this info (public,
+                                                     // protected, private,
+                                                     // none).
 };
 
 struct Location {
@@ -148,10 +153,10 @@ struct FunctionInfo : public SymbolInfo {
   bool IsMethod = false; // Indicates whether this function is a class method.
   Reference Parent;      // Reference to the parent class decl for this method.
   TypeInfo ReturnType;   // Info about the return type of this function.
-  llvm::SmallVector<FieldTypeInfo, 4> Params; // List of parameters.
-  AccessSpecifier Access =
-      AccessSpecifier::AS_none; // Access level for this method (public,
-                                // private, protected, none).
+  llvm::SmallVector<FieldTypeInfo, 4> Params;        // List of parameters.
+  AccessSpecifier Access = AccessSpecifier::AS_none; // Access level for this
+                                                     // method (public, private,
+                                                     // protected, none).
 };
 
 // TODO: Expand to allow for documenting templating, inheritance access,

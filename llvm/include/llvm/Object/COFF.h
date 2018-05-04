@@ -452,11 +452,12 @@ struct coff_section {
     if (Characteristics & COFF::IMAGE_SCN_TYPE_NO_PAD)
       return 1;
 
-    // Bit [20:24] contains section alignment. Both 0 and 1 mean alignment 1.
+    // Bit [20:24] contains section alignment. 0 means use a default alignment
+    // of 16.
     uint32_t Shift = (Characteristics >> 20) & 0xF;
     if (Shift > 0)
       return 1U << (Shift - 1);
-    return 1;
+    return 16;
   }
 };
 

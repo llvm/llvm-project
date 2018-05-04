@@ -54,7 +54,7 @@ multiclass I3DNow_conv_rm_int<bits<8> opc, string Mn,
         Sched<[sched.Folded, ReadAfterLd]>;
 }
 
-defm PAVGUSB  : I3DNow_binop_rm_int<0xBF, "pavgusb", WriteVecIMul, 1>;
+defm PAVGUSB  : I3DNow_binop_rm_int<0xBF, "pavgusb", SchedWriteVecALU.MMX, 1>;
 defm PF2ID    : I3DNow_conv_rm_int<0x1D, "pf2id", WriteCvtF2I>;
 defm PFACC    : I3DNow_binop_rm_int<0xAE, "pfacc", WriteFAdd>;
 defm PFADD    : I3DNow_binop_rm_int<0x9E, "pfadd", WriteFAdd, 1>;
@@ -72,10 +72,9 @@ defm PFRSQRT  : I3DNow_conv_rm_int<0x97, "pfrsqrt", WriteFAdd>;
 defm PFSUB    : I3DNow_binop_rm_int<0x9A, "pfsub", WriteFAdd, 1>;
 defm PFSUBR   : I3DNow_binop_rm_int<0xAA, "pfsubr", WriteFAdd, 1>;
 defm PI2FD    : I3DNow_conv_rm_int<0x0D, "pi2fd", WriteCvtI2F>;
-defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", WriteVecIMul, 1>;
+defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", SchedWriteVecIMul.MMX, 1>;
 
-// FIXME: Is there a better scheduler class for EMMS/FEMMS?
-let SchedRW = [WriteMicrocoded] in
+let SchedRW = [WriteEMMS] in
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
                    [(int_x86_mmx_femms)]>, TB;
 
@@ -109,4 +108,4 @@ defm PF2IW    : I3DNow_conv_rm_int<0x1C, "pf2iw", WriteCvtF2I, "a">;
 defm PI2FW    : I3DNow_conv_rm_int<0x0C, "pi2fw", WriteCvtI2F, "a">;
 defm PFNACC   : I3DNow_binop_rm_int<0x8A, "pfnacc", WriteFAdd, 0, "a">;
 defm PFPNACC  : I3DNow_binop_rm_int<0x8E, "pfpnacc", WriteFAdd, 0, "a">;
-defm PSWAPD   : I3DNow_conv_rm_int<0xBB, "pswapd", WriteShuffle, "a">;
+defm PSWAPD   : I3DNow_conv_rm_int<0xBB, "pswapd", SchedWriteShuffle.MMX, "a">;

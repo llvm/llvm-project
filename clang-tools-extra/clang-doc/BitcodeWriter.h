@@ -31,7 +31,7 @@ namespace doc {
 // Current version number of clang-doc bitcode.
 // Should be bumped when removing or changing BlockIds, RecordIds, or
 // BitCodeConstants, though they can be added without breaking it.
-static const unsigned VersionNumber = 1;
+static const unsigned VersionNumber = 2;
 
 struct BitCodeConstants {
   static constexpr unsigned RecordSize = 16U;
@@ -59,20 +59,20 @@ enum BlockId {
   BI_RECORD_BLOCK_ID,
   BI_FUNCTION_BLOCK_ID,
   BI_COMMENT_BLOCK_ID,
-  BI_FIRST = BI_VERSION_BLOCK_ID,
-  BI_LAST = BI_COMMENT_BLOCK_ID
+  BI_REFERENCE_BLOCK_ID,
+  BI_LAST,
+  BI_FIRST = BI_VERSION_BLOCK_ID
 };
 
 // New Ids need to be added to the enum here, and to the relevant IdNameMap and
 // initialization list in the implementation file.
-#define INFORECORDS(X) X##_USR, X##_NAME, X##_NAMESPACE
+#define INFORECORDS(X) X##_USR, X##_NAME
 
 enum RecordId {
   VERSION = 1,
   INFORECORDS(FUNCTION),
   FUNCTION_DEFLOCATION,
   FUNCTION_LOCATION,
-  FUNCTION_PARENT,
   FUNCTION_ACCESS,
   FUNCTION_IS_METHOD,
   COMMENT_KIND,
@@ -86,10 +86,7 @@ enum RecordId {
   COMMENT_ATTRKEY,
   COMMENT_ATTRVAL,
   COMMENT_ARG,
-  TYPE_REF,
-  FIELD_TYPE_REF,
   FIELD_TYPE_NAME,
-  MEMBER_TYPE_REF,
   MEMBER_TYPE_NAME,
   MEMBER_TYPE_ACCESS,
   INFORECORDS(NAMESPACE),
@@ -102,16 +99,21 @@ enum RecordId {
   RECORD_DEFLOCATION,
   RECORD_LOCATION,
   RECORD_TAG_TYPE,
-  RECORD_PARENT,
-  RECORD_VPARENT,
-  RI_FIRST = VERSION,
-  RI_LAST = RECORD_VPARENT
+  REFERENCE_USR,
+  REFERENCE_NAME,
+  REFERENCE_TYPE,
+  REFERENCE_FIELD,
+  RI_LAST,
+  RI_FIRST = VERSION
 };
 
-static constexpr unsigned BlockIdCount = BI_LAST - BI_FIRST + 1;
-static constexpr unsigned RecordIdCount = RI_LAST - RI_FIRST + 1;
+static constexpr unsigned BlockIdCount = BI_LAST - BI_FIRST;
+static constexpr unsigned RecordIdCount = RI_LAST - RI_FIRST;
 
 #undef INFORECORDS
+
+// Identifiers for differentiating between subblocks
+enum class FieldId { F_namespace = 1, F_parent, F_vparent, F_type };
 
 class ClangDocBitcodeWriter {
 public:
@@ -137,6 +139,7 @@ public:
   void emitBlock(const FieldTypeInfo &B);
   void emitBlock(const MemberTypeInfo &B);
   void emitBlock(const CommentInfo &B);
+  void emitBlock(const Reference &B, FieldId F);
 
 private:
   class AbbreviationMap {

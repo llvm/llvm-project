@@ -63,7 +63,7 @@ define float @fmul_fadd_contract2(float %x, float %y, float %z) {
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_reassoc1:'
 ; FMFDEBUG:         fmul {{t[0-9]+}}, {{t[0-9]+}}
-; FMFDEBUG:         fadd {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fadd reassoc {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_reassoc1:'
 
 define float @fmul_fadd_reassoc1(float %x, float %y, float %z) {
@@ -86,15 +86,14 @@ define float @fmul_fadd_reassoc1(float %x, float %y, float %z) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_reassoc2:'
-; FMFDEBUG:         fmul {{t[0-9]+}}, {{t[0-9]+}}
-; FMFDEBUG:         fadd {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_reassoc2:'
 
 define float @fmul_fadd_reassoc2(float %x, float %y, float %z) {
 ; FMF-LABEL: fmul_fadd_reassoc2:
 ; FMF:       # %bb.0:
-; FMF-NEXT:    xsmulsp 0, 1, 2
-; FMF-NEXT:    xsaddsp 1, 0, 3
+; FMF-NEXT:    xsmaddasp 3, 1, 2
+; FMF-NEXT:    fmr 1, 3
 ; FMF-NEXT:    blr
 ;
 ; GLOBAL-LABEL: fmul_fadd_reassoc2:
@@ -161,7 +160,7 @@ define float @fmul_fadd_fast2(float %x, float %y, float %z) {
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_reassoc1:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_reassoc1:'
-; GLOBALDEBUG:         fmul unsafe {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_reassoc1:'
 
 define float @fmul_fma_reassoc1(float %x) {
@@ -197,7 +196,7 @@ define float @fmul_fma_reassoc1(float %x) {
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_reassoc2:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_reassoc2:'
-; GLOBALDEBUG:         fmul unsafe {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_reassoc2:'
 
 define float @fmul_fma_reassoc2(float %x) {
@@ -233,7 +232,7 @@ define float @fmul_fma_reassoc2(float %x) {
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
-; GLOBALDEBUG:         fmul unsafe {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 define float @fmul_fma_fast1(float %x) {
@@ -269,7 +268,7 @@ define float @fmul_fma_fast1(float %x) {
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
-; GLOBALDEBUG:         fmul unsafe {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 define float @fmul_fma_fast2(float %x) {
@@ -305,7 +304,7 @@ define float @fmul_fma_fast2(float %x) {
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn:'
-; GLOBALDEBUG:         fmul unsafe {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn:'
 
 define float @sqrt_afn(float %x) {
@@ -345,7 +344,7 @@ define float @sqrt_afn(float %x) {
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast:'
-; GLOBALDEBUG:         fmul unsafe {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast:'
 
 define float @sqrt_fast(float %x) {

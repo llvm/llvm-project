@@ -65,9 +65,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonSplitDoubleRegs() : MachineFunctionPass(ID) {
-      initializeHexagonSplitDoubleRegsPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonSplitDoubleRegs() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon Split Double Registers";
@@ -308,11 +306,9 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
     P2Rs[I.second].insert(I.first);
 }
 
-static inline int32_t profitImm(unsigned Lo, unsigned Hi) {
+static inline int32_t profitImm(unsigned Imm) {
   int32_t P = 0;
-  if (Lo == 0 || Lo == 0xFFFFFFFF)
-    P += 10;
-  if (Hi == 0 || Hi == 0xFFFFFFFF)
+  if (Imm == 0 || Imm == 0xFFFFFFFF)
     P += 10;
   return P;
 }
@@ -343,21 +339,28 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
       uint64_t D = MI->getOperand(1).getImm();
       unsigned Lo = D & 0xFFFFFFFFULL;
       unsigned Hi = D >> 32;
-      return profitImm(Lo, Hi);
+      return profitImm(Lo) + profitImm(Hi);
     }
     case Hexagon::A2_combineii:
-    case Hexagon::A4_combineii:
-      return profitImm(MI->getOperand(1).getImm(),
-                       MI->getOperand(2).getImm());
+    case Hexagon::A4_combineii: {
+      const MachineOperand &Op1 = MI->getOperand(1);
+      const MachineOperand &Op2 = MI->getOperand(2);
+      int32_t Prof1 = Op1.isImm() ? profitImm(Op1.getImm()) : 0;
+      int32_t Prof2 = Op2.isImm() ? profitImm(Op2.getImm()) : 0;
+      return Prof1 + Prof2;
+    }
     case Hexagon::A4_combineri:
       ImmX++;
       // Fall through into A4_combineir.
       LLVM_FALLTHROUGH;
     case Hexagon::A4_combineir: {
       ImmX++;
-      int64_t V = MI->getOperand(ImmX).getImm();
-      if (V == 0 || V == -1)
-        return 10;
+      const MachineOperand &OpX = MI->getOperand(ImmX);
+      if (OpX.isImm()) {
+        int64_t V = OpX.getImm();
+        if (V == 0 || V == -1)
+          return 10;
+      }
       // Fall through into A2_combinew.
       LLVM_FALLTHROUGH;
     }
@@ -735,23 +738,21 @@ void HexagonSplitDoubleRegs::splitCombine(MachineInstr *MI,
   assert(F != PairMap.end());
   const UUPair &P = F->second;
 
-  if (Op1.isImm()) {
+  if (!Op1.isReg()) {
     BuildMI(B, MI, DL, TII->get(Hexagon::A2_tfrsi), P.second)
-      .addImm(Op1.getImm());
-  } else if (Op1.isReg()) {
+      .add(Op1);
+  } else {
     BuildMI(B, MI, DL, TII->get(TargetOpcode::COPY), P.second)
       .addReg(Op1.getReg(), getRegState(Op1), Op1.getSubReg());
-  } else
-    llvm_unreachable("Unexpected operand");
+  }
 
-  if (Op2.isImm()) {
+  if (!Op2.isReg()) {
     BuildMI(B, MI, DL, TII->get(Hexagon::A2_tfrsi), P.first)
-      .addImm(Op2.getImm());
-  } else if (Op2.isReg()) {
+      .add(Op2);
+  } else {
     BuildMI(B, MI, DL, TII->get(TargetOpcode::COPY), P.first)
       .addReg(Op2.getReg(), getRegState(Op2), Op2.getSubReg());
-  } else
-    llvm_unreachable("Unexpected operand");
+  }
 }
 
 void HexagonSplitDoubleRegs::splitExt(MachineInstr *MI,

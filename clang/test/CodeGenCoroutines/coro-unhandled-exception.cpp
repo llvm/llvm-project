@@ -48,6 +48,8 @@ coro_t f() {
 // CHECK: [[CATCHRETDEST]]:
 // CHECK-NEXT: br label %[[TRYCONT:.+]]
 // CHECK: [[TRYCONT]]:
+// CHECK-NEXT: br label %[[RESUMECONT:.+]]
+// CHECK: [[RESUMECONT]]:
 // CHECK-NEXT: br label %[[COROFIN:.+]]
 // CHECK: [[COROFIN]]:
 // CHECK-NEXT: invoke void @"?final_suspend@promise_type@coro_t@@QEAA?AUsuspend_never@coroutines_v1@experimental@std@@XZ"(
@@ -67,6 +69,8 @@ coro_t f() {
 // CHECK-LPAD: [[CATCHRETDEST]]:
 // CHECK-LPAD-NEXT: br label %[[TRYCONT:.+]]
 // CHECK-LPAD: [[TRYCONT]]:
+// CHECK-LPAD: br label %[[RESUMECONT:.+]]
+// CHECK-LPAD: [[RESUMECONT]]:
 // CHECK-LPAD-NEXT: br label %[[COROFIN:.+]]
 // CHECK-LPAD: [[COROFIN]]:
 // CHECK-LPAD-NEXT: invoke void @_ZN6coro_t12promise_type13final_suspendEv(

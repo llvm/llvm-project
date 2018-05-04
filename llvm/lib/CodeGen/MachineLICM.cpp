@@ -374,6 +374,10 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
 
 /// Return true if instruction stores to the specified frame.
 static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
+  // Check mayStore before memory operands so that e.g. DBG_VALUEs will return
+  // true since they have no memory operands.
+  if (!MI->mayStore())
+     return false;
   // If we lost memory operands, conservatively assume that the instruction
   // writes to all slots.
   if (MI->memoperands_empty())

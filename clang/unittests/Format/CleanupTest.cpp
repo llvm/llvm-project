@@ -471,19 +471,77 @@ TEST_F(CleanUpReplacementsTest, InsertOneIncludeLLVMStyle) {
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
+TEST_F(CleanUpReplacementsTest, InsertIntoBlockSorted) {
+  std::string Code = "#include \"x/fix.h\"\n"
+                     "#include \"a.h\"\n"
+                     "#include \"c.h\"\n"
+                     "#include <memory>\n";
+  std::string Expected = "#include \"x/fix.h\"\n"
+                         "#include \"a.h\"\n"
+                         "#include \"b.h\"\n"
+                         "#include \"c.h\"\n"
+                         "#include <memory>\n";
+  tooling::Replacements Replaces =
+      toReplacements({createInsertion("#include \"b.h\"")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, InsertIntoFirstBlockOfSameKind) {
+  std::string Code = "#include \"x/fix.h\"\n"
+                     "#include \"c.h\"\n"
+                     "#include \"e.h\"\n"
+                     "#include \"f.h\"\n"
+                     "#include <memory>\n"
+                     "#include <vector>\n"
+                     "#include \"m.h\"\n"
+                     "#include \"n.h\"\n";
+  std::string Expected = "#include \"x/fix.h\"\n"
+                         "#include \"c.h\"\n"
+                         "#include \"d.h\"\n"
+                         "#include \"e.h\"\n"
+                         "#include \"f.h\"\n"
+                         "#include <memory>\n"
+                         "#include <vector>\n"
+                         "#include \"m.h\"\n"
+                         "#include \"n.h\"\n";
+  tooling::Replacements Replaces =
+      toReplacements({createInsertion("#include \"d.h\"")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, InsertIntoSystemBlockSorted) {
+  std::string Code = "#include \"x/fix.h\"\n"
+                     "#include \"a.h\"\n"
+                     "#include \"c.h\"\n"
+                     "#include <a>\n"
+                     "#include <z>\n";
+  std::string Expected = "#include \"x/fix.h\"\n"
+                         "#include \"a.h\"\n"
+                         "#include \"c.h\"\n"
+                         "#include <a>\n"
+                         "#include <vector>\n"
+                         "#include <z>\n";
+  tooling::Replacements Replaces =
+      toReplacements({createInsertion("#include <vector>")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+
 TEST_F(CleanUpReplacementsTest, InsertMultipleIncludesLLVMStyle) {
   std::string Code = "#include \"x/fix.h\"\n"
                      "#include \"a.h\"\n"
                      "#include \"b.h\"\n"
+                     "#include \"z.h\"\n"
                      "#include \"clang/Format/Format.h\"\n"
                      "#include <memory>\n";
   std::string Expected = "#include \"x/fix.h\"\n"
                          "#include \"a.h\"\n"
                          "#include \"b.h\"\n"
                          "#include \"new/new.h\"\n"
+                         "#include \"z.h\"\n"
                          "#include \"clang/Format/Format.h\"\n"
-                         "#include <memory>\n"
-                         "#include <list>\n";
+                         "#include <list>\n"
+                         "#include <memory>\n";
   tooling::Replacements Replaces =
       toReplacements({createInsertion("#include <list>"),
                       createInsertion("#include \"new/new.h\"")});
@@ -517,12 +575,12 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleIncludesGoogleStyle) {
                      "#include \"z/b.h\"\n";
   std::string Expected = "#include \"x/fix.h\"\n"
                          "\n"
-                         "#include <vector>\n"
                          "#include <list>\n"
+                         "#include <vector>\n"
                          "\n"
+                         "#include \"x/x.h\"\n"
                          "#include \"y/a.h\"\n"
-                         "#include \"z/b.h\"\n"
-                         "#include \"x/x.h\"\n";
+                         "#include \"z/b.h\"\n";
   tooling::Replacements Replaces =
       toReplacements({createInsertion("#include <list>"),
                       createInsertion("#include \"x/x.h\"")});
@@ -776,8 +834,10 @@ TEST_F(CleanUpReplacementsTest, NoNewLineAtTheEndOfCode) {
 
 TEST_F(CleanUpReplacementsTest, NoNewLineAtTheEndOfCodeMultipleInsertions) {
   std::string Code = "#include <map>";
+  // FIXME: a better behavior is to only append on newline to Code, but this
+  // case should be rare in practice.
   std::string Expected =
-      "#include <map>\n#include <string>\n#include <vector>\n";
+      "#include <map>\n#include <string>\n\n#include <vector>\n";
   tooling::Replacements Replaces =
       toReplacements({createInsertion("#include <string>"),
                       createInsertion("#include <vector>")});
@@ -801,8 +861,8 @@ TEST_F(CleanUpReplacementsTest, AddIncludesWithDifferentForms) {
   // FIXME: this might not be the best behavior.
   std::string Expected = "#include \"a.h\"\n"
                          "#include \"vector\"\n"
-                         "#include <vector>\n"
-                         "#include <a.h>\n";
+                         "#include <a.h>\n"
+                         "#include <vector>\n";
   tooling::Replacements Replaces =
       toReplacements({createInsertion("#include \"vector\""),
                       createInsertion("#include <a.h>")});
@@ -825,16 +885,18 @@ TEST_F(CleanUpReplacementsTest, DeleteAllCode) {
   std::string Code = "#include \"xyz.h\"\n"
                      "#include <xyz.h>";
   std::string Expected = "";
-  tooling::Replacements Replaces = toReplacements({createDeletion("xyz.h")});
+  tooling::Replacements Replaces =
+      toReplacements({createDeletion("\"xyz.h\""), createDeletion("<xyz.h>")});
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
-TEST_F(CleanUpReplacementsTest, DeleteAllIncludesWithSameNameIfNoType) {
+TEST_F(CleanUpReplacementsTest, DeleteOnlyIncludesWithSameQuote) {
   std::string Code = "#include \"xyz.h\"\n"
                      "#include \"xyz\"\n"
                      "#include <xyz.h>\n";
-  std::string Expected = "#include \"xyz\"\n";
-  tooling::Replacements Replaces = toReplacements({createDeletion("xyz.h")});
+  std::string Expected = "#include \"xyz.h\"\n"
+                         "#include \"xyz\"\n";
+  tooling::Replacements Replaces = toReplacements({createDeletion("<xyz.h>")});
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 

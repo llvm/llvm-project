@@ -452,12 +452,8 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
 
 std::string getFullyQualifiedName(QualType QT,
                                   const ASTContext &Ctx,
+                                  const PrintingPolicy &Policy,
                                   bool WithGlobalNsPrefix) {
-  PrintingPolicy Policy(Ctx.getPrintingPolicy());
-  Policy.SuppressScope = false;
-  Policy.AnonymousTagLocations = false;
-  Policy.PolishForDeclaration = true;
-  Policy.SuppressUnwrittenScope = true;
   QualType FQQT = getFullyQualifiedType(QT, Ctx, WithGlobalNsPrefix);
   return FQQT.getAsString(Policy);
 }

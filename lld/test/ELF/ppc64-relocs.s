@@ -1,14 +1,16 @@
+# REQUIRES: ppc
+
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t
+# RUN: ld.lld %t -o %t2
+# RUN: llvm-objdump -d %t2 | FileCheck %s
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-objdump -d %t2 | FileCheck %s
-# REQUIRES: ppc
-
-.section        ".opd","aw"
-.global _start
-_start:
-.quad   .Lfoo,.TOC.@tocbase,0
 
 .text
+.global _start
+_start:
 .Lfoo:
 	li      0,1
 	li      3,42
@@ -25,7 +27,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_LO_DS:
 # CHECK: .FR_PPC64_TOC16_LO_DS:
-# CHECK: 1001000c:       e8 22 80 00     ld 1, -32768(2)
+# CHECK: 1001000c:       {{.*}}     ld 1, -32768(2)
 
 .section .R_PPC64_TOC16_LO,"ax",@progbits
 .globl .FR_PPC64_TOC16_LO
@@ -34,7 +36,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_LO:
 # CHECK: .FR_PPC64_TOC16_LO:
-# CHECK: 10010010: 38 22 80 00 addi 1, 2, -32768
+# CHECK: 10010010: {{.*}} addi 1, 2, -32768
 
 .section .R_PPC64_TOC16_HI,"ax",@progbits
 .globl .FR_PPC64_TOC16_HI
@@ -43,7 +45,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_HI:
 # CHECK: .FR_PPC64_TOC16_HI:
-# CHECK: 10010014: 3c 22 ff fe addis 1, 2, -2
+# CHECK: 10010014: {{.*}} addis 1, 2, -2
 
 .section .R_PPC64_TOC16_HA,"ax",@progbits
 .globl .FR_PPC64_TOC16_HA
@@ -52,7 +54,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_HA:
 # CHECK: .FR_PPC64_TOC16_HA:
-# CHECK: 10010018: 3c 22 ff ff addis 1, 2, -1
+# CHECK: 10010018: {{.*}} addis 1, 2, -1
 
 .section .R_PPC64_REL24,"ax",@progbits
 .globl .FR_PPC64_REL24
@@ -63,7 +65,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_REL24:
 # CHECK: .FR_PPC64_REL24:
-# CHECK: 1001001c: 48 00 00 04 b .+4
+# CHECK: 1001001c: {{.*}} b .+4
 
 .section .R_PPC64_ADDR16_LO,"ax",@progbits
 .globl .FR_PPC64_ADDR16_LO
@@ -72,7 +74,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_LO:
 # CHECK: .FR_PPC64_ADDR16_LO:
-# CHECK: 10010020: 38 20 00 00 li 1, 0
+# CHECK: 10010020: {{.*}} li 1, 0
 
 .section .R_PPC64_ADDR16_HI,"ax",@progbits
 .globl .FR_PPC64_ADDR16_HI
@@ -81,7 +83,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HI:
 # CHECK: .FR_PPC64_ADDR16_HI:
-# CHECK: 10010024: 38 20 10 01 li 1, 4097
+# CHECK: 10010024: {{.*}} li 1, 4097
 
 .section .R_PPC64_ADDR16_HA,"ax",@progbits
 .globl .FR_PPC64_ADDR16_HA
@@ -90,7 +92,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HA:
 # CHECK: .FR_PPC64_ADDR16_HA:
-# CHECK: 10010028: 38 20 10 01 li 1, 4097
+# CHECK: 10010028: {{.*}} li 1, 4097
 
 .section .R_PPC64_ADDR16_HIGHER,"ax",@progbits
 .globl .FR_PPC64_ADDR16_HIGHER
@@ -99,7 +101,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHER:
 # CHECK: .FR_PPC64_ADDR16_HIGHER:
-# CHECK: 1001002c: 38 20 00 00 li 1, 0
+# CHECK: 1001002c: {{.*}} li 1, 0
 
 .section .R_PPC64_ADDR16_HIGHERA,"ax",@progbits
 .globl .FR_PPC64_ADDR16_HIGHERA
@@ -108,7 +110,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHERA:
 # CHECK: .FR_PPC64_ADDR16_HIGHERA:
-# CHECK: 10010030: 38 20 00 00 li 1, 0
+# CHECK: 10010030: {{.*}} li 1, 0
 
 .section .R_PPC64_ADDR16_HIGHEST,"ax",@progbits
 .globl .FR_PPC64_ADDR16_HIGHEST
@@ -117,7 +119,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHEST:
 # CHECK: .FR_PPC64_ADDR16_HIGHEST:
-# CHECK: 10010034: 38 20 00 00 li 1, 0
+# CHECK: 10010034: {{.*}} li 1, 0
 
 .section .R_PPC64_ADDR16_HIGHESTA,"ax",@progbits
 .globl .FR_PPC64_ADDR16_HIGHESTA
@@ -126,5 +128,5 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_ADDR16_HIGHESTA:
 # CHECK: .FR_PPC64_ADDR16_HIGHESTA:
-# CHECK: 10010038: 38 20 00 00 li 1, 0
+# CHECK: 10010038: {{.*}} li 1, 0
 

@@ -1,9 +1,17 @@
 // REQUIRES: ppc
+
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-func-global-entry.s -o %t2.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-func-local-entry.s -o %t3.o
 // RUN: ld.lld -dynamic-linker /lib64/ld64.so.2 %t.o %t2.o %t3.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
+
+// RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-func-global-entry.s -o %t2.o
+// RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-func-local-entry.s -o %t3.o
+// RUN: ld.lld -dynamic-linker /lib64/ld64.so.2 %t.o %t2.o %t3.o -o %t
+// RUN: llvm-objdump -d %t | FileCheck %s
+
 	.text
 	.abiversion 2
 	.globl	_start                    # -- Begin function _start
@@ -62,11 +70,11 @@ glob:
 # point and we branch to start of foo_external_same.
 
 // CHECK: _start:
-// CHECK: 10010020:       91 00 00 48     bl .+144
-// CHECK: 10010034:       55 00 00 48     bl .+84
+// CHECK: 10010020:       {{.*}}     bl .+144
+// CHECK: 10010034:       {{.*}}     bl .+84
 // CHECK: foo_external_diff:
-// CHECK-NEXT: 10010080:       02 00 4c 3c     addis 2, 12, 2
-// CHECK-NEXT: 10010084:       80 7f 42 38     addi 2, 2, 32640
-// CHECK-NEXT: 10010088:       ff ff a2 3c     addis 5, 2, -1
+// CHECK-NEXT: 10010080:       {{.*}}     addis 2, 12, 2
+// CHECK-NEXT: 10010084:       {{.*}}     addi 2, 2, 32640
+// CHECK-NEXT: 10010088:       {{.*}}     addis 5, 2, -1
 // CHECK: foo_external_same:
-// CHECK-NEXT: 100100b0:       14 1a 64 7c     add 3, 4, 3
+// CHECK-NEXT: 100100b0:       {{.*}}     add 3, 4, 3
