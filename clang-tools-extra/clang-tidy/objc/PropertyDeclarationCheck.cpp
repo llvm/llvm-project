@@ -217,6 +217,12 @@ void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   assert(MatchedDecl->getName().size() > 0);
   auto *DeclContext = MatchedDecl->getDeclContext();
   auto *CategoryDecl = llvm::dyn_cast<ObjCCategoryDecl>(DeclContext);
+
+  auto AcronymsRegex =
+      llvm::Regex("^" + AcronymsGroupRegex(EscapedAcronyms) + "$");
+  if (AcronymsRegex.match(MatchedDecl->getName())) {
+    return;
+  }
   if (CategoryDecl != nullptr &&
       hasCategoryPropertyPrefix(MatchedDecl->getName())) {
     if (!prefixedPropertyNameValid(MatchedDecl->getName(), EscapedAcronyms) ||
