@@ -30,7 +30,7 @@ void Flags::setDefaults() XRAY_NEVER_INSTRUMENT {
 #undef XRAY_FLAG
 }
 
-static void registerXRayFlags(FlagParser *P, Flags *F) XRAY_NEVER_INSTRUMENT {
+void registerXRayFlags(FlagParser *P, Flags *F) XRAY_NEVER_INSTRUMENT {
 #define XRAY_FLAG(Type, Name, DefaultValue, Description)                       \
   RegisterFlag(P, #Name, Description, &F->Name);
 #include "xray_flags.inc"
@@ -42,12 +42,13 @@ static void registerXRayFlags(FlagParser *P, Flags *F) XRAY_NEVER_INSTRUMENT {
 // options that control XRay. This means users/deployments can tweak the
 // defaults that override the hard-coded defaults in the xray_flags.inc at
 // compile-time using the XRAY_DEFAULT_OPTIONS macro.
-static const char *useCompilerDefinedFlags() XRAY_NEVER_INSTRUMENT {
+const char *useCompilerDefinedFlags() XRAY_NEVER_INSTRUMENT {
 #ifdef XRAY_DEFAULT_OPTIONS
-// Do the double-layered string conversion to prevent badly crafted strings
-// provided through the XRAY_DEFAULT_OPTIONS from causing compilation issues (or
-// changing the semantics of the implementation through the macro). This ensures
-// that we convert whatever XRAY_DEFAULT_OPTIONS is defined as a string literal.
+  // Do the double-layered string conversion to prevent badly crafted strings
+  // provided through the XRAY_DEFAULT_OPTIONS from causing compilation issues
+  // (or changing the semantics of the implementation through the macro). This
+  // ensures that we convert whatever XRAY_DEFAULT_OPTIONS is defined as a
+  // string literal.
   return SANITIZER_STRINGIFY(XRAY_DEFAULT_OPTIONS);
 #else
   return "";

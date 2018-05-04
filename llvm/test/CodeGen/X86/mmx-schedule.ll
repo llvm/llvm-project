@@ -3409,7 +3409,7 @@ define i64 @test_phsubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; ZNVER1-LABEL: test_phsubsw:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    phsubsw %mm1, %mm0 # sched: [100:?]
-; ZNVER1-NEXT:    phsubsw (%rdi), %mm0 # sched: [8:0.50]
+; ZNVER1-NEXT:    phsubsw (%rdi), %mm0 # sched: [100:?]
 ; ZNVER1-NEXT:    movq %mm0, %rax # sched: [2:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call x86_mmx @llvm.x86.ssse3.phsub.sw(x86_mmx %a0, x86_mmx %a1)

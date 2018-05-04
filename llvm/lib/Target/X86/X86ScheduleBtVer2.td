@@ -325,6 +325,9 @@ defm : JWriteResYMMPair<WriteFMulY,        [JFPU1, JFPM],  2, [2,2], 2>;
 defm : JWriteResFpuPair<WriteFMA,          [JFPU1, JFPM],  2>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteFMAS,         [JFPU1, JFPM],  2>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteFMAY,         [JFPU1, JFPM],  2>; // NOTE: Doesn't exist on Jaguar.
+defm : JWriteResFpuPair<WriteDPPD,   [JFPU1, JFPM, JFPA],  9, [1, 3, 3],  3>;
+defm : JWriteResFpuPair<WriteDPPS,   [JFPU1, JFPM, JFPA], 11, [1, 3, 3],  5>;
+defm : JWriteResYMMPair<WriteDPPSY,  [JFPU1, JFPM, JFPA], 12, [2, 6, 6], 10>;
 defm : JWriteResFpuPair<WriteFRcp,         [JFPU1, JFPM],  2>;
 defm : JWriteResYMMPair<WriteFRcpY,        [JFPU1, JFPM],  2, [2,2], 2>;
 defm : JWriteResFpuPair<WriteFRsqrt,       [JFPU1, JFPM],  2>;
@@ -483,38 +486,6 @@ defm : JWriteResFpuPair<WritePHAddY,      [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteCLMul,       [JFPU0, JVIMUL], 2>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// SSE4.1 instructions.
-////////////////////////////////////////////////////////////////////////////////
-
-def JWriteDPPS: SchedWriteRes<[JFPU1, JFPM, JFPA]> {
-  let Latency = 11;
-  let ResourceCycles = [1, 3, 3];
-  let NumMicroOps = 5;
-}
-def : InstRW<[JWriteDPPS], (instrs DPPSrri, VDPPSrri)>;
-
-def JWriteDPPSLd: SchedWriteRes<[JLAGU, JFPU1, JFPM, JFPA]> {
-  let Latency = 16;
-  let ResourceCycles = [1, 1, 3, 3];
-  let NumMicroOps = 5;
-}
-def : InstRW<[JWriteDPPSLd], (instrs DPPSrmi, VDPPSrmi)>;
-
-def JWriteDPPD: SchedWriteRes<[JFPU1, JFPM, JFPA]> {
-  let Latency = 9;
-  let ResourceCycles = [1, 3, 3];
-  let NumMicroOps = 3;
-}
-def : InstRW<[JWriteDPPD], (instrs DPPDrri, VDPPDrri)>;
-
-def JWriteDPPDLd: SchedWriteRes<[JLAGU, JFPU1, JFPM, JFPA]> {
-  let Latency = 14;
-  let ResourceCycles = [1, 1, 3, 3];
-  let NumMicroOps = 3;
-}
-def : InstRW<[JWriteDPPDLd], (instrs DPPDrmi, VDPPDrmi)>;
-
-////////////////////////////////////////////////////////////////////////////////
 // SSE4A instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -559,20 +530,6 @@ def : InstRW<[JWriteCVTPH2PSYLd], (instrs VCVTPH2PSYrm)>;
 ////////////////////////////////////////////////////////////////////////////////
 // AVX instructions.
 ////////////////////////////////////////////////////////////////////////////////
-
-def JWriteVDPPSY: SchedWriteRes<[JFPU1, JFPM, JFPA]> {
-  let Latency = 12;
-  let ResourceCycles = [2, 6, 6];
-  let NumMicroOps = 10;
-}
-def : InstRW<[JWriteVDPPSY], (instrs VDPPSYrri)>;
-
-def JWriteVDPPSYLd: SchedWriteRes<[JLAGU, JFPU1, JFPM, JFPA]> {
-  let Latency = 17;
-  let ResourceCycles = [2, 2, 6, 6];
-  let NumMicroOps = 10;
-}
-def : InstRW<[JWriteVDPPSYLd, ReadAfterLd], (instrs VDPPSYrmi)>;
 
 def JWriteVMULYPD: SchedWriteRes<[JFPU1, JFPM]> {
   let Latency = 4;

@@ -925,11 +925,12 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
     return None;
   }
   const SCEV* StepRec = IndVarBase->getStepRecurrence(SE);
-  ConstantInt *StepCI = dyn_cast<SCEVConstant>(StepRec)->getValue();
-  if (!StepCI) {
+  if (!isa<SCEVConstant>(StepRec)) {
     FailureReason = "LHS in icmp not induction variable";
     return None;
   }
+  ConstantInt *StepCI = cast<SCEVConstant>(StepRec)->getValue();
+
   if (ICI->isEquality() && !HasNoSignedWrap(IndVarBase)) {
     FailureReason = "LHS in icmp needs nsw for equality predicates";
     return None;

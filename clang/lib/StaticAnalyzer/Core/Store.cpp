@@ -378,21 +378,9 @@ SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
 ///  implicit casts that arise from loads from regions that are reinterpreted
 ///  as another region.
 SVal StoreManager::CastRetrievedVal(SVal V, const TypedValueRegion *R,
-                                    QualType castTy, bool performTestOnly) {
+                                    QualType castTy) {
   if (castTy.isNull() || V.isUnknownOrUndef())
     return V;
-
-  ASTContext &Ctx = svalBuilder.getContext();
-
-  if (performTestOnly) {
-    // Automatically translate references to pointers.
-    QualType T = R->getValueType();
-    if (const ReferenceType *RT = T->getAs<ReferenceType>())
-      T = Ctx.getPointerType(RT->getPointeeType());
-
-    assert(svalBuilder.getContext().hasSameUnqualifiedType(castTy, T));
-    return V;
-  }
 
   return svalBuilder.dispatchCast(V, castTy);
 }
