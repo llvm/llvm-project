@@ -155,10 +155,14 @@ multiclass xop3opimm<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 let ExeDomain = SSEPackedInt in {
-  defm VPROTB : xop3opimm<0xC0, "vprotb", X86vrotli, v16i8, SchedWriteVecShift.XMM>;
-  defm VPROTD : xop3opimm<0xC2, "vprotd", X86vrotli, v4i32, SchedWriteVecShift.XMM>;
-  defm VPROTQ : xop3opimm<0xC3, "vprotq", X86vrotli, v2i64, SchedWriteVecShift.XMM>;
-  defm VPROTW : xop3opimm<0xC1, "vprotw", X86vrotli, v8i16, SchedWriteVecShift.XMM>;
+  defm VPROTB : xop3opimm<0xC0, "vprotb", X86vrotli, v16i8,
+                          SchedWriteVecShiftImm.XMM>;
+  defm VPROTD : xop3opimm<0xC2, "vprotd", X86vrotli, v4i32,
+                          SchedWriteVecShiftImm.XMM>;
+  defm VPROTQ : xop3opimm<0xC3, "vprotq", X86vrotli, v2i64,
+                          SchedWriteVecShiftImm.XMM>;
+  defm VPROTW : xop3opimm<0xC1, "vprotw", X86vrotli, v8i16,
+                          SchedWriteVecShiftImm.XMM>;
 }
 
 // Instruction where second source can be memory, but third must be register

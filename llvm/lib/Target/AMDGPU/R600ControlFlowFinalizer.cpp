@@ -308,7 +308,7 @@ private:
           DstMI = Reg;
         else
           DstMI = TRI->getMatchingSuperReg(Reg,
-              TRI->getSubRegFromChannel(TRI->getHWRegChan(Reg)),
+              AMDGPURegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
               &AMDGPU::R600_Reg128RegClass);
       }
       if (MO.isUse()) {
@@ -317,7 +317,7 @@ private:
           SrcMI = Reg;
         else
           SrcMI = TRI->getMatchingSuperReg(Reg,
-              TRI->getSubRegFromChannel(TRI->getHWRegChan(Reg)),
+              AMDGPURegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
               &AMDGPU::R600_Reg128RegClass);
       }
     }

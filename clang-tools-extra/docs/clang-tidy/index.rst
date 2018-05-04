@@ -112,11 +112,6 @@ An overview of all the command-line options:
 
   clang-tidy options:
 
-    -analyze-temporary-dtors     -
-                                   Enable temporary destructor-aware analysis in
-                                   clang-analyzer- checks.
-                                   This option overrides the value read from a
-                                   .clang-tidy file.
     -checks=<string>             -
                                    Comma-separated list of globs with optional '-'
                                    prefix. Globs are processed in order of
@@ -245,7 +240,6 @@ An overview of all the command-line options:
       Checks:          '-*,some-check'
       WarningsAsErrors: ''
       HeaderFilterRegex: ''
-      AnalyzeTemporaryDtors: false
       FormatStyle:     none
       User:            user
       CheckOptions:

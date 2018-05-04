@@ -5257,12 +5257,48 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // PHI nodes have already been selected, so we should know which VReg that
     // is assigns to already.
     if (isa<PHINode>(V)) {
-      auto It = FuncInfo.ValueMap.find(V);
-      if (It != FuncInfo.ValueMap.end()) {
-        unsigned Reg = It->second;
-        SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
-                                  SDNodeOrder);
-        DAG.AddDbgValue(SDV, nullptr, false);
+      auto VMI = FuncInfo.ValueMap.find(V);
+      if (VMI != FuncInfo.ValueMap.end()) {
+        unsigned Reg = VMI->second;
+        // The PHI node may be split up into several MI PHI nodes (in
+        // FunctionLoweringInfo::set).
+        RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
+                         V->getType(), false);
+        if (RFV.occupiesMultipleRegs()) {
+          unsigned I = 0;
+          unsigned Offset = 0;
+          unsigned BitsToDescribe = 0;
+          if (auto VarSize = Variable->getSizeInBits())
+            BitsToDescribe = *VarSize;
+          if (auto Fragment = Expression->getFragmentInfo())
+            BitsToDescribe = Fragment->SizeInBits;
+          for (auto CountAndVT : zip_first(RFV.RegCount, RFV.RegVTs)) {
+            unsigned RegCount = std::get<0>(CountAndVT);
+            MVT RegisterVT = std::get<1>(CountAndVT);
+            unsigned RegisterSize = RegisterVT.getSizeInBits();
+            for (unsigned E = I + RegCount; I != E; ++I) {
+              // Bail out if all bits already are described.
+              if (Offset >= BitsToDescribe)
+                break;
+              unsigned FragmentSize = (Offset + RegisterSize > BitsToDescribe)
+                  ? BitsToDescribe - Offset
+                  : RegisterSize;
+              auto FragmentExpr = DIExpression::createFragmentExpression(
+                  Expression, Offset, FragmentSize);
+              if (!FragmentExpr)
+                continue;
+              // The vregs are guaranteed to be allocated in sequence.
+              SDV = DAG.getVRegDbgValue(Variable, *FragmentExpr, Reg + I,
+                                        false, dl, SDNodeOrder);
+              DAG.AddDbgValue(SDV, nullptr, false);
+              Offset += RegisterSize;
+            }
+          }
+        } else {
+          SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
+                                    SDNodeOrder);
+          DAG.AddDbgValue(SDV, nullptr, false);
+        }
         return nullptr;
       }
     }

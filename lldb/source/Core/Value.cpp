@@ -669,6 +669,25 @@ const char *Value::GetContextTypeAsCString(ContextType context_type) {
   return "???";
 }
 
+void Value::ConvertToLoadAddress(Module *module, Target *target) {
+  if (!module || !target || (GetValueType() != eValueTypeFileAddress))
+    return;
+
+  lldb::addr_t file_addr = GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  if (file_addr == LLDB_INVALID_ADDRESS)
+    return;
+
+  Address so_addr;
+  if (!module->ResolveFileAddress(file_addr, so_addr))
+    return;
+  lldb::addr_t load_addr = so_addr.GetLoadAddress(target);
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return;
+
+  SetValueType(Value::eValueTypeLoadAddress);
+  GetScalar() = load_addr;
+}
+
 ValueList::ValueList(const ValueList &rhs) { m_values = rhs.m_values; }
 
 const ValueList &ValueList::operator=(const ValueList &rhs) {

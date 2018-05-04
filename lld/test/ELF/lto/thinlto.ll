@@ -33,6 +33,15 @@
 ; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t.o %t4.o -o %t5 2>&1 | FileCheck %s --check-prefix=ERR
 ; ERR: failed to write {{.*}}4.o.thinlto.bc: {{P|p}}ermission denied
 
+; Ensure lld doesn't generates index files when thinlto-index-only is not enabled
+; RUN: rm -f %t.o.thinlto.bc
+; RUN: rm -f %t2.o.thinlto.bc
+; RUN: rm -f %t4.o.thinlto.bc
+; RUN: ld.lld -m elf_x86_64 -shared %t.o %t2.o %t4.o -o %t5
+; RUN: not ls %t.o.thinlto.bc
+; RUN: not ls %t2.o.thinlto.bc
+; RUN: not ls %t4.o.thinlto.bc
+
 ; First force single-threaded mode
 ; RUN: rm -f %t.lto.o %t1.lto.o
 ; RUN: ld.lld -save-temps --thinlto-jobs=1 -shared %t.o %t2.o -o %t

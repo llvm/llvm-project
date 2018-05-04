@@ -445,15 +445,13 @@ bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
   // Heuristics #3: If the common subexpression is used by PHIs, do not reuse
   // it unless the defined value is already used in the BB of the new use.
   bool HasPHI = false;
-  SmallPtrSet<MachineBasicBlock*, 4> CSBBs;
-  for (MachineInstr &MI : MRI->use_nodbg_instructions(CSReg)) {
-    HasPHI |= MI.isPHI();
-    CSBBs.insert(MI.getParent());
+  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(CSReg)) {
+    HasPHI |= UseMI.isPHI();
+    if (UseMI.getParent() == MI->getParent())
+      return true;
   }
 
-  if (!HasPHI)
-    return true;
-  return CSBBs.count(MI->getParent());
+  return !HasPHI;
 }
 
 void MachineCSE::EnterScope(MachineBasicBlock *MBB) {

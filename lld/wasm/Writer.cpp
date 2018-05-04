@@ -580,22 +580,48 @@ void Writer::writeSections() {
 
 // Fix the memory layout of the output binary.  This assigns memory offsets
 // to each of the input data sections as well as the explicit stack region.
-// The memory layout is as follows, from low to high.
+// The default memory layout is as follows, from low to high.
+//
 //  - initialized data (starting at Config->GlobalBase)
 //  - BSS data (not currently implemented in llvm)
 //  - explicit stack (Config->ZStackSize)
 //  - heap start / unallocated
+//
+// The --stack-first option means that stack is placed before any static data.
+// This can be useful since it means that stack overflow traps immediately rather
+// than overwriting global data, but also increases code size since all static
+// data loads and stores requires larger offsets.
 void Writer::layoutMemory() {
-  uint32_t MemoryPtr = 0;
-  MemoryPtr = Config->GlobalBase;
-  log("mem: global base = " + Twine(Config->GlobalBase));
-
   createOutputSegments();
+
+  uint32_t MemoryPtr = 0;
+
+  auto PlaceStack = [&]() {
+    if (Config->Relocatable)
+      return;
+    MemoryPtr = alignTo(MemoryPtr, kStackAlignment);
+    if (Config->ZStackSize != alignTo(Config->ZStackSize, kStackAlignment))
+      error("stack size must be " + Twine(kStackAlignment) + "-byte aligned");
+    log("mem: stack size  = " + Twine(Config->ZStackSize));
+    log("mem: stack base  = " + Twine(MemoryPtr));
+    MemoryPtr += Config->ZStackSize;
+    WasmSym::StackPointer->Global->Global.InitExpr.Value.Int32 = MemoryPtr;
+    log("mem: stack top   = " + Twine(MemoryPtr));
+  };
+
+  if (Config->StackFirst) {
+    PlaceStack();
+  } else {
+    MemoryPtr = Config->GlobalBase;
+    log("mem: global base = " + Twine(Config->GlobalBase));
+  }
+
+  uint32_t DataStart = MemoryPtr;
 
   // Arbitrarily set __dso_handle handle to point to the start of the data
   // segments.
   if (WasmSym::DsoHandle)
-    WasmSym::DsoHandle->setVirtualAddress(MemoryPtr);
+    WasmSym::DsoHandle->setVirtualAddress(DataStart);
 
   for (OutputSegment *Seg : Segments) {
     MemoryPtr = alignTo(MemoryPtr, Seg->Alignment);
@@ -609,22 +635,15 @@ void Writer::layoutMemory() {
   if (WasmSym::DataEnd)
     WasmSym::DataEnd->setVirtualAddress(MemoryPtr);
 
-  log("mem: static data = " + Twine(MemoryPtr - Config->GlobalBase));
+  log("mem: static data = " + Twine(MemoryPtr - DataStart));
 
-  // Stack comes after static data and bss
+  if (!Config->StackFirst)
+    PlaceStack();
+
+  // Set `__heap_base` to directly follow the end of the stack or global data.
+  // The fact that this comes last means that a malloc/brk implementation
+  // can grow the heap at runtime.
   if (!Config->Relocatable) {
-    MemoryPtr = alignTo(MemoryPtr, kStackAlignment);
-    if (Config->ZStackSize != alignTo(Config->ZStackSize, kStackAlignment))
-      error("stack size must be " + Twine(kStackAlignment) + "-byte aligned");
-    log("mem: stack size  = " + Twine(Config->ZStackSize));
-    log("mem: stack base  = " + Twine(MemoryPtr));
-    MemoryPtr += Config->ZStackSize;
-    WasmSym::StackPointer->Global->Global.InitExpr.Value.Int32 = MemoryPtr;
-    log("mem: stack top   = " + Twine(MemoryPtr));
-
-    // Set `__heap_base` to directly follow the end of the stack.  We don't
-    // allocate any heap memory up front, but instead really on the malloc/brk
-    // implementation growing the memory at runtime.
     WasmSym::HeapBase->setVirtualAddress(MemoryPtr);
     log("mem: heap base   = " + Twine(MemoryPtr));
   }

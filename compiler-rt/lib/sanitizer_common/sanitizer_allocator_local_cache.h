@@ -262,8 +262,7 @@ struct SizeClassAllocator32LocalCache {
     // TODO(alekseys): Figure out how to do it without allocating a new batch.
     if (UNLIKELY(!b))
       DieOnFailure::OnOOM();
-    b->SetFromArray(allocator->GetRegionBeginBySizeClass(class_id),
-                    &c->batch[first_idx_to_drain], count);
+    b->SetFromArray(&c->batch[first_idx_to_drain], count);
     c->count -= count;
     allocator->DeallocateBatch(&stats_, class_id, b);
   }

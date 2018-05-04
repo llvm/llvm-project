@@ -219,8 +219,8 @@ int main() {
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[SIVAR_ADDR]],
 
 // T_VAR and SIVAR
-// CHECK-DAG-64: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
-// CHECK-DAG-64: [[CONV_SIVAR:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
+// CHECK-64-DAG: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
+// CHECK-64-DAG: [[CONV_SIVAR:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
 
 // preparation vars
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
@@ -250,13 +250,13 @@ int main() {
 // CHECK-DAG: call void @{{.+}}({{.+}} [[AGG_TMP2]])
 
 // CHECK: call void @__kmpc_for_static_init_4(
-// CHECK-DAG-32: {{.+}} = {{.+}} [[T_VAR_ADDR]]
-// CHECK-DAG-64: {{.+}} = {{.+}} [[CONV_TVAR]]
+// CHECK-32-DAG: {{.+}} = {{.+}} [[T_VAR_ADDR]]
+// CHECK-64-DAG: {{.+}} = {{.+}} [[CONV_TVAR]]
 // CHECK-DAG: {{.+}} = {{.+}} [[VEC_PRIV]]
 // CHECK-DAG: {{.+}} = {{.+}} [[S_ARR_PRIV]]
 // CHECK-DAG: {{.+}} = {{.+}} [[VAR_PRIV]]
-// CHECK-DAG-32: {{.+}} = {{.+}} [[SIVAR_ADDR]]
-// CHECK-DAG-64: {{.+}} = {{.+}} [[CONV_SIVAR]]
+// CHECK-32-DAG: {{.+}} = {{.+}} [[SIVAR_ADDR]]
+// CHECK-64-DAG: {{.+}} = {{.+}} [[CONV_SIVAR]]
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
@@ -338,8 +338,8 @@ int main() {
 // CHECK-DAG: store [[S_INT_TY]]* [[VAR_PRIV]], [[S_INT_TY]]** [[TMP]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
-// CHECK-DAG-32: {{.+}} = {{.+}} [[T_VAR_ADDR]]
-// CHECK-DAG-64: {{.+}} = {{.+}} [[CONV_TVAR]]
+// CHECK-32-DAG: {{.+}} = {{.+}} [[T_VAR_ADDR]]
+// CHECK-64-DAG: {{.+}} = {{.+}} [[CONV_TVAR]]
 // CHECK-DAG: {{.+}} = {{.+}} [[VEC_PRIV]]
 // CHECK-DAG: {{.+}} = {{.+}} [[TMP]]
 // CHECK-DAG: {{.+}} = {{.+}} [[S_ARR_PRIV]]

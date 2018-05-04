@@ -47,7 +47,7 @@ bool MemIndex::fuzzyFind(
         continue;
 
       if (auto Score = Filter.match(Sym->Name)) {
-        Top.emplace(-*Score, Sym);
+        Top.emplace(-*Score * quality(*Sym), Sym);
         if (Top.size() > Req.MaxCandidateCount) {
           More = true;
           Top.pop();

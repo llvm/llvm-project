@@ -58,12 +58,10 @@ TEST(ParseConfiguration, ValidConfiguration) {
   llvm::ErrorOr<ClangTidyOptions> Options =
       parseConfiguration("Checks: \"-*,misc-*\"\n"
                          "HeaderFilterRegex: \".*\"\n"
-                         "AnalyzeTemporaryDtors: true\n"
                          "User: some.user");
   EXPECT_TRUE(!!Options);
   EXPECT_EQ("-*,misc-*", *Options->Checks);
   EXPECT_EQ(".*", *Options->HeaderFilterRegex);
-  EXPECT_TRUE(*Options->AnalyzeTemporaryDtors);
   EXPECT_EQ("some.user", *Options->User);
 }
 
@@ -71,7 +69,6 @@ TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options1 = parseConfiguration(R"(
       Checks: "check1,check2"
       HeaderFilterRegex: "filter1"
-      AnalyzeTemporaryDtors: true
       User: user1
       ExtraArgs: ['arg1', 'arg2']
       ExtraArgsBefore: ['arg-before1', 'arg-before2']
@@ -80,7 +77,6 @@ TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options2 = parseConfiguration(R"(
       Checks: "check3,check4"
       HeaderFilterRegex: "filter2"
-      AnalyzeTemporaryDtors: false
       User: user2
       ExtraArgs: ['arg3', 'arg4']
       ExtraArgsBefore: ['arg-before3', 'arg-before4']
@@ -89,7 +85,6 @@ TEST(ParseConfiguration, MergeConfigurations) {
   ClangTidyOptions Options = Options1->mergeWith(*Options2);
   EXPECT_EQ("check1,check2,check3,check4", *Options.Checks);
   EXPECT_EQ("filter2", *Options.HeaderFilterRegex);
-  EXPECT_FALSE(*Options.AnalyzeTemporaryDtors);
   EXPECT_EQ("user2", *Options.User);
   ASSERT_TRUE(Options.ExtraArgs.hasValue());
   EXPECT_EQ("arg1,arg2,arg3,arg4", llvm::join(Options.ExtraArgs->begin(),

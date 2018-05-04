@@ -77,7 +77,7 @@ set(lldbDebugserverCommonSources
   RNBSocket.cpp
   SysSignal.cpp
   TTYState.cpp
-  
+
   MacOSX/CFBundle.cpp
   MacOSX/CFString.cpp
   MacOSX/Genealogy.cpp
@@ -99,7 +99,7 @@ set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
 
 if(NOT LLDB_CODESIGN_IDENTITY STREQUAL "")
-  set(DEBUGSERVER_PATH $<TARGET_FILE:debugserver> CACHE PATH "Path to debugserver.")
+  set(DEBUGSERVER_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/debugserver${CMAKE_EXECUTABLE_SUFFIX} CACHE PATH "Path to debugserver.")
   set(SKIP_DEBUGSERVER OFF CACHE BOOL "Skip building the in-tree debug server")
 else()
   execute_process(
