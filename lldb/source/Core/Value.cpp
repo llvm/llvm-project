@@ -676,11 +676,8 @@ const char *Value::GetContextTypeAsCString(ContextType context_type) {
   return "???";
 }
 
-void Value::ConvertToLoadAddress(SymbolContext sc) {
-  if (GetValueType() != eValueTypeFileAddress)
-    return;
-
-  if (!sc.module_sp)
+void Value::ConvertToLoadAddress(Module *module, Target *target) {
+  if (!module || !target || (GetValueType() != eValueTypeFileAddress))
     return;
 
   lldb::addr_t file_addr = GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
@@ -688,9 +685,9 @@ void Value::ConvertToLoadAddress(SymbolContext sc) {
     return;
 
   Address so_addr;
-  if (!sc.module_sp->ResolveFileAddress(file_addr, so_addr))
+  if (!module->ResolveFileAddress(file_addr, so_addr))
     return;
-  lldb::addr_t load_addr = so_addr.GetLoadAddress(sc.target_sp.get());
+  lldb::addr_t load_addr = so_addr.GetLoadAddress(target);
   if (load_addr == LLDB_INVALID_ADDRESS)
     return;
 

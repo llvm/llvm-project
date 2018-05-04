@@ -251,10 +251,9 @@ bool ValueObjectVariable::UpdateValue() {
         // If this variable is a simple type, we read all data for it into
         // m_data. Make sure this type has a value before we try and read it
 
-        SymbolContext var_sc;
-        variable->CalculateSymbolContext(&var_sc);
         // If we have a file address, convert it to a load address if we can.
-        m_value.ConvertToLoadAddress(var_sc);
+        if (value_type == Value::eValueTypeFileAddress && process_is_alive)
+          m_value.ConvertToLoadAddress(GetModule().get(), target);
 
         if (!CanProvideValue()) {
           // this value object represents an aggregate type whose
