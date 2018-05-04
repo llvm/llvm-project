@@ -162,14 +162,14 @@ protected:
   // with an on-disk dyld_shared_cache file.  The process will record
   // the shared cache UUID so the on-disk cache can be matched or rejected
   // correctly.
-  lldb_private::UUID GetProcessSharedCacheUUID(lldb_private::Process *);
+  void GetProcessSharedCacheUUID(lldb_private::Process *, lldb::addr_t &base_addr, lldb_private::UUID &uuid);
 
   // Intended for same-host arm device debugging where lldb will read
   // shared cache libraries out of its own memory instead of the remote
   // process' memory as an optimization.  If lldb's shared cache UUID
   // does not match the process' shared cache UUID, this optimization
   // should not be used.
-  lldb_private::UUID GetLLDBSharedCacheUUID();
+  void GetLLDBSharedCacheUUID(lldb::addr_t &base_addir, lldb_private::UUID &uuid);
 
   lldb_private::Section *GetMachHeaderSection();
 
