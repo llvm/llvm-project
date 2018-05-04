@@ -6026,15 +6026,15 @@ let Predicates = [HasAVX] in {
   let ExeDomain = SSEPackedSingle in
   defm VDPPS : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_sse41_dpps,
                                    VR128, loadv4f32, f128mem, 0,
-                                   SchedWriteFAdd.XMM>, VEX_4V, VEX_WIG;
+                                   SchedWriteDPPS.XMM>, VEX_4V, VEX_WIG;
   let ExeDomain = SSEPackedDouble in
   defm VDPPD : SS41I_binop_rmi_int<0x41, "vdppd", int_x86_sse41_dppd,
                                    VR128, loadv2f64, f128mem, 0,
-                                   SchedWriteFAdd.XMM>, VEX_4V, VEX_WIG;
+                                   SchedWriteDPPD.XMM>, VEX_4V, VEX_WIG;
   let ExeDomain = SSEPackedSingle in
   defm VDPPSY : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_avx_dp_ps_256,
                                     VR256, loadv8f32, i256mem, 0,
-                                    SchedWriteFAdd.YMM>, VEX_4V, VEX_L, VEX_WIG;
+                                    SchedWriteDPPS.YMM>, VEX_4V, VEX_L, VEX_WIG;
 }
 
 let Predicates = [HasAVX2] in {
@@ -6055,11 +6055,11 @@ let Constraints = "$src1 = $dst" in {
   let ExeDomain = SSEPackedSingle in
   defm DPPS : SS41I_binop_rmi_int<0x40, "dpps", int_x86_sse41_dpps,
                                   VR128, memopv4f32, f128mem, 1,
-                                  SchedWriteFAdd.XMM>;
+                                  SchedWriteDPPS.XMM>;
   let ExeDomain = SSEPackedDouble in
   defm DPPD : SS41I_binop_rmi_int<0x41, "dppd", int_x86_sse41_dppd,
                                   VR128, memopv2f64, f128mem, 1,
-                                  SchedWriteFAdd.XMM>;
+                                  SchedWriteDPPD.XMM>;
 }
 
 /// SS41I_blend_rmi - SSE 4.1 blend with 8-bit immediate

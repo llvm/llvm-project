@@ -43,14 +43,10 @@ exit:
 define i32 @compare_against_zero(i32 %x) {
 ; CHECK-LABEL: @compare_against_zero(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i32 [[X]], 31
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], 1
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP1]], i32 0, i32 [[TMP1]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SELECT2]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
 ; CHECK:       callfoo:
-; CHECK-NEXT:    call void @foo(i32 [[SELECT2]])
+; CHECK-NEXT:    call void @foo(i32 1)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 42
@@ -273,15 +269,10 @@ exit:
 define i32 @compare_against_zero_non_idiomatic_add(i32 %x) {
 ; CHECK-LABEL: @compare_against_zero_non_idiomatic_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i32 [[X]], 31
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -431
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], 425
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP1]], i32 0, i32 [[TMP2]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SELECT2]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
 ; CHECK:       callfoo:
-; CHECK-NEXT:    call void @foo(i32 [[SELECT2]])
+; CHECK-NEXT:    call void @foo(i32 425)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 42
@@ -336,15 +327,10 @@ exit:
 define i32 @compare_against_zero_non_idiomatic_or(i32 %x) {
 ; CHECK-LABEL: @compare_against_zero_non_idiomatic_or(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i32 [[X]], 31
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -430
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 425
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP1]], i32 0, i32 [[TMP2]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SELECT2]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
 ; CHECK:       callfoo:
-; CHECK-NEXT:    call void @foo(i32 [[SELECT2]])
+; CHECK-NEXT:    call void @foo(i32 425)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 42
@@ -402,17 +388,10 @@ exit:
 define i32 @compare_against_zero_type_mismatch_idiomatic(i64 %x) {
 ; CHECK-LABEL: @compare_against_zero_type_mismatch_idiomatic(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[X]], 62
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], -1
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP1]], i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SELECT2]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
 ; CHECK:       callfoo:
-; CHECK-NEXT:    call void @foo(i32 [[SELECT2]])
+; CHECK-NEXT:    call void @foo(i32 1)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 42
@@ -437,17 +416,10 @@ exit:
 define i32 @compare_against_zero_type_mismatch_non_idiomatic_1(i64 %x) {
 ; CHECK-LABEL: @compare_against_zero_type_mismatch_non_idiomatic_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[X]], 60
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], -7
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP1]], i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[SELECT2]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[CALLFOO:%.*]], label [[EXIT:%.*]]
 ; CHECK:       callfoo:
-; CHECK-NEXT:    call void @foo(i32 [[SELECT2]])
+; CHECK-NEXT:    call void @foo(i32 1)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 42

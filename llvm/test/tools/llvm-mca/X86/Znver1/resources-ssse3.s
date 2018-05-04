@@ -139,7 +139,7 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  1      100    -                      	phsubd	%xmm0, %xmm2
 # CHECK-NEXT:  1      100    -      *               	phsubd	(%rax), %xmm2
 # CHECK-NEXT:  1      100    -                      	phsubsw	%mm0, %mm2
-# CHECK-NEXT:  1      8     0.50    *               	phsubsw	(%rax), %mm2
+# CHECK-NEXT:  1      100    -      *               	phsubsw	(%rax), %mm2
 # CHECK-NEXT:  1      100    -                      	phsubsw	%xmm0, %xmm2
 # CHECK-NEXT:  1      100    -      *               	phsubsw	(%rax), %xmm2
 # CHECK-NEXT:  1      100    -                      	phsubw	%mm0, %mm2
@@ -187,7 +187,7 @@ psignw      (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 10.50  10.50   -      -      -      -      -     16.25  8.25   8.25   8.25    -
+# CHECK-NEXT: 10.00  10.00   -      -      -      -      -     16.00  8.00   8.00   8.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   	Instructions:
@@ -224,7 +224,7 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	phsubd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	phsubd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	phsubsw	%mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     	phsubsw	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	phsubsw	(%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	phsubsw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	phsubsw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	phsubw	%mm0, %mm2

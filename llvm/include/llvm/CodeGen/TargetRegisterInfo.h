@@ -995,6 +995,12 @@ public:
   /// of the set as well.
   bool checkAllSuperRegsMarked(const BitVector &RegisterSet,
       ArrayRef<MCPhysReg> Exceptions = ArrayRef<MCPhysReg>()) const;
+
+  virtual const TargetRegisterClass *
+  getConstrainedRegClassForOperand(const MachineOperand &MO,
+                                   const MachineRegisterInfo &MRI) const {
+    return nullptr;
+  }
 };
 
 //===----------------------------------------------------------------------===//

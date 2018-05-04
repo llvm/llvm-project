@@ -2284,7 +2284,7 @@ static bool hasRequiredFeatures(const SmallVectorImpl<StringRef> &ReqFeatures,
   return std::all_of(
       ReqFeatures.begin(), ReqFeatures.end(), [&](StringRef Feature) {
         SmallVector<StringRef, 1> OrFeatures;
-        Feature.split(OrFeatures, "|");
+        Feature.split(OrFeatures, '|');
         return std::any_of(OrFeatures.begin(), OrFeatures.end(),
                            [&](StringRef Feature) {
                              if (!CallerFeatureMap.lookup(Feature)) {
@@ -2322,7 +2322,7 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
     // Return if the builtin doesn't have any required features.
     if (!FeatureList || StringRef(FeatureList) == "")
       return;
-    StringRef(FeatureList).split(ReqFeatures, ",");
+    StringRef(FeatureList).split(ReqFeatures, ',');
     if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
       CGM.getDiags().Report(E->getLocStart(), diag::err_builtin_needs_feature)
           << TargetDecl->getDeclName()

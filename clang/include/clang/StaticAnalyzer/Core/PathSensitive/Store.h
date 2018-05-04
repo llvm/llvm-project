@@ -282,8 +282,8 @@ protected:
   /// CastRetrievedVal - Used by subclasses of StoreManager to implement
   ///  implicit casts that arise from loads from regions that are reinterpreted
   ///  as another region.
-  SVal CastRetrievedVal(SVal val, const TypedValueRegion *region, 
-                        QualType castTy, bool performTestOnly = true);
+  SVal CastRetrievedVal(SVal val, const TypedValueRegion *region,
+                        QualType castTy);
 
 private:
   SVal getLValueFieldOrIvar(const Decl *decl, SVal base);
