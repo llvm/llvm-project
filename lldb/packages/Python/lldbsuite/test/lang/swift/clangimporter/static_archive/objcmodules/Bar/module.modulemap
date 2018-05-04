@@ -1,0 +1,3 @@
+module CBar {
+  header "CBar.h"
+}
