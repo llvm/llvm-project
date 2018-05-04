@@ -15,8 +15,28 @@ if (NOT LLDB_TEST_USE_CUSTOM_CXX_COMPILER)
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TEST_CXX_COMPILER ${LLDB_TEST_CXX_COMPILER})
 endif ()
 
+get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)
+
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
+string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+
+list(APPEND LLDB_TEST_DEPS
+  LLDBUnitTests
+  dsymutil
+  lldb
+  lldb-test
+  llvm-config
+  llvm-mc
+  llvm-objcopy
+  )
+
+if(TARGET lld)
+  list(APPEND LLDB_TEST_DEPS lld)
+  set(LLDB_HAVE_LLD 1)
+else()
+  set(LLDB_HAVE_LLD 0)
+endif()
 
 if(BUILD_SHARED_LIBS)
   set(ENABLE_SHARED 1)
@@ -33,34 +53,16 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
-  )
-
-set(LLDB_TEST_DEPS
-  LLDBUnitTests
-  dsymutil
-  lldb
-  lldb-test
-  llvm-config
-  llvm-mc
-  llvm-objcopy
-  )
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Suite/lit.site.cfg.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Suite/lit.site.cfg)
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS FileCheck not yaml2obj)
-endif()
-  
-# lldb-server is not built on every platform.
-if (TARGET lldb-server)
-  list(APPEND LLDB_TEST_DEPS lldb-server)
-endif()
-  
-if(APPLE)
-  list(APPEND LLDB_TEST_DEPS debugserver)
-endif()
-
-if(TARGET clang)
-  list(APPEND LLDB_TEST_DEPS clang)
+  list(APPEND LLDB_TEST_DEPS
+    FileCheck
+    not
+    )
 endif()
 
 set(LLDB_TEST_PARAMS

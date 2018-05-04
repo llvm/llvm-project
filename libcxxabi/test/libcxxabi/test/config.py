@@ -49,7 +49,10 @@ class Configuration(LibcxxConfiguration):
             self.config.available_features.add('libcxxabi-has-system-unwinder')
 
     def configure_compile_flags(self):
-        self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']
+        self.cxx.compile_flags += [
+            '-DLIBCXXABI_NO_TIMER',
+            '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS',
+        ]
         if self.get_lit_bool('enable_exceptions', True):
             self.cxx.compile_flags += ['-funwind-tables']
         else:

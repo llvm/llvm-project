@@ -2280,17 +2280,17 @@ size_t ObjectFileMachO::ParseSymtab() {
           // this by reading the memory for the __LINKEDIT section from this
           // process.
 
-          UUID lldb_shared_cache(GetLLDBSharedCacheUUID());
-          UUID process_shared_cache(GetProcessSharedCacheUUID(process));
+          UUID lldb_shared_cache;
+          addr_t lldb_shared_cache_addr;
+          GetLLDBSharedCacheUUID (lldb_shared_cache_addr, lldb_shared_cache);
+          UUID process_shared_cache;
+          addr_t process_shared_cache_addr;
+          GetProcessSharedCacheUUID(process, process_shared_cache_addr, process_shared_cache);
           bool use_lldb_cache = true;
           if (lldb_shared_cache.IsValid() && process_shared_cache.IsValid() &&
-              lldb_shared_cache != process_shared_cache) {
+              (lldb_shared_cache != process_shared_cache
+               || process_shared_cache_addr != lldb_shared_cache_addr)) {
             use_lldb_cache = false;
-            ModuleSP module_sp(GetModule());
-            if (module_sp)
-              module_sp->ReportWarning("shared cache in process does not match "
-                                       "lldb's own shared cache, startup will "
-                                       "be slow.");
           }
 
           PlatformSP platform_sp(target.GetPlatform());
@@ -2605,9 +2605,10 @@ size_t ObjectFileMachO::ParseSymtab() {
 
       UUID dsc_uuid;
       UUID process_shared_cache_uuid;
+      addr_t process_shared_cache_base_addr;
 
       if (process) {
-        process_shared_cache_uuid = GetProcessSharedCacheUUID(process);
+        GetProcessSharedCacheUUID(process, process_shared_cache_base_addr, process_shared_cache_uuid);
       }
 
       // First see if we can find an exact match for the inferior process
@@ -5577,24 +5578,40 @@ bool ObjectFileMachO::GetArchitecture(ArchSpec &arch) {
   return false;
 }
 
-UUID ObjectFileMachO::GetProcessSharedCacheUUID(Process *process) {
-  UUID uuid;
+void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process, addr_t &base_addr, UUID &uuid) {
+  uuid.Clear();
+  base_addr = LLDB_INVALID_ADDRESS;
   if (process && process->GetDynamicLoader()) {
     DynamicLoader *dl = process->GetDynamicLoader();
-    addr_t load_address;
     LazyBool using_shared_cache;
     LazyBool private_shared_cache;
-    dl->GetSharedCacheInformation(load_address, uuid, using_shared_cache,
+    dl->GetSharedCacheInformation(base_addr, uuid, using_shared_cache,
                                   private_shared_cache);
   }
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
   if (log)
-    log->Printf("inferior process shared cache has a UUID of %s", uuid.GetAsString().c_str());
-  return uuid;
+    log->Printf("inferior process shared cache has a UUID of %s, base address 0x%" PRIx64 , uuid.GetAsString().c_str(), base_addr);
 }
 
-UUID ObjectFileMachO::GetLLDBSharedCacheUUID() {
-  UUID uuid;
+// From dyld SPI header dyld_process_info.h
+typedef void *dyld_process_info;
+struct lldb_copy__dyld_process_cache_info {
+  uuid_t cacheUUID;          // UUID of cache used by process
+  uint64_t cacheBaseAddress; // load address of dyld shared cache
+  bool noCache;              // process is running without a dyld cache
+  bool privateCache; // process is using a private copy of its dyld cache
+};
+
+// #including mach/mach.h pulls in machine.h & CPU_TYPE_ARM etc conflicts with llvm
+// enum definitions llvm::MachO::CPU_TYPE_ARM turning them into compile errors.
+// So we need to use the actual underlying types of task_t and kern_return_t
+// below.
+extern "C" unsigned int /*task_t*/ mach_task_self(); 
+
+void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
+  uuid.Clear();
+  base_addr = LLDB_INVALID_ADDRESS;
+
 #if defined(__APPLE__) &&                                                      \
     (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
   uint8_t *(*dyld_get_all_image_infos)(void);
@@ -5612,30 +5629,54 @@ UUID ObjectFileMachO::GetLLDBSharedCacheUUID() {
           sharedCacheUUID_address =
               (uuid_t *)((uint8_t *)dyld_all_image_infos_address +
                          160); // sharedCacheUUID <mach-o/dyld_images.h>
+          if (*version >= 15)
+            base_addr = *(uint64_t *) ((uint8_t *) dyld_all_image_infos_address 
+                          + 176); // sharedCacheBaseAddress <mach-o/dyld_images.h>
         } else {
           sharedCacheUUID_address =
               (uuid_t *)((uint8_t *)dyld_all_image_infos_address +
                          84); // sharedCacheUUID <mach-o/dyld_images.h>
+          if (*version >= 15) {
+            base_addr = 0;
+            base_addr = *(uint32_t *) ((uint8_t *) dyld_all_image_infos_address 
+                          + 100); // sharedCacheBaseAddress <mach-o/dyld_images.h>
+          }
         }
         uuid.SetBytes(sharedCacheUUID_address);
       }
     }
   } else {
     // Exists in macOS 10.12 and later, iOS 10.0 and later - dyld SPI
-    bool *(*dyld_get_shared_cache_uuid)(uuid_t);
-    dyld_get_shared_cache_uuid = (bool *(*)(uuid_t))
-        dlsym(RTLD_DEFAULT, "_dyld_get_shared_cache_uuid");
-    if (dyld_get_shared_cache_uuid) {
-      uuid_t tmp_uuid;
-      if (dyld_get_shared_cache_uuid(tmp_uuid))
-        uuid.SetBytes(tmp_uuid);
+    dyld_process_info (*dyld_process_info_create)(unsigned int /* task_t */ task, uint64_t timestamp, unsigned int /*kern_return_t*/ *kernelError);
+    void (*dyld_process_info_get_cache)(void *info, void *cacheInfo);
+    void (*dyld_process_info_release)(dyld_process_info info);
+
+    dyld_process_info_create = (void *(*)(unsigned int /* task_t */, uint64_t, unsigned int /*kern_return_t*/ *))
+               dlsym (RTLD_DEFAULT, "_dyld_process_info_create");
+    dyld_process_info_get_cache = (void (*)(void *, void *))
+               dlsym (RTLD_DEFAULT, "_dyld_process_info_get_cache");
+    dyld_process_info_release = (void (*)(void *))
+               dlsym (RTLD_DEFAULT, "_dyld_process_info_release");
+
+    if (dyld_process_info_create && dyld_process_info_get_cache) {
+      unsigned int /*kern_return_t */ kern_ret;
+		  dyld_process_info process_info = dyld_process_info_create(::mach_task_self(), 0, &kern_ret);
+      if (process_info) {
+        struct lldb_copy__dyld_process_cache_info sc_info;
+        memset (&sc_info, 0, sizeof (struct lldb_copy__dyld_process_cache_info));
+        dyld_process_info_get_cache (process_info, &sc_info);
+        if (sc_info.cacheBaseAddress != 0) {
+          base_addr = sc_info.cacheBaseAddress;
+          uuid.SetBytes (sc_info.cacheUUID);
+        }
+        dyld_process_info_release (process_info);
+      }
     }
   }
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
   if (log && uuid.IsValid())
-    log->Printf("lldb's in-memory shared cache has a UUID of %s", uuid.GetAsString().c_str());
+    log->Printf("lldb's in-memory shared cache has a UUID of %s base address of 0x%" PRIx64, uuid.GetAsString().c_str(), base_addr);
 #endif
-  return uuid;
 }
 
 uint32_t ObjectFileMachO::GetMinimumOSVersion(uint32_t *versions,

@@ -20,6 +20,10 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
+#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/TypeList.h"
+#include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -29,6 +33,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
 #include <thread>
 
 using namespace lldb;
@@ -57,7 +62,7 @@ static cl::opt<bool> Persistent(
 static llvm::StringRef plural(uintmax_t value) { return value == 1 ? "" : "s"; }
 static void dumpState(const BreakpointList &List, LinePrinter &P);
 static std::string substitute(StringRef Cmd);
-static void evaluateBreakpoints(Debugger &Dbg);
+static int evaluateBreakpoints(Debugger &Dbg);
 } // namespace breakpoint
 
 namespace module {
@@ -69,12 +74,68 @@ cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
 } // namespace module
 
 namespace symbols {
-cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
-                                     cl::OneOrMore, cl::sub(SymbolsSubcommand));
+static cl::list<std::string> InputFilenames(cl::Positional,
+                                            cl::desc("<input files>"),
+                                            cl::OneOrMore,
+                                            cl::sub(SymbolsSubcommand));
+enum class FindType {
+  None,
+  Function,
+  Namespace,
+  Type,
+  Variable,
+};
+static cl::opt<FindType> Find(
+    "find", cl::desc("Choose search type:"),
+    cl::values(
+        clEnumValN(FindType::None, "none",
+                   "No search, just dump the module."),
+        clEnumValN(FindType::Function, "function", "Find functions."),
+        clEnumValN(FindType::Namespace, "namespace", "Find namespaces."),
+        clEnumValN(FindType::Type, "type", "Find types."),
+        clEnumValN(FindType::Variable, "variable", "Find global variables.")),
+    cl::sub(SymbolsSubcommand));
+
+static cl::opt<std::string> Name("name", cl::desc("Name to find."),
+                                 cl::sub(SymbolsSubcommand));
+static cl::opt<bool>
+    Regex("regex",
+          cl::desc("Search using regular expressions (avaliable for variables "
+                   "and functions only)."),
+          cl::sub(SymbolsSubcommand));
+static cl::opt<std::string>
+    Context("context",
+            cl::desc("Restrict search to the context of the given variable."),
+            cl::value_desc("variable"), cl::sub(SymbolsSubcommand));
+
+static cl::list<FunctionNameType> FunctionNameFlags(
+    "function-flags", cl::desc("Function search flags:"),
+    cl::values(clEnumValN(eFunctionNameTypeAuto, "auto",
+                          "Automatically deduce flags based on name."),
+               clEnumValN(eFunctionNameTypeFull, "full", "Full function name."),
+               clEnumValN(eFunctionNameTypeBase, "base", "Base name."),
+               clEnumValN(eFunctionNameTypeMethod, "method", "Method name."),
+               clEnumValN(eFunctionNameTypeSelector, "selector",
+                          "Selector name.")),
+    cl::sub(SymbolsSubcommand));
+static FunctionNameType getFunctionNameFlags() {
+  FunctionNameType Result = FunctionNameType(0);
+  for (FunctionNameType Flag : FunctionNameFlags)
+    Result = FunctionNameType(Result | Flag);
+  return Result;
+}
+
+static Expected<CompilerDeclContext> getDeclContext(SymbolVendor &Vendor);
+
+static Error findFunctions(lldb_private::Module &Module);
+static Error findNamespaces(lldb_private::Module &Module);
+static Error findTypes(lldb_private::Module &Module);
+static Error findVariables(lldb_private::Module &Module);
+static Error dumpModule(lldb_private::Module &Module);
+
+static int dumpSymbols(Debugger &Dbg);
 }
 } // namespace opts
-
-static llvm::ManagedStatic<SystemLifetimeManager> DebuggerLifetime;
 
 void opts::breakpoint::dumpState(const BreakpointList &List, LinePrinter &P) {
   P.formatLine("{0} breakpoint{1}", List.GetSize(), plural(List.GetSize()));
@@ -130,7 +191,7 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
   return std::move(OS.str());
 }
 
-void opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
+int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
   TargetSP Target;
   Status ST =
       Dbg.GetTargetList().CreateTarget(Dbg, breakpoint::Target, /*triple*/ "",
@@ -151,6 +212,7 @@ void opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
 
   LinePrinter P(4, outs());
   StringRef Rest = (*MB)->getBuffer();
+  int HadErrors = 0;
   while (!Rest.empty()) {
     StringRef Line;
     std::tie(Line, Rest) = Rest.split('\n');
@@ -167,31 +229,198 @@ void opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
     if (!Dbg.GetCommandInterpreter().HandleCommand(
             Command.c_str(), /*add_to_history*/ eLazyBoolNo, Result)) {
       P.formatLine("Failed: {0}", Result.GetErrorData());
+      HadErrors = 1;
       continue;
     }
 
     dumpState(Target->GetBreakpointList(/*internal*/ false), P);
   }
+  return HadErrors;
 }
 
-static void dumpSymbols(Debugger &Dbg) {
-  for (const auto &File : opts::symbols::InputFilenames) {
+Expected<CompilerDeclContext>
+opts::symbols::getDeclContext(SymbolVendor &Vendor) {
+  if (Context.empty())
+    return CompilerDeclContext();
+  VariableList List;
+  Vendor.FindGlobalVariables(ConstString(Context), nullptr, false, UINT32_MAX,
+                             List);
+  if (List.Empty()) {
+    return make_error<StringError>("Context search didn't find a match.",
+                                   inconvertibleErrorCode());
+  }
+  if (List.GetSize() > 1) {
+    return make_error<StringError>("Context search found multiple matches.",
+                                   inconvertibleErrorCode());
+  }
+  return List.GetVariableAtIndex(0)->GetDeclContext();
+}
+
+Error opts::symbols::findFunctions(lldb_private::Module &Module) {
+  SymbolVendor &Vendor = *Module.GetSymbolVendor();
+  SymbolContextList List;
+  if (Regex) {
+    RegularExpression RE(Name);
+    assert(RE.IsValid());
+    Vendor.FindFunctions(RE, true, false, List);
+  } else {
+    Expected<CompilerDeclContext> ContextOr = getDeclContext(Vendor);
+    if (!ContextOr)
+      return ContextOr.takeError();
+    CompilerDeclContext *ContextPtr =
+        ContextOr->IsValid() ? &*ContextOr : nullptr;
+
+    Vendor.FindFunctions(ConstString(Name), ContextPtr, getFunctionNameFlags(),
+                          true, false, List);
+  }
+  outs() << formatv("Found {0} functions:\n", List.GetSize());
+  StreamString Stream;
+  List.Dump(&Stream, nullptr);
+  outs() << Stream.GetData() << "\n";
+  return Error::success();
+}
+
+Error opts::symbols::findNamespaces(lldb_private::Module &Module) {
+  SymbolVendor &Vendor = *Module.GetSymbolVendor();
+  Expected<CompilerDeclContext> ContextOr = getDeclContext(Vendor);
+  if (!ContextOr)
+    return ContextOr.takeError();
+  CompilerDeclContext *ContextPtr =
+      ContextOr->IsValid() ? &*ContextOr : nullptr;
+
+  SymbolContext SC;
+  CompilerDeclContext Result =
+      Vendor.FindNamespace(SC, ConstString(Name), ContextPtr);
+  if (Result)
+    outs() << "Found namespace: "
+           << Result.GetScopeQualifiedName().GetStringRef() << "\n";
+  else
+    outs() << "Namespace not found.\n";
+  return Error::success();
+}
+
+Error opts::symbols::findTypes(lldb_private::Module &Module) {
+  SymbolVendor &Vendor = *Module.GetSymbolVendor();
+  Expected<CompilerDeclContext> ContextOr = getDeclContext(Vendor);
+  if (!ContextOr)
+    return ContextOr.takeError();
+  CompilerDeclContext *ContextPtr =
+      ContextOr->IsValid() ? &*ContextOr : nullptr;
+
+  SymbolContext SC;
+  DenseSet<SymbolFile *> SearchedFiles;
+  TypeMap Map;
+  Vendor.FindTypes(SC, ConstString(Name), ContextPtr, true, UINT32_MAX,
+                    SearchedFiles, Map);
+
+  outs() << formatv("Found {0} types:\n", Map.GetSize());
+  StreamString Stream;
+  Map.Dump(&Stream, false);
+  outs() << Stream.GetData() << "\n";
+  return Error::success();
+}
+
+Error opts::symbols::findVariables(lldb_private::Module &Module) {
+  SymbolVendor &Vendor = *Module.GetSymbolVendor();
+  VariableList List;
+  if (Regex) {
+    RegularExpression RE(Name);
+    assert(RE.IsValid());
+    Vendor.FindGlobalVariables(RE, false, UINT32_MAX, List);
+  } else {
+    Expected<CompilerDeclContext> ContextOr = getDeclContext(Vendor);
+    if (!ContextOr)
+      return ContextOr.takeError();
+    CompilerDeclContext *ContextPtr =
+        ContextOr->IsValid() ? &*ContextOr : nullptr;
+
+    Vendor.FindGlobalVariables(ConstString(Name), ContextPtr, false, UINT32_MAX,
+                               List);
+  }
+  outs() << formatv("Found {0} variables:\n", List.GetSize());
+  StreamString Stream;
+  List.Dump(&Stream, false);
+  outs() << Stream.GetData() << "\n";
+  return Error::success();
+}
+
+Error opts::symbols::dumpModule(lldb_private::Module &Module) {
+  StreamString Stream;
+  Module.ParseAllDebugSymbols();
+  Module.Dump(&Stream);
+  outs() << Stream.GetData() << "\n";
+  return Error::success();
+}
+
+int opts::symbols::dumpSymbols(Debugger &Dbg) {
+  if (Find != FindType::None && Regex && !Context.empty()) {
+    WithColor::error()
+        << "Cannot search using both regular expressions and context.\n";
+    return 1;
+  }
+  if ((Find == FindType::Type || Find == FindType::Namespace) && Regex) {
+    WithColor::error() << "Cannot search for types and namespaces using "
+                          "regular expressions.\n";
+    return 1;
+  }
+  if (Find == FindType::Function && Regex && getFunctionNameFlags() != 0) {
+    WithColor::error() << "Cannot search for types using both regular "
+                          "expressions and function-flags.\n";
+    return 1;
+  }
+  if (Regex && !RegularExpression(Name).IsValid()) {
+    WithColor::error() << "`" << Name
+                       << "` is not a valid regular expression.\n";
+    return 1;
+  }
+
+  Error (*Action)(lldb_private::Module &);
+  switch (Find) {
+  case FindType::Function:
+    Action = findFunctions;
+    break;
+  case FindType::Namespace:
+    Action = findNamespaces;
+    break;
+  case FindType::Type:
+    Action = findTypes;
+    break;
+  case FindType::Variable:
+    Action = findVariables;
+    break;
+  case FindType::None:
+    Action = dumpModule;
+    break;
+  }
+
+  int HadErrors = 0;
+  for (const auto &File : InputFilenames) {
+    outs() << "Module: " << File << "\n";
     ModuleSpec Spec{FileSpec(File, false)};
     Spec.GetSymbolFileSpec().SetFile(File, false);
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
+    SymbolVendor *Vendor = ModulePtr->GetSymbolVendor();
+    if (!Vendor) {
+      WithColor::error() << "Module has no symbol vendor.\n";
+      HadErrors = 1;
+      continue;
+    }
+    
+    if (Error E = Action(*ModulePtr)) {
+      WithColor::error() << toString(std::move(E)) << "\n";
+      HadErrors = 1;
+    }
 
-    StreamString Stream;
-    ModulePtr->ParseAllDebugSymbols();
-    ModulePtr->Dump(&Stream);
-    llvm::outs() << Stream.GetData() << "\n";
-    llvm::outs().flush();
+    outs().flush();
   }
+  return HadErrors;
 }
 
-static void dumpModules(Debugger &Dbg) {
+static int dumpModules(Debugger &Dbg) {
   LinePrinter Printer(4, llvm::outs());
 
+  int HadErrors = 0;
   for (const auto &File : opts::module::InputFilenames) {
     ModuleSpec Spec{FileSpec(File, false)};
 
@@ -202,6 +431,7 @@ static void dumpModules(Debugger &Dbg) {
     SectionList *Sections = ModulePtr->GetSectionList();
     if (!Sections) {
       llvm::errs() << "Could not load sections for module " << File << "\n";
+      HadErrors = 1;
       continue;
     }
 
@@ -226,6 +456,7 @@ static void dumpModules(Debugger &Dbg) {
       Printer.NewLine();
     }
   }
+  return HadErrors;
 }
 
 int main(int argc, const char *argv[]) {
@@ -236,18 +467,20 @@ int main(int argc, const char *argv[]) {
 
   cl::ParseCommandLineOptions(argc, argv, "LLDB Testing Utility\n");
 
-  DebuggerLifetime->Initialize(llvm::make_unique<SystemInitializerTest>(),
-                               nullptr);
+  SystemLifetimeManager DebuggerLifetime;
+  DebuggerLifetime.Initialize(llvm::make_unique<SystemInitializerTest>(),
+                              nullptr);
+  CleanUp TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
 
   if (opts::BreakpointSubcommand)
-    opts::breakpoint::evaluateBreakpoints(*Dbg);
+    return opts::breakpoint::evaluateBreakpoints(*Dbg);
   if (opts::ModuleSubcommand)
-    dumpModules(*Dbg);
-  else if (opts::SymbolsSubcommand)
-    dumpSymbols(*Dbg);
+    return dumpModules(*Dbg);
+  if (opts::SymbolsSubcommand)
+    return opts::symbols::dumpSymbols(*Dbg);
 
-  DebuggerLifetime->Terminate();
-  return 0;
+  WithColor::error() << "No command specified.\n";
+  return 1;
 }
