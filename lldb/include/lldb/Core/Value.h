@@ -230,7 +230,7 @@ public:
   static const char *GetContextTypeAsCString(ContextType context_type);
 
   /// Convert this value's file address to a load address, if possible.
-  void ConvertToLoadAddress(SymbolContext sc);
+  void ConvertToLoadAddress(Module *module, Target *target);
 
   bool GetData(DataExtractor &data);
 
