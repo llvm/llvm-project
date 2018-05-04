@@ -459,35 +459,32 @@ define <8 x i8> @vuzp_trunc_and_shuffle_undef_left(<8 x i8> %tr0, <8 x i8> %tr1,
 define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK-LABEL: vuzp_wide_type:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:	.save	{r4, r10, r11, lr}
-; CHECK-NEXT:	push	{r4, r10, r11, lr}
-; CHECK-NEXT:	.setfp	r11, sp, #8
-; CHECK-NEXT:	add	r11, sp, #8
-; CHECK-NEXT:	bic	sp, sp, #15
-; CHECK-NEXT:	add	r12, r11, #32
-; CHECK-NEXT:	add	lr, r11, #44
+; CHECK-NEXT:	.save	{r4, lr}
+; CHECK-NEXT:	push	{r4, lr}
+; CHECK-NEXT:	add	r12, sp, #32
+; CHECK-NEXT:	add	lr, sp, #48
 ; CHECK-NEXT:	vld1.32	{d17[0]}, [r12:32]
-; CHECK-NEXT:	add	r12, r11, #24
+; CHECK-NEXT:	add	r12, sp, #24
 ; CHECK-NEXT:	vld1.32	{d16[0]}, [r12:32]
-; CHECK-NEXT:	add	r12, r11, #52
+; CHECK-NEXT:	add	r12, sp, #56
 ; CHECK-NEXT:	vld1.32	{d19[0]}, [r12:32]
-; CHECK-NEXT:	ldr	r12, [r11, #64]
+; CHECK-NEXT:	ldr	r12, [sp, #68]
 ; CHECK-NEXT:	vld1.32	{d18[0]}, [lr:32]
-; CHECK-NEXT:	add	lr, r11, #40
+; CHECK-NEXT:	add	lr, sp, #40
 ; CHECK-NEXT:	vld1.32	{d20[0]}, [lr:32]
 ; CHECK-NEXT:	ldr	r4, [r12]
 ; CHECK-NEXT:	vmov.32	d23[0], r4
-; CHECK-NEXT:	add	r4, r11, #60
+; CHECK-NEXT:	add	r4, sp, #64
 ; CHECK-NEXT:	vld1.32	{d24[0]}, [r4:32]
-; CHECK-NEXT:	add	r4, r11, #36
+; CHECK-NEXT:	add	r4, sp, #36
 ; CHECK-NEXT:	vld1.32	{d17[1]}, [r4:32]
-; CHECK-NEXT:	add	r4, r11, #28
+; CHECK-NEXT:	add	r4, sp, #28
 ; CHECK-NEXT:	vcgt.u32	q10, q12, q10
 ; CHECK-NEXT:	vmov.u8	lr, d23[3]
 ; CHECK-NEXT:	vld1.32	{d16[1]}, [r4:32]
-; CHECK-NEXT:	add	r4, r11, #56
+; CHECK-NEXT:	add	r4, sp, #60
 ; CHECK-NEXT:	vld1.32	{d19[1]}, [r4:32]
-; CHECK-NEXT:	add	r4, r11, #48
+; CHECK-NEXT:	add	r4, sp, #52
 ; CHECK-NEXT:	vld1.32	{d18[1]}, [r4:32]
 ; CHECK-NEXT:	add	r4, r12, #4
 ; CHECK-NEXT:	vcgt.u32	q8, q9, q8
@@ -500,7 +497,7 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK-NEXT:	vneg.s8	q9, q9
 ; CHECK-NEXT:	vtbl.8	d16, {d22, d23}, d20
 ; CHECK-NEXT:	vld1.8	{d17[1]}, [r4]
-; CHECK-NEXT:	add	r4, r11, #8
+; CHECK-NEXT:	add	r4, sp, #8
 ; CHECK-NEXT:	vshl.i8	q8, q8, #7
 ; CHECK-NEXT:	vld1.64	{d20, d21}, [r4]
 ; CHECK-NEXT:	vshl.s8	q8, q8, q9
@@ -509,8 +506,7 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK-NEXT:	vbsl	q8, q9, q10
 ; CHECK-NEXT:	vmov	r0, r1, d16
 ; CHECK-NEXT:	vmov	r2, r3, d17
-; CHECK-NEXT:	sub	sp, r11, #8
-; CHECK-NEXT:	pop	{r4, r10, r11, lr}
+; CHECK-NEXT:	pop	{r4, lr}
 ; CHECK-NEXT:	mov	pc, lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:

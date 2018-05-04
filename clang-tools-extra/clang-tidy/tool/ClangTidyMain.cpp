@@ -41,7 +41,6 @@ Configuration files:
     Checks:          '-*,some-check'
     WarningsAsErrors: ''
     HeaderFilterRegex: ''
-    AnalyzeTemporaryDtors: false
     FormatStyle:     none
     User:            user
     CheckOptions:
@@ -182,16 +181,6 @@ report to stderr.
                                         cl::init(false),
                                         cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> AnalyzeTemporaryDtors("analyze-temporary-dtors",
-                                           cl::desc(R"(
-Enable temporary destructor-aware analysis in
-clang-analyzer- checks.
-This option overrides the value read from a
-.clang-tidy file.
-)"),
-                                           cl::init(false),
-                                           cl::cat(ClangTidyCategory));
-
 static cl::opt<std::string> ExportFixes("export-fixes", cl::desc(R"(
 YAML file to store suggested fixes in. The
 stored fixes can be applied to the input source
@@ -300,7 +289,6 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
   DefaultOptions.WarningsAsErrors = "";
   DefaultOptions.HeaderFilterRegex = HeaderFilter;
   DefaultOptions.SystemHeaders = SystemHeaders;
-  DefaultOptions.AnalyzeTemporaryDtors = AnalyzeTemporaryDtors;
   DefaultOptions.FormatStyle = FormatStyle;
   DefaultOptions.User = llvm::sys::Process::GetEnv("USER");
   // USERNAME is used on Windows.
@@ -316,8 +304,6 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
     OverrideOptions.HeaderFilterRegex = HeaderFilter;
   if (SystemHeaders.getNumOccurrences() > 0)
     OverrideOptions.SystemHeaders = SystemHeaders;
-  if (AnalyzeTemporaryDtors.getNumOccurrences() > 0)
-    OverrideOptions.AnalyzeTemporaryDtors = AnalyzeTemporaryDtors;
   if (FormatStyle.getNumOccurrences() > 0)
     OverrideOptions.FormatStyle = FormatStyle;
 

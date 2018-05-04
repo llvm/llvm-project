@@ -183,3 +183,85 @@ while.cond:                                       ; preds = %while.cond, %entry
 while.end:                                        ; preds = %while.cond
   ret i32 %i.0
 }
+
+; This loop contains a volatile store. If x is initially negative,
+; the code will be an infinite loop because the ashr will eventually produce
+; all ones and continue doing so. This prevents the loop from terminating. If
+; we convert this to a countable loop using ctlz that loop will only run 32
+; times. This is different than the infinite number of times of the original.
+; FIXME: Don't transform this loop.
+define i32 @foo(i32 %x) {
+; LZCNT-LABEL: @foo(
+; LZCNT-NEXT:  entry:
+; LZCNT-NEXT:    [[V:%.*]] = alloca i8, align 1
+; LZCNT-NEXT:    [[TOBOOL4:%.*]] = icmp eq i32 [[X:%.*]], 0
+; LZCNT-NEXT:    br i1 [[TOBOOL4]], label [[WHILE_END:%.*]], label [[WHILE_BODY_LR_PH:%.*]]
+; LZCNT:       while.body.lr.ph:
+; LZCNT-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
+; LZCNT-NEXT:    [[TMP1:%.*]] = sub i32 32, [[TMP0]]
+; LZCNT-NEXT:    br label [[WHILE_BODY:%.*]]
+; LZCNT:       while.body:
+; LZCNT-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY_LR_PH]] ], [ [[TCDEC:%.*]], [[WHILE_BODY]] ]
+; LZCNT-NEXT:    [[CNT_06:%.*]] = phi i32 [ 0, [[WHILE_BODY_LR_PH]] ], [ [[INC:%.*]], [[WHILE_BODY]] ]
+; LZCNT-NEXT:    [[X_ADDR_05:%.*]] = phi i32 [ [[X]], [[WHILE_BODY_LR_PH]] ], [ [[SHR:%.*]], [[WHILE_BODY]] ]
+; LZCNT-NEXT:    [[SHR]] = ashr i32 [[X_ADDR_05]], 1
+; LZCNT-NEXT:    [[INC]] = add i32 [[CNT_06]], 1
+; LZCNT-NEXT:    store volatile i8 42, i8* [[V]], align 1
+; LZCNT-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; LZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
+; LZCNT-NEXT:    br i1 [[TOBOOL]], label [[WHILE_COND_WHILE_END_CRIT_EDGE:%.*]], label [[WHILE_BODY]]
+; LZCNT:       while.cond.while.end_crit_edge:
+; LZCNT-NEXT:    [[SPLIT:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY]] ]
+; LZCNT-NEXT:    br label [[WHILE_END]]
+; LZCNT:       while.end:
+; LZCNT-NEXT:    [[CNT_0_LCSSA:%.*]] = phi i32 [ [[SPLIT]], [[WHILE_COND_WHILE_END_CRIT_EDGE]] ], [ 0, [[ENTRY:%.*]] ]
+; LZCNT-NEXT:    ret i32 [[CNT_0_LCSSA]]
+;
+; NOLZCNT-LABEL: @foo(
+; NOLZCNT-NEXT:  entry:
+; NOLZCNT-NEXT:    [[V:%.*]] = alloca i8, align 1
+; NOLZCNT-NEXT:    [[TOBOOL4:%.*]] = icmp eq i32 [[X:%.*]], 0
+; NOLZCNT-NEXT:    br i1 [[TOBOOL4]], label [[WHILE_END:%.*]], label [[WHILE_BODY_LR_PH:%.*]]
+; NOLZCNT:       while.body.lr.ph:
+; NOLZCNT-NEXT:    br label [[WHILE_BODY:%.*]]
+; NOLZCNT:       while.body:
+; NOLZCNT-NEXT:    [[CNT_06:%.*]] = phi i32 [ 0, [[WHILE_BODY_LR_PH]] ], [ [[INC:%.*]], [[WHILE_BODY]] ]
+; NOLZCNT-NEXT:    [[X_ADDR_05:%.*]] = phi i32 [ [[X]], [[WHILE_BODY_LR_PH]] ], [ [[SHR:%.*]], [[WHILE_BODY]] ]
+; NOLZCNT-NEXT:    [[SHR]] = ashr i32 [[X_ADDR_05]], 1
+; NOLZCNT-NEXT:    [[INC]] = add i32 [[CNT_06]], 1
+; NOLZCNT-NEXT:    store volatile i8 42, i8* [[V]], align 1
+; NOLZCNT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHR]], 0
+; NOLZCNT-NEXT:    br i1 [[TOBOOL]], label [[WHILE_COND_WHILE_END_CRIT_EDGE:%.*]], label [[WHILE_BODY]]
+; NOLZCNT:       while.cond.while.end_crit_edge:
+; NOLZCNT-NEXT:    [[SPLIT:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ]
+; NOLZCNT-NEXT:    br label [[WHILE_END]]
+; NOLZCNT:       while.end:
+; NOLZCNT-NEXT:    [[CNT_0_LCSSA:%.*]] = phi i32 [ [[SPLIT]], [[WHILE_COND_WHILE_END_CRIT_EDGE]] ], [ 0, [[ENTRY:%.*]] ]
+; NOLZCNT-NEXT:    ret i32 [[CNT_0_LCSSA]]
+;
+entry:
+  %v = alloca i8, align 1
+  %tobool4 = icmp eq i32 %x, 0
+  br i1 %tobool4, label %while.end, label %while.body.lr.ph
+
+while.body.lr.ph:                                 ; preds = %entry
+  br label %while.body
+
+while.body:                                       ; preds = %while.body.lr.ph, %while.body
+  %cnt.06 = phi i32 [ 0, %while.body.lr.ph ], [ %inc, %while.body ]
+  %x.addr.05 = phi i32 [ %x, %while.body.lr.ph ], [ %shr, %while.body ]
+  %shr = ashr i32 %x.addr.05, 1
+  %inc = add i32 %cnt.06, 1
+  store volatile i8 42, i8* %v, align 1
+  %tobool = icmp eq i32 %shr, 0
+  br i1 %tobool, label %while.cond.while.end_crit_edge, label %while.body
+
+while.cond.while.end_crit_edge:                   ; preds = %while.body
+  %split = phi i32 [ %inc, %while.body ]
+  br label %while.end
+
+while.end:                                        ; preds = %while.cond.while.end_crit_edge, %entry
+  %cnt.0.lcssa = phi i32 [ %split, %while.cond.while.end_crit_edge ], [ 0, %entry ]
+  ret i32 %cnt.0.lcssa
+}
+

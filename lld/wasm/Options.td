@@ -124,6 +124,9 @@ def max_memory: J<"max-memory=">,
 def no_entry: F<"no-entry">,
   HelpText<"Do not output any entry point">;
 
+def stack_first: F<"stack-first">,
+  HelpText<"Place stack at start of linear memory rather than after data">;
+
 // Aliases
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_entry_entry: J<"entry=">, Alias<entry>;

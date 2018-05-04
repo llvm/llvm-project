@@ -13,7 +13,7 @@
 
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RWMutex.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Config/config.h"
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system

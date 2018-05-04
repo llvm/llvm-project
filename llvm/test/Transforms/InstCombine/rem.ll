@@ -354,12 +354,11 @@ define i32 @test17(i32 %X) {
 
 define i32 @test18(i16 %x, i32 %y) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[X:%.*]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i16 [[TMP2]], 63
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 63, i32 31
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %1 = and i16 %x, 4
   %2 = icmp ne i16 %1, 0

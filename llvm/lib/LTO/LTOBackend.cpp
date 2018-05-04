@@ -421,14 +421,15 @@ Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
 
 }
 
-static void
+static Error
 finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)
-    return;
+    return Error::success();
   DiagOutputFile->keep();
   DiagOutputFile->os().flush();
+  return Error::success();
 }
 
 Error lto::backend(Config &C, AddStreamFn AddStream,
@@ -450,10 +451,8 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
 
   if (!C.CodeGenOnly) {
     if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false,
-             /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr)) {
-      finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
-      return Error::success();
-    }
+             /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr))
+      return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {
@@ -462,8 +461,7 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
                  std::move(Mod));
   }
-  finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
-  return Error::success();
+  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
@@ -498,13 +496,20 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   std::unique_ptr<TargetMachine> TM = createTargetMachine(Conf, *TOrErr, Mod);
 
+  // Setup optimization remarks.
+  auto DiagFileOrErr = lto::setupOptimizationRemarks(
+      Mod.getContext(), Conf.RemarksFilename, Conf.RemarksWithHotness, Task);
+  if (!DiagFileOrErr)
+    return DiagFileOrErr.takeError();
+  auto DiagnosticOutputFile = std::move(*DiagFileOrErr);
+
   if (Conf.CodeGenOnly) {
     codegen(Conf, TM.get(), AddStream, Task, Mod);
-    return Error::success();
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
-    return Error::success();
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   renameModuleForThinLTO(Mod, CombinedIndex);
 
@@ -513,14 +518,14 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   thinLTOResolveWeakForLinkerModule(Mod, DefinedGlobals);
 
   if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
-    return Error::success();
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   if (!DefinedGlobals.empty())
     thinLTOInternalizeModule(Mod, DefinedGlobals);
 
   if (Conf.PostInternalizeModuleHook &&
       !Conf.PostInternalizeModuleHook(Task, Mod))
-    return Error::success();
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
@@ -537,12 +542,12 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
     return Err;
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
-    return Error::success();
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLTO=*/true,
            /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex))
-    return Error::success();
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   codegen(Conf, TM.get(), AddStream, Task, Mod);
-  return Error::success();
+  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }

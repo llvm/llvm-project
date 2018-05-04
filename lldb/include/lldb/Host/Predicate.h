@@ -138,17 +138,12 @@ public:
   ///     If non-nullptr, the absolute time at which we should stop
   ///     waiting, else wait an infinite amount of time.
   ///
-  /// @param[out] timed_out
-  ///     If not null, set to true if we return because of a time out,
-  ///     and false if the value was set.
-  ///
   /// @return
   ///     @li \b true if the \a m_value is equal to \a value
-  ///     @li \b false otherwise
+  ///     @li \b false otherwise (timeout occurred)
   //------------------------------------------------------------------
   bool WaitForValueEqualTo(T value, const std::chrono::microseconds &timeout =
-                                        std::chrono::microseconds(0),
-                           bool *timed_out = nullptr) {
+                                        std::chrono::microseconds(0)) {
     // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
     // the mutex and wait for the condition to be set. When either function
     // returns, they will re-lock the mutex. We use an auto lock/unlock class
@@ -160,19 +155,13 @@ public:
     printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
            __FUNCTION__, value, timeout.count(), m_value);
 #endif
-    if (timed_out)
-      *timed_out = false;
-
     while (m_value != value) {
       if (timeout == std::chrono::microseconds(0)) {
         m_condition.wait(lock);
       } else {
         std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout) {
-          if (timed_out)
-            *timed_out = true;
+        if (result == std::cv_status::timeout)
           break;
-        }
       }
     }
 

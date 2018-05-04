@@ -86,7 +86,6 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("Checks", Options.Checks);
     IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
-    IO.mapOptional("AnalyzeTemporaryDtors", Options.AnalyzeTemporaryDtors);
     IO.mapOptional("FormatStyle", Options.FormatStyle);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", NOpts->Options);
@@ -107,7 +106,6 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.WarningsAsErrors = "";
   Options.HeaderFilterRegex = "";
   Options.SystemHeaders = false;
-  Options.AnalyzeTemporaryDtors = false;
   Options.FormatStyle = "none";
   Options.User = llvm::None;
   for (ClangTidyModuleRegistry::iterator I = ClangTidyModuleRegistry::begin(),
@@ -147,7 +145,6 @@ ClangTidyOptions::mergeWith(const ClangTidyOptions &Other) const {
   mergeCommaSeparatedLists(Result.WarningsAsErrors, Other.WarningsAsErrors);
   overrideValue(Result.HeaderFilterRegex, Other.HeaderFilterRegex);
   overrideValue(Result.SystemHeaders, Other.SystemHeaders);
-  overrideValue(Result.AnalyzeTemporaryDtors, Other.AnalyzeTemporaryDtors);
   overrideValue(Result.FormatStyle, Other.FormatStyle);
   overrideValue(Result.User, Other.User);
   mergeVectors(Result.ExtraArgs, Other.ExtraArgs);

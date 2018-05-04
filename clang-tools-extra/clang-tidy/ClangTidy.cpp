@@ -369,11 +369,6 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
     Consumers.push_back(Finder->newASTConsumer());
 
   AnalyzerOptionsRef AnalyzerOptions = Compiler.getAnalyzerOpts();
-  // FIXME: Remove this option once clang's cfg-temporary-dtors option defaults
-  // to true.
-  AnalyzerOptions->Config["cfg-temporary-dtors"] =
-      Context.getOptions().AnalyzeTemporaryDtors ? "true" : "false";
-
   AnalyzerOptions->CheckersControlList = getCheckersControlList(Context);
   if (!AnalyzerOptions->CheckersControlList.empty()) {
     setStaticAnalyzerCheckerOpts(Context.getOptions(), AnalyzerOptions);
@@ -528,6 +523,18 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
   public:
     ActionFactory(ClangTidyContext &Context) : ConsumerFactory(Context) {}
     FrontendAction *create() override { return new Action(&ConsumerFactory); }
+
+    bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
+                       FileManager *Files,
+                       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+                       DiagnosticConsumer *DiagConsumer) override {
+      // Explicitly set ProgramAction to RunAnalysis to make the preprocessor
+      // define __clang_analyzer__ macro. The frontend analyzer action will not
+      // be called here.
+      Invocation->getFrontendOpts().ProgramAction = frontend::RunAnalysis;
+      return FrontendActionFactory::runInvocation(
+          Invocation, Files, PCHContainerOps, DiagConsumer);
+    }
 
   private:
     class Action : public ASTFrontendAction {
