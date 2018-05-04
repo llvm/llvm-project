@@ -13,6 +13,7 @@ import lldb
 import swift
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import decorators
 
 
 class TestREPLExceptions(TestBase):
@@ -24,12 +25,14 @@ class TestREPLExceptions(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @decorators.skipUnlessDarwin
     def test_set_repl_mode_exceptions(self):
         """ Test that SetREPLMode turns off trapping exceptions."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")
         self.do_repl_mode_test()
 
+    @decorators.skipUnlessDarwin
     def test_repl_exceptions(self):
         """ Test the lldb --repl turns off trapping exceptions."""
         self.build()
