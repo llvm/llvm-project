@@ -234,26 +234,10 @@ bool ValueObjectVariable::UpdateValue() {
         // If this variable is a simple type, we read all data for it into
         // m_data. Make sure this type has a value before we try and read it
 
+        SymbolContext var_sc;
+        variable->CalculateSymbolContext(&var_sc);
         // If we have a file address, convert it to a load address if we can.
-        if (value_type == Value::eValueTypeFileAddress && process_is_alive) {
-          lldb::addr_t file_addr =
-              m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-          if (file_addr != LLDB_INVALID_ADDRESS) {
-            SymbolContext var_sc;
-            variable->CalculateSymbolContext(&var_sc);
-            if (var_sc.module_sp) {
-              ObjectFile *objfile = var_sc.module_sp->GetObjectFile();
-              if (objfile) {
-                Address so_addr(file_addr, objfile->GetSectionList());
-                lldb::addr_t load_addr = so_addr.GetLoadAddress(target);
-                if (load_addr != LLDB_INVALID_ADDRESS) {
-                  m_value.SetValueType(Value::eValueTypeLoadAddress);
-                  m_value.GetScalar() = load_addr;
-                }
-              }
-            }
-          }
-        }
+        m_value.ConvertToLoadAddress(var_sc);
 
         if (!CanProvideValue()) {
           // this value object represents an aggregate type whose children have

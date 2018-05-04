@@ -48,6 +48,14 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &S) {
   return OS << S.Scope << S.Name;
 }
 
+double quality(const Symbol &S) {
+  // This avoids a sharp gradient for tail symbols, and also neatly avoids the
+  // question of whether 0 references means a bad symbol or missing data.
+  if (S.References < 3)
+    return 1;
+  return std::log(S.References);
+}
+
 SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
   auto It = std::lower_bound(Symbols.begin(), Symbols.end(), ID,
                              [](const Symbol &S, const SymbolID &I) {

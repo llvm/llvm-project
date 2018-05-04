@@ -5587,24 +5587,24 @@ multiclass avx512_shift_rmi_dq<bits<8> opcd, bits<8> opcq,
 }
 
 defm VPSRL : avx512_shift_rmi_dq<0x72, 0x73, MRM2r, MRM2m, "vpsrl", X86vsrli,
-                                 SchedWriteVecShift>,
+                                 SchedWriteVecShiftImm>,
              avx512_shift_rmi_w<0x71, MRM2r, MRM2m, "vpsrlw", X86vsrli,
-                                SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSLL : avx512_shift_rmi_dq<0x72, 0x73, MRM6r, MRM6m, "vpsll", X86vshli,
-                                 SchedWriteVecShift>,
+                                 SchedWriteVecShiftImm>,
              avx512_shift_rmi_w<0x71, MRM6r, MRM6m, "vpsllw", X86vshli,
-                                SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSRA : avx512_shift_rmi_dq<0x72, 0x72, MRM4r, MRM4m, "vpsra", X86vsrai,
-                                 SchedWriteVecShift>,
+                                 SchedWriteVecShiftImm>,
              avx512_shift_rmi_w<0x71, MRM4r, MRM4m, "vpsraw", X86vsrai,
-                                SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPROR : avx512_shift_rmi_dq<0x72, 0x72, MRM0r, MRM0m, "vpror", X86vrotri,
-                                 SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                 SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 defm VPROL : avx512_shift_rmi_dq<0x72, 0x72, MRM1r, MRM1m, "vprol", X86vrotli,
-                                 SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                 SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSLL : avx512_shift_types<0xF2, 0xF3, 0xF1, "vpsll", X86vshl,
                                 SchedWriteVecShift>;
@@ -9842,9 +9842,8 @@ multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
   }
 }
 
-// FIXME: Is there a better scheduler class for VPLZCNT?
 defm VPLZCNT    : avx512_unary_rm_vl_dq<0x44, 0x44, "vplzcnt", ctlz,
-                                        SchedWriteVecALU, HasCDI>;
+                                        SchedWriteVecIMul, HasCDI>;
 
 // FIXME: Is there a better scheduler class for VPCONFLICT?
 defm VPCONFLICT : avx512_unary_rm_vl_dq<0xC4, 0xC4, "vpconflict", X86Conflict,

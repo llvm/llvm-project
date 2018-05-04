@@ -175,7 +175,7 @@ bool CommunicationKDP::GetSequenceMutex(
 
 bool CommunicationKDP::WaitForNotRunningPrivate(
     const std::chrono::microseconds &timeout) {
-  return m_is_running.WaitForValueEqualTo(false, timeout, NULL);
+  return m_is_running.WaitForValueEqualTo(false, timeout);
 }
 
 size_t

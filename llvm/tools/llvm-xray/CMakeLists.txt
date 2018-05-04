@@ -4,7 +4,8 @@ set(LLVM_LINK_COMPONENTS
   Object
   Support
   Symbolize
-  XRay)
+  XRay
+  )
 
 set(LLVM_XRAY_TOOLS
   func-id-helper.cpp
@@ -15,6 +16,10 @@ set(LLVM_XRAY_TOOLS
   xray-graph.cpp
   xray-graph-diff.cpp
   xray-stacks.cpp
-  xray-registry.cpp)
+  xray-registry.cpp
+  )
 
-add_llvm_tool(llvm-xray llvm-xray.cpp ${LLVM_XRAY_TOOLS})
+add_llvm_tool(llvm-xray
+  llvm-xray.cpp
+  ${LLVM_XRAY_TOOLS}
+  )

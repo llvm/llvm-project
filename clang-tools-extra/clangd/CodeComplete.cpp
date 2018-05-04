@@ -229,24 +229,27 @@ struct CompletionCandidate {
 
   // Computes the "symbol quality" score for this completion. Higher is better.
   float score() const {
-    // For now we just use the Sema priority, mapping it onto a 0-1 interval.
-    if (!SemaResult) // FIXME(sammccall): better scoring for index results.
-      return 0.3f;   // fixed mediocre score for index-only results.
+    float Score = 1;
+    if (IndexResult)
+      Score *= quality(*IndexResult);
+    if (SemaResult) {
+      // For now we just use the Sema priority, mapping it onto a 0-2 interval.
+      // That makes 1 neutral-ish, so we don't reward/penalize non-Sema results.
+      // Priority 80 is a really bad score.
+      Score *= 2 - std::min<float>(80, SemaResult->Priority) / 40;
 
-    // Priority 80 is a really bad score.
-    float Score = 1 - std::min<float>(80, SemaResult->Priority) / 80;
-
-    switch (static_cast<CXAvailabilityKind>(SemaResult->Availability)) {
-    case CXAvailability_Available:
-      // No penalty.
-      break;
-    case CXAvailability_Deprecated:
-      Score *= 0.1f;
-      break;
-    case CXAvailability_NotAccessible:
-    case CXAvailability_NotAvailable:
-      Score = 0;
-      break;
+      switch (static_cast<CXAvailabilityKind>(SemaResult->Availability)) {
+      case CXAvailability_Available:
+        // No penalty.
+        break;
+      case CXAvailability_Deprecated:
+        Score *= 0.1f;
+        break;
+      case CXAvailability_NotAccessible:
+      case CXAvailability_NotAvailable:
+        Score = 0;
+        break;
+      }
     }
     return Score;
   }

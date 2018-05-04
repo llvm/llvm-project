@@ -144,6 +144,13 @@ Symbol cls(StringRef Name) {
 Symbol var(StringRef Name) {
   return sym(Name, index::SymbolKind::Variable, "@\\0");
 }
+Symbol ns(StringRef Name) {
+  return sym(Name, index::SymbolKind::Namespace, "@N@\\0");
+}
+Symbol withReferences(int N, Symbol S) {
+  S.References = N;
+  return S;
+}
 
 TEST(CompletionTest, Limit) {
   clangd::CodeCompleteOptions Opts;
@@ -441,6 +448,14 @@ TEST(CompletionTest, ScopedWithFilter) {
       {cls("ns::XYZ"), func("ns::foo")});
   EXPECT_THAT(Results.items,
               UnorderedElementsAre(AllOf(Named("XYZ"), Filter("XYZ"))));
+}
+
+TEST(CompletionTest, ReferencesAffectRanking) {
+  auto Results = completions("int main() { abs^ }", {ns("absl"), func("abs")});
+  EXPECT_THAT(Results.items, HasSubsequence(Named("abs"), Named("absl")));
+  Results = completions("int main() { abs^ }",
+                        {withReferences(10000, ns("absl")), func("abs")});
+  EXPECT_THAT(Results.items, HasSubsequence(Named("absl"), Named("abs")));
 }
 
 TEST(CompletionTest, GlobalQualified) {

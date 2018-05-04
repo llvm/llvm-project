@@ -74,9 +74,6 @@ struct ClangTidyOptions {
   /// \brief Output warnings from system headers matching \c HeaderFilterRegex.
   llvm::Optional<bool> SystemHeaders;
 
-  /// \brief Turns on temporary destructor-based analysis.
-  llvm::Optional<bool> AnalyzeTemporaryDtors;
-
   /// \brief Format code around applied fixes with clang-format using this
   /// style.
   ///
