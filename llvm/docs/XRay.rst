@@ -171,20 +171,6 @@ variable, where we list down the options and their defaults below.
 | xray_logfile_base | ``const char*`` | ``xray-log.`` | Filename base for the  |
 |                   |                 |               | XRay logfile.          |
 +-------------------+-----------------+---------------+------------------------+
-| xray_naive_log    | ``bool``        | ``false``     | **DEPRECATED:** Use    |
-|                   |                 |               | xray_mode=xray-basic   |
-|                   |                 |               | instead. Whether to    |
-|                   |                 |               | install the basic log  |
-|                   |                 |               | the naive log          |
-|                   |                 |               | implementation.        |
-+-------------------+-----------------+---------------+------------------------+
-| xray_fdr_log      | ``bool``        | ``false``     | **DEPRECATED:** Use    |
-|                   |                 |               | xray_mode=xray-fdr     |
-|                   |                 |               | instead. Whether to    |
-|                   |                 |               | install the Flight     |
-|                   |                 |               | Data Recorder          |
-|                   |                 |               | (FDR) mode.            |
-+-------------------+-----------------+---------------+------------------------+
 | verbosity         | ``int``         | ``0``         | Runtime verbosity      |
 |                   |                 |               | level.                 |
 +-------------------+-----------------+---------------+------------------------+
@@ -193,30 +179,45 @@ variable, where we list down the options and their defaults below.
 If you choose to not use the default logging implementation that comes with the
 XRay runtime and/or control when/how the XRay instrumentation runs, you may use
 the XRay APIs directly for doing so. To do this, you'll need to include the
-``xray_interface.h`` from the compiler-rt ``xray`` directory. The important API
+``xray_log_interface.h`` from the compiler-rt ``xray`` directory. The important API
 functions we list below:
 
-- ``__xray_set_handler(void (*entry)(int32_t, XRayEntryType))``: Install your
-  own logging handler for when an event is encountered. See
-  ``xray/xray_interface.h`` for more details.
-- ``__xray_remove_handler()``: Removes whatever the installed handler is.
-- ``__xray_patch()``: Patch all the instrumentation points defined in the
-  binary.
-- ``__xray_unpatch()``: Unpatch the instrumentation points defined in the
-  binary.
+- ``__xray_log_register_mode(...)``: Register a logging implementation against
+  a string Mode identifier. The implementation is an instance of
+  ``XRayLogImpl`` defined in ``xray/xray_log_interface.h``.
+- ``__xray_log_select_mode(...)``: Select the mode to install, associated with
+  a string Mode identifier. Only implementations registered with
+  ``__xray_log_register_mode(...)`` can be chosen with this function.
+- ``__xray_log_init_mode(...)``: This function allows for initializing and
+  re-initializing an installed logging implementation. See
+  ``xray/xray_log_interface.h`` for details, part of the XRay compiler-rt
+  installation.
 
-There are some requirements on the logging handler to be installed for the
-thread-safety of operations to be performed by the XRay runtime library:
+Once a logging implementation has been initialized, it can be "stopped" by
+finalizing the implementation through the ``__xray_log_finalize()`` function.
+The finalization routine is the opposite of the initialization. When finalized,
+an implementation's data can be cleared out through the
+``__xray_log_flushLog()`` function. For implementations that support in-memory
+processing, these should register an iterator function to provide access to the
+data via the ``__xray_log_set_buffer_iterator(...)`` which allows code calling
+the ``__xray_log_process_buffers(...)`` function to deal with the data in
+memory.
 
-- The function should be thread-safe, as multiple threads may be invoking the
-  function at the same time. If the logging function needs to do
-  synchronisation, it must do so internally as XRay does not provide any
-  synchronisation guarantees outside from the atomicity of updates to the
-  pointer.
-- The pointer provided to ``__xray_set_handler(...)`` must be live even after
-  calls to ``__xray_remove_handler()`` and ``__xray_unpatch()`` have succeeded.
-  XRay cannot guarantee that all threads that have ever gotten a copy of the
-  pointer will not invoke the function.
+All of this is better explained in the ``xray/xray_log_interface.h`` header.
+
+Basic Mode
+----------
+
+XRay supports a basic logging mode which will trace the application's
+execution, and periodically append to a single log. This mode can be
+installed/enabled by setting ``xray_mode=xray-basic`` in the ``XRAY_OPTIONS``
+environment variable. Combined with ``patch_premain=true`` this can allow for
+tracing applications from start to end.
+
+Like all the other modes installed through ``__xray_log_select_mode(...)``, the
+implementation can be configured through the ``__xray_log_init_mode(...)``
+function, providing the mode string and the flag options. Basic-mode specific
+defaults can be provided in the ``XRAY_BASIC_OPTIONS`` environment variable.
 
 Flight Data Recorder Mode
 -------------------------
@@ -226,9 +227,12 @@ fixed amount of memory's worth of events. Flight Data Recorder (FDR) mode works
 very much like a plane's "black box" which keeps recording data to memory in a
 fixed-size circular queue of buffers, and have the data available
 programmatically until the buffers are finalized and flushed. To use FDR mode
-on your application, you may set the ``xray_fdr_log`` option to ``true`` in the
-``XRAY_OPTIONS`` environment variable (while also optionally setting the
-``xray_naive_log`` to ``false``).
+on your application, you may set the ``xray_mode`` variable to ``xray-fdr`` in
+the ``XRAY_OPTIONS`` environment variable. Additional options to the FDR mode
+implementation can be provided in the ``XRAY_FDR_OPTIONS`` environment
+variable. Programmatic configuration can be done by calling
+``__xray_log_init_mode("xray-fdr", <configuration string>)`` once it has been
+selected/installed.
 
 When the buffers are flushed to disk, the result is a binary trace format
 described by `XRay FDR format <XRayFDRFormat.html>`_
@@ -260,33 +264,14 @@ provided below:
   }
 
 The default settings for the FDR mode implementation will create logs named
-similarly to the naive log implementation, but will have a different log
+similarly to the basic log implementation, but will have a different log
 format. All the trace analysis tools (and the trace reading library) will
 support all versions of the FDR mode format as we add more functionality and
 record types in the future.
 
-  **NOTE:** We do not however promise perpetual support for when we update the
-  log versions we support going forward. Deprecation of the formats will be
+  **NOTE:** We do not promise perpetual support for when we update the log
+  versions we support going forward. Deprecation of the formats will be
   announced and discussed on the developers mailing list.
-
-XRay allows for replacing the default FDR mode logging implementation using the
-following API:
-
-- ``__xray_set_log_impl(...)``: This function takes a struct of type
-  ``XRayLogImpl``, which is defined in ``xray/xray_log_interface.h``, part of
-  the XRay compiler-rt installation.
-- ``__xray_log_register_mode(...)``: Register a logging implementation against
-  a string Mode. The implementation is an instance of ``XRayLogImpl`` defined
-  in ``xray/xray_log_interface.h``.
-- ``__xray_log_select_mode(...)``: Select the mode to install, associated with
-  a string Mode. Only implementations registered with
-  ``__xray_log_register_mode(...)`` can be chosen with this function. When
-  successful, has the same effects as calling ``__xray_set_log_impl(...)`` with
-  the registered logging implementation.
-- ``__xray_log_init(...)``: This function allows for initializing and
-  re-initializing an installed logging implementation. See
-  ``xray/xray_log_interface.h`` for details, part of the XRay compiler-rt
-  installation.
 
 Trace Analysis Tools
 --------------------
@@ -301,7 +286,7 @@ supports the following subcommands:
   options for sorting, and output formats (supports CSV, YAML, and
   console-friendly TEXT).
 - ``convert``: Converts an XRay log file from one format to another. We can
-  convert from binary XRay traces (both naive and FDR mode) to YAML,
+  convert from binary XRay traces (both basic and FDR mode) to YAML,
   `flame-graph <https://github.com/brendangregg/FlameGraph>`_ friendly text
   formats, as well as `Chrome Trace Viewer (catapult)
   <https://github.com/catapult-project/catapult>` formats.

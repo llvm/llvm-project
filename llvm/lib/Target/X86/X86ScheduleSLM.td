@@ -144,6 +144,9 @@ defm : SLMWriteResPair<WriteFRsqrt, [SLM_FPC_RSV0], 5>;
 defm : SLMWriteResPair<WriteFRsqrtY,[SLM_FPC_RSV0], 5>;
 defm : SLMWriteResPair<WriteFSqrt,  [SLM_FPC_RSV0], 15>;
 defm : SLMWriteResPair<WriteFSqrtY, [SLM_FPC_RSV0], 15>;
+defm : SLMWriteResPair<WriteDPPD,   [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteDPPS,   [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteDPPSY,  [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteCvtF2I, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtI2F, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtF2F, [SLM_FPC_RSV01], 4>;
@@ -162,14 +165,21 @@ def  : WriteRes<WriteVecStore,       [SLM_FPC_RSV01, SLM_MEC_RSV]>;
 def  : WriteRes<WriteVecLoad,        [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteVecMove,        [SLM_FPC_RSV01]>;
 
-defm : SLMWriteResPair<WriteVecShift, [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVecShift,    [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVecShiftX,   [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVecShiftY,   [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVecShiftImmX,[SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVecShiftImmY,[SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecLogic, [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecLogicY,[SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecALU,   [SLM_FPC_RSV01],  1>;
+defm : SLMWriteResPair<WriteVecALUY,  [SLM_FPC_RSV01],  1>;
 defm : SLMWriteResPair<WriteVecIMul,  [SLM_FPC_RSV0],   4>;
+defm : SLMWriteResPair<WriteVecIMulY, [SLM_FPC_RSV0],   4>;
 // FIXME: The below is closer to correct, but caused some perf regressions.
 //defm : SLMWriteResPair<WritePMULLD,  [SLM_FPC_RSV0],   11, [11], 7>;
 defm : SLMWriteResPair<WritePMULLD,  [SLM_FPC_RSV0],   4>;
+defm : SLMWriteResPair<WritePMULLDY, [SLM_FPC_RSV0],   4>;
 defm : SLMWriteResPair<WriteShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteShuffleY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
@@ -177,7 +187,9 @@ defm : SLMWriteResPair<WriteVarShuffleY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlendY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
-defm : SLMWriteResPair<WritePSADBW, [SLM_FPC_RSV0],  4>;
+defm : SLMWriteResPair<WriteMPSADY, [SLM_FPC_RSV0],  7>;
+defm : SLMWriteResPair<WritePSADBW,  [SLM_FPC_RSV0],  4>;
+defm : SLMWriteResPair<WritePSADBWY, [SLM_FPC_RSV0],  4>;
 defm : SLMWriteResPair<WritePHMINPOS,  [SLM_FPC_RSV0],   4>;
 
 // Vector insert/extract operations.
@@ -197,6 +209,7 @@ def  : WriteRes<WriteVecExtractSt, [SLM_FPC_RSV0, SLM_MEC_RSV]> {
 defm : SLMWriteResPair<WriteFHAdd,   [SLM_FPC_RSV01], 3, [2]>;
 defm : SLMWriteResPair<WriteFHAddY,  [SLM_FPC_RSV01], 3, [2]>;
 defm : SLMWriteResPair<WritePHAdd,   [SLM_FPC_RSV01], 1>;
+defm : SLMWriteResPair<WritePHAddY,  [SLM_FPC_RSV01], 1>;
 
 // String instructions.
 // Packed Compare Implicit Length Strings, Return Mask
@@ -282,7 +295,6 @@ def : WriteRes<WriteCLMulLd, [SLM_FPC_RSV0, SLM_MEC_RSV]> {
   let ResourceCycles = [10, 1];
 }
 
-
 def : WriteRes<WriteSystem,     [SLM_FPC_RSV0]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [SLM_FPC_RSV0]> { let Latency = 100; }
 def : WriteRes<WriteFence, [SLM_MEC_RSV]>;
@@ -300,7 +312,8 @@ defm : SLMWriteResPair<WriteFShuffle256, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFVarShuffle256, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteShuffle256, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle256, [SLM_FPC_RSV0],  1>;
-defm : SLMWriteResPair<WriteVarVecShift, [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVarVecShift,  [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVarVecShiftY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFMA, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFMAS, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFMAY, [SLM_FPC_RSV0],  1>;

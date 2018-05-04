@@ -1372,13 +1372,13 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
 
   bool IsCntPhiUsedOutsideLoop = false;
   for (User *U : CntPhi->users())
-    if (!CurLoop->contains(dyn_cast<Instruction>(U))) {
+    if (!CurLoop->contains(cast<Instruction>(U))) {
       IsCntPhiUsedOutsideLoop = true;
       break;
     }
   bool IsCntInstUsedOutsideLoop = false;
   for (User *U : CntInst->users())
-    if (!CurLoop->contains(dyn_cast<Instruction>(U))) {
+    if (!CurLoop->contains(cast<Instruction>(U))) {
       IsCntInstUsedOutsideLoop = true;
       break;
     }
@@ -1416,9 +1416,8 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
   //  br i1 %tobool
 
   IRBuilder<> Builder(PH->getTerminator());
-  SmallVector<const Value *, 2> Ops =
+  const Value *Args[] =
       {InitX, ZeroCheck ? Builder.getTrue() : Builder.getFalse()};
-  ArrayRef<const Value *> Args(Ops);
   if (CurLoop->getHeader()->size() != 6 &&
       TTI->getIntrinsicCost(Intrinsic::ctlz, InitX->getType(), Args) >
           TargetTransformInfo::TCC_Basic)
@@ -1540,7 +1539,7 @@ static CallInst *createCTLZIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
 void LoopIdiomRecognize::transformLoopToCountable(
     BasicBlock *Preheader, Instruction *CntInst, PHINode *CntPhi, Value *InitX,
     const DebugLoc DL, bool ZeroCheck, bool IsCntPhiUsedOutsideLoop) {
-  BranchInst *PreheaderBr = dyn_cast<BranchInst>(Preheader->getTerminator());
+  BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
 
   // Step 1: Insert the CTLZ instruction at the end of the preheader block
   //   Count = BitWidth - CTLZ(InitX);
@@ -1588,7 +1587,7 @@ void LoopIdiomRecognize::transformLoopToCountable(
   //   ...
   //   Br: loop if (Dec != 0)
   BasicBlock *Body = *(CurLoop->block_begin());
-  auto *LbBr = dyn_cast<BranchInst>(Body->getTerminator());
+  auto *LbBr = cast<BranchInst>(Body->getTerminator());
   ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
   Type *Ty = Count->getType();
 
@@ -1625,7 +1624,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
                                                  Instruction *CntInst,
                                                  PHINode *CntPhi, Value *Var) {
   BasicBlock *PreHead = CurLoop->getLoopPreheader();
-  auto *PreCondBr = dyn_cast<BranchInst>(PreCondBB->getTerminator());
+  auto *PreCondBr = cast<BranchInst>(PreCondBB->getTerminator());
   const DebugLoc DL = CntInst->getDebugLoc();
 
   // Assuming before transformation, the loop is following:
@@ -1696,7 +1695,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   //     do { cnt++; x &= x-1; t--) } while (t > 0);
   BasicBlock *Body = *(CurLoop->block_begin());
   {
-    auto *LbBr = dyn_cast<BranchInst>(Body->getTerminator());
+    auto *LbBr = cast<BranchInst>(Body->getTerminator());
     ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
     Type *Ty = TripCnt->getType();
 

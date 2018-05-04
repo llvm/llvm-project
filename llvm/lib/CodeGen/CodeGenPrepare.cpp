@@ -1668,7 +1668,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       InsertedInsts.insert(ExtVal);
       return true;
     }
-    case Intrinsic::invariant_group_barrier:
+    case Intrinsic::launder_invariant_group:
       II->replaceAllUsesWith(II->getArgOperand(0));
       II->eraseFromParent();
       return true;

@@ -14783,6 +14783,18 @@ static bool isHomogeneousAggregate(Type *Ty, HABaseType &Base,
   return (Members > 0 && Members <= 4);
 }
 
+/// Return the correct alignment for the current calling convention.
+unsigned
+ARMTargetLowering::getABIAlignmentForCallingConv(Type *ArgTy,
+                                                 DataLayout DL) const {
+  if (!ArgTy->isVectorTy())
+    return DL.getABITypeAlignment(ArgTy);
+
+  // Avoid over-aligning vector parameters. It would require realigning the
+  // stack and waste space for no real benefit.
+  return std::min(DL.getABITypeAlignment(ArgTy), DL.getStackAlignment());
+}
+
 /// Return true if a type is an AAPCS-VFP homogeneous aggregate or one of
 /// [N x i32] or [N x i64]. This allows front-ends to skip emitting padding when
 /// passing according to AAPCS rules.

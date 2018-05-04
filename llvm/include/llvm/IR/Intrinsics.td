@@ -710,7 +710,7 @@ def int_invariant_end   : Intrinsic<[],
                                      llvm_anyptr_ty],
                                     [IntrArgMemOnly, NoCapture<2>]>;
 
-// invariant.group.barrier can't be marked with 'readnone' (IntrNoMem),
+// launder.invariant.group can't be marked with 'readnone' (IntrNoMem),
 // because it would cause CSE of two barriers with the same argument.
 // Inaccessiblememonly says that the barrier doesn't read the argument,
 // but it changes state not accessible to this module. This way
@@ -722,9 +722,9 @@ def int_invariant_end   : Intrinsic<[],
 // it would remove barrier.
 // Note that it is still experimental, which means that its semantics
 // might change in the future.
-def int_invariant_group_barrier : Intrinsic<[llvm_anyptr_ty],
+def int_launder_invariant_group : Intrinsic<[llvm_anyptr_ty],
                                             [LLVMMatchType<0>],
-                                            [IntrInaccessibleMemOnly]>;
+                                            [IntrInaccessibleMemOnly, IntrSpeculatable]>;
 
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //

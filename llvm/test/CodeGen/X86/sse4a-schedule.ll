@@ -6,7 +6,7 @@
 define <2 x i64> @test_extrq(<2 x i64> %a0, <16 x i8> %a1) {
 ; GENERIC-LABEL: test_extrq:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    extrq %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    extrq %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: test_extrq:
@@ -26,7 +26,7 @@ declare <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64>, <16 x i8>)
 define <2 x i64> @test_extrqi(<2 x i64> %a0) {
 ; GENERIC-LABEL: test_extrqi:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    extrq $2, $3, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    extrq $2, $3, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: test_extrqi:
@@ -46,7 +46,7 @@ declare <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64>, i8, i8)
 define <2 x i64> @test_insertq(<2 x i64> %a0, <2 x i64> %a1) {
 ; GENERIC-LABEL: test_insertq:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    insertq %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    insertq %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: test_insertq:
@@ -66,7 +66,7 @@ declare <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64>, <2 x i64>)
 define <2 x i64> @test_insertqi(<2 x i64> %a0, <2 x i64> %a1) {
 ; GENERIC-LABEL: test_insertqi:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    insertq $6, $5, %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    insertq $6, $5, %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: test_insertqi:

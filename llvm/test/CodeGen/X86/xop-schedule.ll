@@ -147,14 +147,14 @@ define void @test_vpcom(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_vpcom:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vpcomb $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomd $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomq $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomw $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomb $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vpcomd $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vpcomq $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vpcomw $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vpcomb $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomd $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomq $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomw $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomb $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpcomd $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpcomq $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpcomw $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -179,14 +179,14 @@ define void @test_vpcomu(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_vpcomu:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vpcomub $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomud $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomuq $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomuw $3, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcomub $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vpcomud $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vpcomuq $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
-; GENERIC-NEXT:    vpcomuw $3, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; GENERIC-NEXT:    vpcomub $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomud $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomuq $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomuw $3, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcomub $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpcomud $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpcomuq $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpcomuw $3, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -724,7 +724,7 @@ define void @test_vpmacsswd(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i6
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpmacsswd %xmm2, %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmacsswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vpmacsswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -744,7 +744,7 @@ define void @test_vpmacssww(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i6
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpmacssww %xmm2, %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmacssww %xmm2, (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vpmacssww %xmm2, (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -764,7 +764,7 @@ define void @test_vpmacswd(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i64
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpmacswd %xmm2, %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmacswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vpmacswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -784,7 +784,7 @@ define void @test_vpmacsww(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i64
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpmacsww %xmm2, %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmacsww %xmm2, (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vpmacsww %xmm2, (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -804,7 +804,7 @@ define void @test_vpmadcsswd(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpmadcsswd %xmm2, %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmadcsswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vpmadcsswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -824,7 +824,7 @@ define void @test_vpmadcswd(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i6
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vpmadcswd %xmm2, %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmadcswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; GENERIC-NEXT:    vpmadcswd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -869,22 +869,22 @@ define void @test_vprot(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-NEXT:    vprotd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vprotq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vprotw %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vprotb (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotd (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotq (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotw (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotb %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotd %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotq %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotw %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vprotb (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotq (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotw (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotb %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotd %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotq %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotw %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    vprotb $7, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vprotd $7, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vprotq $7, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vprotw $7, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vprotb $7, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotd $7, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotq $7, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vprotw $7, (%rdi), %xmm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vprotb $7, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotd $7, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotq $7, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vprotw $7, (%rdi), %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -925,14 +925,14 @@ define void @test_vpsha(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-NEXT:    vpshad %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpshaq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpshaw %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpshab (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshad (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshaq (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshaw (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshab %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshad %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshaq %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshaw %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpshab (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshad (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshaq (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshaw (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshab %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshad %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshaq %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshaw %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -965,14 +965,14 @@ define void @test_vpshl(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-NEXT:    vpshld %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpshlq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpshlw %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpshlb (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshld (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshlq (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshlw (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshlb %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshld %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshlq %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpshlw %xmm0, (%rdi), %xmm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpshlb (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshld (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshlq (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshlw (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshlb %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshld %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshlq %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    vpshlw %xmm0, (%rdi), %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

@@ -971,6 +971,20 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
   }
 }
 
+SmallVector<std::pair<unsigned, unsigned>, 4>
+RegsForValue::getRegsAndSizes() const {
+  SmallVector<std::pair<unsigned, unsigned>, 4> OutVec;
+  unsigned I = 0;
+  for (auto CountAndVT : zip_first(RegCount, RegVTs)) {
+    unsigned RegCount = std::get<0>(CountAndVT);
+    MVT RegisterVT = std::get<1>(CountAndVT);
+    unsigned RegisterSize = RegisterVT.getSizeInBits();
+    for (unsigned E = I + RegCount; I != E; ++I)
+      OutVec.push_back(std::make_pair(Regs[I], RegisterSize));
+  }
+  return OutVec;
+}
+
 void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis *aa,
                                const TargetLibraryInfo *li) {
   AA = aa;
@@ -4908,26 +4922,18 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       const auto &TLI = DAG.getTargetLoweringInfo();
       RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), VMI->second,
                        V->getType(), isABIRegCopy(V));
-      unsigned NumRegs =
-          std::accumulate(RFV.RegCount.begin(), RFV.RegCount.end(), 0);
-      if (NumRegs > 1) {
-        unsigned I = 0;
+      if (RFV.occupiesMultipleRegs()) {
         unsigned Offset = 0;
-        auto RegisterVT = RFV.RegVTs.begin();
-        for (auto RegCount : RFV.RegCount) {
-          unsigned RegisterSize = (RegisterVT++)->getSizeInBits();
-          for (unsigned E = I + RegCount; I != E; ++I) {
-            // The vregs are guaranteed to be allocated in sequence.
-            Op = MachineOperand::CreateReg(VMI->second + I, false);
-            auto FragmentExpr = DIExpression::createFragmentExpression(
-                Expr, Offset, RegisterSize);
-            if (!FragmentExpr)
-              continue;
-            FuncInfo.ArgDbgValues.push_back(
-                BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsDbgDeclare,
-                        Op->getReg(), Variable, *FragmentExpr));
-            Offset += RegisterSize;
-          }
+        for (auto RegAndSize : RFV.getRegsAndSizes()) {
+          Op = MachineOperand::CreateReg(RegAndSize.first, false);
+          auto FragmentExpr = DIExpression::createFragmentExpression(
+              Expr, Offset, RegAndSize.second);
+          if (!FragmentExpr)
+            continue;
+          FuncInfo.ArgDbgValues.push_back(
+              BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsDbgDeclare,
+                      Op->getReg(), Variable, *FragmentExpr));
+          Offset += RegAndSize.second;
         }
         return true;
       }
@@ -5257,12 +5263,42 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // PHI nodes have already been selected, so we should know which VReg that
     // is assigns to already.
     if (isa<PHINode>(V)) {
-      auto It = FuncInfo.ValueMap.find(V);
-      if (It != FuncInfo.ValueMap.end()) {
-        unsigned Reg = It->second;
-        SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
-                                  SDNodeOrder);
-        DAG.AddDbgValue(SDV, nullptr, false);
+      auto VMI = FuncInfo.ValueMap.find(V);
+      if (VMI != FuncInfo.ValueMap.end()) {
+        unsigned Reg = VMI->second;
+        // The PHI node may be split up into several MI PHI nodes (in
+        // FunctionLoweringInfo::set).
+        RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
+                         V->getType(), false);
+        if (RFV.occupiesMultipleRegs()) {
+          unsigned Offset = 0;
+          unsigned BitsToDescribe = 0;
+          if (auto VarSize = Variable->getSizeInBits())
+            BitsToDescribe = *VarSize;
+          if (auto Fragment = Expression->getFragmentInfo())
+            BitsToDescribe = Fragment->SizeInBits;
+          for (auto RegAndSize : RFV.getRegsAndSizes()) {
+            unsigned RegisterSize = RegAndSize.second;
+            // Bail out if all bits are described already.
+            if (Offset >= BitsToDescribe)
+              break;
+            unsigned FragmentSize = (Offset + RegisterSize > BitsToDescribe)
+                ? BitsToDescribe - Offset
+                : RegisterSize;
+            auto FragmentExpr = DIExpression::createFragmentExpression(
+                Expression, Offset, FragmentSize);
+            if (!FragmentExpr)
+                continue;
+            SDV = DAG.getVRegDbgValue(Variable, *FragmentExpr, RegAndSize.first,
+                                      false, dl, SDNodeOrder);
+            DAG.AddDbgValue(SDV, nullptr, false);
+            Offset += RegisterSize;
+          }
+        } else {
+          SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
+                                    SDNodeOrder);
+          DAG.AddDbgValue(SDV, nullptr, false);
+        }
         return nullptr;
       }
     }
@@ -5710,7 +5746,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   }
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
-  case Intrinsic::invariant_group_barrier:
+  case Intrinsic::launder_invariant_group:
     // Drop the intrinsic, but forward the value
     setValue(&I, getValue(I.getOperand(0)));
     return nullptr;

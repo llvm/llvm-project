@@ -4,7 +4,7 @@
 ; RUN: opt -S -O3 < %s | FileCheck %s
 
 ; These tests checks if passes with CSE functionality can do CSE on
-; invariant.group.barrier, that is prohibited if there is a memory clobber
+; launder.invariant.group, that is prohibited if there is a memory clobber
 ; between barriers call.
 
 ; CHECK-LABEL: define i8 @optimizable()
@@ -12,11 +12,11 @@ define i8 @optimizable() {
 entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
-; CHECK: call i8* @llvm.invariant.group.barrier.p0i8
-    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call i8* @llvm.launder.invariant.group.p0i8
+    %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; FIXME: This one could be CSE
-; CHECK: call i8* @llvm.invariant.group.barrier
-    %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call i8* @llvm.launder.invariant.group
+    %ptr3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; CHECK: call void @clobber(i8* {{.*}}%ptr)
     call void @clobber(i8* %ptr)
 
@@ -35,11 +35,11 @@ define i8 @unoptimizable() {
 entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
-; CHECK: call i8* @llvm.invariant.group.barrier.p0i8
-    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call i8* @llvm.launder.invariant.group.p0i8
+    %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
     call void @clobber(i8* %ptr)
-; CHECK: call i8* @llvm.invariant.group.barrier.p0i8
-    %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call i8* @llvm.launder.invariant.group.p0i8
+    %ptr3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; CHECK: call void @clobber(i8* {{.*}}%ptr)
     call void @clobber(i8* %ptr)
 ; CHECK: call void @use(i8* {{.*}}%ptr2)
@@ -56,11 +56,11 @@ entry:
 define i8 @unoptimizable2() {
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
-; CHECK: call i8* @llvm.invariant.group.barrier
-    %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call i8* @llvm.launder.invariant.group
+    %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
     store i8 43, i8* %ptr
-; CHECK: call i8* @llvm.invariant.group.barrier
-    %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call i8* @llvm.launder.invariant.group
+    %ptr3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; CHECK: call void @clobber(i8* {{.*}}%ptr)
     call void @clobber(i8* %ptr)
 ; CHECK: call void @use(i8* {{.*}}%ptr2)
@@ -72,12 +72,23 @@ define i8 @unoptimizable2() {
     ret i8 %v
 }
 
+; This test check if optimizer is not proving equality based on mustalias
+; CHECK-LABEL: define void @dontProveEquality(i8* %a)
+define void @dontProveEquality(i8* %a) {
+  %b = call i8* @llvm.launder.invariant.group.p0i8(i8* %a)
+  %r = icmp eq i8* %b, %a
+;CHECK: call void @useBool(i1 %r)
+  call void @useBool(i1 %r)
+  ret void
+}
+
 declare void @use(i8* readonly)
+declare void @useBool(i1)
 
 declare void @clobber(i8*)
-; CHECK: Function Attrs: inaccessiblememonly nounwind{{$}}
-; CHECK-NEXT: declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
-declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
+; CHECK: Function Attrs: inaccessiblememonly nounwind speculatable{{$}}
+; CHECK-NEXT: declare i8* @llvm.launder.invariant.group.p0i8(i8*)
+declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 
 !0 = !{}
 

@@ -4507,7 +4507,7 @@ defm VPMULHUW : avx512_binop_rm_vl_w<0xE4, "vpmulhuw", mulhu, SchedWriteVecIMul,
 defm VPMULHRSW : avx512_binop_rm_vl_w<0x0B, "vpmulhrsw", X86mulhrs,
                                       SchedWriteVecIMul, HasBWI, 1>, T8PD;
 defm VPAVG : avx512_binop_rm_vl_bw<0xE0, 0xE3, "vpavg", X86avg,
-                                   SchedWriteVecIMul, HasBWI, 1>;
+                                   SchedWriteVecALU, HasBWI, 1>;
 defm VPMULDQ : avx512_binop_rm_vl_q<0x28, "vpmuldq", X86pmuldq,
                                     SchedWriteVecIMul, HasAVX512, 1>, T8PD;
 defm VPMULUDQ : avx512_binop_rm_vl_q<0xF4, "vpmuludq", X86pmuludq,
@@ -5587,24 +5587,24 @@ multiclass avx512_shift_rmi_dq<bits<8> opcd, bits<8> opcq,
 }
 
 defm VPSRL : avx512_shift_rmi_dq<0x72, 0x73, MRM2r, MRM2m, "vpsrl", X86vsrli,
-                                 SchedWriteVecShift>,
+                                 SchedWriteVecShiftImm>,
              avx512_shift_rmi_w<0x71, MRM2r, MRM2m, "vpsrlw", X86vsrli,
-                                SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSLL : avx512_shift_rmi_dq<0x72, 0x73, MRM6r, MRM6m, "vpsll", X86vshli,
-                                 SchedWriteVecShift>,
+                                 SchedWriteVecShiftImm>,
              avx512_shift_rmi_w<0x71, MRM6r, MRM6m, "vpsllw", X86vshli,
-                                SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSRA : avx512_shift_rmi_dq<0x72, 0x72, MRM4r, MRM4m, "vpsra", X86vsrai,
-                                 SchedWriteVecShift>,
+                                 SchedWriteVecShiftImm>,
              avx512_shift_rmi_w<0x71, MRM4r, MRM4m, "vpsraw", X86vsrai,
-                                SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPROR : avx512_shift_rmi_dq<0x72, 0x72, MRM0r, MRM0m, "vpror", X86vrotri,
-                                 SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                 SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 defm VPROL : avx512_shift_rmi_dq<0x72, 0x72, MRM1r, MRM1m, "vprol", X86vrotli,
-                                 SchedWriteVecShift>, AVX512BIi8Base, EVEX_4V;
+                                 SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSLL : avx512_shift_types<0xF2, 0xF3, 0xF1, "vpsll", X86vshl,
                                 SchedWriteVecShift>;
@@ -9711,7 +9711,7 @@ let Predicates = [HasVLX, HasBWI] in {
 }
 
 defm VDBPSADBW: avx512_common_3Op_rm_imm8<0x42, X86dbpsadbw, "vdbpsadbw",
-                SchedWriteVecIMul, avx512vl_i16_info, avx512vl_i8_info>,
+                SchedWritePSADBW, avx512vl_i16_info, avx512vl_i8_info>,
                 EVEX_CD8<8, CD8VF>;
 
 multiclass avx512_unary_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -9842,9 +9842,8 @@ multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
   }
 }
 
-// FIXME: Is there a better scheduler class for VPLZCNT?
 defm VPLZCNT    : avx512_unary_rm_vl_dq<0x44, 0x44, "vplzcnt", ctlz,
-                                        SchedWriteVecALU, HasCDI>;
+                                        SchedWriteVecIMul, HasCDI>;
 
 // FIXME: Is there a better scheduler class for VPCONFLICT?
 defm VPCONFLICT : avx512_unary_rm_vl_dq<0xC4, 0xC4, "vpconflict", X86Conflict,

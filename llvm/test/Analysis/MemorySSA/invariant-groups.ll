@@ -1,7 +1,7 @@
 ; RUN: opt -basicaa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s
 ;
 ; Currently, MemorySSA doesn't support invariant groups. So, we should ignore
-; invariant.group.barrier intrinsics entirely. We'll need to pay attention to
+; launder.invariant.group intrinsics entirely. We'll need to pay attention to
 ; them when/if we decide to support invariant groups.
 
 @g = external global i32
@@ -17,8 +17,8 @@ define i32 @foo(i32* %a) {
 
   %1 = bitcast i32* %a to i8*
 ; CHECK:  3 = MemoryDef(2)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
+; CHECK-NEXT: %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)
+  %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
 ; This have to be MemoryUse(2), because we can't skip the barrier based on
@@ -36,8 +36,8 @@ define i32 @skipBarrier(i32* %a) {
 
   %1 = bitcast i32* %a to i8*
 ; CHECK: 2 = MemoryDef(1)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)  
+; CHECK-NEXT: %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)
+  %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)  
   %a32 = bitcast i8* %a8 to i32*
 
 ; We can skip the barrier only if the "skip" is not based on !invariant.group.
@@ -55,8 +55,8 @@ define i32 @skipBarrier2(i32* %a) {
 
   %1 = bitcast i32* %a to i8*
 ; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
+; CHECK-NEXT: %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)
+  %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
 ; We can skip the barrier only if the "skip" is not based on !invariant.group.
@@ -86,8 +86,8 @@ define i32 @handleInvariantGroups(i32* %a) {
   store i32 1, i32* @g, align 4
   %1 = bitcast i32* %a to i8*
 ; CHECK: 3 = MemoryDef(2)
-; CHECK-NEXT: %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
-  %a8 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %1)
+; CHECK-NEXT: %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)
+  %a8 = call i8* @llvm.launder.invariant.group.p0i8(i8* %1)
   %a32 = bitcast i8* %a8 to i32*
 
 ; CHECK: MemoryUse(2)
@@ -145,8 +145,8 @@ entry:
   call void @clobber8(i8* %p)
 
 ; CHECK: 3 = MemoryDef(2)
-; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
-  %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
+; CHECK-NEXT: %after = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
+  %after = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
   br i1 undef, label %Loop.Body, label %Loop.End
 
 Loop.Body:
@@ -192,8 +192,8 @@ entry:
   call void @clobber8(i8* %p)
 
 ; CHECK: 3 = MemoryDef(2)
-; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
-  %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
+; CHECK-NEXT: %after = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
+  %after = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
   br i1 undef, label %Loop.Body, label %Loop.End
 
 Loop.Body:
@@ -253,8 +253,8 @@ entry:
 ; CHECK-NEXT: call void @clobber
   call void @clobber8(i8* %p)
 ; CHECK: 3 = MemoryDef(2)
-; CHECK-NEXT: %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
-  %after = call i8* @llvm.invariant.group.barrier.p0i8(i8* %p)
+; CHECK-NEXT: %after = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
+  %after = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
   br i1 undef, label %Loop.Pre, label %Loop.End
 
 Loop.Pre:
@@ -302,12 +302,12 @@ entry:
 ; CHECK-NEXT: store i8 42, i8* %ptr, !invariant.group !0
   store i8 42, i8* %ptr, !invariant.group !0
 ; CHECK: 2 = MemoryDef(1)
-; CHECK-NEXT: call i8* @llvm.invariant.group.barrier
-  %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK-NEXT: call i8* @llvm.launder.invariant.group
+  %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; FIXME: This one could be CSEd.
 ; CHECK: 3 = MemoryDef(2)
-; CHECK: call i8* @llvm.invariant.group.barrier
-  %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK: call i8* @llvm.launder.invariant.group
+  %ptr3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; CHECK: 4 = MemoryDef(3)
 ; CHECK-NEXT: call void @clobber8(i8* %ptr)
   call void @clobber8(i8* %ptr)
@@ -331,13 +331,13 @@ define i8 @unoptimizable2() {
 ; CHECK-NEXT: store i8 42, i8* %ptr, !invariant.group !0
   store i8 42, i8* %ptr, !invariant.group !0
 ; CHECK: 2 = MemoryDef(1)
-; CHECK-NEXT: call i8* @llvm.invariant.group.barrier
-  %ptr2 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK-NEXT: call i8* @llvm.launder.invariant.group
+  %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; CHECK: 3 = MemoryDef(2)
   store i8 43, i8* %ptr
 ; CHECK: 4 = MemoryDef(3)
-; CHECK-NEXT: call i8* @llvm.invariant.group.barrier
-  %ptr3 = call i8* @llvm.invariant.group.barrier.p0i8(i8* %ptr)
+; CHECK-NEXT: call i8* @llvm.launder.invariant.group
+  %ptr3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
 ; CHECK: 5 = MemoryDef(4)
 ; CHECK-NEXT: call void @clobber8(i8* %ptr)
   call void @clobber8(i8* %ptr)
@@ -354,7 +354,7 @@ define i8 @unoptimizable2() {
 }
 
 
-declare i8* @llvm.invariant.group.barrier.p0i8(i8*)
+declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare void @clobber(i32*)
 declare void @clobber8(i8*)
 declare void @use(i8* readonly)
