@@ -5,8 +5,12 @@ import Dispatch
 
 func main() {
   let label = "lldbtest"
+#if os(Darwin)
+  // Due to the way CI is set up the apinotes are not yet available.
   let queue = DispatchQueue(label: label)
-  print(queue) //% self.expect("fr var -- label", substrs=['lldbtest'])
+  print(queue)
+#endif
+  print(label) //% self.expect("fr var -- label", substrs=['lldbtest'])
                //% self.expect("expr -- label",   substrs=['lldbtest'])
 }
 
