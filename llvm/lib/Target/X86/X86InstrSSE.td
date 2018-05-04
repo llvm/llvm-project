@@ -3855,25 +3855,26 @@ defm PINSRW : sse2_pinsrw, PD;
 // SSE2 - Packed Mask Creation
 //===---------------------------------------------------------------------===//
 
-let ExeDomain = SSEPackedInt, SchedRW = [WriteVecMOVMSK] in {
+let ExeDomain = SSEPackedInt in {
 
 def VPMOVMSKBrr  : VPDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
            (ins VR128:$src),
            "pmovmskb\t{$src, $dst|$dst, $src}",
            [(set GR32orGR64:$dst, (X86movmsk (v16i8 VR128:$src)))]>,
-           VEX, VEX_WIG;
+           Sched<[WriteVecMOVMSK]>, VEX, VEX_WIG;
 
 let Predicates = [HasAVX2] in {
 def VPMOVMSKBYrr  : VPDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
            (ins VR256:$src),
            "pmovmskb\t{$src, $dst|$dst, $src}",
            [(set GR32orGR64:$dst, (X86movmsk (v32i8 VR256:$src)))]>,
-           VEX, VEX_L, VEX_WIG;
+           Sched<[WriteVecMOVMSKY]>, VEX, VEX_L, VEX_WIG;
 }
 
 def PMOVMSKBrr : PDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst), (ins VR128:$src),
            "pmovmskb\t{$src, $dst|$dst, $src}",
-           [(set GR32orGR64:$dst, (X86movmsk (v16i8 VR128:$src)))]>;
+           [(set GR32orGR64:$dst, (X86movmsk (v16i8 VR128:$src)))]>,
+           Sched<[WriteVecMOVMSK]>;
 
 } // ExeDomain = SSEPackedInt
 

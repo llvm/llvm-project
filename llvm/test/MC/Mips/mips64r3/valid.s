@@ -299,9 +299,13 @@ a:
         sdr       $11,-20423($12)
         sdxc1     $f11,$10($14)
         seb       $25, $15             # CHECK: seb $25, $15           # encoding: [0x7c,0x0f,0xcc,0x20]
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SEB_MM
         seb       $25                  # CHECK: seb $25, $25           # encoding: [0x7c,0x19,0xcc,0x20]
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SEB_MM
         seh       $3, $12              # CHECK: seh $3, $12            # encoding: [0x7c,0x0c,0x1e,0x20]
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SEH_MM
         seh       $3                   # CHECK: seh $3, $3             # encoding: [0x7c,0x03,0x1e,0x20]
+                                       # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SEH_MM
         sh        $14,-6704($15)
         sll       $4, $5               # CHECK: sllv $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x04]
                                        # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLL

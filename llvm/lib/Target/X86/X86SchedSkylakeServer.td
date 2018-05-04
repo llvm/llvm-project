@@ -150,6 +150,7 @@ defm : SKXWriteResPair<WriteJump,  [SKXPort06],   1>;
 def  : WriteRes<WriteFLoad,         [SKXPort23]> { let Latency = 5; }
 def  : WriteRes<WriteFStore,        [SKXPort237, SKXPort4]>;
 def  : WriteRes<WriteFMove,         [SKXPort015]>;
+defm : X86WriteRes<WriteEMMS,       [SKXPort05,SKXPort0156], 10, [9,1], 10>;
 
 defm : SKXWriteResPair<WriteFAdd, [SKXPort015],  4, [1], 1, 6>; // Floating point add/sub.
 defm : SKXWriteResPair<WriteFAddY,[SKXPort015],  4, [1], 1, 7>; // Floating point add/sub (YMM/ZMM).
@@ -166,8 +167,8 @@ defm : SKXWriteResPair<WriteFRcp,   [SKXPort0],  4, [1], 1, 6>; // Floating poin
 defm : SKXWriteResPair<WriteFRcpY,  [SKXPort0],  4, [1], 1, 7>; // Floating point reciprocal estimate (YMM/ZMM).
 defm : SKXWriteResPair<WriteFRsqrt, [SKXPort0],  4, [1], 1, 6>; // Floating point reciprocal square root estimate.
 defm : SKXWriteResPair<WriteFRsqrtY,[SKXPort0],  4, [1], 1, 7>; // Floating point reciprocal square root estimate (YMM/ZMM).
-defm : SKXWriteResPair<WriteFMA,  [SKXPort015],  4, [1], 1, 6>; // Fused Multiply Add.
-defm : SKXWriteResPair<WriteFMAS, [SKXPort015],  4, [1], 1, 5>; // Fused Multiply Add (Scalar).
+defm : SKXWriteResPair<WriteFMA,  [SKXPort015],  4, [1], 1, 5>; // Fused Multiply Add.
+defm : SKXWriteResPair<WriteFMAX, [SKXPort015],  4, [1], 1, 6>; // Fused Multiply Add (XMM).
 defm : SKXWriteResPair<WriteFMAY, [SKXPort015],  4, [1], 1, 7>; // Fused Multiply Add (YMM/ZMM).
 defm : SKXWriteResPair<WriteDPPD, [SKXPort5,SKXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
 defm : SKXWriteResPair<WriteDPPS, [SKXPort5,SKXPort015], 13, [1,3], 4, 6>; // Floating point single dot product.
@@ -204,7 +205,8 @@ defm : SKXWriteResPair<WriteVecALU,   [SKXPort01], 1, [1], 1, 6>; // Vector inte
 defm : SKXWriteResPair<WriteVecALUY,  [SKXPort01], 1, [1], 1, 7>; // Vector integer ALU op, no logicals (YMM/ZMM).
 defm : SKXWriteResPair<WriteVecLogic, [SKXPort015], 1, [1], 1, 6>; // Vector integer and/or/xor.
 defm : SKXWriteResPair<WriteVecLogicY,[SKXPort015], 1, [1], 1, 7>; // Vector integer and/or/xor (YMM/ZMM).
-defm : SKXWriteResPair<WriteVecIMul,  [SKXPort015],  4, [1], 1, 6>; // Vector integer multiply.
+defm : SKXWriteResPair<WriteVecIMul,  [SKXPort0],    4, [1], 1, 5>; // Vector integer multiply.
+defm : SKXWriteResPair<WriteVecIMulX, [SKXPort015],  4, [1], 1, 6>; // Vector integer multiply (XMM).
 defm : SKXWriteResPair<WriteVecIMulY, [SKXPort015],  4, [1], 1, 7>; // Vector integer multiply (YMM/ZMM).
 defm : SKXWriteResPair<WritePMULLD,   [SKXPort015], 10, [2], 2, 6>; // Vector PMULLD.
 defm : SKXWriteResPair<WritePMULLDY,  [SKXPort015], 10, [2], 2, 7>; // Vector PMULLD (YMM/ZMM).
@@ -229,6 +231,7 @@ defm : X86WriteRes<WriteVecShiftY,    [SKXPort5,SKXPort01],  4, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftXLd,  [SKXPort01,SKXPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftYLd,  [SKXPort01,SKXPort23], 8, [1,1], 2>;
 
+defm : SKXWriteResPair<WriteVecShiftImm,  [SKXPort0],  1, [1], 1, 5>;
 defm : SKXWriteResPair<WriteVecShiftImmX, [SKXPort01], 1, [1], 1, 6>; // Vector integer immediate shifts (XMM).
 defm : SKXWriteResPair<WriteVecShiftImmY, [SKXPort01], 1, [1], 1, 7>; // Vector integer immediate shifts (YMM/ZMM).
 defm : SKXWriteResPair<WriteVarVecShift,  [SKXPort01], 1, [1], 1, 6>; // Variable vector shifts.
@@ -311,9 +314,10 @@ def : WriteRes<WritePCmpEStrILd, [SKXPort0, SKXPort5, SKXPort23, SKXPort0156]> {
 }
 
 // MOVMSK Instructions.
-def : WriteRes<WriteFMOVMSK, [SKXPort0]> { let Latency = 2; }
-def : WriteRes<WriteVecMOVMSK, [SKXPort0]> { let Latency = 2; }
-def : WriteRes<WriteMMXMOVMSK, [SKXPort0]> { let Latency = 2; }
+def : WriteRes<WriteFMOVMSK,    [SKXPort0]> { let Latency = 2; }
+def : WriteRes<WriteVecMOVMSK,  [SKXPort0]> { let Latency = 2; }
+def : WriteRes<WriteVecMOVMSKY, [SKXPort0]> { let Latency = 2; }
+def : WriteRes<WriteMMXMOVMSK,  [SKXPort0]> { let Latency = 2; }
 
 // AES instructions.
 def : WriteRes<WriteAESDecEnc, [SKXPort0]> { // Decryption, encryption.
@@ -1197,14 +1201,7 @@ def SKXWriteResGroup49 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup49], (instregex "MMX_PMADDUBSWrr",
-                                             "MMX_PMADDWDirr",
-                                             "MMX_PMULHRSWrr",
-                                             "MMX_PMULHUWirr",
-                                             "MMX_PMULHWirr",
-                                             "MMX_PMULLWirr",
-                                             "MMX_PMULUDQirr",
-                                             "MUL_FPrST0",
+def: InstRW<[SKXWriteResGroup49], (instregex "MUL_FPrST0",
                                              "MUL_FST0r",
                                              "MUL_FrST0")>;
 
@@ -2391,13 +2388,6 @@ def SKXWriteResGroup135 : SchedWriteRes<[SKXPort0,SKXPort23]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SKXWriteResGroup135], (instregex "MMX_CVTPI2PSirm",
-                                              "MMX_PMADDUBSWrm",
-                                              "MMX_PMADDWDirm",
-                                              "MMX_PMULHRSWrm",
-                                              "MMX_PMULHUWirm",
-                                              "MMX_PMULHWirm",
-                                              "MMX_PMULLWirm",
-                                              "MMX_PMULUDQirm",
                                               "RCPSSm",
                                               "RSQRTSSm",
                                               "VRCPSSm",
@@ -2703,13 +2693,6 @@ def SKXWriteResGroup157 : SchedWriteRes<[SKXPort4,SKXPort6,SKXPort23,SKXPort237,
   let ResourceCycles = [1,1,1,1,1,3];
 }
 def: InstRW<[SKXWriteResGroup157], (instregex "XCHG(8|16|32|64)rm")>;
-
-def SKXWriteResGroup158 : SchedWriteRes<[SKXPort05,SKXPort0156]> {
-  let Latency = 10;
-  let NumMicroOps = 10;
-  let ResourceCycles = [9,1];
-}
-def: InstRW<[SKXWriteResGroup158], (instregex "MMX_EMMS")>;
 
 def SKXWriteResGroup159 : SchedWriteRes<[SKXPort0,SKXFPDivider]> {
   let Latency = 11;

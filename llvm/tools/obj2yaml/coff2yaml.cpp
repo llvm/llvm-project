@@ -159,7 +159,8 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     NewYAMLSection.Header.PointerToRelocations =
         COFFSection->PointerToRelocations;
     NewYAMLSection.Header.SizeOfRawData = COFFSection->SizeOfRawData;
-    NewYAMLSection.Alignment = ObjSection.getAlignment();
+    uint32_t Shift = (COFFSection->Characteristics >> 20) & 0xF;
+    NewYAMLSection.Alignment = (1U << Shift) >> 1;
     assert(NewYAMLSection.Alignment <= 8192);
 
     ArrayRef<uint8_t> sectionData;

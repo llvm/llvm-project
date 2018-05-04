@@ -780,7 +780,7 @@ def : FlatAtomicPat <FLAT_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
 
-let OtherPredicates = [HasD16LoadStore] in {
+let OtherPredicates = [D16PreservesUnusedBits] in {
 def : FlatStorePat <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
 def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
 
@@ -824,7 +824,7 @@ def : FlatStoreSignedPat <GLOBAL_STORE_DWORD, store_global, i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX2, store_global, v2i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, v4i32>;
 
-let OtherPredicates = [HasD16LoadStore] in {
+let OtherPredicates = [D16PreservesUnusedBits] in {
 def : FlatStoreSignedPat <GLOBAL_STORE_SHORT_D16_HI, truncstorei16_hi16_global, i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_BYTE_D16_HI, truncstorei8_hi16_global, i32>;
 

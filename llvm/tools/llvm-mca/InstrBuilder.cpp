@@ -16,6 +16,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
 
 #define DEBUG_TYPE "llvm-mca"
 
@@ -383,8 +384,8 @@ const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
 
   if (SCDesc.isVariant()) {
-    errs() << "warning: don't know how to model variant opcodes.\n"
-           << "note: assume 1 micro opcode.\n";
+    WithColor::warning() << "don't know how to model variant opcodes.\n";
+    WithColor::note() << "assume 1 micro opcode.\n";
     ID->NumMicroOps = 1U;
   } else {
     ID->NumMicroOps = SCDesc.NumMicroOps;
@@ -392,15 +393,15 @@ const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   if (MCDesc.isCall()) {
     // We don't correctly model calls.
-    errs() << "warning: found a call in the input assembly sequence.\n"
-           << "note: call instructions are not correctly modeled. Assume a "
-              "latency of 100cy.\n";
+    WithColor::warning() << "found a call in the input assembly sequence.\n";
+    WithColor::note() << "call instructions are not correctly modeled. "
+                      << "Assume a latency of 100cy.\n";
   }
 
   if (MCDesc.isReturn()) {
-    errs() << "warning: found a return instruction in the input assembly "
-              "sequence.\n"
-           << "note: program counter updates are ignored.\n";
+    WithColor::warning() << "found a return instruction in the input"
+                         << " assembly sequence.\n";
+    WithColor::note() << "program counter updates are ignored.\n";
   }
 
   ID->MayLoad = MCDesc.mayLoad();

@@ -6430,29 +6430,29 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
   defm r_Int: AVX512_maskable_3src_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.RC:$src3), OpcodeStr,
           "$src3, $src2", "$src2, $src3", RHS_VEC_r, 1, 1>,
-          AVX512FMA3Base, Sched<[WriteFMAS]>;
+          AVX512FMA3Base, Sched<[SchedWriteFMA.Scl]>;
 
   defm m_Int: AVX512_maskable_3src_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.IntScalarMemOp:$src3), OpcodeStr,
           "$src3, $src2", "$src2, $src3", RHS_VEC_m, 1, 1>,
-          AVX512FMA3Base, Sched<[WriteFMASLd, ReadAfterLd]>;
+          AVX512FMA3Base, Sched<[SchedWriteFMA.Scl.Folded, ReadAfterLd]>;
 
   defm rb_Int: AVX512_maskable_3src_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
          (ins _.RC:$src2, _.RC:$src3, AVX512RC:$rc),
          OpcodeStr, "$rc, $src3, $src2", "$src2, $src3, $rc", RHS_VEC_rb, 1, 1>,
-         AVX512FMA3Base, EVEX_B, EVEX_RC, Sched<[WriteFMAS]>;
+         AVX512FMA3Base, EVEX_B, EVEX_RC, Sched<[SchedWriteFMA.Scl]>;
 
   let isCodeGenOnly = 1, isCommutable = 1 in {
     def r     : AVX512FMA3S<opc, MRMSrcReg, (outs _.FRC:$dst),
                      (ins _.FRC:$src1, _.FRC:$src2, _.FRC:$src3),
                      !strconcat(OpcodeStr,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                     !if(MaskOnlyReg, [], [RHS_r])>, Sched<[WriteFMAS]>;
+                     !if(MaskOnlyReg, [], [RHS_r])>, Sched<[SchedWriteFMA.Scl]>;
     def m     : AVX512FMA3S<opc, MRMSrcMem, (outs _.FRC:$dst),
                     (ins _.FRC:$src1, _.FRC:$src2, _.ScalarMemOp:$src3),
                     !strconcat(OpcodeStr,
                                "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                    [RHS_m]>, Sched<[WriteFMASLd, ReadAfterLd]>;
+                    [RHS_m]>, Sched<[SchedWriteFMA.Scl.Folded, ReadAfterLd]>;
   }// isCodeGenOnly = 1
 }// Constraints = "$src1 = $dst"
 }
