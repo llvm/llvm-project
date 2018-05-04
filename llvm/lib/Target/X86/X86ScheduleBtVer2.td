@@ -337,6 +337,8 @@ defm : JWriteResYMMPair<WriteFDivY,        [JFPU1, JFPM], 38, [2, 38], 2>;
 defm : JWriteResFpuPair<WriteFSqrt,        [JFPU1, JFPM], 21, [1, 21]>;
 defm : JWriteResYMMPair<WriteFSqrtY,       [JFPU1, JFPM], 42, [2, 42], 2>;
 defm : JWriteResFpuPair<WriteFSign,        [JFPU1, JFPM],  2>;
+defm : JWriteResFpuPair<WriteFRnd,         [JFPU1, JSTC],  3>;
+defm : JWriteResYMMPair<WriteFRndY,        [JFPU1, JSTC],  3, [2,2], 2>;
 defm : JWriteResFpuPair<WriteFLogic,      [JFPU01, JFPX],  1>;
 defm : JWriteResYMMPair<WriteFLogicY,     [JFPU01, JFPX],  1, [2, 2], 2>;
 defm : JWriteResFpuPair<WriteFShuffle,    [JFPU01, JFPX],  1>;
@@ -563,8 +565,7 @@ def JWriteVCVTY: SchedWriteRes<[JFPU1, JSTC]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteVCVTY], (instrs VCVTDQ2PDYrr, VCVTDQ2PSYrr,
-                                    VCVTPS2DQYrr, VCVTTPS2DQYrr,
-                                    VROUNDPDYr,   VROUNDPSYr)>;
+                                    VCVTPS2DQYrr, VCVTTPS2DQYrr)>;
 
 def JWriteVCVTYLd: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
   let Latency = 8;
@@ -572,8 +573,7 @@ def JWriteVCVTYLd: SchedWriteRes<[JLAGU, JFPU1, JSTC]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteVCVTYLd, ReadAfterLd], (instrs VCVTDQ2PDYrm, VCVTDQ2PSYrm,
-                                                   VCVTPS2DQYrm, VCVTTPS2DQYrm,
-                                                   VROUNDPDYm,   VROUNDPSYm)>;
+                                                   VCVTPS2DQYrm, VCVTTPS2DQYrm)>;
 
 def JWriteVMOVNTDQSt: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 2;

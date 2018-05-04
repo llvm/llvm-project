@@ -151,6 +151,8 @@ defm : SLMWriteResPair<WriteCvtF2I, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtI2F, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtF2F, [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteFSign,  [SLM_FPC_RSV01], 1>;
+defm : SLMWriteResPair<WriteFRnd,   [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteFRndY,  [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteFLogic, [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteFLogicY, [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteFShuffle,  [SLM_FPC_RSV0], 1>;

@@ -139,6 +139,47 @@ XRayLogInitStatus __xray_log_init(size_t BufferSize, size_t MaxBuffers,
   return GlobalXRayImpl->log_init(BufferSize, MaxBuffers, Args, ArgsSize);
 }
 
+XRayLogInitStatus __xray_log_init_mode(const char *Mode, const char *Config)
+    XRAY_NEVER_INSTRUMENT {
+  __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
+  if (!GlobalXRayImpl)
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+
+  if (Config == nullptr)
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+
+  // Check first whether the current mode is the same as what we expect.
+  if (CurrentMode == nullptr || internal_strcmp(CurrentMode->Mode, Mode) != 0)
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+
+  // Here we do some work to coerce the pointer we're provided, so that
+  // the implementations that still take void* pointers can handle the
+  // data provided in the Config argument.
+  return GlobalXRayImpl->log_init(
+      0, 0, const_cast<void *>(static_cast<const void *>(Config)), 0);
+}
+
+XRayLogInitStatus
+__xray_log_init_mode_bin(const char *Mode, const char *Config,
+                         size_t ConfigSize) XRAY_NEVER_INSTRUMENT {
+  __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
+  if (!GlobalXRayImpl)
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+
+  if (Config == nullptr)
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+
+  // Check first whether the current mode is the same as what we expect.
+  if (CurrentMode == nullptr || internal_strcmp(CurrentMode->Mode, Mode) != 0)
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+
+  // Here we do some work to coerce the pointer we're provided, so that
+  // the implementations that still take void* pointers can handle the
+  // data provided in the Config argument.
+  return GlobalXRayImpl->log_init(
+      0, 0, const_cast<void *>(static_cast<const void *>(Config)), ConfigSize);
+}
+
 XRayLogInitStatus __xray_log_finalize() XRAY_NEVER_INSTRUMENT {
   __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
   if (!GlobalXRayImpl)

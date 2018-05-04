@@ -31,7 +31,7 @@ void InstructionTables::run() {
   while (S.hasNext()) {
     UsedResources.clear();
     InstRef IR = S.peekNext();
-    std::unique_ptr<Instruction> Inst = IB.createInstruction(IR.first, *IR.second);
+    std::unique_ptr<Instruction> Inst = IB.createInstruction(*IR.second);
     const InstrDesc &Desc = Inst->getDesc();
     // Now identify the resources consumed by this instruction.
     for (const std::pair<uint64_t, ResourceUsage> Resource : Desc.Resources) {

@@ -366,7 +366,7 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
   }
 }
 
-void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
+const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -376,8 +376,8 @@ void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   const MCSchedModel &SM = STI.getSchedModel();
 
   // Then obtain the scheduling class information from the instruction.
-  const MCSchedClassDesc &SCDesc =
-      *SM.getSchedClassDesc(MCDesc.getSchedClass());
+  unsigned SchedClassID = MCDesc.getSchedClass();
+  const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
 
   // Create a new empty descriptor.
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
@@ -417,16 +417,17 @@ void InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Now add the new descriptor.
   Descriptors[Opcode] = std::move(ID);
+  return *Descriptors[Opcode];
 }
 
 const InstrDesc &InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI) {
   if (Descriptors.find_as(MCI.getOpcode()) == Descriptors.end())
-    createInstrDescImpl(MCI);
+    return createInstrDescImpl(MCI);
   return *Descriptors[MCI.getOpcode()];
 }
 
 std::unique_ptr<Instruction>
-InstrBuilder::createInstruction(unsigned Idx, const MCInst &MCI) {
+InstrBuilder::createInstruction(const MCInst &MCI) {
   const InstrDesc &D = getOrCreateInstrDesc(MCI);
   std::unique_ptr<Instruction> NewIS = llvm::make_unique<Instruction>(D);
 

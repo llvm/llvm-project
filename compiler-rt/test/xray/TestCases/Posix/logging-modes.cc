@@ -1,6 +1,7 @@
 // Check that we can install an implementation associated with a mode.
 //
-// RUN: %clangxx_xray -std=c++11 %s -o %t
+// RUN: rm xray-log.logging-modes* || true
+// RUN: %clangxx_xray -std=c++11 %s -o %t -fxray-modes=none
 // RUN: %run %t | FileCheck %s
 //
 // UNSUPPORTED: target-is-mips64,target-is-mips64el
@@ -31,8 +32,18 @@
   assert(false && "Invalid buffer provided.");
 }
 
+static constexpr char Options[] = "additional_flags";
+
 [[clang::xray_never_instrument]] XRayLogInitStatus
-printing_init(size_t, size_t, void *, size_t) {
+printing_init(size_t BufferSize, size_t MaxBuffers, void *Config,
+              size_t ArgsSize) {
+  // We require that the printing init is called through the
+  // __xray_log_init_mode(...) implementation, and that the promised contract is
+  // enforced.
+  assert(BufferSize == 0);
+  assert(MaxBuffers == 0);
+  assert(Config != nullptr);
+  assert(ArgsSize == 0 || ArgsSize == sizeof(Options));
   __xray_log_set_buffer_iterator(next_buffer);
   return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }
@@ -52,23 +63,25 @@ static auto buffer_counter = 0;
 
 void process_buffer(const char *, XRayBuffer) { ++buffer_counter; }
 
-static bool unused = [] {
+int main(int argc, char **argv) {
   assert(__xray_log_register_mode("custom",
                                   {printing_init, printing_finalize,
                                    printing_handler, printing_flush_log}) ==
          XRayLogRegisterStatus::XRAY_REGISTRATION_OK);
-  return true;
-}();
-
-int main(int argc, char **argv) {
   assert(__xray_log_select_mode("custom") ==
          XRayLogRegisterStatus::XRAY_REGISTRATION_OK);
   assert(__xray_log_get_current_mode() != nullptr);
   std::string current_mode = __xray_log_get_current_mode();
   assert(current_mode == "custom");
   assert(__xray_patch() == XRayPatchingStatus::SUCCESS);
-  assert(__xray_log_init(0, 0, nullptr, 0) ==
+  assert(__xray_log_init_mode("custom", "flags_config_here=true") ==
          XRayLogInitStatus::XRAY_LOG_INITIALIZED);
+
+  // Also test that we can use the "binary" version of the
+  // __xray_log_niit_mode(...) API.
+  assert(__xray_log_init_mode_bin("custom", Options, sizeof(Options)) ==
+         XRayLogInitStatus::XRAY_LOG_INITIALIZED);
+
   // CHECK: printing {{.*}}
   callme(); // CHECK: called me!
   // CHECK: printing {{.*}}

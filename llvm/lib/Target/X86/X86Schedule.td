@@ -123,6 +123,8 @@ defm WriteDPPD   : X86SchedWritePair; // Floating point double dot product.
 defm WriteDPPS   : X86SchedWritePair; // Floating point single dot product.
 defm WriteDPPSY  : X86SchedWritePair; // Floating point single dot product (YMM).
 defm WriteFSign  : X86SchedWritePair; // Floating point fabs/fchs.
+defm WriteFRnd   : X86SchedWritePair; // Floating point rounding.
+defm WriteFRndY  : X86SchedWritePair; // Floating point rounding (YMM/ZMM).
 defm WriteFLogic  : X86SchedWritePair; // Floating point and/or/xor logicals.
 defm WriteFLogicY : X86SchedWritePair; // Floating point and/or/xor logicals (YMM/ZMM).
 defm WriteFShuffle  : X86SchedWritePair; // Floating point vector shuffles.
@@ -258,6 +260,8 @@ def SchedWriteFRcp
  : X86SchedWriteWidths<WriteFRcp, WriteFRcp, WriteFRcpY, WriteFRcpY>;
 def SchedWriteFRsqrt
  : X86SchedWriteWidths<WriteFRsqrt, WriteFRsqrt, WriteFRsqrtY, WriteFRsqrtY>;
+def SchedWriteFRnd
+ : X86SchedWriteWidths<WriteFRnd, WriteFRnd, WriteFRndY, WriteFRndY>;
 def SchedWriteFLogic
  : X86SchedWriteWidths<WriteFLogic, WriteFLogic, WriteFLogicY, WriteFLogicY>;
 
