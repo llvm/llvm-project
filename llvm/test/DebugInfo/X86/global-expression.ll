@@ -17,7 +17,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
 
 @i = global i32 23, align 4
-@indirect = global i32* @i, align 8, !dbg !6, !dbg !0, !dbg !14, !dbg !15
+@indirect = global i32* @i, align 8, !dbg !6, !dbg !0, !dbg !14, !dbg !15, !dbg !16
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10, !11, !12, !13}
@@ -39,3 +39,4 @@ target triple = "x86_64-apple-macosx10.13.0"
 ; This is malformed, but too expensive to detect in the verifier.
 !14 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !15 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression(DW_OP_LLVM_fragment, 0, 1))
+!16 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression(DW_OP_deref, DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value))
