@@ -5387,11 +5387,11 @@ SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
   auto matchAndXor = [&X, &Y, &M](SDValue And, unsigned XorIdx, SDValue Other) {
     if (And.getOpcode() != ISD::AND || !And.hasOneUse())
       return false;
-    if (And.getOperand(XorIdx).getOpcode() != ISD::XOR ||
-        !And.getOperand(XorIdx).hasOneUse())
+    SDValue Xor = And.getOperand(XorIdx);
+    if (Xor.getOpcode() != ISD::XOR || !Xor.hasOneUse())
       return false;
-    SDValue Xor0 = And.getOperand(XorIdx).getOperand(0);
-    SDValue Xor1 = And.getOperand(XorIdx).getOperand(1);
+    SDValue Xor0 = Xor.getOperand(0);
+    SDValue Xor1 = Xor.getOperand(1);
     if (Other == Xor0)
       std::swap(Xor0, Xor1);
     if (Other != Xor1)
@@ -16933,14 +16933,14 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
       const ConstantFPSDNode *Zero = nullptr;
 
       if (TheSelect->getOpcode() == ISD::SELECT_CC) {
-        CC = dyn_cast<CondCodeSDNode>(TheSelect->getOperand(4))->get();
+        CC = cast<CondCodeSDNode>(TheSelect->getOperand(4))->get();
         CmpLHS = TheSelect->getOperand(0);
         Zero = isConstOrConstSplatFP(TheSelect->getOperand(1));
       } else {
         // SELECT or VSELECT
         SDValue Cmp = TheSelect->getOperand(0);
         if (Cmp.getOpcode() == ISD::SETCC) {
-          CC = dyn_cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+          CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
           CmpLHS = Cmp.getOperand(0);
           Zero = isConstOrConstSplatFP(Cmp.getOperand(1));
         }

@@ -3726,7 +3726,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       if (Tmp2.isUndef() ||
           (Tmp2.getOpcode() == ISD::AND &&
            isa<ConstantSDNode>(Tmp2.getOperand(1)) &&
-           dyn_cast<ConstantSDNode>(Tmp2.getOperand(1))->getZExtValue() == 1))
+           cast<ConstantSDNode>(Tmp2.getOperand(1))->getZExtValue() == 1))
         Tmp3 = Tmp2;
       else
         Tmp3 = DAG.getNode(ISD::AND, dl, Tmp2.getValueType(), Tmp2,

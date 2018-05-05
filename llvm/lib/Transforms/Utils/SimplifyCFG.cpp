@@ -5415,8 +5415,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   }
 
   bool ReturnedEarly = false;
-  for (size_t I = 0, E = PHIs.size(); I != E; ++I) {
-    PHINode *PHI = PHIs[I];
+  for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
     // If using a bitmask, use any value to fill the lookup table holes.

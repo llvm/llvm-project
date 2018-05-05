@@ -93,7 +93,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   if (Opcode == ISD::FrameIndex) {
     SDLoc DL(Node);
     SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
-    int FI = dyn_cast<FrameIndexSDNode>(Node)->getIndex();
+    int FI = cast<FrameIndexSDNode>(Node)->getIndex();
     EVT VT = Node->getValueType(0);
     SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
     ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
