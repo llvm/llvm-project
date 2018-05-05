@@ -76,10 +76,12 @@ Error Config::addSaveTemps(std::string OutputFileName,
       // user hasn't requested using the input module's path, emit to a file
       // named from the provided OutputFileName with the Task ID appended.
       if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
-        PathPrefix = OutputFileName + utostr(Task);
+        PathPrefix = OutputFileName;
+        if (Task != (unsigned)-1)
+          PathPrefix += utostr(Task) + ".";
       } else
-        PathPrefix = M.getModuleIdentifier();
-      std::string Path = PathPrefix + "." + PathSuffix + ".bc";
+        PathPrefix = M.getModuleIdentifier() + ".";
+      std::string Path = PathPrefix + PathSuffix + ".bc";
       std::error_code EC;
       raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
       // Because -save-temps is a debugging feature, we report the error

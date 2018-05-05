@@ -72,7 +72,8 @@ bool InstructionSelector::executeMatchTable(
 
   while (true) {
     assert(CurrentIdx != ~0u && "Invalid MatchTable index");
-    switch (MatchTable[CurrentIdx++]) {
+    int64_t MatcherOpcode = MatchTable[CurrentIdx++];
+    switch (MatcherOpcode) {
     case GIM_Try: {
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": Begin try-block\n");
@@ -282,6 +283,87 @@ bool InstructionSelector::executeMatchTable(
         if (!isStrongerThan(Ordering, MMO->getOrdering()))
           if (handleReject() == RejectAndGiveUp)
             return false;
+      break;
+    }
+    case GIM_CheckMemorySizeEqualTo: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t MMOIdx = MatchTable[CurrentIdx++];
+      uint64_t Size = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_CheckMemorySizeEqual(MIs[" << InsnID
+                             << "]->memoperands() + " << MMOIdx
+                             << ", Size=" << Size << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+
+      if (State.MIs[InsnID]->getNumMemOperands() <= MMOIdx) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+        break;
+      }
+
+      MachineMemOperand *MMO = *(State.MIs[InsnID]->memoperands_begin() + MMOIdx);
+
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << MMO->getSize() << " bytes vs " << Size
+                             << " bytes\n");
+      if (MMO->getSize() != Size)
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+
+      break;
+    }
+    case GIM_CheckMemorySizeEqualToLLT:
+    case GIM_CheckMemorySizeLessThanLLT:
+    case GIM_CheckMemorySizeGreaterThanLLT: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t MMOIdx = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(
+          TgtInstructionSelector::getName(),
+          dbgs() << CurrentIdx << ": GIM_CheckMemorySize"
+                 << (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT
+                         ? "EqualTo"
+                         : MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT
+                               ? "GreaterThan"
+                               : "LessThan")
+                 << "LLT(MIs[" << InsnID << "]->memoperands() + " << MMOIdx
+                 << ", OpIdx=" << OpIdx << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!MO.isReg()) {
+        DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                        dbgs() << CurrentIdx << ": Not a register\n");
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+        break;
+      }
+
+      if (State.MIs[InsnID]->getNumMemOperands() <= MMOIdx) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+        break;
+      }
+
+      MachineMemOperand *MMO = *(State.MIs[InsnID]->memoperands_begin() + MMOIdx);
+
+      unsigned Size = MRI.getType(MO.getReg()).getSizeInBits();
+      if (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT &&
+          MMO->getSize() * 8 != Size) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      } else if (MatcherOpcode == GIM_CheckMemorySizeLessThanLLT &&
+                 MMO->getSize() * 8 >= Size) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      } else if (MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT &&
+                 MMO->getSize() * 8 <= Size)
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+
       break;
     }
     case GIM_CheckType: {

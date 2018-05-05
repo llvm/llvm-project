@@ -977,7 +977,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
 
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
-    LLT MemTy = Ty;
     LLT PtrTy = MRI.getType(I.getOperand(1).getReg());
 
     if (PtrTy != LLT::pointer(0, 64)) {
@@ -991,6 +990,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       DEBUG(dbgs() << "Atomic load/store not supported yet\n");
       return false;
     }
+    unsigned MemSizeInBits = MemOp.getSize() * 8;
 
     // FIXME: PR36018: Volatile loads in some cases are incorrectly selected by
     // folding with an extend. Until we have a G_SEXTLOAD solution bail out if
@@ -1012,7 +1012,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
 
     const unsigned NewOpc =
-        selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemTy.getSizeInBits());
+        selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
     if (NewOpc == I.getOpcode())
       return false;
 
@@ -1025,7 +1025,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     if (PtrMI->getOpcode() == TargetOpcode::G_GEP) {
       if (auto COff = getConstantVRegVal(PtrMI->getOperand(2).getReg(), MRI)) {
         int64_t Imm = *COff;
-        const unsigned Size = MemTy.getSizeInBits() / 8;
+        const unsigned Size = MemSizeInBits / 8;
         const unsigned Scale = Log2_32(Size);
         if ((Imm & (Size - 1)) == 0 && Imm >= 0 && Imm < (0x1000 << Scale)) {
           unsigned Ptr2Reg = PtrMI->getOperand(1).getReg();

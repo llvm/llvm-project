@@ -5372,8 +5372,15 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 //    |  D  |
 // Into:
 //   (x & m) | (y & ~m)
+// NOTE: we don't unfold the pattern if 'xor' is actually a 'not', because at
+//       the very least that breaks andnpd / andnps patterns, and because those
+//       patterns are simplified in IR and shouldn't be created in the DAG
 SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
   assert(N->getOpcode() == ISD::XOR);
+
+  // Don't touch 'not' (i.e. where y = -1).
+  if (isAllOnesConstantOrAllOnesSplatConstant(N->getOperand(1)))
+    return SDValue();
 
   EVT VT = N->getValueType(0);
 
@@ -5392,6 +5399,9 @@ SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
       return false;
     SDValue Xor0 = Xor.getOperand(0);
     SDValue Xor1 = Xor.getOperand(1);
+    // Don't touch 'not' (i.e. where y = -1).
+    if (isAllOnesConstantOrAllOnesSplatConstant(Xor1))
+      return false;
     if (Other == Xor0)
       std::swap(Xor0, Xor1);
     if (Other != Xor1)

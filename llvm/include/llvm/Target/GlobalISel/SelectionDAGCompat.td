@@ -28,6 +28,13 @@ class GINodeEquiv<Instruction i, SDNode node> {
   // (ISD::LOAD, ISD::ATOMIC_LOAD, ISD::STORE, ISD::ATOMIC_STORE) but GlobalISel
   // stores this information in the MachineMemoryOperand.
   bit CheckMMOIsNonAtomic = 0;
+
+  // SelectionDAG has one node for all loads and uses predicates to
+  // differentiate them. GlobalISel on the other hand uses separate opcodes.
+  // When this is true, the resulting opcode is G_LOAD/G_SEXTLOAD/G_ZEXTLOAD
+  // depending on the predicates on the node.
+  Instruction IfSignExtend = ?;
+  Instruction IfZeroExtend = ?;
 }
 
 // These are defined in the same order as the G_* instructions.
@@ -80,11 +87,15 @@ def : GINodeEquiv<G_BSWAP, bswap>;
 // Broadly speaking G_LOAD is equivalent to ISD::LOAD but there are some
 // complications that tablegen must take care of. For example, Predicates such
 // as isSignExtLoad require that this is not a perfect 1:1 mapping since a
-// sign-extending load is (G_SEXT (G_LOAD x)) in GlobalISel. Additionally,
+// sign-extending load is (G_SEXTLOAD x) in GlobalISel. Additionally,
 // G_LOAD handles both atomic and non-atomic loads where as SelectionDAG had
 // separate nodes for them. This GINodeEquiv maps the non-atomic loads to
 // G_LOAD with a non-atomic MachineMemOperand.
-def : GINodeEquiv<G_LOAD, ld> { let CheckMMOIsNonAtomic = 1; }
+def : GINodeEquiv<G_LOAD, ld> {
+  let CheckMMOIsNonAtomic = 1;
+  let IfSignExtend = G_SEXTLOAD;
+  let IfZeroExtend = G_ZEXTLOAD;
+}
 // Broadly speaking G_STORE is equivalent to ISD::STORE but there are some
 // complications that tablegen must take care of. For example, predicates such
 // as isTruncStore require that this is not a perfect 1:1 mapping since a
