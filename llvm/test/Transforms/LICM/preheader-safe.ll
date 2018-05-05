@@ -55,7 +55,27 @@ loop:                                         ; preds = %entry, %for.inc
   br label %loop
 }
 
+; Similiar to the above, but the hoistable instruction (%y in this case)
+; happens not to be the first instruction in the block.
+define void @throw_header_after_nonfirst(i64* %xp, i64* %yp, i1* %cond) {
+; CHECK-LABEL: throw_header_after_nonfirst
+; CHECK: %y = load i64, i64* %yp
+; CHECK-LABEL: loop
+; CHECK: %x = load i64, i64* %gep
+; CHECK: %div = udiv i64 %x, %y
+; CHECK: call void @use(i64 %div)
+entry:
+  br label %loop
 
+loop:                                         ; preds = %entry, %for.inc
+  %iv = phi i64 [0, %entry], [%div, %loop]
+  %gep = getelementptr i64, i64* %xp, i64 %iv
+  %x = load i64, i64* %gep
+  %y = load i64, i64* %yp
+  %div = udiv i64 %x, %y
+  call void @use(i64 %div) readonly
+  br label %loop
+}
 
 ; Negative test
 define void @throw_header_before(i64 %x, i64 %y, i1* %cond) {

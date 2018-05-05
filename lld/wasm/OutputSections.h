@@ -127,6 +127,8 @@ public:
     return Header.size() + NameData.size() + PayloadSize;
   }
   void writeTo(uint8_t *Buf) override;
+  uint32_t numRelocations() const override;
+  void writeRelocations(raw_ostream &OS) const override;
 
 protected:
   size_t PayloadSize;

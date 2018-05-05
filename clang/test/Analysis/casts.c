@@ -149,3 +149,25 @@ void multiDimensionalArrayPointerCasts() {
 
   clang_analyzer_eval(*((char *)y1) == *((char *) y3)); // expected-warning{{TRUE}}
 }
+
+void *getVoidPtr();
+
+void testCastVoidPtrToIntPtrThroughIntTypedAssignment() {
+  int *x;
+  (*((int *)(&x))) = (int)getVoidPtr();
+  *x = 1; // no-crash
+}
+
+void testCastUIntPtrToIntPtrThroughIntTypedAssignment() {
+  unsigned u;
+  int *x;
+  (*((int *)(&x))) = (int)&u;
+  *x = 1;
+  clang_analyzer_eval(u == 1); // expected-warning{{TRUE}}
+}
+
+void testCastVoidPtrToIntPtrThroughUIntTypedAssignment() {
+  int *x;
+  (*((int *)(&x))) = (int)(unsigned *)getVoidPtr();
+  *x = 1; // no-crash
+}

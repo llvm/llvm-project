@@ -1226,6 +1226,8 @@ Expected<std::unique_ptr<ToolOutputFile>>
 lto::setupOptimizationRemarks(LLVMContext &Context,
                               StringRef LTORemarksFilename,
                               bool LTOPassRemarksWithHotness, int Count) {
+  if (LTOPassRemarksWithHotness)
+    Context.setDiagnosticsHotnessRequested(true);
   if (LTORemarksFilename.empty())
     return nullptr;
 
@@ -1240,8 +1242,6 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
     return errorCodeToError(EC);
   Context.setDiagnosticsOutputFile(
       llvm::make_unique<yaml::Output>(DiagnosticFile->os()));
-  if (LTOPassRemarksWithHotness)
-    Context.setDiagnosticsHotnessRequested(true);
   DiagnosticFile->keep();
   return std::move(DiagnosticFile);
 }

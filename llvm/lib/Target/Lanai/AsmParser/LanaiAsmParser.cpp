@@ -475,8 +475,8 @@ public:
     } else if (isa<MCBinaryExpr>(getImm())) {
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
-      assert(dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS()) &&
-             dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
+      assert(isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
+             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
                  LanaiMCExpr::VK_Lanai_ABS_LO);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
@@ -505,8 +505,8 @@ public:
     } else if (isa<MCBinaryExpr>(getImm())) {
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
-      assert(dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS()) &&
-             dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
+      assert(isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
+             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
                  LanaiMCExpr::VK_Lanai_ABS_HI);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));

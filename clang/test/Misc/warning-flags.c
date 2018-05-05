@@ -18,7 +18,7 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (77):
+CHECK: Warnings without flags (76):
 CHECK-NEXT:   ext_excess_initializers
 CHECK-NEXT:   ext_excess_initializers_in_char_array_initializer
 CHECK-NEXT:   ext_expected_semi_decl_list
@@ -31,7 +31,6 @@ CHECK-NEXT:   ext_plain_complex
 CHECK-NEXT:   ext_template_arg_extra_parens
 CHECK-NEXT:   ext_typecheck_comparison_of_pointer_integer
 CHECK-NEXT:   ext_typecheck_cond_incompatible_operands
-CHECK-NEXT:   ext_typecheck_ordered_comparison_of_function_pointers
 CHECK-NEXT:   ext_typecheck_ordered_comparison_of_pointer_integer
 CHECK-NEXT:   ext_using_undefined_std
 CHECK-NEXT:   pp_invalid_string_literal

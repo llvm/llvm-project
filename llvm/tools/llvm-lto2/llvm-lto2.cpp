@@ -192,7 +192,8 @@ static int run(int argc, char **argv) {
     DiagnosticPrinterRawOStream DP(errs());
     DI.print(DP);
     errs() << '\n';
-    exit(1);
+    if (DI.getSeverity() == DS_Error)
+      exit(1);
   };
 
   Conf.CPU = MCPU;

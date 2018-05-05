@@ -483,7 +483,7 @@ private:
       if (!(isa<FieldRegion>(R) || isa<CXXBaseObjectRegion>(R)))
         return false; // Pattern-matching failed.
       Subregions.push_back(R);
-      R = dyn_cast<SubRegion>(R)->getSuperRegion();
+      R = cast<SubRegion>(R)->getSuperRegion();
     }
     bool IndirectReference = !Subregions.empty();
 

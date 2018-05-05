@@ -473,8 +473,7 @@ TEST(ConstantsTest, BitcastToGEP) {
                                GlobalValue::ExternalLinkage, nullptr);
   auto *PtrTy = PointerType::get(i32, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
-  ASSERT_EQ(dyn_cast<ConstantExpr>(C)->getOpcode(),
-            Instruction::BitCast);
+  ASSERT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
 }
 
 }  // end anonymous namespace
