@@ -220,3 +220,21 @@ entry:
   store volatile i32 0, i32* %gep, align 4
   ret void
 }
+
+; CHECK: nocaptureLaunder(i8* nocapture %p)
+define void @nocaptureLaunder(i8* %p) {
+entry:
+  %b = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
+  store i8 42, i8* %b
+  ret void
+}
+
+@g2 = global i8* null
+; CHECK: define void @captureLaunder(i8* %p)
+define void @captureLaunder(i8* %p) {
+  %b = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
+  store i8* %b, i8** @g2
+  ret void
+}
+
+declare i8* @llvm.launder.invariant.group.p0i8(i8*)

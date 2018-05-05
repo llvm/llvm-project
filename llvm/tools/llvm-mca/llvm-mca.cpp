@@ -97,48 +97,40 @@ static cl::opt<unsigned>
 static cl::opt<bool>
     PrintRegisterFileStats("register-file-stats",
                            cl::desc("Print register file statistics"),
-                           cl::cat(ViewOptions),
-                           cl::init(false));
+                           cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> PrintDispatchStats("dispatch-stats",
                                         cl::desc("Print dispatch statistics"),
-                                        cl::cat(ViewOptions),
-                                        cl::init(false));
+                                        cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> PrintSchedulerStats("scheduler-stats",
                                          cl::desc("Print scheduler statistics"),
-                                         cl::cat(ViewOptions),
-                                         cl::init(false));
+                                         cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool>
     PrintRetireStats("retire-stats",
                      cl::desc("Print retire control unit statistics"),
-                     cl::cat(ViewOptions),
-                     cl::init(false));
+                     cl::cat(ViewOptions), cl::init(false));
 
-static cl::opt<bool>
-    PrintResourcePressureView("resource-pressure",
-                              cl::desc("Print the resource pressure view"),
-                              cl::cat(ViewOptions),
-                              cl::init(true));
+static cl::opt<bool> PrintResourcePressureView(
+    "resource-pressure",
+    cl::desc("Print the resource pressure view (enabled by default)"),
+    cl::cat(ViewOptions), cl::init(true));
 
 static cl::opt<bool> PrintTimelineView("timeline",
                                        cl::desc("Print the timeline view"),
-                                       cl::cat(ViewOptions),
-                                       cl::init(false));
+                                       cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<unsigned> TimelineMaxIterations(
     "timeline-max-iterations",
     cl::desc("Maximum number of iterations to print in timeline view"),
-    cl::cat(ViewOptions),
-    cl::init(0));
+    cl::cat(ViewOptions), cl::init(0));
 
 static cl::opt<unsigned> TimelineMaxCycles(
     "timeline-max-cycles",
     cl::desc(
         "Maximum number of cycles in the timeline view. Defaults to 80 cycles"),
-    cl::cat(ViewOptions),
-    cl::init(80));
+    cl::cat(ViewOptions), cl::init(80));
 
 static cl::opt<bool> AssumeNoAlias(
     "noalias",
@@ -154,14 +146,12 @@ static cl::opt<unsigned>
 static cl::opt<bool>
     PrintInstructionTables("instruction-tables",
                            cl::desc("Print instruction tables"),
-                           cl::cat(ViewOptions),
                            cl::init(false));
 
-static cl::opt<bool>
-    PrintInstructionInfoView("instruction-info",
-                             cl::desc("Print the instruction info view"),
-                             cl::cat(ViewOptions),
-                             cl::init(true));
+static cl::opt<bool> PrintInstructionInfoView(
+    "instruction-info",
+    cl::desc("Print the instruction info view (enabled by default)"),
+    cl::cat(ViewOptions), cl::init(true));
 
 namespace {
 

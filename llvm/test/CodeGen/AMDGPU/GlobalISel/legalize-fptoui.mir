@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-mesa-mesa3d -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -run-pass=legalizer %s -o - | FileCheck %s
 
 --- |
   define void @test_fptoui() { ret void }

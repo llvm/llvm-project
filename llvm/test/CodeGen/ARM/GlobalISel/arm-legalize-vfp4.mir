@@ -1,7 +1,7 @@
-# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp4 -float-abi=hard -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
-# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix HARD-ABI
-# RUN: llc -mtriple arm-linux-gnueabi -mattr=+vfp4,+soft-float -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-ABI
-# RUN: llc -mtriple arm-linux-gnu -mattr=+vfp4,+soft-float -float-abi=soft -global-isel -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-ABI
+# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp4 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
+# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix HARD-ABI
+# RUN: llc -mtriple arm-linux-gnueabi -mattr=+vfp4,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-ABI
+# RUN: llc -mtriple arm-linux-gnu -mattr=+vfp4,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-ABI
 --- |
   define void @test_fma_float() { ret void }
   define void @test_fma_double() { ret void }

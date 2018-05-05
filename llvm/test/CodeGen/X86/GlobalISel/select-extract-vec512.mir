@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
 
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
 
 --- |
   define void @test_extract_128_idx0() {

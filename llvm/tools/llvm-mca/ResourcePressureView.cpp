@@ -84,7 +84,7 @@ static void printColumnNames(raw_string_ostream &OS, const MCSchedModel &SM) {
 }
 
 static void printResourcePressure(raw_string_ostream &OS, double Pressure) {
-  if (!Pressure) {
+  if (!Pressure || Pressure < 0.005) {
     OS << " -     ";
     return;
   }
