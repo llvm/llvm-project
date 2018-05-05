@@ -85,9 +85,6 @@ public:
     SkipToNextArg();
   }
 
-  // FIXME: This conversion function makes no sense.
-  operator const Arg*() { return *Current; }
-
   reference operator*() const { return *Current; }
   pointer operator->() const { return Current; }
 
