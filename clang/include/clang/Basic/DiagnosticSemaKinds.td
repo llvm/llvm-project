@@ -7094,6 +7094,8 @@ def err_atomic_builtin_must_be_pointer : Error<
 def err_atomic_builtin_must_be_pointer_intptr : Error<
   "address argument to atomic builtin must be a pointer to integer or pointer"
   " (%0 invalid)">;
+def err_atomic_builtin_cannot_be_const : Error<
+  "address argument to atomic builtin cannot be const-qualified (%0 invalid)">;
 def err_atomic_builtin_must_be_pointer_intfltptr : Error<
   "address argument to atomic builtin must be a pointer to integer,"
   " floating-point or pointer (%0 invalid)">;

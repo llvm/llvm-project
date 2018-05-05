@@ -29,13 +29,13 @@
 
 ; Ensure f2 was imported. Check for all 3 flavors of -save-temps[=cwd|obj].
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t3.o -x ir %t1.o -c -fthinlto-index=%t.thinlto.bc -save-temps=obj
-; RUN: llvm-dis %t1.s.0.3.import.bc -o - | FileCheck --check-prefix=CHECK-IMPORT %s
+; RUN: llvm-dis %t1.s.3.import.bc -o - | FileCheck --check-prefix=CHECK-IMPORT %s
 ; RUN: mkdir -p %T/dir1
 ; RUN: (cd %T/dir1 && %clang -target x86_64-unknown-linux-gnu -O2 -o %t3.o -x ir %t1.o -c -fthinlto-index=%t.thinlto.bc -save-temps=cwd)
-; RUN: llvm-dis %T/dir1/*1.s.0.3.import.bc -o - | FileCheck --check-prefix=CHECK-IMPORT %s
+; RUN: llvm-dis %T/dir1/*1.s.3.import.bc -o - | FileCheck --check-prefix=CHECK-IMPORT %s
 ; RUN: mkdir -p %T/dir2
 ; RUN: (cd %T/dir2 && %clang -target x86_64-unknown-linux-gnu -O2 -o %t3.o -x ir %t1.o -c -fthinlto-index=%t.thinlto.bc -save-temps)
-; RUN: llvm-dis %T/dir2/*1.s.0.3.import.bc -o - | FileCheck --check-prefix=CHECK-IMPORT %s
+; RUN: llvm-dis %T/dir2/*1.s.3.import.bc -o - | FileCheck --check-prefix=CHECK-IMPORT %s
 ; CHECK-IMPORT: define available_externally void @f2()
 ; RUN: llvm-nm %t3.o | FileCheck --check-prefix=CHECK-OBJ %s
 ; CHECK-OBJ: T f1

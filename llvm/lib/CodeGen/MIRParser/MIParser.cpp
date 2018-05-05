@@ -1303,11 +1303,17 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, const Constant *&C) {
 }
 
 bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
-  if (Token.is(MIToken::ScalarType)) {
+  if (Token.range().front() == 's' || Token.range().front() == 'p')
+    if (!llvm::all_of(Token.range().drop_front(), isdigit))
+      return error("Expected integers after 's'/'p' type character");
+  if (!llvm::all_of(Token.range().drop_front(), isdigit))
+    return error("Expected integers after 's'/'p' type character");
+
+  if (Token.range().front() == 's') {
     Ty = LLT::scalar(APSInt(Token.range().drop_front()).getZExtValue());
     lex();
     return false;
-  } else if (Token.is(MIToken::PointerType)) {
+  } else if (Token.range().front() == 'p') {
     const DataLayout &DL = MF.getDataLayout();
     unsigned AS = APSInt(Token.range().drop_front()).getZExtValue();
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
@@ -1331,8 +1337,10 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     return error(Loc, "expected '<N x sM>' for vector type");
   lex();
 
-  if (Token.isNot(MIToken::ScalarType))
+  if (Token.range().front() != 's')
     return error(Loc, "expected '<N x sM>' for vector type");
+  if (!llvm::all_of(Token.range().drop_front(), isdigit))
+    return error("Expected integers after 's' type character");
   uint64_t ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
   lex();
 
@@ -1345,7 +1353,10 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 }
 
 bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
-  assert(Token.is(MIToken::IntegerType));
+  assert(Token.is(MIToken::Identifier));
+  if (!llvm::all_of(Token.range().drop_front(), isdigit))
+    return error("Expected integers after 'i'/'s'/'p' type character");
+
   auto Loc = Token.location();
   lex();
   if (Token.isNot(MIToken::IntegerLiteral))
@@ -2004,8 +2015,6 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
     return parseRegisterOperand(Dest, TiedDefIdx);
   case MIToken::IntegerLiteral:
     return parseImmediateOperand(Dest);
-  case MIToken::IntegerType:
-    return parseTypedImmediateOperand(Dest);
   case MIToken::kw_half:
   case MIToken::kw_float:
   case MIToken::kw_double:
@@ -2066,8 +2075,10 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
       Dest = MachineOperand::CreateRegMask(RegMask);
       lex();
       break;
-    } else
+    } else if (Token.stringValue() == "CustomRegMask") {
       return parseCustomRegisterMaskOperand(Dest);
+    } else
+      return parseTypedImmediateOperand(Dest);
   default:
     // FIXME: Parse the MCSymbol machine operand.
     return error("expected a machine operand");

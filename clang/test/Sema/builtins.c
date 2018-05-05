@@ -248,3 +248,8 @@ char * Test20(char *p, const char *in, unsigned n)
 
     return buf;
 }
+
+void test21(const int *ptr) {
+  __sync_fetch_and_add(ptr, 1); // expected-error{{address argument to atomic builtin cannot be const-qualified ('const int *' invalid)}}
+  __atomic_fetch_add(ptr, 1, 0);  // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
+}

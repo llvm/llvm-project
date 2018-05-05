@@ -3445,6 +3445,12 @@ Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
     return ExprError();
   }
 
+  if (ValType.isConstQualified()) {
+    Diag(DRE->getLocStart(), diag::err_atomic_builtin_cannot_be_const)
+        << FirstArg->getType() << FirstArg->getSourceRange();
+    return ExprError();
+  }
+
   switch (ValType.getObjCLifetime()) {
   case Qualifiers::OCL_None:
   case Qualifiers::OCL_ExplicitNone:

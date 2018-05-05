@@ -123,13 +123,10 @@ struct MIToken {
 
     // Identifier tokens
     Identifier,
-    IntegerType,
     NamedRegister,
     NamedVirtualRegister,
     MachineBasicBlockLabel,
     MachineBasicBlock,
-    PointerType,
-    ScalarType,
     StackObject,
     FixedStackObject,
     NamedGlobalValue,
