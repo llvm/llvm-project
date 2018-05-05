@@ -1393,11 +1393,11 @@ void Function::setSectionPrefix(StringRef Prefix) {
 
 Optional<StringRef> Function::getSectionPrefix() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
-    assert(dyn_cast<MDString>(MD->getOperand(0))
+    assert(cast<MDString>(MD->getOperand(0))
                ->getString()
                .equals("function_section_prefix") &&
            "Metadata not match");
-    return dyn_cast<MDString>(MD->getOperand(1))->getString();
+    return cast<MDString>(MD->getOperand(1))->getString();
   }
   return None;
 }

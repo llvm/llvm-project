@@ -297,11 +297,13 @@ public:
 struct ICallBranchFunnel final
     : TrailingObjects<ICallBranchFunnel, GlobalTypeMember *> {
   static ICallBranchFunnel *create(BumpPtrAllocator &Alloc, CallInst *CI,
-                                   ArrayRef<GlobalTypeMember *> Targets) {
+                                   ArrayRef<GlobalTypeMember *> Targets,
+                                   unsigned UniqueId) {
     auto *Call = static_cast<ICallBranchFunnel *>(
         Alloc.Allocate(totalSizeToAlloc<GlobalTypeMember *>(Targets.size()),
                        alignof(ICallBranchFunnel)));
     Call->CI = CI;
+    Call->UniqueId = UniqueId;
     Call->NTargets = Targets.size();
     std::uninitialized_copy(Targets.begin(), Targets.end(),
                             Call->getTrailingObjects<GlobalTypeMember *>());
@@ -312,6 +314,8 @@ struct ICallBranchFunnel final
   ArrayRef<GlobalTypeMember *> targets() const {
     return makeArrayRef(getTrailingObjects<GlobalTypeMember *>(), NTargets);
   }
+
+  unsigned UniqueId;
 
 private:
   size_t NTargets;
@@ -1664,11 +1668,11 @@ bool LowerTypeTestsModule::lower() {
   // identifiers.
   BumpPtrAllocator Alloc;
   struct TIInfo {
-    unsigned Index;
+    unsigned UniqueId;
     std::vector<GlobalTypeMember *> RefGlobals;
   };
   DenseMap<Metadata *, TIInfo> TypeIdInfo;
-  unsigned I = 0;
+  unsigned CurUniqueId = 0;
   SmallVector<MDNode *, 2> Types;
 
   struct ExportedFunctionInfo {
@@ -1756,7 +1760,7 @@ bool LowerTypeTestsModule::lower() {
     for (MDNode *Type : Types) {
       verifyTypeMDNode(&GO, Type);
       auto &Info = TypeIdInfo[Type->getOperand(1)];
-      Info.Index = ++I;
+      Info.UniqueId = ++CurUniqueId;
       Info.RefGlobals.push_back(GTM);
     }
   }
@@ -1825,8 +1829,9 @@ bool LowerTypeTestsModule::lower() {
       }
 
       GlobalClasses.unionSets(
-          CurSet, GlobalClasses.findLeader(GlobalClasses.insert(
-                      ICallBranchFunnel::create(Alloc, CI, Targets))));
+          CurSet, GlobalClasses.findLeader(
+                      GlobalClasses.insert(ICallBranchFunnel::create(
+                          Alloc, CI, Targets, ++CurUniqueId))));
     }
   }
 
@@ -1863,13 +1868,15 @@ bool LowerTypeTestsModule::lower() {
       continue;
     ++NumTypeIdDisjointSets;
 
-    unsigned MaxIndex = 0;
+    unsigned MaxUniqueId = 0;
     for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(I);
          MI != GlobalClasses.member_end(); ++MI) {
-      if ((*MI).is<Metadata *>())
-        MaxIndex = std::max(MaxIndex, TypeIdInfo[MI->get<Metadata *>()].Index);
+      if (auto *MD = MI->dyn_cast<Metadata *>())
+        MaxUniqueId = std::max(MaxUniqueId, TypeIdInfo[MD].UniqueId);
+      else if (auto *BF = MI->dyn_cast<ICallBranchFunnel *>())
+        MaxUniqueId = std::max(MaxUniqueId, BF->UniqueId);
     }
-    Sets.emplace_back(I, MaxIndex);
+    Sets.emplace_back(I, MaxUniqueId);
   }
   llvm::sort(Sets.begin(), Sets.end(),
              [](const std::pair<GlobalClassesTy::iterator, unsigned> &S1,
@@ -1894,11 +1901,17 @@ bool LowerTypeTestsModule::lower() {
         ICallBranchFunnels.push_back(MI->get<ICallBranchFunnel *>());
     }
 
-    // Order type identifiers by global index for determinism. This ordering is
-    // stable as there is a one-to-one mapping between metadata and indices.
+    // Order type identifiers by unique ID for determinism. This ordering is
+    // stable as there is a one-to-one mapping between metadata and unique IDs.
     llvm::sort(TypeIds.begin(), TypeIds.end(), [&](Metadata *M1, Metadata *M2) {
-      return TypeIdInfo[M1].Index < TypeIdInfo[M2].Index;
+      return TypeIdInfo[M1].UniqueId < TypeIdInfo[M2].UniqueId;
     });
+
+    // Same for the branch funnels.
+    llvm::sort(ICallBranchFunnels.begin(), ICallBranchFunnels.end(),
+               [&](ICallBranchFunnel *F1, ICallBranchFunnel *F2) {
+                 return F1->UniqueId < F2->UniqueId;
+               });
 
     // Build bitsets for this disjoint set.
     buildBitSetsFromDisjointSet(TypeIds, Globals, ICallBranchFunnels);

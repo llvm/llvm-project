@@ -242,7 +242,18 @@ public:
 
   ProgramStateRef bindLoc(SVal location, SVal V, const LocationContext *LCtx) const;
 
-  ProgramStateRef bindDefault(SVal loc, SVal V, const LocationContext *LCtx) const;
+  /// Initializes the region of memory represented by \p loc with an initial
+  /// value. Once initialized, all values loaded from any sub-regions of that
+  /// region will be equal to \p V, unless overwritten later by the program.
+  /// This method should not be used on regions that are already initialized.
+  /// If you need to indicate that memory contents have suddenly become unknown
+  /// within a certain region of memory, consider invalidateRegions().
+  ProgramStateRef bindDefaultInitial(SVal loc, SVal V,
+                                     const LocationContext *LCtx) const;
+
+  /// Performs C++ zero-initialization procedure on the region of memory
+  /// represented by \p loc.
+  ProgramStateRef bindDefaultZero(SVal loc, const LocationContext *LCtx) const;
 
   ProgramStateRef killBinding(Loc LV) const;
 

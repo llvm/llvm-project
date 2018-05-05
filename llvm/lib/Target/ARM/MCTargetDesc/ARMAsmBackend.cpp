@@ -755,7 +755,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
   if (Sym && Sym->isELF()) {
-    unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
+    unsigned Type = cast<MCSymbolELF>(Sym)->getType();
     if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
       if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
         return true;

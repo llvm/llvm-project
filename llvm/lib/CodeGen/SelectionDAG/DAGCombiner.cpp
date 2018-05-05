@@ -16933,14 +16933,14 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
       const ConstantFPSDNode *Zero = nullptr;
 
       if (TheSelect->getOpcode() == ISD::SELECT_CC) {
-        CC = dyn_cast<CondCodeSDNode>(TheSelect->getOperand(4))->get();
+        CC = cast<CondCodeSDNode>(TheSelect->getOperand(4))->get();
         CmpLHS = TheSelect->getOperand(0);
         Zero = isConstOrConstSplatFP(TheSelect->getOperand(1));
       } else {
         // SELECT or VSELECT
         SDValue Cmp = TheSelect->getOperand(0);
         if (Cmp.getOpcode() == ISD::SETCC) {
-          CC = dyn_cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+          CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
           CmpLHS = Cmp.getOperand(0);
           Zero = isConstOrConstSplatFP(Cmp.getOperand(1));
         }

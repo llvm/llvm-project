@@ -656,8 +656,8 @@ TARGET_BUILTIN(__builtin_ia32_xsavec, "vv*ULLi", "n", "xsavec")
 TARGET_BUILTIN(__builtin_ia32_xsaves, "vv*ULLi", "n", "xsaves")
 
 // SHSTK
-TARGET_BUILTIN(__builtin_ia32_incsspd, "vUi", "u", "shstk")
-TARGET_BUILTIN(__builtin_ia32_rdsspd, "UiUi", "Un", "shstk")
+TARGET_BUILTIN(__builtin_ia32_incsspd, "vUi", "n", "shstk")
+TARGET_BUILTIN(__builtin_ia32_rdsspd, "UiUi", "n", "shstk")
 TARGET_BUILTIN(__builtin_ia32_saveprevssp, "v", "n", "shstk")
 TARGET_BUILTIN(__builtin_ia32_rstorssp, "vv*", "n", "shstk")
 TARGET_BUILTIN(__builtin_ia32_wrssd, "vUiv*", "n", "shstk")

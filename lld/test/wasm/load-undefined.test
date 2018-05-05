@@ -5,7 +5,7 @@
 ; RUN: llc -filetype=obj %S/Inputs/ret32.ll -o %t2.o
 ; RUN: llc -filetype=obj %S/Inputs/start.ll -o %t.start.o
 ; RUN: llvm-ar rcs %t2.a %t2.o
-; RUN: wasm-ld --check-signatures %t.start.o %t2.a %t.o -o %t.wasm -u ret32 --undefined ret64
+; RUN: wasm-ld %t.start.o %t2.a %t.o -o %t.wasm -u ret32 --undefined ret64
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:        - Type:            EXPORT
@@ -32,8 +32,8 @@
 
 
 ; Verify that referencing a symbol that doesn't exist won't work
-; RUN: not wasm-ld --check-signatures %t.start.o -o %t.wasm -u symboldoesnotexist 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED1 %s
+; RUN: not wasm-ld %t.start.o -o %t.wasm -u symboldoesnotexist 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED1 %s
 ; CHECK-UNDEFINED1: error: undefined symbol: symboldoesnotexist
 
-; RUN: not wasm-ld --check-signatures %t.start.o -o %t.wasm --undefined symboldoesnotexist --allow-undefined 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED2 %s
+; RUN: not wasm-ld %t.start.o -o %t.wasm --undefined symboldoesnotexist --allow-undefined 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED2 %s
 ; CHECK-UNDEFINED2: function forced with --undefined not found: symboldoesnotexist

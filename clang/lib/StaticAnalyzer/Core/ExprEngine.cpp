@@ -348,7 +348,9 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
       break;
     case SubobjectAdjustment::MemberPointerAdjustment:
       // FIXME: Unimplemented.
-      State = State->bindDefault(Reg, UnknownVal(), LC);
+      State = State->invalidateRegions(Reg, InitWithAdjustments,
+                                       currBldrCtx->blockCount(), LC, true,
+                                       nullptr, nullptr, nullptr);
       return State;
     }
   }
@@ -2895,43 +2897,6 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
                           const ProgramPointTag *tag,
                           QualType LoadTy) {
   assert(!location.getAs<NonLoc>() && "location cannot be a NonLoc.");
-
-  // Are we loading from a region?  This actually results in two loads; one
-  // to fetch the address of the referenced value and one to fetch the
-  // referenced value.
-  if (const auto *TR =
-        dyn_cast_or_null<TypedValueRegion>(location.getAsRegion())) {
-
-    QualType ValTy = TR->getValueType();
-    if (const ReferenceType *RT = ValTy->getAs<ReferenceType>()) {
-      static SimpleProgramPointTag
-             loadReferenceTag(TagProviderName, "Load Reference");
-      ExplodedNodeSet Tmp;
-      evalLoadCommon(Tmp, NodeEx, BoundEx, Pred, state,
-                     location, &loadReferenceTag,
-                     getContext().getPointerType(RT->getPointeeType()));
-
-      // Perform the load from the referenced value.
-      for (const auto I : Tmp) {
-        state = I->getState();
-        location = state->getSVal(BoundEx, I->getLocationContext());
-        evalLoadCommon(Dst, NodeEx, BoundEx, I, state, location, tag, LoadTy);
-      }
-      return;
-    }
-  }
-
-  evalLoadCommon(Dst, NodeEx, BoundEx, Pred, state, location, tag, LoadTy);
-}
-
-void ExprEngine::evalLoadCommon(ExplodedNodeSet &Dst,
-                                const Expr *NodeEx,
-                                const Expr *BoundEx,
-                                ExplodedNode *Pred,
-                                ProgramStateRef state,
-                                SVal location,
-                                const ProgramPointTag *tag,
-                                QualType LoadTy) {
   assert(NodeEx);
   assert(BoundEx);
   // Evaluate the location (checks for bad dereferences).

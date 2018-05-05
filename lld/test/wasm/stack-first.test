@@ -5,7 +5,7 @@
 
 RUN: llc -filetype=obj %p/Inputs/start.ll -o %t.o
 
-RUN: wasm-ld --check-signatures -z stack-size=512 --stack-first --allow-undefined -o %t.wasm %t.o
+RUN: wasm-ld -z stack-size=512 --stack-first --allow-undefined -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s
 
 CHECK:        - Type:            GLOBAL

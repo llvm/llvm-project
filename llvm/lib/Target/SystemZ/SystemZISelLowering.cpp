@@ -4257,9 +4257,9 @@ static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask) {
     if (!Op.isUndef()) {
       uint64_t Value;
       if (Op.getOpcode() == ISD::Constant)
-        Value = dyn_cast<ConstantSDNode>(Op)->getZExtValue();
+        Value = cast<ConstantSDNode>(Op)->getZExtValue();
       else if (Op.getOpcode() == ISD::ConstantFP)
-        Value = (dyn_cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt()
+        Value = (cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt()
                  .getZExtValue());
       else
         return false;
@@ -4642,7 +4642,7 @@ SDValue SystemZTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       Op1.getOpcode() != ISD::BITCAST &&
       Op1.getOpcode() != ISD::ConstantFP &&
       Op2.getOpcode() == ISD::Constant) {
-    uint64_t Index = dyn_cast<ConstantSDNode>(Op2)->getZExtValue();
+    uint64_t Index = cast<ConstantSDNode>(Op2)->getZExtValue();
     unsigned Mask = VT.getVectorNumElements() - 1;
     if (Index <= Mask)
       return Op;
