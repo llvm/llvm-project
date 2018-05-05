@@ -16,6 +16,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "lld"
@@ -42,6 +43,12 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   return MBRef;
 }
 
+static size_t getFunctionCodeOffset(ArrayRef<uint8_t> FunctionBody) {
+  unsigned Count;
+  llvm::decodeULEB128(FunctionBody.data(), &Count);
+  return Count;
+}
+
 void ObjFile::dumpInfo() const {
   log("info for: " + getName() +
       "\n              Symbols : " + Twine(Symbols.size()) +
@@ -58,6 +65,22 @@ uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
     return TypeMap[Reloc.Index];
   }
   return Symbols[Reloc.Index]->getOutputSymbolIndex();
+}
+
+// Relocations can contain addend for combined sections. This function takes a
+// relocation and returns updated addend by offset in the output section.
+uint32_t ObjFile::calcNewAddend(const WasmRelocation &Reloc) const {
+  switch (Reloc.Type) {
+  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
+  case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+    return Reloc.Addend;
+  case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    return getSectionSymbol(Reloc.Index)->Section->OutputOffset + Reloc.Addend;
+  default:
+    llvm_unreachable("unexpected relocation type");
+  }
 }
 
 // Calculate the value we expect to find at the relocation location.
@@ -80,6 +103,16 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
     return Segment.Data.Offset.Value.Int32 + Sym.Info.DataRef.Offset +
            Reloc.Addend;
   }
+  case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+    if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
+      size_t FunctionCodeOffset =
+          getFunctionCodeOffset(Sym->Function->getFunctionBody());
+      return Sym->Function->getFunctionInputOffset() + FunctionCodeOffset +
+             Reloc.Addend;
+    }
+    return 0;
+  case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    return Reloc.Addend;
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     return Reloc.Index;
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
@@ -110,6 +143,15 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
     return getFunctionSymbol(Reloc.Index)->getFunctionIndex();
   case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
     return getGlobalSymbol(Reloc.Index)->getGlobalIndex();
+  case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+    if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
+      size_t FunctionCodeOffset =
+          getFunctionCodeOffset(Sym->Function->getFunctionBody());
+      return Sym->Function->OutputOffset + FunctionCodeOffset + Reloc.Addend;
+    }
+    return 0;
+  case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    return getSectionSymbol(Reloc.Index)->Section->OutputOffset + Reloc.Addend;
   default:
     llvm_unreachable("unknown relocation type");
   }
@@ -147,14 +189,19 @@ void ObjFile::parse() {
 
   // Find the code and data sections.  Wasm objects can have at most one code
   // and one data section.
+  uint32_t SectionIndex = 0;
   for (const SectionRef &Sec : WasmObj->sections()) {
     const WasmSection &Section = WasmObj->getWasmSection(Sec);
-    if (Section.Type == WASM_SEC_CODE)
+    if (Section.Type == WASM_SEC_CODE) {
       CodeSection = &Section;
-    else if (Section.Type == WASM_SEC_DATA)
+    } else if (Section.Type == WASM_SEC_DATA) {
       DataSection = &Section;
-    else if (Section.Type == WASM_SEC_CUSTOM)
+    } else if (Section.Type == WASM_SEC_CUSTOM) {
       CustomSections.emplace_back(make<InputSection>(Section, this));
+      CustomSections.back()->copyRelocations(Section);
+      CustomSectionsByIndex[SectionIndex] = CustomSections.back();
+    }
+    SectionIndex++;
   }
 
   TypeMap.resize(getWasmObj()->types().size());
@@ -215,6 +262,10 @@ GlobalSymbol *ObjFile::getGlobalSymbol(uint32_t Index) const {
   return cast<GlobalSymbol>(Symbols[Index]);
 }
 
+SectionSymbol *ObjFile::getSectionSymbol(uint32_t Index) const {
+  return cast<SectionSymbol>(Symbols[Index]);
+}
+
 DataSymbol *ObjFile::getDataSymbol(uint32_t Index) const {
   return cast<DataSymbol>(Symbols[Index]);
 }
@@ -253,14 +304,20 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
       return make<DefinedData>(Name, Flags, this, Seg, Offset, Size);
     return Symtab->addDefinedData(Name, Flags, this, Seg, Offset, Size);
   }
-  case WASM_SYMBOL_TYPE_GLOBAL:
+  case WASM_SYMBOL_TYPE_GLOBAL: {
     InputGlobal *Global =
         Globals[Sym.Info.ElementIndex - WasmObj->getNumImportedGlobals()];
     if (Sym.isBindingLocal())
       return make<DefinedGlobal>(Name, Flags, this, Global);
     return Symtab->addDefinedGlobal(Name, Flags, this, Global);
   }
-  llvm_unreachable("unkown symbol kind");
+  case WASM_SYMBOL_TYPE_SECTION: {
+    InputSection *Section = CustomSectionsByIndex[Sym.Info.ElementIndex];
+    assert(Sym.isBindingLocal());
+    return make<SectionSymbol>(Name, Flags, Section, this);
+  }
+  }
+  llvm_unreachable("unknown symbol kind");
 }
 
 Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
@@ -274,8 +331,10 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
     return Symtab->addUndefinedData(Name, Flags, this);
   case WASM_SYMBOL_TYPE_GLOBAL:
     return Symtab->addUndefinedGlobal(Name, Flags, this, Sym.GlobalType);
+  case WASM_SYMBOL_TYPE_SECTION:
+    llvm_unreachable("section symbols cannot be undefined");
   }
-  llvm_unreachable("unkown symbol kind");
+  llvm_unreachable("unknown symbol kind");
 }
 
 void ArchiveFile::parse() {

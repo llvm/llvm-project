@@ -1273,7 +1273,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
 
   // Fill the region with the initialization value.
-  State = State->bindDefault(RetVal, Init, LCtx);
+  State = State->bindDefaultInitial(RetVal, Init, LCtx);
 
   // Set the region's extent equal to the Size parameter.
   const SymbolicRegion *R =

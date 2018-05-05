@@ -67,6 +67,7 @@ private:
   void assignIndexes();
   void calculateImports();
   void calculateExports();
+  void calculateCustomSections();
   void assignSymtab();
   void calculateTypes();
   void createOutputSegments();
@@ -114,6 +115,7 @@ private:
   std::vector<WasmInitEntry> InitFunctions;
 
   llvm::StringMap<std::vector<InputSection *>> CustomSectionMapping;
+  llvm::StringMap<SectionSymbol *> CustomSectionSymbols;
 
   // Elements that are used to construct the final output
   std::string Header;
@@ -299,18 +301,35 @@ void Writer::createExportSection() {
   }
 }
 
+void Writer::calculateCustomSections() {
+  log("calculateCustomSections");
+  bool StripDebug = Config->StripDebug || Config->StripAll;
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    for (InputSection *Section : File->CustomSections) {
+      StringRef Name = Section->getName();
+      // These custom sections are known the linker and synthesized rather than
+      // blindly copied
+      if (Name == "linking" || Name == "name" || Name.startswith("reloc."))
+        continue;
+      // .. or it is a debug section
+      if (StripDebug && Name.startswith(".debug_"))
+        continue;
+      CustomSectionMapping[Name].push_back(Section);
+    }
+  }
+}
+
 void Writer::createCustomSections() {
   log("createCustomSections");
-  for (ObjFile *File : Symtab->ObjectFiles)
-    for (InputSection *Section : File->CustomSections)
-      CustomSectionMapping[Section->getName()].push_back(Section);
-
   for (auto &Pair : CustomSectionMapping) {
     StringRef Name = Pair.first();
-    // These custom sections are known the linker and synthesized rather than
-    // blindly copied
-    if (Name == "linking" || Name == "name" || Name.startswith("reloc."))
-      continue;
+
+    auto P = CustomSectionSymbols.find(Name);
+    if (P != CustomSectionSymbols.end()) {
+      uint32_t SectionIndex = OutputSections.size();
+      P->second->setOutputSectionIndex(SectionIndex);
+    }
+
     DEBUG(dbgs() << "createCustomSection: " << Name << "\n");
     OutputSections.push_back(make<CustomSection>(Name, Pair.second));
   }
@@ -375,8 +394,11 @@ void Writer::createRelocSections() {
       Name = "reloc.DATA";
     else if (OSec->Type == WASM_SEC_CODE)
       Name = "reloc.CODE";
+    else if (OSec->Type == WASM_SEC_CUSTOM)
+      Name = Saver.save("reloc." + OSec->Name);
     else
-      llvm_unreachable("relocations only supported for code and data");
+      llvm_unreachable(
+          "relocations only supported for code, data, or custom sections");
 
     SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, Name);
     raw_ostream &OS = Section->getStream();
@@ -452,8 +474,7 @@ void Writer::createLinkingSection() {
         writeUleb128(Sub.OS, G->getGlobalIndex(), "index");
         if (Sym->isDefined())
           writeStr(Sub.OS, Sym->getName(), "sym name");
-      } else {
-        assert(isa<DataSymbol>(Sym));
+      } else if (auto *D = dyn_cast<DataSymbol>(Sym)) {
         writeStr(Sub.OS, Sym->getName(), "sym name");
         if (auto *DataSym = dyn_cast<DefinedData>(Sym)) {
           writeUleb128(Sub.OS, DataSym->getOutputSegmentIndex(), "index");
@@ -461,6 +482,9 @@ void Writer::createLinkingSection() {
                        "data offset");
           writeUleb128(Sub.OS, DataSym->getSize(), "data size");
         }
+      } else {
+        auto *S = cast<SectionSymbol>(Sym);
+        writeUleb128(Sub.OS, S->getOutputSectionIndex(), "sym section index");
       }
     }
 
@@ -751,12 +775,32 @@ void Writer::assignSymtab() {
   if (!Config->Relocatable)
     return;
 
+  StringMap<uint32_t> SectionSymbolIndices;
+
   unsigned SymbolIndex = SymtabEntries.size();
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Symtab entries: " << File->getName() << "\n");
     for (Symbol *Sym : File->getSymbols()) {
       if (Sym->getFile() != File)
         continue;
+
+      if (auto *S = dyn_cast<SectionSymbol>(Sym)) {
+        StringRef Name = S->getName();
+        if (CustomSectionMapping.count(Name) == 0)
+          continue;
+
+        auto SSI = SectionSymbolIndices.find(Name);
+        if (SSI != SectionSymbolIndices.end()) {
+          Sym->setOutputSymbolIndex(SSI->second);
+          continue;
+        }
+
+        SectionSymbolIndices[Name] = SymbolIndex;
+        CustomSectionSymbols[Name] = cast<SectionSymbol>(Sym);
+
+        Sym->markLive();
+      }
+
       // (Since this is relocatable output, GC is not performed so symbols must
       // be live.)
       assert(Sym->isLive());
@@ -855,6 +899,8 @@ void Writer::assignIndexes() {
       HandleRelocs(Chunk);
     for (InputChunk *Chunk : File->Segments)
       HandleRelocs(Chunk);
+    for (auto &P : File->CustomSections)
+      HandleRelocs(P);
   }
 
   uint32_t GlobalIndex = NumImportedGlobals + InputGlobals.size();
@@ -976,6 +1022,8 @@ void Writer::run() {
   layoutMemory();
   log("-- calculateExports");
   calculateExports();
+  log("-- calculateCustomSections");
+  calculateCustomSections();
   log("-- assignSymtab");
   assignSymtab();
 
