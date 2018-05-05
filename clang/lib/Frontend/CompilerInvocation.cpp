@@ -1075,7 +1075,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   bool UsingProfile = UsingSampleProfile ||
       (Opts.getProfileUse() != CodeGenOptions::ProfileNone);
 
-  if (Opts.DiagnosticsWithHotness && !UsingProfile)
+  if (Opts.DiagnosticsWithHotness && !UsingProfile &&
+      // An IR file will contain PGO as metadata
+      IK.getLanguage() != InputKind::LLVM_IR)
     Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
         << "-fdiagnostics-show-hotness";
 

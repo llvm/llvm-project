@@ -112,11 +112,9 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GILLT_s16,
 // CHECK-NEXT:    GILLT_s32,
 // CHECK-NEXT:  }
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
-// CHECK-NEXT:    LLT::scalar(16),
 // CHECK-NEXT:    LLT::scalar(32),
 // CHECK-NEXT:  };
 
@@ -265,6 +263,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/1, /*Op*/3, /*Renderer*/2, GICP_gi_complex,
 // CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, (complex_rr:{ *:[i32] } GPR32:{ *:[i32] }:$src2a, GPR32:{ *:[i32] }:$src2b), (select:{ *:[i32] } GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, (complex:{ *:[i32] } i32imm:{ *:[i32] }:$src5a, i32imm:{ *:[i32] }:$src5b)))  =>  (INSN3:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2b, GPR32:{ *:[i32] }:$src2a, (INSN4:{ *:[i32] } GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, i32imm:{ *:[i32] }:$src5a, i32imm:{ *:[i32] }:$src5b))
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/1, /*Opcode*/MyTarget::INSN4,
 // CHECK-NEXT:    GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/RegState::Define,
@@ -313,6 +312,7 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/3, /*Renderer*/1, GICP_gi_complex,
 // CHECK-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2, complex:{ *:[i32] }:$src3) => (INSN2:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src2)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN2,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
@@ -348,6 +348,7 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex,
 // CHECK-NEXT:    // (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2) => (INSN1:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN1,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
@@ -411,6 +412,7 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 // CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:    // (sub:{ *:[i32] } (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2), (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src3, GPR32:{ *:[i32] }:$src4)) => (INSNBOB:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3, GPR32:{ *:[i32] }:$src4)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSNBOB,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
@@ -449,6 +451,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    // (intrinsic_wo_chain:{ *:[i32] } [[ID:[0-9]+]]:{ *:[iPTR] }, GPR32:{ *:[i32] }:$src1) => (MOV:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -485,6 +488,7 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -2
 // CHECK-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -2:{ *:[i32] }) => (XORI:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORI,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
@@ -515,6 +519,7 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -3
 // CHECK-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -3:{ *:[i32] }) => (XOR:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XOR,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
@@ -545,6 +550,7 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -4
 // CHECK-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -4:{ *:[i32] }) => (XORlike:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORlike,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
@@ -576,6 +582,7 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -5,
 // CHECK-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -5:{ *:[i32] }) => (XORManyDefaults:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORManyDefaults,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
@@ -610,6 +617,7 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -1,
 // CHECK-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$Wm, -1:{ *:[i32] }) => (ORN:{ *:[i32] } R0:{ *:[i32] }, GPR32:{ *:[i32] }:$Wm)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::ORN,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
@@ -625,47 +633,6 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 
 def ORN : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2), []>;
 def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
-
-
-//===- Test a simple pattern with a sextload -------------------------------===//
-
-// OPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[GRP_LABEL_NUM:[0-9]+]]*/ [[GRP_LABEL:[0-9]+]],
-// OPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SEXT,
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
-// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/2,
-// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SEXT,
-// OPT-NEXT:      // No instruction predicates
-// CHECK-NEXT:    // MIs[0] dst
-// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    // MIs[0] Operand 1
-// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s16,
-// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_LOAD,
-// CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/1, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
-// CHECK-NEXT:    // MIs[1] Operand 0
-// CHECK-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s16,
-// CHECK-NEXT:    // MIs[1] src1
-// CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/1, /*Op*/1, /*SizeInBits*/32,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
-// CHECK-NEXT:    // (sext:{ *:[i32] } (ld:{ *:[i16] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>>)  =>  (SEXTLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
-// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SEXTLOAD,
-// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, 1, GIU_MergeMemOperands_EndOfList,
-// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-// Closing the G_SEXT group.
-// OPT-NEXT:      GIM_Reject,
-// OPT-NEXT:  GIR_Done,
-// OPT-NEXT:  // Label [[GRP_LABEL_NUM]]: @[[GRP_LABEL]]
-
-def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
-                 [(set GPR32:$dst, (sextloadi16 GPR32:$src1))]>;
 
 
 //===- Test a nested instruction match. -----------------------------------===//
@@ -698,6 +665,7 @@ def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:    // (mul:{ *:[i32] } (add:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2), GPR32:{ *:[i32] }:$src3)  =>  (MULADD:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MULADD,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
@@ -735,6 +703,7 @@ def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:    // (mul:{ *:[i32] } GPR32:{ *:[i32] }:$src3, (add:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2))  =>  (MULADD:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MULADD,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
@@ -768,6 +737,7 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, 1,
 // CHECK-NEXT:    // 1:{ *:[i32] }  =>  (MOV1:{ *:[i32] })
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV1,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
@@ -789,6 +759,7 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    // No operand predicates
 // CHECK-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm8>>:$imm => (MOVimm8:{ *:[i32] } (imm:{ *:[i32] }):$imm)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVimm8,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
@@ -812,6 +783,7 @@ def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$i
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    // No operand predicates
 // CHECK-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm9>>:$imm =>  (MOVimm9:{ *:[i32] } (imm:{ *:[i32] }):$imm)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVimm9,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
@@ -834,6 +806,7 @@ def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$i
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    // No operand predicates
 // CHECK-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_cimm8>><<X:cimm8_xform>>:$imm  =>  (MOVcimm8:{ *:[i32] } (cimm8_xform:{ *:[i32] } (imm:{ *:[i32] }):$imm))
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVcimm8,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GICR_renderImm8, // imm
@@ -861,6 +834,7 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    // No operand predicates
 // CHECK-NEXT:    // (fpimm:{ *:[f32] })<<P:Predicate_fpimmz>>:$imm =>  (MOVfpimmz:{ *:[f32] } (fpimm:{ *:[f32] }):$imm)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVfpimmz,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_CopyFConstantAsFPImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
@@ -880,6 +854,7 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_LOAD,
+// CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    // MIs[0] dst
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
@@ -888,6 +863,7 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>> => (LOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::LOAD,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -899,6 +875,36 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 
 def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
             [(set GPR32:$dst, (load GPR32:$src1))]>;
+
+//===- Test a simple pattern with a sextload -------------------------------===//
+
+// OPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[GRP_LABEL_NUM:[0-9]+]]*/ [[GRP_LABEL:[0-9]+]],
+// OPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SEXTLOAD,
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SEXTLOAD,
+// CHECK-NEXT:    GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/2,
+// CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] src1
+// CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_sextload>><<P:Predicate_sextloadi16>> => (SEXTLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::SEXTLOAD,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+// Closing the G_SEXT group.
+// OPT-NEXT:      GIM_Reject,
+// OPT-NEXT:  GIR_Done,
+// OPT-NEXT:  // Label [[GRP_LABEL_NUM]]: @[[GRP_LABEL]]
+
+def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
+                 [(set GPR32:$dst, (sextloadi16 GPR32:$src1))]>;
+
 
 //===- Test a simple pattern with regclass operands. ----------------------===//
 
@@ -918,6 +924,7 @@ def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    // (add:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::ADD,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -942,6 +949,7 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    // MIs[0] src{{$}}
 // CHECK-NEXT:    GIM_CheckIsSameOperand, /*MI*/0, /*OpIdx*/2, /*OtherMI*/0, /*OtherOpIdx*/1,
 // CHECK-NEXT:    // (add:{ *:[i32] } GPR32:{ *:[i32] }:$src, GPR32:{ *:[i32] }:$src) => (DOUBLE:{ *:[i32] } GPR32:{ *:[i32] }:$src)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::DOUBLE,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src
@@ -966,6 +974,7 @@ def DOUBLE : I<(outs GPR32:$dst), (ins GPR32:$src), [(set GPR32:$dst, (add GPR32
 // CHECK-NEXT:    // MIs[0] src2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    // (add:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::ADD,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -999,6 +1008,7 @@ def : Pat<(add i32:$src1, i32:$src2),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    // (mul:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2) => (MUL:{ *:[i32] } GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MUL,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src2
@@ -1034,6 +1044,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::FPR32RegClassID,
 // CHECK-NEXT:    // (bitconvert:{ *:[i32] } FPR32:{ *:[f32] }:$src1) => (COPY_TO_REGCLASS:{ *:[i32] } FPR32:{ *:[f32] }:$src1, GPR32:{ *:[i32] })
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC GPR32*/1,
 // CHECK-NEXT:    GIR_Done,
@@ -1062,6 +1073,7 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    // No operand predicates
 // CHECK-NEXT:    // (imm:{ *:[i32] }):$imm =>  (MOVimm:{ *:[i32] } (imm:{ *:[i32] }):$imm)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVimm,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
@@ -1093,6 +1105,7 @@ def MOVfpimmz : I<(outs FPR32:$dst), (ins f32imm:$imm), [(set FPR32:$dst, fpimmz
 // CHECK-NEXT:    // MIs[0] target
 // CHECK-NEXT:    GIM_CheckIsMBB, /*MI*/0, /*Op*/0,
 // CHECK-NEXT:    // (br (bb:{ *:[Other] }):$target) => (BR (bb:{ *:[Other] }):$target)
+// CHECK-NEXT:    // Rule ID {{[0-9]+}}
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::BR,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,

@@ -231,6 +231,7 @@ body:             |
     $noreg = PATCHABLE_RET
 
 ...
+# The rules that generated this test has changed. The generator should be rerun
 ---
 name:            test_rule92_id2150_at_idx7770
 alignment:       2
@@ -238,7 +239,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: fpr }
+  - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
 liveins:
@@ -253,11 +254,11 @@ body:             |
     ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load 1)
     ; CHECK: $noreg = PATCHABLE_RET [[LDRBBui]]
     %2:gpr(p0) = COPY $x0
-    %0:fpr(s1) = G_LOAD %2(p0) :: (load 1)
-    %1:gpr(s32) = G_ANYEXT %0(s1)
-    $noreg = PATCHABLE_RET %1(s32)
+    %0:gpr(s32) = G_LOAD %2(p0) :: (load 1)
+    $noreg = PATCHABLE_RET %0(s32)
 
 ...
+# The rules that generated this test has changed. The generator should be rerun
 ---
 name:            test_rule96_id2146_at_idx8070
 alignment:       2
@@ -277,8 +278,10 @@ body:             |
     ; CHECK-LABEL: name: test_rule96_id2146_at_idx8070
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load 1)
-    ; CHECK: $noreg = PATCHABLE_RET [[LDRBBui]]
+    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load 1)
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[LDRBui]]
+    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY2]], 0, 0
+    ; CHECK: $noreg = PATCHABLE_RET [[UBFMWri]]
     %2:gpr(p0) = COPY $x0
     %0:fpr(s1) = G_LOAD %2(p0) :: (load 1)
     %1:gpr(s32) = G_ZEXT %0(s1)

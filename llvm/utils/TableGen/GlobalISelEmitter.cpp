@@ -176,6 +176,9 @@ public:
   bool operator==(const LLTCodeGen &B) const { return Ty == B.Ty; }
 };
 
+// Track all types that are used so we can emit the corresponding enum.
+std::set<LLTCodeGen> KnownTypes;
+
 class InstructionMatcher;
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
 /// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
@@ -285,10 +288,14 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     if (Predicate.isImmediatePattern())
       continue;
 
-    if (Predicate.isNonExtLoad())
+    if (Predicate.isNonExtLoad() || Predicate.isAnyExtLoad() ||
+        Predicate.isSignExtLoad() || Predicate.isZeroExtLoad())
       continue;
 
     if (Predicate.isNonTruncStore())
+      continue;
+
+    if (Predicate.isLoad() && Predicate.getMemoryVT())
       continue;
 
     if (Predicate.isLoad() || Predicate.isStore()) {
@@ -863,6 +870,8 @@ public:
     IPM_Opcode,
     IPM_ImmPredicate,
     IPM_AtomicOrderingMMO,
+    IPM_MemoryLLTSize,
+    IPM_MemoryVsLLTSize,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -964,8 +973,6 @@ protected:
   LLTCodeGen Ty;
 
 public:
-  static std::set<LLTCodeGen> KnownTypes;
-
   LLTOperandMatcher(unsigned InsnVarID, unsigned OpIdx, const LLTCodeGen &Ty)
       : OperandPredicateMatcher(OPM_LLT, InsnVarID, OpIdx), Ty(Ty) {
     KnownTypes.insert(Ty);
@@ -988,8 +995,6 @@ public:
           << MatchTable::LineBreak;
   }
 };
-
-std::set<LLTCodeGen> LLTOperandMatcher::KnownTypes;
 
 /// Generates code to check that an operand is a pointer to any address space.
 ///
@@ -1514,6 +1519,82 @@ public:
     Table << MatchTable::Opcode(Opcode) << MatchTable::Comment("MI")
           << MatchTable::IntValue(InsnVarID) << MatchTable::Comment("Order")
           << MatchTable::NamedValue(("(int64_t)AtomicOrdering::" + Order).str())
+          << MatchTable::LineBreak;
+  }
+};
+
+/// Generates code to check that the size of an MMO is exactly N bytes.
+class MemorySizePredicateMatcher : public InstructionPredicateMatcher {
+protected:
+  unsigned MMOIdx;
+  uint64_t Size;
+
+public:
+  MemorySizePredicateMatcher(unsigned InsnVarID, unsigned MMOIdx, unsigned Size)
+      : InstructionPredicateMatcher(IPM_MemoryLLTSize, InsnVarID),
+        MMOIdx(MMOIdx), Size(Size) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_MemoryLLTSize;
+  }
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B) &&
+           MMOIdx == cast<MemorySizePredicateMatcher>(&B)->MMOIdx &&
+           Size == cast<MemorySizePredicateMatcher>(&B)->Size;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckMemorySizeEqualTo")
+          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+          << MatchTable::Comment("MMO") << MatchTable::IntValue(MMOIdx)
+          << MatchTable::Comment("Size") << MatchTable::IntValue(Size)
+          << MatchTable::LineBreak;
+  }
+};
+
+/// Generates code to check that the size of an MMO is less-than, equal-to, or
+/// greater than a given LLT.
+class MemoryVsLLTSizePredicateMatcher : public InstructionPredicateMatcher {
+public:
+  enum RelationKind {
+    GreaterThan,
+    EqualTo,
+    LessThan,
+  };
+
+protected:
+  unsigned MMOIdx;
+  RelationKind Relation;
+  unsigned OpIdx;
+
+public:
+  MemoryVsLLTSizePredicateMatcher(unsigned InsnVarID, unsigned MMOIdx,
+                                  enum RelationKind Relation,
+                                  unsigned OpIdx)
+      : InstructionPredicateMatcher(IPM_MemoryVsLLTSize, InsnVarID),
+        MMOIdx(MMOIdx), Relation(Relation), OpIdx(OpIdx) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_MemoryVsLLTSize;
+  }
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B) &&
+           MMOIdx == cast<MemoryVsLLTSizePredicateMatcher>(&B)->MMOIdx &&
+           Relation == cast<MemoryVsLLTSizePredicateMatcher>(&B)->Relation &&
+           OpIdx == cast<MemoryVsLLTSizePredicateMatcher>(&B)->OpIdx;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode(Relation == EqualTo
+                                    ? "GIM_CheckMemorySizeEqualToLLT"
+                                    : Relation == GreaterThan
+                                          ? "GIM_CheckMemorySizeGreaterThanLLT"
+                                          : "GIM_CheckMemorySizeLessThanLLT")
+          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+          << MatchTable::Comment("MMO") << MatchTable::IntValue(MMOIdx)
+          << MatchTable::Comment("OpIdx") << MatchTable::IntValue(OpIdx)
           << MatchTable::LineBreak;
   }
 };
@@ -2621,6 +2702,8 @@ private:
 
   void gatherNodeEquivs();
   Record *findNodeEquiv(Record *N) const;
+  const CodeGenInstruction *getEquivNode(Record &Equiv,
+                                         const TreePatternNode *N) const;
 
   Error importRulePredicates(RuleMatcher &M, ArrayRef<Predicate> Predicates);
   Expected<InstructionMatcher &> createAndImportSelDAGMatcher(
@@ -2666,9 +2749,6 @@ private:
   Expected<RuleMatcher> runOnPattern(const PatternToMatch &P);
 
   void declareSubtargetFeature(Record *Predicate);
-
-  TreePatternNode *fixupPatternNode(TreePatternNode *N);
-  void fixupPatternTrees(TreePattern *P);
 
   /// Takes a sequence of \p Rules and group them based on the predicates
   /// they share. \p StorageGroupMatcher is used as a memory container
@@ -2734,9 +2814,22 @@ Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
   return NodeEquivs.lookup(N);
 }
 
+const CodeGenInstruction *
+GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
+  for (const auto &Predicate : N->getPredicateFns()) {
+    if (!Equiv.isValueUnset("IfSignExtend") && Predicate.isLoad() &&
+        Predicate.isSignExtLoad())
+      return &Target.getInstruction(Equiv.getValueAsDef("IfSignExtend"));
+    if (!Equiv.isValueUnset("IfZeroExtend") && Predicate.isLoad() &&
+        Predicate.isZeroExtLoad())
+      return &Target.getInstruction(Equiv.getValueAsDef("IfZeroExtend"));
+  }
+  return &Target.getInstruction(Equiv.getValueAsDef("I"));
+}
+
 GlobalISelEmitter::GlobalISelEmitter(RecordKeeper &RK)
-    : RK(RK), CGP(RK, [&](TreePattern *P) { fixupPatternTrees(P); }),
-      Target(CGP.getTargetInfo()), CGRegs(RK, Target.getHwModes()) {}
+    : RK(RK), CGP(RK), Target(CGP.getTargetInfo()),
+      CGRegs(RK, Target.getHwModes()) {}
 
 //===- Emitter ------------------------------------------------------------===//
 
@@ -2776,7 +2869,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (!SrcGIEquivOrNull)
       return failedImport("Pattern operator lacks an equivalent Instruction" +
                           explainOperator(Src->getOperator()));
-    SrcGIOrNull = &Target.getInstruction(SrcGIEquivOrNull->getValueAsDef("I"));
+    SrcGIOrNull = getEquivNode(*SrcGIEquivOrNull, Src);
 
     // The operators look good: match the opcode
     InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
@@ -2801,8 +2894,26 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       continue;
     }
 
-    // No check required. G_LOAD by itself is a non-extending load.
-    if (Predicate.isNonExtLoad())
+    // G_LOAD is used for both non-extending and any-extending loads. 
+    if (Predicate.isLoad() && Predicate.isNonExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+      continue;
+    }
+    if (Predicate.isLoad() && Predicate.isAnyExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      continue;
+    }
+
+    // No check required. We already did it by swapping the opcode.
+    if (!SrcGIEquivOrNull->isValueUnset("IfSignExtend") &&
+        Predicate.isSignExtLoad())
+      continue;
+
+    // No check required. We already did it by swapping the opcode.
+    if (!SrcGIEquivOrNull->isValueUnset("IfZeroExtend") &&
+        Predicate.isZeroExtLoad())
       continue;
 
     // No check required. G_STORE by itself is a non-extending store.
@@ -2817,8 +2928,13 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
         if (!MemTyOrNone)
           return failedImport("MemVT could not be converted to LLT");
 
-        OperandMatcher &OM = InsnMatcher.getOperand(0);
-        OM.addPredicate<LLTOperandMatcher>(MemTyOrNone.getValue());
+        // MMO's work in bytes so we must take care of unusual types like i1
+        // don't round down.
+        unsigned MemSizeInBits =
+            llvm::alignTo(MemTyOrNone->get().getSizeInBits(), 8);
+
+        InsnMatcher.addPredicate<MemorySizePredicateMatcher>(
+            0, MemSizeInBits / 8);
         continue;
       }
     }
@@ -3406,6 +3522,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   M.addAction<DebugCommentAction>(llvm::to_string(*P.getSrcPattern()) +
                                   "  =>  " +
                                   llvm::to_string(*P.getDstPattern()));
+  M.addAction<DebugCommentAction>("Rule ID " + llvm::to_string(M.getRuleID()));
 
   if (auto Error = importRulePredicates(M, P.getPredicates()))
     return std::move(Error);
@@ -3846,7 +3963,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Emit a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.
   std::vector<LLTCodeGen> TypeObjects;
-  for (const auto &Ty : LLTOperandMatcher::KnownTypes)
+  for (const auto &Ty : KnownTypes)
     TypeObjects.push_back(Ty);
   llvm::sort(TypeObjects.begin(), TypeObjects.end());
   OS << "// LLT Objects.\n"
@@ -4033,81 +4150,6 @@ void GlobalISelEmitter::declareSubtargetFeature(Record *Predicate) {
   if (SubtargetFeatures.count(Predicate) == 0)
     SubtargetFeatures.emplace(
         Predicate, SubtargetFeatureInfo(Predicate, SubtargetFeatures.size()));
-}
-
-TreePatternNode *GlobalISelEmitter::fixupPatternNode(TreePatternNode *N) {
-  if (!N->isLeaf()) {
-    for (unsigned I = 0, E = N->getNumChildren(); I < E; ++I) {
-      TreePatternNode *OrigChild = N->getChild(I);
-      TreePatternNode *NewChild = fixupPatternNode(OrigChild);
-      if (OrigChild != NewChild)
-        N->setChild(I, NewChild);
-    }
-
-    if (N->getOperator()->getName() == "ld") {
-      // If it's a signext-load we need to adapt the pattern slightly. We need
-      // to split the node into (sext (ld ...)), remove the <<signext>> predicate,
-      // and then apply the <<signextTY>> predicate by updating the result type
-      // of the load.
-      //
-      // For example:
-      //   (ld:[i32] [iPTR])<<unindexed>><<signext>><<signexti16>>
-      // must be transformed into:
-      //   (sext:[i32] (ld:[i16] [iPTR])<<unindexed>>)
-      //
-      // Likewise for zeroext-load and anyext-load.
-
-      std::vector<TreePredicateFn> Predicates;
-      bool IsSignExtLoad = false;
-      bool IsZeroExtLoad = false;
-      bool IsAnyExtLoad = false;
-      Record *MemVT = nullptr;
-      for (const auto &P : N->getPredicateFns()) {
-        if (P.isLoad() && P.isSignExtLoad()) {
-          IsSignExtLoad = true;
-          continue;
-        }
-        if (P.isLoad() && P.isZeroExtLoad()) {
-          IsZeroExtLoad = true;
-          continue;
-        }
-        if (P.isLoad() && P.isAnyExtLoad()) {
-          IsAnyExtLoad = true;
-          continue;
-        }
-        if (P.isLoad() && P.getMemoryVT()) {
-          MemVT = P.getMemoryVT();
-          continue;
-        }
-        Predicates.push_back(P);
-      }
-
-      if ((IsSignExtLoad || IsZeroExtLoad || IsAnyExtLoad) && MemVT) {
-        assert((IsSignExtLoad + IsZeroExtLoad + IsAnyExtLoad) == 1 &&
-               "IsSignExtLoad, IsZeroExtLoad, IsAnyExtLoad are mutually exclusive");
-        TreePatternNode *Ext = new TreePatternNode(
-            RK.getDef(IsSignExtLoad ? "sext"
-                                    : IsZeroExtLoad ? "zext" : "anyext"),
-            {N}, 1);
-        Ext->setType(0, N->getType(0));
-        N->clearPredicateFns();
-        N->setPredicateFns(Predicates);
-        N->setType(0, getValueType(MemVT));
-        return Ext;
-      }
-    }
-  }
-
-  return N;
-}
-
-void GlobalISelEmitter::fixupPatternTrees(TreePattern *P) {
-  for (unsigned I = 0, E = P->getNumTrees(); I < E; ++I) {
-    TreePatternNode *OrigTree = P->getTree(I);
-    TreePatternNode *NewTree = fixupPatternNode(OrigTree);
-    if (OrigTree != NewTree)
-      P->setTree(I, NewTree);
-  }
 }
 
 std::unique_ptr<PredicateMatcher> RuleMatcher::forgetFirstCondition() {

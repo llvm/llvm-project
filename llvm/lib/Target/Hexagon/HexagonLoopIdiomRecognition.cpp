@@ -244,8 +244,8 @@ namespace {
     const Value *V;
   };
 
-  raw_ostream &operator<< (raw_ostream &OS, const PE &P) LLVM_ATTRIBUTE_USED;
-  raw_ostream &operator<< (raw_ostream &OS, const PE &P) {
+  LLVM_ATTRIBUTE_USED
+  raw_ostream &operator<<(raw_ostream &OS, const PE &P) {
     P.C.print(OS, P.V ? P.V : P.C.Root);
     return OS;
   }

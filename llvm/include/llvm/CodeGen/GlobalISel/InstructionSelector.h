@@ -117,6 +117,19 @@ enum {
   GIM_CheckAtomicOrdering,
   GIM_CheckAtomicOrderingOrStrongerThan,
   GIM_CheckAtomicOrderingWeakerThan,
+  /// Check the size of the memory access for the given machine memory operand.
+  /// - InsnID - Instruction ID
+  /// - MMOIdx - MMO index
+  /// - Size - The size in bytes of the memory access
+  GIM_CheckMemorySizeEqualTo,
+  /// Check the size of the memory access for the given machine memory operand
+  /// against the size of an operand.
+  /// - InsnID - Instruction ID
+  /// - MMOIdx - MMO index
+  /// - OpIdx - The operand index to compare the MMO against
+  GIM_CheckMemorySizeEqualToLLT,
+  GIM_CheckMemorySizeLessThanLLT,
+  GIM_CheckMemorySizeGreaterThanLLT,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID
