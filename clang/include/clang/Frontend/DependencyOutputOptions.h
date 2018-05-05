@@ -15,6 +15,9 @@
 
 namespace clang {
 
+/// ShowIncludesDestination - Destination for /showIncludes output.
+enum class ShowIncludesDestination { None, Stdout, Stderr };
+
 /// DependencyOutputFormat - Format for the compiler dependency file.
 enum class DependencyOutputFormat { Make, NMake };
 
@@ -28,8 +31,10 @@ public:
                                      /// dependency, which can avoid some 'make'
                                      /// problems.
   unsigned AddMissingHeaderDeps : 1; ///< Add missing headers to dependency list
-  unsigned PrintShowIncludes : 1; ///< Print cl.exe style /showIncludes info.
   unsigned IncludeModuleFiles : 1; ///< Include module file dependencies.
+
+  /// Destination of cl.exe style /showIncludes info.
+  ShowIncludesDestination ShowIncludesDest;
 
   /// The format for the dependency file.
   DependencyOutputFormat OutputFormat;
@@ -60,15 +65,11 @@ public:
   std::string ModuleDependencyOutputDir;
 
 public:
-  DependencyOutputOptions() {
-    IncludeSystemHeaders = 0;
-    ShowHeaderIncludes = 0;
-    UsePhonyTargets = 0;
-    AddMissingHeaderDeps = 0;
-    PrintShowIncludes = 0;
-    IncludeModuleFiles = 0;
-    OutputFormat = DependencyOutputFormat::Make;
-  }
+  DependencyOutputOptions()
+      : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
+        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
+        ShowIncludesDest(ShowIncludesDestination::None),
+        OutputFormat(DependencyOutputFormat::Make) {}
 };
 
 }  // end namespace clang

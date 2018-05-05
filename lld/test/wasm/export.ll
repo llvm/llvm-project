@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: not wasm-ld --check-signatures --export=missing -o %t.wasm %t.o 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
-; RUN: wasm-ld --check-signatures --export=hidden_function -o %t.wasm %t.o
+; RUN: not wasm-ld --export=missing -o %t.wasm %t.o 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
+; RUN: wasm-ld --export=hidden_function -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"

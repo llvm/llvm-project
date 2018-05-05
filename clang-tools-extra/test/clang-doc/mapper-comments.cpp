@@ -25,7 +25,7 @@ int F(int I, int J);
 
 // CHECK: <BLOCKINFO_BLOCK/>
 // CHECK-NEXT: <VersionBlock NumWords=1 BlockCodeSize=4>
-  // CHECK-NEXT: <Version abbrevid=4 op0=1/>
+  // CHECK-NEXT: <Version abbrevid=4 op0=2/>
 // CHECK-NEXT: </VersionBlock>
 // CHECK-NEXT: <FunctionBlock NumWords={{[0-9]*}} BlockCodeSize=4>
   // CHECK-NEXT: <USR abbrevid=4 op0=20 op1=117 op2=116 op3=99 op4=6 op5=20 op6=165 op7=53 op8=113 op9=14 op10=90 op11=106 op12=188 op13=255 op14=249 op15=139 op16=202 op17=45 op18=6 op19=164 op20=202/>
@@ -157,16 +157,25 @@ int F(int I, int J);
       // CHECK-NEXT: </CommentBlock>
     // CHECK-NEXT: </CommentBlock>
   // CHECK-NEXT: </CommentBlock>
-  // CHECK-NEXT: <Location abbrevid=8 op0=24 op1={{[0-9]*}}/> blob data = '{{.*}}'
-  // CHECK-NEXT: <TypeBlock NumWords=4 BlockCodeSize=4>
-    // CHECK-NEXT: <Type abbrevid=4 op0=4 op1=3/> blob data = 'int'
+  // CHECK-NEXT: <Location abbrevid=7 op0=24 op1={{[0-9]*}}/> blob data = '{{.*}}'
+  // CHECK-NEXT: <TypeBlock NumWords={{[0-9]*}} BlockCodeSize=4>
+    // CHECK-NEXT: <ReferenceBlock NumWords={{[0-9]*}} BlockCodeSize=4>
+      // CHECK-NEXT: <Name abbrevid=5 op0=3/> blob data = 'int'
+      // CHECK-NEXT: <Field abbrevid=7 op0=4/>
+    // CHECK-NEXT: </ReferenceBlock>
   // CHECK-NEXT: </TypeBlock>
-  // CHECK-NEXT: <FieldTypeBlock NumWords=6 BlockCodeSize=4>
-    // CHECK-NEXT: <Type abbrevid=4 op0=4 op1=3/> blob data = 'int'
-    // CHECK-NEXT: <Name abbrevid=5 op0=1/> blob data = 'I'
+  // CHECK-NEXT: <FieldTypeBlock NumWords={{[0-9]*}} BlockCodeSize=4>
+    // CHECK-NEXT: <ReferenceBlock NumWords={{[0-9]*}} BlockCodeSize=4>
+      // CHECK-NEXT: <Name abbrevid=5 op0=3/> blob data = 'int'
+      // CHECK-NEXT: <Field abbrevid=7 op0=4/>
+    // CHECK-NEXT: </ReferenceBlock>
+    // CHECK-NEXT: <Name abbrevid=4 op0=1/> blob data = 'I'
   // CHECK-NEXT: </FieldTypeBlock>
-  // CHECK-NEXT: <FieldTypeBlock NumWords=6 BlockCodeSize=4>
-    // CHECK-NEXT: <Type abbrevid=4 op0=4 op1=3/> blob data = 'int'
-    // CHECK-NEXT: <Name abbrevid=5 op0=1/> blob data = 'J'
+  // CHECK-NEXT: <FieldTypeBlock NumWords={{[0-9]*}} BlockCodeSize=4>
+    // CHECK-NEXT: <ReferenceBlock NumWords={{[0-9]*}} BlockCodeSize=4>
+      // CHECK-NEXT: <Name abbrevid=5 op0=3/> blob data = 'int'
+      // CHECK-NEXT: <Field abbrevid=7 op0=4/>
+    // CHECK-NEXT: </ReferenceBlock>
+    // CHECK-NEXT: <Name abbrevid=4 op0=1/> blob data = 'J'
   // CHECK-NEXT: </FieldTypeBlock>
 // CHECK-NEXT: </FunctionBlock>

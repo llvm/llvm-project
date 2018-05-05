@@ -65,10 +65,6 @@ const ElementRegion *StoreManager::MakeElementRegion(const SubRegion *Base,
   return MRMgr.getElementRegion(EleTy, idx, Base, svalBuilder.getContext());
 }
 
-StoreRef StoreManager::BindDefault(Store store, const MemRegion *R, SVal V) {
-  return StoreRef(store, *this);
-}
-
 const ElementRegion *StoreManager::GetElementZeroRegion(const SubRegion *R,
                                                         QualType T) {
   NonLoc idx = svalBuilder.makeZeroArrayIndex();
@@ -381,6 +377,20 @@ SVal StoreManager::CastRetrievedVal(SVal V, const TypedValueRegion *R,
                                     QualType castTy) {
   if (castTy.isNull() || V.isUnknownOrUndef())
     return V;
+
+  // When retrieving symbolic pointer and expecting a non-void pointer,
+  // wrap them into element regions of the expected type if necessary.
+  // SValBuilder::dispatchCast() doesn't do that, but it is necessary to
+  // make sure that the retrieved value makes sense, because there's no other
+  // cast in the AST that would tell us to cast it to the correct pointer type.
+  // We might need to do that for non-void pointers as well.
+  // FIXME: We really need a single good function to perform casts for us
+  // correctly every time we need it.
+  if (castTy->isPointerType() && !castTy->isVoidPointerType())
+    if (const auto *SR = dyn_cast_or_null<SymbolicRegion>(V.getAsRegion()))
+      if (SR->getSymbol()->getType().getCanonicalType() !=
+          castTy.getCanonicalType())
+        return loc::MemRegionVal(castRegion(SR, castTy));
 
   return svalBuilder.dispatchCast(V, castTy);
 }

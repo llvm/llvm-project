@@ -257,6 +257,13 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
     ProgramStateRef state, const Expr* Ex, const LocationContext* LCtx,
     QualType T, QualType ExTy, const CastExpr* CastE, StmtNodeBuilder& Bldr,
     ExplodedNode* Pred) {
+  if (T->isLValueReferenceType()) {
+    assert(!CastE->getType()->isLValueReferenceType());
+    ExTy = getContext().getLValueReferenceType(ExTy);
+  } else if (T->isRValueReferenceType()) {
+    assert(!CastE->getType()->isRValueReferenceType());
+    ExTy = getContext().getRValueReferenceType(ExTy);
+  }
   // Delegate to SValBuilder to process.
   SVal OrigV = state->getSVal(Ex, LCtx);
   SVal V = svalBuilder.evalCast(OrigV, T, ExTy);

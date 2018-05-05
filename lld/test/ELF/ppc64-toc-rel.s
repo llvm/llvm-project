@@ -1,8 +1,14 @@
 # REQUIRES: ppc
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 # RUN: llvm-readobj -relocations %t.o | FileCheck -check-prefix=RELOCS %s
 # RUN: ld.lld %t.o -o %t2
 # RUN: llvm-objdump -D %t2 | FileCheck %s
+
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
+# RUN: llvm-readobj -relocations %t.o | FileCheck -check-prefix=RELOCS-BE %s
+# RUN: ld.lld %t.o -o %t2
+# RUN: llvm-objdump -D %t2 | FileCheck -check-prefix=CHECK-BE %s
 
 # Make sure we calculate the offset correctly for a toc-relative access to a
 # global variable as described by the PPC64 Elf V2 abi.
@@ -44,6 +50,11 @@ _start:
 # RELOCS:          0x8 R_PPC64_TOC16_HA global_a 0x0
 # RELOCS:          0xC R_PPC64_TOC16_LO global_a 0x0
 
+# RELOCS-BE:      Relocations [
+# RELOCS-BE-NEXT:   .rela.text {
+# RELOCS-BE:          0xA R_PPC64_TOC16_HA global_a 0x0
+# RELOCS-NE:          0xE R_PPC64_TOC16_LO global_a 0x0
+
 # Want to check _start for the values used to build the offset from the TOC base
 # to global_a. The .TOC. symbol is expected at address 0x10030000, and the
 # TOC base is address-of(.TOC.) + 0x8000.  The expected offset is:
@@ -52,13 +63,28 @@ _start:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: _start:
-# CHECK:      10010008:       ff ff 62 3c     addis 3, 2, -1
-# CHECK-NEXT: 1001000c:       00 80 63 38     addi 3, 3, -32768
+# CHECK:      10010008:       {{.*}}     addis 3, 2, -1
+# CHECK-NEXT: 1001000c:       {{.*}}     addi 3, 3, -32768
 
 # CHECK:      Disassembly of section .data:
 # CHECK-NEXT: global_a:
-# CHECK-NEXT: 10020000:       29 00 00 00
+# CHECK-NEXT: 10020000:       {{.*}}
 
 # CHECK:      Disassembly of section .got:
 # CHECK-NEXT: .got:
 # CHECK-NEXT: 10030000:       00 80 03 10
+
+
+# CHECK-BE:      Disassembly of section .text:
+# CHECK-BE-NEXT: _start:
+# CHECK-BE:      10010008:       {{.*}}     addis 3, 2, -1
+# CHECK-BE-NEXT: 1001000c:       {{.*}}     addi 3, 3, -32768
+
+# CHECK-BE:      Disassembly of section .data:
+# CHECK-BE-NEXT: global_a:
+# CHECK-BE-NEXT: 10020000:       {{.*}}
+
+# CHECK-BE:      Disassembly of section .got:
+# CHECK-BE-NEXT: .got:
+# CHECK-BE-NEXT: 10030000:       00 00 00 00
+# CHECK-BE-NEXT: 10030004:       10 03 80 00

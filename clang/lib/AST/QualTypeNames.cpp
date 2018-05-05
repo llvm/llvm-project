@@ -408,7 +408,7 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     // Get the qualifiers.
     Qualifiers Quals = QT.getQualifiers();
 
-    QT = dyn_cast<SubstTemplateTypeParmType>(QT.getTypePtr())->desugar();
+    QT = cast<SubstTemplateTypeParmType>(QT.getTypePtr())->desugar();
 
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
@@ -452,12 +452,8 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
 
 std::string getFullyQualifiedName(QualType QT,
                                   const ASTContext &Ctx,
+                                  const PrintingPolicy &Policy,
                                   bool WithGlobalNsPrefix) {
-  PrintingPolicy Policy(Ctx.getPrintingPolicy());
-  Policy.SuppressScope = false;
-  Policy.AnonymousTagLocations = false;
-  Policy.PolishForDeclaration = true;
-  Policy.SuppressUnwrittenScope = true;
   QualType FQQT = getFullyQualifiedType(QT, Ctx, WithGlobalNsPrefix);
   return FQQT.getAsString(Policy);
 }

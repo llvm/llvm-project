@@ -689,7 +689,6 @@ enum RankFlags {
   RF_BSS = 1 << 8,
   RF_NOTE = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
-  RF_PPC_OPD = 1 << 5,
   RF_PPC_TOCL = 1 << 4,
   RF_PPC_TOC = 1 << 3,
   RF_PPC_BRANCH_LT = 1 << 2,
@@ -793,9 +792,6 @@ static unsigned getSectionRank(const OutputSection *Sec) {
     StringRef Name = Sec->Name;
     if (Name != ".tocbss")
       Rank |= RF_PPC_NOT_TOCBSS;
-
-    if (Name == ".opd")
-      Rank |= RF_PPC_OPD;
 
     if (Name == ".toc1")
       Rank |= RF_PPC_TOCL;
@@ -2295,14 +2291,6 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 template <class ELFT> void Writer<ELFT>::writeSections() {
   uint8_t *Buf = Buffer->getBufferStart();
 
-  // PPC64 needs to process relocations in the .opd section
-  // before processing relocations in code-containing sections.
-  if (auto *OpdCmd = findSection(".opd")) {
-    Out::Opd = OpdCmd;
-    Out::OpdBuf = Buf + Out::Opd->Offset;
-    OpdCmd->template writeTo<ELFT>(Buf + Out::Opd->Offset);
-  }
-
   OutputSection *EhFrameHdr = nullptr;
   if (InX::EhFrameHdr && !InX::EhFrameHdr->empty())
     EhFrameHdr = InX::EhFrameHdr->getParent();
@@ -2315,8 +2303,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
       Sec->writeTo<ELFT>(Buf + Sec->Offset);
 
   for (OutputSection *Sec : OutputSections)
-    if (Sec != Out::Opd && Sec != EhFrameHdr && Sec->Type != SHT_REL &&
-        Sec->Type != SHT_RELA)
+    if (Sec != EhFrameHdr && Sec->Type != SHT_REL && Sec->Type != SHT_RELA)
       Sec->writeTo<ELFT>(Buf + Sec->Offset);
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore

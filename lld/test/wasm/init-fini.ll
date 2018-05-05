@@ -49,7 +49,7 @@ entry:
   { i32, void ()*, i8* } { i32 4000, void ()* @externDtor, i8* null }
 ]
 
-; RUN: wasm-ld --check-signatures --allow-undefined %t.o %t.global-ctor-dtor.o -o %t.wasm
+; RUN: wasm-ld --allow-undefined %t.o %t.global-ctor-dtor.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:        - Type:            IMPORT
@@ -128,7 +128,7 @@ entry:
 ; CHECK-NEXT: ...
 
 
-; RUN: wasm-ld --check-signatures -r %t.o %t.global-ctor-dtor.o -o %t.reloc.wasm
+; RUN: wasm-ld -r %t.o %t.global-ctor-dtor.o -o %t.reloc.wasm
 ; RUN: obj2yaml %t.reloc.wasm | FileCheck -check-prefix=RELOC %s
 
 ; RELOC:          SymbolTable:

@@ -2,6 +2,8 @@
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
 // RUN: llvm-readelf --symbols %t | FileCheck -check-prefix CHECK-SYMS %s
+// REQUIRES: aarch64
+
         .text
         .globl _start
         .type _start, %function

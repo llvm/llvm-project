@@ -1,4 +1,4 @@
-/*===------------- avx512pfintrin.h - PF intrinsics ------------------===
+/*===------------- avx512pfintrin.h - PF intrinsics ------------------------===
  *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
