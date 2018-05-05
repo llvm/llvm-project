@@ -359,21 +359,22 @@ private:
   bool NoUnsignedWrap : 1;
   bool NoSignedWrap : 1;
   bool Exact : 1;
-  bool UnsafeAlgebra : 1;
   bool NoNaNs : 1;
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
   bool AllowReciprocal : 1;
   bool VectorReduction : 1;
   bool AllowContract : 1;
+  bool ApproximateFuncs : 1;
+  bool AllowReassociation : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
       : AnyDefined(false), NoUnsignedWrap(false), NoSignedWrap(false),
-        Exact(false), UnsafeAlgebra(false), NoNaNs(false), NoInfs(false),
+        Exact(false), NoNaNs(false), NoInfs(false),
         NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false),
-        AllowContract(false) {}
+        AllowContract(false),  ApproximateFuncs(false), AllowReassociation(false) {}
 
   /// Sets the state of the flags to the defined state.
   void setDefined() { AnyDefined = true; }
@@ -392,10 +393,6 @@ public:
   void setExact(bool b) {
     setDefined();
     Exact = b;
-  }
-  void setUnsafeAlgebra(bool b) {
-    setDefined();
-    UnsafeAlgebra = b;
   }
   void setNoNaNs(bool b) {
     setDefined();
@@ -421,18 +418,32 @@ public:
     setDefined();
     AllowContract = b;
   }
+  void setApproximateFuncs(bool b) {
+    setDefined();
+    ApproximateFuncs = b;
+  }
+  void setAllowReassociation(bool b) {
+    setDefined();
+    AllowReassociation = b;
+  }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
   bool hasNoSignedWrap() const { return NoSignedWrap; }
   bool hasExact() const { return Exact; }
-  bool hasUnsafeAlgebra() const { return UnsafeAlgebra; }
   bool hasNoNaNs() const { return NoNaNs; }
   bool hasNoInfs() const { return NoInfs; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
   bool hasAllowReciprocal() const { return AllowReciprocal; }
   bool hasVectorReduction() const { return VectorReduction; }
   bool hasAllowContract() const { return AllowContract; }
+  bool hasApproximateFuncs() const { return ApproximateFuncs; }
+  bool hasAllowReassociation() const { return AllowReassociation; }
+
+  bool isFast() const {
+    return NoSignedZeros && AllowReciprocal && NoNaNs && NoInfs &&
+           AllowContract && ApproximateFuncs && AllowReassociation;
+  }
 
   /// Clear any flags in this flag set that aren't also set in Flags.
   /// If the given Flags are undefined then don't do anything.
@@ -442,13 +453,14 @@ public:
     NoUnsignedWrap &= Flags.NoUnsignedWrap;
     NoSignedWrap &= Flags.NoSignedWrap;
     Exact &= Flags.Exact;
-    UnsafeAlgebra &= Flags.UnsafeAlgebra;
     NoNaNs &= Flags.NoNaNs;
     NoInfs &= Flags.NoInfs;
     NoSignedZeros &= Flags.NoSignedZeros;
     AllowReciprocal &= Flags.AllowReciprocal;
     VectorReduction &= Flags.VectorReduction;
     AllowContract &= Flags.AllowContract;
+    ApproximateFuncs &= Flags.ApproximateFuncs;
+    AllowReassociation &= Flags.AllowReassociation;
   }
 };
 
@@ -923,6 +935,7 @@ public:
 
   const SDNodeFlags getFlags() const { return Flags; }
   void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
+  bool isFast() { return Flags.isFast(); }
 
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.

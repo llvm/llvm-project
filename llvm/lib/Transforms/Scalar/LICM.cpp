@@ -449,6 +449,11 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     if (inSubLoop(BB, CurLoop, LI))
       continue;
 
+    // Keep track of whether the prefix of instructions visited so far are such
+    // that the next instruction visited is guaranteed to execute if the loop
+    // is entered.  
+    bool IsMustExecute = CurLoop->getHeader() == BB;
+
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
       Instruction &I = *II++;
       // Try constant folding this instruction.  If all the operands are
@@ -496,10 +501,16 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       //
       if (CurLoop->hasLoopInvariantOperands(&I) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
-          isSafeToExecuteUnconditionally(
-              I, DT, CurLoop, SafetyInfo, ORE,
-              CurLoop->getLoopPreheader()->getTerminator()))
+          (IsMustExecute ||
+           isSafeToExecuteUnconditionally(
+               I, DT, CurLoop, SafetyInfo, ORE,
+               CurLoop->getLoopPreheader()->getTerminator()))) {
         Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
+        continue;
+      }
+
+      if (IsMustExecute)
+        IsMustExecute = isGuaranteedToTransferExecutionToSuccessor(&I);
     }
   }
 
