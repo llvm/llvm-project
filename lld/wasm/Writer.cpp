@@ -474,7 +474,7 @@ void Writer::createLinkingSection() {
         writeUleb128(Sub.OS, G->getGlobalIndex(), "index");
         if (Sym->isDefined())
           writeStr(Sub.OS, Sym->getName(), "sym name");
-      } else if (auto *D = dyn_cast<DataSymbol>(Sym)) {
+      } else if (isa<DataSymbol>(Sym)) {
         writeStr(Sub.OS, Sym->getName(), "sym name");
         if (auto *DataSym = dyn_cast<DefinedData>(Sym)) {
           writeUleb128(Sub.OS, DataSym->getOutputSegmentIndex(), "index");
