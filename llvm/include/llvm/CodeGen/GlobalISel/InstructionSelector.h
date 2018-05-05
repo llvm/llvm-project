@@ -248,6 +248,12 @@ enum {
   /// The operand index is implicitly 1.
   GIR_CopyConstantAsSImm,
 
+  /// Render a G_FCONSTANT operator as a sign-extended immediate.
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// The operand index is implicitly 1.
+  GIR_CopyFConstantAsFPImm,
+
   /// Constrain an instruction operand to a register class.
   /// - InsnID - Instruction ID to modify
   /// - OpIdx - Operand index

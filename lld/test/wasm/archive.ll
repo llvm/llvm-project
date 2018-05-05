@@ -4,12 +4,12 @@
 ; RUN: llc -filetype=obj %S/Inputs/hello.ll -o %t.a3.o
 ; RUN: llvm-ar rcs %t.a %t.a1.o %t.a2.o %t.a3.o
 ; RUN: rm -f %t.imports
-; RUN: not wasm-ld --check-signatures %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED %s
+; RUN: not wasm-ld %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED %s
 
 ; CHECK-UNDEFINED: undefined symbol: missing_func
 
 ; RUN: echo 'missing_func' > %t.imports
-; RUN: wasm-ld --check-signatures -r %t.a %t.o -o %t.wasm
+; RUN: wasm-ld -r %t.a %t.o -o %t.wasm
 
 ; RUN: llvm-nm -a %t.wasm | FileCheck %s
 
@@ -40,4 +40,4 @@ entry:
 ; CHECK-NOT: hello
 
 ; Specifying the same archive twice is allowed.
-; RUN: wasm-ld --check-signatures %t.a %t.a %t.o -o %t.wasm
+; RUN: wasm-ld %t.a %t.a %t.o -o %t.wasm

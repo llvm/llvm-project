@@ -2496,7 +2496,7 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
     // Static allocas (constant size in the entry block) are handled by
     // prologue/epilogue insertion so they're free anyway. We definitely don't
     // want to make them non-constant.
-    return !dyn_cast<AllocaInst>(I)->isStaticAlloca();
+    return !cast<AllocaInst>(I)->isStaticAlloca();
   case Instruction::GetElementPtr:
     if (OpIdx == 0)
       return true;

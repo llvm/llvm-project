@@ -2355,7 +2355,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Load: {
       // Cost of wide load - cost of scalar loads.
-      unsigned alignment = dyn_cast<LoadInst>(VL0)->getAlignment();
+      unsigned alignment = cast<LoadInst>(VL0)->getAlignment();
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) *
                             TTI->getMemoryOpCost(Instruction::Load, ScalarTy,
@@ -2374,7 +2374,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Store: {
       // We know that we can merge the stores. Calculate the cost.
-      unsigned alignment = dyn_cast<StoreInst>(VL0)->getAlignment();
+      unsigned alignment = cast<StoreInst>(VL0)->getAlignment();
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) *
                             TTI->getMemoryOpCost(Instruction::Store, ScalarTy,
@@ -5987,9 +5987,8 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
   // reduction phi. Vectorizing such cases has been reported to cause
   // miscompiles. See PR25787.
   auto DominatedReduxValue = [&](Value *R) {
-    return (
-        dyn_cast<Instruction>(R) &&
-        DT->dominates(P->getParent(), dyn_cast<Instruction>(R)->getParent()));
+    return isa<Instruction>(R) &&
+           DT->dominates(P->getParent(), cast<Instruction>(R)->getParent());
   };
 
   Value *Rdx = nullptr;

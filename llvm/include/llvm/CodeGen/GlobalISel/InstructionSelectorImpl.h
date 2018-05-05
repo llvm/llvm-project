@@ -662,6 +662,23 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
 
+    // TODO: Needs a test case once we have a pattern that uses this.
+    case GIR_CopyFConstantAsFPImm: {
+      int64_t NewInsnID = MatchTable[CurrentIdx++];
+      int64_t OldInsnID = MatchTable[CurrentIdx++];
+      assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
+      assert(State.MIs[OldInsnID]->getOpcode() == TargetOpcode::G_FCONSTANT && "Expected G_FCONSTANT");
+      if (State.MIs[OldInsnID]->getOperand(1).isFPImm())
+        OutMIs[NewInsnID].addFPImm(
+            State.MIs[OldInsnID]->getOperand(1).getFPImm());
+      else
+        llvm_unreachable("Expected FPImm operand");
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIR_CopyFPConstantAsFPImm(OutMIs["
+                             << NewInsnID << "], MIs[" << OldInsnID << "])\n");
+      break;
+    }
+
     case GIR_CustomRenderer: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OldInsnID = MatchTable[CurrentIdx++];

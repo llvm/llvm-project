@@ -326,7 +326,9 @@ def FeatureD16PreservesUnusedBits : SubtargetFeature<
   "d16-preserves-unused-bits",
   "D16PreservesUnusedBits",
   "true",
-  "D16 memory instructions preserve unused bits rather than zeroing them out"
+  "If present, then instructions defined by HasD16LoadStore predicate preserve "
+  "unused bits. Otherwise instructions defined by HasD16LoadStore predicate "
+  "zero unused bits."
 >;
 
 //===------------------------------------------------------------===//

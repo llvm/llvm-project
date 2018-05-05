@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld --check-signatures --no-entry --print-gc-sections %t.o \
+; RUN: wasm-ld --no-entry --print-gc-sections %t.o \
 ; RUN:     -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-GC %s
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 

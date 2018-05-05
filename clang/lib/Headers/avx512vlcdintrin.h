@@ -1,4 +1,4 @@
-/*===---- avx512vlcdintrin.h - AVX512VL and AVX512CD intrinsics ---------------------------===
+/*===---- avx512vlcdintrin.h - AVX512VL and AVX512CD intrinsics ------------===
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

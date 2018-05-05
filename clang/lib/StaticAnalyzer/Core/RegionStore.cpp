@@ -230,11 +230,6 @@ Optional<SVal> RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
 }
 
 Optional<SVal> RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
-  if (R->isBoundable())
-    if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(R))
-      if (TR->getValueType()->isUnionType())
-        return UnknownVal();
-
   return Optional<SVal>::create(lookup(R, BindingKey::Default));
 }
 
@@ -409,8 +404,22 @@ public: // Part of public interface to class.
 
   RegionBindingsRef bind(RegionBindingsConstRef B, Loc LV, SVal V);
 
-  // BindDefault is only used to initialize a region with a default value.
-  StoreRef BindDefault(Store store, const MemRegion *R, SVal V) override {
+  // BindDefaultInitial is only used to initialize a region with
+  // a default value.
+  StoreRef BindDefaultInitial(Store store, const MemRegion *R,
+                              SVal V) override {
+    RegionBindingsRef B = getRegionBindings(store);
+    // Use other APIs when you have to wipe the region that was initialized
+    // earlier.
+    assert(!(B.getDefaultBinding(R) || B.getDirectBinding(R)) &&
+           "Double initialization!");
+    B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
+    return StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this);
+  }
+
+  // BindDefaultZero is used for zeroing constructors that may accidentally
+  // overwrite existing bindings.
+  StoreRef BindDefaultZero(Store store, const MemRegion *R) override {
     // FIXME: The offsets of empty bases can be tricky because of
     // of the so called "empty base class optimization".
     // If a base class has been optimized out
@@ -420,24 +429,14 @@ public: // Part of public interface to class.
     // and trying to infer them from offsets/alignments
     // seems to be error-prone and non-trivial because of the trailing padding.
     // As a temporary mitigation we don't create bindings for empty bases.
-    if (R->getKind() == MemRegion::CXXBaseObjectRegionKind &&
-        cast<CXXBaseObjectRegion>(R)->getDecl()->isEmpty())
-      return StoreRef(store, *this);
+    if (const auto *BR = dyn_cast<CXXBaseObjectRegion>(R))
+      if (BR->getDecl()->isEmpty())
+        return StoreRef(store, *this);
 
     RegionBindingsRef B = getRegionBindings(store);
-    assert(!B.lookup(R, BindingKey::Direct));
-
-    BindingKey Key = BindingKey::Make(R, BindingKey::Default);
-    if (B.lookup(Key)) {
-      const SubRegion *SR = cast<SubRegion>(R);
-      assert(SR->getAsOffset().getOffset() ==
-             SR->getSuperRegion()->getAsOffset().getOffset() &&
-             "A default value must come from a super-region");
-      B = removeSubRegionBindings(B, SR);
-    } else {
-      B = B.addBinding(Key, V);
-    }
-
+    SVal V = svalBuilder.makeZeroVal(Ctx.CharTy);
+    B = removeSubRegionBindings(B, cast<SubRegion>(R));
+    B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
     return StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this);
   }
 
@@ -1095,7 +1094,7 @@ void invalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     return;
   }
 
-  if (T->isStructureOrClassType()) {
+  if (T->isRecordType()) {
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(baseR, Ex, LCtx,
@@ -1606,7 +1605,7 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
   const MemRegion* superR = R->getSuperRegion();
 
   // Check if the region is an element region of a string literal.
-  if (const StringRegion *StrR=dyn_cast<StringRegion>(superR)) {
+  if (const StringRegion *StrR = dyn_cast<StringRegion>(superR)) {
     // FIXME: Handle loads from strings where the literal is treated as
     // an integer, e.g., *((unsigned int*)"hello")
     QualType T = Ctx.getAsArrayType(StrR->getValueType())->getElementType();
@@ -1628,6 +1627,27 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
       // used to initialize a larger array.
       char c = (i >= length) ? '\0' : Str->getCodeUnit(i);
       return svalBuilder.makeIntVal(c, T);
+    }
+  } else if (const VarRegion *VR = dyn_cast<VarRegion>(superR)) {
+    // Check if the containing array is const and has an initialized value.
+    const VarDecl *VD = VR->getDecl();
+    // Either the array or the array element has to be const.
+    if (VD->getType().isConstQualified() || R->getElementType().isConstQualified()) {
+      if (const Expr *Init = VD->getInit()) {
+        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
+          // The array index has to be known.
+          if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
+            int64_t i = CI->getValue().getSExtValue();
+            // Return unknown value if index is out of bounds.
+            if (i < 0 || i >= InitList->getNumInits())
+              return UnknownVal();
+
+            if (const Expr *ElemInit = InitList->getInit(i))
+              if (Optional<SVal> V = svalBuilder.getConstantVal(ElemInit))
+                return *V;
+          }
+        }
+      }
     }
   }
 
@@ -1678,7 +1698,28 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const Optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
-  QualType Ty = R->getValueType();
+  // Is the field declared constant and has an in-class initializer?
+  const FieldDecl *FD = R->getDecl();
+  QualType Ty = FD->getType();
+  if (Ty.isConstQualified())
+    if (const Expr *Init = FD->getInClassInitializer())
+      if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
+        return *V;
+
+  // If the containing record was initialized, try to get its constant value.
+  const MemRegion* superR = R->getSuperRegion();
+  if (const auto *VR = dyn_cast<VarRegion>(superR)) {
+    const VarDecl *VD = VR->getDecl();
+    QualType RecordVarTy = VD->getType();
+    // Either the record variable or the field has to be const qualified.
+    if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
+      if (const Expr *Init = VD->getInit())
+        if (const auto *InitList = dyn_cast<InitListExpr>(Init))
+          if (const Expr *FieldInit = InitList->getInit(FD->getFieldIndex()))
+            if (Optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
+              return *V;
+  }
+
   return getBindingForFieldOrElementCommon(B, R, Ty);
 }
 

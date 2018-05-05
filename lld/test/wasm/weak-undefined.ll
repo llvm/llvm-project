@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj -o %t.o %s
-; RUN: wasm-ld --check-signatures -strip-debug %t.o -o %t.wasm
+; RUN: wasm-ld -strip-debug %t.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Test that undefined weak externals (global_var) and (foo) don't cause

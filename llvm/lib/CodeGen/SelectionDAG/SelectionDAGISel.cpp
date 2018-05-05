@@ -1369,7 +1369,7 @@ static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
       }
 
       auto DLoc = isa<Instruction>(SwiftErrorVal)
-                      ? dyn_cast<Instruction>(SwiftErrorVal)->getDebugLoc()
+                      ? cast<Instruction>(SwiftErrorVal)->getDebugLoc()
                       : DebugLoc();
       const auto *TII = FuncInfo->MF->getSubtarget().getInstrInfo();
 

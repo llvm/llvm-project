@@ -19,7 +19,6 @@ namespace wasm {
 
 struct Configuration {
   bool AllowUndefined;
-  bool CheckSignatures;
   bool Demangle;
   bool ExportTable;
   bool GcSections;

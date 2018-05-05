@@ -119,7 +119,7 @@ SValBuilder::getRegionValueSymbolVal(const TypedValueRegion *region) {
 
   if (T->isNullPtrType())
     return makeZeroVal(T);
-  
+
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
@@ -328,12 +328,19 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   case Stmt::CXXNullPtrLiteralExprClass:
     return makeNull();
 
+  case Stmt::CStyleCastExprClass:
+  case Stmt::CXXFunctionalCastExprClass:
+  case Stmt::CXXConstCastExprClass:
+  case Stmt::CXXReinterpretCastExprClass:
+  case Stmt::CXXStaticCastExprClass:
   case Stmt::ImplicitCastExprClass: {
     const auto *CE = cast<CastExpr>(E);
     switch (CE->getCastKind()) {
     default:
       break;
     case CK_ArrayToPointerDecay:
+    case CK_IntegralToPointer:
+    case CK_NoOp:
     case CK_BitCast: {
       const Expr *SE = CE->getSubExpr();
       Optional<SVal> Val = getConstantVal(SE);

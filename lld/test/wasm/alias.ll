@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj -o %t.o %s
-; RUN: wasm-ld --check-signatures %t.o -o %t.wasm
+; RUN: wasm-ld %t.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"

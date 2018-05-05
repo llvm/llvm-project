@@ -1,4 +1,4 @@
-/*===------------- pkuintrin.h - PKU intrinsics ------------------===
+/*===---- pkuintrin.h - PKU intrinsics -------------------------------------===
  *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
