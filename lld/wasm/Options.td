@@ -96,10 +96,6 @@ def allow_undefined_file: J<"allow-undefined-file=">,
 def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">,
   Alias<allow_undefined_file>;
 
-defm check_signatures: B<"check-signatures",
-    "Check function signatures",
-    "Don't check function signatures">;
-
 defm export: Eq<"export">,
   HelpText<"Force a symbol to be exported">;
 

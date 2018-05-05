@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %p/Inputs/locals-duplicate1.ll -o %t1.o
 ; RUN: llc -filetype=obj %p/Inputs/locals-duplicate2.ll -o %t2.o
-; RUN: wasm-ld --check-signatures --no-entry -o %t.wasm %t1.o %t2.o
+; RUN: wasm-ld --no-entry -o %t.wasm %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:      --- !WASM
@@ -236,7 +236,7 @@
 ; CHECK-NEXT: ...
 
 
-; RUN: wasm-ld --check-signatures -r --no-entry -o %t.reloc.wasm %t1.o %t2.o
+; RUN: wasm-ld -r --no-entry -o %t.reloc.wasm %t1.o %t2.o
 ; RUN: obj2yaml %t.reloc.wasm | FileCheck -check-prefix=RELOC %s
 
 ; RELOC:      --- !WASM

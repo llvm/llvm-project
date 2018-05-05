@@ -163,7 +163,7 @@
 
 #define PRINT0(_flag, _str)                                                    \
   {                                                                            \
-    if (DON(_flag)) {                                                          \
+    if (omptarget_device_environment.debug_level && DON(_flag)) {              \
       printf("<b %2d, t %4d, w %2d, l %2d>: " _str, blockIdx.x, threadIdx.x,   \
              threadIdx.x / WARPSIZE, threadIdx.x & 0x1F);                      \
     }                                                                          \
@@ -171,7 +171,7 @@
 
 #define PRINT(_flag, _str, _args...)                                           \
   {                                                                            \
-    if (DON(_flag)) {                                                          \
+    if (omptarget_device_environment.debug_level && DON(_flag)) {              \
       printf("<b %2d, t %4d, w %2d, l %2d>: " _str, blockIdx.x, threadIdx.x,   \
              threadIdx.x / WARPSIZE, threadIdx.x & 0x1F, _args);               \
     }                                                                          \

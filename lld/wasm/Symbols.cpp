@@ -36,6 +36,8 @@ WasmSymbolType Symbol::getWasmType() const {
     return llvm::wasm::WASM_SYMBOL_TYPE_DATA;
   if (isa<GlobalSymbol>(this))
     return llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL;
+  if (isa<SectionSymbol>(this))
+    return llvm::wasm::WASM_SYMBOL_TYPE_SECTION;
   llvm_unreachable("invalid symbol kind");
 }
 
@@ -194,6 +196,19 @@ DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
                    Global ? &Global->getType() : nullptr),
       Global(Global) {}
 
+uint32_t SectionSymbol::getOutputSectionIndex() const {
+  DEBUG(dbgs() << "getOutputSectionIndex: " << getName() << "\n");
+  assert(OutputSectionIndex != INVALID_INDEX);
+  return OutputSectionIndex;
+}
+
+void SectionSymbol::setOutputSectionIndex(uint32_t Index) {
+  DEBUG(dbgs() << "setOutputSectionIndex: " << getName() << " -> " << Index
+               << "\n");
+  assert(Index != INVALID_INDEX);
+  OutputSectionIndex = Index;
+}
+
 void LazySymbol::fetch() { cast<ArchiveFile>(File)->addMember(&ArchiveSymbol); }
 
 std::string lld::toString(const wasm::Symbol &Sym) {
@@ -219,6 +234,8 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
     return "UndefinedGlobal";
   case wasm::Symbol::LazyKind:
     return "LazyKind";
+  case wasm::Symbol::SectionKind:
+    return "SectionKind";
   }
   llvm_unreachable("invalid symbol kind");
 }

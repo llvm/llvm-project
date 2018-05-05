@@ -83,16 +83,13 @@ static void checkFunctionType(const Symbol *Existing, const InputFile *File,
     return;
   }
 
-  if (!Config->CheckSignatures)
-    return;
-
   const WasmSignature *OldSig =
       cast<FunctionSymbol>(Existing)->getFunctionType();
   if (OldSig && *NewSig != *OldSig) {
-    error("Function type mismatch: " + Existing->getName() +
-          "\n>>> defined as " + toString(*OldSig) + " in " +
-          toString(Existing->getFile()) + "\n>>> defined as " +
-          toString(*NewSig) + " in " + toString(File));
+    warn("Function type mismatch: " + Existing->getName() +
+         "\n>>> defined as " + toString(*OldSig) + " in " +
+         toString(Existing->getFile()) + "\n>>> defined as " +
+         toString(*NewSig) + " in " + toString(File));
   }
 }
 

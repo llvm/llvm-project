@@ -53,6 +53,43 @@ void InputChunk::copyRelocations(const WasmSection &Section) {
       Relocations.push_back(R);
 }
 
+void InputChunk::verifyRelocTargets() const {
+  for (const WasmRelocation &Rel : Relocations) {
+    uint32_t ExistingValue;
+    unsigned BytesRead = 0;
+    uint32_t Offset = Rel.Offset - getInputSectionOffset();
+    const uint8_t *Loc = data().data() + Offset;
+    switch (Rel.Type) {
+    case R_WEBASSEMBLY_TYPE_INDEX_LEB:
+    case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+    case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+      ExistingValue = decodeULEB128(Loc, &BytesRead);
+      break;
+    case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+      ExistingValue = static_cast<uint32_t>(decodeSLEB128(Loc, &BytesRead));
+      break;
+    case R_WEBASSEMBLY_TABLE_INDEX_I32:
+    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
+    case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+    case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+      ExistingValue = static_cast<uint32_t>(read32le(Loc));
+      break;
+    default:
+      llvm_unreachable("unknown relocation type");
+    }
+
+    if (BytesRead && BytesRead != 5)
+      warn("expected LEB at relocation site be 5-byte padded");
+    uint32_t ExpectedValue = File->calcExpectedValue(Rel);
+    if (ExpectedValue != ExistingValue)
+      warn("unexpected existing value for " + ReloctTypeToString(Rel.Type) +
+           ": existing=" + Twine(ExistingValue) +
+           " expected=" + Twine(ExpectedValue));
+  }
+}
+
 // Copy this input chunk to an mmap'ed output file and apply relocations.
 void InputChunk::writeTo(uint8_t *Buf) const {
   // Copy contents
@@ -62,6 +99,10 @@ void InputChunk::writeTo(uint8_t *Buf) const {
   if (Relocations.empty())
     return;
 
+#ifndef NDEBUG
+  verifyRelocTargets();
+#endif
+
   DEBUG(dbgs() << "applying relocations: " << getName()
                << " count=" << Relocations.size() << "\n");
   int32_t Off = OutputOffset - getInputSectionOffset();
@@ -69,7 +110,6 @@ void InputChunk::writeTo(uint8_t *Buf) const {
   for (const WasmRelocation &Rel : Relocations) {
     uint8_t *Loc = Buf + Rel.Offset + Off;
     uint32_t Value = File->calcNewValue(Rel);
-    uint32_t ExistingValue;
     DEBUG(dbgs() << "apply reloc: type=" << ReloctTypeToString(Rel.Type)
                  << " addend=" << Rel.Addend << " index=" << Rel.Index
                  << " value=" << Value << " offset=" << Rel.Offset << "\n");
@@ -79,28 +119,21 @@ void InputChunk::writeTo(uint8_t *Buf) const {
     case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
     case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-      ExistingValue = decodeULEB128(Loc);
       encodeULEB128(Value, Loc, 5);
       break;
     case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-      ExistingValue = static_cast<uint32_t>(decodeSLEB128(Loc));
       encodeSLEB128(static_cast<int32_t>(Value), Loc, 5);
       break;
     case R_WEBASSEMBLY_TABLE_INDEX_I32:
     case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-      ExistingValue = static_cast<uint32_t>(read32le(Loc));
+    case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+    case R_WEBASSEMBLY_SECTION_OFFSET_I32:
       write32le(Loc, Value);
       break;
     default:
       llvm_unreachable("unknown relocation type");
     }
-
-    uint32_t ExpectedValue = File->calcExpectedValue(Rel);
-    if (ExpectedValue != ExistingValue)
-      error("unexpected existing value for " + ReloctTypeToString(Rel.Type) +
-            ": existing=" + Twine(ExistingValue) +
-            " expected=" + Twine(ExpectedValue));
   }
 }
 
@@ -124,7 +157,9 @@ void InputChunk::writeRelocations(raw_ostream &OS) const {
     case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-      writeSleb128(OS, Rel.Addend, "reloc addend");
+    case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+    case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+      writeSleb128(OS, File->calcNewAddend(Rel), "reloc addend");
       break;
     }
   }

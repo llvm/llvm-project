@@ -224,3 +224,15 @@ void CustomSection::writeTo(uint8_t *Buf) {
   parallelForEach(InputSections,
                   [&](const InputSection *Section) { Section->writeTo(Buf); });
 }
+
+uint32_t CustomSection::numRelocations() const {
+  uint32_t Count = 0;
+  for (const InputSection *InputSect : InputSections)
+    Count += InputSect->NumRelocations();
+  return Count;
+}
+
+void CustomSection::writeRelocations(raw_ostream &OS) const {
+  for (const InputSection *S : InputSections)
+    S->writeRelocations(OS);
+}

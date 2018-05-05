@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
-; RUN: not wasm-ld --check-signatures -o %t.wasm %t.o %t.ret32.o 2>&1 | FileCheck %s
+; RUN: not wasm-ld -o %t.wasm %t.o %t.ret32.o 2>&1 | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"
 

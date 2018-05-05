@@ -1,5 +1,5 @@
 # RUN: llc -filetype=obj %p/Inputs/start.ll -o %t.start.o
-# RUN: wasm-ld --check-signatures --import-table -o %t.wasm %t.start.o
+# RUN: wasm-ld --import-table -o %t.wasm %t.start.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # Verify the --import-table flag creates a table import
