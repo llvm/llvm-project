@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple arm-- -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple arm-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   define void @test_mla() #0 { ret void }
   define void @test_mla_commutative() #0 { ret void }

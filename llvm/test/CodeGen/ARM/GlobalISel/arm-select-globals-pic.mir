@@ -1,7 +1,7 @@
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
-# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-NOMOVT
-# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-MOVT
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-NOMOVT
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-MOVT
 --- |
   @internal_global = internal global i32 42
   define void @test_internal_global() { ret void }

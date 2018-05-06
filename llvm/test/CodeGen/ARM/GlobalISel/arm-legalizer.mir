@@ -1,4 +1,4 @@
-# RUN: llc -mtriple arm-- -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
 --- |
   define void @test_sext_s8() { ret void }
   define void @test_zext_s16() { ret void }

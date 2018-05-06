@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=regbankselect -global-isel %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=regbankselect %s -verify-machineinstrs -o - | FileCheck %s
 
 # REQUIRES: global-isel
 

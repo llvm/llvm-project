@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
-# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+# RUN: llc -mtriple=i386-linux-gnu   -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
 --- |
   define i8 @test_zext_i1toi8(i1 %a) {
