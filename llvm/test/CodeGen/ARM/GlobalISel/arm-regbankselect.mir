@@ -1,4 +1,4 @@
-# RUN: llc -mtriple arm-- -global-isel -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -mtriple arm-- -run-pass=regbankselect %s -o - | FileCheck %s
 --- |
   define void @test_add_s32() { ret void }
   define void @test_sub_s32() { ret void }

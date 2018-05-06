@@ -192,6 +192,23 @@ public:
   InputSection *getTargetInputSection() const override;
 };
 
+
+// PPC64 Plt call stubs.
+// Any call site that needs to call through a plt entry needs a call stub in
+// the .text section. The call stub is responsible for:
+// 1) Saving the toc-pointer to the stack.
+// 2) Loading the target functions address from the procedure linkage table into
+//    r12 for use by the target functions global entry point, and into the count
+//    register.
+// 3) Transfering control to the target function through an indirect branch.
+class PPC64PltCallStub final : public Thunk {
+public:
+  PPC64PltCallStub(Symbol &Dest) : Thunk(Dest) {}
+  uint32_t size() override { return 20; }
+  void writeTo(uint8_t *Buf) override;
+  void addSymbols(ThunkSection &IS) override;
+};
+
 } // end anonymous namespace
 
 Defined *Thunk::addSymbol(StringRef Name, uint8_t Type, uint64_t Value,
@@ -485,6 +502,25 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(DR.Section);
 }
 
+void PPC64PltCallStub::writeTo(uint8_t *Buf) {
+  int64_t Off = Destination.getGotPltVA() - getPPC64TocBase();
+  // Need to add 0x8000 to offset to account for the low bits being signed.
+  uint16_t OffHa = (Off + 0x8000) >> 16;
+  uint16_t OffLo = Off;
+
+  write32(Buf +  0, 0xf8410018);          // std     r2,24(r1)
+  write32(Buf +  4, 0x3d820000 | OffHa);  // addis   r12,r2, X@plt@to@ha
+  write32(Buf +  8, 0xe98c0000 | OffLo);  // ld      r12,X@plt@toc@l(r12)
+  write32(Buf + 12, 0x7d8903a6);          // mtctr   r12
+  write32(Buf + 16, 0x4e800420);          // bctr
+}
+
+void PPC64PltCallStub::addSymbols(ThunkSection &IS) {
+  Defined *S = addSymbol(Saver.save("__plt_" + Destination.getName()), STT_FUNC,
+                         0, IS);
+  S->NeedsTocRestore = true;
+}
+
 Thunk::Thunk(Symbol &D) : Destination(D), Offset(0) {}
 
 Thunk::~Thunk() = default;
@@ -528,15 +564,26 @@ static Thunk *addThunkMips(RelType Type, Symbol &S) {
   return make<MipsThunk>(S);
 }
 
+static Thunk *addThunkPPC64(RelType Type, Symbol &S) {
+  if (Type == R_PPC64_REL24)
+    return make<PPC64PltCallStub>(S);
+  fatal("unexpected relocation type");
+}
+
 Thunk *addThunk(RelType Type, Symbol &S) {
   if (Config->EMachine == EM_AARCH64)
     return addThunkAArch64(Type, S);
-  else if (Config->EMachine == EM_ARM)
+
+  if (Config->EMachine == EM_ARM)
     return addThunkArm(Type, S);
-  else if (Config->EMachine == EM_MIPS)
+
+  if (Config->EMachine == EM_MIPS)
     return addThunkMips(Type, S);
-  llvm_unreachable("add Thunk only supported for ARM and Mips");
-  return nullptr;
+
+  if (Config->EMachine == EM_PPC64)
+    return addThunkPPC64(Type, S);
+
+  llvm_unreachable("add Thunk only supported for ARM, Mips and PowerPC");
 }
 
 } // end namespace elf

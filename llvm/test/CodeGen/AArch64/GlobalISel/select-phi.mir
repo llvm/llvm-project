@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown-unknown -o - -global-isel -verify-machineinstrs -run-pass=instruction-select %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select %s | FileCheck %s
 --- |
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"

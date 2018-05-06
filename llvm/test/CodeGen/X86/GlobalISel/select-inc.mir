@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu                     -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,INC
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+slow-incdec -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,ADD
+# RUN: llc -mtriple=x86_64-linux-gnu                     -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,INC
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+slow-incdec -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,ADD
 
 --- |
   define i8 @test_add_i8(i8 %arg1) {

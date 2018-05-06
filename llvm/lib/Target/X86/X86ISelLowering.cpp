@@ -17803,7 +17803,6 @@ SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
   EVT VT = Op.getValueType();
 
   // SSE1 has rsqrtss and rsqrtps. AVX adds a 256-bit variant for rsqrtps.
-  // TODO: Add support for AVX512 (v16f32).
   // It is likely not profitable to do this for f64 because a double-precision
   // rsqrt estimate with refinement on x86 prior to FMA requires at least 16
   // instructions: convert to single, rsqrtss, convert back to double, refine
@@ -17814,12 +17813,15 @@ SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
   if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
       (VT == MVT::v4f32 && Subtarget.hasSSE1() && Reciprocal) ||
       (VT == MVT::v4f32 && Subtarget.hasSSE2() && !Reciprocal) ||
-      (VT == MVT::v8f32 && Subtarget.hasAVX())) {
+      (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
+      (VT == MVT::v16f32 && Subtarget.useAVX512Regs())) {
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 1;
 
     UseOneConstNR = false;
-    return DAG.getNode(X86ISD::FRSQRT, SDLoc(Op), VT, Op);
+    // There is no FSQRT for 512-bits, but there is RSQRT14.
+    unsigned Opcode = VT == MVT::v16f32 ? X86ISD::RSQRT14 : X86ISD::FRSQRT;
+    return DAG.getNode(Opcode, SDLoc(Op), VT, Op);
   }
   return SDValue();
 }
@@ -17832,7 +17834,6 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
   EVT VT = Op.getValueType();
 
   // SSE1 has rcpss and rcpps. AVX adds a 256-bit variant for rcpps.
-  // TODO: Add support for AVX512 (v16f32).
   // It is likely not profitable to do this for f64 because a double-precision
   // reciprocal estimate with refinement on x86 prior to FMA requires
   // 15 instructions: convert to single, rcpss, convert back to double, refine
@@ -17841,7 +17842,8 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
 
   if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
       (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v8f32 && Subtarget.hasAVX())) {
+      (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
+      (VT == MVT::v16f32 && Subtarget.useAVX512Regs())) {
     // Enable estimate codegen with 1 refinement step for vector division.
     // Scalar division estimates are disabled because they break too much
     // real-world code. These defaults are intended to match GCC behavior.
@@ -17851,7 +17853,9 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 1;
 
-    return DAG.getNode(X86ISD::FRCP, SDLoc(Op), VT, Op);
+    // There is no FSQRT for 512-bits, but there is RSQRT14.
+    unsigned Opcode = VT == MVT::v16f32 ? X86ISD::RCP14 : X86ISD::FRCP;
+    return DAG.getNode(Opcode, SDLoc(Op), VT, Op);
   }
   return SDValue();
 }

@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=legalizer -global-isel -global-isel-abort=0 -pass-remarks-missed='gisel*' %s -o - 2>&1 | FileCheck %s
+# RUN: llc -O0 -run-pass=legalizer -global-isel-abort=0 -pass-remarks-missed='gisel*' %s -o - 2>&1 | FileCheck %s
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

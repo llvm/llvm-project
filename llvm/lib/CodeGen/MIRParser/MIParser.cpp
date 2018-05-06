@@ -1303,11 +1303,11 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, const Constant *&C) {
 }
 
 bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
-  if (Token.range().front() == 's' || Token.range().front() == 'p')
-    if (!llvm::all_of(Token.range().drop_front(), isdigit))
+  if (Token.range().front() == 's' || Token.range().front() == 'p') {
+    StringRef SizeStr = Token.range().drop_front();
+    if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
       return error("Expected integers after 's'/'p' type character");
-  if (!llvm::all_of(Token.range().drop_front(), isdigit))
-    return error("Expected integers after 's'/'p' type character");
+  }
 
   if (Token.range().front() == 's') {
     Ty = LLT::scalar(APSInt(Token.range().drop_front()).getZExtValue());
@@ -1339,7 +1339,8 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   if (Token.range().front() != 's')
     return error(Loc, "expected '<N x sM>' for vector type");
-  if (!llvm::all_of(Token.range().drop_front(), isdigit))
+  StringRef SizeStr = Token.range().drop_front();
+  if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
     return error("Expected integers after 's' type character");
   uint64_t ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
   lex();
@@ -1354,7 +1355,13 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
 bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::Identifier));
-  if (!llvm::all_of(Token.range().drop_front(), isdigit))
+  StringRef TypeStr = Token.range();
+  if (TypeStr.front() != 'i' && TypeStr.front() != 's' &&
+      TypeStr.front() != 'p')
+    return error(
+        "A typed immediate operand should start with one of 'i', 's', or 'p'");
+  StringRef SizeStr = Token.range().drop_front();
+  if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
     return error("Expected integers after 'i'/'s'/'p' type character");
 
   auto Loc = Token.location();

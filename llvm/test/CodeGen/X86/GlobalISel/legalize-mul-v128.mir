@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL
 --- |
   define <8 x i16> @test_mul_v8i16(<8 x i16> %arg1, <8 x i16> %arg2) #0 {
     %ret = mul <8 x i16> %arg1, %arg2

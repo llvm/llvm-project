@@ -12,9 +12,17 @@
 // RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
 
-// CHECK:          Disassembly of section .text:
+// CHECK:      Disassembly of section .text:
+// CHECK-NEXT: __plt_foo:
+// CHECK-NEXT:      std 2, 24(1)
+// CHECK-NEXT:      addis 12, 2, -2
+// CHECK-NEXT:      ld 12, 32576(12)
+// CHECK-NEXT:      mtctr 12
+// CHECK-NEXT:      bctr
+
+
 // CHECK:            _start:
-// CHECK:            bl .+24
+// CHECK:            bl .+67108824
         .text
         .abiversion 2
         .globl  _start
@@ -32,13 +40,3 @@ _start:
   li 0, 1
   sc
   .size _start, .-.Lfunc_begin0
-
-
-
-// CHECK:          Disassembly of section .plt:
-// CHECK:          .plt:
-// CHECK-NEXT:            {{.*}}     std 2, 24(1)
-// CHECK-NEXT:            {{.*}}     addis 12, 2, -2
-// CHECK-NEXT:            {{.*}}     ld 12, 32576(12)
-// CHECK-NEXT:            {{.*}}     mtctr 12
-// CHECK:                 {{.*}}     bctr
