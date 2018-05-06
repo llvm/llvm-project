@@ -691,8 +691,8 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   if (LangOpts.Sanitize.has(SanitizerKind::Cilk)) {
     PMBuilder.addExtension(PassManagerBuilder::EP_TapirLate,
                            addCilkSanitizerPass);
-    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
-                           addCilkSanitizerPass);
+    // PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+    //                        addCilkSanitizerPass);
   }
 
   if (LangOpts.ComprehensiveStaticInstrumentation) {
