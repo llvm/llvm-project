@@ -1,5 +1,5 @@
-# RUN: llc -O0 -run-pass=regbankselect -global-isel %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
-# RUN: llc -O0 -run-pass=regbankselect -global-isel %s -regbankselect-greedy -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
+# RUN: llc -O0 -run-pass=regbankselect %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
+# RUN: llc -O0 -run-pass=regbankselect %s -regbankselect-greedy -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
 
 --- |
   ; ModuleID = 'generic-virtual-registers-type-error.mir'

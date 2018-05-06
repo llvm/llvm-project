@@ -1,4 +1,4 @@
-# RUN: llc -run-pass machine-cse -global-isel -verify-machineinstrs -mtriple aarch64-apple-ios %s -o - | FileCheck %s
+# RUN: llc -run-pass machine-cse -verify-machineinstrs -mtriple aarch64-apple-ios %s -o - | FileCheck %s
 ---
 name:            irtranslated
 legalized:       false

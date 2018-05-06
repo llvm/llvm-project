@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple=arm64eb-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple=arm64eb-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            bitcast_v2f32_to_s64
 legalized:       true

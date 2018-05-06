@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -global-isel -run-pass=regbankselect -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=regbankselect -o - %s | FileCheck %s
 ---
 name:            test_large_merge
 legalized:       true
