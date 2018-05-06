@@ -455,6 +455,9 @@ void PassManagerBuilder::populateModulePassManager(
       Inliner = nullptr;
     }
 
+    // Add passes to run just before Tapir lowering.
+    addExtensionsToPM(EP_TapirLate, MPM);
+
     if (tapirTarget) {
       MPM.add(createInferFunctionAttrsLegacyPass());
       MPM.add(createLowerTapirToTargetPass(tapirTarget));
