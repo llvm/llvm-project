@@ -1332,9 +1332,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       if (result.second) {
         StreamString ss;
         module_sp->GetDescription(&ss, eDescriptionLevelBrief);
+        if (module_swift_ast->HasFatalErrors())
+          ss << ": "
+             << module_swift_ast->GetFatalErrors().AsCString("unknown error");
+
         target.GetDebugger().GetErrorFile()->Printf(
-            "warning: Swift error in module %s" /*": \n    %s\n"*/
-            ".\nDebug info from this module will be unavailable in the "
+            "warning: Swift error in module %s.\n"
+            "Debug info from this module will be unavailable in the "
             "debugger.\n\n",
             ss.GetData());
       }
