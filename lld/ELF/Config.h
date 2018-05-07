@@ -95,7 +95,7 @@ struct Configuration {
   llvm::StringRef Sysroot;
   llvm::StringRef ThinLTOCacheDir;
   llvm::StringRef ThinLTOIndexOnlyObjectsFile;
-  llvm::StringRef ThinLTOPrefixReplace;
+  std::pair<llvm::StringRef, llvm::StringRef> ThinLTOPrefixReplace;
   std::string Rpath;
   std::vector<VersionDefinition> VersionDefinitions;
   std::vector<llvm::StringRef> AuxiliaryList;
