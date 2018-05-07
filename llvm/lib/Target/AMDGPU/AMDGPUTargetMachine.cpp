@@ -168,7 +168,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
-  initializeSIInsertWaitsPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
@@ -876,10 +875,7 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(createSIMemoryLegalizerPass());
-  if (EnableSIInsertWaitcntsPass)
-    addPass(createSIInsertWaitcntsPass());
-  else
-    addPass(createSIInsertWaitsPass());
+  addPass(createSIInsertWaitcntsPass());
   addPass(createSIShrinkInstructionsPass());
   addPass(&SIInsertSkipsPassID);
   addPass(createSIDebuggerInsertNopsPass());

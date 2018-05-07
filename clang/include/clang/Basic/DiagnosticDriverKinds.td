@@ -339,10 +339,12 @@ def warn_drv_unsupported_longcalls : Warning<
   "ignoring '-mlong-calls' option as it is not currently supported with "
   "%select{|the implicit usage of }0-mabicalls">,
   InGroup<OptionIgnored>;
-def warn_drv_unsupported_abicalls : Warning<
-  "ignoring '-mabicalls' option as it cannot be used with "
-  "non position-independent code and the N64 ABI">,
+def warn_drv_unsupported_pic_with_mabicalls : Warning<
+  "ignoring '%0' option as it cannot be used with "
+  "%select{implicit usage of|}1 -mabicalls and the N64 ABI">,
   InGroup<OptionIgnored>;
+def err_drv_unsupported_noabicalls_pic : Error<
+  "position-independent code requires ‘-mabicalls’">;
 def err_drv_unsupported_indirect_jump_opt : Error<
   "'-mindirect-jump=%0' is unsupported with the '%1' architecture">;
 def err_drv_unknown_indirect_jump_opt : Error<

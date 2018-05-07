@@ -224,8 +224,9 @@ static void RegisterGlobal(const Global *g) {
   list_of_all_globals = l;
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
-      dynamic_init_globals = new(allocator_for_globals)
-          VectorOfGlobals(kDynamicInitGlobalsInitialCapacity);
+      dynamic_init_globals =
+          new (allocator_for_globals) VectorOfGlobals;  // NOLINT
+      dynamic_init_globals->reserve(kDynamicInitGlobalsInitialCapacity);
     }
     DynInitGlobal dyn_global = { *g, false };
     dynamic_init_globals->push_back(dyn_global);
@@ -358,9 +359,11 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
   GET_STACK_TRACE_MALLOC;
   u32 stack_id = StackDepotPut(stack);
   BlockingMutexLock lock(&mu_for_globals);
-  if (!global_registration_site_vector)
+  if (!global_registration_site_vector) {
     global_registration_site_vector =
-        new(allocator_for_globals) GlobalRegistrationSiteVector(128);
+        new (allocator_for_globals) GlobalRegistrationSiteVector;  // NOLINT
+    global_registration_site_vector->reserve(128);
+  }
   GlobalRegistrationSite site = {stack_id, &globals[0], &globals[n - 1]};
   global_registration_site_vector->push_back(site);
   if (flags()->report_globals >= 2) {

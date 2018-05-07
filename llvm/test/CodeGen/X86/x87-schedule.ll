@@ -1397,10 +1397,10 @@ define void @test_fdiv(float *%a0, double *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fdiv %st(0), %st(1) # sched: [34:34.00]
-; SLM-NEXT:    fdiv %st(2) # sched: [34:34.00]
-; SLM-NEXT:    fdivs (%ecx) # sched: [37:34.00]
-; SLM-NEXT:    fdivl (%eax) # sched: [37:34.00]
+; SLM-NEXT:    fdiv %st(0), %st(1) # sched: [19:17.00]
+; SLM-NEXT:    fdiv %st(2) # sched: [19:17.00]
+; SLM-NEXT:    fdivs (%ecx) # sched: [22:17.00]
+; SLM-NEXT:    fdivl (%eax) # sched: [22:17.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1409,8 +1409,8 @@ define void @test_fdiv(float *%a0, double *%a1) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fdiv %st(0), %st(1) # sched: [24:1.00]
-; SANDY-NEXT:    fdiv %st(2) # sched: [24:1.00]
+; SANDY-NEXT:    fdiv %st(0), %st(1) # sched: [14:14.00]
+; SANDY-NEXT:    fdiv %st(2) # sched: [14:14.00]
 ; SANDY-NEXT:    fdivs (%ecx) # sched: [31:1.00]
 ; SANDY-NEXT:    fdivl (%eax) # sched: [31:1.00]
 ; SANDY-NEXT:    #NO_APP
@@ -1521,10 +1521,10 @@ define void @test_fdivp_fidiv(i16 *%a0, i32 *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fdivp %st(1) # sched: [34:34.00]
-; SLM-NEXT:    fdivp %st(2) # sched: [34:34.00]
-; SLM-NEXT:    fidivs (%ecx) # sched: [37:34.00]
-; SLM-NEXT:    fidivl (%eax) # sched: [37:34.00]
+; SLM-NEXT:    fdivp %st(1) # sched: [19:17.00]
+; SLM-NEXT:    fdivp %st(2) # sched: [19:17.00]
+; SLM-NEXT:    fidivs (%ecx) # sched: [22:17.00]
+; SLM-NEXT:    fidivl (%eax) # sched: [22:17.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1533,8 +1533,8 @@ define void @test_fdivp_fidiv(i16 *%a0, i32 *%a1) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fdivp %st(1) # sched: [24:1.00]
-; SANDY-NEXT:    fdivp %st(2) # sched: [24:1.00]
+; SANDY-NEXT:    fdivp %st(1) # sched: [14:14.00]
+; SANDY-NEXT:    fdivp %st(2) # sched: [14:14.00]
 ; SANDY-NEXT:    fidivs (%ecx) # sched: [34:1.00]
 ; SANDY-NEXT:    fidivl (%eax) # sched: [34:1.00]
 ; SANDY-NEXT:    #NO_APP
@@ -1645,10 +1645,10 @@ define void @test_fdivr(float *%a0, double *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fdivr %st(0), %st(1) # sched: [34:34.00]
-; SLM-NEXT:    fdivr %st(2) # sched: [34:34.00]
-; SLM-NEXT:    fdivrs (%ecx) # sched: [37:34.00]
-; SLM-NEXT:    fdivrl (%eax) # sched: [37:34.00]
+; SLM-NEXT:    fdivr %st(0), %st(1) # sched: [19:17.00]
+; SLM-NEXT:    fdivr %st(2) # sched: [19:17.00]
+; SLM-NEXT:    fdivrs (%ecx) # sched: [22:17.00]
+; SLM-NEXT:    fdivrl (%eax) # sched: [22:17.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1657,8 +1657,8 @@ define void @test_fdivr(float *%a0, double *%a1) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fdivr %st(0), %st(1) # sched: [24:1.00]
-; SANDY-NEXT:    fdivr %st(2) # sched: [24:1.00]
+; SANDY-NEXT:    fdivr %st(0), %st(1) # sched: [14:14.00]
+; SANDY-NEXT:    fdivr %st(2) # sched: [14:14.00]
 ; SANDY-NEXT:    fdivrs (%ecx) # sched: [31:1.00]
 ; SANDY-NEXT:    fdivrl (%eax) # sched: [31:1.00]
 ; SANDY-NEXT:    #NO_APP
@@ -1769,10 +1769,10 @@ define void @test_fdivrp_fidivr(i16 *%a0, i32 *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fdivrp %st(1) # sched: [34:34.00]
-; SLM-NEXT:    fdivrp %st(2) # sched: [34:34.00]
-; SLM-NEXT:    fidivrs (%ecx) # sched: [37:34.00]
-; SLM-NEXT:    fidivrl (%eax) # sched: [37:34.00]
+; SLM-NEXT:    fdivrp %st(1) # sched: [19:17.00]
+; SLM-NEXT:    fdivrp %st(2) # sched: [19:17.00]
+; SLM-NEXT:    fidivrs (%ecx) # sched: [22:17.00]
+; SLM-NEXT:    fidivrl (%eax) # sched: [22:17.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1781,8 +1781,8 @@ define void @test_fdivrp_fidivr(i16 *%a0, i32 *%a1) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fdivrp %st(1) # sched: [24:1.00]
-; SANDY-NEXT:    fdivrp %st(2) # sched: [24:1.00]
+; SANDY-NEXT:    fdivrp %st(1) # sched: [14:14.00]
+; SANDY-NEXT:    fdivrp %st(2) # sched: [14:14.00]
 ; SANDY-NEXT:    fidivrs (%ecx) # sched: [34:1.00]
 ; SANDY-NEXT:    fidivrl (%eax) # sched: [34:1.00]
 ; SANDY-NEXT:    #NO_APP
@@ -3067,10 +3067,10 @@ define void @test_fmul(float *%a0, double *%a1) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fmul %st(0), %st(1) # sched: [5:1.00]
-; ZNVER1-NEXT:    fmul %st(2) # sched: [5:1.00]
-; ZNVER1-NEXT:    fmuls (%ecx) # sched: [12:1.00]
-; ZNVER1-NEXT:    fmull (%eax) # sched: [12:1.00]
+; ZNVER1-NEXT:    fmul %st(0), %st(1) # sched: [3:0.50]
+; ZNVER1-NEXT:    fmul %st(2) # sched: [3:0.50]
+; ZNVER1-NEXT:    fmuls (%ecx) # sched: [10:0.50]
+; ZNVER1-NEXT:    fmull (%eax) # sched: [10:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fmul %st(0), %st(1) \0A\09 fmul %st(2), %st(0) \0A\09 fmuls $0 \0A\09 fmull $1", "*m,*m"(float *%a0, double *%a1) nounwind
@@ -3191,10 +3191,10 @@ define void @test_fmulp_fimul(i16 *%a0, i32 *%a1) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fmulp %st(1) # sched: [5:1.00]
-; ZNVER1-NEXT:    fmulp %st(2) # sched: [5:1.00]
-; ZNVER1-NEXT:    fimuls (%ecx) # sched: [12:1.00]
-; ZNVER1-NEXT:    fimull (%eax) # sched: [12:1.00]
+; ZNVER1-NEXT:    fmulp %st(1) # sched: [3:0.50]
+; ZNVER1-NEXT:    fmulp %st(2) # sched: [3:0.50]
+; ZNVER1-NEXT:    fimuls (%ecx) # sched: [10:0.50]
+; ZNVER1-NEXT:    fimull (%eax) # sched: [10:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fmulp \0A\09 fmulp %st(2), %st(0) \0A\09 fimuls $0 \0A\09 fimull $1", "*m,*m"(i16 *%a0, i32 *%a1) nounwind
@@ -4083,56 +4083,56 @@ define void @test_fsqrt() optsize {
 ; SLM-LABEL: test_fsqrt:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fsqrt # sched: [15:1.00]
+; SLM-NEXT:    fsqrt # sched: [40:40.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_fsqrt:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fsqrt # sched: [14:1.00]
+; SANDY-NEXT:    fsqrt # sched: [24:24.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_fsqrt:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fsqrt # sched: [15:1.00]
+; HASWELL-NEXT:    fsqrt # sched: [23:17.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsqrt:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    fsqrt # sched: [15:1.00]
+; BROADWELL-NEXT:    fsqrt # sched: [23:9.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKYLAKE-LABEL: test_fsqrt:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fsqrt # sched: [15:1.00]
+; SKYLAKE-NEXT:    fsqrt # sched: [21:7.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_fsqrt:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fsqrt # sched: [15:1.00]
+; SKX-NEXT:    fsqrt # sched: [21:7.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
 ; BTVER2-LABEL: test_fsqrt:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fsqrt # sched: [21:21.00]
+; BTVER2-NEXT:    fsqrt # sched: [35:35.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_fsqrt:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fsqrt # sched: [20:1.00]
+; ZNVER1-NEXT:    fsqrt # sched: [20:20.00]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fsqrt", ""() nounwind

@@ -2,6 +2,14 @@
 # RUN: llvm-objcopy --strip-all %t %t2
 # RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
 
+# We run yaml2obj again rather than copy %t to avoid interfering
+# with llvm-objcopy's test (which potentially could have corrupted/updated the binary).
+
+# RUN: yaml2obj %s > %t3
+# RUN: llvm-strip %t3 
+# RUN: llvm-readobj -file-headers -sections %t3 | FileCheck %s
+# RUN: cmp %t2 %t3
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

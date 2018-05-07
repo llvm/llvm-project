@@ -211,13 +211,28 @@ defm : AtomWriteResPair<WriteFCom,           [AtomPort0],  [AtomPort0],  5,  5, 
 defm : AtomWriteResPair<WriteFMul,           [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
 defm : AtomWriteResPair<WriteFMulY,          [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
 defm : AtomWriteResPair<WriteFRcp,           [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
-defm : AtomWriteResPair<WriteFRcpY,          [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
+defm : AtomWriteResPair<WriteFRcpX,         [AtomPort01], [AtomPort01],  9, 10,  [9], [10]>;
+defm : AtomWriteResPair<WriteFRcpY,         [AtomPort01], [AtomPort01],  9, 10,  [9], [10]>;
 defm : AtomWriteResPair<WriteFRsqrt,         [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
-defm : AtomWriteResPair<WriteFRsqrtY,        [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
+defm : AtomWriteResPair<WriteFRsqrtX,       [AtomPort01], [AtomPort01],  9, 10,  [9], [10]>;
+defm : AtomWriteResPair<WriteFRsqrtY,       [AtomPort01], [AtomPort01],  9, 10,  [9], [10]>;
 defm : AtomWriteResPair<WriteFDiv,          [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
-defm : AtomWriteResPair<WriteFDivY,         [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
+defm : AtomWriteResPair<WriteFDivX,         [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFDivY,         [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFDivZ,         [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFDiv64,        [AtomPort01], [AtomPort01], 62, 62, [62], [62]>;
+defm : AtomWriteResPair<WriteFDiv64X,       [AtomPort01], [AtomPort01],125,125,[125],[125]>;
+defm : AtomWriteResPair<WriteFDiv64Y,       [AtomPort01], [AtomPort01],125,125,[125],[125]>;
+defm : AtomWriteResPair<WriteFDiv64Z,       [AtomPort01], [AtomPort01],125,125,[125],[125]>;
 defm : AtomWriteResPair<WriteFSqrt,         [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
-defm : AtomWriteResPair<WriteFSqrtY,        [AtomPort01], [AtomPort01], 34, 34, [34], [34]>;
+defm : AtomWriteResPair<WriteFSqrtX,        [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFSqrtY,        [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFSqrtZ,        [AtomPort01], [AtomPort01], 70, 70, [70], [70]>;
+defm : AtomWriteResPair<WriteFSqrt64,       [AtomPort01], [AtomPort01], 62, 62, [62], [62]>;
+defm : AtomWriteResPair<WriteFSqrt64X,      [AtomPort01], [AtomPort01],125,125,[125],[125]>;
+defm : AtomWriteResPair<WriteFSqrt64Y,      [AtomPort01], [AtomPort01],125,125,[125],[125]>;
+defm : AtomWriteResPair<WriteFSqrt64Z,      [AtomPort01], [AtomPort01],125,125,[125],[125]>;
+defm : AtomWriteResPair<WriteFSqrt80,       [AtomPort01], [AtomPort01], 71, 71, [71], [71]>;
 defm : AtomWriteResPair<WriteFSign,          [AtomPort1],  [AtomPort1]>;
 defm : AtomWriteResPair<WriteFRnd,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
 defm : AtomWriteResPair<WriteFRndY,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
@@ -557,7 +572,7 @@ def : InstRW<[AtomWrite01_9], (instrs BT16mr, BT32mr, BT64mr,
                                       SHLD64mri8, SHRD64mri8,
                                       SHLD64rri8, SHRD64rri8,
                                       CMPXCHG8rr,
-                                      MULPDrr, RCPPSr, RSQRTPSr)>;
+                                      MULPDrr)>;
 def : InstRW<[AtomWrite01_9], (instregex "CMOV(B|BE|E|P|NB|NBE|NE|NP)_F",
                                          "(U)?COM_FI", "TST_F",
                                          "(U)?COMIS(D|S)rr",
@@ -568,7 +583,7 @@ def AtomWrite01_10 : SchedWriteRes<[AtomPort01]> {
   let ResourceCycles = [10];
 }
 def : InstRW<[AtomWrite01_10], (instrs FLDL2E, FLDL2T, FLDLG2, FLDLN2, FLDPI,
-                                       MULPDrm, RCPPSm, RSQRTPSm)>;
+                                       MULPDrm)>;
 def : InstRW<[AtomWrite01_10], (instregex "(U)?COMIS(D|S)rm",
                                           "CVT(T)?SS2SI64rm(_Int)?")>;
 
@@ -693,13 +708,6 @@ def AtomWrite01_59 : SchedWriteRes<[AtomPort01]> {
 }
 def : InstRW<[AtomWrite01_59], (instrs INSB, INSL, INSW)>;
 
-def AtomWrite01_62 : SchedWriteRes<[AtomPort01]> {
-  let Latency = 62;
-  let ResourceCycles = [62];
-}
-def : InstRW<[AtomWrite01_62], (instregex "DIVSD(r|m)(_Int)?",
-                                          "SQRTSD(r|m)(_Int)?")>;
-
 def AtomWrite01_63 : SchedWriteRes<[AtomPort01]> {
   let Latency = 63;
   let ResourceCycles = [63];
@@ -712,19 +720,12 @@ def AtomWrite01_68 : SchedWriteRes<[AtomPort01]> {
 }
 def : InstRW<[AtomWrite01_68], (instrs OUT8rr, OUT16rr, OUT32rr)>;
 
-def AtomWrite01_70 : SchedWriteRes<[AtomPort01]> {
-  let Latency = 70;
-  let ResourceCycles = [70];
-}
-def : InstRW<[AtomWrite01_70], (instrs DIVPSrr, DIVPSrm, SQRTPSr, SQRTPSm)>;
-
 def AtomWrite01_71 : SchedWriteRes<[AtomPort01]> {
   let Latency = 71;
   let ResourceCycles = [71];
 }
 def : InstRW<[AtomWrite01_71], (instrs FPREM1,
                                        INVLPG, INVLPGA32, INVLPGA64)>;
-def : InstRW<[AtomWrite01_71], (instregex "SQRT_F")>;
 
 def AtomWrite01_72 : SchedWriteRes<[AtomPort01]> {
   let Latency = 72;
@@ -780,12 +781,6 @@ def AtomWrite01_121 : SchedWriteRes<[AtomPort01]> {
   let ResourceCycles = [121];
 }
 def : InstRW<[AtomWrite01_121], (instrs CPUID)>;
-
-def AtomWrite01_125 : SchedWriteRes<[AtomPort01]> {
-  let Latency = 125;
-  let ResourceCycles = [125];
-}
-def : InstRW<[AtomWrite01_125], (instrs DIVPDrr, DIVPDrm, SQRTPDr, SQRTPDm)>;
 
 def AtomWrite01_127 : SchedWriteRes<[AtomPort01]> {
   let Latency = 127;

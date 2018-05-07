@@ -138,6 +138,7 @@ private:
   // Top-level resource parsers.
   ParseType parseLanguageResource();
   ParseType parseAcceleratorsResource();
+  ParseType parseBitmapResource();
   ParseType parseCursorResource();
   ParseType parseDialogResource(bool IsExtended);
   ParseType parseIconResource();

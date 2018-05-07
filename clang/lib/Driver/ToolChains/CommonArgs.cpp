@@ -1018,6 +1018,14 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
        Triple.getArch() == llvm::Triple::mipsel ||
        Triple.getArch() == llvm::Triple::mips64 ||
        Triple.getArch() == llvm::Triple::mips64el) {
+    StringRef CPUName;
+    StringRef ABIName;
+    mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
+    // When targeting the N64 ABI, PIC is the default, except in the case
+    // when the -mno-abicalls option is used. In that case we exit
+    // at next check regardless of PIC being set below.
+    if (ABIName == "n64")
+      PIC = true;
     // When targettng MIPS with -mno-abicalls, it's always static.
     if(Args.hasArg(options::OPT_mno_abicalls))
       return std::make_tuple(llvm::Reloc::Static, 0U, false);

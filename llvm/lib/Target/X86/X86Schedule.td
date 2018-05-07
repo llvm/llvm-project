@@ -61,6 +61,13 @@ class X86SchedWriteWidths<X86FoldableSchedWrite sScl,
   X86FoldableSchedWrite ZMM = s512; // ZMM operations.
 }
 
+// Multiclass that wraps X86SchedWriteWidths for each fp vector type.
+class X86SchedWriteSizes<X86SchedWriteWidths sPS,
+                         X86SchedWriteWidths sPD> {
+  X86SchedWriteWidths PS = sPS;
+  X86SchedWriteWidths PD = sPD;
+}
+
 // Loads, stores, and moves, not folded with other operations.
 def WriteLoad  : SchedWrite;
 def WriteStore : SchedWrite;
@@ -108,13 +115,28 @@ defm WriteFCmpY  : X86SchedWritePair; // Floating point compare (YMM/ZMM).
 defm WriteFCom   : X86SchedWritePair; // Floating point compare to flags.
 defm WriteFMul   : X86SchedWritePair; // Floating point multiplication.
 defm WriteFMulY  : X86SchedWritePair; // Floating point multiplication (YMM/ZMM).
-defm WriteFDiv   : X86SchedWritePair; // Floating point division.
-defm WriteFDivY  : X86SchedWritePair; // Floating point division (YMM/ZMM).
+defm WriteFDiv    : X86SchedWritePair; // Floating point division.
+defm WriteFDivX   : X86SchedWritePair; // Floating point division (XMM).
+defm WriteFDivY   : X86SchedWritePair; // Floating point division (YMM).
+defm WriteFDivZ   : X86SchedWritePair; // Floating point division (ZMM).
+defm WriteFDiv64  : X86SchedWritePair; // Floating point division.
+defm WriteFDiv64X : X86SchedWritePair; // Floating point division (XMM).
+defm WriteFDiv64Y : X86SchedWritePair; // Floating point division (YMM).
+defm WriteFDiv64Z : X86SchedWritePair; // Floating point division (ZMM).
 defm WriteFSqrt  : X86SchedWritePair; // Floating point square root.
-defm WriteFSqrtY : X86SchedWritePair; // Floating point square root (YMM/ZMM).
+defm WriteFSqrtX : X86SchedWritePair; // Floating point square root (XMM).
+defm WriteFSqrtY : X86SchedWritePair; // Floating point square root (YMM).
+defm WriteFSqrtZ : X86SchedWritePair; // Floating point square root (ZMM).
+defm WriteFSqrt64  : X86SchedWritePair; // Floating point double square root.
+defm WriteFSqrt64X : X86SchedWritePair; // Floating point double square root (XMM).
+defm WriteFSqrt64Y : X86SchedWritePair; // Floating point double square root (YMM).
+defm WriteFSqrt64Z : X86SchedWritePair; // Floating point double square root (ZMM).
+defm WriteFSqrt80  : X86SchedWritePair; // Floating point long double square root.
 defm WriteFRcp   : X86SchedWritePair; // Floating point reciprocal estimate.
+defm WriteFRcpX  : X86SchedWritePair; // Floating point reciprocal estimate (XMM).
 defm WriteFRcpY  : X86SchedWritePair; // Floating point reciprocal estimate (YMM/ZMM).
 defm WriteFRsqrt : X86SchedWritePair; // Floating point reciprocal square root estimate.
+defm WriteFRsqrtX: X86SchedWritePair; // Floating point reciprocal square root estimate (XMM).
 defm WriteFRsqrtY: X86SchedWritePair; // Floating point reciprocal square root estimate (YMM/ZMM).
 defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
 defm WriteFMAX   : X86SchedWritePair; // Fused Multiply Add (XMM).
@@ -252,6 +274,8 @@ def SchedWriteFCmp
  : X86SchedWriteWidths<WriteFCmp, WriteFCmp, WriteFCmpY, WriteFCmpY>;
 def SchedWriteFMul
  : X86SchedWriteWidths<WriteFMul, WriteFMul, WriteFMulY, WriteFMulY>;
+def SchedWriteFMul64
+ : X86SchedWriteWidths<WriteFMul, WriteFMul, WriteFMulY, WriteFMulY>;
 def SchedWriteFMA
  : X86SchedWriteWidths<WriteFMA, WriteFMAX, WriteFMAY, WriteFMAY>;
 def SchedWriteDPPD
@@ -259,13 +283,19 @@ def SchedWriteDPPD
 def SchedWriteDPPS
  : X86SchedWriteWidths<WriteDPPS, WriteDPPS, WriteDPPSY, WriteDPPSY>;
 def SchedWriteFDiv
- : X86SchedWriteWidths<WriteFDiv, WriteFDiv, WriteFDivY, WriteFDivY>;
+ : X86SchedWriteWidths<WriteFDiv, WriteFDivX, WriteFDivY, WriteFDivZ>;
+def SchedWriteFDiv64
+ : X86SchedWriteWidths<WriteFDiv64, WriteFDiv64X, WriteFDiv64Y, WriteFDiv64Z>;
 def SchedWriteFSqrt
- : X86SchedWriteWidths<WriteFSqrt, WriteFSqrt, WriteFSqrtY, WriteFSqrtY>;
+ : X86SchedWriteWidths<WriteFSqrt, WriteFSqrtX,
+                       WriteFSqrtY, WriteFSqrtZ>;
+def SchedWriteFSqrt64
+ : X86SchedWriteWidths<WriteFSqrt64, WriteFSqrt64X,
+                       WriteFSqrt64Y, WriteFSqrt64Z>;
 def SchedWriteFRcp
- : X86SchedWriteWidths<WriteFRcp, WriteFRcp, WriteFRcpY, WriteFRcpY>;
+ : X86SchedWriteWidths<WriteFRcp, WriteFRcpX, WriteFRcpY, WriteFRcpY>;
 def SchedWriteFRsqrt
- : X86SchedWriteWidths<WriteFRsqrt, WriteFRsqrt, WriteFRsqrtY, WriteFRsqrtY>;
+ : X86SchedWriteWidths<WriteFRsqrt, WriteFRsqrtX, WriteFRsqrtY, WriteFRsqrtY>;
 def SchedWriteFRnd
  : X86SchedWriteWidths<WriteFRnd, WriteFRnd, WriteFRndY, WriteFRndY>;
 def SchedWriteFLogic
@@ -323,6 +353,22 @@ def SchedWriteBlend
 def SchedWriteVarBlend
  : X86SchedWriteWidths<WriteVarBlend, WriteVarBlend,
                        WriteVarBlendY, WriteVarBlendY>;
+
+// Vector size wrappers.
+def SchedWriteFAddSizes
+ : X86SchedWriteSizes<SchedWriteFAdd, SchedWriteFAdd>;
+def SchedWriteFCmpSizes
+ : X86SchedWriteSizes<SchedWriteFCmp, SchedWriteFCmp>;
+def SchedWriteFMulSizes
+ : X86SchedWriteSizes<SchedWriteFMul, SchedWriteFMul64>;
+def SchedWriteFDivSizes
+ : X86SchedWriteSizes<SchedWriteFDiv, SchedWriteFDiv64>;
+def SchedWriteFSqrtSizes
+ : X86SchedWriteSizes<SchedWriteFSqrt, SchedWriteFSqrt64>;
+def SchedWriteFLogicSizes
+ : X86SchedWriteSizes<SchedWriteFLogic, SchedWriteFLogic>;
+def SchedWriteFShuffleSizes
+ : X86SchedWriteSizes<SchedWriteFShuffle, SchedWriteFShuffle>;
 
 //===----------------------------------------------------------------------===//
 // Generic Processor Scheduler Models.

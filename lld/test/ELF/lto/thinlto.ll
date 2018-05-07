@@ -26,6 +26,13 @@
 ; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t.o %t4.o --start-lib %t2.o --end-lib -o %t5
 ; RUN: ls %t2.o.thinlto.bc
 
+; Ensure lld writes linked files to linked objects file
+; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only=%tlinkedobjfile -shared %t.o %t2.o %t4.o -o %t5
+; RUN: cat %tlinkedobjfile 2>&1 | FileCheck %s --check-prefix=IN1
+; IN1: {{.*}}thinlto.ll.tmp.o
+; IN1-NEXT: {{.*}}thinlto.ll.tmp2.o
+; IN1-NEXT: {{.*}}thinlto.ll.tmp4.o
+
 ; Ensure lld generates error if unable to write to index file
 ; RUN: rm -f %t4.o.thinlto.bc
 ; RUN: touch %t4.o.thinlto.bc

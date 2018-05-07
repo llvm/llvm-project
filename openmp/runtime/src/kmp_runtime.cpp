@@ -1386,6 +1386,8 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, OMPT_CUR_TEAM_DATA(this_thr),
           OMPT_CUR_TASK_DATA(this_thr), 1, __kmp_tid_from_gtid(global_tid));
+      OMPT_CUR_TASK_INFO(this_thr)
+          ->thread_num = __kmp_tid_from_gtid(global_tid);
     }
 
     /* OMPT state */
@@ -1551,6 +1553,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                 ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
                 implicit_task_data, 1, __kmp_tid_from_gtid(gtid));
+            OMPT_CUR_TASK_INFO(master_th)
+                ->thread_num = __kmp_tid_from_gtid(gtid);
           }
 
           /* OMPT state */
@@ -1578,7 +1582,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           if (ompt_enabled.ompt_callback_implicit_task) {
             ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                 ompt_scope_end, NULL, implicit_task_data, 1,
-                __kmp_tid_from_gtid(gtid));
+                OMPT_CUR_TASK_INFO(master_th)->thread_num);
           }
           __ompt_lw_taskteam_unlink(master_th);
 
@@ -1762,6 +1766,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
                   &(task_info->task_data), 1, __kmp_tid_from_gtid(gtid));
+              OMPT_CUR_TASK_INFO(master_th)
+                  ->thread_num = __kmp_tid_from_gtid(gtid);
             }
 
             /* OMPT state */
@@ -1789,7 +1795,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_end, NULL, &(task_info->task_data), 1,
-                  __kmp_tid_from_gtid(gtid));
+                  OMPT_CUR_TASK_INFO(master_th)->thread_num);
             }
 
             __ompt_lw_taskteam_unlink(master_th);
@@ -1865,6 +1871,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
                   implicit_task_data, 1, __kmp_tid_from_gtid(gtid));
+              OMPT_CUR_TASK_INFO(master_th)
+                  ->thread_num = __kmp_tid_from_gtid(gtid);
             }
 
             /* OMPT state */
@@ -1891,7 +1899,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_end, NULL, &(task_info->task_data), 1,
-                  __kmp_tid_from_gtid(gtid));
+                  OMPT_CUR_TASK_INFO(master_th)->thread_num);
             }
 
             ompt_parallel_data = *OMPT_CUR_TEAM_DATA(master_th);
@@ -2494,7 +2502,7 @@ void __kmp_join_call(ident_t *loc, int gtid
       int ompt_team_size = team->t.t_nproc;
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_end, NULL, &(task_info->task_data), ompt_team_size,
-          __kmp_tid_from_gtid(gtid));
+          OMPT_CUR_TASK_INFO(master_th)->thread_num);
     }
 
     task_info->frame.exit_frame = NULL;
@@ -6919,6 +6927,7 @@ int __kmp_invoke_task_func(int gtid) {
     ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
         ompt_scope_begin, my_parallel_data, my_task_data, ompt_team_size,
         __kmp_tid_from_gtid(gtid));
+    OMPT_CUR_TASK_INFO(this_thr)->thread_num = __kmp_tid_from_gtid(gtid);
   }
 #endif
 

@@ -18,6 +18,7 @@
 /// blocks in a function.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -27,6 +28,11 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
+
+static cl::opt<bool> VerifyCFI("verify-cfiinstrs",
+    cl::desc("Verify Call Frame Information instructions"),
+    cl::init(false),
+    cl::Hidden);
 
 namespace {
 class CFIInstrInserter : public MachineFunctionPass {
@@ -49,11 +55,12 @@ class CFIInstrInserter : public MachineFunctionPass {
 
     MBBVector.resize(MF.getNumBlockIDs());
     calculateCFAInfo(MF);
-#ifndef NDEBUG
-    if (unsigned ErrorNum = verify(MF))
-      report_fatal_error("Found " + Twine(ErrorNum) +
-                         " in/out CFI information errors.");
-#endif
+
+    if (VerifyCFI) {
+      if (unsigned ErrorNum = verify(MF))
+        report_fatal_error("Found " + Twine(ErrorNum) +
+                           " in/out CFI information errors.");
+    }
     bool insertedCFI = insertCFIInstrs(MF);
     MBBVector.clear();
     return insertedCFI;
@@ -291,9 +298,9 @@ void CFIInstrInserter::report(const MBBCFAInfo &Pred,
 
 unsigned CFIInstrInserter::verify(MachineFunction &MF) {
   unsigned ErrorNum = 0;
-  for (MachineBasicBlock &CurrMBB : MF) {
-    const MBBCFAInfo &CurrMBBInfo = MBBVector[CurrMBB.getNumber()];
-    for (MachineBasicBlock *Succ : CurrMBB.successors()) {
+  for (auto *CurrMBB : depth_first(&MF)) {
+    const MBBCFAInfo &CurrMBBInfo = MBBVector[CurrMBB->getNumber()];
+    for (MachineBasicBlock *Succ : CurrMBB->successors()) {
       const MBBCFAInfo &SuccMBBInfo = MBBVector[Succ->getNumber()];
       // Check that incoming offset and register values of successors match the
       // outgoing offset and register values of CurrMBB

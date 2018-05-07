@@ -336,7 +336,7 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   if (!ai.is_store && !ai.is_load)
     return false;
 
-  InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
+  InternalMmapVector<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
   SignalContext sig{info, uc};

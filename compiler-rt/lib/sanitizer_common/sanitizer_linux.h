@@ -87,7 +87,7 @@ class ThreadLister {
 
   int pid_;
   int descriptor_;
-  InternalScopedBuffer<char> buffer_;
+  InternalMmapVector<char> buffer_;
   bool error_;
   struct linux_dirent* entry_;
   int bytes_read_;

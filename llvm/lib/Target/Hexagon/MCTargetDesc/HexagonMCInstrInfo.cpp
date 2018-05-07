@@ -158,23 +158,6 @@ bool HexagonMCInstrInfo::canonicalizePacket(MCInstrInfo const &MCII,
   return true;
 }
 
-void HexagonMCInstrInfo::clampExtended(MCInstrInfo const &MCII,
-                                       MCContext &Context, MCInst &MCI) {
-  assert(HexagonMCInstrInfo::isExtendable(MCII, MCI) ||
-         HexagonMCInstrInfo::isExtended(MCII, MCI));
-  MCOperand &exOp =
-      MCI.getOperand(HexagonMCInstrInfo::getExtendableOp(MCII, MCI));
-  // If the extended value is a constant, then use it for the extended and
-  // for the extender instructions, masking off the lower 6 bits and
-  // including the assumed bits.
-  int64_t Value;
-  if (exOp.getExpr()->evaluateAsAbsolute(Value)) {
-    unsigned Shift = HexagonMCInstrInfo::getExtentAlignment(MCII, MCI);
-    exOp.setExpr(HexagonMCExpr::create(
-        MCConstantExpr::create((Value & 0x3f) << Shift, Context), Context));
-  }
-}
-
 MCInst HexagonMCInstrInfo::deriveExtender(MCInstrInfo const &MCII,
                                           MCInst const &Inst,
                                           MCOperand const &MO) {
@@ -330,16 +313,19 @@ unsigned HexagonMCInstrInfo::getExtentBits(MCInstrInfo const &MCII,
   return ((F >> HexagonII::ExtentBitsPos) & HexagonII::ExtentBitsMask);
 }
 
+bool HexagonMCInstrInfo::isExtentSigned(MCInstrInfo const &MCII,
+                                        MCInst const &MCI) {
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return (F >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask;
+}
+
 /// Return the maximum value of an extendable operand.
 int HexagonMCInstrInfo::getMaxValue(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  bool S = (F >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask;
-
   assert(HexagonMCInstrInfo::isExtendable(MCII, MCI) ||
          HexagonMCInstrInfo::isExtended(MCII, MCI));
 
-  if (S) // if value is signed
+  if (HexagonMCInstrInfo::isExtentSigned(MCII, MCI)) // if value is signed
     return (1 << (HexagonMCInstrInfo::getExtentBits(MCII, MCI) - 1)) - 1;
   return (1 << HexagonMCInstrInfo::getExtentBits(MCII, MCI)) - 1;
 }
@@ -347,13 +333,10 @@ int HexagonMCInstrInfo::getMaxValue(MCInstrInfo const &MCII,
 /// Return the minimum value of an extendable operand.
 int HexagonMCInstrInfo::getMinValue(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  bool S = (F >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask;
-
   assert(HexagonMCInstrInfo::isExtendable(MCII, MCI) ||
          HexagonMCInstrInfo::isExtended(MCII, MCI));
 
-  if (S) // if value is signed
+  if (HexagonMCInstrInfo::isExtentSigned(MCII, MCI)) // if value is signed
     return -(1 << (HexagonMCInstrInfo::getExtentBits(MCII, MCI) - 1));
   return 0;
 }

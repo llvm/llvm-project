@@ -24,6 +24,7 @@
 
 namespace mca {
 
+class InstRef;
 struct InstrDesc;
 
 /// A Load/Store Unit implementing a load and store queues.
@@ -132,7 +133,7 @@ public:
   bool isLQFull() const { return LQ_Size != 0 && LoadQueue.size() == LQ_Size; }
 
   // Returns true if this instruction has been successfully enqueued.
-  bool reserve(unsigned Index, const InstrDesc &Desc);
+  bool reserve(const InstRef &IR);
 
   // The rules are:
   // 1. A store may not pass a previous store.
@@ -141,8 +142,8 @@ public:
   // 4. A store may not pass a previous load (regardless of flag 'NoAlias').
   // 5. A load has to wait until an older load barrier is fully executed.
   // 6. A store has to wait until an older store barrier is fully executed.
-  bool isReady(unsigned Index) const;
-  void onInstructionExecuted(unsigned Index);
+  bool isReady(const InstRef &IR) const;
+  void onInstructionExecuted(const InstRef &IR);
 };
 } // namespace mca
 

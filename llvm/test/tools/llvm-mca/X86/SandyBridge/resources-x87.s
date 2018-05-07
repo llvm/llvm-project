@@ -241,20 +241,20 @@ fyl2xp1
 # CHECK-NEXT:  3      3     1.00                  * 	fcompi	%st(3)
 # CHECK-NEXT:  1      100   0.33                  * 	fcos
 # CHECK-NEXT:  1      1     1.00                  * 	fdecstp
-# CHECK-NEXT:  1      24    1.00                  * 	fdiv	%st(0), %st(1)
-# CHECK-NEXT:  1      24    1.00                  * 	fdiv	%st(2)
+# CHECK-NEXT:  1      14    14.00                 * 	fdiv	%st(0), %st(1)
+# CHECK-NEXT:  1      14    14.00                 * 	fdiv	%st(2)
 # CHECK-NEXT:  2      31    1.00    *             * 	fdivs	(%ecx)
 # CHECK-NEXT:  2      31    1.00    *             * 	fdivl	(%eax)
-# CHECK-NEXT:  1      24    1.00                  * 	fdivp	%st(1)
-# CHECK-NEXT:  1      24    1.00                  * 	fdivp	%st(2)
+# CHECK-NEXT:  1      14    14.00                 * 	fdivp	%st(1)
+# CHECK-NEXT:  1      14    14.00                 * 	fdivp	%st(2)
 # CHECK-NEXT:  3      34    1.00    *             * 	fidivs	(%ecx)
 # CHECK-NEXT:  3      34    1.00    *             * 	fidivl	(%eax)
-# CHECK-NEXT:  1      24    1.00                  * 	fdivr	%st(0), %st(1)
-# CHECK-NEXT:  1      24    1.00                  * 	fdivr	%st(2)
+# CHECK-NEXT:  1      14    14.00                 * 	fdivr	%st(0), %st(1)
+# CHECK-NEXT:  1      14    14.00                 * 	fdivr	%st(2)
 # CHECK-NEXT:  2      31    1.00    *             * 	fdivrs	(%ecx)
 # CHECK-NEXT:  2      31    1.00    *             * 	fdivrl	(%eax)
-# CHECK-NEXT:  1      24    1.00                  * 	fdivrp	%st(1)
-# CHECK-NEXT:  1      24    1.00                  * 	fdivrp	%st(2)
+# CHECK-NEXT:  1      14    14.00                 * 	fdivrp	%st(1)
+# CHECK-NEXT:  1      14    14.00                 * 	fdivrp	%st(2)
 # CHECK-NEXT:  3      34    1.00    *             * 	fidivrs	(%ecx)
 # CHECK-NEXT:  3      34    1.00    *             * 	fidivrl	(%eax)
 # CHECK-NEXT:  1      1     1.00                  * 	ffree	%st(0)
@@ -307,7 +307,7 @@ fyl2xp1
 # CHECK-NEXT:  1      100   0.33                  * 	fscale
 # CHECK-NEXT:  1      100   0.33                  * 	fsin
 # CHECK-NEXT:  1      100   0.33                  * 	fsincos
-# CHECK-NEXT:  1      14    1.00                  * 	fsqrt
+# CHECK-NEXT:  1      24    24.00                 * 	fsqrt
 # CHECK-NEXT:  1      1     1.00                  * 	fst	%st(0)
 # CHECK-NEXT:  3      6     1.00           *      * 	fsts	(%edx)
 # CHECK-NEXT:  3      6     1.00           *      * 	fstl	(%ecx)
@@ -367,7 +367,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     48.33  87.33  17.00  54.33  34.00  34.00
+# CHECK-NEXT:  -     136.00 48.33  87.33  17.00  54.33  34.00  34.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  	Instructions:
@@ -406,20 +406,20 @@ fyl2xp1
 # CHECK-NEXT:  -      -     1.00   1.00    -     1.00    -      -     	fcompi	%st(3)
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     	fcos
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     	fdecstp
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdiv	%st(0), %st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdiv	%st(2)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdiv	%st(0), %st(1)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdiv	%st(2)
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   	fdivs	(%ecx)
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   	fdivl	(%eax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdivp	%st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdivp	%st(2)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdivp	%st(1)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdivp	%st(2)
 # CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   	fidivs	(%ecx)
 # CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   	fidivl	(%eax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdivr	%st(0), %st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdivr	%st(2)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdivr	%st(0), %st(1)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdivr	%st(2)
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   	fdivrs	(%ecx)
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   	fdivrl	(%eax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdivrp	%st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fdivrp	%st(2)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdivrp	%st(1)
+# CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     	fdivrp	%st(2)
 # CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   	fidivrs	(%ecx)
 # CHECK-NEXT:  -      -     1.00   1.00    -      -     0.50   0.50   	fidivrl	(%eax)
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     	ffree	%st(0)
@@ -472,7 +472,7 @@ fyl2xp1
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     	fscale
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     	fsin
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     	fsincos
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	fsqrt
+# CHECK-NEXT:  -     24.00  1.00    -      -      -      -      -     	fsqrt
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     	fst	%st(0)
 # CHECK-NEXT:  -      -      -      -     1.00    -     1.00   1.00   	fsts	(%edx)
 # CHECK-NEXT:  -      -      -      -     1.00    -     1.00   1.00   	fstl	(%ecx)

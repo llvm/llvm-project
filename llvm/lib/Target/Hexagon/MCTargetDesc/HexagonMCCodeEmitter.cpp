@@ -45,8 +45,8 @@ STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 HexagonMCCodeEmitter::HexagonMCCodeEmitter(MCInstrInfo const &aMII,
                                            MCContext &aMCT)
     : MCT(aMCT), MCII(aMII), Addend(new unsigned(0)),
-      Extended(new bool(false)), CurrentBundle(new MCInst const *),
-      CurrentIndex(new size_t(0)) {}
+      Extended(new bool(false)), SubInst1(new bool(false)),
+      CurrentBundle(new MCInst const *), CurrentIndex(new size_t(0)) {}
 
 uint32_t HexagonMCCodeEmitter::parseBits(size_t Last,
                                          MCInst const &MCB,
@@ -159,7 +159,9 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
     // get subinstruction slot 0
     unsigned subInstSlot0Bits = getBinaryCodeForInstr(*subInst0, Fixups, STI);
     // get subinstruction slot 1
+    *SubInst1 = true;
     unsigned subInstSlot1Bits = getBinaryCodeForInstr(*subInst1, Fixups, STI);
+    *SubInst1 = false;
 
     Binary |= subInstSlot0Bits | (subInstSlot1Bits << 16);
   }
@@ -350,8 +352,29 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   if (isa<HexagonMCExpr>(ME))
     ME = &HexagonMCInstrInfo::getExpr(*ME);
   int64_t Value;
-  if (ME->evaluateAsAbsolute(Value))
+  if (ME->evaluateAsAbsolute(Value)) {
+    bool InstExtendable = HexagonMCInstrInfo::isExtendable(MCII, MI) ||
+                          HexagonMCInstrInfo::isExtended(MCII, MI);
+    // Only sub-instruction #1 can be extended in a duplex. If MI is a
+    // sub-instruction #0, it is not extended even if Extended is true
+    // (it can be true for the duplex as a whole).
+    bool IsSub0 = HexagonMCInstrInfo::isSubInstruction(MI) && !*SubInst1;
+    if (*Extended && InstExtendable && !IsSub0) {
+      unsigned OpIdx = ~0u;
+      for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+        if (&MO != &MI.getOperand(I))
+          continue;
+        OpIdx = I;
+        break;
+      }
+      assert(OpIdx != ~0u);
+      if (OpIdx == HexagonMCInstrInfo::getExtendableOp(MCII, MI)) {
+        unsigned Shift = HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
+        Value = (Value & 0x3f) << Shift;
+      }
+    }
     return Value;
+  }
   assert(ME->getKind() == MCExpr::SymbolRef ||
          ME->getKind() == MCExpr::Binary);
   if (ME->getKind() == MCExpr::Binary) {

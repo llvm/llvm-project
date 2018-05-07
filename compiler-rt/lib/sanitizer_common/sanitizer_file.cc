@@ -140,7 +140,7 @@ char *FindPathToBinary(const char *name) {
   if (!path)
     return nullptr;
   uptr name_len = internal_strlen(name);
-  InternalScopedBuffer<char> buffer(kMaxPathLength);
+  InternalMmapVector<char> buffer(kMaxPathLength);
   const char *beg = path;
   while (true) {
     const char *end = internal_strchrnul(beg, kPathSeparator);

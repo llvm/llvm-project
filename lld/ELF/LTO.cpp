@@ -79,14 +79,13 @@ static void checkError(Error E) {
 // SkipModuleByDistributedBackend flag which requests distributed backend
 // to skip the compilation of the corresponding module and produce an empty
 // object file.
-static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
-                                              const std::string &OldPrefix,
-                                              const std::string &NewPrefix,
+static void writeEmptyDistributedBuildOutputs(StringRef ModulePath,
                                               bool SkipModule) {
   std::string NewModulePath =
-      lto::getThinLTOOutputFile(ModulePath, OldPrefix, NewPrefix);
-  std::error_code EC;
+      lto::getThinLTOOutputFile(ModulePath, Config->ThinLTOPrefixReplace.first,
+                                Config->ThinLTOPrefixReplace.second);
 
+  std::error_code EC;
   raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                     sys::fs::OpenFlags::F_None);
   if (EC)
@@ -100,24 +99,22 @@ static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
   }
 }
 
-// Creates and returns output stream with a list of object files for final
+// Creates an empty file to store a list of object files for final
 // linking of distributed ThinLTO.
-static std::unique_ptr<raw_fd_ostream> createLinkedObjectsFile() {
-  if (Config->ThinLTOIndexOnlyObjectsFile.empty())
+static std::unique_ptr<raw_fd_ostream> openFile(StringRef File) {
+  if (File.empty())
     return nullptr;
+
   std::error_code EC;
-  auto LinkedObjectsFile = llvm::make_unique<raw_fd_ostream>(
-      Config->ThinLTOIndexOnlyObjectsFile, EC, sys::fs::OpenFlags::F_None);
+  auto Ret =
+      llvm::make_unique<raw_fd_ostream>(File, EC, sys::fs::OpenFlags::F_None);
   if (EC)
-    error("cannot create " + Config->ThinLTOIndexOnlyObjectsFile + ": " +
-          EC.message());
-  return LinkedObjectsFile;
+    error("cannot create " + File + ": " + EC.message());
+  return Ret;
 }
 
-// Creates instance of LTO.
-// LinkedObjectsFile is an output stream to write the list of object files for
-// the final ThinLTO linking. Can be nullptr.
-static std::unique_ptr<lto::LTO> createLTO(raw_fd_ostream *LinkedObjectsFile) {
+// Initializes IndexFile, Backend and LTOObj members.
+void BitcodeCompiler::init() {
   lto::Config Conf;
 
   // LLD supports the new relocations.
@@ -157,23 +154,23 @@ static std::unique_ptr<lto::LTO> createLTO(raw_fd_ostream *LinkedObjectsFile) {
     Backend = lto::createInProcessThinBackend(Config->ThinLTOJobs);
 
   if (Config->ThinLTOIndexOnly) {
-    std::string OldPrefix, NewPrefix;
-    std::tie(OldPrefix, NewPrefix) = Config->ThinLTOPrefixReplace.split(';');
-    Backend = lto::createWriteIndexesThinBackend(OldPrefix, NewPrefix, true,
-                                                 LinkedObjectsFile, nullptr);
+    IndexFile = openFile(Config->ThinLTOIndexOnlyObjectsFile);
+    Backend = lto::createWriteIndexesThinBackend(
+        Config->ThinLTOPrefixReplace.first, Config->ThinLTOPrefixReplace.second,
+        true, IndexFile.get(), nullptr);
   }
 
   Conf.SampleProfile = Config->LTOSampleProfile;
   Conf.UseNewPM = Config->LTONewPassManager;
   Conf.DebugPassManager = Config->LTODebugPassManager;
 
-  return llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
-                                     Config->LTOPartitions);
+  LTOObj = llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
+                                       Config->LTOPartitions);
 }
 
 BitcodeCompiler::BitcodeCompiler() {
-  LinkedObjects = createLinkedObjectsFile();
-  LTOObj = createLTO(LinkedObjects.get());
+  init();
+
   for (Symbol *Sym : Symtab->getSymbols()) {
     StringRef Name = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
@@ -192,13 +189,9 @@ static void undefine(Symbol *S) {
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
 
-  std::string OldPrefix, NewPrefix;
-  std::tie(OldPrefix, NewPrefix) = Config->ThinLTOPrefixReplace.split(';');
-
   // Create the empty files which, if indexed, will be overwritten later.
   if (Config->ThinLTOIndexOnly)
-    writeEmptyDistributedBuildOutputs(Obj.getName(), OldPrefix, NewPrefix,
-                                      false);
+    writeEmptyDistributedBuildOutputs(Obj.getName(), false);
 
   unsigned SymNum = 0;
   std::vector<Symbol *> Syms = F.getSymbols();
@@ -312,9 +305,6 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
 
 // For lazy object files not added to link, adds empty index files
 void BitcodeCompiler::addLazyObjFile(LazyObjFile *File) {
-  StringRef Identifier = File->getBuffer().getBufferIdentifier();
-  std::string OldPrefix, NewPrefix;
-  std::tie(OldPrefix, NewPrefix) = Config->ThinLTOPrefixReplace.split(';');
-  writeEmptyDistributedBuildOutputs(Identifier, OldPrefix, NewPrefix,
-                                    /* SkipModule */ true);
+  writeEmptyDistributedBuildOutputs(File->getBuffer().getBufferIdentifier(),
+                                    /*SkipModule=*/true);
 }
