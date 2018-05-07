@@ -698,8 +698,8 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   if (LangOpts.ComprehensiveStaticInstrumentation) {
     PMBuilder.addExtension(PassManagerBuilder::EP_TapirLate,
                            addComprehensiveStaticInstrumentationPass);
-    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
-                           addComprehensiveStaticInstrumentationPass);
+    // PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+    //                        addComprehensiveStaticInstrumentationPass);
   }
 
   // Set up the per-function pass manager.
