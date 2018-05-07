@@ -958,9 +958,8 @@ bool ThreadLister::error() { return error_; }
 bool ThreadLister::GetDirectoryEntries() {
   CHECK_GE(descriptor_, 0);
   CHECK_NE(error_, true);
-  bytes_read_ = internal_getdents(descriptor_,
-                                  (struct linux_dirent *)buffer_.data(),
-                                  buffer_.size());
+  bytes_read_ = internal_getdents(
+      descriptor_, (struct linux_dirent *)buffer_.data(), buffer_.size());
   if (internal_iserror(bytes_read_)) {
     Report("Can't read directory entries from /proc/%d/task.\n", pid_);
     error_ = true;
