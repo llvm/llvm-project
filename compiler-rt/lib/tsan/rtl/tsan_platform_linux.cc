@@ -168,7 +168,7 @@ static void MapRodata() {
   fd_t fd = openrv;
   // Fill the file with kShadowRodata.
   const uptr kMarkerSize = 512 * 1024 / sizeof(u64);
-  InternalScopedBuffer<u64> marker(kMarkerSize);
+  InternalMmapVector<u64> marker(kMarkerSize);
   // volatile to prevent insertion of memset
   for (volatile u64 *p = marker.data(); p < marker.data() + kMarkerSize; p++)
     *p = kShadowRodata;

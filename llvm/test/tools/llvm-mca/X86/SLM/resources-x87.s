@@ -307,7 +307,7 @@ fyl2xp1
 # CHECK-NEXT:  1      100   1.00                  * 	fscale
 # CHECK-NEXT:  1      100   1.00                  * 	fsin
 # CHECK-NEXT:  1      100   1.00                  * 	fsincos
-# CHECK-NEXT:  1      15    1.00                  * 	fsqrt
+# CHECK-NEXT:  1      40    40.00                 * 	fsqrt
 # CHECK-NEXT:  1      1     0.50                  * 	fst	%st(0)
 # CHECK-NEXT:  1      1     1.00           *      * 	fsts	(%edx)
 # CHECK-NEXT:  1      1     1.00           *      * 	fstl	(%ecx)
@@ -367,7 +367,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     544.00 16.00  64.00  55.00  9.50   9.50   52.00
+# CHECK-NEXT:  -     584.00 16.00  64.00  55.00  9.50   9.50   52.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    	Instructions:
@@ -472,7 +472,7 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     	fscale
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     	fsin
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     	fsincos
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     	fsqrt
+# CHECK-NEXT:  -     40.00   -     1.00    -      -      -      -     	fsqrt
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     	fst	%st(0)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   	fsts	(%edx)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   	fstl	(%ecx)

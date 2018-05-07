@@ -96,7 +96,7 @@ void ReportMmapWriteExec(int prot) {
   ScopedErrorReportLock l;
   SanitizerCommonDecorator d;
 
-  InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
+  InternalMmapVector<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
   uptr top = 0;
@@ -175,7 +175,7 @@ static void ReportStackOverflowImpl(const SignalContext &sig, u32 tid,
          SanitizerToolName, kDescription, (void *)sig.addr, (void *)sig.pc,
          (void *)sig.bp, (void *)sig.sp, tid);
   Printf("%s", d.Default());
-  InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
+  InternalMmapVector<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
   unwind(sig, unwind_context, stack);
@@ -205,7 +205,7 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
       Report("Hint: address points to the zero page.\n");
   }
   MaybeReportNonExecRegion(sig.pc);
-  InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
+  InternalMmapVector<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
   unwind(sig, unwind_context, stack);
