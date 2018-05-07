@@ -88,7 +88,7 @@ namespace __sanitizer {
 
 class SuspendedThreadsListLinux : public SuspendedThreadsList {
  public:
-  SuspendedThreadsListLinux() : thread_ids_(1024) {}
+  SuspendedThreadsListLinux() { thread_ids_.reserve(1024); }
 
   tid_t GetThreadID(uptr index) const;
   uptr ThreadCount() const;
@@ -295,7 +295,7 @@ static int TracerThread(void* argument) {
   thread_suspender_instance = &thread_suspender;
 
   // Alternate stack for signal handling.
-  InternalScopedBuffer<char> handler_stack_memory(kHandlerStackSize);
+  InternalMmapVector<char> handler_stack_memory(kHandlerStackSize);
   stack_t handler_stack;
   internal_memset(&handler_stack, 0, sizeof(handler_stack));
   handler_stack.ss_sp = handler_stack_memory.data();

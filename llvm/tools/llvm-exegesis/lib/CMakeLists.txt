@@ -2,6 +2,7 @@ add_library(LLVMExegesis
   STATIC
   BenchmarkResult.cpp
   BenchmarkRunner.cpp
+  Clustering.cpp
   InMemoryAssembler.cpp
   InstructionSnippetGenerator.cpp
   Latency.cpp

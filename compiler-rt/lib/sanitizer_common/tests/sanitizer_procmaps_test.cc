@@ -37,7 +37,8 @@ TEST(MemoryMappingLayout, DumpListOfModules) {
   const char *binary_name = last_slash ? last_slash + 1 : argv0;
   MemoryMappingLayout memory_mapping(false);
   const uptr kMaxModules = 100;
-  InternalMmapVector<LoadedModule> modules(kMaxModules);
+  InternalMmapVector<LoadedModule> modules;
+  modules.reserve(kMaxModules);
   memory_mapping.DumpListOfModules(&modules);
   EXPECT_GT(modules.size(), 0U);
   bool found = false;
@@ -56,7 +57,8 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
   if (SANITIZER_MAC) {
     MemoryMappingLayout memory_mapping(false);
     const uptr kMaxModules = 100;
-    InternalMmapVector<LoadedModule> modules(kMaxModules);
+    InternalMmapVector<LoadedModule> modules;
+    modules.reserve(kMaxModules);
     memory_mapping.DumpListOfModules(&modules);
     for (uptr i = 0; i < modules.size(); ++i) {
       ModuleArch arch = modules[i].arch();

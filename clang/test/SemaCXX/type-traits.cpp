@@ -262,6 +262,7 @@ void is_pod()
 typedef Empty EmptyAr[10];
 struct Bit0 { int : 0; };
 struct Bit0Cons { int : 0; Bit0Cons(); };
+struct AnonBitOnly { int : 3; };
 struct BitOnly { int x : 3; };
 struct DerivesVirt : virtual POD {};
 
@@ -287,6 +288,7 @@ void is_empty()
   { int arr[F(__is_empty(EmptyAr))]; }
   { int arr[F(__is_empty(HasRef))]; }
   { int arr[F(__is_empty(HasVirt))]; }
+  { int arr[F(__is_empty(AnonBitOnly))]; }
   { int arr[F(__is_empty(BitOnly))]; }
   { int arr[F(__is_empty(void))]; }
   { int arr[F(__is_empty(IntArNB))]; }

@@ -1323,7 +1323,7 @@ define <16 x float> @v16f32_one_step2(<16 x float> %x) #1 {
 ;
 ; KNL-LABEL: v16f32_one_step2:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [5:1.00]
+; KNL-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [11:2.00]
 ; KNL-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + mem sched: [12:0.50]
 ; KNL-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * zmm1) + zmm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %zmm0, %zmm0 # sched: [12:0.50]
@@ -1489,7 +1489,7 @@ define <16 x float> @v16f32_one_step_2_divs(<16 x float> %x) #1 {
 ;
 ; KNL-LABEL: v16f32_one_step_2_divs:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [5:1.00]
+; KNL-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [11:2.00]
 ; KNL-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + mem sched: [12:0.50]
 ; KNL-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * zmm1) + zmm1 sched: [5:0.50]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %zmm0, %zmm1 # sched: [12:0.50]
@@ -1709,7 +1709,7 @@ define <16 x float> @v16f32_two_step2(<16 x float> %x) #2 {
 ;
 ; KNL-LABEL: v16f32_two_step2:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [5:1.00]
+; KNL-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [11:2.00]
 ; KNL-NEXT:    vbroadcastss {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] sched: [10:1.00]
 ; KNL-NEXT:    vmovaps %zmm1, %zmm3 # sched: [1:1.00]
 ; KNL-NEXT:    vfnmadd213ps {{.*#+}} zmm3 = -(zmm0 * zmm3) + zmm2 sched: [5:0.50]
@@ -1781,7 +1781,7 @@ define <16 x float> @v16f32_no_step(<16 x float> %x) #3 {
 ;
 ; KNL-LABEL: v16f32_no_step:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcp14ps %zmm0, %zmm0 # sched: [5:1.00]
+; KNL-NEXT:    vrcp14ps %zmm0, %zmm0 # sched: [11:2.00]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: v16f32_no_step:
@@ -1855,7 +1855,7 @@ define <16 x float> @v16f32_no_step2(<16 x float> %x) #3 {
 ;
 ; KNL-LABEL: v16f32_no_step2:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcp14ps %zmm0, %zmm0 # sched: [5:1.00]
+; KNL-NEXT:    vrcp14ps %zmm0, %zmm0 # sched: [11:2.00]
 ; KNL-NEXT:    vmulps {{.*}}(%rip), %zmm0, %zmm0 # sched: [12:0.50]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;

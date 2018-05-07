@@ -5007,15 +5007,15 @@ define <4 x float> @test_sqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ZNVER1-SSE-LABEL: test_sqrtps:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    sqrtps %xmm0, %xmm1 # sched: [20:1.00]
-; ZNVER1-SSE-NEXT:    sqrtps (%rdi), %xmm0 # sched: [27:1.00]
+; ZNVER1-SSE-NEXT:    sqrtps %xmm0, %xmm1 # sched: [20:20.00]
+; ZNVER1-SSE-NEXT:    sqrtps (%rdi), %xmm0 # sched: [27:20.00]
 ; ZNVER1-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_sqrtps:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vsqrtps (%rdi), %xmm1 # sched: [27:1.00]
-; ZNVER1-NEXT:    vsqrtps %xmm0, %xmm0 # sched: [20:1.00]
+; ZNVER1-NEXT:    vsqrtps (%rdi), %xmm1 # sched: [27:20.00]
+; ZNVER1-NEXT:    vsqrtps %xmm0, %xmm0 # sched: [20:20.00]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %a0)
@@ -5152,16 +5152,16 @@ define <4 x float> @test_sqrtss(<4 x float> %a0, <4 x float> *%a1) {
 ; ZNVER1-SSE-LABEL: test_sqrtss:
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movaps (%rdi), %xmm1 # sched: [8:0.50]
-; ZNVER1-SSE-NEXT:    sqrtss %xmm0, %xmm0 # sched: [20:1.00]
-; ZNVER1-SSE-NEXT:    sqrtss %xmm1, %xmm1 # sched: [20:1.00]
+; ZNVER1-SSE-NEXT:    sqrtss %xmm0, %xmm0 # sched: [20:20.00]
+; ZNVER1-SSE-NEXT:    sqrtss %xmm1, %xmm1 # sched: [20:20.00]
 ; ZNVER1-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_sqrtss:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovaps (%rdi), %xmm1 # sched: [8:0.50]
-; ZNVER1-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [20:1.00]
-; ZNVER1-NEXT:    vsqrtss %xmm1, %xmm1, %xmm1 # sched: [20:1.00]
+; ZNVER1-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [20:20.00]
+; ZNVER1-NEXT:    vsqrtss %xmm1, %xmm1, %xmm1 # sched: [20:20.00]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %a0)

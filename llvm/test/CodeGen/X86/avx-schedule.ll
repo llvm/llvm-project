@@ -4450,7 +4450,7 @@ define <4 x double> @test_sqrtpd(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; ZNVER1-LABEL: test_sqrtpd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [47:47.00]
+; ZNVER1-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [47:40.00]
 ; ZNVER1-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [40:40.00]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -4514,7 +4514,7 @@ define <8 x float> @test_sqrtps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; ZNVER1-LABEL: test_sqrtps:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [35:35.00]
+; ZNVER1-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [35:28.00]
 ; ZNVER1-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [28:28.00]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]

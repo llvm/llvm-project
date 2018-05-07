@@ -70,7 +70,7 @@ int SidelineThread::runSideline(void *Arg) {
   internal_prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0);
 
   // Set up a signal handler on an alternate stack for safety.
-  InternalScopedBuffer<char> StackMap(SigAltStackSize);
+  InternalMmapVector<char> StackMap(SigAltStackSize);
   stack_t SigAltStack;
   SigAltStack.ss_sp = StackMap.data();
   SigAltStack.ss_size = SigAltStackSize;

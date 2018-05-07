@@ -424,7 +424,7 @@ void DumpProcessMap() {
   modules.init();
   uptr num_modules = modules.size();
 
-  InternalScopedBuffer<ModuleInfo> module_infos(num_modules);
+  InternalMmapVector<ModuleInfo> module_infos(num_modules);
   for (size_t i = 0; i < num_modules; ++i) {
     module_infos[i].filepath = modules[i].full_name();
     module_infos[i].base_address = modules[i].ranges().front()->beg;
