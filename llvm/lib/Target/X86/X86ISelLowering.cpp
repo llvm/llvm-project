@@ -17853,7 +17853,7 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 1;
 
-    // There is no FSQRT for 512-bits, but there is RSQRT14.
+    // There is no FSQRT for 512-bits, but there is RCP14.
     unsigned Opcode = VT == MVT::v16f32 ? X86ISD::RCP14 : X86ISD::FRCP;
     return DAG.getNode(Opcode, SDLoc(Op), VT, Op);
   }

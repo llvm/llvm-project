@@ -216,7 +216,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier) {
   InternalScopedBuffer<uptr> registers(suspended_threads.RegisterCount());
   uptr registers_begin = reinterpret_cast<uptr>(registers.data());
-  uptr registers_end = registers_begin + registers.size();
+  uptr registers_end =
+      reinterpret_cast<uptr>(registers.data() + registers.size());
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
     LOG_THREADS("Processing thread %d.\n", os_id);
