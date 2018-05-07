@@ -650,10 +650,10 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      8     0.50    *               	pxor	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                    	shufpd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *               	shufpd	$1, (%rax), %xmm2
-# CHECK-NEXT:  1      20    1.00                    	sqrtpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      27    1.00    *               	sqrtpd	(%rax), %xmm2
-# CHECK-NEXT:  1      20    1.00                    	sqrtsd	%xmm0, %xmm2
-# CHECK-NEXT:  1      27    1.00    *               	sqrtsd	(%rax), %xmm2
+# CHECK-NEXT:  1      20    20.00                   	sqrtpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      27    20.00   *               	sqrtpd	(%rax), %xmm2
+# CHECK-NEXT:  1      20    20.00                   	sqrtsd	%xmm0, %xmm2
+# CHECK-NEXT:  1      27    20.00   *               	sqrtsd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                    	subpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      10    1.00    *               	subpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                    	subsd	%xmm0, %xmm2
@@ -683,7 +683,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 65.00  65.00  0.50   0.50   0.50   0.50    -     74.08  39.58  69.25  77.08   -
+# CHECK-NEXT: 65.00  65.00  0.50   0.50   0.50   0.50    -     74.08  39.58  69.25  153.08  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   	Instructions:
@@ -935,10 +935,10 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     	pxor	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     	shufpd	$1, %xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     	shufpd	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -     	sqrtpd	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     	sqrtpd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -     	sqrtsd	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     	sqrtsd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     20.00   -     	sqrtpd	%xmm0, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     20.00   -     	sqrtpd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     20.00   -     	sqrtsd	%xmm0, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     20.00   -     	sqrtsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     	subpd	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     	subpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     	subsd	%xmm0, %xmm2

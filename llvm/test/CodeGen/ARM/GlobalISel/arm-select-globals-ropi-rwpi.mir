@@ -1,9 +1,9 @@
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RW-DEFAULT-MOVT,RW-DEFAULT,ROPI-MOVT,ROPI
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RW-DEFAULT-NOMOVT,RW-DEFAULT,ROPI-NOMOVT,ROPI
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=rwpi -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-MOVT,RWPI,RO-DEFAULT-MOVT,RO-DEFAULT
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=rwpi -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-NOMOVT,RWPI,RO-DEFAULT-NOMOVT,RO-DEFAULT
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi-rwpi -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-MOVT,RWPI,ROPI-MOVT,ROPI
-# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi-rwpi -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-NOMOVT,RWPI,ROPI-NOMOVT,ROPI
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RW-DEFAULT-MOVT,RW-DEFAULT,ROPI-MOVT,ROPI
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RW-DEFAULT-NOMOVT,RW-DEFAULT,ROPI-NOMOVT,ROPI
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=rwpi -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-MOVT,RWPI,RO-DEFAULT-MOVT,RO-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=rwpi -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-NOMOVT,RWPI,RO-DEFAULT-NOMOVT,RO-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi-rwpi -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-MOVT,RWPI,ROPI-MOVT,ROPI
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi-rwpi -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-NOMOVT,RWPI,ROPI-NOMOVT,ROPI
 --- |
   @internal_global = internal global i32 42
   define void @test_internal_global() { ret void }

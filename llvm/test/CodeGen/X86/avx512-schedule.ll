@@ -600,7 +600,7 @@ declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
 define <16 x float> @sqrtD(<16 x float> %a) nounwind {
 ; GENERIC-LABEL: sqrtD:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vsqrtps %zmm0, %zmm0 # sched: [14:1.00]
+; GENERIC-NEXT:    vsqrtps %zmm0, %zmm0 # sched: [29:28.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: sqrtD:
@@ -615,7 +615,7 @@ declare <8 x double> @llvm.sqrt.v8f64(<8 x double>)
 define <8 x double> @sqrtE(<8 x double> %a) nounwind {
 ; GENERIC-LABEL: sqrtE:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vsqrtpd %zmm0, %zmm0 # sched: [14:1.00]
+; GENERIC-NEXT:    vsqrtpd %zmm0, %zmm0 # sched: [45:44.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: sqrtE:

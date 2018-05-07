@@ -4083,56 +4083,56 @@ define void @test_fsqrt() optsize {
 ; SLM-LABEL: test_fsqrt:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fsqrt # sched: [15:1.00]
+; SLM-NEXT:    fsqrt # sched: [40:40.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_fsqrt:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fsqrt # sched: [14:1.00]
+; SANDY-NEXT:    fsqrt # sched: [24:24.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_fsqrt:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fsqrt # sched: [15:1.00]
+; HASWELL-NEXT:    fsqrt # sched: [23:17.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsqrt:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    fsqrt # sched: [15:1.00]
+; BROADWELL-NEXT:    fsqrt # sched: [23:9.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKYLAKE-LABEL: test_fsqrt:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fsqrt # sched: [15:1.00]
+; SKYLAKE-NEXT:    fsqrt # sched: [21:7.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_fsqrt:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fsqrt # sched: [15:1.00]
+; SKX-NEXT:    fsqrt # sched: [21:7.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
 ; BTVER2-LABEL: test_fsqrt:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fsqrt # sched: [21:21.00]
+; BTVER2-NEXT:    fsqrt # sched: [35:35.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_fsqrt:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fsqrt # sched: [20:1.00]
+; ZNVER1-NEXT:    fsqrt # sched: [20:20.00]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fsqrt", ""() nounwind

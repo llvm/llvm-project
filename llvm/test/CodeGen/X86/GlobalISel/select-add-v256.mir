@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2                        -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX2
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl           -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl,+avx512bw -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BWVL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2                        -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX2
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl           -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl,+avx512bw -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BWVL
 
 --- |
   define <32 x i8> @test_add_v32i8(<32 x i8> %arg1, <32 x i8> %arg2) {

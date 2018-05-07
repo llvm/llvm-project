@@ -60,9 +60,6 @@ enum OperandType {
   OPERAND_FIRST_TARGET = 12,
 };
 
-enum GenericOperandType {
-};
-
 }
 
 /// This holds information about one operand of a machine instruction,
@@ -177,8 +174,8 @@ public:
   // deprecated due to a "complex" reason, below.
   int64_t DeprecatedFeature;
 
-  // A complex method to determine is a certain is deprecated or not, and return
-  // the reason for deprecation.
+  // A complex method to determine if a certain instruction is deprecated or
+  // not, and return the reason for deprecation.
   bool (*ComplexDeprecationInfo)(MCInst &, const MCSubtargetInfo &,
                                  std::string &);
 

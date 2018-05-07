@@ -1723,7 +1723,7 @@ static int getOpEnabled(bool IsSqrt, EVT VT, StringRef Override) {
     return TargetLoweringBase::ReciprocalEstimate::Unspecified;
 
   SmallVector<StringRef, 4> OverrideVector;
-  SplitString(Override, OverrideVector, ",");
+  Override.split(OverrideVector, ',');
   unsigned NumArgs = OverrideVector.size();
 
   // Check if "all", "none", or "default" was specified.
@@ -1783,7 +1783,7 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
     return TargetLoweringBase::ReciprocalEstimate::Unspecified;
 
   SmallVector<StringRef, 4> OverrideVector;
-  SplitString(Override, OverrideVector, ",");
+  Override.split(OverrideVector, ',');
   unsigned NumArgs = OverrideVector.size();
 
   // Check if "all", "default", or "none" was specified.

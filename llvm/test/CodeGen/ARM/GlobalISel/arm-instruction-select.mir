@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple arm-- -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple arm-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   define void @test_trunc_and_zext_s1() { ret void }
   define void @test_trunc_and_sext_s1() { ret void }

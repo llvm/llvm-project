@@ -5412,10 +5412,10 @@ SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
     return true;
   };
 
-  SDValue A = N->getOperand(0);
-  SDValue B = N->getOperand(1);
-  if (!matchAndXor(A, 0, B) && !matchAndXor(A, 1, B) && !matchAndXor(B, 0, A) &&
-      !matchAndXor(B, 1, A))
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (!matchAndXor(N0, 0, N1) && !matchAndXor(N0, 1, N1) &&
+      !matchAndXor(N1, 0, N0) && !matchAndXor(N1, 1, N0))
     return SDValue();
 
   // Don't do anything if the mask is constant. This should not be reachable.

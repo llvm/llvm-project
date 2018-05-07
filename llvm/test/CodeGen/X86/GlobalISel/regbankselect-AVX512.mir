@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel                       -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                       -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
 
 --- |
 

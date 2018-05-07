@@ -119,7 +119,8 @@ void ProcessGlobalRegions(Frontier *frontier) {
   for (auto name : kSkippedSecNames) CHECK(ARRAY_SIZE(name) < kMaxSegName);
 
   MemoryMappingLayout memory_mapping(false);
-  InternalMmapVector<LoadedModule> modules(/*initial_capacity*/ 128);
+  InternalMmapVector<LoadedModule> modules;
+  modules.reserve(128);
   memory_mapping.DumpListOfModules(&modules);
   for (uptr i = 0; i < modules.size(); ++i) {
     // Even when global scanning is disabled, we still need to scan

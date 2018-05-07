@@ -1,7 +1,7 @@
-# RUN: llc -mtriple=x86_64-linux-gnu                          -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64
-# RUN: llc -mtriple=x86_64-apple-darwin -relocation-model=pic -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64_DARWIN_PIC
-# RUN: llc -mtriple=i386-linux-gnu                            -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32
-# RUN: llc -mtriple=x86_64-linux-gnux32                       -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32ABI
+# RUN: llc -mtriple=x86_64-linux-gnu                          -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64
+# RUN: llc -mtriple=x86_64-apple-darwin -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64_DARWIN_PIC
+# RUN: llc -mtriple=i386-linux-gnu                            -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnux32                       -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32ABI
 
 --- |
 

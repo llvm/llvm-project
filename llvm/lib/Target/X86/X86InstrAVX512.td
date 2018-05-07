@@ -8092,34 +8092,38 @@ multiclass avx512_sqrt_packed<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_sqrt_packed_all<bits<8> opc, string OpcodeStr,
-                                  X86SchedWriteWidths sched> {
-  defm PSZ : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "ps"), sched.ZMM, v16f32_info>,
+                                  X86SchedWriteSizes sched> {
+  defm PSZ : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "ps"),
+                                sched.PS.ZMM, v16f32_info>,
                                 EVEX_V512, PS, EVEX_CD8<32, CD8VF>;
-  defm PDZ : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "pd"), sched.ZMM, v8f64_info>,
+  defm PDZ : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "pd"),
+                                sched.PD.ZMM, v8f64_info>,
                                 EVEX_V512, VEX_W, PD, EVEX_CD8<64, CD8VF>;
   // Define only if AVX512VL feature is present.
   let Predicates = [HasVLX] in {
     defm PSZ128 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "ps"),
-                                     sched.XMM, v4f32x_info>,
+                                     sched.PS.XMM, v4f32x_info>,
                                      EVEX_V128, PS, EVEX_CD8<32, CD8VF>;
     defm PSZ256 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "ps"),
-                                     sched.YMM, v8f32x_info>,
+                                     sched.PS.YMM, v8f32x_info>,
                                      EVEX_V256, PS, EVEX_CD8<32, CD8VF>;
     defm PDZ128 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "pd"),
-                                     sched.XMM, v2f64x_info>,
+                                     sched.PD.XMM, v2f64x_info>,
                                      EVEX_V128, VEX_W, PD, EVEX_CD8<64, CD8VF>;
     defm PDZ256 : avx512_sqrt_packed<opc, !strconcat(OpcodeStr, "pd"),
-                                     sched.YMM, v4f64x_info>,
+                                     sched.PD.YMM, v4f64x_info>,
                                      EVEX_V256, VEX_W, PD, EVEX_CD8<64, CD8VF>;
   }
 }
 
 multiclass avx512_sqrt_packed_all_round<bits<8> opc, string OpcodeStr,
-                                        X86SchedWriteWidths sched> {
-  defm PSZ : avx512_sqrt_packed_round<opc, !strconcat(OpcodeStr, "ps"), sched.ZMM,
-                                v16f32_info>, EVEX_V512, PS, EVEX_CD8<32, CD8VF>;
-  defm PDZ : avx512_sqrt_packed_round<opc, !strconcat(OpcodeStr, "pd"), sched.ZMM,
-                                v8f64_info>, EVEX_V512, VEX_W, PD, EVEX_CD8<64, CD8VF>;
+                                        X86SchedWriteSizes sched> {
+  defm PSZ : avx512_sqrt_packed_round<opc, !strconcat(OpcodeStr, "ps"),
+                                      sched.PS.ZMM, v16f32_info>,
+                                      EVEX_V512, PS, EVEX_CD8<32, CD8VF>;
+  defm PDZ : avx512_sqrt_packed_round<opc, !strconcat(OpcodeStr, "pd"),
+                                      sched.PD.ZMM, v8f64_info>,
+                                      EVEX_V512, VEX_W, PD, EVEX_CD8<64, CD8VF>;
 }
 
 multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, X86FoldableSchedWrite sched,
@@ -8182,20 +8186,20 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, X86FoldableSchedWri
 }
 
 multiclass avx512_sqrt_scalar_all<bits<8> opc, string OpcodeStr,
-                                  X86SchedWriteWidths sched> {
-  defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", sched.Scl, f32x_info, "SS",
+                                  X86SchedWriteSizes sched> {
+  defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", sched.PS.Scl, f32x_info, "SS",
                         int_x86_sse_sqrt_ss>,
                         EVEX_CD8<32, CD8VT1>, EVEX_4V, XS, NotMemoryFoldable;
-  defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", sched.Scl, f64x_info, "SD",
+  defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", sched.PD.Scl, f64x_info, "SD",
                         int_x86_sse2_sqrt_sd>,
                         EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W,
                         NotMemoryFoldable;
 }
 
-defm VSQRT   : avx512_sqrt_packed_all<0x51, "vsqrt", SchedWriteFSqrt>,
-               avx512_sqrt_packed_all_round<0x51, "vsqrt", SchedWriteFSqrt>;
+defm VSQRT : avx512_sqrt_packed_all<0x51, "vsqrt", SchedWriteFSqrtSizes>,
+             avx512_sqrt_packed_all_round<0x51, "vsqrt", SchedWriteFSqrtSizes>;
 
-defm VSQRT   : avx512_sqrt_scalar_all<0x51, "vsqrt", SchedWriteFSqrt>, VEX_LIG;
+defm VSQRT : avx512_sqrt_scalar_all<0x51, "vsqrt", SchedWriteFSqrtSizes>, VEX_LIG;
 
 multiclass avx512_rndscale_scalar<bits<8> opc, string OpcodeStr,
                                   X86FoldableSchedWrite sched, X86VectorVTInfo _> {

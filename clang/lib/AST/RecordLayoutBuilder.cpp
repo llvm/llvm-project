@@ -2617,8 +2617,8 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
   }
 
   if (!FoundBase) {
-    if (MDCUsesEBO && BaseDecl->isEmpty() &&
-        BaseLayout.getNonVirtualSize() == CharUnits::Zero()) {
+    if (MDCUsesEBO && BaseDecl->isEmpty()) {
+      assert(BaseLayout.getNonVirtualSize() == CharUnits::Zero());
       BaseOffset = CharUnits::Zero();
     } else {
       // Otherwise, lay the base out at the end of the MDC.

@@ -315,8 +315,9 @@ class Addr2LinePool : public SymbolizerTool {
  public:
   explicit Addr2LinePool(const char *addr2line_path,
                          LowLevelAllocator *allocator)
-      : addr2line_path_(addr2line_path), allocator_(allocator),
-        addr2line_pool_(16) {}
+      : addr2line_path_(addr2line_path), allocator_(allocator) {
+    addr2line_pool_.reserve(16);
+  }
 
   bool SymbolizePC(uptr addr, SymbolizedStack *stack) override {
     if (const char *buf =

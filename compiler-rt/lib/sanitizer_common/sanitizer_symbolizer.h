@@ -132,8 +132,9 @@ class Symbolizer final {
   class ModuleNameOwner {
    public:
     explicit ModuleNameOwner(BlockingMutex *synchronized_by)
-        : storage_(kInitialCapacity), last_match_(nullptr),
-          mu_(synchronized_by) {}
+        : last_match_(nullptr), mu_(synchronized_by) {
+      storage_.reserve(kInitialCapacity);
+    }
     const char *GetOwnedCopy(const char *str);
 
    private:
