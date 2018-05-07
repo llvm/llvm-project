@@ -740,13 +740,15 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
     case R_RELAX_TLS_GD_TO_IE_END:
       Target->relaxTlsGdToIe(BufLoc, Type, TargetVA);
       break;
-    case R_PPC_CALL_PLT:
+    case R_PPC_CALL:
       // Patch a nop (0x60000000) to a ld.
-      if (BufLoc + 8 > BufEnd || read32(BufLoc + 4) != 0x60000000) {
-        error(getErrorLocation(BufLoc) + "call lacks nop, can't restore toc");
-        break;
+      if (Rel.Sym->NeedsTocRestore) {
+        if (BufLoc + 8 > BufEnd || read32(BufLoc + 4) != 0x60000000) {
+          error(getErrorLocation(BufLoc) + "call lacks nop, can't restore toc");
+          break;
+        }
+        write32(BufLoc + 4, 0xe8410018); // ld %r2, 24(%r1)
       }
-      write32(BufLoc + 4, 0xe8410018); // ld %r2, 24(%r1)
       Target->relocateOne(BufLoc, Type, TargetVA);
       break;
     default:
