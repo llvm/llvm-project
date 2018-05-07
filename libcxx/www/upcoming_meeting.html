@@ -60,86 +60,52 @@
   <table id="issues" border="1">
 	<tr><th>Issue #</th><th>Issue Name</th><th>Meeting</th><th>Status</th></tr>
 
-<tr><td><a href="https://wg21.link/LWG2164">2164</a></td><td>What are the semantics of <tt>vector.emplace(vector.begin(), vector.back())</tt>?</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2243">2243</a></td><td><tt>istream::putback</tt> problem</td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG2816">2816</a></td><td><tt>resize_file</tt> has impossible postcondition</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG2843">2843</a></td><td>Unclear behavior of <tt>std::pmr::memory_resource::do_allocate()</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2849">2849</a></td><td>Why does <tt>!is_regular_file(from)</tt> cause <tt>copy_file</tt> to report a "file already exists" error?</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG2851">2851</a></td><td><tt>std::filesystem</tt> enum classes are now underspecified</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG2969">2969</a></td><td><tt>polymorphic_allocator::construct()</tt> shouldn't pass <tt>resource()</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2975">2975</a></td><td>Missing case for <tt>pair</tt> construction in scoped and polymorphic allocators</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2989">2989</a></td><td><tt>path</tt>'s stream insertion operator lets you insert everything under the sun</td><td>Jacksonville</td><td>Completed</td></tr>
-<tr><td><a href="https://wg21.link/LWG3000">3000</a></td><td><tt>monotonic_memory_resource::do_is_equal</tt> uses <tt>dynamic_cast</tt> unnecessarily</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3002">3002</a></td><td>[networking.ts] <tt>basic_socket_acceptor::is_open()</tt> isn't <tt>noexcept</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3004">3004</a></td><td>&sect;[string.capacity] and &sect;[vector.capacity] should specify time complexity for <tt>capacity()</tt></td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG3005">3005</a></td><td>Destruction order of arrays by <tt>make_shared/allocate_shared</tt> only recommended?</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3007">3007</a></td><td><tt>allocate_shared</tt> should rebind allocator to <i>cv</i>-unqualified <tt>value_type</tt> for construction</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3009">3009</a></td><td>Including <tt>&lt;string_view&gt;</tt> doesn't provide <tt>std::size/empty/data</tt></td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG3010">3010</a></td><td>[networking.ts] <tt>uses_executor</tt> says "if a type <tt>T::executor_type</tt> exists"</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3013">3013</a></td><td><tt>(recursive_)directory_iterator</tt> construction and traversal should not be <tt>noexcept</tt></td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG3014">3014</a></td><td>More <tt>noexcept</tt> issues with filesystem operations</td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG3015">3015</a></td><td><tt>copy_options::<i>unspecified</i></tt> underspecified</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG3017">3017</a></td><td><tt>list splice</tt> functions should use <tt>addressof</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3020">3020</a></td><td>[networking.ts] Remove spurious nested <tt>value_type</tt> buffer sequence requirement</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3026">3026</a></td><td><tt>filesystem::weakly_canonical</tt> still defined in terms of <tt>canonical(p, base)</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3030">3030</a></td><td>Who shall meet the requirements of <tt>try_lock</tt>?</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG3034">3034</a></td><td>P0767R1 breaks previously-standard-layout types</td><td>Jacksonville</td><td><i>Patch Ready</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG3035">3035</a></td><td><tt>std::allocator</tt>'s constructors should be <tt>constexpr</tt></td><td>Jacksonville</td><td><i>Patch Ready</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG3039">3039</a></td><td>Unnecessary <tt>decay</tt> in <tt>thread</tt> and <tt>packaged_task</tt></td><td>Jacksonville</td><td><i>Patch Ready</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG3041">3041</a></td><td>Unnecessary <tt>decay</tt> in <tt>reference_wrapper</tt></td><td>Jacksonville</td><td><i>Patch Ready</i></td></tr>
-<tr><td><a href="https://wg21.link/LWG3042">3042</a></td><td><tt>is_literal_type_v</tt> should be inline</td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG3043">3043</a></td><td>Bogus postcondition for <tt>filesystem_error</tt> constructor</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3045">3045</a></td><td><tt>atomic&lt;<i>floating-point</i>&gt;</tt> doesn't have <tt>value_type</tt> or <tt>difference_type</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3048">3048</a></td><td><tt>transform_reduce(exec, first1, last1, first2, init)</tt> discards execution policy</td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3051">3051</a></td><td><tt>Floating point classifications were inadvertently changed in P0175</td><td>Jacksonville</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG2139">2139</a></td><td>What is a user-defined type?</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2970">2970</a></td><td>Return type of std::visit misspecified</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3058">3058</a></td><td>Parallel adjacent_difference shouldn't require creating temporaries</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3062">3062</a></td><td>Unnecessary decay_t in is_execution_policy_v should be remove_cvref_t</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3067">3067</a></td><td>recursive_directory_iterator::pop must invalidate</td><td>Rapperswil</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG3071">3071</a></td><td>[networking.ts] read_until still refers to "input sequence"</td><td>Rapperswil</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG3074">3074</a></td><td>Non-member functions for valarray should only deduce from the valarray</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3076">3076</a></td><td>basic_string CTAD ambiguity</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3079">3079</a></td><td>LWG 2935 forgot to fix the existing_p overloads of create_directory</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3080">3080</a></td><td>Floating point from_chars pattern specification breaks round-tripping</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3083">3083</a></td><td>What should ios::iword(-1) do?</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3094">3094</a></td><td>[time.duration.io]p4 makes surprising claims about encoding</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3100">3100</a></td><td>Unnecessary and confusing "empty span" wording</td><td>Rapperswil</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG3102">3102</a></td><td>Clarify span iterator and const_iterator behavior</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3104">3104</a></td><td>Fixing duration division</td><td>Rapperswil</td><td>Complete</td></tr>
 
-  </table>
+</table>
 
 <h3>Issues to "Review"</h3>
 <table border="1">
 <tr><th>Issue #</th><th>Issue Name</th><th>Meeting</th><th>Status</th></tr>
-<tr><td><a href="https://wg21.link/LWG2412">2412</a></td><td><tt>promise::set_value()</tt> and <tt>promise::get_future()</tt> should not race</td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG2682">2682</a></td><td><code>filesystem::copy()</code> won't create a symlink to a directory</td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG2697">2697</a></td><td>[concurr.ts] Behavior of <tt>future/shared_future</tt> unwrapping constructor when given an invalid <tt>future</tt></td><td>Jacksonville</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG2708">2708</a></td><td><tt>recursive_directory_iterator::recursion_pending()</tt> is incorrectly specified</td><td>Jacksonville</td><td>Complete</td></tr>
-<tr><td><a href="https://wg21.link/LWG2936">2936</a></td><td>Path comparison is defined in terms of the generic format</td><td>Jacksonville</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2412">2412</a></td><td><tt>promise::set_value()</tt> and <tt>promise::get_future()</tt> should not race</td><td>Rapperswil</td><td>Complete</td></tr>
+<tr><td><a href="https://wg21.link/LWG2682">2682</a></td><td><code>filesystem::copy()</code> won't create a symlink to a directory</td><td>Rapperswil</td><td>Complete</td></tr>
+<tr><td><a href="https://wg21.link/LWG2697">2697</a></td><td>[concurr.ts] Behavior of <tt>future/shared_future</tt> unwrapping constructor when given an invalid <tt>future</tt></td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2708">2708</a></td><td><tt>recursive_directory_iterator::recursion_pending()</tt> is incorrectly specified</td><td>Rapperswil</td><td>Complete</td></tr>
+<tr><td><a href="https://wg21.link/LWG2936">2936</a></td><td>Path comparison is defined in terms of the generic format</td><td>Rapperswil</td><td></td></tr>
 </table>
 
 
 <h3>Comments about the issues</h3>
 <ul>
-<li> 2164 - Writing tests here will be fun.</li>
-<li> 2243 - We already do this.</li>
-<li> 2816 - Wording changes only</li>
-<li> 2843 - We don't have PMRs yet</li>
-<li> 2849 - We already report different errors. </li>
-<li> 2851 - Wording changes only</li>
-<li> 2969 - We don't have PMRs yet</li>
-<li> 2975 - We can do the scoped_ bit, but the PMR stuff will have to wait.</li>
-<li> 2989 - Proposed changes LGTM </li>
-<li> 3000 - We don't have PMRs yet</li>
-<li> 3002 - No networking TS implementation yet</li>
-<li> 3004 - Wording changes only</li>
-<li> 3005 - We don't have shared_ptr support for arrays yet</li>
-<li> 3007 - <i>Looks easy</i></li>
-<li> 3009 - We do this already; tests added in r323719</li>
-<li> 3010 - No networking TS implementation yet</li>
-<li> 3013 - We already implement this</li>
-<li> 3014 - We implement this</li>
-<li> 3015 - Wording changes only</li>
-<li> 3017 - We don't do the splicing stuff yet</li>
-<li> 3020 - No networking TS implementation yet</li>
-<li> 3026 - I think this is just wording cleanup - Eric?</li>
-<li> 3030 - Wording changes only</li>
-<li> 3034 - <i>Patch Ready</i></li>
-<li> 3035 - <i>Patch Ready</i></li>
-<li> 3039 - <i>Patch Ready</i></li>
-<li> 3041 - <i>Patch Ready</i></li>
-<li> 3042 - We already do this.</li>
-<li> 3043 - We have a 'TODO(ericwf)' here</li>
-<li> 3045 - We haven't done the &lt;atomic&gt; rework yet.</li>
-<li> 3048 - We haven't done the parallel algorithms yet.</li>
-<li> 3051 - Fixing an inadvertent wording change</li>
+<li>2139 - I think that this is just wording cleanup.</li>
+<li>2970 - </li>
+<li>3058 - </li>
+<li>3062 - This should be very easy.</li>
+<li>3067 - Adding restrictions; no code changes needed.</li>
+<li>3071 - This is just wording cleanup.</li>
+<li>3074 - </li>
+<li>3076 - </li>
+<li>3079 - </li>
+<li>3080 - </li>
+<li>3083 - </li>
+<li>3094 - </li>
+<li>3100 - This is just wording cleanup.</li>
+<li>3102 - This should be just adding tests.</li>
+<li>3104 - We already do this.</li>
 </ul>
 
 <h3>Comments about the "Review" issues</h3>
@@ -151,7 +117,7 @@
 <li> 2936 - Eric - don't we do this already?</li>
 </ul>
 
-<p>Last Updated: 1-Mar-2018</p>
+<p>Last Updated: 7-May-2018</p>
 </div>
 </body>
 </html>

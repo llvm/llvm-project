@@ -40,7 +40,7 @@ movsldup  (%rax), %xmm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
 # CHECK-NEXT:  1      6     3.00                    	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     3.00    *               	addsubpd	(%rax), %xmm2
+# CHECK-NEXT:  1      7     3.50    *               	addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  1      5     5.00                    	addsubps	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     5.00    *               	addsubps	(%rax), %xmm2
 # CHECK-NEXT:  1      8     4.00                    	haddpd	%xmm0, %xmm2
@@ -65,12 +65,12 @@ movsldup  (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 57.50  41.50
+# CHECK-NEXT: 58.00  42.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    	Instructions:
 # CHECK-NEXT: 3.00   3.00   	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT: 3.00   3.00   	addsubpd	(%rax), %xmm2
+# CHECK-NEXT: 3.50   3.50   	addsubpd	(%rax), %xmm2
 # CHECK-NEXT: 5.00    -     	addsubps	%xmm0, %xmm2
 # CHECK-NEXT: 5.00    -     	addsubps	(%rax), %xmm2
 # CHECK-NEXT: 4.00   4.00   	haddpd	%xmm0, %xmm2

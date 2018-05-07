@@ -17,6 +17,7 @@
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTION_H
 
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>
 #include <vector>
@@ -29,6 +30,36 @@ class WriteState;
 class ReadState;
 
 constexpr int UNKNOWN_CYCLES = -512;
+
+class Instruction;
+
+/// An InstRef contains both a SourceMgr index and Instruction pair.  The index
+/// is used as a unique identifier for the instruction.  MCA will make use of
+/// this index as a key throughout MCA.
+class InstRef : public std::pair<unsigned, Instruction *> {
+public:
+  InstRef() : std::pair<unsigned, Instruction *>(0, nullptr) {}
+  InstRef(unsigned Index, Instruction *I)
+      : std::pair<unsigned, Instruction *>(Index, I) {}
+
+  unsigned getSourceIndex() const { return first; }
+  Instruction *getInstruction() { return second; }
+  const Instruction *getInstruction() const { return second; }
+
+  /// Returns true if  this InstRef has been populated.
+  bool isValid() const { return second != nullptr; }
+
+#ifndef NDEBUG
+  void print(llvm::raw_ostream &OS) const { OS << getSourceIndex(); }
+#endif
+};
+
+#ifndef NDEBUG
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InstRef &IR) {
+  IR.print(OS);
+  return OS;
+}
+#endif
 
 /// A register write descriptor.
 struct WriteDescriptor {

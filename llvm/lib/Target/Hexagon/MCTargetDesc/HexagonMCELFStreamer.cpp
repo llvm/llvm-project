@@ -63,21 +63,6 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCB,
   assert(MCB.getOpcode() == Hexagon::BUNDLE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) <= HEXAGON_PACKET_SIZE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) > 0);
-  bool Extended = false;
-  for (auto &I : HexagonMCInstrInfo::bundleInstructions(MCB)) {
-    MCInst *MCI = const_cast<MCInst *>(I.getInst());
-    if (Extended) {
-      if (HexagonMCInstrInfo::isDuplex(*MCII, *MCI)) {
-        MCInst *SubInst = const_cast<MCInst *>(MCI->getOperand(1).getInst());
-        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *SubInst);
-      } else {
-        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *MCI);
-      }
-      Extended = false;
-    } else {
-      Extended = HexagonMCInstrInfo::isImmext(*MCI);
-    }
-  }
 
   // At this point, MCB is a bundle
   // Iterate through the bundle and assign addends for the instructions

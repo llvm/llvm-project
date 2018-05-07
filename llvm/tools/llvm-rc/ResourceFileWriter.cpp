@@ -437,6 +437,10 @@ Error ResourceFileWriter::visitAcceleratorsResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeAcceleratorsBody);
 }
 
+Error ResourceFileWriter::visitBitmapResource(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeBitmapBody);
+}
+
 Error ResourceFileWriter::visitCursorResource(const RCResource *Res) {
   return handleError(visitIconOrCursorResource(Res), Res);
 }
@@ -681,6 +685,29 @@ Error ResourceFileWriter::writeAcceleratorsBody(const RCResource *Base) {
     RETURN_IF_ERROR(
         writeSingleAccelerator(Acc, AcceleratorId == Res->Accelerators.size()));
   }
+  return Error::success();
+}
+
+// --- BitmapResource helpers. --- //
+
+Error ResourceFileWriter::writeBitmapBody(const RCResource *Base) {
+  StringRef Filename = cast<BitmapResource>(Base)->BitmapLoc;
+  bool IsLong;
+  stripQuotes(Filename, IsLong);
+
+  auto File = loadFile(Filename);
+  if (!File)
+    return File.takeError();
+
+  StringRef Buffer = (*File)->getBuffer();
+
+  // Skip the 14 byte BITMAPFILEHEADER.
+  constexpr size_t BITMAPFILEHEADER_size = 14;
+  if (Buffer.size() < BITMAPFILEHEADER_size || Buffer[0] != 'B' ||
+      Buffer[1] != 'M')
+    return createError("Incorrect bitmap file.");
+
+  *FS << Buffer.substr(BITMAPFILEHEADER_size);
   return Error::success();
 }
 
@@ -1285,6 +1312,7 @@ Error ResourceFileWriter::writeVersionInfoBlock(const VersionInfoBlock &Blk) {
   bool OutputHeader = Blk.Name != "";
   uint64_t LengthLoc;
 
+  padStream(sizeof(uint32_t));
   if (OutputHeader) {
     LengthLoc = writeInt<uint16_t>(0);
     writeInt<uint16_t>(0);
@@ -1310,7 +1338,6 @@ Error ResourceFileWriter::writeVersionInfoBlock(const VersionInfoBlock &Blk) {
     writeObjectAt(ulittle16_t(CurLoc - LengthLoc), LengthLoc);
   }
 
-  padStream(sizeof(uint32_t));
   return Error::success();
 }
 
@@ -1340,6 +1367,7 @@ Error ResourceFileWriter::writeVersionInfoValue(const VersionInfoValue &Val) {
     return createError(Twine("VALUE ") + Val.Key +
                        " cannot contain both strings and integers");
 
+  padStream(sizeof(uint32_t));
   auto LengthLoc = writeInt<uint16_t>(0);
   auto ValLengthLoc = writeInt<uint16_t>(0);
   writeInt<uint16_t>(HasStrings);
@@ -1369,7 +1397,6 @@ Error ResourceFileWriter::writeVersionInfoValue(const VersionInfoValue &Val) {
   }
   writeObjectAt(ulittle16_t(CurLoc - LengthLoc), LengthLoc);
   writeObjectAt(ulittle16_t(ValueLength), ValLengthLoc);
-  padStream(sizeof(uint32_t));
   return Error::success();
 }
 

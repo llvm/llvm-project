@@ -160,6 +160,10 @@ void InitializeFlags() {
   CHECK_LE(f->max_redzone, 2048);
   CHECK(IsPowerOfTwo(f->redzone));
   CHECK(IsPowerOfTwo(f->max_redzone));
+  if (SANITIZER_RTEMS) {
+    CHECK(!f->unmap_shadow_on_exit);
+    CHECK(!f->protect_shadow_gap);
+  }
 
   // quarantine_size is deprecated but we still honor it.
   // quarantine_size can not be used together with quarantine_size_mb.

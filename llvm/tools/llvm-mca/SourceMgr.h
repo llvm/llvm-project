@@ -21,7 +21,7 @@
 
 namespace mca {
 
-typedef std::pair<unsigned, const llvm::MCInst *> InstRef;
+typedef std::pair<unsigned, const llvm::MCInst *> SourceRef;
 
 class SourceMgr {
   using InstVec = std::vector<std::unique_ptr<const llvm::MCInst>>;
@@ -43,9 +43,9 @@ public:
   bool hasNext() { return Current < (Iterations * size()); }
   void updateNext() { Current++; }
 
-  const InstRef peekNext() const {
+  const SourceRef peekNext() const {
     unsigned Index = getCurrentInstructionIndex();
-    return InstRef(Current, Sequence[Index].get());
+    return SourceRef(Current, Sequence[Index].get());
   }
 
   unsigned getCurrentInstructionIndex() const {

@@ -9429,6 +9429,16 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
 
   unsigned DiagID = 0;
   if (IsLiteral) {
+    // Conversion of a floating-point value to a non-bool integer where the
+    // integral part cannot be represented by the integer type is undefined.
+    if (!IsBool &&
+        ((IntegerValue.isSigned() && (IntegerValue.isMaxSignedValue() ||
+                                      IntegerValue.isMinSignedValue())) ||
+         (IntegerValue.isUnsigned() &&
+          (IntegerValue.isMaxValue() || IntegerValue.isMinValue()))))
+      return DiagnoseImpCast(
+          S, E, T, CContext,
+          diag::warn_impcast_literal_float_to_integer_out_of_range);
     // Warn on floating point literal to integer.
     DiagID = diag::warn_impcast_literal_float_to_integer;
   } else if (IntegerValue == 0) {
@@ -9444,12 +9454,19 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
         return DiagnoseImpCast(S, E, T, CContext,
                                diag::warn_impcast_float_integer, PruneWarnings);
       }
+      if (!IsBool && (IntegerValue.isMaxValue() || IntegerValue.isMinValue()))
+        return DiagnoseImpCast(S, E, T, CContext,
+                               diag::warn_impcast_float_to_integer_out_of_range,
+                               PruneWarnings);
     } else {  // IntegerValue.isSigned()
       if (!IntegerValue.isMaxSignedValue() &&
           !IntegerValue.isMinSignedValue()) {
         return DiagnoseImpCast(S, E, T, CContext,
                                diag::warn_impcast_float_integer, PruneWarnings);
       }
+      return DiagnoseImpCast(S, E, T, CContext,
+                             diag::warn_impcast_float_to_integer_out_of_range,
+                             PruneWarnings);
     }
     // Warn on evaluatable floating point expression to integer conversion.
     DiagID = diag::warn_impcast_float_to_integer;

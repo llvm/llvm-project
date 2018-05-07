@@ -7,9 +7,6 @@ addpd       (%rax), %xmm2
 addsd       %xmm0, %xmm2
 addsd       (%rax), %xmm2
 
-addsubpd    %xmm0, %xmm2
-addsubpd    (%rax), %xmm2
-
 andnpd      %xmm0, %xmm2
 andnpd      (%rax), %xmm2
 
@@ -406,8 +403,6 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      8     1.00    *               	addpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                    	addsd	%xmm0, %xmm2
 # CHECK-NEXT:  2      8     1.00    *               	addsd	(%rax), %xmm2
-# CHECK-NEXT:  1      3     1.00                    	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  2      8     1.00    *               	addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                    	andnpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      6     1.00    *               	andnpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                    	andpd	%xmm0, %xmm2
@@ -681,7 +676,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     78.00  70.25  97.25  62.50  62.50  12.00  123.75 1.75   4.00
+# CHECK-NEXT:  -     78.00  70.25  95.25  62.00  62.00  12.00  123.75 1.75   4.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    	Instructions:
@@ -689,8 +684,6 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     	addpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     	addsd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     	addsd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     	addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     	andnpd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     	andnpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     	andpd	%xmm0, %xmm2

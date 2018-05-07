@@ -2,6 +2,16 @@
 # RUN: llvm-objcopy -strip-debug %t %t2
 # RUN: llvm-readobj -file-headers -sections -symbols %t2 | FileCheck %s
 
+# We run yaml2obj again rather than copy %t to avoid interfering 
+# with llvm-objcopy's test (which potentially could have corrupted/updated the binary).
+
+# RUN: yaml2obj %s > %t3
+# RUN: llvm-strip -strip-debug %t3
+# RUN: llvm-readobj -file-headers -sections -symbols %t3 | FileCheck %s
+# RUN: cmp %t2 %t3
+
+# RUN: not llvm-strip -strip-debug 2>&1 | FileCheck %s --check-prefix=NO-INPUT-FILES
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -52,3 +62,5 @@ Symbols:
 # CHECK-NEXT:     Section: .text
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
+
+# NO-INPUT-FILES: No input file specified

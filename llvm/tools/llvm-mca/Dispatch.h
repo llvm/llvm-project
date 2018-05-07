@@ -189,12 +189,12 @@ class DispatchUnit {
   std::unique_ptr<RetireControlUnit> RCU;
   Backend *Owner;
 
-  bool checkRAT(unsigned Index, const Instruction &Inst);
-  bool checkRCU(unsigned Index, const InstrDesc &Desc);
-  bool checkScheduler(unsigned Index, const InstrDesc &Desc);
+  bool checkRAT(const InstRef &IR);
+  bool checkRCU(const InstRef &IR);
+  bool checkScheduler(const InstRef &IR);
 
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
-  void notifyInstructionDispatched(unsigned IID,
+  void notifyInstructionDispatched(const InstRef &IR,
                                    llvm::ArrayRef<unsigned> UsedPhysRegs);
 
 public:
@@ -214,14 +214,12 @@ public:
 
   bool isRCUEmpty() const { return RCU->isEmpty(); }
 
-  bool canDispatch(unsigned Index, const Instruction &Inst) {
-    const InstrDesc &Desc = Inst.getDesc();
-    assert(isAvailable(Desc.NumMicroOps));
-    return checkRCU(Index, Desc) && checkRAT(Index, Inst) &&
-           checkScheduler(Index, Desc);
+  bool canDispatch(const InstRef &IR) {
+    assert(isAvailable(IR.getInstruction()->getDesc().NumMicroOps));
+    return checkRCU(IR) && checkRAT(IR) && checkScheduler(IR);
   }
 
-  void dispatch(unsigned IID, Instruction *I, const llvm::MCSubtargetInfo &STI);
+  void dispatch(InstRef IR, const llvm::MCSubtargetInfo &STI);
 
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
                      unsigned RegID) const {
@@ -235,9 +233,9 @@ public:
     CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
   }
 
-  void notifyInstructionRetired(unsigned Index);
+  void notifyInstructionRetired(const InstRef &IR);
 
-  void notifyDispatchStall(unsigned Index, unsigned EventType);
+  void notifyDispatchStall(const InstRef &IR, unsigned EventType);
 
   void onInstructionExecuted(unsigned TokenID) {
     RCU->onInstructionExecuted(TokenID);

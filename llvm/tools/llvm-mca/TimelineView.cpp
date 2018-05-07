@@ -35,15 +35,16 @@ void TimelineView::initialize(unsigned MaxIterations) {
 }
 
 void TimelineView::onInstructionEvent(const HWInstructionEvent &Event) {
-  if (CurrentCycle >= MaxCycle || Event.Index >= Timeline.size())
+  const unsigned Index = Event.IR.getSourceIndex();
+  if (CurrentCycle >= MaxCycle || Index >= Timeline.size())
     return;
   switch (Event.Type) {
   case HWInstructionEvent::Retired: {
-    TimelineViewEntry &TVEntry = Timeline[Event.Index];
+    TimelineViewEntry &TVEntry = Timeline[Index];
     TVEntry.CycleRetired = CurrentCycle;
 
     // Update the WaitTime entry which corresponds to this Index.
-    WaitTimeEntry &WTEntry = WaitTime[Event.Index % AsmSequence.size()];
+    WaitTimeEntry &WTEntry = WaitTime[Index % AsmSequence.size()];
     WTEntry.Executions++;
     WTEntry.CyclesSpentInSchedulerQueue +=
         TVEntry.CycleIssued - TVEntry.CycleDispatched;
@@ -55,16 +56,16 @@ void TimelineView::onInstructionEvent(const HWInstructionEvent &Event) {
     break;
   }
   case HWInstructionEvent::Ready:
-    Timeline[Event.Index].CycleReady = CurrentCycle;
+    Timeline[Index].CycleReady = CurrentCycle;
     break;
   case HWInstructionEvent::Issued:
-    Timeline[Event.Index].CycleIssued = CurrentCycle;
+    Timeline[Index].CycleIssued = CurrentCycle;
     break;
   case HWInstructionEvent::Executed:
-    Timeline[Event.Index].CycleExecuted = CurrentCycle;
+    Timeline[Index].CycleExecuted = CurrentCycle;
     break;
   case HWInstructionEvent::Dispatched:
-    Timeline[Event.Index].CycleDispatched = CurrentCycle;
+    Timeline[Index].CycleDispatched = CurrentCycle;
     break;
   default:
     return;

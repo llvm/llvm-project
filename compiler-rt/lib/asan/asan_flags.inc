@@ -86,9 +86,10 @@ ASAN_FLAG(
 ASAN_FLAG(bool, check_malloc_usable_size, true,
           "Allows the users to work around the bug in Nvidia drivers prior to "
           "295.*.")
-ASAN_FLAG(bool, unmap_shadow_on_exit, false,
+ASAN_FLAG(bool, unmap_shadow_on_exit, !SANITIZER_RTEMS,
           "If set, explicitly unmaps the (huge) shadow at exit.")
-ASAN_FLAG(bool, protect_shadow_gap, true, "If set, mprotect the shadow gap")
+ASAN_FLAG(bool, protect_shadow_gap, !SANITIZER_RTEMS,
+          "If set, mprotect the shadow gap")
 ASAN_FLAG(bool, print_stats, false,
           "Print various statistics after printing an error message or if "
           "atexit=1.")
