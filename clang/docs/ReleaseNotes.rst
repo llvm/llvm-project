@@ -84,6 +84,15 @@ Non-comprehensive list of changes in this release
   Clang 7 and earlier versions. The old behavior can be restored by setting
   ``-fclang-abi-compat`` to ``6`` or earlier.
 
+- Clang implements the proposed resolution of LWG issue 2358, along with the
+  `corresponding change to the Itanium C++ ABI
+  <https://github.com/itanium-cxx-abi/cxx-abi/pull/51>`_, which make classes
+  containing only unnamed non-zero-length bit-fields be considered non-empty.
+  This is an ABI break compared to prior Clang releases, but makes Clang
+  generate code that is ABI-compatible with other compilers. The old
+  behavior can be restored by setting ``-fclang-abi-compat`` to ``6`` or
+  lower.
+
 - ...
 
 New Compiler Flags
