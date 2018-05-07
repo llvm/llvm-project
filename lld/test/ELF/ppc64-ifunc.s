@@ -1,33 +1,60 @@
 # REQUIRES: ppc
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/shared-ppc64le.s -o %t2.o
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
 # RUN: ld.lld -shared %t2.o -o %t2.so
 # RUN: ld.lld %t.o %t2.so -o %t
-# RUN: llvm-objdump -d %t | FileCheck %s
+# RUN: llvm-objdump -D %t | FileCheck %s
 
-# CHECK:      _start:
-# CHECK-NEXT: 10010004:       1d 00 00 48     bl .+28
-# CHECK-NEXT: 10010008:       18 00 41 e8     ld 2, 24(1)
-# CHECK-NEXT: 1001000c:       35 00 00 48     bl .+52
-# CHECK-NEXT: 10010010:       18 00 41 e8     ld 2, 24(1)
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
+# RUN: ld.lld -shared %t2.o -o %t2.so
+# RUN: ld.lld %t.o %t2.so -o %t
+# RUN: llvm-objdump -D %t | FileCheck %s
 
-# 0x10010004 + 28 = 0x10010020 (PLT entry 0)
-# 0x1001000c + 52 = 0x10010040 (PLT entry 1)
+# CHECK: Disassembly of section .text:
 
-# CHECK:     Disassembly of section .plt:
-# CHECK-NEXT: .plt:
-# CHECK-NEXT: 10010020:       18 00 41 f8     std 2, 24(1)
-# CHECK-NEXT: 10010024:       02 10 82 3d     addis 12, 2, 4098
-# CHECK-NEXT: 10010028:       10 80 8c e9     ld 12, -32752(12)
-# CHECK-NEXT: 1001002c:       a6 03 89 7d     mtctr 12
-# CHECK-NEXT: 10010030:       20 04 80 4e     bctr
-# CHECK-NEXT: 10010034:       08 00 e0 7f     trap
-# CHECK-NEXT: 10010038:       08 00 e0 7f     trap
-# CHECK-NEXT: 1001003c:       08 00 e0 7f     trap
-# CHECK-NEXT: 10010040:       18 00 41 f8     std 2, 24(1)
-# CHECK-NEXT: 10010044:       02 10 82 3d     addis 12, 2, 4098
-# CHECK-NEXT: 10010048:       18 80 8c e9     ld 12, -32744(12)
-# CHECK-NEXT: 1001004c:       a6 03 89 7d     mtctr 12
+# Tocbase    + (-2 << 16) + 32576
+# 0x100380d0 + (-131072)  + 32576 = 0x10020010 (.got.plt[2])
+# CHECK: __plt_foo:
+# CHECK-NEXT:     std 2, 24(1)
+# CHECK-NEXT:     addis 12, 2, -2
+# CHECK-NEXT:     ld 12, 32576(12)
+# CHECK-NEXT:     mtctr 12
+# CHECK-NEXT:     bctr
+
+# Tocbase    + (-2 << 16) + 32584
+# 0x100380d0 + (-131072)  + 32584 = 0x10020018  (.got.plt[3])
+# CHECK: __plt_ifunc:
+# CHECK-NEXT:     std 2, 24(1)
+# CHECK-NEXT:     addis 12, 2, -2
+# CHECK-NEXT:     ld 12, 32584(12)
+# CHECK-NEXT:     mtctr 12
+# CHECK-NEXT:     bctr
+
+# CHECK: ifunc:
+# CHECK-NEXT: 10010028:  {{.*}} nop
+
+# CHECK: _start:
+# CHECK-NEXT:     addis 2, 12, 3
+# CHECK-NEXT:     addi 2, 2, -32604
+# CHECK-NEXT:     bl .+67108812
+# CHECK-NEXT:     ld 2, 24(1)
+# CHECK-NEXT:     bl .+67108824
+# CHECK-NEXT:     ld 2, 24(1)
+
+# Address of .got.plt
+# CHECK:      Disassembly of section .got.plt:
+# CHECK-NEXT:   .got.plt:
+# CHECK-NEXT:   10020000:
+
+
+# Check tocbase
+# CHECK:       Disassembly of section .got:
+# CHECK-NEXT:    .got:
+# CHECK-NEXT:    100300d0:
+
+
     .text
     .abiversion 2
 
@@ -36,8 +63,15 @@
 ifunc:
  nop
 
-.global _start
+    .global _start
+    .type   _start,@function
+
 _start:
+.Lfunc_gep0:
+  addis 2, 12, .TOC.-.Lfunc_gep0@ha
+  addi 2, 2, .TOC.-.Lfunc_gep0@l
+.Lfunc_lep0:
+  .localentry     _start, .Lfunc_lep0-.Lfunc_gep0
   bl foo
   nop
   bl ifunc

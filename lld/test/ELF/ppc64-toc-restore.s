@@ -1,10 +1,19 @@
+// REQUIRES: ppc
+
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/shared-ppc64le.s -o %t2.o
+// RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-func.s -o %t3.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so %t3.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
-// REQUIRES: ppc
+
+// RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
+// RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-func.s -o %t3.o
+// RUN: ld.lld -shared %t2.o -o %t2.so
+// RUN: ld.lld %t.o %t2.so %t3.o -o %t
+// RUN: llvm-objdump -d %t | FileCheck %s
+
     .text
     .abiversion 2
 .global bar_local
@@ -14,20 +23,21 @@ bar_local:
 
 # Calling external function foo in a shared object needs a nop.
 # Calling local function bar_local doe snot need a nop.
-// CHECK: Disassembly of section .text:
 .global _start
 _start:
   bl foo
   nop
   bl bar_local
 
+
+// CHECK: Disassembly of section .text:
 // CHECK: _start:
-// CHECK: 10010008:       49 00 00 48     bl .+72
-// CHECK-NOT: 1001000c:       00 00 00 60     nop
-// CHECK: 1001000c:       18 00 41 e8     ld 2, 24(1)
-// CHECK: 10010010:       f1 ff ff 4b     bl .+67108848
-// CHECK-NOT: 10010014:       00 00 00 60     nop
-// CHECK-NOT: 10010014:       18 00 41 e8     ld 2, 24(1)
+// CHECK:     1001001c: {{.*}}  bl .+67108836
+// CHECK-NOT: 10010020: {{.*}}  nop
+// CHECK:     10010020: {{.*}}  ld 2, 24(1)
+// CHECK:     10010024: {{.*}}  bl .+67108848
+// CHECK-NOT: 10010028: {{.*}}  nop
+// CHECK-NOT: 10010028: {{.*}}  ld 2, 24(1)
 
 # Calling a function in another object file which will have same
 # TOC base does not need a nop. If nop present, do not rewrite to
@@ -39,18 +49,18 @@ _diff_object:
   nop
 
 // CHECK: _diff_object:
-// CHECK-NEXT: 10010014:       1d 00 00 48     bl .+28
-// CHECK-NEXT: 10010018:       19 00 00 48     bl .+24
-// CHECK-NEXT: 1001001c:       00 00 00 60     nop
+// CHECK-NEXT: 10010028: {{.*}}  bl .+24
+// CHECK-NEXT: 1001002c: {{.*}}  bl .+20
+// CHECK-NEXT: 10010030: {{.*}}  nop
 
 # Branching to a local function does not need a nop
 .global noretbranch
 noretbranch:
   b bar_local
 // CHECK: noretbranch:
-// CHECK: 10010020:       e0 ff ff 4b     b .+67108832
-// CHECK-NOT: 10010024:       00 00 00 60     nop
-// CHECK-NOT: 10010024:       18 00 41 e8     ld 2, 24(1)
+// CHECK:     10010034:  {{.*}}  b .+67108832
+// CHECK-NOT: 10010038:  {{.*}}  nop
+// CHECK-NOT: 1001003c:  {{.*}}  ld 2, 24(1)
 
 // This should come last to check the end-of-buffer condition.
 .global last
@@ -58,12 +68,5 @@ last:
   bl foo
   nop
 // CHECK: last:
-// CHECK: 10010024:       2d 00 00 48     bl .+44
-// CHECK-NEXT: 10010028:       18 00 41 e8     ld 2, 24(1)
-
-// CHECK: Disassembly of section .plt:
-// CHECK: .plt:
-// CHECK-NEXT: 10010050:       18 00 41 f8     std 2, 24(1)
-// CHECK-NEXT: 10010054:       02 10 82 3d     addis 12, 2, 4098
-// CHECK-NEXT: 10010058:       10 80 8c e9     ld 12, -32752(12)
-// CHECK-NEXT: 1001005c:       a6 03 89 7d     mtctr 12
+// CHECK:      10010038: {{.*}}   bl .+67108808
+// CHECK-NEXT: 1001003c: {{.*}}   ld 2, 24(1)

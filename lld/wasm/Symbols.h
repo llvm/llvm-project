@@ -30,6 +30,7 @@ class InputChunk;
 class InputSegment;
 class InputFunction;
 class InputGlobal;
+class InputSection;
 
 #define INVALID_INDEX UINT32_MAX
 
@@ -40,6 +41,7 @@ public:
     DefinedFunctionKind,
     DefinedDataKind,
     DefinedGlobalKind,
+    SectionKind,
     UndefinedFunctionKind,
     UndefinedDataKind,
     UndefinedGlobalKind,
@@ -50,7 +52,7 @@ public:
 
   bool isDefined() const {
     return SymbolKind == DefinedFunctionKind || SymbolKind == DefinedDataKind ||
-           SymbolKind == DefinedGlobalKind;
+           SymbolKind == DefinedGlobalKind || SymbolKind == SectionKind;
   }
 
   bool isUndefined() const {
@@ -153,6 +155,23 @@ public:
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedFunctionKind;
   }
+};
+
+class SectionSymbol : public Symbol {
+public:
+  static bool classof(const Symbol *S) { return S->kind() == SectionKind; }
+
+  SectionSymbol(StringRef Name, uint32_t Flags, const InputSection *S,
+                InputFile *F = nullptr)
+      : Symbol(Name, SectionKind, Flags, F), Section(S) {}
+
+  const InputSection *Section;
+
+  uint32_t getOutputSectionIndex() const;
+  void setOutputSectionIndex(uint32_t Index);
+
+protected:
+  uint32_t OutputSectionIndex = INVALID_INDEX;
 };
 
 class DataSymbol : public Symbol {
@@ -301,6 +320,7 @@ union SymbolUnion {
   alignas(UndefinedFunction) char E[sizeof(UndefinedFunction)];
   alignas(UndefinedData) char F[sizeof(UndefinedData)];
   alignas(UndefinedGlobal) char G[sizeof(UndefinedGlobal)];
+  alignas(SectionSymbol) char I[sizeof(SectionSymbol)];
 };
 
 template <typename T, typename... ArgT>

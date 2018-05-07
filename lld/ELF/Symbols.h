@@ -159,7 +159,8 @@ protected:
       : File(File), NameData(Name.Data), NameSize(Name.Size), Binding(Binding),
         Type(Type), StOther(StOther), SymbolKind(K), NeedsPltAddr(false),
         IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
-        IsInIgot(false), IsPreemptible(false), Used(!Config->GcSections) {}
+        IsInIgot(false), IsPreemptible(false), Used(!Config->GcSections),
+        NeedsTocRestore(false) {}
 
 public:
   // True the symbol should point to its PLT entry.
@@ -182,6 +183,10 @@ public:
 
   // True if an undefined or shared symbol is used from a live section.
   unsigned Used : 1;
+
+  // True if a call to this symbol needs to be followed by a restore of the
+  // PPC64 toc pointer.
+  unsigned NeedsTocRestore : 1;
 
   // The Type field may also have this value. It means that we have not yet seen
   // a non-Lazy symbol with this name, so we don't know what its type is. The

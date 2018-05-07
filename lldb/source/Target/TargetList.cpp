@@ -367,16 +367,12 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       user_exe_path_is_bundle = true;
 
     if (file.IsRelative() && !user_exe_path.empty()) {
-      // Ignore paths that start with "./" and "../"
-      if (!user_exe_path.startswith("./") && !user_exe_path.startswith("../")) {
-        llvm::SmallString<64> cwd;
-        if (! llvm::sys::fs::current_path(cwd)) {
-          cwd += '/';
-          cwd += user_exe_path;
-          FileSpec cwd_file(cwd, false);
-          if (cwd_file.Exists())
-            file = cwd_file;
-        }
+      llvm::SmallString<64> cwd;
+      if (! llvm::sys::fs::current_path(cwd)) {
+        FileSpec cwd_file(cwd.c_str(), false);
+        cwd_file.AppendPathComponent(file);
+        if (cwd_file.Exists())
+          file = cwd_file;
       }
     }
 
