@@ -2778,7 +2778,9 @@ protected:
 public:
   CastKind getCastKind() const { return (CastKind) CastExprBits.Kind; }
   void setCastKind(CastKind K) { CastExprBits.Kind = K; }
-  const char *getCastKindName() const;
+
+  static const char *getCastKindName(CastKind CK);
+  const char *getCastKindName() const { return getCastKindName(getCastKind()); }
 
   Expr *getSubExpr() { return cast<Expr>(Op); }
   const Expr *getSubExpr() const { return cast<Expr>(Op); }

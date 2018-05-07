@@ -81,9 +81,9 @@ void TestOverflow() {
   char b = -500.0;  // caught by -Wliteral-conversion
 
   const float LargeNumber = 1024;
-  char c = LargeNumber;  // expected-warning{{implicit conversion of out of range value from 'const float' to 'char' changes value from 1024 to 127}}
-  char d = 400.0 + 400.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' changes value from 800 to 127}}
+  char c = LargeNumber;  // expected-warning{{implicit conversion of out of range value from 'const float' to 'char' is undefined}}
+  char d = 400.0 + 400.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' is undefined}}
 
-  char e = 1.0 / 0.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' changes value from +Inf to 127}}
+  char e = 1.0 / 0.0;  // expected-warning{{implicit conversion of out of range value from 'double' to 'char' is undefined}}
 }
 #endif  // OVERFLOW

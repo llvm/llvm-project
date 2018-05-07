@@ -80,13 +80,9 @@ public:
       runCycle(Cycles++);
   }
 
-  const Instruction &getInstruction(unsigned Index) const {
-    const auto It = Instructions.find(Index);
-    assert(It != Instructions.end() && "no running instructions with index");
-    assert(It->second);
-    return *It->second;
+  void eraseInstruction(const InstRef &IR) {
+    Instructions.erase(IR.getSourceIndex());
   }
-  void eraseInstruction(unsigned Index) { Instructions.erase(Index); }
 
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);

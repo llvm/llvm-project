@@ -2672,9 +2672,8 @@ multiclass avx512_fp_fpclass_all<string OpcodeStr, bits<8> opcVec,
                                   EVEX_CD8<64, CD8VT1>, VEX_W;
 }
 
-// FIXME: Is there a better scheduler class for VFPCLASS?
 defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, X86Vfpclass,
-                                      X86Vfpclasss, SchedWriteFAdd, HasDQI>,
+                                      X86Vfpclasss, SchedWriteFCmp, HasDQI>,
                                       AVX512AIi8Base, EVEX;
 
 //-----------------------------------------------------------------
@@ -4910,42 +4909,42 @@ multiclass avx512_fp_scalar_sae<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
 }
 
 multiclass avx512_binop_s_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                SDNode VecNode, X86FoldableSchedWrite sched,
+                                SDNode VecNode, X86SchedWriteSizes sched,
                                 bit IsCommutable> {
   defm SSZ : avx512_fp_scalar<opc, OpcodeStr#"ss", f32x_info, OpNode, VecNode,
-                              sched, IsCommutable>,
+                              sched.PS.Scl, IsCommutable>,
              avx512_fp_scalar_round<opc, OpcodeStr#"ss", f32x_info, VecNode,
-                              sched, IsCommutable>,
+                              sched.PS.Scl, IsCommutable>,
                               XS, EVEX_4V, VEX_LIG,  EVEX_CD8<32, CD8VT1>;
   defm SDZ : avx512_fp_scalar<opc, OpcodeStr#"sd", f64x_info, OpNode, VecNode,
-                              sched, IsCommutable>,
+                              sched.PD.Scl, IsCommutable>,
              avx512_fp_scalar_round<opc, OpcodeStr#"sd", f64x_info, VecNode,
-                              sched, IsCommutable>,
+                              sched.PD.Scl, IsCommutable>,
                               XD, VEX_W, EVEX_4V, VEX_LIG, EVEX_CD8<64, CD8VT1>;
 }
 
 multiclass avx512_binop_s_sae<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               SDNode VecNode, SDNode SaeNode,
-                              X86FoldableSchedWrite sched, bit IsCommutable> {
+                              X86SchedWriteSizes sched, bit IsCommutable> {
   defm SSZ : avx512_fp_scalar_sae<opc, OpcodeStr#"ss", f32x_info, OpNode,
-                              VecNode, SaeNode, sched, IsCommutable>,
+                              VecNode, SaeNode, sched.PS.Scl, IsCommutable>,
                               XS, EVEX_4V, VEX_LIG,  EVEX_CD8<32, CD8VT1>;
   defm SDZ : avx512_fp_scalar_sae<opc, OpcodeStr#"sd", f64x_info, OpNode,
-                              VecNode, SaeNode, sched, IsCommutable>,
+                              VecNode, SaeNode, sched.PD.Scl, IsCommutable>,
                               XD, VEX_W, EVEX_4V, VEX_LIG, EVEX_CD8<64, CD8VT1>;
 }
 defm VADD : avx512_binop_s_round<0x58, "vadd", fadd, X86faddRnds,
-                                 SchedWriteFAdd.Scl, 1>;
+                                 SchedWriteFAddSizes, 1>;
 defm VMUL : avx512_binop_s_round<0x59, "vmul", fmul, X86fmulRnds,
-                                 SchedWriteFMul.Scl, 1>;
+                                 SchedWriteFMulSizes, 1>;
 defm VSUB : avx512_binop_s_round<0x5C, "vsub", fsub, X86fsubRnds,
-                                 SchedWriteFAdd.Scl, 0>;
+                                 SchedWriteFAddSizes, 0>;
 defm VDIV : avx512_binop_s_round<0x5E, "vdiv", fdiv, X86fdivRnds,
-                                 SchedWriteFDiv.Scl, 0>;
+                                 SchedWriteFDivSizes, 0>;
 defm VMIN : avx512_binop_s_sae<0x5D, "vmin", X86fmin, X86fmins, X86fminRnds,
-                               SchedWriteFCmp.Scl, 0>;
+                               SchedWriteFCmpSizes, 0>;
 defm VMAX : avx512_binop_s_sae<0x5F, "vmax", X86fmax, X86fmaxs, X86fmaxRnds,
-                               SchedWriteFCmp.Scl, 0>;
+                               SchedWriteFCmpSizes, 0>;
 
 // MIN/MAX nodes are commutable under "unsafe-fp-math". In this case we use
 // X86fminc and X86fmaxc instead of X86fmin and X86fmax
@@ -5034,86 +5033,86 @@ multiclass avx512_fp_sae_packed<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_fp_binop_p<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
-                             Predicate prd, X86SchedWriteWidths sched,
+                             Predicate prd, X86SchedWriteSizes sched,
                              bit IsCommutable = 0> {
   let Predicates = [prd] in {
   defm PSZ : avx512_fp_packed<opc, OpcodeStr, OpNode, v16f32_info,
-                              sched.ZMM, IsCommutable>, EVEX_V512, PS,
+                              sched.PS.ZMM, IsCommutable>, EVEX_V512, PS,
                               EVEX_CD8<32, CD8VF>;
   defm PDZ : avx512_fp_packed<opc, OpcodeStr, OpNode, v8f64_info,
-                              sched.ZMM, IsCommutable>, EVEX_V512, PD, VEX_W,
+                              sched.PD.ZMM, IsCommutable>, EVEX_V512, PD, VEX_W,
                               EVEX_CD8<64, CD8VF>;
   }
 
     // Define only if AVX512VL feature is present.
   let Predicates = [prd, HasVLX] in {
     defm PSZ128 : avx512_fp_packed<opc, OpcodeStr, OpNode, v4f32x_info,
-                                   sched.XMM, IsCommutable>, EVEX_V128, PS,
+                                   sched.PS.XMM, IsCommutable>, EVEX_V128, PS,
                                    EVEX_CD8<32, CD8VF>;
     defm PSZ256 : avx512_fp_packed<opc, OpcodeStr, OpNode, v8f32x_info,
-                                   sched.YMM, IsCommutable>, EVEX_V256, PS,
+                                   sched.PS.YMM, IsCommutable>, EVEX_V256, PS,
                                    EVEX_CD8<32, CD8VF>;
     defm PDZ128 : avx512_fp_packed<opc, OpcodeStr, OpNode, v2f64x_info,
-                                   sched.XMM, IsCommutable>, EVEX_V128, PD, VEX_W,
+                                   sched.PD.XMM, IsCommutable>, EVEX_V128, PD, VEX_W,
                                    EVEX_CD8<64, CD8VF>;
     defm PDZ256 : avx512_fp_packed<opc, OpcodeStr, OpNode, v4f64x_info,
-                                   sched.YMM, IsCommutable>, EVEX_V256, PD, VEX_W,
+                                   sched.PD.YMM, IsCommutable>, EVEX_V256, PD, VEX_W,
                                    EVEX_CD8<64, CD8VF>;
   }
 }
 
 multiclass avx512_fp_binop_p_round<bits<8> opc, string OpcodeStr, SDNode OpNodeRnd,
-                                   X86SchedWriteWidths sched> {
-  defm PSZ : avx512_fp_round_packed<opc, OpcodeStr, OpNodeRnd, sched.ZMM,
+                                   X86SchedWriteSizes sched> {
+  defm PSZ : avx512_fp_round_packed<opc, OpcodeStr, OpNodeRnd, sched.PS.ZMM,
                                     v16f32_info>,
                                     EVEX_V512, PS, EVEX_CD8<32, CD8VF>;
-  defm PDZ : avx512_fp_round_packed<opc, OpcodeStr, OpNodeRnd, sched.ZMM,
+  defm PDZ : avx512_fp_round_packed<opc, OpcodeStr, OpNodeRnd, sched.PD.ZMM,
                                     v8f64_info>,
                                     EVEX_V512, PD, VEX_W,EVEX_CD8<64, CD8VF>;
 }
 
 multiclass avx512_fp_binop_p_sae<bits<8> opc, string OpcodeStr, SDNode OpNodeRnd,
-                                 X86SchedWriteWidths sched> {
-  defm PSZ : avx512_fp_sae_packed<opc, OpcodeStr, OpNodeRnd, sched.ZMM,
+                                 X86SchedWriteSizes sched> {
+  defm PSZ : avx512_fp_sae_packed<opc, OpcodeStr, OpNodeRnd, sched.PS.ZMM,
                                   v16f32_info>,
                                   EVEX_V512, PS, EVEX_CD8<32, CD8VF>;
-  defm PDZ : avx512_fp_sae_packed<opc, OpcodeStr, OpNodeRnd, sched.ZMM,
+  defm PDZ : avx512_fp_sae_packed<opc, OpcodeStr, OpNodeRnd, sched.PD.ZMM,
                                   v8f64_info>,
                                   EVEX_V512, PD, VEX_W,EVEX_CD8<64, CD8VF>;
 }
 
 defm VADD : avx512_fp_binop_p<0x58, "vadd", fadd, HasAVX512,
-                              SchedWriteFAdd, 1>,
-            avx512_fp_binop_p_round<0x58, "vadd", X86faddRnd, SchedWriteFAdd>;
+                              SchedWriteFAddSizes, 1>,
+            avx512_fp_binop_p_round<0x58, "vadd", X86faddRnd, SchedWriteFAddSizes>;
 defm VMUL : avx512_fp_binop_p<0x59, "vmul", fmul, HasAVX512,
-                              SchedWriteFMul, 1>,
-            avx512_fp_binop_p_round<0x59, "vmul", X86fmulRnd, SchedWriteFMul>;
+                              SchedWriteFMulSizes, 1>,
+            avx512_fp_binop_p_round<0x59, "vmul", X86fmulRnd, SchedWriteFMulSizes>;
 defm VSUB : avx512_fp_binop_p<0x5C, "vsub", fsub, HasAVX512,
-                              SchedWriteFAdd>,
-            avx512_fp_binop_p_round<0x5C, "vsub", X86fsubRnd, SchedWriteFAdd>;
+                              SchedWriteFAddSizes>,
+            avx512_fp_binop_p_round<0x5C, "vsub", X86fsubRnd, SchedWriteFAddSizes>;
 defm VDIV : avx512_fp_binop_p<0x5E, "vdiv", fdiv, HasAVX512,
-                              SchedWriteFDiv>,
-            avx512_fp_binop_p_round<0x5E, "vdiv", X86fdivRnd, SchedWriteFDiv>;
+                              SchedWriteFDivSizes>,
+            avx512_fp_binop_p_round<0x5E, "vdiv", X86fdivRnd, SchedWriteFDivSizes>;
 defm VMIN : avx512_fp_binop_p<0x5D, "vmin", X86fmin, HasAVX512,
-                              SchedWriteFCmp, 0>,
-            avx512_fp_binop_p_sae<0x5D, "vmin", X86fminRnd, SchedWriteFCmp>;
+                              SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_p_sae<0x5D, "vmin", X86fminRnd, SchedWriteFCmpSizes>;
 defm VMAX : avx512_fp_binop_p<0x5F, "vmax", X86fmax, HasAVX512,
-                              SchedWriteFCmp, 0>,
-            avx512_fp_binop_p_sae<0x5F, "vmax", X86fmaxRnd, SchedWriteFCmp>;
+                              SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_p_sae<0x5F, "vmax", X86fmaxRnd, SchedWriteFCmpSizes>;
 let isCodeGenOnly = 1 in {
   defm VMINC : avx512_fp_binop_p<0x5D, "vmin", X86fminc, HasAVX512,
-                                 SchedWriteFCmp, 1>;
+                                 SchedWriteFCmpSizes, 1>;
   defm VMAXC : avx512_fp_binop_p<0x5F, "vmax", X86fmaxc, HasAVX512,
-                                 SchedWriteFCmp, 1>;
+                                 SchedWriteFCmpSizes, 1>;
 }
 defm VAND  : avx512_fp_binop_p<0x54, "vand", null_frag, HasDQI,
-                               SchedWriteFLogic, 1>;
+                               SchedWriteFLogicSizes, 1>;
 defm VANDN : avx512_fp_binop_p<0x55, "vandn", null_frag, HasDQI,
-                               SchedWriteFLogic, 0>;
+                               SchedWriteFLogicSizes, 0>;
 defm VOR   : avx512_fp_binop_p<0x56, "vor", null_frag, HasDQI,
-                               SchedWriteFLogic, 1>;
+                               SchedWriteFLogicSizes, 1>;
 defm VXOR  : avx512_fp_binop_p<0x57, "vxor", null_frag, HasDQI,
-                               SchedWriteFLogic, 1>;
+                               SchedWriteFLogicSizes, 1>;
 
 // Patterns catch floating point selects with bitcasted integer logic ops.
 multiclass avx512_fp_logical_lowering<string InstrStr, SDNode OpNode,
@@ -9960,9 +9959,9 @@ def : Pat<(vselect (v2i1 VK2WM:$mask), (v2f64 (X86VBroadcast (loadv2f64 addr:$sr
 //===----------------------------------------------------------------------===//
 
 defm VUNPCKH : avx512_fp_binop_p<0x15, "vunpckh", X86Unpckh, HasAVX512,
-                                 SchedWriteFShuffle>;
+                                 SchedWriteFShuffleSizes>;
 defm VUNPCKL : avx512_fp_binop_p<0x14, "vunpckl", X86Unpckl, HasAVX512,
-                                 SchedWriteFShuffle>;
+                                 SchedWriteFShuffleSizes>;
 
 defm VPUNPCKLBW : avx512_binop_rm_vl_b<0x60, "vpunpcklbw", X86Unpckl,
                                        SchedWriteShuffle, HasBWI>;

@@ -895,7 +895,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ; KNL-LABEL: v16f32_no_estimate:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] sched: [10:1.00]
-; KNL-NEXT:    vdivps %zmm0, %zmm1, %zmm0 # sched: [12:1.00]
+; KNL-NEXT:    vdivps %zmm0, %zmm1, %zmm0 # sched: [21:14.00]
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: v16f32_no_estimate:

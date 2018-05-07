@@ -486,7 +486,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     if (ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_end, NULL, OMPT_CUR_TASK_DATA(this_thr), 1,
-          __kmp_tid_from_gtid(global_tid));
+          OMPT_CUR_TASK_INFO(this_thr)->thread_num);
     }
 
     // reset clear the task id only after unlinking the task

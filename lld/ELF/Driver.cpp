@@ -802,8 +802,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->ThinLTOIndexOnly = true;
       Config->ThinLTOIndexOnlyObjectsFile = S.substr(19);
     } else if (S.startswith("thinlto-prefix-replace=")) {
-      Config->ThinLTOPrefixReplace = S.substr(23);
-      if (!Config->ThinLTOPrefixReplace.contains(';'))
+      std::tie(Config->ThinLTOPrefixReplace.first,
+               Config->ThinLTOPrefixReplace.second) = S.substr(23).split(';');
+      if (Config->ThinLTOPrefixReplace.second.empty())
         error("thinlto-prefix-replace expects 'old;new' format");
     } else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
                !S.startswith("-pass-through=") && !S.startswith("thinlto")) {

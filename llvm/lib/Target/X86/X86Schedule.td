@@ -105,18 +105,37 @@ def WriteZero : SchedWrite;
 defm WriteJump : X86SchedWritePair;
 
 // Floating point. This covers both scalar and vector operations.
-def  WriteFLoad  : SchedWrite;
-def  WriteFStore : SchedWrite;
-def  WriteFMove  : SchedWrite;
-defm WriteFAdd   : X86SchedWritePair; // Floating point add/sub.
-defm WriteFAddY  : X86SchedWritePair; // Floating point add/sub (YMM/ZMM).
-defm WriteFCmp   : X86SchedWritePair; // Floating point compare.
-defm WriteFCmpY  : X86SchedWritePair; // Floating point compare (YMM/ZMM).
-defm WriteFCom   : X86SchedWritePair; // Floating point compare to flags.
-defm WriteFMul   : X86SchedWritePair; // Floating point multiplication.
-defm WriteFMulY  : X86SchedWritePair; // Floating point multiplication (YMM/ZMM).
-defm WriteFDiv   : X86SchedWritePair; // Floating point division.
-defm WriteFDivY  : X86SchedWritePair; // Floating point division (YMM/ZMM).
+def  WriteFLoad   : SchedWrite;
+def  WriteFStore  : SchedWrite;
+def  WriteFMove   : SchedWrite;
+
+defm WriteFAdd    : X86SchedWritePair; // Floating point add/sub.
+defm WriteFAddX   : X86SchedWritePair; // Floating point add/sub (XMM).
+defm WriteFAddY   : X86SchedWritePair; // Floating point add/sub (YMM/ZMM).
+defm WriteFAdd64  : X86SchedWritePair; // Floating point double add/sub.
+defm WriteFAdd64X : X86SchedWritePair; // Floating point double add/sub (XMM).
+defm WriteFAdd64Y : X86SchedWritePair; // Floating point double add/sub (YMM/ZMM).
+defm WriteFCmp    : X86SchedWritePair; // Floating point compare.
+defm WriteFCmpX   : X86SchedWritePair; // Floating point compare (XMM).
+defm WriteFCmpY   : X86SchedWritePair; // Floating point compare (YMM/ZMM).
+defm WriteFCmp64  : X86SchedWritePair; // Floating point double compare.
+defm WriteFCmp64X : X86SchedWritePair; // Floating point double compare (XMM).
+defm WriteFCmp64Y : X86SchedWritePair; // Floating point double compare (YMM/ZMM).
+defm WriteFCom    : X86SchedWritePair; // Floating point compare to flags.
+defm WriteFMul    : X86SchedWritePair; // Floating point multiplication.
+defm WriteFMulX   : X86SchedWritePair; // Floating point multiplication (XMM).
+defm WriteFMulY   : X86SchedWritePair; // Floating point multiplication (YMM/ZMM).
+defm WriteFMul64  : X86SchedWritePair; // Floating point double multiplication.
+defm WriteFMul64X : X86SchedWritePair; // Floating point double multiplication (XMM).
+defm WriteFMul64Y : X86SchedWritePair; // Floating point double multiplication (YMM/ZMM).
+defm WriteFDiv    : X86SchedWritePair; // Floating point division.
+defm WriteFDivX   : X86SchedWritePair; // Floating point division (XMM).
+defm WriteFDivY   : X86SchedWritePair; // Floating point division (YMM).
+defm WriteFDivZ   : X86SchedWritePair; // Floating point division (ZMM).
+defm WriteFDiv64  : X86SchedWritePair; // Floating point double division.
+defm WriteFDiv64X : X86SchedWritePair; // Floating point double division (XMM).
+defm WriteFDiv64Y : X86SchedWritePair; // Floating point double division (YMM).
+defm WriteFDiv64Z : X86SchedWritePair; // Floating point double division (ZMM).
 defm WriteFSqrt  : X86SchedWritePair; // Floating point square root.
 defm WriteFSqrtX : X86SchedWritePair; // Floating point square root (XMM).
 defm WriteFSqrtY : X86SchedWritePair; // Floating point square root (YMM).
@@ -261,13 +280,19 @@ def WriteNop : SchedWrite;
 
 // Vector width wrappers.
 def SchedWriteFAdd
- : X86SchedWriteWidths<WriteFAdd, WriteFAdd, WriteFAddY, WriteFAddY>;
+ : X86SchedWriteWidths<WriteFAdd, WriteFAddX, WriteFAddY, WriteFAddY>;
+def SchedWriteFAdd64
+ : X86SchedWriteWidths<WriteFAdd64, WriteFAdd64X, WriteFAdd64Y, WriteFAdd64Y>;
 def SchedWriteFHAdd
  : X86SchedWriteWidths<WriteFHAdd, WriteFHAdd, WriteFHAddY, WriteFHAddY>;
 def SchedWriteFCmp
- : X86SchedWriteWidths<WriteFCmp, WriteFCmp, WriteFCmpY, WriteFCmpY>;
+ : X86SchedWriteWidths<WriteFCmp, WriteFCmpX, WriteFCmpY, WriteFCmpY>;
+def SchedWriteFCmp64
+ : X86SchedWriteWidths<WriteFCmp64, WriteFCmp64X, WriteFCmp64Y, WriteFCmp64Y>;
 def SchedWriteFMul
- : X86SchedWriteWidths<WriteFMul, WriteFMul, WriteFMulY, WriteFMulY>;
+ : X86SchedWriteWidths<WriteFMul, WriteFMulX, WriteFMulY, WriteFMulY>;
+def SchedWriteFMul64
+ : X86SchedWriteWidths<WriteFMul64, WriteFMul64X, WriteFMul64Y, WriteFMul64Y>;
 def SchedWriteFMA
  : X86SchedWriteWidths<WriteFMA, WriteFMAX, WriteFMAY, WriteFMAY>;
 def SchedWriteDPPD
@@ -275,7 +300,9 @@ def SchedWriteDPPD
 def SchedWriteDPPS
  : X86SchedWriteWidths<WriteDPPS, WriteDPPS, WriteDPPSY, WriteDPPSY>;
 def SchedWriteFDiv
- : X86SchedWriteWidths<WriteFDiv, WriteFDiv, WriteFDivY, WriteFDivY>;
+ : X86SchedWriteWidths<WriteFDiv, WriteFDivX, WriteFDivY, WriteFDivZ>;
+def SchedWriteFDiv64
+ : X86SchedWriteWidths<WriteFDiv64, WriteFDiv64X, WriteFDiv64Y, WriteFDiv64Z>;
 def SchedWriteFSqrt
  : X86SchedWriteWidths<WriteFSqrt, WriteFSqrtX,
                        WriteFSqrtY, WriteFSqrtZ>;
@@ -346,13 +373,19 @@ def SchedWriteVarBlend
 
 // Vector size wrappers.
 def SchedWriteFAddSizes
- : X86SchedWriteSizes<SchedWriteFAdd, SchedWriteFAdd>;
+ : X86SchedWriteSizes<SchedWriteFAdd, SchedWriteFAdd64>;
+def SchedWriteFCmpSizes
+ : X86SchedWriteSizes<SchedWriteFCmp, SchedWriteFCmp64>;
 def SchedWriteFMulSizes
- : X86SchedWriteSizes<SchedWriteFMul, SchedWriteFMul>;
+ : X86SchedWriteSizes<SchedWriteFMul, SchedWriteFMul64>;
 def SchedWriteFDivSizes
- : X86SchedWriteSizes<SchedWriteFDiv, SchedWriteFDiv>;
+ : X86SchedWriteSizes<SchedWriteFDiv, SchedWriteFDiv64>;
 def SchedWriteFSqrtSizes
  : X86SchedWriteSizes<SchedWriteFSqrt, SchedWriteFSqrt64>;
+def SchedWriteFLogicSizes
+ : X86SchedWriteSizes<SchedWriteFLogic, SchedWriteFLogic>;
+def SchedWriteFShuffleSizes
+ : X86SchedWriteSizes<SchedWriteFShuffle, SchedWriteFShuffle>;
 
 //===----------------------------------------------------------------------===//
 // Generic Processor Scheduler Models.

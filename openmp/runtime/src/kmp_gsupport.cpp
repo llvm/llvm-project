@@ -401,6 +401,7 @@ static
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, &(team_info->parallel_data),
           &(task_info->task_data), ompt_team_size, __kmp_tid_from_gtid(gtid));
+      task_info->thread_num = __kmp_tid_from_gtid(gtid);
     }
     thr->th.ompt_thread_info.state = omp_state_work_parallel;
   }

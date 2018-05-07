@@ -56,6 +56,7 @@ typedef struct {
   ompt_frame_t frame;
   ompt_data_t task_data;
   struct kmp_taskdata *scheduling_parent;
+  int thread_num;
 #if OMP_40_ENABLED
   int ndeps;
   ompt_task_dependence_t *deps;

@@ -66,16 +66,18 @@ RCParser::ParseType RCParser::parseSingleResource() {
 
   if (TypeToken->equalsLower("ACCELERATORS"))
     Result = parseAcceleratorsResource();
+  else if (TypeToken->equalsLower("BITMAP"))
+    Result = parseBitmapResource();
   else if (TypeToken->equalsLower("CURSOR"))
     Result = parseCursorResource();
   else if (TypeToken->equalsLower("DIALOG"))
     Result = parseDialogResource(false);
   else if (TypeToken->equalsLower("DIALOGEX"))
     Result = parseDialogResource(true);
-  else if (TypeToken->equalsLower("ICON"))
-    Result = parseIconResource();
   else if (TypeToken->equalsLower("HTML"))
     Result = parseHTMLResource();
+  else if (TypeToken->equalsLower("ICON"))
+    Result = parseIconResource();
   else if (TypeToken->equalsLower("MENU"))
     Result = parseMenuResource();
   else if (TypeToken->equalsLower("VERSIONINFO"))
@@ -484,6 +486,11 @@ Expected<Control> RCParser::parseControl() {
                  TakeOptArg(7));
 }
 
+RCParser::ParseType RCParser::parseBitmapResource() {
+  ASSIGN_OR_RETURN(Arg, readString());
+  return llvm::make_unique<BitmapResource>(*Arg);
+}
+
 RCParser::ParseType RCParser::parseIconResource() {
   ASSIGN_OR_RETURN(Arg, readString());
   return llvm::make_unique<IconResource>(*Arg);
@@ -573,6 +580,7 @@ RCParser::ParseType RCParser::parseStringTableResource() {
     // Some examples in documentation suggest that there might be a comma in
     // between, however we strictly adhere to the single statement definition.
     ASSIGN_OR_RETURN(IDResult, readInt());
+    consumeOptionalType(Kind::Comma);
     ASSIGN_OR_RETURN(StrResult, readString());
     Table->addString(*IDResult, *StrResult);
   }

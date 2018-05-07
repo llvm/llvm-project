@@ -44,7 +44,7 @@ void ResourcePressureView::onInstructionEvent(const HWInstructionEvent &Event) {
   if (Event.Type != HWInstructionEvent::Issued)
     return;
   const auto &IssueEvent = static_cast<const HWInstructionIssuedEvent &>(Event);
-  unsigned SourceIdx = Event.Index % Source.size();
+  const unsigned SourceIdx = Event.IR.getSourceIndex() % Source.size();
   for (const std::pair<ResourceRef, double> &Use : IssueEvent.UsedResources) {
     const ResourceRef &RR = Use.first;
     assert(Resource2VecIndex.find(RR.first) != Resource2VecIndex.end());

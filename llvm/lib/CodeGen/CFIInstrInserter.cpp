@@ -29,6 +29,11 @@
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
+static cl::opt<bool> VerifyCFI("verify-cfiinstrs",
+    cl::desc("Verify Call Frame Information instructions"),
+    cl::init(false),
+    cl::Hidden);
+
 namespace {
 class CFIInstrInserter : public MachineFunctionPass {
  public:
@@ -50,11 +55,12 @@ class CFIInstrInserter : public MachineFunctionPass {
 
     MBBVector.resize(MF.getNumBlockIDs());
     calculateCFAInfo(MF);
-#ifndef NDEBUG
-    if (unsigned ErrorNum = verify(MF))
-      report_fatal_error("Found " + Twine(ErrorNum) +
-                         " in/out CFI information errors.");
-#endif
+
+    if (VerifyCFI) {
+      if (unsigned ErrorNum = verify(MF))
+        report_fatal_error("Found " + Twine(ErrorNum) +
+                           " in/out CFI information errors.");
+    }
     bool insertedCFI = insertCFIInstrs(MF);
     MBBVector.clear();
     return insertedCFI;

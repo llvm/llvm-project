@@ -25,7 +25,7 @@ namespace CodeGen {
 
 class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
 private:
-  // Parallel outlined function work for workers to execute.
+  /// Parallel outlined function work for workers to execute.
   llvm::SmallVector<llvm::Function *, 16> Work;
 
   struct EntryFunctionState {
@@ -52,14 +52,14 @@ private:
   /// \brief Helper for worker function. Emit body of worker loop.
   void emitWorkerLoop(CodeGenFunction &CGF, WorkerFunctionState &WST);
 
-  /// \brief Helper for generic target entry function. Guide the master and
+  /// \brief Helper for non-SPMD target entry function. Guide the master and
   /// worker threads to their respective locations.
-  void emitGenericEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
+  void emitNonSPMDEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
                               WorkerFunctionState &WST);
 
-  /// \brief Signal termination of OMP execution for generic target entry
+  /// \brief Signal termination of OMP execution for non-SPMD target entry
   /// function.
-  void emitGenericEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
+  void emitNonSPMDEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
   /// Helper for generic variables globalization prolog.
   void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc);
@@ -93,7 +93,7 @@ private:
   /// \param IsOffloadEntry True if the outlined function is an offload entry.
   /// An outlined function may not be an entry if, e.g. the if clause always
   /// evaluates to false.
-  void emitGenericKernel(const OMPExecutableDirective &D, StringRef ParentName,
+  void emitNonSPMDKernel(const OMPExecutableDirective &D, StringRef ParentName,
                          llvm::Function *&OutlinedFn,
                          llvm::Constant *&OutlinedFnID, bool IsOffloadEntry,
                          const RegionCodeGenTy &CodeGen);
@@ -133,14 +133,14 @@ private:
   /// \brief Emits code for parallel or serial call of the \a OutlinedFn with
   /// variables captured in a record which address is stored in \a
   /// CapturedStruct.
-  /// This call is for the Generic Execution Mode.
+  /// This call is for the Non-SPMD Execution Mode.
   /// \param OutlinedFn Outlined function to be run in parallel threads. Type of
   /// this function is void(*)(kmp_int32 *, kmp_int32, struct context_vars*).
   /// \param CapturedVars A pointer to the record with the references to
   /// variables used in \a OutlinedFn function.
   /// \param IfCond Condition in the associated 'if' clause, if it was
   /// specified, nullptr otherwise.
-  void emitGenericParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+  void emitNonSPMDParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                                llvm::Value *OutlinedFn,
                                ArrayRef<llvm::Value *> CapturedVars,
                                const Expr *IfCond);
@@ -250,6 +250,16 @@ public:
                         ArrayRef<llvm::Value *> CapturedVars,
                         const Expr *IfCond) override;
 
+  /// Emits a critical region.
+  /// \param CriticalName Name of the critical region.
+  /// \param CriticalOpGen Generator for the statement associated with the given
+  /// critical region.
+  /// \param Hint Value of the 'hint' clause (optional).
+  void emitCriticalRegion(CodeGenFunction &CGF, StringRef CriticalName,
+                          const RegionCodeGenTy &CriticalOpGen,
+                          SourceLocation Loc,
+                          const Expr *Hint = nullptr) override;
+
   /// Emit a code for reduction clause.
   ///
   /// \param Privates List of private copies for original reduction arguments.
@@ -304,15 +314,15 @@ public:
   Address getAddressOfLocalVariable(CodeGenFunction &CGF,
                                     const VarDecl *VD) override;
 
-  /// Target codegen is specialized based on two programming models: the
-  /// 'generic' fork-join model of OpenMP, and a more GPU efficient 'spmd'
-  /// model for constructs like 'target parallel' that support it.
-  enum ExecutionMode {
-    /// Single Program Multiple Data.
-    Spmd,
-    /// Generic codegen to support fork-join model.
+  /// Target codegen is specialized based on two data-sharing modes: CUDA, in
+  /// which the local variables are actually global threadlocal, and Generic, in
+  /// which the local variables are placed in global memory if they may escape
+  /// their declaration context.
+  enum DataSharingMode {
+    /// CUDA data sharing mode.
+    CUDA,
+    /// Generic data-sharing mode.
     Generic,
-    Unknown,
   };
 
   /// Cleans up references to the objects in finished function.
@@ -320,11 +330,17 @@ public:
   void functionFinished(CodeGenFunction &CGF) override;
 
 private:
-  // Track the execution mode when codegening directives within a target
-  // region. The appropriate mode (generic/spmd) is set on entry to the
-  // target region and used by containing directives such as 'parallel'
-  // to emit optimized code.
-  ExecutionMode CurrentExecutionMode;
+  /// Track the execution mode when codegening directives within a target
+  /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the
+  /// target region and used by containing directives such as 'parallel'
+  /// to emit optimized code.
+  bool IsInSPMDExecutionMode = false;
+
+  /// true if we're emitting the code for the target region and next parallel
+  /// region is L0 for sure.
+  bool IsInTargetMasterThreadRegion = false;
+  /// true if we're definitely in the parallel region.
+  bool IsInParallelRegion = false;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;

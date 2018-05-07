@@ -37,6 +37,7 @@ class HexagonMCCodeEmitter : public MCCodeEmitter {
   MCInstrInfo const &MCII;
   std::unique_ptr<unsigned> Addend;
   std::unique_ptr<bool> Extended;
+  std::unique_ptr<bool> SubInst1;
   std::unique_ptr<MCInst const *> CurrentBundle;
   std::unique_ptr<size_t> CurrentIndex;
 

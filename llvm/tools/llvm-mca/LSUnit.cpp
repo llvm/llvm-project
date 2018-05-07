@@ -50,13 +50,15 @@ void LSUnit::assignSQSlot(unsigned Index) {
   StoreQueue.insert(Index);
 }
 
-bool LSUnit::reserve(unsigned Index, const InstrDesc &Desc) {
+bool LSUnit::reserve(const InstRef &IR) {
+  const InstrDesc Desc = IR.getInstruction()->getDesc();
   unsigned MayLoad = Desc.MayLoad;
   unsigned MayStore = Desc.MayStore;
   unsigned IsMemBarrier = Desc.HasSideEffects;
   if (!MayLoad && !MayStore)
     return false;
 
+  const unsigned Index = IR.getSourceIndex();
   if (MayLoad) {
     if (IsMemBarrier)
       LoadBarriers.insert(Index);
@@ -70,7 +72,8 @@ bool LSUnit::reserve(unsigned Index, const InstrDesc &Desc) {
   return true;
 }
 
-bool LSUnit::isReady(unsigned Index) const {
+bool LSUnit::isReady(const InstRef &IR) const {
+  const unsigned Index = IR.getSourceIndex();
   bool IsALoad = LoadQueue.count(Index) != 0;
   bool IsAStore = StoreQueue.count(Index) != 0;
   assert((IsALoad || IsAStore) && "Instruction is not in queue!");
@@ -116,7 +119,8 @@ bool LSUnit::isReady(unsigned Index) const {
   return !IsAStore;
 }
 
-void LSUnit::onInstructionExecuted(unsigned Index) {
+void LSUnit::onInstructionExecuted(const InstRef &IR) {
+  const unsigned Index = IR.getSourceIndex();
   std::set<unsigned>::iterator it = LoadQueue.find(Index);
   if (it != LoadQueue.end()) {
     DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index

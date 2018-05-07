@@ -288,14 +288,14 @@ fyl2xp1
 # CHECK-NEXT:  1      11    1.00                  * 	fldln2
 # CHECK-NEXT:  1      11    1.00                  * 	fldpi
 # CHECK-NEXT:  1      8     0.50                  * 	fldz
-# CHECK-NEXT:  1      5     1.00                  * 	fmul	%st(0), %st(1)
-# CHECK-NEXT:  1      5     1.00                  * 	fmul	%st(2)
-# CHECK-NEXT:  1      12    1.00    *             * 	fmuls	(%ecx)
-# CHECK-NEXT:  1      12    1.00    *             * 	fmull	(%eax)
-# CHECK-NEXT:  1      5     1.00                  * 	fmulp	%st(1)
-# CHECK-NEXT:  1      5     1.00                  * 	fmulp	%st(2)
-# CHECK-NEXT:  1      12    1.00    *             * 	fimuls	(%ecx)
-# CHECK-NEXT:  1      12    1.00    *             * 	fimull	(%eax)
+# CHECK-NEXT:  1      3     0.50                  * 	fmul	%st(0), %st(1)
+# CHECK-NEXT:  1      3     0.50                  * 	fmul	%st(2)
+# CHECK-NEXT:  2      10    0.50    *             * 	fmuls	(%ecx)
+# CHECK-NEXT:  2      10    0.50    *             * 	fmull	(%eax)
+# CHECK-NEXT:  1      3     0.50                  * 	fmulp	%st(1)
+# CHECK-NEXT:  1      3     0.50                  * 	fmulp	%st(2)
+# CHECK-NEXT:  2      10    0.50    *             * 	fimuls	(%ecx)
+# CHECK-NEXT:  2      10    0.50    *             * 	fimull	(%eax)
 # CHECK-NEXT:  1      1     1.00                  * 	fnop
 # CHECK-NEXT:  1      100    -                    * 	fpatan
 # CHECK-NEXT:  1      100    -                    * 	fprem
@@ -371,7 +371,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 32.50  32.50   -      -      -      -      -     58.50  2.00   8.00   64.50   -
+# CHECK-NEXT: 32.50  32.50   -      -      -      -      -     54.50  6.00   8.00   64.50   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   	Instructions:
@@ -457,14 +457,14 @@ fyl2xp1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     	fldln2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     	fldpi
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50    -     0.50    -     	fldz
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     	fmul	%st(0), %st(1)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     	fmul	%st(2)
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     	fmuls	(%ecx)
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     	fmull	(%eax)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     	fmulp	%st(1)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     	fmulp	%st(2)
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     	fimuls	(%ecx)
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     	fimull	(%eax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -     	fmul	%st(0), %st(1)
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -     	fmul	%st(2)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.50   0.50    -      -      -     	fmuls	(%ecx)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.50   0.50    -      -      -     	fmull	(%eax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -     	fmulp	%st(1)
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -     	fmulp	%st(2)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.50   0.50    -      -      -     	fimuls	(%ecx)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.50   0.50    -      -      -     	fimull	(%eax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     	fnop
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	fpatan
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	fprem

@@ -1,4 +1,4 @@
-# RUN: llc -run-pass si-insert-waits -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s
+# RUN: llc -run-pass si-insert-waitcnts -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s
 --- |
 
   define amdgpu_kernel void @vccz_corrupt_workaround(float %cond, i32 addrspace(1)* %out) #0 {
@@ -47,6 +47,7 @@
 ---
 # CHECK-LABEL: name: vccz_corrupt_workaround
 # CHECK: $vcc = V_CMP_EQ_F32
+# CHECK-NEXT: S_WAITCNT 0
 # CHECK-NEXT: $vcc = S_MOV_B64 $vcc
 # CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
@@ -75,13 +76,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1, $vcc
 
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 9, 0 :: (non-temporal dereferenceable invariant load 4 from `float addrspace(2)* undef`)
     $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vcc = V_CMP_EQ_F32_e64 0, 0, 0, $sgpr2, 0, implicit $exec
+    $vcc = V_CMP_EQ_F32_e64 0, 0, 0, undef $sgpr2, 0, implicit $exec
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
 
   bb.2.if:
@@ -110,8 +110,8 @@ body:             |
 ...
 ---
 # CHECK-LABEL: name: vccz_corrupt_undef_vcc
-# CHECK: S_WAITCNT
-# CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
+# CHECK: S_WAITCNT 3855
+# CHECK-NEXT: $vgpr0 = V_MOV_B32_e32
 
 name:            vccz_corrupt_undef_vcc
 alignment:       0

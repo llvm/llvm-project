@@ -252,50 +252,48 @@ void RegisterFile::dump() const {
 }
 #endif
 
-void DispatchUnit::notifyInstructionDispatched(unsigned Index,
+void DispatchUnit::notifyInstructionDispatched(const InstRef &IR,
                                                ArrayRef<unsigned> UsedRegs) {
-  DEBUG(dbgs() << "[E] Instruction Dispatched: " << Index << '\n');
-  Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(Index, UsedRegs));
+  DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
+  Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
-void DispatchUnit::notifyInstructionRetired(unsigned Index) {
-  DEBUG(dbgs() << "[E] Instruction Retired: " << Index << '\n');
-  const Instruction &IS = Owner->getInstruction(Index);
+void DispatchUnit::notifyInstructionRetired(const InstRef &IR) {
+  DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
   SmallVector<unsigned, 4> FreedRegs(RAT->getNumRegisterFiles());
-  for (const std::unique_ptr<WriteState> &WS : IS.getDefs())
+  for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
     RAT->invalidateRegisterMapping(*WS.get(), FreedRegs);
-
-  Owner->notifyInstructionEvent(HWInstructionRetiredEvent(Index, FreedRegs));
-  Owner->eraseInstruction(Index);
+  Owner->notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
+  Owner->eraseInstruction(IR);
 }
 
-bool DispatchUnit::checkRAT(unsigned Index, const Instruction &Instr) {
+bool DispatchUnit::checkRAT(const InstRef &IR) {
   SmallVector<unsigned, 4> RegDefs;
-  for (const std::unique_ptr<WriteState> &RegDef : Instr.getDefs())
+  for (const std::unique_ptr<WriteState> &RegDef :
+       IR.getInstruction()->getDefs())
     RegDefs.emplace_back(RegDef->getRegisterID());
 
   unsigned RegisterMask = RAT->isAvailable(RegDefs);
   // A mask with all zeroes means: register files are available.
   if (RegisterMask) {
-    Owner->notifyStallEvent(
-        HWStallEvent(HWStallEvent::RegisterFileStall, Index));
+    Owner->notifyStallEvent(HWStallEvent(HWStallEvent::RegisterFileStall, IR));
     return false;
   }
 
   return true;
 }
 
-bool DispatchUnit::checkRCU(unsigned Index, const InstrDesc &Desc) {
-  unsigned NumMicroOps = Desc.NumMicroOps;
+bool DispatchUnit::checkRCU(const InstRef &IR) {
+  const unsigned NumMicroOps = IR.getInstruction()->getDesc().NumMicroOps;
   if (RCU->isAvailable(NumMicroOps))
     return true;
   Owner->notifyStallEvent(
-      HWStallEvent(HWStallEvent::RetireControlUnitStall, Index));
+      HWStallEvent(HWStallEvent::RetireControlUnitStall, IR));
   return false;
 }
 
-bool DispatchUnit::checkScheduler(unsigned Index, const InstrDesc &Desc) {
-  return SC->canBeDispatched(Index, Desc);
+bool DispatchUnit::checkScheduler(const InstRef &IR) {
+  return SC->canBeDispatched(IR);
 }
 
 void DispatchUnit::updateRAWDependencies(ReadState &RS,
@@ -326,10 +324,11 @@ void DispatchUnit::updateRAWDependencies(ReadState &RS,
   DependentWrites.clear();
 }
 
-void DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
-                            const MCSubtargetInfo &STI) {
+void DispatchUnit::dispatch(InstRef IR, const MCSubtargetInfo &STI) {
   assert(!CarryOver && "Cannot dispatch another instruction!");
-  unsigned NumMicroOps = NewInst->getDesc().NumMicroOps;
+  Instruction &IS = *IR.getInstruction();
+  const InstrDesc &Desc = IS.getDesc();
+  const unsigned NumMicroOps = Desc.NumMicroOps;
   if (NumMicroOps > DispatchWidth) {
     assert(AvailableEntries == DispatchWidth);
     AvailableEntries = 0;
@@ -343,27 +342,26 @@ void DispatchUnit::dispatch(unsigned IID, Instruction *NewInst,
   // instruction. The assumption is that a zero-latency instruction doesn't
   // require to be issued to the scheduler for execution. More importantly, it
   // doesn't have to wait on the register input operands.
-  const InstrDesc &Desc = NewInst->getDesc();
   if (Desc.MaxLatency || !Desc.Resources.empty())
-    for (std::unique_ptr<ReadState> &RS : NewInst->getUses())
+    for (std::unique_ptr<ReadState> &RS : IS.getUses())
       updateRAWDependencies(*RS, STI);
 
   // Allocate new mappings.
   SmallVector<unsigned, 4> RegisterFiles(RAT->getNumRegisterFiles());
-  for (std::unique_ptr<WriteState> &WS : NewInst->getDefs())
+  for (std::unique_ptr<WriteState> &WS : IS.getDefs())
     RAT->addRegisterMapping(*WS, RegisterFiles);
 
   // Reserve slots in the RCU, and notify the instruction that it has been
   // dispatched to the schedulers for execution.
-  NewInst->dispatch(RCU->reserveSlot(IID, NumMicroOps));
+  IS.dispatch(RCU->reserveSlot(IR, NumMicroOps));
 
   // Notify listeners of the "instruction dispatched" event.
-  notifyInstructionDispatched(IID, RegisterFiles);
+  notifyInstructionDispatched(IR, RegisterFiles);
 
   // Now move the instruction into the scheduler's queue.
   // The scheduler is responsible for checking if this is a zero-latency
   // instruction that doesn't consume pipeline/scheduler resources.
-  SC->scheduleInstruction(IID, *NewInst);
+  SC->scheduleInstruction(IR);
 }
 
 #ifndef NDEBUG
