@@ -95,7 +95,7 @@ struct LeakedObject {
 // Aggregates leaks by stack trace prefix.
 class LeakReport {
  public:
-  LeakReport() : next_id_(0), leaks_(1), leaked_objects_(1) {}
+  LeakReport() {}
   void AddLeakedChunk(uptr chunk, u32 stack_trace_id, uptr leaked_size,
                       ChunkTag tag);
   void ReportTopLeaks(uptr max_leaks);
@@ -103,12 +103,11 @@ class LeakReport {
   void ApplySuppressions();
   uptr UnsuppressedLeakCount();
 
-
  private:
   void PrintReportForLeak(uptr index);
   void PrintLeakedObjectsForLeak(uptr index);
 
-  u32 next_id_;
+  u32 next_id_ = 0;
   InternalMmapVector<Leak> leaks_;
   InternalMmapVector<LeakedObject> leaked_objects_;
 };

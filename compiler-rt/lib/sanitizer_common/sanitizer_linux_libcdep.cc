@@ -607,7 +607,7 @@ u32 GetNumberOfCPUs() {
   uptr fd = internal_open("/sys/devices/system/cpu", O_RDONLY | O_DIRECTORY);
   if (internal_iserror(fd))
     return 0;
-  InternalScopedBuffer<u8> buffer(4096);
+  InternalMmapVector<u8> buffer(4096);
   uptr bytes_read = buffer.size();
   uptr n_cpus = 0;
   u8 *d_type;

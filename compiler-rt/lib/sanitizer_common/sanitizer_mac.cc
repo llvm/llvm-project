@@ -1032,7 +1032,8 @@ void FormatUUID(char *out, uptr size, const u8 *uuid) {
 void PrintModuleMap() {
   Printf("Process module map:\n");
   MemoryMappingLayout memory_mapping(false);
-  InternalMmapVector<LoadedModule> modules(/*initial_capacity*/ 128);
+  InternalMmapVector<LoadedModule> modules;
+  modules.reserve(128);
   memory_mapping.DumpListOfModules(&modules);
   InternalSort(&modules, modules.size(), CompareBaseAddress);
   for (uptr i = 0; i < modules.size(); ++i) {

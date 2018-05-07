@@ -42,7 +42,7 @@ void WriteLE(fd_t fd, uptr val) {
 }
 
 void OpenStatsFile(const char *path_env) {
-  InternalScopedBuffer<char> path(kMaxPathLength);
+  InternalMmapVector<char> path(kMaxPathLength);
   SubstituteForFlagValue(path_env, path.data(), kMaxPathLength);
 
   error_t err;

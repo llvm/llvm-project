@@ -23,20 +23,21 @@ bar_local:
 
 # Calling external function foo in a shared object needs a nop.
 # Calling local function bar_local doe snot need a nop.
-// CHECK: Disassembly of section .text:
 .global _start
 _start:
   bl foo
   nop
   bl bar_local
 
+
+// CHECK: Disassembly of section .text:
 // CHECK: _start:
-// CHECK: 10010008:       {{.*}}     bl .+72
-// CHECK-NOT: 1001000c:       {{.*}}     nop
-// CHECK: 1001000c:       {{.*}}     ld 2, 24(1)
-// CHECK: 10010010:       {{.*}}     bl .+67108848
-// CHECK-NOT: 10010014:       {{.*}}     nop
-// CHECK-NOT: 10010014:       {{.*}}     ld 2, 24(1)
+// CHECK:     1001001c: {{.*}}  bl .+67108836
+// CHECK-NOT: 10010020: {{.*}}  nop
+// CHECK:     10010020: {{.*}}  ld 2, 24(1)
+// CHECK:     10010024: {{.*}}  bl .+67108848
+// CHECK-NOT: 10010028: {{.*}}  nop
+// CHECK-NOT: 10010028: {{.*}}  ld 2, 24(1)
 
 # Calling a function in another object file which will have same
 # TOC base does not need a nop. If nop present, do not rewrite to
@@ -48,18 +49,18 @@ _diff_object:
   nop
 
 // CHECK: _diff_object:
-// CHECK-NEXT: 10010014:       {{.*}}     bl .+28
-// CHECK-NEXT: 10010018:       {{.*}}     bl .+24
-// CHECK-NEXT: 1001001c:       {{.*}}     nop
+// CHECK-NEXT: 10010028: {{.*}}  bl .+24
+// CHECK-NEXT: 1001002c: {{.*}}  bl .+20
+// CHECK-NEXT: 10010030: {{.*}}  nop
 
 # Branching to a local function does not need a nop
 .global noretbranch
 noretbranch:
   b bar_local
 // CHECK: noretbranch:
-// CHECK: 10010020:       {{.*}}     b .+67108832
-// CHECK-NOT: 10010024:       {{.*}}     nop
-// CHECK-NOT: 10010024:       {{.*}}     ld 2, 24(1)
+// CHECK:     10010034:  {{.*}}  b .+67108832
+// CHECK-NOT: 10010038:  {{.*}}  nop
+// CHECK-NOT: 1001003c:  {{.*}}  ld 2, 24(1)
 
 // This should come last to check the end-of-buffer condition.
 .global last
@@ -67,12 +68,5 @@ last:
   bl foo
   nop
 // CHECK: last:
-// CHECK: 10010024:       {{.*}}     bl .+44
-// CHECK-NEXT: 10010028:       {{.*}}     ld 2, 24(1)
-
-// CHECK: Disassembly of section .plt:
-// CHECK: .plt:
-// CHECK-NEXT: 10010050:       {{.*}}     std 2, 24(1)
-// CHECK-NEXT: 10010054:       {{.*}}     addis 12, 2, 4098
-// CHECK-NEXT: 10010058:       {{.*}}     ld 12, -32752(12)
-// CHECK-NEXT: 1001005c:       {{.*}}     mtctr 12
+// CHECK:      10010038: {{.*}}   bl .+67108808
+// CHECK-NEXT: 1001003c: {{.*}}   ld 2, 24(1)

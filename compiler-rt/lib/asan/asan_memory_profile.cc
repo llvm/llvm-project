@@ -31,9 +31,9 @@ struct AllocationSite {
 
 class HeapProfile {
  public:
-  HeapProfile() : allocations_(1024) {}
+  HeapProfile() { allocations_.reserve(1024); }
 
-  void ProcessChunk(const AsanChunkView& cv) {
+  void ProcessChunk(const AsanChunkView &cv) {
     if (cv.IsAllocated()) {
       total_allocated_user_size_ += cv.UsedSize();
       total_allocated_count_++;
