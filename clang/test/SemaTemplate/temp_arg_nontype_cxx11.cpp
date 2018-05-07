@@ -36,3 +36,15 @@ namespace check_conversion_early {
   struct Y { constexpr operator int() const { return 0; } };
   template<Y &y> struct A<y> {}; // expected-error {{cannot be deduced}} expected-note {{'y'}}
 }
+
+namespace ReportCorrectParam {
+template <int a, unsigned b, int c>
+void TempFunc() {}
+
+void Useage() {
+  //expected-error@+2 {{no matching function}}
+  //expected-note@-4 {{candidate template ignored: invalid explicitly-specified argument for template parameter 'b'}}
+  TempFunc<1, -1, 1>();
+}
+}
+

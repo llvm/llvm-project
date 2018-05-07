@@ -121,6 +121,7 @@ enum ResourceKind {
   // kind is equal to this type ID.
   RkNull = 0,
   RkSingleCursor = 1,
+  RkBitmap = 2,
   RkSingleIcon = 3,
   RkMenu = 4,
   RkDialog = 5,
@@ -302,6 +303,29 @@ public:
   ResourceKind getKind() const override { return RkAccelerators; }
   static bool classof(const RCResource *Res) {
     return Res->getKind() == RkAccelerators;
+  }
+};
+
+// BITMAP resource. Represents a bitmap (".bmp") file.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380680(v=vs.85).aspx
+class BitmapResource : public RCResource {
+public:
+  StringRef BitmapLoc;
+
+  BitmapResource(StringRef Location) : BitmapLoc(Location) {}
+  raw_ostream &log(raw_ostream &) const override;
+
+  IntOrString getResourceType() const override { return RkBitmap; }
+  uint16_t getMemoryFlags() const override { return MfPure | MfMoveable; }
+
+  Twine getResourceTypeName() const override { return "BITMAP"; }
+  Error visit(Visitor *V) const override {
+    return V->visitBitmapResource(this);
+  }
+  ResourceKind getKind() const override { return RkBitmap; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkBitmap;
   }
 };
 

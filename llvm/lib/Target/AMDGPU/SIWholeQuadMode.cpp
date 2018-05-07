@@ -325,9 +325,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
       unsigned Opcode = MI.getOpcode();
       char Flags = 0;
 
-      if (TII->isDS(Opcode) && CallingConv == CallingConv::AMDGPU_PS) {
-        Flags = StateWQM;
-      } else if (TII->isWQM(Opcode)) {
+      if (TII->isWQM(Opcode)) {
         // Sampling instructions don't need to produce results for all pixels
         // in a quad, they just require all inputs of a quad to have been
         // computed for derivatives.

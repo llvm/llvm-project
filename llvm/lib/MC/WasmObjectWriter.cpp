@@ -1207,8 +1207,12 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         Name = Name.substr(strlen(".custom_section."));
 
       MCSymbol* Begin = Sec.getBeginSymbol();
-      if (Begin)
+      if (Begin) {
         WasmIndices[cast<MCSymbolWasm>(Begin)] = CustomSections.size();
+        if (Name != Begin->getName())
+          report_fatal_error("section name and begin symbol should match: " +
+                             Twine(Name));
+      }
       CustomSections.emplace_back(Name, &Section);
     }
   }

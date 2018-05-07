@@ -386,7 +386,9 @@ private:
 
   std::vector<std::unique_ptr<BlockWaitcntBrackets>> KillWaitBrackets;
 
-  bool ForceEmitZeroWaitcnt;
+  // ForceEmitZeroWaitcnts: force all waitcnts insts to be s_waitcnt 0
+  // because of amdgpu-waitcnt-forcezero flag
+  bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
 public:
@@ -881,14 +883,18 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
   // To emit, or not to emit - that's the question!
   // Start with an assumption that there is no need to emit.
   unsigned int EmitWaitcnt = 0;
+
   // No need to wait before phi. If a phi-move exists, then the wait should
   // has been inserted before the move. If a phi-move does not exist, then
   // wait should be inserted before the real use. The same is true for
   // sc-merge. It is not a coincident that all these cases correspond to the
   // instructions that are skipped in the assembling loop.
   bool NeedLineMapping = false; // TODO: Check on this.
-  setForceEmitWaitcnt();
 
+  // ForceEmitZeroWaitcnt: force a single s_waitcnt 0 due to hw bug
+  bool ForceEmitZeroWaitcnt = false;
+
+  setForceEmitWaitcnt();
   bool IsForceEmitWaitcnt = isForceEmitWaitcnt();
 
   if (MI.isDebugValue() &&
@@ -1128,6 +1134,9 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
       // block, so if we only wait on LGKM here, we might end up with
       // another s_waitcnt inserted right after this if there are non-LGKM
       // instructions still outstanding.
+      // FIXME: this is too conservative / the comment is wrong.
+      // We don't wait on everything at the end of the block and we combine
+      // waitcnts so we should never have back-to-back waitcnts.
       ForceEmitZeroWaitcnt = true;
       EmitWaitcnt = true;
     }
@@ -1138,7 +1147,7 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
     int CntVal[NUM_INST_CNTS];
 
     bool UseDefaultWaitcntStrategy = true;
-    if (ForceEmitZeroWaitcnt) {
+    if (ForceEmitZeroWaitcnt || ForceEmitZeroWaitcnts) {
       // Force all waitcnts to 0.
       for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
            T = (enum InstCounterType)(T + 1)) {
@@ -1232,7 +1241,7 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
       }
       if (insertSWaitInst) {
         if (OldWaitcnt && OldWaitcnt->getOpcode() == AMDGPU::S_WAITCNT) {
-          if (ForceEmitZeroWaitcnt)
+          if (ForceEmitZeroWaitcnts)
             DEBUG(dbgs() << "Force emit s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)\n");
           if (IsForceEmitWaitcnt)
             DEBUG(dbgs() << "Force emit a s_waitcnt due to debug counter\n");
@@ -1828,7 +1837,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   AMDGPUASI = ST->getAMDGPUAS();
 
-  ForceEmitZeroWaitcnt = ForceEmitZeroFlag;
+  ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
        T = (enum InstCounterType)(T + 1))
     ForceEmitWaitcnt[T] = false;

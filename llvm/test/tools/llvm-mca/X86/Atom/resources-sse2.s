@@ -407,7 +407,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      5     5.00                    	addsd	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     5.00    *               	addsd	(%rax), %xmm2
 # CHECK-NEXT:  1      6     3.00                    	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     3.00    *               	addsubpd	(%rax), %xmm2
+# CHECK-NEXT:  1      7     3.50    *               	addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                    	andnpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *               	andnpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                    	andpd	%xmm0, %xmm2
@@ -673,7 +673,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 872.50 644.50
+# CHECK-NEXT: 873.00 645.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    	Instructions:
@@ -682,7 +682,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 5.00    -     	addsd	%xmm0, %xmm2
 # CHECK-NEXT: 5.00    -     	addsd	(%rax), %xmm2
 # CHECK-NEXT: 3.00   3.00   	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT: 3.00   3.00   	addsubpd	(%rax), %xmm2
+# CHECK-NEXT: 3.50   3.50   	addsubpd	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50   	andnpd	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     	andnpd	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50   	andpd	%xmm0, %xmm2

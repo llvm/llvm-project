@@ -330,9 +330,10 @@ class Sema;
     }
     
     ImplicitConversionRank getRank() const;
-    NarrowingKind getNarrowingKind(ASTContext &Context, const Expr *Converted,
-                                   APValue &ConstantValue,
-                                   QualType &ConstantType) const;
+    NarrowingKind
+    getNarrowingKind(ASTContext &Context, const Expr *Converted,
+                     APValue &ConstantValue, QualType &ConstantType,
+                     bool IgnoreFloatToIntegralConversion = false) const;
     bool isPointerConversionToBool() const;
     bool isPointerConversionToVoidPointer(ASTContext& Context) const;
     void dump() const;

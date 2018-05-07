@@ -1,4 +1,3 @@
-
 //===----------------------- HWEventListener.h ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -16,6 +15,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_HWEVENTLISTENER_H
 #define LLVM_TOOLS_LLVM_MCA_HWEVENTLISTENER_H
 
+#include "Instruction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <utility>
 
@@ -48,30 +48,30 @@ public:
     LastGenericEventType,
   };
 
-  HWInstructionEvent(unsigned type, unsigned index)
-      : Type(type), Index(index) {}
+  HWInstructionEvent(unsigned type, const InstRef &Inst)
+      : Type(type), IR(Inst) {}
 
   // The event type. The exact meaning depends on the subtarget.
   const unsigned Type;
-  // The index of the instruction in the source manager.
-  const unsigned Index;
+
+  // The instruction this event was generated for.
+  const InstRef &IR;
 };
 
 class HWInstructionIssuedEvent : public HWInstructionEvent {
 public:
   using ResourceRef = std::pair<uint64_t, uint64_t>;
-  HWInstructionIssuedEvent(unsigned Index,
+  HWInstructionIssuedEvent(const InstRef &IR,
                            llvm::ArrayRef<std::pair<ResourceRef, double>> UR)
-      : HWInstructionEvent(HWInstructionEvent::Issued, Index),
-        UsedResources(UR) {}
+      : HWInstructionEvent(HWInstructionEvent::Issued, IR), UsedResources(UR) {}
 
   llvm::ArrayRef<std::pair<ResourceRef, double>> UsedResources;
 };
 
 class HWInstructionDispatchedEvent : public HWInstructionEvent {
 public:
-  HWInstructionDispatchedEvent(unsigned Index, llvm::ArrayRef<unsigned> Regs)
-      : HWInstructionEvent(HWInstructionEvent::Dispatched, Index),
+  HWInstructionDispatchedEvent(const InstRef &IR, llvm::ArrayRef<unsigned> Regs)
+      : HWInstructionEvent(HWInstructionEvent::Dispatched, IR),
         UsedPhysRegs(Regs) {}
   // Number of physical register allocated for this instruction. There is one
   // entry per register file.
@@ -80,8 +80,8 @@ public:
 
 class HWInstructionRetiredEvent : public HWInstructionEvent {
 public:
-  HWInstructionRetiredEvent(unsigned Index, llvm::ArrayRef<unsigned> Regs)
-      : HWInstructionEvent(HWInstructionEvent::Retired, Index),
+  HWInstructionRetiredEvent(const InstRef &IR, llvm::ArrayRef<unsigned> Regs)
+      : HWInstructionEvent(HWInstructionEvent::Retired, IR),
         FreedPhysRegs(Regs) {}
   // Number of register writes that have been architecturally committed. There
   // is one entry per register file.
@@ -105,12 +105,13 @@ public:
     LastGenericEvent
   };
 
-  HWStallEvent(unsigned type, unsigned index) : Type(type), Index(index) {}
+  HWStallEvent(unsigned type, const InstRef &Inst) : Type(type), IR(Inst) {}
 
   // The exact meaning of the stall event type depends on the subtarget.
   const unsigned Type;
-  // The index of the instruction in the source manager.
-  const unsigned Index;
+
+  // The instruction this event was generated for.
+  const InstRef &IR;
 };
 
 class HWEventListener {

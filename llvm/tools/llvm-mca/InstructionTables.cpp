@@ -30,8 +30,8 @@ void InstructionTables::run() {
   // Create an instruction descriptor for every instruction in the sequence.
   while (S.hasNext()) {
     UsedResources.clear();
-    InstRef IR = S.peekNext();
-    std::unique_ptr<Instruction> Inst = IB.createInstruction(*IR.second);
+    SourceRef SR = S.peekNext();
+    std::unique_ptr<Instruction> Inst = IB.createInstruction(*SR.second);
     const InstrDesc &Desc = Inst->getDesc();
     // Now identify the resources consumed by this instruction.
     for (const std::pair<uint64_t, ResourceUsage> Resource : Desc.Resources) {
@@ -70,7 +70,8 @@ void InstructionTables::run() {
     }
 
     // Now send a fake instruction issued event to all the views.
-    HWInstructionIssuedEvent Event(IR.first, UsedResources);
+    InstRef IR(SR.first, Inst.get());
+    HWInstructionIssuedEvent Event(IR, UsedResources);
     for (std::unique_ptr<View> &Listener : Views)
       Listener->onInstructionEvent(Event);
     S.updateNext();

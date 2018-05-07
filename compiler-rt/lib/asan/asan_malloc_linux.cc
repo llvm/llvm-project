@@ -16,7 +16,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
-    SANITIZER_NETBSD || SANITIZER_SOLARIS
+    SANITIZER_NETBSD || SANITIZER_RTEMS || SANITIZER_SOLARIS
 
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "asan_allocator.h"
@@ -28,7 +28,7 @@
 using namespace __asan;  // NOLINT
 
 static uptr allocated_for_dlsym;
-static const uptr kDlsymAllocPoolSize = 1024;
+static const uptr kDlsymAllocPoolSize = SANITIZER_RTEMS ? 4096 : 1024;
 static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
 
 static INLINE bool IsInDlsymAllocPool(const void *ptr) {
@@ -44,16 +44,26 @@ static void *AllocateFromLocalPool(uptr size_in_bytes) {
   return mem;
 }
 
+// On RTEMS, we use the local pool to handle memory allocation before
+// the ASan run-time has been initialized.
+static INLINE bool EarlyMalloc() {
+  return SANITIZER_RTEMS && (!asan_inited || asan_init_is_running);
+}
+
 static INLINE bool MaybeInDlsym() {
   // Fuchsia doesn't use dlsym-based interceptors.
   return !SANITIZER_FUCHSIA && asan_init_is_running;
+}
+
+static INLINE bool UseLocalPool() {
+  return EarlyMalloc() || MaybeInDlsym();
 }
 
 static void *ReallocFromLocalPool(void *ptr, uptr size) {
   const uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
   const uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
   void *new_ptr;
-  if (UNLIKELY(MaybeInDlsym())) {
+  if (UNLIKELY(UseLocalPool())) {
     new_ptr = AllocateFromLocalPool(size);
   } else {
     ENSURE_ASAN_INITED();
@@ -81,7 +91,7 @@ INTERCEPTOR(void, cfree, void *ptr) {
 #endif // SANITIZER_INTERCEPT_CFREE
 
 INTERCEPTOR(void*, malloc, uptr size) {
-  if (UNLIKELY(MaybeInDlsym()))
+  if (UNLIKELY(UseLocalPool()))
     // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
     return AllocateFromLocalPool(size);
   ENSURE_ASAN_INITED();
@@ -90,7 +100,7 @@ INTERCEPTOR(void*, malloc, uptr size) {
 }
 
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
-  if (UNLIKELY(MaybeInDlsym()))
+  if (UNLIKELY(UseLocalPool()))
     // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
     return AllocateFromLocalPool(nmemb * size);
   ENSURE_ASAN_INITED();
@@ -101,7 +111,7 @@ INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (UNLIKELY(IsInDlsymAllocPool(ptr)))
     return ReallocFromLocalPool(ptr, size);
-  if (UNLIKELY(MaybeInDlsym()))
+  if (UNLIKELY(UseLocalPool()))
     return AllocateFromLocalPool(size);
   ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
