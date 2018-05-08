@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 
 // CHECK: @__omp_offloading_{{.*}}_main_l16_exec_mode = weak constant i8 0
 
-// CHECK: define void @__omp_offloading_{{.*}}_main_l16(i{{64|32}} %{{[^,].*}}, i32* dereferenceable{{[^,]*}}, i{{64|32}} %{{[^,)]*}})
+// CHECK: define weak void @__omp_offloading_{{.*}}_main_l16(i{{64|32}} %{{[^,].*}}, i32* dereferenceable{{[^,]*}}, i{{64|32}} %{{[^,)]*}})
 // CHECK: [[TID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @
 // CHECK: call void @__kmpc_spmd_kernel_init(
 // CHECK: call void @__kmpc_for_static_init_4(

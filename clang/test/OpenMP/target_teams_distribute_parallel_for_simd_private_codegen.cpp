@@ -282,7 +282,7 @@ int main() {
 // HCHECK: ret
 
 // HCHECK: define {{.*}}void @[[TOFFL1]]()
-// TCHECK: define void @[[TOFFL1:.+]]()
+// TCHECK: define weak void @[[TOFFL1:.+]]()
 // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 0, {{.+}} @[[TOUTL1:.+]] to {{.+}})
 // CHECK: ret void
 

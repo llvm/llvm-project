@@ -2789,15 +2789,19 @@ auto Y() -&gt; int {}
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isConstexpr1')"><a name="isConstexpr1Anchor">isConstexpr</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isConstexpr1"><pre>Matches constexpr variable and function declarations.
+<tr><td colspan="4" class="doc" id="isConstexpr1"><pre>Matches constexpr variable and function declarations,
+       and if constexpr.
 
 Given:
   constexpr int foo = 42;
   constexpr int bar();
+  void baz() { if constexpr(1 &gt; 0) {} }
 varDecl(isConstexpr())
   matches the declaration of foo.
 functionDecl(isConstexpr())
   matches the declaration of bar.
+ifStmt(isConstexpr())
+  matches the if statement in baz.
 </pre></td></tr>
 
 
@@ -3036,6 +3040,23 @@ functionProtoType(parameterCountIs(2))
   matches g and h
 functionProtoType(parameterCountIs(3))
   matches k
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IfStmt.html">IfStmt</a>&gt;</td><td class="name" onclick="toggle('isConstexpr2')"><a name="isConstexpr2Anchor">isConstexpr</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConstexpr2"><pre>Matches constexpr variable and function declarations,
+       and if constexpr.
+
+Given:
+  constexpr int foo = 42;
+  constexpr int bar();
+  void baz() { if constexpr(1 &gt; 0) {} }
+varDecl(isConstexpr())
+  matches the declaration of foo.
+functionDecl(isConstexpr())
+  matches the declaration of bar.
+ifStmt(isConstexpr())
+  matches the if statement in baz.
 </pre></td></tr>
 
 
@@ -3803,15 +3824,19 @@ int a;
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isConstexpr0')"><a name="isConstexpr0Anchor">isConstexpr</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isConstexpr0"><pre>Matches constexpr variable and function declarations.
+<tr><td colspan="4" class="doc" id="isConstexpr0"><pre>Matches constexpr variable and function declarations,
+       and if constexpr.
 
 Given:
   constexpr int foo = 42;
   constexpr int bar();
+  void baz() { if constexpr(1 &gt; 0) {} }
 varDecl(isConstexpr())
   matches the declaration of foo.
 functionDecl(isConstexpr())
   matches the declaration of bar.
+ifStmt(isConstexpr())
+  matches the if statement in baz.
 </pre></td></tr>
 
 

@@ -87,11 +87,6 @@ struct ClangTidyStats {
   }
 };
 
-/// \brief Container for clang-tidy profiling data.
-struct ProfileData {
-  llvm::StringMap<llvm::TimeRecord> Records;
-};
-
 /// \brief Every \c ClangTidyCheck reports errors through a \c DiagnosticsEngine
 /// provided by this context.
 ///
@@ -169,12 +164,9 @@ public:
   /// \brief Clears collected errors.
   void clearErrors() { Errors.clear(); }
 
-  /// \brief Set the output struct for profile data.
-  ///
-  /// Setting a non-null pointer here will enable profile collection in
-  /// clang-tidy.
-  void setCheckProfileData(ProfileData *Profile);
-  ProfileData *getCheckProfileData() const { return Profile; }
+  /// \brief Control profile collection in clang-tidy.
+  void setEnableProfiling(bool Profile);
+  bool getEnableProfiling() const { return Profile; }
 
   /// \brief Should be called when starting to process new translation unit.
   void setCurrentBuildDirectory(StringRef BuildDirectory) {
@@ -216,7 +208,7 @@ private:
 
   llvm::DenseMap<unsigned, std::string> CheckNamesByDiagnosticID;
 
-  ProfileData *Profile;
+  bool Profile;
 };
 
 /// \brief A diagnostic consumer that turns each \c Diagnostic into a

@@ -920,6 +920,7 @@ static llvm::Value *EmitCompare(CGBuilderTy &Builder, CodeGenFunction &CGF,
     case CK_Equal:
       return {"cmp.eq", FI::FCMP_OEQ, II::ICMP_EQ, II::ICMP_EQ};
     }
+    llvm_unreachable("Unrecognised CompareKind enum");
   }();
 
   if (ArgTy->hasFloatingRepresentation())

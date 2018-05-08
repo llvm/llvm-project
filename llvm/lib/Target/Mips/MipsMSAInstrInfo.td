@@ -181,8 +181,28 @@ def vsplati16 : PatFrag<(ops node:$e0),
 def vsplati32 : PatFrag<(ops node:$e0),
                         (v4i32 (build_vector node:$e0, node:$e0,
                                              node:$e0, node:$e0))>;
+
+def vsplati64_imm_eq_1 : PatLeaf<(bitconvert (v4i32 (build_vector))), [{
+  APInt Imm;
+  SDNode *BV = N->getOperand(0).getNode();
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+
+  return selectVSplat(BV, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
+}]>;
+
 def vsplati64 : PatFrag<(ops node:$e0),
                         (v2i64 (build_vector node:$e0, node:$e0))>;
+
+def vsplati64_splat_d : PatFrag<(ops node:$e0),
+                                (v2i64 (bitconvert
+                                         (v4i32 (and
+                                           (v4i32 (build_vector node:$e0,
+                                                                node:$e0,
+                                                                node:$e0,
+                                                                node:$e0)),
+                                           vsplati64_imm_eq_1))))>;
+
 def vsplatf32 : PatFrag<(ops node:$e0),
                         (v4f32 (build_vector node:$e0, node:$e0,
                                              node:$e0, node:$e0))>;
@@ -196,7 +216,8 @@ def vsplati16_elt : PatFrag<(ops node:$v, node:$i),
 def vsplati32_elt : PatFrag<(ops node:$v, node:$i),
                             (MipsVSHF (vsplati32 node:$i), node:$v, node:$v)>;
 def vsplati64_elt : PatFrag<(ops node:$v, node:$i),
-                            (MipsVSHF (vsplati64 node:$i), node:$v, node:$v)>;
+                            (MipsVSHF (vsplati64_splat_d node:$i),
+                                      node:$v, node:$v)>;
 
 class SplatPatLeaf<Operand opclass, dag frag, code pred = [{}],
                    SDNodeXForm xform = NOOP_SDNodeXForm>
@@ -324,15 +345,6 @@ def vsplat_imm_eq_1 : PatLeaf<(build_vector), [{
   EVT EltTy = N->getValueType(0).getVectorElementType();
 
   return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
-         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
-}]>;
-
-def vsplati64_imm_eq_1 : PatLeaf<(bitconvert (v4i32 (build_vector))), [{
-  APInt Imm;
-  SDNode *BV = N->getOperand(0).getNode();
-  EVT EltTy = N->getValueType(0).getVectorElementType();
-
-  return selectVSplat(BV, Imm, EltTy.getSizeInBits()) &&
          Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
 }]>;
 

@@ -1,9 +1,9 @@
 ; Test the MSA splat intrinsics that are encoded with the 3R instruction
 ; format.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | \
+; RUN: llc -march=mips -mcpu=mips32r5 -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:     FileCheck -check-prefix=MIPS32 %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | \
+; RUN: llc -march=mipsel -mcpu=mips32r5 -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:     FileCheck -check-prefix=MIPS32 %s
 
 @llvm_mips_splat_b_ARG1 = global <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, align 16
@@ -83,14 +83,11 @@ entry:
 declare <2 x i64> @llvm.mips.splat.d(<2 x i64>, i32) nounwind
 
 ; MIPS32: llvm_mips_splat_d_test:
-; FIXME: This test is currently disabled for MIPS32 because the indices are
-;        difficult to match. This is because 64-bit values cannot be stored in
-;        GPR32.
-; MIPS64-DAG: lw   [[R1:\$[0-9]+]], %got(llvm_mips_splat_d_ARG1)(
-; MIPS64-DAG: lw   [[R2:\$[0-9]+]], %got(llvm_mips_splat_d_RES)(
-; MIPS64-DAG: ld.d [[R3:\$w[0-9]+]], 0([[R1]])
-; MIPS64-DAG: splat.d [[R4:\$w[0-9]+]], [[R3]][$4]
-; MIPS64-DAG: st.d [[R4]], 0([[R2]])
+; MIPS32-DAG: lw   [[R1:\$[0-9]+]], %got(llvm_mips_splat_d_ARG1)(
+; MIPS32-DAG: lw   [[R2:\$[0-9]+]], %got(llvm_mips_splat_d_RES)(
+; MIPS32-DAG: ld.d [[R3:\$w[0-9]+]], 0([[R1]])
+; MIPS32-DAG: splat.d [[R4:\$w[0-9]+]], [[R3]][$4]
+; MIPS32-DAG: st.d [[R4]], 0([[R2]])
 ; MIPS32: .size llvm_mips_splat_d_test
 
 define void @llvm_mips_splat_d_arg_test(i32 %arg) {
@@ -99,10 +96,14 @@ entry:
   store volatile <2 x i64> %0, <2 x i64>* @llvm_mips_splat_d_RES
   ret void
 }
-; CHECK-LABEL: llvm_mips_splat_d_arg_test
-; CHECK: ldi.w [[R1:\$w[0-9]+]], 1 
-; CHECK: and.v [[R2:\$w[0-9]+]], {{\$w[0-9]+}}, [[R1]]
-; CHECK: vshf.d [[R2]], {{.*}}
+; MIPS32-LABEL: llvm_mips_splat_d_arg_test
+; MIPS32-DAG: lw      [[R0:\$[0-9]+]], %got(
+; MIPS32-DAG: addiu   [[R1:\$[0-9]+]], [[R0]], %lo(
+; MIPS32-DAG: lw      [[R2:\$[0-9]+]], %got(llvm_mips_splat_d_RES)(
+; MIPS32-DAG: ld.d    [[R3:\$w[0-9]+]], 0([[R1]])
+; MIPS32-DAG: splat.d [[R4:\$w[0-9]+]], [[R3]][$4]
+; MIPS32-DAG: st.d    [[R4]], 0([[R2]])
+; MIPS32-NOT: vshf.d
 
 define void @llvm_mips_splat_d_imm_test() {
 entry:
@@ -110,6 +111,11 @@ entry:
   store volatile<2 x i64> %0, <2 x i64>* @llvm_mips_splat_d_RES
   ret void
 }
-; CHECK-LABEL: llvm_mips_splat_d_imm_test
-; CHECK: splati. d {{.*}}, {{.*}}[0]
-; CHECK-NOT: vshf.d
+; MIPS32-LABEL: llvm_mips_splat_d_imm_test
+; MIPS32-DAG: lw       [[R0:\$[0-9]+]], %got(
+; MIPS32-DAG: addiu    [[R1:\$[0-9]+]], [[R0]], %lo(
+; MIPS32-DAG: lw       [[R2:\$[0-9]+]], %got(llvm_mips_splat_d_RES)(
+; MIPS32-DAG: ld.d     [[R3:\$w[0-9]+]], 0([[R1]])
+; MIPS32-DAG: splati.d [[R4:\$w[0-9]+]], [[R3]][0]
+; MIPS32-DAG: st.d     [[R4]], 0([[R2]])
+; MIPS32-NOT: vshf.d

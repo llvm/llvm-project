@@ -1200,6 +1200,7 @@ def ScalarLoads {
 */
 def HasP8Vector : Predicate<"PPCSubTarget->hasP8Vector()">;
 def HasDirectMove : Predicate<"PPCSubTarget->hasDirectMove()">;
+def NoP9Vector : Predicate<"!PPCSubTarget->hasP9Vector()">;
 let Predicates = [HasP8Vector] in {
 let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   let isCommutable = 1, UseVSXReg = 1 in {
@@ -1464,6 +1465,25 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   }
   def : Pat<(v4i32 (scalar_to_vector ScalarLoads.Li32)),
             (v4i32 (XXSPLTWs (LIWAX xoaddr:$src), 1))>;
+
+  // Instructions for converting float to i64 feeding a store.
+  let Predicates = [NoP9Vector] in {
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), xoaddr:$dst, 8),
+            (STXSDX (XSCVDPSXDS f64:$src), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xoaddr:$dst, 8),
+            (STXSDX (XSCVDPUXDS f64:$src), xoaddr:$dst)>;
+  }
+
+  // Instructions for converting float to i32 feeding a store.
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), xoaddr:$dst, 4),
+            (STIWX (XSCVDPSXWS f64:$src), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xoaddr:$dst, 4),
+            (STIWX (XSCVDPUXWS f64:$src), xoaddr:$dst)>;
+
 } // AddedComplexity = 400
 } // HasP8Vector
 
@@ -2510,7 +2530,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XSCVQPUDZ : X_VT5_XO5_VB5<63, 17, 836, "xscvqpudz", []>;
   def XSCVQPUWZ : X_VT5_XO5_VB5<63,  1, 836, "xscvqpuwz", []>;
 
-  // Convert (Un)Signed DWord -> QP
+  // Convert (Un)Signed DWord -> QP.
   def XSCVSDQP  : X_VT5_XO5_VB5_TyVB<63, 10, 836, "xscvsdqp", vfrc, []>;
   def : Pat<(f128 (sint_to_fp i64:$src)),
             (f128 (XSCVSDQP (COPY_TO_REGCLASS $src, VFRC)))>;
@@ -2518,7 +2538,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(f128 (uint_to_fp i64:$src)),
             (f128 (XSCVUDQP (COPY_TO_REGCLASS $src, VFRC)))>;
 
-  // Convert (Un)Signed Word -> QP
+  // Convert (Un)Signed Word -> QP.
   def : Pat<(f128 (sint_to_fp i32:$src)),
             (f128 (XSCVSDQP (MTVSRWA $src)))>;
   def : Pat<(f128 (sint_to_fp (i32 (load xoaddr:$src)))),
@@ -3150,8 +3170,78 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(f128 (uint_to_fp ScalarLoads.ZELi8)),
             (f128 (XSCVUDQP (LXSIBZX xoaddr:$src)))>;
 
-} // end HasP9Vector, AddedComplexity
+  // Truncate & Convert QP -> (Un)Signed (D)Word.
+  def : Pat<(i64 (fp_to_sint f128:$src)), (i64 (MFVRD (XSCVQPSDZ $src)))>;
+  def : Pat<(i64 (fp_to_uint f128:$src)), (i64 (MFVRD (XSCVQPUDZ $src)))>;
+  def : Pat<(i32 (fp_to_sint f128:$src)),
+            (i32 (MFVSRWZ (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC)))>;
+  def : Pat<(i32 (fp_to_uint f128:$src)),
+            (i32 (MFVSRWZ (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC)))>;
 
+  // Instructions for store(fptosi).
+  // The 8-byte version is repeated here due to availability of D-Form STXSD.
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), xaddr:$dst, 8),
+            (STXSDX (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
+                    xaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), ixaddr:$dst, 8),
+            (STXSD (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
+                   ixaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), xoaddr:$dst, 4),
+            (STXSIWX (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), xoaddr:$dst, 2),
+            (STXSIHX (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), xoaddr:$dst, 1),
+            (STXSIBX (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), xaddr:$dst, 8),
+            (STXSDX (XSCVDPSXDS f64:$src), xaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), ixaddr:$dst, 8),
+            (STXSD (XSCVDPSXDS f64:$src), ixaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), xoaddr:$dst, 2),
+            (STXSIHX (XSCVDPSXWS f64:$src), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), xoaddr:$dst, 1),
+            (STXSIBX (XSCVDPSXWS f64:$src), xoaddr:$dst)>;
+
+  // Instructions for store(fptoui).
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), xaddr:$dst, 8),
+            (STXSDX (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
+                    xaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), ixaddr:$dst, 8),
+            (STXSD (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
+                   ixaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), xoaddr:$dst, 4),
+            (STXSIWX (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), xoaddr:$dst, 2),
+            (STXSIHX (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), xoaddr:$dst, 1),
+            (STXSIBX (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xaddr:$dst, 8),
+            (STXSDX (XSCVDPUXDS f64:$src), xaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), ixaddr:$dst, 8),
+            (STXSD (XSCVDPUXDS f64:$src), ixaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xoaddr:$dst, 2),
+            (STXSIHX (XSCVDPUXWS f64:$src), xoaddr:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr
+              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xoaddr:$dst, 1),
+            (STXSIBX (XSCVDPUXWS f64:$src), xoaddr:$dst)>;
+
+} // end HasP9Vector, AddedComplexity
 let Predicates = [HasP9Vector] in {
   let isPseudo = 1 in {
     let mayStore = 1 in {
@@ -3305,7 +3395,6 @@ def MrgFP {
 }
 
 // Patterns for BUILD_VECTOR nodes.
-def NoP9Vector : Predicate<"!PPCSubTarget->hasP9Vector()">;
 let AddedComplexity = 400 in {
 
   let Predicates = [HasVSX] in {

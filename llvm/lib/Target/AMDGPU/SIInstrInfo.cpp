@@ -2869,6 +2869,22 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  const MachineOperand *DppCt = getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl);
+  if (DppCt) {
+    using namespace AMDGPU::DPP;
+
+    unsigned DC = DppCt->getImm();
+    if (DC == DppCtrl::DPP_UNUSED1 || DC == DppCtrl::DPP_UNUSED2 ||
+        DC == DppCtrl::DPP_UNUSED3 || DC > DppCtrl::DPP_LAST ||
+        (DC >= DppCtrl::DPP_UNUSED4_FIRST && DC <= DppCtrl::DPP_UNUSED4_LAST) ||
+        (DC >= DppCtrl::DPP_UNUSED5_FIRST && DC <= DppCtrl::DPP_UNUSED5_LAST) ||
+        (DC >= DppCtrl::DPP_UNUSED6_FIRST && DC <= DppCtrl::DPP_UNUSED6_LAST) ||
+        (DC >= DppCtrl::DPP_UNUSED7_FIRST && DC <= DppCtrl::DPP_UNUSED7_LAST)) {
+      ErrInfo = "Invalid dpp_ctrl value";
+      return false;
+    }
+  }
+
   return true;
 }
 

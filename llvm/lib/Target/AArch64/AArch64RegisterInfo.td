@@ -612,13 +612,32 @@ defm VecListTwo   : VectorList<2, DD,    QQ>;
 defm VecListThree : VectorList<3, DDD,   QQQ>;
 defm VecListFour  : VectorList<4, DDDD,  QQQQ>;
 
+class FPRAsmOperand<string RC> : AsmOperandClass {
+  let Name = "FPRAsmOperand" # RC;
+  let PredicateMethod = "isGPR64<AArch64::" # RC # "RegClassID>";
+  let RenderMethod = "addRegOperands";
+}
 
 // Register operand versions of the scalar FP registers.
-def FPR16Op : RegisterOperand<FPR16, "printOperand">;
-def FPR32Op : RegisterOperand<FPR32, "printOperand">;
-def FPR64Op : RegisterOperand<FPR64, "printOperand">;
-def FPR128Op : RegisterOperand<FPR128, "printOperand">;
+def FPR8Op  : RegisterOperand<FPR8, "printOperand"> {
+  let ParserMatchClass = FPRAsmOperand<"FPR8">;
+}
 
+def FPR16Op  : RegisterOperand<FPR16, "printOperand"> {
+  let ParserMatchClass = FPRAsmOperand<"FPR16">;
+}
+
+def FPR32Op  : RegisterOperand<FPR32, "printOperand"> {
+  let ParserMatchClass = FPRAsmOperand<"FPR32">;
+}
+
+def FPR64Op  : RegisterOperand<FPR64, "printOperand"> {
+  let ParserMatchClass = FPRAsmOperand<"FPR64">;
+}
+
+def FPR128Op : RegisterOperand<FPR128, "printOperand"> {
+  let ParserMatchClass = FPRAsmOperand<"FPR128">;
+}
 
 //===----------------------------------------------------------------------===//
 // ARMv8.1a atomic CASP register operands

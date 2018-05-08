@@ -145,7 +145,8 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
     if (PN)
       PN->addIncoming(BB->getTerminator()->getOperand(0), BB);
 
-    BB->getInstList().pop_back();  // Remove the return insn
+    // Remove and delete the return inst.
+    BB->getTerminator()->eraseFromParent();
     BranchInst::Create(NewRetBlock, BB);
   }
 
@@ -190,7 +191,8 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
       new UnreachableInst(F.getContext(), UnreachableBlock);
 
       for (BasicBlock *BB : UnreachableBlocks) {
-        BB->getInstList().pop_back();  // Remove the unreachable inst.
+        // Remove and delete the unreachable inst.
+        BB->getTerminator()->eraseFromParent();
         BranchInst::Create(UnreachableBlock, BB);
       }
     }
@@ -201,7 +203,8 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
 
       Type *RetTy = F.getReturnType();
       Value *RetVal = RetTy->isVoidTy() ? nullptr : UndefValue::get(RetTy);
-      UnreachableBlock->getInstList().pop_back();  // Remove the unreachable inst.
+      // Remove and delete the unreachable inst.
+      UnreachableBlock->getTerminator()->eraseFromParent();
 
       Function *UnreachableIntrin =
         Intrinsic::getDeclaration(F.getParent(), Intrinsic::amdgcn_unreachable);

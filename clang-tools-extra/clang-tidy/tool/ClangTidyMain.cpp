@@ -236,45 +236,6 @@ static void printStats(const ClangTidyStats &Stats) {
   }
 }
 
-static void printProfileData(const ProfileData &Profile,
-                             llvm::raw_ostream &OS) {
-  // Time is first to allow for sorting by it.
-  std::vector<std::pair<llvm::TimeRecord, StringRef>> Timers;
-  TimeRecord Total;
-
-  for (const auto &P : Profile.Records) {
-    Timers.emplace_back(P.getValue(), P.getKey());
-    Total += P.getValue();
-  }
-
-  std::sort(Timers.begin(), Timers.end());
-
-  std::string Line = "===" + std::string(73, '-') + "===\n";
-  OS << Line;
-
-  if (Total.getUserTime())
-    OS << "   ---User Time---";
-  if (Total.getSystemTime())
-    OS << "   --System Time--";
-  if (Total.getProcessTime())
-    OS << "   --User+System--";
-  OS << "   ---Wall Time---";
-  if (Total.getMemUsed())
-    OS << "  ---Mem---";
-  OS << "  --- Name ---\n";
-
-  // Loop through all of the timing data, printing it out.
-  for (auto I = Timers.rbegin(), E = Timers.rend(); I != E; ++I) {
-    I->first.print(Total, OS);
-    OS << I->second << '\n';
-  }
-
-  Total.print(Total, OS);
-  OS << "Total\n";
-  OS << Line << "\n";
-  OS.flush();
-}
-
 static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
    llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   ClangTidyGlobalOptions GlobalOptions;
@@ -424,7 +385,6 @@ static int clangTidyMain(int argc, const char **argv) {
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return 1;
   }
-  ProfileData Profile;
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
@@ -432,7 +392,7 @@ static int clangTidyMain(int argc, const char **argv) {
 
   ClangTidyContext Context(std::move(OwningOptionsProvider));
   runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
-               EnableCheckProfile ? &Profile : nullptr);
+               EnableCheckProfile);
   ArrayRef<ClangTidyError> Errors = Context.getErrors();
   bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
                        return E.DiagLevel == ClangTidyError::Error;
@@ -463,9 +423,6 @@ static int clangTidyMain(int argc, const char **argv) {
           << "Found compiler errors, but -fix-errors was not specified.\n"
              "Fixes have NOT been applied.\n\n";
   }
-
-  if (EnableCheckProfile)
-    printProfileData(Profile, llvm::errs());
 
   if (WErrorCount) {
     if (!Quiet) {
