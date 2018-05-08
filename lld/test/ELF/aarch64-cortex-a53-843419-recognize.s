@@ -262,7 +262,7 @@ t3_ffc_stnp:
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 3BFFC in unpatched output.
 // CHECK: t3_ffc_st1singlepost:
 // CHECK-NEXT:    3bffc:        37 01 00 b0     adrp    x23, #151552
-// CHECK-NEXT:    3c000:        20 70 82 4c     st1     { v0.16b }, [x1], x2
+// CHECK-NEXT:    3c000:        20 04 82 0d     st1 { v0.b }[1], [x1], x2
 // CHECK-FIX:     3c004:        1c 50 00 14     b       #82032
 // CHECK-NOFIX:   3c004:        f6 06 40 f9     ldr     x22, [x23, #8]
 // CHECK-NEXT:    3c008:        c0 03 5f d6     ret
@@ -273,7 +273,7 @@ t3_ffc_stnp:
         .space 4096 - 4
 t3_ffc_st1singlepost:
         adrp x23, dat2
-        st1 { v0.16b }, [x1], x2
+        st1 { v0.b }[1], [x1], x2
         ldr x22, [x23, :lo12:dat2]
         ret
 
@@ -438,7 +438,7 @@ t4_ffc_stnp:
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 4DFFC in unpatched output.
 // CHECK: t4_ffc_st1:
 // CHECK-NEXT:    4dffc:        98 00 00 f0     adrp    x24, #77824
-// CHECK-NEXT:    4e000:        20 70 00 4c     st1     { v0.16b }, [x1]
+// CHECK-NEXT:    4e000:        20 80 00 4d     st1 { v0.s }[2], [x1]
 // CHECK-NEXT:    4e004:        f6 06 40 f9     ldr     x22, [x23, #8]
 // CHECK-FIX:     4e008:        2d 08 00 14     b       #8372
 // CHECK-NOFIX:   4e008:        18 ff 3f f9     str     x24, [x24, #32760]
@@ -450,7 +450,7 @@ t4_ffc_stnp:
         .space 4096 - 4
 t4_ffc_st1:
         adrp x24, dat2
-        st1 { v0.16b }, [x1]
+        st1 { v0.s }[2], [x1]
         ldr x22, [x23, :got_lo12:dat2]
         str x24, [x24, #32760]
         ret
