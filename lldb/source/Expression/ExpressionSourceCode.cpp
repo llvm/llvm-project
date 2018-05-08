@@ -11,6 +11,9 @@
 
 #include <algorithm>
 
+#include "llvm/ADT/StringRef.h"
+#include "clang/Basic/CharInfo.h"
+
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
@@ -182,14 +185,29 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
   }
 }
 
+static bool ExprBodyContainsVar(llvm::StringRef var, llvm::StringRef body) {
+  int from = 0;
+  while ((from = body.find(var, from)) != llvm::StringRef::npos) {
+    if ((from != 0 && clang::isIdentifierBody(body[from-1])) ||
+        (from + var.size() != body.size() &&
+         clang::isIdentifierBody(body[from+var.size()]))) {
+      ++from;
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
 static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
-                                  StreamString &stream) {
+                                  StreamString &stream, const std::string &expr) {
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
     ConstString var_name = var_sp->GetName();
     if (!var_name || var_name == ConstString("this") ||
-        var_name == ConstString(".block_descriptor"))
+        var_name == ConstString(".block_descriptor") ||
+        !ExprBodyContainsVar(var_name.AsCString(), expr))
       continue;
 
     stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
@@ -343,7 +361,7 @@ bool ExpressionSourceCode::GetText(
       if (target->GetInjectLocalVariables(&exe_ctx)) {
         lldb::VariableListSP var_list_sp =
             frame->GetInScopeVariableList(false, true);
-        AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
+        AddLocalVariableDecls(var_list_sp, lldb_local_var_decls, m_body);
       }
     }
   }

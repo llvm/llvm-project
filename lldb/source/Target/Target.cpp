@@ -3876,7 +3876,7 @@ protected:
 // TargetProperties
 //----------------------------------------------------------------------
 static PropertyDefinition g_experimental_properties[]{
-    {"inject-local-vars", OptionValue::eTypeBoolean, true, false, nullptr,
+    {"inject-local-vars", OptionValue::eTypeBoolean, true, true, nullptr,
      nullptr,
      "If true, inject local variables explicitly into the expression text.  "
      "This will fix symbol resolution when there are name collisions between "
