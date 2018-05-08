@@ -222,8 +222,8 @@ ClangTidyOptions::OptionMap getCheckOptions(const ClangTidyOptions &Options);
 
 /// \brief Run a set of clang-tidy checks on a set of files.
 ///
-/// \param Profile if provided, it enables check profile collection in
-/// MatchFinder, and will contain the result of the profile.
+/// \param EnableCheckProfile If provided, it enables check profile collection
+/// in MatchFinder, and will contain the result of the profile.
 void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const tooling::CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
