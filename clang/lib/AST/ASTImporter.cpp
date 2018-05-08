@@ -2687,8 +2687,8 @@ Decl *ASTNodeImporter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
       Importer.getToContext(), DC, Loc, Name.getAsIdentifierInfo(), T,
       {NamedChain, D->getChainingSize()});
 
-  for (const auto *Attr : D->attrs())
-    ToIndirectField->addAttr(Attr->clone(Importer.getToContext()));
+  for (const auto *A : D->attrs())
+    ToIndirectField->addAttr(Importer.Import(A));
 
   ToIndirectField->setAccess(D->getAccess());
   ToIndirectField->setLexicalDeclContext(LexicalDC);
@@ -4766,15 +4766,8 @@ Stmt *ASTNodeImporter::VisitAttributedStmt(AttributedStmt *S) {
   SourceLocation ToAttrLoc = Importer.Import(S->getAttrLoc());
   ArrayRef<const Attr*> FromAttrs(S->getAttrs());
   SmallVector<const Attr *, 1> ToAttrs(FromAttrs.size());
-  ASTContext &_ToContext = Importer.getToContext();
-  std::transform(FromAttrs.begin(), FromAttrs.end(), ToAttrs.begin(),
-    [&_ToContext](const Attr *A) -> const Attr * {
-      return A->clone(_ToContext);
-    });
-  for (const auto *ToA : ToAttrs) {
-    if (!ToA)
-      return nullptr;
-  }
+  if (ImportContainerChecked(FromAttrs, ToAttrs))
+    return nullptr;
   Stmt *ToSubStmt = Importer.Import(S->getSubStmt());
   if (!ToSubStmt && S->getSubStmt())
     return nullptr;
@@ -6657,6 +6650,12 @@ TypeSourceInfo *ASTImporter::Import(TypeSourceInfo *FromTSI) {
            Import(FromTSI->getTypeLoc().getLocStart()));
 }
 
+Attr *ASTImporter::Import(const Attr *FromAttr) {
+  Attr *ToAttr = FromAttr->clone(ToContext);
+  ToAttr->setRange(Import(FromAttr->getRange()));
+  return ToAttr;
+}
+
 Decl *ASTImporter::GetAlreadyImportedOrNull(Decl *FromD) {
   llvm::DenseMap<Decl *, Decl *>::iterator Pos = ImportedDecls.find(FromD);
   if (Pos != ImportedDecls.end()) {
@@ -7290,8 +7289,8 @@ void ASTImporter::CompleteDecl (Decl *D) {
 
 Decl *ASTImporter::Imported(Decl *From, Decl *To) {
   if (From->hasAttrs()) {
-    for (auto *FromAttr : From->getAttrs())
-      To->addAttr(FromAttr->clone(To->getASTContext()));
+    for (const auto *FromAttr : From->getAttrs())
+      To->addAttr(Import(FromAttr));
   }
   if (From->isUsed()) {
     To->setIsUsed();

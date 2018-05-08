@@ -2674,6 +2674,8 @@ def mpku : Flag<["-"], "mpku">, Group<m_x86_Features_Group>;
 def mno_pku : Flag<["-"], "mno-pku">, Group<m_x86_Features_Group>;
 def mpclmul : Flag<["-"], "mpclmul">, Group<m_x86_Features_Group>;
 def mno_pclmul : Flag<["-"], "mno-pclmul">, Group<m_x86_Features_Group>;
+def mpconfig : Flag<["-"], "mpconfig">, Group<m_x86_Features_Group>;
+def mno_pconfig : Flag<["-"], "mno-pconfig">, Group<m_x86_Features_Group>;
 def mpopcnt : Flag<["-"], "mpopcnt">, Group<m_x86_Features_Group>;
 def mno_popcnt : Flag<["-"], "mno-popcnt">, Group<m_x86_Features_Group>;
 def mprefetchwt1 : Flag<["-"], "mprefetchwt1">, Group<m_x86_Features_Group>;

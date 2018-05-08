@@ -5694,21 +5694,21 @@ let Defs = [EFLAGS], Predicates = [HasAVX] in {
 def VPTESTrr  : SS48I<0x17, MRMSrcReg, (outs), (ins VR128:$src1, VR128:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS, (X86ptest VR128:$src1, (v2i64 VR128:$src2)))]>,
-                Sched<[SchedWriteVecLogic.XMM]>, VEX, VEX_WIG;
+                Sched<[SchedWriteVecTest.XMM]>, VEX, VEX_WIG;
 def VPTESTrm  : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS,(X86ptest VR128:$src1, (loadv2i64 addr:$src2)))]>,
-                Sched<[SchedWriteVecLogic.XMM.Folded, ReadAfterLd]>,
+                Sched<[SchedWriteVecTest.XMM.Folded, ReadAfterLd]>,
                 VEX, VEX_WIG;
 
 def VPTESTYrr : SS48I<0x17, MRMSrcReg, (outs), (ins VR256:$src1, VR256:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS, (X86ptest VR256:$src1, (v4i64 VR256:$src2)))]>,
-                Sched<[SchedWriteVecLogic.YMM]>, VEX, VEX_L, VEX_WIG;
+                Sched<[SchedWriteVecTest.YMM]>, VEX, VEX_L, VEX_WIG;
 def VPTESTYrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR256:$src1, i256mem:$src2),
                 "vptest\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS,(X86ptest VR256:$src1, (loadv4i64 addr:$src2)))]>,
-                Sched<[SchedWriteVecLogic.YMM.Folded, ReadAfterLd]>,
+                Sched<[SchedWriteVecTest.YMM.Folded, ReadAfterLd]>,
                 VEX, VEX_L, VEX_WIG;
 }
 
@@ -5716,11 +5716,11 @@ let Defs = [EFLAGS] in {
 def PTESTrr : SS48I<0x17, MRMSrcReg, (outs), (ins VR128:$src1, VR128:$src2),
               "ptest\t{$src2, $src1|$src1, $src2}",
               [(set EFLAGS, (X86ptest VR128:$src1, (v2i64 VR128:$src2)))]>,
-              Sched<[SchedWriteVecLogic.XMM]>;
+              Sched<[SchedWriteVecTest.XMM]>;
 def PTESTrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
               "ptest\t{$src2, $src1|$src1, $src2}",
               [(set EFLAGS, (X86ptest VR128:$src1, (memopv2i64 addr:$src2)))]>,
-              Sched<[SchedWriteVecLogic.XMM.Folded, ReadAfterLd]>;
+              Sched<[SchedWriteVecTest.XMM.Folded, ReadAfterLd]>;
 }
 
 // The bit test instructions below are AVX only
@@ -5740,15 +5740,15 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
 let ExeDomain = SSEPackedSingle in {
 defm VTESTPS  : avx_bittest<0x0E, "vtestps", VR128, f128mem, loadv4f32, v4f32,
-                            SchedWriteVecLogic.XMM>;
+                            SchedWriteFTest.XMM>;
 defm VTESTPSY : avx_bittest<0x0E, "vtestps", VR256, f256mem, loadv8f32, v8f32,
-                            SchedWriteVecLogic.YMM>, VEX_L;
+                            SchedWriteFTest.YMM>, VEX_L;
 }
 let ExeDomain = SSEPackedDouble in {
 defm VTESTPD  : avx_bittest<0x0F, "vtestpd", VR128, f128mem, loadv2f64, v2f64,
-                            SchedWriteVecLogic.XMM>;
+                            SchedWriteFTest.XMM>;
 defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64,
-                            SchedWriteVecLogic.YMM>, VEX_L;
+                            SchedWriteFTest.YMM>, VEX_L;
 }
 }
 
@@ -7102,22 +7102,22 @@ multiclass avx_movmask_rm<bits<8> opc_rm, bits<8> opc_mr, string OpcodeStr,
              (ins VR128:$src1, f128mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR128:$dst, (IntLd addr:$src2, VR128:$src1))]>,
-             VEX_4V, Sched<[WriteFLoad]>;
+             VEX_4V, Sched<[WriteFMaskedLoad]>;
   def Yrm : AVX8I<opc_rm, MRMSrcMem, (outs VR256:$dst),
              (ins VR256:$src1, f256mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR256:$dst, (IntLd256 addr:$src2, VR256:$src1))]>,
-             VEX_4V, VEX_L, Sched<[WriteFLoad]>;
+             VEX_4V, VEX_L, Sched<[WriteFMaskedLoadY]>;
   def mr  : AVX8I<opc_mr, MRMDestMem, (outs),
              (ins f128mem:$dst, VR128:$src1, VR128:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt addr:$dst, VR128:$src1, VR128:$src2)]>,
-             VEX_4V, Sched<[WriteFStore]>;
+             VEX_4V, Sched<[WriteFMaskedStore]>;
   def Ymr : AVX8I<opc_mr, MRMDestMem, (outs),
              (ins f256mem:$dst, VR256:$src1, VR256:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt256 addr:$dst, VR256:$src1, VR256:$src2)]>,
-             VEX_4V, VEX_L, Sched<[WriteFStore]>;
+             VEX_4V, VEX_L, Sched<[WriteFMaskedStoreY]>;
 }
 
 let ExeDomain = SSEPackedSingle in
@@ -7729,22 +7729,22 @@ multiclass avx2_pmovmask<string OpcodeStr,
              (ins VR128:$src1, i128mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR128:$dst, (IntLd128 addr:$src2, VR128:$src1))]>,
-             VEX_4V, Sched<[WriteVecLoad]>;
+             VEX_4V, Sched<[WriteVecMaskedLoad]>;
   def Yrm : AVX28I<0x8c, MRMSrcMem, (outs VR256:$dst),
              (ins VR256:$src1, i256mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR256:$dst, (IntLd256 addr:$src2, VR256:$src1))]>,
-             VEX_4V, VEX_L, Sched<[WriteVecLoad]>;
+             VEX_4V, VEX_L, Sched<[WriteVecMaskedLoadY]>;
   def mr  : AVX28I<0x8e, MRMDestMem, (outs),
              (ins i128mem:$dst, VR128:$src1, VR128:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt128 addr:$dst, VR128:$src1, VR128:$src2)]>,
-             VEX_4V, Sched<[WriteVecStore]>;
+             VEX_4V, Sched<[WriteVecMaskedStore]>;
   def Ymr : AVX28I<0x8e, MRMDestMem, (outs),
              (ins i256mem:$dst, VR256:$src1, VR256:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt256 addr:$dst, VR256:$src1, VR256:$src2)]>,
-             VEX_4V, VEX_L, Sched<[WriteVecStore]>;
+             VEX_4V, VEX_L, Sched<[WriteVecMaskedStoreY]>;
 }
 
 defm VPMASKMOVD : avx2_pmovmask<"vpmaskmovd",

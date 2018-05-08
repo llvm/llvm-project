@@ -148,7 +148,9 @@ msubu  $4, $5               # CHECK: msubu  $4, $5          # encoding: [0x00,0x
 neg.d $f0, $f2              # CHECK: neg.d $f0, $f2         # encoding: [0x54,0x02,0x2b,0x7b]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FNEG_D32_MM
 clz $9, $6                  # CHECK: clz $9, $6             # encoding: [0x01,0x26,0x5b,0x3c]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} CLZ_MM
 clo $9, $6                  # CHECK: clo $9, $6             # encoding: [0x01,0x26,0x4b,0x3c]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} CLO_MM
 seb $9, $6                  # CHECK: seb $9, $6             # encoding: [0x01,0x26,0x2b,0x3c]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SEB_MM
 seb $9                      # CHECK: seb $9, $9             # encoding: [0x01,0x29,0x2b,0x3c]

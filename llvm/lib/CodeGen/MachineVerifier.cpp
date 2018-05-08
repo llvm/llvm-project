@@ -986,6 +986,58 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
              MI);
     break;
   }
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC: {
+    // Number of operands and presense of types is already checked (and
+    // reported in case of any issues), so no need to report them again. As
+    // we're trying to report as many issues as possible at once, however, the
+    // instructions aren't guaranteed to have the right number of operands or
+    // types attached to them at this point
+    assert(MCID.getNumOperands() == 2 && "Expected 2 operands G_*{EXT,TRUNC}");
+    if (MI->getNumOperands() < MCID.getNumOperands())
+      break;
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid())
+      break;
+
+    LLT DstElTy = DstTy.isVector() ? DstTy.getElementType() : DstTy;
+    LLT SrcElTy = SrcTy.isVector() ? SrcTy.getElementType() : SrcTy;
+    if (DstElTy.isPointer() || SrcElTy.isPointer())
+      report("Generic extend/truncate can not operate on pointers", MI);
+
+    if (DstTy.isVector() != SrcTy.isVector()) {
+      report("Generic extend/truncate must be all-vector or all-scalar", MI);
+      // Generally we try to report as many issues as possible at once, but in
+      // this case it's not clear what should we be comparing the size of the
+      // scalar with: the size of the whole vector or its lane. Instead of
+      // making an arbitrary choice and emitting not so helpful message, let's
+      // avoid the extra noise and stop here.
+      break;
+    }
+    if (DstTy.isVector() && DstTy.getNumElements() != SrcTy.getNumElements())
+      report("Generic vector extend/truncate must preserve number of lanes",
+             MI);
+    unsigned DstSize = DstElTy.getSizeInBits();
+    unsigned SrcSize = SrcElTy.getSizeInBits();
+    switch (MI->getOpcode()) {
+    default:
+      if (DstSize <= SrcSize)
+        report("Generic extend has destination type no larger than source", MI);
+      break;
+    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_FPTRUNC:
+      if (DstSize >= SrcSize)
+        report("Generic truncate has destination type no smaller than source",
+               MI);
+      break;
+    }
+    break;
+  }
   case TargetOpcode::COPY: {
     if (foundErrors)
       break;

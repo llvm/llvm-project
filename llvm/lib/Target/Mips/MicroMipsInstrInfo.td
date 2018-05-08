@@ -852,10 +852,9 @@ let DecoderNamespace = "MicroMips" in {
                   POOL32C_STEVA_LDEVA_FM_MM<0xa, 0x1>,
                   ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
   }
-}
-let DecoderNamespace = "MicroMips" in {
-  let Predicates = [InMicroMips] in
-    def LWXS_MM : LoadWordIndexedScaledMM<"lwxs", GPR32Opnd>, LWXS_FM_MM<0x118>;
+
+  def LWXS_MM : LoadWordIndexedScaledMM<"lwxs", GPR32Opnd>, LWXS_FM_MM<0x118>,
+                ISA_MICROMIPS;
 
   /// Load and Store Instructions - unaligned
   def LWL_MM : MMRel, LoadLeftRightMM<"lwl", MipsLWL, GPR32Opnd, mem_mm_12,
@@ -873,12 +872,12 @@ let DecoderNamespace = "MicroMips" in {
 }
 let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   /// Load and Store Instructions - multiple
-  def SWM32_MM  : StoreMultMM<"swm32", II_SWM>, LWM_FM_MM<0xd>;
-  def LWM32_MM  : LoadMultMM<"lwm32", II_LWM>, LWM_FM_MM<0x5>;
+  def SWM32_MM  : StoreMultMM<"swm32", II_SWM>, LWM_FM_MM<0xd>, ISA_MICROMIPS;
+  def LWM32_MM  : LoadMultMM<"lwm32", II_LWM>, LWM_FM_MM<0x5>, ISA_MICROMIPS;
 
   /// Load and Store Pair Instructions
-  def SWP_MM  : StorePairMM<"swp">, LWM_FM_MM<0x9>;
-  def LWP_MM  : LoadPairMM<"lwp">, LWM_FM_MM<0x1>;
+  def SWP_MM  : StorePairMM<"swp">, LWM_FM_MM<0x9>, ISA_MICROMIPS;
+  def LWP_MM  : LoadPairMM<"lwp">, LWM_FM_MM<0x1>, ISA_MICROMIPS;
 
   /// Load and Store multiple pseudo Instructions
   class LoadWordMultMM<string instr_asm > :
@@ -890,8 +889,8 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                       !strconcat(instr_asm, "\t$rt, $addr")> ;
 
 
-  def SWM_MM  : StoreWordMultMM<"swm">;
-  def LWM_MM  : LoadWordMultMM<"lwm">;
+  def SWM_MM  : StoreWordMultMM<"swm">, ISA_MICROMIPS;
+  def LWM_MM  : LoadWordMultMM<"lwm">, ISA_MICROMIPS;
 
   /// Move Conditional
   def MOVZ_I_MM : MMRel, CMov_I_I_FT<"movz", GPR32Opnd, GPR32Opnd,
@@ -921,9 +920,9 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   /// Count Leading
   def CLZ_MM : MMRel, CountLeading0<"clz", GPR32Opnd, II_CLZ>, CLO_FM_MM<0x16c>,
-               ISA_MIPS32;
+               ISA_MICROMIPS;
   def CLO_MM : MMRel, CountLeading1<"clo", GPR32Opnd, II_CLO>, CLO_FM_MM<0x12c>,
-               ISA_MIPS32;
+               ISA_MICROMIPS;
 
   /// Sign Ext In Register Instructions.
   def SEB_MM : MMRel, SignExtInReg<"seb", i8, GPR32Opnd, II_SEB>,
