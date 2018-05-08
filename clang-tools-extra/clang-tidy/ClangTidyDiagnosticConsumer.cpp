@@ -179,7 +179,7 @@ private:
 ClangTidyContext::ClangTidyContext(
     std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider)
     : DiagEngine(nullptr), OptionsProvider(std::move(OptionsProvider)),
-      Profile(nullptr) {
+      Profile(false) {
   // Before the first translation unit we can get errors related to command-line
   // parsing, use empty string for the file name in this case.
   setCurrentFile("");
@@ -233,7 +233,7 @@ ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
       OptionsProvider->getOptions(File));
 }
 
-void ClangTidyContext::setCheckProfileData(ProfileData *P) { Profile = P; }
+void ClangTidyContext::setEnableProfiling(bool P) { Profile = P; }
 
 bool ClangTidyContext::isCheckEnabled(StringRef CheckName) const {
   assert(CheckFilter != nullptr);

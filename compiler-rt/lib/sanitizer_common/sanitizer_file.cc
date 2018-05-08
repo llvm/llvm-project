@@ -102,11 +102,12 @@ bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
   *read_len = 0;
   // The files we usually open are not seekable, so try different buffer sizes.
   for (uptr size = kMinFileLen; size <= max_len; size *= 2) {
-    fd_t fd = OpenFile(file_name, RdOnly, errno_p);
-    if (fd == kInvalidFd) return false;
     UnmapOrDie(*buff, *buff_size);
     *buff = (char*)MmapOrDie(size, __func__);
     *buff_size = size;
+    fd_t fd = OpenFile(file_name, RdOnly, errno_p);
+    if (fd == kInvalidFd)
+      return false;
     *read_len = 0;
     // Read up to one page at a time.
     bool reached_eof = false;
@@ -114,6 +115,7 @@ bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
       uptr just_read;
       if (!ReadFromFile(fd, *buff + *read_len, PageSize, &just_read, errno_p)) {
         UnmapOrDie(*buff, *buff_size);
+        CloseFile(fd);
         return false;
       }
       if (just_read == 0) {
@@ -125,6 +127,43 @@ bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
     CloseFile(fd);
     if (reached_eof)  // We've read the whole file.
       break;
+  }
+  return true;
+}
+
+bool ReadFileToBuffer(const char *file_name,
+                      InternalMmapVectorNoCtor<char> *buff, uptr max_len,
+                      error_t *errno_p) {
+  uptr PageSize = GetPageSizeCached();
+  buff->clear();
+  // The files we usually open are not seekable, so try different buffer sizes.
+  for (uptr size = Max(PageSize, buff->capacity()); size <= max_len;
+       size *= 2) {
+    buff->resize(size);
+    fd_t fd = OpenFile(file_name, RdOnly, errno_p);
+    if (fd == kInvalidFd)
+      return false;
+    uptr read_len = 0;
+    // Read up to one page at a time.
+    bool reached_eof = false;
+    while (read_len + PageSize <= buff->size()) {
+      uptr just_read;
+      if (!ReadFromFile(fd, buff->data() + read_len, PageSize, &just_read,
+                        errno_p)) {
+        CloseFile(fd);
+        return false;
+      }
+      if (!just_read) {
+        reached_eof = true;
+        break;
+      }
+      read_len += just_read;
+    }
+    CloseFile(fd);
+    if (reached_eof) {  // We've read the whole file.
+      buff->resize(read_len);
+      break;
+    }
   }
   return true;
 }

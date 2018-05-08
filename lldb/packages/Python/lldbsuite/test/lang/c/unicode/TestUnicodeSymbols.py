@@ -9,7 +9,6 @@ class TestUnicodeSymbols(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=["dsym"])
     def test_union_members(self):
         self.build()
         spec = lldb.SBModuleSpec()
