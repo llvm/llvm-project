@@ -1289,7 +1289,7 @@ TEST(SanitizerCommon, TwoLevelByteMap) {
   const u64 kSize1 = 1 << 6, kSize2 = 1 << 12;
   const u64 n = kSize1 * kSize2;
   TwoLevelByteMap<kSize1, kSize2> m;
-  m.TestOnlyInit();
+  m.Init();
   for (u64 i = 0; i < n; i += 7) {
     m.set(i, (i % 100) + 1);
   }
@@ -1324,7 +1324,7 @@ void *TwoLevelByteMapUserThread(void *param) {
 
 TEST(SanitizerCommon, ThreadedTwoLevelByteMap) {
   TestByteMap m;
-  m.TestOnlyInit();
+  m.Init();
   TestMapUnmapCallback::map_count = 0;
   TestMapUnmapCallback::unmap_count = 0;
   static const int kNumThreads = 4;

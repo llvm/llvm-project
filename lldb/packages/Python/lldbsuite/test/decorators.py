@@ -680,7 +680,7 @@ def skipUnlessSupportedTypeAttribute(attr):
         compiler_path = self.getCompiler()
         f = tempfile.NamedTemporaryFile()
         cmd = [self.getCompiler(), "-x", "c++", "-c", "-o", f.name, "-"]
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         stdout, stderr = p.communicate('struct __attribute__((%s)) Test {};'%attr)
         if attr in stderr:
             return "Compiler does not support attribute %s"%(attr)
@@ -715,7 +715,7 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
 
     def is_compiler_clang_with_ubsan(self):
         # Write out a temp file which exhibits UB.
-        inputf = tempfile.NamedTemporaryFile(suffix='.c')
+        inputf = tempfile.NamedTemporaryFile(suffix='.c', mode='w')
         inputf.write('int main() { int x = 0; return x / x; }\n')
         inputf.flush()
 

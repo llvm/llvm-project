@@ -510,6 +510,12 @@ class InternalMmapVectorNoCtor {
     return data() + size();
   }
 
+  void swap(InternalMmapVectorNoCtor &other) {
+    Swap(data_, other.data_);
+    Swap(capacity_, other.capacity_);
+    Swap(size_, other.size_);
+  }
+
  private:
   void Resize(uptr new_capacity) {
     CHECK_GT(new_capacity, 0);

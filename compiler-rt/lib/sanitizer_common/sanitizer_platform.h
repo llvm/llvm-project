@@ -104,6 +104,12 @@
 # define SANITIZER_FUCHSIA 0
 #endif
 
+#if defined(__rtems__)
+# define SANITIZER_RTEMS 1
+#else
+# define SANITIZER_RTEMS 0
+#endif
+
 #define SANITIZER_POSIX \
   (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC || \
     SANITIZER_NETBSD || SANITIZER_OPENBSD || SANITIZER_SOLARIS)
@@ -199,6 +205,12 @@
 # define SANITIZER_SOLARIS32 1
 #else
 # define SANITIZER_SOLARIS32 0
+#endif
+
+#if defined(__myriad2__)
+# define SANITIZER_MYRIAD2 1
+#else
+# define SANITIZER_MYRIAD2 0
 #endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
