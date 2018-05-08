@@ -241,8 +241,6 @@ class TestMembersAndLocalsWithSameName(TestBase):
         # Load the executable
         self.target = self.dbg.CreateTarget(exe_path)
         self.assertTrue(self.target.IsValid(), VALID_TARGET)
-        self.dbg.HandleCommand(
-            "settings set target.experimental.inject-local-vars true")
 
     def _test_globals(self):
         thread = lldbutil.get_stopped_thread(
