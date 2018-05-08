@@ -1,0 +1,8 @@
+# RUN: llvm-objcopy --help | FileCheck --check-prefix=CHECK-OBJCOPY %s
+# RUN: not llvm-objcopy 2>&1 | FileCheck --check-prefix=CHECK-OBJCOPY %s
+
+# RUN: llvm-strip --help | FileCheck --check-prefix=CHECK-STRIP %s
+# RUN: not llvm-strip 2>&1 | FileCheck --check-prefix=CHECK-STRIP %s
+
+# CHECK-OBJCOPY: USAGE: llvm-objcopy
+# CHECK-STRIP:   USAGE: llvm-strip

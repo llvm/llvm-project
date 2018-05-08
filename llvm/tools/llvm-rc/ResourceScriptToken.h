@@ -11,9 +11,8 @@
 // the input data. The list of available tokens is located at
 // ResourceScriptTokenList.def.
 //
-// Note that the tokenizer does not support comments or preprocessor
-// directives. The preprocessor should do its work on the .rc file before
-// running llvm-rc.
+// Note that the tokenizer does not support preprocessor directives. The
+// preprocessor should do its work on the .rc file before running llvm-rc.
 //
 // As for now, it is possible to parse ASCII files only (the behavior on
 // UTF files might be undefined). However, it already consumes UTF-8 BOM, if

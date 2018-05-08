@@ -100,7 +100,8 @@ def : ReadAdvance<ReadAfterLd, 4>;
 // This multiclass is for folded loads for integer units.
 multiclass ZnWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
-                          int Lat, list<int> Res = [], int UOps = 1> {
+                          int Lat, list<int> Res = [], int UOps = 1,
+                          int LoadLat = 4, int LoadUOps = 1> {
   // Register variant takes 1-cycle on Execution Port.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -109,11 +110,11 @@ multiclass ZnWriteResPair<X86FoldableSchedWrite SchedRW,
   }
 
   // Memory variant also uses a cycle on ZnAGU
-  // adds 4 cycles to the latency.
+  // adds LoadLat cycles to the latency (default = 4).
   def : WriteRes<SchedRW.Folded, !listconcat([ZnAGU], ExePorts)> {
-    let Latency = !add(Lat, 4);
+    let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
-    let NumMicroOps = !add(UOps, 1);
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
@@ -150,6 +151,7 @@ def : WriteRes<WriteZero,  []>;
 def : WriteRes<WriteLEA, [ZnALU]>;
 defm : ZnWriteResPair<WriteALU,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteIMul,   [ZnALU1, ZnMultiplier], 4>;
+defm : ZnWriteResPair<WriteIMul64, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
@@ -172,15 +174,14 @@ defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteBZHI, [ZnALU], 1>;
 
 // IDIV
-def : WriteRes<WriteIDiv, [ZnALU2, ZnDivider]> {
-  let Latency = 41;
-  let ResourceCycles = [1, 41];
-}
-
-def : WriteRes<WriteIDivLd, [ZnALU2, ZnAGU, ZnDivider]> {
-  let Latency = 45;
-  let ResourceCycles = [1, 4, 41];
-}
+defm : ZnWriteResPair<WriteDiv8,   [ZnALU2, ZnDivider], 15, [1,15], 1>;
+defm : ZnWriteResPair<WriteDiv16,  [ZnALU2, ZnDivider], 17, [1,17], 2>;
+defm : ZnWriteResPair<WriteDiv32,  [ZnALU2, ZnDivider], 25, [1,25], 2>;
+defm : ZnWriteResPair<WriteDiv64,  [ZnALU2, ZnDivider], 41, [1,41], 2>;
+defm : ZnWriteResPair<WriteIDiv8,  [ZnALU2, ZnDivider], 15, [1,15], 1>;
+defm : ZnWriteResPair<WriteIDiv16, [ZnALU2, ZnDivider], 17, [1,17], 2>;
+defm : ZnWriteResPair<WriteIDiv32, [ZnALU2, ZnDivider], 25, [1,25], 2>;
+defm : ZnWriteResPair<WriteIDiv64, [ZnALU2, ZnDivider], 41, [1,41], 2>;
 
 // IMULH
 def  : WriteRes<WriteIMulH, [ZnALU1, ZnMultiplier]>{
@@ -188,9 +189,13 @@ def  : WriteRes<WriteIMulH, [ZnALU1, ZnMultiplier]>{
 }
 
 // Floating point operations
-def : WriteRes<WriteFStore,             [ZnAGU]>;
-def : WriteRes<WriteFMove,              [ZnFPU]>;
-def : WriteRes<WriteFLoad,              [ZnAGU]> { let Latency = 8; }
+defm : X86WriteRes<WriteFLoad,         [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteFMaskedLoad,   [ZnAGU,ZnFPU01], 8, [1,1], 1>;
+defm : X86WriteRes<WriteFMaskedLoadY,  [ZnAGU,ZnFPU01], 8, [1,2], 2>;
+defm : X86WriteRes<WriteFStore,        [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFMaskedStore,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
+defm : X86WriteRes<WriteFMaskedStoreY, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteFMove,         [ZnFPU], 1, [1], 1>;
 
 defm : ZnWriteResFpuPair<WriteFAdd,      [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFAddX,     [ZnFPU0],  3>;
@@ -227,6 +232,8 @@ defm : ZnWriteResFpuPair<WriteFRnd,      [ZnFPU3],  4, [1], 1, 7, 1>; // FIXME: 
 defm : ZnWriteResFpuPair<WriteFRndY,     [ZnFPU3],  4, [1], 1, 7, 1>; // FIXME: Should folds require 1 extra uops?
 defm : ZnWriteResFpuPair<WriteFLogic,    [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteFLogicY,   [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteFTest,     [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteFTestY,    [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteFShuffle,  [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFShuffleY, [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFVarShuffle, [ZnFPU12], 1>;
@@ -258,10 +265,14 @@ defm : ZnWriteResFpuPair<WriteFSqrt80,   [ZnFPU3], 20, [20]>;
 def  : WriteRes<WriteCvtF2FSt, [ZnFPU3, ZnAGU]>;
 
 // Vector integer operations which uses FPU units
-def  : WriteRes<WriteVecStore,            [ZnAGU]>;
-def  : WriteRes<WriteVecMove,             [ZnFPU]>;
-def  : WriteRes<WriteVecLoad,             [ZnAGU]> { let Latency = 8; }
-def  : WriteRes<WriteEMMS,                [ZnFPU]> { let Latency = 2; }
+defm : X86WriteRes<WriteVecLoad,         [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteVecMaskedLoad,   [ZnAGU,ZnFPU01], 8, [1,2], 2>;
+defm : X86WriteRes<WriteVecMaskedLoadY,  [ZnAGU,ZnFPU01], 9, [1,3], 2>;
+defm : X86WriteRes<WriteVecStore,        [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecMaskedStore,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
+defm : X86WriteRes<WriteVecMaskedStoreY, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteVecMove,         [ZnFPU], 1, [1], 1>;
+defm : X86WriteRes<WriteEMMS,            [ZnFPU], 2, [1], 1>;
 
 defm : ZnWriteResFpuPair<WriteVecShift,   [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecShiftX,  [ZnFPU2],  1>;
@@ -271,6 +282,8 @@ defm : ZnWriteResFpuPair<WriteVecShiftImmX, [ZnFPU], 1>;
 defm : ZnWriteResFpuPair<WriteVecShiftImmY, [ZnFPU], 1>;
 defm : ZnWriteResFpuPair<WriteVecLogic,   [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecLogicY,  [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteVecTest,    [ZnFPU12], 1, [2], 1, 7, 1>;
+defm : ZnWriteResFpuPair<WriteVecTestY,   [ZnFPU12], 1, [2], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteVecALU,     [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecALUY,    [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecIMul,    [ZnFPU0],  4>;
@@ -539,34 +552,6 @@ def ZnWriteMulX64Ld : SchedWriteRes<[ZnAGU, ZnALU1, ZnMultiplier]> {
   let Latency = 8;
 }
 def : InstRW<[ZnWriteMulX64Ld, ReadAfterLd], (instrs MULX64rm)>;
-
-// DIV, IDIV.
-// r8.
-def ZnWriteDiv8 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 15;
-}
-def : InstRW<[ZnWriteDiv8], (instregex "DIV8r", "IDIV8r")>;
-
-// r16.
-def ZnWriteDiv16 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 17;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ZnWriteDiv16], (instregex "DIV16r", "IDIV16r")>;
-
-// r32.
-def ZnWriteDiv32 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 25;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ZnWriteDiv32], (instregex "DIV32r", "IDIV32r")>;
-
-// r64.
-def ZnWriteDiv64 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 41;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ZnWriteDiv64], (instregex "DIV64r", "IDIV64r")>;
 
 //-- Control transfer instructions --//
 
@@ -1026,11 +1011,8 @@ def : InstRW<[WriteMicrocoded], (instregex "MMX_MASKMOVQ(64)?")>;
 // MASKMOVDQU.
 def : InstRW<[WriteMicrocoded], (instregex "(V?)MASKMOVDQU(64)?")>;
 
-// VPMASKMOVQ.
+// VPMASKMOVD.
 // ymm
-def : InstRW<[ZnWriteFPU01Op2],(instregex "VPMASKMOVQrm")>;
-def : InstRW<[ZnWriteFPU01Op2Y],(instregex "VPMASKMOVQYrm")>;
-
 def : InstRW<[WriteMicrocoded],
                                (instregex "VPMASKMOVD(Y?)rm")>;
 // m, v,v.
@@ -1101,21 +1083,6 @@ def : InstRW<[ZnWritePMULLDYm], (instregex "(V?)PMULLDYrm")>;
 
 //-- Logic instructions --//
 
-// PTEST.
-// v,v.
-def ZnWritePTESTr : SchedWriteRes<[ZnFPU12]> {
-  let ResourceCycles = [2];
-}
-def : InstRW<[ZnWritePTESTr], (instregex "(V?)PTEST(Y?)rr")>;
-
-// v,m.
-def ZnWritePTESTm : SchedWriteRes<[ZnAGU, ZnFPU12]> {
-  let Latency = 8;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1, 2];
-}
-def : InstRW<[ZnWritePTESTm], (instregex "(V?)PTEST(Y?)rm")>;
-
 // PSLL,PSRL,PSRA W/D/Q.
 // x,x / v,v,x.
 def ZnWritePShift  : SchedWriteRes<[ZnFPU2]> ;
@@ -1178,32 +1145,6 @@ def ZnWriteVINSERT128Ld: SchedWriteRes<[ZnAGU,ZnFPU013]> {
 // y,y,x,i.
 def : InstRW<[ZnWriteVINSERT128r], (instregex "VINSERTF128rr")>;
 def : InstRW<[ZnWriteVINSERT128Ld], (instregex "VINSERTF128rm")>;
-
-// VMASKMOVP S/D.
-// x,x,m.
-def ZnWriteVMASKMOVPLd : SchedWriteRes<[ZnAGU, ZnFPU01]> {
-  let Latency = 8;
-}
-// y,y,m.
-def ZnWriteVMASKMOVPLdY : SchedWriteRes<[ZnAGU, ZnFPU01]> {
-  let Latency = 8;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1, 2];
-}
-def ZnWriteVMASKMOVPm : SchedWriteRes<[ZnAGU, ZnFPU01]> {
-  let Latency = 4;
-}
-def : InstRW<[ZnWriteVMASKMOVPLd], (instregex "VMASKMOVP(S|D)rm")>;
-def : InstRW<[ZnWriteVMASKMOVPLdY], (instregex "VMASKMOVP(S|D)Yrm")>;
-def : InstRW<[ZnWriteVMASKMOVPm], (instregex "VMASKMOVP(S|D)mr")>;
-
-// m256,y,y.
-def ZnWriteVMASKMOVPYmr : SchedWriteRes<[ZnAGU,ZnFPU01]> {
-  let Latency = 5;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1, 2];
-}
-def : InstRW<[ZnWriteVMASKMOVPYmr], (instregex "VMASKMOVP(S|D)Ymr")>;
 
 // VGATHERDPS.
 // x.

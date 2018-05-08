@@ -591,6 +591,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   }
 }
 
+void LegalizerHelper::widenScalarSrc(MachineInstr &MI, LLT WideTy,
+                                     unsigned OpIdx, unsigned ExtOpcode) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  auto ExtB = MIRBuilder.buildInstr(ExtOpcode, WideTy, MO.getReg());
+  MO.setReg(ExtB->getOperand(0).getReg());
+}
+
+void LegalizerHelper::widenScalarDst(MachineInstr &MI, LLT WideTy,
+                                     unsigned OpIdx, unsigned TruncOpcode) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+  MIRBuilder.buildInstr(TruncOpcode, MO.getReg(), DstExt);
+  MO.setReg(DstExt);
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   MIRBuilder.setInstr(MI);
@@ -598,140 +614,83 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
+
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_SUB:
-  case TargetOpcode::G_SHL: {
+  case TargetOpcode::G_SHL:
     // Perform operation at larger width (any extension is fine here, high bits
     // don't affect the result) and then truncate the result back to the
     // original type.
-    unsigned Src1Ext = MRI.createGenericVirtualRegister(WideTy);
-    unsigned Src2Ext = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildAnyExt(Src1Ext, MI.getOperand(1).getReg());
-    MIRBuilder.buildAnyExt(Src2Ext, MI.getOperand(2).getReg());
-
-    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildInstr(MI.getOpcode())
-        .addDef(DstExt)
-        .addUse(Src1Ext)
-        .addUse(Src2Ext);
-
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
-    MI.eraseFromParent();
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
+
   case TargetOpcode::G_SDIV:
-  case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SREM:
-  case TargetOpcode::G_UREM:
   case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR: {
-    unsigned ExtOp = MI.getOpcode() == TargetOpcode::G_SDIV ||
-                             MI.getOpcode() == TargetOpcode::G_SREM ||
-                             MI.getOpcode() == TargetOpcode::G_ASHR
-                         ? TargetOpcode::G_SEXT
-                         : TargetOpcode::G_ZEXT;
-
-    unsigned LHSExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildInstr(ExtOp).addDef(LHSExt).addUse(
-        MI.getOperand(1).getReg());
-
-    unsigned RHSExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildInstr(ExtOp).addDef(RHSExt).addUse(
-        MI.getOperand(2).getReg());
-
-    unsigned ResExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildInstr(MI.getOpcode())
-        .addDef(ResExt)
-        .addUse(LHSExt)
-        .addUse(RHSExt);
-
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), ResExt);
-    MI.eraseFromParent();
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
-  case TargetOpcode::G_SELECT: {
+
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_UREM:
+  case TargetOpcode::G_LSHR:
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
+
+  case TargetOpcode::G_SELECT:
     if (TypeIdx != 0)
       return UnableToLegalize;
-
     // Perform operation at larger width (any extension is fine here, high bits
     // don't affect the result) and then truncate the result back to the
     // original type.
-    unsigned Src1Ext = MRI.createGenericVirtualRegister(WideTy);
-    unsigned Src2Ext = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildAnyExt(Src1Ext, MI.getOperand(2).getReg());
-    MIRBuilder.buildAnyExt(Src2Ext, MI.getOperand(3).getReg());
-
-    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildInstr(TargetOpcode::G_SELECT)
-        .addDef(DstExt)
-        .addReg(MI.getOperand(1).getReg())
-        .addUse(Src1Ext)
-        .addUse(Src2Ext);
-
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
-    MI.eraseFromParent();
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
+    widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ANYEXT);
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
+
   case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI: {
+  case TargetOpcode::G_FPTOUI:
     if (TypeIdx != 0)
       return UnableToLegalize;
-
-    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildInstr(MI.getOpcode())
-        .addDef(DstExt)
-        .addUse(MI.getOperand(1).getReg());
-
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
-    MI.eraseFromParent();
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
+
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP: {
     if (TypeIdx != 1)
       return UnableToLegalize;
-
-    unsigned Src = MI.getOperand(1).getReg();
-    unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
-
-    if (MI.getOpcode() == TargetOpcode::G_SITOFP) {
-      MIRBuilder.buildSExt(SrcExt, Src);
-    } else {
-      assert(MI.getOpcode() == TargetOpcode::G_UITOFP && "Unexpected conv op");
-      MIRBuilder.buildZExt(SrcExt, Src);
-    }
-
-    MIRBuilder.buildInstr(MI.getOpcode())
-        .addDef(MI.getOperand(0).getReg())
-        .addUse(SrcExt);
-
-    MI.eraseFromParent();
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
-  case TargetOpcode::G_INSERT: {
+
+  case TargetOpcode::G_UITOFP:
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
+
+  case TargetOpcode::G_INSERT:
     if (TypeIdx != 0)
       return UnableToLegalize;
-
-    unsigned Src = MI.getOperand(1).getReg();
-    unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildAnyExt(SrcExt, Src);
-
-    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    auto MIB = MIRBuilder.buildInsert(DstExt, SrcExt, MI.getOperand(2).getReg(),
-                                      MI.getOperand(3).getImm());
-    for (unsigned OpNum = 4; OpNum < MI.getNumOperands(); OpNum += 2) {
-      MIB.addReg(MI.getOperand(OpNum).getReg());
-      MIB.addImm(MI.getOperand(OpNum + 1).getImm());
-    }
-
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
-    MI.eraseFromParent();
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
+
   case TargetOpcode::G_LOAD:
     // For some types like i24, we might try to widen to i32. To properly handle
     // this we should be using a dedicated extending load, until then avoid
@@ -741,164 +700,109 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
     LLVM_FALLTHROUGH;
   case TargetOpcode::G_SEXTLOAD:
-  case TargetOpcode::G_ZEXTLOAD: {
-    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildLoadInstr(MI.getOpcode(), DstExt, MI.getOperand(1).getReg(),
-                              **MI.memoperands_begin());
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
-    MI.eraseFromParent();
+  case TargetOpcode::G_ZEXTLOAD:
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
+
   case TargetOpcode::G_STORE: {
     if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(1) ||
         WideTy != LLT::scalar(8))
       return UnableToLegalize;
 
-    auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-    auto Content = TLI.getBooleanContents(false, false);
-
-    unsigned ExtOp = TargetOpcode::G_ANYEXT;
-    if (Content == TargetLoweringBase::ZeroOrOneBooleanContent)
-      ExtOp = TargetOpcode::G_ZEXT;
-    else if (Content == TargetLoweringBase::ZeroOrNegativeOneBooleanContent)
-      ExtOp = TargetOpcode::G_SEXT;
-    else
-      ExtOp = TargetOpcode::G_ANYEXT;
-
-    unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildInstr(ExtOp).addDef(SrcExt).addUse(
-        MI.getOperand(0).getReg());
-    MIRBuilder.buildStore(SrcExt, MI.getOperand(1).getReg(),
-                          **MI.memoperands_begin());
-    MI.eraseFromParent();
+    const auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+    switch (TLI.getBooleanContents(false, false)) {
+    case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_SEXT);
+      break;
+    case TargetLoweringBase::ZeroOrOneBooleanContent:
+      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ZEXT);
+      break;
+    default:
+      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
+    }
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
   }
   case TargetOpcode::G_CONSTANT: {
-    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildConstant(DstExt, *MI.getOperand(1).getCImm());
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
-    MI.eraseFromParent();
+    MachineOperand &SrcMO = MI.getOperand(1);
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
+    const APInt &Val = SrcMO.getCImm()->getValue().sext(WideTy.getSizeInBits());
+    SrcMO.setCImm(ConstantInt::get(Ctx, Val));
+
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
   }
   case TargetOpcode::G_FCONSTANT: {
-    const ConstantFP *CFP = MI.getOperand(1).getFPImm();
-    APFloat Val = CFP->getValueAPF();
+    MachineOperand &SrcMO = MI.getOperand(1);
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
-    auto LLT2Sem = [](LLT Ty) {
-      switch (Ty.getSizeInBits()) {
-      case 32:
-        return &APFloat::IEEEsingle();
-        break;
-      case 64:
-        return &APFloat::IEEEdouble();
-        break;
-      default:
-        llvm_unreachable("Unhandled fp widen type");
-      }
-    };
+    APFloat Val = SrcMO.getFPImm()->getValueAPF();
     bool LosesInfo;
-    Val.convert(*LLT2Sem(WideTy), APFloat::rmTowardZero, &LosesInfo);
-    auto Cst = MIRBuilder.buildFConstant(WideTy, *ConstantFP::get(Ctx, Val));
-    MIRBuilder.buildFPTrunc(MI.getOperand(0).getReg(), Cst);
-    MI.eraseFromParent();
-    return Legalized;
-  }
-  case TargetOpcode::G_BRCOND: {
-    unsigned TstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildAnyExt(TstExt, MI.getOperand(0).getReg());
-    MIRBuilder.buildBrCond(TstExt, *MI.getOperand(1).getMBB());
-    MI.eraseFromParent();
-    return Legalized;
-  }
-  case TargetOpcode::G_FCMP: {
-    unsigned Op0Ext, Op1Ext, DstReg;
-    unsigned Cmp1 = MI.getOperand(2).getReg();
-    unsigned Cmp2 = MI.getOperand(3).getReg();
-    if (TypeIdx == 0) {
-      Op0Ext = Cmp1;
-      Op1Ext = Cmp2;
-      DstReg = MRI.createGenericVirtualRegister(WideTy);
-    } else {
-      Op0Ext = MRI.createGenericVirtualRegister(WideTy);
-      Op1Ext = MRI.createGenericVirtualRegister(WideTy);
-      DstReg = MI.getOperand(0).getReg();
-      MIRBuilder.buildInstr(TargetOpcode::G_FPEXT, Op0Ext, Cmp1);
-      MIRBuilder.buildInstr(TargetOpcode::G_FPEXT, Op1Ext, Cmp2);
+    switch (WideTy.getSizeInBits()) {
+    case 32:
+      Val.convert(APFloat::IEEEsingle(), APFloat::rmTowardZero, &LosesInfo);
+      break;
+    case 64:
+      Val.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &LosesInfo);
+      break;
+    default:
+      llvm_unreachable("Unhandled fp widen type");
     }
-    MIRBuilder.buildFCmp(
-        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()),
-        DstReg, Op0Ext, Op1Ext);
-    if (TypeIdx == 0)
-      MIRBuilder.buildInstr(TargetOpcode::G_TRUNC, MI.getOperand(0).getReg(),
-                            DstReg);
-    MI.eraseFromParent();
+    SrcMO.setFPImm(ConstantFP::get(Ctx, Val));
+
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
   }
-  case TargetOpcode::G_ICMP: {
-    bool IsSigned = CmpInst::isSigned(
-        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()));
-    unsigned Cmp1 = MI.getOperand(2).getReg();
-    unsigned Cmp2 = MI.getOperand(3).getReg();
-    unsigned Op0Ext, Op1Ext, DstReg;
-    if (TypeIdx == 0) {
-      Op0Ext = Cmp1;
-      Op1Ext = Cmp2;
-      DstReg = MRI.createGenericVirtualRegister(WideTy);
-    } else {
-      Op0Ext = MRI.createGenericVirtualRegister(WideTy);
-      Op1Ext = MRI.createGenericVirtualRegister(WideTy);
-      DstReg = MI.getOperand(0).getReg();
-      if (IsSigned) {
-        MIRBuilder.buildSExt(Op0Ext, Cmp1);
-        MIRBuilder.buildSExt(Op1Ext, Cmp2);
-      } else {
-        MIRBuilder.buildZExt(Op0Ext, Cmp1);
-        MIRBuilder.buildZExt(Op1Ext, Cmp2);
-      }
+  case TargetOpcode::G_BRCOND:
+    widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
+
+  case TargetOpcode::G_FCMP:
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy);
+    else {
+      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
+      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_FPEXT);
     }
-    MIRBuilder.buildICmp(
-        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()),
-        DstReg, Op0Ext, Op1Ext);
-    if (TypeIdx == 0)
-      MIRBuilder.buildInstr(TargetOpcode::G_TRUNC, MI.getOperand(0).getReg(),
-                            DstReg);
-    MI.eraseFromParent();
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
-  case TargetOpcode::G_GEP: {
+
+  case TargetOpcode::G_ICMP:
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy);
+    else {
+      unsigned ExtOpcode = CmpInst::isSigned(static_cast<CmpInst::Predicate>(
+                               MI.getOperand(1).getPredicate()))
+                               ? TargetOpcode::G_SEXT
+                               : TargetOpcode::G_ZEXT;
+      widenScalarSrc(MI, WideTy, 2, ExtOpcode);
+      widenScalarSrc(MI, WideTy, 3, ExtOpcode);
+    }
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
+
+  case TargetOpcode::G_GEP:
     assert(TypeIdx == 1 && "unable to legalize pointer of GEP");
-    unsigned OffsetExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildSExt(OffsetExt, MI.getOperand(2).getReg());
-    MI.getOperand(2).setReg(OffsetExt);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
-  }
+
   case TargetOpcode::G_PHI: {
     assert(TypeIdx == 0 && "Expecting only Idx 0");
-    auto getExtendedReg = [&](unsigned Reg, MachineBasicBlock &MBB) {
-      auto FirstTermIt = MBB.getFirstTerminator();
-      MIRBuilder.setInsertPt(MBB, FirstTermIt);
-      MachineInstr *DefMI = MRI.getVRegDef(Reg);
-      MachineInstrBuilder MIB;
-      if (DefMI->getOpcode() == TargetOpcode::G_TRUNC)
-        MIB = MIRBuilder.buildAnyExtOrTrunc(WideTy,
-                                            DefMI->getOperand(1).getReg());
-      else
-        MIB = MIRBuilder.buildAnyExt(WideTy, Reg);
-      return MIB->getOperand(0).getReg();
-    };
-    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI, WideTy);
-    for (auto OpIt = MI.operands_begin() + 1, OpE = MI.operands_end();
-         OpIt != OpE;) {
-      unsigned Reg = OpIt++->getReg();
-      MachineBasicBlock *OpMBB = OpIt++->getMBB();
-      MIB.addReg(getExtendedReg(Reg, *OpMBB));
-      MIB.addMBB(OpMBB);
+
+    for (unsigned I = 1; I < MI.getNumOperands(); I += 2) {
+      MachineBasicBlock &OpMBB = *MI.getOperand(I + 1).getMBB();
+      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+      widenScalarSrc(MI, WideTy, I, TargetOpcode::G_ANYEXT);
     }
-    auto *MBB = MI.getParent();
-    MIRBuilder.setInsertPt(*MBB, MBB->getFirstNonPHI());
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(),
-                          MIB->getOperand(0).getReg());
-    MI.eraseFromParent();
+
+    MachineBasicBlock &MBB = *MI.getParent();
+    MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
     return Legalized;
   }
   }

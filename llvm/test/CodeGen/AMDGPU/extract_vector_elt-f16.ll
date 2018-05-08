@@ -21,7 +21,7 @@ define amdgpu_kernel void @extract_vector_elt_v2f16(half addrspace(1)* %out, <2 
 ; GCN-LABEL: {{^}}extract_vector_elt_v2f16_dynamic_sgpr:
 ; GCN: s_load_dword [[IDX:s[0-9]+]]
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
-; GCN: s_lshl_b32 [[IDX_SCALED:s[0-9]+]], [[IDX]], 16
+; GCN: s_lshl_b32 [[IDX_SCALED:s[0-9]+]], [[IDX]], 4
 ; GCN: s_lshr_b32 [[ELT1:s[0-9]+]], [[VEC]], [[IDX_SCALED]]
 ; GCN: v_mov_b32_e32 [[VELT1:v[0-9]+]], [[ELT1]]
 ; GCN: buffer_store_short [[VELT1]]
@@ -36,7 +36,7 @@ define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_sgpr(half addrspace(
 ; GCN-LABEL: {{^}}extract_vector_elt_v2f16_dynamic_vgpr:
 ; GCN-DAG: s_load_dword [[VEC:s[0-9]+]]
 ; GCN-DAG: {{flat|buffer}}_load_dword [[IDX:v[0-9]+]]
-; GCN: v_lshlrev_b32_e32 [[IDX_SCALED:v[0-9]+]], 16, [[IDX]]
+; GCN: v_lshlrev_b32_e32 [[IDX_SCALED:v[0-9]+]], 4, [[IDX]]
 
 ; SI: v_lshr_b32_e32 [[ELT:v[0-9]+]], [[VEC]], [[IDX_SCALED]]
 ; VI: v_lshrrev_b32_e64 [[ELT:v[0-9]+]], [[IDX_SCALED]], [[VEC]]

@@ -1343,7 +1343,16 @@ static SDValue lowerMSASplatZExt(SDValue Op, unsigned OpNr, SelectionDAG &DAG) {
   SDValue LaneB;
 
   if (ResVecTy == MVT::v2i64) {
-    LaneB = DAG.getConstant(0, DL, MVT::i32);
+    // In case of the index being passed as an immediate value, set the upper
+    // lane to 0 so that the splati.d instruction can be matched.
+    if (isa<ConstantSDNode>(LaneA))
+      LaneB = DAG.getConstant(0, DL, MVT::i32);
+    // Having the index passed in a register, set the upper lane to the same
+    // value as the lower - this results in the BUILD_VECTOR node not being
+    // expanded through stack. This way we are able to pattern match the set of
+    // nodes created here to splat.d.
+    else
+      LaneB = LaneA;
     ViaVecTy = MVT::v4i32;
     if(BigEndian)
       std::swap(LaneA, LaneB);

@@ -207,8 +207,10 @@ Error CoverageMapping::loadFunctionRecord(
   else
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
 
-  // Don't load records for functions we've already seen.
-  if (!FunctionNames.insert(OrigFuncName).second)
+  // Don't load records for (filenames, function) pairs we've already seen.
+  auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
+                                          Record.Filenames.end());
+  if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
     return Error::success();
 
   CounterMappingContext Ctx(Record.Expressions);

@@ -36,6 +36,7 @@
 ; RUN: -debug-pass=Structure %s -o /dev/null 2>&1 | FileCheck %s --check-prefix DISABLED
 
 ; ENABLED:       IRTranslator
+; ENABLED-NEXT:  PreLegalizerCombiner
 ; ENABLED-NEXT:  Legalizer
 ; ENABLED-NEXT:  RegBankSelect
 ; ENABLED-O0-NEXT:  Localizer

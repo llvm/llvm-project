@@ -49,11 +49,6 @@
 ; RUN: not ls %t2.o.thinlto.bc
 ; RUN: not ls %t4.o.thinlto.bc
 
-; Ensure lld generates one regular LTO file via splitting for ThinLTO builds
-; RUN: rm -f %t.lto.o
-; RUN: ld.lld -save-temps --plugin-opt=thinlto-index-only -shared %t.o %t2.o -o %t
-; RUN: llvm-readobj -h %t.lto.o | FileCheck %s --check-prefix=FORMAT
-
 ; First force single-threaded mode
 ; RUN: rm -f %t.lto.o %t1.lto.o
 ; RUN: ld.lld -save-temps --thinlto-jobs=1 -shared %t.o %t2.o -o %t
@@ -70,6 +65,12 @@
 ; We just check that we don't crash or fail (as it's not sure which tests are
 ; stable on the final output file itself.
 ; RUN: ld.lld -shared %t.o %t2.o -o %t2
+
+; Test to ensure that thinlto-index-only with obj-path creates the file.
+; RUN: rm -f %t5.o
+; RUN: ld.lld --plugin-opt=thinlto-index-only --plugin-opt=obj-path=%t5.o -shared %t.o %t2.o -o %t4
+; RUN: llvm-readobj -h %t5.o | FileCheck %s --check-prefix=FORMAT
+; RUN: llvm-nm %t5.o | count 0
 
 ; NM: T f
 ; NM1: T f
