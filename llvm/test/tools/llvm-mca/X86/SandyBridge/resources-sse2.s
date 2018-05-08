@@ -7,9 +7,6 @@ addpd       (%rax), %xmm2
 addsd       %xmm0, %xmm2
 addsd       (%rax), %xmm2
 
-addsubpd    %xmm0, %xmm2
-addsubpd    (%rax), %xmm2
-
 andnpd      %xmm0, %xmm2
 andnpd      (%rax), %xmm2
 
@@ -406,8 +403,6 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      9     1.00    *               	addpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                    	addsd	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *               	addsd	(%rax), %xmm2
-# CHECK-NEXT:  1      3     1.00                    	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  2      9     1.00    *               	addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                    	andnpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      7     1.00    *               	andnpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                    	andpd	%xmm0, %xmm2
@@ -679,7 +674,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     172.00 75.83  119.33 14.00  98.83  65.50  65.50
+# CHECK-NEXT:  -     172.00 75.83  117.33 14.00  98.83  65.00  65.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  	Instructions:
@@ -687,8 +682,6 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   	addpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     	addsd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   	addsd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     	addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   	addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     	andnpd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   	andnpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     	andpd	%xmm0, %xmm2

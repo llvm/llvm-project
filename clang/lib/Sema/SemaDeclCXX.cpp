@@ -8938,8 +8938,10 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
 
   // If lookup failed
   if (!Info) {
+    std::string NameForDiags = "std::";
+    NameForDiags += ComparisonCategories::getCategoryString(Kind);
     Diag(Loc, diag::err_implied_comparison_category_type_not_found)
-        << ComparisonCategories::getCategoryString(Kind);
+        << NameForDiags;
     return QualType();
   }
 
@@ -8947,7 +8949,7 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
   assert(Info->Record);
 
   // Update the Record decl in case we encountered a forward declaration on our
-  // first pass. FIXME(EricWF): This is a bit of a hack.
+  // first pass. FIXME: This is a bit of a hack.
   if (Info->Record->hasDefinition())
     Info->Record = Info->Record->getDefinition();
 

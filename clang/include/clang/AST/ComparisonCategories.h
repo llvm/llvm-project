@@ -35,7 +35,7 @@ class Sema;
 class QualType;
 class NamespaceDecl;
 
-/// \brief An enumeration representing the different comparison categories
+/// An enumeration representing the different comparison categories
 /// types.
 ///
 /// C++2a [cmp.categories.pre] The types weak_equality, strong_equality,
@@ -51,9 +51,9 @@ enum class ComparisonCategoryType : unsigned char {
   Last = StrongOrdering
 };
 
-/// \brief An enumeration representing the possible results of a three-way
-///   comparison. These values map onto instances of comparison category types
-///   defined in the standard library. i.e. 'std::strong_ordering::less'.
+/// An enumeration representing the possible results of a three-way
+/// comparison. These values map onto instances of comparison category types
+/// defined in the standard library. e.g. 'std::strong_ordering::less'.
 enum class ComparisonCategoryResult : unsigned char {
   Equal,
   Equivalent,
@@ -79,39 +79,26 @@ public:
     VarDecl *VD;
 
     ValueInfo(ComparisonCategoryResult Kind, VarDecl *VD)
-        : Kind(Kind), VD(VD), HasValue(false) {}
+        : Kind(Kind), VD(VD) {}
 
-    /// \brief True iff we've successfully evaluated the variable as a constant
+    /// True iff we've successfully evaluated the variable as a constant
     /// expression and extracted its integer value.
-    bool hasValidIntValue() const { return HasValue; }
+    bool hasValidIntValue() const;
 
-    /// \brief Get the constant integer value used by this variable to represent
+    /// Get the constant integer value used by this variable to represent
     /// the comparison category result type.
-    llvm::APSInt getIntValue() const {
-      assert(hasValidIntValue());
-      return IntValue;
-    }
-
-    void setIntValue(llvm::APSInt Val) {
-      IntValue = Val;
-      HasValue = true;
-    }
-
-  private:
-    friend class ComparisonCategoryInfo;
-    llvm::APSInt IntValue;
-    bool HasValue : 1;
+    llvm::APSInt getIntValue() const;
   };
 private:
   const ASTContext &Ctx;
 
-  /// \brief A map containing the comparison category result decls from the
+  /// A map containing the comparison category result decls from the
   /// standard library. The key is a value of ComparisonCategoryResult.
   mutable llvm::SmallVector<
       ValueInfo, static_cast<unsigned>(ComparisonCategoryResult::Last) + 1>
       Objects;
 
-  /// \brief Lookup the ValueInfo struct for the specified ValueKind. If the
+  /// Lookup the ValueInfo struct for the specified ValueKind. If the
   /// VarDecl for the value cannot be found, nullptr is returned.
   ///
   /// If the ValueInfo does not have a valid integer value the variable
@@ -119,12 +106,12 @@ private:
   ValueInfo *lookupValueInfo(ComparisonCategoryResult ValueKind) const;
 
 public:
-  /// \brief The declaration for the comparison category type from the
+  /// The declaration for the comparison category type from the
   /// standard library.
   // FIXME: Make this const
   CXXRecordDecl *Record = nullptr;
 
-  /// \brief The Kind of the comparison category type
+  /// The Kind of the comparison category type
   ComparisonCategoryType Kind;
 
 public:
@@ -139,7 +126,7 @@ public:
     return Info;
   }
 
-  /// \brief True iff the comparison category is an equality comparison.
+  /// True iff the comparison category is an equality comparison.
   bool isEquality() const { return !isOrdered(); }
 
   /// \brief True iff the comparison category is a relational comparison.
@@ -149,22 +136,22 @@ public:
            Kind == CCK::StrongOrdering;
   }
 
-  /// \brief True iff the comparison is "strong". i.e. it checks equality and
-  ///    not equivalence.
+  /// True iff the comparison is "strong". i.e. it checks equality and
+  /// not equivalence.
   bool isStrong() const {
     using CCK = ComparisonCategoryType;
     return Kind == CCK::StrongEquality || Kind == CCK::StrongOrdering;
   }
 
-  /// \brief True iff the comparison is not totally ordered.
+  /// True iff the comparison is not totally ordered.
   bool isPartial() const {
     using CCK = ComparisonCategoryType;
     return Kind == CCK::PartialOrdering;
   }
 
-  /// \brief Converts the specified result kind into the the correct result kind
-  ///    for this category. Specifically it lowers strong equality results to
-  ///    weak equivalence if needed.
+  /// Converts the specified result kind into the the correct result kind
+  /// for this category. Specifically it lowers strong equality results to
+  /// weak equivalence if needed.
   ComparisonCategoryResult makeWeakResult(ComparisonCategoryResult Res) const {
     using CCR = ComparisonCategoryResult;
     if (!isStrong()) {
@@ -202,13 +189,13 @@ public:
   static StringRef getCategoryString(ComparisonCategoryType Kind);
   static StringRef getResultString(ComparisonCategoryResult Kind);
 
-  /// \brief Return the list of results which are valid for the specified
-  ///   comparison category type.
+  /// Return the list of results which are valid for the specified
+  /// comparison category type.
   static std::vector<ComparisonCategoryResult>
   getPossibleResultsForType(ComparisonCategoryType Type);
 
-  /// \brief Return the comparison category information for the category
-  ///   specified by 'Kind'.
+  /// Return the comparison category information for the category
+  /// specified by 'Kind'.
   const ComparisonCategoryInfo &getInfo(ComparisonCategoryType Kind) const {
     const ComparisonCategoryInfo *Result = lookupInfo(Kind);
     assert(Result != nullptr &&
@@ -216,17 +203,18 @@ public:
     return *Result;
   }
 
-  /// \brief Return the comparison category information as specified by
-  ///   `getCategoryForType(Ty)`. If the information is not already cached,
-  ///    the declaration is looked up and a cache entry is created.
-  /// NOTE: Lookup is expected to succeed. Use lookupInfo if failure is possible.
+  /// Return the comparison category information as specified by
+  /// `getCategoryForType(Ty)`. If the information is not already cached,
+  /// the declaration is looked up and a cache entry is created.
+  /// NOTE: Lookup is expected to succeed. Use lookupInfo if failure is
+  /// possible.
   const ComparisonCategoryInfo &getInfoForType(QualType Ty) const;
 
 public:
-  /// \brief Return the cached comparison category information for the
-  ///   specified 'Kind'. If no cache entry is present the comparison category
-  ///   type is looked up. If lookup fails nullptr is returned. Otherwise, a
-  ///   new cache entry is created and returned
+  /// Return the cached comparison category information for the
+  /// specified 'Kind'. If no cache entry is present the comparison category
+  /// type is looked up. If lookup fails nullptr is returned. Otherwise, a
+  /// new cache entry is created and returned
   const ComparisonCategoryInfo *lookupInfo(ComparisonCategoryType Kind) const;
 
   ComparisonCategoryInfo *lookupInfo(ComparisonCategoryType Kind) {

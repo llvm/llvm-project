@@ -34,10 +34,10 @@ public:
   unsigned IncludeModuleFiles : 1; ///< Include module file dependencies.
 
   /// Destination of cl.exe style /showIncludes info.
-  ShowIncludesDestination ShowIncludesDest;
+  ShowIncludesDestination ShowIncludesDest = ShowIncludesDestination::None;
 
   /// The format for the dependency file.
-  DependencyOutputFormat OutputFormat;
+  DependencyOutputFormat OutputFormat = DependencyOutputFormat::Make;
 
   /// The file to write dependency output to.
   std::string OutputFile;
@@ -67,9 +67,7 @@ public:
 public:
   DependencyOutputOptions()
       : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
-        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
-        ShowIncludesDest(ShowIncludesDestination::None),
-        OutputFormat(DependencyOutputFormat::Make) {}
+        AddMissingHeaderDeps(0), IncludeModuleFiles(0) {}
 };
 
 }  // end namespace clang
