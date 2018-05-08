@@ -49,7 +49,7 @@
 
 // CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 0, i[[SZ]] 4]
 // CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 288]
-// CHECK-DAG: @{{.*}} = private constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
 
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = {{.*}}constant [[ENTTY]]

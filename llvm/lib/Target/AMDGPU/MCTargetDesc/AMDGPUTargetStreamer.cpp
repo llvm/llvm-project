@@ -39,66 +39,82 @@ using namespace llvm::AMDGPU;
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
 
-unsigned AMDGPUTargetStreamer::getMACH(StringRef GPU) const {
-  return llvm::StringSwitch<unsigned>(GPU)
+static const struct {
+  const char *Name;
+  unsigned Mach;
+} MachTable[] = {
       // Radeon HD 2000/3000 Series (R600).
-      .Case("r600", ELF::EF_AMDGPU_MACH_R600_R600)
-      .Case("r630", ELF::EF_AMDGPU_MACH_R600_R630)
-      .Case("rs880", ELF::EF_AMDGPU_MACH_R600_RS880)
-      .Case("rv670", ELF::EF_AMDGPU_MACH_R600_RV670)
+      { "r600", ELF::EF_AMDGPU_MACH_R600_R600 },
+      { "r630", ELF::EF_AMDGPU_MACH_R600_R630 },
+      { "rs880", ELF::EF_AMDGPU_MACH_R600_RS880 },
+      { "rv670", ELF::EF_AMDGPU_MACH_R600_RV670 },
       // Radeon HD 4000 Series (R700).
-      .Case("rv710", ELF::EF_AMDGPU_MACH_R600_RV710)
-      .Case("rv730", ELF::EF_AMDGPU_MACH_R600_RV730)
-      .Case("rv770", ELF::EF_AMDGPU_MACH_R600_RV770)
+      { "rv710", ELF::EF_AMDGPU_MACH_R600_RV710 },
+      { "rv730", ELF::EF_AMDGPU_MACH_R600_RV730 },
+      { "rv770", ELF::EF_AMDGPU_MACH_R600_RV770 },
       // Radeon HD 5000 Series (Evergreen).
-      .Case("cedar", ELF::EF_AMDGPU_MACH_R600_CEDAR)
-      .Case("cypress", ELF::EF_AMDGPU_MACH_R600_CYPRESS)
-      .Case("juniper", ELF::EF_AMDGPU_MACH_R600_JUNIPER)
-      .Case("redwood", ELF::EF_AMDGPU_MACH_R600_REDWOOD)
-      .Case("sumo", ELF::EF_AMDGPU_MACH_R600_SUMO)
+      { "cedar", ELF::EF_AMDGPU_MACH_R600_CEDAR },
+      { "cypress", ELF::EF_AMDGPU_MACH_R600_CYPRESS },
+      { "juniper", ELF::EF_AMDGPU_MACH_R600_JUNIPER },
+      { "redwood", ELF::EF_AMDGPU_MACH_R600_REDWOOD },
+      { "sumo", ELF::EF_AMDGPU_MACH_R600_SUMO },
       // Radeon HD 6000 Series (Northern Islands).
-      .Case("barts", ELF::EF_AMDGPU_MACH_R600_BARTS)
-      .Case("caicos", ELF::EF_AMDGPU_MACH_R600_CAICOS)
-      .Case("cayman", ELF::EF_AMDGPU_MACH_R600_CAYMAN)
-      .Case("turks", ELF::EF_AMDGPU_MACH_R600_TURKS)
+      { "barts", ELF::EF_AMDGPU_MACH_R600_BARTS },
+      { "caicos", ELF::EF_AMDGPU_MACH_R600_CAICOS },
+      { "cayman", ELF::EF_AMDGPU_MACH_R600_CAYMAN },
+      { "turks", ELF::EF_AMDGPU_MACH_R600_TURKS },
       // AMDGCN GFX6.
-      .Case("gfx600", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600)
-      .Case("tahiti", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600)
-      .Case("gfx601", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
-      .Case("hainan", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
-      .Case("oland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
-      .Case("pitcairn", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
-      .Case("verde", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601)
+      { "gfx600", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600 },
+      { "tahiti", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600 },
+      { "gfx601", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
+      { "hainan", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
+      { "oland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
+      { "pitcairn", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
+      { "verde", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
       // AMDGCN GFX7.
-      .Case("gfx700", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700)
-      .Case("kaveri", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700)
-      .Case("gfx701", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701)
-      .Case("hawaii", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701)
-      .Case("gfx702", ELF::EF_AMDGPU_MACH_AMDGCN_GFX702)
-      .Case("gfx703", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703)
-      .Case("kabini", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703)
-      .Case("mullins", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703)
-      .Case("gfx704", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704)
-      .Case("bonaire", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704)
+      { "gfx700", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700 },
+      { "kaveri", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700 },
+      { "gfx701", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701 },
+      { "hawaii", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701 },
+      { "gfx702", ELF::EF_AMDGPU_MACH_AMDGCN_GFX702 },
+      { "gfx703", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703 },
+      { "kabini", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703 },
+      { "mullins", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703 },
+      { "gfx704", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704 },
+      { "bonaire", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704 },
       // AMDGCN GFX8.
-      .Case("gfx801", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801)
-      .Case("carrizo", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801)
-      .Case("gfx802", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802)
-      .Case("iceland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802)
-      .Case("tonga", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802)
-      .Case("gfx803", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
-      .Case("fiji", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
-      .Case("polaris10", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
-      .Case("polaris11", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803)
-      .Case("gfx810", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810)
-      .Case("stoney", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810)
+      { "gfx801", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801 },
+      { "carrizo", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801 },
+      { "gfx802", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802 },
+      { "iceland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802 },
+      { "tonga", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802 },
+      { "gfx803", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
+      { "fiji", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
+      { "polaris10", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
+      { "polaris11", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
+      { "gfx810", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810 },
+      { "stoney", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810 },
       // AMDGCN GFX9.
-      .Case("gfx900", ELF::EF_AMDGPU_MACH_AMDGCN_GFX900)
-      .Case("gfx902", ELF::EF_AMDGPU_MACH_AMDGCN_GFX902)
-      .Case("gfx904", ELF::EF_AMDGPU_MACH_AMDGCN_GFX904)
-      .Case("gfx906", ELF::EF_AMDGPU_MACH_AMDGCN_GFX906)
+      { "gfx900", ELF::EF_AMDGPU_MACH_AMDGCN_GFX900 },
+      { "gfx902", ELF::EF_AMDGPU_MACH_AMDGCN_GFX902 },
+      { "gfx904", ELF::EF_AMDGPU_MACH_AMDGCN_GFX904 },
+      { "gfx906", ELF::EF_AMDGPU_MACH_AMDGCN_GFX906 },
       // Not specified processor.
-      .Default(ELF::EF_AMDGPU_MACH_NONE);
+      { nullptr, ELF::EF_AMDGPU_MACH_NONE }
+};
+
+unsigned AMDGPUTargetStreamer::getMACH(StringRef GPU) const {
+  auto Entry = MachTable;
+  for (; Entry->Name && GPU != Entry->Name; ++Entry)
+    ;
+  return Entry->Mach;
+}
+
+const char *AMDGPUTargetStreamer::getMachName(unsigned Mach) {
+  auto Entry = MachTable;
+  for (; Entry->Name && Mach != Entry->Mach; ++Entry)
+    ;
+  return Entry->Name;
 }
 
 bool AMDGPUTargetStreamer::EmitHSAMetadata(StringRef HSAMetadataString) {

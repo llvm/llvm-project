@@ -5275,13 +5275,13 @@ define void @test_div(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ; ZNVER1-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [8:0.50]
 ; ZNVER1-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    divb %dil # sched: [15:1.00]
-; ZNVER1-NEXT:    divb (%r8) # sched: [45:41.00]
-; ZNVER1-NEXT:    divw %si # sched: [17:1.00]
-; ZNVER1-NEXT:    divw (%r9) # sched: [45:41.00]
-; ZNVER1-NEXT:    divl %edx # sched: [25:1.00]
-; ZNVER1-NEXT:    divl (%rax) # sched: [45:41.00]
-; ZNVER1-NEXT:    divq %rcx # sched: [41:1.00]
+; ZNVER1-NEXT:    divb %dil # sched: [15:15.00]
+; ZNVER1-NEXT:    divb (%r8) # sched: [19:15.00]
+; ZNVER1-NEXT:    divw %si # sched: [17:17.00]
+; ZNVER1-NEXT:    divw (%r9) # sched: [21:17.00]
+; ZNVER1-NEXT:    divl %edx # sched: [25:25.00]
+; ZNVER1-NEXT:    divl (%rax) # sched: [29:25.00]
+; ZNVER1-NEXT:    divq %rcx # sched: [41:41.00]
 ; ZNVER1-NEXT:    divq (%r10) # sched: [45:41.00]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -5523,13 +5523,13 @@ define void @test_idiv(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32
 ; ZNVER1-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [8:0.50]
 ; ZNVER1-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    idivb %dil # sched: [15:1.00]
-; ZNVER1-NEXT:    idivb (%r8) # sched: [45:41.00]
-; ZNVER1-NEXT:    idivw %si # sched: [17:1.00]
-; ZNVER1-NEXT:    idivw (%r9) # sched: [45:41.00]
-; ZNVER1-NEXT:    idivl %edx # sched: [25:1.00]
-; ZNVER1-NEXT:    idivl (%rax) # sched: [45:41.00]
-; ZNVER1-NEXT:    idivq %rcx # sched: [41:1.00]
+; ZNVER1-NEXT:    idivb %dil # sched: [15:15.00]
+; ZNVER1-NEXT:    idivb (%r8) # sched: [19:15.00]
+; ZNVER1-NEXT:    idivw %si # sched: [17:17.00]
+; ZNVER1-NEXT:    idivw (%r9) # sched: [21:17.00]
+; ZNVER1-NEXT:    idivl %edx # sched: [25:25.00]
+; ZNVER1-NEXT:    idivl (%rax) # sched: [29:25.00]
+; ZNVER1-NEXT:    idivq %rcx # sched: [41:41.00]
 ; ZNVER1-NEXT:    idivq (%r10) # sched: [45:41.00]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -6080,14 +6080,14 @@ define void @test_imul_64(i64 %a0, i64* %a1) optsize {
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    imulq %rdi # sched: [6:4.00]
 ; BTVER2-NEXT:    imulq (%rsi) # sched: [9:4.00]
-; BTVER2-NEXT:    imulq %rdi, %rdi # sched: [3:1.00]
-; BTVER2-NEXT:    imulq (%rsi), %rdi # sched: [6:1.00]
+; BTVER2-NEXT:    imulq %rdi, %rdi # sched: [6:4.00]
+; BTVER2-NEXT:    imulq (%rsi), %rdi # sched: [9:4.00]
 ; BTVER2-NEXT:    imulq $665536, %rdi, %rdi # imm = 0xA27C0
-; BTVER2-NEXT:    # sched: [3:1.00]
+; BTVER2-NEXT:    # sched: [6:4.00]
 ; BTVER2-NEXT:    imulq $665536, (%rsi), %rdi # imm = 0xA27C0
-; BTVER2-NEXT:    # sched: [6:1.00]
-; BTVER2-NEXT:    imulq $7, %rdi, %rdi # sched: [3:1.00]
-; BTVER2-NEXT:    imulq $7, (%rsi), %rdi # sched: [6:1.00]
+; BTVER2-NEXT:    # sched: [9:4.00]
+; BTVER2-NEXT:    imulq $7, %rdi, %rdi # sched: [6:4.00]
+; BTVER2-NEXT:    imulq $7, (%rsi), %rdi # sched: [9:4.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

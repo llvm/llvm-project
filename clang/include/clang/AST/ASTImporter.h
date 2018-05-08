@@ -41,6 +41,7 @@ class NamedDecl;
 class Stmt;
 class TagDecl;
 class TypeSourceInfo;
+class Attr;
 
   /// \brief Imports selected nodes from one AST context into another context,
   /// merging AST nodes where appropriate.
@@ -125,6 +126,12 @@ class TypeSourceInfo;
     /// \returns the equivalent type source information in the "to"
     /// context, or NULL if an error occurred.
     TypeSourceInfo *Import(TypeSourceInfo *FromTSI);
+
+    /// \brief Import the given attribute from the "from" context into the
+    /// "to" context.
+    ///
+    /// \returns the equivalent attribute in the "to" context.
+    Attr *Import(const Attr *FromAttr);
 
     /// \brief Import the given declaration from the "from" context into the 
     /// "to" context.

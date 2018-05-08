@@ -665,6 +665,10 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_str_offsets_data() {
                               m_data_debug_str_offsets);
 }
 
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_types_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugTypes, m_data_debug_types);
+}
+
 const DWARFDataExtractor &SymbolFileDWARF::get_apple_names_data() {
   return GetCachedSectionData(eSectionTypeDWARFAppleNames, m_data_apple_names);
 }

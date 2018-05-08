@@ -1485,7 +1485,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 
-  if (Args.getLastArg(options::OPT_foutline)) {
+  if (Args.getLastArg(options::OPT_moutline)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-enable-machine-outliner");
   }
@@ -3000,7 +3000,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   // debuggers don't handle missing end columns well, so it's better not to
   // include any column info.
   if (Args.hasFlag(options::OPT_gcolumn_info, options::OPT_gno_column_info,
-                   /*Default=*/!(IsWindowsMSVC && EmitCodeView) &&
+                   /*Default=*/!EmitCodeView &&
                        DebuggerTuning != llvm::DebuggerKind::SCE))
     CmdArgs.push_back("-dwarf-column-info");
 

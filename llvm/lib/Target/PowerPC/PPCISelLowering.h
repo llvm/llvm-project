@@ -71,6 +71,9 @@ namespace llvm {
       /// unsigned integers with round toward zero.
       FCTIDUZ, FCTIWUZ,
 
+      /// Floating-point-to-interger conversion instructions
+      FP_TO_UINT_IN_VSR, FP_TO_SINT_IN_VSR,
+
       /// VEXTS, ByteWidth - takes an input in VSFRC and produces an output in
       /// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
       VEXTS,
@@ -425,6 +428,9 @@ namespace llvm {
       /// Maps directly to an stxvd2x instruction that will be preceded by
       /// an xxswapd.
       STXVD2X,
+
+      /// Store scalar integers from VSR.
+      ST_VSR_SCAL_INT,
 
       /// QBRC, CHAIN = QVLFSb CHAIN, Ptr
       /// The 4xf32 load used for v4i1 constants.
@@ -1063,6 +1069,7 @@ namespace llvm {
     SDValue DAGCombineExtBoolTrunc(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue DAGCombineBuildVector(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue DAGCombineTruncBoolExt(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineStoreFPToInt(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFPToIntToFP(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSHL(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSRA(SDNode *N, DAGCombinerInfo &DCI) const;

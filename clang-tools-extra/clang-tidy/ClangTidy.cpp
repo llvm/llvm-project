@@ -18,6 +18,7 @@
 #include "ClangTidy.h"
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyModuleRegistry.h"
+#include "ClangTidyProfiling.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -267,12 +268,17 @@ private:
 class ClangTidyASTConsumer : public MultiplexConsumer {
 public:
   ClangTidyASTConsumer(std::vector<std::unique_ptr<ASTConsumer>> Consumers,
+                       std::unique_ptr<ClangTidyProfiling> Profiling,
                        std::unique_ptr<ast_matchers::MatchFinder> Finder,
                        std::vector<std::unique_ptr<ClangTidyCheck>> Checks)
-      : MultiplexConsumer(std::move(Consumers)), Finder(std::move(Finder)),
+      : MultiplexConsumer(std::move(Consumers)),
+        Profiling(std::move(Profiling)), Finder(std::move(Finder)),
         Checks(std::move(Checks)) {}
 
 private:
+  // Destructor order matters! Profiling must be destructed last.
+  // Or at least after Finder.
+  std::unique_ptr<ClangTidyProfiling> Profiling;
   std::unique_ptr<ast_matchers::MatchFinder> Finder;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
 };
@@ -353,8 +359,12 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   CheckFactories->createChecks(&Context, Checks);
 
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
-  if (auto *P = Context.getCheckProfileData())
-    FinderOptions.CheckProfiling.emplace(P->Records);
+
+  std::unique_ptr<ClangTidyProfiling> Profiling;
+  if (Context.getEnableProfiling()) {
+    Profiling = llvm::make_unique<ClangTidyProfiling>();
+    FinderOptions.CheckProfiling.emplace(Profiling->Records);
+  }
 
   std::unique_ptr<ast_matchers::MatchFinder> Finder(
       new ast_matchers::MatchFinder(std::move(FinderOptions)));
@@ -383,7 +393,8 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
     Consumers.push_back(std::move(AnalysisConsumer));
   }
   return llvm::make_unique<ClangTidyASTConsumer>(
-      std::move(Consumers), std::move(Finder), std::move(Checks));
+      std::move(Consumers), std::move(Profiling), std::move(Finder),
+      std::move(Checks));
 }
 
 std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
@@ -472,7 +483,7 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
                   llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
-                  ProfileData *Profile) {
+                  bool EnableCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
@@ -512,8 +523,7 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
 
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
   Tool.appendArgumentsAdjuster(PluginArgumentsRemover);
-  if (Profile)
-    Context.setCheckProfileData(Profile);
+  Context.setEnableProfiling(EnableCheckProfile);
 
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
 

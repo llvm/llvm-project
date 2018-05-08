@@ -88,6 +88,29 @@ TEST(SanitizerCommon, MmapAlignedOrDieOnFatalError) {
   }
 }
 
+TEST(SanitizerCommon, InternalMmapVectorReize) {
+  InternalMmapVector<uptr> v;
+  CHECK_EQ(0U, v.size());
+  CHECK_GE(v.capacity(), v.size());
+
+  v.reserve(1000);
+  CHECK_EQ(0U, v.size());
+  CHECK_GE(v.capacity(), 1000U);
+
+  v.resize(10000);
+  CHECK_EQ(10000U, v.size());
+  CHECK_GE(v.capacity(), v.size());
+  uptr cap = v.capacity();
+
+  v.resize(100);
+  CHECK_EQ(100U, v.size());
+  CHECK_EQ(v.capacity(), cap);
+
+  v.reserve(10);
+  CHECK_EQ(100U, v.size());
+  CHECK_EQ(v.capacity(), cap);
+}
+
 TEST(SanitizerCommon, InternalMmapVector) {
   InternalMmapVector<uptr> vector;
   for (uptr i = 0; i < 100; i++) {

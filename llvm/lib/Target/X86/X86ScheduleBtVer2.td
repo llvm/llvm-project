@@ -155,19 +155,25 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 // Arithmetic.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteALU,   [JALU01], 1>;
-defm : JWriteResIntPair<WriteIMul,  [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 multiplication
-defm : JWriteResIntPair<WriteIDiv,  [JALU1, JDiv], 41, [1, 41], 2>; // Worst case (i64 division)
-defm : JWriteResIntPair<WriteCRC32, [JALU01], 3, [4], 3>;
+defm : JWriteResIntPair<WriteALU,    [JALU01], 1>;
+defm : JWriteResIntPair<WriteIMul,   [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 multiplication
+defm : JWriteResIntPair<WriteIMul64, [JALU1, JMul], 6, [1, 4], 2>; // i64 multiplication
+defm : X86WriteRes<WriteIMulH,       [JALU1], 6, [4], 1>;
+
+defm : JWriteResIntPair<WriteDiv8,   [JALU1, JDiv], 12, [1, 12], 1>;
+defm : JWriteResIntPair<WriteDiv16,  [JALU1, JDiv], 17, [1, 17], 2>;
+defm : JWriteResIntPair<WriteDiv32,  [JALU1, JDiv], 25, [1, 25], 2>;
+defm : JWriteResIntPair<WriteDiv64,  [JALU1, JDiv], 41, [1, 41], 2>;
+defm : JWriteResIntPair<WriteIDiv8,  [JALU1, JDiv], 12, [1, 12], 1>;
+defm : JWriteResIntPair<WriteIDiv16, [JALU1, JDiv], 17, [1, 17], 2>;
+defm : JWriteResIntPair<WriteIDiv32, [JALU1, JDiv], 25, [1, 25], 2>;
+defm : JWriteResIntPair<WriteIDiv64, [JALU1, JDiv], 41, [1, 41], 2>;
+
+defm : JWriteResIntPair<WriteCRC32,  [JALU01], 3, [4], 3>;
 
 defm : JWriteResIntPair<WriteCMOV,  [JALU01], 1>; // Conditional move.
 def  : WriteRes<WriteSETCC, [JALU01]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [JALU01,JSAGU]>;
-
-def  : WriteRes<WriteIMulH, [JALU1]> {
-  let Latency = 6;
-  let ResourceCycles = [4];
-}
 
 // This is for simple LEAs with one or two input operands.
 // FIXME: SAGU 3-operand LEA
@@ -182,56 +188,6 @@ defm : JWriteResIntPair<WriteTZCNT,   [JALU01], 2, [2]>;
 // BMI1 BEXTR, BMI2 BZHI
 defm : JWriteResIntPair<WriteBEXTR, [JALU01], 1>;
 defm : JWriteResIntPair<WriteBZHI, [JALU01], 1>; // NOTE: Doesn't exist on Jaguar.
-
-def JWriteIMul64 : SchedWriteRes<[JALU1, JMul]> {
-  let Latency = 6;
-  let ResourceCycles = [1, 4];
-  let NumMicroOps = 2;
-}
-def JWriteIMul64Ld : SchedWriteRes<[JLAGU, JALU1, JMul]> {
-  let Latency = 9;
-  let ResourceCycles = [1, 1, 4];
-  let NumMicroOps = 2;
-}
-def : InstRW<[JWriteIMul64], (instrs MUL64r, IMUL64r)>;
-def : InstRW<[JWriteIMul64Ld], (instrs MUL64m, IMUL64m)>;
-
-def JWriteIDiv8 : SchedWriteRes<[JALU1, JDiv]> {
-  let Latency = 12;
-  let ResourceCycles = [1, 12];
-}
-def JWriteIDiv8Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
-  let Latency = 15;
-  let ResourceCycles = [1, 1, 12];
-}
-def : InstRW<[JWriteIDiv8], (instrs DIV8r, IDIV8r)>;
-def : InstRW<[JWriteIDiv8Ld], (instrs DIV8m, IDIV8m)>;
-
-def JWriteIDiv16 : SchedWriteRes<[JALU1, JDiv]> {
-  let Latency = 17;
-  let ResourceCycles = [1, 17];
-  let NumMicroOps = 2;
-}
-def JWriteIDiv16Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
-  let Latency = 20;
-  let ResourceCycles = [1, 1, 17];
-  let NumMicroOps = 2;
-}
-def : InstRW<[JWriteIDiv16], (instrs DIV16r, IDIV16r)>;
-def : InstRW<[JWriteIDiv16Ld], (instrs DIV16m, IDIV16m)>;
-
-def JWriteIDiv32 : SchedWriteRes<[JALU1, JDiv]> {
-  let Latency = 25;
-  let ResourceCycles = [1, 25];
-  let NumMicroOps = 2;
-}
-def JWriteIDiv32Ld : SchedWriteRes<[JLAGU, JALU1, JDiv]> {
-  let Latency = 28;
-  let ResourceCycles = [1, 1, 25];
-  let NumMicroOps = 2;
-}
-def : InstRW<[JWriteIDiv32], (instrs DIV32r, IDIV32r)>;
-def : InstRW<[JWriteIDiv32Ld], (instrs DIV32m, IDIV32m)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer shifts and rotates.

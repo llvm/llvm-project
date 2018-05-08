@@ -3863,9 +3863,9 @@ void CGOpenMPRuntime::createOffloadEntry(
                             llvm::ConstantInt::get(CGM.Int32Ty, Flags),
                             llvm::ConstantInt::get(CGM.Int32Ty, 0)};
   std::string EntryName = getName({"omp_offloading", "entry", ""});
-  llvm::GlobalVariable *Entry =
-      createConstantGlobalStruct(CGM, getTgtOffloadEntryQTy(), Data,
-                                 Twine(EntryName).concat(Name), Linkage);
+  llvm::GlobalVariable *Entry = createConstantGlobalStruct(
+      CGM, getTgtOffloadEntryQTy(), Data, Twine(EntryName).concat(Name),
+      llvm::GlobalValue::WeakAnyLinkage);
 
   // The entry has to be created in the section the linker expects it to be.
   std::string Section = getName({"omp_offloading", "entries"});
@@ -6281,13 +6281,13 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   if (CGM.getLangOpts().OpenMPIsDevice) {
     OutlinedFnID = llvm::ConstantExpr::getBitCast(OutlinedFn, CGM.Int8PtrTy);
-    OutlinedFn->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    OutlinedFn->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
     OutlinedFn->setDSOLocal(false);
   } else {
     std::string Name = getName({"omp_offload", "region_id"});
     OutlinedFnID = new llvm::GlobalVariable(
         CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
-        llvm::GlobalValue::PrivateLinkage,
+        llvm::GlobalValue::WeakAnyLinkage,
         llvm::Constant::getNullValue(CGM.Int8Ty), Name);
   }
 

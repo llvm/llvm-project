@@ -29,7 +29,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/ScopedPrinter.h"
 
 using namespace clang;
 
@@ -3806,11 +3805,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Diag(Tok, DiagID)
           << PrevSpec << FixItHint::CreateRemoval(Tok.getLocation());
       else if (DiagID == diag::err_opencl_unknown_type_specifier) {
-        const int OpenCLVer = getLangOpts().OpenCLVersion;
-        std::string VerSpec = llvm::to_string(OpenCLVer / 100) +
-                              std::string (".") +
-                              llvm::to_string((OpenCLVer % 100) / 10);
-        Diag(Tok, DiagID) << VerSpec << PrevSpec << isStorageClass;
+        Diag(Tok, DiagID) << getLangOpts().getOpenCLVersionTuple().getAsString()
+                          << PrevSpec << isStorageClass;
       } else
         Diag(Tok, DiagID) << PrevSpec;
     }

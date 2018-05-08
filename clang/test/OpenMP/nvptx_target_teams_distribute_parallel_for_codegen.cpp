@@ -125,7 +125,7 @@ int bar(int n){
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
-// CHECK: define void @__omp_offloading_{{.*}}_l56(i[[SZ:64|32]] %{{[^,]+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{[^)]+}})
+// CHECK: define weak void @__omp_offloading_{{.*}}_l56(i[[SZ:64|32]] %{{[^,]+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{[^)]+}})
 // CHECK: call void [[OUTLINED:@__omp_outlined.*]](i32* %{{.+}}, i32* %{{.+}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, [1000 x i32]* %{{.*}}, i32* %{{.*}})
 // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}} i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{.*}})
 

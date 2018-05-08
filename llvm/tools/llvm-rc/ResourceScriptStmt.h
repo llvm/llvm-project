@@ -542,6 +542,7 @@ public:
   IntOrString Title;
   uint32_t ID, X, Y, Width, Height;
   Optional<uint32_t> Style, ExtStyle, HelpID;
+  IntOrString Class;
 
   // Control classes as described in DLGITEMTEMPLATEEX documentation.
   //
@@ -565,10 +566,10 @@ public:
   Control(StringRef CtlType, IntOrString CtlTitle, uint32_t CtlID,
           uint32_t PosX, uint32_t PosY, uint32_t ItemWidth, uint32_t ItemHeight,
           Optional<uint32_t> ItemStyle, Optional<uint32_t> ExtItemStyle,
-          Optional<uint32_t> CtlHelpID)
+          Optional<uint32_t> CtlHelpID, IntOrString CtlClass)
       : Type(CtlType), Title(CtlTitle), ID(CtlID), X(PosX), Y(PosY),
         Width(ItemWidth), Height(ItemHeight), Style(ItemStyle),
-        ExtStyle(ExtItemStyle), HelpID(CtlHelpID) {}
+        ExtStyle(ExtItemStyle), HelpID(CtlHelpID), Class(CtlClass) {}
 
   static const StringMap<CtlInfo> SupportedCtls;
 

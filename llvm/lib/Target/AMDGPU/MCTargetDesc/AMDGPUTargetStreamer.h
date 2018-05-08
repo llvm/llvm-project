@@ -34,6 +34,9 @@ protected:
   unsigned getMACH(StringRef GPU) const;
 
 public:
+  /// \returns Equivalent GPU name for an EF_AMDGPU_MACH_* value.
+  static const char *getMachName(unsigned Mach);
+
   AMDGPUTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
   virtual void EmitDirectiveHSACodeObjectVersion(uint32_t Major,

@@ -293,7 +293,7 @@ define i64 @test_mul_by_6(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_6:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $6, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $6, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_6:
@@ -348,7 +348,7 @@ define i64 @test_mul_by_7(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_7:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $7, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $7, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_7:
@@ -503,7 +503,7 @@ define i64 @test_mul_by_10(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_10:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $10, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $10, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_10:
@@ -558,7 +558,7 @@ define i64 @test_mul_by_11(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_11:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $11, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $11, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_11:
@@ -611,7 +611,7 @@ define i64 @test_mul_by_12(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_12:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $12, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $12, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_12:
@@ -666,7 +666,7 @@ define i64 @test_mul_by_13(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_13:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $13, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $13, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_13:
@@ -723,7 +723,7 @@ define i64 @test_mul_by_14(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_14:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $14, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $14, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_14:
@@ -777,7 +777,7 @@ define i64 @test_mul_by_15(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_15:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $15, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $15, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_15:
@@ -891,7 +891,7 @@ define i64 @test_mul_by_17(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_17:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $17, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $17, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_17:
@@ -946,7 +946,7 @@ define i64 @test_mul_by_18(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_18:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $18, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $18, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_18:
@@ -1004,7 +1004,7 @@ define i64 @test_mul_by_19(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_19:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $19, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $19, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_19:
@@ -1057,7 +1057,7 @@ define i64 @test_mul_by_20(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_20:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $20, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $20, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_20:
@@ -1112,7 +1112,7 @@ define i64 @test_mul_by_21(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_21:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $21, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $21, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_21:
@@ -1169,7 +1169,7 @@ define i64 @test_mul_by_22(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_22:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $22, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $22, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_22:
@@ -1226,7 +1226,7 @@ define i64 @test_mul_by_23(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_23:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $23, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $23, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_23:
@@ -1279,7 +1279,7 @@ define i64 @test_mul_by_24(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_24:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $24, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $24, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_24:
@@ -1334,7 +1334,7 @@ define i64 @test_mul_by_25(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_25:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $25, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $25, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_25:
@@ -1392,7 +1392,7 @@ define i64 @test_mul_by_26(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_26:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $26, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $26, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_26:
@@ -1446,7 +1446,7 @@ define i64 @test_mul_by_27(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_27:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $27, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $27, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_27:
@@ -1504,7 +1504,7 @@ define i64 @test_mul_by_28(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_28:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $28, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $28, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_28:
@@ -1564,7 +1564,7 @@ define i64 @test_mul_by_29(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_29:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $29, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $29, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_29:
@@ -1624,7 +1624,7 @@ define i64 @test_mul_by_30(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_30:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $30, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $30, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_30:
@@ -1681,7 +1681,7 @@ define i64 @test_mul_by_31(i64 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_31:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    imulq $31, %rdi, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq $31, %rdi, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_31:
@@ -1802,7 +1802,7 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    leaq 42(%rdi,%rdi,8), %rcx # sched: [1:0.50]
 ; X64-JAG-NEXT:    leaq 2(%rdi,%rdi,4), %rax # sched: [1:0.50]
-; X64-JAG-NEXT:    imulq %rcx, %rax # sched: [3:1.00]
+; X64-JAG-NEXT:    imulq %rcx, %rax # sched: [6:4.00]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
 ;
 ; X86-NOOPT-LABEL: test_mul_spec:
@@ -1850,7 +1850,7 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; JAG-NOOPT:       # %bb.0:
 ; JAG-NOOPT-NEXT:    leaq 42(%rdi,%rdi,8), %rcx # sched: [1:0.50]
 ; JAG-NOOPT-NEXT:    leaq 2(%rdi,%rdi,4), %rax # sched: [1:0.50]
-; JAG-NOOPT-NEXT:    imulq %rcx, %rax # sched: [3:1.00]
+; JAG-NOOPT-NEXT:    imulq %rcx, %rax # sched: [6:4.00]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_spec:

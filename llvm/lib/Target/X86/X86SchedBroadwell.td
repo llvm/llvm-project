@@ -106,9 +106,19 @@ multiclass BWWriteResPair<X86FoldableSchedWrite SchedRW,
 def : WriteRes<WriteRMW, [BWPort237,BWPort4]>;
 
 // Arithmetic.
-defm : BWWriteResPair<WriteALU,   [BWPort0156], 1>; // Simple integer ALU op.
-defm : BWWriteResPair<WriteIMul,  [BWPort1],   3>; // Integer multiplication.
-defm : BWWriteResPair<WriteIDiv, [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteALU,    [BWPort0156], 1>; // Simple integer ALU op.
+defm : BWWriteResPair<WriteIMul,   [BWPort1], 3>; // Integer multiplication.
+defm : BWWriteResPair<WriteIMul64, [BWPort1], 3>; // Integer 64-bit multiplication.
+
+defm : BWWriteResPair<WriteDiv8,   [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteDiv16,  [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteDiv32,  [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteDiv64,  [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteIDiv8,  [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteIDiv16, [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteIDiv32, [BWPort0, BWDivider], 25, [1, 10]>;
+defm : BWWriteResPair<WriteIDiv64, [BWPort0, BWDivider], 25, [1, 10]>;
+
 defm : BWWriteResPair<WriteCRC32, [BWPort1],   3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 

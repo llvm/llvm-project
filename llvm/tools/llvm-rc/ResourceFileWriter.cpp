@@ -1016,7 +1016,7 @@ Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
   }
 
   // Window class - either 0xFFFF + 16-bit integer or a string.
-  RETURN_IF_ERROR(writeIntOrString(IntOrString(TypeInfo.CtlClass)));
+  RETURN_IF_ERROR(writeIntOrString(Ctl.Class));
 
   // Element caption/reference ID. ID is preceded by 0xFFFF.
   RETURN_IF_ERROR(checkIntOrString(Ctl.Title, "Control reference ID"));

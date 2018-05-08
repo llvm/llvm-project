@@ -224,7 +224,7 @@ layer interface. The interface consists of one typedef and five methods:
 |                  | emitAndFinalize.                                          |
 +------------------+-----------------------------------------------------------+
 |                  | Takes a given set of Modules and makes them "available    |
-|                  | for execution. This means that symbols in those modules   |
+|                  | for execution". This means that symbols in those modules  |
 |                  | should be searchable via findSymbol and findSymbolIn, and |
 |                  | the address of the symbols should be read/writable (for   |
 |                  | data symbols), or executable (for function symbols) after |

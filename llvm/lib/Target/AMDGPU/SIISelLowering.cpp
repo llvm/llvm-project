@@ -4168,7 +4168,7 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   // Convert vector index to bit-index.
   SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx,
-                                  DAG.getConstant(16, SL, MVT::i32));
+                                  DAG.getConstant(4, SL, MVT::i32));
 
   SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Vec);
 
@@ -4216,10 +4216,10 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, ResultVT, Result);
   }
 
-  SDValue Sixteen = DAG.getConstant(16, SL, MVT::i32);
+  SDValue Four = DAG.getConstant(4, SL, MVT::i32);
 
-  // Convert vector index to bit-index.
-  SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, Sixteen);
+  // Convert vector index to bit-index (* 16)
+  SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, Four);
 
   SDValue BC = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Vec);
   SDValue Elt = DAG.getNode(ISD::SRL, SL, MVT::i32, BC, ScaledIdx);
