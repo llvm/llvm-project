@@ -497,10 +497,10 @@ void EhFrameSection::finalizeContents() {
   }
 
   // The LSB standard does not allow a .eh_frame section with zero
-  // Call Frame Information records. Therefore add a CIE record length
-  // 0 as a terminator if this .eh_frame section is empty.
-  if (Off == 0)
-    Off = 4;
+  // Call Frame Information records. glibc unwind-dw2-fde.c
+  // classify_object_over_fdes expects there is a CIE record length 0 as a
+  // terminator. Thus we add one unconditionally.
+  Off += 4;
 
   this->Size = Off;
 }

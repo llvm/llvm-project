@@ -228,7 +228,7 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const tooling::CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
                   llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
-                  ProfileData *Profile = nullptr);
+                  bool EnableCheckProfile = false);
 
 // FIXME: This interface will need to be significantly extended to be useful.
 // FIXME: Implement confidence levels for displaying/fixing errors.
