@@ -184,8 +184,6 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
 
       auto *Opt = reinterpret_cast<const Elf_Mips_Options *>(D.data());
       if (Opt->kind == ODK_REGINFO) {
-        if (Config->Relocatable && Opt->getRegInfo().ri_gp_value)
-          error(Filename + ": unsupported non-zero ri_gp_value");
         Reginfo.ri_gprmask |= Opt->getRegInfo().ri_gprmask;
         Sec->getFile<ELFT>()->MipsGp0 = Opt->getRegInfo().ri_gp_value;
         break;
@@ -236,10 +234,8 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
       error(toString(Sec->File) + ": invalid size of .reginfo section");
       return nullptr;
     }
-    auto *R = reinterpret_cast<const Elf_Mips_RegInfo *>(Sec->Data.data());
-    if (Config->Relocatable && R->ri_gp_value)
-      error(toString(Sec->File) + ": unsupported non-zero ri_gp_value");
 
+    auto *R = reinterpret_cast<const Elf_Mips_RegInfo *>(Sec->Data.data());
     Reginfo.ri_gprmask |= R->ri_gprmask;
     Sec->getFile<ELFT>()->MipsGp0 = R->ri_gp_value;
   };
