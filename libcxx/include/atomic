@@ -555,9 +555,6 @@ void atomic_signal_fence(memory_order m) noexcept;
 #if !defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP)
 #error <atomic> is not implemented
 #endif
-#ifdef __ALLOW_STDC_ATOMICS_IN_CXX__
-#error <stdatomic.h> is incompatible with the C++ standard library
-#endif
 
 #if _LIBCPP_STD_VER > 14
 # define __cpp_lib_atomic_is_always_lock_free 201603L
