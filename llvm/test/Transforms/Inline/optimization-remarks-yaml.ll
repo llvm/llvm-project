@@ -20,10 +20,10 @@
 ; NewPM:
 ; RUN: opt < %s -S -passes=inline -pass-remarks-missed=inline \
 ; RUN:     -pass-remarks-with-hotness -pass-remarks-hotness-threshold 15 \
-; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s -check-prefix=CHECK_NEW
-; RUN: test ! -s %t
+; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 ; RUN: opt < %s -S -passes=inline -pass-remarks-with-hotness -pass-remarks-output=%t
-; RUN: test ! -s %t
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 ;
 ; Verify that remarks that don't meet the hotness threshold are not output.
 ; RUN: opt < %s -S -passes=inline -pass-remarks-missed=inline \
@@ -78,9 +78,6 @@
 
 ; No remarks should be output, since none meet the threshold.
 ; THRESHOLD-NOT: remark
-
-; NewPM does not output this kind of "missed" remark.
-; CHECK_NEW-NOT: remark
 
 ; ModuleID = '/tmp/s.c'
 source_filename = "/tmp/s.c"

@@ -4743,6 +4743,9 @@ bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
 }
 
 bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
+  // A mask and compare against constant is ok for an 'andn' too
+  // even though the BMI instruction doesn't have an immediate form.
+
   if (!Subtarget.hasBMI())
     return false;
 
@@ -4752,6 +4755,14 @@ bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
     return false;
 
   return true;
+}
+
+bool X86TargetLowering::hasAndNot(SDValue Y) const {
+  // x86 can't form 'andn' with an immediate.
+  if (isa<ConstantSDNode>(Y))
+    return false;
+
+  return hasAndNotCompare(Y);
 }
 
 MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {

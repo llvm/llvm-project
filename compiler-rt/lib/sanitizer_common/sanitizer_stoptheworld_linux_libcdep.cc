@@ -211,21 +211,23 @@ bool ThreadSuspender::SuspendAllThreads() {
   ThreadLister thread_lister(pid_);
   bool added_threads;
   bool first_iteration = true;
+  InternalMmapVector<int> threads;
+  threads.reserve(128);
   do {
     // Run through the directory entries once.
     added_threads = false;
-    pid_t tid = thread_lister.GetNextTID();
-    while (tid >= 0) {
+    if (!thread_lister.ListThreads(&threads)) {
+      ResumeAllThreads();
+      return false;
+    }
+    for (int tid : threads)
       if (SuspendThread(tid))
         added_threads = true;
-      tid = thread_lister.GetNextTID();
-    }
-    if (thread_lister.error() || (first_iteration && !added_threads)) {
+    if (first_iteration && !added_threads) {
       // Detach threads and fail.
       ResumeAllThreads();
       return false;
     }
-    thread_lister.Reset();
     first_iteration = false;
   } while (added_threads);
   return true;

@@ -17,9 +17,9 @@ define i32 @t1(i64 %a) {
 ;
 ; CHECK-BMI-LABEL: t1:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    shrq $63, %rdi
-; CHECK-BMI-NEXT:    xorl $1, %edi
-; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorl %eax, %eax
+; CHECK-BMI-NEXT:    testq %rdi, %rdi
+; CHECK-BMI-NEXT:    setns %al
 ; CHECK-BMI-NEXT:    retq
   %cmp = icmp sgt i64 %a, -1
   %conv = zext i1 %cmp to i32

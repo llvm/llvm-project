@@ -905,70 +905,45 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
 #endif // !SANITIZER_SOLARIS
 
 // ThreadLister implementation.
-ThreadLister::ThreadLister(int pid)
-  : pid_(pid),
-    descriptor_(-1),
-    buffer_(4096),
-    error_(true),
-    entry_((struct linux_dirent *)buffer_.data()),
-    bytes_read_(0) {
+ThreadLister::ThreadLister(int pid) : pid_(pid), buffer_(4096) {
+  buffer_.resize(buffer_.capacity());
   char task_directory_path[80];
   internal_snprintf(task_directory_path, sizeof(task_directory_path),
                     "/proc/%d/task/", pid);
-  uptr openrv = internal_open(task_directory_path, O_RDONLY | O_DIRECTORY);
-  if (internal_iserror(openrv)) {
-    error_ = true;
+  descriptor_ = internal_open(task_directory_path, O_RDONLY | O_DIRECTORY);
+  if (internal_iserror(descriptor_)) {
     Report("Can't open /proc/%d/task for reading.\n", pid);
-  } else {
-    error_ = false;
-    descriptor_ = openrv;
   }
 }
 
-int ThreadLister::GetNextTID() {
-  int tid = -1;
-  do {
-    if (error_)
-      return -1;
-    if ((char *)entry_ >= &buffer_[bytes_read_] && !GetDirectoryEntries())
-      return -1;
-    if (entry_->d_ino != 0 && entry_->d_name[0] >= '0' &&
-        entry_->d_name[0] <= '9') {
-      // Found a valid tid.
-      tid = (int)internal_atoll(entry_->d_name);
-    }
-    entry_ = (struct linux_dirent *)(((char *)entry_) + entry_->d_reclen);
-  } while (tid < 0);
-  return tid;
-}
-
-void ThreadLister::Reset() {
-  if (error_ || descriptor_ < 0)
-    return;
+bool ThreadLister::ListThreads(InternalMmapVector<int> *threads) {
+  if (!descriptor_) return false;
   internal_lseek(descriptor_, 0, SEEK_SET);
+  threads->clear();
+
+  while (uptr read = internal_getdents(descriptor_,
+                                       (struct linux_dirent *)buffer_.data(),
+                                       buffer_.size())) {
+    if (internal_iserror(read)) {
+      Report("Can't read directory entries from /proc/%d/task.\n", pid_);
+      return false;
+    }
+
+    for (uptr begin = (uptr)buffer_.data(), end = begin + read; begin < end;) {
+      struct linux_dirent *entry = (struct linux_dirent *)begin;
+      begin += entry->d_reclen;
+      if (entry->d_ino && *entry->d_name >= '0' && *entry->d_name <= '9') {
+        // Found a valid tid.
+        threads->push_back(internal_atoll(entry->d_name));
+      }
+    }
+  }
+  return true;
 }
 
 ThreadLister::~ThreadLister() {
   if (descriptor_ >= 0)
     internal_close(descriptor_);
-}
-
-bool ThreadLister::error() { return error_; }
-
-bool ThreadLister::GetDirectoryEntries() {
-  CHECK_GE(descriptor_, 0);
-  CHECK_NE(error_, true);
-  bytes_read_ = internal_getdents(
-      descriptor_, (struct linux_dirent *)buffer_.data(), buffer_.size());
-  if (internal_iserror(bytes_read_)) {
-    Report("Can't read directory entries from /proc/%d/task.\n", pid_);
-    error_ = true;
-    return false;
-  } else if (bytes_read_ == 0) {
-    return false;
-  }
-  entry_ = (struct linux_dirent *)buffer_.data();
-  return true;
 }
 
 #if SANITIZER_WORDSIZE == 32

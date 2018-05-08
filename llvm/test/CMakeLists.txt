@@ -83,6 +83,7 @@ set(LLVM_TEST_DEPENDS
           llvm-size
           llvm-split
           llvm-strings
+          llvm-strip
           llvm-symbolizer
           llvm-tblgen
           llvm-xray
