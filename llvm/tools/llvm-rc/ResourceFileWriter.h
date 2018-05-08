@@ -122,6 +122,10 @@ private:
                                bool IsLastItem);
   Error writeAcceleratorsBody(const RCResource *);
 
+  // BitmapResource
+  Error visitBitmapResource(const RCResource *) override;
+  Error writeBitmapBody(const RCResource *);
+
   // CursorResource and IconResource
   Error visitIconOrCursorResource(const RCResource *);
   Error visitIconOrCursorGroup(const RCResource *);

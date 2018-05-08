@@ -379,6 +379,9 @@ protected:
   /// Processor supports WaitPKG instructions
   bool HasWAITPKG;
 
+  /// Processor supports PCONFIG instruction
+  bool HasPCONFIG;
+
   /// Use a retpoline thunk rather than indirect calls to block speculative
   /// execution.
   bool UseRetpoline;
@@ -640,6 +643,8 @@ public:
   bool hasWBNOINVD() const { return HasWBNOINVD; }
   bool hasRDPID() const { return HasRDPID; }
   bool hasWAITPKG() const { return HasWAITPKG; }
+  bool hasPCONFIG() const { return HasPCONFIG; }
+  bool hasSGX() const { return HasSGX; }
   bool useRetpoline() const { return UseRetpoline; }
   bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
 

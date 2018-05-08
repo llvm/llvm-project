@@ -84,6 +84,7 @@ private:
   Expected<RCInt> readInt();               // Parse an integer.
   Expected<StringRef> readString();        // Parse a string.
   Expected<StringRef> readIdentifier();    // Parse an identifier.
+  Expected<StringRef> readFilename();      // Parse a filename.
   Expected<IntOrString> readIntOrString(); // Parse an integer or a string.
   Expected<IntOrString> readTypeOrName();  // Parse an integer or an identifier.
 
@@ -138,6 +139,7 @@ private:
   // Top-level resource parsers.
   ParseType parseLanguageResource();
   ParseType parseAcceleratorsResource();
+  ParseType parseBitmapResource();
   ParseType parseCursorResource();
   ParseType parseDialogResource(bool IsExtended);
   ParseType parseIconResource();

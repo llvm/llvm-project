@@ -323,6 +323,7 @@ void X86Subtarget::initializeEnvironment() {
   HasSHSTK = false;
   HasIBT = false;
   HasSGX = false;
+  HasPCONFIG = false;
   HasCLFLUSHOPT = false;
   HasCLWB = false;
   HasWBNOINVD = false;

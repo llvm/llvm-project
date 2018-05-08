@@ -3,6 +3,11 @@
 ; RUN: llvm-rc /FO %t.include.res %p/Inputs/include.rc
 ; RUN: llvm-readobj %t.include.res | FileCheck --check-prefix=FOUND %s
 
+; Try including files without quotes.
+; RUN: rm -f %t.noquotes.res
+; RUN: llvm-rc /FO %t.noquotes.res %p/Inputs/include-noquotes.rc
+; RUN: llvm-readobj %t.noquotes.res | FileCheck --check-prefix=FOUND %s
+
 ; Should find the bitmap if the folder is explicitly specified.
 ; RUN: rm -f %t.nested-include.res
 ; RUN: llvm-rc /FO %t.nested-include.res /I %p/Inputs/nested %p/Inputs/deep-include.rc
@@ -22,7 +27,7 @@
 ; RUN: llvm-rc /FO %t.nested-include.res %p/Inputs/include.rc
 ; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
 
-FOUND:      Resource type (string): BITMAP
+FOUND:      Resource type (int): 2
 FOUND-NEXT: Resource name (string): FOO
 FOUND-NEXT: Data version: 0
 FOUND-NEXT: Memory flags: 0x30
@@ -30,16 +35,15 @@ FOUND-NEXT: Language ID: 1033
 FOUND-NEXT: Version (major): 0
 FOUND-NEXT: Version (minor): 0
 FOUND-NEXT: Characteristics: 0
-FOUND-NEXT: Data size: 110
+FOUND-NEXT: Data size: 96
 FOUND-NEXT: Data: (
-FOUND-NEXT:   0000: 424D6E00 00000000 00003600 00002800  |BMn.......6...(.|
-FOUND-NEXT:   0010: 00000200 00000700 00000100 18000000  |................|
-FOUND-NEXT:   0020: 00003800 00000000 00000000 00000000  |..8.............|
-FOUND-NEXT:   0030: 00000000 00005BB3 855BB385 0000FFFF  |......[..[......|
-FOUND-NEXT:   0040: FFFFFFFF 0000FFFF FFFFFFFF 0000FFFF  |................|
-FOUND-NEXT:   0050: FFFFFFFF 00005BB3 85FFFFFF 0000FFFF  |......[.........|
-FOUND-NEXT:   0060: FF0EC9FF 0000241C EDFFFFFF 0000      |......$.......|
+FOUND-NEXT:   0000: 28000000 02000000 07000000 01001800  |(...............|
+FOUND-NEXT:   0010: 00000000 38000000 00000000 00000000  |....8...........|
+FOUND-NEXT:   0020: 00000000 00000000 5BB3855B B3850000  |........[..[....|
+FOUND-NEXT:   0030: FFFFFFFF FFFF0000 FFFFFFFF FFFF0000  |................|
+FOUND-NEXT:   0040: FFFFFFFF FFFF0000 5BB385FF FFFF0000  |........[.......|
+FOUND-NEXT:   0050: FFFFFF0E C9FF0000 241CEDFF FFFF0000  |........$.......|
 FOUND-NEXT: )
 
 MISSING:      llvm-rc: Error in BITMAP statement (ID foo):
-MISSING-NEXT: error : file not found : nested-bitmap.bmp
+MISSING-NEXT: error : file not found : nested_bitmap.bmp

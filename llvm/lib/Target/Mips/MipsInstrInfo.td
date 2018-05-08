@@ -2279,27 +2279,24 @@ def MTHI : MMRel, MoveToLOHI<"mthi", GPR32Opnd, [HI0]>, MTLO_FM<0x11>,
            ISA_MIPS1_NOT_32R6_64R6;
 def MTLO : MMRel, MoveToLOHI<"mtlo", GPR32Opnd, [LO0]>, MTLO_FM<0x13>,
            ISA_MIPS1_NOT_32R6_64R6;
-let EncodingPredicates = []<Predicate>, // FIXME: Lack of HasStdEnc is probably a bug
-    AdditionalPredicates = [NotInMicroMips] in {
-def MFHI : MMRel, MoveFromLOHI<"mfhi", GPR32Opnd, AC0>, MFLO_FM<0x10>,
-           ISA_MIPS1_NOT_32R6_64R6;
-def MFLO : MMRel, MoveFromLOHI<"mflo", GPR32Opnd, AC0>, MFLO_FM<0x12>,
-           ISA_MIPS1_NOT_32R6_64R6;
-
-/// Sign Ext In Register Instructions.
-def SEB : MMRel, StdMMR6Rel, SignExtInReg<"seb", i8, GPR32Opnd, II_SEB>,
-          SEB_FM<0x10, 0x20>, ISA_MIPS32R2;
-def SEH : MMRel, StdMMR6Rel, SignExtInReg<"seh", i16, GPR32Opnd, II_SEH>,
-          SEB_FM<0x18, 0x20>, ISA_MIPS32R2;
-}
-
-/// Count Leading
-def CLZ : MMRel, CountLeading0<"clz", GPR32Opnd, II_CLZ>, CLO_FM<0x20>,
-          ISA_MIPS32_NOT_32R6_64R6;
-def CLO : MMRel, CountLeading1<"clo", GPR32Opnd, II_CLO>, CLO_FM<0x21>,
-          ISA_MIPS32_NOT_32R6_64R6;
-
 let AdditionalPredicates = [NotInMicroMips] in {
+  def MFHI : MMRel, MoveFromLOHI<"mfhi", GPR32Opnd, AC0>, MFLO_FM<0x10>,
+             ISA_MIPS1_NOT_32R6_64R6;
+  def MFLO : MMRel, MoveFromLOHI<"mflo", GPR32Opnd, AC0>, MFLO_FM<0x12>,
+             ISA_MIPS1_NOT_32R6_64R6;
+
+  /// Sign Ext In Register Instructions.
+  def SEB : MMRel, StdMMR6Rel, SignExtInReg<"seb", i8, GPR32Opnd, II_SEB>,
+            SEB_FM<0x10, 0x20>, ISA_MIPS32R2;
+  def SEH : MMRel, StdMMR6Rel, SignExtInReg<"seh", i16, GPR32Opnd, II_SEH>,
+            SEB_FM<0x18, 0x20>, ISA_MIPS32R2;
+
+  /// Count Leading
+  def CLZ : MMRel, CountLeading0<"clz", GPR32Opnd, II_CLZ>, CLO_FM<0x20>,
+            ISA_MIPS32_NOT_32R6_64R6;
+  def CLO : MMRel, CountLeading1<"clo", GPR32Opnd, II_CLO>, CLO_FM<0x21>,
+            ISA_MIPS32_NOT_32R6_64R6;
+
   /// Word Swap Bytes Within Halfwords
   def WSBH : MMRel, SubwordSwap<"wsbh", GPR32Opnd, II_WSBH>, SEB_FM<2, 0x20>,
              ISA_MIPS32R2;

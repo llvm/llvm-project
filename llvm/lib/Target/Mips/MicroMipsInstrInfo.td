@@ -921,9 +921,9 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   /// Count Leading
   def CLZ_MM : MMRel, CountLeading0<"clz", GPR32Opnd, II_CLZ>, CLO_FM_MM<0x16c>,
-               ISA_MIPS32;
+               ISA_MICROMIPS;
   def CLO_MM : MMRel, CountLeading1<"clo", GPR32Opnd, II_CLO>, CLO_FM_MM<0x12c>,
-               ISA_MIPS32;
+               ISA_MICROMIPS;
 
   /// Sign Ext In Register Instructions.
   def SEB_MM : MMRel, SignExtInReg<"seb", i8, GPR32Opnd, II_SEB>,

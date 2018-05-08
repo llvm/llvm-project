@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-waits  %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-waitcnts  %s -o - | FileCheck %s
 
 --- |
   define amdgpu_kernel void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
@@ -25,26 +25,26 @@
 # CHECK: FLAT_LOAD_DWORD
 # CHECK: FLAT_LOAD_DWORDX4
 # Global loads will return in order so we should:
-# s_waitcnt vmcnt(1) lgkmcnt(0)
-# CHECK-NEXT: S_WAITCNT 113
+# s_waitcnt vmcnt(1) lgkmcnt(1)
+# CHECK-NEXT: S_WAITCNT 369
 
 # CHECK-LABEL: bb.1:
 # CHECK: FLAT_LOAD_DWORD
-# CHECK: S_WAITCNT 3952
+# CHECK: S_WAITCNT 368
 # CHECK: FLAT_LOAD_DWORDX4
 # The first load has no mem operand, so we should assume it accesses the flat
 # address space.
-# s_waitcnt vmcnt(0) lgkmcnt(0)
-# CHECK-NEXT: S_WAITCNT 127
+# s_waitcnt lgkmcnt(1)
+# CHECK-NEXT: S_WAITCNT 383
 
 # CHECK-LABEL: bb.2:
 # CHECK: FLAT_LOAD_DWORD
-# CHECK: S_WAITCNT 3952
+# CHECK: S_WAITCNT 368
 # CHECK: FLAT_LOAD_DWORDX4
 
-# One outstand loads access the flat address space.
-# s_waitcnt vmcnt(0) lgkmcnt(0)
-# CHECK-NEXT: S_WAITCNT 127
+# One outstanding load accesses the flat address space.
+# s_waitcnt lgkmcnt(1)
+# CHECK-NEXT: S_WAITCNT 383
 
 name: flat_zero_waitcnt
 
@@ -99,8 +99,6 @@ body: |
 
 
 # CHECK-LABEL: name: single_branch_successor_not_next_block
-# CHECK:   $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2
-# CHECK-NEXT: S_WAITCNT 112
 
 # CHECK: bb.1
 # CHECK-NEXT: FLAT_STORE_DWORD
@@ -108,6 +106,7 @@ body: |
 
 # CHECK: bb.2:
 # CHECK-NEXT: V_LSHLREV_B64
+# CHECK-NEXT: S_WAITCNT 112
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_branch_successor_not_next_block
 

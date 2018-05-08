@@ -280,6 +280,8 @@ def FeaturePOPCNTFalseDeps : SubtargetFeature<"false-deps-popcnt",
 def FeatureLZCNTFalseDeps : SubtargetFeature<"false-deps-lzcnt-tzcnt",
                                      "HasLZCNTFalseDeps", "true",
                                      "LZCNT/TZCNT have a false dependency on dest register">;
+def FeaturePCONFIG : SubtargetFeature<"pconfig", "HasPCONFIG", "true",
+                                      "platform configuration instruction">;
 // On recent X86 (port bound) processors, its preferable to combine to a single shuffle
 // using a variable mask over multiple fixed shuffles.
 def FeatureFastVariableShuffle
@@ -868,6 +870,7 @@ def : IcelakeClientProc<"icelake-client">;
 class IcelakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  ICLFeatures.Value, [
   ProcIntelICX,
+  FeaturePCONFIG,
   FeatureWBNOINVD,
   FeatureHasFastGather
 ]>;

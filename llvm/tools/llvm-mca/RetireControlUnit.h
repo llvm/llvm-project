@@ -47,7 +47,7 @@ struct RetireControlUnit {
   // Note that the size of the reorder buffer is defined by the scheduling
   // model via field 'NumMicroOpBufferSize'.
   struct RUToken {
-    unsigned Index;    // Instruction index.
+    InstRef IR;
     unsigned NumSlots; // Slots reserved to this instruction.
     bool Executed;     // True if the instruction is past the WB stage.
   };
@@ -74,7 +74,7 @@ public:
   }
 
   // Reserves a number of slots, and returns a new token.
-  unsigned reserveSlot(unsigned Index, unsigned NumMicroOps);
+  unsigned reserveSlot(const InstRef &IS, unsigned NumMicroOps);
 
   /// Retires instructions in program order.
   void cycleEvent();

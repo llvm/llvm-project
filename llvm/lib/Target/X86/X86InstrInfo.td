@@ -881,6 +881,7 @@ def HasIFMA      : Predicate<"Subtarget->hasIFMA()">;
 def HasRTM       : Predicate<"Subtarget->hasRTM()">;
 def HasADX       : Predicate<"Subtarget->hasADX()">;
 def HasSHA       : Predicate<"Subtarget->hasSHA()">;
+def HasSGX       : Predicate<"Subtarget->hasSGX()">;
 def HasPRFCHW    : Predicate<"Subtarget->hasPRFCHW()">;
 def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasSSEPrefetch : Predicate<"Subtarget->hasSSEPrefetch()">;
@@ -904,6 +905,7 @@ def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
 def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
+def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
                              AssemblerPredicate<"!Mode64Bit", "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,

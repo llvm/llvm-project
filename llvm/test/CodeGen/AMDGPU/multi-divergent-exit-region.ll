@@ -355,7 +355,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 
 ; GCN: v_mov_b32_e32 v0, 2.0
 ; GCN: s_or_b64 exec, exec
-; GCN: s_and_b64 exec, exec
+; GCN-NOT: s_and_b64 exec, exec
 ; GCN: v_mov_b32_e32 v0, 1.0
 
 ; GCN: {{^BB[0-9]+_[0-9]+}}: ; %UnifiedReturnBlock

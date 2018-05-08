@@ -48,10 +48,10 @@ define i1 @foo(i8* %p) {
   ret i1 %x
 }
 
-; X86-LINUX:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 8 {
-; X86-WIN32:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 8 {
-; ARM:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
-; THUMB: define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
+; X86-LINUX:   define private void @[[JT]]() #[[ATTR:.*]] align 8 {
+; X86-WIN32:   define private void @[[JT]]() #[[ATTR:.*]] align 8 {
+; ARM:   define private void @[[JT]]() #[[ATTR:.*]] align 4 {
+; THUMB: define private void @[[JT]]() #[[ATTR:.*]] align 4 {
 
 ; X86:      jmp ${0:c}@plt
 ; X86-SAME: int3

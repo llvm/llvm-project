@@ -578,6 +578,7 @@ define i32 @in_constant_varx_mone(i32 %x, i32 %y, i32 %mask) {
   %r = xor i32 %n1, -1
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @out_constant_varx_mone_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: out_constant_varx_mone_invmask:
 ; CHECK-NOBMI:       # %bb.0:
@@ -598,6 +599,7 @@ define i32 @out_constant_varx_mone_invmask(i32 %x, i32 %y, i32 %mask) {
   %r = or i32 %mx, %my
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @in_constant_varx_mone_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: in_constant_varx_mone_invmask:
 ; CHECK-NOBMI:       # %bb.0:
@@ -655,17 +657,16 @@ define i32 @in_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-BMI-LABEL: in_constant_varx_42:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andl %edx, %edi
-; CHECK-BMI-NEXT:    notl %edx
-; CHECK-BMI-NEXT:    andl $42, %edx
-; CHECK-BMI-NEXT:    orl %edi, %edx
-; CHECK-BMI-NEXT:    movl %edx, %eax
+; CHECK-BMI-NEXT:    andnl %edx, %edi, %eax
+; CHECK-BMI-NEXT:    orl $42, %edx
+; CHECK-BMI-NEXT:    andnl %edx, %eax, %eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i32 %x, 42 ; %x
   %n1 = and i32 %n0, %mask
   %r = xor i32 %n1, 42
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @out_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: out_constant_varx_42_invmask:
 ; CHECK-NOBMI:       # %bb.0:
@@ -689,6 +690,7 @@ define i32 @out_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
   %r = or i32 %mx, %my
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @in_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: in_constant_varx_42_invmask:
 ; CHECK-NOBMI:       # %bb.0:
@@ -701,9 +703,10 @@ define i32 @in_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-BMI-LABEL: in_constant_varx_42_invmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andnl %edi, %edx, %eax
-; CHECK-BMI-NEXT:    andl $42, %edx
-; CHECK-BMI-NEXT:    orl %edx, %eax
+; CHECK-BMI-NEXT:    notl %edx
+; CHECK-BMI-NEXT:    andnl %edx, %edi, %eax
+; CHECK-BMI-NEXT:    orl $42, %edx
+; CHECK-BMI-NEXT:    andnl %edx, %eax, %eax
 ; CHECK-BMI-NEXT:    retq
   %notmask = xor i32 %mask, -1
   %n0 = xor i32 %x, 42 ; %x
@@ -750,6 +753,7 @@ define i32 @in_constant_mone_vary(i32 %x, i32 %y, i32 %mask) {
   %r = xor i32 %n1, %y
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @out_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: out_constant_mone_vary_invmask:
 ; CHECK-NOBMI:       # %bb.0:
@@ -772,6 +776,7 @@ define i32 @out_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
   %r = or i32 %mx, %my
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @in_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: in_constant_mone_vary_invmask:
 ; CHECK-NOBMI:       # %bb.0:
@@ -836,6 +841,7 @@ define i32 @in_constant_42_vary(i32 %x, i32 %y, i32 %mask) {
   %r = xor i32 %n1, %y
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: out_constant_42_vary_invmask:
 ; CHECK-NOBMI:       # %bb.0:
@@ -860,6 +866,7 @@ define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
   %r = or i32 %mx, %my
   ret i32 %r
 }
+; This is not a canonical form. Testing for completeness only.
 define i32 @in_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-NOBMI-LABEL: in_constant_42_vary_invmask:
 ; CHECK-NOBMI:       # %bb.0:

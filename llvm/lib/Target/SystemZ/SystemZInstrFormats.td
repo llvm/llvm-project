@@ -4779,7 +4779,7 @@ class AtomicLoadWBinaryImm<SDPatternOperator operator, Immediate imm>
 multiclass MemorySS<string mnemonic, bits<8> opcode,
                     SDPatternOperator sequence, SDPatternOperator loop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
-  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CC] in {
     def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
                                        imm64:$length),
                            [(sequence bdaddr12only:$dest, bdaddr12only:$src,

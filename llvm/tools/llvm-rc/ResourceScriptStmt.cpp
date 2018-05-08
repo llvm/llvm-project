@@ -57,6 +57,10 @@ raw_ostream &AcceleratorsResource::log(raw_ostream &OS) const {
   return OS;
 }
 
+raw_ostream &BitmapResource::log(raw_ostream &OS) const {
+  return OS << "Bitmap (" << ResName << "): " << BitmapLoc << "\n";
+}
+
 raw_ostream &CursorResource::log(raw_ostream &OS) const {
   return OS << "Cursor (" << ResName << "): " << CursorLoc << "\n";
 }

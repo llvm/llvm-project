@@ -197,7 +197,9 @@ a:
         ll      $v0,-153($s2)    # CHECK: ll $2, -153($18)       # encoding: [0x7e,0x42,0xb3,0xb6]
         sc      $15,-40($s3)     # CHECK: sc $15, -40($19)       # encoding: [0x7e,0x6f,0xec,0x26]
         clo     $11,$a1          # CHECK: clo $11, $5            # encoding: [0x00,0xa0,0x58,0x51]
+                                 # CHECK-NEXT:                   # <MCInst #{{.*}} CLO
         clz     $sp,$gp          # CHECK: clz $sp, $gp           # encoding: [0x03,0x80,0xe8,0x50]
+                                 # CHECK-NEXT:                   # <MCInst #{{.*}} CLZ
         rsqrt.s $f0,$f4          # CHECK: rsqrt.s $f0, $f4       # encoding: [0x46,0x00,0x20,0x16]
         rsqrt.d $f2,$f6          # CHECK: rsqrt.d $f2, $f6       # encoding: [0x46,0x20,0x30,0x96]
         seb       $25, $15       # CHECK: seb $25, $15           # encoding: [0x7c,0x0f,0xcc,0x20]

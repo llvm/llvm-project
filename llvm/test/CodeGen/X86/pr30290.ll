@@ -5,10 +5,6 @@
 ; When broken, five "1" constants are written into the byval %struct.face,
 ; but the subsequent byval read of that struct (call to bar) gets re-ordered
 ; before those writes, illegally.
-;
-; FIXME: the output shown below is the broken output of llc, "movl $1" is
-; scheduled after the copy between byval arguments starts. This will be fixed
-; with the patch in review D45022.
 source_filename = "test.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
@@ -26,8 +22,8 @@ define void @foo(%struct.face* byval nocapture align 8) local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    movl $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    vmovups %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    vmovups %xmm0, (%rsp)

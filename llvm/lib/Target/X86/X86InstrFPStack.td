@@ -314,7 +314,7 @@ defm CHS : FPUnary<fneg, MRM_E0, "fchs">;
 defm ABS : FPUnary<fabs, MRM_E1, "fabs">;
 }
 
-let SchedRW = [WriteFSqrt] in
+let SchedRW = [WriteFSqrt80] in
 defm SQRT: FPUnary<fsqrt,MRM_FA, "fsqrt">;
 
 let SchedRW = [WriteMicrocoded] in {

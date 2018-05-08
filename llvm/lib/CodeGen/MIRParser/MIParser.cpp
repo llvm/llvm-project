@@ -1306,7 +1306,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.range().front() == 's' || Token.range().front() == 'p') {
     StringRef SizeStr = Token.range().drop_front();
     if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-      return error("Expected integers after 's'/'p' type character");
+      return error("expected integers after 's'/'p' type character");
   }
 
   if (Token.range().front() == 's') {
@@ -1324,32 +1324,39 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   // Now we're looking for a vector.
   if (Token.isNot(MIToken::less))
     return error(Loc,
-                 "expected unsized, pN, sN or <N x sM> for GlobalISel type");
-
+                 "expected sN, pA, <M x sN>, or <M x pA> for GlobalISel type");
   lex();
 
   if (Token.isNot(MIToken::IntegerLiteral))
-    return error(Loc, "expected <N x sM> for vctor type");
+    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
   uint64_t NumElements = Token.integerValue().getZExtValue();
   lex();
 
   if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
-    return error(Loc, "expected '<N x sM>' for vector type");
+    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
   lex();
 
-  if (Token.range().front() != 's')
-    return error(Loc, "expected '<N x sM>' for vector type");
+  if (Token.range().front() != 's' && Token.range().front() != 'p')
+    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
   StringRef SizeStr = Token.range().drop_front();
   if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-    return error("Expected integers after 's' type character");
-  uint64_t ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
+    return error("expected integers after 's'/'p' type character");
+
+  if (Token.range().front() == 's')
+    Ty = LLT::scalar(APSInt(Token.range().drop_front()).getZExtValue());
+  else if (Token.range().front() == 'p') {
+    const DataLayout &DL = MF.getDataLayout();
+    unsigned AS = APSInt(Token.range().drop_front()).getZExtValue();
+    Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
+  } else
+    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
   lex();
 
   if (Token.isNot(MIToken::greater))
-    return error(Loc, "expected '<N x sM>' for vector type");
+    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
   lex();
 
-  Ty = LLT::vector(NumElements, ScalarSize);
+  Ty = LLT::vector(NumElements, Ty);
   return false;
 }
 
@@ -1359,10 +1366,10 @@ bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
   if (TypeStr.front() != 'i' && TypeStr.front() != 's' &&
       TypeStr.front() != 'p')
     return error(
-        "A typed immediate operand should start with one of 'i', 's', or 'p'");
+        "a typed immediate operand should start with one of 'i', 's', or 'p'");
   StringRef SizeStr = Token.range().drop_front();
   if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-    return error("Expected integers after 'i'/'s'/'p' type character");
+    return error("expected integers after 'i'/'s'/'p' type character");
 
   auto Loc = Token.location();
   lex();
