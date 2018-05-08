@@ -4,6 +4,16 @@
 # CHECK: Name: .text
 # CHECK-NEXT: Type: code
 
+# CHECK: Name: .debug_info
+# CHECK-NEXT: Type: dwarf-info
+# CHECK-NEXT: VM size: 0
+# CHECK-NEXT: File size: 8
+
+# CHECK: Name: .debug_types
+# CHECK-NEXT: Type: dwarf-types
+# CHECK-NEXT: VM size: 0
+# CHECK-NEXT: File size: 8
+
 # CHECK: Name: .gnu_debugaltlink
 # CHECK-NEXT: Type: dwarf-gnu-debugaltlink
 # CHECK-NEXT: VM size: 0
@@ -13,18 +23,22 @@
 # CHECK-NEXT: Type: code
 
 --- !ELF
-FileHeader:      
+FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   Type:            ET_DYN
   Machine:         EM_X86_64
   Entry:           0x00000000000007A0
-Sections:        
+Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Content:         DEADBEEFBAADF00D
   - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_types
     Type:            SHT_PROGBITS
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D

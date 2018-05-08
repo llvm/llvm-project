@@ -246,6 +246,7 @@ public:
   const lldb_private::DWARFDataExtractor &get_debug_ranges_data();
   const lldb_private::DWARFDataExtractor &get_debug_str_data();
   const lldb_private::DWARFDataExtractor &get_debug_str_offsets_data();
+  const lldb_private::DWARFDataExtractor &get_debug_types_data();
   const lldb_private::DWARFDataExtractor &get_apple_names_data();
   const lldb_private::DWARFDataExtractor &get_apple_types_data();
   const lldb_private::DWARFDataExtractor &get_apple_namespaces_data();
@@ -492,6 +493,7 @@ protected:
   DWARFDataSegment m_data_debug_ranges;
   DWARFDataSegment m_data_debug_str;
   DWARFDataSegment m_data_debug_str_offsets;
+  DWARFDataSegment m_data_debug_types;
   DWARFDataSegment m_data_apple_names;
   DWARFDataSegment m_data_apple_types;
   DWARFDataSegment m_data_apple_namespaces;

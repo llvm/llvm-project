@@ -656,6 +656,7 @@ enum SectionType {
   eSectionTypeAbsoluteAddress, // Dummy section for symbols with absolute
                                // address
   eSectionTypeDWARFGNUDebugAltLink,
+  eSectionTypeDWARFDebugTypes, // DWARF .debug_types section
   eSectionTypeOther
 };
 
