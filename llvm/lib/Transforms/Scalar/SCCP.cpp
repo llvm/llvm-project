@@ -1853,6 +1853,7 @@ static void findReturnsToZap(Function &F,
     if (CallInst *CI = BB.getTerminatingMustTailCall()) {
       DEBUG(dbgs() << "Can't zap return of the block due to present "
                    << "musttail call : " << *CI << "\n");
+      (void)CI;
       return;
     }
 
