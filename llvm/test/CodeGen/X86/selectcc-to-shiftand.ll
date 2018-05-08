@@ -101,10 +101,10 @@ define i32 @pos_sel_constants(i32 %a) {
 ;
 ; CHECK-BMI-LABEL: pos_sel_constants:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    sarl $31, %edi
-; CHECK-BMI-NEXT:    notl %edi
-; CHECK-BMI-NEXT:    andl $5, %edi
-; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorl %eax, %eax
+; CHECK-BMI-NEXT:    testl %edi, %edi
+; CHECK-BMI-NEXT:    setns %al
+; CHECK-BMI-NEXT:    leal (%rax,%rax,4), %eax
 ; CHECK-BMI-NEXT:    retq
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 5, i32 0
@@ -124,10 +124,10 @@ define i32 @pos_sel_special_constant(i32 %a) {
 ;
 ; CHECK-BMI-LABEL: pos_sel_special_constant:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    shrl $22, %edi
-; CHECK-BMI-NEXT:    notl %edi
-; CHECK-BMI-NEXT:    andl $512, %edi # imm = 0x200
-; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorl %eax, %eax
+; CHECK-BMI-NEXT:    testl %edi, %edi
+; CHECK-BMI-NEXT:    setns %al
+; CHECK-BMI-NEXT:    shll $9, %eax
 ; CHECK-BMI-NEXT:    retq
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 512, i32 0

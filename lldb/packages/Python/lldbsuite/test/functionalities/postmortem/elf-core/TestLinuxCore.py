@@ -46,16 +46,19 @@ class LinuxCoreTestCase(TestBase):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid, self._i386_regions, "a.out")
 
+    @skipIf(oslist=['windows'])
     def test_mips_o32(self):
         """Test that lldb can read the process information from an MIPS O32 linux core file."""
         self.do_test("linux-mipsel-gnuabio32", self._mips_o32_pid,
                 self._mips_regions, "linux-mipsel-gn")
 
+    @skipIf(oslist=['windows'])
     def test_mips_n32(self):
         """Test that lldb can read the process information from an MIPS N32 linux core file """
         self.do_test("linux-mips64el-gnuabin32", self._mips64_n32_pid,
                 self._mips_regions, "linux-mips64el-")
 
+    @skipIf(oslist=['windows'])
     def test_mips_n64(self):
         """Test that lldb can read the process information from an MIPS N64 linux core file """
         self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid,

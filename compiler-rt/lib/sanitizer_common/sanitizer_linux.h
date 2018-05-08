@@ -76,21 +76,12 @@ class ThreadLister {
  public:
   explicit ThreadLister(int pid);
   ~ThreadLister();
-  // GetNextTID returns -1 if the list of threads is exhausted, or if there has
-  // been an error.
-  int GetNextTID();
-  void Reset();
-  bool error();
+  bool ListThreads(InternalMmapVector<int> *threads);
 
  private:
-  bool GetDirectoryEntries();
-
   int pid_;
-  int descriptor_;
+  int descriptor_ = -1;
   InternalMmapVector<char> buffer_;
-  bool error_;
-  struct linux_dirent* entry_;
-  int bytes_read_;
 };
 
 // Exposed for testing.

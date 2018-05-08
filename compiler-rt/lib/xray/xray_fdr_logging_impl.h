@@ -606,6 +606,7 @@ inline void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
                                 int (*wall_clock_reader)(clockid_t,
                                                          struct timespec *),
                                 BufferQueue *BQ) XRAY_NEVER_INSTRUMENT {
+  __asm volatile("# LLVM-MCA-BEGIN processFunctionHook");
   // Prevent signal handler recursion, so in case we're already in a log writing
   // mode and the signal handler comes in (and is also instrumented) then we
   // don't want to be clobbering potentially partial writes already happening in
@@ -718,6 +719,7 @@ inline void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
   // If we've exhausted the buffer by this time, we then release the buffer to
   // make sure that other threads may start using this buffer.
   endBufferIfFull();
+  __asm volatile("# LLVM-MCA-END");
 }
 
 } // namespace __xray_fdr_internal

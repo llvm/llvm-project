@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -fsyntax-only -pedantic -verify -Wsign-compare -std=c++2a %s
 
 void compare_not_found_test() {
-  // expected-error@+1 {{cannot deduce return type of 'operator<=>' because type partial_ordering was not found; include <compare>}}
+  // expected-error@+1 {{cannot deduce return type of 'operator<=>' because type 'std::partial_ordering' was not found; include <compare>}}
   (void)(0.0 <=> 42.123);
 }
 

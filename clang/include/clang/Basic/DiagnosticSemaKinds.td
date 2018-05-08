@@ -9426,7 +9426,7 @@ def err_multiversion_not_supported : Error<
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
-  "cannot deduce return type of 'operator<=>' because type %0 was not found; "
+  "cannot deduce return type of 'operator<=>' because type '%0' was not found; "
   "include <compare>">;
 def err_spaceship_argument_narrowing : Error<
   "argument to 'operator<=>' "

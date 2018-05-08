@@ -956,7 +956,7 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
   if (!ArgTy->isIntegralOrEnumerationType() && !ArgTy->isRealFloatingType() &&
       !ArgTy->isNullPtrType() && !ArgTy->isPointerType() &&
       !ArgTy->isMemberPointerType() && !ArgTy->isAnyComplexType()) {
-    return CGF.ErrorUnsupported(E, "aggregate three-way comparisoaoeun");
+    return CGF.ErrorUnsupported(E, "aggregate three-way comparison");
   }
   bool IsComplex = ArgTy->isAnyComplexType();
 

@@ -20,34 +20,32 @@
 
 using namespace clang;
 
+bool ComparisonCategoryInfo::ValueInfo::hasValidIntValue() const {
+  assert(VD && "must have var decl");
+  if (!VD->checkInitIsICE())
+    return false;
+
+  // Before we attempt to get the value of the first field, ensure that we
+  // actually have one (and only one) field.
+  auto *Record = VD->getType()->getAsCXXRecordDecl();
+  if (std::distance(Record->field_begin(), Record->field_end()) != 1 ||
+      !Record->field_begin()->getType()->isIntegralOrEnumerationType())
+    return false;
+
+  return true;
+}
+
 /// Attempt to determine the integer value used to represent the comparison
 /// category result by evaluating the initializer for the specified VarDecl as
-/// a constant expression and retreiving the value of the classes first
+/// a constant expression and retreiving the value of the class's first
 /// (and only) field.
 ///
 /// Note: The STL types are expected to have the form:
 ///    struct X { T value; };
 /// where T is an integral or enumeration type.
-static bool evaluateIntValue(const ASTContext &Ctx,
-                             ComparisonCategoryInfo::ValueInfo *Info) {
-  if (Info->hasValidIntValue())
-    return false;
-
-  // Before we attempt to get the value of the first field, ensure that we
-  // actually have one (and only one) field.
-  auto *Record = Info->VD->getType()->getAsCXXRecordDecl();
-  if (std::distance(Record->field_begin(), Record->field_end()) != 1 ||
-      !Record->field_begin()->getType()->isIntegralOrEnumerationType())
-    return true;
-
-  Expr::EvalResult Result;
-  if (!Info->VD->hasInit() ||
-      !Info->VD->getInit()->EvaluateAsRValue(Result, Ctx))
-    return true;
-
-  assert(Result.Val.isStruct());
-  Info->setIntValue(Result.Val.getStructField(0).getInt());
-  return false;
+llvm::APSInt ComparisonCategoryInfo::ValueInfo::getIntValue() const {
+  assert(hasValidIntValue() && "must have a valid value");
+  return VD->evaluateValue()->getStructField(0).getInt();
 }
 
 ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
@@ -55,24 +53,17 @@ ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
   // Check if we already have a cache entry for this value.
   auto It = llvm::find_if(
       Objects, [&](ValueInfo const &Info) { return Info.Kind == ValueKind; });
+  if (It != Objects.end())
+    return &(*It);
 
   // We don't have a cached result. Lookup the variable declaration and create
   // a new entry representing it.
-  if (It == Objects.end()) {
-    DeclContextLookupResult Lookup = Record->getCanonicalDecl()->lookup(
-        &Ctx.Idents.get(ComparisonCategories::getResultString(ValueKind)));
-    if (Lookup.size() != 1 || !isa<VarDecl>(Lookup.front()))
-      return nullptr;
-    Objects.emplace_back(ValueKind, cast<VarDecl>(Lookup.front()));
-    It = Objects.end() - 1;
-  }
-  assert(It != Objects.end());
-  // Success! Attempt to update the int value in case the variables initializer
-  // wasn't present the last time we were here.
-  ValueInfo *Info = &(*It);
-  evaluateIntValue(Ctx, Info);
-
-  return Info;
+  DeclContextLookupResult Lookup = Record->getCanonicalDecl()->lookup(
+      &Ctx.Idents.get(ComparisonCategories::getResultString(ValueKind)));
+  if (Lookup.size() != 1 || !isa<VarDecl>(Lookup.front()))
+    return nullptr;
+  Objects.emplace_back(ValueKind, cast<VarDecl>(Lookup.front()));
+  return &Objects.back();
 }
 
 static const NamespaceDecl *lookupStdNamespace(const ASTContext &Ctx,

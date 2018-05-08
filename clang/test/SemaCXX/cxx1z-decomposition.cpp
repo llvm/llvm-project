@@ -76,4 +76,9 @@ template <class T> void dependent_foreach(T t) {
     a,b,c;
 }
 
+struct PR37352 {
+  int n;
+  void f() { static auto [a] = *this; } // expected-error {{cannot be declared 'static'}}
+};
+
 // FIXME: by-value array copies

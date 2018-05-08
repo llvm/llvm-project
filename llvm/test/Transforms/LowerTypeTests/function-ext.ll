@@ -22,5 +22,5 @@ declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
 ; WASM-NOT: !{i64 0}
 ; WASM-NOT: !{i64 1}
 
-; X64: define private void @[[JT]]() #{{.*}} section ".text.cfi" align {{.*}} {
+; X64: define private void @[[JT]]() #{{.*}} align {{.*}} {
 ; X64:   call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(void ()* @foo)

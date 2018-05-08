@@ -37,7 +37,6 @@ void test0(long a, unsigned long b) {
   (void)((short) a <=> (unsigned short) b);
   (void)((signed char) a <=> (unsigned char) b);
 
-  (void)(A < 42);
   // (A,b)
   (void)(A <=> (unsigned long) b);
   (void)(A <=> (unsigned int) b);

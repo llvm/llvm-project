@@ -9757,12 +9757,12 @@ static bool checkThreeWayNarrowingConversion(Sema &S, QualType ToType, Expr *E,
                                              SourceLocation Loc) {
   // Check for a narrowing implicit conversion.
   StandardConversionSequence SCS;
+  SCS.setAsIdentityConversion();
   SCS.setToType(0, FromType);
   SCS.setToType(1, ToType);
-  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    auto CastK = ICE->getCastKind();
-    SCS.Second = castKindToImplicitConversionKind(CastK);
-  }
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    SCS.Second = castKindToImplicitConversionKind(ICE->getCastKind());
+
   APValue PreNarrowingValue;
   QualType PreNarrowingType;
   switch (SCS.getNarrowingKind(S.Context, E, PreNarrowingValue,
