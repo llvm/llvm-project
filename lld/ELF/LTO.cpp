@@ -137,9 +137,13 @@ BitcodeCompiler::BitcodeCompiler() {
     if (!Path.empty())
       IndexFile = openFile(Path);
 
+    auto OnIndexWrite = [&](const std::string &Identifier) {
+      ObjectToIndexFileState[Identifier] = true;
+    };
+
     Backend = lto::createWriteIndexesThinBackend(
         Config->ThinLTOPrefixReplace.first, Config->ThinLTOPrefixReplace.second,
-        Config->ThinLTOEmitImportsFiles, IndexFile.get(), nullptr);
+        Config->ThinLTOEmitImportsFiles, IndexFile.get(), OnIndexWrite);
   } else if (Config->ThinLTOJobs != -1U) {
     Backend = lto::createInProcessThinBackend(Config->ThinLTOJobs);
   }
@@ -167,14 +171,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   bool IsExec = !Config->Shared && !Config->Relocatable;
 
-  // Create the empty files which, if indexed, will be overwritten later.
-  if (Config->ThinLTOIndexOnly) {
-    std::string Path = getThinLTOOutputFile(Obj.getName());
-    openFile(Path + ".thinlto.bc");
-
-    if (Config->ThinLTOEmitImportsFiles)
-      openFile(Path + ".imports");
-  }
+  if (Config->ThinLTOIndexOnly)
+    ObjectToIndexFileState.insert({Obj.getName(), false});
 
   ArrayRef<Symbol *> Syms = F.getSymbols();
   ArrayRef<lto::InputFile::Symbol> ObjSyms = Obj.symbols();
@@ -226,7 +224,6 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile(s).
 std::vector<InputFile *> BitcodeCompiler::compile() {
-  std::vector<InputFile *> Ret;
   unsigned MaxTasks = LTOObj->getMaxTasks();
   Buff.resize(MaxTasks);
   Files.resize(MaxTasks);
@@ -249,20 +246,16 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       },
       Cache));
 
-  if (!Config->ThinLTOCacheDir.empty())
-    pruneCache(Config->ThinLTOCacheDir, Config->ThinLTOCachePolicy);
+  // Emit empty index files for non-indexed files
+  if (Config->ThinLTOIndexOnly) {
+    for (auto &Identifier : ObjectToIndexFileState)
+      if (!Identifier.getValue()) {
+        std::string Path = getThinLTOOutputFile(Identifier.getKey());
+        openFile(Path + ".thinlto.bc");
 
-  for (unsigned I = 0; I != MaxTasks; ++I) {
-    if (Buff[I].empty())
-      continue;
-    if (Config->SaveTemps) {
-      if (I == 0)
-        saveBuffer(Buff[I], Config->OutputFile + ".lto.o");
-      else
-        saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.o");
-    }
-    InputFile *Obj = createObjectFile(MemoryBufferRef(Buff[I], "lto.tmp"));
-    Ret.push_back(Obj);
+        if (Config->ThinLTOEmitImportsFiles)
+          openFile(Path + ".imports");
+      }
   }
 
   // If LazyObjFile has not been added to link, emit empty index files.
@@ -286,12 +279,31 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
         openFile(Path + ".imports");
     }
 
+    if (Config->SaveTemps)
+      saveBuffer(Buff[0], Config->OutputFile + ".lto.o");
+
     // ThinLTO with index only option is required to generate only the index
     // files. After that, we exit from linker and ThinLTO backend runs in a
     // distributed environment.
     if (IndexFile)
       IndexFile->close();
     return {};
+  }
+  if (!Config->ThinLTOCacheDir.empty())
+    pruneCache(Config->ThinLTOCacheDir, Config->ThinLTOCachePolicy);
+
+  std::vector<InputFile *> Ret;
+  for (unsigned I = 0; I != MaxTasks; ++I) {
+    if (Buff[I].empty())
+      continue;
+    if (Config->SaveTemps) {
+      if (I == 0)
+        saveBuffer(Buff[I], Config->OutputFile + ".lto.o");
+      else
+        saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.o");
+    }
+    InputFile *Obj = createObjectFile(MemoryBufferRef(Buff[I], "lto.tmp"));
+    Ret.push_back(Obj);
   }
 
   for (std::unique_ptr<MemoryBuffer> &File : Files)

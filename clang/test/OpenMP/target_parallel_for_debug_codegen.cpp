@@ -65,7 +65,7 @@ int main() {
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]]* %{{.+}} to [10 x [10 x [10 x i32]]] addrspace(1)*
 // CHECK: call void [[DEBUG_PARALLEL]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 {{[^,]+}}, [10 x [10 x i32]]* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
 
-// CHECK: define void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i64 {{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
+// CHECK: define weak void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i64 {{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]]* %{{.+}} to [10 x [10 x [10 x i32]]] addrspace(1)*
 // CHECK: call void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 {{[^,]+}}, [10 x [10 x i32]]* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
 
@@ -83,7 +83,7 @@ int main() {
 // CHECK: addrspacecast [10 x [10 x i32]]* %{{.+}} to [10 x [10 x i32]] addrspace(1)*
 // CHECK: call void [[DEBUG_PARALLEL]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 {{[^,]+}}, [10 x [10 x i32]] addrspace(1)* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
 
-// CHECK: define void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i64 {{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
+// CHECK: define weak void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i64 {{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]]* %{{.+}} to [10 x [10 x [10 x i32]]] addrspace(1)*
 // CHECK: addrspacecast [10 x [10 x i32]]* %{{.+}} to [10 x [10 x i32]] addrspace(1)*
 // CHECK: call void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 {{[^,]+}}, [10 x [10 x i32]] addrspace(1)* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
@@ -105,7 +105,7 @@ int main() {
 // CHECK: addrspacecast [10 x [10 x i32]]* %{{.+}} to [10 x [10 x i32]] addrspace(1)*
 // CHECK: call void @[[DEBUG_PARALLEL]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 addrspace(1)* {{[^,]+}}, [10 x [10 x i32]] addrspace(1)* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
 
-// CHECK: define void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i32* dereferenceable{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
+// CHECK: define weak void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i32* dereferenceable{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]]* %{{.+}} to [10 x [10 x [10 x i32]]] addrspace(1)*
 // CHECK: addrspacecast i32* %{{.+}} to i32 addrspace(1)*
 // CHECK: addrspacecast [10 x [10 x i32]]* %{{.+}} to [10 x [10 x i32]] addrspace(1)*

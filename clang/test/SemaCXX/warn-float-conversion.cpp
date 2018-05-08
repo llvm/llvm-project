@@ -63,6 +63,9 @@ void TestConstantFloat() {
 
   int b3 = five / 1.0;  //expected-warning{{conversion}}
   int b4 = five / 2.0;  //expected-warning{{conversion}}
+
+  int f = 2147483646.5 + 1; // expected-warning{{implicit conversion from 'double' to 'int' changes value from 2147483647.5 to 2147483647}}
+  unsigned g = -.5 + .01; // expected-warning{{implicit conversion from 'double' to 'unsigned int' changes non-zero value from -0.49 to 0}}
 }
 #endif  // FLOAT_CONVERSION
 

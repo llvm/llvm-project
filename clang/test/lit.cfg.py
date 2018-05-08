@@ -63,6 +63,7 @@ tools = [
 ]
 
 if config.clang_examples:
+    config.available_features.add('examples')
     tools.append('clang-interpreter')
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)

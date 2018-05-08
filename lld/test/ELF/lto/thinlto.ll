@@ -49,6 +49,11 @@
 ; RUN: not ls %t2.o.thinlto.bc
 ; RUN: not ls %t4.o.thinlto.bc
 
+; Ensure lld generates one regular LTO file via splitting for ThinLTO builds
+; RUN: rm -f %t.lto.o
+; RUN: ld.lld -save-temps --plugin-opt=thinlto-index-only -shared %t.o %t2.o -o %t
+; RUN: llvm-readobj -h %t.lto.o | FileCheck %s --check-prefix=FORMAT
+
 ; First force single-threaded mode
 ; RUN: rm -f %t.lto.o %t1.lto.o
 ; RUN: ld.lld -save-temps --thinlto-jobs=1 -shared %t.o %t2.o -o %t
@@ -70,6 +75,7 @@
 ; NM1: T f
 ; NM1-NOT: U g
 ; NM2: T g
+; FORMAT: Format: ELF64-x86-64
 
 ; The backend index for this module contains summaries from itself and
 ; Inputs/thinlto.ll, as it imports from the latter.

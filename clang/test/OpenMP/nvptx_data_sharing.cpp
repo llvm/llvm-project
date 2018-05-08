@@ -34,7 +34,7 @@ void test_ds(){
 
 /// ========= In the kernel function ========= ///
 
-// CK1: {{.*}}define void @__omp_offloading{{.*}}test_ds{{.*}}()
+// CK1: {{.*}}define weak void @__omp_offloading{{.*}}test_ds{{.*}}()
 // CK1: [[SHAREDARGS1:%.+]] = alloca i8**
 // CK1: [[SHAREDARGS2:%.+]] = alloca i8**
 // CK1: call void @__kmpc_kernel_init
