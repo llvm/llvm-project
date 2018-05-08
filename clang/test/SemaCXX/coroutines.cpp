@@ -157,7 +157,7 @@ struct coroutine_handle<void> {
 void yield() {
   co_yield 0;
   co_yield {"foo", 1, 2};
-  co_yield {1e100}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}} expected-warning {{braces around scalar}}
+  co_yield {1e100}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{implicit conversion}} expected-warning {{braces around scalar}}
   co_yield {"foo", __LONG_LONG_MAX__}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}}
   co_yield {"foo"};
   co_yield "foo"; // expected-error {{no matching}}

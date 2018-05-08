@@ -1709,5 +1709,60 @@ TEST(ImportDecl, ImportEnumSequential) {
       "main.c", enumDecl(), VerificationMatcher);
 }
 
+const internal::VariadicDynCastAllOfMatcher<Expr, DependentScopeDeclRefExpr>
+    dependentScopeDeclRefExpr;
+
+TEST(ImportExpr, DependentScopeDeclRefExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename T> struct S { static T foo; };"
+             "template <typename T> void declToImport() {"
+             "  (void) S<T>::foo;"
+             "}"
+             "void instantiate() { declToImport<int>(); }",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             functionTemplateDecl(has(functionDecl(has(compoundStmt(
+                 has(cStyleCastExpr(has(dependentScopeDeclRefExpr())))))))));
+
+  testImport("template <typename T> struct S {"
+             "template<typename S> static void foo(){};"
+             "};"
+             "template <typename T> void declToImport() {"
+             "  S<T>::template foo<T>();"
+             "}"
+             "void instantiate() { declToImport<int>(); }",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             functionTemplateDecl(has(functionDecl(has(compoundStmt(
+                 has(callExpr(has(dependentScopeDeclRefExpr())))))))));
+}
+
+const internal::VariadicDynCastAllOfMatcher<Type, DependentNameType>
+    dependentNameType;
+
+TEST(ImportExpr, DependentNameType) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename T> struct declToImport {"
+             "  typedef typename T::type dependent_name;"
+             "};",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             classTemplateDecl(has(
+                 cxxRecordDecl(has(typedefDecl(has(dependentNameType())))))));
+}
+
+const internal::VariadicDynCastAllOfMatcher<Expr, UnresolvedMemberExpr>
+    unresolvedMemberExpr;
+
+TEST(ImportExpr, UnresolvedMemberExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("struct S { template <typename T> void mem(); };"
+             "template <typename U> void declToImport() {"
+             "  S s;"
+             "  s.mem<U>();"
+             "}"
+             "void instantiate() { declToImport<int>(); }",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             functionTemplateDecl(has(functionDecl(has(
+                 compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

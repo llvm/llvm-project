@@ -40,9 +40,11 @@ set(CLANG_BOOTSTRAP_TARGETS
   install-distribution
   clang CACHE STRING "")
 
-foreach(target x86_64;aarch64)
-  if(FUCHSIA_${target}_SYSROOT)
-    list(APPEND EXTRA_ARGS -DFUCHSIA_${target}_SYSROOT=${FUCHSIA_${target}_SYSROOT})
+get_cmake_property(variableNames VARIABLES)
+foreach(variableName ${variableNames})
+  if(variableName MATCHES "^STAGE2_")
+    string(REPLACE "STAGE2_" "" new_name ${variableName})
+    list(APPEND EXTRA_ARGS "-D${new_name}=${${variableName}}")
   endif()
 endforeach()
 

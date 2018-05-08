@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenFunction.h"
+#include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -145,6 +146,7 @@ public:
   void VisitPointerToDataMemberBinaryOperator(const BinaryOperator *BO);
   void VisitBinAssign(const BinaryOperator *E);
   void VisitBinComma(const BinaryOperator *E);
+  void VisitBinCmp(const BinaryOperator *E);
 
   void VisitObjCMessageExpr(ObjCMessageExpr *E);
   void VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
@@ -877,6 +879,150 @@ void AggExprEmitter::VisitBinComma(const BinaryOperator *E) {
 void AggExprEmitter::VisitStmtExpr(const StmtExpr *E) {
   CodeGenFunction::StmtExprEvaluation eval(CGF);
   CGF.EmitCompoundStmt(*E->getSubStmt(), true, Dest);
+}
+
+enum CompareKind {
+  CK_Less,
+  CK_Greater,
+  CK_Equal,
+};
+
+static llvm::Value *EmitCompare(CGBuilderTy &Builder, CodeGenFunction &CGF,
+                                const BinaryOperator *E, llvm::Value *LHS,
+                                llvm::Value *RHS, CompareKind Kind,
+                                const char *NameSuffix = "") {
+  QualType ArgTy = E->getLHS()->getType();
+  if (const ComplexType *CT = ArgTy->getAs<ComplexType>())
+    ArgTy = CT->getElementType();
+
+  if (const auto *MPT = ArgTy->getAs<MemberPointerType>()) {
+    assert(Kind == CK_Equal &&
+           "member pointers may only be compared for equality");
+    return CGF.CGM.getCXXABI().EmitMemberPointerComparison(
+        CGF, LHS, RHS, MPT, /*IsInequality*/ false);
+  }
+
+  // Compute the comparison instructions for the specified comparison kind.
+  struct CmpInstInfo {
+    const char *Name;
+    llvm::CmpInst::Predicate FCmp;
+    llvm::CmpInst::Predicate SCmp;
+    llvm::CmpInst::Predicate UCmp;
+  };
+  CmpInstInfo InstInfo = [&]() -> CmpInstInfo {
+    using FI = llvm::FCmpInst;
+    using II = llvm::ICmpInst;
+    switch (Kind) {
+    case CK_Less:
+      return {"cmp.lt", FI::FCMP_OLT, II::ICMP_SLT, II::ICMP_ULT};
+    case CK_Greater:
+      return {"cmp.gt", FI::FCMP_OGT, II::ICMP_SGT, II::ICMP_UGT};
+    case CK_Equal:
+      return {"cmp.eq", FI::FCMP_OEQ, II::ICMP_EQ, II::ICMP_EQ};
+    }
+    llvm_unreachable("Unrecognised CompareKind enum");
+  }();
+
+  if (ArgTy->hasFloatingRepresentation())
+    return Builder.CreateFCmp(InstInfo.FCmp, LHS, RHS,
+                              llvm::Twine(InstInfo.Name) + NameSuffix);
+  if (ArgTy->isIntegralOrEnumerationType() || ArgTy->isPointerType()) {
+    auto Inst =
+        ArgTy->hasSignedIntegerRepresentation() ? InstInfo.SCmp : InstInfo.UCmp;
+    return Builder.CreateICmp(Inst, LHS, RHS,
+                              llvm::Twine(InstInfo.Name) + NameSuffix);
+  }
+
+  llvm_unreachable("unsupported aggregate binary expression should have "
+                   "already been handled");
+}
+
+void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
+  using llvm::BasicBlock;
+  using llvm::PHINode;
+  using llvm::Value;
+  assert(CGF.getContext().hasSameType(E->getLHS()->getType(),
+                                      E->getRHS()->getType()));
+  const ComparisonCategoryInfo &CmpInfo =
+      CGF.getContext().CompCategories.getInfoForType(E->getType());
+  assert(CmpInfo.Record->isTriviallyCopyable() &&
+         "cannot copy non-trivially copyable aggregate");
+
+  QualType ArgTy = E->getLHS()->getType();
+
+  // TODO: Handle comparing these types.
+  if (ArgTy->isVectorType())
+    return CGF.ErrorUnsupported(
+        E, "aggregate three-way comparison with vector arguments");
+  if (!ArgTy->isIntegralOrEnumerationType() && !ArgTy->isRealFloatingType() &&
+      !ArgTy->isNullPtrType() && !ArgTy->isPointerType() &&
+      !ArgTy->isMemberPointerType() && !ArgTy->isAnyComplexType()) {
+    return CGF.ErrorUnsupported(E, "aggregate three-way comparison");
+  }
+  bool IsComplex = ArgTy->isAnyComplexType();
+
+  // Evaluate the operands to the expression and extract their values.
+  auto EmitOperand = [&](Expr *E) -> std::pair<Value *, Value *> {
+    RValue RV = CGF.EmitAnyExpr(E);
+    if (RV.isScalar())
+      return {RV.getScalarVal(), nullptr};
+    if (RV.isAggregate())
+      return {RV.getAggregatePointer(), nullptr};
+    assert(RV.isComplex());
+    return RV.getComplexVal();
+  };
+  auto LHSValues = EmitOperand(E->getLHS()),
+       RHSValues = EmitOperand(E->getRHS());
+
+  auto EmitCmp = [&](CompareKind K) {
+    Value *Cmp = EmitCompare(Builder, CGF, E, LHSValues.first, RHSValues.first,
+                             K, IsComplex ? ".r" : "");
+    if (!IsComplex)
+      return Cmp;
+    assert(K == CompareKind::CK_Equal);
+    Value *CmpImag = EmitCompare(Builder, CGF, E, LHSValues.second,
+                                 RHSValues.second, K, ".i");
+    return Builder.CreateAnd(Cmp, CmpImag, "and.eq");
+  };
+  auto EmitCmpRes = [&](const ComparisonCategoryInfo::ValueInfo *VInfo) {
+    return Builder.getInt(VInfo->getIntValue());
+  };
+
+  Value *Select;
+  if (ArgTy->isNullPtrType()) {
+    Select = EmitCmpRes(CmpInfo.getEqualOrEquiv());
+  } else if (CmpInfo.isEquality()) {
+    Select = Builder.CreateSelect(
+        EmitCmp(CK_Equal), EmitCmpRes(CmpInfo.getEqualOrEquiv()),
+        EmitCmpRes(CmpInfo.getNonequalOrNonequiv()), "sel.eq");
+  } else if (!CmpInfo.isPartial()) {
+    Value *SelectOne =
+        Builder.CreateSelect(EmitCmp(CK_Less), EmitCmpRes(CmpInfo.getLess()),
+                             EmitCmpRes(CmpInfo.getGreater()), "sel.lt");
+    Select = Builder.CreateSelect(EmitCmp(CK_Equal),
+                                  EmitCmpRes(CmpInfo.getEqualOrEquiv()),
+                                  SelectOne, "sel.eq");
+  } else {
+    Value *SelectEq = Builder.CreateSelect(
+        EmitCmp(CK_Equal), EmitCmpRes(CmpInfo.getEqualOrEquiv()),
+        EmitCmpRes(CmpInfo.getUnordered()), "sel.eq");
+    Value *SelectGT = Builder.CreateSelect(EmitCmp(CK_Greater),
+                                           EmitCmpRes(CmpInfo.getGreater()),
+                                           SelectEq, "sel.gt");
+    Select = Builder.CreateSelect(
+        EmitCmp(CK_Less), EmitCmpRes(CmpInfo.getLess()), SelectGT, "sel.lt");
+  }
+  // Create the return value in the destination slot.
+  EnsureDest(E->getType());
+  LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), E->getType());
+
+  // Emit the address of the first (and only) field in the comparison category
+  // type, and initialize it from the constant integer value selected above.
+  LValue FieldLV = CGF.EmitLValueForFieldInitialization(
+      DestLV, *CmpInfo.Record->field_begin());
+  CGF.EmitStoreThroughLValue(RValue::get(Select), FieldLV, /*IsInit*/ true);
+
+  // All done! The result is in the Dest slot.
 }
 
 void AggExprEmitter::VisitBinaryOperator(const BinaryOperator *E) {

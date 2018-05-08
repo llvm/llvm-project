@@ -18,6 +18,7 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CommentCommandTraits.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
@@ -1977,6 +1978,10 @@ public:
   /// expressions.
   QualType GetBuiltinType(unsigned ID, GetBuiltinTypeError &Error,
                           unsigned *IntegerConstantArgs = nullptr) const;
+
+  /// Types and expressions required to build C++2a three-way comparisons
+  /// using operator<=>, including the values return by builtin <=> operators.
+  ComparisonCategories CompCategories;
 
 private:
   CanQualType getFromTargetType(unsigned Type) const;

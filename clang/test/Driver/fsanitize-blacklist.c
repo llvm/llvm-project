@@ -62,4 +62,8 @@
 // CHECK-ONLY-FIRST-DISABLED: -fsanitize-blacklist={{.*}}.second
 // CHECK-ONLY_FIRST-DISABLED-NOT: good
 
+// If cfi_blacklist.txt cannot be found in the resource dir, driver should fail.
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-BLACKLIST
+// CHECK-MISSING-CFI-BLACKLIST: error: no such file or directory: '{{.*}}cfi_blacklist.txt'
+
 // DELIMITERS: {{^ *"}}

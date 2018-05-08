@@ -214,6 +214,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // For case (a) we need to add +noabicalls for N64.
 
   bool IsN64 = ABIName == "64";
+  bool IsPIC = false;
   bool NonPIC = false;
 
   Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
@@ -225,6 +226,9 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     NonPIC =
         (O.matches(options::OPT_fno_PIC) || O.matches(options::OPT_fno_pic) ||
          O.matches(options::OPT_fno_PIE) || O.matches(options::OPT_fno_pie));
+    IsPIC =
+        (O.matches(options::OPT_fPIC) || O.matches(options::OPT_fpic) ||
+         O.matches(options::OPT_fPIE) || O.matches(options::OPT_fpie));
   }
 
   bool UseAbiCalls = false;
@@ -234,9 +238,14 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   UseAbiCalls =
       !ABICallsArg || ABICallsArg->getOption().matches(options::OPT_mabicalls);
 
-  if (UseAbiCalls && IsN64 && NonPIC) {
-    D.Diag(diag::warn_drv_unsupported_abicalls);
-    UseAbiCalls = false;
+  if (IsN64 && NonPIC && (!ABICallsArg || UseAbiCalls)) {
+    D.Diag(diag::warn_drv_unsupported_pic_with_mabicalls)
+        << LastPICArg->getAsString(Args) << (!ABICallsArg ? 0 : 1);
+    NonPIC = false;
+  }
+
+  if (ABICallsArg && !UseAbiCalls && IsPIC) {
+    D.Diag(diag::err_drv_unsupported_noabicalls_pic);
   }
 
   if (!UseAbiCalls)

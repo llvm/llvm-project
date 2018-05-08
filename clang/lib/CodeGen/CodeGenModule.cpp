@@ -2399,8 +2399,17 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     // For the device mark the function as one that should be emitted.
     if (getLangOpts().OpenMPIsDevice && OpenMPRuntime &&
         !OpenMPRuntime->markAsGlobalTarget(GD) && FD->isDefined() &&
-        !DontDefer && !IsForDefinition)
-      addDeferredDeclToEmit(GD);
+        !DontDefer && !IsForDefinition) {
+      const FunctionDecl *FDDef = FD->getDefinition();
+      GlobalDecl GDDef;
+      if (const auto *CD = dyn_cast<CXXConstructorDecl>(FDDef))
+        GDDef = GlobalDecl(CD, GD.getCtorType());
+      else if (const auto *DD = dyn_cast<CXXDestructorDecl>(FDDef))
+        GDDef = GlobalDecl(DD, GD.getDtorType());
+      else
+        GDDef = GlobalDecl(FDDef);
+      addDeferredDeclToEmit(GDDef);
+    }
 
     if (FD->isMultiVersion() && FD->getAttr<TargetAttr>()->isDefaultVersion()) {
       UpdateMultiVersionNames(GD, FD);

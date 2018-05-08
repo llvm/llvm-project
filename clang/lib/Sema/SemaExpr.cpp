@@ -37,6 +37,7 @@
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
@@ -9619,10 +9620,16 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   Expr *RHSStripped = RHS->IgnoreParenImpCasts();
 
   QualType LHSType = LHS->getType();
+  QualType RHSType = RHS->getType();
   if (LHSType->hasFloatingRepresentation() ||
       (LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)) ||
       LHS->getLocStart().isMacroID() || RHS->getLocStart().isMacroID() ||
       S.inTemplateInstantiation())
+    return;
+
+  // Comparisons between two array types are ill-formed for operator<=>, so
+  // we shouldn't emit any additional warnings about it.
+  if (Opc == BO_Cmp && LHSType->isArrayType() && RHSType->isArrayType())
     return;
 
   // For non-floating point types, check for self-comparisons of the form
@@ -9708,10 +9715,183 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   }
 }
 
+static ImplicitConversionKind castKindToImplicitConversionKind(CastKind CK) {
+  switch (CK) {
+  default: {
+#ifndef NDEBUG
+    llvm::errs() << "unhandled cast kind: " << CastExpr::getCastKindName(CK)
+                 << "\n";
+#endif
+    llvm_unreachable("unhandled cast kind");
+  }
+  case CK_UserDefinedConversion:
+    return ICK_Identity;
+  case CK_LValueToRValue:
+    return ICK_Lvalue_To_Rvalue;
+  case CK_ArrayToPointerDecay:
+    return ICK_Array_To_Pointer;
+  case CK_FunctionToPointerDecay:
+    return ICK_Function_To_Pointer;
+  case CK_IntegralCast:
+    return ICK_Integral_Conversion;
+  case CK_FloatingCast:
+    return ICK_Floating_Conversion;
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+    return ICK_Floating_Integral;
+  case CK_IntegralComplexCast:
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_IntegralComplexToFloatingComplex:
+    return ICK_Complex_Conversion;
+  case CK_FloatingComplexToReal:
+  case CK_FloatingRealToComplex:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralRealToComplex:
+    return ICK_Complex_Real;
+  }
+}
+
+static bool checkThreeWayNarrowingConversion(Sema &S, QualType ToType, Expr *E,
+                                             QualType FromType,
+                                             SourceLocation Loc) {
+  // Check for a narrowing implicit conversion.
+  StandardConversionSequence SCS;
+  SCS.setAsIdentityConversion();
+  SCS.setToType(0, FromType);
+  SCS.setToType(1, ToType);
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    SCS.Second = castKindToImplicitConversionKind(ICE->getCastKind());
+
+  APValue PreNarrowingValue;
+  QualType PreNarrowingType;
+  switch (SCS.getNarrowingKind(S.Context, E, PreNarrowingValue,
+                               PreNarrowingType,
+                               /*IgnoreFloatToIntegralConversion*/ true)) {
+  case NK_Dependent_Narrowing:
+    // Implicit conversion to a narrower type, but the expression is
+    // value-dependent so we can't tell whether it's actually narrowing.
+  case NK_Not_Narrowing:
+    return false;
+
+  case NK_Constant_Narrowing:
+    // Implicit conversion to a narrower type, and the value is not a constant
+    // expression.
+    S.Diag(E->getLocStart(), diag::err_spaceship_argument_narrowing)
+        << /*Constant*/ 1
+        << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << ToType;
+    return true;
+
+  case NK_Variable_Narrowing:
+    // Implicit conversion to a narrower type, and the value is not a constant
+    // expression.
+  case NK_Type_Narrowing:
+    S.Diag(E->getLocStart(), diag::err_spaceship_argument_narrowing)
+        << /*Constant*/ 0 << FromType << ToType;
+    // TODO: It's not a constant expression, but what if the user intended it
+    // to be? Can we produce notes to help them figure out why it isn't?
+    return true;
+  }
+  llvm_unreachable("unhandled case in switch");
+}
+
+static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
+                                                         ExprResult &LHS,
+                                                         ExprResult &RHS,
+                                                         SourceLocation Loc) {
+  using CCT = ComparisonCategoryType;
+
+  QualType LHSType = LHS.get()->getType();
+  QualType RHSType = RHS.get()->getType();
+  // Dig out the original argument type and expression before implicit casts
+  // were applied. These are the types/expressions we need to check the
+  // [expr.spaceship] requirements against.
+  ExprResult LHSStripped = LHS.get()->IgnoreParenImpCasts();
+  ExprResult RHSStripped = RHS.get()->IgnoreParenImpCasts();
+  QualType LHSStrippedType = LHSStripped.get()->getType();
+  QualType RHSStrippedType = RHSStripped.get()->getType();
+
+  // C++2a [expr.spaceship]p3: If one of the operands is of type bool and the
+  // other is not, the program is ill-formed.
+  if (LHSStrippedType->isBooleanType() != RHSStrippedType->isBooleanType()) {
+    S.InvalidOperands(Loc, LHSStripped, RHSStripped);
+    return QualType();
+  }
+
+  int NumEnumArgs = (int)LHSStrippedType->isEnumeralType() +
+                    RHSStrippedType->isEnumeralType();
+  if (NumEnumArgs == 1) {
+    bool LHSIsEnum = LHSStrippedType->isEnumeralType();
+    QualType OtherTy = LHSIsEnum ? RHSStrippedType : LHSStrippedType;
+    if (OtherTy->hasFloatingRepresentation()) {
+      S.InvalidOperands(Loc, LHSStripped, RHSStripped);
+      return QualType();
+    }
+  }
+  if (NumEnumArgs == 2) {
+    // C++2a [expr.spaceship]p5: If both operands have the same enumeration
+    // type E, the operator yields the result of converting the operands
+    // to the underlying type of E and applying <=> to the converted operands.
+    if (!S.Context.hasSameUnqualifiedType(LHSStrippedType, RHSStrippedType)) {
+      S.InvalidOperands(Loc, LHSStripped, RHSStripped);
+      return QualType();
+    }
+    QualType IntType =
+        LHSStrippedType->getAs<EnumType>()->getDecl()->getIntegerType();
+    assert(IntType->isArithmeticType());
+
+    // We can't use `CK_IntegralCast` when the underlying type is 'bool', so we
+    // promote the boolean type, and all other promotable integer types, to
+    // avoid this.
+    if (IntType->isPromotableIntegerType())
+      IntType = S.Context.getPromotedIntegerType(IntType);
+
+    LHS = S.ImpCastExprToType(LHS.get(), IntType, CK_IntegralCast);
+    RHS = S.ImpCastExprToType(RHS.get(), IntType, CK_IntegralCast);
+    LHSType = RHSType = IntType;
+  }
+
+  // C++2a [expr.spaceship]p4: If both operands have arithmetic types, the
+  // usual arithmetic conversions are applied to the operands.
+  QualType Type = S.UsualArithmeticConversions(LHS, RHS);
+  if (LHS.isInvalid() || RHS.isInvalid())
+    return QualType();
+  if (Type.isNull())
+    return S.InvalidOperands(Loc, LHS, RHS);
+  assert(Type->isArithmeticType() || Type->isEnumeralType());
+
+  bool HasNarrowing = checkThreeWayNarrowingConversion(
+      S, Type, LHS.get(), LHSType, LHS.get()->getLocStart());
+  HasNarrowing |= checkThreeWayNarrowingConversion(
+      S, Type, RHS.get(), RHSType, RHS.get()->getLocStart());
+  if (HasNarrowing)
+    return QualType();
+
+  assert(!Type.isNull() && "composite type for <=> has not been set");
+
+  auto TypeKind = [&]() {
+    if (const ComplexType *CT = Type->getAs<ComplexType>()) {
+      if (CT->getElementType()->hasFloatingRepresentation())
+        return CCT::WeakEquality;
+      return CCT::StrongEquality;
+    }
+    if (Type->isIntegralOrEnumerationType())
+      return CCT::StrongOrdering;
+    if (Type->hasFloatingRepresentation())
+      return CCT::PartialOrdering;
+    llvm_unreachable("other types are unimplemented");
+  }();
+
+  return S.CheckComparisonCategoryType(TypeKind, Loc);
+}
+
 static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
                                                  ExprResult &RHS,
                                                  SourceLocation Loc,
                                                  BinaryOperatorKind Opc) {
+  if (Opc == BO_Cmp)
+    return checkArithmeticOrEnumeralThreeWayCompare(S, LHS, RHS, Loc);
+
   // C99 6.5.8p3 / C99 6.5.9p4
   QualType Type = S.UsualArithmeticConversions(LHS, RHS);
   if (LHS.isInvalid() || RHS.isInvalid())
@@ -9722,15 +9902,7 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
 
   checkEnumComparison(S, Loc, LHS.get(), RHS.get());
 
-  enum { StrongEquality, PartialOrdering, StrongOrdering } Ordering;
-  if (Type->isAnyComplexType())
-    Ordering = StrongEquality;
-  else if (Type->isFloatingType())
-    Ordering = PartialOrdering;
-  else
-    Ordering = StrongOrdering;
-
-  if (Ordering == StrongEquality && BinaryOperator::isRelationalOp(Opc))
+  if (Type->isAnyComplexType() && BinaryOperator::isRelationalOp(Opc))
     return S.InvalidOperands(Loc, LHS, RHS);
 
   // Check for comparisons of floating point operands using != and ==.
@@ -9738,22 +9910,40 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
     S.CheckFloatComparison(Loc, LHS.get(), RHS.get());
 
   // The result of comparisons is 'bool' in C++, 'int' in C.
-  // FIXME: For BO_Cmp, return the relevant comparison category type.
   return S.Context.getLogicalOperationType();
 }
 
 // C99 6.5.8, C++ [expr.rel]
 QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
-                                    SourceLocation Loc, BinaryOperatorKind Opc,
-                                    bool IsRelational) {
-  // Comparisons expect an rvalue, so convert to rvalue before any
-  // type-related checks.
-  LHS = DefaultFunctionArrayLvalueConversion(LHS.get());
-  if (LHS.isInvalid())
-    return QualType();
-  RHS = DefaultFunctionArrayLvalueConversion(RHS.get());
-  if (RHS.isInvalid())
-    return QualType();
+                                    SourceLocation Loc,
+                                    BinaryOperatorKind Opc) {
+  bool IsRelational = BinaryOperator::isRelationalOp(Opc);
+  bool IsThreeWay = Opc == BO_Cmp;
+  auto IsAnyPointerType = [](ExprResult E) {
+    QualType Ty = E.get()->getType();
+    return Ty->isPointerType() || Ty->isMemberPointerType();
+  };
+
+  // C++2a [expr.spaceship]p6: If at least one of the operands is of pointer
+  // type, array-to-pointer, ..., conversions are performed on both operands to
+  // bring them to their composite type.
+  // Otherwise, all comparisons expect an rvalue, so convert to rvalue before
+  // any type-related checks.
+  if (!IsThreeWay || IsAnyPointerType(LHS) || IsAnyPointerType(RHS)) {
+    LHS = DefaultFunctionArrayLvalueConversion(LHS.get());
+    if (LHS.isInvalid())
+      return QualType();
+    RHS = DefaultFunctionArrayLvalueConversion(RHS.get());
+    if (RHS.isInvalid())
+      return QualType();
+  } else {
+    LHS = DefaultLvalueConversion(LHS.get());
+    if (LHS.isInvalid())
+      return QualType();
+    RHS = DefaultLvalueConversion(RHS.get());
+    if (RHS.isInvalid())
+      return QualType();
+  }
 
   checkArithmeticNull(*this, LHS, RHS, Loc, /*isCompare=*/true);
 
@@ -9771,14 +9961,50 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       (RHSType->isArithmeticType() || RHSType->isEnumeralType()))
     return checkArithmeticOrEnumeralCompare(*this, LHS, RHS, Loc, Opc);
 
-  QualType ResultTy = Context.getLogicalOperationType();
-
   const Expr::NullPointerConstantKind LHSNullKind =
       LHS.get()->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull);
   const Expr::NullPointerConstantKind RHSNullKind =
       RHS.get()->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull);
   bool LHSIsNull = LHSNullKind != Expr::NPCK_NotNull;
   bool RHSIsNull = RHSNullKind != Expr::NPCK_NotNull;
+
+  auto computeResultTy = [&]() {
+    if (Opc != BO_Cmp)
+      return Context.getLogicalOperationType();
+    assert(getLangOpts().CPlusPlus);
+    assert(Context.hasSameType(LHS.get()->getType(), RHS.get()->getType()));
+
+    QualType CompositeTy = LHS.get()->getType();
+    assert(!CompositeTy->isReferenceType());
+
+    auto buildResultTy = [&](ComparisonCategoryType Kind) {
+      return CheckComparisonCategoryType(Kind, Loc);
+    };
+
+    // C++2a [expr.spaceship]p7: If the composite pointer type is a function
+    // pointer type, a pointer-to-member type, or std::nullptr_t, the
+    // result is of type std::strong_equality
+    if (CompositeTy->isFunctionPointerType() ||
+        CompositeTy->isMemberPointerType() || CompositeTy->isNullPtrType())
+      // FIXME: consider making the function pointer case produce
+      // strong_ordering not strong_equality, per P0946R0-Jax18 discussion
+      // and direction polls
+      return buildResultTy(ComparisonCategoryType::StrongEquality);
+
+    // C++2a [expr.spaceship]p8: If the composite pointer type is an object
+    // pointer type, p <=> q is of type std::strong_ordering.
+    if (CompositeTy->isPointerType()) {
+      // P0946R0: Comparisons between a null pointer constant and an object
+      // pointer result in std::strong_equality
+      if (LHSIsNull != RHSIsNull)
+        return buildResultTy(ComparisonCategoryType::StrongEquality);
+      return buildResultTy(ComparisonCategoryType::StrongOrdering);
+    }
+    // C++2a [expr.spaceship]p9: Otherwise, the program is ill-formed.
+    // TODO: Extend support for operator<=> to ObjC types.
+    return InvalidOperands(Loc, LHS, RHS);
+  };
+
 
   if (!IsRelational && LHSIsNull != RHSIsNull) {
     bool IsEquality = Opc == BO_EQ;
@@ -9807,29 +10033,30 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       // conformance with the C++ standard.
       diagnoseFunctionPointerToVoidComparison(
           *this, Loc, LHS, RHS, /*isError*/ (bool)isSFINAEContext());
-      
+
       if (isSFINAEContext())
         return QualType();
-      
+
       RHS = ImpCastExprToType(RHS.get(), LHSType, CK_BitCast);
-      return ResultTy;
+      return computeResultTy();
     }
 
     // C++ [expr.eq]p2:
     //   If at least one operand is a pointer [...] bring them to their
     //   composite pointer type.
+    // C++ [expr.spaceship]p6
+    //  If at least one of the operands is of pointer type, [...] bring them
+    //  to their composite pointer type.
     // C++ [expr.rel]p2:
     //   If both operands are pointers, [...] bring them to their composite
     //   pointer type.
     if ((int)LHSType->isPointerType() + (int)RHSType->isPointerType() >=
             (IsRelational ? 2 : 1) &&
-        (!LangOpts.ObjCAutoRefCount ||
-         !(LHSType->isObjCObjectPointerType() ||
-           RHSType->isObjCObjectPointerType()))) {
+        (!LangOpts.ObjCAutoRefCount || !(LHSType->isObjCObjectPointerType() ||
+                                         RHSType->isObjCObjectPointerType()))) {
       if (convertPointersToCompositeType(*this, Loc, LHS, RHS))
         return QualType();
-      else
-        return ResultTy;
+      return computeResultTy();
     }
   } else if (LHSType->isPointerType() &&
              RHSType->isPointerType()) { // C99 6.5.8p2
@@ -9880,7 +10107,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       else
         RHS = ImpCastExprToType(RHS.get(), LHSType, Kind);
     }
-    return ResultTy;
+    return computeResultTy();
   }
 
   if (getLangOpts().CPlusPlus) {
@@ -9890,11 +10117,11 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     if (!IsRelational && LHSIsNull && RHSIsNull) {
       if (LHSType->isNullPtrType()) {
         RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
-        return ResultTy;
+        return computeResultTy();
       }
       if (RHSType->isNullPtrType()) {
         LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
-        return ResultTy;
+        return computeResultTy();
       }
     }
 
@@ -9903,12 +10130,12 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     if (!IsRelational && RHSType->isNullPtrType() &&
         (LHSType->isObjCObjectPointerType() || LHSType->isBlockPointerType())) {
       RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
-      return ResultTy;
+      return computeResultTy();
     }
     if (!IsRelational && LHSType->isNullPtrType() &&
         (RHSType->isObjCObjectPointerType() || RHSType->isBlockPointerType())) {
       LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
-      return ResultTy;
+      return computeResultTy();
     }
 
     if (IsRelational &&
@@ -9931,7 +10158,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
             RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
           else
             LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
-          return ResultTy;
+          return computeResultTy();
         }
       }
     }
@@ -9944,7 +10171,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       if (convertPointersToCompositeType(*this, Loc, LHS, RHS))
         return QualType();
       else
-        return ResultTy;
+        return computeResultTy();
     }
   }
 
@@ -9961,7 +10188,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         << RHS.get()->getSourceRange();
     }
     RHS = ImpCastExprToType(RHS.get(), LHSType, CK_BitCast);
-    return ResultTy;
+    return computeResultTy();
   }
 
   // Allow block pointers to be compared with null pointer constants.
@@ -9985,7 +10212,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       RHS = ImpCastExprToType(RHS.get(), LHSType,
                               LHSType->isPointerType() ? CK_BitCast
                                 : CK_AnyPointerToBlockPointerCast);
-    return ResultTy;
+    return computeResultTy();
   }
 
   if (LHSType->isObjCObjectPointerType() ||
@@ -10018,7 +10245,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         RHS = ImpCastExprToType(E, LHSType,
                                 LPT ? CK_BitCast :CK_CPointerToObjCPointerCast);
       }
-      return ResultTy;
+      return computeResultTy();
     }
     if (LHSType->isObjCObjectPointerType() &&
         RHSType->isObjCObjectPointerType()) {
@@ -10032,20 +10259,20 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         LHS = ImpCastExprToType(LHS.get(), RHSType, CK_BitCast);
       else
         RHS = ImpCastExprToType(RHS.get(), LHSType, CK_BitCast);
-      return ResultTy;
+      return computeResultTy();
     }
 
     if (!IsRelational && LHSType->isBlockPointerType() &&
         RHSType->isBlockCompatibleObjCPointerType(Context)) {
       LHS = ImpCastExprToType(LHS.get(), RHSType,
                               CK_BlockPointerToObjCPointerCast);
-      return ResultTy;
+      return computeResultTy();
     } else if (!IsRelational &&
                LHSType->isBlockCompatibleObjCPointerType(Context) &&
                RHSType->isBlockPointerType()) {
       RHS = ImpCastExprToType(RHS.get(), LHSType,
                               CK_BlockPointerToObjCPointerCast);
-      return ResultTy;
+      return computeResultTy();
     }
   }
   if ((LHSType->isAnyPointerType() && RHSType->isIntegerType()) ||
@@ -10085,30 +10312,30 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     else
       RHS = ImpCastExprToType(RHS.get(), LHSType,
                         RHSIsNull ? CK_NullToPointer : CK_IntegralToPointer);
-    return ResultTy;
+    return computeResultTy();
   }
   
   // Handle block pointers.
   if (!IsRelational && RHSIsNull
       && LHSType->isBlockPointerType() && RHSType->isIntegerType()) {
     RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
-    return ResultTy;
+    return computeResultTy();
   }
   if (!IsRelational && LHSIsNull
       && LHSType->isIntegerType() && RHSType->isBlockPointerType()) {
     LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
-    return ResultTy;
+    return computeResultTy();
   }
 
   if (getLangOpts().OpenCLVersion >= 200) {
     if (LHSIsNull && RHSType->isQueueT()) {
       LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
-      return ResultTy;
+      return computeResultTy();
     }
 
     if (LHSType->isQueueT() && RHSIsNull) {
       RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
-      return ResultTy;
+      return computeResultTy();
     }
   }
 
@@ -11761,19 +11988,17 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_GE:
   case BO_GT:
     ConvertHalfVec = true;
-    ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc, true);
+    ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_EQ:
   case BO_NE:
     ConvertHalfVec = true;
-    ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc, false);
+    ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_Cmp:
-    // FIXME: Implement proper semantic checking of '<=>'.
     ConvertHalfVec = true;
-    ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc, true);
-    if (!ResultTy.isNull())
-      ResultTy = Context.VoidTy;
+    ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
+    assert(ResultTy.isNull() || ResultTy->getAsCXXRecordDecl());
     break;
   case BO_And:
     checkObjCPointerIntrospection(*this, LHS, RHS, OpLoc);

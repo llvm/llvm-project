@@ -216,6 +216,10 @@ AST Matchers
 clang-format
 ------------
 
+- Clang-format will now support detecting and formatting code snippets in raw
+  string literals.  This is configured through the `RawStringFormats` style
+  option.
+
 - ...
 
 libclang

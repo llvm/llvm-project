@@ -2764,13 +2764,6 @@ Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
       CGM.getPointerAlign());
 }
 
-/// \brief Emits code for OpenMP 'if' clause using specified \a CodeGen
-/// function. Here is the logic:
-/// if (Cond) {
-///   ThenGen();
-/// } else {
-///   ElseGen();
-/// }
 void CGOpenMPRuntime::emitOMPIfClause(CodeGenFunction &CGF, const Expr *Cond,
                                       const RegionCodeGenTy &ThenGen,
                                       const RegionCodeGenTy &ElseGen) {
