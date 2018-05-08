@@ -9,7 +9,7 @@ int bar() {
   return foo(a);
 }
 
-// CHECK: define void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+5]](i32* dereferenceable{{.*}})
+// CHECK: define weak void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+5]](i32* dereferenceable{{.*}})
 // CHECK-NOT: @__kmpc_data_sharing_push_stack
 
 int maini1() {

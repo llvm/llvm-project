@@ -115,7 +115,7 @@ int main() {
 #pragma omp target teams distribute parallel for simd firstprivate(g, g1, sivar)
   for (int i = 0; i < 2; ++i) {
     // HLAMBDA: define{{.*}} internal{{.*}} void @[[LOFFL1]](i{{64|32}} {{%.+}}, i{{64|32}} {{%.+}})
-    // TLAMBDA: define void @[[LOFFL1:.+]](i{{64|32}} {{%.+}}, i{{64|32}} {{%.+}})
+    // TLAMBDA: define weak void @[[LOFFL1:.+]](i{{64|32}} {{%.+}}, i{{64|32}} {{%.+}})
     // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},
     // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},
     // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},

@@ -409,8 +409,13 @@ CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
-
-  if (InputArgs.size() == 0 || InputArgs.hasArg(OBJCOPY_help)) {
+  
+  if (InputArgs.size() == 0) {
+    T.PrintHelp(errs(), "llvm-objcopy <input> [ <output> ]", "objcopy tool");
+    exit(1);
+  }
+  
+  if (InputArgs.hasArg(OBJCOPY_help)) {
     T.PrintHelp(outs(), "llvm-objcopy <input> [ <output> ]", "objcopy tool");
     exit(0);
   }
@@ -484,7 +489,12 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
-  if (InputArgs.size() == 0 || InputArgs.hasArg(STRIP_help)) {
+  if (InputArgs.size() == 0) {
+    T.PrintHelp(errs(), "llvm-strip <input> [ <output> ]", "strip tool");
+    exit(1);
+  }
+  
+  if (InputArgs.hasArg(STRIP_help)) {
     T.PrintHelp(outs(), "llvm-strip <input> [ <output> ]", "strip tool");
     exit(0);
   }

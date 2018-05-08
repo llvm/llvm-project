@@ -6,6 +6,8 @@
 // RUN: FileCheck < %t1 %s
 // RUN: %clangxx -### --target=x86_64-windows-msvc -c -g -gcodeview %s 2> %t2
 // RUN: FileCheck < %t2 %s
+// RUN: %clangxx -### --target=x86_64-windows-gnu -c -g -gcodeview %s 2> %t2
+// RUN: FileCheck < %t2 %s
 // RUN: %clang_cl -### --target=x86_64-windows-msvc /c /Z7 -- %s 2> %t2
 // RUN: FileCheck < %t2 %s
 

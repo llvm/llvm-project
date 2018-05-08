@@ -715,6 +715,8 @@ def PTWRITE64r : RI<0xAE, MRM4r, (outs), (ins GR64:$dst),
 //   indicated in RAX with ZF set to 1 and CF, PF, AF, OF, and SF are cleared."
 // Thus all these mentioned registers are considered clobbered.
 
+let SchedRW = [WriteSystem] in {
 let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX, RDX, EFLAGS] in
     def PCONFIG : I<0x01, MRM_C5, (outs), (ins), "pconfig", []>, TB,
                   Requires<[HasPCONFIG]>;
+} // SchedRW

@@ -105,9 +105,19 @@ multiclass SKXWriteResPair<X86FoldableSchedWrite SchedRW,
 def : WriteRes<WriteRMW, [SKXPort237,SKXPort4]>;
 
 // Arithmetic.
-defm : SKXWriteResPair<WriteALU,   [SKXPort0156], 1>; // Simple integer ALU op.
-defm : SKXWriteResPair<WriteIMul,  [SKXPort1],   3>; // Integer multiplication.
-defm : SKXWriteResPair<WriteIDiv, [SKXPort0, SKXDivider], 25, [1,10], 1, 4>; // Integer division.
+defm : SKXWriteResPair<WriteALU,    [SKXPort0156], 1>; // Simple integer ALU op.
+defm : SKXWriteResPair<WriteIMul,   [SKXPort1],    3>; // Integer multiplication.
+defm : SKXWriteResPair<WriteIMul64, [SKXPort1],    3>; // Integer 64-bit multiplication.
+
+defm : SKXWriteResPair<WriteDiv8,   [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+defm : SKXWriteResPair<WriteDiv16,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+defm : SKXWriteResPair<WriteDiv32,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+defm : SKXWriteResPair<WriteDiv64,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+defm : SKXWriteResPair<WriteIDiv8,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+defm : SKXWriteResPair<WriteIDiv16, [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+defm : SKXWriteResPair<WriteIDiv32, [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+defm : SKXWriteResPair<WriteIDiv64, [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
+
 defm : SKXWriteResPair<WriteCRC32, [SKXPort1], 3>;
 
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.

@@ -395,7 +395,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_1_inlineimm(<2 x half> addrspac
 ; GCN: s_load_dword [[IDX:s[0-9]+]]
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[VVEC:v[0-9]+]], [[VEC]]
-; GCN-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 16
+; GCN-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 4
 ; GCN-DAG: s_lshl_b32 [[MASK:s[0-9]+]], 0xffff, [[SCALED_IDX]]
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VVEC]]
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
@@ -411,7 +411,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(<2 x i16> addrspace(1)*
 ; GCN-DAG: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
 ; GCN-DAG: s_load_dword [[IDX:s[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
-; GCN-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 16
+; GCN-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 4
 ; GCN-DAG: s_lshl_b32 [[MASK:s[0-9]+]], 0xffff, [[SCALED_IDX]]
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
@@ -434,10 +434,10 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(<2 x i16> addrspac
 ; GCN: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
 
 ; GFX89-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
-; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
+; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
 ; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
 
-; CI-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
+; CI-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
 ; CI-DAG: v_lshl_b32_e32 [[MASK:v[0-9]+]], 0xffff, [[SCALED_IDX]]
 
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]
@@ -463,10 +463,10 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(<2 x i16> addrspac
 ; GCN: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
 
 ; GFX89-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x1234
-; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
+; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
 ; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
 
-; CI-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
+; CI-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
 ; CI-DAG: v_lshl_b32_e32 [[MASK:v[0-9]+]], 0xffff, [[SCALED_IDX]]
 
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]

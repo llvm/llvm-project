@@ -1737,14 +1737,16 @@ struct LoopVectorize : public FunctionPass {
 //===----------------------------------------------------------------------===//
 
 Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
-  // We need to place the broadcast of invariant variables outside the loop.
+  // We need to place the broadcast of invariant variables outside the loop,
+  // but only if it's proven safe to do so. Else, broadcast will be inside
+  // vector loop body.
   Instruction *Instr = dyn_cast<Instruction>(V);
-  bool NewInstr = (Instr && Instr->getParent() == LoopVectorBody);
-  bool Invariant = OrigLoop->isLoopInvariant(V) && !NewInstr;
-
+  bool SafeToHoist = OrigLoop->isLoopInvariant(V) &&
+                     (!Instr ||
+                      DT->dominates(Instr->getParent(), LoopVectorPreHeader));
   // Place the code for broadcasting invariant variables in the new preheader.
   IRBuilder<>::InsertPointGuard Guard(Builder);
-  if (Invariant)
+  if (SafeToHoist)
     Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
 
   // Broadcast the scalar into all locations in the vector.

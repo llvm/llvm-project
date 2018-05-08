@@ -486,15 +486,46 @@ Expected<Control> RCParser::parseControl() {
     Caption = *CaptionResult;
   }
 
-  ASSIGN_OR_RETURN(Args, readIntsWithCommas(5, 8));
+  ASSIGN_OR_RETURN(ID, readInt());
+  RETURN_IF_ERROR(consumeType(Kind::Comma));
 
-  auto TakeOptArg = [&Args](size_t Id) -> Optional<uint32_t> {
-    return Args->size() > Id ? (uint32_t)(*Args)[Id] : Optional<uint32_t>();
-  };
+  IntOrString Class;
+  Optional<uint32_t> Style;
+  if (ClassUpper == "CONTROL") {
+    // CONTROL text, id, class, style, x, y, width, height [, exstyle] [, helpID]
+    ASSIGN_OR_RETURN(ClassStr, readString());
+    RETURN_IF_ERROR(consumeType(Kind::Comma));
+    Class = *ClassStr;
+    ASSIGN_OR_RETURN(StyleVal, readInt());
+    RETURN_IF_ERROR(consumeType(Kind::Comma));
+    Style = *StyleVal;
+  } else {
+    Class = CtlInfo->getValue().CtlClass;
+  }
 
-  return Control(*ClassResult, Caption, (*Args)[0], (*Args)[1], (*Args)[2],
-                 (*Args)[3], (*Args)[4], TakeOptArg(5), TakeOptArg(6),
-                 TakeOptArg(7));
+  // x, y, width, height
+  ASSIGN_OR_RETURN(Args, readIntsWithCommas(4, 4));
+
+  if (ClassUpper != "CONTROL") {
+    if (consumeOptionalType(Kind::Comma)) {
+      ASSIGN_OR_RETURN(Val, readInt());
+      Style = *Val;
+    }
+  }
+
+  Optional<uint32_t> ExStyle;
+  if (consumeOptionalType(Kind::Comma)) {
+    ASSIGN_OR_RETURN(Val, readInt());
+    ExStyle = *Val;
+  }
+  Optional<uint32_t> HelpID;
+  if (consumeOptionalType(Kind::Comma)) {
+    ASSIGN_OR_RETURN(Val, readInt());
+    HelpID = *Val;
+  }
+
+  return Control(*ClassResult, Caption, *ID, (*Args)[0], (*Args)[1],
+                 (*Args)[2], (*Args)[3], Style, ExStyle, HelpID, Class);
 }
 
 RCParser::ParseType RCParser::parseBitmapResource() {
