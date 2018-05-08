@@ -830,8 +830,14 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // incrementally maknig a single function grow in a super linear fashion.
   SmallVector<std::pair<CallSite, int>, 16> Calls;
 
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(InitialC, CG)
+          .getManager();
+
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
+    auto &ORE =
+        FAM.getResult<OptimizationRemarkEmitterAnalysis>(N.getFunction());
     // We want to generally process call sites top-down in order for
     // simplifications stemming from replacing the call with the returned value
     // after inlining to be visible to subsequent inlining decisions.
@@ -839,9 +845,20 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // Instead we should do an actual RPO walk of the function body.
     for (Instruction &I : instructions(N.getFunction()))
       if (auto CS = CallSite(&I))
-        if (Function *Callee = CS.getCalledFunction())
+        if (Function *Callee = CS.getCalledFunction()) {
           if (!Callee->isDeclaration())
             Calls.push_back({CS, -1});
+          else if (!isa<IntrinsicInst>(I)) {
+            using namespace ore;
+            ORE.emit([&]() {
+              return OptimizationRemarkMissed(DEBUG_TYPE, "NoDefinition", &I)
+                     << NV("Callee", Callee) << " will not be inlined into "
+                     << NV("Caller", CS.getCaller())
+                     << " because its definition is unavailable"
+                     << setIsVerbose();
+            });
+          }
+        }
   }
   if (Calls.empty())
     return PreservedAnalyses::all();

@@ -701,3 +701,20 @@ def PTWRITEr : I<0xAE, MRM4r, (outs), (ins GR32:$dst),
 def PTWRITE64r : RI<0xAE, MRM4r, (outs), (ins GR64:$dst),
                     "ptwrite{q}\t$dst", []>, XS, Requires<[In64BitMode]>;
 } // SchedRW
+
+//===----------------------------------------------------------------------===//
+// Platform Configuration instruction
+
+// From ISA docs:
+//  "This instruction is used to execute functions for configuring platform
+//   features.
+//   EAX: Leaf function to be invoked.
+//   RBX/RCX/RDX: Leaf-specific purpose."
+//  "Successful execution of the leaf clears RAX (set to zero) and ZF, CF, PF,
+//   AF, OF, and SF are cleared. In case of failure, the failure reason is
+//   indicated in RAX with ZF set to 1 and CF, PF, AF, OF, and SF are cleared."
+// Thus all these mentioned registers are considered clobbered.
+
+let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX, RDX, EFLAGS] in
+    def PCONFIG : I<0x01, MRM_C5, (outs), (ins), "pconfig", []>, TB,
+                  Requires<[HasPCONFIG]>;

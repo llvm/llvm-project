@@ -430,6 +430,9 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
             case 'R':
               FDEPointerEncoding = Data.getU8(&Offset);
               break;
+            case 'S':
+              // Current frame is a signal trampoline.
+              break;
             case 'z':
               if (i)
                 ReportError(StartOffset,
