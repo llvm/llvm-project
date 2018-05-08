@@ -48,11 +48,8 @@ public:
 
   void add(BitcodeFile &F);
   std::vector<InputFile *> compile();
-  void addLazyObjFile(LazyObjFile *File);
 
 private:
-  void init();
-
   std::unique_ptr<llvm::lto::LTO> LTOObj;
   std::vector<SmallString<0>> Buff;
   std::vector<std::unique_ptr<MemoryBuffer>> Files;

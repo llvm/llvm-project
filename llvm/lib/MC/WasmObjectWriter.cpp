@@ -199,8 +199,9 @@ struct WasmRelocationEntry {
 #endif
 };
 
+static const uint32_t INVALID_INDEX = -1;
+
 struct WasmCustomSection {
-  const uint32_t INVALID_INDEX = -1;
 
   StringRef Name;
   MCSectionWasm *Section;
@@ -238,8 +239,6 @@ class WasmObjectWriter : public MCObjectWriter {
   // Maps function symbols to the table element index space. Used
   // for TABLE_INDEX relocation types (i.e. address taken functions).
   DenseMap<const MCSymbolWasm *, uint32_t> TableIndices;
-  // Maps function/global symbols to the (shared) Symbol index space.
-  DenseMap<const MCSymbolWasm *, uint32_t> SymbolIndices;
   // Maps function/global symbols to the function/global/section index space.
   DenseMap<const MCSymbolWasm *, uint32_t> WasmIndices;
   // Maps data symbols to the Wasm segment and offset/size with the segment.
@@ -284,7 +283,6 @@ private:
     CodeRelocations.clear();
     DataRelocations.clear();
     TypeIndices.clear();
-    SymbolIndices.clear();
     WasmIndices.clear();
     TableIndices.clear();
     DataLocations.clear();
@@ -666,10 +664,7 @@ WasmObjectWriter::getRelocationIndexValue(const WasmRelocationEntry &RelEntry) {
     return TypeIndices[RelEntry.Symbol];
   }
 
-  if (!SymbolIndices.count(RelEntry.Symbol))
-    report_fatal_error("symbol not found in symbol index space: " +
-                       RelEntry.Symbol->getName());
-  return SymbolIndices[RelEntry.Symbol];
+  return RelEntry.Symbol->getIndex();
 }
 
 // Apply the portions of the relocation records that we can handle ourselves
@@ -1344,8 +1339,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // Finally, populate the symbol table itself, in its "natural" order.
   for (const MCSymbol &S : Asm.symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
-    if (!isInSymtab(WS))
+    if (!isInSymtab(WS)) {
+      WS.setIndex(INVALID_INDEX);
       continue;
+    }
     DEBUG(dbgs() << "adding to symtab: " << WS << "\n");
 
     uint32_t Flags = 0;
@@ -1369,7 +1366,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       assert(DataLocations.count(&WS) > 0);
       Info.DataRef = DataLocations.find(&WS)->second;
     }
-    SymbolIndices[&WS] = SymbolInfos.size();
+    WS.setIndex(SymbolInfos.size());
     SymbolInfos.emplace_back(Info);
   }
 
@@ -1444,11 +1441,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         report_fatal_error("fixups in .init_array should be symbol references");
       if (Sym->getKind() != MCSymbolRefExpr::VK_WebAssembly_FUNCTION)
         report_fatal_error("symbols in .init_array should be for functions");
-      auto I = SymbolIndices.find(cast<MCSymbolWasm>(&Sym->getSymbol()));
-      if (I == SymbolIndices.end())
-        report_fatal_error("symbols in .init_array should be defined");
-      uint32_t Index = I->second;
-      InitFuncs.push_back(std::make_pair(Priority, Index));
+      if (Sym->getSymbol().getIndex() == INVALID_INDEX)
+        report_fatal_error("symbols in .init_array should exist in symbtab");
+      InitFuncs.push_back(
+          std::make_pair(Priority, Sym->getSymbol().getIndex()));
     }
   }
 

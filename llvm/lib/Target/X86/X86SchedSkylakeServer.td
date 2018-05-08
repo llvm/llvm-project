@@ -152,13 +152,28 @@ def  : WriteRes<WriteFStore,        [SKXPort237, SKXPort4]>;
 def  : WriteRes<WriteFMove,         [SKXPort015]>;
 defm : X86WriteRes<WriteEMMS,       [SKXPort05,SKXPort0156], 10, [9,1], 10>;
 
-defm : SKXWriteResPair<WriteFAdd, [SKXPort015],  4, [1], 1, 6>; // Floating point add/sub.
-defm : SKXWriteResPair<WriteFAddY,[SKXPort015],  4, [1], 1, 7>; // Floating point add/sub (YMM/ZMM).
-defm : SKXWriteResPair<WriteFCmp, [SKXPort015],  4, [1], 1, 6>; // Floating point compare.
-defm : SKXWriteResPair<WriteFCmpY,[SKXPort015],  4, [1], 1, 7>; // Floating point compare (YMM/ZMM).
-defm : SKXWriteResPair<WriteFCom,   [SKXPort0],  2>; // Floating point compare to flags.
-defm : SKXWriteResPair<WriteFMul, [SKXPort015],  4, [1], 1, 6>; // Floating point multiplication.
-defm : SKXWriteResPair<WriteFMulY,[SKXPort015],  4, [1], 1, 7>; // Floating point multiplication (YMM/ZMM).
+defm : SKXWriteResPair<WriteFAdd,     [SKXPort015],  4, [1], 1, 5>; // Floating point add/sub.
+defm : SKXWriteResPair<WriteFAddX,    [SKXPort015],  4, [1], 1, 6>; // Floating point add/sub (XMM).
+defm : SKXWriteResPair<WriteFAddY,    [SKXPort015],  4, [1], 1, 7>; // Floating point add/sub (YMM/ZMM).
+defm : SKXWriteResPair<WriteFAdd64,   [SKXPort015],  4, [1], 1, 5>; // Floating point double add/sub.
+defm : SKXWriteResPair<WriteFAdd64X,  [SKXPort015],  4, [1], 1, 6>; // Floating point double add/sub (XMM).
+defm : SKXWriteResPair<WriteFAdd64Y,  [SKXPort015],  4, [1], 1, 7>; // Floating point double add/sub (YMM/ZMM).
+
+defm : SKXWriteResPair<WriteFCmp,     [SKXPort015],  4, [1], 1, 5>; // Floating point compare.
+defm : SKXWriteResPair<WriteFCmpX,    [SKXPort015],  4, [1], 1, 6>; // Floating point compare (XMM).
+defm : SKXWriteResPair<WriteFCmpY,    [SKXPort015],  4, [1], 1, 7>; // Floating point compare (YMM/ZMM).
+defm : SKXWriteResPair<WriteFCmp64,   [SKXPort015],  4, [1], 1, 5>; // Floating point double compare.
+defm : SKXWriteResPair<WriteFCmp64X,  [SKXPort015],  4, [1], 1, 6>; // Floating point double compare (XMM).
+defm : SKXWriteResPair<WriteFCmp64Y,  [SKXPort015],  4, [1], 1, 7>; // Floating point double compare (YMM/ZMM).
+
+defm : SKXWriteResPair<WriteFCom,       [SKXPort0],  2>; // Floating point compare to flags.
+
+defm : SKXWriteResPair<WriteFMul,     [SKXPort015],  4, [1], 1, 5>; // Floating point multiplication.
+defm : SKXWriteResPair<WriteFMulX,    [SKXPort015],  4, [1], 1, 6>; // Floating point multiplication (XMM).
+defm : SKXWriteResPair<WriteFMulY,    [SKXPort015],  4, [1], 1, 7>; // Floating point multiplication (YMM/ZMM).
+defm : SKXWriteResPair<WriteFMul64,   [SKXPort015],  4, [1], 1, 5>; // Floating point double multiplication.
+defm : SKXWriteResPair<WriteFMul64X,  [SKXPort015],  4, [1], 1, 6>; // Floating point double multiplication (XMM).
+defm : SKXWriteResPair<WriteFMul64Y,  [SKXPort015],  4, [1], 1, 7>; // Floating point double multiplication (YMM/ZMM).
 
 defm : SKXWriteResPair<WriteFDiv,     [SKXPort0,SKXFPDivider], 11, [1,3], 1, 5>; // 10-14 cycles. // Floating point division.
 //defm : SKXWriteResPair<WriteFDivX,    [SKXPort0,SKXFPDivider], 11, [1,3], 1, 6>; // 10-14 cycles. // Floating point division (XMM).
@@ -2472,20 +2487,8 @@ def SKXWriteResGroup137 : SchedWriteRes<[SKXPort23,SKXPort015]> {
 }
 def: InstRW<[SKXWriteResGroup137], (instregex "MMX_CVTPS2PIirm",
                                               "MMX_CVTTPS2PIirm",
-                                              "(V?)ADDSDrm",
-                                              "(V?)ADDSSrm",
-                                              "(V?)CMPSDrm",
-                                              "(V?)CMPSSrm",
                                               "VCVTPH2PSrm",
-                                              "(V?)CVTPS2PDrm",
-                                              "(V?)MAX(C?)SDrm",
-                                              "(V?)MAX(C?)SSrm",
-                                              "(V?)MIN(C?)SDrm",
-                                              "(V?)MIN(C?)SSrm",
-                                              "(V?)MULSDrm",
-                                              "(V?)MULSSrm",
-                                              "(V?)SUBSDrm",
-                                              "(V?)SUBSSrm")>;
+                                              "(V?)CVTPS2PDrm")>;
 
 def SKXWriteResGroup138 : SchedWriteRes<[SKXPort0,SKXPort015]> {
   let Latency = 9;

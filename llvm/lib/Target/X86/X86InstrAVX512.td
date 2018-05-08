@@ -2672,9 +2672,8 @@ multiclass avx512_fp_fpclass_all<string OpcodeStr, bits<8> opcVec,
                                   EVEX_CD8<64, CD8VT1>, VEX_W;
 }
 
-// FIXME: Is there a better scheduler class for VFPCLASS?
 defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, X86Vfpclass,
-                                      X86Vfpclasss, SchedWriteFAdd, HasDQI>,
+                                      X86Vfpclasss, SchedWriteFCmp, HasDQI>,
                                       AVX512AIi8Base, EVEX;
 
 //-----------------------------------------------------------------

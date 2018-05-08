@@ -834,6 +834,8 @@ namespace llvm {
 
     bool hasAndNotCompare(SDValue Y) const override;
 
+    bool hasAndNot(SDValue Y) const override;
+
     bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
       return VT.isScalarInteger();
     }

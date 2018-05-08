@@ -704,9 +704,15 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
 
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
+  print(OS, LLT{}, TRI, IntrinsicInfo);
+}
+
+void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
+                           const TargetRegisterInfo *TRI,
+                           const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
   ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST, LLT{}, /*PrintDef=*/false, /*IsStandalone=*/true,
+  print(OS, DummyMST, TypeToPrint, /*PrintDef=*/false, /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
         /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);
 }

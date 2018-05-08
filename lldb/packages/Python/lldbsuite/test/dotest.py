@@ -1230,7 +1230,7 @@ def run_suite():
     checkLibcxxSupport()
     checkDebugInfoSupport()
 
-    # Don't do debugserver tests on everything except OS X.
+    # Don't do debugserver tests on anything except OS X.
     configuration.dont_do_debugserver_test = "linux" in target_platform or "freebsd" in target_platform or "windows" in target_platform
 
     # Don't do lldb-server (llgs) tests on anything except Linux.

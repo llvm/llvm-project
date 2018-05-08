@@ -123,11 +123,9 @@ void ThreadListerTest::SpawnTidReporter(pthread_t *pthread_id,
 
 static std::vector<pid_t> ReadTidsToVector(ThreadLister *thread_lister) {
   std::vector<pid_t> listed_tids;
-  pid_t tid;
-  while ((tid = thread_lister->GetNextTID()) >= 0)
-    listed_tids.push_back(tid);
-  EXPECT_FALSE(thread_lister->error());
-  return listed_tids;
+  InternalMmapVector<int> threads(128);
+  EXPECT_TRUE(thread_lister->ListThreads(&threads));
+  return std::vector<pid_t>(threads.begin(), threads.end());
 }
 
 static bool Includes(std::vector<pid_t> first, std::vector<pid_t> second) {
@@ -151,23 +149,20 @@ TEST_F(ThreadListerTest, ThreadListerSeesAllSpawnedThreads) {
   ASSERT_TRUE(Includes(listed_tids, tids_));
 }
 
-// Calling Reset() should not cause ThreadLister to forget any threads it's
-// supposed to know about.
-TEST_F(ThreadListerTest, ResetDoesNotForgetThreads) {
+TEST_F(ThreadListerTest, DoNotForgetThreads) {
   ThreadLister thread_lister(getpid());
 
-  // Run the loop body twice, because Reset() might behave differently if called
-  // on a freshly created object.
+  // Run the loop body twice, because ThreadLister might behave differently if
+  // called on a freshly created object.
   for (uptr i = 0; i < 2; i++) {
-    thread_lister.Reset();
     std::vector<pid_t> listed_tids = ReadTidsToVector(&thread_lister);
     ASSERT_TRUE(Includes(listed_tids, tids_));
   }
 }
 
 // If new threads have spawned during ThreadLister object's lifetime, calling
-// Reset() should cause ThreadLister to recognize their existence.
-TEST_F(ThreadListerTest, ResetMakesNewThreadsKnown) {
+// relisting should cause ThreadLister to recognize their existence.
+TEST_F(ThreadListerTest, NewThreads) {
   ThreadLister thread_lister(getpid());
   std::vector<pid_t> threads_before_extra = ReadTidsToVector(&thread_lister);
 
@@ -181,8 +176,6 @@ TEST_F(ThreadListerTest, ResetMakesNewThreadsKnown) {
   // spawned that thread, but it would also cause a false success in this test,
   // so better check for that.
   ASSERT_FALSE(HasElement(threads_before_extra, extra_tid));
-
-  thread_lister.Reset();
 
   std::vector<pid_t> threads_after_extra = ReadTidsToVector(&thread_lister);
   ASSERT_TRUE(HasElement(threads_after_extra, extra_tid));

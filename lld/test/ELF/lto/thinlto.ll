@@ -37,8 +37,8 @@
 ; RUN: rm -f %t4.o.thinlto.bc
 ; RUN: touch %t4.o.thinlto.bc
 ; RUN: chmod 400 %t4.o.thinlto.bc
-; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t.o %t4.o -o %t5 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: failed to write {{.*}}4.o.thinlto.bc: {{P|p}}ermission denied
+; RUN: not ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t.o %t4.o -o %t5 2>&1 | FileCheck %s --check-prefix=ERR
+; ERR: cannot open {{.*}}4.o.thinlto.bc: {{P|p}}ermission denied
 
 ; Ensure lld doesn't generates index files when thinlto-index-only is not enabled
 ; RUN: rm -f %t.o.thinlto.bc

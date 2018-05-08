@@ -29,7 +29,7 @@ define <2 x double> @test_addsubpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ; ATOM-LABEL: test_addsubpd:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    addsubpd %xmm1, %xmm0 # sched: [6:3.00]
-; ATOM-NEXT:    addsubpd (%rdi), %xmm0 # sched: [6:3.00]
+; ATOM-NEXT:    addsubpd (%rdi), %xmm0 # sched: [7:3.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_addsubpd:

@@ -115,6 +115,10 @@ static void addDefaultBlacklists(const Driver &D, SanitizerMask Kinds,
     llvm::sys::path::append(Path, "share", BL.File);
     if (llvm::sys::fs::exists(Path))
       BlacklistFiles.push_back(Path.str());
+    else if (BL.Mask == CFI)
+      // If cfi_blacklist.txt cannot be found in the resource dir, driver
+      // should fail.
+      D.Diag(clang::diag::err_drv_no_such_file) << Path;
   }
 }
 
