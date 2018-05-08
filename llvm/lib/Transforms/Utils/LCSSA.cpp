@@ -226,11 +226,16 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     insertDebugValuesForPHIs(InstBB, NeedDbgValues);
     Changed = true;
   }
-  // Remove PHI nodes that did not have any uses rewritten.
-  for (PHINode *PN : PHIsToRemove) {
-    assert (PN->use_empty() && "Trying to remove a phi with uses.");
-    PN->eraseFromParent();
-  }
+  // Remove PHI nodes that did not have any uses rewritten. We need to redo the
+  // use_empty() check here, because even if the PHI node wasn't used when added
+  // to PHIsToRemove, later added PHI nodes can be using it.  This cleanup is
+  // not guaranteed to handle trees/cycles of PHI nodes that only are used by
+  // each other. Such situations has only been noticed when the input IR
+  // contains unreachable code, and leaving some extra redundant PHI nodes in
+  // such situations is considered a minor problem.
+  for (PHINode *PN : PHIsToRemove)
+    if (PN->use_empty())
+      PN->eraseFromParent();
   return Changed;
 }
 

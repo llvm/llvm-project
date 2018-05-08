@@ -198,8 +198,14 @@ def : WriteRes<WriteNop, [AtomPort01]>;
 // Floating point. This covers both scalar and vector operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-def  : WriteRes<WriteFLoad,  [AtomPort0]>;
-def  : WriteRes<WriteFStore, [AtomPort0]>;
+def  : WriteRes<WriteFLoad,         [AtomPort0]>;
+def  : WriteRes<WriteFMaskedLoad,   [AtomPort0]>;
+def  : WriteRes<WriteFMaskedLoadY,  [AtomPort0]>;
+
+def  : WriteRes<WriteFStore,        [AtomPort0]>;
+def  : WriteRes<WriteFMaskedStore,  [AtomPort0]>;
+def  : WriteRes<WriteFMaskedStoreY, [AtomPort0]>;
+
 def  : WriteRes<WriteFMove,  [AtomPort01]>;
 defm : X86WriteRes<WriteEMMS,[AtomPort01], 5, [5], 1>;
 
@@ -250,6 +256,8 @@ defm : AtomWriteResPair<WriteFRnd,           [AtomPort0],  [AtomPort0],  5,  5, 
 defm : AtomWriteResPair<WriteFRndY,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
 defm : AtomWriteResPair<WriteFLogic,        [AtomPort01],  [AtomPort0]>;
 defm : AtomWriteResPair<WriteFLogicY,       [AtomPort01],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
+defm : AtomWriteResPair<WriteFTest,         [AtomPort01],  [AtomPort0]>;
+defm : AtomWriteResPair<WriteFTestY ,       [AtomPort01],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteFShuffle,       [AtomPort0],  [AtomPort0]>;
 defm : AtomWriteResPair<WriteFShuffleY,      [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteFVarShuffle,    [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
@@ -280,14 +288,22 @@ def  : WriteRes<WriteCvtF2FSt, [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 // Vector integer operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-def  : WriteRes<WriteVecLoad,  [AtomPort0]>;
-def  : WriteRes<WriteVecStore, [AtomPort0]>;
+def  : WriteRes<WriteVecLoad,         [AtomPort0]>;
+def  : WriteRes<WriteVecMaskedLoad,   [AtomPort0]>;
+def  : WriteRes<WriteVecMaskedLoadY,  [AtomPort0]>;
+
+def  : WriteRes<WriteVecStore,        [AtomPort0]>;
+def  : WriteRes<WriteVecMaskedStore,  [AtomPort0]>;
+def  : WriteRes<WriteVecMaskedStoreY, [AtomPort0]>;
+
 def  : WriteRes<WriteVecMove,  [AtomPort01]>;
 
 defm : AtomWriteResPair<WriteVecALU,       [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecALUY,      [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecLogic,     [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecLogicY,    [AtomPort01],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WriteVecTest,      [AtomPort01],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WriteVecTestY,     [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecShift,     [AtomPort01], [AtomPort01], 2, 3, [2], [3]>;
 defm : AtomWriteResPair<WriteVecShiftX,    [AtomPort01], [AtomPort01], 2, 3, [2], [3]>;
 defm : AtomWriteResPair<WriteVecShiftY,    [AtomPort01], [AtomPort01], 2, 3, [2], [3]>;

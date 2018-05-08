@@ -8616,6 +8616,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       case APFloat::cmpUnordered:
         return CCR::Unordered;
       }
+      llvm_unreachable("Unrecognised APFloat::cmpResult enum");
     };
     return Success(GetCmpRes(), E);
   }

@@ -130,6 +130,24 @@ TEST(SanitizerCommon, InternalMmapVectorEq) {
   EXPECT_TRUE(vector1 != vector2);
 }
 
+TEST(SanitizerCommon, InternalMmapVectorSwap) {
+  InternalMmapVector<uptr> vector1;
+  InternalMmapVector<uptr> vector2;
+  InternalMmapVector<uptr> vector3;
+  InternalMmapVector<uptr> vector4;
+  for (uptr i = 0; i < 100; i++) {
+    vector1.push_back(i);
+    vector2.push_back(i);
+    vector3.push_back(-i);
+    vector4.push_back(-i);
+  }
+  EXPECT_NE(vector2, vector3);
+  EXPECT_NE(vector1, vector4);
+  vector1.swap(vector3);
+  EXPECT_EQ(vector2, vector3);
+  EXPECT_EQ(vector1, vector4);
+}
+
 void TestThreadInfo(bool main) {
   uptr stk_addr = 0;
   uptr stk_size = 0;

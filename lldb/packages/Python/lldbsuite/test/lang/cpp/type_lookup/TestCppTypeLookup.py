@@ -38,6 +38,11 @@ class TestCppTypeLookup(TestBase):
         # Get frame for current thread
         frame = thread.GetSelectedFrame()
 
+        # We are testing LLDB's type lookup machinery, but if we inject local
+        # variables, the types for those will be found because they have been
+        # imported through the variable, not because the type lookup worked.
+        self.runCmd("settings set target.experimental.inject-local-vars false")
+
         # Make sure we don't accidentally accept structures that exist only
         # in namespaces when evaluating expressions with top level types.
         # Prior to the revision that added this test, we would accidentally

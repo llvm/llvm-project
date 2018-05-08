@@ -3,6 +3,11 @@
 ; RUN: llvm-rc /FO %t.include.res %p/Inputs/include.rc
 ; RUN: llvm-readobj %t.include.res | FileCheck --check-prefix=FOUND %s
 
+; Try including files without quotes.
+; RUN: rm -f %t.noquotes.res
+; RUN: llvm-rc /FO %t.noquotes.res %p/Inputs/include-noquotes.rc
+; RUN: llvm-readobj %t.noquotes.res | FileCheck --check-prefix=FOUND %s
+
 ; Should find the bitmap if the folder is explicitly specified.
 ; RUN: rm -f %t.nested-include.res
 ; RUN: llvm-rc /FO %t.nested-include.res /I %p/Inputs/nested %p/Inputs/deep-include.rc
@@ -41,4 +46,4 @@ FOUND-NEXT:   0050: FFFFFF0E C9FF0000 241CEDFF FFFF0000  |........$.......|
 FOUND-NEXT: )
 
 MISSING:      llvm-rc: Error in BITMAP statement (ID foo):
-MISSING-NEXT: error : file not found : nested-bitmap.bmp
+MISSING-NEXT: error : file not found : nested_bitmap.bmp

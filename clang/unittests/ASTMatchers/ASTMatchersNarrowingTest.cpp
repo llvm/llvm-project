@@ -894,6 +894,10 @@ TEST(isConstexpr, MatchesConstexprDeclarations) {
                       varDecl(hasName("foo"), isConstexpr())));
   EXPECT_TRUE(matches("constexpr int bar();",
                       functionDecl(hasName("bar"), isConstexpr())));
+  EXPECT_TRUE(matchesConditionally("void baz() { if constexpr(1 > 0) {} }",
+                                   ifStmt(isConstexpr()), true, "-std=c++17"));
+  EXPECT_TRUE(matchesConditionally("void baz() { if (1 > 0) {} }",
+                                   ifStmt(isConstexpr()), false, "-std=c++17"));
 }
 
 TEST(TemplateArgumentCountIs, Matches) {

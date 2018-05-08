@@ -73,10 +73,12 @@ set(files
   opencl-c.h
   pkuintrin.h
   pmmintrin.h
+  pconfigintrin.h
   popcntintrin.h
   prfchwintrin.h
   rdseedintrin.h
   rtmintrin.h
+  sgxintrin.h
   s390intrin.h
   shaintrin.h
   smmintrin.h

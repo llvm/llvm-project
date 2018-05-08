@@ -194,6 +194,7 @@
 /* Features in %edx for leaf 7 sub-leaf 0 */
 #define bit_AVX5124VNNIW  0x00000004
 #define bit_AVX5124FMAPS  0x00000008
+#define bit_PCONFIG       0x00040000
 #define bit_IBT           0x00100000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */

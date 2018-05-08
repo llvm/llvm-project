@@ -154,6 +154,7 @@ bool X86TargetInfo::initFeatureMap(
     break;
 
   case CK_IcelakeServer:
+    setFeatureEnabledImpl(Features, "pconfig", true);
     setFeatureEnabledImpl(Features, "wbnoinvd", true);
     LLVM_FALLTHROUGH;
   case CK_IcelakeClient:
@@ -827,6 +828,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMOVDIRI = true;
     } else if (Feature == "+movdir64b") {
       HasMOVDIR64B = true;
+    } else if (Feature == "+pconfig") {
+      HasPCONFIG = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -1187,6 +1190,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MOVDIRI__");
   if (HasMOVDIR64B)
     Builder.defineMacro("__MOVDIR64B__");
+  if (HasPCONFIG)
+    Builder.defineMacro("__PCONFIG__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1316,6 +1321,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("mpx", true)
       .Case("mwaitx", true)
       .Case("pclmul", true)
+      .Case("pconfig", true)
       .Case("pku", true)
       .Case("popcnt", true)
       .Case("prefetchwt1", true)
@@ -1394,6 +1400,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("mpx", HasMPX)
       .Case("mwaitx", HasMWAITX)
       .Case("pclmul", HasPCLMUL)
+      .Case("pconfig", HasPCONFIG)
       .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)
       .Case("prefetchwt1", HasPREFETCHWT1)
