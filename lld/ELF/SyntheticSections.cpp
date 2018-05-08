@@ -497,10 +497,10 @@ void EhFrameSection::finalizeContents() {
   }
 
   // The LSB standard does not allow a .eh_frame section with zero
-  // Call Frame Information records. Therefore add a CIE record length
-  // 0 as a terminator if this .eh_frame section is empty.
-  if (Off == 0)
-    Off = 4;
+  // Call Frame Information records. glibc unwind-dw2-fde.c
+  // classify_object_over_fdes expects there is a CIE record length 0 as a
+  // terminator. Thus we add one unconditionally.
+  Off += 4;
 
   this->Size = Off;
 }
@@ -1685,8 +1685,11 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
         ESym->st_other |= STO_MIPS_PLT;
       if (isMicroMips()) {
         // Set STO_MIPS_MICROMIPS flag and less-significant bit for
-        // defined microMIPS symbols and shared symbols with PLT record.
-        if (Sym->isDefined() && (Sym->StOther & STO_MIPS_MICROMIPS)) {
+        // a defined microMIPS symbol and symbol should point to its
+        // PLT entry (in case of microMIPS, PLT entries always contain
+        // microMIPS code).
+        if (Sym->isDefined() &&
+            ((Sym->StOther & STO_MIPS_MICROMIPS) || Sym->NeedsPltAddr)) {
           if (StrTabSec.isDynamic())
             ESym->st_value |= 1;
           ESym->st_other |= STO_MIPS_MICROMIPS;

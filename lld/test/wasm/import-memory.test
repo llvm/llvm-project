@@ -1,5 +1,5 @@
 # RUN: llc -filetype=obj %p/Inputs/start.ll -o %t.start.o
-# RUN: wasm-ld --check-signatures --import-memory -o %t.wasm %t.start.o
+# RUN: wasm-ld --import-memory -o %t.wasm %t.start.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # Verify the --import-memory flag creates a memory import
@@ -15,7 +15,7 @@
 
 
 
-# RUN: wasm-ld --check-signatures --import-memory --initial-memory=262144 \
+# RUN: wasm-ld --import-memory --initial-memory=262144 \
 # RUN:     --max-memory=327680 -o %t.max.wasm %t.start.o
 # RUN: obj2yaml %t.max.wasm | FileCheck -check-prefix=CHECK-MAX %s
 

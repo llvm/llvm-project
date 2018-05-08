@@ -118,7 +118,8 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
 
   std::pair<ELFKind, uint16_t> Ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(S)
-          .Cases("aarch64elf", "aarch64linux", {ELF64LEKind, EM_AARCH64})
+          .Cases("aarch64elf", "aarch64linux", "aarch64_elf64_le_vec",
+                 {ELF64LEKind, EM_AARCH64})
           .Cases("armelf", "armelf_linux_eabi", {ELF32LEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
@@ -799,11 +800,15 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->ThinLTOIndexOnly = true;
     } else if (S.startswith("thinlto-index-only=")) {
       Config->ThinLTOIndexOnly = true;
-      Config->ThinLTOIndexOnlyObjectsFile = S.substr(19);
+      Config->ThinLTOIndexOnlyArg = S.substr(19);
+    } else if (S == "thinlto-emit-imports-files") {
+      Config->ThinLTOEmitImportsFiles = true;
     } else if (S.startswith("thinlto-prefix-replace=")) {
-      Config->ThinLTOPrefixReplace = S.substr(23);
-      if (!Config->ThinLTOPrefixReplace.contains(';'))
-        error("thinlto-prefix-replace expects 'old;new' format");
+      std::tie(Config->ThinLTOPrefixReplace.first,
+               Config->ThinLTOPrefixReplace.second) = S.substr(23).split(';');
+      if (Config->ThinLTOPrefixReplace.second.empty())
+        error("thinlto-prefix-replace expects 'old;new' format, but got " +
+              S.substr(23));
     } else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
                !S.startswith("-pass-through=") && !S.startswith("thinlto")) {
       parseClangOption(S, Arg->getSpelling());
@@ -1263,8 +1268,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab->addSymbolWrap<ELFT>(Arg->getValue());
 
+  // Do link-time optimization if given files are LLVM bitcode files.
+  // This compiles bitcode files into real object files.
   Symtab->addCombinedLTOObject<ELFT>();
   if (errorCount())
+    return;
+
+  // If -thinlto-index-only is given, we should create only "index
+  // files" and not object files. Index file creation is already done
+  // in addCombinedLTOObject, so we are done if that's the case.
+  if (Config->ThinLTOIndexOnly)
     return;
 
   // Apply symbol renames for -wrap.

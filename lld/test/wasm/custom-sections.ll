@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o %t1.o
 ; RUN: llc -filetype=obj  %S/Inputs/custom.ll -o %t2.o
-; RUN: wasm-ld --check-signatures --relocatable -o %t.wasm %t1.o %t2.o
+; RUN: wasm-ld --relocatable -o %t.wasm %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"

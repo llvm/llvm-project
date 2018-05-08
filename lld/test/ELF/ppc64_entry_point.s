@@ -1,7 +1,12 @@
 # REQUIRES: ppc
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-objdump -D %t2 | FileCheck %s
+
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t
+# RUN: ld.lld %t -o %t2
+# RUN: llvm-objdump -D %t2 | FileCheck -check-prefix=CHECK-BE %s
 
 .text
 .abiversion 2
@@ -27,10 +32,19 @@ _start:
 .Lfunc_end0:
     .size   _start, .Lfunc_end0-.Lfunc_begin0
 
-// CHECK: 10010000:       01 10 80 3c     lis 4, 4097
-// CHECK-NEXT: 10010004:       00 00 84 38     addi 4, 4, 0
-// CHECK-NEXT: 10010008:       02 00 a0 3c     lis 5, 2
-// CHECK-NEXT: 1001000c:       00 80 a5 38     addi 5, 5, -32768
+// CHECK: 10010000:       {{.*}}     lis 4, 4097
+// CHECK-NEXT: 10010004:       {{.*}}     addi 4, 4, 0
+// CHECK-NEXT: 10010008:       {{.*}}     lis 5, 2
+// CHECK-NEXT: 1001000c:       {{.*}}     addi 5, 5, -32768
 // CHECK: Disassembly of section .got:
 // CHECK-NEXT: .got:
 // CHECK-NEXT: 10020000:       00 80 02 10
+
+// CHECK-BE: 10010000:       {{.*}}     lis 4, 4097
+// CHECK-BE-NEXT: 10010004:       {{.*}}     addi 4, 4, 0
+// CHECK-BE-NEXT: 10010008:       {{.*}}     lis 5, 2
+// CHECK-BE-NEXT: 1001000c:       {{.*}}     addi 5, 5, -32768
+// CHECK-BE: Disassembly of section .got:
+// CHECK-BE-NEXT: .got:
+// CHECK-BE-NEXT: 10020000:       00 00 00 00 {{.*}}
+// CHECK-BE-NEXT: 10020004:       10 02 80 00 {{.*}}

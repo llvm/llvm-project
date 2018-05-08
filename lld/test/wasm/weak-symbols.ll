@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=obj %p/Inputs/weak-symbol1.ll -o %t1.o
 ; RUN: llc -filetype=obj %p/Inputs/weak-symbol2.ll -o %t2.o
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld -no-gc-sections --check-signatures -o %t.wasm %t.o %t1.o %t2.o
+; RUN: wasm-ld -no-gc-sections -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown-wasm"

@@ -48,14 +48,13 @@ public:
 
   void add(BitcodeFile &F);
   std::vector<InputFile *> compile();
-  void addLazyObjFile(LazyObjFile *File);
 
 private:
   std::unique_ptr<llvm::lto::LTO> LTOObj;
   std::vector<SmallString<0>> Buff;
   std::vector<std::unique_ptr<MemoryBuffer>> Files;
   llvm::DenseSet<StringRef> UsedStartStop;
-  std::unique_ptr<llvm::raw_fd_ostream> LinkedObjects;
+  std::unique_ptr<llvm::raw_fd_ostream> IndexFile;
 };
 } // namespace elf
 } // namespace lld

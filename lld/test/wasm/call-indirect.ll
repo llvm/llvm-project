@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld --check-signatures -o %t.wasm %t2.o %t.o
+; RUN: wasm-ld -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; bitcode generated from the following C code:
