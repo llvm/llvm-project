@@ -105,9 +105,13 @@ def WriteZero : SchedWrite;
 defm WriteJump : X86SchedWritePair;
 
 // Floating point. This covers both scalar and vector operations.
-def  WriteFLoad   : SchedWrite;
-def  WriteFStore  : SchedWrite;
-def  WriteFMove   : SchedWrite;
+def  WriteFLoad         : SchedWrite;
+def  WriteFMaskedLoad   : SchedWrite;
+def  WriteFMaskedLoadY  : SchedWrite;
+def  WriteFStore        : SchedWrite;
+def  WriteFMaskedStore  : SchedWrite;
+def  WriteFMaskedStoreY : SchedWrite;
+def  WriteFMove         : SchedWrite;
 
 defm WriteFAdd    : X86SchedWritePair; // Floating point add/sub.
 defm WriteFAddX   : X86SchedWritePair; // Floating point add/sub (XMM).
@@ -162,6 +166,8 @@ defm WriteFRnd   : X86SchedWritePair; // Floating point rounding.
 defm WriteFRndY  : X86SchedWritePair; // Floating point rounding (YMM/ZMM).
 defm WriteFLogic  : X86SchedWritePair; // Floating point and/or/xor logicals.
 defm WriteFLogicY : X86SchedWritePair; // Floating point and/or/xor logicals (YMM/ZMM).
+defm WriteFTest   : X86SchedWritePair; // Floating point TEST instructions.
+defm WriteFTestY  : X86SchedWritePair; // Floating point TEST instructions (YMM/ZMM).
 defm WriteFShuffle  : X86SchedWritePair; // Floating point vector shuffles.
 defm WriteFShuffleY : X86SchedWritePair; // Floating point vector shuffles (YMM/ZMM).
 defm WriteFVarShuffle  : X86SchedWritePair; // Floating point vector variable shuffles.
@@ -181,13 +187,20 @@ defm WritePHAdd  : X86SchedWritePair;
 defm WritePHAddY : X86SchedWritePair; // YMM/ZMM.
 
 // Vector integer operations.
-def  WriteVecLoad  : SchedWrite;
-def  WriteVecStore : SchedWrite;
-def  WriteVecMove  : SchedWrite;
+def  WriteVecLoad         : SchedWrite;
+def  WriteVecMaskedLoad   : SchedWrite;
+def  WriteVecMaskedLoadY  : SchedWrite;
+def  WriteVecStore        : SchedWrite;
+def  WriteVecMaskedStore  : SchedWrite;
+def  WriteVecMaskedStoreY : SchedWrite;
+def  WriteVecMove         : SchedWrite;
+
 defm WriteVecALU   : X86SchedWritePair; // Vector integer ALU op, no logicals.
 defm WriteVecALUY  : X86SchedWritePair; // Vector integer ALU op, no logicals (YMM/ZMM).
 defm WriteVecLogic : X86SchedWritePair; // Vector integer and/or/xor logicals.
 defm WriteVecLogicY: X86SchedWritePair; // Vector integer and/or/xor logicals (YMM/ZMM).
+defm WriteVecTest  : X86SchedWritePair; // Vector integer TEST instructions.
+defm WriteVecTestY : X86SchedWritePair; // Vector integer TEST instructions (YMM/ZMM).
 defm WriteVecShift  : X86SchedWritePair; // Vector integer shifts (default).
 defm WriteVecShiftX : X86SchedWritePair; // Vector integer shifts (XMM).
 defm WriteVecShiftY : X86SchedWritePair; // Vector integer shifts (YMM/ZMM).
@@ -317,6 +330,8 @@ def SchedWriteFRnd
  : X86SchedWriteWidths<WriteFRnd, WriteFRnd, WriteFRndY, WriteFRndY>;
 def SchedWriteFLogic
  : X86SchedWriteWidths<WriteFLogic, WriteFLogic, WriteFLogicY, WriteFLogicY>;
+def SchedWriteFTest
+ : X86SchedWriteWidths<WriteFTest, WriteFTest, WriteFTestY, WriteFTestY>;
 
 def SchedWriteFShuffle
  : X86SchedWriteWidths<WriteFShuffle, WriteFShuffle,
@@ -337,6 +352,9 @@ def SchedWritePHAdd
 def SchedWriteVecLogic
  : X86SchedWriteWidths<WriteVecLogic, WriteVecLogic,
                        WriteVecLogicY, WriteVecLogicY>;
+def SchedWriteVecTest
+ : X86SchedWriteWidths<WriteVecTest, WriteVecTest,
+                       WriteVecTestY, WriteVecTestY>;
 def SchedWriteVecShift
  : X86SchedWriteWidths<WriteVecShift, WriteVecShiftX,
                        WriteVecShiftY, WriteVecShiftY>;

@@ -214,6 +214,12 @@ Expected<StringRef> RCParser::readString() {
   return read().value();
 }
 
+Expected<StringRef> RCParser::readFilename() {
+  if (!isNextTokenKind(Kind::String) && !isNextTokenKind(Kind::Identifier))
+    return getExpectedError("string");
+  return read().value();
+}
+
 Expected<StringRef> RCParser::readIdentifier() {
   if (!isNextTokenKind(Kind::Identifier))
     return getExpectedError("identifier");
@@ -385,7 +391,7 @@ RCParser::ParseType RCParser::parseAcceleratorsResource() {
 }
 
 RCParser::ParseType RCParser::parseCursorResource() {
-  ASSIGN_OR_RETURN(Arg, readString());
+  ASSIGN_OR_RETURN(Arg, readFilename());
   return llvm::make_unique<CursorResource>(*Arg);
 }
 
@@ -427,8 +433,13 @@ RCParser::ParseType RCParser::parseUserDefinedResource(IntOrString Type) {
     return getExpectedError("filename, '{' or BEGIN");
 
   // Check if this is a file resource.
-  if (look().kind() == Kind::String)
+  switch (look().kind()) {
+  case Kind::String:
+  case Kind::Identifier:
     return llvm::make_unique<UserDefinedResource>(Type, read().value());
+  default:
+    break;
+  }
 
   RETURN_IF_ERROR(consumeType(Kind::BlockBegin));
   std::vector<IntOrString> Data;
@@ -487,17 +498,17 @@ Expected<Control> RCParser::parseControl() {
 }
 
 RCParser::ParseType RCParser::parseBitmapResource() {
-  ASSIGN_OR_RETURN(Arg, readString());
+  ASSIGN_OR_RETURN(Arg, readFilename());
   return llvm::make_unique<BitmapResource>(*Arg);
 }
 
 RCParser::ParseType RCParser::parseIconResource() {
-  ASSIGN_OR_RETURN(Arg, readString());
+  ASSIGN_OR_RETURN(Arg, readFilename());
   return llvm::make_unique<IconResource>(*Arg);
 }
 
 RCParser::ParseType RCParser::parseHTMLResource() {
-  ASSIGN_OR_RETURN(Arg, readString());
+  ASSIGN_OR_RETURN(Arg, readFilename());
   return llvm::make_unique<HTMLResource>(*Arg);
 }
 

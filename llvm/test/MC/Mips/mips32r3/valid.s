@@ -80,7 +80,9 @@ a:
         ceil.w.s  $f6,$f20
         cfc1      $s1,$21
         clo       $11,$a1              # CHECK: clo $11, $5   # encoding: [0x70,0xab,0x58,0x21]
+                                       # CHECK-NEXT:          # <MCInst #{{.*}} CLO
         clz       $sp,$gp              # CHECK: clz $sp, $gp  # encoding: [0x73,0x9d,0xe8,0x20]
+                                       # CHECK-NEXT:          # <MCInst #{{.*}} CLZ
         ctc1      $a2,$26
         cvt.d.s   $f0,$f2              # CHECK: cvt.d.s $f0, $f2         # encoding: [0x46,0x00,0x10,0x21]
                                        # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} CVT_D32_S
