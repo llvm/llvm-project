@@ -385,6 +385,44 @@ enum SDWA9EncValues{
 };
 
 } // namespace SDWA
+
+namespace DPP {
+
+enum DppCtrl {
+  QUAD_PERM_FIRST   = 0,
+  QUAD_PERM_LAST    = 0xFF,
+  DPP_UNUSED1       = 0x100,
+  ROW_SHL0          = 0x100,
+  ROW_SHL_FIRST     = 0x101,
+  ROW_SHL_LAST      = 0x10F,
+  DPP_UNUSED2       = 0x110,
+  ROW_SHR0          = 0x110,
+  ROW_SHR_FIRST     = 0x111,
+  ROW_SHR_LAST      = 0x11F,
+  DPP_UNUSED3       = 0x120,
+  ROW_ROR0          = 0x120,
+  ROW_ROR_FIRST     = 0x121,
+  ROW_ROR_LAST      = 0x12F,
+  WAVE_SHL1         = 0x130,
+  DPP_UNUSED4_FIRST = 0x131,
+  DPP_UNUSED4_LAST  = 0x133,
+  WAVE_ROL1         = 0x134,
+  DPP_UNUSED5_FIRST = 0x135,
+  DPP_UNUSED5_LAST  = 0x137,
+  WAVE_SHR1         = 0x138,
+  DPP_UNUSED6_FIRST = 0x139,
+  DPP_UNUSED6_LAST  = 0x13B,
+  WAVE_ROR1         = 0x13C,
+  DPP_UNUSED7_FIRST = 0x13D,
+  DPP_UNUSED7_LAST  = 0x13F,
+  ROW_MIRROR        = 0x140,
+  ROW_HALF_MIRROR   = 0x141,
+  BCAST15           = 0x142,
+  BCAST31           = 0x143,
+  DPP_LAST          = BCAST31
+};
+
+} // namespace DPP
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

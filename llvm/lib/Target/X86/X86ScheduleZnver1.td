@@ -100,7 +100,8 @@ def : ReadAdvance<ReadAfterLd, 4>;
 // This multiclass is for folded loads for integer units.
 multiclass ZnWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
-                          int Lat, list<int> Res = [], int UOps = 1> {
+                          int Lat, list<int> Res = [], int UOps = 1,
+                          int LoadLat = 4, int LoadUOps = 1> {
   // Register variant takes 1-cycle on Execution Port.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -109,11 +110,11 @@ multiclass ZnWriteResPair<X86FoldableSchedWrite SchedRW,
   }
 
   // Memory variant also uses a cycle on ZnAGU
-  // adds 4 cycles to the latency.
+  // adds LoadLat cycles to the latency (default = 4).
   def : WriteRes<SchedRW.Folded, !listconcat([ZnAGU], ExePorts)> {
-    let Latency = !add(Lat, 4);
+    let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
-    let NumMicroOps = !add(UOps, 1);
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
@@ -150,6 +151,7 @@ def : WriteRes<WriteZero,  []>;
 def : WriteRes<WriteLEA, [ZnALU]>;
 defm : ZnWriteResPair<WriteALU,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteIMul,   [ZnALU1, ZnMultiplier], 4>;
+defm : ZnWriteResPair<WriteIMul64, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
@@ -172,15 +174,14 @@ defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1>;
 defm : ZnWriteResPair<WriteBZHI, [ZnALU], 1>;
 
 // IDIV
-def : WriteRes<WriteIDiv, [ZnALU2, ZnDivider]> {
-  let Latency = 41;
-  let ResourceCycles = [1, 41];
-}
-
-def : WriteRes<WriteIDivLd, [ZnALU2, ZnAGU, ZnDivider]> {
-  let Latency = 45;
-  let ResourceCycles = [1, 4, 41];
-}
+defm : ZnWriteResPair<WriteDiv8,   [ZnALU2, ZnDivider], 15, [1,15], 1>;
+defm : ZnWriteResPair<WriteDiv16,  [ZnALU2, ZnDivider], 17, [1,17], 2>;
+defm : ZnWriteResPair<WriteDiv32,  [ZnALU2, ZnDivider], 25, [1,25], 2>;
+defm : ZnWriteResPair<WriteDiv64,  [ZnALU2, ZnDivider], 41, [1,41], 2>;
+defm : ZnWriteResPair<WriteIDiv8,  [ZnALU2, ZnDivider], 15, [1,15], 1>;
+defm : ZnWriteResPair<WriteIDiv16, [ZnALU2, ZnDivider], 17, [1,17], 2>;
+defm : ZnWriteResPair<WriteIDiv32, [ZnALU2, ZnDivider], 25, [1,25], 2>;
+defm : ZnWriteResPair<WriteIDiv64, [ZnALU2, ZnDivider], 41, [1,41], 2>;
 
 // IMULH
 def  : WriteRes<WriteIMulH, [ZnALU1, ZnMultiplier]>{
@@ -551,34 +552,6 @@ def ZnWriteMulX64Ld : SchedWriteRes<[ZnAGU, ZnALU1, ZnMultiplier]> {
   let Latency = 8;
 }
 def : InstRW<[ZnWriteMulX64Ld, ReadAfterLd], (instrs MULX64rm)>;
-
-// DIV, IDIV.
-// r8.
-def ZnWriteDiv8 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 15;
-}
-def : InstRW<[ZnWriteDiv8], (instregex "DIV8r", "IDIV8r")>;
-
-// r16.
-def ZnWriteDiv16 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 17;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ZnWriteDiv16], (instregex "DIV16r", "IDIV16r")>;
-
-// r32.
-def ZnWriteDiv32 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 25;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ZnWriteDiv32], (instregex "DIV32r", "IDIV32r")>;
-
-// r64.
-def ZnWriteDiv64 : SchedWriteRes<[ZnALU2, ZnDivider]> {
-  let Latency = 41;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ZnWriteDiv64], (instregex "DIV64r", "IDIV64r")>;
 
 //-- Control transfer instructions --//
 

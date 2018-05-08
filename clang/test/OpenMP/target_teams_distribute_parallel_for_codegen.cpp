@@ -77,7 +77,7 @@ int target_teams_fun(int *g){
 
   // outlined target regions
   // HCK1: define internal void @[[OFFL1]](i{{32|64}} [[N_ARG:%.+]], i{{32|64}} [[TE_ARG:%.+]], i{{32|64}} [[TH_ARG:%.+]])
-  // TCK1: define void @{{.+}}target_teams_fun{{.*}}(i{{32|64}} [[N_ARG:%.+]], {{.+}}, i{{32|64}} [[TE_ARG:%.+]], i{{32|64}} [[TH_ARG:%.+]])
+  // TCK1: define weak void @{{.+}}target_teams_fun{{.*}}(i{{32|64}} [[N_ARG:%.+]], {{.+}}, i{{32|64}} [[TE_ARG:%.+]], i{{32|64}} [[TH_ARG:%.+]])
   // CK1: [[N_ADDR:%.+]] = alloca i{{32|64}},
   // CK1: [[TE_ADDR:%.+]] = alloca i{{32|64}},
   // CK1: [[TH_ADDR:%.+]] = alloca i{{32|64}},
@@ -101,7 +101,7 @@ int target_teams_fun(int *g){
   // CK1: ret void
 
   // HCK1: define internal void @[[OFFL2]](
-  // TCK1: define void @{{.+}}target_teams_fun{{.+}}(
+  // TCK1: define weak void @{{.+}}target_teams_fun{{.+}}(
   // CK1: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 3, {{.+}} @[[OUTL2:.+]] to {{.+}}, {{.+}}, {{.+}})
   // CK1: ret void
 

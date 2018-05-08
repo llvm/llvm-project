@@ -39,7 +39,7 @@ int maini1() {
   return 0;
 }
 
-// DEVICE: define void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](i32* dereferenceable{{[^,]*}}
+// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](i32* dereferenceable{{[^,]*}}
 // DEVICE: [[C_REF:%.+]] = load i32*, i32** @c_decl_tgt_link_ptr,
 // DEVICE: [[C:%.+]] = load i32, i32* [[C_REF]],
 // DEVICE: store i32 [[C]], i32* %

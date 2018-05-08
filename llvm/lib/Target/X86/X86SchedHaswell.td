@@ -112,12 +112,13 @@ def : WriteRes<WriteLoad,  [HWPort23]> { let Latency = 5; }
 def : WriteRes<WriteMove,  [HWPort0156]>;
 def : WriteRes<WriteZero,  []>;
 
-defm : HWWriteResPair<WriteALU,   [HWPort0156], 1>;
-defm : HWWriteResPair<WriteIMul,  [HWPort1],   3>;
+defm : HWWriteResPair<WriteALU,    [HWPort0156], 1>;
+defm : HWWriteResPair<WriteIMul,   [HWPort1],   3>;
+defm : HWWriteResPair<WriteIMul64, [HWPort1],   3>;
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
-defm : HWWriteResPair<WriteShift, [HWPort06],  1>;
-defm : HWWriteResPair<WriteJump,  [HWPort06],   1>;
-defm : HWWriteResPair<WriteCRC32, [HWPort1],   3>;
+defm : HWWriteResPair<WriteShift,  [HWPort06],  1>;
+defm : HWWriteResPair<WriteJump,   [HWPort06],  1>;
+defm : HWWriteResPair<WriteCRC32,  [HWPort1],   3>;
 
 defm : HWWriteResPair<WriteCMOV,  [HWPort06,HWPort0156], 2, [1,1], 2>; // Conditional move.
 def  : WriteRes<WriteSETCC, [HWPort06]>; // Setcc.
@@ -141,8 +142,14 @@ defm : HWWriteResPair<WritePOPCNT,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteBEXTR, [HWPort06,HWPort15], 2, [1,1], 2>;
 defm : HWWriteResPair<WriteBZHI, [HWPort15], 1>;
 
-// This is quite rough, latency depends on the dividend.
-defm : HWWriteResPair<WriteIDiv,  [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteDiv8,   [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteDiv16,  [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteDiv32,  [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteDiv64,  [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteIDiv8,  [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteIDiv16, [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteIDiv32, [HWPort0, HWDivider], 25, [1,10], 1, 4>;
+defm : HWWriteResPair<WriteIDiv64, [HWPort0, HWDivider], 25, [1,10], 1, 4>;
 
 // Scalar and vector floating point.
 defm : X86WriteRes<WriteFLoad,         [HWPort23], 5, [1], 1>;

@@ -4710,21 +4710,23 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst,
 //===----------------------------------------------------------------------===//
 
 bool AMDGPUOperand::isDPPCtrl() const {
+  using namespace AMDGPU::DPP;
+
   bool result = isImm() && getImmTy() == ImmTyDppCtrl && isUInt<9>(getImm());
   if (result) {
     int64_t Imm = getImm();
-    return ((Imm >= 0x000) && (Imm <= 0x0ff)) ||
-           ((Imm >= 0x101) && (Imm <= 0x10f)) ||
-           ((Imm >= 0x111) && (Imm <= 0x11f)) ||
-           ((Imm >= 0x121) && (Imm <= 0x12f)) ||
-           (Imm == 0x130) ||
-           (Imm == 0x134) ||
-           (Imm == 0x138) ||
-           (Imm == 0x13c) ||
-           (Imm == 0x140) ||
-           (Imm == 0x141) ||
-           (Imm == 0x142) ||
-           (Imm == 0x143);
+    return (Imm >= DppCtrl::QUAD_PERM_FIRST && Imm <= DppCtrl::QUAD_PERM_LAST) ||
+           (Imm >= DppCtrl::ROW_SHL_FIRST && Imm <= DppCtrl::ROW_SHL_LAST) ||
+           (Imm >= DppCtrl::ROW_SHR_FIRST && Imm <= DppCtrl::ROW_SHR_LAST) ||
+           (Imm >= DppCtrl::ROW_ROR_FIRST && Imm <= DppCtrl::ROW_ROR_LAST) ||
+           (Imm == DppCtrl::WAVE_SHL1) ||
+           (Imm == DppCtrl::WAVE_ROL1) ||
+           (Imm == DppCtrl::WAVE_SHR1) ||
+           (Imm == DppCtrl::WAVE_ROR1) ||
+           (Imm == DppCtrl::ROW_MIRROR) ||
+           (Imm == DppCtrl::ROW_HALF_MIRROR) ||
+           (Imm == DppCtrl::BCAST15) ||
+           (Imm == DppCtrl::BCAST31);
   }
   return false;
 }
@@ -4743,6 +4745,8 @@ bool AMDGPUOperand::isU16Imm() const {
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
+  using namespace AMDGPU::DPP;
+
   SMLoc S = Parser.getTok().getLoc();
   StringRef Prefix;
   int64_t Int;
@@ -4754,10 +4758,10 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
   }
 
   if (Prefix == "row_mirror") {
-    Int = 0x140;
+    Int = DppCtrl::ROW_MIRROR;
     Parser.Lex();
   } else if (Prefix == "row_half_mirror") {
-    Int = 0x141;
+    Int = DppCtrl::ROW_HALF_MIRROR;
     Parser.Lex();
   } else {
     // Check to prevent parseDPPCtrlOps from eating invalid tokens
@@ -4809,24 +4813,24 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
         return MatchOperand_ParseFail;
 
       if (Prefix == "row_shl" && 1 <= Int && Int <= 15) {
-        Int |= 0x100;
+        Int |= DppCtrl::ROW_SHL0;
       } else if (Prefix == "row_shr" && 1 <= Int && Int <= 15) {
-        Int |= 0x110;
+        Int |= DppCtrl::ROW_SHR0;
       } else if (Prefix == "row_ror" && 1 <= Int && Int <= 15) {
-        Int |= 0x120;
+        Int |= DppCtrl::ROW_ROR0;
       } else if (Prefix == "wave_shl" && 1 == Int) {
-        Int = 0x130;
+        Int = DppCtrl::WAVE_SHL1;
       } else if (Prefix == "wave_rol" && 1 == Int) {
-        Int = 0x134;
+        Int = DppCtrl::WAVE_ROL1;
       } else if (Prefix == "wave_shr" && 1 == Int) {
-        Int = 0x138;
+        Int = DppCtrl::WAVE_SHR1;
       } else if (Prefix == "wave_ror" && 1 == Int) {
-        Int = 0x13C;
+        Int = DppCtrl::WAVE_ROR1;
       } else if (Prefix == "row_bcast") {
         if (Int == 15) {
-          Int = 0x142;
+          Int = DppCtrl::BCAST15;
         } else if (Int == 31) {
-          Int = 0x143;
+          Int = DppCtrl::BCAST31;
         } else {
           return MatchOperand_ParseFail;
         }

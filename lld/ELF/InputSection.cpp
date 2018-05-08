@@ -376,17 +376,32 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
         continue;
       }
 
-      if (RelTy::IsRela) {
-        P->r_addend =
-            Sym.getVA(getAddend<ELFT>(Rel)) - Section->getOutputSection()->Addr;
-      } else if (Config->Relocatable) {
-        const uint8_t *BufLoc = Sec->Data.begin() + Rel.r_offset;
-        Sec->Relocations.push_back({R_ABS, Type, Rel.r_offset,
-                                    Target->getImplicitAddend(BufLoc, Type),
-                                    &Sym});
-      }
-    }
+      int64_t Addend = getAddend<ELFT>(Rel);
+      const uint8_t *BufLoc = Sec->Data.begin() + Rel.r_offset;
+      if (!RelTy::IsRela)
+        Addend = Target->getImplicitAddend(BufLoc, Type);
 
+      if (Config->EMachine == EM_MIPS && Config->Relocatable &&
+          Target->getRelExpr(Type, Sym, BufLoc) == R_MIPS_GOTREL) {
+        // Some MIPS relocations depend on "gp" value. By default,
+        // this value has 0x7ff0 offset from a .got section. But
+        // relocatable files produced by a complier or a linker
+        // might redefine this default value and we must use it
+        // for a calculation of the relocation result. When we
+        // generate EXE or DSO it's trivial. Generating a relocatable
+        // output is more difficult case because the linker does
+        // not calculate relocations in this mode and loses
+        // individual "gp" values used by each input object file.
+        // As a workaround we add the "gp" value to the relocation
+        // addend and save it back to the file.
+        Addend += Sec->getFile<ELFT>()->MipsGp0;
+      }
+
+      if (RelTy::IsRela)
+        P->r_addend = Sym.getVA(Addend) - Section->getOutputSection()->Addr;
+      else if (Config->Relocatable)
+        Sec->Relocations.push_back({R_ABS, Type, Rel.r_offset, Addend, &Sym});
+    }
   }
 }
 

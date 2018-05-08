@@ -53,12 +53,12 @@
 
 // We have 6 target regions
 
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
 
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]

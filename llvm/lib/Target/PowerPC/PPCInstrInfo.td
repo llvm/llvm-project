@@ -29,6 +29,12 @@ def SDT_PPCLxsizx : SDTypeProfile<1, 2, [
 def SDT_PPCstxsix : SDTypeProfile<0, 3, [
   SDTCisVT<0, f64>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
 ]>;
+def SDT_PPCcv_fp_to_int  : SDTypeProfile<1, 1, [
+  SDTCisFP<0>, SDTCisFP<1>
+  ]>;
+def SDT_PPCstore_scal_int_from_vsr : SDTypeProfile<0, 3, [
+  SDTCisVT<0, f64>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
+]>;
 def SDT_PPCVexts  : SDTypeProfile<1, 2, [
   SDTCisVT<0, f64>, SDTCisVT<1, f64>, SDTCisPtrTy<2>
 ]>;
@@ -123,6 +129,14 @@ def PPCfctidz : SDNode<"PPCISD::FCTIDZ", SDTFPUnaryOp, []>;
 def PPCfctiwz : SDNode<"PPCISD::FCTIWZ", SDTFPUnaryOp, []>;
 def PPCfctiduz: SDNode<"PPCISD::FCTIDUZ",SDTFPUnaryOp, []>;
 def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
+
+def PPCcv_fp_to_uint_in_vsr:
+    SDNode<"PPCISD::FP_TO_UINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
+def PPCcv_fp_to_sint_in_vsr:
+    SDNode<"PPCISD::FP_TO_SINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
+def PPCstore_scal_int_from_vsr:
+   SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
+           [SDNPHasChain, SDNPMayStore]>;
 def PPCstfiwx : SDNode<"PPCISD::STFIWX", SDT_PPCstfiwx,
                        [SDNPHasChain, SDNPMayStore]>;
 def PPClfiwax : SDNode<"PPCISD::LFIWAX", SDT_PPClfiwx,
@@ -1998,7 +2012,7 @@ def STWX  : XForm_8_memOp<31, 151, (outs), (ins gprc:$rS, memrr:$dst),
                    "stwx $rS, $dst", IIC_LdStStore,
                    [(store i32:$rS, xaddr:$dst)]>,
                    PPC970_DGroup_Cracked;
- 
+
 def STHBRX: XForm_8_memOp<31, 918, (outs), (ins gprc:$rS, memrr:$dst),
                    "sthbrx $rS, $dst", IIC_LdStStore,
                    [(PPCstbrx i32:$rS, xoaddr:$dst, i16)]>,
@@ -2011,7 +2025,7 @@ def STWBRX: XForm_8_memOp<31, 662, (outs), (ins gprc:$rS, memrr:$dst),
 def STFIWX: XForm_28_memOp<31, 983, (outs), (ins f8rc:$frS, memrr:$dst),
                      "stfiwx $frS, $dst", IIC_LdStSTFD,
                      [(PPCstfiwx f64:$frS, xoaddr:$dst)]>;
-                     
+
 def STFSX : XForm_28_memOp<31, 663, (outs), (ins f4rc:$frS, memrr:$dst),
                      "stfsx $frS, $dst", IIC_LdStSTFD,
                      [(store f32:$frS, xaddr:$dst)]>;
