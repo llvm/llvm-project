@@ -33,6 +33,7 @@ uintptr_t *call_pc = nullptr;
 uintptr_t *spawn_pc = nullptr;
 uintptr_t *load_pc = nullptr;
 uintptr_t *store_pc = nullptr;
+uintptr_t *alloca_pc = nullptr;
 
 class ProcMapping_t {
 public:
@@ -439,6 +440,10 @@ static void print_race_info(const RaceInfo_t& race) {
 
   if (race.alloc_inst.acc_loc != -1) {
     std::cerr << "  Allocation context" << std::endl;
+    // id 0 = non-stack allocation; otherwise, on stack and subtract 1 to true id
+    const csi_id_t alloca_id = race.alloc_inst.acc_loc;
+    if (alloca_id > 0)
+      std::cerr << "    " << get_info_on_mem_access(alloca_pc[alloca_id - 1]) << std::endl;
     auto alloc_call_stack = get_call_stack(race.alloc_inst);
     for (int i = race.alloc_inst.call_stack.size() - 1; i >= 0; --i)
       std::cerr << "    " << get_info_on_call(alloc_call_stack[i])

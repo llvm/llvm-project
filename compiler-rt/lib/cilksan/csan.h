@@ -18,6 +18,7 @@ typedef struct {
   csi_id_t num_task_exit;
   csi_id_t num_detach_continue;
   csi_id_t num_sync;
+  csi_id_t num_alloca;
 } csan_instrumentation_counts_t;
 
 struct csan_source_loc_t {

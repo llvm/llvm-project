@@ -40,10 +40,12 @@ extern uintptr_t *call_pc;
 extern uintptr_t *spawn_pc;
 extern uintptr_t *load_pc;
 extern uintptr_t *store_pc;
+extern uintptr_t *alloca_pc;
 static csi_id_t total_call = 0;
 static csi_id_t total_spawn = 0;
 static csi_id_t total_load = 0;
 static csi_id_t total_store = 0;
+static csi_id_t total_alloca = 0;
 
 static bool TOOL_INITIALIZED = false;
 
@@ -174,6 +176,8 @@ void __csan_unit_init(const char * const file_name,
     grow_pc_table(load_pc, total_load, counts.num_load);
   if (counts.num_store)
     grow_pc_table(store_pc, total_store, counts.num_store);
+  if (counts.num_alloca)
+    grow_pc_table(alloca_pc, total_alloca, counts.num_alloca);
   enable_checking();
 }
 
@@ -439,6 +443,8 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
 
 CILKSAN_API
 void __csi_after_alloca(const csi_id_t alloca_id, const void *addr, uint64_t total_size, uint64_t isStaticAlloca) {
+  if (!alloca_pc[alloca_id])
+    alloca_pc[alloca_id] = CALLERPC;
   cilksan_record_alloc((size_t) addr, total_size, alloca_id + 1);
   cilksan_clear_shadow_memory((size_t)addr, total_size);
 }
