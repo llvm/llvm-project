@@ -15,8 +15,8 @@
 // CHECK:      Disassembly of section .text:
 // CHECK-NEXT: __plt_foo:
 // CHECK-NEXT:      std 2, 24(1)
-// CHECK-NEXT:      addis 12, 2, -2
-// CHECK-NEXT:      ld 12, 32576(12)
+// CHECK-NEXT:      addis 12, 2, 0
+// CHECK-NEXT:      ld 12, 32560(12)
 // CHECK-NEXT:      mtctr 12
 // CHECK-NEXT:      bctr
 

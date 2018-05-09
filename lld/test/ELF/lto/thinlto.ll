@@ -66,10 +66,17 @@
 ; stable on the final output file itself.
 ; RUN: ld.lld -shared %t.o %t2.o -o %t2
 
+; Test to ensure that thinlto-index-only with obj-path creates the file.
+; RUN: rm -f %t5.o
+; RUN: ld.lld --plugin-opt=thinlto-index-only --plugin-opt=obj-path=%t5.o -shared %t.o %t2.o -o %t4
+; RUN: llvm-readobj -h %t5.o | FileCheck %s --check-prefix=FORMAT
+; RUN: llvm-nm %t5.o | count 0
+
 ; NM: T f
 ; NM1: T f
 ; NM1-NOT: U g
 ; NM2: T g
+; FORMAT: Format: ELF64-x86-64
 
 ; The backend index for this module contains summaries from itself and
 ; Inputs/thinlto.ll, as it imports from the latter.

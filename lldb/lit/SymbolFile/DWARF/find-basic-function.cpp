@@ -8,6 +8,8 @@
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL %s
+// RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
@@ -24,8 +26,16 @@
 // METHOD-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
 // METHOD-DAG: name = "ffbar()::sbar::foo()", mangled = "_ZZ5ffbarvEN4sbar3fooEv"
 
-// FULL: Found 2 functions:
+// FULL: Found 7 functions:
 // FULL-DAG: name = "foo()", mangled = "_Z3foov"
+// FULL-DAG: name = "foo(int)", mangled = "_Z3fooi"
+// FULL-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"
+// FULL-DAG: name = "bar::baz::foo()", mangled = "_ZN3bar3baz3fooEv"
+// FULL-DAG: name = "sbar::foo()", mangled = "_ZN4sbar3fooEv"
+// FULL-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
+// FULL-DAG: name = "ffbar()::sbar::foo()", mangled = "_ZZ5ffbarvEN4sbar3fooEv"
+
+// FULL-MANGLED: Found 1 functions:
 // FULL-DAG: name = "foo(int)", mangled = "_Z3fooi"
 
 // CONTEXT: Found 1 functions:
