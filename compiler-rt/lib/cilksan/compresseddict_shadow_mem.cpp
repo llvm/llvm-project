@@ -122,8 +122,9 @@ void CompressedDictShadowMem::clear(size_t start, size_t size) {
 
 void CompressedDictShadowMem::record_alloc(size_t start, size_t size,
                                            FrameData_t *f,
-                                           const call_stack_t &call_stack) {
-  my_alloc_dict->set(start, size, MemoryAccess_t(f->Sbag, 0, call_stack));
+                                           const call_stack_t &call_stack,
+                                           csi_id_t alloca_id) {
+  my_alloc_dict->set(start, size, MemoryAccess_t(f->Sbag, alloca_id, call_stack));
 }
 
 // prev_read: are we checking with previous reads or writes?
@@ -168,10 +169,12 @@ void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,
           if (is_read) // the current access is a read
             report_race(access->getLoc(),
                         AccessLoc_t(acc_id, call_stack),
+                        alloc_access,
                         shifted_addr, WR_RACE);
           else
             report_race(access->getLoc(),
                         AccessLoc_t(acc_id, call_stack),
+                        alloc_access,
                         shifted_addr, WW_RACE);
         }
       }

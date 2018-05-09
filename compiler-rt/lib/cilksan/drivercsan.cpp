@@ -439,7 +439,7 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
 
 CILKSAN_API
 void __csi_after_alloca(const csi_id_t alloca_id, const void *addr, uint64_t total_size, uint64_t isStaticAlloca) {
-  cilksan_record_alloc((size_t) addr, total_size);
+  cilksan_record_alloc((size_t) addr, total_size, alloca_id + 1);
   cilksan_clear_shadow_memory((size_t)addr, total_size);
 }
 
@@ -560,7 +560,7 @@ CILKSAN_API void* malloc(size_t s) {
     disable_checking();
     malloc_sizes.insert({(uintptr_t)r, new_size});
     // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
-    cilksan_record_alloc((size_t)r, new_size);
+    cilksan_record_alloc((size_t)r, new_size, 0);
     cilksan_clear_shadow_memory((size_t)r, new_size);
     enable_checking();
   }

@@ -468,7 +468,7 @@ void cilksan_do_leave_stolen_callback();
 void cilksan_do_read(const csi_id_t load_id, uintptr_t addr, size_t len);
 void cilksan_do_write(const csi_id_t store_id, uintptr_t addr, size_t len);
 void cilksan_clear_shadow_memory(size_t start, size_t end);
-void cilksan_record_alloc(size_t start, size_t end);
+void cilksan_record_alloc(size_t start, size_t end, csi_id_t alloca_id);
 // void cilksan_do_function_entry(uint64_t an_address);
 // void cilksan_do_function_exit();
 #endif // __CILKSAN_INTERNAL_H__

@@ -23,7 +23,7 @@ public:
   virtual void clear(size_t start, size_t size) = 0;
 
   virtual void record_alloc(size_t start, size_t size, FrameData_t *f,
-                            const call_stack_t &call_stack) {}
+                            const call_stack_t &call_stack, csi_id_t alloca_id) {}
 
   virtual void check_race_with_prev_read(const csi_id_t acc_id,
                                          uintptr_t addr,
@@ -87,8 +87,8 @@ public:
   }
 
   virtual void record_alloc(size_t start, size_t size, FrameData_t *f,
-                            const call_stack_t &call_stack) {
-    shadow_mem->record_alloc(start, size, f, call_stack);
+                            const call_stack_t &call_stack, csi_id_t alloca_id) {
+    shadow_mem->record_alloc(start, size, f, call_stack, alloca_id);
   }
 
   void check_race_with_prev_read(const csi_id_t acc_id,
