@@ -4749,7 +4749,7 @@ Decl *Sema::ActOnMethodDeclaration(
   }
 
   ResultTypeCompatibilityKind RTC
-    = checkRelatedResultTypeCompatibility(ObjCMethod, CurrentClass);
+    = CheckRelatedResultTypeCompatibility(*this, ObjCMethod, CurrentClass);
 
   CheckObjCMethodOverrides(ObjCMethod, CurrentClass, RTC);
 
