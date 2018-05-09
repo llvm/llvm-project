@@ -257,7 +257,7 @@ void Lexer::Stringify(SmallVectorImpl<char> &Str) { StringifyImpl(Str, '"'); }
 // Token Spelling
 //===----------------------------------------------------------------------===//
 
-/// \brief Slow case of getSpelling. Extract the characters comprising the
+/// Slow case of getSpelling. Extract the characters comprising the
 /// spelling of this token from the provided input buffer.
 static size_t getSpellingSlow(const Token &Tok, const char *BufPtr,
                               const LangOptions &LangOpts, char *Spelling) {
@@ -442,7 +442,7 @@ unsigned Lexer::MeasureTokenLength(SourceLocation Loc,
   return TheTok.getLength();
 }
 
-/// \brief Relex the token at the specified location.
+/// Relex the token at the specified location.
 /// \returns true if there was a failure, false on success.
 bool Lexer::getRawToken(SourceLocation Loc, Token &Result,
                         const SourceManager &SM,
@@ -753,7 +753,7 @@ unsigned Lexer::getTokenPrefixLength(SourceLocation TokStart, unsigned CharNo,
   return PhysOffset;
 }
 
-/// \brief Computes the source location just past the end of the
+/// Computes the source location just past the end of the
 /// token at this source location.
 ///
 /// This routine can be used to produce a source location that
@@ -788,7 +788,7 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
   return Loc.getLocWithOffset(Len);
 }
 
-/// \brief Returns true if the given MacroID location points at the first
+/// Returns true if the given MacroID location points at the first
 /// token of the macro expansion.
 bool Lexer::isAtStartOfMacroExpansion(SourceLocation loc,
                                       const SourceManager &SM,
@@ -810,7 +810,7 @@ bool Lexer::isAtStartOfMacroExpansion(SourceLocation loc,
   return isAtStartOfMacroExpansion(expansionLoc, SM, LangOpts, MacroBegin);
 }
 
-/// \brief Returns true if the given MacroID location points at the last
+/// Returns true if the given MacroID location points at the last
 /// token of the macro expansion.
 bool Lexer::isAtEndOfMacroExpansion(SourceLocation loc,
                                     const SourceManager &SM,
@@ -1256,7 +1256,7 @@ Optional<Token> Lexer::findNextToken(SourceLocation Loc,
   return Tok;
 }
 
-/// \brief Checks that the given token is the first token that occurs after the
+/// Checks that the given token is the first token that occurs after the
 /// given location (this excludes comments and whitespace). Returns the location
 /// immediately after the specified token. If the token is not found or the
 /// location is inside a macro, the returned source location will be invalid.
@@ -1409,7 +1409,7 @@ Slash:
 // Helper methods for lexing.
 //===----------------------------------------------------------------------===//
 
-/// \brief Routine that indiscriminately sets the offset into the source file.
+/// Routine that indiscriminately sets the offset into the source file.
 void Lexer::SetByteOffset(unsigned Offset, bool StartOfLine) {
   BufferPtr = BufferStart + Offset;
   if (BufferPtr > BufferEnd)
@@ -2755,7 +2755,7 @@ unsigned Lexer::isNextPPTokenLParen() {
   return Tok.is(tok::l_paren);
 }
 
-/// \brief Find the end of a version control conflict marker.
+/// Find the end of a version control conflict marker.
 static const char *FindConflictEnd(const char *CurPtr, const char *BufferEnd,
                                    ConflictMarkerKind CMK) {
   const char *Terminator = CMK == CMK_Perforce ? "<<<<\n" : ">>>>>>>";

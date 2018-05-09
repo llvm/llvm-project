@@ -75,7 +75,7 @@ const FunctionDecl *SVal::getAsFunctionDecl() const {
   return nullptr;
 }
 
-/// \brief If this SVal is a location (subclasses Loc) and wraps a symbol,
+/// If this SVal is a location (subclasses Loc) and wraps a symbol,
 /// return that SymbolRef.  Otherwise return 0.
 ///
 /// Implicit casts (ex: void* -> char*) can turn Symbolic region into Element
@@ -118,7 +118,7 @@ SymbolRef SVal::getLocSymbolInBase() const {
 
 // TODO: The next 3 functions have to be simplified.
 
-/// \brief If this SVal wraps a symbol return that SymbolRef.
+/// If this SVal wraps a symbol return that SymbolRef.
 /// Otherwise, return 0.
 ///
 /// Casts are ignored during lookup.

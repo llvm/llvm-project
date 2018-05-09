@@ -226,7 +226,7 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
     CurLexerKind = CLK_TokenLexer;
 }
 
-/// \brief Compute the relative path that names the given file relative to
+/// Compute the relative path that names the given file relative to
 /// the given directory.
 static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
                                 const FileEntry *File,
@@ -264,7 +264,7 @@ void Preprocessor::PropagateLineStartLeadingSpaceInfo(Token &Result) {
   // but it might if they're empty?
 }
 
-/// \brief Determine the location to use as the end of the buffer for a lexer.
+/// Determine the location to use as the end of the buffer for a lexer.
 ///
 /// If the file ends with a newline, form the EOF token on the newline itself,
 /// rather than "on the line following it", which doesn't exist.  This makes

@@ -80,7 +80,7 @@ bool commentsStartOnSameColumn(const SourceManager &SM, const RawComment &R1,
 }
 } // unnamed namespace
 
-/// \brief Determines whether there is only whitespace in `Buffer` between `P`
+/// Determines whether there is only whitespace in `Buffer` between `P`
 /// and the previous line.
 /// \param Buffer The buffer to search in.
 /// \param P The offset from the beginning of `Buffer` to start from.

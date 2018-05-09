@@ -236,7 +236,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
       continue;
 
     numInstr++;
-    if (mi->isIdentityCopy() || mi->isImplicitDef() || mi->isDebugValue())
+    if (mi->isIdentityCopy() || mi->isImplicitDef() || mi->isDebugInstr())
       continue;
     if (!visited.insert(mi).second)
       continue;

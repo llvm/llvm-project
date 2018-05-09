@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file implements OMPThreadPrivateDecl, OMPCapturedExprDecl
+/// This file implements OMPThreadPrivateDecl, OMPCapturedExprDecl
 /// classes.
 ///
 //===----------------------------------------------------------------------===//

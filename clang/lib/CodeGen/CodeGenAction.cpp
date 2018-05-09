@@ -341,17 +341,17 @@ namespace clang {
                                SourceLocation LocCookie);
 
     void DiagnosticHandlerImpl(const llvm::DiagnosticInfo &DI);
-    /// \brief Specialized handler for InlineAsm diagnostic.
+    /// Specialized handler for InlineAsm diagnostic.
     /// \return True if the diagnostic has been successfully reported, false
     /// otherwise.
     bool InlineAsmDiagHandler(const llvm::DiagnosticInfoInlineAsm &D);
-    /// \brief Specialized handler for StackSize diagnostic.
+    /// Specialized handler for StackSize diagnostic.
     /// \return True if the diagnostic has been successfully reported, false
     /// otherwise.
     bool StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D);
-    /// \brief Specialized handler for unsupported backend feature diagnostic.
+    /// Specialized handler for unsupported backend feature diagnostic.
     void UnsupportedDiagHandler(const llvm::DiagnosticInfoUnsupported &D);
-    /// \brief Specialized handlers for optimization remarks.
+    /// Specialized handlers for optimization remarks.
     /// Note that these handlers only accept remarks and they always handle
     /// them.
     void EmitOptimizationMessage(const llvm::DiagnosticInfoOptimizationBase &D,
@@ -697,7 +697,7 @@ void BackendConsumer::OptimizationFailureHandler(
   EmitOptimizationMessage(D, diag::warn_fe_backend_optimization_failure);
 }
 
-/// \brief This function is invoked when the backend needs
+/// This function is invoked when the backend needs
 /// to report something to the user.
 void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
   unsigned DiagID = diag::err_fe_inline_asm;

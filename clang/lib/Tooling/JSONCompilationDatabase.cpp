@@ -43,7 +43,7 @@ using namespace tooling;
 
 namespace {
 
-/// \brief A parser for escaped strings of command line arguments.
+/// A parser for escaped strings of command line arguments.
 ///
 /// Assumes \-escaping for quoted arguments (see the documentation of
 /// unescapeCommandLine(...)).

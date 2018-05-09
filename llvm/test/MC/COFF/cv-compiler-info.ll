@@ -38,7 +38,7 @@ attributes #0 = { nounwind sspstrong "correctly-rounded-divide-sqrt-fp-math"="fa
 !7 = !{i32 2, !"CodeView", i32 1}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{!"clang version 4.0.0 "}
-!10 = distinct !DISubprogram(name: "foo", linkageName: "\01?foo@@YAHXZ", scope: !1, file: !1, line: 1, type: !11, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!10 = distinct !DISubprogram(name: "foo", linkageName: "\01?foo@@YAHXZ", scope: !1, file: !1, line: 1, type: !11, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
 !13 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

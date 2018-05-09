@@ -5044,7 +5044,7 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     return MachineOutlinerInstrType::Illegal;
 
   // Don't allow debug values to impact outlining type.
-  if (MI.isDebugValue() || MI.isIndirectDebugValue()) 
+  if (MI.isDebugInstr() || MI.isIndirectDebugValue())
     return MachineOutlinerInstrType::Invisible;
 
   // At this point, KILL instructions don't really tell us much so we can go

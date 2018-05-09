@@ -31,7 +31,7 @@
 #define __DEFAULT_FN_ATTRS \
   __attribute__((__always_inline__, __nodebug__,  __target__("clzero")))
 
-/// \brief Loads the cache line address and zero's out the cacheline
+/// Loads the cache line address and zero's out the cacheline
 ///
 /// \headerfile <clzerointrin.h>
 ///

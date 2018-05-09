@@ -65,7 +65,7 @@ unsigned MacroInfo::getDefinitionLengthSlow(const SourceManager &SM) const {
   return DefinitionLength;
 }
 
-/// \brief Return true if the specified macro definition is equal to
+/// Return true if the specified macro definition is equal to
 /// this macro in spelling, arguments, and whitespace.
 ///
 /// \param Syntactically if true, the macro definitions can be identical even

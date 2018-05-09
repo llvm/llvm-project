@@ -59,39 +59,39 @@
 
 namespace clang {
 
-  /// \brief Various flags that control template argument deduction.
+  /// Various flags that control template argument deduction.
   ///
   /// These flags can be bitwise-OR'd together.
   enum TemplateDeductionFlags {
-    /// \brief No template argument deduction flags, which indicates the
+    /// No template argument deduction flags, which indicates the
     /// strictest results for template argument deduction (as used for, e.g.,
     /// matching class template partial specializations).
     TDF_None = 0,
 
-    /// \brief Within template argument deduction from a function call, we are
+    /// Within template argument deduction from a function call, we are
     /// matching with a parameter type for which the original parameter was
     /// a reference.
     TDF_ParamWithReferenceType = 0x1,
 
-    /// \brief Within template argument deduction from a function call, we
+    /// Within template argument deduction from a function call, we
     /// are matching in a case where we ignore cv-qualifiers.
     TDF_IgnoreQualifiers = 0x02,
 
-    /// \brief Within template argument deduction from a function call,
+    /// Within template argument deduction from a function call,
     /// we are matching in a case where we can perform template argument
     /// deduction from a template-id of a derived class of the argument type.
     TDF_DerivedClass = 0x04,
 
-    /// \brief Allow non-dependent types to differ, e.g., when performing
+    /// Allow non-dependent types to differ, e.g., when performing
     /// template argument deduction from a function call where conversions
     /// may apply.
     TDF_SkipNonDependent = 0x08,
 
-    /// \brief Whether we are performing template argument deduction for
+    /// Whether we are performing template argument deduction for
     /// parameters and arguments in a top-level template argument
     TDF_TopLevelParameterTypeList = 0x10,
 
-    /// \brief Within template argument deduction from overload resolution per
+    /// Within template argument deduction from overload resolution per
     /// C++ [over.over] allow matching function types that are compatible in
     /// terms of noreturn and default calling convention adjustments, or
     /// similarly matching a declared template specialization against a
@@ -105,7 +105,7 @@ namespace clang {
 using namespace clang;
 using namespace sema;
 
-/// \brief Compare two APSInts, extending and switching the sign as
+/// Compare two APSInts, extending and switching the sign as
 /// necessary to compare their values regardless of underlying type.
 static bool hasSameExtendedValue(llvm::APSInt X, llvm::APSInt Y) {
   if (Y.getBitWidth() > X.getBitWidth())
@@ -163,7 +163,7 @@ static void MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                        bool OnlyDeduced, unsigned Level,
                                        llvm::SmallBitVector &Deduced);
 
-/// \brief If the given expression is of a form that permits the deduction
+/// If the given expression is of a form that permits the deduction
 /// of a non-type template parameter, return the declaration of that
 /// non-type template parameter.
 static NonTypeTemplateParmDecl *
@@ -188,7 +188,7 @@ getDeducedParameterFromExpr(TemplateDeductionInfo &Info, Expr *E) {
   return nullptr;
 }
 
-/// \brief Determine whether two declaration pointers refer to the same
+/// Determine whether two declaration pointers refer to the same
 /// declaration.
 static bool isSameDeclaration(Decl *X, Decl *Y) {
   if (NamedDecl *NX = dyn_cast<NamedDecl>(X))
@@ -199,7 +199,7 @@ static bool isSameDeclaration(Decl *X, Decl *Y) {
   return X->getCanonicalDecl() == Y->getCanonicalDecl();
 }
 
-/// \brief Verify that the given, deduced template arguments are compatible.
+/// Verify that the given, deduced template arguments are compatible.
 ///
 /// \returns The deduced template argument, or a NULL template argument if
 /// the deduced template arguments were incompatible.
@@ -362,7 +362,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-/// \brief Deduce the value of the given non-type template parameter
+/// Deduce the value of the given non-type template parameter
 /// as the given deduced template argument. All non-type template parameter
 /// deduction is funneled through here.
 static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
@@ -410,7 +410,7 @@ static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
       /*ArrayBound=*/NewDeduced.wasDeducedFromArrayBound());
 }
 
-/// \brief Deduce the value of the given non-type template parameter
+/// Deduce the value of the given non-type template parameter
 /// from the given integral constant.
 static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
     Sema &S, TemplateParameterList *TemplateParams,
@@ -424,7 +424,7 @@ static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
       ValueType, Info, Deduced);
 }
 
-/// \brief Deduce the value of the given non-type template parameter
+/// Deduce the value of the given non-type template parameter
 /// from the given null pointer template argument type.
 static Sema::TemplateDeductionResult DeduceNullPtrTemplateArgument(
     Sema &S, TemplateParameterList *TemplateParams,
@@ -441,7 +441,7 @@ static Sema::TemplateDeductionResult DeduceNullPtrTemplateArgument(
                                        Value->getType(), Info, Deduced);
 }
 
-/// \brief Deduce the value of the given non-type template parameter
+/// Deduce the value of the given non-type template parameter
 /// from the given type- or value-dependent expression.
 ///
 /// \returns true if deduction succeeded, false otherwise.
@@ -454,7 +454,7 @@ static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
                                        Value->getType(), Info, Deduced);
 }
 
-/// \brief Deduce the value of the given non-type template parameter
+/// Deduce the value of the given non-type template parameter
 /// from the given declaration.
 ///
 /// \returns true if deduction succeeded, false otherwise.
@@ -514,7 +514,7 @@ DeduceTemplateArguments(Sema &S,
   return Sema::TDK_NonDeducedMismatch;
 }
 
-/// \brief Deduce the template arguments by comparing the template parameter
+/// Deduce the template arguments by comparing the template parameter
 /// type (which is a template-id) with the template argument type.
 ///
 /// \param S the Sema
@@ -599,7 +599,7 @@ DeduceTemplateArguments(Sema &S,
                                  Deduced, /*NumberOfArgumentsMustMatch=*/true);
 }
 
-/// \brief Determines whether the given type is an opaque type that
+/// Determines whether the given type is an opaque type that
 /// might be more qualified when instantiated.
 static bool IsPossiblyOpaquelyQualifiedType(QualType T) {
   switch (T->getTypeClass()) {
@@ -623,7 +623,7 @@ static bool IsPossiblyOpaquelyQualifiedType(QualType T) {
   }
 }
 
-/// \brief Retrieve the depth and index of a template parameter.
+/// Retrieve the depth and index of a template parameter.
 static std::pair<unsigned, unsigned>
 getDepthAndIndex(NamedDecl *ND) {
   if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
@@ -636,7 +636,7 @@ getDepthAndIndex(NamedDecl *ND) {
   return std::make_pair(TTP->getDepth(), TTP->getIndex());
 }
 
-/// \brief Retrieve the depth and index of an unexpanded parameter pack.
+/// Retrieve the depth and index of an unexpanded parameter pack.
 static std::pair<unsigned, unsigned>
 getDepthAndIndex(UnexpandedParameterPack UPP) {
   if (const TemplateTypeParmType *TTP
@@ -646,7 +646,7 @@ getDepthAndIndex(UnexpandedParameterPack UPP) {
   return getDepthAndIndex(UPP.first.get<NamedDecl *>());
 }
 
-/// \brief Helper function to build a TemplateParameter when we don't
+/// Helper function to build a TemplateParameter when we don't
 /// know its type statically.
 static TemplateParameter makeTemplateParameter(Decl *D) {
   if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(D))
@@ -805,7 +805,7 @@ public:
     ++PackElements;
   }
 
-  /// \brief Finish template argument deduction for a set of argument packs,
+  /// Finish template argument deduction for a set of argument packs,
   /// producing the argument packs and checking for consistency with prior
   /// deductions.
   Sema::TemplateDeductionResult finish() {
@@ -897,7 +897,7 @@ private:
 
 } // namespace
 
-/// \brief Deduce the template arguments by comparing the list of parameter
+/// Deduce the template arguments by comparing the list of parameter
 /// types to the list of argument types, as in the parameter-type-lists of
 /// function types (C++ [temp.deduct.type]p10).
 ///
@@ -1019,7 +1019,7 @@ DeduceTemplateArguments(Sema &S,
   return Sema::TDK_Success;
 }
 
-/// \brief Determine whether the parameter has qualifiers that are either
+/// Determine whether the parameter has qualifiers that are either
 /// inconsistent with or a superset of the argument's qualifiers.
 static bool hasInconsistentOrSupersetQualifiersOf(QualType ParamType,
                                                   QualType ArgType) {
@@ -1050,7 +1050,7 @@ static bool hasInconsistentOrSupersetQualifiersOf(QualType ParamType,
                                                 == ParamQs.getCVRQualifiers());
 }
 
-/// \brief Compare types for equality with respect to possibly compatible
+/// Compare types for equality with respect to possibly compatible
 /// function types (noreturn adjustment, implicit calling conventions). If any
 /// of parameter and argument is not a function, just perform type comparison.
 ///
@@ -1102,7 +1102,7 @@ static bool isForwardingReference(QualType Param, unsigned FirstInnerIndex) {
   return false;
 }
 
-/// \brief Deduce the template arguments by comparing the parameter type and
+/// Deduce the template arguments by comparing the parameter type and
 /// the argument type (C++ [temp.deduct.type]).
 ///
 /// \param S the semantic analysis object within which we are deducing
@@ -2078,7 +2078,7 @@ DeduceTemplateArguments(Sema &S,
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-/// \brief Determine whether there is a template argument to be used for
+/// Determine whether there is a template argument to be used for
 /// deduction.
 ///
 /// This routine "expands" argument packs in-place, overriding its input
@@ -2101,7 +2101,7 @@ static bool hasTemplateArgumentForDeduction(ArrayRef<TemplateArgument> &Args,
   return ArgIdx < Args.size();
 }
 
-/// \brief Determine whether the given set of template arguments has a pack
+/// Determine whether the given set of template arguments has a pack
 /// expansion that is not the last template argument.
 static bool hasPackExpansionBeforeEnd(ArrayRef<TemplateArgument> Args) {
   bool FoundPackExpansion = false;
@@ -2216,7 +2216,7 @@ DeduceTemplateArguments(Sema &S,
                                  /*NumberOfArgumentsMustMatch*/false);
 }
 
-/// \brief Determine whether two template arguments are the same.
+/// Determine whether two template arguments are the same.
 static bool isSameTemplateArg(ASTContext &Context,
                               TemplateArgument X,
                               const TemplateArgument &Y,
@@ -2277,7 +2277,7 @@ static bool isSameTemplateArg(ASTContext &Context,
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-/// \brief Allocate a TemplateArgumentLoc where all locations have
+/// Allocate a TemplateArgumentLoc where all locations have
 /// been initialized to the given location.
 ///
 /// \param Arg The template argument we are producing template argument
@@ -2352,7 +2352,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-/// \brief Convert the given deduced template argument and add it to the set of
+/// Convert the given deduced template argument and add it to the set of
 /// fully-converted template arguments.
 static bool
 ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
@@ -2707,7 +2707,7 @@ static Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
 }
 
 
-/// \brief Perform template argument deduction to determine whether
+/// Perform template argument deduction to determine whether
 /// the given template arguments match the given class template
 /// partial specialization per C++ [temp.class.spec.match].
 Sema::TemplateDeductionResult
@@ -2750,7 +2750,7 @@ Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
       *this, Partial, /*PartialOrdering=*/false, TemplateArgs, Deduced, Info);
 }
 
-/// \brief Perform template argument deduction to determine whether
+/// Perform template argument deduction to determine whether
 /// the given template arguments match the given variable template
 /// partial specialization per C++ [temp.class.spec.match].
 Sema::TemplateDeductionResult
@@ -2791,7 +2791,7 @@ Sema::DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
       *this, Partial, /*PartialOrdering=*/false, TemplateArgs, Deduced, Info);
 }
 
-/// \brief Determine whether the given type T is a simple-template-id type.
+/// Determine whether the given type T is a simple-template-id type.
 static bool isSimpleTemplateIdType(QualType T) {
   if (const TemplateSpecializationType *Spec
         = T->getAs<TemplateSpecializationType>())
@@ -2811,7 +2811,7 @@ static bool isSimpleTemplateIdType(QualType T) {
   return false;
 }
 
-/// \brief Substitute the explicitly-provided template arguments into the
+/// Substitute the explicitly-provided template arguments into the
 /// given function template according to C++ [temp.arg.explicit].
 ///
 /// \param FunctionTemplate the function template into which the explicit
@@ -3018,7 +3018,7 @@ Sema::SubstituteExplicitTemplateArguments(
   return TDK_Success;
 }
 
-/// \brief Check whether the deduced argument type for a call to a function
+/// Check whether the deduced argument type for a call to a function
 /// template matches the actual argument type per C++ [temp.deduct.call]p4.
 static Sema::TemplateDeductionResult
 CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
@@ -3164,7 +3164,7 @@ static unsigned getPackIndexForParam(Sema &S,
   llvm_unreachable("parameter index would not be produced from template");
 }
 
-/// \brief Finish template argument deduction for a function template,
+/// Finish template argument deduction for a function template,
 /// checking the deduced template arguments for completeness and forming
 /// the function template specialization.
 ///
@@ -3436,7 +3436,7 @@ ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
   return Match;
 }
 
-/// \brief Perform the adjustments to the parameter and argument types
+/// Perform the adjustments to the parameter and argument types
 /// described in C++ [temp.deduct.call].
 ///
 /// \returns true if the caller should not attempt to perform any template
@@ -3543,7 +3543,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     SmallVectorImpl<Sema::OriginalCallArg> &OriginalCallArgs,
     bool DecomposedParam, unsigned ArgIdx, unsigned TDF);
 
-/// \brief Attempt template argument deduction from an initializer list
+/// Attempt template argument deduction from an initializer list
 ///        deemed to be an argument in a function call.
 static Sema::TemplateDeductionResult DeduceFromInitializerList(
     Sema &S, TemplateParameterList *TemplateParams, QualType AdjustedParamType,
@@ -3604,7 +3604,7 @@ static Sema::TemplateDeductionResult DeduceFromInitializerList(
   return Sema::TDK_Success;
 }
 
-/// \brief Perform template argument deduction per [temp.deduct.call] for a
+/// Perform template argument deduction per [temp.deduct.call] for a
 ///        single parameter / argument pair.
 static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
@@ -3637,7 +3637,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
                                             ArgType, Info, Deduced, TDF);
 }
 
-/// \brief Perform template argument deduction from a function call
+/// Perform template argument deduction from a function call
 /// (C++ [temp.deduct.call]).
 ///
 /// \param FunctionTemplate the function template for which we are performing
@@ -3848,7 +3848,7 @@ QualType Sema::adjustCCAndNoReturn(QualType ArgFunctionType,
                                  ArgFunctionTypeP->getParamTypes(), EPI);
 }
 
-/// \brief Deduce template arguments when taking the address of a function
+/// Deduce template arguments when taking the address of a function
 /// template (C++ [temp.deduct.funcaddr]) or matching a specialization to
 /// a template.
 ///
@@ -3990,7 +3990,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
   return TDK_Success;
 }
 
-/// \brief Deduce template arguments for a templated conversion
+/// Deduce template arguments for a templated conversion
 /// function (C++ [temp.deduct.conv]) and, if successful, produce a
 /// conversion function template specialization.
 Sema::TemplateDeductionResult
@@ -4100,7 +4100,7 @@ Sema::DeduceTemplateArguments(FunctionTemplateDecl *ConversionTemplate,
   return Result;
 }
 
-/// \brief Deduce template arguments for a function template when there is
+/// Deduce template arguments for a function template when there is
 /// nothing to deduce against (C++0x [temp.arg.explicit]p3).
 ///
 /// \param FunctionTemplate the function template for which we are performing
@@ -4239,7 +4239,7 @@ static bool diagnoseAutoDeductionFailure(Sema &S,
   }
 }
 
-/// \brief Deduce the type for an auto type-specifier (C++11 [dcl.spec.auto]p6)
+/// Deduce the type for an auto type-specifier (C++11 [dcl.spec.auto]p6)
 ///
 /// Note that this is done even if the initializer is dependent. (This is
 /// necessary to support partial ordering of templates using 'auto'.)
@@ -4498,7 +4498,7 @@ bool Sema::DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
   return StillUndeduced;
 }
 
-/// \brief If this is a non-static member function,
+/// If this is a non-static member function,
 static void
 AddImplicitObjectParameterType(ASTContext &Context,
                                CXXMethodDecl *Method,
@@ -4520,7 +4520,7 @@ AddImplicitObjectParameterType(ASTContext &Context,
   ArgTypes.push_back(ArgTy);
 }
 
-/// \brief Determine whether the function template \p FT1 is at least as
+/// Determine whether the function template \p FT1 is at least as
 /// specialized as \p FT2.
 static bool isAtLeastAsSpecializedAs(Sema &S,
                                      SourceLocation Loc,
@@ -4671,7 +4671,7 @@ static bool isAtLeastAsSpecializedAs(Sema &S,
   return true;
 }
 
-/// \brief Determine whether this a function template whose parameter-type-list
+/// Determine whether this a function template whose parameter-type-list
 /// ends with a function parameter pack.
 static bool isVariadicFunctionTemplate(FunctionTemplateDecl *FunTmpl) {
   FunctionDecl *Function = FunTmpl->getTemplatedDecl();
@@ -4692,7 +4692,7 @@ static bool isVariadicFunctionTemplate(FunctionTemplateDecl *FunTmpl) {
   return true;
 }
 
-/// \brief Returns the more specialized function template according
+/// Returns the more specialized function template according
 /// to the rules of function template partial ordering (C++ [temp.func.order]).
 ///
 /// \param FT1 the first function template
@@ -4739,7 +4739,7 @@ Sema::getMoreSpecializedTemplate(FunctionTemplateDecl *FT1,
   return nullptr;
 }
 
-/// \brief Determine if the two templates are equivalent.
+/// Determine if the two templates are equivalent.
 static bool isSameTemplate(TemplateDecl *T1, TemplateDecl *T2) {
   if (T1 == T2)
     return true;
@@ -4750,7 +4750,7 @@ static bool isSameTemplate(TemplateDecl *T1, TemplateDecl *T2) {
   return T1->getCanonicalDecl() == T2->getCanonicalDecl();
 }
 
-/// \brief Retrieve the most specialized of the given function template
+/// Retrieve the most specialized of the given function template
 /// specializations.
 ///
 /// \param SpecBegin the start iterator of the function template
@@ -4909,7 +4909,7 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
   return true;
 }
 
-/// \brief Returns the more specialized class template partial specialization
+/// Returns the more specialized class template partial specialization
 /// according to the rules of partial ordering of class template partial
 /// specializations (C++ [temp.class.order]).
 ///
@@ -5064,7 +5064,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   return isAtLeastAsSpecializedAs(*this, PType, AType, AArg, Info);
 }
 
-/// \brief Mark the template parameters that are used by the given
+/// Mark the template parameters that are used by the given
 /// expression.
 static void
 MarkUsedTemplateParameters(ASTContext &Ctx,
@@ -5108,7 +5108,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
     MarkUsedTemplateParameters(Ctx, NTTP->getType(), OnlyDeduced, Depth, Used);
 }
 
-/// \brief Mark the template parameters that are used by the given
+/// Mark the template parameters that are used by the given
 /// nested name specifier.
 static void
 MarkUsedTemplateParameters(ASTContext &Ctx,
@@ -5125,7 +5125,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
                              OnlyDeduced, Depth, Used);
 }
 
-/// \brief Mark the template parameters that are used by the given
+/// Mark the template parameters that are used by the given
 /// template name.
 static void
 MarkUsedTemplateParameters(ASTContext &Ctx,
@@ -5150,7 +5150,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
                                Depth, Used);
 }
 
-/// \brief Mark the template parameters that are used by the given
+/// Mark the template parameters that are used by the given
 /// type.
 static void
 MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
@@ -5403,7 +5403,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   }
 }
 
-/// \brief Mark the template parameters that are used by this
+/// Mark the template parameters that are used by this
 /// template argument.
 static void
 MarkUsedTemplateParameters(ASTContext &Ctx,
@@ -5446,7 +5446,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   }
 }
 
-/// \brief Mark which template parameters can be deduced from a given
+/// Mark which template parameters can be deduced from a given
 /// template argument list.
 ///
 /// \param TemplateArgs the template argument list from which template
@@ -5472,7 +5472,7 @@ Sema::MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                  Depth, Used);
 }
 
-/// \brief Marks all of the template parameters that will be deduced by a
+/// Marks all of the template parameters that will be deduced by a
 /// call to the given function template.
 void Sema::MarkDeducedTemplateParameters(
     ASTContext &Ctx, const FunctionTemplateDecl *FunctionTemplate,

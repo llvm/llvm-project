@@ -279,8 +279,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
         openFile(Path + ".imports");
     }
 
-    if (Config->SaveTemps)
-      saveBuffer(Buff[0], Config->OutputFile + ".lto.o");
+    if (!Config->LTOObjPath.empty())
+      saveBuffer(Buff[0], Config->LTOObjPath);
 
     // ThinLTO with index only option is required to generate only the index
     // files. After that, we exit from linker and ThinLTO backend runs in a

@@ -128,6 +128,28 @@ public:
   bool isInvalidated() const { return Invalid; }
 };
 
+/// Holds the information from a dbg_label node through SDISel.
+/// We do not use SDValue here to avoid including its header.
+class SDDbgLabel {
+  MDNode *Label;
+  DebugLoc DL;
+  unsigned Order;
+
+public:
+  SDDbgLabel(MDNode *Label, DebugLoc dl, unsigned O)
+      : Label(Label), DL(std::move(dl)), Order(O) {}
+
+  /// Returns the MDNode pointer for the label.
+  MDNode *getLabel() const { return Label; }
+
+  /// Returns the DebugLoc.
+  DebugLoc getDebugLoc() const { return DL; }
+
+  /// Returns the SDNodeOrder.  This is the order of the preceding node in the
+  /// input.
+  unsigned getOrder() const { return Order; }
+};
+
 } // end llvm namespace
 
 #endif

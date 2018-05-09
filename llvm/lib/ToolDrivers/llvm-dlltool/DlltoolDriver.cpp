@@ -158,7 +158,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
 
   if (Machine == IMAGE_FILE_MACHINE_I386 && Args.getLastArg(OPT_k)) {
     for (COFFShortExport& E : Def->Exports) {
-      if (E.isWeak() || (!E.Name.empty() && E.Name[0] == '?'))
+      if (!E.AliasTarget.empty() || (!E.Name.empty() && E.Name[0] == '?'))
         continue;
       E.SymbolName = E.Name;
       // Trim off the trailing decoration. Symbols will always have a
@@ -173,7 +173,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true, true))
+  if (writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true))
     return 1;
   return 0;
 }

@@ -148,7 +148,7 @@ void Preprocessor::HandlePragmaDirective(SourceLocation IntroducerLoc,
 
 namespace {
 
-/// \brief Helper class for \see Preprocessor::Handle_Pragma.
+/// Helper class for \see Preprocessor::Handle_Pragma.
 class LexingFor_PragmaRAII {
   Preprocessor &PP;
   bool InMacroArgPreExpansion;
@@ -588,7 +588,7 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   return LookUpIdentifierInfo(MacroTok);
 }
 
-/// \brief Handle \#pragma push_macro.
+/// Handle \#pragma push_macro.
 ///
 /// The syntax is:
 /// \code
@@ -611,7 +611,7 @@ void Preprocessor::HandlePragmaPushMacro(Token &PushMacroTok) {
   PragmaPushMacroInfo[IdentInfo].push_back(MI);
 }
 
-/// \brief Handle \#pragma pop_macro.
+/// Handle \#pragma pop_macro.
 ///
 /// The syntax is:
 /// \code
@@ -1730,7 +1730,7 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
   }
 };
 
-/// \brief Handle "\#pragma region [...]"
+/// Handle "\#pragma region [...]"
 ///
 /// The syntax is
 /// \code

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Provides definitions for the atomic synchronization scopes.
+/// Provides definitions for the atomic synchronization scopes.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@
 
 namespace clang {
 
-/// \brief Defines synch scope values used internally by clang.
+/// Defines synch scope values used internally by clang.
 ///
 /// The enum values start from 0 and are contiguous. They are mainly used for
 /// enumerating all supported synch scope values and mapping them to LLVM
@@ -62,36 +62,36 @@ inline llvm::StringRef getAsString(SyncScope S) {
   llvm_unreachable("Invalid synch scope");
 }
 
-/// \brief Defines the kind of atomic scope models.
+/// Defines the kind of atomic scope models.
 enum class AtomicScopeModelKind { None, OpenCL };
 
-/// \brief Defines the interface for synch scope model.
+/// Defines the interface for synch scope model.
 class AtomicScopeModel {
 public:
   virtual ~AtomicScopeModel() {}
-  /// \brief Maps language specific synch scope values to internal
+  /// Maps language specific synch scope values to internal
   /// SyncScope enum.
   virtual SyncScope map(unsigned S) const = 0;
 
-  /// \brief Check if the compile-time constant synch scope value
+  /// Check if the compile-time constant synch scope value
   /// is valid.
   virtual bool isValid(unsigned S) const = 0;
 
-  /// \brief Get all possible synch scope values that might be
+  /// Get all possible synch scope values that might be
   /// encountered at runtime for the current language.
   virtual ArrayRef<unsigned> getRuntimeValues() const = 0;
 
-  /// \brief If atomic builtin function is called with invalid
+  /// If atomic builtin function is called with invalid
   /// synch scope value at runtime, it will fall back to a valid
   /// synch scope value returned by this function.
   virtual unsigned getFallBackValue() const = 0;
 
-  /// \brief Create an atomic scope model by AtomicScopeModelKind.
+  /// Create an atomic scope model by AtomicScopeModelKind.
   /// \return an empty std::unique_ptr for AtomicScopeModelKind::None.
   static std::unique_ptr<AtomicScopeModel> create(AtomicScopeModelKind K);
 };
 
-/// \brief Defines the synch scope model for OpenCL.
+/// Defines the synch scope model for OpenCL.
 class AtomicScopeOpenCLModel : public AtomicScopeModel {
 public:
   /// The enum values match the pre-defined macros

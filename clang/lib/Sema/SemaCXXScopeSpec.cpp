@@ -24,7 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 using namespace clang;
 
-/// \brief Find the current instantiation that associated with the given type.
+/// Find the current instantiation that associated with the given type.
 static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
                                                 DeclContext *CurContext) {
   if (T.isNull())
@@ -44,7 +44,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
     return nullptr;
 }
 
-/// \brief Compute the DeclContext that is associated with the given type.
+/// Compute the DeclContext that is associated with the given type.
 ///
 /// \param T the type for which we are attempting to find a DeclContext.
 ///
@@ -59,7 +59,7 @@ DeclContext *Sema::computeDeclContext(QualType T) {
   return ::getCurrentInstantiationOf(T, CurContext);
 }
 
-/// \brief Compute the DeclContext that is associated with the given
+/// Compute the DeclContext that is associated with the given
 /// scope specifier.
 ///
 /// \param SS the C++ scope specifier as it appears in the source
@@ -172,7 +172,7 @@ bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
   return SS.getScopeRep()->isDependent();
 }
 
-/// \brief If the given nested name specifier refers to the current
+/// If the given nested name specifier refers to the current
 /// instantiation, return the declaration that corresponds to that
 /// current instantiation (C++0x [temp.dep.type]p1).
 ///
@@ -188,7 +188,7 @@ CXXRecordDecl *Sema::getCurrentInstantiationOf(NestedNameSpecifier *NNS) {
   return ::getCurrentInstantiationOf(T, CurContext);
 }
 
-/// \brief Require that the context specified by SS be complete.
+/// Require that the context specified by SS be complete.
 ///
 /// If SS refers to a type, this routine checks whether the type is
 /// complete enough (or can be made complete enough) for name lookup
@@ -305,7 +305,7 @@ bool Sema::ActOnSuperScopeSpecifier(SourceLocation SuperLoc,
   return false;
 }
 
-/// \brief Determines whether the given declaration is an valid acceptable
+/// Determines whether the given declaration is an valid acceptable
 /// result for name lookup of a nested-name-specifier.
 /// \param SD Declaration checked for nested-name-specifier.
 /// \param IsExtension If not null and the declaration is accepted as an
@@ -350,7 +350,7 @@ bool Sema::isAcceptableNestedNameSpecifier(const NamedDecl *SD,
   return false;
 }
 
-/// \brief If the given nested-name-specifier begins with a bare identifier
+/// If the given nested-name-specifier begins with a bare identifier
 /// (e.g., Base::), perform name lookup for that identifier as a
 /// nested-name-specifier within the given scope, and return the result of that
 /// name lookup.
@@ -443,7 +443,7 @@ class NestedNameSpecifierValidatorCCC : public CorrectionCandidateCallback {
 
 }
 
-/// \brief Build a new nested-name-specifier for "identifier::", as described
+/// Build a new nested-name-specifier for "identifier::", as described
 /// by ActOnCXXNestedNameSpecifier.
 ///
 /// \param S Scope in which the nested-name-specifier occurs.
@@ -967,7 +967,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
 }
 
 namespace {
-  /// \brief A structure that stores a nested-name-specifier annotation,
+  /// A structure that stores a nested-name-specifier annotation,
   /// including both the nested-name-specifier 
   struct NestedNameSpecifierAnnotation {
     NestedNameSpecifier *NNS;

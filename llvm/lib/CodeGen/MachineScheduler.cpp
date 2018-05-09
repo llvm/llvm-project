@@ -272,7 +272,7 @@ priorNonDebug(MachineBasicBlock::const_iterator I,
               MachineBasicBlock::const_iterator Beg) {
   assert(I != Beg && "reached the top of the region, cannot decrement");
   while (--I != Beg) {
-    if (!I->isDebugValue())
+    if (!I->isDebugInstr())
       break;
   }
   return I;
@@ -292,7 +292,7 @@ static MachineBasicBlock::const_iterator
 nextIfDebug(MachineBasicBlock::const_iterator I,
             MachineBasicBlock::const_iterator End) {
   for(; I != End; ++I) {
-    if (!I->isDebugValue())
+    if (!I->isDebugInstr())
       break;
   }
   return I;
@@ -482,7 +482,7 @@ getSchedRegions(MachineBasicBlock *MBB,
       MachineInstr &MI = *std::prev(I);
       if (isSchedBoundary(&MI, &*MBB, MF, TII))
         break;
-      if (!MI.isDebugValue())
+      if (!MI.isDebugInstr())
         // MBB::size() uses instr_iterator to count. Here we need a bundle to
         // count as a single instruction.
         ++NumRegionInstrs;
@@ -1055,7 +1055,7 @@ void ScheduleDAGMILive::initRegPressure() {
   );
 
   assert((BotRPTracker.getPos() == RegionEnd ||
-          (RegionEnd->isDebugValue() &&
+          (RegionEnd->isDebugInstr() &&
            BotRPTracker.getPos() == priorNonDebug(RegionEnd, RegionBegin))) &&
          "Can't find the region bottom");
 

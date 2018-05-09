@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Defines the clang::MacroInfo and clang::MacroDirective classes.
+/// Defines the clang::MacroInfo and clang::MacroDirective classes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,20 +34,20 @@ class Module;
 class Preprocessor;
 class SourceManager;
 
-/// \brief Encapsulates the data about a macro definition (e.g. its tokens).
+/// Encapsulates the data about a macro definition (e.g. its tokens).
 ///
 /// There's an instance of this class for every #define.
 class MacroInfo {
   //===--------------------------------------------------------------------===//
   // State set when the macro is defined.
 
-  /// \brief The location the macro is defined.
+  /// The location the macro is defined.
   SourceLocation Location;
 
-  /// \brief The location of the last token in the macro.
+  /// The location of the last token in the macro.
   SourceLocation EndLocation;
 
-  /// \brief The list of arguments for a function-like macro.
+  /// The list of arguments for a function-like macro.
   ///
   /// ParameterList points to the first of NumParameters pointers.
   ///
@@ -58,61 +58,61 @@ class MacroInfo {
   /// \see ParameterList
   unsigned NumParameters = 0;
 
-  /// \brief This is the list of tokens that the macro is defined to.
+  /// This is the list of tokens that the macro is defined to.
   SmallVector<Token, 8> ReplacementTokens;
 
-  /// \brief Length in characters of the macro definition.
+  /// Length in characters of the macro definition.
   mutable unsigned DefinitionLength;
   mutable bool IsDefinitionLengthCached : 1;
 
-  /// \brief True if this macro is function-like, false if it is object-like.
+  /// True if this macro is function-like, false if it is object-like.
   bool IsFunctionLike : 1;
 
-  /// \brief True if this macro is of the form "#define X(...)" or
+  /// True if this macro is of the form "#define X(...)" or
   /// "#define X(Y,Z,...)".
   ///
   /// The __VA_ARGS__ token should be replaced with the contents of "..." in an
   /// invocation.
   bool IsC99Varargs : 1;
 
-  /// \brief True if this macro is of the form "#define X(a...)".
+  /// True if this macro is of the form "#define X(a...)".
   ///
   /// The "a" identifier in the replacement list will be replaced with all
   /// arguments of the macro starting with the specified one.
   bool IsGNUVarargs : 1;
 
-  /// \brief True if this macro requires processing before expansion.
+  /// True if this macro requires processing before expansion.
   ///
   /// This is the case for builtin macros such as __LINE__, so long as they have
   /// not been redefined, but not for regular predefined macros from the
   /// "<built-in>" memory buffer (see Preprocessing::getPredefinesFileID).
   bool IsBuiltinMacro : 1;
 
-  /// \brief Whether this macro contains the sequence ", ## __VA_ARGS__"
+  /// Whether this macro contains the sequence ", ## __VA_ARGS__"
   bool HasCommaPasting : 1;
 
   //===--------------------------------------------------------------------===//
   // State that changes as the macro is used.
 
-  /// \brief True if we have started an expansion of this macro already.
+  /// True if we have started an expansion of this macro already.
   ///
   /// This disables recursive expansion, which would be quite bad for things
   /// like \#define A A.
   bool IsDisabled : 1;
 
-  /// \brief True if this macro is either defined in the main file and has
+  /// True if this macro is either defined in the main file and has
   /// been used, or if it is not defined in the main file.
   ///
   /// This is used to emit -Wunused-macros diagnostics.
   bool IsUsed : 1;
 
-  /// \brief True if this macro can be redefined without emitting a warning.
+  /// True if this macro can be redefined without emitting a warning.
   bool IsAllowRedefinitionsWithoutWarning : 1;
 
-  /// \brief Must warn if the macro is unused at the end of translation unit.
+  /// Must warn if the macro is unused at the end of translation unit.
   bool IsWarnIfUnused : 1;
 
-  /// \brief Whether this macro was used as header guard.
+  /// Whether this macro was used as header guard.
   bool UsedForHeaderGuard : 1;
 
   // Only the Preprocessor gets to create and destroy these.
@@ -120,23 +120,23 @@ class MacroInfo {
   ~MacroInfo() = default;
 
 public:
-  /// \brief Return the location that the macro was defined at.
+  /// Return the location that the macro was defined at.
   SourceLocation getDefinitionLoc() const { return Location; }
 
-  /// \brief Set the location of the last token in the macro.
+  /// Set the location of the last token in the macro.
   void setDefinitionEndLoc(SourceLocation EndLoc) { EndLocation = EndLoc; }
 
-  /// \brief Return the location of the last token in the macro.
+  /// Return the location of the last token in the macro.
   SourceLocation getDefinitionEndLoc() const { return EndLocation; }
 
-  /// \brief Get length in characters of the macro definition.
+  /// Get length in characters of the macro definition.
   unsigned getDefinitionLength(const SourceManager &SM) const {
     if (IsDefinitionLengthCached)
       return DefinitionLength;
     return getDefinitionLengthSlow(SM);
   }
 
-  /// \brief Return true if the specified macro definition is equal to
+  /// Return true if the specified macro definition is equal to
   /// this macro in spelling, arguments, and whitespace.
   ///
   /// \param Syntactically if true, the macro definitions can be identical even
@@ -146,21 +146,21 @@ public:
   bool isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
                      bool Syntactically) const;
 
-  /// \brief Set or clear the isBuiltinMacro flag.
+  /// Set or clear the isBuiltinMacro flag.
   void setIsBuiltinMacro(bool Val = true) { IsBuiltinMacro = Val; }
 
-  /// \brief Set the value of the IsUsed flag.
+  /// Set the value of the IsUsed flag.
   void setIsUsed(bool Val) { IsUsed = Val; }
 
-  /// \brief Set the value of the IsAllowRedefinitionsWithoutWarning flag.
+  /// Set the value of the IsAllowRedefinitionsWithoutWarning flag.
   void setIsAllowRedefinitionsWithoutWarning(bool Val) {
     IsAllowRedefinitionsWithoutWarning = Val;
   }
 
-  /// \brief Set the value of the IsWarnIfUnused flag.
+  /// Set the value of the IsWarnIfUnused flag.
   void setIsWarnIfUnused(bool val) { IsWarnIfUnused = val; }
 
-  /// \brief Set the specified list of identifiers as the parameter list for
+  /// Set the specified list of identifiers as the parameter list for
   /// this macro.
   void setParameterList(ArrayRef<IdentifierInfo *> List,
                        llvm::BumpPtrAllocator &PPAllocator) {
@@ -185,7 +185,7 @@ public:
     return ArrayRef<const IdentifierInfo *>(ParameterList, NumParameters);
   }
 
-  /// \brief Return the parameter number of the specified identifier,
+  /// Return the parameter number of the specified identifier,
   /// or -1 if the identifier is not a formal parameter identifier.
   int getParameterNum(const IdentifierInfo *Arg) const {
     for (param_iterator I = param_begin(), E = param_end(); I != E; ++I)
@@ -207,7 +207,7 @@ public:
   bool isGNUVarargs() const { return IsGNUVarargs; }
   bool isVariadic() const { return IsC99Varargs | IsGNUVarargs; }
 
-  /// \brief Return true if this macro requires processing before expansion.
+  /// Return true if this macro requires processing before expansion.
   ///
   /// This is true only for builtin macro, such as \__LINE__, whose values
   /// are not given by fixed textual expansions.  Regular predefined macros
@@ -218,19 +218,19 @@ public:
   bool hasCommaPasting() const { return HasCommaPasting; }
   void setHasCommaPasting() { HasCommaPasting = true; }
 
-  /// \brief Return false if this macro is defined in the main file and has
+  /// Return false if this macro is defined in the main file and has
   /// not yet been used.
   bool isUsed() const { return IsUsed; }
 
-  /// \brief Return true if this macro can be redefined without warning.
+  /// Return true if this macro can be redefined without warning.
   bool isAllowRedefinitionsWithoutWarning() const {
     return IsAllowRedefinitionsWithoutWarning;
   }
 
-  /// \brief Return true if we should emit a warning if the macro is unused.
+  /// Return true if we should emit a warning if the macro is unused.
   bool isWarnIfUnused() const { return IsWarnIfUnused; }
 
-  /// \brief Return the number of tokens that this macro expands to.
+  /// Return the number of tokens that this macro expands to.
   unsigned getNumTokens() const { return ReplacementTokens.size(); }
 
   const Token &getReplacementToken(unsigned Tok) const {
@@ -245,7 +245,7 @@ public:
   bool tokens_empty() const { return ReplacementTokens.empty(); }
   ArrayRef<Token> tokens() const { return ReplacementTokens; }
 
-  /// \brief Add the specified token to the replacement text for the macro.
+  /// Add the specified token to the replacement text for the macro.
   void AddTokenToBody(const Token &Tok) {
     assert(
         !IsDefinitionLengthCached &&
@@ -253,7 +253,7 @@ public:
     ReplacementTokens.push_back(Tok);
   }
 
-  /// \brief Return true if this macro is enabled.
+  /// Return true if this macro is enabled.
   ///
   /// In other words, that we are not currently in an expansion of this macro.
   bool isEnabled() const { return !IsDisabled; }
@@ -268,7 +268,7 @@ public:
     IsDisabled = true;
   }
 
-  /// \brief Determine whether this macro was used for a header guard.
+  /// Determine whether this macro was used for a header guard.
   bool isUsedForHeaderGuard() const { return UsedForHeaderGuard; }
 
   void setUsedForHeaderGuard(bool Val) { UsedForHeaderGuard = Val; }
@@ -281,7 +281,7 @@ private:
   unsigned getDefinitionLengthSlow(const SourceManager &SM) const;
 };
 
-/// \brief Encapsulates changes to the "macros namespace" (the location where
+/// Encapsulates changes to the "macros namespace" (the location where
 /// the macro name became active, the location where it was undefined, etc.).
 ///
 /// MacroDirectives, associated with an identifier, are used to model the macro
@@ -297,20 +297,20 @@ public:
   };
 
 protected:
-  /// \brief Previous macro directive for the same identifier, or nullptr.
+  /// Previous macro directive for the same identifier, or nullptr.
   MacroDirective *Previous = nullptr;
 
   SourceLocation Loc;
 
-  /// \brief MacroDirective kind.
+  /// MacroDirective kind.
   unsigned MDKind : 2;
 
-  /// \brief True if the macro directive was loaded from a PCH file.
+  /// True if the macro directive was loaded from a PCH file.
   unsigned IsFromPCH : 1;
 
   // Used by VisibilityMacroDirective ----------------------------------------//
 
-  /// \brief Whether the macro has public visibility (when described in a
+  /// Whether the macro has public visibility (when described in a
   /// module).
   unsigned IsPublic : 1;
 
@@ -322,16 +322,16 @@ public:
 
   SourceLocation getLocation() const { return Loc; }
 
-  /// \brief Set previous definition of the macro with the same name.
+  /// Set previous definition of the macro with the same name.
   void setPrevious(MacroDirective *Prev) { Previous = Prev; }
 
-  /// \brief Get previous definition of the macro with the same name.
+  /// Get previous definition of the macro with the same name.
   const MacroDirective *getPrevious() const { return Previous; }
 
-  /// \brief Get previous definition of the macro with the same name.
+  /// Get previous definition of the macro with the same name.
   MacroDirective *getPrevious() { return Previous; }
 
-  /// \brief Return true if the macro directive was loaded from a PCH file.
+  /// Return true if the macro directive was loaded from a PCH file.
   bool isFromPCH() const { return IsFromPCH; }
 
   void setIsFromPCH() { IsFromPCH = true; }
@@ -374,7 +374,7 @@ public:
     }
   };
 
-  /// \brief Traverses the macro directives history and returns the next
+  /// Traverses the macro directives history and returns the next
   /// macro definition directive along with info about its undefined location
   /// (if there is one) and if it is public or private.
   DefInfo getDefinition();
@@ -393,7 +393,7 @@ public:
   }
   MacroInfo *getMacroInfo() { return getDefinition().getMacroInfo(); }
 
-  /// \brief Find macro definition active in the specified source location. If
+  /// Find macro definition active in the specified source location. If
   /// this macro was not defined there, return NULL.
   const DefInfo findDirectiveAtLoc(SourceLocation L, SourceManager &SM) const;
 
@@ -402,7 +402,7 @@ public:
   static bool classof(const MacroDirective *) { return true; }
 };
 
-/// \brief A directive for a defined macro or a macro imported from a module.
+/// A directive for a defined macro or a macro imported from a module.
 class DefMacroDirective : public MacroDirective {
   MacroInfo *Info;
 
@@ -414,7 +414,7 @@ public:
   explicit DefMacroDirective(MacroInfo *MI)
       : DefMacroDirective(MI, MI->getDefinitionLoc()) {}
 
-  /// \brief The data for the macro definition.
+  /// The data for the macro definition.
   const MacroInfo *getInfo() const { return Info; }
   MacroInfo *getInfo() { return Info; }
 
@@ -425,7 +425,7 @@ public:
   static bool classof(const DefMacroDirective *) { return true; }
 };
 
-/// \brief A directive for an undefined macro.
+/// A directive for an undefined macro.
 class UndefMacroDirective : public MacroDirective {
 public:
   explicit UndefMacroDirective(SourceLocation UndefLoc)
@@ -440,7 +440,7 @@ public:
   static bool classof(const UndefMacroDirective *) { return true; }
 };
 
-/// \brief A directive for setting the module visibility of a macro.
+/// A directive for setting the module visibility of a macro.
 class VisibilityMacroDirective : public MacroDirective {
 public:
   explicit VisibilityMacroDirective(SourceLocation Loc, bool Public)
@@ -448,7 +448,7 @@ public:
     IsPublic = Public;
   }
 
-  /// \brief Determine whether this macro is part of the public API of its
+  /// Determine whether this macro is part of the public API of its
   /// module.
   bool isPublic() const { return IsPublic; }
 
@@ -478,7 +478,7 @@ MacroDirective::DefInfo::getPreviousDefinition() {
   return DefDirective->getPrevious()->getDefinition();
 }
 
-/// \brief Represents a macro directive exported by a module.
+/// Represents a macro directive exported by a module.
 ///
 /// There's an instance of this class for every macro #define or #undef that is
 /// the final directive for a macro name within a module. These entities also
@@ -557,7 +557,7 @@ public:
   unsigned getNumOverridingMacros() const { return NumOverriddenBy; }
 };
 
-/// \brief A description of the current definition of a macro.
+/// A description of the current definition of a macro.
 ///
 /// The definition of a macro comprises a set of (at least one) defining
 /// entities, which are either local MacroDirectives or imported ModuleMacros.
@@ -571,12 +571,12 @@ public:
                   bool IsAmbiguous)
       : LatestLocalAndAmbiguous(MD, IsAmbiguous), ModuleMacros(MMs) {}
 
-  /// \brief Determine whether there is a definition of this macro.
+  /// Determine whether there is a definition of this macro.
   explicit operator bool() const {
     return getLocalDirective() || !ModuleMacros.empty();
   }
 
-  /// \brief Get the MacroInfo that should be used for this definition.
+  /// Get the MacroInfo that should be used for this definition.
   MacroInfo *getMacroInfo() const {
     if (!ModuleMacros.empty())
       return ModuleMacros.back()->getMacroInfo();
@@ -585,16 +585,16 @@ public:
     return nullptr;
   }
 
-  /// \brief \c true if the definition is ambiguous, \c false otherwise.
+  /// \c true if the definition is ambiguous, \c false otherwise.
   bool isAmbiguous() const { return LatestLocalAndAmbiguous.getInt(); }
 
-  /// \brief Get the latest non-imported, non-\#undef'd macro definition
+  /// Get the latest non-imported, non-\#undef'd macro definition
   /// for this macro.
   DefMacroDirective *getLocalDirective() const {
     return LatestLocalAndAmbiguous.getPointer();
   }
 
-  /// \brief Get the active module macros for this macro.
+  /// Get the active module macros for this macro.
   ArrayRef<ModuleMacro *> getModuleMacros() const { return ModuleMacros; }
 
   template <typename Fn> void forAllDefinitions(Fn F) const {

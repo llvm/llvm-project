@@ -36,7 +36,7 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
-  /// \brief Create a default printing policy for the specified language.
+  /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
     : Indentation(2), SuppressSpecifiers(false),
       SuppressTagKeyword(LO.CPlusPlus),

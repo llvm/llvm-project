@@ -93,7 +93,7 @@ void ReachingDefAnalysis::leaveBasicBlock(
 }
 
 void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
-  assert(!MI->isDebugValue() && "Won't process debug values");
+  assert(!MI->isDebugInstr() && "Won't process debug instructions");
 
   unsigned MBBNumber = MI->getParent()->getNumber();
   assert(MBBNumber < MBBReachingDefs.size() &&
@@ -125,7 +125,7 @@ void ReachingDefAnalysis::processBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
   enterBasicBlock(TraversedMBB);
   for (MachineInstr &MI : *TraversedMBB.MBB) {
-    if (!MI.isDebugValue())
+    if (!MI.isDebugInstr())
       processDefs(&MI);
   }
   leaveBasicBlock(TraversedMBB);

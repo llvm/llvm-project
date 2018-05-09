@@ -30,12 +30,12 @@ middle.block:
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 9, type: !6, isLocal: false, isDefinition: true, scopeLine: 10, isOptimized: true, unit: !0, variables: !2)
+!5 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 9, type: !6, isLocal: false, isDefinition: true, scopeLine: 10, isOptimized: true, unit: !0, retainedNodes: !2)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}
 !8 = !DIBasicType(name: "short", size: 16, align: 16, encoding: DW_ATE_signed)
 !9 = !DILocation(line: 11, column: 5, scope: !5)
-!10 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 14, type: !11, isLocal: false, isDefinition: true, scopeLine: 15, isOptimized: true, unit: !0, variables: !2)
+!10 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 14, type: !11, isLocal: false, isDefinition: true, scopeLine: 15, isOptimized: true, unit: !0, retainedNodes: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{null}
 !13 = !DILocation(line: 24, column: 9, scope: !14)

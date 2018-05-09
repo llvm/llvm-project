@@ -427,7 +427,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   bool emitFrameMoves = XCoreRegisterInfo::needsFrameMoves(*MF);
 
   DebugLoc DL;
-  if (MI != MBB.end() && !MI->isDebugValue())
+  if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
   for (std::vector<CalleeSavedInfo>::const_iterator it = CSI.begin();

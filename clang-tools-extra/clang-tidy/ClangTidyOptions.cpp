@@ -83,9 +83,11 @@ template <> struct MappingTraits<ClangTidyOptions> {
   static void mapping(IO &IO, ClangTidyOptions &Options) {
     MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(
         IO, Options.CheckOptions);
+    bool Ignored = false;
     IO.mapOptional("Checks", Options.Checks);
     IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
+    IO.mapOptional("AnalyzeTemporaryDtors", Ignored); // legacy compatibility
     IO.mapOptional("FormatStyle", Options.FormatStyle);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", NOpts->Options);

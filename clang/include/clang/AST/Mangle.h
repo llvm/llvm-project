@@ -183,14 +183,14 @@ public:
   explicit MicrosoftMangleContext(ASTContext &C, DiagnosticsEngine &D)
       : MangleContext(C, D, MK_Microsoft) {}
 
-  /// \brief Mangle vftable symbols.  Only a subset of the bases along the path
+  /// Mangle vftable symbols.  Only a subset of the bases along the path
   /// to the vftable are included in the name.  It's up to the caller to pick
   /// them correctly.
   virtual void mangleCXXVFTable(const CXXRecordDecl *Derived,
                                 ArrayRef<const CXXRecordDecl *> BasePath,
                                 raw_ostream &Out) = 0;
 
-  /// \brief Mangle vbtable symbols.  Only a subset of the bases along the path
+  /// Mangle vbtable symbols.  Only a subset of the bases along the path
   /// to the vbtable are included in the name.  It's up to the caller to pick
   /// them correctly.
   virtual void mangleCXXVBTable(const CXXRecordDecl *Derived,

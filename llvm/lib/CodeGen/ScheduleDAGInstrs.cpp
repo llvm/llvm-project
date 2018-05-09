@@ -533,7 +533,7 @@ void ScheduleDAGInstrs::initSUnits() {
   SUnits.reserve(NumRegionInstrs);
 
   for (MachineInstr &MI : make_range(RegionBegin, RegionEnd)) {
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
 
     SUnit *SU = newSUnit(&MI);
@@ -764,6 +764,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       DbgMI = &MI;
       continue;
     }
+    if (MI.isDebugLabel())
+      continue;
+
     SUnit *SU = MISUnitMap[&MI];
     assert(SU && "No SUnit mapped to this MI");
 
@@ -1052,7 +1055,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 
   // Examine block from end to start...
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
 
     // Update liveness.  Registers that are defed but not used in this
@@ -1088,7 +1091,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
       while (I->isBundledWithSucc())
         ++I;
       do {
-        if (!I->isDebugValue())
+        if (!I->isDebugInstr())
           toggleKills(MRI, LiveRegs, *I, true);
         --I;
       } while(I != First);

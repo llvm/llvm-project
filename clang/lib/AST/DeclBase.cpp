@@ -493,7 +493,7 @@ static StringRef getRealizedPlatform(const AvailabilityAttr *A,
   return RealizedPlatform;
 }
 
-/// \brief Determine the availability of the given declaration based on
+/// Determine the availability of the given declaration based on
 /// the target platform.
 ///
 /// When it returns an availability result other than \c AR_Available,
@@ -1003,7 +1003,7 @@ bool DeclContext::classof(const Decl *D) {
 
 DeclContext::~DeclContext() = default;
 
-/// \brief Find the parent context of this context that will be
+/// Find the parent context of this context that will be
 /// used for unqualified name lookup.
 ///
 /// Generally, the parent lookup context is the semantic context. However, for
@@ -1221,7 +1221,7 @@ DeclContext::BuildDeclChain(ArrayRef<Decl *> Decls,
   return std::make_pair(FirstNewDecl, PrevDecl);
 }
 
-/// \brief We have just acquired external visible storage, and we already have
+/// We have just acquired external visible storage, and we already have
 /// built a lookup map. For every name in the map, pull in the new names from
 /// the external storage.
 void DeclContext::reconcileExternalVisibleStorage() const {
@@ -1232,7 +1232,7 @@ void DeclContext::reconcileExternalVisibleStorage() const {
     Lookup.second.setHasExternalDecls();
 }
 
-/// \brief Load the declarations within this lexical storage from an
+/// Load the declarations within this lexical storage from an
 /// external source.
 /// \return \c true if any declarations were added.
 bool

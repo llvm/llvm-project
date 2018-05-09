@@ -207,8 +207,8 @@ Filler::findDelayInstr(MachineBasicBlock &MBB,
     if (!done)
       --I;
 
-    // skip debug value
-    if (I->isDebugValue())
+    // skip debug instruction
+    if (I->isDebugInstr())
       continue;
 
     if (I->hasUnmodeledSideEffects() || I->isInlineAsm() || I->isPosition() ||

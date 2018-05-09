@@ -164,7 +164,7 @@ entry:
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!""}
-!6 = distinct !DISubprogram(name: "maxA", scope: !7, file: !7, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!6 = distinct !DISubprogram(name: "maxA", scope: !7, file: !7, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DIFile(filename: "./mergefunc-preserve-debug-info.c", directory: "")
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10, !10, !10}
@@ -192,7 +192,7 @@ entry:
 !31 = !DILocation(line: 6, column: 7, scope: !23)
 !32 = !DILocation(line: 7, column: 10, scope: !6)
 !33 = !DILocation(line: 7, column: 3, scope: !6)
-!34 = distinct !DISubprogram(name: "maxB", scope: !7, file: !7, line: 10, type: !8, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!34 = distinct !DISubprogram(name: "maxB", scope: !7, file: !7, line: 10, type: !8, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !35 = !DILocalVariable(name: "x", arg: 1, scope: !34, file: !7, line: 10, type: !10)
 !36 = !DILocation(line: 10, column: 14, scope: !34)
 !37 = !DILocalVariable(name: "y", arg: 2, scope: !34, file: !7, line: 10, type: !10)
@@ -215,7 +215,7 @@ entry:
 !54 = !DILocation(line: 15, column: 7, scope: !46)
 !55 = !DILocation(line: 16, column: 10, scope: !34)
 !56 = !DILocation(line: 16, column: 3, scope: !34)
-!57 = distinct !DISubprogram(name: "f", scope: !7, file: !7, line: 19, type: !58, isLocal: false, isDefinition: true, scopeLine: 19, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!57 = distinct !DISubprogram(name: "f", scope: !7, file: !7, line: 19, type: !58, isLocal: false, isDefinition: true, scopeLine: 19, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !58 = !DISubroutineType(types: !59)
 !59 = !{null}
 !60 = !DILocation(line: 21, column: 3, scope: !57)

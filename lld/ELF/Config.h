@@ -86,6 +86,7 @@ struct Configuration {
   llvm::StringRef Init;
   llvm::StringRef LTOAAPipeline;
   llvm::StringRef LTONewPmPasses;
+  llvm::StringRef LTOObjPath;
   llvm::StringRef LTOSampleProfile;
   llvm::StringRef MapFile;
   llvm::StringRef OutputFile;
@@ -170,6 +171,7 @@ struct Configuration {
   bool ZCopyreloc;
   bool ZExecstack;
   bool ZHazardplt;
+  bool ZKeepTextSectionPrefix;
   bool ZNodelete;
   bool ZNodlopen;
   bool ZNow;

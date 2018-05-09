@@ -103,7 +103,7 @@ cxtu::CXTUOwner::~CXTUOwner() {
     clang_disposeTranslationUnit(TU);
 }
 
-/// \brief Compare two source ranges to determine their relative position in
+/// Compare two source ranges to determine their relative position in
 /// the translation unit.
 static RangeComparisonResult RangeCompare(SourceManager &SM,
                                           SourceRange R1,
@@ -119,7 +119,7 @@ static RangeComparisonResult RangeCompare(SourceManager &SM,
   return RangeOverlap;
 }
 
-/// \brief Determine if a source location falls within, before, or after a
+/// Determine if a source location falls within, before, or after a
 ///   a given source range.
 static RangeComparisonResult LocationCompare(SourceManager &SM,
                                              SourceLocation L, SourceRange R) {
@@ -134,7 +134,7 @@ static RangeComparisonResult LocationCompare(SourceManager &SM,
   return RangeOverlap;
 }
 
-/// \brief Translate a Clang source range into a CIndex source range.
+/// Translate a Clang source range into a CIndex source range.
 ///
 /// Clang internally represents ranges where the end location points to the
 /// start of the token at the end. However, for external clients it is more
@@ -178,7 +178,7 @@ RangeComparisonResult CursorVisitor::CompareRegionOfInterest(SourceRange R) {
   return RangeCompare(AU->getSourceManager(), R, RegionOfInterest);
 }
 
-/// \brief Visit the given cursor and, if requested by the visitor,
+/// Visit the given cursor and, if requested by the visitor,
 /// its children.
 ///
 /// \param Cursor the cursor to visit.
@@ -482,7 +482,7 @@ bool CursorVisitor::visitPreprocessedEntities(InputIterator First,
   return false;
 }
 
-/// \brief Visit the children of the given cursor.
+/// Visit the children of the given cursor.
 /// 
 /// \returns true if the visitation should be aborted, false if it
 /// should continue.
@@ -799,7 +799,7 @@ static bool HasTrailingReturnType(FunctionDecl *ND) {
   return false;
 }
 
-/// \brief Compare two base or member initializers based on their source order.
+/// Compare two base or member initializers based on their source order.
 static int CompareCXXCtorInitializers(CXXCtorInitializer *const *X,
                                       CXXCtorInitializer *const *Y) {
   return (*X)->getSourceOrder() - (*Y)->getSourceOrder();
@@ -2119,7 +2119,7 @@ void EnqueueVisitor::EnqueueChildren(const Stmt *S) {
 namespace {
 class OMPClauseEnqueue : public ConstOMPClauseVisitor<OMPClauseEnqueue> {
   EnqueueVisitor *Visitor;
-  /// \brief Process clauses with list of variables.
+  /// Process clauses with list of variables.
   template <typename T>
   void VisitOMPClauseList(T *Node);
 public:
@@ -5953,7 +5953,7 @@ static SourceRange getRawCursorExtent(CXCursor C) {
   return SourceRange();
 }
 
-/// \brief Retrieves the "raw" cursor extent, which is then extended to include
+/// Retrieves the "raw" cursor extent, which is then extended to include
 /// the decl-specifier-seq for declarations.
 static SourceRange getFullCursorExtent(CXCursor C, SourceManager &SrcMgr) {
   if (clang_isDeclaration(C.kind)) {
@@ -6763,7 +6763,7 @@ public:
   bool postVisitChildren(CXCursor cursor);
   void AnnotateTokens();
   
-  /// \brief Determine whether the annotator saw any cursors that have 
+  /// Determine whether the annotator saw any cursors that have 
   /// context-sensitive keywords.
   bool hasContextSensitiveKeywords() const {
     return HasContextSensitiveKeywords;
@@ -6788,7 +6788,7 @@ static inline void updateCursorAnnotation(CXCursor &Cursor,
   Cursor = updateC;
 }
 
-/// \brief It annotates and advances tokens with a cursor until the comparison
+/// It annotates and advances tokens with a cursor until the comparison
 //// between the cursor location and the source range is the same as
 /// \arg compResult.
 ///
@@ -6813,7 +6813,7 @@ void AnnotateTokensWorker::annotateAndAdvanceTokens(CXCursor updateC,
   }
 }
 
-/// \brief Special annotation handling for macro argument tokens.
+/// Special annotation handling for macro argument tokens.
 /// \returns true if it advanced beyond all macro tokens, false otherwise.
 bool AnnotateTokensWorker::annotateAndAdvanceFunctionMacroTokens(
                                                CXCursor updateC,
@@ -7057,7 +7057,7 @@ static bool AnnotateTokensPostChildrenVisitor(CXCursor cursor,
 
 namespace {
 
-/// \brief Uses the macro expansions in the preprocessing record to find
+/// Uses the macro expansions in the preprocessing record to find
 /// and mark tokens that are macro arguments. This info is used by the
 /// AnnotateTokensWorker.
 class MarkMacroArgTokensVisitor {
@@ -7132,7 +7132,7 @@ MarkMacroArgTokensVisitorDelegate(CXCursor cursor, CXCursor parent,
                                                                      parent);
 }
 
-/// \brief Used by \c annotatePreprocessorTokens.
+/// Used by \c annotatePreprocessorTokens.
 /// \returns true if lexing was finished, false otherwise.
 static bool lexNext(Lexer &Lex, Token &Tok,
                    unsigned &NextIdx, unsigned NumTokens) {
@@ -7706,7 +7706,7 @@ CXTLSKind clang_getCursorTLSKind(CXCursor cursor) {
   return CXTLS_None;
 }
 
- /// \brief If the given cursor is the "templated" declaration
+ /// If the given cursor is the "templated" declaration
  /// describing a class or function template, return the class or
  /// function template.
 static const Decl *maybeGetTemplateCursor(const Decl *D) {

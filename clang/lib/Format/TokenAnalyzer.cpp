@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements an abstract TokenAnalyzer and associated helper
+/// This file implements an abstract TokenAnalyzer and associated helper
 /// classes. TokenAnalyzer can be extended to generate replacements based on
 /// an annotated and pre-processed token stream.
 ///

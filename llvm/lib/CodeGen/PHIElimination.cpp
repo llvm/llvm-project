@@ -452,7 +452,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           KillInst = FirstTerm;
           while (KillInst != opBlock.begin()) {
             --KillInst;
-            if (KillInst->isDebugValue())
+            if (KillInst->isDebugInstr())
               continue;
             if (KillInst->readsRegister(SrcReg))
               break;
@@ -512,7 +512,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
               KillInst = FirstTerm;
               while (KillInst != opBlock.begin()) {
                 --KillInst;
-                if (KillInst->isDebugValue())
+                if (KillInst->isDebugInstr())
                   continue;
                 if (KillInst->readsRegister(SrcReg))
                   break;

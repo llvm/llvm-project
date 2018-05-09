@@ -290,8 +290,8 @@ sink3AddrInstruction(MachineInstr *MI, unsigned SavedReg,
 
   unsigned NumVisited = 0;
   for (MachineInstr &OtherMI : make_range(std::next(OldPos), KillPos)) {
-    // DBG_VALUE cannot be counted against the limit.
-    if (OtherMI.isDebugValue())
+    // Debug instructions cannot be counted against the limit.
+    if (OtherMI.isDebugInstr())
       continue;
     if (NumVisited > 30)  // FIXME: Arbitrary limit to reduce compile time cost.
       return false;
@@ -940,8 +940,8 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   MachineBasicBlock::iterator KillPos = KillMI;
   ++KillPos;
   for (MachineInstr &OtherMI : make_range(End, KillPos)) {
-    // DBG_VALUE cannot be counted against the limit.
-    if (OtherMI.isDebugValue())
+    // Debug instructions cannot be counted against the limit.
+    if (OtherMI.isDebugInstr())
       continue;
     if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
       return false;
@@ -985,7 +985,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   }
 
   // Move debug info as well.
-  while (Begin != MBB->begin() && std::prev(Begin)->isDebugValue())
+  while (Begin != MBB->begin() && std::prev(Begin)->isDebugInstr())
     --Begin;
 
   nmi = End;
@@ -1114,8 +1114,8 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
   unsigned NumVisited = 0;
   for (MachineInstr &OtherMI :
        make_range(mi, MachineBasicBlock::iterator(KillMI))) {
-    // DBG_VALUE cannot be counted against the limit.
-    if (OtherMI.isDebugValue())
+    // Debug instructions cannot be counted against the limit.
+    if (OtherMI.isDebugInstr())
       continue;
     if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
       return false;
@@ -1162,11 +1162,11 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
 
   // Move the old kill above MI, don't forget to move debug info as well.
   MachineBasicBlock::iterator InsertPos = mi;
-  while (InsertPos != MBB->begin() && std::prev(InsertPos)->isDebugValue())
+  while (InsertPos != MBB->begin() && std::prev(InsertPos)->isDebugInstr())
     --InsertPos;
   MachineBasicBlock::iterator From = KillMI;
   MachineBasicBlock::iterator To = std::next(From);
-  while (std::prev(From)->isDebugValue())
+  while (std::prev(From)->isDebugInstr())
     --From;
   MBB->splice(InsertPos, MBB, From, To);
 
@@ -1699,7 +1699,7 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
       MachineBasicBlock::iterator nmi = std::next(mi);
       // Don't revisit an instruction previously converted by target. It may
       // contain undef register operands (%noreg), which are not handled.
-      if (mi->isDebugValue() || SunkInstrs.count(&*mi)) {
+      if (mi->isDebugInstr() || SunkInstrs.count(&*mi)) {
         mi = nmi;
         continue;
       }

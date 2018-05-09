@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file implements the OpenMP enum and support functions.
+/// This file implements the OpenMP enum and support functions.
 ///
 //===----------------------------------------------------------------------===//
 

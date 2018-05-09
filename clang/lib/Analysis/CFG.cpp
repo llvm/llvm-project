@@ -851,7 +851,7 @@ private:
       B->prependScopeEnd(VD, S, cfg->getBumpVectorContext());
   }
 
-  /// \brief Find a relational comparison with an expression evaluating to a
+  /// Find a relational comparison with an expression evaluating to a
   /// boolean and a constant other than 0 and 1.
   /// e.g. if ((x < y) == 10)
   TryResult checkIncorrectRelationalOperator(const BinaryOperator *B) {
@@ -964,7 +964,7 @@ private:
     }
   }
 
-  /// \brief Find a pair of comparison expressions with or without parentheses
+  /// Find a pair of comparison expressions with or without parentheses
   /// with a shared variable and constants and a logical operator between them
   /// that always evaluates to either true or false.
   /// e.g. if (x != 3 || x != 4)
@@ -1120,7 +1120,7 @@ private:
     return evaluateAsBooleanConditionNoCache(S);
   }
 
-  /// \brief Evaluate as boolean \param E without using the cache.
+  /// Evaluate as boolean \param E without using the cache.
   TryResult evaluateAsBooleanConditionNoCache(Expr *E) {
     if (BinaryOperator *Bop = dyn_cast<BinaryOperator>(E)) {
       if (Bop->isLogicalOp()) {
@@ -1491,7 +1491,7 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   return Block;
 }
 
-/// \brief Retrieve the type of the temporary object whose lifetime was 
+/// Retrieve the type of the temporary object whose lifetime was 
 /// extended by a local reference with the given initializer.
 static QualType getReferenceInitTemporaryType(ASTContext &Context,
                                               const Expr *Init,

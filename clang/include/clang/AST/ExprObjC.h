@@ -198,10 +198,10 @@ public:
   SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
 
-  /// \brief Retrieve elements of array of literals.
+  /// Retrieve elements of array of literals.
   Expr **getElements() { return getTrailingObjects<Expr *>(); }
 
-  /// \brief Retrieve elements of array of literals.
+  /// Retrieve elements of array of literals.
   const Expr * const *getElements() const {
     return getTrailingObjects<Expr *>();
   }
@@ -234,23 +234,23 @@ public:
   }
 };
 
-/// \brief An element in an Objective-C dictionary literal.
+/// An element in an Objective-C dictionary literal.
 ///
 struct ObjCDictionaryElement {
-  /// \brief The key for the dictionary element.
+  /// The key for the dictionary element.
   Expr *Key;
   
-  /// \brief The value of the dictionary element.
+  /// The value of the dictionary element.
   Expr *Value;
   
-  /// \brief The location of the ellipsis, if this is a pack expansion.
+  /// The location of the ellipsis, if this is a pack expansion.
   SourceLocation EllipsisLoc;
   
-  /// \brief The number of elements this pack expansion will expand to, if
+  /// The number of elements this pack expansion will expand to, if
   /// this is a pack expansion and is known.
   Optional<unsigned> NumExpansions;
 
-  /// \brief Determines whether this dictionary element is a pack expansion.
+  /// Determines whether this dictionary element is a pack expansion.
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
 };
 
@@ -264,21 +264,21 @@ template <> struct isPodLike<clang::ObjCDictionaryElement> : std::true_type {};
 
 namespace clang {
 
-/// \brief Internal struct for storing Key/value pair.
+/// Internal struct for storing Key/value pair.
 struct ObjCDictionaryLiteral_KeyValuePair {
   Expr *Key;
   Expr *Value;
 };
 
-/// \brief Internal struct to describes an element that is a pack
+/// Internal struct to describes an element that is a pack
 /// expansion, used if any of the elements in the dictionary literal
 /// are pack expansions.
 struct ObjCDictionaryLiteral_ExpansionData {
-  /// \brief The location of the ellipsis, if this element is a pack
+  /// The location of the ellipsis, if this element is a pack
   /// expansion.
   SourceLocation EllipsisLoc;
 
-  /// \brief If non-zero, the number of elements that this pack
+  /// If non-zero, the number of elements that this pack
   /// expansion will expand to (+1).
   unsigned NumExpansionsPlusOne;
 };
@@ -290,10 +290,10 @@ class ObjCDictionaryLiteral final
       private llvm::TrailingObjects<ObjCDictionaryLiteral,
                                     ObjCDictionaryLiteral_KeyValuePair,
                                     ObjCDictionaryLiteral_ExpansionData> {
-  /// \brief The number of elements in this dictionary literal.
+  /// The number of elements in this dictionary literal.
   unsigned NumElements : 31;
 
-  /// \brief Determine whether this dictionary literal has any pack expansions.
+  /// Determine whether this dictionary literal has any pack expansions.
   ///
   /// If the dictionary literal has pack expansions, then there will
   /// be an array of pack expansion data following the array of
@@ -582,7 +582,7 @@ private:
   /// the pointer is an ObjCPropertyDecl and Setter is always null.
   llvm::PointerIntPair<NamedDecl *, 1, bool> PropertyOrGetter;
 
-  /// \brief Indicates whether the property reference will result in a message
+  /// Indicates whether the property reference will result in a message
   /// to the getter, the setter, or both.
   /// This applies to both implicit and explicit property references.
   enum MethodRefFlags {
@@ -591,7 +591,7 @@ private:
     MethodRef_Setter = 0x2
   };
 
-  /// \brief Contains the Setter method pointer and MethodRefFlags bit flags.
+  /// Contains the Setter method pointer and MethodRefFlags bit flags.
   llvm::PointerIntPair<ObjCMethodDecl *, 2, unsigned> SetterAndMethodRefFlags;
 
   // FIXME: Maybe we should store the property identifier here,
@@ -601,7 +601,7 @@ private:
 
   SourceLocation IdLoc;
   
-  /// \brief When the receiver in property access is 'super', this is
+  /// When the receiver in property access is 'super', this is
   /// the location of the 'super' keyword.  When it's an interface,
   /// this is that interface.
   SourceLocation ReceiverLoc;
@@ -694,14 +694,14 @@ public:
     return getExplicitProperty()->getSetterName();
   }
 
-  /// \brief True if the property reference will result in a message to the
+  /// True if the property reference will result in a message to the
   /// getter.
   /// This applies to both implicit and explicit property references.
   bool isMessagingGetter() const {
     return SetterAndMethodRefFlags.getInt() & MethodRef_Getter;
   }
 
-  /// \brief True if the property reference will result in a message to the
+  /// True if the property reference will result in a message to the
   /// setter.
   /// This applies to both implicit and explicit property references.
   bool isMessagingSetter() const {
@@ -874,7 +874,7 @@ private:
   friend class ASTStmtReader;
 };
 
-/// \brief An expression that sends a message to the given Objective-C
+/// An expression that sends a message to the given Objective-C
 /// object or class.
 ///
 /// The following contains two message send expressions:
@@ -903,47 +903,47 @@ private:
 class ObjCMessageExpr final
     : public Expr,
       private llvm::TrailingObjects<ObjCMessageExpr, void *, SourceLocation> {
-  /// \brief Stores either the selector that this message is sending
+  /// Stores either the selector that this message is sending
   /// to (when \c HasMethod is zero) or an \c ObjCMethodDecl pointer
   /// referring to the method that we type-checked against.
   uintptr_t SelectorOrMethod = 0;
 
   enum { NumArgsBitWidth = 16 };
 
-  /// \brief The number of arguments in the message send, not
+  /// The number of arguments in the message send, not
   /// including the receiver.
   unsigned NumArgs : NumArgsBitWidth;
   
-  /// \brief The kind of message send this is, which is one of the
+  /// The kind of message send this is, which is one of the
   /// ReceiverKind values.
   ///
   /// We pad this out to a byte to avoid excessive masking and shifting.
   unsigned Kind : 8;
 
-  /// \brief Whether we have an actual method prototype in \c
+  /// Whether we have an actual method prototype in \c
   /// SelectorOrMethod.
   ///
   /// When non-zero, we have a method declaration; otherwise, we just
   /// have a selector.
   unsigned HasMethod : 1;
 
-  /// \brief Whether this message send is a "delegate init call",
+  /// Whether this message send is a "delegate init call",
   /// i.e. a call of an init method on self from within an init method.
   unsigned IsDelegateInitCall : 1;
 
-  /// \brief Whether this message send was implicitly generated by
+  /// Whether this message send was implicitly generated by
   /// the implementation rather than explicitly written by the user.
   unsigned IsImplicit : 1;
 
-  /// \brief Whether the locations of the selector identifiers are in a
+  /// Whether the locations of the selector identifiers are in a
   /// "standard" position, a enum SelectorLocationsKind.
   unsigned SelLocsKind : 2;
 
-  /// \brief When the message expression is a send to 'super', this is
+  /// When the message expression is a send to 'super', this is
   /// the location of the 'super' keyword.
   SourceLocation SuperLoc;
 
-  /// \brief The source locations of the open and close square
+  /// The source locations of the open and close square
   /// brackets ('[' and ']', respectively).
   SourceLocation LBracLoc, RBracLoc;
 
@@ -997,10 +997,10 @@ class ObjCMessageExpr final
                           ArrayRef<SourceLocation> SelLocs,
                           SelectorLocationsKind SelLocsK);
 
-  /// \brief Retrieve the pointer value of the message receiver.
+  /// Retrieve the pointer value of the message receiver.
   void *getReceiverPointer() const { return *getTrailingObjects<void *>(); }
 
-  /// \brief Set the pointer value of the message receiver.
+  /// Set the pointer value of the message receiver.
   void setReceiverPointer(void *Value) {
     *getTrailingObjects<void *>() = Value;
   }
@@ -1013,7 +1013,7 @@ class ObjCMessageExpr final
     return getSelLocsKind() != SelLoc_NonStandard;
   }
 
-  /// \brief Get a pointer to the stored selector identifiers locations array.
+  /// Get a pointer to the stored selector identifiers locations array.
   /// No locations will be stored if HasStandardSelLocs is true.
   SourceLocation *getStoredSelLocs() {
     return getTrailingObjects<SourceLocation>();
@@ -1022,7 +1022,7 @@ class ObjCMessageExpr final
     return getTrailingObjects<SourceLocation>();
   }
 
-  /// \brief Get the number of stored selector identifiers locations.
+  /// Get the number of stored selector identifiers locations.
   /// No locations will be stored if HasStandardSelLocs is true.
   unsigned getNumStoredSelLocs() const {
     if (hasStandardSelLocs())
@@ -1045,22 +1045,22 @@ public:
   friend class ASTStmtWriter;
   friend TrailingObjects;
 
-  /// \brief The kind of receiver this message is sending to.
+  /// The kind of receiver this message is sending to.
   enum ReceiverKind {
-    /// \brief The receiver is a class.
+    /// The receiver is a class.
     Class = 0,
 
-    /// \brief The receiver is an object instance.
+    /// The receiver is an object instance.
     Instance,
 
-    /// \brief The receiver is a superclass.
+    /// The receiver is a superclass.
     SuperClass,
 
-    /// \brief The receiver is the instance of the superclass object.
+    /// The receiver is the instance of the superclass object.
     SuperInstance
   };
 
-  /// \brief Create a message send to super.
+  /// Create a message send to super.
   ///
   /// \param Context The ASTContext in which this expression will be created.
   ///
@@ -1098,7 +1098,7 @@ public:
                                  SourceLocation RBracLoc,
                                  bool isImplicit);
 
-  /// \brief Create a class message send.
+  /// Create a class message send.
   ///
   /// \param Context The ASTContext in which this expression will be created.
   ///
@@ -1132,7 +1132,7 @@ public:
                                  SourceLocation RBracLoc,
                                  bool isImplicit);
 
-  /// \brief Create an instance message send.
+  /// Create an instance message send.
   ///
   /// \param Context The ASTContext in which this expression will be created.
   ///
@@ -1166,7 +1166,7 @@ public:
                                  SourceLocation RBracLoc,
                                  bool isImplicit);
 
-  /// \brief Create an empty Objective-C message expression, to be
+  /// Create an empty Objective-C message expression, to be
   /// filled in by subsequent calls.
   ///
   /// \param Context The context in which the message send will be created.
@@ -1177,31 +1177,31 @@ public:
                                       unsigned NumArgs,
                                       unsigned NumStoredSelLocs);
 
-  /// \brief Indicates whether the message send was implicitly
+  /// Indicates whether the message send was implicitly
   /// generated by the implementation. If false, it was written explicitly
   /// in the source code.
   bool isImplicit() const { return IsImplicit; }
 
-  /// \brief Determine the kind of receiver that this message is being
+  /// Determine the kind of receiver that this message is being
   /// sent to.
   ReceiverKind getReceiverKind() const { return (ReceiverKind)Kind; }
 
-  /// \brief Source range of the receiver.
+  /// Source range of the receiver.
   SourceRange getReceiverRange() const;
 
-  /// \brief Determine whether this is an instance message to either a
+  /// Determine whether this is an instance message to either a
   /// computed object or to super.
   bool isInstanceMessage() const {
     return getReceiverKind() == Instance || getReceiverKind() == SuperInstance;
   }
 
-  /// \brief Determine whether this is an class message to either a
+  /// Determine whether this is an class message to either a
   /// specified class or to super.
   bool isClassMessage() const {
     return getReceiverKind() == Class || getReceiverKind() == SuperClass;
   }
 
-  /// \brief Returns the object expression (receiver) for an instance message,
+  /// Returns the object expression (receiver) for an instance message,
   /// or null for a message that is not an instance message.
   Expr *getInstanceReceiver() {
     if (getReceiverKind() == Instance)
@@ -1213,14 +1213,14 @@ public:
     return const_cast<ObjCMessageExpr*>(this)->getInstanceReceiver();
   }
 
-  /// \brief Turn this message send into an instance message that
+  /// Turn this message send into an instance message that
   /// computes the receiver object with the given expression.
   void setInstanceReceiver(Expr *rec) { 
     Kind = Instance;
     setReceiverPointer(rec);
   }
   
-  /// \brief Returns the type of a class message send, or NULL if the
+  /// Returns the type of a class message send, or NULL if the
   /// message is not a class message.
   QualType getClassReceiver() const { 
     if (TypeSourceInfo *TSInfo = getClassReceiverTypeInfo())
@@ -1229,7 +1229,7 @@ public:
     return {};
   }
 
-  /// \brief Returns a type-source information of a class message
+  /// Returns a type-source information of a class message
   /// send, or nullptr if the message is not a class message.
   TypeSourceInfo *getClassReceiverTypeInfo() const {
     if (getReceiverKind() == Class)
@@ -1242,7 +1242,7 @@ public:
     setReceiverPointer(TSInfo);
   }
 
-  /// \brief Retrieve the location of the 'super' keyword for a class
+  /// Retrieve the location of the 'super' keyword for a class
   /// or instance message to 'super', otherwise an invalid source location.
   SourceLocation getSuperLoc() const { 
     if (getReceiverKind() == SuperInstance || getReceiverKind() == SuperClass)
@@ -1251,7 +1251,7 @@ public:
     return SourceLocation();
   }
 
-  /// \brief Retrieve the receiver type to which this message is being directed.
+  /// Retrieve the receiver type to which this message is being directed.
   ///
   /// This routine cross-cuts all of the different kinds of message
   /// sends to determine what the underlying (statically known) type
@@ -1262,7 +1262,7 @@ public:
   /// \returns The type of the receiver.
   QualType getReceiverType() const;
 
-  /// \brief Retrieve the Objective-C interface to which this message
+  /// Retrieve the Objective-C interface to which this message
   /// is being directed, if known.
   ///
   /// This routine cross-cuts all of the different kinds of message
@@ -1274,7 +1274,7 @@ public:
   /// \returns The Objective-C interface if known, otherwise nullptr.
   ObjCInterfaceDecl *getReceiverInterface() const;
 
-  /// \brief Retrieve the type referred to by 'super'. 
+  /// Retrieve the type referred to by 'super'. 
   ///
   /// The returned type will either be an ObjCInterfaceType (for an
   /// class message to super) or an ObjCObjectPointerType that refers
@@ -1323,11 +1323,11 @@ public:
     return getSelector().getMethodFamily();
   }
 
-  /// \brief Return the number of actual arguments in this message,
+  /// Return the number of actual arguments in this message,
   /// not counting the receiver.
   unsigned getNumArgs() const { return NumArgs; }
 
-  /// \brief Retrieve the arguments to this message, not including the
+  /// Retrieve the arguments to this message, not including the
   /// receiver.
   Expr **getArgs() {
     return reinterpret_cast<Expr **>(getTrailingObjects<void *>() + 1);
@@ -1455,7 +1455,7 @@ public:
              /*ContainsUnexpandedParameterPack=*/false),
         Base(base), IsaMemberLoc(l), OpLoc(oploc), IsArrow(isarrow) {}
 
-  /// \brief Build an empty expression.
+  /// Build an empty expression.
   explicit ObjCIsaExpr(EmptyShell Empty) : Expr(ObjCIsaExprClass, Empty) {}
 
   void setBase(Expr *E) { Base = E; }
@@ -1563,7 +1563,7 @@ public:
   }
 };
 
-/// \brief An Objective-C "bridged" cast expression, which casts between
+/// An Objective-C "bridged" cast expression, which casts between
 /// Objective-C pointers and C pointers, transferring ownership in the process.
 ///
 /// \code
@@ -1589,21 +1589,21 @@ public:
                          CK, Operand, 0, TSInfo),
         LParenLoc(LParenLoc), BridgeKeywordLoc(BridgeKeywordLoc), Kind(Kind) {}
   
-  /// \brief Construct an empty Objective-C bridged cast.
+  /// Construct an empty Objective-C bridged cast.
   explicit ObjCBridgedCastExpr(EmptyShell Shell)
       : ExplicitCastExpr(ObjCBridgedCastExprClass, Shell, 0) {}
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
-  /// \brief Determine which kind of bridge is being performed via this cast.
+  /// Determine which kind of bridge is being performed via this cast.
   ObjCBridgeCastKind getBridgeKind() const { 
     return static_cast<ObjCBridgeCastKind>(Kind); 
   }
   
-  /// \brief Retrieve the kind of bridge being performed as a string.
+  /// Retrieve the kind of bridge being performed as a string.
   StringRef getBridgeKindName() const;
   
-  /// \brief The location of the bridge keyword.
+  /// The location of the bridge keyword.
   SourceLocation getBridgeKeywordLoc() const { return BridgeKeywordLoc; }
   
   SourceLocation getLocStart() const LLVM_READONLY { return LParenLoc; }
@@ -1617,7 +1617,7 @@ public:
   }
 };
 
-/// \brief A runtime availability query.
+/// A runtime availability query.
 ///
 /// There are 2 ways to spell this node:
 /// \code
@@ -1650,7 +1650,7 @@ public:
   SourceLocation getLocEnd() const { return RParen; }
   SourceRange getSourceRange() const { return {AtLoc, RParen}; }
 
-  /// \brief This may be '*', in which case this should fold to true.
+  /// This may be '*', in which case this should fold to true.
   bool hasVersion() const { return !VersionToCheck.empty(); }
   VersionTuple getVersion() { return VersionToCheck; }
 

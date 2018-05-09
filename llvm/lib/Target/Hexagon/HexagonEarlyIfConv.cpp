@@ -367,7 +367,7 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
     return false;
 
   for (auto &MI : *B) {
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
     if (MI.isConditionalBranch())
       return false;

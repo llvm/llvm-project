@@ -73,7 +73,7 @@ FrontendActionFactory::~FrontendActionFactory() = default;
 // code that sets up a compiler to run tools on it, and we should refactor
 // it to be based on the same framework.
 
-/// \brief Builds a clang driver initialized for running clang tools.
+/// Builds a clang driver initialized for running clang tools.
 static driver::Driver *newDriver(
     DiagnosticsEngine *Diagnostics, const char *BinaryName,
     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
@@ -84,7 +84,7 @@ static driver::Driver *newDriver(
   return CompilerDriver;
 }
 
-/// \brief Retrieves the clang CC1 specific flags out of the compilation's jobs.
+/// Retrieves the clang CC1 specific flags out of the compilation's jobs.
 ///
 /// Returns nullptr on error.
 static const llvm::opt::ArgStringList *getCC1Arguments(
@@ -114,7 +114,7 @@ static const llvm::opt::ArgStringList *getCC1Arguments(
 namespace clang {
 namespace tooling {
 
-/// \brief Returns a clang build invocation initialized from the CC1 flags.
+/// Returns a clang build invocation initialized from the CC1 flags.
 CompilerInvocation *newInvocation(
     DiagnosticsEngine *Diagnostics, const llvm::opt::ArgStringList &CC1Args) {
   assert(!CC1Args.empty() && "Must at least contain the program name!");

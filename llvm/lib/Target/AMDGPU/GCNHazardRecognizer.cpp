@@ -634,7 +634,7 @@ int GCNHazardRecognizer::checkRFEHazards(MachineInstr *RFE) {
 }
 
 int GCNHazardRecognizer::checkAnyInstHazards(MachineInstr *MI) {
-  if (MI->isDebugValue())
+  if (MI->isDebugInstr())
     return 0;
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();

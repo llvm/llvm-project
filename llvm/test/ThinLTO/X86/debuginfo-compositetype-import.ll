@@ -53,7 +53,7 @@ entry:
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{!"clang version 4.0.0 (trunk 286863) (llvm/trunk 286875)"}
 !5 = !{}
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, variables: !5)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, retainedNodes: !5)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !10, !11, !12}
 !9 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "enum", scope: !1, file: !1, line: 50, size: 32, elements: !5, identifier: "enum")

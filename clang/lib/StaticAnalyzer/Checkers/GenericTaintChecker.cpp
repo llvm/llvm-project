@@ -48,24 +48,24 @@ private:
       BT.reset(new BugType(this, "Use of Untrusted Data", "Untrusted Data"));
   }
 
-  /// \brief Catch taint related bugs. Check if tainted data is passed to a
+  /// Catch taint related bugs. Check if tainted data is passed to a
   /// system call etc.
   bool checkPre(const CallExpr *CE, CheckerContext &C) const;
 
-  /// \brief Add taint sources on a pre-visit.
+  /// Add taint sources on a pre-visit.
   void addSourcesPre(const CallExpr *CE, CheckerContext &C) const;
 
-  /// \brief Propagate taint generated at pre-visit.
+  /// Propagate taint generated at pre-visit.
   bool propagateFromPre(const CallExpr *CE, CheckerContext &C) const;
 
-  /// \brief Add taint sources on a post visit.
+  /// Add taint sources on a post visit.
   void addSourcesPost(const CallExpr *CE, CheckerContext &C) const;
 
   /// Check if the region the expression evaluates to is the standard input,
   /// and thus, is tainted.
   static bool isStdin(const Expr *E, CheckerContext &C);
 
-  /// \brief Given a pointer argument, return the value it points to.
+  /// Given a pointer argument, return the value it points to.
   static Optional<SVal> getPointedToSVal(CheckerContext &C, const Expr *Arg);
 
   /// Functions defining the attack surface.
@@ -102,7 +102,7 @@ private:
 
   typedef SmallVector<unsigned, 2> ArgVector;
 
-  /// \brief A struct used to specify taint propagation rules for a function.
+  /// A struct used to specify taint propagation rules for a function.
   ///
   /// If any of the possible taint source arguments is tainted, all of the
   /// destination arguments should also be tainted. Use InvalidArgIndex in the
@@ -166,7 +166,7 @@ private:
       return (V && State->isTainted(*V));
     }
 
-    /// \brief Pre-process a function which propagates taint according to the
+    /// Pre-process a function which propagates taint according to the
     /// taint rule.
     ProgramStateRef process(const CallExpr *CE, CheckerContext &C) const;
 

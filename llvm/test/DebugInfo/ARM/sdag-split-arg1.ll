@@ -21,7 +21,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !1 = !DIFile(filename: "f.c", directory: "/")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 29, type: !7, isLocal: false, isDefinition: true, scopeLine: 30, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 29, type: !7, isLocal: false, isDefinition: true, scopeLine: 30, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocalVariable(name: "r", scope: !5, file: !1, line: 37, type: !11)
 !11 = distinct !DICompositeType(tag: DW_TAG_union_type, file: !1, line: 33, size: 64, elements: !2)

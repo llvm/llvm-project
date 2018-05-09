@@ -96,7 +96,7 @@ public:
 
   bool isInherited() const { return Inherited; }
 
-  /// \brief Returns true if the attribute has been implicitly created instead
+  /// Returns true if the attribute has been implicitly created instead
   /// of explicitly written by the user.
   bool isImplicit() const { return Implicit; }
   void setImplicit(bool I) { Implicit = I; }

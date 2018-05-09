@@ -58,34 +58,34 @@ public:
   
   virtual ~CXDiagnosticImpl();
   
-  /// \brief Return the severity of the diagnostic.
+  /// Return the severity of the diagnostic.
   virtual CXDiagnosticSeverity getSeverity() const = 0;
   
-  /// \brief Return the location of the diagnostic.
+  /// Return the location of the diagnostic.
   virtual CXSourceLocation getLocation() const = 0;
 
-  /// \brief Return the spelling of the diagnostic.
+  /// Return the spelling of the diagnostic.
   virtual CXString getSpelling() const = 0;
 
-  /// \brief Return the text for the diagnostic option.
+  /// Return the text for the diagnostic option.
   virtual CXString getDiagnosticOption(CXString *Disable) const = 0;
   
-  /// \brief Return the category of the diagnostic.
+  /// Return the category of the diagnostic.
   virtual unsigned getCategory() const = 0;
 
-  /// \brief Return the category string of the diagnostic.
+  /// Return the category string of the diagnostic.
   virtual CXString getCategoryText() const = 0;
 
-  /// \brief Return the number of source ranges for the diagnostic.
+  /// Return the number of source ranges for the diagnostic.
   virtual unsigned getNumRanges() const = 0;
   
-  /// \brief Return the source ranges for the diagnostic.
+  /// Return the source ranges for the diagnostic.
   virtual CXSourceRange getRange(unsigned Range) const = 0;
 
-  /// \brief Return the number of FixIts.
+  /// Return the number of FixIts.
   virtual unsigned getNumFixIts() const = 0;
 
-  /// \brief Return the FixIt information (source range and inserted text).
+  /// Return the FixIt information (source range and inserted text).
   virtual CXString getFixIt(unsigned FixIt,
                             CXSourceRange *ReplacementRange) const = 0;
 
@@ -107,7 +107,7 @@ private:
   Kind K;
 };
   
-/// \brief The storage behind a CXDiagnostic
+/// The storage behind a CXDiagnostic
 struct CXStoredDiagnostic : public CXDiagnosticImpl {
   const StoredDiagnostic &Diag;
   const LangOptions &LangOpts;
@@ -119,34 +119,34 @@ struct CXStoredDiagnostic : public CXDiagnosticImpl {
 
   ~CXStoredDiagnostic() override {}
 
-  /// \brief Return the severity of the diagnostic.
+  /// Return the severity of the diagnostic.
   CXDiagnosticSeverity getSeverity() const override;
 
-  /// \brief Return the location of the diagnostic.
+  /// Return the location of the diagnostic.
   CXSourceLocation getLocation() const override;
 
-  /// \brief Return the spelling of the diagnostic.
+  /// Return the spelling of the diagnostic.
   CXString getSpelling() const override;
 
-  /// \brief Return the text for the diagnostic option.
+  /// Return the text for the diagnostic option.
   CXString getDiagnosticOption(CXString *Disable) const override;
 
-  /// \brief Return the category of the diagnostic.
+  /// Return the category of the diagnostic.
   unsigned getCategory() const override;
 
-  /// \brief Return the category string of the diagnostic.
+  /// Return the category string of the diagnostic.
   CXString getCategoryText() const override;
 
-  /// \brief Return the number of source ranges for the diagnostic.
+  /// Return the number of source ranges for the diagnostic.
   unsigned getNumRanges() const override;
 
-  /// \brief Return the source ranges for the diagnostic.
+  /// Return the source ranges for the diagnostic.
   CXSourceRange getRange(unsigned Range) const override;
 
-  /// \brief Return the number of FixIts.
+  /// Return the number of FixIts.
   unsigned getNumFixIts() const override;
 
-  /// \brief Return the FixIt information (source range and inserted text).
+  /// Return the FixIt information (source range and inserted text).
   CXString getFixIt(unsigned FixIt,
                     CXSourceRange *ReplacementRange) const override;
 

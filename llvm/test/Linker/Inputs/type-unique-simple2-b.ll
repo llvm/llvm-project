@@ -47,11 +47,11 @@ attributes #3 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !DIDerivedType(tag: DW_TAG_member, name: "b", line: 3, size: 64, align: 64, offset: 64, file: !5, scope: !4, baseType: !10)
 !10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4)
-!12 = distinct !DISubprogram(name: "g", linkageName: "_Z1gi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !1, scope: !13, type: !14, variables: !2)
+!12 = distinct !DISubprogram(name: "g", linkageName: "_Z1gi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !1, scope: !13, type: !14, retainedNodes: !2)
 !13 = !DIFile(filename: "bar.cpp", directory: ".")
 !14 = !DISubroutineType(types: !15)
 !15 = !{null, !8}
-!16 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !13, type: !17, variables: !2)
+!16 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !13, type: !17, retainedNodes: !2)
 !17 = !DISubroutineType(types: !18)
 !18 = !{!8}
 !19 = !{i32 2, !"Dwarf Version", i32 2}

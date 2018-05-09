@@ -20,7 +20,7 @@ using namespace clang;
 using namespace ento;
 using llvm::APSInt;
 
-/// \brief Optionally conjure and return a symbol for offset when processing
+/// Optionally conjure and return a symbol for offset when processing
 /// an expression \p Expression.
 /// If \p Other is a location, conjure a symbol for \p Symbol
 /// (offset) if it is unknown so that memory arithmetic always

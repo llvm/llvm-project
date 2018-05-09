@@ -52,7 +52,7 @@ enum TokenKind {
 };
 } // end namespace tok
 
-/// \brief Comment token.
+/// Comment token.
 class Token {
   friend class Lexer;
   friend class TextTokenRetokenizer;
@@ -217,7 +217,7 @@ public:
   void dump(const Lexer &L, const SourceManager &SM) const;
 };
 
-/// \brief Comment lexer.
+/// Comment lexer.
 class Lexer {
 private:
   Lexer(const Lexer &) = delete;

@@ -7,7 +7,7 @@ EXPORTS
 CdeclFunction
 StdcallFunction@4
 @FastcallFunction@4
-StdcallAlias@4=StdcallFunction@4
+StdcallAlias@4==StdcallFunction@4
 ??_7exception@@6B@
 
 ; CHECK: Name type: noprefix

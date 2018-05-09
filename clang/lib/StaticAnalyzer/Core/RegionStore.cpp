@@ -333,7 +333,7 @@ private:
   /// To disable all small-struct-dependent behavior, set the option to "0".
   unsigned SmallStructLimit;
 
-  /// \brief A helper used to populate the work list with the given set of
+  /// A helper used to populate the work list with the given set of
   /// regions.
   void populateWorkList(invalidateRegionsWorker &W,
                         ArrayRef<SVal> Values,
@@ -473,7 +473,7 @@ public: // Part of public interface to class.
                                   const TypedRegion *R,
                                   SVal DefaultVal);
 
-  /// \brief Create a new store with the specified binding removed.
+  /// Create a new store with the specified binding removed.
   /// \param ST the original store, that is the basis for the new store.
   /// \param L the location whose binding should be removed.
   StoreRef killBinding(Store ST, Loc L) override;
@@ -491,7 +491,7 @@ public: // Part of public interface to class.
 
   bool includedInBindings(Store store, const MemRegion *region) const override;
 
-  /// \brief Return the value bound to specified location in a given state.
+  /// Return the value bound to specified location in a given state.
   ///
   /// The high level logic for this method is this:
   /// getBinding (L)

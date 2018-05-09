@@ -321,7 +321,7 @@ static FindVarResult findVar(const Expr *E, const DeclContext *DC) {
 
 namespace {
 
-/// \brief Classify each DeclRefExpr as an initialization or a use. Any
+/// Classify each DeclRefExpr as an initialization or a use. Any
 /// DeclRefExpr which isn't explicitly classified will be assumed to have
 /// escaped the analysis and will be treated as an initialization.
 class ClassifyRefs : public StmtVisitor<ClassifyRefs> {

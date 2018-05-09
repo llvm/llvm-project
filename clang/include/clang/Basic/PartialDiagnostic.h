@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Implements a partial diagnostic that can be emitted anwyhere
+/// Implements a partial diagnostic that can be emitted anwyhere
 /// in a DiagnosticBuilder stream.
 //
 //===----------------------------------------------------------------------===//
@@ -44,7 +44,7 @@ public:
 
   struct Storage {
     enum {
-        /// \brief The maximum number of arguments we can hold. We
+        /// The maximum number of arguments we can hold. We
         /// currently only support up to 10 arguments (%0-%9).
         ///
         /// A single diagnostic with more than that almost certainly has to
@@ -52,35 +52,35 @@ public:
         MaxArguments = PartialDiagnostic::MaxArguments
     };
 
-    /// \brief The number of entries in Arguments.
+    /// The number of entries in Arguments.
     unsigned char NumDiagArgs = 0;
 
-    /// \brief Specifies for each argument whether it is in DiagArgumentsStr
+    /// Specifies for each argument whether it is in DiagArgumentsStr
     /// or in DiagArguments.
     unsigned char DiagArgumentsKind[MaxArguments];
 
-    /// \brief The values for the various substitution positions.
+    /// The values for the various substitution positions.
     ///
     /// This is used when the argument is not an std::string. The specific value
     /// is mangled into an intptr_t and the interpretation depends on exactly
     /// what sort of argument kind it is.
     intptr_t DiagArgumentsVal[MaxArguments];
 
-    /// \brief The values for the various substitution positions that have
+    /// The values for the various substitution positions that have
     /// string arguments.
     std::string DiagArgumentsStr[MaxArguments];
 
-    /// \brief The list of ranges added to this diagnostic.
+    /// The list of ranges added to this diagnostic.
     SmallVector<CharSourceRange, 8> DiagRanges;
 
-    /// \brief If valid, provides a hint with some code to insert, remove, or
+    /// If valid, provides a hint with some code to insert, remove, or
     /// modify at a particular position.
     SmallVector<FixItHint, 6>  FixItHints;
 
     Storage() = default;
   };
 
-  /// \brief An allocator for Storage objects, which uses a small cache to
+  /// An allocator for Storage objects, which uses a small cache to
   /// objects, used to reduce malloc()/free() traffic for partial diagnostics.
   class StorageAllocator {
     static const unsigned NumCached = 16;
@@ -92,7 +92,7 @@ public:
     StorageAllocator();
     ~StorageAllocator();
 
-    /// \brief Allocate new storage.
+    /// Allocate new storage.
     Storage *Allocate() {
       if (NumFreeListEntries == 0)
         return new Storage;
@@ -104,7 +104,7 @@ public:
       return Result;
     }
 
-    /// \brief Free the given storage object.
+    /// Free the given storage object.
     void Deallocate(Storage *S) {
       if (S >= Cached && S <= Cached + NumCached) {
         FreeList[NumFreeListEntries++] = S;
@@ -120,16 +120,16 @@ private:
   // in the sense that its bits can be safely memcpy'ed and destructed
   // in the new location.
 
-  /// \brief The diagnostic ID.
+  /// The diagnostic ID.
   mutable unsigned DiagID = 0;
 
-  /// \brief Storage for args and ranges.
+  /// Storage for args and ranges.
   mutable Storage *DiagStorage = nullptr;
 
-  /// \brief Allocator used to allocate storage for this diagnostic.
+  /// Allocator used to allocate storage for this diagnostic.
   StorageAllocator *Allocator = nullptr;
 
-  /// \brief Retrieve storage for this particular diagnostic.
+  /// Retrieve storage for this particular diagnostic.
   Storage *getStorage() const {
     if (DiagStorage)
       return DiagStorage;
@@ -184,7 +184,7 @@ private:
 public:
   struct NullDiagnostic {};
 
-  /// \brief Create a null partial diagnostic, which cannot carry a payload,
+  /// Create a null partial diagnostic, which cannot carry a payload,
   /// and only exists to be swapped with a real partial diagnostic.
   PartialDiagnostic(NullDiagnostic) {}
 
@@ -324,7 +324,7 @@ public:
     Diags.Clear();
   }
 
-  /// \brief Clear out this partial diagnostic, giving it a new diagnostic ID
+  /// Clear out this partial diagnostic, giving it a new diagnostic ID
   /// and removing all of its arguments, ranges, and fix-it hints.
   void Reset(unsigned DiagID = 0) {
     this->DiagID = DiagID;
@@ -414,7 +414,7 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
   return DB;
 }
 
-/// \brief A partial diagnostic along with the source location where this
+/// A partial diagnostic along with the source location where this
 /// diagnostic occurs.
 using PartialDiagnosticAt = std::pair<SourceLocation, PartialDiagnostic>;
 

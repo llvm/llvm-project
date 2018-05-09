@@ -843,7 +843,7 @@ void BT::visitPHI(const MachineInstr &PI) {
 void BT::visitNonBranch(const MachineInstr &MI) {
   if (Trace)
     dbgs() << "Visit MI(" << printMBBReference(*MI.getParent()) << "): " << MI;
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return;
   assert(!MI.isBranch() && "Unexpected branch instruction");
 

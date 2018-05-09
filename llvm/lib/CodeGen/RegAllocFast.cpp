@@ -910,6 +910,9 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
+    if (MI.isDebugLabel())
+      continue;
+
     // If this is a copy, we may be able to coalesce.
     unsigned CopySrcReg = 0;
     unsigned CopyDstReg = 0;

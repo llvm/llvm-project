@@ -401,7 +401,7 @@ struct Parser::ConditionDeclarationOrInitStatementState {
   }
 };
 
-/// \brief Disambiguates between a declaration in a condition, a
+/// Disambiguates between a declaration in a condition, a
 /// simple-declaration in an init-statement, and an expression for
 /// a condition of a if/switch statement.
 ///
@@ -472,7 +472,7 @@ Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement) {
     return ConditionOrInitStatement::Expression;
 }
 
-  /// \brief Determine whether the next set of tokens contains a type-id.
+  /// Determine whether the next set of tokens contains a type-id.
   ///
   /// The context parameter states what context we're parsing right
   /// now, which affects how this routine copes with the token
@@ -553,7 +553,7 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
   return TPR == TPResult::True;
 }
 
-/// \brief Returns true if this is a C++11 attribute-specifier. Per
+/// Returns true if this is a C++11 attribute-specifier. Per
 /// C++11 [dcl.attr.grammar]p6, two consecutive left square bracket tokens
 /// always introduce an attribute. In Objective-C++11, this rule does not
 /// apply if either '[' begins a message-send.

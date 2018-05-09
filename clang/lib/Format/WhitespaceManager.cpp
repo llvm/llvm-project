@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements WhitespaceManager class.
+/// This file implements WhitespaceManager class.
 ///
 //===----------------------------------------------------------------------===//
 

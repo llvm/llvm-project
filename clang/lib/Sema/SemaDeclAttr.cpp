@@ -59,7 +59,7 @@ static bool isFunctionOrMethod(const Decl *D) {
   return (D->getFunctionType() != nullptr) || isa<ObjCMethodDecl>(D);
 }
 
-/// \brief Return true if the given decl has function type (function or
+/// Return true if the given decl has function type (function or
 /// function-typed variable) or an Objective-C method or a block.
 static bool isFunctionOrMethodOrBlock(const Decl *D) {
   return isFunctionOrMethod(D) || isa<BlockDecl>(D);
@@ -189,7 +189,7 @@ static bool checkAttributeNumArgsImpl(Sema &S, const AttributeList &AL,
   return true;
 }
 
-/// \brief Check if the attribute has exactly as many args as Num. May
+/// Check if the attribute has exactly as many args as Num. May
 /// output an error.
 static bool checkAttributeNumArgs(Sema &S, const AttributeList &AL,
                                   unsigned Num) {
@@ -198,7 +198,7 @@ static bool checkAttributeNumArgs(Sema &S, const AttributeList &AL,
                                    std::not_equal_to<unsigned>());
 }
 
-/// \brief Check if the attribute has at least as many args as Num. May
+/// Check if the attribute has at least as many args as Num. May
 /// output an error.
 static bool checkAttributeAtLeastNumArgs(Sema &S, const AttributeList &AL,
                                          unsigned Num) {
@@ -207,7 +207,7 @@ static bool checkAttributeAtLeastNumArgs(Sema &S, const AttributeList &AL,
                                    std::less<unsigned>());
 }
 
-/// \brief Check if the attribute has at most as many args as Num. May
+/// Check if the attribute has at most as many args as Num. May
 /// output an error.
 static bool checkAttributeAtMostNumArgs(Sema &S, const AttributeList &AL,
                                          unsigned Num) {
@@ -216,7 +216,7 @@ static bool checkAttributeAtMostNumArgs(Sema &S, const AttributeList &AL,
                                    std::greater<unsigned>());
 }
 
-/// \brief A helper function to provide Attribute Location for the Attr types
+/// A helper function to provide Attribute Location for the Attr types
 /// AND the AttributeList.
 template <typename AttrInfo>
 static typename std::enable_if<std::is_base_of<Attr, AttrInfo>::value,
@@ -228,7 +228,7 @@ static SourceLocation getAttrLoc(const AttributeList &AL) {
   return AL.getLoc();
 }
 
-/// \brief A helper function to provide Attribute Name for the Attr types
+/// A helper function to provide Attribute Name for the Attr types
 /// AND the AttributeList.
 template <typename AttrInfo>
 static typename std::enable_if<std::is_base_of<Attr, AttrInfo>::value,
@@ -240,7 +240,7 @@ static const IdentifierInfo *getAttrName(const AttributeList &AL) {
   return AL.getName();
 }
 
-/// \brief If Expr is a valid integer constant, get the value of the integer
+/// If Expr is a valid integer constant, get the value of the integer
 /// expression and return success or failure. May output an error.
 template <typename AttrInfo>
 static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
@@ -269,7 +269,7 @@ static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
   return true;
 }
 
-/// \brief Wrapper around checkUInt32Argument, with an extra check to be sure
+/// Wrapper around checkUInt32Argument, with an extra check to be sure
 /// that the result will fit into a regular (signed) int. All args have the same
 /// purpose as they do in checkUInt32Argument.
 template <typename AttrInfo>
@@ -291,7 +291,7 @@ static bool checkPositiveIntArgument(Sema &S, const AttrInfo &AI, const Expr *Ex
   return true;
 }
 
-/// \brief Diagnose mutually exclusive attributes when present on a given
+/// Diagnose mutually exclusive attributes when present on a given
 /// declaration. Returns true if diagnosed.
 template <typename AttrTy>
 static bool checkAttrMutualExclusion(Sema &S, Decl *D, SourceRange Range,
@@ -305,7 +305,7 @@ static bool checkAttrMutualExclusion(Sema &S, Decl *D, SourceRange Range,
   return false;
 }
 
-/// \brief Check if IdxExpr is a valid parameter index for a function or
+/// Check if IdxExpr is a valid parameter index for a function or
 /// instance method D.  May output an error.
 ///
 /// \returns true if IdxExpr is a valid index.
@@ -351,7 +351,7 @@ static bool checkFunctionOrMethodParameterIndex(
   return true;
 }
 
-/// \brief Check if the argument \p ArgNum of \p Attr is a ASCII string literal.
+/// Check if the argument \p ArgNum of \p Attr is a ASCII string literal.
 /// If not emit an error and return false. If the argument is an identifier it
 /// will emit an error with a fixit hint and treat it as if it was a string
 /// literal.
@@ -387,7 +387,7 @@ bool Sema::checkStringLiteralArgumentAttr(const AttributeList &AL,
   return true;
 }
 
-/// \brief Applies the given attribute to the Decl without performing any
+/// Applies the given attribute to the Decl without performing any
 /// additional semantic checking.
 template <typename AttrType>
 static void handleSimpleAttribute(Sema &S, Decl *D, const AttributeList &AL) {
@@ -401,7 +401,7 @@ static void handleSimpleAttributeWithExclusions(Sema &S, Decl *D,
   handleSimpleAttribute<AttrType>(S, D, AL);
 }
 
-/// \brief Applies the given attribute to the Decl so long as the Decl doesn't
+/// Applies the given attribute to the Decl so long as the Decl doesn't
 /// already have one of the given incompatible attributes.
 template <typename AttrType, typename IncompatibleAttrType,
           typename... IncompatibleAttrTypes>
@@ -414,7 +414,7 @@ static void handleSimpleAttributeWithExclusions(Sema &S, Decl *D,
                                                                           AL);
 }
 
-/// \brief Check if the passed-in expression is of type int or bool.
+/// Check if the passed-in expression is of type int or bool.
 static bool isIntOrBool(Expr *Exp) {
   QualType QT = Exp->getType();
   return QT->isBooleanType() || QT->isIntegerType();
@@ -437,7 +437,7 @@ static bool threadSafetyCheckIsSmartPointer(Sema &S, const RecordType* RT) {
   return true;
 }
 
-/// \brief Check if passed in Decl is a pointer type.
+/// Check if passed in Decl is a pointer type.
 /// Note that this function may produce an error message.
 /// \return true if the Decl is a pointer type; false otherwise
 static bool threadSafetyCheckIsPointer(Sema &S, const Decl *D,
@@ -463,7 +463,7 @@ static bool threadSafetyCheckIsPointer(Sema &S, const Decl *D,
   return false;
 }
 
-/// \brief Checks that the passed in QualType either is of RecordType or points
+/// Checks that the passed in QualType either is of RecordType or points
 /// to RecordType. Returns the relevant RecordType, null if it does not exit.
 static const RecordType *getRecordType(QualType QT) {
   if (const auto *RT = QT->getAs<RecordType>())
@@ -555,7 +555,7 @@ static bool isCapabilityExpr(Sema &S, const Expr *Ex) {
   return typeHasCapability(S, Ex->getType());
 }
 
-/// \brief Checks that all attribute arguments, starting from Sidx, resolve to
+/// Checks that all attribute arguments, starting from Sidx, resolve to
 /// a capability object.
 /// \param Sidx The attribute argument index to start checking with.
 /// \param ParamIdxOk Whether an argument can be indexing into a function
@@ -765,7 +765,7 @@ static void handleAssertExclusiveLockAttr(Sema &S, Decl *D,
       AL.getAttributeSpellingListIndex()));
 }
 
-/// \brief Checks to be sure that the given parameter number is in bounds, and
+/// Checks to be sure that the given parameter number is in bounds, and
 /// is an integral type. Will emit appropriate diagnostics if this returns
 /// false.
 ///
@@ -2137,7 +2137,7 @@ static bool checkAvailabilityAttr(Sema &S, SourceRange Range,
   return false;
 }
 
-/// \brief Check whether the two versions match.
+/// Check whether the two versions match.
 ///
 /// If either version tuple is empty, then they are assumed to match. If
 /// \p BeforeIsOkay is true, then \p X can be less than or equal to \p Y.
@@ -6795,7 +6795,7 @@ ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message) {
 }
 
 
-/// \brief whether we should emit a diagnostic for \c K and \c DeclVersion in
+/// whether we should emit a diagnostic for \c K and \c DeclVersion in
 /// the context of \c Ctx. For example, we should emit an unavailable diagnostic
 /// in a deprecated context, but not the other way around.
 static bool ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
@@ -7362,7 +7362,7 @@ public:
   }
 };
 
-/// \brief This class implements -Wunguarded-availability.
+/// This class implements -Wunguarded-availability.
 ///
 /// This is done with a traversal of the AST of a function that makes reference
 /// to a partially available declaration. Whenever we encounter an \c if of the

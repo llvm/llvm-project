@@ -173,7 +173,7 @@ public:
   CodeInjector *Injector;
   cross_tu::CrossTranslationUnitContext CTU;
 
-  /// \brief Stores the declarations from the local translation unit.
+  /// Stores the declarations from the local translation unit.
   /// Note, we pre-compute the local declarations at parse time as an
   /// optimization to make sure we do not deserialize everything from disk.
   /// The local declaration to all declarations ratio might be very small when
@@ -301,24 +301,24 @@ public:
         CreateStoreMgr, CreateConstraintMgr, checkerMgr.get(), *Opts, Injector);
   }
 
-  /// \brief Store the top level decls in the set to be processed later on.
+  /// Store the top level decls in the set to be processed later on.
   /// (Doing this pre-processing avoids deserialization of data from PCH.)
   bool HandleTopLevelDecl(DeclGroupRef D) override;
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef D) override;
 
   void HandleTranslationUnit(ASTContext &C) override;
 
-  /// \brief Determine which inlining mode should be used when this function is
+  /// Determine which inlining mode should be used when this function is
   /// analyzed. This allows to redefine the default inlining policies when
   /// analyzing a given function.
   ExprEngine::InliningModes
     getInliningModeForFunction(const Decl *D, const SetOfConstDecls &Visited);
 
-  /// \brief Build the call graph for all the top level decls of this TU and
+  /// Build the call graph for all the top level decls of this TU and
   /// use it to define the order in which the functions should be visited.
   void HandleDeclsCallGraph(const unsigned LocalTUDeclsSize);
 
-  /// \brief Run analyzes(syntax or path sensitive) on the given function.
+  /// Run analyzes(syntax or path sensitive) on the given function.
   /// \param Mode - determines if we are requesting syntax only or path
   /// sensitive only analysis.
   /// \param VisitedCallees - The output parameter, which is populated with the
@@ -389,7 +389,7 @@ private:
   void storeTopLevelDecls(DeclGroupRef DG);
   std::string getFunctionName(const Decl *D);
 
-  /// \brief Check if we should skip (not analyze) the given function.
+  /// Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
   void runAnalysisOnTranslationUnit(ASTContext &C);
 

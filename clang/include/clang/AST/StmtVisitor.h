@@ -195,7 +195,7 @@ template<typename ImplClass, typename RetTy=void, typename... ParamTys>
 class ConstStmtVisitor
  : public StmtVisitorBase<make_const_ptr, ImplClass, RetTy, ParamTys...> {};
 
-/// \brief This class implements a simple visitor for OMPClause
+/// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>
 class OMPClauseVisitorBase {

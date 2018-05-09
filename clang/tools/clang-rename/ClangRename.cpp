@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a clang-rename tool that automatically finds and
+/// This file implements a clang-rename tool that automatically finds and
 /// renames symbols in C++ code.
 ///
 //===----------------------------------------------------------------------===//
@@ -39,7 +39,7 @@
 using namespace llvm;
 using namespace clang;
 
-/// \brief An oldname -> newname rename.
+/// An oldname -> newname rename.
 struct RenameAllInfo {
   unsigned Offset = 0;
   std::string QualifiedName;
@@ -51,7 +51,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(RenameAllInfo)
 namespace llvm {
 namespace yaml {
 
-/// \brief Specialized MappingTraits to describe how a RenameAllInfo is
+/// Specialized MappingTraits to describe how a RenameAllInfo is
 /// (de)serialized.
 template <> struct MappingTraits<RenameAllInfo> {
   static void mapping(IO &IO, RenameAllInfo &Info) {

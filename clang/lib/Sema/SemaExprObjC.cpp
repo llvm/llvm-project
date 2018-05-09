@@ -141,7 +141,7 @@ ExprResult Sema::BuildObjCStringLiteral(SourceLocation AtLoc, StringLiteral *S){
   return new (Context) ObjCStringLiteral(S, Ty, AtLoc);
 }
 
-/// \brief Emits an error if the given method does not exist, or if the return
+/// Emits an error if the given method does not exist, or if the return
 /// type is not an Objective-C object.
 static bool validateBoxingMethod(Sema &S, SourceLocation Loc,
                                  const ObjCInterfaceDecl *Class,
@@ -165,7 +165,7 @@ static bool validateBoxingMethod(Sema &S, SourceLocation Loc,
   return true;
 }
 
-/// \brief Maps ObjCLiteralKind to NSClassIdKindKind
+/// Maps ObjCLiteralKind to NSClassIdKindKind
 static NSAPI::NSClassIdKindKind ClassKindFromLiteralKind(
                                             Sema::ObjCLiteralKind LiteralKind) {
   switch (LiteralKind) {
@@ -189,7 +189,7 @@ static NSAPI::NSClassIdKindKind ClassKindFromLiteralKind(
   llvm_unreachable("LiteralKind can't be converted into a ClassKind");
 }
 
-/// \brief Validates ObjCInterfaceDecl availability.
+/// Validates ObjCInterfaceDecl availability.
 /// ObjCInterfaceDecl, used to create ObjC literals, should be defined
 /// if clang not in a debugger mode.
 static bool ValidateObjCLiteralInterfaceDecl(Sema &S, ObjCInterfaceDecl *Decl,
@@ -211,7 +211,7 @@ static bool ValidateObjCLiteralInterfaceDecl(Sema &S, ObjCInterfaceDecl *Decl,
   return true;
 }
 
-/// \brief Looks up ObjCInterfaceDecl of a given NSClassIdKindKind.
+/// Looks up ObjCInterfaceDecl of a given NSClassIdKindKind.
 /// Used to create ObjC literals, such as NSDictionary (@{}),
 /// NSArray (@[]) and Boxed Expressions (@())
 static ObjCInterfaceDecl *LookupObjCInterfaceDeclForLiteral(Sema &S,
@@ -236,7 +236,7 @@ static ObjCInterfaceDecl *LookupObjCInterfaceDeclForLiteral(Sema &S,
   return ID;
 }
 
-/// \brief Retrieve the NSNumber factory method that should be used to create
+/// Retrieve the NSNumber factory method that should be used to create
 /// an Objective-C literal for the given type.
 static ObjCMethodDecl *getNSNumberFactoryMethod(Sema &S, SourceLocation Loc,
                                                 QualType NumberType,
@@ -379,7 +379,7 @@ ExprResult Sema::ActOnObjCBoolLiteral(SourceLocation AtLoc,
   return BuildObjCNumericLiteral(AtLoc, Inner.get());
 }
 
-/// \brief Check that the given expression is a valid element of an Objective-C
+/// Check that the given expression is a valid element of an Objective-C
 /// collection literal.
 static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element, 
                                                     QualType T,
@@ -2324,7 +2324,7 @@ static void checkFoundationAPI(Sema &S, SourceLocation Loc,
   }
 }
 
-/// \brief Diagnose use of %s directive in an NSString which is being passed
+/// Diagnose use of %s directive in an NSString which is being passed
 /// as formatting string to formatting method.
 static void
 DiagnoseCStringFormatDirectiveInObjCAPI(Sema &S,
@@ -2363,7 +2363,7 @@ DiagnoseCStringFormatDirectiveInObjCAPI(Sema &S,
   }
 }
 
-/// \brief Build an Objective-C class message expression.
+/// Build an Objective-C class message expression.
 ///
 /// This routine takes care of both normal class messages and
 /// class messages to the superclass.
@@ -2587,7 +2587,7 @@ static bool isMethodDeclaredInRootProtocol(Sema &S, const ObjCMethodDecl *M) {
   return false;
 }
 
-/// \brief Build an Objective-C instance message expression.
+/// Build an Objective-C instance message expression.
 ///
 /// This routine takes care of both normal instance messages and
 /// instance messages to the superclass instance.

@@ -33,7 +33,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !llvm.module.flags = !{!33}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "Apple clang version 3.0 (tags/Apple/clang-211.10.1) (based on LLVM 3.0svn)", isOptimized: true, emissionKind: FullDebug, file: !32, enums: !{}, retainedTypes: !{}, imports:  null)
-!1 = distinct !DISubprogram(name: "foo", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 11, file: !2, scope: !2, type: !3, variables: !31)
+!1 = distinct !DISubprogram(name: "foo", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 11, file: !2, scope: !2, type: !3, retainedNodes: !31)
 !2 = !DIFile(filename: "one.c", directory: "/Volumes/Athwagate/R10048772")
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}

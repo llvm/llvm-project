@@ -65,7 +65,7 @@ advanceTo(MachineBasicBlock::iterator NextBegin) {
      std::next(LastEmittedMI) : MBB->begin());
 
   for (; I != NextBegin; ++I) {
-    if (I->isPosition() || I->isDebugValue())
+    if (I->isPosition() || I->isDebugInstr())
       continue;
     HazardRec->emitInstruction(&*I);
   }

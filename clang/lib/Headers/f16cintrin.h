@@ -32,7 +32,7 @@
 #define __DEFAULT_FN_ATTRS \
   __attribute__((__always_inline__, __nodebug__, __target__("f16c")))
 
-/// \brief Converts a 16-bit half-precision float value into a 32-bit float
+/// Converts a 16-bit half-precision float value into a 32-bit float
 ///    value.
 ///
 /// \headerfile <x86intrin.h>
@@ -50,7 +50,7 @@ _cvtsh_ss(unsigned short __a)
   return r[0];
 }
 
-/// \brief Converts a 32-bit single-precision float value to a 16-bit
+/// Converts a 32-bit single-precision float value to a 16-bit
 ///    half-precision float value.
 ///
 /// \headerfile <x86intrin.h>
@@ -76,7 +76,7 @@ _cvtsh_ss(unsigned short __a)
   (unsigned short)(((__v8hi)__builtin_ia32_vcvtps2ph((__v4sf){a, 0, 0, 0}, \
                                                      (imm)))[0]); })
 
-/// \brief Converts a 128-bit vector containing 32-bit float values into a
+/// Converts a 128-bit vector containing 32-bit float values into a
 ///    128-bit vector containing 16-bit half-precision float values.
 ///
 /// \headerfile <x86intrin.h>
@@ -102,7 +102,7 @@ _cvtsh_ss(unsigned short __a)
 #define _mm_cvtps_ph(a, imm) __extension__ ({ \
   (__m128i)__builtin_ia32_vcvtps2ph((__v4sf)(__m128)(a), (imm)); })
 
-/// \brief Converts a 128-bit vector containing 16-bit half-precision float
+/// Converts a 128-bit vector containing 16-bit half-precision float
 ///    values into a 128-bit vector containing 32-bit float values.
 ///
 /// \headerfile <x86intrin.h>

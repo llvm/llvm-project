@@ -55,7 +55,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !8 = !{i32 1, !"wchar_size", i32 2}
 !9 = !{i32 7, !"PIC Level", i32 2}
 !10 = !{!"clang version 6.0.0 "}
-!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 2, type: !12, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !15)
+!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 2, type: !12, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !15)
 !12 = !DISubroutineType(types: !13)
 !13 = !{null, !14}
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)

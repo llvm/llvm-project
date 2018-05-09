@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Defines the clang::LangOptions interface.
+/// Defines the clang::LangOptions interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,7 +45,7 @@ protected:
 #include "clang/Basic/LangOptions.def"
 };
 
-/// \brief Keeps track of the various options that can be
+/// Keeps track of the various options that can be
 /// enabled, which controls the dialect of C or C++ that is accepted.
 class LangOptions : public LangOptionsBase {
 public:
@@ -138,26 +138,26 @@ public:
   };
 
 public:
-  /// \brief Set of enabled sanitizers.
+  /// Set of enabled sanitizers.
   SanitizerSet Sanitize;
 
-  /// \brief Paths to blacklist files specifying which objects
+  /// Paths to blacklist files specifying which objects
   /// (files, functions, variables) should not be instrumented.
   std::vector<std::string> SanitizerBlacklistFiles;
 
-  /// \brief Paths to the XRay "always instrument" files specifying which
+  /// Paths to the XRay "always instrument" files specifying which
   /// objects (files, functions, variables) should be imbued with the XRay
   /// "always instrument" attribute.
   /// WARNING: This is a deprecated field and will go away in the future.
   std::vector<std::string> XRayAlwaysInstrumentFiles;
 
-  /// \brief Paths to the XRay "never instrument" files specifying which
+  /// Paths to the XRay "never instrument" files specifying which
   /// objects (files, functions, variables) should be imbued with the XRay
   /// "never instrument" attribute.
   /// WARNING: This is a deprecated field and will go away in the future.
   std::vector<std::string> XRayNeverInstrumentFiles;
 
-  /// \brief Paths to the XRay attribute list files, specifying which objects
+  /// Paths to the XRay attribute list files, specifying which objects
   /// (files, functions, variables) should be imbued with the appropriate XRay
   /// attribute(s).
   std::vector<std::string> XRayAttrListFiles;
@@ -166,7 +166,7 @@ public:
 
   std::string ObjCConstantStringClass;
   
-  /// \brief The name of the handler function to be called when -ftrapv is
+  /// The name of the handler function to be called when -ftrapv is
   /// specified.
   ///
   /// If none is specified, abort (GCC-compatible behaviour).
@@ -175,34 +175,34 @@ public:
   /// The module currently being compiled as speficied by -fmodule-name.
   std::string ModuleName;
 
-  /// \brief The name of the current module, of which the main source file
+  /// The name of the current module, of which the main source file
   /// is a part. If CompilingModule is set, we are compiling the interface
   /// of this module, otherwise we are compiling an implementation file of
   /// it. This starts as ModuleName in case -fmodule-name is provided and
   /// changes during compilation to reflect the current module.
   std::string CurrentModule;
 
-  /// \brief The names of any features to enable in module 'requires' decls
+  /// The names of any features to enable in module 'requires' decls
   /// in addition to the hard-coded list in Module.cpp and the target features.
   ///
   /// This list is sorted.
   std::vector<std::string> ModuleFeatures;
 
-  /// \brief Options for parsing comments.
+  /// Options for parsing comments.
   CommentOptions CommentOpts;
 
-  /// \brief A list of all -fno-builtin-* function names (e.g., memset).
+  /// A list of all -fno-builtin-* function names (e.g., memset).
   std::vector<std::string> NoBuiltinFuncs;
 
-  /// \brief Triples of the OpenMP targets that the host code codegen should
+  /// Triples of the OpenMP targets that the host code codegen should
   /// take into account in order to generate accurate offloading descriptors.
   std::vector<llvm::Triple> OMPTargetTriples;
 
-  /// \brief Name of the IR file that contains the result of the OpenMP target
+  /// Name of the IR file that contains the result of the OpenMP target
   /// host code generation.
   std::string OMPHostIRFile;
 
-  /// \brief Indicates whether the front-end is explicitly told that the
+  /// Indicates whether the front-end is explicitly told that the
   /// input is a header file (i.e. -x c-header).
   bool IsHeaderFile = false;
 
@@ -238,15 +238,15 @@ public:
     return MSCompatibilityVersion >= MajorVersion * 10000000U;
   }
 
-  /// \brief Reset all of the options that are not considered when building a
+  /// Reset all of the options that are not considered when building a
   /// module.
   void resetNonModularOptions();
 
-  /// \brief Is this a libc/libm function that is no longer recognized as a
+  /// Is this a libc/libm function that is no longer recognized as a
   /// builtin because a -fno-builtin-* option has been specified?
   bool isNoBuiltinFunc(StringRef Name) const;
 
-  /// \brief True if any ObjC types may have non-trivial lifetime qualifiers.
+  /// True if any ObjC types may have non-trivial lifetime qualifiers.
   bool allowsNonTrivialObjCLifetimeQualifiers() const {
     return ObjCAutoRefCount || ObjCWeak;
   }
@@ -255,11 +255,11 @@ public:
     return (CUDA && CUDAIsDevice) || OpenCL;
   }
 
-  /// \brief Return the OpenCL C or C++ version as a VersionTuple.
+  /// Return the OpenCL C or C++ version as a VersionTuple.
   VersionTuple getOpenCLVersionTuple() const;
 };
 
-/// \brief Floating point control options
+/// Floating point control options
 class FPOptions {
 public:
   FPOptions() : fp_contract(LangOptions::FPC_Off) {}
@@ -297,16 +297,16 @@ private:
   unsigned fp_contract : 2;
 };
 
-/// \brief Describes the kind of translation unit being processed.
+/// Describes the kind of translation unit being processed.
 enum TranslationUnitKind {
-  /// \brief The translation unit is a complete translation unit.
+  /// The translation unit is a complete translation unit.
   TU_Complete,
 
-  /// \brief The translation unit is a prefix to a translation unit, and is
+  /// The translation unit is a prefix to a translation unit, and is
   /// not complete.
   TU_Prefix,
 
-  /// \brief The translation unit is a module.
+  /// The translation unit is a module.
   TU_Module
 };
   

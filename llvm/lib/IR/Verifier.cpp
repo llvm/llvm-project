@@ -467,6 +467,7 @@ private:
   void visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS);
   void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
   void visitDbgIntrinsic(StringRef Kind, DbgInfoIntrinsic &DII);
+  void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
   void visitFenceInst(FenceInst &FI);
@@ -1085,12 +1086,13 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   if (auto *S = N.getRawDeclaration())
     AssertDI(isa<DISubprogram>(S) && !cast<DISubprogram>(S)->isDefinition(),
              "invalid subprogram declaration", &N, S);
-  if (auto *RawVars = N.getRawVariables()) {
-    auto *Vars = dyn_cast<MDTuple>(RawVars);
-    AssertDI(Vars, "invalid variable list", &N, RawVars);
-    for (Metadata *Op : Vars->operands()) {
-      AssertDI(Op && isa<DILocalVariable>(Op), "invalid local variable", &N,
-               Vars, Op);
+  if (auto *RawNode = N.getRawRetainedNodes()) {
+    auto *Node = dyn_cast<MDTuple>(RawNode);
+    AssertDI(Node, "invalid retained nodes list", &N, RawNode);
+    for (Metadata *Op : Node->operands()) {
+      AssertDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op)),
+               "invalid retained nodes, expected DILocalVariable or DILabel",
+               &N, Node, Op);
     }
   }
   AssertDI(!hasConflictingReferenceFlags(N.getFlags()),
@@ -1220,6 +1222,17 @@ void Verifier::visitDILocalVariable(const DILocalVariable &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_variable, "invalid tag", &N);
   AssertDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
            "local variable requires a valid scope", &N, N.getRawScope());
+}
+
+void Verifier::visitDILabel(const DILabel &N) {
+  if (auto *S = N.getRawScope())
+    AssertDI(isa<DIScope>(S), "invalid scope", &N, S);
+  if (auto *F = N.getRawFile())
+    AssertDI(isa<DIFile>(F), "invalid file", &N, F);
+
+  AssertDI(N.getTag() == dwarf::DW_TAG_label, "invalid tag", &N);
+  AssertDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
+           "label requires a valid scope", &N, N.getRawScope());
 }
 
 void Verifier::visitDIExpression(const DIExpression &N) {
@@ -4065,6 +4078,9 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   case Intrinsic::dbg_value: // llvm.dbg.value
     visitDbgIntrinsic("value", cast<DbgInfoIntrinsic>(*CS.getInstruction()));
     break;
+  case Intrinsic::dbg_label: // llvm.dbg.label
+    visitDbgLabelIntrinsic("label", cast<DbgLabelInst>(*CS.getInstruction()));
+    break;
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memset: {
@@ -4494,7 +4510,40 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgInfoIntrinsic &DII) {
   verifyFnArgs(DII);
 }
 
+void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {
+  AssertDI(isa<DILabel>(DLI.getRawVariable()),
+         "invalid llvm.dbg." + Kind + " intrinsic variable", &DLI,
+         DLI.getRawVariable());
+
+  // Ignore broken !dbg attachments; they're checked elsewhere.
+  if (MDNode *N = DLI.getDebugLoc().getAsMDNode())
+    if (!isa<DILocation>(N))
+      return;
+
+  BasicBlock *BB = DLI.getParent();
+  Function *F = BB ? BB->getParent() : nullptr;
+
+  // The scopes for variables and !dbg attachments must agree.
+  DILabel *Label = DLI.getLabel();
+  DILocation *Loc = DLI.getDebugLoc();
+  Assert(Loc, "llvm.dbg." + Kind + " intrinsic requires a !dbg attachment",
+         &DLI, BB, F);
+
+  DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
+  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  if (!LabelSP || !LocSP)
+    return;
+
+  AssertDI(LabelSP == LocSP, "mismatched subprogram between llvm.dbg." + Kind +
+                             " label and !dbg attachment",
+           &DLI, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
+           Loc->getScope()->getSubprogram());
+}
+
 void Verifier::verifyFragmentExpression(const DbgInfoIntrinsic &I) {
+  if (dyn_cast<DbgLabelInst>(&I))
+    return;
+
   DILocalVariable *V = dyn_cast_or_null<DILocalVariable>(I.getRawVariable());
   DIExpression *E = dyn_cast_or_null<DIExpression>(I.getRawExpression());
 

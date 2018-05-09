@@ -388,13 +388,13 @@ void GCNScheduleDAGMILive::schedule() {
   DEBUG(dbgs() << "Attempting to revert scheduling.\n");
   RegionEnd = RegionBegin;
   for (MachineInstr *MI : Unsched) {
-    if (MI->isDebugValue())
+    if (MI->isDebugInstr())
       continue;
 
     if (MI->getIterator() != RegionEnd) {
       BB->remove(MI);
       BB->insert(RegionEnd, MI);
-      if (!MI->isDebugValue())
+      if (!MI->isDebugInstr())
         LIS->handleMove(*MI, true);
     }
     // Reset read-undef flags and update them later.
@@ -403,7 +403,7 @@ void GCNScheduleDAGMILive::schedule() {
         Op.setIsUndef(false);
     RegisterOperands RegOpers;
     RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
-    if (!MI->isDebugValue()) {
+    if (!MI->isDebugInstr()) {
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
         SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();

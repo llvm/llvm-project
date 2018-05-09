@@ -71,7 +71,7 @@ Module::~Module() {
   }
 }
 
-/// \brief Determine whether a translation unit built using the current
+/// Determine whether a translation unit built using the current
 /// language options has the given feature.
 static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                        const TargetInfo &Target) {

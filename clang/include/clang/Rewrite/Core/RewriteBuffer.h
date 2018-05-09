@@ -48,7 +48,7 @@ public:
     Initialize(Input.begin(), Input.end());
   }
 
-  /// \brief Write to \p Stream the result of applying all changes to the
+  /// Write to \p Stream the result of applying all changes to the
   /// original buffer.
   /// Note that it isn't safe to use this function to overwrite memory mapped
   /// files in-place (PR17960). Consider using a higher-level utility such as

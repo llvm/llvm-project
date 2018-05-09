@@ -1093,7 +1093,7 @@ void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back("-KPIC");
 }
 
-/// \brief Determine whether Objective-C automated reference counting is
+/// Determine whether Objective-C automated reference counting is
 /// enabled.
 bool tools::isObjCAutoRefCount(const ArgList &Args) {
   return Args.hasFlag(options::OPT_fobjc_arc, options::OPT_fno_objc_arc, false);

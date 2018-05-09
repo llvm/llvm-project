@@ -1,6 +1,11 @@
 # binary files
 test/Object/Inputs/*.a-* binary
-test/tools/dsymutil/Inputs/* binary
+test/tools/dsymutil/Inputs/*.o binary
+test/tools/dsymutil/Inputs/*.a binary
+test/tools/dsymutil/Inputs/*.i386 binary
+test/tools/dsymutil/Inputs/*.x86_64 binary
+test/tools/dsymutil/Inputs/*.armv7m binary
+test/tools/dsymutil/Inputs/*.dylib binary
 test/tools/llvm-ar/Inputs/*.lib binary
 test/tools/llvm-objdump/Inputs/*.a binary
 test/tools/llvm-rc/Inputs/* binary

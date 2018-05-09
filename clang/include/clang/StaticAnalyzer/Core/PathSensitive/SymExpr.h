@@ -25,7 +25,7 @@ namespace ento {
 
 class MemRegion;
 
-/// \brief Symbolic value. These values used to capture symbolic execution of
+/// Symbolic value. These values used to capture symbolic execution of
 /// the program.
 class SymExpr : public llvm::FoldingSetNode {
   virtual void anchor();
@@ -61,7 +61,7 @@ public:
   virtual QualType getType() const = 0;
   virtual void Profile(llvm::FoldingSetNodeID &profile) = 0;
 
-  /// \brief Iterator over symbols that the current symbol depends on.
+  /// Iterator over symbols that the current symbol depends on.
   ///
   /// For SymbolData, it's the symbol itself; for expressions, it's the
   /// expression symbol and all the operands in it. Note, SymbolDerived is
@@ -87,7 +87,7 @@ public:
 
   unsigned computeComplexity() const;
 
-  /// \brief Find the region from which this symbol originates.
+  /// Find the region from which this symbol originates.
   ///
   /// Whenever the symbol was constructed to denote an unknown value of
   /// a certain memory region, return this region. This method
@@ -110,7 +110,7 @@ using SymbolRef = const SymExpr *;
 using SymbolRefSmallVectorTy = SmallVector<SymbolRef, 2>;
 using SymbolID = unsigned;
 
-/// \brief A symbol representing data which can be stored in a memory location
+/// A symbol representing data which can be stored in a memory location
 /// (region).
 class SymbolData : public SymExpr {
   const SymbolID Sym;

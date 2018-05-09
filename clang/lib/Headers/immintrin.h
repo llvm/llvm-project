@@ -73,7 +73,7 @@
    Intel documents these as being in immintrin.h, and
    they depend on typedefs from avxintrin.h. */
 
-/// \brief Converts a 256-bit vector of [8 x float] into a 128-bit vector
+/// Converts a 256-bit vector of [8 x float] into a 128-bit vector
 ///    containing 16-bit half-precision float values.
 ///
 /// \headerfile <x86intrin.h>
@@ -99,7 +99,7 @@
 #define _mm256_cvtps_ph(a, imm) __extension__ ({ \
  (__m128i)__builtin_ia32_vcvtps2ph256((__v8sf)(__m256)(a), (imm)); })
 
-/// \brief Converts a 128-bit vector containing 16-bit half-precision float
+/// Converts a 128-bit vector containing 16-bit half-precision float
 ///    values into a 256-bit vector of [8 x float].
 ///
 /// \headerfile <x86intrin.h>
@@ -248,7 +248,7 @@ _mm256_cvtph_ps(__m128i __a)
 #endif
 
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__RDPID__)
-/// \brief Returns the value of the IA32_TSC_AUX MSR (0xc0000103).
+/// Returns the value of the IA32_TSC_AUX MSR (0xc0000103).
 ///
 /// \headerfile <immintrin.h>
 ///

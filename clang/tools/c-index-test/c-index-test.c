@@ -64,7 +64,7 @@ extern char *basename(const char *);
 extern char *dirname(char *);
 #endif
 
-/** \brief Return the default parsing options. */
+/** Return the default parsing options. */
 static unsigned getDefaultParsingOptions() {
   unsigned options = CXTranslationUnit_DetailedPreprocessingRecord;
 
@@ -149,7 +149,7 @@ static void ModifyPrintingPolicyAccordingToEnv(CXPrintingPolicy Policy) {
   }
 }
 
-/** \brief Returns 0 in case of success, non-zero in case of a failure. */
+/** Returns 0 in case of success, non-zero in case of a failure. */
 static int checkForErrors(CXTranslationUnit TU);
 
 static void describeLibclangFailure(enum CXErrorCode Err) {

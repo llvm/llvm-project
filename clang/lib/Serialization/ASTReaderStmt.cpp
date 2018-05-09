@@ -110,20 +110,20 @@ namespace clang {
     ASTStmtReader(ASTRecordReader &Record, llvm::BitstreamCursor &Cursor)
         : Record(Record), DeclsCursor(Cursor) {}
 
-    /// \brief The number of record fields required for the Stmt class
+    /// The number of record fields required for the Stmt class
     /// itself.
     static const unsigned NumStmtFields = 0;
 
-    /// \brief The number of record fields required for the Expr class
+    /// The number of record fields required for the Expr class
     /// itself.
     static const unsigned NumExprFields = NumStmtFields + 7;
 
-    /// \brief Read and initialize a ExplicitTemplateArgumentList structure.
+    /// Read and initialize a ExplicitTemplateArgumentList structure.
     void ReadTemplateKWAndArgsInfo(ASTTemplateKWAndArgsInfo &Args,
                                    TemplateArgumentLoc *ArgsLocArray,
                                    unsigned NumTemplateArgs);
 
-    /// \brief Read and initialize a ExplicitTemplateArgumentList structure.
+    /// Read and initialize a ExplicitTemplateArgumentList structure.
     void ReadExplicitTemplateArgumentList(ASTTemplateArgumentListInfo &ArgList,
                                           unsigned NumTemplateArgs);
 

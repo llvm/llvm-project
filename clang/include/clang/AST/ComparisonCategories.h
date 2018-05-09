@@ -129,7 +129,7 @@ public:
   /// True iff the comparison category is an equality comparison.
   bool isEquality() const { return !isOrdered(); }
 
-  /// \brief True iff the comparison category is a relational comparison.
+  /// True iff the comparison category is a relational comparison.
   bool isOrdered() const {
     using CCK = ComparisonCategoryType;
     return Kind == CCK::PartialOrdering || Kind == CCK::WeakOrdering ||

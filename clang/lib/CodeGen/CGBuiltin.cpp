@@ -189,7 +189,7 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
   return RValue::get(Result);
 }
 
-/// @brief Utility to insert an atomic cmpxchg instruction.
+/// Utility to insert an atomic cmpxchg instruction.
 ///
 /// @param CGF The current codegen function.
 /// @param E   Builtin call expression to convert to cmpxchg.
@@ -320,7 +320,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
   return CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
 }
 
-/// \brief Emit a call to llvm.{sadd,uadd,ssub,usub,smul,umul}.with.overflow.*
+/// Emit a call to llvm.{sadd,uadd,ssub,usub,smul,umul}.with.overflow.*
 /// depending on IntrinsicID.
 ///
 /// \arg CGF The current codegen function.
@@ -3667,7 +3667,7 @@ Value *CodeGenFunction::EmitNeonShiftVector(Value *V, llvm::Type *Ty,
   return ConstantInt::get(Ty, neg ? -SV : SV);
 }
 
-// \brief Right-shift a vector by a constant.
+// Right-shift a vector by a constant.
 Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
                                           llvm::Type *Ty, bool usgn,
                                           const char *name) {

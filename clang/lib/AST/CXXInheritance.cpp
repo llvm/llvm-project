@@ -34,7 +34,7 @@
 
 using namespace clang;
 
-/// \brief Computes the set of declarations referenced by these base
+/// Computes the set of declarations referenced by these base
 /// paths.
 void CXXBasePaths::ComputeDeclsFound() {
   assert(NumDeclsFound == 0 && !DeclsFound &&
@@ -76,7 +76,7 @@ void CXXBasePaths::clear() {
   DetectedVirtual = nullptr;
 }
 
-/// @brief Swaps the contents of this CXXBasePaths structure with the
+/// Swaps the contents of this CXXBasePaths structure with the
 /// contents of Other.
 void CXXBasePaths::swap(CXXBasePaths &Other) {
   std::swap(Origin, Other.Origin);
@@ -567,11 +567,11 @@ void OverridingMethods::replaceAll(UniqueVirtualMethod Overriding) {
 namespace {
 
 class FinalOverriderCollector {
-  /// \brief The number of subobjects of a given class type that
+  /// The number of subobjects of a given class type that
   /// occur within the class hierarchy.
   llvm::DenseMap<const CXXRecordDecl *, unsigned> SubobjectCount;
 
-  /// \brief Overriders for each virtual base subobject.
+  /// Overriders for each virtual base subobject.
   llvm::DenseMap<const CXXRecordDecl *, CXXFinalOverriderMap *> VirtualOverriders;
 
   CXXFinalOverriderMap FinalOverriders;

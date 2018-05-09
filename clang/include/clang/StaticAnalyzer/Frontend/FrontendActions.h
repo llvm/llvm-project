@@ -31,7 +31,7 @@ protected:
                                                  StringRef InFile) override;
 };
 
-/// \brief Frontend action to parse model files.
+/// Frontend action to parse model files.
 ///
 /// This frontend action is responsible for parsing model files. Model files can
 /// not be parsed on their own, they rely on type information that is available

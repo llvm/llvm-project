@@ -95,7 +95,7 @@ attributes #3 = { "no-frame-pointer-elim"="true" "probe-stack"="__rust_probestac
 !8 = distinct !DICompileUnit(language: DW_LANG_Rust, file: !9, producer: "clang LLVM (rustc version 1.22.0-dev)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !10)
 !9 = !DIFile(filename: "t2.rs", directory: "/home/tromey/Rust")
 !10 = !{!0}
-!11 = distinct !DISubprogram(name: "drop_in_place<f64>", linkageName: "_ZN4core3ptr18drop_in_place<f64>E", scope: !13, file: !12, line: 59, type: !15, isLocal: false, isDefinition: true, scopeLine: 59, flags: DIFlagPrototyped, isOptimized: false, unit: !8, templateParams: !18, variables: !4)
+!11 = distinct !DISubprogram(name: "drop_in_place<f64>", linkageName: "_ZN4core3ptr18drop_in_place<f64>E", scope: !13, file: !12, line: 59, type: !15, isLocal: false, isDefinition: true, scopeLine: 59, flags: DIFlagPrototyped, isOptimized: false, unit: !8, templateParams: !18, retainedNodes: !4)
 !12 = !DIFile(filename: "/home/tromey/Rust/rust/src/libcore/ptr.rs", directory: "")
 !13 = !DINamespace(name: "ptr", scope: !14)
 !14 = !DINamespace(name: "core", scope: null)
@@ -109,7 +109,7 @@ attributes #3 = { "no-frame-pointer-elim"="true" "probe-stack"="__rust_probestac
 !22 = !DIExpression()
 !23 = !DILocation(line: 1, scope: !11)
 !24 = !DILocation(line: 59, scope: !11)
-!25 = distinct !DISubprogram(name: "main", linkageName: "_ZN2t24mainE", scope: !26, file: !9, line: 9, type: !27, isLocal: true, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped | DIFlagMainSubprogram, isOptimized: false, unit: !8, templateParams: !4, variables: !4)
+!25 = distinct !DISubprogram(name: "main", linkageName: "_ZN2t24mainE", scope: !26, file: !9, line: 9, type: !27, isLocal: true, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped | DIFlagMainSubprogram, isOptimized: false, unit: !8, templateParams: !4, retainedNodes: !4)
 !26 = !DINamespace(name: "t2", scope: null)
 !27 = !DISubroutineType(types: !28)
 !28 = !{null}

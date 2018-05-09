@@ -101,7 +101,7 @@ struct DenseMapInfo<DecompositionDeclName> {
 
 namespace {
 
-/// \brief Keeps track of the mangled names of lambda expressions and block
+/// Keeps track of the mangled names of lambda expressions and block
 /// literals within a particular context.
 class ItaniumNumberingContext : public MangleNumberingContext {
   llvm::DenseMap<const Type *, unsigned> ManglingNumbers;

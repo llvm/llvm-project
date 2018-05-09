@@ -25,8 +25,8 @@ This tool will be present as a part of the LLVM toolchain, and will reside in
 the "/llvm/tools/llvm-cfi-verify" directory, relative to the LLVM trunk. It will
 be tested in two methods:
 
-- Unit tests to validate code sections, present in "/llvm/unittests/llvm-cfi-
-  verify".
+- Unit tests to validate code sections, present in
+  "/llvm/unittests/tools/llvm-cfi-verify".
 - Integration tests, present in "/llvm/tools/clang/test/LLVMCFIVerify". These
   integration tests are part of clang as part of a continuous integration
   framework, ensuring updates to the compiler that reduce CFI coverage on

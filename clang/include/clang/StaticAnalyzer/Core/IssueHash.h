@@ -17,7 +17,7 @@ class SourceManager;
 class FullSourceLoc;
 class LangOptions;
 
-/// \brief Get an MD5 hash to help identify bugs.
+/// Get an MD5 hash to help identify bugs.
 ///
 /// This function returns a hash that helps identify bugs within a source file.
 /// This identification can be utilized to diff diagnostic results on different
@@ -41,7 +41,7 @@ llvm::SmallString<32> GetIssueHash(const SourceManager &SM,
                                    llvm::StringRef BugType, const Decl *D,
                                    const LangOptions &LangOpts);
 
-/// \brief Get the string representation of issue hash. See GetIssueHash() for
+/// Get the string representation of issue hash. See GetIssueHash() for
 /// more information.
 std::string GetIssueString(const SourceManager &SM, FullSourceLoc &IssueLoc,
                            llvm::StringRef CheckerName, llvm::StringRef BugType,

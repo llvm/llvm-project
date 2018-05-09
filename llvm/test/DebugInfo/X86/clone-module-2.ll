@@ -48,5 +48,5 @@ attributes #0 = { norecurse nounwind readnone ssp uwtable }
 !6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"clang version 7.0.0 (https://git.llvm.org/git/clang.git/ 195459d046e795f5952f7d2121e505eeb59c5574) (https://git.llvm.org/git/llvm.git/ e9dc5b5ade57869d1a443c568c6cf556ccf3b7af)"}
 !8 = !DILocation(line: 3, column: 72, scope: !9)
-!9 = distinct !DISubprogram(name: "eliminated", scope: !1, file: !1, line: 3, type: !10, isLocal: true, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!9 = distinct !DISubprogram(name: "eliminated", scope: !1, file: !1, line: 3, type: !10, isLocal: true, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !2)

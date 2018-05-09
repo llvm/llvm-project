@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a function that runs Clang format on a single
+/// This file implements a function that runs Clang format on a single
 ///  input. This function is then linked into the Fuzzer library.
 ///
 //===----------------------------------------------------------------------===//

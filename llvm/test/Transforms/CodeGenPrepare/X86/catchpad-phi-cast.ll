@@ -103,7 +103,7 @@ catch:
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 254906) (llvm/trunk 254917)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: null)
 !1 = !DIFile(filename: "t.c", directory: "D:\5Csrc\5Cllvm\5Cbuild")
-!4 = distinct !DISubprogram(name: "test_dbg_value", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: null)
+!4 = distinct !DISubprogram(name: "test_dbg_value", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: null)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !{i32 2, !"Dwarf Version", i32 4}

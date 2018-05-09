@@ -230,7 +230,7 @@ SourceLocation Expr::getExprLoc() const {
 // Primary Expressions.
 //===----------------------------------------------------------------------===//
 
-/// \brief Compute the type-, value-, and instantiation-dependence of a 
+/// Compute the type-, value-, and instantiation-dependence of a 
 /// declaration reference
 /// based on the declaration being referenced.
 static void computeDeclRefDependence(const ASTContext &Ctx, NamedDecl *D,
@@ -2632,7 +2632,7 @@ bool Expr::isDefaultArgument() const {
   return isa<CXXDefaultArgExpr>(E);
 }
 
-/// \brief Skip over any no-op casts and any temporary-binding
+/// Skip over any no-op casts and any temporary-binding
 /// expressions.
 static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
   if (const MaterializeTemporaryExpr *M = dyn_cast<MaterializeTemporaryExpr>(E))
@@ -2934,7 +2934,7 @@ bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
 }
 
 namespace {
-  /// \brief Look for any side effects within a Stmt.
+  /// Look for any side effects within a Stmt.
   class SideEffectFinder : public ConstEvaluatedExprVisitor<SideEffectFinder> {
     typedef ConstEvaluatedExprVisitor<SideEffectFinder> Inherited;
     const bool IncludePossibleEffects;
@@ -3230,7 +3230,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 }
 
 namespace {
-  /// \brief Look for a call to a non-trivial function within an expression.
+  /// Look for a call to a non-trivial function within an expression.
   class NonTrivialCallFinder : public ConstEvaluatedExprVisitor<NonTrivialCallFinder>
   {
     typedef ConstEvaluatedExprVisitor<NonTrivialCallFinder> Inherited;
@@ -3406,7 +3406,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
   return NPCK_ZeroExpression;
 }
 
-/// \brief If this expression is an l-value for an Objective C
+/// If this expression is an l-value for an Objective C
 /// property, find the underlying property reference expression.
 const ObjCPropertyRefExpr *Expr::getObjCProperty() const {
   const Expr *E = this;
@@ -3830,7 +3830,7 @@ Expr *DesignatedInitExpr::getArrayRangeEnd(const Designator &D) const {
   return getSubExpr(D.ArrayOrRange.Index + 2);
 }
 
-/// \brief Replaces the designator at index @p Idx with the series
+/// Replaces the designator at index @p Idx with the series
 /// of designators in [First, Last).
 void DesignatedInitExpr::ExpandDesignator(const ASTContext &C, unsigned Idx,
                                           const Designator *First,

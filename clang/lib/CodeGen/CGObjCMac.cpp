@@ -888,7 +888,7 @@ protected:
   /// int * but is actually an Obj-C class pointer.
   llvm::WeakTrackingVH ConstantStringClassRef;
 
-  /// \brief The LLVM type corresponding to NSConstantString.
+  /// The LLVM type corresponding to NSConstantString.
   llvm::StructType *NSConstantStringType = nullptr;
 
   llvm::StringMap<llvm::GlobalVariable *> NSConstantStringMap;

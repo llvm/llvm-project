@@ -149,10 +149,11 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
         return false;
 
   // Begin by getting rid of unneeded PHIs.
-  SmallVector<Value *, 4> IncomingValues;
+  SmallVector<AssertingVH<Value>, 4> IncomingValues;
   if (isa<PHINode>(BB->front())) {
     for (PHINode &PN : BB->phis())
-      if (PN.getIncomingValue(0) != &PN)
+      if (!isa<PHINode>(PN.getIncomingValue(0)) ||
+          cast<PHINode>(PN.getIncomingValue(0))->getParent() != BB)
         IncomingValues.push_back(PN.getIncomingValue(0));
     FoldSingleEntryPHINodes(BB, MemDep);
   }
@@ -168,8 +169,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
   PredBB->getInstList().splice(PredBB->end(), BB->getInstList());
 
   // Eliminate duplicate dbg.values describing the entry PHI node post-splice.
-  for (auto *Incoming : IncomingValues) {
-    if (isa<Instruction>(Incoming)) {
+  for (auto Incoming : IncomingValues) {
+    if (isa<Instruction>(*Incoming)) {
       SmallVector<DbgValueInst *, 2> DbgValues;
       SmallDenseSet<std::pair<DILocalVariable *, DIExpression *>, 2>
           DbgValueSet;

@@ -187,7 +187,7 @@ namespace {
     RValue convertAtomicTempToRValue(Address addr, AggValueSlot resultSlot,
                                      SourceLocation loc, bool AsValue) const;
 
-    /// \brief Converts a rvalue to integer value.
+    /// Converts a rvalue to integer value.
     llvm::Value *convertRValueToInt(RValue RVal) const;
 
     RValue ConvertIntToValueOrAtomic(llvm::Value *IntVal,
@@ -208,13 +208,13 @@ namespace {
                               LVal.getBaseInfo(), LVal.getTBAAInfo());
     }
 
-    /// \brief Emits atomic load.
+    /// Emits atomic load.
     /// \returns Loaded value.
     RValue EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
                           bool AsValue, llvm::AtomicOrdering AO,
                           bool IsVolatile);
 
-    /// \brief Emits atomic compare-and-exchange sequence.
+    /// Emits atomic compare-and-exchange sequence.
     /// \param Expected Expected value.
     /// \param Desired Desired value.
     /// \param Success Atomic ordering for success operation.
@@ -230,13 +230,13 @@ namespace {
                                   llvm::AtomicOrdering::SequentiallyConsistent,
                               bool IsWeak = false);
 
-    /// \brief Emits atomic update.
+    /// Emits atomic update.
     /// \param AO Atomic ordering.
     /// \param UpdateOp Update operation for the current lvalue.
     void EmitAtomicUpdate(llvm::AtomicOrdering AO,
                           const llvm::function_ref<RValue(RValue)> &UpdateOp,
                           bool IsVolatile);
-    /// \brief Emits atomic update.
+    /// Emits atomic update.
     /// \param AO Atomic ordering.
     void EmitAtomicUpdate(llvm::AtomicOrdering AO, RValue UpdateRVal,
                           bool IsVolatile);
@@ -244,25 +244,25 @@ namespace {
     /// Materialize an atomic r-value in atomic-layout memory.
     Address materializeRValue(RValue rvalue) const;
 
-    /// \brief Creates temp alloca for intermediate operations on atomic value.
+    /// Creates temp alloca for intermediate operations on atomic value.
     Address CreateTempAlloca() const;
   private:
     bool requiresMemSetZero(llvm::Type *type) const;
 
 
-    /// \brief Emits atomic load as a libcall.
+    /// Emits atomic load as a libcall.
     void EmitAtomicLoadLibcall(llvm::Value *AddForLoaded,
                                llvm::AtomicOrdering AO, bool IsVolatile);
-    /// \brief Emits atomic load as LLVM instruction.
+    /// Emits atomic load as LLVM instruction.
     llvm::Value *EmitAtomicLoadOp(llvm::AtomicOrdering AO, bool IsVolatile);
-    /// \brief Emits atomic compare-and-exchange op as a libcall.
+    /// Emits atomic compare-and-exchange op as a libcall.
     llvm::Value *EmitAtomicCompareExchangeLibcall(
         llvm::Value *ExpectedAddr, llvm::Value *DesiredAddr,
         llvm::AtomicOrdering Success =
             llvm::AtomicOrdering::SequentiallyConsistent,
         llvm::AtomicOrdering Failure =
             llvm::AtomicOrdering::SequentiallyConsistent);
-    /// \brief Emits atomic compare-and-exchange op as LLVM instruction.
+    /// Emits atomic compare-and-exchange op as LLVM instruction.
     std::pair<llvm::Value *, llvm::Value *> EmitAtomicCompareExchangeOp(
         llvm::Value *ExpectedVal, llvm::Value *DesiredVal,
         llvm::AtomicOrdering Success =
@@ -270,19 +270,19 @@ namespace {
         llvm::AtomicOrdering Failure =
             llvm::AtomicOrdering::SequentiallyConsistent,
         bool IsWeak = false);
-    /// \brief Emit atomic update as libcalls.
+    /// Emit atomic update as libcalls.
     void
     EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO,
                             const llvm::function_ref<RValue(RValue)> &UpdateOp,
                             bool IsVolatile);
-    /// \brief Emit atomic update as LLVM instructions.
+    /// Emit atomic update as LLVM instructions.
     void EmitAtomicUpdateOp(llvm::AtomicOrdering AO,
                             const llvm::function_ref<RValue(RValue)> &UpdateOp,
                             bool IsVolatile);
-    /// \brief Emit atomic update as libcalls.
+    /// Emit atomic update as libcalls.
     void EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO, RValue UpdateRVal,
                                  bool IsVolatile);
-    /// \brief Emit atomic update as LLVM instructions.
+    /// Emit atomic update as LLVM instructions.
     void EmitAtomicUpdateOp(llvm::AtomicOrdering AO, RValue UpdateRal,
                             bool IsVolatile);
   };

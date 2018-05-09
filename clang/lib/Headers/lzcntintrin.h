@@ -31,7 +31,7 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("lzcnt")))
 
-/// \brief Counts the number of leading zero bits in the operand.
+/// Counts the number of leading zero bits in the operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -47,7 +47,7 @@ __lzcnt16(unsigned short __X)
   return __X ? __builtin_clzs(__X) : 16;
 }
 
-/// \brief Counts the number of leading zero bits in the operand.
+/// Counts the number of leading zero bits in the operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -63,7 +63,7 @@ __lzcnt32(unsigned int __X)
   return __X ? __builtin_clz(__X) : 32;
 }
 
-/// \brief Counts the number of leading zero bits in the operand.
+/// Counts the number of leading zero bits in the operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -80,7 +80,7 @@ _lzcnt_u32(unsigned int __X)
 }
 
 #ifdef __x86_64__
-/// \brief Counts the number of leading zero bits in the operand.
+/// Counts the number of leading zero bits in the operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -96,7 +96,7 @@ __lzcnt64(unsigned long long __X)
   return __X ? __builtin_clzll(__X) : 64;
 }
 
-/// \brief Counts the number of leading zero bits in the operand.
+/// Counts the number of leading zero bits in the operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
