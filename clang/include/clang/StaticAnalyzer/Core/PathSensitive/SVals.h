@@ -98,7 +98,7 @@ protected:
 public:
   explicit SVal() = default;
 
-  /// \brief Convert to the specified SVal type, asserting that this SVal is of
+  /// Convert to the specified SVal type, asserting that this SVal is of
   /// the desired type.
   template<typename T>
   T castAs() const {
@@ -106,7 +106,7 @@ public:
     return *static_cast<const T *>(this);
   }
 
-  /// \brief Convert to the specified SVal type, returning None if this SVal is
+  /// Convert to the specified SVal type, returning None if this SVal is
   /// not of the desired type.
   template<typename T>
   Optional<T> getAs() const {
@@ -164,7 +164,7 @@ public:
   /// Otherwise return 0.
   const FunctionDecl *getAsFunctionDecl() const;
 
-  /// \brief If this SVal is a location and wraps a symbol, return that
+  /// If this SVal is a location and wraps a symbol, return that
   ///  SymbolRef. Otherwise return 0.
   ///
   /// Casts are ignored during lookup.
@@ -175,7 +175,7 @@ public:
   /// Get the symbol in the SVal or its base region.
   SymbolRef getLocSymbolInBase() const;
 
-  /// \brief If this SVal wraps a symbol return that SymbolRef.
+  /// If this SVal wraps a symbol return that SymbolRef.
   /// Otherwise, return 0.
   ///
   /// Casts are ignored during lookup.
@@ -278,7 +278,7 @@ private:
   }
 };
 
-/// \brief Represents an SVal that is guaranteed to not be UnknownVal.
+/// Represents an SVal that is guaranteed to not be UnknownVal.
 class KnownSVal : public SVal {
   friend class SVal;
 
@@ -343,7 +343,7 @@ private:
 
 namespace nonloc {
 
-/// \brief Represents symbolic expression.
+/// Represents symbolic expression.
 class SymbolVal : public NonLoc {
 public:
   SymbolVal() = delete;
@@ -370,7 +370,7 @@ private:
   }
 };
 
-/// \brief Value representing integer constant.
+/// Value representing integer constant.
 class ConcreteInt : public NonLoc {
 public:
   explicit ConcreteInt(const llvm::APSInt& V) : NonLoc(ConcreteIntKind, &V) {}
@@ -507,7 +507,7 @@ private:
   }
 };
 
-/// \brief Value representing pointer-to-member.
+/// Value representing pointer-to-member.
 ///
 /// This value is qualified as NonLoc because neither loading nor storing
 /// operations are applied to it. Instead, the analyzer uses the L-value coming
@@ -598,12 +598,12 @@ public:
     assert(r);
   }
 
-  /// \brief Get the underlining region.
+  /// Get the underlining region.
   const MemRegion *getRegion() const {
     return static_cast<const MemRegion *>(Data);
   }
 
-  /// \brief Get the underlining region and strip casts.
+  /// Get the underlining region and strip casts.
   const MemRegion* stripCasts(bool StripBaseCasts = true) const;
 
   template <typename REGION>

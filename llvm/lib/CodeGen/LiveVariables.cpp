@@ -499,7 +499,7 @@ void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
 
 void LiveVariables::runOnInstr(MachineInstr &MI,
                                SmallVectorImpl<unsigned> &Defs) {
-  assert(!MI.isDebugValue());
+  assert(!MI.isDebugInstr());
   // Process all of the operands of the instruction...
   unsigned NumOperandsToProcess = MI.getNumOperands();
 
@@ -576,7 +576,7 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, const unsigned NumRegs) {
   DistanceMap.clear();
   unsigned Dist = 0;
   for (MachineInstr &MI : *MBB) {
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
     DistanceMap.insert(std::make_pair(&MI, Dist++));
 

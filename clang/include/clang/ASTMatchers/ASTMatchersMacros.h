@@ -50,7 +50,7 @@
 #ifndef LLVM_CLANG_ASTMATCHERS_ASTMATCHERSMACROS_H
 #define LLVM_CLANG_ASTMATCHERS_ASTMATCHERSMACROS_H
 
-/// \brief AST_MATCHER_FUNCTION(ReturnType, DefineMatcher) { ... }
+/// AST_MATCHER_FUNCTION(ReturnType, DefineMatcher) { ... }
 /// defines a zero parameter function named DefineMatcher() that returns a
 /// ReturnType object.
 #define AST_MATCHER_FUNCTION(ReturnType, DefineMatcher)                        \
@@ -61,7 +61,7 @@
   }                                                                            \
   inline ReturnType DefineMatcher##_getInstance()
 
-/// \brief AST_MATCHER_FUNCTION_P(ReturnType, DefineMatcher, ParamType, Param) {
+/// AST_MATCHER_FUNCTION_P(ReturnType, DefineMatcher, ParamType, Param) {
 /// ... }
 /// defines a single-parameter function named DefineMatcher() that returns a
 /// ReturnType object.
@@ -81,7 +81,7 @@
   typedef ReturnType (&DefineMatcher##_Type##OverloadId)(ParamType const &);   \
   inline ReturnType DefineMatcher(ParamType const &Param)
 
-/// \brief AST_MATCHER(Type, DefineMatcher) { ... }
+/// AST_MATCHER(Type, DefineMatcher) { ... }
 /// defines a zero parameter function named DefineMatcher() that returns a
 /// Matcher<Type> object.
 ///
@@ -113,7 +113,7 @@
       ::clang::ast_matchers::internal::ASTMatchFinder *Finder,                 \
       ::clang::ast_matchers::internal::BoundNodesTreeBuilder *Builder) const
 
-/// \brief AST_MATCHER_P(Type, DefineMatcher, ParamType, Param) { ... }
+/// AST_MATCHER_P(Type, DefineMatcher, ParamType, Param) { ... }
 /// defines a single-parameter function named DefineMatcher() that returns a
 /// Matcher<Type> object.
 ///
@@ -159,7 +159,7 @@
       ::clang::ast_matchers::internal::ASTMatchFinder *Finder,                 \
       ::clang::ast_matchers::internal::BoundNodesTreeBuilder *Builder) const
 
-/// \brief AST_MATCHER_P2(
+/// AST_MATCHER_P2(
 ///     Type, DefineMatcher, ParamType1, Param1, ParamType2, Param2) { ... }
 /// defines a two-parameter function named DefineMatcher() that returns a
 /// Matcher<Type> object.
@@ -211,7 +211,7 @@
       ::clang::ast_matchers::internal::ASTMatchFinder *Finder,                 \
       ::clang::ast_matchers::internal::BoundNodesTreeBuilder *Builder) const
 
-/// \brief Construct a type-list to be passed to the AST_POLYMORPHIC_MATCHER*
+/// Construct a type-list to be passed to the AST_POLYMORPHIC_MATCHER*
 ///   macros.
 ///
 /// You can't pass something like \c TypeList<Foo, Bar> to a macro, because it
@@ -222,7 +222,7 @@
 #define AST_POLYMORPHIC_SUPPORTED_TYPES(...)                                   \
   void(::clang::ast_matchers::internal::TypeList<__VA_ARGS__>)
 
-/// \brief AST_POLYMORPHIC_MATCHER(DefineMatcher) { ... }
+/// AST_POLYMORPHIC_MATCHER(DefineMatcher) { ... }
 /// defines a single-parameter function named DefineMatcher() that is
 /// polymorphic in the return type.
 ///
@@ -252,7 +252,7 @@
       ::clang::ast_matchers::internal::ASTMatchFinder *Finder,                 \
       ::clang::ast_matchers::internal::BoundNodesTreeBuilder *Builder) const
 
-/// \brief AST_POLYMORPHIC_MATCHER_P(DefineMatcher, ParamType, Param) { ... }
+/// AST_POLYMORPHIC_MATCHER_P(DefineMatcher, ParamType, Param) { ... }
 /// defines a single-parameter function named DefineMatcher() that is
 /// polymorphic in the return type.
 ///
@@ -305,7 +305,7 @@
           ::clang::ast_matchers::internal::BoundNodesTreeBuilder *Builder)     \
           const
 
-/// \brief AST_POLYMORPHIC_MATCHER_P2(
+/// AST_POLYMORPHIC_MATCHER_P2(
 ///     DefineMatcher, ParamType1, Param1, ParamType2, Param2) { ... }
 /// defines a two-parameter function named matcher() that is polymorphic in
 /// the return type.
@@ -383,7 +383,7 @@
       ::clang::ast_matchers::internal::TypeTraverseMatcher,                    \
       ReturnTypesF>::Func MatcherName
 
-/// \brief AST_TYPE_TRAVERSE_MATCHER(MatcherName, FunctionName) defines
+/// AST_TYPE_TRAVERSE_MATCHER(MatcherName, FunctionName) defines
 /// the matcher \c MatcherName that can be used to traverse from one \c Type
 /// to another.
 ///
@@ -426,7 +426,7 @@
       ReturnTypesF>::Func MatcherName##Loc;                                    \
   AST_TYPE_TRAVERSE_MATCHER_DEF(MatcherName, ReturnTypesF)
 
-/// \brief AST_TYPELOC_TRAVERSE_MATCHER(MatcherName, FunctionName) works
+/// AST_TYPELOC_TRAVERSE_MATCHER(MatcherName, FunctionName) works
 /// identical to \c AST_TYPE_TRAVERSE_MATCHER but operates on \c TypeLocs.
 #define AST_TYPELOC_TRAVERSE_MATCHER(MatcherName, FunctionName, ReturnTypesF)  \
   namespace internal {                                                         \

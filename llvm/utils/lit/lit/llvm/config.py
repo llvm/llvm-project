@@ -101,10 +101,6 @@ class LLVMConfig(object):
                 self.with_environment(
                     'DYLD_INSERT_LIBRARIES', gmalloc_path_str)
 
-        breaking_checks = getattr(config, 'enable_abi_breaking_checks', None)
-        if lit.util.pythonize_bool(breaking_checks):
-            features.add('abi-breaking-checks')
-
     def with_environment(self, variable, value, append_path=False):
         if append_path:
             # For paths, we should be able to take a list of them and process all

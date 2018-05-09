@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the implementation of the UnwrappedLineParser,
+/// This file contains the implementation of the UnwrappedLineParser,
 /// which turns a stream of tokens into UnwrappedLines.
 ///
 //===----------------------------------------------------------------------===//

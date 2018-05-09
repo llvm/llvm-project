@@ -41,13 +41,13 @@ class SourceManager;
 
 namespace tooling {
 
-/// \brief A source range independent of the \c SourceManager.
+/// A source range independent of the \c SourceManager.
 class Range {
 public:
   Range() = default;
   Range(unsigned Offset, unsigned Length) : Offset(Offset), Length(Length) {}
 
-  /// \brief Accessors.
+  /// Accessors.
   /// @{
   unsigned getOffset() const { return Offset; }
   unsigned getLength() const { return Length; }
@@ -55,18 +55,18 @@ public:
 
   /// \name Range Predicates
   /// @{
-  /// \brief Whether this range overlaps with \p RHS or not.
+  /// Whether this range overlaps with \p RHS or not.
   bool overlapsWith(Range RHS) const {
     return Offset + Length > RHS.Offset && Offset < RHS.Offset + RHS.Length;
   }
 
-  /// \brief Whether this range contains \p RHS or not.
+  /// Whether this range contains \p RHS or not.
   bool contains(Range RHS) const {
     return RHS.Offset >= Offset &&
            (RHS.Offset + RHS.Length) <= (Offset + Length);
   }
 
-  /// \brief Whether this range equals to \p RHS or not.
+  /// Whether this range equals to \p RHS or not.
   bool operator==(const Range &RHS) const {
     return Offset == RHS.getOffset() && Length == RHS.getLength();
   }
@@ -77,16 +77,16 @@ private:
   unsigned Length = 0;
 };
 
-/// \brief A text replacement.
+/// A text replacement.
 ///
 /// Represents a SourceManager independent replacement of a range of text in a
 /// specific file.
 class Replacement {
 public:
-  /// \brief Creates an invalid (not applicable) replacement.
+  /// Creates an invalid (not applicable) replacement.
   Replacement();
 
-  /// \brief Creates a replacement of the range [Offset, Offset+Length) in
+  /// Creates a replacement of the range [Offset, Offset+Length) in
   /// FilePath with ReplacementText.
   ///
   /// \param FilePath A source file accessible via a SourceManager.
@@ -95,28 +95,28 @@ public:
   Replacement(StringRef FilePath, unsigned Offset, unsigned Length,
               StringRef ReplacementText);
 
-  /// \brief Creates a Replacement of the range [Start, Start+Length) with
+  /// Creates a Replacement of the range [Start, Start+Length) with
   /// ReplacementText.
   Replacement(const SourceManager &Sources, SourceLocation Start,
               unsigned Length, StringRef ReplacementText);
 
-  /// \brief Creates a Replacement of the given range with ReplacementText.
+  /// Creates a Replacement of the given range with ReplacementText.
   Replacement(const SourceManager &Sources, const CharSourceRange &Range,
               StringRef ReplacementText,
               const LangOptions &LangOpts = LangOptions());
 
-  /// \brief Creates a Replacement of the node with ReplacementText.
+  /// Creates a Replacement of the node with ReplacementText.
   template <typename Node>
   Replacement(const SourceManager &Sources, const Node &NodeToReplace,
               StringRef ReplacementText,
               const LangOptions &LangOpts = LangOptions());
 
-  /// \brief Returns whether this replacement can be applied to a file.
+  /// Returns whether this replacement can be applied to a file.
   ///
   /// Only replacements that are in a valid file can be applied.
   bool isApplicable() const;
 
-  /// \brief Accessors.
+  /// Accessors.
   /// @{
   StringRef getFilePath() const { return FilePath; }
   unsigned getOffset() const { return ReplacementRange.getOffset(); }
@@ -124,10 +124,10 @@ public:
   StringRef getReplacementText() const { return ReplacementText; }
   /// @}
 
-  /// \brief Applies the replacement on the Rewriter.
+  /// Applies the replacement on the Rewriter.
   bool apply(Rewriter &Rewrite) const;
 
-  /// \brief Returns a human readable string representation.
+  /// Returns a human readable string representation.
   std::string toString() const;
 
 private:
@@ -150,17 +150,17 @@ enum class replacement_error {
   insert_conflict,
 };
 
-/// \brief Carries extra error information in replacement-related llvm::Error,
+/// Carries extra error information in replacement-related llvm::Error,
 /// e.g. fail applying replacements and replacements conflict.
 class ReplacementError : public llvm::ErrorInfo<ReplacementError> {
 public:
   ReplacementError(replacement_error Err) : Err(Err) {}
 
-  /// \brief Constructs an error related to an existing replacement.
+  /// Constructs an error related to an existing replacement.
   ReplacementError(replacement_error Err, Replacement Existing)
       : Err(Err), ExistingReplacement(std::move(Existing)) {}
 
-  /// \brief Constructs an error related to a new replacement and an existing
+  /// Constructs an error related to a new replacement and an existing
   /// replacement in a set of replacements.
   ReplacementError(replacement_error Err, Replacement New, Replacement Existing)
       : Err(Err), NewReplacement(std::move(New)),
@@ -198,13 +198,13 @@ private:
   llvm::Optional<Replacement> ExistingReplacement;
 };
 
-/// \brief Less-than operator between two Replacements.
+/// Less-than operator between two Replacements.
 bool operator<(const Replacement &LHS, const Replacement &RHS);
 
-/// \brief Equal-to operator between two Replacements.
+/// Equal-to operator between two Replacements.
 bool operator==(const Replacement &LHS, const Replacement &RHS);
 
-/// \brief Maintains a set of replacements that are conflict-free.
+/// Maintains a set of replacements that are conflict-free.
 /// Two replacements are considered conflicts if they overlap or have the same
 /// offset (i.e. order-dependent).
 class Replacements {
@@ -219,7 +219,7 @@ public:
 
   explicit Replacements(const Replacement &R) { Replaces.insert(R); }
 
-  /// \brief Adds a new replacement \p R to the current set of replacements.
+  /// Adds a new replacement \p R to the current set of replacements.
   /// \p R must have the same file path as all existing replacements.
   /// Returns `success` if the replacement is successfully inserted; otherwise,
   /// it returns an llvm::Error, i.e. there is a conflict between R and the
@@ -258,7 +258,7 @@ public:
   /// category of replacements.
   llvm::Error add(const Replacement &R);
 
-  /// \brief Merges \p Replaces into the current replacements. \p Replaces
+  /// Merges \p Replaces into the current replacements. \p Replaces
   /// refers to code after applying the current replacements.
   LLVM_NODISCARD Replacements merge(const Replacements &Replaces) const;
 
@@ -311,7 +311,7 @@ private:
   ReplacementsImpl Replaces;
 };
 
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
+/// Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
 ///
 /// Replacement applications happen independently of the success of
 /// other applications.
@@ -319,7 +319,7 @@ private:
 /// \returns true if all replacements apply. false otherwise.
 bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 
-/// \brief Applies all replacements in \p Replaces to \p Code.
+/// Applies all replacements in \p Replaces to \p Code.
 ///
 /// This completely ignores the path stored in each replacement. If all
 /// replacements are applied successfully, this returns the code with
@@ -329,7 +329,7 @@ bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 llvm::Expected<std::string> applyAllReplacements(StringRef Code,
                                                  const Replacements &Replaces);
 
-/// \brief Collection of Replacements generated from a single translation unit.
+/// Collection of Replacements generated from a single translation unit.
 struct TranslationUnitReplacements {
   /// Name of the main source for the translation unit.
   std::string MainSourceFile;
@@ -337,7 +337,7 @@ struct TranslationUnitReplacements {
   std::vector<Replacement> Replacements;
 };
 
-/// \brief Calculates the new ranges after \p Replaces are applied. These
+/// Calculates the new ranges after \p Replaces are applied. These
 /// include both the original \p Ranges and the affected ranges of \p Replaces
 /// in the new code.
 ///
@@ -349,7 +349,7 @@ std::vector<Range>
 calculateRangesAfterReplacements(const Replacements &Replaces,
                                  const std::vector<Range> &Ranges);
 
-/// \brief If there are multiple <File, Replacements> pairs with the same file
+/// If there are multiple <File, Replacements> pairs with the same file
 /// entry, we only keep one pair and discard the rest.
 /// If a file does not exist, its corresponding replacements will be ignored.
 std::map<std::string, Replacements> groupReplacementsByFile(

@@ -260,7 +260,7 @@ const LineEntry *LineTableInfo::FindNearestLineEntry(FileID FID,
   return &*--I;
 }
 
-/// \brief Add a new line entry that has already been encoded into
+/// Add a new line entry that has already been encoded into
 /// the internal representation of the line table.
 void LineTableInfo::AddEntry(FileID FID,
                              const std::vector<LineEntry> &Entries) {
@@ -468,7 +468,7 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
   return std::make_pair(-ID - 1, CurrentLoadedOffset);
 }
 
-/// \brief As part of recovering from missing or changed content, produce a
+/// As part of recovering from missing or changed content, produce a
 /// fake, non-empty buffer.
 llvm::MemoryBuffer *SourceManager::getFakeBufferForRecovery() const {
   if (!FakeBufferForRecovery)
@@ -478,7 +478,7 @@ llvm::MemoryBuffer *SourceManager::getFakeBufferForRecovery() const {
   return FakeBufferForRecovery.get();
 }
 
-/// \brief As part of recovering from missing or changed content, produce a
+/// As part of recovering from missing or changed content, produce a
 /// fake content cache.
 const SrcMgr::ContentCache *
 SourceManager::getFakeContentCacheForRecovery() const {
@@ -490,7 +490,7 @@ SourceManager::getFakeContentCacheForRecovery() const {
   return FakeContentCacheForRecovery.get();
 }
 
-/// \brief Returns the previous in-order FileID or an invalid FileID if there
+/// Returns the previous in-order FileID or an invalid FileID if there
 /// is no previous one.
 FileID SourceManager::getPreviousFileID(FileID FID) const {
   if (FID.isInvalid())
@@ -510,7 +510,7 @@ FileID SourceManager::getPreviousFileID(FileID FID) const {
   return FileID::get(ID-1);
 }
 
-/// \brief Returns the next in-order FileID or an invalid FileID if there is
+/// Returns the next in-order FileID or an invalid FileID if there is
 /// no next one.
 FileID SourceManager::getNextFileID(FileID FID) const {
   if (FID.isInvalid())
@@ -692,7 +692,7 @@ StringRef SourceManager::getBufferData(FileID FID, bool *Invalid) const {
 // SourceLocation manipulation methods.
 //===----------------------------------------------------------------------===//
 
-/// \brief Return the FileID for a SourceLocation.
+/// Return the FileID for a SourceLocation.
 ///
 /// This is the cache-miss path of getFileID. Not as hot as that function, but
 /// still very important. It is responsible for finding the entry in the
@@ -708,7 +708,7 @@ FileID SourceManager::getFileIDSlow(unsigned SLocOffset) const {
   return getFileIDLoaded(SLocOffset);
 }
 
-/// \brief Return the FileID for a SourceLocation with a low offset.
+/// Return the FileID for a SourceLocation with a low offset.
 ///
 /// This function knows that the SourceLocation is in a local buffer, not a
 /// loaded one.
@@ -799,7 +799,7 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
   }
 }
 
-/// \brief Return the FileID for a SourceLocation with a high offset.
+/// Return the FileID for a SourceLocation with a high offset.
 ///
 /// This function knows that the SourceLocation is in a loaded buffer, not a
 /// local one.
@@ -1519,7 +1519,7 @@ PresumedLoc SourceManager::getPresumedLoc(SourceLocation Loc,
   return PresumedLoc(Filename.data(), LineNo, ColNo, IncludeLoc);
 }
 
-/// \brief Returns whether the PresumedLoc for a given SourceLocation is
+/// Returns whether the PresumedLoc for a given SourceLocation is
 /// in the main file.
 ///
 /// This computes the "presumed" location for a SourceLocation, then checks
@@ -1549,7 +1549,7 @@ bool SourceManager::isInMainFile(SourceLocation Loc) const {
   return FI.getIncludeLoc().isInvalid();
 }
 
-/// \brief The size of the SLocEntry that \p FID represents.
+/// The size of the SLocEntry that \p FID represents.
 unsigned SourceManager::getFileIDSize(FileID FID) const {
   bool Invalid = false;
   const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
@@ -1572,7 +1572,7 @@ unsigned SourceManager::getFileIDSize(FileID FID) const {
 // Other miscellaneous methods.
 //===----------------------------------------------------------------------===//
 
-/// \brief Retrieve the inode for the given file entry, if possible.
+/// Retrieve the inode for the given file entry, if possible.
 ///
 /// This routine involves a system call, and therefore should only be used
 /// in non-performance-critical code.
@@ -1588,7 +1588,7 @@ getActualFileUID(const FileEntry *File) {
   return ID;
 }
 
-/// \brief Get the source location for the given file:line:col triplet.
+/// Get the source location for the given file:line:col triplet.
 ///
 /// If the source file is included multiple times, the source location will
 /// be based upon an arbitrary inclusion.
@@ -1602,7 +1602,7 @@ SourceLocation SourceManager::translateFileLineCol(const FileEntry *SourceFile,
   return translateLineCol(FirstFID, Line, Col);
 }
 
-/// \brief Get the FileID for the given file.
+/// Get the FileID for the given file.
 ///
 /// If the source file is included multiple times, the FileID will be the
 /// first inclusion.
@@ -1719,7 +1719,7 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
   return FirstFID;
 }
 
-/// \brief Get the source location in \arg FID for the given line:col.
+/// Get the source location in \arg FID for the given line:col.
 /// Returns null location if \arg FID is not a file SLocEntry.
 SourceLocation SourceManager::translateLineCol(FileID FID,
                                                unsigned Line,
@@ -1780,7 +1780,7 @@ SourceLocation SourceManager::translateLineCol(FileID FID,
   return FileLoc.getLocWithOffset(FilePos + i);
 }
 
-/// \brief Compute a map of macro argument chunks to their expanded source
+/// Compute a map of macro argument chunks to their expanded source
 /// location. Chunks that are not part of a macro argument will map to an
 /// invalid source location. e.g. if a file contains one macro argument at
 /// offset 100 with length 10, this is how the map will be formed:
@@ -1919,7 +1919,7 @@ void SourceManager::associateFileChunkWithMacroArgExp(
   MacroArgsCache[EndOffs] = EndOffsMappedLoc;
 }
 
-/// \brief If \arg Loc points inside a function macro argument, the returned
+/// If \arg Loc points inside a function macro argument, the returned
 /// location will be the macro location in which the argument was expanded.
 /// If a macro argument is used multiple times, the expanded location will
 /// be at the first expansion of the argument.
@@ -2028,7 +2028,7 @@ InBeforeInTUCacheEntry &SourceManager::getInBeforeInTUCache(FileID LFID,
   return IBTUCacheOverflow;
 }
 
-/// \brief Determines the order of 2 source locations in the translation unit.
+/// Determines the order of 2 source locations in the translation unit.
 ///
 /// \returns true if LHS source location comes before RHS, false otherwise.
 bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,

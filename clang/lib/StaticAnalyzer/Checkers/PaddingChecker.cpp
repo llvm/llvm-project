@@ -67,7 +67,7 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  /// \brief Look for records of overly padded types. If padding *
+  /// Look for records of overly padded types. If padding *
   /// PadMultiplier exceeds AllowedPad, then generate a report.
   /// PadMultiplier is used to share code with the array padding
   /// checker.
@@ -97,7 +97,7 @@ public:
     reportRecord(RD, BaselinePad, OptimalPad, OptimalFieldsOrder);
   }
 
-  /// \brief Look for arrays of overly padded types. If the padding of the
+  /// Look for arrays of overly padded types. If the padding of the
   /// array type exceeds AllowedPad, then generate a report.
   void visitVariable(const VarDecl *VD) const {
     const ArrayType *ArrTy = VD->getType()->getAsArrayTypeUnsafe();

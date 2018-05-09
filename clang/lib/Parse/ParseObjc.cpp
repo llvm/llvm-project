@@ -2272,7 +2272,7 @@ void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
       P.ParseLexedObjCMethodDefs(*LateParsedObjCMethods[i], 
                                  false/*c-functions*/);
   
-  /// \brief Clear and free the cached objc methods.
+  /// Clear and free the cached objc methods.
   for (LateParsedObjCMethodContainer::iterator
          I = LateParsedObjCMethods.begin(),
          E = LateParsedObjCMethods.end(); I != E; ++I)
@@ -2864,7 +2864,7 @@ ExprResult Parser::ParseObjCAtExpression(SourceLocation AtLoc) {
   }
 }
 
-/// \brief Parse the receiver of an Objective-C++ message send.
+/// Parse the receiver of an Objective-C++ message send.
 ///
 /// This routine parses the receiver of a message send in
 /// Objective-C++ either as a type or as an expression. Note that this
@@ -2954,7 +2954,7 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
   return false;
 }
 
-/// \brief Determine whether the parser is currently referring to a an
+/// Determine whether the parser is currently referring to a an
 /// Objective-C message send, using a simplified heuristic to avoid overhead.
 ///
 /// This routine will only return true for a subset of valid message-send
@@ -3099,7 +3099,7 @@ ExprResult Parser::ParseObjCMessageExpression() {
                                         Res.get());
 }
 
-/// \brief Parse the remainder of an Objective-C message following the
+/// Parse the remainder of an Objective-C message following the
 /// '[' objc-receiver.
 ///
 /// This routine handles sends to super, class messages (sent to a

@@ -737,7 +737,7 @@ static void HandlePluralModifier(const Diagnostic &DInfo, unsigned ValNo,
   }
 }
 
-/// \brief Returns the friendly description for a token kind that will appear
+/// Returns the friendly description for a token kind that will appear
 /// without quotes in diagnostic messages. These strings may be translatable in
 /// future.
 static const char *getTokenDescForDiagnostic(tok::TokenKind Kind) {

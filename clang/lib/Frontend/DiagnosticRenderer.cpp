@@ -152,7 +152,7 @@ void DiagnosticRenderer::emitBasicNote(StringRef Message) {
                         Message, None, DiagOrStoredDiag());
 }
 
-/// \brief Prints an include stack when appropriate for a particular
+/// Prints an include stack when appropriate for a particular
 /// diagnostic level and location.
 ///
 /// This routine handles all the logic of suppressing particular include
@@ -186,7 +186,7 @@ void DiagnosticRenderer::emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
   }
 }
 
-/// \brief Helper to recursively walk up the include stack and print each layer
+/// Helper to recursively walk up the include stack and print each layer
 /// on the way back down.
 void DiagnosticRenderer::emitIncludeStackRecursively(FullSourceLoc Loc) {
   if (Loc.isInvalid()) {
@@ -216,7 +216,7 @@ void DiagnosticRenderer::emitIncludeStackRecursively(FullSourceLoc Loc) {
   emitIncludeLocation(Loc, PLoc);
 }
 
-/// \brief Emit the module import stack associated with the current location.
+/// Emit the module import stack associated with the current location.
 void DiagnosticRenderer::emitImportStack(FullSourceLoc Loc) {
   if (Loc.isInvalid()) {
     emitModuleBuildStack(Loc.getManager());
@@ -227,7 +227,7 @@ void DiagnosticRenderer::emitImportStack(FullSourceLoc Loc) {
   emitImportStackRecursively(NextImportLoc.first, NextImportLoc.second);
 }
 
-/// \brief Helper to recursively walk up the import stack and print each layer
+/// Helper to recursively walk up the import stack and print each layer
 /// on the way back down.
 void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
                                                     StringRef ModuleName) {
@@ -245,7 +245,7 @@ void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
   emitImportLocation(Loc, PLoc, ModuleName);
 }
 
-/// \brief Emit the module build stack, for cases where a module is (re-)built
+/// Emit the module build stack, for cases where a module is (re-)built
 /// on demand.
 void DiagnosticRenderer::emitModuleBuildStack(const SourceManager &SM) {
   ModuleBuildStack Stack = SM.getModuleBuildStack();
@@ -424,7 +424,7 @@ void DiagnosticRenderer::emitCaret(FullSourceLoc Loc,
   emitCodeContext(Loc, Level, SpellingRanges, Hints);
 }
 
-/// \brief A helper function for emitMacroExpansion to print the
+/// A helper function for emitMacroExpansion to print the
 /// macro expansion message
 void DiagnosticRenderer::emitSingleMacroExpansion(
     FullSourceLoc Loc, DiagnosticsEngine::Level Level,
@@ -512,7 +512,7 @@ static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
   return true;
 }
 
-/// \brief Recursively emit notes for each macro expansion and caret
+/// Recursively emit notes for each macro expansion and caret
 /// diagnostics where appropriate.
 ///
 /// Walks up the macro expansion stack printing expansion notes, the code

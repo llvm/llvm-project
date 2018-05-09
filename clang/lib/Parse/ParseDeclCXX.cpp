@@ -2109,7 +2109,7 @@ AccessSpecifier Parser::getAccessSpecifierIfPresent() const {
   }
 }
 
-/// \brief If the given declarator has any parts for which parsing has to be
+/// If the given declarator has any parts for which parsing has to be
 /// delayed, e.g., default arguments or an exception-specification, create a
 /// late-parsed method declaration record to handle the parsing at the end of
 /// the class definition.
@@ -2249,7 +2249,7 @@ bool Parser::isCXX11FinalKeyword() const {
          Specifier == VirtSpecifiers::VS_Sealed;
 }
 
-/// \brief Parse a C++ member-declarator up to, but not including, the optional
+/// Parse a C++ member-declarator up to, but not including, the optional
 /// brace-or-equal-initializer or pure-specifier.
 bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
@@ -2320,7 +2320,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   return false;
 }
 
-/// \brief Look for declaration specifiers possibly occurring after C++11
+/// Look for declaration specifiers possibly occurring after C++11
 /// virt-specifier-seq and diagnose them.
 void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
     Declarator &D,
@@ -3505,7 +3505,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     return Diag(Tok, diag::err_expected) << tok::l_paren;
 }
 
-/// \brief Parse a C++ exception-specification if present (C++0x [except.spec]).
+/// Parse a C++ exception-specification if present (C++0x [except.spec]).
 ///
 ///       exception-specification:
 ///         dynamic-exception-specification
@@ -3714,7 +3714,7 @@ TypeResult Parser::ParseTrailingReturnType(SourceRange &Range,
                                    : DeclaratorContext::TrailingReturnContext);
 }
 
-/// \brief We have just started parsing the definition of a new class,
+/// We have just started parsing the definition of a new class,
 /// so push that class onto our stack of classes that is currently
 /// being parsed.
 Sema::ParsingClassState
@@ -3726,7 +3726,7 @@ Parser::PushParsingClass(Decl *ClassDecl, bool NonNestedClass,
   return Actions.PushParsingClass();
 }
 
-/// \brief Deallocate the given parsed class and all of its nested
+/// Deallocate the given parsed class and all of its nested
 /// classes.
 void Parser::DeallocateParsedClasses(Parser::ParsingClass *Class) {
   for (unsigned I = 0, N = Class->LateParsedDeclarations.size(); I != N; ++I)
@@ -3734,7 +3734,7 @@ void Parser::DeallocateParsedClasses(Parser::ParsingClass *Class) {
   delete Class;
 }
 
-/// \brief Pop the top class of the stack of classes that are
+/// Pop the top class of the stack of classes that are
 /// currently being parsed.
 ///
 /// This routine should be called when we have finished parsing the
@@ -3772,7 +3772,7 @@ void Parser::PopParsingClass(Sema::ParsingClassState state) {
   Victim->TemplateScope = getCurScope()->getParent()->isTemplateParamScope();
 }
 
-/// \brief Try to parse an 'identifier' which appears within an attribute-token.
+/// Try to parse an 'identifier' which appears within an attribute-token.
 ///
 /// \return the parsed identifier on success, and 0 if the next token is not an
 /// attribute-token.

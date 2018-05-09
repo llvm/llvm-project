@@ -112,7 +112,7 @@ private:
 
   static bool isDigitSeparator(char C) { return C == '\''; }
 
-  /// \brief Determine whether the sequence of characters [Start, End) contains
+  /// Determine whether the sequence of characters [Start, End) contains
   /// any real digits (not digit separators).
   bool containsDigits(const char *Start, const char *End) {
     return Start != End && (Start + 1 != End || !isDigitSeparator(Start[0]));
@@ -120,7 +120,7 @@ private:
 
   enum CheckSeparatorKind { CSK_BeforeDigits, CSK_AfterDigits };
 
-  /// \brief Ensure that we don't have a digit separator here.
+  /// Ensure that we don't have a digit separator here.
   void checkSeparator(SourceLocation TokLoc, const char *Pos,
                       CheckSeparatorKind IsAfterDigits);
 

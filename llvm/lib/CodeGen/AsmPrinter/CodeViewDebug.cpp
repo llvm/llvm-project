@@ -2589,8 +2589,8 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
 
-  // Ignore DBG_VALUE locations and function prologue.
-  if (!Asm || !CurFn || MI->isDebugValue() ||
+  // Ignore DBG_VALUE and DBG_LABEL locations and function prologue.
+  if (!Asm || !CurFn || MI->isDebugInstr() ||
       MI->getFlag(MachineInstr::FrameSetup))
     return;
 
@@ -2599,7 +2599,7 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
   if (!DL && MI->getParent() != PrevInstBB) {
     for (const auto &NextMI : *MI->getParent()) {
-      if (NextMI.isDebugValue())
+      if (NextMI.isDebugInstr())
         continue;
       DL = NextMI.getDebugLoc();
       if (DL)

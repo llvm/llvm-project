@@ -467,8 +467,8 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
         return false;
     }
   }
-  // If DebugLoc does not match then two dbg.values are not identical.
-  if (isDebugValue())
+  // If DebugLoc does not match then two debug instructions are not identical.
+  if (isDebugInstr())
     if (getDebugLoc() && Other.getDebugLoc() &&
         getDebugLoc() != Other.getDebugLoc())
       return false;
@@ -611,6 +611,11 @@ int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
     ++Group;
   }
   return -1;
+}
+
+const DILabel *MachineInstr::getDebugLabel() const {
+  assert(isDebugLabel() && "not a DBG_LABEL");
+  return cast<DILabel>(getOperand(0).getMetadata());
 }
 
 const DILocalVariable *MachineInstr::getDebugVariable() const {
@@ -970,7 +975,7 @@ bool MachineInstr::isSafeToMove(AliasAnalysis *AA, bool &SawStore) const {
     return false;
   }
 
-  if (isPosition() || isDebugValue() || isTerminator() ||
+  if (isPosition() || isDebugInstr() || isTerminator() ||
       hasUnmodeledSideEffects())
     return false;
 
@@ -1383,6 +1388,17 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true, IsStandalone,
                  ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
       }
+    } else if (isDebugLabel() && MO.isMetadata()) {
+      // Pretty print DBG_LABEL instructions.
+      auto *DIL = dyn_cast<DILabel>(MO.getMetadata());
+      if (DIL && !DIL->getName().empty())
+        OS << "\"" << DIL->getName() << '\"';
+      else {
+        LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
+        unsigned TiedOperandIdx = getTiedOperandIdx(i);
+        MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true, IsStandalone,
+                 ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
+      }
     } else if (i == AsmDescOp && MO.isImm()) {
       // Pretty print the inline asm operand descriptor.
       OS << '$' << AsmOpCount++;
@@ -1518,6 +1534,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (isIndirectDebugValue())
       OS << " indirect";
   }
+  // TODO: DBG_LABEL
 
   if (AddNewLine)
     OS << '\n';

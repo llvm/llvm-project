@@ -19,23 +19,23 @@
 
 namespace clang {
 
-/// \brief This is a base class for callbacks that will be notified at every
+/// This is a base class for callbacks that will be notified at every
 /// template instantiation.
 class TemplateInstantiationCallback {
 public:
   virtual ~TemplateInstantiationCallback() = default;
 
-  /// \brief Called before doing AST-parsing.
+  /// Called before doing AST-parsing.
   virtual void initialize(const Sema &TheSema) = 0;
 
-  /// \brief Called after AST-parsing is completed.
+  /// Called after AST-parsing is completed.
   virtual void finalize(const Sema &TheSema) = 0;
 
-  /// \brief Called when instantiation of a template just began.
+  /// Called when instantiation of a template just began.
   virtual void atTemplateBegin(const Sema &TheSema,
                                const Sema::CodeSynthesisContext &Inst) = 0;
 
-  /// \brief Called when instantiation of a template is just about to end.
+  /// Called when instantiation of a template is just about to end.
   virtual void atTemplateEnd(const Sema &TheSema,
                              const Sema::CodeSynthesisContext &Inst) = 0;
 };

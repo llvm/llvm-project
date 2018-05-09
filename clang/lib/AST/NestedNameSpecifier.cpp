@@ -164,7 +164,7 @@ NestedNameSpecifier::SpecifierKind NestedNameSpecifier::getKind() const {
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-/// \brief Retrieve the namespace stored in this nested name specifier.
+/// Retrieve the namespace stored in this nested name specifier.
 NamespaceDecl *NestedNameSpecifier::getAsNamespace() const {
   if (Prefix.getInt() == StoredDecl)
     return dyn_cast<NamespaceDecl>(static_cast<NamedDecl *>(Specifier));
@@ -172,7 +172,7 @@ NamespaceDecl *NestedNameSpecifier::getAsNamespace() const {
   return nullptr;
 }
 
-/// \brief Retrieve the namespace alias stored in this nested name specifier.
+/// Retrieve the namespace alias stored in this nested name specifier.
 NamespaceAliasDecl *NestedNameSpecifier::getAsNamespaceAlias() const {
   if (Prefix.getInt() == StoredDecl)
     return dyn_cast<NamespaceAliasDecl>(static_cast<NamedDecl *>(Specifier));
@@ -180,7 +180,7 @@ NamespaceAliasDecl *NestedNameSpecifier::getAsNamespaceAlias() const {
   return nullptr;
 }
 
-/// \brief Retrieve the record declaration stored in this nested name specifier.
+/// Retrieve the record declaration stored in this nested name specifier.
 CXXRecordDecl *NestedNameSpecifier::getAsRecordDecl() const {
   switch (Prefix.getInt()) {
   case StoredIdentifier:
@@ -197,7 +197,7 @@ CXXRecordDecl *NestedNameSpecifier::getAsRecordDecl() const {
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-/// \brief Whether this nested name specifier refers to a dependent
+/// Whether this nested name specifier refers to a dependent
 /// type or not.
 bool NestedNameSpecifier::isDependent() const {
   switch (getKind()) {
@@ -227,7 +227,7 @@ bool NestedNameSpecifier::isDependent() const {
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-/// \brief Whether this nested name specifier refers to a dependent
+/// Whether this nested name specifier refers to a dependent
 /// type or not.
 bool NestedNameSpecifier::isInstantiationDependent() const {
   switch (getKind()) {
@@ -268,7 +268,7 @@ bool NestedNameSpecifier::containsUnexpandedParameterPack() const {
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-/// \brief Print this nested name specifier to the given output
+/// Print this nested name specifier to the given output
 /// stream.
 void
 NestedNameSpecifier::print(raw_ostream &OS,
@@ -387,7 +387,7 @@ NestedNameSpecifierLoc::getDataLength(NestedNameSpecifier *Qualifier) {
   return Length;
 }
 
-/// \brief Load a (possibly unaligned) source location from a given address
+/// Load a (possibly unaligned) source location from a given address
 /// and offset.
 static SourceLocation LoadSourceLocation(void *Data, unsigned Offset) {
   unsigned Raw;
@@ -395,7 +395,7 @@ static SourceLocation LoadSourceLocation(void *Data, unsigned Offset) {
   return SourceLocation::getFromRawEncoding(Raw);
 }
   
-/// \brief Load a (possibly unaligned) pointer from a given address and
+/// Load a (possibly unaligned) pointer from a given address and
 /// offset.
 static void *LoadPointer(void *Data, unsigned Offset) {
   void *Result;
@@ -479,7 +479,7 @@ static void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
   BufferSize += End-Start;
 }
   
-/// \brief Save a source location to the given buffer.
+/// Save a source location to the given buffer.
 static void SaveSourceLocation(SourceLocation Loc, char *&Buffer,
                                unsigned &BufferSize, unsigned &BufferCapacity) {
   unsigned Raw = Loc.getRawEncoding();
@@ -488,7 +488,7 @@ static void SaveSourceLocation(SourceLocation Loc, char *&Buffer,
          Buffer, BufferSize, BufferCapacity);
 }
   
-/// \brief Save a pointer to the given buffer.
+/// Save a pointer to the given buffer.
 static void SavePointer(void *Ptr, char *&Buffer, unsigned &BufferSize,
                         unsigned &BufferCapacity) {
   Append(reinterpret_cast<char *>(&Ptr),

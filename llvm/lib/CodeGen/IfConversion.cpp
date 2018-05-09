@@ -948,7 +948,7 @@ void IfConverter::ScanInstructions(BBInfo &BBI,
   BBI.ExtraCost2 = 0;
   BBI.ClobbersPred = false;
   for (MachineInstr &MI : make_range(Begin, End)) {
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
 
     // It's unsafe to duplicate convergent instructions in this context, so set
@@ -1726,14 +1726,14 @@ bool IfConverter::IfConvertDiamondCommon(
   for (unsigned i = 0; i < NumDups1; ++DI1) {
     if (DI1 == MBB1.end())
       break;
-    if (!DI1->isDebugValue())
+    if (!DI1->isDebugInstr())
       ++i;
   }
   while (NumDups1 != 0) {
     ++DI2;
     if (DI2 == MBB2.end())
       break;
-    if (!DI2->isDebugValue())
+    if (!DI2->isDebugInstr())
       --NumDups1;
   }
 
@@ -1767,7 +1767,7 @@ bool IfConverter::IfConvertDiamondCommon(
     assert(DI1 != MBB1.begin());
     --DI1;
     // skip dbg_value instructions
-    if (!DI1->isDebugValue())
+    if (!DI1->isDebugInstr())
       ++i;
   }
   MBB1.erase(DI1, MBB1.end());
@@ -1782,7 +1782,7 @@ bool IfConverter::IfConvertDiamondCommon(
     // instructions could be found.
     while (DI2 != MBB2.begin()) {
       MachineBasicBlock::iterator Prev = std::prev(DI2);
-      if (!Prev->isBranch() && !Prev->isDebugValue())
+      if (!Prev->isBranch() && !Prev->isDebugInstr())
         break;
       DI2 = Prev;
     }
@@ -1793,7 +1793,7 @@ bool IfConverter::IfConvertDiamondCommon(
     assert(DI2 != MBB2.begin());
     --DI2;
     // skip dbg_value instructions
-    if (!DI2->isDebugValue())
+    if (!DI2->isDebugInstr())
       --NumDups2;
   }
 
@@ -1809,7 +1809,7 @@ bool IfConverter::IfConvertDiamondCommon(
   SmallSet<unsigned, 4> ExtUses;
   if (TII->isProfitableToUnpredicate(MBB1, MBB2)) {
     for (const MachineInstr &FI : make_range(MBB2.begin(), DI2)) {
-      if (FI.isDebugValue())
+      if (FI.isDebugInstr())
         continue;
       SmallVector<unsigned, 4> Defs;
       for (const MachineOperand &MO : FI.operands()) {
@@ -2002,7 +2002,7 @@ void IfConverter::PredicateBlock(BBInfo &BBI,
   bool AnyUnpred = false;
   bool MaySpec = LaterRedefs != nullptr;
   for (MachineInstr &I : make_range(BBI.BB->begin(), E)) {
-    if (I.isDebugValue() || TII->isPredicated(I))
+    if (I.isDebugInstr() || TII->isPredicated(I))
       continue;
     // It may be possible not to predicate an instruction if it's the 'true'
     // side of a diamond and the 'false' side may re-define the instruction's
@@ -2058,7 +2058,7 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
       ToBBI.ExtraCost += NumCycles-1;
     ToBBI.ExtraCost2 += ExtraPredCost;
 
-    if (!TII->isPredicated(I) && !MI->isDebugValue()) {
+    if (!TII->isPredicated(I) && !MI->isDebugInstr()) {
       if (!TII->PredicateInstruction(*MI, Cond)) {
 #ifndef NDEBUG
         dbgs() << "Unable to predicate " << I << "!\n";

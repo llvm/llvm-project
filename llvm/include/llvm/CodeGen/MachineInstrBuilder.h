@@ -220,6 +220,9 @@ public:
     assert((MI->isDebugValue() ? static_cast<bool>(MI->getDebugVariable())
                                : true) &&
            "first MDNode argument of a DBG_VALUE not a variable");
+    assert((MI->isDebugLabel() ? static_cast<bool>(MI->getDebugLabel())
+                               : true) &&
+           "first MDNode argument of a DBG_LABEL not a label");
     return *this;
   }
 

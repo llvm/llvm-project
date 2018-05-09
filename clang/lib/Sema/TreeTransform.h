@@ -41,7 +41,7 @@
 namespace clang {
 using namespace sema;
 
-/// \brief A semantic tree transformation that allows one to transform one
+/// A semantic tree transformation that allows one to transform one
 /// abstract syntax tree into another.
 ///
 /// A new tree transformation is defined by creating a new subclass \c X of
@@ -94,7 +94,7 @@ using namespace sema;
 /// (\c getBaseLocation(), \c getBaseEntity()).
 template<typename Derived>
 class TreeTransform {
-  /// \brief Private RAII object that helps us forget and then re-remember
+  /// Private RAII object that helps us forget and then re-remember
   /// the template argument corresponding to a partially-substituted parameter
   /// pack.
   class ForgetPartiallySubstitutedPackRAII {
@@ -114,19 +114,19 @@ class TreeTransform {
 protected:
   Sema &SemaRef;
 
-  /// \brief The set of local declarations that have been transformed, for
+  /// The set of local declarations that have been transformed, for
   /// cases where we are forced to build new declarations within the transformer
   /// rather than in the subclass (e.g., lambda closure types).
   llvm::DenseMap<Decl *, Decl *> TransformedLocalDecls;
 
 public:
-  /// \brief Initializes a new tree transformer.
+  /// Initializes a new tree transformer.
   TreeTransform(Sema &SemaRef) : SemaRef(SemaRef) { }
 
-  /// \brief Retrieves a reference to the derived class.
+  /// Retrieves a reference to the derived class.
   Derived &getDerived() { return static_cast<Derived&>(*this); }
 
-  /// \brief Retrieves a reference to the derived class.
+  /// Retrieves a reference to the derived class.
   const Derived &getDerived() const {
     return static_cast<const Derived&>(*this);
   }
@@ -134,11 +134,11 @@ public:
   static inline ExprResult Owned(Expr *E) { return E; }
   static inline StmtResult Owned(Stmt *S) { return S; }
 
-  /// \brief Retrieves a reference to the semantic analysis object used for
+  /// Retrieves a reference to the semantic analysis object used for
   /// this tree transform.
   Sema &getSema() const { return SemaRef; }
 
-  /// \brief Whether the transformation should always rebuild AST nodes, even
+  /// Whether the transformation should always rebuild AST nodes, even
   /// if none of the children have changed.
   ///
   /// Subclasses may override this function to specify when the transformation
@@ -149,7 +149,7 @@ public:
   /// statement node appears at most once in its containing declaration.
   bool AlwaysRebuild() { return SemaRef.ArgumentPackSubstitutionIndex != -1; }
 
-  /// \brief Returns the location of the entity being transformed, if that
+  /// Returns the location of the entity being transformed, if that
   /// information was not available elsewhere in the AST.
   ///
   /// By default, returns no source-location information. Subclasses can
@@ -157,21 +157,21 @@ public:
   /// information.
   SourceLocation getBaseLocation() { return SourceLocation(); }
 
-  /// \brief Returns the name of the entity being transformed, if that
+  /// Returns the name of the entity being transformed, if that
   /// information was not available elsewhere in the AST.
   ///
   /// By default, returns an empty name. Subclasses can provide an alternative
   /// implementation with a more precise name.
   DeclarationName getBaseEntity() { return DeclarationName(); }
 
-  /// \brief Sets the "base" location and entity when that
+  /// Sets the "base" location and entity when that
   /// information is known based on another transformation.
   ///
   /// By default, the source location and entity are ignored. Subclasses can
   /// override this function to provide a customized implementation.
   void setBase(SourceLocation Loc, DeclarationName Entity) { }
 
-  /// \brief RAII object that temporarily sets the base location and entity
+  /// RAII object that temporarily sets the base location and entity
   /// used for reporting diagnostics in types.
   class TemporaryBase {
     TreeTransform &Self;
@@ -193,7 +193,7 @@ public:
     }
   };
 
-  /// \brief Determine whether the given type \p T has already been
+  /// Determine whether the given type \p T has already been
   /// transformed.
   ///
   /// Subclasses can provide an alternative implementation of this routine
@@ -204,7 +204,7 @@ public:
     return T.isNull();
   }
 
-  /// \brief Determine whether the given call argument should be dropped, e.g.,
+  /// Determine whether the given call argument should be dropped, e.g.,
   /// because it is a default argument.
   ///
   /// Subclasses can provide an alternative implementation of this routine to
@@ -214,7 +214,7 @@ public:
     return E->isDefaultArgument();
   }
 
-  /// \brief Determine whether we should expand a pack expansion with the
+  /// Determine whether we should expand a pack expansion with the
   /// given set of parameter packs into separate arguments by repeatedly
   /// transforming the pattern.
   ///
@@ -261,7 +261,7 @@ public:
     return false;
   }
 
-  /// \brief "Forget" about the partially-substituted pack template argument,
+  /// "Forget" about the partially-substituted pack template argument,
   /// when performing an instantiation that must preserve the parameter pack
   /// use.
   ///
@@ -270,18 +270,18 @@ public:
     return TemplateArgument();
   }
 
-  /// \brief "Remember" the partially-substituted pack template argument
+  /// "Remember" the partially-substituted pack template argument
   /// after performing an instantiation that must preserve the parameter pack
   /// use.
   ///
   /// This routine is meant to be overridden by the template instantiator.
   void RememberPartiallySubstitutedPack(TemplateArgument Arg) { }
 
-  /// \brief Note to the derived class when a function parameter pack is
+  /// Note to the derived class when a function parameter pack is
   /// being expanded.
   void ExpandingFunctionParameterPack(ParmVarDecl *Pack) { }
 
-  /// \brief Transforms the given type into another type.
+  /// Transforms the given type into another type.
   ///
   /// By default, this routine transforms a type by creating a
   /// TypeSourceInfo for it and delegating to the appropriate
@@ -292,7 +292,7 @@ public:
   /// \returns the transformed type.
   QualType TransformType(QualType T);
 
-  /// \brief Transforms the given type-with-location into a new
+  /// Transforms the given type-with-location into a new
   /// type-with-location.
   ///
   /// By default, this routine transforms a type by delegating to the
@@ -302,13 +302,13 @@ public:
   /// to alter the transformation.
   TypeSourceInfo *TransformType(TypeSourceInfo *DI);
 
-  /// \brief Transform the given type-with-location into a new
+  /// Transform the given type-with-location into a new
   /// type, collecting location information in the given builder
   /// as necessary.
   ///
   QualType TransformType(TypeLocBuilder &TLB, TypeLoc TL);
 
-  /// \brief Transform a type that is permitted to produce a
+  /// Transform a type that is permitted to produce a
   /// DeducedTemplateSpecializationType.
   ///
   /// This is used in the (relatively rare) contexts where it is acceptable
@@ -319,7 +319,7 @@ public:
   TypeSourceInfo *TransformTypeWithDeducedTST(TypeSourceInfo *DI);
   /// @}
 
-  /// \brief Transform the given statement.
+  /// Transform the given statement.
   ///
   /// By default, this routine transforms a statement by delegating to the
   /// appropriate TransformXXXStmt function to transform a specific kind of
@@ -330,7 +330,7 @@ public:
   /// \returns the transformed statement.
   StmtResult TransformStmt(Stmt *S);
 
-  /// \brief Transform the given statement.
+  /// Transform the given statement.
   ///
   /// By default, this routine transforms a statement by delegating to the
   /// appropriate TransformOMPXXXClause function to transform a specific kind
@@ -340,7 +340,7 @@ public:
   /// \returns the transformed OpenMP clause.
   OMPClause *TransformOMPClause(OMPClause *S);
 
-  /// \brief Transform the given attribute.
+  /// Transform the given attribute.
   ///
   /// By default, this routine transforms a statement by delegating to the
   /// appropriate TransformXXXAttr function to transform a specific kind
@@ -350,7 +350,7 @@ public:
   /// \returns the transformed attribute
   const Attr *TransformAttr(const Attr *S);
 
-/// \brief Transform the specified attribute.
+/// Transform the specified attribute.
 ///
 /// Subclasses should override the transformation of attributes with a pragma
 /// spelling to transform expressions stored within the attribute.
@@ -361,7 +361,7 @@ public:
   const X##Attr *Transform##X##Attr(const X##Attr *R) { return R; }
 #include "clang/Basic/AttrList.inc"
 
-  /// \brief Transform the given expression.
+  /// Transform the given expression.
   ///
   /// By default, this routine transforms an expression by delegating to the
   /// appropriate TransformXXXExpr function to build a new expression.
@@ -371,7 +371,7 @@ public:
   /// \returns the transformed expression.
   ExprResult TransformExpr(Expr *E);
 
-  /// \brief Transform the given initializer.
+  /// Transform the given initializer.
   ///
   /// By default, this routine transforms an initializer by stripping off the
   /// semantic nodes added by initialization, then passing the result to
@@ -380,7 +380,7 @@ public:
   /// \returns the transformed initializer.
   ExprResult TransformInitializer(Expr *Init, bool NotCopyInit);
 
-  /// \brief Transform the given list of expressions.
+  /// Transform the given list of expressions.
   ///
   /// This routine transforms a list of expressions by invoking
   /// \c TransformExpr() for each subexpression. However, it also provides
@@ -407,7 +407,7 @@ public:
                       SmallVectorImpl<Expr *> &Outputs,
                       bool *ArgChanged = nullptr);
 
-  /// \brief Transform the given declaration, which is referenced from a type
+  /// Transform the given declaration, which is referenced from a type
   /// or expression.
   ///
   /// By default, acts as the identity function on declarations, unless the
@@ -422,7 +422,7 @@ public:
     return D;
   }
 
-  /// \brief Transform the specified condition.
+  /// Transform the specified condition.
   ///
   /// By default, this transforms the variable and expression and rebuilds
   /// the condition.
@@ -430,14 +430,14 @@ public:
                                            Expr *Expr,
                                            Sema::ConditionKind Kind);
 
-  /// \brief Transform the attributes associated with the given declaration and
+  /// Transform the attributes associated with the given declaration and
   /// place them on the new declaration.
   ///
   /// By default, this operation does nothing. Subclasses may override this
   /// behavior to transform attributes.
   void transformAttrs(Decl *Old, Decl *New) { }
 
-  /// \brief Note that a local declaration has been transformed by this
+  /// Note that a local declaration has been transformed by this
   /// transformer.
   ///
   /// Local declarations are typically transformed via a call to
@@ -448,7 +448,7 @@ public:
     TransformedLocalDecls[Old] = New;
   }
 
-  /// \brief Transform the definition of the given declaration.
+  /// Transform the definition of the given declaration.
   ///
   /// By default, invokes TransformDecl() to transform the declaration.
   /// Subclasses may override this function to provide alternate behavior.
@@ -456,7 +456,7 @@ public:
     return getDerived().TransformDecl(Loc, D);
   }
 
-  /// \brief Transform the given declaration, which was the first part of a
+  /// Transform the given declaration, which was the first part of a
   /// nested-name-specifier in a member access expression.
   ///
   /// This specific declaration transformation only applies to the first
@@ -473,7 +473,7 @@ public:
   bool TransformOverloadExprDecls(OverloadExpr *Old, bool RequiresADL,
                                   LookupResult &R);
 
-  /// \brief Transform the given nested-name-specifier with source-location
+  /// Transform the given nested-name-specifier with source-location
   /// information.
   ///
   /// By default, transforms all of the types and declarations within the
@@ -484,7 +484,7 @@ public:
                                   QualType ObjectType = QualType(),
                                   NamedDecl *FirstQualifierInScope = nullptr);
 
-  /// \brief Transform the given declaration name.
+  /// Transform the given declaration name.
   ///
   /// By default, transforms the types of conversion function, constructor,
   /// and destructor names and then (if needed) rebuilds the declaration name.
@@ -493,7 +493,7 @@ public:
   DeclarationNameInfo
   TransformDeclarationNameInfo(const DeclarationNameInfo &NameInfo);
 
-  /// \brief Transform the given template name.
+  /// Transform the given template name.
   ///
   /// \param SS The nested-name-specifier that qualifies the template
   /// name. This nested-name-specifier must already have been transformed.
@@ -520,7 +520,7 @@ public:
                         NamedDecl *FirstQualifierInScope = nullptr,
                         bool AllowInjectedClassName = false);
 
-  /// \brief Transform the given template argument.
+  /// Transform the given template argument.
   ///
   /// By default, this operation transforms the type, expression, or
   /// declaration stored within the template argument and constructs a
@@ -532,7 +532,7 @@ public:
                                  TemplateArgumentLoc &Output,
                                  bool Uneval = false);
 
-  /// \brief Transform the given set of template arguments.
+  /// Transform the given set of template arguments.
   ///
   /// By default, this operation transforms all of the template arguments
   /// in the input set using \c TransformTemplateArgument(), and appends
@@ -558,7 +558,7 @@ public:
                                       Uneval);
   }
 
-  /// \brief Transform the given set of template arguments.
+  /// Transform the given set of template arguments.
   ///
   /// By default, this operation transforms all of the template arguments
   /// in the input set using \c TransformTemplateArgument(), and appends
@@ -578,11 +578,11 @@ public:
                                   TemplateArgumentListInfo &Outputs,
                                   bool Uneval = false);
 
-  /// \brief Fakes up a TemplateArgumentLoc for a given TemplateArgument.
+  /// Fakes up a TemplateArgumentLoc for a given TemplateArgument.
   void InventTemplateArgumentLoc(const TemplateArgument &Arg,
                                  TemplateArgumentLoc &ArgLoc);
 
-  /// \brief Fakes up a TypeSourceInfo for a type.
+  /// Fakes up a TypeSourceInfo for a type.
   TypeSourceInfo *InventTypeSourceInfo(QualType T) {
     return SemaRef.Context.getTrivialTypeSourceInfo(T,
                        getDerived().getBaseLocation());
@@ -622,7 +622,7 @@ public:
       TypeLocBuilder &TLB, DependentTemplateSpecializationTypeLoc TL,
       NestedNameSpecifierLoc QualifierLoc);
 
-  /// \brief Transforms the parameters of a function type into the
+  /// Transforms the parameters of a function type into the
   /// given vectors.
   ///
   /// The result vectors should be kept in sync; null entries in the
@@ -636,7 +636,7 @@ public:
       SmallVectorImpl<QualType> &PTypes, SmallVectorImpl<ParmVarDecl *> *PVars,
       Sema::ExtParameterInfoBuilder &PInfos);
 
-  /// \brief Transforms a single function-type parameter.  Return null
+  /// Transforms a single function-type parameter.  Return null
   /// on error.
   ///
   /// \param indexAdjustment - A number to add to the parameter's
@@ -684,7 +684,7 @@ public:
   OMPClause *Transform ## Class(Class *S);
 #include "clang/Basic/OpenMPKinds.def"
 
-  /// \brief Build a new qualified type given its unqualified type and type
+  /// Build a new qualified type given its unqualified type and type
   /// qualifiers.
   ///
   /// By default, this routine adds type qualifiers only to types that can
@@ -694,19 +694,19 @@ public:
   QualType RebuildQualifiedType(QualType T, SourceLocation Loc,
                                 Qualifiers Quals);
 
-  /// \brief Build a new pointer type given its pointee type.
+  /// Build a new pointer type given its pointee type.
   ///
   /// By default, performs semantic analysis when building the pointer type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildPointerType(QualType PointeeType, SourceLocation Sigil);
 
-  /// \brief Build a new block pointer type given its pointee type.
+  /// Build a new block pointer type given its pointee type.
   ///
   /// By default, performs semantic analysis when building the block pointer
   /// type. Subclasses may override this routine to provide different behavior.
   QualType RebuildBlockPointerType(QualType PointeeType, SourceLocation Sigil);
 
-  /// \brief Build a new reference type given the type it references.
+  /// Build a new reference type given the type it references.
   ///
   /// By default, performs semantic analysis when building the
   /// reference type. Subclasses may override this routine to provide
@@ -718,7 +718,7 @@ public:
                                 bool LValue,
                                 SourceLocation Sigil);
 
-  /// \brief Build a new member pointer type given the pointee type and the
+  /// Build a new member pointer type given the pointee type and the
   /// class type it refers into.
   ///
   /// By default, performs semantic analysis when building the member pointer
@@ -732,7 +732,7 @@ public:
                                     ArrayRef<SourceLocation> ProtocolLocs,
                                     SourceLocation ProtocolRAngleLoc);
 
-  /// \brief Build an Objective-C object type.
+  /// Build an Objective-C object type.
   ///
   /// By default, performs semantic analysis when building the object type.
   /// Subclasses may override this routine to provide different behavior.
@@ -746,14 +746,14 @@ public:
                                  ArrayRef<SourceLocation> ProtocolLocs,
                                  SourceLocation ProtocolRAngleLoc);
 
-  /// \brief Build a new Objective-C object pointer type given the pointee type.
+  /// Build a new Objective-C object pointer type given the pointee type.
   ///
   /// By default, directly builds the pointer type, with no additional semantic
   /// analysis.
   QualType RebuildObjCObjectPointerType(QualType PointeeType,
                                         SourceLocation Star);
 
-  /// \brief Build a new array type given the element type, size
+  /// Build a new array type given the element type, size
   /// modifier, size of the array (if known), size expression, and index type
   /// qualifiers.
   ///
@@ -767,7 +767,7 @@ public:
                             unsigned IndexTypeQuals,
                             SourceRange BracketsRange);
 
-  /// \brief Build a new constant array type given the element type, size
+  /// Build a new constant array type given the element type, size
   /// modifier, (known) size of the array, and index type qualifiers.
   ///
   /// By default, performs semantic analysis when building the array type.
@@ -778,7 +778,7 @@ public:
                                     unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
 
-  /// \brief Build a new incomplete array type given the element type, size
+  /// Build a new incomplete array type given the element type, size
   /// modifier, and index type qualifiers.
   ///
   /// By default, performs semantic analysis when building the array type.
@@ -788,7 +788,7 @@ public:
                                       unsigned IndexTypeQuals,
                                       SourceRange BracketsRange);
 
-  /// \brief Build a new variable-length array type given the element type,
+  /// Build a new variable-length array type given the element type,
   /// size modifier, size expression, and index type qualifiers.
   ///
   /// By default, performs semantic analysis when building the array type.
@@ -799,7 +799,7 @@ public:
                                     unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
 
-  /// \brief Build a new dependent-sized array type given the element type,
+  /// Build a new dependent-sized array type given the element type,
   /// size modifier, size expression, and index type qualifiers.
   ///
   /// By default, performs semantic analysis when building the array type.
@@ -810,7 +810,7 @@ public:
                                           unsigned IndexTypeQuals,
                                           SourceRange BracketsRange);
 
-  /// \brief Build a new vector type given the element type and
+  /// Build a new vector type given the element type and
   /// number of elements.
   ///
   /// By default, performs semantic analysis when building the vector type.
@@ -818,7 +818,7 @@ public:
   QualType RebuildVectorType(QualType ElementType, unsigned NumElements,
                              VectorType::VectorKind VecKind);
 
-  /// \brief Build a new extended vector type given the element type and
+  /// Build a new extended vector type given the element type and
   /// number of elements.
   ///
   /// By default, performs semantic analysis when building the vector type.
@@ -826,7 +826,7 @@ public:
   QualType RebuildExtVectorType(QualType ElementType, unsigned NumElements,
                                 SourceLocation AttributeLoc);
 
-  /// \brief Build a new potentially dependently-sized extended vector type
+  /// Build a new potentially dependently-sized extended vector type
   /// given the element type and number of elements.
   ///
   /// By default, performs semantic analysis when building the vector type.
@@ -835,7 +835,7 @@ public:
                                               Expr *SizeExpr,
                                               SourceLocation AttributeLoc);
 
-  /// \brief Build a new DependentAddressSpaceType or return the pointee
+  /// Build a new DependentAddressSpaceType or return the pointee
   /// type variable with the correct address space (retrieved from
   /// AddrSpaceExpr) applied to it. The former will be returned in cases
   /// where the address space remains dependent.
@@ -847,7 +847,7 @@ public:
                                             Expr *AddrSpaceExpr,
                                             SourceLocation AttributeLoc);
 
-  /// \brief Build a new function type.
+  /// Build a new function type.
   ///
   /// By default, performs semantic analysis when building the function type.
   /// Subclasses may override this routine to provide different behavior.
@@ -855,51 +855,51 @@ public:
                                     MutableArrayRef<QualType> ParamTypes,
                                     const FunctionProtoType::ExtProtoInfo &EPI);
 
-  /// \brief Build a new unprototyped function type.
+  /// Build a new unprototyped function type.
   QualType RebuildFunctionNoProtoType(QualType ResultType);
 
-  /// \brief Rebuild an unresolved typename type, given the decl that
+  /// Rebuild an unresolved typename type, given the decl that
   /// the UnresolvedUsingTypenameDecl was transformed to.
   QualType RebuildUnresolvedUsingType(SourceLocation NameLoc, Decl *D);
 
-  /// \brief Build a new typedef type.
+  /// Build a new typedef type.
   QualType RebuildTypedefType(TypedefNameDecl *Typedef) {
     return SemaRef.Context.getTypeDeclType(Typedef);
   }
 
-  /// \brief Build a new class/struct/union type.
+  /// Build a new class/struct/union type.
   QualType RebuildRecordType(RecordDecl *Record) {
     return SemaRef.Context.getTypeDeclType(Record);
   }
 
-  /// \brief Build a new Enum type.
+  /// Build a new Enum type.
   QualType RebuildEnumType(EnumDecl *Enum) {
     return SemaRef.Context.getTypeDeclType(Enum);
   }
 
-  /// \brief Build a new typeof(expr) type.
+  /// Build a new typeof(expr) type.
   ///
   /// By default, performs semantic analysis when building the typeof type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildTypeOfExprType(Expr *Underlying, SourceLocation Loc);
 
-  /// \brief Build a new typeof(type) type.
+  /// Build a new typeof(type) type.
   ///
   /// By default, builds a new TypeOfType with the given underlying type.
   QualType RebuildTypeOfType(QualType Underlying);
 
-  /// \brief Build a new unary transform type.
+  /// Build a new unary transform type.
   QualType RebuildUnaryTransformType(QualType BaseType,
                                      UnaryTransformType::UTTKind UKind,
                                      SourceLocation Loc);
 
-  /// \brief Build a new C++11 decltype type.
+  /// Build a new C++11 decltype type.
   ///
   /// By default, performs semantic analysis when building the decltype type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildDecltypeType(Expr *Underlying, SourceLocation Loc);
 
-  /// \brief Build a new C++11 auto type.
+  /// Build a new C++11 auto type.
   ///
   /// By default, builds a new AutoType with the given deduced type.
   QualType RebuildAutoType(QualType Deduced, AutoTypeKeyword Keyword) {
@@ -918,7 +918,7 @@ public:
         Template, Deduced, /*IsDependent*/ false);
   }
 
-  /// \brief Build a new template specialization type.
+  /// Build a new template specialization type.
   ///
   /// By default, performs semantic analysis when building the template
   /// specialization type. Subclasses may override this routine to provide
@@ -927,7 +927,7 @@ public:
                                              SourceLocation TemplateLoc,
                                              TemplateArgumentListInfo &Args);
 
-  /// \brief Build a new parenthesized type.
+  /// Build a new parenthesized type.
   ///
   /// By default, builds a new ParenType type from the inner type.
   /// Subclasses may override this routine to provide different behavior.
@@ -935,7 +935,7 @@ public:
     return SemaRef.BuildParenType(InnerType);
   }
 
-  /// \brief Build a new qualified name type.
+  /// Build a new qualified name type.
   ///
   /// By default, builds a new ElaboratedType type from the keyword,
   /// the nested-name-specifier and the named type.
@@ -949,7 +949,7 @@ public:
                                              Named);
   }
 
-  /// \brief Build a new typename type that refers to a template-id.
+  /// Build a new typename type that refers to a template-id.
   ///
   /// By default, builds a new DependentNameType type from the
   /// nested-name-specifier and the given type. Subclasses may override
@@ -993,7 +993,7 @@ public:
                                              T);
   }
 
-  /// \brief Build a new typename type that refers to an identifier.
+  /// Build a new typename type that refers to an identifier.
   ///
   /// By default, performs semantic analysis when building the typename type
   /// (or elaborated type). Subclasses may override this routine to provide
@@ -1106,7 +1106,7 @@ public:
                                              T);
   }
 
-  /// \brief Build a new pack expansion type.
+  /// Build a new pack expansion type.
   ///
   /// By default, builds a new PackExpansionType type from the given pattern.
   /// Subclasses may override this routine to provide different behavior.
@@ -1118,17 +1118,17 @@ public:
                                         NumExpansions);
   }
 
-  /// \brief Build a new atomic type given its value type.
+  /// Build a new atomic type given its value type.
   ///
   /// By default, performs semantic analysis when building the atomic type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildAtomicType(QualType ValueType, SourceLocation KWLoc);
 
-  /// \brief Build a new pipe type given its value type.
+  /// Build a new pipe type given its value type.
   QualType RebuildPipeType(QualType ValueType, SourceLocation KWLoc,
                            bool isReadPipe);
 
-  /// \brief Build a new template name given a nested name specifier, a flag
+  /// Build a new template name given a nested name specifier, a flag
   /// indicating whether the "template" keyword was provided, and the template
   /// that the template name refers to.
   ///
@@ -1138,7 +1138,7 @@ public:
                                    bool TemplateKW,
                                    TemplateDecl *Template);
 
-  /// \brief Build a new template name given a nested name specifier and the
+  /// Build a new template name given a nested name specifier and the
   /// name that is referred to as a template.
   ///
   /// By default, performs semantic analysis to determine whether the name can
@@ -1152,7 +1152,7 @@ public:
                                    NamedDecl *FirstQualifierInScope,
                                    bool AllowInjectedClassName);
 
-  /// \brief Build a new template name given a nested name specifier and the
+  /// Build a new template name given a nested name specifier and the
   /// overloaded operator name that is referred to as a template.
   ///
   /// By default, performs semantic analysis to determine whether the name can
@@ -1165,7 +1165,7 @@ public:
                                    QualType ObjectType,
                                    bool AllowInjectedClassName);
 
-  /// \brief Build a new template name given a template template parameter pack
+  /// Build a new template name given a template template parameter pack
   /// and the
   ///
   /// By default, performs semantic analysis to determine whether the name can
@@ -1177,7 +1177,7 @@ public:
     return getSema().Context.getSubstTemplateTemplateParmPack(Param, ArgPack);
   }
 
-  /// \brief Build a new compound statement.
+  /// Build a new compound statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1189,7 +1189,7 @@ public:
                                        IsStmtExpr);
   }
 
-  /// \brief Build a new case statement.
+  /// Build a new case statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1202,7 +1202,7 @@ public:
                                    ColonLoc);
   }
 
-  /// \brief Attach the body to a new case statement.
+  /// Attach the body to a new case statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1211,7 +1211,7 @@ public:
     return S;
   }
 
-  /// \brief Build a new default statement.
+  /// Build a new default statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1222,7 +1222,7 @@ public:
                                       /*CurScope=*/nullptr);
   }
 
-  /// \brief Build a new label statement.
+  /// Build a new label statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1231,7 +1231,7 @@ public:
     return SemaRef.ActOnLabelStmt(IdentLoc, L, ColonLoc, SubStmt);
   }
 
-  /// \brief Build a new label statement.
+  /// Build a new label statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1241,7 +1241,7 @@ public:
     return SemaRef.ActOnAttributedStmt(AttrLoc, Attrs, SubStmt);
   }
 
-  /// \brief Build a new "if" statement.
+  /// Build a new "if" statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1252,7 +1252,7 @@ public:
                                  ElseLoc, Else);
   }
 
-  /// \brief Start building a new switch statement.
+  /// Start building a new switch statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1261,7 +1261,7 @@ public:
     return getSema().ActOnStartOfSwitchStmt(SwitchLoc, Init, Cond);
   }
 
-  /// \brief Attach the body to the switch statement.
+  /// Attach the body to the switch statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1270,7 +1270,7 @@ public:
     return getSema().ActOnFinishSwitchStmt(SwitchLoc, Switch, Body);
   }
 
-  /// \brief Build a new while statement.
+  /// Build a new while statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1279,7 +1279,7 @@ public:
     return getSema().ActOnWhileStmt(WhileLoc, Cond, Body);
   }
 
-  /// \brief Build a new do-while statement.
+  /// Build a new do-while statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1290,7 +1290,7 @@ public:
                                  Cond, RParenLoc);
   }
 
-  /// \brief Build a new for statement.
+  /// Build a new for statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1302,7 +1302,7 @@ public:
                                   Inc, RParenLoc, Body);
   }
 
-  /// \brief Build a new goto statement.
+  /// Build a new goto statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1311,7 +1311,7 @@ public:
     return getSema().ActOnGotoStmt(GotoLoc, LabelLoc, Label);
   }
 
-  /// \brief Build a new indirect goto statement.
+  /// Build a new indirect goto statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1321,7 +1321,7 @@ public:
     return getSema().ActOnIndirectGotoStmt(GotoLoc, StarLoc, Target);
   }
 
-  /// \brief Build a new return statement.
+  /// Build a new return statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1329,7 +1329,7 @@ public:
     return getSema().BuildReturnStmt(ReturnLoc, Result);
   }
 
-  /// \brief Build a new declaration statement.
+  /// Build a new declaration statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1339,7 +1339,7 @@ public:
     return getSema().ActOnDeclStmt(DG, StartLoc, EndLoc);
   }
 
-  /// \brief Build a new inline asm statement.
+  /// Build a new inline asm statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1354,7 +1354,7 @@ public:
                                      AsmString, Clobbers, RParenLoc);
   }
 
-  /// \brief Build a new MS style inline asm statement.
+  /// Build a new MS style inline asm statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1371,7 +1371,7 @@ public:
                                     Constraints, Clobbers, Exprs, EndLoc);
   }
 
-  /// \brief Build a new co_return statement.
+  /// Build a new co_return statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1380,7 +1380,7 @@ public:
     return getSema().BuildCoreturnStmt(CoreturnLoc, Result, IsImplicit);
   }
 
-  /// \brief Build a new co_await expression.
+  /// Build a new co_await expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -1389,7 +1389,7 @@ public:
     return getSema().BuildResolvedCoawaitExpr(CoawaitLoc, Result, IsImplicit);
   }
 
-  /// \brief Build a new co_await expression.
+  /// Build a new co_await expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -1399,7 +1399,7 @@ public:
     return getSema().BuildUnresolvedCoawaitExpr(CoawaitLoc, Result, Lookup);
   }
 
-  /// \brief Build a new co_yield expression.
+  /// Build a new co_yield expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -1411,7 +1411,7 @@ public:
     return getSema().BuildCoroutineBodyStmt(Args);
   }
 
-  /// \brief Build a new Objective-C \@try statement.
+  /// Build a new Objective-C \@try statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1423,7 +1423,7 @@ public:
                                         Finally);
   }
 
-  /// \brief Rebuild an Objective-C exception declaration.
+  /// Rebuild an Objective-C exception declaration.
   ///
   /// By default, performs semantic analysis to build the new declaration.
   /// Subclasses may override this routine to provide different behavior.
@@ -1435,7 +1435,7 @@ public:
                                             ExceptionDecl->getIdentifier());
   }
 
-  /// \brief Build a new Objective-C \@catch statement.
+  /// Build a new Objective-C \@catch statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1447,7 +1447,7 @@ public:
                                           Var, Body);
   }
 
-  /// \brief Build a new Objective-C \@finally statement.
+  /// Build a new Objective-C \@finally statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1456,7 +1456,7 @@ public:
     return getSema().ActOnObjCAtFinallyStmt(AtLoc, Body);
   }
 
-  /// \brief Build a new Objective-C \@throw statement.
+  /// Build a new Objective-C \@throw statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1465,7 +1465,7 @@ public:
     return getSema().BuildObjCAtThrowStmt(AtLoc, Operand);
   }
 
-  /// \brief Build a new OpenMP executable directive.
+  /// Build a new OpenMP executable directive.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1479,7 +1479,7 @@ public:
         Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'if' clause.
+  /// Build a new OpenMP 'if' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1494,7 +1494,7 @@ public:
                                          EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'final' clause.
+  /// Build a new OpenMP 'final' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1505,7 +1505,7 @@ public:
                                             EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'num_threads' clause.
+  /// Build a new OpenMP 'num_threads' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1517,7 +1517,7 @@ public:
                                                  LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'safelen' clause.
+  /// Build a new OpenMP 'safelen' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1527,7 +1527,7 @@ public:
     return getSema().ActOnOpenMPSafelenClause(Len, StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'simdlen' clause.
+  /// Build a new OpenMP 'simdlen' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1537,7 +1537,7 @@ public:
     return getSema().ActOnOpenMPSimdlenClause(Len, StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'collapse' clause.
+  /// Build a new OpenMP 'collapse' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1548,7 +1548,7 @@ public:
                                                EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'default' clause.
+  /// Build a new OpenMP 'default' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1561,7 +1561,7 @@ public:
                                               StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'proc_bind' clause.
+  /// Build a new OpenMP 'proc_bind' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1574,7 +1574,7 @@ public:
                                                StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'schedule' clause.
+  /// Build a new OpenMP 'schedule' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1588,7 +1588,7 @@ public:
         CommaLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'ordered' clause.
+  /// Build a new OpenMP 'ordered' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1598,7 +1598,7 @@ public:
     return getSema().ActOnOpenMPOrderedClause(StartLoc, EndLoc, LParenLoc, Num);
   }
 
-  /// \brief Build a new OpenMP 'private' clause.
+  /// Build a new OpenMP 'private' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1610,7 +1610,7 @@ public:
                                               EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'firstprivate' clause.
+  /// Build a new OpenMP 'firstprivate' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1622,7 +1622,7 @@ public:
                                                    EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'lastprivate' clause.
+  /// Build a new OpenMP 'lastprivate' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1634,7 +1634,7 @@ public:
                                                   EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'shared' clause.
+  /// Build a new OpenMP 'shared' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1646,7 +1646,7 @@ public:
                                              EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'reduction' clause.
+  /// Build a new OpenMP 'reduction' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1694,7 +1694,7 @@ public:
         ReductionId, UnresolvedReductions);
   }
 
-  /// \brief Build a new OpenMP 'linear' clause.
+  /// Build a new OpenMP 'linear' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1710,7 +1710,7 @@ public:
                                              EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'aligned' clause.
+  /// Build a new OpenMP 'aligned' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1723,7 +1723,7 @@ public:
                                               LParenLoc, ColonLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'copyin' clause.
+  /// Build a new OpenMP 'copyin' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1735,7 +1735,7 @@ public:
                                              EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'copyprivate' clause.
+  /// Build a new OpenMP 'copyprivate' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1747,7 +1747,7 @@ public:
                                                   EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'flush' pseudo clause.
+  /// Build a new OpenMP 'flush' pseudo clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1759,7 +1759,7 @@ public:
                                             EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'depend' pseudo clause.
+  /// Build a new OpenMP 'depend' pseudo clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1772,7 +1772,7 @@ public:
                                              StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'device' clause.
+  /// Build a new OpenMP 'device' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1783,7 +1783,7 @@ public:
                                              EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'map' clause.
+  /// Build a new OpenMP 'map' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1798,7 +1798,7 @@ public:
                                           VarList, StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'num_teams' clause.
+  /// Build a new OpenMP 'num_teams' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1809,7 +1809,7 @@ public:
                                                EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'thread_limit' clause.
+  /// Build a new OpenMP 'thread_limit' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1821,7 +1821,7 @@ public:
                                                   LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'priority' clause.
+  /// Build a new OpenMP 'priority' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1832,7 +1832,7 @@ public:
                                                EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'grainsize' clause.
+  /// Build a new OpenMP 'grainsize' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1843,7 +1843,7 @@ public:
                                                 EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'num_tasks' clause.
+  /// Build a new OpenMP 'num_tasks' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1854,7 +1854,7 @@ public:
                                                EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'hint' clause.
+  /// Build a new OpenMP 'hint' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1864,7 +1864,7 @@ public:
     return getSema().ActOnOpenMPHintClause(Hint, StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'dist_schedule' clause.
+  /// Build a new OpenMP 'dist_schedule' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -1877,7 +1877,7 @@ public:
         Kind, ChunkSize, StartLoc, LParenLoc, KindLoc, CommaLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'to' clause.
+  /// Build a new OpenMP 'to' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1888,7 +1888,7 @@ public:
     return getSema().ActOnOpenMPToClause(VarList, StartLoc, LParenLoc, EndLoc);
   }
 
-  /// \brief Build a new OpenMP 'from' clause.
+  /// Build a new OpenMP 'from' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1924,7 +1924,7 @@ public:
                                                   EndLoc);
   }
 
-  /// \brief Rebuild the operand to an Objective-C \@synchronized statement.
+  /// Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1933,7 +1933,7 @@ public:
     return getSema().ActOnObjCAtSynchronizedOperand(atLoc, object);
   }
 
-  /// \brief Build a new Objective-C \@synchronized statement.
+  /// Build a new Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1942,7 +1942,7 @@ public:
     return getSema().ActOnObjCAtSynchronizedStmt(AtLoc, Object, Body);
   }
 
-  /// \brief Build a new Objective-C \@autoreleasepool statement.
+  /// Build a new Objective-C \@autoreleasepool statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1951,7 +1951,7 @@ public:
     return getSema().ActOnObjCAutoreleasePoolStmt(AtLoc, Body);
   }
 
-  /// \brief Build a new Objective-C fast enumeration statement.
+  /// Build a new Objective-C fast enumeration statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1970,7 +1970,7 @@ public:
     return getSema().FinishObjCForCollectionStmt(ForEachStmt.get(), Body);
   }
 
-  /// \brief Build a new C++ exception declaration.
+  /// Build a new C++ exception declaration.
   ///
   /// By default, performs semantic analysis to build the new decaration.
   /// Subclasses may override this routine to provide different behavior.
@@ -1986,7 +1986,7 @@ public:
     return Var;
   }
 
-  /// \brief Build a new C++ catch statement.
+  /// Build a new C++ catch statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -1997,7 +1997,7 @@ public:
                                                       Handler));
   }
 
-  /// \brief Build a new C++ try statement.
+  /// Build a new C++ try statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -2006,7 +2006,7 @@ public:
     return getSema().ActOnCXXTryBlock(TryLoc, TryBlock, Handlers);
   }
 
-  /// \brief Build a new C++0x range-based for statement.
+  /// Build a new C++0x range-based for statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -2040,7 +2040,7 @@ public:
                                           Sema::BFRK_Rebuild);
   }
 
-  /// \brief Build a new C++0x range-based for statement.
+  /// Build a new C++0x range-based for statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -2053,7 +2053,7 @@ public:
                                                 QualifierLoc, NameInfo, Nested);
   }
 
-  /// \brief Attach body to a C++0x range-based for statement.
+  /// Attach body to a C++0x range-based for statement.
   ///
   /// By default, performs semantic analysis to finish the new statement.
   /// Subclasses may override this routine to provide different behavior.
@@ -2075,7 +2075,7 @@ public:
     return SEHFinallyStmt::Create(getSema().getASTContext(), Loc, Block);
   }
 
-  /// \brief Build a new predefined expression.
+  /// Build a new predefined expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2084,7 +2084,7 @@ public:
     return getSema().BuildPredefinedExpr(Loc, IT);
   }
 
-  /// \brief Build a new expression that references a declaration.
+  /// Build a new expression that references a declaration.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2095,7 +2095,7 @@ public:
   }
 
 
-  /// \brief Build a new expression that references a declaration.
+  /// Build a new expression that references a declaration.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2111,7 +2111,7 @@ public:
     return getSema().BuildDeclarationNameExpr(SS, NameInfo, VD);
   }
 
-  /// \brief Build a new expression in parentheses.
+  /// Build a new expression in parentheses.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2120,7 +2120,7 @@ public:
     return getSema().ActOnParenExpr(LParen, RParen, SubExpr);
   }
 
-  /// \brief Build a new pseudo-destructor expression.
+  /// Build a new pseudo-destructor expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2133,7 +2133,7 @@ public:
                                             SourceLocation TildeLoc,
                                         PseudoDestructorTypeStorage Destroyed);
 
-  /// \brief Build a new unary operator expression.
+  /// Build a new unary operator expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2143,7 +2143,7 @@ public:
     return getSema().BuildUnaryOp(/*Scope=*/nullptr, OpLoc, Opc, SubExpr);
   }
 
-  /// \brief Build a new builtin offsetof expression.
+  /// Build a new builtin offsetof expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2155,7 +2155,7 @@ public:
                                           RParenLoc);
   }
 
-  /// \brief Build a new sizeof, alignof or vec_step expression with a
+  /// Build a new sizeof, alignof or vec_step expression with a
   /// type argument.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -2167,7 +2167,7 @@ public:
     return getSema().CreateUnaryExprOrTypeTraitExpr(TInfo, OpLoc, ExprKind, R);
   }
 
-  /// \brief Build a new sizeof, alignof or vec step expression with an
+  /// Build a new sizeof, alignof or vec step expression with an
   /// expression argument.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -2183,7 +2183,7 @@ public:
     return Result;
   }
 
-  /// \brief Build a new array subscript expression.
+  /// Build a new array subscript expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2196,7 +2196,7 @@ public:
                                              RBracketLoc);
   }
 
-  /// \brief Build a new array section expression.
+  /// Build a new array section expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2208,7 +2208,7 @@ public:
                                               ColonLoc, Length, RBracketLoc);
   }
 
-  /// \brief Build a new call expression.
+  /// Build a new call expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2220,7 +2220,7 @@ public:
                                    Args, RParenLoc, ExecConfig);
   }
 
-  /// \brief Build a new member access expression.
+  /// Build a new member access expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2278,7 +2278,7 @@ public:
                                               /*S*/nullptr);
   }
 
-  /// \brief Build a new binary operator expression.
+  /// Build a new binary operator expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2288,7 +2288,7 @@ public:
     return getSema().BuildBinOp(/*Scope=*/nullptr, OpLoc, Opc, LHS, RHS);
   }
 
-  /// \brief Build a new conditional operator expression.
+  /// Build a new conditional operator expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2301,7 +2301,7 @@ public:
                                         LHS, RHS);
   }
 
-  /// \brief Build a new C-style cast expression.
+  /// Build a new C-style cast expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2313,7 +2313,7 @@ public:
                                          SubExpr);
   }
 
-  /// \brief Build a new compound literal expression.
+  /// Build a new compound literal expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2325,7 +2325,7 @@ public:
                                               Init);
   }
 
-  /// \brief Build a new extended vector element access expression.
+  /// Build a new extended vector element access expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2345,7 +2345,7 @@ public:
                                               /*S*/ nullptr);
   }
 
-  /// \brief Build a new initializer list expression.
+  /// Build a new initializer list expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2355,7 +2355,7 @@ public:
     return SemaRef.ActOnInitList(LBraceLoc, Inits, RBraceLoc);
   }
 
-  /// \brief Build a new designated initializer expression.
+  /// Build a new designated initializer expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2373,7 +2373,7 @@ public:
     return Result;
   }
 
-  /// \brief Build a new value-initialized expression.
+  /// Build a new value-initialized expression.
   ///
   /// By default, builds the implicit value initialization without performing
   /// any semantic analysis. Subclasses may override this routine to provide
@@ -2382,7 +2382,7 @@ public:
     return new (SemaRef.Context) ImplicitValueInitExpr(T);
   }
 
-  /// \brief Build a new \c va_arg expression.
+  /// Build a new \c va_arg expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2394,7 +2394,7 @@ public:
                                     RParenLoc);
   }
 
-  /// \brief Build a new expression list in parentheses.
+  /// Build a new expression list in parentheses.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2404,7 +2404,7 @@ public:
     return getSema().ActOnParenListExpr(LParenLoc, RParenLoc, SubExprs);
   }
 
-  /// \brief Build a new address-of-label expression.
+  /// Build a new address-of-label expression.
   ///
   /// By default, performs semantic analysis, using the name of the label
   /// rather than attempting to map the label statement itself.
@@ -2414,7 +2414,7 @@ public:
     return getSema().ActOnAddrLabel(AmpAmpLoc, LabelLoc, Label);
   }
 
-  /// \brief Build a new GNU statement expression.
+  /// Build a new GNU statement expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2424,7 +2424,7 @@ public:
     return getSema().ActOnStmtExpr(LParenLoc, SubStmt, RParenLoc);
   }
 
-  /// \brief Build a new __builtin_choose_expr expression.
+  /// Build a new __builtin_choose_expr expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2436,7 +2436,7 @@ public:
                                    RParenLoc);
   }
 
-  /// \brief Build a new generic selection expression.
+  /// Build a new generic selection expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2450,7 +2450,7 @@ public:
                                                 ControllingExpr, Types, Exprs);
   }
 
-  /// \brief Build a new overloaded operator call expression.
+  /// Build a new overloaded operator call expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// The semantic analysis provides the behavior of template instantiation,
@@ -2464,7 +2464,7 @@ public:
                                               Expr *First,
                                               Expr *Second);
 
-  /// \brief Build a new C++ "named" cast expression, such as static_cast or
+  /// Build a new C++ "named" cast expression, such as static_cast or
   /// reinterpret_cast.
   ///
   /// By default, this routine dispatches to one of the more-specific routines
@@ -2505,7 +2505,7 @@ public:
     }
   }
 
-  /// \brief Build a new C++ static_cast expression.
+  /// Build a new C++ static_cast expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2522,7 +2522,7 @@ public:
                                        SourceRange(LParenLoc, RParenLoc));
   }
 
-  /// \brief Build a new C++ dynamic_cast expression.
+  /// Build a new C++ dynamic_cast expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2539,7 +2539,7 @@ public:
                                        SourceRange(LParenLoc, RParenLoc));
   }
 
-  /// \brief Build a new C++ reinterpret_cast expression.
+  /// Build a new C++ reinterpret_cast expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2556,7 +2556,7 @@ public:
                                        SourceRange(LParenLoc, RParenLoc));
   }
 
-  /// \brief Build a new C++ const_cast expression.
+  /// Build a new C++ const_cast expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2573,7 +2573,7 @@ public:
                                        SourceRange(LParenLoc, RParenLoc));
   }
 
-  /// \brief Build a new C++ functional-style cast expression.
+  /// Build a new C++ functional-style cast expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2587,7 +2587,7 @@ public:
                                                ListInitialization);
   }
 
-  /// \brief Build a new C++ typeid(type) expression.
+  /// Build a new C++ typeid(type) expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2600,7 +2600,7 @@ public:
   }
 
 
-  /// \brief Build a new C++ typeid(expr) expression.
+  /// Build a new C++ typeid(expr) expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2612,7 +2612,7 @@ public:
                                     RParenLoc);
   }
 
-  /// \brief Build a new C++ __uuidof(type) expression.
+  /// Build a new C++ __uuidof(type) expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2624,7 +2624,7 @@ public:
                                     RParenLoc);
   }
 
-  /// \brief Build a new C++ __uuidof(expr) expression.
+  /// Build a new C++ __uuidof(expr) expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2636,7 +2636,7 @@ public:
                                     RParenLoc);
   }
 
-  /// \brief Build a new C++ "this" expression.
+  /// Build a new C++ "this" expression.
   ///
   /// By default, builds a new "this" expression without performing any
   /// semantic analysis. Subclasses may override this routine to provide
@@ -2648,7 +2648,7 @@ public:
     return new (getSema().Context) CXXThisExpr(ThisLoc, ThisType, isImplicit);
   }
 
-  /// \brief Build a new C++ throw expression.
+  /// Build a new C++ throw expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2657,7 +2657,7 @@ public:
     return getSema().BuildCXXThrow(ThrowLoc, Sub, IsThrownVariableInScope);
   }
 
-  /// \brief Build a new C++ default-argument expression.
+  /// Build a new C++ default-argument expression.
   ///
   /// By default, builds a new default-argument expression, which does not
   /// require any semantic analysis. Subclasses may override this routine to
@@ -2667,7 +2667,7 @@ public:
     return CXXDefaultArgExpr::Create(getSema().Context, Loc, Param);
   }
 
-  /// \brief Build a new C++11 default-initialization expression.
+  /// Build a new C++11 default-initialization expression.
   ///
   /// By default, builds a new default field initialization expression, which
   /// does not require any semantic analysis. Subclasses may override this
@@ -2677,7 +2677,7 @@ public:
     return CXXDefaultInitExpr::Create(getSema().Context, Loc, Field);
   }
 
-  /// \brief Build a new C++ zero-initialization expression.
+  /// Build a new C++ zero-initialization expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2688,7 +2688,7 @@ public:
         TSInfo, LParenLoc, None, RParenLoc, /*ListInitialization=*/false);
   }
 
-  /// \brief Build a new C++ "new" expression.
+  /// Build a new C++ "new" expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2715,7 +2715,7 @@ public:
                                  Initializer);
   }
 
-  /// \brief Build a new C++ "delete" expression.
+  /// Build a new C++ "delete" expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2727,7 +2727,7 @@ public:
                                     Operand);
   }
 
-  /// \brief Build a new type trait expression.
+  /// Build a new type trait expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2738,7 +2738,7 @@ public:
     return getSema().BuildTypeTrait(Trait, StartLoc, Args, RParenLoc);
   }
 
-  /// \brief Build a new array type trait expression.
+  /// Build a new array type trait expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2750,7 +2750,7 @@ public:
     return getSema().BuildArrayTypeTrait(Trait, StartLoc, TSInfo, DimExpr, RParenLoc);
   }
 
-  /// \brief Build a new expression trait expression.
+  /// Build a new expression trait expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2761,7 +2761,7 @@ public:
     return getSema().BuildExpressionTrait(Trait, StartLoc, Queried, RParenLoc);
   }
 
-  /// \brief Build a new (previously unresolved) declaration reference
+  /// Build a new (previously unresolved) declaration reference
   /// expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -2784,7 +2784,7 @@ public:
         SS, NameInfo, IsAddressOfOperand, /*S*/nullptr, RecoveryTSI);
   }
 
-  /// \brief Build a new template-id expression.
+  /// Build a new template-id expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2797,7 +2797,7 @@ public:
                                          TemplateArgs);
   }
 
-  /// \brief Build a new object-construction expression.
+  /// Build a new object-construction expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2827,7 +2827,7 @@ public:
                                            ParenRange);
   }
 
-  /// \brief Build a new implicit construction via inherited constructor
+  /// Build a new implicit construction via inherited constructor
   /// expression.
   ExprResult RebuildCXXInheritedCtorInitExpr(QualType T, SourceLocation Loc,
                                              CXXConstructorDecl *Constructor,
@@ -2837,7 +2837,7 @@ public:
         Loc, T, Constructor, ConstructsVBase, InheritedFromVBase);
   }
 
-  /// \brief Build a new object-construction expression.
+  /// Build a new object-construction expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2850,7 +2850,7 @@ public:
         TSInfo, LParenOrBraceLoc, Args, RParenOrBraceLoc, ListInitialization);
   }
 
-  /// \brief Build a new object-construction expression.
+  /// Build a new object-construction expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2863,7 +2863,7 @@ public:
                                                RParenLoc, ListInitialization);
   }
 
-  /// \brief Build a new member reference expression.
+  /// Build a new member reference expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2887,7 +2887,7 @@ public:
                                             TemplateArgs, /*S*/nullptr);
   }
 
-  /// \brief Build a new member reference expression.
+  /// Build a new member reference expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2909,7 +2909,7 @@ public:
                                             R, TemplateArgs, /*S*/nullptr);
   }
 
-  /// \brief Build a new noexcept expression.
+  /// Build a new noexcept expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2917,7 +2917,7 @@ public:
     return SemaRef.BuildCXXNoexceptExpr(Range.getBegin(), Arg, Range.getEnd());
   }
 
-  /// \brief Build a new expression to compute the length of a parameter pack.
+  /// Build a new expression to compute the length of a parameter pack.
   ExprResult RebuildSizeOfPackExpr(SourceLocation OperatorLoc,
                                    NamedDecl *Pack,
                                    SourceLocation PackLoc,
@@ -2928,7 +2928,7 @@ public:
                                   RParenLoc, Length, PartialArgs);
   }
 
-  /// \brief Build a new Objective-C boxed expression.
+  /// Build a new Objective-C boxed expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2936,7 +2936,7 @@ public:
     return getSema().BuildObjCBoxedExpr(SR, ValueExpr);
   }
 
-  /// \brief Build a new Objective-C array literal.
+  /// Build a new Objective-C array literal.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2954,7 +2954,7 @@ public:
                                                    getterMethod, setterMethod);
   }
 
-  /// \brief Build a new Objective-C dictionary literal.
+  /// Build a new Objective-C dictionary literal.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2963,7 +2963,7 @@ public:
     return getSema().BuildObjCDictionaryLiteral(Range, Elements);
   }
 
-  /// \brief Build a new Objective-C \@encode expression.
+  /// Build a new Objective-C \@encode expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -2973,7 +2973,7 @@ public:
     return SemaRef.BuildObjCEncodeExpression(AtLoc, EncodeTypeInfo, RParenLoc);
   }
 
-  /// \brief Build a new Objective-C class message.
+  /// Build a new Objective-C class message.
   ExprResult RebuildObjCMessageExpr(TypeSourceInfo *ReceiverTypeInfo,
                                           Selector Sel,
                                           ArrayRef<SourceLocation> SelectorLocs,
@@ -2988,7 +2988,7 @@ public:
                                      RBracLoc, Args);
   }
 
-  /// \brief Build a new Objective-C instance message.
+  /// Build a new Objective-C instance message.
   ExprResult RebuildObjCMessageExpr(Expr *Receiver,
                                           Selector Sel,
                                           ArrayRef<SourceLocation> SelectorLocs,
@@ -3003,7 +3003,7 @@ public:
                                         RBracLoc, Args);
   }
 
-  /// \brief Build a new Objective-C instance/class message to 'super'.
+  /// Build a new Objective-C instance/class message to 'super'.
   ExprResult RebuildObjCMessageExpr(SourceLocation SuperLoc,
                                     Selector Sel,
                                     ArrayRef<SourceLocation> SelectorLocs,
@@ -3026,7 +3026,7 @@ public:
       
   }
 
-  /// \brief Build a new Objective-C ivar reference expression.
+  /// Build a new Objective-C ivar reference expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3046,7 +3046,7 @@ public:
     return Result;
   }
 
-  /// \brief Build a new Objective-C property reference expression.
+  /// Build a new Objective-C property reference expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3065,7 +3065,7 @@ public:
                                               /*S=*/nullptr);
   }
 
-  /// \brief Build a new Objective-C property reference expression.
+  /// Build a new Objective-C property reference expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3081,7 +3081,7 @@ public:
                                                   PropertyLoc, Base));
   }
 
-  /// \brief Build a new Objective-C "isa" expression.
+  /// Build a new Objective-C "isa" expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3098,7 +3098,7 @@ public:
                                               /*S=*/nullptr);
   }
 
-  /// \brief Build a new shuffle vector expression.
+  /// Build a new shuffle vector expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3130,7 +3130,7 @@ public:
     return SemaRef.SemaBuiltinShuffleVector(cast<CallExpr>(TheCall.get()));
   }
 
-  /// \brief Build a new convert vector expression.
+  /// Build a new convert vector expression.
   ExprResult RebuildConvertVectorExpr(SourceLocation BuiltinLoc,
                                       Expr *SrcExpr, TypeSourceInfo *DstTInfo,
                                       SourceLocation RParenLoc) {
@@ -3138,7 +3138,7 @@ public:
                                          BuiltinLoc, RParenLoc);
   }
 
-  /// \brief Build a new template argument pack expansion.
+  /// Build a new template argument pack expansion.
   ///
   /// By default, performs semantic analysis to build a new pack expansion
   /// for a template argument. Subclasses may override this routine to provide
@@ -3186,7 +3186,7 @@ public:
     return TemplateArgumentLoc();
   }
 
-  /// \brief Build a new expression pack expansion.
+  /// Build a new expression pack expansion.
   ///
   /// By default, performs semantic analysis to build a new pack expansion
   /// for an expression. Subclasses may override this routine to provide
@@ -3196,7 +3196,7 @@ public:
     return getSema().CheckPackExpansion(Pattern, EllipsisLoc, NumExpansions);
   }
 
-  /// \brief Build a new C++1z fold-expression.
+  /// Build a new C++1z fold-expression.
   ///
   /// By default, performs semantic analysis in order to build a new fold
   /// expression.
@@ -3208,7 +3208,7 @@ public:
                                       RHS, RParenLoc);
   }
 
-  /// \brief Build an empty C++1z fold-expression with the given operator.
+  /// Build an empty C++1z fold-expression with the given operator.
   ///
   /// By default, produces the fallback value for the fold-expression, or
   /// produce an error if there is no fallback value.
@@ -3217,7 +3217,7 @@ public:
     return getSema().BuildEmptyCXXFoldExpr(EllipsisLoc, Operator);
   }
 
-  /// \brief Build a new atomic operation expression.
+  /// Build a new atomic operation expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3920,7 +3920,7 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
   return true;
 }
 
-/// \brief Iterator adaptor that invents template argument location information
+/// Iterator adaptor that invents template argument location information
 /// for each of the template arguments in its underlying iterator.
 template<typename Derived, typename InputIterator>
 class TemplateArgumentLocInventIterator {
@@ -5758,7 +5758,7 @@ QualType TreeTransform<Derived>::TransformPipeType(TypeLocBuilder &TLB,
   return Result;
 }
 
-  /// \brief Simple iterator that traverses the template arguments in a
+  /// Simple iterator that traverses the template arguments in a
   /// container that provides a \c getArgLoc() member function.
   ///
   /// This iterator is intended to be used with the iterator form of
@@ -8962,7 +8962,7 @@ TreeTransform<Derived>::TransformParenExpr(ParenExpr *E) {
                                        E->getRParen());
 }
 
-/// \brief The operand of a unary address-of operator has special rules: it's
+/// The operand of a unary address-of operator has special rules: it's
 /// allowed to refer to a non-static member of a class even if there's no 'this'
 /// object available.
 template<typename Derived>
@@ -9661,7 +9661,7 @@ TreeTransform<Derived>::TransformParenListExpr(ParenListExpr *E) {
                                            E->getRParenLoc());
 }
 
-/// \brief Transform an address-of-label expression.
+/// Transform an address-of-label expression.
 ///
 /// By default, the transformation of an address-of-label expression always
 /// rebuilds the expression, so that the label identifier can be resolved to
@@ -10791,7 +10791,7 @@ ExprResult TreeTransform<Derived>::TransformCXXInheritedCtorInitExpr(
       E->constructsVBase(), E->inheritedFromVBase());
 }
 
-/// \brief Transform a C++ temporary-binding expression.
+/// Transform a C++ temporary-binding expression.
 ///
 /// Since CXXBindTemporaryExpr nodes are implicitly generated, we just
 /// transform the subexpression and return that.
@@ -10801,7 +10801,7 @@ TreeTransform<Derived>::TransformCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
   return getDerived().TransformExpr(E->getSubExpr());
 }
 
-/// \brief Transform a C++ expression that contains cleanups that should
+/// Transform a C++ expression that contains cleanups that should
 /// be run after the expression is evaluated.
 ///
 /// Since ExprWithCleanups nodes are implicitly generated, we

@@ -100,6 +100,7 @@ namespace llvm {
       case Intrinsic::dbg_declare:
       case Intrinsic::dbg_value:
       case Intrinsic::dbg_addr:
+      case Intrinsic::dbg_label:
         return true;
       default: return false;
       }
@@ -152,6 +153,32 @@ namespace llvm {
     /// @{
     static bool classof(const IntrinsicInst *I) {
       return I->getIntrinsicID() == Intrinsic::dbg_value;
+    }
+    static bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+    /// @}
+  };
+
+  /// This represents the llvm.dbg.label instruction.
+  class DbgLabelInst : public DbgInfoIntrinsic {
+  public:
+    DILabel *getLabel() const {
+      return cast<DILabel>(getRawVariable());
+    }
+
+    Metadata *getRawVariable() const {
+      return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();
+    }
+
+    Metadata *getRawExpression() const {
+      return nullptr;
+    }
+
+    /// Methods for support type inquiry through isa, cast, and dyn_cast:
+    /// @{
+    static bool classof(const IntrinsicInst *I) {
+      return I->getIntrinsicID() == Intrinsic::dbg_label;
     }
     static bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

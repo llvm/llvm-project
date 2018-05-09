@@ -1015,7 +1015,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
   return MacroArgs::create(MI, ArgTokens, isVarargsElided, *this);
 }
 
-/// \brief Keeps macro expanded tokens for TokenLexers.
+/// Keeps macro expanded tokens for TokenLexers.
 //
 /// Works like a stack; a TokenLexer adds the macro expanded tokens that is
 /// going to lex in the cache and when it finishes the tokens are removed
@@ -1485,7 +1485,7 @@ static bool EvaluateHasIncludeNext(Token &Tok,
   return EvaluateHasIncludeCommon(Tok, II, PP, Lookup, LookupFromFile);
 }
 
-/// \brief Process single-argument builtin feature-like macros that return
+/// Process single-argument builtin feature-like macros that return
 /// integer values.
 static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
                                             Token &Tok, IdentifierInfo *II,
@@ -1588,7 +1588,7 @@ already_lexed:
   }
 }
 
-/// \brief Helper function to return the IdentifierInfo structure of a Token
+/// Helper function to return the IdentifierInfo structure of a Token
 /// or generate a diagnostic if none available.
 static IdentifierInfo *ExpectFeatureIdentifierInfo(Token &Tok,
                                                    Preprocessor &PP,

@@ -38,7 +38,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   static const LangASMap AMDGPUDefIsGenMap;
   static const LangASMap AMDGPUDefIsPrivMap;
 
-  /// \brief GPU kinds supported by the AMDGPU target.
+  /// GPU kinds supported by the AMDGPU target.
   enum GPUKind : uint32_t {
     // Not specified processor.
     GK_NONE = 0,

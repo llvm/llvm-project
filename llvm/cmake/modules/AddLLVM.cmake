@@ -1546,7 +1546,7 @@ function(llvm_externalize_debuginfo name)
     if(APPLE)
       set(strip_command COMMAND xcrun strip -Sxl $<TARGET_FILE:${name}>)
     else()
-      set(strip_command COMMAND strip -gx $<TARGET_FILE:${name}>)
+      set(strip_command COMMAND ${CMAKE_STRIP} -gx $<TARGET_FILE:${name}>)
     endif()
   endif()
 
@@ -1564,9 +1564,9 @@ function(llvm_externalize_debuginfo name)
       )
   else()
     add_custom_command(TARGET ${name} POST_BUILD
-      COMMAND objcopy --only-keep-debug $<TARGET_FILE:${name}> $<TARGET_FILE:${name}>.debug
+      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:${name}> $<TARGET_FILE:${name}>.debug
       ${strip_command} -R .gnu_debuglink
-      COMMAND objcopy --add-gnu-debuglink=$<TARGET_FILE:${name}>.debug $<TARGET_FILE:${name}>
+      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:${name}>.debug $<TARGET_FILE:${name}>
       )
   endif()
 endfunction()

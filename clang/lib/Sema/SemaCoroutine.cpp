@@ -1438,7 +1438,7 @@ static Expr *castForMoving(Sema &S, Expr *E, QualType T = QualType()) {
       .get();
 }
 
-/// \brief Build a variable declaration for move parameter.
+/// Build a variable declaration for move parameter.
 static VarDecl *buildVarDecl(Sema &S, SourceLocation Loc, QualType Type,
                              IdentifierInfo *II) {
   TypeSourceInfo *TInfo = S.Context.getTrivialTypeSourceInfo(Type, Loc);

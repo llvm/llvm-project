@@ -32,7 +32,7 @@ using namespace llvm::opt;
 
 using tools::addPathIfExists;
 
-/// \brief Get our best guess at the multiarch triple for a target.
+/// Get our best guess at the multiarch triple for a target.
 ///
 /// Debian-based systems are starting to use a multiarch setup where they use
 /// a target-triple directory in the library and header search paths.

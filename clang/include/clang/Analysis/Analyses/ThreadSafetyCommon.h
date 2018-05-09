@@ -329,7 +329,7 @@ public:
 // Translate clang::Expr to til::SExpr.
 class SExprBuilder {
 public:
-  /// \brief Encapsulates the lexical context of a function call.  The lexical
+  /// Encapsulates the lexical context of a function call.  The lexical
   /// context includes the arguments to the call, including the implicit object
   /// argument.  When an attribute containing a mutex expression is attached to
   /// a method, the expression may refer to formal parameters of the method.

@@ -13,7 +13,7 @@
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!"clang version 3.9.1 (http://llvm.org/git/clang.git c3709e72d22432f53f8e2f14354def31a96734fe)"}
-!6 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: !2)
+!6 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !DILocalVariable(name: "i", scope: !6, file: !1, line: 1, type: !10)

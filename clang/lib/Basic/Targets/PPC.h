@@ -57,7 +57,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
   }
 
-  /// \brief Flags for architecture specific defines.
+  /// Flags for architecture specific defines.
   typedef enum {
     ArchDefineNone = 0,
     ArchDefineName = 1 << 0, // <name> is substituted for arch name.

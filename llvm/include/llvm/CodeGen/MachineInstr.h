@@ -292,6 +292,10 @@ public:
   /// this DBG_VALUE instruction.
   const DIExpression *getDebugExpression() const;
 
+  /// Return the debug label referenced by
+  /// this DBG_LABEL instruction.
+  const DILabel *getDebugLabel() const;
+
   /// Emit an error referring to the source location of this instruction.
   /// This should only be used for inline assembly that is somehow
   /// impossible to compile. Other errors should have been handled much
@@ -831,6 +835,8 @@ public:
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isDebugValue() const { return getOpcode() == TargetOpcode::DBG_VALUE; }
+  bool isDebugLabel() const { return getOpcode() == TargetOpcode::DBG_LABEL; }
+  bool isDebugInstr() const { return isDebugValue() || isDebugLabel(); }
 
   /// A DBG_VALUE is indirect iff the first operand is a register and
   /// the second operand is an immediate.
@@ -907,6 +913,7 @@ public:
     case TargetOpcode::EH_LABEL:
     case TargetOpcode::GC_LABEL:
     case TargetOpcode::DBG_VALUE:
+    case TargetOpcode::DBG_LABEL:
     case TargetOpcode::LIFETIME_START:
     case TargetOpcode::LIFETIME_END:
       return true;

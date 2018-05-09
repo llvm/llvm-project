@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a clang-format tool that automatically formats
+/// This file implements a clang-format tool that automatically formats
 /// (fragments of) C++ code.
 ///
 //===----------------------------------------------------------------------===//

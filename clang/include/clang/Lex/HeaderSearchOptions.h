@@ -108,32 +108,32 @@ public:
   /// etc.).
   std::string ResourceDir;
 
-  /// \brief The directory used for the module cache.
+  /// The directory used for the module cache.
   std::string ModuleCachePath;
 
-  /// \brief The directory used for a user build.
+  /// The directory used for a user build.
   std::string ModuleUserBuildPath;
 
-  /// \brief The mapping of module names to prebuilt module files.
+  /// The mapping of module names to prebuilt module files.
   std::map<std::string, std::string> PrebuiltModuleFiles;
 
-  /// \brief The directories used to load prebuilt module files.
+  /// The directories used to load prebuilt module files.
   std::vector<std::string> PrebuiltModulePaths;
 
   /// The module/pch container format.
   std::string ModuleFormat;
 
-  /// \brief Whether we should disable the use of the hash string within the
+  /// Whether we should disable the use of the hash string within the
   /// module cache.
   ///
   /// Note: Only used for testing!
   unsigned DisableModuleHash : 1;
 
-  /// \brief Implicit module maps.  This option is enabld by default when
+  /// Implicit module maps.  This option is enabld by default when
   /// modules is enabled.
   unsigned ImplicitModuleMaps : 1;
 
-  /// \brief Set the 'home directory' of a module map file to the current
+  /// Set the 'home directory' of a module map file to the current
   /// working directory (or the home directory of the module map file that
   /// contained the 'extern module' directive importing this module map file
   /// if any) rather than the directory containing the module map file.
@@ -142,7 +142,7 @@ public:
   /// file.
   unsigned ModuleMapFileHomeIsCwd : 1;
 
-  /// \brief The interval (in seconds) between pruning operations.
+  /// The interval (in seconds) between pruning operations.
   ///
   /// This operation is expensive, because it requires Clang to walk through
   /// the directory structure of the module cache, stat()'ing and removing
@@ -151,7 +151,7 @@ public:
   /// The default value is large, e.g., the operation runs once a week.
   unsigned ModuleCachePruneInterval = 7 * 24 * 60 * 60;
 
-  /// \brief The time (in seconds) after which an unused module file will be
+  /// The time (in seconds) after which an unused module file will be
   /// considered unused and will, therefore, be pruned.
   ///
   /// When the module cache is pruned, any module file that has not been
@@ -160,17 +160,17 @@ public:
   /// regenerated often.
   unsigned ModuleCachePruneAfter = 31 * 24 * 60 * 60;
 
-  /// \brief The time in seconds when the build session started.
+  /// The time in seconds when the build session started.
   ///
   /// This time is used by other optimizations in header search and module
   /// loading.
   uint64_t BuildSessionTimestamp = 0;
 
-  /// \brief The set of macro names that should be ignored for the purposes
+  /// The set of macro names that should be ignored for the purposes
   /// of computing the module hash.
   llvm::SmallSetVector<llvm::CachedHashString, 16> ModulesIgnoreMacros;
 
-  /// \brief The set of user-provided virtual filesystem overlay files.
+  /// The set of user-provided virtual filesystem overlay files.
   std::vector<std::string> VFSOverlayFiles;
 
   /// Include the compiler builtin includes.
@@ -188,12 +188,12 @@ public:
   /// Whether header search information should be output as for -v.
   unsigned Verbose : 1;
 
-  /// \brief If true, skip verifying input files used by modules if the
+  /// If true, skip verifying input files used by modules if the
   /// module was already verified during this build session (see
   /// \c BuildSessionTimestamp).
   unsigned ModulesValidateOncePerBuildSession : 1;
 
-  /// \brief Whether to validate system input files when a module is loaded.
+  /// Whether to validate system input files when a module is loaded.
   unsigned ModulesValidateSystemHeaders : 1;
 
   /// Whether the module includes debug information (-gmodules).

@@ -78,8 +78,8 @@ bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
-      // Skip DBG_VALUE instructions and instructions without location.
-      if (MI->isDebugValue() || !MI->getDebugLoc())
+      // Skip debug instructions and instructions without location.
+      if (MI->isDebugInstr() || !MI->getDebugLoc())
         continue;
 
       // Insert nop instruction if line number does not have nop inserted.

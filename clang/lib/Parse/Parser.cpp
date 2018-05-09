@@ -24,7 +24,7 @@ using namespace clang;
 
 
 namespace {
-/// \brief A comment handler that passes comments found by the preprocessor
+/// A comment handler that passes comments found by the preprocessor
 /// to the parser action.
 class ActionCommentHandler : public CommentHandler {
   Sema &S;
@@ -77,7 +77,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
   return Diag(Tok.getLocation(), DiagID);
 }
 
-/// \brief Emits a diagnostic suggesting parentheses surrounding a
+/// Emits a diagnostic suggesting parentheses surrounding a
 /// given range.
 ///
 /// \param Loc The location where we'll emit the diagnostic.
@@ -858,7 +858,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   return Actions.ConvertDeclToDeclGroup(SingleDecl);
 }
 
-/// \brief Determine whether the current token, if it occurs after a
+/// Determine whether the current token, if it occurs after a
 /// declarator, continues a declaration or declaration list.
 bool Parser::isDeclarationAfterDeclarator() {
   // Check for '= delete' or '= default'
@@ -877,7 +877,7 @@ bool Parser::isDeclarationAfterDeclarator() {
      Tok.is(tok::l_paren));         // int X(0) -> not a function def [C++]
 }
 
-/// \brief Determine whether the current token, if it occurs after a
+/// Determine whether the current token, if it occurs after a
 /// declarator, indicates the start of a function definition.
 bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
   assert(Declarator.isFunctionDeclarator() && "Isn't a function declarator");
@@ -1451,7 +1451,7 @@ ExprResult Parser::ParseSimpleAsm(SourceLocation *EndLoc) {
   return Result;
 }
 
-/// \brief Get the TemplateIdAnnotation from the token and put it in the
+/// Get the TemplateIdAnnotation from the token and put it in the
 /// cleanup pool so that it gets destroyed when parsing the current top level
 /// declaration is finished.
 TemplateIdAnnotation *Parser::takeTemplateIdAnnotation(const Token &tok) {
@@ -1479,7 +1479,7 @@ void Parser::AnnotateScopeToken(CXXScopeSpec &SS, bool IsNewAnnotation) {
     PP.AnnotateCachedTokens(Tok);
 }
 
-/// \brief Attempt to classify the name at the current token position. This may
+/// Attempt to classify the name at the current token position. This may
 /// form a type, scope or primary expression annotation, or replace the token
 /// with a typo-corrected keyword. This is only appropriate when the current
 /// name must refer to an entity which has already been declared.
@@ -1764,7 +1764,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation);
 }
 
-/// \brief Try to annotate a type or scope token, having already parsed an
+/// Try to annotate a type or scope token, having already parsed an
 /// optional scope specifier. \p IsNewScope should be \c true unless the scope
 /// specifier was extracted from an existing tok::annot_cxxscope annotation.
 bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
@@ -2185,7 +2185,7 @@ bool Parser::ParseModuleName(
   }
 }
 
-/// \brief Try recover parser when module annotation appears where it must not
+/// Try recover parser when module annotation appears where it must not
 /// be found.
 /// \returns false if the recover was successful and parsing may be continued, or
 /// true if parser must bail out to top level and handle the token there.

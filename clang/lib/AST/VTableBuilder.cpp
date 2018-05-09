@@ -2396,7 +2396,7 @@ private:
 
   MethodVFTableLocationsTy MethodVFTableLocations;
 
-  /// \brief Does this class have an RTTI component?
+  /// Does this class have an RTTI component?
   bool HasRTTIComponent = false;
 
   /// MethodInfo - Contains information about a method in a vtable.

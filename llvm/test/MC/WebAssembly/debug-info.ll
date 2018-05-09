@@ -241,5 +241,5 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !15 = !{i32 1, !"wchar_size", i32 4}
 !16 = !{!"clang version 6.0.0 (trunk 315924) (llvm/trunk 315960)"}
-!17 = distinct !DISubprogram(name: "f2", scope: !3, file: !3, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!17 = distinct !DISubprogram(name: "f2", scope: !3, file: !3, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !18 = !DILocation(line: 2, column: 16, scope: !17)

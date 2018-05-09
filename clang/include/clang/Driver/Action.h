@@ -88,6 +88,7 @@ public:
     // The device offloading tool chains - one bit for each programming model.
     OFK_Cuda = 0x02,
     OFK_OpenMP = 0x04,
+    OFK_HIP = 0x08,
   };
 
   static const char *getClassName(ActionClass AC);
@@ -546,13 +547,13 @@ public:
   /// Type that provides information about the actions that depend on this
   /// unbundling action.
   struct DependentActionInfo final {
-    /// \brief The tool chain of the dependent action.
+    /// The tool chain of the dependent action.
     const ToolChain *DependentToolChain = nullptr;
 
-    /// \brief The bound architecture of the dependent action.
+    /// The bound architecture of the dependent action.
     StringRef DependentBoundArch;
 
-    /// \brief The offload kind of the dependent action.
+    /// The offload kind of the dependent action.
     const OffloadKind DependentOffloadKind = OFK_None;
 
     DependentActionInfo(const ToolChain *DependentToolChain,

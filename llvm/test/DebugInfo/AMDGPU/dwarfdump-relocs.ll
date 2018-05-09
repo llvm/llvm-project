@@ -51,7 +51,7 @@ entry:
 !4 = !{i32 2, !"Dwarf Version", i32 2}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{!""}
-!7 = distinct !DISubprogram(name: "kernel1", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "kernel1", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10}
 !10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64)
@@ -66,7 +66,7 @@ entry:
 !19 = !DILocation(line: 2, column: 4, scope: !7)
 !20 = !DILocation(line: 2, column: 6, scope: !7)
 !21 = !DILocation(line: 3, column: 1, scope: !7)
-!22 = distinct !DISubprogram(name: "kernel2", scope: !1, file: !1, line: 5, type: !8, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!22 = distinct !DISubprogram(name: "kernel2", scope: !1, file: !1, line: 5, type: !8, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !23 = !DILocalVariable(name: "B", arg: 1, scope: !22, file: !1, line: 5, type: !10)
 !24 = !DILocation(line: 5, column: 33, scope: !22)
 !25 = !DILocation(line: 6, column: 4, scope: !22)

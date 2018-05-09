@@ -34,7 +34,7 @@
 ; CHECK-NEXT: !13 = !DICompositeType(tag: DW_TAG_structure_type, name: "MyStruct", scope: !14, file: !1, size: 192, elements: !15, runtimeLang: DW_LANG_C89, identifier: "MyStruct")
 ; CHECK-NEXT: !14 = !DINamespace(name: "NameSpace", scope: !6)
 ; CHECK-NEXT: !15 = !{!7, !7, !7}
-; CHECK-NEXT: !16 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 42, type: !17, isLocal: true, isDefinition: true, scopeLine: 42, isOptimized: false, unit: !0, variables: !22)
+; CHECK-NEXT: !16 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 42, type: !17, isLocal: true, isDefinition: true, scopeLine: 42, isOptimized: false, unit: !0, retainedNodes: !22)
 ; CHECK-NEXT: !17 = !DISubroutineType(types: !18)
 ; CHECK-NEXT: !18 = !{!7, !7, !19}
 ; CHECK-NEXT: !19 = !DICompositeType(tag: DW_TAG_array_type, baseType: !7, size: 640, flags: DIFlagVector, elements: !20)

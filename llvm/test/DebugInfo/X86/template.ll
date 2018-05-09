@@ -108,11 +108,11 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !14 = !{i32 2, !"Dwarf Version", i32 4}
 !15 = !{i32 2, !"Debug Info Version", i32 3}
 !16 = !{!"clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)"}
-!17 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !2, file: !2, line: 3, type: !18, isLocal: true, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !11, variables: !8)
+!17 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !2, file: !2, line: 3, type: !18, isLocal: true, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !11, retainedNodes: !8)
 !18 = !DISubroutineType(types: !19)
 !19 = !{null}
 !20 = !DILocation(line: 3, column: 12, scope: !17)
-!21 = distinct !DISubprogram(name: "func<3, &glbl, y_impl, nullptr, 1, 2>", linkageName: "_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv", scope: !2, file: !2, line: 1, type: !22, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !11, templateParams: !24, variables: !8)
+!21 = distinct !DISubprogram(name: "func<3, &glbl, y_impl, nullptr, 1, 2>", linkageName: "_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv", scope: !2, file: !2, line: 1, type: !22, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !11, templateParams: !24, retainedNodes: !8)
 !22 = !DISubroutineType(types: !23)
 !23 = !{!3}
 !24 = !{!25, !26, !28, !29, !31}
@@ -128,6 +128,6 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !34 = !DITemplateValueParameter(type: !3, value: i32 2)
 !35 = !DILocation(line: 1, column: 96, scope: !21)
 !36 = !DILocation(line: 0, scope: !37)
-!37 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_template.cpp", scope: !2, file: !2, type: !38, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !11, variables: !8)
+!37 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_template.cpp", scope: !2, file: !2, type: !38, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !11, retainedNodes: !8)
 !38 = !DISubroutineType(types: !8)
 

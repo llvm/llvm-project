@@ -20,7 +20,7 @@
 
 namespace clang {
 
-/// \brief One specifier in an @available expression.
+/// One specifier in an @available expression.
 ///
 /// \code
 ///   @available(macos 10.10, *)

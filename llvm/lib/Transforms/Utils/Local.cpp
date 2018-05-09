@@ -372,6 +372,11 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
       return false;
     return true;
   }
+  if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
+    if (DLI->getLabel())
+      return false;
+    return true;
+  }
 
   if (!I->mayHaveSideEffects())
     return true;

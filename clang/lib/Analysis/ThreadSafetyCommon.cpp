@@ -86,7 +86,7 @@ static bool isCalleeArrow(const Expr *E) {
   return ME ? ME->isArrow() : false;
 }
 
-/// \brief Translate a clang expression in an attribute to a til::SExpr.
+/// Translate a clang expression in an attribute to a til::SExpr.
 /// Constructs the context from D, DeclExp, and SelfDecl.
 ///
 /// \param AttrExp The expression to translate.
@@ -146,7 +146,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     return translateAttrExpr(AttrExp, &Ctx);
 }
 
-/// \brief Translate a clang expression in an attribute to a til::SExpr.
+/// Translate a clang expression in an attribute to a til::SExpr.
 // This assumes a CallingContext has already been created.
 CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
                                                CallingContext *Ctx) {

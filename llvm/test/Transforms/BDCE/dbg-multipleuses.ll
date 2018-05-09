@@ -34,7 +34,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{!"clang version 4.0.0 (trunk 288665) (llvm/trunk 288725)"}
-!6 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !7, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !0, variables: !2)
+!6 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !7, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !DILocation(line: 4, column: 3, scope: !6)

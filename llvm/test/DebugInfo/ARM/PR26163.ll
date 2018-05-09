@@ -72,14 +72,14 @@ entry:
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257891)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "/home/ubuntu/bugs")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "parse_config_file", scope: !5, file: !5, line: 22, type: !6, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !9)
+!4 = distinct !DISubprogram(name: "parse_config_file", scope: !5, file: !5, line: 22, type: !6, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !9)
 !5 = !DIFile(filename: "test.c", directory: "/home/ubuntu/bugs")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !{!10}
 !10 = !DILocalVariable(name: "value", scope: !4, file: !5, line: 24, type: !8)
-!11 = distinct !DISubprogram(name: "bar", scope: !5, file: !5, line: 11, type: !12, isLocal: true, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !14)
+!11 = distinct !DISubprogram(name: "bar", scope: !5, file: !5, line: 11, type: !12, isLocal: true, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !14)
 !12 = !DISubroutineType(types: !13)
 !13 = !{null, !8}
 !14 = !{!15, !16}

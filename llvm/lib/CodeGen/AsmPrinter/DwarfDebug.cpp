@@ -1202,10 +1202,12 @@ void DwarfDebug::collectVariableInfo(DwarfCompileUnit &TheCU,
   }
 
   // Collect info for variables that were optimized out.
-  for (const DILocalVariable *DV : SP->getVariables()) {
-    if (Processed.insert(InlinedVariable(DV, nullptr)).second)
-      if (LexicalScope *Scope = LScopes.findLexicalScope(DV->getScope()))
-        createConcreteVariable(TheCU, *Scope, InlinedVariable(DV, nullptr));
+  for (const DINode *DN : SP->getRetainedNodes()) {
+    if (auto *DV = dyn_cast<DILocalVariable>(DN)) {
+      if (Processed.insert(InlinedVariable(DV, nullptr)).second)
+        if (LexicalScope *Scope = LScopes.findLexicalScope(DV->getScope()))
+          createConcreteVariable(TheCU, *Scope, InlinedVariable(DV, nullptr));
+    }
   }
 }
 
@@ -1386,14 +1388,16 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   // Construct abstract scopes.
   for (LexicalScope *AScope : LScopes.getAbstractScopesList()) {
     auto *SP = cast<DISubprogram>(AScope->getScopeNode());
-    // Collect info for variables that were optimized out.
-    for (const DILocalVariable *DV : SP->getVariables()) {
-      if (!ProcessedVars.insert(InlinedVariable(DV, nullptr)).second)
-        continue;
-      ensureAbstractVariableIsCreated(TheCU, InlinedVariable(DV, nullptr),
-                                      DV->getScope());
-      assert(LScopes.getAbstractScopesList().size() == NumAbstractScopes
-             && "ensureAbstractVariableIsCreated inserted abstract scopes");
+    for (const DINode *DN : SP->getRetainedNodes()) {
+      if (auto *DV = dyn_cast<DILocalVariable>(DN)) {
+        // Collect info for variables that were optimized out.
+        if (!ProcessedVars.insert(InlinedVariable(DV, nullptr)).second)
+          continue;
+        ensureAbstractVariableIsCreated(TheCU, InlinedVariable(DV, nullptr),
+                                        DV->getScope());
+        assert(LScopes.getAbstractScopesList().size() == NumAbstractScopes
+               && "ensureAbstractVariableIsCreated inserted abstract scopes");
+      }
     }
     constructAbstractSubprogramScopeDIE(TheCU, AScope);
   }

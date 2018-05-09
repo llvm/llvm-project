@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the ExceptionSpecificationType enumeration and various
+/// Defines the ExceptionSpecificationType enumeration and various
 /// utility functions.
 ///
 //===----------------------------------------------------------------------===//
@@ -17,7 +17,7 @@
 
 namespace clang {
 
-/// \brief The various types of exception specifications that exist in C++11.
+/// The various types of exception specifications that exist in C++11.
 enum ExceptionSpecificationType {
   EST_None,             ///< no exception specification
   EST_DynamicNone,      ///< throw()
@@ -49,7 +49,7 @@ inline bool isUnresolvedExceptionSpec(ExceptionSpecificationType ESpecType) {
   return ESpecType == EST_Unevaluated || ESpecType == EST_Uninstantiated;
 }
 
-/// \brief Possible results from evaluation of a noexcept expression.
+/// Possible results from evaluation of a noexcept expression.
 enum CanThrowResult {
   CT_Cannot,
   CT_Dependent,

@@ -372,7 +372,7 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
     if (!ProcessedBegin)
       --I;
 
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
 
     bool Joined = PerformTrivialForwardCoalescing(MI, &MBB);

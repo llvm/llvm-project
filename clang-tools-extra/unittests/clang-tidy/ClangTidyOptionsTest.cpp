@@ -58,6 +58,7 @@ TEST(ParseConfiguration, ValidConfiguration) {
   llvm::ErrorOr<ClangTidyOptions> Options =
       parseConfiguration("Checks: \"-*,misc-*\"\n"
                          "HeaderFilterRegex: \".*\"\n"
+                         "AnalyzeTemporaryDtors: true\n"
                          "User: some.user");
   EXPECT_TRUE(!!Options);
   EXPECT_EQ("-*,misc-*", *Options->Checks);
@@ -69,6 +70,7 @@ TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options1 = parseConfiguration(R"(
       Checks: "check1,check2"
       HeaderFilterRegex: "filter1"
+      AnalyzeTemporaryDtors: true
       User: user1
       ExtraArgs: ['arg1', 'arg2']
       ExtraArgsBefore: ['arg-before1', 'arg-before2']
@@ -77,6 +79,7 @@ TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options2 = parseConfiguration(R"(
       Checks: "check3,check4"
       HeaderFilterRegex: "filter2"
+      AnalyzeTemporaryDtors: false
       User: user2
       ExtraArgs: ['arg3', 'arg4']
       ExtraArgsBefore: ['arg-before3', 'arg-before4']

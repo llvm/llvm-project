@@ -1232,30 +1232,30 @@ public:
 
   EvaluatedStmt *ensureEvaluatedStmt() const;
 
-  /// \brief Attempt to evaluate the value of the initializer attached to this
+  /// Attempt to evaluate the value of the initializer attached to this
   /// declaration, and produce notes explaining why it cannot be evaluated or is
   /// not a constant expression. Returns a pointer to the value if evaluation
   /// succeeded, 0 otherwise.
   APValue *evaluateValue() const;
   APValue *evaluateValue(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
 
-  /// \brief Return the already-evaluated value of this variable's
+  /// Return the already-evaluated value of this variable's
   /// initializer, or NULL if the value is not yet known. Returns pointer
   /// to untyped APValue if the value could not be evaluated.
   APValue *getEvaluatedValue() const;
 
-  /// \brief Determines whether it is already known whether the
+  /// Determines whether it is already known whether the
   /// initializer is an integral constant expression or not.
   bool isInitKnownICE() const;
 
-  /// \brief Determines whether the initializer is an integral constant
+  /// Determines whether the initializer is an integral constant
   /// expression, or in C++11, whether the initializer is a constant
   /// expression.
   ///
   /// \pre isInitKnownICE()
   bool isInitICE() const;
 
-  /// \brief Determine whether the value of the initializer attached to this
+  /// Determine whether the value of the initializer attached to this
   /// declaration is an integral constant expression.
   bool checkInitIsICE() const;
 
@@ -1263,7 +1263,7 @@ public:
     VarDeclBits.InitStyle = Style;
   }
 
-  /// \brief The style of initialization for this declaration.
+  /// The style of initialization for this declaration.
   ///
   /// C-style initialization is "int x = 1;". Call-style initialization is
   /// a C++98 direct-initializer, e.g. "int x(1);". The Init expression will be
@@ -1277,18 +1277,18 @@ public:
     return static_cast<InitializationStyle>(VarDeclBits.InitStyle);
   }
 
-  /// \brief Whether the initializer is a direct-initializer (list or call).
+  /// Whether the initializer is a direct-initializer (list or call).
   bool isDirectInit() const {
     return getInitStyle() != CInit;
   }
 
-  /// \brief If this definition should pretend to be a declaration.
+  /// If this definition should pretend to be a declaration.
   bool isThisDeclarationADemotedDefinition() const {
     return isa<ParmVarDecl>(this) ? false :
       NonParmVarDeclBits.IsThisDeclarationADemotedDefinition;
   }
 
-  /// \brief This is a definition which should be demoted to a declaration.
+  /// This is a definition which should be demoted to a declaration.
   ///
   /// In some cases (mostly module merging) we can end up with two visible
   /// definitions one of which needs to be demoted to a declaration to keep
@@ -1299,7 +1299,7 @@ public:
     NonParmVarDeclBits.IsThisDeclarationADemotedDefinition = 1;
   }
 
-  /// \brief Determine whether this variable is the exception variable in a
+  /// Determine whether this variable is the exception variable in a
   /// C++ catch statememt or an Objective-C \@catch statement.
   bool isExceptionVariable() const {
     return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.ExceptionVar;
@@ -1309,7 +1309,7 @@ public:
     NonParmVarDeclBits.ExceptionVar = EV;
   }
 
-  /// \brief Determine whether this local variable can be used with the named
+  /// Determine whether this local variable can be used with the named
   /// return value optimization (NRVO).
   ///
   /// The named return value optimization (NRVO) works by marking certain
@@ -1327,7 +1327,7 @@ public:
     NonParmVarDeclBits.NRVOVariable = NRVO;
   }
 
-  /// \brief Determine whether this variable is the for-range-declaration in
+  /// Determine whether this variable is the for-range-declaration in
   /// a C++0x for-range statement.
   bool isCXXForRangeDecl() const {
     return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.CXXForRangeDecl;
@@ -1337,7 +1337,7 @@ public:
     NonParmVarDeclBits.CXXForRangeDecl = FRD;
   }
 
-  /// \brief Determine whether this variable is a for-loop declaration for a
+  /// Determine whether this variable is a for-loop declaration for a
   /// for-in statement in Objective-C.
   bool isObjCForDecl() const {
     return NonParmVarDeclBits.ObjCForDecl;
@@ -1347,7 +1347,7 @@ public:
     NonParmVarDeclBits.ObjCForDecl = FRD;
   }
 
-  /// \brief Determine whether this variable is an ARC pseudo-__strong
+  /// Determine whether this variable is an ARC pseudo-__strong
   /// variable.  A pseudo-__strong variable has a __strong-qualified
   /// type but does not actually retain the object written into it.
   /// Generally such variables are also 'const' for safety.
@@ -1407,41 +1407,41 @@ public:
     NonParmVarDeclBits.PreviousDeclInSameBlockScope = Same;
   }
 
-  /// \brief Retrieve the variable declaration from which this variable could
+  /// Retrieve the variable declaration from which this variable could
   /// be instantiated, if it is an instantiation (rather than a non-template).
   VarDecl *getTemplateInstantiationPattern() const;
 
-  /// \brief If this variable is an instantiated static data member of a
+  /// If this variable is an instantiated static data member of a
   /// class template specialization, returns the templated static data member
   /// from which it was instantiated.
   VarDecl *getInstantiatedFromStaticDataMember() const;
 
-  /// \brief If this variable is an instantiation of a variable template or a
+  /// If this variable is an instantiation of a variable template or a
   /// static data member of a class template, determine what kind of
   /// template specialization or instantiation this is.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
 
-  /// \brief If this variable is an instantiation of a variable template or a
+  /// If this variable is an instantiation of a variable template or a
   /// static data member of a class template, determine its point of
   /// instantiation.
   SourceLocation getPointOfInstantiation() const;
 
-  /// \brief If this variable is an instantiation of a static data member of a
+  /// If this variable is an instantiation of a static data member of a
   /// class template specialization, retrieves the member specialization
   /// information.
   MemberSpecializationInfo *getMemberSpecializationInfo() const;
 
-  /// \brief For a static data member that was instantiated from a static
+  /// For a static data member that was instantiated from a static
   /// data member of a class template, set the template specialiation kind.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
 
-  /// \brief Specify that this variable is an instantiation of the
+  /// Specify that this variable is an instantiation of the
   /// static data member VD.
   void setInstantiationOfStaticDataMember(VarDecl *VD,
                                           TemplateSpecializationKind TSK);
 
-  /// \brief Retrieves the variable template that is described by this
+  /// Retrieves the variable template that is described by this
   /// variable declaration.
   ///
   /// Every variable template is represented as a VarTemplateDecl and a
@@ -1613,7 +1613,7 @@ public:
 
   void setDefaultArg(Expr *defarg);
 
-  /// \brief Retrieve the source range that covers the entire default
+  /// Retrieve the source range that covers the entire default
   /// argument.
   SourceRange getDefaultArgRange() const;
   void setUninstantiatedDefaultArg(Expr *arg);
@@ -1661,7 +1661,7 @@ public:
 
   QualType getOriginalType() const;
 
-  /// \brief Determine whether this parameter is actually a function
+  /// Determine whether this parameter is actually a function
   /// parameter pack.
   bool isParameterPack() const;
 
@@ -1709,7 +1709,7 @@ private:
 class FunctionDecl : public DeclaratorDecl, public DeclContext,
                      public Redeclarable<FunctionDecl> {
 public:
-  /// \brief The kind of templated function a FunctionDecl can be.
+  /// The kind of templated function a FunctionDecl can be.
   enum TemplatedKind {
     TK_NonTemplate,
     TK_FunctionTemplate,
@@ -1757,10 +1757,10 @@ private:
   unsigned IsConstexpr : 1;
   unsigned InstantiationIsPending : 1;
 
-  /// \brief Indicates if the function uses __try.
+  /// Indicates if the function uses __try.
   unsigned UsesSEHTry : 1;
 
-  /// \brief Indicates if the function was a definition but its body was
+  /// Indicates if the function was a definition but its body was
   /// skipped.
   unsigned HasSkippedBody : 1;
 
@@ -1786,7 +1786,7 @@ private:
   unsigned HasODRHash : 1;
   unsigned ODRHash;
 
-  /// \brief End part of this FunctionDecl's source range.
+  /// End part of this FunctionDecl's source range.
   ///
   /// We could compute the full range in getSourceRange(). However, when we're
   /// dealing with a function definition deserialized from a PCH/AST file,
@@ -1795,7 +1795,7 @@ private:
   /// EndRangeLoc.
   SourceLocation EndRangeLoc;
 
-  /// \brief The template or declaration that this declaration
+  /// The template or declaration that this declaration
   /// describes or was instantiated from, respectively.
   ///
   /// For non-templates, this value will be NULL. For function
@@ -1817,7 +1817,7 @@ private:
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
 
-  /// \brief Specify that this function declaration is actually a function
+  /// Specify that this function declaration is actually a function
   /// template specialization.
   ///
   /// \param C the ASTContext.
@@ -1846,7 +1846,7 @@ private:
                           const TemplateArgumentListInfo *TemplateArgsAsWritten,
                                          SourceLocation PointOfInstantiation);
 
-  /// \brief Specify that this record is an instantiation of the
+  /// Specify that this record is an instantiation of the
   /// member function FD.
   void setInstantiationOfMemberFunction(ASTContext &C, FunctionDecl *FD,
                                         TemplateSpecializationKind TSK);
@@ -1980,7 +1980,7 @@ public:
     return isDefined(Definition);
   }
 
-  /// \brief Get the definition for this declaration.
+  /// Get the definition for this declaration.
   FunctionDecl *getDefinition() {
     const FunctionDecl *Definition;
     if (isDefined(Definition))
@@ -2064,7 +2064,7 @@ public:
   bool hasImplicitReturnZero() const { return HasImplicitReturnZero; }
   void setHasImplicitReturnZero(bool IRZ) { HasImplicitReturnZero = IRZ; }
 
-  /// \brief Whether this function has a prototype, either because one
+  /// Whether this function has a prototype, either because one
   /// was explicitly written or because it was "inherited" by merging
   /// a declaration without a prototype with a declaration that has a
   /// prototype.
@@ -2074,7 +2074,7 @@ public:
 
   bool hasWrittenPrototype() const { return HasWrittenPrototype; }
 
-  /// \brief Whether this function inherited its prototype from a
+  /// Whether this function inherited its prototype from a
   /// previous declaration.
   bool hasInheritedPrototype() const { return HasInheritedPrototype; }
   void setHasInheritedPrototype(bool P = true) { HasInheritedPrototype = P; }
@@ -2083,7 +2083,7 @@ public:
   bool isConstexpr() const { return IsConstexpr; }
   void setConstexpr(bool IC) { IsConstexpr = IC; }
 
-  /// \brief Whether the instantiation of this function is pending.
+  /// Whether the instantiation of this function is pending.
   /// This bit is set when the decision to instantiate this function is made
   /// and unset if and when the function body is created. That leaves out
   /// cases where instantiation did not happen because the template definition
@@ -2092,11 +2092,11 @@ public:
   bool instantiationIsPending() const { return InstantiationIsPending; }
   void setInstantiationIsPending(bool IC) { InstantiationIsPending = IC; }
 
-  /// \brief Indicates the function uses __try.
+  /// Indicates the function uses __try.
   bool usesSEHTry() const { return UsesSEHTry; }
   void setUsesSEHTry(bool UST) { UsesSEHTry = UST; }
 
-  /// \brief Whether this function has been deleted.
+  /// Whether this function has been deleted.
   ///
   /// A function that is "deleted" (via the C++0x "= delete" syntax)
   /// acts like a normal function, except that it cannot actually be
@@ -2119,15 +2119,15 @@ public:
   bool isDeletedAsWritten() const { return IsDeleted && !IsDefaulted; }
   void setDeletedAsWritten(bool D = true) { IsDeleted = D; }
 
-  /// \brief Determines whether this function is "main", which is the
+  /// Determines whether this function is "main", which is the
   /// entry point into an executable program.
   bool isMain() const;
 
-  /// \brief Determines whether this function is a MSVCRT user defined entry
+  /// Determines whether this function is a MSVCRT user defined entry
   /// point.
   bool isMSVCRTEntryPoint() const;
 
-  /// \brief Determines whether this operator new or delete is one
+  /// Determines whether this operator new or delete is one
   /// of the reserved global placement operators:
   ///    void *operator new(size_t, void *);
   ///    void *operator new[](size_t, void *);
@@ -2142,7 +2142,7 @@ public:
   /// This function must be an allocation or deallocation function.
   bool isReservedGlobalPlacementOperator() const;
 
-  /// \brief Determines whether this function is one of the replaceable
+  /// Determines whether this function is one of the replaceable
   /// global allocation functions:
   ///    void *operator new(size_t);
   ///    void *operator new(size_t, const std::nothrow_t &) noexcept;
@@ -2162,32 +2162,32 @@ public:
   /// true through IsAligned.
   bool isReplaceableGlobalAllocationFunction(bool *IsAligned = nullptr) const;
 
-  /// \brief Determine whether this is a destroying operator delete.
+  /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
 
-  /// \brief Determines whether this function is a function with
+  /// Determines whether this function is a function with
   /// external, C linkage.
   bool isExternC() const;
 
-  /// \brief Determines whether this function's context is, or is nested within,
+  /// Determines whether this function's context is, or is nested within,
   /// a C++ extern "C" linkage spec.
   bool isInExternCContext() const;
 
-  /// \brief Determines whether this function's context is, or is nested within,
+  /// Determines whether this function's context is, or is nested within,
   /// a C++ extern "C++" linkage spec.
   bool isInExternCXXContext() const;
 
-  /// \brief Determines whether this is a global function.
+  /// Determines whether this is a global function.
   bool isGlobal() const;
 
-  /// \brief Determines whether this function is known to be 'noreturn', through
+  /// Determines whether this function is known to be 'noreturn', through
   /// an attribute on its declaration or its type.
   bool isNoReturn() const;
 
-  /// \brief True if the function was a definition but its body was skipped.
+  /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return HasSkippedBody; }
   void setHasSkippedBody(bool Skipped = true) { HasSkippedBody = Skipped; }
 
@@ -2259,34 +2259,34 @@ public:
     return getType()->getAs<FunctionType>()->getReturnType();
   }
 
-  /// \brief Attempt to compute an informative source range covering the
+  /// Attempt to compute an informative source range covering the
   /// function return type. This may omit qualifiers and other information with
   /// limited representation in the AST.
   SourceRange getReturnTypeSourceRange() const;
 
-  /// \brief Attempt to compute an informative source range covering the
+  /// Attempt to compute an informative source range covering the
   /// function exception specification, if any.
   SourceRange getExceptionSpecSourceRange() const;
 
-  /// \brief Determine the type of an expression that calls this function.
+  /// Determine the type of an expression that calls this function.
   QualType getCallResultType() const {
     assert(getType()->getAs<FunctionType>() && "Expected a FunctionType!");
     return getType()->getAs<FunctionType>()->getCallResultType(getASTContext());
   }
 
-  /// \brief Returns the WarnUnusedResultAttr that is either declared on this
+  /// Returns the WarnUnusedResultAttr that is either declared on this
   /// function, or its return type declaration.
   const Attr *getUnusedResultAttr() const;
 
-  /// \brief Returns true if this function or its return type has the
+  /// Returns true if this function or its return type has the
   /// warn_unused_result attribute.
   bool hasUnusedResultAttr() const { return getUnusedResultAttr() != nullptr; }
 
-  /// \brief Returns the storage class as written in the source. For the
+  /// Returns the storage class as written in the source. For the
   /// computed linkage of symbol, see getLinkage.
   StorageClass getStorageClass() const { return StorageClass(SClass); }
 
-  /// \brief Determine whether the "inline" keyword was specified for this
+  /// Determine whether the "inline" keyword was specified for this
   /// function.
   bool isInlineSpecified() const { return IsInlineSpecified; }
 
@@ -2301,7 +2301,7 @@ public:
     IsInline = true;
   }
 
-  /// \brief Determine whether this function should be inlined, because it is
+  /// Determine whether this function should be inlined, because it is
   /// either marked "inline" or "constexpr" or is a member function of a class
   /// that was defined in the class body.
   bool isInlined() const { return IsInline; }
@@ -2322,7 +2322,7 @@ public:
 
   const IdentifierInfo *getLiteralIdentifier() const;
 
-  /// \brief If this function is an instantiation of a member function
+  /// If this function is an instantiation of a member function
   /// of a class template specialization, retrieves the function from
   /// which it was instantiated.
   ///
@@ -2345,22 +2345,22 @@ public:
   /// declaration returned by getInstantiatedFromMemberFunction().
   FunctionDecl *getInstantiatedFromMemberFunction() const;
 
-  /// \brief What kind of templated function this is.
+  /// What kind of templated function this is.
   TemplatedKind getTemplatedKind() const;
 
-  /// \brief If this function is an instantiation of a member function of a
+  /// If this function is an instantiation of a member function of a
   /// class template specialization, retrieves the member specialization
   /// information.
   MemberSpecializationInfo *getMemberSpecializationInfo() const;
 
-  /// \brief Specify that this record is an instantiation of the
+  /// Specify that this record is an instantiation of the
   /// member function FD.
   void setInstantiationOfMemberFunction(FunctionDecl *FD,
                                         TemplateSpecializationKind TSK) {
     setInstantiationOfMemberFunction(getASTContext(), FD, TSK);
   }
 
-  /// \brief Retrieves the function template that is described by this
+  /// Retrieves the function template that is described by this
   /// function declaration.
   ///
   /// Every function template is represented as a FunctionTemplateDecl
@@ -2376,50 +2376,50 @@ public:
 
   void setDescribedFunctionTemplate(FunctionTemplateDecl *Template);
 
-  /// \brief Determine whether this function is a function template
+  /// Determine whether this function is a function template
   /// specialization.
   bool isFunctionTemplateSpecialization() const {
     return getPrimaryTemplate() != nullptr;
   }
 
-  /// \brief Retrieve the class scope template pattern that this function
+  /// Retrieve the class scope template pattern that this function
   ///  template specialization is instantiated from.
   FunctionDecl *getClassScopeSpecializationPattern() const;
 
-  /// \brief If this function is actually a function template specialization,
+  /// If this function is actually a function template specialization,
   /// retrieve information about this function template specialization.
   /// Otherwise, returns NULL.
   FunctionTemplateSpecializationInfo *getTemplateSpecializationInfo() const;
 
-  /// \brief Determines whether this function is a function template
+  /// Determines whether this function is a function template
   /// specialization or a member of a class template specialization that can
   /// be implicitly instantiated.
   bool isImplicitlyInstantiable() const;
 
-  /// \brief Determines if the given function was instantiated from a
+  /// Determines if the given function was instantiated from a
   /// function template.
   bool isTemplateInstantiation() const;
 
-  /// \brief Retrieve the function declaration from which this function could
+  /// Retrieve the function declaration from which this function could
   /// be instantiated, if it is an instantiation (rather than a non-template
   /// or a specialization, for example).
   FunctionDecl *getTemplateInstantiationPattern() const;
 
-  /// \brief Retrieve the primary template that this function template
+  /// Retrieve the primary template that this function template
   /// specialization either specializes or was instantiated from.
   ///
   /// If this function declaration is not a function template specialization,
   /// returns NULL.
   FunctionTemplateDecl *getPrimaryTemplate() const;
 
-  /// \brief Retrieve the template arguments used to produce this function
+  /// Retrieve the template arguments used to produce this function
   /// template specialization from the primary template.
   ///
   /// If this function declaration is not a function template specialization,
   /// returns NULL.
   const TemplateArgumentList *getTemplateSpecializationArgs() const;
 
-  /// \brief Retrieve the template argument list as written in the sources,
+  /// Retrieve the template argument list as written in the sources,
   /// if any.
   ///
   /// If this function declaration is not a function template specialization
@@ -2429,7 +2429,7 @@ public:
   const ASTTemplateArgumentListInfo*
   getTemplateSpecializationArgsAsWritten() const;
 
-  /// \brief Specify that this function declaration is actually a function
+  /// Specify that this function declaration is actually a function
   /// template specialization.
   ///
   /// \param Template the function template that this function template
@@ -2459,7 +2459,7 @@ public:
                                       PointOfInstantiation);
   }
 
-  /// \brief Specifies that this function declaration is actually a
+  /// Specifies that this function declaration is actually a
   /// dependent function template specialization.
   void setDependentTemplateSpecialization(ASTContext &Context,
                              const UnresolvedSetImpl &Templates,
@@ -2468,16 +2468,16 @@ public:
   DependentFunctionTemplateSpecializationInfo *
   getDependentSpecializationInfo() const;
 
-  /// \brief Determine what kind of template instantiation this function
+  /// Determine what kind of template instantiation this function
   /// represents.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
 
-  /// \brief Determine what kind of template instantiation this function
+  /// Determine what kind of template instantiation this function
   /// represents.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
 
-  /// \brief Retrieve the (first) point of instantiation of a function template
+  /// Retrieve the (first) point of instantiation of a function template
   /// specialization or a member of a class template specialization.
   ///
   /// \returns the first point of instantiation, if this function was
@@ -2485,17 +2485,17 @@ public:
   /// location.
   SourceLocation getPointOfInstantiation() const;
 
-  /// \brief Determine whether this is or was instantiated from an out-of-line
+  /// Determine whether this is or was instantiated from an out-of-line
   /// definition of a member function.
   bool isOutOfLine() const override;
 
-  /// \brief Identify a memory copying or setting function.
+  /// Identify a memory copying or setting function.
   /// If the given function is a memory copy or setting function, returns
   /// the corresponding Builtin ID. If the function is not a memory function,
   /// returns 0.
   unsigned getMemoryFunctionKind() const;
 
-  /// \brief Returns ODRHash of the function.  This value is calculated and
+  /// Returns ODRHash of the function.  This value is calculated and
   /// stored on first call, then the stored value returned on the other calls.
   unsigned getODRHash();
 
@@ -2548,7 +2548,7 @@ class FieldDecl : public DeclaratorDecl, public Mergeable<FieldDecl> {
     Expr *BitWidth;
   };
 
-  /// \brief Storage for either the bit-width, the in-class initializer, or
+  /// Storage for either the bit-width, the in-class initializer, or
   /// both (via InitAndBitWidth), or the captured variable length array bound.
   ///
   /// If the storage kind is ISK_InClassCopyInit or
@@ -2679,20 +2679,20 @@ public:
     InitStorage.setPointerAndInt(getBitWidth(), ISK_NoInit);
   }
 
-  /// \brief Determine whether this member captures the variable length array
+  /// Determine whether this member captures the variable length array
   /// type.
   bool hasCapturedVLAType() const {
     return InitStorage.getInt() == ISK_CapturedVLAType;
   }
 
-  /// \brief Get the captured variable length array type.
+  /// Get the captured variable length array type.
   const VariableArrayType *getCapturedVLAType() const {
     return hasCapturedVLAType() ? static_cast<const VariableArrayType *>(
                                       InitStorage.getPointer())
                                 : nullptr;
   }
 
-  /// \brief Set the captured variable length array type for this field.
+  /// Set the captured variable length array type for this field.
   void setCapturedVLAType(const VariableArrayType *VLAType);
 
   /// Returns the parent of this field declaration, which
@@ -3062,7 +3062,7 @@ private:
   // to be used for the (uncommon) case of out-of-line declarations.
   using ExtInfo = QualifierInfo;
 
-  /// \brief If the (out-of-line) tag declaration name
+  /// If the (out-of-line) tag declaration name
   /// is qualified, it points to the qualifier info (nns and range);
   /// otherwise, if the tag declaration is anonymous and it is part of
   /// a typedef or alias, it points to the TypedefNameDecl (used for mangling);
@@ -3106,7 +3106,7 @@ protected:
     return getMostRecentDecl();
   }
 
-  /// @brief Completes the definition of this tag declaration.
+  /// Completes the definition of this tag declaration.
   ///
   /// This is a helper function for derived classes.
   void completeDefinition();
@@ -3153,7 +3153,7 @@ public:
     return IsCompleteDefinition;
   }
 
-  /// \brief Return true if this complete decl is
+  /// Return true if this complete decl is
   /// required to be complete for some existing use.
   bool isCompleteDefinitionRequired() const {
     return IsCompleteDefinitionRequired;
@@ -3176,7 +3176,7 @@ public:
     IsFreeStanding = isFreeStanding;
   }
 
-  /// \brief Whether this declaration declares a type that is
+  /// Whether this declaration declares a type that is
   /// dependent, i.e., a type that somehow depends on template
   /// parameters.
   bool isDependentType() const { return isDependentContext(); }
@@ -3246,14 +3246,14 @@ public:
 
   void setTypedefNameForAnonDecl(TypedefNameDecl *TDD);
 
-  /// \brief Retrieve the nested-name-specifier that qualifies the name of this
+  /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
   NestedNameSpecifier *getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
                         : nullptr;
   }
 
-  /// \brief Retrieve the nested-name-specifier (with source-location
+  /// Retrieve the nested-name-specifier (with source-location
   /// information) that qualifies the name of this declaration, if it was
   /// present in the source.
   NestedNameSpecifierLoc getQualifierLoc() const {
@@ -3314,7 +3314,7 @@ class EnumDecl : public TagDecl {
   /// in C++) are of the enum type instead.
   QualType PromotionType;
 
-  /// \brief If this enumeration is an instantiation of a member enumeration
+  /// If this enumeration is an instantiation of a member enumeration
   /// of a class template specialization, this is the member specialization
   /// information.
   MemberSpecializationInfo *SpecializationInfo = nullptr;
@@ -3422,23 +3422,23 @@ public:
     return IntegerType.get<TypeSourceInfo*>()->getType().getUnqualifiedType();
   }
 
-  /// \brief Set the underlying integer type.
+  /// Set the underlying integer type.
   void setIntegerType(QualType T) { IntegerType = T.getTypePtrOrNull(); }
 
-  /// \brief Set the underlying integer type source info.
+  /// Set the underlying integer type source info.
   void setIntegerTypeSourceInfo(TypeSourceInfo *TInfo) { IntegerType = TInfo; }
 
-  /// \brief Return the type source info for the underlying integer type,
+  /// Return the type source info for the underlying integer type,
   /// if no type source info exists, return 0.
   TypeSourceInfo *getIntegerTypeSourceInfo() const {
     return IntegerType.dyn_cast<TypeSourceInfo*>();
   }
 
-  /// \brief Retrieve the source range that covers the underlying type if
+  /// Retrieve the source range that covers the underlying type if
   /// specified.
   SourceRange getIntegerTypeRange() const LLVM_READONLY;
 
-  /// \brief Returns the width in bits required to store all the
+  /// Returns the width in bits required to store all the
   /// non-negative enumerators of this enum.
   unsigned getNumPositiveBits() const {
     return NumPositiveBits;
@@ -3448,7 +3448,7 @@ public:
     assert(NumPositiveBits == Num && "can't store this bitcount");
   }
 
-  /// \brief Returns the width in bits required to store all the
+  /// Returns the width in bits required to store all the
   /// negative enumerators of this enum.  These widths include
   /// the rightmost leading 1;  that is:
   ///
@@ -3464,23 +3464,23 @@ public:
     NumNegativeBits = Num;
   }
 
-  /// \brief Returns true if this is a C++11 scoped enumeration.
+  /// Returns true if this is a C++11 scoped enumeration.
   bool isScoped() const {
     return IsScoped;
   }
 
-  /// \brief Returns true if this is a C++11 scoped enumeration.
+  /// Returns true if this is a C++11 scoped enumeration.
   bool isScopedUsingClassTag() const {
     return IsScopedUsingClassTag;
   }
 
-  /// \brief Returns true if this is an Objective-C, C++11, or
+  /// Returns true if this is an Objective-C, C++11, or
   /// Microsoft-style enumeration with a fixed underlying type.
   bool isFixed() const {
     return IsFixed;
   }
 
-  /// \brief Returns true if this can be considered a complete type.
+  /// Returns true if this can be considered a complete type.
   bool isComplete() const {
     // IntegerType is set for fixed type enums and non-fixed but implicitly
     // int-sized Microsoft enums.
@@ -3499,33 +3499,33 @@ public:
   /// enum_extensibility(open).
   bool isClosedNonFlag() const;
 
-  /// \brief Retrieve the enum definition from which this enumeration could
+  /// Retrieve the enum definition from which this enumeration could
   /// be instantiated, if it is an instantiation (rather than a non-template).
   EnumDecl *getTemplateInstantiationPattern() const;
 
-  /// \brief Returns the enumeration (declared within the template)
+  /// Returns the enumeration (declared within the template)
   /// from which this enumeration type was instantiated, or NULL if
   /// this enumeration was not instantiated from any template.
   EnumDecl *getInstantiatedFromMemberEnum() const;
 
-  /// \brief If this enumeration is a member of a specialization of a
+  /// If this enumeration is a member of a specialization of a
   /// templated class, determine what kind of template specialization
   /// or instantiation this is.
   TemplateSpecializationKind getTemplateSpecializationKind() const;
 
-  /// \brief For an enumeration member that was instantiated from a member
+  /// For an enumeration member that was instantiated from a member
   /// enumeration of a templated class, set the template specialiation kind.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
 
-  /// \brief If this enumeration is an instantiation of a member enumeration of
+  /// If this enumeration is an instantiation of a member enumeration of
   /// a class template specialization, retrieves the member specialization
   /// information.
   MemberSpecializationInfo *getMemberSpecializationInfo() const {
     return SpecializationInfo;
   }
 
-  /// \brief Specify that this enumeration is an instantiation of the
+  /// Specify that this enumeration is an instantiation of the
   /// member enumeration ED.
   void setInstantiationOfMemberEnum(EnumDecl *ED,
                                     TemplateSpecializationKind TSK) {
@@ -3713,7 +3713,7 @@ public:
     ParamDestroyedInCallee = V;
   }
 
-  /// \brief Determines whether this declaration represents the
+  /// Determines whether this declaration represents the
   /// injected class name.
   ///
   /// The injected class name in C++ is the name of the class that
@@ -3728,15 +3728,15 @@ public:
   /// \endcode
   bool isInjectedClassName() const;
 
-  /// \brief Determine whether this record is a class describing a lambda
+  /// Determine whether this record is a class describing a lambda
   /// function object.
   bool isLambda() const;
 
-  /// \brief Determine whether this record is a record for captured variables in
+  /// Determine whether this record is a record for captured variables in
   /// CapturedStmt construct.
   bool isCapturedRecord() const;
 
-  /// \brief Mark the record as a record for captured variables in CapturedStmt
+  /// Mark the record as a record for captured variables in CapturedStmt
   /// construct.
   void setCapturedRecord();
 
@@ -3778,12 +3778,12 @@ public:
     return K >= firstRecord && K <= lastRecord;
   }
 
-  /// \brief Get whether or not this is an ms_struct which can
+  /// Get whether or not this is an ms_struct which can
   /// be turned on with an attribute, pragma, or -mms-bitfields
   /// commandline option.
   bool isMsStruct(const ASTContext &C) const;
 
-  /// \brief Whether we are allowed to insert extra padding between fields.
+  /// Whether we are allowed to insert extra padding between fields.
   /// These padding are added to help AddressSanitizer detect
   /// intra-object-overflow bugs.
   bool mayInsertExtraPadding(bool EmitRemark = false) const;
@@ -3793,7 +3793,7 @@ public:
   const FieldDecl *findFirstNamedDataMember() const;  
 
 private:
-  /// \brief Deserialize just the fields.
+  /// Deserialize just the fields.
   void LoadFieldsFromExternalStorage() const;
 };
 
@@ -4019,13 +4019,13 @@ protected:
   }
 
 private:
-  /// \brief The number of parameters to the outlined function.
+  /// The number of parameters to the outlined function.
   unsigned NumParams;
 
-  /// \brief The position of context parameter in list of parameters.
+  /// The position of context parameter in list of parameters.
   unsigned ContextParam;
 
-  /// \brief The body of the outlined function.
+  /// The body of the outlined function.
   llvm::PointerIntPair<Stmt *, 1, bool> BodyAndNothrow;
 
   explicit CapturedDecl(DeclContext *DC, unsigned NumParams);
@@ -4073,7 +4073,7 @@ public:
     return {getParams(), getNumParams()};
   }
 
-  /// \brief Retrieve the parameter containing captured variables.
+  /// Retrieve the parameter containing captured variables.
   ImplicitParamDecl *getContextParam() const {
     assert(ContextParam < NumParams);
     return getParam(ContextParam);
@@ -4088,9 +4088,9 @@ public:
   using param_iterator = ImplicitParamDecl *const *;
   using param_range = llvm::iterator_range<param_iterator>;
 
-  /// \brief Retrieve an iterator pointing to the first parameter decl.
+  /// Retrieve an iterator pointing to the first parameter decl.
   param_iterator param_begin() const { return getParams(); }
-  /// \brief Retrieve an iterator one past the last parameter decl.
+  /// Retrieve an iterator one past the last parameter decl.
   param_iterator param_end() const { return getParams() + NumParams; }
 
   // Implement isa/cast/dyncast/etc.
@@ -4104,7 +4104,7 @@ public:
   }
 };
 
-/// \brief Describes a module import declaration, which makes the contents
+/// Describes a module import declaration, which makes the contents
 /// of the named module visible in the current translation unit.
 ///
 /// An import declaration imports the named module (or submodule). For example:
@@ -4121,7 +4121,7 @@ class ImportDecl final : public Decl,
   friend class ASTReader;
   friend TrailingObjects;
 
-  /// \brief The imported module, along with a bit that indicates whether
+  /// The imported module, along with a bit that indicates whether
   /// we have source-location information for each identifier in the module
   /// name. 
   ///
@@ -4129,7 +4129,7 @@ class ImportDecl final : public Decl,
   /// end of the import declaration.
   llvm::PointerIntPair<Module *, 1, bool> ImportedAndComplete;
   
-  /// \brief The next import in the list of imports local to the translation
+  /// The next import in the list of imports local to the translation
   /// unit being parsed (not loaded from an AST file).
   ImportDecl *NextLocalImport = nullptr;
   
@@ -4142,25 +4142,25 @@ class ImportDecl final : public Decl,
   ImportDecl(EmptyShell Empty) : Decl(Import, Empty) {}
   
 public:
-  /// \brief Create a new module import declaration.
+  /// Create a new module import declaration.
   static ImportDecl *Create(ASTContext &C, DeclContext *DC, 
                             SourceLocation StartLoc, Module *Imported,
                             ArrayRef<SourceLocation> IdentifierLocs);
   
-  /// \brief Create a new module import declaration for an implicitly-generated
+  /// Create a new module import declaration for an implicitly-generated
   /// import.
   static ImportDecl *CreateImplicit(ASTContext &C, DeclContext *DC, 
                                     SourceLocation StartLoc, Module *Imported, 
                                     SourceLocation EndLoc);
   
-  /// \brief Create a new, deserialized module import declaration.
+  /// Create a new, deserialized module import declaration.
   static ImportDecl *CreateDeserialized(ASTContext &C, unsigned ID, 
                                         unsigned NumLocations);
   
-  /// \brief Retrieve the module that was imported by the import declaration.
+  /// Retrieve the module that was imported by the import declaration.
   Module *getImportedModule() const { return ImportedAndComplete.getPointer(); }
   
-  /// \brief Retrieves the locations of each of the identifiers that make up
+  /// Retrieves the locations of each of the identifiers that make up
   /// the complete module name in the import declaration.
   ///
   /// This will return an empty array if the locations of the individual
@@ -4173,7 +4173,7 @@ public:
   static bool classofKind(Kind K) { return K == Import; }
 };
 
-/// \brief Represents a C++ Modules TS module export declaration.
+/// Represents a C++ Modules TS module export declaration.
 ///
 /// For example:
 /// \code
@@ -4185,7 +4185,7 @@ class ExportDecl final : public Decl, public DeclContext {
 private:
   friend class ASTDeclReader;
 
-  /// \brief The source location for the right brace (if valid).
+  /// The source location for the right brace (if valid).
   SourceLocation RBraceLoc;
 
   ExportDecl(DeclContext *DC, SourceLocation ExportLoc)

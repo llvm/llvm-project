@@ -70,7 +70,7 @@ static CharSourceRange MakeCharSourceRange(const LangOptions &Features,
   return CharSourceRange::getCharRange(Begin, End);
 }
 
-/// \brief Produce a diagnostic highlighting some portion of a literal.
+/// Produce a diagnostic highlighting some portion of a literal.
 ///
 /// Emits the diagnostic \p DiagID, highlighting the range of characters from
 /// \p TokRangeBegin (inclusive) to \p TokRangeEnd (exclusive), which must be
@@ -1591,7 +1591,7 @@ static const char *resyncUTF8(const char *Err, const char *End) {
   return Err;
 }
 
-/// \brief This function copies from Fragment, which is a sequence of bytes
+/// This function copies from Fragment, which is a sequence of bytes
 /// within Tok's contents (which begin at TokBegin) into ResultPtr.
 /// Performs widening for multi-byte characters.
 bool StringLiteralParser::CopyStringFragment(const Token &Tok,

@@ -23,7 +23,7 @@ using namespace trans;
 
 namespace {
 
-/// \brief Collects all the places where GC attributes __strong/__weak occur.
+/// Collects all the places where GC attributes __strong/__weak occur.
 class GCAttrsCollector : public RecursiveASTVisitor<GCAttrsCollector> {
   MigrationContext &MigrateCtx;
   bool FullyMigratable;

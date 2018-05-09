@@ -469,6 +469,7 @@ TEST_F(FormatTestTextProto, AcceptsOperatorAsKey) {
                "    ccccccccccccccccccccccc: <\n"
                "      operator: 1\n"
                "      operator: 2\n"
+               "      operator: 3\n"
                "      operator { key: value }\n"
                "    >\n"
                "  >\n"
@@ -493,6 +494,17 @@ TEST_F(FormatTestTextProto, PutsMultipleEntriesInExtensionsOnNewlines) {
                "    key: value\n"
                "  }\n"
                "}", Style);
+}
+
+TEST_F(FormatTestTextProto, BreaksAfterBraceFollowedByClosingBraceOnNextLine) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
+  Style.ColumnLimit = 60;
+  verifyFormat("keys: [\n"
+               "  data: { item: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }\n"
+               "]");
+  verifyFormat("keys: <\n"
+               "  data: { item: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }\n"
+               ">");
 }
 
 } // end namespace tooling

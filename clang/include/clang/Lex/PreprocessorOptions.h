@@ -27,14 +27,14 @@ class MemoryBuffer;
 
 namespace clang {
 
-/// \brief Enumerate the kinds of standard library that 
+/// Enumerate the kinds of standard library that 
 enum ObjCXXARCStandardLibraryKind {
   ARCXX_nolib,
 
-  /// \brief libc++
+  /// libc++
   ARCXX_libcxx,
 
-  /// \brief libstdc++
+  /// libstdc++
   ARCXX_libstdcxx
 };
   
@@ -46,42 +46,42 @@ public:
   std::vector<std::string> Includes;
   std::vector<std::string> MacroIncludes;
 
-  /// \brief Initialize the preprocessor with the compiler and target specific
+  /// Initialize the preprocessor with the compiler and target specific
   /// predefines.
   bool UsePredefines = true;
 
-  /// \brief Whether we should maintain a detailed record of all macro
+  /// Whether we should maintain a detailed record of all macro
   /// definitions and expansions.
   bool DetailedRecord = false;
 
   /// The implicit PCH included at the start of the translation unit, or empty.
   std::string ImplicitPCHInclude;
 
-  /// \brief Headers that will be converted to chained PCHs in memory.
+  /// Headers that will be converted to chained PCHs in memory.
   std::vector<std::string> ChainedIncludes;
 
-  /// \brief When true, disables most of the normal validation performed on
+  /// When true, disables most of the normal validation performed on
   /// precompiled headers.
   bool DisablePCHValidation = false;
 
-  /// \brief When true, a PCH with compiler errors will not be rejected.
+  /// When true, a PCH with compiler errors will not be rejected.
   bool AllowPCHWithCompilerErrors = false;
 
-  /// \brief Dump declarations that are deserialized from PCH, for testing.
+  /// Dump declarations that are deserialized from PCH, for testing.
   bool DumpDeserializedPCHDecls = false;
 
-  /// \brief This is a set of names for decls that we do not want to be
+  /// This is a set of names for decls that we do not want to be
   /// deserialized, and we emit an error if they are; for testing purposes.
   std::set<std::string> DeserializedPCHDeclsToErrorOn;
 
-  /// \brief If non-zero, the implicit PCH include is actually a precompiled
+  /// If non-zero, the implicit PCH include is actually a precompiled
   /// preamble that covers this number of bytes in the main source file.
   ///
   /// The boolean indicates whether the preamble ends at the start of a new
   /// line.
   std::pair<unsigned, bool> PrecompiledPreambleBytes;
 
-  /// \brief True indicates that a preamble is being generated.
+  /// True indicates that a preamble is being generated.
   ///
   /// When the lexer is done, one of the things that need to be preserved is the
   /// conditional #if stack, so the ASTWriter/ASTReader can save/restore it when
@@ -105,22 +105,22 @@ public:
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
-  /// \brief True if the SourceManager should report the original file name for
+  /// True if the SourceManager should report the original file name for
   /// contents of files that were remapped to other files. Defaults to true.
   bool RemappedFilesKeepOriginalName = true;
 
-  /// \brief The set of file remappings, which take existing files on
+  /// The set of file remappings, which take existing files on
   /// the system (the first part of each pair) and gives them the
   /// contents of other files on the system (the second part of each
   /// pair).
   std::vector<std::pair<std::string, std::string>> RemappedFiles;
 
-  /// \brief The set of file-to-buffer remappings, which take existing files
+  /// The set of file-to-buffer remappings, which take existing files
   /// on the system (the first part of each pair) and gives them the contents
   /// of the specified memory buffer (the second part of each pair).
   std::vector<std::pair<std::string, llvm::MemoryBuffer *>> RemappedFileBuffers;
 
-  /// \brief Whether the compiler instance should retain (i.e., not free)
+  /// Whether the compiler instance should retain (i.e., not free)
   /// the buffers associated with remapped files.
   ///
   /// This flag defaults to false; it can be set true only through direct
@@ -128,12 +128,12 @@ public:
   /// compiler invocation and its buffers will be reused.
   bool RetainRemappedFileBuffers = false;
   
-  /// \brief The Objective-C++ ARC standard library that we should support,
+  /// The Objective-C++ ARC standard library that we should support,
   /// by providing appropriate definitions to retrofit the standard library
   /// with support for lifetime-qualified pointers.
   ObjCXXARCStandardLibraryKind ObjCXXARCStandardLibrary = ARCXX_nolib;
     
-  /// \brief Records the set of modules
+  /// Records the set of modules
   class FailedModulesSet {
     llvm::StringSet<> Failed;
 
@@ -147,7 +147,7 @@ public:
     }
   };
   
-  /// \brief The set of modules that failed to build.
+  /// The set of modules that failed to build.
   ///
   /// This pointer will be shared among all of the compiler instances created
   /// to (re)build modules, so that once a module fails to build anywhere,
@@ -174,7 +174,7 @@ public:
     RemappedFileBuffers.clear();
   }
   
-  /// \brief Reset any options that are not considered when building a
+  /// Reset any options that are not considered when building a
   /// module.
   void resetNonModularOptions() {
     Includes.clear();

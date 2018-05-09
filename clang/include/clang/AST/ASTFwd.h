@@ -8,7 +8,7 @@
 //===--------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Forward declaration of all AST node types.
+/// Forward declaration of all AST node types.
 ///
 //===-------------------------------------------------------------===//
 

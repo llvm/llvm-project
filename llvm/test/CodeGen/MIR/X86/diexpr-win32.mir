@@ -123,7 +123,7 @@
   !9 = !{!"clang version 6.0.0 "}
   !10 = !DIExpression(DW_OP_plus_uconst, 12)
   !11 = !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref)
-  !12 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 9, type: !13, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !12 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 9, type: !13, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
   !13 = !DISubroutineType(types: !14)
   !14 = !{!15}
   !15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "string", file: !1, line: 1, size: 96, elements: !16, identifier: ".?AUstring@@")
@@ -142,7 +142,7 @@
   !28 = !DIExpression(DW_OP_constu, 4, DW_OP_minus)
   !29 = !DILocation(line: 11, scope: !12)
   !30 = !DILocation(line: 12, scope: !12)
-  !31 = distinct !DISubprogram(name: "len", linkageName: "len", scope: !1, file: !1, line: 14, type: !32, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !31 = distinct !DISubprogram(name: "len", linkageName: "len", scope: !1, file: !1, line: 14, type: !32, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
   !32 = !DISubroutineType(types: !33)
   !33 = !{!18}
   !34 = !DILocation(line: 15, scope: !31)

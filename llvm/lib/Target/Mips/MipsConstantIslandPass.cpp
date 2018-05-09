@@ -661,7 +661,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
     if (!BBHasFallthrough(&MBB))
       WaterList.push_back(&MBB);
     for (MachineInstr &MI : MBB) {
-      if (MI.isDebugValue())
+      if (MI.isDebugInstr())
         continue;
 
       int Opc = MI.getOpcode();

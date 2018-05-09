@@ -128,9 +128,9 @@ define i32 @compr11() {
 ; CHECK-NEXT:    movzbl (%rax), %eax ## encoding: [0x0f,0xb6,0x00]
 ; CHECK-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
 ; CHECK-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x8b,0xc0]
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xef,0xc9]
 ; CHECK-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp) ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x7f,0x44,0x24,0xd8]
-; CHECK-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp) ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x7f,0x4c,0x24,0xe8]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp) ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x7f,0x44,0x24,0xe8]
 ; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
 entry:

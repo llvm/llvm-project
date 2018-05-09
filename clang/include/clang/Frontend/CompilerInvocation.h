@@ -44,7 +44,7 @@ class HeaderSearchOptions;
 class PreprocessorOptions;
 class TargetOptions;
 
-/// \brief Fill out Opts based on the options given in Args.
+/// Fill out Opts based on the options given in Args.
 ///
 /// Args must have been created from the OptTable returned by
 /// createCC1OptTable().
@@ -107,7 +107,7 @@ public:
   }
 };
   
-/// \brief Helper class for holding the data necessary to invoke the compiler.
+/// Helper class for holding the data necessary to invoke the compiler.
 ///
 /// This class is designed to represent an abstract "invocation" of the
 /// compiler, including data such as the include paths, the code generation
@@ -139,7 +139,7 @@ public:
   /// @name Utility Methods
   /// @{
 
-  /// \brief Create a compiler invocation from a list of input options.
+  /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///
   /// \param [out] Res - The resulting invocation.
@@ -151,7 +151,7 @@ public:
                              const char* const *ArgEnd,
                              DiagnosticsEngine &Diags);
 
-  /// \brief Get the directory where the compiler headers
+  /// Get the directory where the compiler headers
   /// reside, relative to the compiler binary (found by the passed in
   /// arguments).
   ///
@@ -161,7 +161,7 @@ public:
   /// executable), for finding the builtin compiler path.
   static std::string GetResourcesPath(const char *Argv0, void *MainAddr);
 
-  /// \brief Set language defaults for the given input language and
+  /// Set language defaults for the given input language and
   /// language standard in the given LangOptions object.
   ///
   /// \param Opts - The LangOptions object to set up.
@@ -173,7 +173,7 @@ public:
                    const llvm::Triple &T, PreprocessorOptions &PPOpts,
                    LangStandard::Kind LangStd = LangStandard::lang_unspecified);
   
-  /// \brief Retrieve a module hash string that is suitable for uniquely 
+  /// Retrieve a module hash string that is suitable for uniquely 
   /// identifying the conditions under which the module was built.
   std::string getModuleHash() const;
   

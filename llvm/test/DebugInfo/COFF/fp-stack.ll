@@ -31,7 +31,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 261537) (llvm/trunk 261463)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "/")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "f", linkageName: "f", scope: !5, file: !5, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !9)
+!4 = distinct !DISubprogram(name: "f", linkageName: "f", scope: !5, file: !5, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !9)
 !5 = !DIFile(filename: "t.ii", directory: "/")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null, !8}

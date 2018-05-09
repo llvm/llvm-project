@@ -68,7 +68,7 @@ for.cond.cleanup:
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 2}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!7 = distinct !DISubprogram(name: "forced", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "forced", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 3, column: 20, scope: !7)
 !10 = !DILocation(line: 3, column: 3, scope: !7)

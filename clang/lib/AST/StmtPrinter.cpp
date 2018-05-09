@@ -631,7 +631,7 @@ class OMPClausePrinter : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;
 
-  /// \brief Process clauses with list of variables.
+  /// Process clauses with list of variables.
   template <typename T>
   void VisitOMPClauseList(T *Node, char StartSym);
 

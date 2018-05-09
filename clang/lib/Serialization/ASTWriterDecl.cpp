@@ -1635,7 +1635,7 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Code = serialization::DECL_STATIC_ASSERT;
 }
 
-/// \brief Emit the DeclContext part of a declaration context decl.
+/// Emit the DeclContext part of a declaration context decl.
 void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   Record.AddOffset(Writer.WriteDeclContextLexicalBlock(Context, DC));
   Record.AddOffset(Writer.WriteDeclContextVisibleBlock(Context, DC));

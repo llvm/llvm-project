@@ -240,7 +240,7 @@ clang_getCompletionBriefComment(CXCompletionString completion_string) {
 
 namespace {
 
-/// \brief The CXCodeCompleteResults structure we allocate internally;
+/// The CXCodeCompleteResults structure we allocate internally;
 /// the client only sees the initial CXCodeCompleteResults structure.
 ///
 /// Normally, clients of CXString shouldn't care whether or not a CXString is
@@ -251,62 +251,62 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   AllocatedCXCodeCompleteResults(IntrusiveRefCntPtr<FileManager> FileMgr);
   ~AllocatedCXCodeCompleteResults();
   
-  /// \brief Diagnostics produced while performing code completion.
+  /// Diagnostics produced while performing code completion.
   SmallVector<StoredDiagnostic, 8> Diagnostics;
 
-  /// \brief Allocated API-exposed wrappters for Diagnostics.
+  /// Allocated API-exposed wrappters for Diagnostics.
   SmallVector<CXStoredDiagnostic *, 8> DiagnosticsWrappers;
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   
-  /// \brief Diag object
+  /// Diag object
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag;
   
-  /// \brief Language options used to adjust source locations.
+  /// Language options used to adjust source locations.
   LangOptions LangOpts;
 
-  /// \brief File manager, used for diagnostics.
+  /// File manager, used for diagnostics.
   IntrusiveRefCntPtr<FileManager> FileMgr;
 
-  /// \brief Source manager, used for diagnostics.
+  /// Source manager, used for diagnostics.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
   
-  /// \brief Temporary buffers that will be deleted once we have finished with
+  /// Temporary buffers that will be deleted once we have finished with
   /// the code-completion results.
   SmallVector<const llvm::MemoryBuffer *, 1> TemporaryBuffers;
   
-  /// \brief Allocator used to store globally cached code-completion results.
+  /// Allocator used to store globally cached code-completion results.
   std::shared_ptr<clang::GlobalCodeCompletionAllocator>
       CachedCompletionAllocator;
 
-  /// \brief Allocator used to store code completion results.
+  /// Allocator used to store code completion results.
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> CodeCompletionAllocator;
 
-  /// \brief Context under which completion occurred.
+  /// Context under which completion occurred.
   enum clang::CodeCompletionContext::Kind ContextKind;
   
-  /// \brief A bitfield representing the acceptable completions for the
+  /// A bitfield representing the acceptable completions for the
   /// current context.
   unsigned long long Contexts;
   
-  /// \brief The kind of the container for the current context for completions.
+  /// The kind of the container for the current context for completions.
   enum CXCursorKind ContainerKind;
 
-  /// \brief The USR of the container for the current context for completions.
+  /// The USR of the container for the current context for completions.
   std::string ContainerUSR;
 
-  /// \brief a boolean value indicating whether there is complete information
+  /// a boolean value indicating whether there is complete information
   /// about the container
   unsigned ContainerIsIncomplete;
   
-  /// \brief A string containing the Objective-C selector entered thus far for a
+  /// A string containing the Objective-C selector entered thus far for a
   /// message send.
   std::string Selector;
 };
 
 } // end anonymous namespace
 
-/// \brief Tracks the number of code-completion result objects that are 
+/// Tracks the number of code-completion result objects that are 
 /// currently active.
 ///
 /// Used for debugging purposes only.
@@ -913,7 +913,7 @@ CXString clang_codeCompleteGetObjCSelector(CXCodeCompleteResults *ResultsIn) {
   return cxstring::createDup(Results->Selector);
 }
   
-/// \brief Simple utility function that appends a \p New string to the given
+/// Simple utility function that appends a \p New string to the given
 /// \p Old string, using the \p Buffer for storage.
 ///
 /// \param Old The string to which we are appending. This parameter will be
@@ -937,7 +937,7 @@ static void AppendToString(StringRef &Old, StringRef New,
   Old = Buffer.str();
 }
 
-/// \brief Get the typed-text blocks from the given code-completion string
+/// Get the typed-text blocks from the given code-completion string
 /// and return them as a single string.
 ///
 /// \param String The code-completion string whose typed-text blocks will be

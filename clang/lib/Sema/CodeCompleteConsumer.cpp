@@ -621,7 +621,7 @@ PrintingCodeCompleteConsumer::ProcessOverloadCandidates(Sema &SemaRef,
   }
 }
 
-/// \brief Retrieve the effective availability of the given declaration.
+/// Retrieve the effective availability of the given declaration.
 static AvailabilityResult getDeclAvailability(const Decl *D) {
   AvailabilityResult AR = D->getAvailability();
   if (isa<EnumConstantDecl>(D))
@@ -683,7 +683,7 @@ void CodeCompletionResult::computeCursorKindAndAvailability(bool Accessible) {
     Availability = CXAvailability_NotAccessible;
 }
 
-/// \brief Retrieve the name that should be used to order a result.
+/// Retrieve the name that should be used to order a result.
 ///
 /// If the name needs to be constructed as a string, that string will be
 /// saved into Saved and the returned StringRef will refer to it.

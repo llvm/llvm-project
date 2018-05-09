@@ -43,9 +43,9 @@ namespace CodeGen {
 
 /// Abstract information about a function or function prototype.
 class CGCalleeInfo {
-  /// \brief The function prototype of the callee.
+  /// The function prototype of the callee.
   const FunctionProtoType *CalleeProtoTy;
-  /// \brief The function declaration of the callee.
+  /// The function declaration of the callee.
   const Decl *CalleeDecl;
 
 public:
@@ -334,7 +334,7 @@ public:
     llvm::Instruction *getStackBase() const { return StackBase; }
     void freeArgumentMemory(CodeGenFunction &CGF) const;
 
-    /// \brief Returns if we're using an inalloca struct to pass arguments in
+    /// Returns if we're using an inalloca struct to pass arguments in
     /// memory.
     bool isUsingInAlloca() const { return StackBase; }
 

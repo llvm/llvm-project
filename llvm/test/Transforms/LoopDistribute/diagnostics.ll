@@ -139,7 +139,7 @@ for.cond.cleanup:
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 2}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!7 = distinct !DISubprogram(name: "forced", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "forced", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 3, column: 20, scope: !7)
 !10 = !DILocation(line: 3, column: 3, scope: !7)
@@ -154,7 +154,7 @@ for.cond.cleanup:
 !19 = !DILocation(line: 4, column: 10, scope: !7)
 !20 = distinct !{!20, !21}
 !21 = !{!"llvm.loop.distribute.enable", i1 true}
-!22 = distinct !DISubprogram(name: "not_forced", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!22 = distinct !DISubprogram(name: "not_forced", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !23 = !DILocation(line: 9, column: 20, scope: !22)
 !24 = !DILocation(line: 9, column: 3, scope: !22)
 !25 = !DILocation(line: 12, column: 1, scope: !22)
@@ -163,7 +163,7 @@ for.cond.cleanup:
 !28 = !DILocation(line: 10, column: 17, scope: !22)
 !29 = !DILocation(line: 10, column: 5, scope: !22)
 !30 = !DILocation(line: 10, column: 10, scope: !22)
-!31 = distinct !DISubprogram(name: "success", scope: !1, file: !1, line: 14, type: !8, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!31 = distinct !DISubprogram(name: "success", scope: !1, file: !1, line: 14, type: !8, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !32 = !DILocation(line: 15, column: 20, scope: !31)
 !33 = !DILocation(line: 15, column: 3, scope: !31)
 !34 = !DILocation(line: 19, column: 1, scope: !31)

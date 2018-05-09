@@ -44,7 +44,7 @@ Command::Command(const Action &Source, const Tool &Creator,
       InputFilenames.push_back(II.getFilename());
 }
 
-/// @brief Check if the compiler flag in question should be skipped when
+/// Check if the compiler flag in question should be skipped when
 /// emitting a reproducer. Also track how many arguments it has and if the
 /// option is some kind of include path.
 static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
@@ -171,7 +171,7 @@ void Command::buildArgvForResponseFile(
   }
 }
 
-/// @brief Rewrite relative include-like flag paths to absolute ones.
+/// Rewrite relative include-like flag paths to absolute ones.
 static void
 rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
                 size_t NumArgs,

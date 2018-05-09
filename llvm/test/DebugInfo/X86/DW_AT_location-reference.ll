@@ -98,7 +98,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!24}
 
-!0 = distinct !DISubprogram(name: "f", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 4, file: !23, scope: !1, type: !3, variables: !22)
+!0 = distinct !DISubprogram(name: "f", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 4, file: !23, scope: !1, type: !3, retainedNodes: !22)
 !1 = !DIFile(filename: "simple.c", directory: "/home/rengol01/temp/tests/dwarf/relocation")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk)", isOptimized: true, emissionKind: FullDebug, file: !23, enums: !{}, retainedTypes: !{}, imports:  null)
 !3 = !DISubroutineType(types: !4)

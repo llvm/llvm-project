@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines a function that returns the minimum OS versions supporting
+/// Defines a function that returns the minimum OS versions supporting
 /// C++17's aligned allocation functions.
 ///
 //===----------------------------------------------------------------------===//

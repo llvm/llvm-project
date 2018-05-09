@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements routines that provide refactoring testing
+/// This file implements routines that provide refactoring testing
 /// utilities.
 ///
 //===----------------------------------------------------------------------===//

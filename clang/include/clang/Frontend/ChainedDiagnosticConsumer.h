@@ -32,7 +32,7 @@ public:
       : OwningPrimary(std::move(Primary)), Primary(OwningPrimary.get()),
         Secondary(std::move(Secondary)) {}
 
-  /// \brief Construct without taking ownership of \c Primary.
+  /// Construct without taking ownership of \c Primary.
   ChainedDiagnosticConsumer(DiagnosticConsumer *Primary,
                             std::unique_ptr<DiagnosticConsumer> Secondary)
       : Primary(Primary), Secondary(std::move(Secondary)) {}

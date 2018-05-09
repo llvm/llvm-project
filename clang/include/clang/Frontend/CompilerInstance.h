@@ -109,59 +109,59 @@ class CompilerInstance : public ModuleLoader {
   /// The code completion consumer.
   std::unique_ptr<CodeCompleteConsumer> CompletionConsumer;
 
-  /// \brief The semantic analysis object.
+  /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
 
-  /// \brief The frontend timer group.
+  /// The frontend timer group.
   std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
 
-  /// \brief The frontend timer.
+  /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
 
-  /// \brief The ASTReader, if one exists.
+  /// The ASTReader, if one exists.
   IntrusiveRefCntPtr<ASTReader> ModuleManager;
 
-  /// \brief The module dependency collector for crashdumps
+  /// The module dependency collector for crashdumps
   std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
-  /// \brief The module provider.
+  /// The module provider.
   std::shared_ptr<PCHContainerOperations> ThePCHContainerOperations;
 
-  /// \brief The dependency file generator.
+  /// The dependency file generator.
   std::unique_ptr<DependencyFileGenerator> TheDependencyFileGenerator;
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
-  /// \brief The set of top-level modules that has already been loaded,
+  /// The set of top-level modules that has already been loaded,
   /// along with the module map
   llvm::DenseMap<const IdentifierInfo *, Module *> KnownModules;
 
-  /// \brief The set of top-level modules that has already been built on the
+  /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
   std::map<std::string, std::string> BuiltModules;
 
   /// Should we delete the BuiltModules when we're done?
   bool DeleteBuiltModules = true;
 
-  /// \brief The location of the module-import keyword for the last module
+  /// The location of the module-import keyword for the last module
   /// import. 
   SourceLocation LastModuleImportLoc;
   
-  /// \brief The result of the last module import.
+  /// The result of the last module import.
   ///
   ModuleLoadResult LastModuleImportResult;
 
-  /// \brief Whether we should (re)build the global module index once we
+  /// Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
   bool BuildGlobalModuleIndex = false;
 
-  /// \brief We have a full global module index, with all modules.
+  /// We have a full global module index, with all modules.
   bool HaveFullGlobalModuleIndex = false;
 
-  /// \brief One or more modules failed to build.
+  /// One or more modules failed to build.
   bool ModuleBuildFailed = false;
 
-  /// \brief Holds information about the output file.
+  /// Holds information about the output file.
   ///
   /// If TempFilename is not empty we must rename it to Filename at the end.
   /// TempFilename may be empty and Filename non-empty if creating the temporary
@@ -244,10 +244,10 @@ public:
   /// setInvocation - Replace the current invocation.
   void setInvocation(std::shared_ptr<CompilerInvocation> Value);
 
-  /// \brief Indicates whether we should (re)build the global module index.
+  /// Indicates whether we should (re)build the global module index.
   bool shouldBuildGlobalModuleIndex() const;
   
-  /// \brief Set the flag indicating whether we should (re)build the global
+  /// Set the flag indicating whether we should (re)build the global
   /// module index.
   void setBuildGlobalModuleIndex(bool Build) {
     BuildGlobalModuleIndex = Build;
@@ -390,7 +390,7 @@ public:
     return *VirtualFileSystem;
   }
 
-  /// \brief Replace the current virtual file system.
+  /// Replace the current virtual file system.
   ///
   /// \note Most clients should use setFileManager, which will implicitly reset
   /// the virtual file system to the one contained in the file manager.
@@ -415,7 +415,7 @@ public:
     FileMgr.resetWithoutRelease();
   }
 
-  /// \brief Replace the current file manager and virtual file system.
+  /// Replace the current file manager and virtual file system.
   void setFileManager(FileManager *Value);
 
   /// }
@@ -478,7 +478,7 @@ public:
   /// setASTContext - Replace the current AST context.
   void setASTContext(ASTContext *Value);
 
-  /// \brief Replace the current Sema; the compiler instance takes ownership
+  /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
   void setSema(Sema *S);
   
@@ -690,7 +690,7 @@ public:
       Preprocessor &PP, StringRef Filename, unsigned Line, unsigned Column,
       const CodeCompleteOptions &Opts, raw_ostream &OS);
 
-  /// \brief Create the Sema object to be used for parsing.
+  /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,
                   CodeCompleteConsumer *CompletionConsumer);
   

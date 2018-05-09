@@ -65,7 +65,7 @@ IdentifierInfoLookup::~IdentifierInfoLookup() = default;
 
 namespace {
 
-/// \brief A simple identifier lookup iterator that represents an
+/// A simple identifier lookup iterator that represents an
 /// empty sequence of identifiers.
 class EmptyLookupIterator : public IdentifierIterator
 {
@@ -127,7 +127,7 @@ namespace {
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 
-  /// \brief How a keyword is treated in the selected standard.
+  /// How a keyword is treated in the selected standard.
   enum KeywordStatus {
     KS_Disabled,    // Disabled
     KS_Extension,   // Is an extension
@@ -137,7 +137,7 @@ namespace {
 
 } // namespace
 
-/// \brief Translates flags as specified in TokenKinds.def into keyword status
+/// Translates flags as specified in TokenKinds.def into keyword status
 /// in the given language standard.
 static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
                                       unsigned Flags) {
@@ -244,7 +244,7 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   get("import").setModulesImport(true);
 }
 
-/// \brief Checks if the specified token kind represents a keyword in the
+/// Checks if the specified token kind represents a keyword in the
 /// specified language.
 /// \returns Status of the keyword in the language.
 static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
@@ -257,7 +257,7 @@ static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
   }
 }
 
-/// \brief Returns true if the identifier represents a keyword in the
+/// Returns true if the identifier represents a keyword in the
 /// specified language.
 bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   switch (getTokenKwStatus(LangOpts, getTokenID())) {
@@ -269,7 +269,7 @@ bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   }
 }
 
-/// \brief Returns true if the identifier represents a C++ keyword in the
+/// Returns true if the identifier represents a C++ keyword in the
 /// specified language.
 bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
   if (!LangOpts.CPlusPlus || !isKeyword(LangOpts))

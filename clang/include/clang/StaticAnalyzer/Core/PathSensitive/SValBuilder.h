@@ -198,7 +198,7 @@ public:
   /// Make a unique symbol for value of region.
   DefinedOrUnknownSVal getRegionValueSymbolVal(const TypedValueRegion *region);
 
-  /// \brief Create a new symbol with a unique 'name'.
+  /// Create a new symbol with a unique 'name'.
   ///
   /// We resort to conjured symbols when we cannot construct a derived symbol.
   /// The advantage of symbols derived/built from other symbols is that we
@@ -218,7 +218,7 @@ public:
                                         QualType type,
                                         unsigned visitCount);
 
-  /// \brief Conjure a symbol representing heap allocated memory region.
+  /// Conjure a symbol representing heap allocated memory region.
   ///
   /// Note, the expression should represent a location.
   DefinedOrUnknownSVal getConjuredHeapSymbolVal(const Expr *E,
@@ -329,7 +329,7 @@ public:
   NonLoc makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
                     const SymExpr *rhs, QualType type);
 
-  /// \brief Create a NonLoc value for cast.
+  /// Create a NonLoc value for cast.
   NonLoc makeNonLoc(const SymExpr *operand, QualType fromTy, QualType toTy);
 
   nonloc::ConcreteInt makeTruthVal(bool b, QualType type) {

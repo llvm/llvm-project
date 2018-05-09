@@ -43,7 +43,7 @@ inline std::error_code make_error_code(SDError E) {
   return std::error_code(static_cast<int>(E), SDErrorCategory());
 }
 
-/// \brief A location that is represented in the serialized diagnostics.
+/// A location that is represented in the serialized diagnostics.
 struct Location {
   unsigned FileID;
   unsigned Line;
@@ -54,7 +54,7 @@ struct Location {
       : FileID(FileID), Line(Line), Col(Col), Offset(Offset) {}
 };
 
-/// \brief A base class that handles reading serialized diagnostics from a file.
+/// A base class that handles reading serialized diagnostics from a file.
 ///
 /// Subclasses should override the visit* methods with their logic for handling
 /// the various constructs that are found in serialized diagnostics.
@@ -63,66 +63,66 @@ public:
   SerializedDiagnosticReader() = default;
   virtual ~SerializedDiagnosticReader() = default;
 
-  /// \brief Read the diagnostics in \c File
+  /// Read the diagnostics in \c File
   std::error_code readDiagnostics(StringRef File);
 
 private:
   enum class Cursor;
 
-  /// \brief Read to the next record or block to process.
+  /// Read to the next record or block to process.
   llvm::ErrorOr<Cursor> skipUntilRecordOrBlock(llvm::BitstreamCursor &Stream,
                                                unsigned &BlockOrRecordId);
 
-  /// \brief Read a metadata block from \c Stream.
+  /// Read a metadata block from \c Stream.
   std::error_code readMetaBlock(llvm::BitstreamCursor &Stream);
 
-  /// \brief Read a diagnostic block from \c Stream.
+  /// Read a diagnostic block from \c Stream.
   std::error_code readDiagnosticBlock(llvm::BitstreamCursor &Stream);
 
 protected:
-  /// \brief Visit the start of a diagnostic block.
+  /// Visit the start of a diagnostic block.
   virtual std::error_code visitStartOfDiagnostic() { return {}; }
 
-  /// \brief Visit the end of a diagnostic block.
+  /// Visit the end of a diagnostic block.
   virtual std::error_code visitEndOfDiagnostic() { return {}; }
 
-  /// \brief Visit a category. This associates the category \c ID to a \c Name.
+  /// Visit a category. This associates the category \c ID to a \c Name.
   virtual std::error_code visitCategoryRecord(unsigned ID, StringRef Name) {
     return {};
   }
 
-  /// \brief Visit a flag. This associates the flag's \c ID to a \c Name.
+  /// Visit a flag. This associates the flag's \c ID to a \c Name.
   virtual std::error_code visitDiagFlagRecord(unsigned ID, StringRef Name) {
     return {};
   }
 
-  /// \brief Visit a diagnostic.
+  /// Visit a diagnostic.
   virtual std::error_code
   visitDiagnosticRecord(unsigned Severity, const Location &Location,
                         unsigned Category, unsigned Flag, StringRef Message) {
     return {};
   }
 
-  /// \brief Visit a filename. This associates the file's \c ID to a \c Name.
+  /// Visit a filename. This associates the file's \c ID to a \c Name.
   virtual std::error_code visitFilenameRecord(unsigned ID, unsigned Size,
                                               unsigned Timestamp,
                                               StringRef Name) {
     return {};
   }
 
-  /// \brief Visit a fixit hint.
+  /// Visit a fixit hint.
   virtual std::error_code
   visitFixitRecord(const Location &Start, const Location &End, StringRef Text) {
     return {};
   }
 
-  /// \brief Visit a source range.
+  /// Visit a source range.
   virtual std::error_code visitSourceRangeRecord(const Location &Start,
                                                  const Location &End) {
     return {};
   }
 
-  /// \brief Visit the version of the set of diagnostics.
+  /// Visit the version of the set of diagnostics.
   virtual std::error_code visitVersionRecord(unsigned Version) { return {}; }
 };
 

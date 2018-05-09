@@ -164,7 +164,7 @@ defm : BWWriteResPair<WriteJump,  [BWPort06],   1>;
 defm : X86WriteRes<WriteFLoad,         [BWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [BWPort23,BWPort5], 7, [1,2], 3>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [BWPort23,BWPort5], 8, [1,2], 3>;
-defm : X86WriteRes<WriteFStore,        [BWPort237,BWPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStore,        [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMaskedStoreY, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMove,         [BWPort5], 1, [1], 1>;
@@ -258,7 +258,7 @@ def  : WriteRes<WriteCvtF2FSt, [BWPort1,BWPort4,BWPort237]> {
 defm : X86WriteRes<WriteVecLoad,         [BWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [BWPort23,BWPort5], 7, [1,2], 3>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [BWPort23,BWPort5], 8, [1,2], 3>;
-defm : X86WriteRes<WriteVecStore,        [BWPort237,BWPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStore,        [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [BWPort015], 1, [1], 1>;
@@ -566,26 +566,15 @@ def: InstRW<[BWWriteResGroup10], (instregex "FBSTPm",
                                             "MOVNTI_64mr",
                                             "MOVNTImr",
                                             "ST_FP(32|64|80)m",
-                                            "VEXTRACTF128mr",
-                                            "VEXTRACTI128mr",
-                                            "(V?)MOVAPD(Y?)mr",
-                                            "(V?)MOVAPS(Y?)mr",
-                                            "(V?)MOVDQA(Y?)mr",
-                                            "(V?)MOVDQU(Y?)mr",
                                             "(V?)MOVHPDmr",
                                             "(V?)MOVHPSmr",
                                             "(V?)MOVLPDmr",
                                             "(V?)MOVLPSmr",
-                                            "(V?)MOVNTDQ(V?)mr",
-                                            "(V?)MOVNTPD(V?)mr",
-                                            "(V?)MOVNTPS(V?)mr",
                                             "(V?)MOVPDI2DImr",
                                             "(V?)MOVPQI2QImr",
                                             "(V?)MOVPQIto64mr",
                                             "(V?)MOVSDmr",
-                                            "(V?)MOVSSmr",
-                                            "(V?)MOVUPD(Y?)mr",
-                                            "(V?)MOVUPS(Y?)mr")>;
+                                            "(V?)MOVSSmr")>;
 
 def BWWriteResGroup12 : SchedWriteRes<[BWPort01]> {
   let Latency = 2;

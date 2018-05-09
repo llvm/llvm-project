@@ -341,7 +341,7 @@ QualType QualType::IgnoreParens(QualType T) {
   return T;
 }
 
-/// \brief This will check for a T (which should be a Type which can act as
+/// This will check for a T (which should be a Type which can act as
 /// sugar, such as a TypedefType) by removing any existing sugar until it
 /// reaches a T or a non-sugared type.
 template<typename T> static const T *getAsSugar(const Type *Cur) {
@@ -1700,7 +1700,7 @@ bool Type::hasIntegerRepresentation() const {
     return isIntegerType();
 }
 
-/// \brief Determine whether this type is an integral type.
+/// Determine whether this type is an integral type.
 ///
 /// This routine determines whether the given type is an integral type per 
 /// C++ [basic.fundamental]p7. Although the C standard does not define the
@@ -1781,7 +1781,7 @@ bool Type::isChar32Type() const {
   return false;
 }
 
-/// \brief Determine whether this type is any of the built-in character
+/// Determine whether this type is any of the built-in character
 /// types.
 bool Type::isAnyCharacterType() const {
   const auto *BT = dyn_cast<BuiltinType>(CanonicalType);
@@ -1957,7 +1957,7 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
   llvm_unreachable("unknown scalar type");
 }
 
-/// \brief Determines whether the type is a C++ aggregate type or C
+/// Determines whether the type is a C++ aggregate type or C
 /// aggregate or union type.
 ///
 /// An aggregate type is an array or a class type (struct, union, or
@@ -3343,7 +3343,7 @@ void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID) {
 
 namespace {
 
-/// \brief The cached properties of a type.
+/// The cached properties of a type.
 class CachedProperties {
   Linkage L;
   bool local;
@@ -3510,7 +3510,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
   llvm_unreachable("unhandled type class");
 }
 
-/// \brief Determine the linkage of this type.
+/// Determine the linkage of this type.
 Linkage Type::getLinkage() const {
   Cache::ensure(this);
   return TypeBits.getLinkage();
@@ -3870,13 +3870,13 @@ bool Type::isObjCLifetimeType() const {
   return type->isObjCRetainableType();
 }
 
-/// \brief Determine whether the given type T is a "bridgable" Objective-C type,
+/// Determine whether the given type T is a "bridgable" Objective-C type,
 /// which is either an Objective-C object pointer type or an 
 bool Type::isObjCARCBridgableType() const {
   return isObjCObjectPointerType() || isBlockPointerType();
 }
 
-/// \brief Determine whether the given type T is a "bridgeable" C type.
+/// Determine whether the given type T is a "bridgeable" C type.
 bool Type::isCARCBridgableType() const {
   const auto *Pointer = getAs<PointerType>();
   if (!Pointer)

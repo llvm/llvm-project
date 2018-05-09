@@ -36,7 +36,7 @@ bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 
 namespace tools {
 
-/// \brief Base class for all GNU tools that provide the same behavior when
+/// Base class for all GNU tools that provide the same behavior when
 /// it comes to response files support
 class LLVM_LIBRARY_VISIBILITY GnuTool : public Tool {
   virtual void anchor();
@@ -139,7 +139,7 @@ namespace toolchains {
 /// command line options.
 class LLVM_LIBRARY_VISIBILITY Generic_GCC : public ToolChain {
 public:
-  /// \brief Struct to store and manipulate GCC versions.
+  /// Struct to store and manipulate GCC versions.
   ///
   /// We rely on assumptions about the form and structure of GCC version
   /// numbers: they consist of at most three '.'-separated components, and each
@@ -155,16 +155,16 @@ public:
   /// in the way that (for example) Debian's version format does. If that ever
   /// becomes necessary, it can be added.
   struct GCCVersion {
-    /// \brief The unparsed text of the version.
+    /// The unparsed text of the version.
     std::string Text;
 
-    /// \brief The parsed major, minor, and patch numbers.
+    /// The parsed major, minor, and patch numbers.
     int Major, Minor, Patch;
 
-    /// \brief The text of the parsed major, and major+minor versions.
+    /// The text of the parsed major, and major+minor versions.
     std::string MajorStr, MinorStr;
 
-    /// \brief Any textual suffix on the patch number.
+    /// Any textual suffix on the patch number.
     std::string PatchSuffix;
 
     static GCCVersion Parse(StringRef VersionText);
@@ -178,7 +178,7 @@ public:
     bool operator>=(const GCCVersion &RHS) const { return !(*this < RHS); }
   };
 
-  /// \brief This is a class to find a viable GCC installation for Clang to
+  /// This is a class to find a viable GCC installation for Clang to
   /// use.
   ///
   /// This class tries to find a GCC installation on the system, and report
@@ -213,32 +213,32 @@ public:
     void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args,
               ArrayRef<std::string> ExtraTripleAliases = None);
 
-    /// \brief Check whether we detected a valid GCC install.
+    /// Check whether we detected a valid GCC install.
     bool isValid() const { return IsValid; }
 
-    /// \brief Get the GCC triple for the detected install.
+    /// Get the GCC triple for the detected install.
     const llvm::Triple &getTriple() const { return GCCTriple; }
 
-    /// \brief Get the detected GCC installation path.
+    /// Get the detected GCC installation path.
     StringRef getInstallPath() const { return GCCInstallPath; }
 
-    /// \brief Get the detected GCC parent lib path.
+    /// Get the detected GCC parent lib path.
     StringRef getParentLibPath() const { return GCCParentLibPath; }
 
-    /// \brief Get the detected Multilib
+    /// Get the detected Multilib
     const Multilib &getMultilib() const { return SelectedMultilib; }
 
-    /// \brief Get the whole MultilibSet
+    /// Get the whole MultilibSet
     const MultilibSet &getMultilibs() const { return Multilibs; }
 
     /// Get the biarch sibling multilib (if it exists).
     /// \return true iff such a sibling exists
     bool getBiarchSibling(Multilib &M) const;
 
-    /// \brief Get the detected GCC version string.
+    /// Get the detected GCC version string.
     const GCCVersion &getVersion() const { return Version; }
 
-    /// \brief Print information about the detected GCC installation.
+    /// Print information about the detected GCC installation.
     void print(raw_ostream &OS) const;
 
   private:
@@ -304,10 +304,10 @@ protected:
   /// \name ToolChain Implementation Helper Functions
   /// @{
 
-  /// \brief Check whether the target triple's architecture is 64-bits.
+  /// Check whether the target triple's architecture is 64-bits.
   bool isTarget64Bit() const { return getTriple().isArch64Bit(); }
 
-  /// \brief Check whether the target triple's architecture is 32-bits.
+  /// Check whether the target triple's architecture is 32-bits.
   bool isTarget32Bit() const { return getTriple().isArch32Bit(); }
 
   // FIXME: This should be final, but the CrossWindows toolchain does weird

@@ -109,7 +109,7 @@ static bool CheckNakedParmReference(Expr *E, Sema &S) {
   return false;
 }
 
-/// \brief Returns true if given expression is not compatible with inline
+/// Returns true if given expression is not compatible with inline
 /// assembly's memory constraint; false otherwise.
 static bool checkExprMemoryConstraintCompat(Sema &S, Expr *E,
                                             TargetInfo::ConstraintInfo &Info,

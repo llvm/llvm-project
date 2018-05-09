@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file implements semantic analysis for CUDA constructs.
+/// This file implements semantic analysis for CUDA constructs.
 ///
 //===----------------------------------------------------------------------===//
 

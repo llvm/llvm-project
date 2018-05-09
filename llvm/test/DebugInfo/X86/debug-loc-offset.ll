@@ -139,7 +139,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (210479)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "debug-loc-offset1.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "debug-loc-offset1.cc", directory: "/llvm_cmake_gcc")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}
@@ -148,7 +148,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !10 = !DIFile(filename: "debug-loc-offset2.cc", directory: "/llvm_cmake_gcc")
 !11 = !{!12}
 !12 = !DICompositeType(tag: DW_TAG_structure_type, name: "A", line: 1, flags: DIFlagFwdDecl, file: !10, identifier: "_ZTS1A")
-!14 = distinct !DISubprogram(name: "baz", linkageName: "_Z3baz1A", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !9, scopeLine: 6, file: !10, scope: !15, type: !16, variables: !2)
+!14 = distinct !DISubprogram(name: "baz", linkageName: "_Z3baz1A", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !9, scopeLine: 6, file: !10, scope: !15, type: !16, retainedNodes: !2)
 !15 = !DIFile(filename: "debug-loc-offset2.cc", directory: "/llvm_cmake_gcc")
 !16 = !DISubroutineType(types: !17)
 !17 = !{null, !12}

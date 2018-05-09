@@ -43,34 +43,34 @@ namespace {
 #define STMT(Node, Base) void Visit##Node(const Node *S);
 #include "clang/AST/StmtNodes.inc"
 
-    /// \brief Visit a declaration that is referenced within an expression
+    /// Visit a declaration that is referenced within an expression
     /// or statement.
     virtual void VisitDecl(const Decl *D) = 0;
 
-    /// \brief Visit a type that is referenced within an expression or
+    /// Visit a type that is referenced within an expression or
     /// statement.
     virtual void VisitType(QualType T) = 0;
 
-    /// \brief Visit a name that occurs within an expression or statement.
+    /// Visit a name that occurs within an expression or statement.
     virtual void VisitName(DeclarationName Name, bool TreatAsDecl = false) = 0;
 
-    /// \brief Visit identifiers that are not in Decl's or Type's.
+    /// Visit identifiers that are not in Decl's or Type's.
     virtual void VisitIdentifierInfo(IdentifierInfo *II) = 0;
 
-    /// \brief Visit a nested-name-specifier that occurs within an expression
+    /// Visit a nested-name-specifier that occurs within an expression
     /// or statement.
     virtual void VisitNestedNameSpecifier(NestedNameSpecifier *NNS) = 0;
 
-    /// \brief Visit a template name that occurs within an expression or
+    /// Visit a template name that occurs within an expression or
     /// statement.
     virtual void VisitTemplateName(TemplateName Name) = 0;
 
-    /// \brief Visit template arguments that occur within an expression or
+    /// Visit template arguments that occur within an expression or
     /// statement.
     void VisitTemplateArguments(const TemplateArgumentLoc *Args,
                                 unsigned NumArgs);
 
-    /// \brief Visit a single template argument.
+    /// Visit a single template argument.
     void VisitTemplateArgument(const TemplateArgument &Arg);
   };
 
@@ -405,7 +405,7 @@ StmtProfiler::VisitObjCAutoreleasePoolStmt(const ObjCAutoreleasePoolStmt *S) {
 namespace {
 class OMPClauseProfiler : public ConstOMPClauseVisitor<OMPClauseProfiler> {
   StmtProfiler *Profiler;
-  /// \brief Process clauses with list of variables.
+  /// Process clauses with list of variables.
   template <typename T>
   void VisitOMPClauseList(T *Node);
 

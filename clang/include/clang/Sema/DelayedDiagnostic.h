@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Defines the classes clang::DelayedDiagnostic and 
+/// Defines the classes clang::DelayedDiagnostic and 
 /// clang::AccessedEntity.
 ///
 /// DelayedDiangostic is used to record diagnostics that are being
@@ -265,7 +265,7 @@ private:
   };
 };
 
-/// \brief A collection of diagnostics which were delayed.
+/// A collection of diagnostics which were delayed.
 class DelayedDiagnosticPool {
   const DelayedDiagnosticPool *Parent;
   SmallVector<DelayedDiagnostic, 4> Diagnostics;

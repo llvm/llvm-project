@@ -166,7 +166,7 @@ bool CallEvent::isGlobalCFunction(StringRef FunctionName) const {
   return CheckerContext::isCLibraryFunction(FD, FunctionName);
 }
 
-/// \brief Returns true if a type is a pointer-to-const or reference-to-const
+/// Returns true if a type is a pointer-to-const or reference-to-const
 /// with no further indirection.
 static bool isPointerToConst(QualType Ty) {
   QualType PointeeTy = Ty->getPointeeType();

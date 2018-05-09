@@ -24,7 +24,7 @@
 using namespace clang;
 using namespace sema;
 
-/// \brief Examines the FunctionScopeInfo stack to determine the nearest
+/// Examines the FunctionScopeInfo stack to determine the nearest
 /// enclosing lambda (to the current lambda) that is 'capture-ready' for 
 /// the variable referenced in the current lambda (i.e. \p VarToCapture).
 /// If successful, returns the index into Sema's FunctionScopeInfo stack
@@ -135,7 +135,7 @@ getStackIndexOfNearestEnclosingCaptureReadyLambda(
   return NoLambdaIsCaptureReady;
 }
 
-/// \brief Examines the FunctionScopeInfo stack to determine the nearest
+/// Examines the FunctionScopeInfo stack to determine the nearest
 /// enclosing lambda (to the current lambda) that is 'capture-capable' for 
 /// the variable referenced in the current lambda (i.e. \p VarToCapture).
 /// If successful, returns the index into Sema's FunctionScopeInfo stack
@@ -263,7 +263,7 @@ CXXRecordDecl *Sema::createLambdaClosureType(SourceRange IntroducerRange,
   return Class;
 }
 
-/// \brief Determine whether the given context is or is enclosed in an inline
+/// Determine whether the given context is or is enclosed in an inline
 /// function.
 static bool isInInlineFunction(const DeclContext *DC) {
   while (!DC->isFileContext()) {
@@ -1189,7 +1189,7 @@ QualType Sema::getLambdaConversionFunctionResultType(
                                  CallOpProto->getParamTypes(), InvokerExtInfo);
 }
 
-/// \brief Add a lambda's conversion to function pointer, as described in
+/// Add a lambda's conversion to function pointer, as described in
 /// C++11 [expr.prim.lambda]p6.
 static void addFunctionPointerConversion(Sema &S,
                                          SourceRange IntroducerRange,
@@ -1358,7 +1358,7 @@ static void addFunctionPointerConversion(Sema &S,
     Class->addDecl(Invoke);
 }
 
-/// \brief Add a lambda's conversion to block pointer.
+/// Add a lambda's conversion to block pointer.
 static void addBlockPointerConversion(Sema &S, 
                                       SourceRange IntroducerRange,
                                       CXXRecordDecl *Class,

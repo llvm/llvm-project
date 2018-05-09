@@ -50,8 +50,8 @@ define weak_odr zeroext i1 @baz() {
 
 ; CHECK-DAG: ![[CU]] = distinct !DICompileUnit(language: DW_LANG_C, file: {{.*}}, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: {{.*}})
 ; CHECK-DAG: !DIFile(filename: "<stdin>", directory: "/")
-; CHECK-DAG: distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: {{.*}}, line: 1, type: {{.*}}, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: {{.*}}, variables: {{.*}})
-; CHECK-DAG: distinct !DISubprogram(name: "bar", linkageName: "bar", scope: null, file: {{.*}}, line: 2, type: {{.*}}, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: true, unit: {{.*}}, variables: {{.*}})
+; CHECK-DAG: distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: {{.*}}, line: 1, type: {{.*}}, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: {{.*}}, retainedNodes: {{.*}})
+; CHECK-DAG: distinct !DISubprogram(name: "bar", linkageName: "bar", scope: null, file: {{.*}}, line: 2, type: {{.*}}, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: true, unit: {{.*}}, retainedNodes: {{.*}})
 
 ; --- DILocations
 ; CHECK-DAG: ![[RET1]] = !DILocation(line: 1, column: 1

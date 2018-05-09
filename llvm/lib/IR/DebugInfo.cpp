@@ -568,7 +568,7 @@ void DebugTypeInfoRemoval::traverse(MDNode *N) {
   // parts of the graph.
   auto prune = [](MDNode *Parent, MDNode *Child) {
     if (auto *MDS = dyn_cast<DISubprogram>(Parent))
-      return Child == MDS->getVariables().get();
+      return Child == MDS->getRetainedNodes().get();
     return false;
   };
 

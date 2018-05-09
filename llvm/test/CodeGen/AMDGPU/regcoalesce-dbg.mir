@@ -12,7 +12,7 @@
 
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4, producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4)
   !1 = !DILocalVariable(name: "a", scope: !2, file: !4, line: 126, type: !6)
-  !2 = distinct !DISubprogram(name: "test", scope: !4, file: !4, line: 1, type: !3, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !5)
+  !2 = distinct !DISubprogram(name: "test", scope: !4, file: !4, line: 1, type: !3, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !5)
   !3 = !DISubroutineType(types: !4)
   !4 = !{null}
   !5 = !{!1}

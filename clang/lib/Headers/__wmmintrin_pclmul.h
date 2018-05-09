@@ -23,7 +23,7 @@
 #ifndef __WMMINTRIN_PCLMUL_H
 #define __WMMINTRIN_PCLMUL_H
 
-/// \brief Multiplies two 64-bit integer values, which are selected from source
+/// Multiplies two 64-bit integer values, which are selected from source
 ///    operands using the immediate-value operand. The multiplication is a
 ///    carry-less multiplication, and the 128-bit integer product is stored in
 ///    the destination.

@@ -163,7 +163,7 @@ bool HexagonSplitDoubleRegs::isFixedInstr(const MachineInstr *MI) const {
   if (MI->mayLoad() || MI->mayStore())
     if (MemRefsFixed || isVolatileInstr(MI))
       return true;
-  if (MI->isDebugValue())
+  if (MI->isDebugInstr())
     return false;
 
   unsigned Opc = MI->getOpcode();

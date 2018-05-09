@@ -16,7 +16,7 @@
 namespace clang {
 namespace attr {
 
-/// \brief A list of all the recognized kinds of attributes.
+/// A list of all the recognized kinds of attributes.
 enum SubjectMatchRule {
 #define ATTR_MATCH_RULE(X, Spelling, IsAbstract) X,
 #include "clang/Basic/AttrSubMatchRulesList.inc"

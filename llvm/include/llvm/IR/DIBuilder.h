@@ -46,6 +46,7 @@ namespace llvm {
     DICompileUnit *CUNode;   ///< The one compile unit created by this DIBuiler.
     Function *DeclareFn;     ///< llvm.dbg.declare
     Function *ValueFn;       ///< llvm.dbg.value
+    Function *LabelFn;       ///< llvm.dbg.label
 
     SmallVector<Metadata *, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
@@ -69,6 +70,9 @@ namespace llvm {
     /// copy.
     DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedVariables;
 
+    /// Each subprogram's preserved labels.
+    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedLabels;
+
     /// Create a temporary.
     ///
     /// Create an \a temporary node and track it in \a UnresolvedNodes.
@@ -78,6 +82,10 @@ namespace llvm {
     Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
                                DIExpression *Expr, const DILocation *DL,
                                BasicBlock *InsertBB, Instruction *InsertBefore);
+
+    /// Internal helper for insertLabel.
+    Instruction *insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                             BasicBlock *InsertBB, Instruction *InsertBefore);
 
     /// Internal helper for insertDbgValueIntrinsic.
     Instruction *
@@ -591,6 +599,14 @@ namespace llvm {
                        DINode::DIFlags Flags = DINode::FlagZero,
                        uint32_t AlignInBits = 0);
 
+    /// Create a new descriptor for an label.
+    ///
+    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
+    /// leads to a \a DISubprogram.
+    DILabel *
+    createLabel(DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+                bool AlwaysPreserve = false);
+
     /// Create a new descriptor for a parameter variable.
     ///
     /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
@@ -781,6 +797,20 @@ namespace llvm {
     Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
                                DIExpression *Expr, const DILocation *DL,
                                Instruction *InsertBefore);
+
+    /// Insert a new llvm.dbg.label intrinsic call.
+    /// \param LabelInfo    Label's debug info descriptor.
+    /// \param DL           Debug info location.
+    /// \param InsertBefore Location for the new intrinsic.
+    Instruction *insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                             Instruction *InsertBefore);
+
+    /// Insert a new llvm.dbg.label intrinsic call.
+    /// \param LabelInfo    Label's debug info descriptor.
+    /// \param DL           Debug info location.
+    /// \param InsertAtEnd Location for the new intrinsic.
+    Instruction *insertLabel(DILabel *LabelInfo, const DILocation *DL,
+                             BasicBlock *InsertAtEnd);
 
     /// Insert a new llvm.dbg.value intrinsic call.
     /// \param Val          llvm::Value of the variable

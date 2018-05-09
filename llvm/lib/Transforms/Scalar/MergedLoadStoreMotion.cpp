@@ -285,7 +285,8 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *T) {
     return false; // No. More than 2 predecessors.
 
   // #Instructions in Succ1 for Compile Time Control
-  int Size1 = Pred1->size();
+  int Size1 = std::distance(Pred1->instructionsWithoutDebug().begin(),
+                            Pred1->instructionsWithoutDebug().end());
   int NStores = 0;
 
   for (BasicBlock::reverse_iterator RBI = Pred0->rbegin(), RBE = Pred0->rend();
