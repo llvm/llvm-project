@@ -3750,11 +3750,25 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                  getLangOpts());
       break;
 
-    // OpenCL qualifiers:
+    // OpenCL access qualifiers:
+    case tok::kw___read_only:
+    case tok::kw___write_only:
+    case tok::kw___read_write:
+      // OpenCL C++ 1.0 s2.2: access qualifiers are reserved keywords.
+      if (Actions.getLangOpts().OpenCLCPlusPlus) {
+        DiagID = diag::err_openclcxx_reserved;
+        PrevSpec = Tok.getIdentifierInfo()->getNameStart();
+        isInvalid = true;
+      }
+      ParseOpenCLQualifiers(DS.getAttributes());
+      break;
+
+    // OpenCL address space qualifiers:
     case tok::kw___generic:
       // generic address space is introduced only in OpenCL v2.0
       // see OpenCL C Spec v2.0 s6.5.5
-      if (Actions.getLangOpts().OpenCLVersion < 200) {
+      if (Actions.getLangOpts().OpenCLVersion < 200 &&
+          !Actions.getLangOpts().OpenCLCPlusPlus) {
         DiagID = diag::err_opencl_unknown_type_specifier;
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
         isInvalid = true;
@@ -3765,9 +3779,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw___global:
     case tok::kw___local:
     case tok::kw___constant:
-    case tok::kw___read_only:
-    case tok::kw___write_only:
-    case tok::kw___read_write:
       ParseOpenCLQualifiers(DS.getAttributes());
       break;
 
@@ -3805,8 +3816,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Diag(Tok, DiagID)
           << PrevSpec << FixItHint::CreateRemoval(Tok.getLocation());
       else if (DiagID == diag::err_opencl_unknown_type_specifier) {
-        Diag(Tok, DiagID) << getLangOpts().getOpenCLVersionTuple().getAsString()
-                          << PrevSpec << isStorageClass;
+        Diag(Tok, DiagID) << getLangOpts().OpenCLCPlusPlus
+            << getLangOpts().getOpenCLVersionTuple().getAsString()
+            << PrevSpec << isStorageClass;
       } else
         Diag(Tok, DiagID) << PrevSpec;
     }

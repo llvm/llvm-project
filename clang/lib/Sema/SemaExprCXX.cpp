@@ -480,6 +480,12 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
 ExprResult
 Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
                      bool isType, void *TyOrExpr, SourceLocation RParenLoc) {
+  // OpenCL C++ 1.0 s2.9: typeid is not supported.
+  if (getLangOpts().OpenCLCPlusPlus) {
+    return ExprError(Diag(OpLoc, diag::err_openclcxx_not_supported)
+                     << "typeid");
+  }
+
   // Find the std::type_info type.
   if (!getStdNamespace())
     return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));

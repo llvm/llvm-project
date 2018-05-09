@@ -297,6 +297,8 @@ fun:__sanitizer_update_counter_bitset_and_clear_counters=uninstrumented
 fun:__sanitizer_update_counter_bitset_and_clear_counters=discard
 fun:__sanitizer_cov_trace_pc*=uninstrumented
 fun:__sanitizer_cov_trace_pc*=discard
+fun:__sanitizer_cov_pcs_init=uninstrumented
+fun:__sanitizer_cov_pcs_init=discard
 
 # Ignores the dfsan wrappers.
 fun:__dfsw_*=uninstrumented

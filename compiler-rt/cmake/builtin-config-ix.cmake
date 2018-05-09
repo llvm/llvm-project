@@ -25,6 +25,7 @@ int foo(int x, int y) {
 
 set(ARM64 aarch64)
 set(ARM32 arm armhf armv6m armv7m armv7em armv7 armv7s armv7k)
+set(HEXAGON hexagon)
 set(X86 i386)
 set(X86_64 x86_64)
 set(MIPS32 mips mipsel)
@@ -42,7 +43,7 @@ if(APPLE)
 endif()
 
 set(ALL_BUILTIN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
-    ${MIPS32} ${MIPS64} ${PPC64} ${RISCV32} ${RISCV64} ${WASM32} ${WASM64})
+    ${HEXAGON} ${MIPS32} ${MIPS64} ${PPC64} ${RISCV32} ${RISCV64} ${WASM32} ${WASM64})
 
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)

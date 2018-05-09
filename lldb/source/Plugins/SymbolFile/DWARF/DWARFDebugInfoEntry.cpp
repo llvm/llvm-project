@@ -196,7 +196,7 @@ bool DWARFDebugInfoEntry::FastExtract(
 bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
                                   const DWARFUnit *cu,
                                   lldb::offset_t *offset_ptr) {
-  const DWARFDataExtractor &debug_info_data = dwarf2Data->get_debug_info_data();
+  const DWARFDataExtractor &debug_info_data = cu->GetData();
   //    const DWARFDataExtractor& debug_str_data =
   //    dwarf2Data->get_debug_str_data();
   const uint32_t cu_end_offset = cu->GetNextCompileUnitOffset();
@@ -403,8 +403,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   lldb::ModuleSP module = dwarf2Data->GetObjectFile()->GetModule();
 
   if (abbrevDecl) {
-    const DWARFDataExtractor &debug_info_data =
-        dwarf2Data->get_debug_info_data();
+    const DWARFDataExtractor &debug_info_data = cu->GetData();
 
     if (!debug_info_data.ValidOffset(offset))
       return false;
@@ -587,7 +586,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 void DWARFDebugInfoEntry::Dump(SymbolFileDWARF *dwarf2Data,
                                const DWARFUnit *cu, Stream &s,
                                uint32_t recurse_depth) const {
-  const DWARFDataExtractor &debug_info_data = dwarf2Data->get_debug_info_data();
+  const DWARFDataExtractor &debug_info_data = cu->GetData();
   lldb::offset_t offset = m_offset;
 
   if (debug_info_data.ValidOffset(offset)) {
@@ -780,8 +779,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(
   }
 
   if (abbrevDecl) {
-    const DWARFDataExtractor &debug_info_data =
-        dwarf2Data->get_debug_info_data();
+    const DWARFDataExtractor &debug_info_data = cu->GetData();
 
     if (fixed_form_sizes.Empty())
       fixed_form_sizes = DWARFFormValue::GetFixedFormSizesForAddressSize(
@@ -863,8 +861,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     uint32_t attr_idx = abbrevDecl->FindAttributeIndex(attr);
 
     if (attr_idx != DW_INVALID_INDEX) {
-      const DWARFDataExtractor &debug_info_data =
-          dwarf2Data->get_debug_info_data();
+      const DWARFDataExtractor &debug_info_data = cu->GetData();
 
       uint32_t idx = 0;
       while (idx < attr_idx)
@@ -1789,8 +1786,7 @@ DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(
         // Make sure the abbreviation code still matches. If it doesn't and the
         // DWARF data was mmap'ed, the backing file might have been modified
         // which is bad news.
-        const uint64_t abbrev_code =
-            dwarf2Data->get_debug_info_data().GetULEB128(&offset);
+        const uint64_t abbrev_code = cu->GetData().GetULEB128(&offset);
 
         if (abbrev_decl->Code() == abbrev_code)
           return abbrev_decl;

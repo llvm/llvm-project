@@ -3451,8 +3451,7 @@ entry:
 define void @mask_not_cast(i8*, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) {
 ; CHECK-LABEL: mask_not_cast:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmpleud %zmm3, %zmm2, %k0
-; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vpcmpnleud %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vptestmd %zmm0, %zmm1, %k1 {%k1}
 ; CHECK-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    vzeroupper
@@ -3461,8 +3460,7 @@ define void @mask_not_cast(i8*, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) {
 ; X86-LABEL: mask_not_cast:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpcmpleud %zmm3, %zmm2, %k0
-; X86-NEXT:    knotw %k0, %k1
+; X86-NEXT:    vpcmpnleud %zmm3, %zmm2, %k1
 ; X86-NEXT:    vptestmd %zmm0, %zmm1, %k1 {%k1}
 ; X86-NEXT:    vmovdqu32 %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper

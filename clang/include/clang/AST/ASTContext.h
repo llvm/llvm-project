@@ -1348,6 +1348,8 @@ public:
     return getFunctionTypeInternal(ResultTy, Args, EPI, false);
   }
 
+  QualType adjustStringLiteralBaseType(QualType StrLTy) const;
+
 private:
   /// Return a normal function type with a typed argument list.
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,

@@ -232,6 +232,10 @@ def note_mt_message : Note<"[rewriter] %0">;
 def warn_arcmt_nsalloc_realloc : Warning<"[rewriter] call returns pointer to GC managed memory; it will become unmanaged in ARC">;
 def err_arcmt_nsinvocation_ownership : Error<"NSInvocation's %0 is not safe to be used with an object with ownership other than __unsafe_unretained">;
 
+// OpenCL C++.
+def err_openclcxx_not_supported : Error<
+  "'%0' is not supported in OpenCL C++">;
+
 // OpenMP
 def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;

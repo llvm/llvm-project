@@ -127,6 +127,7 @@ enum ResourceKind {
   RkDialog = 5,
   RkStringTableBundle = 6,
   RkAccelerators = 9,
+  RkRcData = 10,
   RkCursorGroup = 12,
   RkIconGroup = 14,
   RkVersionInfo = 16,
