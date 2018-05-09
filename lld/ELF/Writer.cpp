@@ -88,6 +88,10 @@ private:
 };
 } // anonymous namespace
 
+static bool isSectionPrefix(StringRef Prefix, StringRef Name) {
+  return Name.startswith(Prefix) || Name == Prefix.drop_back();
+}
+
 StringRef elf::getOutputSectionName(InputSectionBase *S) {
   if (Config->Relocatable)
     return S->Name;
@@ -104,13 +108,25 @@ StringRef elf::getOutputSectionName(InputSectionBase *S) {
     }
   }
 
+  // This check is for -z keep-text-section-prefix.  This option separates text
+  // sections with prefix ".text.hot", ".text.unlikely", ".text.startup" or
+  // ".text.exit".
+  // When enabled, this allows identifying the hot code region (.text.hot) in
+  // the final binary which can be selectively mapped to huge pages or mlocked,
+  // for instance.
+  if (Config->ZKeepTextSectionPrefix)
+    for (StringRef V :
+         {".text.hot.", ".text.unlikely.", ".text.startup.", ".text.exit."}) {
+      if (isSectionPrefix(V, S->Name))
+        return V.drop_back();
+    }
+
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
         ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
         ".gcc_except_table.", ".tdata.", ".ARM.exidx.", ".ARM.extab."}) {
-    StringRef Prefix = V.drop_back();
-    if (S->Name.startswith(V) || S->Name == Prefix)
-      return Prefix;
+    if (isSectionPrefix(V, S->Name))
+      return V.drop_back();
   }
 
   // CommonSection is identified as "COMMON" in linker scripts.

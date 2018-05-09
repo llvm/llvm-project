@@ -2626,44 +2626,26 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
     if (!m_indexed)
       Index();
 
+    DIEArray die_offsets;
     if (name_type_mask & eFunctionNameTypeFull) {
-      FindFunctions(name, m_function_fullname_index, include_inlines, sc_list);
+      uint32_t num_matches = m_function_basename_index.Find(name, die_offsets);
+      num_matches += m_function_method_index.Find(name, die_offsets);
+      num_matches += m_function_fullname_index.Find(name, die_offsets);
+      for (uint32_t i = 0; i < num_matches; i++) {
+        const DIERef &die_ref = die_offsets[i];
+        DWARFDIE die = info->GetDIE(die_ref);
+        if (die) {
+          if (!DIEInDeclContext(parent_decl_ctx, die))
+            continue; // The containing decl contexts don't match
 
-      // FIXME Temporary workaround for global/anonymous namespace
-      // functions debugging FreeBSD and Linux binaries. If we didn't find any
-      // functions in the global namespace try looking in the basename index
-      // but ignore any returned functions that have a namespace but keep
-      // functions which have an anonymous namespace
-      // TODO: The arch in the object file isn't correct for MSVC
-      // binaries on windows, we should find a way to make it correct and
-      // handle those symbols as well.
-      if (sc_list.GetSize() == original_size) {
-        ArchSpec arch;
-        if (!parent_decl_ctx && GetObjectFile()->GetArchitecture(arch) &&
-            arch.GetTriple().isOSBinFormatELF()) {
-          SymbolContextList temp_sc_list;
-          FindFunctions(name, m_function_basename_index, include_inlines,
-                        temp_sc_list);
-          SymbolContext sc;
-          for (uint32_t i = 0; i < temp_sc_list.GetSize(); i++) {
-            if (temp_sc_list.GetContextAtIndex(i, sc)) {
-              ConstString mangled_name =
-                  sc.GetFunctionName(Mangled::ePreferMangled);
-              ConstString demangled_name =
-                  sc.GetFunctionName(Mangled::ePreferDemangled);
-              // Mangled names on Linux and FreeBSD are of the form:
-              // _ZN18function_namespace13function_nameEv.
-              if (strncmp(mangled_name.GetCString(), "_ZN", 3) ||
-                  !strncmp(demangled_name.GetCString(), "(anonymous namespace)",
-                           21)) {
-                sc_list.Append(sc);
-              }
-            }
+          if (resolved_dies.find(die.GetDIE()) == resolved_dies.end()) {
+            if (ResolveFunction(die, include_inlines, sc_list))
+              resolved_dies.insert(die.GetDIE());
           }
         }
       }
+      die_offsets.clear();
     }
-    DIEArray die_offsets;
     if (name_type_mask & eFunctionNameTypeBase) {
       uint32_t num_base = m_function_basename_index.Find(name, die_offsets);
       for (uint32_t i = 0; i < num_base; i++) {

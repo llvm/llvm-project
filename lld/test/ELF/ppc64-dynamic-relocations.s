@@ -5,7 +5,7 @@
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-readobj -dyn-relocations %t | FileCheck %s
-// RUN: llvm-objdump -D %t | FileCheck --check-prefix=DIS %s
+// RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=DIS %s
 // RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
@@ -13,29 +13,23 @@
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-readobj -dyn-relocations %t | FileCheck %s
-// RUN: llvm-objdump -D %t | FileCheck --check-prefix=DIS %s
+// RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=DIS %s
 // RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
 
 
 // The dynamic relocation for foo should point to 16 bytes past the start of
-// the .got.plt section.
+// the .plt section.
 // CHECK: Dynamic Relocations {
-// CHECK-NEXT:    0x10020010 R_PPC64_JMP_SLOT foo 0x0
+// CHECK-NEXT:    0x10030010 R_PPC64_JMP_SLOT foo 0x0
 
 // There should be 2 reserved doublewords before the first entry. The dynamic
 // linker will fill those in with the address of the resolver entry point and
 // the dynamic object identifier.
-// DIS: Disassembly of section .got.plt:
-// DIS-NEXT:  .got.plt:
-// DIS-NEXT: 10020000:       00 00 00 00  <unknown>
-// DIS-NEXT: 10020004:       00 00 00 00  <unknown>
-// DIS-NEXT: 10020008:       00 00 00 00  <unknown>
-// DIS-NEXT: 1002000c:       00 00 00 00  <unknown>
-// DIS-NEXT: 10020010:       00 00 00 00  <unknown>
-// DIS-NEXT: 10020014:       00 00 00 00  <unknown>
+// DIS: Idx Name       Size      Address          Type
+// DIS:     .plt       00000018  0000000010030000 BSS
 
-// DT_PLTGOT should point to the start of the .got.plt section.
-// DT: 0x0000000000000003 PLTGOT               0x10020000
+// DT_PLTGOT should point to the start of the .plt section.
+// DT: 0x0000000000000003 PLTGOT               0x10030000
 
     .text
     .abiversion 2
