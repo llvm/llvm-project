@@ -21,13 +21,13 @@
 namespace clang {
 namespace tooling {
 
-/// \brief Executes given frontend actions on all files/TUs in the compilation
+/// Executes given frontend actions on all files/TUs in the compilation
 /// database.
 class AllTUsToolExecutor : public ToolExecutor {
 public:
   static const char *ExecutorName;
 
-  /// \brief Init with \p CompilationDatabase.
+  /// Init with \p CompilationDatabase.
   /// This uses \p ThreadCount threads to exececute the actions on all files in
   /// parallel. If \p ThreadCount is 0, this uses `llvm::hardware_concurrency`.
   AllTUsToolExecutor(const CompilationDatabase &Compilations,
@@ -35,7 +35,7 @@ public:
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                          std::make_shared<PCHContainerOperations>());
 
-  /// \brief Init with \p CommonOptionsParser. This is expected to be used by
+  /// Init with \p CommonOptionsParser. This is expected to be used by
   /// `createExecutorFromCommandLineArgs` based on commandline options.
   ///
   /// The executor takes ownership of \p Options.

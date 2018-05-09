@@ -41,7 +41,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"clang version 7.0.0 (trunk 330296) (llvm/trunk 330298)"}
-!8 = distinct !DISubprogram(name: "main", scope: !9, file: !9, line: 1, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!8 = distinct !DISubprogram(name: "main", scope: !9, file: !9, line: 1, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DIFile(filename: "<stdin>", directory: "/Users/vsk/src/builds/llvm.org-master-RA")
 !10 = !DISubroutineType(types: !11)
 !11 = !{!12, !12, !13}

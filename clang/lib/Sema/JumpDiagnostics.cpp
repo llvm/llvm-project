@@ -216,7 +216,7 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
   return ScopePair(0U, 0U);
 }
 
-/// \brief Build scope information for a declaration that is part of a DeclStmt.
+/// Build scope information for a declaration that is part of a DeclStmt.
 void JumpScopeChecker::BuildScopeInformation(Decl *D, unsigned &ParentScope) {
   // If this decl causes a new scope, push and switch to it.
   std::pair<unsigned,unsigned> Diags = GetDiagForGotoScopeDecl(S, D);
@@ -233,7 +233,7 @@ void JumpScopeChecker::BuildScopeInformation(Decl *D, unsigned &ParentScope) {
       BuildScopeInformation(Init, ParentScope);
 }
 
-/// \brief Build scope information for a captured block literal variables.
+/// Build scope information for a captured block literal variables.
 void JumpScopeChecker::BuildScopeInformation(VarDecl *D,
                                              const BlockDecl *BDecl,
                                              unsigned &ParentScope) {

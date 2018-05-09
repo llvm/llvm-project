@@ -21,7 +21,7 @@
 #include "clang/Sema/Scope.h"
 using namespace clang;
 
-/// \brief Parse a template declaration, explicit instantiation, or
+/// Parse a template declaration, explicit instantiation, or
 /// explicit specialization.
 Decl *
 Parser::ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
@@ -41,7 +41,7 @@ Parser::ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
 
 
 
-/// \brief Parse a template declaration or an explicit specialization.
+/// Parse a template declaration or an explicit specialization.
 ///
 /// Template declarations include one or more template parameter lists
 /// and either the function or class template declaration. Explicit
@@ -157,7 +157,7 @@ Parser::ParseTemplateDeclarationOrSpecialization(DeclaratorContext Context,
                                              DeclEnd, AS, AccessAttrs);
 }
 
-/// \brief Parse a single declaration that declares a template,
+/// Parse a single declaration that declares a template,
 /// template specialization, or explicit instantiation of a template.
 ///
 /// \param DeclEnd will receive the source location of the last token
@@ -403,7 +403,7 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
   return true;
 }
 
-/// \brief Determine whether the parser is at the start of a template
+/// Determine whether the parser is at the start of a template
 /// type parameter.
 bool Parser::isStartOfTemplateTypeParameter() {
   if (Tok.is(tok::kw_class)) {
@@ -754,7 +754,7 @@ void Parser::DiagnoseMisplacedEllipsisInDeclarator(SourceLocation EllipsisLoc,
                             AlreadyHasEllipsis, D.hasName());
 }
 
-/// \brief Parses a '>' at the end of a template list.
+/// Parses a '>' at the end of a template list.
 ///
 /// If this function encounters '>>', '>>>', '>=', or '>>=', it tries
 /// to determine if these tokens were supposed to be a '>' followed by
@@ -926,7 +926,7 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
 }
 
 
-/// \brief Parses a template-id that after the template name has
+/// Parses a template-id that after the template name has
 /// already been parsed.
 ///
 /// This routine takes care of parsing the enclosed template argument
@@ -968,7 +968,7 @@ Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
                                         /*ObjCGenericList=*/false);
 }
 
-/// \brief Replace the tokens that form a simple-template-id with an
+/// Replace the tokens that form a simple-template-id with an
 /// annotation token containing the complete template-id.
 ///
 /// The first token in the stream must be the name of a template that
@@ -1089,7 +1089,7 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
   return false;
 }
 
-/// \brief Replaces a template-id annotation token with a type
+/// Replaces a template-id annotation token with a type
 /// annotation token.
 ///
 /// If there was a failure when forming the type from the template-id,
@@ -1134,12 +1134,12 @@ void Parser::AnnotateTemplateIdTokenAsType(bool IsClassName) {
   PP.AnnotateCachedTokens(Tok);
 }
 
-/// \brief Determine whether the given token can end a template argument.
+/// Determine whether the given token can end a template argument.
 static bool isEndOfTemplateArgument(Token Tok) {
   return Tok.isOneOf(tok::comma, tok::greater, tok::greatergreater);
 }
 
-/// \brief Parse a C++ template template argument.
+/// Parse a C++ template template argument.
 ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   if (!Tok.is(tok::identifier) && !Tok.is(tok::coloncolon) &&
       !Tok.is(tok::annot_cxxscope))
@@ -1267,7 +1267,7 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
                                 ExprArg.get(), Loc);
 }
 
-/// \brief Determine whether the current tokens can only be parsed as a 
+/// Determine whether the current tokens can only be parsed as a 
 /// template argument list (starting with the '<') and never as a '<' 
 /// expression.
 bool Parser::IsTemplateArgumentList(unsigned Skip) {
@@ -1329,7 +1329,7 @@ Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs) {
   return false;
 }
 
-/// \brief Parse a C++ explicit template instantiation
+/// Parse a C++ explicit template instantiation
 /// (C++ [temp.explicit]).
 ///
 ///       explicit-instantiation:
@@ -1367,7 +1367,7 @@ void Parser::LateTemplateParserCallback(void *P, LateParsedTemplate &LPT) {
   ((Parser *)P)->ParseLateTemplatedFuncDef(LPT);
 }
 
-/// \brief Late parse a C++ function template in Microsoft mode.
+/// Late parse a C++ function template in Microsoft mode.
 void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   if (!LPT.D)
      return;
@@ -1458,7 +1458,7 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
     delete *I;
 }
 
-/// \brief Lex a delayed template function for late parsing.
+/// Lex a delayed template function for late parsing.
 void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {
   tok::TokenKind kind = Tok.getKind();
   if (!ConsumeAndStoreFunctionPrologue(Toks)) {

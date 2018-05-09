@@ -520,6 +520,28 @@ int AArch64TTIImpl::getArithmeticInstrCost(
     }
     LLVM_FALLTHROUGH;
   case ISD::UDIV:
+    if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue) {
+      auto VT = TLI->getValueType(DL, Ty);
+      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
+        // Vector signed division by constant are expanded to the
+        // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
+        // to MULHS + SUB + SRL + ADD + SRL.
+        int MulCost = getArithmeticInstrCost(Instruction::Mul, Ty, Opd1Info,
+                                             Opd2Info,
+                                             TargetTransformInfo::OP_None,
+                                             TargetTransformInfo::OP_None);
+        int AddCost = getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info,
+                                             Opd2Info,
+                                             TargetTransformInfo::OP_None,
+                                             TargetTransformInfo::OP_None);
+        int ShrCost = getArithmeticInstrCost(Instruction::AShr, Ty, Opd1Info,
+                                             Opd2Info,
+                                             TargetTransformInfo::OP_None,
+                                             TargetTransformInfo::OP_None);
+        return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
+      }
+    }
+
     Cost += BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
                                           Opd1PropInfo, Opd2PropInfo);
     if (Ty->isVectorTy()) {

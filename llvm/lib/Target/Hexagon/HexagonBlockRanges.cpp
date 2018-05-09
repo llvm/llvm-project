@@ -160,7 +160,7 @@ HexagonBlockRanges::InstrIndexMap::InstrIndexMap(MachineBasicBlock &B)
   IndexType Idx = IndexType::First;
   First = Idx;
   for (auto &In : B) {
-    if (In.isDebugValue())
+    if (In.isDebugInstr())
       continue;
     assert(getIndex(&In) == IndexType::None && "Instruction already in map");
     Map.insert(std::make_pair(Idx, &In));
@@ -314,7 +314,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
   RegisterSet Defs, Clobbers;
 
   for (auto &In : B) {
-    if (In.isDebugValue())
+    if (In.isDebugInstr())
       continue;
     IndexType Index = IndexMap.getIndex(&In);
     // Process uses first.

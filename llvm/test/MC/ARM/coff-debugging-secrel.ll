@@ -18,7 +18,7 @@ entry:
 !llvm.module.flags = !{!9, !10}
 
 !0 = !DILocation(line: 1, scope: !1)
-!1 = distinct !DISubprogram(name: "function", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !7, scopeLine: 1, file: !2, scope: !3, type: !4, variables: !6)
+!1 = distinct !DISubprogram(name: "function", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !7, scopeLine: 1, file: !2, scope: !3, type: !4, retainedNodes: !6)
 !2 = !DIFile(filename: "/Users/compnerd/work/llvm/test/MC/ARM/reduced.c", directory: "/Users/compnerd/work/llvm")
 !3 = !DIFile(filename: "/Users/compnerd/work/llvm/test/MC/ARM/reduced.c", directory: "/Users/compnerd/work/llvm")
 !4 = !DISubroutineType(types: !5)

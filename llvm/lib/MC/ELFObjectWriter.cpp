@@ -1149,7 +1149,6 @@ void ELFObjectWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
   }
 
   case ELF::SHT_SYMTAB:
-  case ELF::SHT_DYNSYM:
     sh_link = StringTableIndex;
     sh_info = LastLocalSymbolIndex;
     break;

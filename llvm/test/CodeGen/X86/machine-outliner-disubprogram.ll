@@ -117,7 +117,7 @@ entry:
 ; CHECK-SAME: flags: DIFlagArtificial,
 ; CHECK-SAME: isOptimized: true,
 ; CHECK-SAME: unit: !0,
-; CHECK-SAME: variables: [[VARS:![0-9]+]]
+; CHECK-SAME: retainedNodes: [[VARS:![0-9]+]]
 
 ; CHECK: distinct !DISubprogram(name: "OUTLINED_FUNCTION_0",
 ; CHECK-SAME: scope: !1,
@@ -128,7 +128,7 @@ entry:
 ; CHECK-SAME: flags: DIFlagArtificial,
 ; CHECK-SAME: isOptimized: true,
 ; CHECK-SAME: unit: !0,
-; CHECK-SAME: variables: [[VARS]]
+; CHECK-SAME: retainedNodes: [[VARS]]
 
 attributes #0 = { noinline noredzone nounwind optnone ssp uwtable "no-frame-pointer-elim"="true"  }
 attributes #1 = { nounwind readnone speculatable }
@@ -146,7 +146,7 @@ attributes #2 = { noredzone }
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"clang"}
-!8 = distinct !DISubprogram(name: "f6", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !0, variables: !2)
+!8 = distinct !DISubprogram(name: "f6", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 !11 = !DILocalVariable(name: "dog", scope: !8, file: !1, line: 4, type: !12)
@@ -157,7 +157,7 @@ attributes #2 = { noredzone }
 !16 = !DILocalVariable(name: "pangolin", scope: !8, file: !1, line: 6, type: !12)
 !17 = !DILocation(line: 6, column: 16, scope: !8)
 !18 = !DILocation(line: 7, column: 1, scope: !8)
-!19 = distinct !DISubprogram(name: "f5", scope: !1, file: !1, line: 9, type: !9, isLocal: false, isDefinition: true, scopeLine: 9, isOptimized: false, unit: !0, variables: !2)
+!19 = distinct !DISubprogram(name: "f5", scope: !1, file: !1, line: 9, type: !9, isLocal: false, isDefinition: true, scopeLine: 9, isOptimized: false, unit: !0, retainedNodes: !2)
 !20 = !DILocalVariable(name: "dog", scope: !19, file: !1, line: 10, type: !12)
 !21 = !DILocation(line: 10, column: 16, scope: !19)
 !22 = !DILocalVariable(name: "cat", scope: !19, file: !1, line: 11, type: !12)
@@ -165,7 +165,7 @@ attributes #2 = { noredzone }
 !24 = !DILocalVariable(name: "pangolin", scope: !19, file: !1, line: 12, type: !12)
 !25 = !DILocation(line: 12, column: 16, scope: !19)
 !26 = !DILocation(line: 13, column: 1, scope: !19)
-!27 = distinct !DISubprogram(name: "f4", scope: !1, file: !1, line: 15, type: !9, isLocal: false, isDefinition: true, scopeLine: 15, isOptimized: false, unit: !0, variables: !2)
+!27 = distinct !DISubprogram(name: "f4", scope: !1, file: !1, line: 15, type: !9, isLocal: false, isDefinition: true, scopeLine: 15, isOptimized: false, unit: !0, retainedNodes: !2)
 !28 = !DILocalVariable(name: "dog", scope: !27, file: !1, line: 16, type: !12)
 !29 = !DILocation(line: 16, column: 16, scope: !27)
 !30 = !DILocalVariable(name: "cat", scope: !27, file: !1, line: 17, type: !12)
@@ -173,7 +173,7 @@ attributes #2 = { noredzone }
 !32 = !DILocalVariable(name: "pangolin", scope: !27, file: !1, line: 18, type: !12)
 !33 = !DILocation(line: 18, column: 16, scope: !27)
 !34 = !DILocation(line: 19, column: 1, scope: !27)
-!35 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 21, type: !36, isLocal: false, isDefinition: true, scopeLine: 21, isOptimized: false, unit: !0, variables: !2)
+!35 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 21, type: !36, isLocal: false, isDefinition: true, scopeLine: 21, isOptimized: false, unit: !0, retainedNodes: !2)
 !36 = !DISubroutineType(types: !37)
 !37 = !{!12}
 !38 = !DILocalVariable(name: "dog", scope: !35, file: !1, line: 22, type: !12)
@@ -185,7 +185,7 @@ attributes #2 = { noredzone }
 !44 = !DILocation(line: 25, column: 7, scope: !35)
 !45 = !DILocation(line: 26, column: 10, scope: !35)
 !46 = !DILocation(line: 26, column: 3, scope: !35)
-!47 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 29, type: !36, isLocal: false, isDefinition: true, scopeLine: 29, isOptimized: false, unit: !0, variables: !2)
+!47 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 29, type: !36, isLocal: false, isDefinition: true, scopeLine: 29, isOptimized: false, unit: !0, retainedNodes: !2)
 !48 = !DILocalVariable(name: "dog", scope: !47, file: !1, line: 30, type: !12)
 !49 = !DILocation(line: 30, column: 16, scope: !47)
 !50 = !DILocalVariable(name: "cat", scope: !47, file: !1, line: 31, type: !12)
@@ -195,7 +195,7 @@ attributes #2 = { noredzone }
 !54 = !DILocation(line: 33, column: 7, scope: !47)
 !55 = !DILocation(line: 34, column: 10, scope: !47)
 !56 = !DILocation(line: 34, column: 3, scope: !47)
-!57 = distinct !DISubprogram(name: "f3", scope: !1, file: !1, line: 37, type: !36, isLocal: false, isDefinition: true, scopeLine: 37, isOptimized: false, unit: !0, variables: !2)
+!57 = distinct !DISubprogram(name: "f3", scope: !1, file: !1, line: 37, type: !36, isLocal: false, isDefinition: true, scopeLine: 37, isOptimized: false, unit: !0, retainedNodes: !2)
 !58 = !DILocalVariable(name: "dog", scope: !57, file: !1, line: 38, type: !12)
 !59 = !DILocation(line: 38, column: 16, scope: !57)
 !60 = !DILocalVariable(name: "cat", scope: !57, file: !1, line: 39, type: !12)
@@ -205,7 +205,7 @@ attributes #2 = { noredzone }
 !64 = !DILocation(line: 41, column: 7, scope: !57)
 !65 = !DILocation(line: 42, column: 10, scope: !57)
 !66 = !DILocation(line: 42, column: 3, scope: !57)
-!67 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 45, type: !36, isLocal: false, isDefinition: true, scopeLine: 45, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!67 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 45, type: !36, isLocal: false, isDefinition: true, scopeLine: 45, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !68 = !DILocalVariable(name: "a", scope: !67, file: !1, line: 46, type: !12)
 !69 = !DILocation(line: 46, column: 16, scope: !67)
 !70 = !DILocation(line: 47, column: 3, scope: !67)

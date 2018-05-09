@@ -764,6 +764,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZCopyreloc = getZFlag(Args, "copyreloc", "nocopyreloc", true);
   Config->ZExecstack = getZFlag(Args, "execstack", "noexecstack", false);
   Config->ZHazardplt = hasZOption(Args, "hazardplt");
+  Config->ZKeepTextSectionPrefix = getZFlag(
+      Args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNodlopen = hasZOption(Args, "nodlopen");
   Config->ZNow = getZFlag(Args, "now", "lazy", false);
@@ -796,6 +798,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->LTODebugPassManager = true;
     } else if (S.startswith("sample-profile=")) {
       Config->LTOSampleProfile = S.substr(15);
+    } else if (S.startswith("obj-path=")) {
+      Config->LTOObjPath = S.substr(9);
     } else if (S == "thinlto-index-only") {
       Config->ThinLTOIndexOnly = true;
     } else if (S.startswith("thinlto-index-only=")) {

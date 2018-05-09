@@ -265,7 +265,7 @@ static void FixEndsAtEndOfFunction(
 
   for (MachineBasicBlock &MBB : reverse(MF)) {
     for (MachineInstr &MI : reverse(MBB)) {
-      if (MI.isPosition() || MI.isDebugValue())
+      if (MI.isPosition() || MI.isDebugInstr())
         continue;
       if (MI.getOpcode() == WebAssembly::END_BLOCK) {
         BlockTops[&MI]->getOperand(0).setImm(int32_t(retType));

@@ -102,7 +102,7 @@ void FileManager::clearStatCaches() {
   StatCache.reset();
 }
 
-/// \brief Retrieve the directory that the given file name resides in.
+/// Retrieve the directory that the given file name resides in.
 /// Filename can point to either a real file or a virtual file.
 static const DirectoryEntry *getDirectoryFromFile(FileManager &FileMgr,
                                                   StringRef Filename,

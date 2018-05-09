@@ -874,9 +874,15 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
   }
 }
 
+// On PowerPC the .plt section is used to hold the table of function addresses
+// instead of the .got.plt, and the type is SHT_NOBITS similar to a .bss
+// section. I don't know why we have a BSS style type for the section but it is
+// consitent across both 64-bit PowerPC ABIs as well as the 32-bit PowerPC ABI.
 GotPltSection::GotPltSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotPltEntrySize, ".got.plt") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE,
+                       Config->EMachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
+                       Target->GotPltEntrySize,
+                       Config->EMachine == EM_PPC64 ? ".plt" : ".got.plt") {}
 
 void GotPltSection::addEntry(Symbol &Sym) {
   assert(Sym.PltIndex == Entries.size());
@@ -905,12 +911,25 @@ bool GotPltSection::empty() const {
          !(ElfSym::GlobalOffsetTable && Target->GotBaseSymInGotPlt);
 }
 
-// On ARM the IgotPltSection is part of the GotSection, on other Targets it is
-// part of the .got.plt
+static StringRef getIgotPltName() {
+  // On ARM the IgotPltSection is part of the GotSection.
+  if (Config->EMachine == EM_ARM)
+    return ".got";
+
+  // On PowerPC64 the GotPltSection is renamed to '.plt' so the IgotPltSection
+  // needs to be named the same.
+  if (Config->EMachine == EM_PPC64)
+    return ".plt";
+
+  return ".got.plt";
+}
+
+// On PowerPC64 the GotPltSection type is SHT_NOBITS so we have to follow suit
+// with the IgotPltSection.
 IgotPltSection::IgotPltSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotPltEntrySize,
-                       Config->EMachine == EM_ARM ? ".got" : ".got.plt") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE,
+                       Config->EMachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
+                       Target->GotPltEntrySize, getIgotPltName()) {}
 
 void IgotPltSection::addEntry(Symbol &Sym) {
   Sym.IsInIgot = true;
@@ -1180,6 +1199,16 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
       // relative to the address of the tag.
       addInSecRelative(DT_MIPS_RLD_MAP_REL, InX::MipsRldMap);
     }
+  }
+
+  // Glink dynamic tag is required by the V2 abi if the plt section isn't empty.
+  if (Config->EMachine == EM_PPC64 && !InX::Plt->empty()) {
+    // The Glink tag points to 32 bytes before the first lazy symbol resolution
+    // stub, which starts directly after the header.
+    Entries.push_back({DT_PPC64_GLINK, [=] {
+                         unsigned Offset = Target->PltHeaderSize - 32;
+                         return InX::Plt->getVA(0) + Offset;
+                       }});
   }
 
   addInt(DT_NULL, 0);
@@ -1899,8 +1928,11 @@ void HashTableSection::writeTo(uint8_t *Buf) {
   }
 }
 
+// On PowerPC64 the lazy symbol resolvers go into the `global linkage table`
+// in the .glink section, rather then the typical .plt section.
 PltSection::PltSection(bool IsIplt)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
+                       Config->EMachine == EM_PPC64 ? ".glink" : ".plt"),
       HeaderSize(IsIplt ? 0 : Target->PltHeaderSize), IsIplt(IsIplt) {
   // The PLT needs to be writable on SPARC as the dynamic linker will
   // modify the instructions in the PLT entries.

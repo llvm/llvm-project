@@ -163,7 +163,7 @@ unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB,
   // Note that indirect branches are not removed.
   while (I != REnd && removed < 2) {
     // Skip past debug instructions.
-    if (I->isDebugValue()) {
+    if (I->isDebugInstr()) {
       ++I;
       continue;
     }
@@ -195,7 +195,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::analyzeBranch(
   MachineBasicBlock::reverse_iterator I = MBB.rbegin(), REnd = MBB.rend();
 
   // Skip all the debug instructions.
-  while (I != REnd && I->isDebugValue())
+  while (I != REnd && I->isDebugInstr())
     ++I;
 
   if (I == REnd || !isUnpredicatedTerminator(*I)) {
@@ -220,7 +220,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::analyzeBranch(
   // Skip past any debug instruction to see if the second last actual
   // is a branch.
   ++I;
-  while (I != REnd && I->isDebugValue())
+  while (I != REnd && I->isDebugInstr())
     ++I;
 
   if (I != REnd) {

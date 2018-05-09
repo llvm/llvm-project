@@ -658,7 +658,7 @@ public:
 
   ~ApplyDebugLocation();
 
-  /// \brief Apply TemporaryLocation if it is valid. Otherwise switch
+  /// Apply TemporaryLocation if it is valid. Otherwise switch
   /// to an artificial debug location that has a valid scope, but no
   /// line information.
   ///
@@ -672,7 +672,7 @@ public:
   static ApplyDebugLocation CreateArtificial(CodeGenFunction &CGF) {
     return ApplyDebugLocation(CGF, false, SourceLocation());
   }
-  /// \brief Apply TemporaryLocation if it is valid. Otherwise switch
+  /// Apply TemporaryLocation if it is valid. Otherwise switch
   /// to an artificial debug location that has a valid scope, but no
   /// line information.
   static ApplyDebugLocation

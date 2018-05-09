@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the clang::FrontendAction interface and various convenience
+/// Defines the clang::FrontendAction interface and various convenience
 /// abstract classes (clang::ASTFrontendAction, clang::PluginASTAction,
 /// clang::PreprocessorFrontendAction, and clang::WrapperFrontendAction)
 /// derived from it.
@@ -48,7 +48,7 @@ protected:
   /// @name Implementation Action Interface
   /// @{
 
-  /// \brief Create the AST consumer object for this action, if supported.
+  /// Create the AST consumer object for this action, if supported.
   ///
   /// This routine is called as part of BeginSourceFile(), which will
   /// fail if the AST consumer cannot be created. This will not be called if the
@@ -64,7 +64,7 @@ protected:
   virtual std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                          StringRef InFile) = 0;
 
-  /// \brief Callback before starting processing a single input, giving the
+  /// Callback before starting processing a single input, giving the
   /// opportunity to modify the CompilerInvocation or do some other action
   /// before BeginSourceFileAction is called.
   ///
@@ -72,7 +72,7 @@ protected:
   /// ExecuteAction() and EndSourceFileAction() will not be called.
   virtual bool BeginInvocation(CompilerInstance &CI) { return true; }
 
-  /// \brief Callback at the start of processing a single input.
+  /// Callback at the start of processing a single input.
   ///
   /// \return True on success; on failure ExecutionAction() and
   /// EndSourceFileAction() will not be called.
@@ -80,20 +80,20 @@ protected:
     return true;
   }
 
-  /// \brief Callback to run the program action, using the initialized
+  /// Callback to run the program action, using the initialized
   /// compiler instance.
   ///
   /// This is guaranteed to only be called between BeginSourceFileAction()
   /// and EndSourceFileAction().
   virtual void ExecuteAction() = 0;
 
-  /// \brief Callback at the end of processing a single input.
+  /// Callback at the end of processing a single input.
   ///
   /// This is guaranteed to only be called following a successful call to
   /// BeginSourceFileAction (and BeginSourceFile).
   virtual void EndSourceFileAction() {}
 
-  /// \brief Callback at the end of processing a single input, to determine
+  /// Callback at the end of processing a single input, to determine
   /// if the output files should be erased or not.
   ///
   /// By default it returns true if a compiler error occurred.
@@ -158,39 +158,39 @@ public:
   /// @name Supported Modes
   /// @{
 
-  /// \brief Is this action invoked on a model file?
+  /// Is this action invoked on a model file?
   ///
   /// Model files are incomplete translation units that relies on type
   /// information from another translation unit. Check ParseModelFileAction for
   /// details.
   virtual bool isModelParsingAction() const { return false; }
 
-  /// \brief Does this action only use the preprocessor?
+  /// Does this action only use the preprocessor?
   ///
   /// If so no AST context will be created and this action will be invalid
   /// with AST file inputs.
   virtual bool usesPreprocessorOnly() const = 0;
 
-  /// \brief For AST-based actions, the kind of translation unit we're handling.
+  /// For AST-based actions, the kind of translation unit we're handling.
   virtual TranslationUnitKind getTranslationUnitKind() { return TU_Complete; }
 
-  /// \brief Does this action support use with PCH?
+  /// Does this action support use with PCH?
   virtual bool hasPCHSupport() const { return true; }
 
-  /// \brief Does this action support use with AST files?
+  /// Does this action support use with AST files?
   virtual bool hasASTFileSupport() const { return true; }
 
-  /// \brief Does this action support use with IR files?
+  /// Does this action support use with IR files?
   virtual bool hasIRSupport() const { return false; }
 
-  /// \brief Does this action support use with code completion?
+  /// Does this action support use with code completion?
   virtual bool hasCodeCompletionSupport() const { return false; }
 
   /// @}
   /// @name Public Action Interface
   /// @{
 
-  /// \brief Prepare the action for processing the input file \p Input.
+  /// Prepare the action for processing the input file \p Input.
   ///
   /// This is run after the options and frontend have been initialized,
   /// but prior to executing any per-file processing.
@@ -211,20 +211,20 @@ public:
   /// be aborted and neither Execute() nor EndSourceFile() should be called.
   bool BeginSourceFile(CompilerInstance &CI, const FrontendInputFile &Input);
 
-  /// \brief Set the source manager's main input file, and run the action.
+  /// Set the source manager's main input file, and run the action.
   bool Execute();
 
-  /// \brief Perform any per-file post processing, deallocate per-file
+  /// Perform any per-file post processing, deallocate per-file
   /// objects, and run statistics and output file cleanup code.
   void EndSourceFile();
 
   /// @}
 };
 
-/// \brief Abstract base class to use for AST consumer-based frontend actions.
+/// Abstract base class to use for AST consumer-based frontend actions.
 class ASTFrontendAction : public FrontendAction {
 protected:
-  /// \brief Implement the ExecuteAction interface by running Sema on
+  /// Implement the ExecuteAction interface by running Sema on
   /// the already-initialized AST consumer.
   ///
   /// This will also take care of instantiating a code completion consumer if
@@ -242,7 +242,7 @@ public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override = 0;
 
-  /// \brief Parse the given plugin command line arguments.
+  /// Parse the given plugin command line arguments.
   ///
   /// \param CI - The compiler instance, for use in reporting diagnostics.
   /// \return True if the parsing succeeded; otherwise the plugin will be
@@ -257,7 +257,7 @@ public:
     AddBeforeMainAction, ///< Execute the action before the main action
     AddAfterMainAction   ///< Execute the action after the main action
   };
-  /// \brief Get the action type for this plugin
+  /// Get the action type for this plugin
   ///
   /// \return The action type. If the type is Cmdline then by default the
   /// plugin does nothing and what it does is determined by the cc1
@@ -265,10 +265,10 @@ public:
   virtual ActionType getActionType() { return Cmdline; }
 };
 
-/// \brief Abstract base class to use for preprocessor-based frontend actions.
+/// Abstract base class to use for preprocessor-based frontend actions.
 class PreprocessorFrontendAction : public FrontendAction {
 protected:
-  /// \brief Provide a default implementation which returns aborts;
+  /// Provide a default implementation which returns aborts;
   /// this method should never be called by FrontendAction clients.
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -277,7 +277,7 @@ public:
   bool usesPreprocessorOnly() const override { return true; }
 };
 
-/// \brief A frontend action which simply wraps some other runtime-specified
+/// A frontend action which simply wraps some other runtime-specified
 /// frontend action.
 ///
 /// Deriving from this class allows an action to inject custom logic around

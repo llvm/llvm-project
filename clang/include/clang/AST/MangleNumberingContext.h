@@ -27,29 +27,29 @@ class TagDecl;
 class Type;
 class VarDecl;
 
-/// \brief Keeps track of the mangled names of lambda expressions and block
+/// Keeps track of the mangled names of lambda expressions and block
 /// literals within a particular context.
 class MangleNumberingContext {
 public:
   virtual ~MangleNumberingContext() {}
 
-  /// \brief Retrieve the mangling number of a new lambda expression with the
+  /// Retrieve the mangling number of a new lambda expression with the
   /// given call operator within this context.
   virtual unsigned getManglingNumber(const CXXMethodDecl *CallOperator) = 0;
 
-  /// \brief Retrieve the mangling number of a new block literal within this
+  /// Retrieve the mangling number of a new block literal within this
   /// context.
   virtual unsigned getManglingNumber(const BlockDecl *BD) = 0;
 
   /// Static locals are numbered by source order.
   virtual unsigned getStaticLocalNumber(const VarDecl *VD) = 0;
 
-  /// \brief Retrieve the mangling number of a static local variable within
+  /// Retrieve the mangling number of a static local variable within
   /// this context.
   virtual unsigned getManglingNumber(const VarDecl *VD,
                                      unsigned MSLocalManglingNumber) = 0;
 
-  /// \brief Retrieve the mangling number of a static local variable within
+  /// Retrieve the mangling number of a static local variable within
   /// this context.
   virtual unsigned getManglingNumber(const TagDecl *TD,
                                      unsigned MSLocalManglingNumber) = 0;

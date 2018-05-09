@@ -79,7 +79,7 @@ declare void @llvm.stackrestore(i8*) nounwind
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.2 (trunk 156005) (llvm/trunk 156000)", isOptimized: false, emissionKind: FullDebug, file: !28, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "testVLAwithSize", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !28, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "testVLAwithSize", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !28, scope: !6, type: !7, retainedNodes: !1)
 !6 = !DIFile(filename: "bar.c", directory: "/Users/echristo/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9}

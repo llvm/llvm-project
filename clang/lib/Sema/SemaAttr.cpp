@@ -389,7 +389,7 @@ bool Sema::UnifySection(StringRef SectionName,
   return false;
 }
 
-/// \brief Called on well formed \#pragma bss_seg().
+/// Called on well formed \#pragma bss_seg().
 void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
                             PragmaMsStackAction Action,
                             llvm::StringRef StackSlotLabel,
@@ -410,7 +410,7 @@ void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
   Stack->Act(PragmaLocation, Action, StackSlotLabel, SegmentName);
 }
 
-/// \brief Called on well formed \#pragma bss_seg().
+/// Called on well formed \#pragma bss_seg().
 void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation,
                                 int SectionFlags, StringLiteral *SegmentName) {
   UnifySection(SegmentName->getString(), SectionFlags, PragmaLocation);

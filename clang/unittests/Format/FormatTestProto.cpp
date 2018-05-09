@@ -486,6 +486,7 @@ TEST_F(FormatTestProto, AcceptsOperatorAsKeyInOptions) {
                "    ccccccccccccccccccccccc: <\n"
                "      operator: 1\n"
                "      operator: 2\n"
+               "      operator: 3\n"
                "      operator { key: value }\n"
                "    >\n"
                "  >\n"

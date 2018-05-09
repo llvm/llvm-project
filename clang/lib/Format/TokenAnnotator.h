@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a token annotator, i.e. creates
+/// This file implements a token annotator, i.e. creates
 /// \c AnnotatedTokens out of \c FormatTokens with required extra information.
 ///
 //===----------------------------------------------------------------------===//
@@ -138,14 +138,14 @@ private:
   void operator=(const AnnotatedLine &) = delete;
 };
 
-/// \brief Determines extra information about the tokens comprising an
+/// Determines extra information about the tokens comprising an
 /// \c UnwrappedLine.
 class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), Keywords(Keywords) {}
 
-  /// \brief Adapts the indent levels of comment lines to the indent of the
+  /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.
   // FIXME: Can/should this be done in the UnwrappedLineParser?
   void setCommentLineLevels(SmallVectorImpl<AnnotatedLine *> &Lines);
@@ -154,7 +154,7 @@ public:
   void calculateFormattingInformation(AnnotatedLine &Line);
 
 private:
-  /// \brief Calculate the penalty for splitting before \c Tok.
+  /// Calculate the penalty for splitting before \c Tok.
   unsigned splitPenalty(const AnnotatedLine &Line, const FormatToken &Tok,
                         bool InFunctionDecl);
 

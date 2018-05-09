@@ -19,7 +19,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.1", isOptimized: true, emissionKind: FullDebug, file: !21, enums: !1, retainedTypes: !1, globals: !1, imports: !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "main", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, file: !21, scope: null, type: !7, variables: !13)
+!5 = distinct !DISubprogram(name: "main", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, file: !21, scope: null, type: !7, retainedNodes: !13)
 !6 = !DIFile(filename: "dbg.c", directory: "/src")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9, !10}

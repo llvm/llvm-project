@@ -39,6 +39,6 @@ done:
 !22 = !{i32 2, !"Dwarf Version", i32 4}
 !23 = !{i32 2, !"Debug Info Version", i32 3}
 !62 = !{!10}
-!98 = distinct !DISubprogram(name: "NSMaxX", scope: !1, file: !1, line: 27, isLocal: true, isDefinition: true, scopeLine: 27, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !62, type: !99)
+!98 = distinct !DISubprogram(name: "NSMaxX", scope: !1, file: !1, line: 27, isLocal: true, isDefinition: true, scopeLine: 27, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !62, type: !99)
 !99 = !DISubroutineType(types: !100)
 !100 = !{null}

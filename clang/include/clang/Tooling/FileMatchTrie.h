@@ -30,7 +30,7 @@ struct PathComparator {
   virtual bool equivalent(StringRef FileA, StringRef FileB) const = 0;
 };
 
-/// \brief A trie to efficiently match against the entries of the compilation
+/// A trie to efficiently match against the entries of the compilation
 /// database in order of matching suffix length.
 ///
 /// When a clang tool is supposed to operate on a specific file, we have to
@@ -58,17 +58,17 @@ class FileMatchTrie {
 public:
   FileMatchTrie();
 
-  /// \brief Construct a new \c FileMatchTrie with the given \c PathComparator.
+  /// Construct a new \c FileMatchTrie with the given \c PathComparator.
   ///
   /// The \c FileMatchTrie takes ownership of 'Comparator'. Used for testing.
   FileMatchTrie(PathComparator* Comparator);
 
   ~FileMatchTrie();
 
-  /// \brief Insert a new absolute path. Relative paths are ignored.
+  /// Insert a new absolute path. Relative paths are ignored.
   void insert(StringRef NewPath);
 
-  /// \brief Finds the corresponding file in this trie.
+  /// Finds the corresponding file in this trie.
   ///
   /// Returns file name stored in this trie that is equivalent to 'FileName'
   /// according to 'Comparator', if it can be uniquely identified. If there

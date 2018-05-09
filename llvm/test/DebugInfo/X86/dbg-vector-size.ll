@@ -31,7 +31,7 @@ declare dso_local void @foo(i8*)
 !6 = !{i32 2, !"Debug Info Version", i32 3}
 !7 = !{i32 1, !"wchar_size", i32 4}
 !8 = !{!"clang"}
-!9 = distinct !DISubprogram(name: "test", scope: !10, file: !10, line: 3, type: !11, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!9 = distinct !DISubprogram(name: "test", scope: !10, file: !10, line: 3, type: !11, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !10 = !DIFile(filename: "./small.c", directory: "/dbg/info")
 !11 = !DISubroutineType(types: !12)
 !12 = !{null}

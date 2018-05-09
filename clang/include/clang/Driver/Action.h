@@ -547,13 +547,13 @@ public:
   /// Type that provides information about the actions that depend on this
   /// unbundling action.
   struct DependentActionInfo final {
-    /// \brief The tool chain of the dependent action.
+    /// The tool chain of the dependent action.
     const ToolChain *DependentToolChain = nullptr;
 
-    /// \brief The bound architecture of the dependent action.
+    /// The bound architecture of the dependent action.
     StringRef DependentBoundArch;
 
-    /// \brief The offload kind of the dependent action.
+    /// The offload kind of the dependent action.
     const OffloadKind DependentOffloadKind = OFK_None;
 
     DependentActionInfo(const ToolChain *DependentToolChain,

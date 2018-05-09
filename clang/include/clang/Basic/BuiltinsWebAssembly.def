@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the WebAssembly-specific builtin function database.
+/// This file defines the WebAssembly-specific builtin function database.
 /// Users of this file must define the BUILTIN macro to make use of this
 /// information.
 ///

@@ -314,7 +314,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
   unsigned LookAheadLeft = LookAheadLimit;
   while (LookAheadLeft) {
     // Skip over dbg_value's.
-    while (I != E && I != EE && I->isDebugValue())
+    while (I != E && I != EE && I->isDebugInstr())
       ++I;
 
     if (I == EE) {
@@ -353,7 +353,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
 
 bool MachineCSE::isCSECandidate(MachineInstr *MI) {
   if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() || MI->isKill() ||
-      MI->isInlineAsm() || MI->isDebugValue())
+      MI->isInlineAsm() || MI->isDebugInstr())
     return false;
 
   // Ignore copies.

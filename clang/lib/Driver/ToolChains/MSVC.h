@@ -110,7 +110,7 @@ public:
                           llvm::opt::ArgStringList &CC1Args) const override;
 
   bool getWindowsSDKLibraryPath(std::string &path) const;
-  /// \brief Check if Universal CRT should be used if available
+  /// Check if Universal CRT should be used if available
   bool getUniversalCRTLibraryPath(std::string &path) const;
   bool useUniversalCRT() const;
   VersionTuple

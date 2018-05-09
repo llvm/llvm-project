@@ -67,6 +67,7 @@ endif()
 foreach(target x86_64;aarch64)
   set(RUNTIMES_${target}-fuchsia_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
   set(RUNTIMES_${target}-fuchsia_CMAKE_BUILD_TYPE ${FUCHSIA_RUNTIMES_BUILD_TYPE} CACHE STRING "")
+  set(RUNTIMES_${target}-fuchsia_CMAKE_BUILD_WITH_INSTALL_RPATH ON CACHE STRING "")
   set(RUNTIMES_${target}-fuchsia_CMAKE_ASM_FLAGS ${FUCHSIA_${target}_C_FLAGS} CACHE PATH "")
   set(RUNTIMES_${target}-fuchsia_CMAKE_C_FLAGS ${FUCHSIA_${target}_C_FLAGS} CACHE PATH "")
   set(RUNTIMES_${target}-fuchsia_CMAKE_CXX_FLAGS ${FUCHSIA_${target}_CXX_FLAGS} CACHE PATH "")
@@ -108,6 +109,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-readelf
   llvm-readobj
   llvm-size
+  llvm-strip
   llvm-symbolizer
   opt
   sancov

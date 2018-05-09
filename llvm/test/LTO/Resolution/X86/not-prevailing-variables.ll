@@ -3,7 +3,7 @@
 ; RUN:   -r %t1.o,testVar1,plx -r %t1.o,testVar2,plx \
 ; RUN:   -r %t1.o,var1,pl -r %t1.o,var2,lx
 
-; Test contains two variables: var1 and var2.
+; Test contains two retainedNodes: var1 and var2.
 ; var2 is not prevailing and here we check it is not inlined.
 
 ; Check 'var2' was not inlined.

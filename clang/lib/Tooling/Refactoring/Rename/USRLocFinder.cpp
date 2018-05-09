@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Methods for finding all instances of a USR. Our strategy is very
+/// Methods for finding all instances of a USR. Our strategy is very
 /// simple; we just compare the USR at every relevant AST node with the one
 /// provided.
 ///
@@ -50,7 +50,7 @@ bool IsValidEditLoc(const clang::SourceManager& SM, clang::SourceLocation Loc) {
   return SM.getFileEntryForID(FileIdAndOffset.first) != nullptr;
 }
 
-// \brief This visitor recursively searches for all instances of a USR in a
+// This visitor recursively searches for all instances of a USR in a
 // translation unit and stores them for later usage.
 class USRLocFindingASTVisitor
     : public RecursiveSymbolVisitor<USRLocFindingASTVisitor> {
@@ -80,7 +80,7 @@ public:
 
   // Non-visitors:
 
-  /// \brief Returns a set of unique symbol occurrences. Duplicate or
+  /// Returns a set of unique symbol occurrences. Duplicate or
   /// overlapping occurrences are erroneous and should be reported!
   SymbolOccurrences takeOccurrences() { return std::move(Occurrences); }
 

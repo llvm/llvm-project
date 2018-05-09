@@ -343,7 +343,7 @@ MbbIterator LanaiMemAluCombiner::findClosestSuitableAluInstr(
       break;
 
     // Skip over debug instructions
-    if (First->isDebugValue())
+    if (First->isDebugInstr())
       continue;
 
     if (isSuitableAluInstr(IsSpls, First, *Base, *Offset)) {

@@ -471,15 +471,15 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   return None;
 }
 
-/// \brief Returns true if \param T is a typedef of "BOOL" in objective-c.
+/// Returns true if \param T is a typedef of "BOOL" in objective-c.
 bool NSAPI::isObjCBOOLType(QualType T) const {
   return isObjCTypedef(T, "BOOL", BOOLId);
 }
-/// \brief Returns true if \param T is a typedef of "NSInteger" in objective-c.
+/// Returns true if \param T is a typedef of "NSInteger" in objective-c.
 bool NSAPI::isObjCNSIntegerType(QualType T) const {
   return isObjCTypedef(T, "NSInteger", NSIntegerId);
 }
-/// \brief Returns true if \param T is a typedef of "NSUInteger" in objective-c.
+/// Returns true if \param T is a typedef of "NSUInteger" in objective-c.
 bool NSAPI::isObjCNSUIntegerType(QualType T) const {
   return isObjCTypedef(T, "NSUInteger", NSUIntegerId);
 }

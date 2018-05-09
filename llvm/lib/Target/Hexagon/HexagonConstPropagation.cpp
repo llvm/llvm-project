@@ -799,7 +799,7 @@ bool MachineConstPropagator::computeBlockSuccessors(const MachineBasicBlock *MB,
       SetVector<const MachineBasicBlock*> &Targets) {
   MachineBasicBlock::const_iterator FirstBr = MB->end();
   for (const MachineInstr &MI : *MB) {
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
     if (MI.isBranch()) {
       FirstBr = MI.getIterator();
@@ -814,7 +814,7 @@ bool MachineConstPropagator::computeBlockSuccessors(const MachineBasicBlock *MB,
   for (MachineBasicBlock::const_iterator I = FirstBr; I != End; ++I) {
     const MachineInstr &MI = *I;
     // Can there be debug instructions between branches?
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
     if (!InstrExec.count(&MI))
       continue;
@@ -896,7 +896,7 @@ void MachineConstPropagator::propagate(MachineFunction &MF) {
     // If the successor block just became executable, visit all instructions.
     // To see if this is the first time we're visiting it, check the first
     // non-debug instruction to see if it is executable.
-    while (It != End && It->isDebugValue())
+    while (It != End && It->isDebugInstr())
       ++It;
     assert(It == End || !It->isPHI());
     // If this block has been visited, go on to the next one.
@@ -905,7 +905,7 @@ void MachineConstPropagator::propagate(MachineFunction &MF) {
     // For now, scan all non-branch instructions. Branches require different
     // processing.
     while (It != End && !It->isBranch()) {
-      if (!It->isDebugValue()) {
+      if (!It->isDebugInstr()) {
         InstrExec.insert(&*It);
         visitNonBranch(*It);
       }

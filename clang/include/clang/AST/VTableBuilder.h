@@ -26,7 +26,7 @@
 namespace clang {
   class CXXRecordDecl;
 
-/// \brief Represents a single component in a vtable.
+/// Represents a single component in a vtable.
 class VTableComponent {
 public:
   enum Kind {
@@ -36,13 +36,13 @@ public:
     CK_RTTI,
     CK_FunctionPointer,
 
-    /// \brief A pointer to the complete destructor.
+    /// A pointer to the complete destructor.
     CK_CompleteDtorPointer,
 
-    /// \brief A pointer to the deleting destructor.
+    /// A pointer to the deleting destructor.
     CK_DeletingDtorPointer,
 
-    /// \brief An entry that is never used.
+    /// An entry that is never used.
     ///
     /// In some cases, a vtable function pointer will end up never being
     /// called. Such vtable function pointers are represented as a
@@ -97,7 +97,7 @@ public:
     return VTableComponent(I);
   }
 
-  /// \brief Get the kind of this vtable component.
+  /// Get the kind of this vtable component.
   Kind getKind() const {
     return (Kind)(Value & 0x7);
   }
@@ -255,10 +255,10 @@ private:
 
   OwningArrayRef<VTableComponent> VTableComponents;
 
-  /// \brief Contains thunks needed by vtables, sorted by indices.
+  /// Contains thunks needed by vtables, sorted by indices.
   OwningArrayRef<VTableThunkTy> VTableThunks;
 
-  /// \brief Address points for all vtables.
+  /// Address points for all vtables.
   AddressPointsMapTy AddressPoints;
 
 public:
@@ -324,7 +324,7 @@ public:
 protected:
   typedef llvm::DenseMap<const CXXMethodDecl *, ThunkInfoVectorTy> ThunksMapTy;
 
-  /// \brief Contains all thunks that a given method decl will need.
+  /// Contains all thunks that a given method decl will need.
   ThunksMapTy Thunks;
 
   /// Compute and store all vtable related information (vtable layout, vbase
@@ -355,7 +355,7 @@ public:
 class ItaniumVTableContext : public VTableContextBase {
 private:
 
-  /// \brief Contains the index (relative to the vtable address point)
+  /// Contains the index (relative to the vtable address point)
   /// where the function pointer for a virtual function is stored.
   typedef llvm::DenseMap<GlobalDecl, int64_t> MethodVTableIndicesTy;
   MethodVTableIndicesTy MethodVTableIndices;
@@ -368,7 +368,7 @@ private:
   typedef std::pair<const CXXRecordDecl *,
                     const CXXRecordDecl *> ClassPairTy;
 
-  /// \brief vtable offsets for offsets of virtual bases of a class.
+  /// vtable offsets for offsets of virtual bases of a class.
   ///
   /// Contains the vtable offset (relative to the address point) in chars
   /// where the offsets for virtual bases of a class are stored.
@@ -393,7 +393,7 @@ public:
       const CXXRecordDecl *MostDerivedClass, CharUnits MostDerivedClassOffset,
       bool MostDerivedClassIsVirtual, const CXXRecordDecl *LayoutClass);
 
-  /// \brief Locate a virtual function in the vtable.
+  /// Locate a virtual function in the vtable.
   ///
   /// Return the index (relative to the vtable address point) where the
   /// function pointer for the given virtual function is stored.
@@ -570,7 +570,7 @@ public:
     return VTableContextBase::getThunkInfo(GD);
   }
 
-  /// \brief Returns the index of VBase in the vbtable of Derived.
+  /// Returns the index of VBase in the vbtable of Derived.
   /// VBase must be a morally virtual base of Derived.
   /// The vbtable is an array of i32 offsets.  The first entry is a self entry,
   /// and the rest are offsets from the vbptr to virtual bases.

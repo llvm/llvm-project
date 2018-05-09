@@ -893,7 +893,7 @@ void DataFlowGraph::build(unsigned Options) {
     NodeAddr<BlockNode*> BA = newBlock(Func, &B);
     BlockNodes.insert(std::make_pair(&B, BA));
     for (MachineInstr &I : B) {
-      if (I.isDebugValue())
+      if (I.isDebugInstr())
         continue;
       buildStmt(BA, I);
     }

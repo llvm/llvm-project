@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a function that runs Clang on a single
+/// This file implements a function that runs Clang on a single
 ///  input and uses libprotobuf-mutator to find new inputs. This function is
 ///  then linked into the Fuzzer library.
 ///

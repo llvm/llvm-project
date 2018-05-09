@@ -174,7 +174,7 @@ MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I) {
   const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
 
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition() || I->isDebugValue() ||
+  while (I != E && (I->isPHI() || I->isPosition() || I->isDebugInstr() ||
                     TII->isBasicBlockPrologue(*I)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
@@ -187,7 +187,7 @@ MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I) {
 
 MachineBasicBlock::iterator MachineBasicBlock::getFirstTerminator() {
   iterator B = begin(), E = end(), I = E;
-  while (I != B && ((--I)->isTerminator() || I->isDebugValue()))
+  while (I != B && ((--I)->isTerminator() || I->isDebugInstr()))
     ; /*noop */
   while (I != E && !I->isTerminator())
     ++I;
@@ -196,7 +196,7 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstTerminator() {
 
 MachineBasicBlock::instr_iterator MachineBasicBlock::getFirstInstrTerminator() {
   instr_iterator B = instr_begin(), E = instr_end(), I = E;
-  while (I != B && ((--I)->isTerminator() || I->isDebugValue()))
+  while (I != B && ((--I)->isTerminator() || I->isDebugInstr()))
     ; /*noop */
   while (I != E && !I->isTerminator())
     ++I;
@@ -214,7 +214,7 @@ MachineBasicBlock::iterator MachineBasicBlock::getLastNonDebugInstr() {
   while (I != B) {
     --I;
     // Return instruction that starts a bundle.
-    if (I->isDebugValue() || I->isInsideBundle())
+    if (I->isDebugInstr() || I->isInsideBundle())
       continue;
     return I;
   }
@@ -1271,7 +1271,7 @@ DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
   if (MBBI == instr_begin()) return {};
   // Skip debug declarations, we don't want a DebugLoc from them.
   MBBI = skipDebugInstructionsBackward(std::prev(MBBI), instr_begin());
-  if (!MBBI->isDebugValue()) return MBBI->getDebugLoc();
+  if (!MBBI->isDebugInstr()) return MBBI->getDebugLoc();
   return {};
 }
 

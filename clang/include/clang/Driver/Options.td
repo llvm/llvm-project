@@ -143,6 +143,8 @@ def m_hexagon_Features_Group : OptionGroup<"<hexagon features group>">,
 // These are explicitly handled.
 def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
                                    Group<m_Group>, DocName<"Hexagon">;
+def m_mips_Features_Group : OptionGroup<"<mips features group>">,
+                            Group<m_Group>, DocName<"MIPS">;
 def m_ppc_Features_Group : OptionGroup<"<ppc features group>">,
                            Group<m_Group>, DocName<"PowerPC">;
 def m_wasm_Features_Group : OptionGroup<"<wasm features group>">,
@@ -150,7 +152,7 @@ def m_wasm_Features_Group : OptionGroup<"<wasm features group>">,
 def m_x86_Features_Group : OptionGroup<"<x86 features group>">,
                            Group<m_Group>, Flags<[CoreOption]>, DocName<"X86">;
 
-def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_Group>,
+def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_mips_Features_Group>,
                    Flags<[HelpHidden]>;
 
 def O_Group : OptionGroup<"<O group>">, Group<CompileOnly_Group>,
@@ -2094,127 +2096,135 @@ def mpie_copy_relocations : Flag<["-"], "mpie-copy-relocations">, Group<m_Group>
 def mno_pie_copy_relocations : Flag<["-"], "mno-pie-copy-relocations">, Group<m_Group>;
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86 only)">,
   Flags<[CC1Option]>, Group<m_Group>;
-def mips16 : Flag<["-"], "mips16">, Group<m_Group>;
-def mno_mips16 : Flag<["-"], "mno-mips16">, Group<m_Group>;
-def mmicromips : Flag<["-"], "mmicromips">, Group<m_Group>;
-def mno_micromips : Flag<["-"], "mno-micromips">, Group<m_Group>;
-def mxgot : Flag<["-"], "mxgot">, Group<m_Group>;
-def mno_xgot : Flag<["-"], "mno-xgot">, Group<m_Group>;
-def mldc1_sdc1 : Flag<["-"], "mldc1-sdc1">, Group<m_Group>;
-def mno_ldc1_sdc1 : Flag<["-"], "mno-ldc1-sdc1">, Group<m_Group>;
-def mcheck_zero_division : Flag<["-"], "mcheck-zero-division">, Group<m_Group>;
+def mips16 : Flag<["-"], "mips16">, Group<m_mips_Features_Group>;
+def mno_mips16 : Flag<["-"], "mno-mips16">, Group<m_mips_Features_Group>;
+def mmicromips : Flag<["-"], "mmicromips">, Group<m_mips_Features_Group>;
+def mno_micromips : Flag<["-"], "mno-micromips">, Group<m_mips_Features_Group>;
+def mxgot : Flag<["-"], "mxgot">, Group<m_mips_Features_Group>;
+def mno_xgot : Flag<["-"], "mno-xgot">, Group<m_mips_Features_Group>;
+def mldc1_sdc1 : Flag<["-"], "mldc1-sdc1">, Group<m_mips_Features_Group>;
+def mno_ldc1_sdc1 : Flag<["-"], "mno-ldc1-sdc1">, Group<m_mips_Features_Group>;
+def mcheck_zero_division : Flag<["-"], "mcheck-zero-division">,
+                           Group<m_mips_Features_Group>;
 def mno_check_zero_division : Flag<["-"], "mno-check-zero-division">,
-                              Group<m_Group>;
-def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">, Group<m_Group>;
+                              Group<m_mips_Features_Group>;
+def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
+                           Group<m_mips_Features_Group>;
 def mbranch_likely : Flag<["-"], "mbranch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
 def mno_branch_likely : Flag<["-"], "mno-branch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
 def mindirect_jump_EQ : Joined<["-"], "mindirect-jump=">,
-  Group<m_Group>,
+  Group<m_mips_Features_Group>,
   HelpText<"Change indirect jump instructions to inhibit speculation">;
-def mdsp : Flag<["-"], "mdsp">, Group<m_Group>;
-def mno_dsp : Flag<["-"], "mno-dsp">, Group<m_Group>;
-def mdspr2 : Flag<["-"], "mdspr2">, Group<m_Group>;
-def mno_dspr2 : Flag<["-"], "mno-dspr2">, Group<m_Group>;
-def msingle_float : Flag<["-"], "msingle-float">, Group<m_Group>;
-def mdouble_float : Flag<["-"], "mdouble-float">, Group<m_Group>;
-def mmadd4 : Flag<["-"], "mmadd4">, Group<m_Group>,
+def mdsp : Flag<["-"], "mdsp">, Group<m_mips_Features_Group>;
+def mno_dsp : Flag<["-"], "mno-dsp">, Group<m_mips_Features_Group>;
+def mdspr2 : Flag<["-"], "mdspr2">, Group<m_mips_Features_Group>;
+def mno_dspr2 : Flag<["-"], "mno-dspr2">, Group<m_mips_Features_Group>;
+def msingle_float : Flag<["-"], "msingle-float">, Group<m_mips_Features_Group>;
+def mdouble_float : Flag<["-"], "mdouble-float">, Group<m_mips_Features_Group>;
+def mmadd4 : Flag<["-"], "mmadd4">, Group<m_mips_Features_Group>,
   HelpText<"Enable the generation of 4-operand madd.s, madd.d and related instructions.">;
-def mno_madd4 : Flag<["-"], "mno-madd4">, Group<m_Group>,
+def mno_madd4 : Flag<["-"], "mno-madd4">, Group<m_mips_Features_Group>,
   HelpText<"Disable the generation of 4-operand madd.s, madd.d and related instructions.">;
-def mmsa : Flag<["-"], "mmsa">, Group<m_Group>,
+def mmsa : Flag<["-"], "mmsa">, Group<m_mips_Features_Group>,
   HelpText<"Enable MSA ASE (MIPS only)">;
-def mno_msa : Flag<["-"], "mno-msa">, Group<m_Group>,
+def mno_msa : Flag<["-"], "mno-msa">, Group<m_mips_Features_Group>,
   HelpText<"Disable MSA ASE (MIPS only)">;
-def mmt : Flag<["-"], "mmt">, Group<m_Group>,
+def mmt : Flag<["-"], "mmt">, Group<m_mips_Features_Group>,
   HelpText<"Enable MT ASE (MIPS only)">;
-def mno_mt : Flag<["-"], "mno-mt">, Group<m_Group>,
+def mno_mt : Flag<["-"], "mno-mt">, Group<m_mips_Features_Group>,
   HelpText<"Disable MT ASE (MIPS only)">;
-def mfp64 : Flag<["-"], "mfp64">, Group<m_Group>,
+def mfp64 : Flag<["-"], "mfp64">, Group<m_mips_Features_Group>,
   HelpText<"Use 64-bit floating point registers (MIPS only)">;
-def mfp32 : Flag<["-"], "mfp32">, Group<m_Group>,
+def mfp32 : Flag<["-"], "mfp32">, Group<m_mips_Features_Group>,
   HelpText<"Use 32-bit floating point registers (MIPS only)">;
-def mgpopt : Flag<["-"], "mgpopt">, Group<m_Group>,
+def mgpopt : Flag<["-"], "mgpopt">, Group<m_mips_Features_Group>,
   HelpText<"Use GP relative accesses for symbols known to be in a small"
            " data section (MIPS)">;
-def mno_gpopt : Flag<["-"], "mno-gpopt">, Group<m_Group>,
+def mno_gpopt : Flag<["-"], "mno-gpopt">, Group<m_mips_Features_Group>,
   HelpText<"Do not use GP relative accesses for symbols known to be in a small"
            " data section (MIPS)">;
-def mlocal_sdata : Flag<["-"], "mlocal-sdata">, Group<m_Group>,
+def mlocal_sdata : Flag<["-"], "mlocal-sdata">,
+  Group<m_mips_Features_Group>,
   HelpText<"Extend the -G behaviour to object local data (MIPS)">;
-def mno_local_sdata : Flag<["-"], "mno-local-sdata">, Group<m_Group>,
+def mno_local_sdata : Flag<["-"], "mno-local-sdata">,
+  Group<m_mips_Features_Group>,
   HelpText<"Do not extend the -G behaviour to object local data (MIPS)">;
-def mextern_sdata : Flag<["-"], "mextern-sdata">, Group<m_Group>,
+def mextern_sdata : Flag<["-"], "mextern-sdata">,
+  Group<m_mips_Features_Group>,
   HelpText<"Assume that externally defined data is in the small data if it"
            " meets the -G <size> threshold (MIPS)">;
-def mno_extern_sdata : Flag<["-"], "mno-extern-sdata">, Group<m_Group>,
+def mno_extern_sdata : Flag<["-"], "mno-extern-sdata">,
+  Group<m_mips_Features_Group>,
   HelpText<"Do not assume that externally defined data is in the small data if"
            " it meets the -G <size> threshold (MIPS)">;
-def membedded_data : Flag<["-"], "membedded-data">, Group<m_Group>,
+def membedded_data : Flag<["-"], "membedded-data">,
+  Group<m_mips_Features_Group>,
   HelpText<"Place constants in the .rodata section instead of the .sdata "
            "section even if they meet the -G <size> threshold (MIPS)">;
-def mno_embedded_data : Flag<["-"], "mno-embedded-data">, Group<m_Group>,
+def mno_embedded_data : Flag<["-"], "mno-embedded-data">,
+  Group<m_mips_Features_Group>,
   HelpText<"Do not place constants in the .rodata section instead of the "
            ".sdata if they meet the -G <size> threshold (MIPS)">;
-def mnan_EQ : Joined<["-"], "mnan=">, Group<m_Group>;
-def mabs_EQ : Joined<["-"], "mabs=">, Group<m_Group>;
-def mabicalls : Flag<["-"], "mabicalls">, Group<m_Group>,
+def mnan_EQ : Joined<["-"], "mnan=">, Group<m_mips_Features_Group>;
+def mabs_EQ : Joined<["-"], "mabs=">, Group<m_mips_Features_Group>;
+def mabicalls : Flag<["-"], "mabicalls">, Group<m_mips_Features_Group>,
   HelpText<"Enable SVR4-style position-independent code (Mips only)">;
-def mno_abicalls : Flag<["-"], "mno-abicalls">, Group<m_Group>,
+def mno_abicalls : Flag<["-"], "mno-abicalls">, Group<m_mips_Features_Group>,
   HelpText<"Disable SVR4-style position-independent code (Mips only)">;
 def mips1 : Flag<["-"], "mips1">,
-  Alias<march_EQ>, AliasArgs<["mips1"]>,
+  Alias<march_EQ>, AliasArgs<["mips1"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips1">, Flags<[HelpHidden]>;
 def mips2 : Flag<["-"], "mips2">,
-  Alias<march_EQ>, AliasArgs<["mips2"]>,
+  Alias<march_EQ>, AliasArgs<["mips2"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips2">, Flags<[HelpHidden]>;
 def mips3 : Flag<["-"], "mips3">,
-  Alias<march_EQ>, AliasArgs<["mips3"]>,
+  Alias<march_EQ>, AliasArgs<["mips3"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips3">, Flags<[HelpHidden]>;
 def mips4 : Flag<["-"], "mips4">,
-  Alias<march_EQ>, AliasArgs<["mips4"]>,
+  Alias<march_EQ>, AliasArgs<["mips4"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips4">, Flags<[HelpHidden]>;
 def mips5 : Flag<["-"], "mips5">,
-  Alias<march_EQ>, AliasArgs<["mips5"]>,
+  Alias<march_EQ>, AliasArgs<["mips5"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips5">, Flags<[HelpHidden]>;
 def mips32 : Flag<["-"], "mips32">,
-  Alias<march_EQ>, AliasArgs<["mips32"]>,
+  Alias<march_EQ>, AliasArgs<["mips32"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips32">, Flags<[HelpHidden]>;
 def mips32r2 : Flag<["-"], "mips32r2">,
-  Alias<march_EQ>, AliasArgs<["mips32r2"]>,
+  Alias<march_EQ>, AliasArgs<["mips32r2"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips32r2">, Flags<[HelpHidden]>;
 def mips32r3 : Flag<["-"], "mips32r3">,
-  Alias<march_EQ>, AliasArgs<["mips32r3"]>,
+  Alias<march_EQ>, AliasArgs<["mips32r3"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips32r3">, Flags<[HelpHidden]>;
 def mips32r5 : Flag<["-"], "mips32r5">,
-  Alias<march_EQ>, AliasArgs<["mips32r5"]>,
+  Alias<march_EQ>, AliasArgs<["mips32r5"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips32r5">, Flags<[HelpHidden]>;
 def mips32r6 : Flag<["-"], "mips32r6">,
-  Alias<march_EQ>, AliasArgs<["mips32r6"]>,
+  Alias<march_EQ>, AliasArgs<["mips32r6"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips32r6">, Flags<[HelpHidden]>;
 def mips64 : Flag<["-"], "mips64">,
-  Alias<march_EQ>, AliasArgs<["mips64"]>,
+  Alias<march_EQ>, AliasArgs<["mips64"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips64">, Flags<[HelpHidden]>;
 def mips64r2 : Flag<["-"], "mips64r2">,
-  Alias<march_EQ>, AliasArgs<["mips64r2"]>,
+  Alias<march_EQ>, AliasArgs<["mips64r2"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips64r2">, Flags<[HelpHidden]>;
 def mips64r3 : Flag<["-"], "mips64r3">,
-  Alias<march_EQ>, AliasArgs<["mips64r3"]>,
+  Alias<march_EQ>, AliasArgs<["mips64r3"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips64r3">, Flags<[HelpHidden]>;
 def mips64r5 : Flag<["-"], "mips64r5">,
-  Alias<march_EQ>, AliasArgs<["mips64r5"]>,
+  Alias<march_EQ>, AliasArgs<["mips64r5"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips64r5">, Flags<[HelpHidden]>;
 def mips64r6 : Flag<["-"], "mips64r6">,
-  Alias<march_EQ>, AliasArgs<["mips64r6"]>,
+  Alias<march_EQ>, AliasArgs<["mips64r6"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips64r6">, Flags<[HelpHidden]>;
-def mfpxx : Flag<["-"], "mfpxx">, Group<m_Group>,
+def mfpxx : Flag<["-"], "mfpxx">, Group<m_mips_Features_Group>,
   HelpText<"Avoid FPU mode dependent operations when used with the O32 ABI">,
   Flags<[HelpHidden]>;
-def modd_spreg : Flag<["-"], "modd-spreg">, Group<m_Group>,
+def modd_spreg : Flag<["-"], "modd-spreg">, Group<m_mips_Features_Group>,
   HelpText<"Enable odd single-precision floating point registers">,
   Flags<[HelpHidden]>;
-def mno_odd_spreg : Flag<["-"], "mno-odd-spreg">, Group<m_Group>,
+def mno_odd_spreg : Flag<["-"], "mno-odd-spreg">, Group<m_mips_Features_Group>,
   HelpText<"Disable odd single-precision floating point registers">,
   Flags<[HelpHidden]>;
 def mglibc : Flag<["-"], "mglibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;

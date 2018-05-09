@@ -65,7 +65,7 @@ IdentifierInfoLookup::~IdentifierInfoLookup() = default;
 
 namespace {
 
-/// \brief A simple identifier lookup iterator that represents an
+/// A simple identifier lookup iterator that represents an
 /// empty sequence of identifiers.
 class EmptyLookupIterator : public IdentifierIterator
 {
@@ -108,7 +108,7 @@ namespace {
     KEYALTIVEC = 0x40,
     KEYNOCXX = 0x80,
     KEYBORLAND = 0x100,
-    KEYOPENCL = 0x200,
+    KEYOPENCLC = 0x200,
     KEYC11 = 0x400,
     KEYARC = 0x800,
     KEYNOMS18 = 0x01000,
@@ -122,12 +122,13 @@ namespace {
     KEYCOROUTINES = 0x100000,
     KEYMODULES = 0x200000,
     KEYCXX2A = 0x400000,
+    KEYOPENCLCXX = 0x800000,
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX2A,
-    KEYALL = (0x7fffff & ~KEYNOMS18 &
+    KEYALL = (0xffffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 
-  /// \brief How a keyword is treated in the selected standard.
+  /// How a keyword is treated in the selected standard.
   enum KeywordStatus {
     KS_Disabled,    // Disabled
     KS_Extension,   // Is an extension
@@ -137,7 +138,7 @@ namespace {
 
 } // namespace
 
-/// \brief Translates flags as specified in TokenKinds.def into keyword status
+/// Translates flags as specified in TokenKinds.def into keyword status
 /// in the given language standard.
 static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
                                       unsigned Flags) {
@@ -154,7 +155,9 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.WChar && (Flags & WCHARSUPPORT)) return KS_Enabled;
   if (LangOpts.Char8 && (Flags & CHAR8SUPPORT)) return KS_Enabled;
   if (LangOpts.AltiVec && (Flags & KEYALTIVEC)) return KS_Enabled;
-  if (LangOpts.OpenCL && (Flags & KEYOPENCL)) return KS_Enabled;
+  if (LangOpts.OpenCL && !LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLC))
+    return KS_Enabled;
+  if (LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLCXX)) return KS_Enabled;
   if (!LangOpts.CPlusPlus && (Flags & KEYNOCXX)) return KS_Enabled;
   if (LangOpts.C11 && (Flags & KEYC11)) return KS_Enabled;
   // We treat bridge casts as objective-C keywords so we can warn on them
@@ -244,7 +247,7 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   get("import").setModulesImport(true);
 }
 
-/// \brief Checks if the specified token kind represents a keyword in the
+/// Checks if the specified token kind represents a keyword in the
 /// specified language.
 /// \returns Status of the keyword in the language.
 static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
@@ -257,7 +260,7 @@ static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
   }
 }
 
-/// \brief Returns true if the identifier represents a keyword in the
+/// Returns true if the identifier represents a keyword in the
 /// specified language.
 bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   switch (getTokenKwStatus(LangOpts, getTokenID())) {
@@ -269,7 +272,7 @@ bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   }
 }
 
-/// \brief Returns true if the identifier represents a C++ keyword in the
+/// Returns true if the identifier represents a C++ keyword in the
 /// specified language.
 bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
   if (!LangOpts.CPlusPlus || !isKeyword(LangOpts))

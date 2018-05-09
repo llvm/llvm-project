@@ -457,7 +457,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      14    3.00                    	divsd	%xmm0, %xmm2
 # CHECK-NEXT:  2      19    4.00    *               	divsd	(%rax), %xmm2
 # CHECK-NEXT:  2      2     0.50    *      *      * 	lfence
-# CHECK-NEXT:  1      1     1.00    *      *      * 	maskmovdqu	%xmm0, %xmm1
+# CHECK-NEXT:  2      1     1.00    *      *      * 	maskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  1      4     0.33                    	maxpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    0.50    *               	maxpd	(%rax), %xmm2
 # CHECK-NEXT:  1      4     0.33                    	maxsd	%xmm0, %xmm2

@@ -30,7 +30,7 @@ class PostOrderCFGView : public ManagedAnalysis {
   virtual void anchor();
 
 public:
-  /// \brief Implements a set of CFGBlocks using a BitVector.
+  /// Implements a set of CFGBlocks using a BitVector.
   ///
   /// This class contains a minimal interface, primarily dictated by the SetType
   /// template parameter of the llvm::po_iterator template, as used with
@@ -47,7 +47,7 @@ public:
     CFGBlockSet() = default;
     CFGBlockSet(const CFG *G) : VisitedBlockIDs(G->getNumBlockIDs(), false) {}
 
-    /// \brief Set the bit associated with a particular CFGBlock.
+    /// Set the bit associated with a particular CFGBlock.
     /// This is the important method for the SetType template parameter.
     std::pair<llvm::NoneType, bool> insert(const CFGBlock *Block) {
       // Note that insert() is called by po_iterator, which doesn't check to
@@ -62,7 +62,7 @@ public:
       return std::make_pair(None, true);
     }
 
-    /// \brief Check if the bit for a CFGBlock has been already set.
+    /// Check if the bit for a CFGBlock has been already set.
     /// This method is for tracking visited blocks in the main threadsafety
     /// loop. Block must not be null.
     bool alreadySet(const CFGBlock *Block) {

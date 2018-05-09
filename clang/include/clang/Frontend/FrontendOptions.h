@@ -195,9 +195,9 @@ public:
   }
 };
 
-/// \brief An input file for the front end.
+/// An input file for the front end.
 class FrontendInputFile {
-  /// \brief The file name, or "-" to read from standard input.
+  /// The file name, or "-" to read from standard input.
   std::string File;
 
   /// The input, if it comes from a buffer rather than a file. This object
@@ -205,10 +205,10 @@ class FrontendInputFile {
   /// that it outlives any users.
   llvm::MemoryBuffer *Buffer = nullptr;
 
-  /// \brief The kind of input, e.g., C source, AST file, LLVM IR.
+  /// The kind of input, e.g., C source, AST file, LLVM IR.
   InputKind Kind;
 
-  /// \brief Whether we're dealing with a 'system' input (vs. a 'user' input).
+  /// Whether we're dealing with a 'system' input (vs. a 'user' input).
   bool IsSystem = false;
 
 public:
@@ -315,46 +315,46 @@ public:
   enum {
     ObjCMT_None = 0,
 
-    /// \brief Enable migration to modern ObjC literals.
+    /// Enable migration to modern ObjC literals.
     ObjCMT_Literals = 0x1,
 
-    /// \brief Enable migration to modern ObjC subscripting.
+    /// Enable migration to modern ObjC subscripting.
     ObjCMT_Subscripting = 0x2,
 
-    /// \brief Enable migration to modern ObjC readonly property.
+    /// Enable migration to modern ObjC readonly property.
     ObjCMT_ReadonlyProperty = 0x4,
 
-    /// \brief Enable migration to modern ObjC readwrite property.
+    /// Enable migration to modern ObjC readwrite property.
     ObjCMT_ReadwriteProperty = 0x8,
 
-    /// \brief Enable migration to modern ObjC property.
+    /// Enable migration to modern ObjC property.
     ObjCMT_Property = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty),
 
-    /// \brief Enable annotation of ObjCMethods of all kinds.
+    /// Enable annotation of ObjCMethods of all kinds.
     ObjCMT_Annotation = 0x10,
 
-    /// \brief Enable migration of ObjC methods to 'instancetype'.
+    /// Enable migration of ObjC methods to 'instancetype'.
     ObjCMT_Instancetype = 0x20,
 
-    /// \brief Enable migration to NS_ENUM/NS_OPTIONS macros.
+    /// Enable migration to NS_ENUM/NS_OPTIONS macros.
     ObjCMT_NsMacros = 0x40,
 
-    /// \brief Enable migration to add conforming protocols.
+    /// Enable migration to add conforming protocols.
     ObjCMT_ProtocolConformance = 0x80,
 
-    /// \brief prefer 'atomic' property over 'nonatomic'.
+    /// prefer 'atomic' property over 'nonatomic'.
     ObjCMT_AtomicProperty = 0x100,
 
-    /// \brief annotate property with NS_RETURNS_INNER_POINTER
+    /// annotate property with NS_RETURNS_INNER_POINTER
     ObjCMT_ReturnsInnerPointerProperty = 0x200,
 
-    /// \brief use NS_NONATOMIC_IOSONLY for property 'atomic' attribute
+    /// use NS_NONATOMIC_IOSONLY for property 'atomic' attribute
     ObjCMT_NsAtomicIOSOnlyProperty = 0x400,
 
-    /// \brief Enable inferring NS_DESIGNATED_INITIALIZER for ObjC methods.
+    /// Enable inferring NS_DESIGNATED_INITIALIZER for ObjC methods.
     ObjCMT_DesignatedInitializer = 0x800,
 
-    /// \brief Enable converting setter/getter expressions to property-dot syntx.
+    /// Enable converting setter/getter expressions to property-dot syntx.
     ObjCMT_PropertyDotSyntax = 0x1000,
 
     ObjCMT_MigrateDecls = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty |
@@ -408,31 +408,31 @@ public:
   /// The list of module file extensions.
   std::vector<std::shared_ptr<ModuleFileExtension>> ModuleFileExtensions;
 
-  /// \brief The list of module map files to load before processing the input.
+  /// The list of module map files to load before processing the input.
   std::vector<std::string> ModuleMapFiles;
 
-  /// \brief The list of additional prebuilt module files to load before
+  /// The list of additional prebuilt module files to load before
   /// processing the input.
   std::vector<std::string> ModuleFiles;
 
-  /// \brief The list of files to embed into the compiled module file.
+  /// The list of files to embed into the compiled module file.
   std::vector<std::string> ModulesEmbedFiles;
 
-  /// \brief The list of AST files to merge.
+  /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 
-  /// \brief A list of arguments to forward to LLVM's option processing; this
+  /// A list of arguments to forward to LLVM's option processing; this
   /// should only be used for debugging and experimental features.
   std::vector<std::string> LLVMArgs;
 
-  /// \brief File name of the file that will provide record layouts
+  /// File name of the file that will provide record layouts
   /// (in the format produced by -fdump-record-layouts).
   std::string OverrideRecordLayoutsFile;
 
-  /// \brief Auxiliary triple for CUDA compilation.
+  /// Auxiliary triple for CUDA compilation.
   std::string AuxTriple;
 
-  /// \brief If non-empty, search the pch input file as if it was a header
+  /// If non-empty, search the pch input file as if it was a header
   /// included by this file.
   std::string FindPchSource;
 

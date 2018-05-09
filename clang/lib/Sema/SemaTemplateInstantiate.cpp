@@ -34,7 +34,7 @@ using namespace sema;
 // Template Instantiation Support
 //===----------------------------------------------------------------------===/
 
-/// \brief Retrieve the template argument list(s) that should be used to
+/// Retrieve the template argument list(s) that should be used to
 /// instantiate the definition of the given declaration.
 ///
 /// \param D the declaration for which we are computing template instantiation
@@ -427,7 +427,7 @@ bool Sema::InstantiatingTemplate::CheckInstantiationDepth(
   return true;
 }
 
-/// \brief Prints the current instantiation stack through a series of
+/// Prints the current instantiation stack through a series of
 /// notes.
 void Sema::PrintInstantiationStack() {
   // Determine which template instantiations to skip, if any.
@@ -708,7 +708,7 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
   return None;
 }
 
-/// \brief Retrieve the depth and index of a parameter pack.
+/// Retrieve the depth and index of a parameter pack.
 static std::pair<unsigned, unsigned> 
 getDepthAndIndex(NamedDecl *ND) {
   if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
@@ -740,20 +740,20 @@ namespace {
       : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
         Entity(Entity) { }
 
-    /// \brief Determine whether the given type \p T has already been
+    /// Determine whether the given type \p T has already been
     /// transformed.
     ///
     /// For the purposes of template instantiation, a type has already been
     /// transformed if it is NULL or if it is not dependent.
     bool AlreadyTransformed(QualType T);
 
-    /// \brief Returns the location of the entity being instantiated, if known.
+    /// Returns the location of the entity being instantiated, if known.
     SourceLocation getBaseLocation() { return Loc; }
 
-    /// \brief Returns the name of the entity being instantiated, if any.
+    /// Returns the name of the entity being instantiated, if any.
     DeclarationName getBaseEntity() { return Entity; }
 
-    /// \brief Sets the "base" location and entity when that
+    /// Sets the "base" location and entity when that
     /// information is known based on another transformation.
     void setBase(SourceLocation Loc, DeclarationName Entity) {
       this->Loc = Loc;
@@ -808,7 +808,7 @@ namespace {
       }
     }
 
-    /// \brief Transform the given declaration by instantiating a reference to
+    /// Transform the given declaration by instantiating a reference to
     /// this declaration.
     Decl *TransformDecl(SourceLocation Loc, Decl *D);
 
@@ -839,15 +839,15 @@ namespace {
         SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
     }
     
-    /// \brief Transform the definition of the given declaration by
+    /// Transform the definition of the given declaration by
     /// instantiating it.
     Decl *TransformDefinition(SourceLocation Loc, Decl *D);
 
-    /// \brief Transform the first qualifier within a scope by instantiating the
+    /// Transform the first qualifier within a scope by instantiating the
     /// declaration.
     NamedDecl *TransformFirstQualifierInScope(NamedDecl *D, SourceLocation Loc);
       
-    /// \brief Rebuild the exception declaration and register the declaration
+    /// Rebuild the exception declaration and register the declaration
     /// as an instantiated local.
     VarDecl *RebuildExceptionDecl(VarDecl *ExceptionDecl, 
                                   TypeSourceInfo *Declarator,
@@ -855,12 +855,12 @@ namespace {
                                   SourceLocation NameLoc,
                                   IdentifierInfo *Name);
 
-    /// \brief Rebuild the Objective-C exception declaration and register the 
+    /// Rebuild the Objective-C exception declaration and register the 
     /// declaration as an instantiated local.
     VarDecl *RebuildObjCExceptionDecl(VarDecl *ExceptionDecl, 
                                       TypeSourceInfo *TSInfo, QualType T);
       
-    /// \brief Check for tag mismatches when instantiating an
+    /// Check for tag mismatches when instantiating an
     /// elaborated type.
     QualType RebuildElaboratedType(SourceLocation KeywordLoc,
                                    ElaboratedTypeKeyword Keyword,
@@ -885,14 +885,14 @@ namespace {
     ExprResult TransformSubstNonTypeTemplateParmPackExpr(
                                            SubstNonTypeTemplateParmPackExpr *E);
 
-    /// \brief Rebuild a DeclRefExpr for a ParmVarDecl reference.
+    /// Rebuild a DeclRefExpr for a ParmVarDecl reference.
     ExprResult RebuildParmVarDeclRefExpr(ParmVarDecl *PD, SourceLocation Loc);
 
-    /// \brief Transform a reference to a function parameter pack.
+    /// Transform a reference to a function parameter pack.
     ExprResult TransformFunctionParmPackRefExpr(DeclRefExpr *E,
                                                 ParmVarDecl *PD);
 
-    /// \brief Transform a FunctionParmPackExpr which was built when we couldn't
+    /// Transform a FunctionParmPackExpr which was built when we couldn't
     /// expand a function parameter pack reference which refers to an expanded
     /// pack.
     ExprResult TransformFunctionParmPackExpr(FunctionParmPackExpr *E);
@@ -915,12 +915,12 @@ namespace {
                                             Optional<unsigned> NumExpansions,
                                             bool ExpectParameterPack);
 
-    /// \brief Transforms a template type parameter type by performing
+    /// Transforms a template type parameter type by performing
     /// substitution of the corresponding template type argument.
     QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
                                            TemplateTypeParmTypeLoc TL);
 
-    /// \brief Transforms an already-substituted template type parameter pack
+    /// Transforms an already-substituted template type parameter pack
     /// into either itself (if we aren't substituting into its pack expansion)
     /// or the appropriate substituted argument.
     QualType TransformSubstTemplateTypeParmPackType(TypeLocBuilder &TLB,
@@ -1540,7 +1540,7 @@ TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
   return Result;
 }
 
-/// \brief Perform substitution on the type T with a given set of template
+/// Perform substitution on the type T with a given set of template
 /// arguments.
 ///
 /// This routine substitutes the given template arguments into the
@@ -1835,7 +1835,7 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
   return NewParm;  
 }
 
-/// \brief Substitute the given template arguments into the given set of
+/// Substitute the given template arguments into the given set of
 /// parameters, producing the set of parameter types that would be generated
 /// from such a substitution.
 bool Sema::SubstParmTypes(
@@ -1855,7 +1855,7 @@ bool Sema::SubstParmTypes(
       Loc, Params, nullptr, ExtParamInfos, ParamTypes, OutParams, ParamInfos);
 }
 
-/// \brief Perform substitution on the base class specifiers of the
+/// Perform substitution on the base class specifiers of the
 /// given class template specialization.
 ///
 /// Produces a diagnostic and returns true on error, returns false and
@@ -1975,7 +1975,7 @@ namespace clang {
   }
 }
 
-/// \brief Instantiate the definition of a class from a given pattern.
+/// Instantiate the definition of a class from a given pattern.
 ///
 /// \param PointOfInstantiation The point of instantiation within the
 /// source code.
@@ -2011,7 +2011,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     return true;
   Pattern = PatternDef;
 
-  // \brief Record the point of instantiation.
+  // Record the point of instantiation.
   if (MemberSpecializationInfo *MSInfo 
         = Instantiation->getMemberSpecializationInfo()) {
     MSInfo->setTemplateSpecializationKind(TSK);
@@ -2215,7 +2215,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   return Instantiation->isInvalidDecl();
 }
 
-/// \brief Instantiate the definition of an enum from a given pattern.
+/// Instantiate the definition of an enum from a given pattern.
 ///
 /// \param PointOfInstantiation The point of instantiation within the
 ///        source code.
@@ -2281,7 +2281,7 @@ bool Sema::InstantiateEnum(SourceLocation PointOfInstantiation,
 }
 
 
-/// \brief Instantiate the definition of a field from the given pattern.
+/// Instantiate the definition of a field from the given pattern.
 ///
 /// \param PointOfInstantiation The point of instantiation within the
 ///        source code.
@@ -2359,7 +2359,7 @@ bool Sema::InstantiateInClassInitializer(
 }
 
 namespace {
-  /// \brief A partial specialization whose template arguments have matched
+  /// A partial specialization whose template arguments have matched
   /// a given template-id.
   struct PartialSpecMatchResult {
     ClassTemplatePartialSpecializationDecl *Partial;
@@ -2544,7 +2544,7 @@ bool Sema::InstantiateClassTemplateSpecialization(
                           Complain);
 }
 
-/// \brief Instantiates the definitions of all of the member
+/// Instantiates the definitions of all of the member
 /// of the given class, which is an instantiation of a class template
 /// or a member class of a template.
 void
@@ -2751,7 +2751,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
   }
 }
 
-/// \brief Instantiate the definitions of all of the members of the
+/// Instantiate the definitions of all of the members of the
 /// given class template specialization, which was named as part of an
 /// explicit instantiation.
 void
@@ -2827,7 +2827,7 @@ Sema::SubstNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
   return Instantiator.TransformNestedNameSpecifierLoc(NNS);
 }
 
-/// \brief Do template substitution on declaration name info.
+/// Do template substitution on declaration name info.
 DeclarationNameInfo
 Sema::SubstDeclarationNameInfo(const DeclarationNameInfo &NameInfo,
                          const MultiLevelTemplateArgumentList &TemplateArgs) {

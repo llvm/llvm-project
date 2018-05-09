@@ -40,7 +40,7 @@ public:
   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
            StringRef IncludeSuffix = {});
 
-  /// \brief Get the detected GCC installation path suffix for the multi-arch
+  /// Get the detected GCC installation path suffix for the multi-arch
   /// target variant. Always starts with a '/', unless empty
   const std::string &gccSuffix() const {
     assert(GCCSuffix.empty() ||
@@ -51,7 +51,7 @@ public:
   /// Set the GCC installation path suffix.
   Multilib &gccSuffix(StringRef S);
 
-  /// \brief Get the detected os path suffix for the multi-arch
+  /// Get the detected os path suffix for the multi-arch
   /// target variant. Always starts with a '/', unless empty
   const std::string &osSuffix() const {
     assert(OSSuffix.empty() ||
@@ -62,7 +62,7 @@ public:
   /// Set the os path suffix.
   Multilib &osSuffix(StringRef S);
 
-  /// \brief Get the include directory suffix. Always starts with a '/', unless
+  /// Get the include directory suffix. Always starts with a '/', unless
   /// empty
   const std::string &includeSuffix() const {
     assert(IncludeSuffix.empty() ||
@@ -73,7 +73,7 @@ public:
   /// Set the include directory suffix
   Multilib &includeSuffix(StringRef S);
 
-  /// \brief Get the flags that indicate or contraindicate this multilib's use
+  /// Get the flags that indicate or contraindicate this multilib's use
   /// All elements begin with either '+' or '-'
   const flags_list &flags() const { return Flags; }
   flags_list &flags() { return Flags; }
@@ -92,7 +92,7 @@ public:
   }
 
   LLVM_DUMP_METHOD void dump() const;
-  /// \brief print summary of the Multilib
+  /// print summary of the Multilib
   void print(raw_ostream &OS) const;
 
   /// Check whether any of the 'against' flags contradict the 'for' flags.

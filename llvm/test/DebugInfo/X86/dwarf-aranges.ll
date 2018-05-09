@@ -73,7 +73,7 @@ entry:
 !10 = !{!0, !4, !6}
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 1, !"Debug Info Version", i32 3}
-!13 = distinct !DISubprogram(name: "some_code", scope: !2, file: !2, line: 5, type: !14, isLocal: false, isDefinition: true, scopeLine: 6, virtualIndex: 6, isOptimized: false, unit: !8, variables: !9)
+!13 = distinct !DISubprogram(name: "some_code", scope: !2, file: !2, line: 5, type: !14, isLocal: false, isDefinition: true, scopeLine: 6, virtualIndex: 6, isOptimized: false, unit: !8, retainedNodes: !9)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null}
 !16 = !DILocation(line: 7, scope: !13)

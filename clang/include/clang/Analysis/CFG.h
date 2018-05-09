@@ -92,7 +92,7 @@ protected:
   CFGElement() = default;
 
 public:
-  /// \brief Convert to the specified CFGElement type, asserting that this
+  /// Convert to the specified CFGElement type, asserting that this
   /// CFGElement is of the desired type.
   template<typename T>
   T castAs() const {
@@ -103,7 +103,7 @@ public:
     return t;
   }
 
-  /// \brief Convert to the specified CFGElement type, returning None if this
+  /// Convert to the specified CFGElement type, returning None if this
   /// CFGElement is not of the desired type.
   template<typename T>
   Optional<T> getAs() const {
@@ -980,7 +980,7 @@ public:
 
 };
 
-/// \brief CFGCallback defines methods that should be called when a logical
+/// CFGCallback defines methods that should be called when a logical
 /// operator error is found when building the CFG.
 class CFGCallback {
 public:

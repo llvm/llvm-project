@@ -375,7 +375,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   // Skip over DEBUG_VALUE.
   // For globals in PIC mode, we can have some LEAs here. Skip them as well.
   // TODO: Extend this to something that covers more cases.
-  while (I->getOpcode() == X86::LEA32r || I->isDebugValue())
+  while (I->getOpcode() == X86::LEA32r || I->isDebugInstr())
     ++I;
 
   unsigned StackPtr = RegInfo.getStackRegister();

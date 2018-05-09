@@ -39,7 +39,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 1, !"min_enum_size", i32 4}
 !7 = !{!"clang version 4.0.0 "}
-!8 = distinct !DISubprogram(name: "s_idx", scope: !1, file: !1, line: 6, type: !9, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !16)
+!8 = distinct !DISubprogram(name: "s_idx", scope: !1, file: !1, line: 6, type: !9, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !16)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !11}
 !11 = !DIDerivedType(tag: DW_TAG_typedef, name: "ezxml_t", file: !1, line: 1, baseType: !12)

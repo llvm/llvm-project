@@ -202,7 +202,7 @@ void Sema::CheckObjCMethodOverride(ObjCMethodDecl *NewMethod,
   }
 }
 
-/// \brief Check a method declaration for compatibility with the Objective-C
+/// Check a method declaration for compatibility with the Objective-C
 /// ARC conventions.
 bool Sema::CheckARCMethodDecl(ObjCMethodDecl *method) {
   ObjCMethodFamily family = method->getMethodFamily();
@@ -3366,7 +3366,7 @@ void Sema::addMethodToGlobalList(ObjCMethodList *List,
   Previous->setNext(new (Mem) ObjCMethodList(Method));
 }
 
-/// \brief Read the contents of the method pool for a given selector from
+/// Read the contents of the method pool for a given selector from
 /// external storage.
 void Sema::ReadMethodPool(Selector Sel) {
   assert(ExternalSource && "We need an external AST source");
@@ -4105,7 +4105,7 @@ CvtQTToAstBitMask(ObjCDeclSpec::ObjCDeclQualifier PQTVal) {
   return (Decl::ObjCDeclQualifier) (unsigned) PQTVal;
 }
 
-/// \brief Check whether the declared result type of the given Objective-C
+/// Check whether the declared result type of the given Objective-C
 /// method declaration is compatible with the method's class.
 ///
 static Sema::ResultTypeCompatibilityKind 
@@ -4817,7 +4817,7 @@ void Sema::ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
   }
 }
 
-/// \brief Build a type-check a new Objective-C exception variable declaration.
+/// Build a type-check a new Objective-C exception variable declaration.
 VarDecl *Sema::BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType T,
                                       SourceLocation StartLoc,
                                       SourceLocation IdLoc,

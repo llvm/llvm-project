@@ -880,7 +880,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
 
   for (auto I = B->rbegin(), E = B->rend(); I != E; ++I) {
     MachineInstr *MI = &*I;
-    if (MI->isDebugValue())
+    if (MI->isDebugInstr())
       continue;
 
     MI->clearKillInfo();

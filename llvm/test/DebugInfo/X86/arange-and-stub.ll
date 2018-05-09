@@ -50,7 +50,7 @@ lpad:                                             ; preds = %0
 !14 = !DISubrange(count: 1)
 !15 = !{i32 2, !"Dwarf Version", i32 4}
 !16 = !{i32 2, !"Debug Info Version", i32 3}
-!17 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !6, file: !6, line: 1, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
-!18 = distinct !DISubprogram(name: "bar_d", linkageName: "bar", scope: !6, file: !6, line: 3, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!17 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !6, file: !6, line: 1, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
+!18 = distinct !DISubprogram(name: "bar_d", linkageName: "bar", scope: !6, file: !6, line: 3, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !19 = !DILocation(line: 0, scope: !18)
 

@@ -138,10 +138,10 @@ namespace clang {
     ASTWriter &Writer;
     ASTRecordWriter Record;
 
-    /// \brief Type code that corresponds to the record generated.
+    /// Type code that corresponds to the record generated.
     TypeCode Code = static_cast<TypeCode>(0);
 
-    /// \brief Abbreviation to use for the record, if any.
+    /// Abbreviation to use for the record, if any.
     unsigned AbbrevToUse = 0;
 
   public:
@@ -1319,7 +1319,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   Stream.ExitBlock();
 }
 
-/// \brief Prepares a path for being written to an AST file by converting it
+/// Prepares a path for being written to an AST file by converting it
 /// to an absolute path and removing nested './'s.
 ///
 /// \return \c true if the path was changed.
@@ -1329,7 +1329,7 @@ static bool cleanPathForOutput(FileManager &FileMgr,
   return Changed | llvm::sys::path::remove_dots(Path);
 }
 
-/// \brief Adjusts the given filename to only write out the portion of the
+/// Adjusts the given filename to only write out the portion of the
 /// filename that is not part of the system root directory.
 ///
 /// \param Filename the file name to adjust.
@@ -1439,7 +1439,7 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   return Signature;
 }
 
-/// \brief Write the control block.
+/// Write the control block.
 void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
                                   StringRef isysroot,
                                   const std::string &OutputFile) {
@@ -1735,7 +1735,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
 namespace  {
 
-/// \brief An input file.
+/// An input file.
 struct InputFileEntry {
   const FileEntry *File;
   bool IsSystemFile;
@@ -1845,7 +1845,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
 // Source Manager Serialization
 //===----------------------------------------------------------------------===//
 
-/// \brief Create an abbreviation for the SLocEntry that refers to a
+/// Create an abbreviation for the SLocEntry that refers to a
 /// file.
 static unsigned CreateSLocFileAbbrev(llvm::BitstreamWriter &Stream) {
   using namespace llvm;
@@ -1864,7 +1864,7 @@ static unsigned CreateSLocFileAbbrev(llvm::BitstreamWriter &Stream) {
   return Stream.EmitAbbrev(std::move(Abbrev));
 }
 
-/// \brief Create an abbreviation for the SLocEntry that refers to a
+/// Create an abbreviation for the SLocEntry that refers to a
 /// buffer.
 static unsigned CreateSLocBufferAbbrev(llvm::BitstreamWriter &Stream) {
   using namespace llvm;
@@ -1879,7 +1879,7 @@ static unsigned CreateSLocBufferAbbrev(llvm::BitstreamWriter &Stream) {
   return Stream.EmitAbbrev(std::move(Abbrev));
 }
 
-/// \brief Create an abbreviation for the SLocEntry that refers to a
+/// Create an abbreviation for the SLocEntry that refers to a
 /// buffer's blob.
 static unsigned CreateSLocBufferBlobAbbrev(llvm::BitstreamWriter &Stream,
                                            bool Compressed) {
@@ -1894,7 +1894,7 @@ static unsigned CreateSLocBufferBlobAbbrev(llvm::BitstreamWriter &Stream,
   return Stream.EmitAbbrev(std::move(Abbrev));
 }
 
-/// \brief Create an abbreviation for the SLocEntry that refers to a macro
+/// Create an abbreviation for the SLocEntry that refers to a macro
 /// expansion.
 static unsigned CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
   using namespace llvm;
@@ -2038,7 +2038,7 @@ namespace {
 
 } // namespace
 
-/// \brief Write the header search block for the list of files that
+/// Write the header search block for the list of files that
 ///
 /// \param HS The header search structure to save.
 void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
@@ -2202,7 +2202,7 @@ static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob,
   Stream.EmitRecordWithBlob(SLocBufferBlobAbbrv, Record, Blob);
 }
 
-/// \brief Writes the block containing the serialized form of the
+/// Writes the block containing the serialized form of the
 /// source manager.
 ///
 /// TODO: We should probably use an on-disk hash table (stored in a
@@ -2425,7 +2425,7 @@ static bool shouldIgnoreMacro(MacroDirective *MD, bool IsModule,
   return false;
 }
 
-/// \brief Writes the block containing the serialized form of the
+/// Writes the block containing the serialized form of the
 /// preprocessor.
 void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   PreprocessingRecord *PPRec = PP.getPreprocessingRecord();
@@ -2545,7 +2545,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
     Record.clear();
   }
 
-  /// \brief Offsets of each of the macros into the bitstream, indexed by
+  /// Offsets of each of the macros into the bitstream, indexed by
   /// the local macro ID
   ///
   /// For each identifier that is associated with a macro, this map
@@ -2780,7 +2780,7 @@ unsigned ASTWriter::getSubmoduleID(Module *Mod) {
   return ID;
 }
 
-/// \brief Compute the number of modules within the given tree (including the
+/// Compute the number of modules within the given tree (including the
 /// given module).
 static unsigned getNumberOfModules(Module *Mod) {
   unsigned ChildModules = 0;
@@ -3129,7 +3129,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 // Type Serialization
 //===----------------------------------------------------------------------===//
 
-/// \brief Write the representation of a type to the AST stream.
+/// Write the representation of a type to the AST stream.
 void ASTWriter::WriteType(QualType T) {
   TypeIdx &IdxRef = TypeIdxs[T];
   if (IdxRef.getIndex() == 0) // we haven't seen this type before.
@@ -3161,7 +3161,7 @@ void ASTWriter::WriteType(QualType T) {
 // Declaration Serialization
 //===----------------------------------------------------------------------===//
 
-/// \brief Write the block containing all of the declaration IDs
+/// Write the block containing all of the declaration IDs
 /// lexically declared within the given DeclContext.
 ///
 /// \returns the offset of the DECL_CONTEXT_LEXICAL block within the
@@ -3373,7 +3373,7 @@ public:
 
 } // namespace
 
-/// \brief Write ObjC data: selectors and the method pool.
+/// Write ObjC data: selectors and the method pool.
 ///
 /// The method pool contains both instance and factory methods, stored
 /// in an on-disk hash table indexed by the selector. The hash table also
@@ -3477,7 +3477,7 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
   }
 }
 
-/// \brief Write the selectors referenced in @selector expression into AST file.
+/// Write the selectors referenced in @selector expression into AST file.
 void ASTWriter::WriteReferencedSelectorsPool(Sema &SemaRef) {
   using namespace llvm;
 
@@ -3553,7 +3553,7 @@ class ASTIdentifierTableTrait {
   bool NeedDecls;
   ASTWriter::RecordData *InterestingIdentifierOffsets;
 
-  /// \brief Determines whether this is an "interesting" identifier that needs a
+  /// Determines whether this is an "interesting" identifier that needs a
   /// full IdentifierInfo structure written into the hash table. Notably, this
   /// doesn't check whether the name has macros defined; use PublicMacroIterator
   /// to check that.
@@ -3695,7 +3695,7 @@ public:
 
 } // namespace
 
-/// \brief Write the identifier table into the AST file.
+/// Write the identifier table into the AST file.
 ///
 /// The identifier table consists of a blob containing string data
 /// (the actual identifiers themselves) and a separate "offsets" index
@@ -4126,7 +4126,7 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
   Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
 }
 
-/// \brief Write the block containing all of the declaration IDs
+/// Write the block containing all of the declaration IDs
 /// visible from the given DeclContext.
 ///
 /// \returns the offset of the DECL_CONTEXT_VISIBLE block within the
@@ -4216,7 +4216,7 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
   return Offset;
 }
 
-/// \brief Write an UPDATE_VISIBLE block for the given context.
+/// Write an UPDATE_VISIBLE block for the given context.
 ///
 /// UPDATE_VISIBLE blocks contain the declarations that are added to an existing
 /// DeclContext in a dependent AST file. As such, they only exist for the TU
@@ -4241,13 +4241,13 @@ void ASTWriter::WriteDeclContextVisibleUpdate(const DeclContext *DC) {
   Stream.EmitRecordWithBlob(UpdateVisibleAbbrev, Record, LookupTable);
 }
 
-/// \brief Write an FP_PRAGMA_OPTIONS block for the given FPOptions.
+/// Write an FP_PRAGMA_OPTIONS block for the given FPOptions.
 void ASTWriter::WriteFPPragmaOptions(const FPOptions &Opts) {
   RecordData::value_type Record[] = {Opts.getInt()};
   Stream.EmitRecord(FP_PRAGMA_OPTIONS, Record);
 }
 
-/// \brief Write an OPENCL_EXTENSIONS block for the given OpenCLOptions.
+/// Write an OPENCL_EXTENSIONS block for the given OpenCLOptions.
 void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
   if (!SemaRef.Context.getLangOpts().OpenCL)
     return;
@@ -4374,7 +4374,7 @@ void ASTWriter::WriteLateParsedTemplates(Sema &SemaRef) {
   Stream.EmitRecord(LATE_PARSED_TEMPLATE, Record);
 }
 
-/// \brief Write the state of 'pragma clang optimize' at the end of the module.
+/// Write the state of 'pragma clang optimize' at the end of the module.
 void ASTWriter::WriteOptimizePragmaOptions(Sema &SemaRef) {
   RecordData Record;
   SourceLocation PragmaLoc = SemaRef.getOptimizeOffPragmaLocation();
@@ -4382,14 +4382,14 @@ void ASTWriter::WriteOptimizePragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(OPTIMIZE_PRAGMA_OPTIONS, Record);
 }
 
-/// \brief Write the state of 'pragma ms_struct' at the end of the module.
+/// Write the state of 'pragma ms_struct' at the end of the module.
 void ASTWriter::WriteMSStructPragmaOptions(Sema &SemaRef) {
   RecordData Record;
   Record.push_back(SemaRef.MSStructPragmaOn ? PMSST_ON : PMSST_OFF);
   Stream.EmitRecord(MSSTRUCT_PRAGMA_OPTIONS, Record);
 }
 
-/// \brief Write the state of 'pragma pointers_to_members' at the end of the
+/// Write the state of 'pragma pointers_to_members' at the end of the
 //module.
 void ASTWriter::WriteMSPointersToMembersPragmaOptions(Sema &SemaRef) {
   RecordData Record;
@@ -4398,7 +4398,7 @@ void ASTWriter::WriteMSPointersToMembersPragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(POINTERS_TO_MEMBERS_PRAGMA_OPTIONS, Record);
 }
 
-/// \brief Write the state of 'pragma pack' at the end of the module.
+/// Write the state of 'pragma pack' at the end of the module.
 void ASTWriter::WritePackPragmaOptions(Sema &SemaRef) {
   // Don't serialize pragma pack state for modules, since it should only take
   // effect on a per-submodule basis.
@@ -4457,7 +4457,7 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 // General Serialization Routines
 //===----------------------------------------------------------------------===//
 
-/// \brief Emit the list of attributes to the specified record.
+/// Emit the list of attributes to the specified record.
 void ASTRecordWriter::AddAttributes(ArrayRef<const Attr *> Attrs) {
   auto &Record = *this;
   Record.push_back(Attrs.size());
@@ -4531,7 +4531,7 @@ void ASTWriter::AddVersionTuple(const VersionTuple &Version,
     Record.push_back(0);
 }
 
-/// \brief Note that the identifier II occurs at the given offset
+/// Note that the identifier II occurs at the given offset
 /// within the identifier table.
 void ASTWriter::SetIdentifierOffset(const IdentifierInfo *II, uint32_t Offset) {
   IdentID ID = IdentifierIDs[II];
@@ -4541,7 +4541,7 @@ void ASTWriter::SetIdentifierOffset(const IdentifierInfo *II, uint32_t Offset) {
     IdentifierOffsets[ID - FirstIdentID] = Offset;
 }
 
-/// \brief Note that the selector Sel occurs at the given offset
+/// Note that the selector Sel occurs at the given offset
 /// within the method pool/selector table.
 void ASTWriter::SetSelectorOffset(Selector Sel, uint32_t Offset) {
   unsigned ID = SelectorIDs[Sel];
@@ -5889,7 +5889,7 @@ void ASTRecordWriter::AddTemplateParameterList(
     AddDeclRef(P);
 }
 
-/// \brief Emit a template argument list.
+/// Emit a template argument list.
 void ASTRecordWriter::AddTemplateArgumentList(
     const TemplateArgumentList *TemplateArgs) {
   assert(TemplateArgs && "No TemplateArgs!");

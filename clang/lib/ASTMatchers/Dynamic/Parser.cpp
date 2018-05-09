@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Recursive parser implementation for the matcher expression grammar.
+/// Recursive parser implementation for the matcher expression grammar.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -34,9 +34,9 @@ namespace clang {
 namespace ast_matchers {
 namespace dynamic {
 
-/// \brief Simple structure to hold information for one token from the parser.
+/// Simple structure to hold information for one token from the parser.
 struct Parser::TokenInfo {
-  /// \brief Different possible tokens.
+  /// Different possible tokens.
   enum TokenKind {
     TK_Eof,
     TK_OpenParen,
@@ -50,7 +50,7 @@ struct Parser::TokenInfo {
     TK_CodeCompletion
   };
 
-  /// \brief Some known identifiers.
+  /// Some known identifiers.
   static const char* const ID_Bind;
 
   TokenInfo() = default;
@@ -63,7 +63,7 @@ struct Parser::TokenInfo {
 
 const char* const Parser::TokenInfo::ID_Bind = "bind";
 
-/// \brief Simple tokenizer for the parser.
+/// Simple tokenizer for the parser.
 class Parser::CodeTokenizer {
 public:
   explicit CodeTokenizer(StringRef MatcherCode, Diagnostics *Error)
@@ -78,10 +78,10 @@ public:
     NextToken = getNextToken();
   }
 
-  /// \brief Returns but doesn't consume the next token.
+  /// Returns but doesn't consume the next token.
   const TokenInfo &peekNextToken() const { return NextToken; }
 
-  /// \brief Consumes and returns the next token.
+  /// Consumes and returns the next token.
   TokenInfo consumeNextToken() {
     TokenInfo ThisToken = NextToken;
     NextToken = getNextToken();
@@ -185,7 +185,7 @@ private:
     return Result;
   }
 
-  /// \brief Consume an unsigned and float literal.
+  /// Consume an unsigned and float literal.
   void consumeNumberLiteral(TokenInfo *Result) {
     bool isFloatingLiteral = false;
     unsigned Length = 1;
@@ -238,7 +238,7 @@ private:
     Result->Kind = TokenInfo::TK_Error;
   }
 
-  /// \brief Consume a string literal.
+  /// Consume a string literal.
   ///
   /// \c Code must be positioned at the start of the literal (the opening
   /// quote). Consumed until it finds the same closing quote character.
@@ -272,7 +272,7 @@ private:
     Result->Kind = TokenInfo::TK_Error;
   }
 
-  /// \brief Consume all leading whitespace from \c Code.
+  /// Consume all leading whitespace from \c Code.
   void consumeWhitespace() {
     while (!Code.empty() && isWhitespace(Code[0])) {
       if (Code[0] == '\n') {
@@ -326,7 +326,7 @@ struct Parser::ScopedContextEntry {
   }
 };
 
-/// \brief Parse expressions that start with an identifier.
+/// Parse expressions that start with an identifier.
 ///
 /// This function can parse named values and matchers.
 /// In case of failure it will try to determine the user's intent to give
@@ -359,7 +359,7 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
   return parseMatcherExpressionImpl(NameToken, Value);
 }
 
-/// \brief Parse and validate a matcher expression.
+/// Parse and validate a matcher expression.
 /// \return \c true on success, in which case \c Value has the matcher parsed.
 ///   If the input is malformed, or some argument has an error, it
 ///   returns \c false.
@@ -524,7 +524,7 @@ void Parser::addExpressionCompletions() {
   }
 }
 
-/// \brief Parse an <Expression>
+/// Parse an <Expression>
 bool Parser::parseExpressionImpl(VariantValue *Value) {
   switch (Tokenizer->nextTokenKind()) {
   case TokenInfo::TK_Literal:

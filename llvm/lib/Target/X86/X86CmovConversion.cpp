@@ -295,7 +295,7 @@ bool X86CmovConverterPass::collectCmovCandidates(
 
     for (auto &I : *MBB) {
       // Skip debug instructions.
-      if (I.isDebugValue())
+      if (I.isDebugInstr())
         continue;
       X86::CondCode CC = X86::getCondFromCMovOpc(I.getOpcode());
       // Check if we found a X86::CMOVrr instruction.
@@ -435,7 +435,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
       RegDefMaps[PhyRegType].clear();
       for (MachineInstr &MI : *MBB) {
         // Skip debug instructions.
-        if (MI.isDebugValue())
+        if (MI.isDebugInstr())
           continue;
         unsigned MIDepth = 0;
         unsigned MIDepthOpt = 0;
@@ -605,7 +605,7 @@ static void packCmovGroup(MachineInstr *First, MachineInstr *Last) {
 
   SmallVector<MachineInstr *, 2> DBGInstructions;
   for (auto I = First->getIterator(), E = Last->getIterator(); I != E; I++) {
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       DBGInstructions.push_back(&*I);
   }
 

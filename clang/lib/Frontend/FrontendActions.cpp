@@ -416,7 +416,7 @@ void TemplightDumpAction::ExecuteAction() {
 }
 
 namespace {
-  /// \brief AST reader listener that dumps module information for a module
+  /// AST reader listener that dumps module information for a module
   /// file.
   class DumpModuleInfoListener : public ASTReaderListener {
     llvm::raw_ostream &Out;

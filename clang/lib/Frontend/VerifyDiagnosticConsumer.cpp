@@ -80,7 +80,7 @@ public:
   VerifyFileTracker(VerifyDiagnosticConsumer &Verify, SourceManager &SM)
       : Verify(Verify), SM(SM) {}
 
-  /// \brief Hook into the preprocessor and update the list of parsed
+  /// Hook into the preprocessor and update the list of parsed
   /// files when the preprocessor indicates a new file is entered.
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -656,7 +656,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
 }
 
 #ifndef NDEBUG
-/// \brief Lex the specified source file to determine whether it contains
+/// Lex the specified source file to determine whether it contains
 /// any expected-* directives.  As a Lexer is used rather than a full-blown
 /// Preprocessor, directives inside skipped #if blocks will still be found.
 ///
@@ -694,7 +694,7 @@ static bool findDirectives(SourceManager &SM, FileID FID,
 }
 #endif // !NDEBUG
 
-/// \brief Takes a list of diagnostics that have been generated but not matched
+/// Takes a list of diagnostics that have been generated but not matched
 /// by an expected-* directive and produces a diagnostic to the user from this.
 static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceMgr,
                                 const_diag_iterator diag_begin,
@@ -722,7 +722,7 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
   return std::distance(diag_begin, diag_end);
 }
 
-/// \brief Takes a list of diagnostics that were expected to have been generated
+/// Takes a list of diagnostics that were expected to have been generated
 /// but were not and produces a diagnostic to the user from this.
 static unsigned PrintExpected(DiagnosticsEngine &Diags,
                               SourceManager &SourceMgr,
@@ -753,7 +753,7 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
   return DL.size();
 }
 
-/// \brief Determine whether two source locations come from the same file.
+/// Determine whether two source locations come from the same file.
 static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
                            SourceLocation DiagnosticLoc) {
   while (DiagnosticLoc.isMacroID())

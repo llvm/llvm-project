@@ -679,7 +679,7 @@ bool Filler::searchRange(MachineBasicBlock &MBB, IterTy Begin, IterTy End,
     ++I;
 
     // skip debug value
-    if (CurrI->isDebugValue())
+    if (CurrI->isDebugInstr())
       continue;
 
     if (terminateSearch(*CurrI))

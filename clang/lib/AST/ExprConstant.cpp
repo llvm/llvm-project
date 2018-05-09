@@ -686,11 +686,11 @@ namespace {
     /// notes attached to it will also be stored, otherwise they will not be.
     bool HasActiveDiagnostic;
 
-    /// \brief Have we emitted a diagnostic explaining why we couldn't constant
+    /// Have we emitted a diagnostic explaining why we couldn't constant
     /// fold (not just why it's not strictly a constant expression)?
     bool HasFoldFailureDiagnostic;
 
-    /// \brief Whether or not we're currently speculatively evaluating.
+    /// Whether or not we're currently speculatively evaluating.
     bool IsSpeculativelyEvaluating;
 
     enum EvaluationMode {
@@ -3271,7 +3271,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   return CompleteObject(BaseVal, BaseType, LifetimeStartedInEvaluation);
 }
 
-/// \brief Perform an lvalue-to-rvalue conversion on the given glvalue. This
+/// Perform an lvalue-to-rvalue conversion on the given glvalue. This
 /// can also be used for 'lvalue-to-lvalue' conversions for looking up the
 /// glvalue referred to by an entity of reference type.
 ///
@@ -3834,7 +3834,7 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
 }
 
 namespace {
-/// \brief A location where the result (returned value) of evaluating a
+/// A location where the result (returned value) of evaluating a
 /// statement should be stored.
 struct StmtResult {
   /// The APValue that should be filled in with the returned value.
@@ -5553,7 +5553,7 @@ bool LValueExprEvaluator::VisitBinAssign(const BinaryOperator *E) {
 // Pointer Evaluation
 //===----------------------------------------------------------------------===//
 
-/// \brief Attempts to compute the number of bytes available at the pointer
+/// Attempts to compute the number of bytes available at the pointer
 /// returned by a function with the alloc_size attribute. Returns true if we
 /// were successful. Places an unsigned number into `Result`.
 ///
@@ -5602,7 +5602,7 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
   return true;
 }
 
-/// \brief Convenience function. LVal's base must be a call to an alloc_size
+/// Convenience function. LVal's base must be a call to an alloc_size
 /// function.
 static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
                                             const LValue &LVal,
@@ -5614,7 +5614,7 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
   return getBytesReturnedByAllocSizeCall(Ctx, CE, Result);
 }
 
-/// \brief Attempts to evaluate the given LValueBase as the result of a call to
+/// Attempts to evaluate the given LValueBase as the result of a call to
 /// a function with the alloc_size attribute. If it was possible to do so, this
 /// function will return true, make Result's Base point to said function call,
 /// and mark Result's Base as invalid.
@@ -7730,7 +7730,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   return true;
 }
 
-/// \brief Tries to evaluate the __builtin_object_size for @p E. If successful,
+/// Tries to evaluate the __builtin_object_size for @p E. If successful,
 /// returns true and stores the result in @p Size.
 ///
 /// If @p WasError is non-null, this will report whether the failure to evaluate
@@ -8151,7 +8151,7 @@ static bool HasSameBase(const LValue &A, const LValue &B) {
           A.getLValueVersion() == B.getLValueVersion());
 }
 
-/// \brief Determine whether this is a pointer past the end of the complete
+/// Determine whether this is a pointer past the end of the complete
 /// object referred to by the lvalue.
 static bool isOnePastTheEndOfCompleteObject(const ASTContext &Ctx,
                                             const LValue &LV) {
@@ -8180,7 +8180,7 @@ static bool isOnePastTheEndOfCompleteObject(const ASTContext &Ctx,
 
 namespace {
 
-/// \brief Data recursive integer evaluator of certain binary operators.
+/// Data recursive integer evaluator of certain binary operators.
 ///
 /// We use a data recursive algorithm for binary operators so that we are able
 /// to handle extreme cases of chained binary operators without causing stack
@@ -8225,7 +8225,7 @@ public:
   DataRecursiveIntBinOpEvaluator(IntExprEvaluator &IntEval, APValue &Result)
     : IntEval(IntEval), Info(IntEval.getEvalInfo()), FinalResult(Result) { }
 
-  /// \brief True if \param E is a binary operator that we are going to handle
+  /// True if \param E is a binary operator that we are going to handle
   /// data recursively.
   /// We handle binary operators that are comma, logical, or that have operands
   /// with integral or enumeration type.
@@ -8266,7 +8266,7 @@ private:
     return Info.CCEDiag(E, D);
   }
 
-  // \brief Returns true if visiting the RHS is necessary, false otherwise.
+  // Returns true if visiting the RHS is necessary, false otherwise.
   bool VisitBinOpLHSOnly(EvalResult &LHSResult, const BinaryOperator *E,
                          bool &SuppressRHSDiags);
 

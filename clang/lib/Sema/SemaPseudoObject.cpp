@@ -253,7 +253,7 @@ namespace {
     virtual ExprResult buildGet() = 0;
     virtual ExprResult buildSet(Expr *, SourceLocation,
                                 bool captureSetValueAsResult) = 0;
-    /// \brief Should the result of an assignment be the formal result of the
+    /// Should the result of an assignment be the formal result of the
     /// setter call or the value that was passed to the setter?
     ///
     /// Different pseudo-object language features use different language rules

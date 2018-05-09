@@ -46,7 +46,7 @@ entry:
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 1, !"min_enum_size", i32 4}
 !7 = !{!"clang version 6.0.0"}
-!8 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!8 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !11}
 !11 = !DIBasicType(name: "int", size: 19, encoding: DW_ATE_signed)
@@ -54,7 +54,7 @@ entry:
 !13 = !DILocalVariable(name: "v", arg: 1, scope: !8, file: !1, line: 3, type: !11)
 !14 = !DILocation(line: 5, column: 10, scope: !8)
 !15 = !DILocation(line: 5, column: 3, scope: !8)
-!16 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !26)
+!16 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !26)
 !26 = !{!27}
 !27 = !DILocalVariable(name: "v", arg: 1, scope: !16, file: !1, line: 8, type: !11)
 !17 = !DILocation(line: 9, column: 9, scope: !18)

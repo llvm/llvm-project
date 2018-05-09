@@ -117,7 +117,7 @@ public:
   /// reset to zero. This method is allowed to overwrite previous bindings.
   virtual StoreRef BindDefaultZero(Store store, const MemRegion *R) = 0;
 
-  /// \brief Create a new store with the specified binding removed.
+  /// Create a new store with the specified binding removed.
   /// \param ST the original store, that is the basis for the new store.
   /// \param L the location whose binding should be removed.
   virtual StoreRef killBinding(Store ST, Loc L) = 0;
@@ -170,7 +170,7 @@ public:
   SVal evalDerivedToBase(SVal Derived, QualType DerivedPtrType,
                          bool IsVirtual);
 
-  /// \brief Attempts to do a down cast. Used to model BaseToDerived and C++
+  /// Attempts to do a down cast. Used to model BaseToDerived and C++
   ///        dynamic_cast.
   /// The callback may result in the following 3 scenarios:
   ///  - Successful cast (ex: derived is subclass of base).

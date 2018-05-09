@@ -25,7 +25,7 @@ namespace clang {
   // TODO: move ParsingClassDefinition here.
   // TODO: move TentativeParsingAction here.
 
-  /// \brief A RAII object used to temporarily suppress access-like
+  /// A RAII object used to temporarily suppress access-like
   /// checking.  Access-like checks are those associated with
   /// controlling the use of a declaration, like C++ access control
   /// errors and deprecation warnings.  They are contextually
@@ -84,7 +84,7 @@ namespace clang {
     }
   };
 
-  /// \brief RAII object used to inform the actions that we're
+  /// RAII object used to inform the actions that we're
   /// currently parsing a declaration.  This is active when parsing a
   /// variable's initializer, but not when parsing the body of a
   /// class or function definition.
@@ -288,7 +288,7 @@ namespace clang {
     }
   };
   
-  /// \brief RAII object that makes '>' behave either as an operator
+  /// RAII object that makes '>' behave either as an operator
   /// or as the closing angle bracket for a template argument list.
   class GreaterThanIsOperatorScope {
     bool &GreaterThanIsOperator;
@@ -320,7 +320,7 @@ namespace clang {
     }
   };
   
-  /// \brief RAII object that makes sure paren/bracket/brace count is correct
+  /// RAII object that makes sure paren/bracket/brace count is correct
   /// after declaration/statement parsing, even when there's a parsing error.
   class ParenBraceBracketBalancer {
     Parser &P;
@@ -361,7 +361,7 @@ namespace clang {
     }
   };
 
-  /// \brief RAII class that helps handle the parsing of an open/close delimiter
+  /// RAII class that helps handle the parsing of an open/close delimiter
   /// pair, such as braces { ... } or parentheses ( ... ).
   class BalancedDelimiterTracker : public GreaterThanIsOperatorScope {
     Parser& P;
@@ -441,7 +441,7 @@ namespace clang {
     void skipToEnd();
   };
 
-  /// \brief RAIIObject to destroy the contents of a SmallVector of
+  /// RAIIObject to destroy the contents of a SmallVector of
   /// TemplateIdAnnotation pointers and clear the vector.
   class DestroyTemplateIdAnnotationsRAIIObj {
     SmallVectorImpl<TemplateIdAnnotation *> &Container;

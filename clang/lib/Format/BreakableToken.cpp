@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Contains implementation of BreakableToken class and classes derived
+/// Contains implementation of BreakableToken class and classes derived
 /// from it.
 ///
 //===----------------------------------------------------------------------===//

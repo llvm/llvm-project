@@ -63,14 +63,14 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!53}
 
-!0 = distinct !DISubprogram(name: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 5, file: !51, scope: !1, type: !3, variables: !48)
+!0 = distinct !DISubprogram(name: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 5, file: !51, scope: !1, type: !3, retainedNodes: !48)
 !1 = !DIFile(filename: "a.c", directory: "/private/tmp")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: FullDebug, file: !51, enums: !52, retainedTypes: !52, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 12, file: !51, scope: !1, type: !3, variables: !49)
-!7 = distinct !DISubprogram(name: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 18, file: !51, scope: !1, type: !3, variables: !50)
+!6 = distinct !DISubprogram(name: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 12, file: !51, scope: !1, type: !3, retainedNodes: !49)
+!7 = distinct !DISubprogram(name: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 18, file: !51, scope: !1, type: !3, retainedNodes: !50)
 !8 = !DILocalVariable(name: "ptr", line: 4, arg: 1, scope: !0, file: !1, type: !9)
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, scope: !2, baseType: null)
 !10 = !DILocalVariable(name: "val", line: 4, arg: 2, scope: !0, file: !1, type: !11)

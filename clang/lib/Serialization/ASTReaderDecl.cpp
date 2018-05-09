@@ -94,7 +94,7 @@ namespace clang {
 
     bool HasPendingBody = false;
 
-    ///\brief A flag to carry the information for a decl from the entity is
+    ///A flag to carry the information for a decl from the entity is
     /// used. We use it to delay the marking of the canonical decl as used until
     /// the entire declaration is deserialized and merged.
     bool IsDeclMarkedUsed = false;
@@ -193,18 +193,18 @@ namespace clang {
       RedeclarableResult(Decl *MergeWith, GlobalDeclID FirstID, bool IsKeyDecl)
           : MergeWith(MergeWith), FirstID(FirstID), IsKeyDecl(IsKeyDecl) {}
 
-      /// \brief Retrieve the first ID.
+      /// Retrieve the first ID.
       GlobalDeclID getFirstID() const { return FirstID; }
 
-      /// \brief Is this declaration a key declaration?
+      /// Is this declaration a key declaration?
       bool isKeyDecl() const { return IsKeyDecl; }
 
-      /// \brief Get a known declaration that this should be merged with, if
+      /// Get a known declaration that this should be merged with, if
       /// any.
       Decl *getKnownMergeTarget() const { return MergeWith; }
     };
 
-    /// \brief Class used to capture the result of searching for an existing
+    /// Class used to capture the result of searching for an existing
     /// declaration of a specific kind and name, along with the ability
     /// to update the place where this result was found (the declaration
     /// chain hanging off an identifier or the DeclContext we searched in)
@@ -238,7 +238,7 @@ namespace clang {
       FindExistingResult &operator=(FindExistingResult &&) = delete;
       ~FindExistingResult();
 
-      /// \brief Suppress the addition of this result into the known set of
+      /// Suppress the addition of this result into the known set of
       /// names.
       void suppress() { AddResult = false; }
 
@@ -305,7 +305,7 @@ namespace clang {
     static void markIncompleteDeclChainImpl(Redeclarable<DeclT> *D);
     static void markIncompleteDeclChainImpl(...);
 
-    /// \brief Determine whether this declaration has a pending body.
+    /// Determine whether this declaration has a pending body.
     bool hasPendingBody() const { return HasPendingBody; }
 
     void ReadFunctionDefinition(FunctionDecl *FD);
@@ -2433,7 +2433,7 @@ ASTDeclReader::VisitRedeclarable(Redeclarable<T> *D) {
   return RedeclarableResult(MergeWith, FirstDeclID, IsKeyDecl);
 }
 
-/// \brief Attempts to merge the given declaration (D) with another declaration
+/// Attempts to merge the given declaration (D) with another declaration
 /// of the same entity.
 template<typename T>
 void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase,
@@ -2457,7 +2457,7 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase,
       mergeRedeclarable(D, Existing, Redecl, TemplatePatternID);
 }
 
-/// \brief "Cast" to type T, asserting if we don't have an implicit conversion.
+/// "Cast" to type T, asserting if we don't have an implicit conversion.
 /// We use this to put code in a template that will only be valid for certain
 /// instantiations.
 template<typename T> static T assert_cast(T t) { return t; }
@@ -2465,7 +2465,7 @@ template<typename T> static T assert_cast(...) {
   llvm_unreachable("bad assert_cast");
 }
 
-/// \brief Merge together the pattern declarations from two template
+/// Merge together the pattern declarations from two template
 /// declarations.
 void ASTDeclReader::mergeTemplatePattern(RedeclarableTemplateDecl *D,
                                          RedeclarableTemplateDecl *Existing,
@@ -2507,7 +2507,7 @@ void ASTDeclReader::mergeTemplatePattern(RedeclarableTemplateDecl *D,
   llvm_unreachable("merged an unknown kind of redeclarable template");
 }
 
-/// \brief Attempts to merge the given declaration (D) with another declaration
+/// Attempts to merge the given declaration (D) with another declaration
 /// of the same entity.
 template<typename T>
 void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
@@ -2561,7 +2561,7 @@ bool allowODRLikeMergeInC(NamedDecl *ND) {
   return false;
 }
 
-/// \brief Attempts to merge the given declaration (D) with another declaration
+/// Attempts to merge the given declaration (D) with another declaration
 /// of the same entity, for the case where the entity is not actually
 /// redeclarable. This happens, for instance, when merging the fields of
 /// identical class definitions from two different modules.
@@ -2614,7 +2614,7 @@ void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
 // Attribute Reading
 //===----------------------------------------------------------------------===//
 
-/// \brief Reads attributes from the current stream position.
+/// Reads attributes from the current stream position.
 void ASTReader::ReadAttributes(ASTRecordReader &Record, AttrVec &Attrs) {
   for (unsigned i = 0, e = Record.readInt(); i != e; ++i) {
     Attr *New = nullptr;
@@ -2633,7 +2633,7 @@ void ASTReader::ReadAttributes(ASTRecordReader &Record, AttrVec &Attrs) {
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
 
-/// \brief Note that we have loaded the declaration with the given
+/// Note that we have loaded the declaration with the given
 /// Index.
 ///
 /// This routine notes that this declaration has already been loaded,
@@ -2644,7 +2644,7 @@ inline void ASTReader::LoadedDecl(unsigned Index, Decl *D) {
   DeclsLoaded[Index] = D;
 }
 
-/// \brief Determine whether the consumer will be interested in seeing
+/// Determine whether the consumer will be interested in seeing
 /// this declaration (via HandleTopLevelDecl).
 ///
 /// This routine should return true for anything that might affect
@@ -2685,7 +2685,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   return false;
 }
 
-/// \brief Get the correct cursor and offset for loading a declaration.
+/// Get the correct cursor and offset for loading a declaration.
 ASTReader::RecordLocation
 ASTReader::DeclCursorForID(DeclID ID, SourceLocation &Loc) {
   GlobalDeclMapType::iterator I = GlobalDeclMap.find(ID);
@@ -2711,7 +2711,7 @@ uint64_t ASTReader::getGlobalBitOffset(ModuleFile &M, uint32_t LocalOffset) {
 static bool isSameTemplateParameterList(const TemplateParameterList *X,
                                         const TemplateParameterList *Y);
 
-/// \brief Determine whether two template parameters are similar enough
+/// Determine whether two template parameters are similar enough
 /// that they may be used in declarations of the same template.
 static bool isSameTemplateParameter(const NamedDecl *X,
                                     const NamedDecl *Y) {
@@ -2783,7 +2783,7 @@ static bool isSameQualifier(const NestedNameSpecifier *X,
   return !PX && !PY;
 }
 
-/// \brief Determine whether two template parameter lists are similar enough
+/// Determine whether two template parameter lists are similar enough
 /// that they may be used in declarations of the same template.
 static bool isSameTemplateParameterList(const TemplateParameterList *X,
                                         const TemplateParameterList *Y) {
@@ -2836,7 +2836,7 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   return true;
 }
 
-/// \brief Determine whether the two declarations refer to the same entity.
+/// Determine whether the two declarations refer to the same entity.
 static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
   assert(X->getDeclName() == Y->getDeclName() && "Declaration name mismatch!");
 
@@ -3463,7 +3463,7 @@ void ASTReader::markIncompleteDeclChain(Decl *D) {
   }
 }
 
-/// \brief Read the declaration at the given offset from the AST file.
+/// Read the declaration at the given offset from the AST file.
 Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   unsigned Index = ID - NUM_PREDEF_DECL_IDS;
   SourceLocation DeclLoc;
@@ -3905,7 +3905,7 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
 
 namespace {
 
-  /// \brief Given an ObjC interface, goes through the modules and links to the
+  /// Given an ObjC interface, goes through the modules and links to the
   /// interface all the categories for it.
   class ObjCCategoriesVisitor {
     ASTReader &Reader;

@@ -232,7 +232,7 @@ bool PPCMIPeephole::simplifyCode(void) {
       SomethingChanged = false;
       for (MachineBasicBlock &MBB : *MF) {
         for (MachineInstr &MI : MBB) {
-          if (MI.isDebugValue())
+          if (MI.isDebugInstr())
             continue;
 
           if (TII->convertToImmediateForm(MI)) {
@@ -261,7 +261,7 @@ bool PPCMIPeephole::simplifyCode(void) {
       }
 
       // Ignore debug instructions.
-      if (MI.isDebugValue())
+      if (MI.isDebugInstr())
         continue;
 
       // Per-opcode peepholes.

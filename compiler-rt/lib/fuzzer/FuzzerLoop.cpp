@@ -105,7 +105,7 @@ void MallocHook(const volatile void *ptr, size_t size) {
       return;
     Printf("MALLOC[%zd] %p %zd\n", N, ptr, size);
     if (TraceLevel >= 2 && EF)
-      EF->__sanitizer_print_stack_trace();
+      PrintStackTrace();
   }
 }
 
@@ -118,7 +118,7 @@ void FreeHook(const volatile void *ptr) {
       return;
     Printf("FREE[%zd]   %p\n", N, ptr);
     if (TraceLevel >= 2 && EF)
-      EF->__sanitizer_print_stack_trace();
+      PrintStackTrace();
   }
 }
 
@@ -129,8 +129,7 @@ void Fuzzer::HandleMalloc(size_t Size) {
   Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n", GetPid(),
          Size);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
-  if (EF->__sanitizer_print_stack_trace)
-    EF->__sanitizer_print_stack_trace();
+  PrintStackTrace();
   DumpCurrentUnit("oom-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
   PrintFinalStats();
@@ -231,8 +230,7 @@ void Fuzzer::CrashCallback() {
   if (EF->__sanitizer_acquire_crash_state)
     EF->__sanitizer_acquire_crash_state();
   Printf("==%lu== ERROR: libFuzzer: deadly signal\n", GetPid());
-  if (EF->__sanitizer_print_stack_trace)
-    EF->__sanitizer_print_stack_trace();
+  PrintStackTrace();
   Printf("NOTE: libFuzzer has rudimentary signal handlers.\n"
          "      Combine libFuzzer with AddressSanitizer or similar for better "
          "crash reports.\n");
@@ -249,8 +247,7 @@ void Fuzzer::ExitCallback() {
       !EF->__sanitizer_acquire_crash_state())
     return;
   Printf("==%lu== ERROR: libFuzzer: fuzz target exited\n", GetPid());
-  if (EF->__sanitizer_print_stack_trace)
-    EF->__sanitizer_print_stack_trace();
+  PrintStackTrace();
   Printf("SUMMARY: libFuzzer: fuzz target exited\n");
   DumpCurrentUnit("crash-");
   PrintFinalStats();
@@ -296,8 +293,7 @@ void Fuzzer::AlarmCallback() {
     DumpCurrentUnit("timeout-");
     Printf("==%lu== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
            Seconds);
-    if (EF->__sanitizer_print_stack_trace)
-      EF->__sanitizer_print_stack_trace();
+    PrintStackTrace();
     Printf("SUMMARY: libFuzzer: timeout\n");
     PrintFinalStats();
     _Exit(Options.TimeoutExitCode); // Stop right now.
@@ -312,8 +308,7 @@ void Fuzzer::RssLimitCallback() {
       "==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %zdMb)\n",
       GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
-  if (EF->__sanitizer_print_memory_profile)
-    EF->__sanitizer_print_memory_profile(95, 8);
+  PrintMemoryProfile();
   DumpCurrentUnit("oom-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
   PrintFinalStats();

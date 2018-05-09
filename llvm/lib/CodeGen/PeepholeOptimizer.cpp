@@ -1643,8 +1643,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       ++MII;
       LocalMIs.insert(MI);
 
-      // Skip debug values. They should not affect this peephole optimization.
-      if (MI->isDebugValue())
+      // Skip debug instructions. They should not affect this peephole optimization.
+      if (MI->isDebugInstr())
           continue;
 
       if (MI->isPosition())

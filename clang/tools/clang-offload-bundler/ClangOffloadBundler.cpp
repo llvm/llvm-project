@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a clang-offload-bundler that bundles different
+/// This file implements a clang-offload-bundler that bundles different
 /// files that relate with the same source code but different targets into a
 /// single one. Also the implements the opposite functionality, i.e. unbundle
 /// files previous created by this tool.

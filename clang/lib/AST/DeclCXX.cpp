@@ -2305,7 +2305,7 @@ bool CXXConstructorDecl::isMoveConstructor(unsigned &TypeQuals) const {
     getParamDecl(0)->getType()->isRValueReferenceType();
 }
 
-/// \brief Determine whether this is a copy or move constructor.
+/// Determine whether this is a copy or move constructor.
 bool CXXConstructorDecl::isCopyOrMoveConstructor(unsigned &TypeQuals) const {
   // C++ [class.copy]p2:
   //   A non-template constructor for class X is a copy constructor

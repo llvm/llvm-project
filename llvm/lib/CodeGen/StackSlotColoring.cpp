@@ -423,7 +423,7 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS, LoadSize)))
       continue;
     // Skip the ...pseudo debugging... instructions between a load and store.
-    while ((NextMI != E) && NextMI->isDebugValue()) {
+    while ((NextMI != E) && NextMI->isDebugInstr()) {
       ++NextMI;
       ++I;
     }

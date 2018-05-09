@@ -116,7 +116,7 @@ public:
     InputFileList = std::move(List);
   }
 
-  /// \brief Sets the environment to be used by the new process.
+  /// Sets the environment to be used by the new process.
   /// \param NewEnvironment An array of environment variables.
   /// \remark If the environment remains unset, then the environment
   ///         from the parent process will be used.

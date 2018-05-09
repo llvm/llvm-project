@@ -888,7 +888,7 @@ BuildMSPropertyRefExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
                                            NameInfo.getLoc());
 }
 
-/// \brief Build a MemberExpr AST node.
+/// Build a MemberExpr AST node.
 static MemberExpr *BuildMemberExpr(
     Sema &SemaRef, ASTContext &C, Expr *Base, bool isArrow,
     SourceLocation OpLoc, const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
@@ -903,7 +903,7 @@ static MemberExpr *BuildMemberExpr(
   return E;
 }
 
-/// \brief Determine if the given scope is within a function-try-block handler.
+/// Determine if the given scope is within a function-try-block handler.
 static bool IsInFnTryBlockHandler(const Scope *S) {
   // Walk the scope stack until finding a FnTryCatchScope, or leave the
   // function scope. If a FnTryCatchScope is found, check whether the TryScope
