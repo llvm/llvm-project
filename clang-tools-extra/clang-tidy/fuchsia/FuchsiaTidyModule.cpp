@@ -14,7 +14,6 @@
 #include "DefaultArgumentsCheck.h"
 #include "MultipleInheritanceCheck.h"
 #include "OverloadedOperatorCheck.h"
-#include "RestrictSystemIncludesCheck.h"
 #include "StaticallyConstructedObjectsCheck.h"
 #include "TrailingReturnCheck.h"
 #include "VirtualInheritanceCheck.h"
@@ -37,8 +36,6 @@ public:
         "fuchsia-multiple-inheritance");
     CheckFactories.registerCheck<OverloadedOperatorCheck>(
         "fuchsia-overloaded-operator");
-    CheckFactories.registerCheck<RestrictSystemIncludesCheck>(
-        "fuchsia-restrict-system-includes");
     CheckFactories.registerCheck<StaticallyConstructedObjectsCheck>(
         "fuchsia-statically-constructed-objects");
     CheckFactories.registerCheck<TrailingReturnCheck>(
