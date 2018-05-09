@@ -319,3 +319,19 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
 
   return __c11_atomic_compare_exchange_strong(addr, desired, *new, 5, 5);
 }
+
+struct Empty {};
+
+struct Empty testEmptyStructLoad(_Atomic(struct Empty)* empty) {
+  // CHECK-LABEL: @testEmptyStructLoad(
+  // CHECK-NOT: @__atomic_load
+  // CHECK: load atomic i8, i8* %{{.*}} seq_cst, align 1
+  return *empty;
+}
+
+void testEmptyStructStore(_Atomic(struct Empty)* empty, struct Empty value) {
+  // CHECK-LABEL: @testEmptyStructStore(
+  // CHECK-NOT: @__atomic_store
+  // CHECK: store atomic i8 %{{.*}}, i8* %{{.*}} seq_cst, align 1
+  *empty = value;
+}
