@@ -88,7 +88,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: %[[TMP:.*]] = alloca [1 x i64]
   // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
   // B64: store i64 256, i64* %[[TMP1]], align 8
-  // COMMON-LABEL: call i32 @__enqueue_kernel_vaargs(
+  // COMMON-LABEL: call i32 @__enqueue_kernel_varargs(
   // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK1:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG1]] to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1,
@@ -109,7 +109,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: %[[TMP:.*]] = alloca [1 x i64]
   // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
   // B64: store i64 %{{.*}}, i64* %[[TMP1]], align 8
-  // COMMON-LABEL: call i32 @__enqueue_kernel_vaargs(
+  // COMMON-LABEL: call i32 @__enqueue_kernel_varargs(
   // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK2:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG2]] to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1,
@@ -133,7 +133,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: %[[TMP:.*]] = alloca [1 x i64]
   // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
   // B64: store i64 256, i64* %[[TMP1]], align 8
-  // COMMON-LABEL: call i32 @__enqueue_kernel_events_vaargs
+  // COMMON-LABEL: call i32 @__enqueue_kernel_events_varargs
   // COMMON-SAME: (%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}} [[WAIT_EVNT]], %opencl.clk_event_t{{.*}} [[EVNT]],
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK3:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG3]] to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1,
@@ -157,7 +157,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: %[[TMP:.*]] = alloca [1 x i64]
   // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
   // B64: store i64 %{{.*}}, i64* %[[TMP1]], align 8
-  // COMMON-LABEL: call i32 @__enqueue_kernel_events_vaargs
+  // COMMON-LABEL: call i32 @__enqueue_kernel_events_varargs
   // COMMON-SAME: (%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}}* addrspace(4)* [[WAIT_EVNT]], %opencl.clk_event_t{{.*}}* addrspace(4)* [[EVNT]],
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK4:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG4]] to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1,
@@ -179,7 +179,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: %[[TMP:.*]] = alloca [1 x i64]
   // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
   // B64: store i64 %{{.*}}, i64* %[[TMP1]], align 8
-  // COMMON-LABEL: call i32 @__enqueue_kernel_vaargs
+  // COMMON-LABEL: call i32 @__enqueue_kernel_varargs
   // COMMON-SAME: (%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK5:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG5]] to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1,
@@ -208,7 +208,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: store i64 2, i64* %[[TMP2]], align 8
   // B64: %[[TMP3:.*]] = getelementptr [3 x i64], [3 x i64]* %[[TMP]], i32 0, i32 2
   // B64: store i64 4, i64* %[[TMP3]], align 8
-  // COMMON-LABEL: call i32 @__enqueue_kernel_vaargs
+  // COMMON-LABEL: call i32 @__enqueue_kernel_varargs
   // COMMON-SAME: (%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK6:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG6]] to i8 addrspace(1)*) to i8 addrspace(4)*), i32 3,
@@ -229,7 +229,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // B64: %[[TMP:.*]] = alloca [1 x i64]
   // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
   // B64: store i64 4294967296, i64* %[[TMP1]], align 8
-  // COMMON-LABEL: call i32 @__enqueue_kernel_vaargs
+  // COMMON-LABEL: call i32 @__enqueue_kernel_varargs
   // COMMON-SAME: (%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK7:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG7]] to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1,
@@ -299,13 +299,13 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   size = get_kernel_work_group_size(block_B);
 
   // Uses global block literal [[BLG8]] and block kernel [[INVGK8]]. Make sure no redundant block literal ind invoke functions are emitted.
-  // COMMON: call i32 @__get_kernel_preferred_work_group_multiple_impl(
+  // COMMON: call i32 @__get_kernel_preferred_work_group_size_multiple_impl(
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVGK8]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BLG8]] to i8 addrspace(1)*) to i8 addrspace(4)*))
   size = get_kernel_preferred_work_group_size_multiple(block_A);
 
   // Uses global block literal [[BL_GLOBAL]] and block kernel [[INV_G_K]]. [[INV_G_K]] calls [[INV_G]].
-  // COMMON: call i32 @__get_kernel_preferred_work_group_multiple_impl(
+  // COMMON: call i32 @__get_kernel_preferred_work_group_size_multiple_impl(
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INV_G_K:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32 } addrspace(1)* [[BL_GLOBAL]] to i8 addrspace(1)*) to i8 addrspace(4)*))
   size = get_kernel_preferred_work_group_size_multiple(block_G);

@@ -881,7 +881,8 @@ StringLiteral *StringLiteral::CreateEmpty(const ASTContext &C,
   void *Mem =
       C.Allocate(sizeof(StringLiteral) + sizeof(SourceLocation) * (NumStrs - 1),
                  alignof(StringLiteral));
-  StringLiteral *SL = new (Mem) StringLiteral(QualType());
+  StringLiteral *SL =
+      new (Mem) StringLiteral(C.adjustStringLiteralBaseType(QualType()));
   SL->CharByteWidth = 0;
   SL->Length = 0;
   SL->NumConcatenated = NumStrs;

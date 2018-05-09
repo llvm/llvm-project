@@ -20,6 +20,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-defines.h"
 
 //#define DB_PTHREAD_LOG_EVENTS
@@ -118,6 +119,40 @@ public:
   }
 
   //------------------------------------------------------------------
+  /// Wait for Cond(m_value) to be true.
+  ///
+  /// Waits in a thread safe way for Cond(m_value) to be true. If Cond(m_value)
+  /// is already true, this function will return without waiting.
+  ///
+  /// It is possible for the value to be changed between the time the value is
+  /// set and the time the waiting thread wakes up. If the value no longer
+  /// satisfies the condition when the waiting thread wakes up, it will go back
+  /// into a wait state. It may be necessary for the calling code to use
+  /// additional thread synchronization methods to detect transitory states.
+  ///
+  /// @param[in] Cond
+  ///     The condition we want \a m_value satisfy.
+  ///
+  /// @param[in] timeout
+  ///     How long to wait for the condition to hold.
+  ///
+  /// @return
+  ///     @li m_value if Cond(m_value) is true.
+  ///     @li None otherwise (timeout occurred).
+  //------------------------------------------------------------------
+  template <typename C>
+  llvm::Optional<T> WaitFor(C Cond, const Timeout<std::micro> &timeout) {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    auto RealCond = [&] { return Cond(m_value); };
+    if (!timeout) {
+      m_condition.wait(lock, RealCond);
+      return m_value;
+    }
+    if (m_condition.wait_for(lock, *timeout, RealCond))
+      return m_value;
+    return llvm::None;
+  }
+  //------------------------------------------------------------------
   /// Wait for \a m_value to be equal to \a value.
   ///
   /// Waits in a thread safe way for \a m_value to be equal to \a
@@ -134,38 +169,17 @@ public:
   /// @param[in] value
   ///     The value we want \a m_value to be equal to.
   ///
-  /// @param[in] abstime
-  ///     If non-nullptr, the absolute time at which we should stop
-  ///     waiting, else wait an infinite amount of time.
+  /// @param[in] timeout
+  ///     How long to wait for the condition to hold.
   ///
   /// @return
   ///     @li \b true if the \a m_value is equal to \a value
   ///     @li \b false otherwise (timeout occurred)
   //------------------------------------------------------------------
-  bool WaitForValueEqualTo(T value, const std::chrono::microseconds &timeout =
-                                        std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
-    // the mutex and wait for the condition to be set. When either function
-    // returns, they will re-lock the mutex. We use an auto lock/unlock class
-    // (std::lock_guard) to allow us to return at any point in this function
-    // and not have to worry about unlocking the mutex.
-    std::unique_lock<std::mutex> lock(m_mutex);
-
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
-           __FUNCTION__, value, timeout.count(), m_value);
-#endif
-    while (m_value != value) {
-      if (timeout == std::chrono::microseconds(0)) {
-        m_condition.wait(lock);
-      } else {
-        std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout)
-          break;
-      }
-    }
-
-    return m_value == value;
+  bool WaitForValueEqualTo(T value,
+                           const Timeout<std::micro> &timeout = llvm::None) {
+    return WaitFor([&value](T current) { return value == current; }, timeout) !=
+           llvm::None;
   }
 
   //------------------------------------------------------------------
@@ -185,45 +199,17 @@ public:
   /// @param[in] value
   ///     The value we want \a m_value to not be equal to.
   ///
-  /// @param[out] new_value
-  ///     The new value if \b true is returned.
-  ///
-  /// @param[in] abstime
-  ///     If non-nullptr, the absolute time at which we should stop
-  ///     waiting, else wait an infinite amount of time.
+  /// @param[in] timeout
+  ///     How long to wait for the condition to hold.
   ///
   /// @return
-  ///     @li \b true if the \a m_value is equal to \a value
-  ///     @li \b false otherwise
+  ///     @li m_value if m_value != value
+  ///     @li None otherwise (timeout occurred).
   //------------------------------------------------------------------
-  bool WaitForValueNotEqualTo(
-      T value, T &new_value,
-      const std::chrono::microseconds &timeout = std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically unlock
-    // the mutex and wait for the condition to be set. When either function
-    // returns, they will re-lock the mutex. We use an auto lock/unlock class
-    // (std::lock_guard) to allow us to return at any point in this function
-    // and not have to worry about unlocking the mutex.
-    std::unique_lock<std::mutex> lock(m_mutex);
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
-           __FUNCTION__, value, timeout.count(), m_value);
-#endif
-    while (m_value == value) {
-      if (timeout == std::chrono::microseconds(0)) {
-        m_condition.wait(lock);
-      } else {
-        std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout)
-          break;
-      }
-    }
-
-    if (m_value != value) {
-      new_value = m_value;
-      return true;
-    }
-    return false;
+  llvm::Optional<T>
+  WaitForValueNotEqualTo(T value,
+                         const Timeout<std::micro> &timeout = llvm::None) {
+    return WaitFor([&value](T current) { return value != current; }, timeout);
   }
 
 protected:

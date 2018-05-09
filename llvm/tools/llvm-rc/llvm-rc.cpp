@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ResourceFileWriter.h"
+#include "ResourceScriptCppFilter.h"
 #include "ResourceScriptParser.h"
 #include "ResourceScriptStmt.h"
 #include "ResourceScriptToken.h"
@@ -111,7 +112,8 @@ int main(int Argc, const char **Argv) {
   std::unique_ptr<MemoryBuffer> FileContents = std::move(*File);
   StringRef Contents = FileContents->getBuffer();
 
-  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(Contents));
+  std::string FilteredContents = filterCppOutput(Contents);
+  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(FilteredContents));
 
   if (BeVerbose) {
     const Twine TokenNames[] = {

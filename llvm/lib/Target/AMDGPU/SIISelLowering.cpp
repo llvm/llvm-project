@@ -4201,21 +4201,6 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
 
-  if (const ConstantSDNode *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
-    SDValue Result = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Vec);
-
-    if (CIdx->getZExtValue() == 1) {
-      Result = DAG.getNode(ISD::SRL, SL, MVT::i32, Result,
-                           DAG.getConstant(16, SL, MVT::i32));
-    } else {
-      assert(CIdx->getZExtValue() == 0);
-    }
-
-    if (ResultVT.bitsLT(MVT::i32))
-      Result = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, Result);
-    return DAG.getNode(ISD::BITCAST, SL, ResultVT, Result);
-  }
-
   SDValue Four = DAG.getConstant(4, SL, MVT::i32);
 
   // Convert vector index to bit-index (* 16)

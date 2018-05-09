@@ -8,11 +8,11 @@
 ; UNPACKED: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HI]]
 
 ; PACKED: image_gather4 v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf d16
-; PACKED: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 
+; GFX81: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 ; GFX81: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]]
 
-; GFX9: global_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]], off
+; GFX9: global_store_short_d16_hi v[{{[0-9]+:[0-9]+}}], v[[HI]], off
 define amdgpu_kernel void @image_gather4_v4f16(<4 x float> %coords, <8 x i32> inreg %rsrc, <4 x i32> inreg %sample, half addrspace(1)* %out) {
 main_body:
   %tex = call <4 x half> @llvm.amdgcn.image.gather4.v4f16.v4f32.v8i32(<4 x float> %coords, <8 x i32> %rsrc, <4 x i32> %sample, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
@@ -26,11 +26,11 @@ main_body:
 ; UNPACKED: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HI]]
 
 ; PACKED: image_gather4_cl v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf d16
-; PACKED: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 
+; GFX81: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 ; GFX81: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]]
 
-; GFX9: global_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]], off
+; GFX9: global_store_short_d16_hi v[{{[0-9]+:[0-9]+}}], v[[HI]], off
 define amdgpu_kernel void @image_gather4_cl_v4f16(<4 x float> %coords, <8 x i32> inreg %rsrc, <4 x i32> inreg %sample, half addrspace(1)* %out) {
 main_body:
   %tex = call <4 x half> @llvm.amdgcn.image.gather4.cl.v4f16.v4f32.v8i32(<4 x float> %coords, <8 x i32> %rsrc, <4 x i32> %sample, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
@@ -44,11 +44,11 @@ main_body:
 ; UNPACKED: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HI]]
 
 ; PACKED: image_gather4_c v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf d16
-; PACKED: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 
+; GFX81: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 ; GFX81: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]]
 
-; GFX9: global_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]], off
+; GFX9: global_store_short_d16_hi v[{{[0-9]+:[0-9]+}}], v[[HI]], off
 define amdgpu_kernel void @image_gather4_c_v4f16(<4 x float> %coords, <8 x i32> inreg %rsrc, <4 x i32> inreg %sample, half addrspace(1)* %out) {
 main_body:
   %tex = call <4 x half> @llvm.amdgcn.image.gather4.c.v4f16.v4f32.v8i32(<4 x float> %coords, <8 x i32> %rsrc, <4 x i32> %sample, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
@@ -62,11 +62,11 @@ main_body:
 ; UNPACKED: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HI]]
 
 ; PACKED: image_gather4_o v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf d16
-; PACKED: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 
+; GFX81: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 ; GFX81: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]]
 
-; GFX9: global_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]], off
+; GFX9: global_store_short_d16_hi v[{{[0-9]+:[0-9]+}}], v[[HI]], off
 define amdgpu_kernel void @image_gather4_o_v4f16(<4 x float> %coords, <8 x i32> inreg %rsrc, <4 x i32> inreg %sample, half addrspace(1)* %out) {
 main_body:
   %tex = call <4 x half> @llvm.amdgcn.image.gather4.o.v4f16.v4f32.v8i32(<4 x float> %coords, <8 x i32> %rsrc, <4 x i32> %sample, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
@@ -80,11 +80,11 @@ main_body:
 ; UNPACKED: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HI]]
 
 ; PACKED: image_gather4_c_o v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf d16
-; PACKED: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 
+; GFX81: v_lshrrev_b32_e32 v[[HALF:[0-9]+]], 16, v[[HI]]
 ; GFX81: flat_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]]
 
-; GFX9: global_store_short v[{{[0-9]+:[0-9]+}}], v[[HALF]], off
+; GFX9: global_store_short_d16_hi v[{{[0-9]+:[0-9]+}}], v[[HI]], off
 define amdgpu_kernel void @image_gather4_c_o_v4f16(<4 x float> %coords, <8 x i32> inreg %rsrc, <4 x i32> inreg %sample, half addrspace(1)* %out) {
 main_body:
   %tex = call <4 x half> @llvm.amdgcn.image.gather4.c.o.v4f16.v4f32.v8i32(<4 x float> %coords, <8 x i32> %rsrc, <4 x i32> %sample, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)

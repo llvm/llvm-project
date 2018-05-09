@@ -24,6 +24,7 @@
 #include "polly/ScopDetection.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
+#include "polly/Support/ISLTools.h"
 #include "polly/Support/SCEVAffinator.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
@@ -2307,12 +2308,12 @@ buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
   isl::pw_aff LastDimAff;
   isl::aff OneAff;
   unsigned Pos;
-  isl::ctx Ctx = Set.get_ctx();
 
   Set = Set.remove_divs();
+  polly::simplify(Set);
 
-  if (isl_set_n_basic_set(Set.get()) >= MaxDisjunctsInDomain)
-    return isl::stat::error;
+  if (isl_set_n_basic_set(Set.get()) > RunTimeChecksMaxAccessDisjuncts)
+    Set = Set.simple_hull();
 
   // Restrict the number of parameters involved in the access as the lexmin/
   // lexmax computation will take too long if this number is high.
@@ -2338,14 +2339,8 @@ buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
       return isl::stat::error;
   }
 
-  if (isl_set_n_basic_set(Set.get()) > RunTimeChecksMaxAccessDisjuncts)
-    return isl::stat::error;
-
   MinPMA = Set.lexmin_pw_multi_aff();
   MaxPMA = Set.lexmax_pw_multi_aff();
-
-  if (isl_ctx_last_error(Ctx.get()) == isl_error_quota)
-    return isl::stat::error;
 
   MinPMA = MinPMA.coalesce();
   MaxPMA = MaxPMA.coalesce();
@@ -2354,13 +2349,18 @@ buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
   // enclose the accessed memory region by MinPMA and MaxPMA. The pointer
   // we test during code generation might now point after the end of the
   // allocated array but we will never dereference it anyway.
-  assert(MaxPMA.dim(isl::dim::out) && "Assumed at least one output dimension");
+  assert((!MaxPMA || MaxPMA.dim(isl::dim::out)) &&
+         "Assumed at least one output dimension");
+
   Pos = MaxPMA.dim(isl::dim::out) - 1;
   LastDimAff = MaxPMA.get_pw_aff(Pos);
   OneAff = isl::aff(isl::local_space(LastDimAff.get_domain_space()));
   OneAff = OneAff.add_constant_si(1);
   LastDimAff = LastDimAff.add(OneAff);
   MaxPMA = MaxPMA.set_pw_aff(Pos, LastDimAff);
+
+  if (!MinPMA || !MaxPMA)
+    return isl::stat::error;
 
   MinMaxAccesses.push_back(std::make_pair(MinPMA, MaxPMA));
 
@@ -2386,8 +2386,6 @@ static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
 
   Accesses = Accesses.intersect_domain(Domains);
   isl::union_set Locations = Accesses.range();
-  Locations = Locations.coalesce();
-  Locations = Locations.detect_equalities();
 
   auto Lambda = [&MinMaxAccesses, &S](isl::set Set) -> isl::stat {
     return buildMinMaxAccess(Set, MinMaxAccesses, S);

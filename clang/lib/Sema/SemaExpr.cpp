@@ -1554,17 +1554,14 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   if (getLangOpts().CPlusPlus || getLangOpts().ConstStrings)
     CharTyConst.addConst();
 
+  CharTyConst = Context.adjustStringLiteralBaseType(CharTyConst);
+
   // Get an array type for the string, according to C99 6.4.5.  This includes
   // the nul terminator character as well as the string length for pascal
   // strings.
-  QualType StrTy = Context.getConstantArrayType(CharTyConst,
-                                 llvm::APInt(32, Literal.GetNumStringChars()+1),
-                                 ArrayType::Normal, 0);
-
-  // OpenCL v1.1 s6.5.3: a string literal is in the constant address space.
-  if (getLangOpts().OpenCL) {
-    StrTy = Context.getAddrSpaceQualType(StrTy, LangAS::opencl_constant);
-  }
+  QualType StrTy = Context.getConstantArrayType(
+      CharTyConst, llvm::APInt(32, Literal.GetNumStringChars() + 1),
+      ArrayType::Normal, 0);
 
   // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
   StringLiteral *Lit = StringLiteral::Create(Context, Literal.GetString(),
@@ -3046,7 +3043,8 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
 
     llvm::APInt LengthI(32, Length + 1);
     if (IT == PredefinedExpr::LFunction) {
-      ResTy = Context.WideCharTy.withConst();
+      ResTy =
+          Context.adjustStringLiteralBaseType(Context.WideCharTy.withConst());
       SmallString<32> RawChars;
       ConvertUTF8ToWideString(Context.getTypeSizeInChars(ResTy).getQuantity(),
                               Str, RawChars);
@@ -3055,7 +3053,7 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
       SL = StringLiteral::Create(Context, RawChars, StringLiteral::Wide,
                                  /*Pascal*/ false, ResTy, Loc);
     } else {
-      ResTy = Context.CharTy.withConst();
+      ResTy = Context.adjustStringLiteralBaseType(Context.CharTy.withConst());
       ResTy = Context.getConstantArrayType(ResTy, LengthI, ArrayType::Normal,
                                            /*IndexTypeQuals*/ 0);
       SL = StringLiteral::Create(Context, Str, StringLiteral::Ascii,
@@ -3294,8 +3292,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       //   operator "" X ("n")
       unsigned Length = Literal.getUDSuffixOffset();
       QualType StrTy = Context.getConstantArrayType(
-          Context.CharTy.withConst(), llvm::APInt(32, Length + 1),
-          ArrayType::Normal, 0);
+          Context.adjustStringLiteralBaseType(Context.CharTy.withConst()),
+          llvm::APInt(32, Length + 1), ArrayType::Normal, 0);
       Expr *Lit = StringLiteral::Create(
           Context, StringRef(TokSpelling.data(), Length), StringLiteral::Ascii,
           /*Pascal*/false, StrTy, &TokLoc, 1);
@@ -13674,7 +13672,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     if (lhq.getAddressSpace() != rhq.getAddressSpace()) {
       DiagKind = diag::err_typecheck_incompatible_address_space;
       break;
-
 
     } else if (lhq.getObjCLifetime() != rhq.getObjCLifetime()) {
       DiagKind = diag::err_typecheck_incompatible_ownership;

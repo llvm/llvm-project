@@ -121,9 +121,8 @@ public:
 
   const ConstString &GetFlavor() const override { return GetFlavorString(); }
 
-  bool WaitForEventReceived(
-      const std::chrono::microseconds &abstime = std::chrono::microseconds(0)) {
-    return m_predicate.WaitForValueEqualTo(true, abstime);
+  bool WaitForEventReceived(const Timeout<std::micro> &timeout = llvm::None) {
+    return m_predicate.WaitForValueEqualTo(true, timeout);
   }
 
 private:

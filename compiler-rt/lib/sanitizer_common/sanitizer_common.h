@@ -243,8 +243,6 @@ void SleepForMillis(int millis);
 u64 NanoTime();
 u64 MonotonicNanoTime();
 int Atexit(void (*function)(void));
-void SortArray(uptr *array, uptr size);
-void SortArray(u32 *array, uptr size);
 bool TemplateMatch(const char *templ, const char *str);
 
 // Exit
@@ -572,9 +570,14 @@ class InternalScopedString : public InternalMmapVector<char> {
   uptr length_;
 };
 
+template <class T>
+struct CompareLess {
+  bool operator()(const T &a, const T &b) const { return a < b; }
+};
+
 // HeapSort for arrays and InternalMmapVector.
-template<class Container, class Compare>
-void InternalSort(Container *v, uptr size, Compare comp) {
+template <class T, class Compare = CompareLess<T>>
+void Sort(T *v, uptr size, Compare comp = {}) {
   if (size < 2)
     return;
   // Stage 1: insert elements to the heap.
@@ -582,8 +585,8 @@ void InternalSort(Container *v, uptr size, Compare comp) {
     uptr j, p;
     for (j = i; j > 0; j = p) {
       p = (j - 1) / 2;
-      if (comp((*v)[p], (*v)[j]))
-        Swap((*v)[j], (*v)[p]);
+      if (comp(v[p], v[j]))
+        Swap(v[j], v[p]);
       else
         break;
     }
@@ -591,18 +594,18 @@ void InternalSort(Container *v, uptr size, Compare comp) {
   // Stage 2: swap largest element with the last one,
   // and sink the new top.
   for (uptr i = size - 1; i > 0; i--) {
-    Swap((*v)[0], (*v)[i]);
+    Swap(v[0], v[i]);
     uptr j, max_ind;
     for (j = 0; j < i; j = max_ind) {
       uptr left = 2 * j + 1;
       uptr right = 2 * j + 2;
       max_ind = j;
-      if (left < i && comp((*v)[max_ind], (*v)[left]))
+      if (left < i && comp(v[max_ind], v[left]))
         max_ind = left;
-      if (right < i && comp((*v)[max_ind], (*v)[right]))
+      if (right < i && comp(v[max_ind], v[right]))
         max_ind = right;
       if (max_ind != j)
-        Swap((*v)[j], (*v)[max_ind]);
+        Swap(v[j], v[max_ind]);
       else
         break;
     }

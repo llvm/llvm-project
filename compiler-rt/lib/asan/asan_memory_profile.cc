@@ -49,10 +49,10 @@ class HeapProfile {
   }
 
   void Print(uptr top_percent, uptr max_number_of_contexts) {
-    InternalSort(&allocations_, allocations_.size(),
-                 [](const AllocationSite &a, const AllocationSite &b) {
-                   return a.total_size > b.total_size;
-                 });
+    Sort(allocations_.data(), allocations_.size(),
+         [](const AllocationSite &a, const AllocationSite &b) {
+           return a.total_size > b.total_size;
+         });
     CHECK(total_allocated_user_size_);
     uptr total_shown = 0;
     Printf("Live Heap Allocations: %zd bytes in %zd chunks; quarantined: "

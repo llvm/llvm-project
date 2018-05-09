@@ -705,16 +705,13 @@ def SBWriteResGroup28 : SchedWriteRes<[SBPort1,SBPort5]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup28], (instregex "MMX_CVTPD2PIirr",
-                                            "MMX_CVTPI2PDirr",
-                                            "MMX_CVTTPD2PIirr",
+def: InstRW<[SBWriteResGroup28], (instregex "MMX_CVTPI2PDirr",
+                                            "MMX_CVT(T?)PD2PIirr",
                                             "(V?)CVTDQ2PD(Y?)rr",
-                                            "(V?)CVTPD2DQ(Y?)rr",
                                             "(V?)CVTPD2PS(Y?)rr",
                                             "(V?)CVTSD2SSrr",
-                                            "(V?)CVTSI642SDrr",
-                                            "(V?)CVTSI2SDrr",
-                                            "(V?)CVTTPD2DQ(Y?)rr")>;
+                                            "(V?)CVTSI(64)?2SDrr",
+                                            "(V?)CVT(T?)PD2DQ(Y?)rr")>;
 
 def SBWriteResGroup29 : SchedWriteRes<[SBPort1,SBPort015]> {
   let Latency = 4;
@@ -761,14 +758,8 @@ def SBWriteResGroup32 : SchedWriteRes<[SBPort0,SBPort1]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup32], (instregex "(V?)CVTSD2SI64rr",
-                                            "(V?)CVTSD2SIrr",
-                                            "(V?)CVTSS2SI64rr",
-                                            "(V?)CVTSS2SIrr",
-                                            "(V?)CVTTSD2SI64rr",
-                                            "(V?)CVTTSD2SIrr",
-                                            "(V?)CVTTSS2SI64rr",
-                                            "(V?)CVTTSS2SIrr")>;
+def: InstRW<[SBWriteResGroup32], (instregex "(V?)CVT(T?)SD2SI(64)?rr",
+                                            "(V?)CVT(T?)SS2SI(64)?rr")>;
 
 def SBWriteResGroup33 : SchedWriteRes<[SBPort4,SBPort23]> {
   let Latency = 5;
@@ -784,8 +775,7 @@ def SBWriteResGroup35 : SchedWriteRes<[SBPort1,SBPort5]> {
   let ResourceCycles = [1,2];
 }
 def: InstRW<[SBWriteResGroup35], (instregex "CLI")>;
-def: InstRW<[SBWriteResGroup35], (instregex "(V?)CVTSI642SSrr",
-                                            "(V?)CVTSI2SSrr")>;
+def: InstRW<[SBWriteResGroup35], (instregex "(V?)CVTSI(64)?2SSrr")>;
 
 def SBWriteResGroup35_2 : SchedWriteRes<[SBPort1,SBPort4,SBPort23]> {
   let Latency = 5;
@@ -1068,10 +1058,7 @@ def SBWriteResGroup77 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SBWriteResGroup77], (instregex "(V?)COMISDrm",
-                                            "(V?)COMISSrm",
-                                            "(V?)UCOMISDrm",
-                                            "(V?)UCOMISSrm")>;
+def: InstRW<[SBWriteResGroup77], (instregex "(V?)(U?)COMI(SD|SS)rm")>;
 
 def SBWriteResGroup80 : SchedWriteRes<[SBPort23,SBPort15]> {
   let Latency = 8;
@@ -1159,24 +1146,16 @@ def SBWriteResGroup90 : SchedWriteRes<[SBPort1,SBPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup90], (instregex "MMX_CVTPS2PIirm",
-                                            "MMX_CVTTPS2PIirm",
-                                            "(V?)CVTPS2DQrm",
-                                            "(V?)CVTTPS2DQrm")>;
+def: InstRW<[SBWriteResGroup90], (instregex "MMX_CVT(T?)PS2PIirm",
+                                            "(V?)CVT(T?)PS2DQrm")>;
 
 def SBWriteResGroup93 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
   let Latency = 9;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SBWriteResGroup93], (instregex "CVTSD2SI64rm",
-                                            "CVTSD2SIrm",
-                                            "CVTSS2SI64rm",
-                                            "CVTSS2SIrm",
-                                            "CVTTSD2SI64rm",
-                                            "CVTTSD2SIrm",
-                                            "CVTTSS2SI64rm",
-                                            "CVTTSS2SIrm")>;
+def: InstRW<[SBWriteResGroup93], (instregex "CVT(T?)SD2SI(64)?rm",
+                                            "CVT(T?)SS2SI(64)?rm")>;
 
 def SBWriteResGroup93_1 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
   let Latency = 9;
@@ -1266,38 +1245,28 @@ def SBWriteResGroup101 : SchedWriteRes<[SBPort1,SBPort23]> {
 def: InstRW<[SBWriteResGroup101], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                              "ILD_F(16|32|64)m",
                                              "VCVTDQ2PSYrm",
-                                             "VCVTPS2DQYrm",
-                                             "VCVTTPS2DQYrm")>;
+                                             "VCVT(T?)PS2DQYrm")>;
 
 def SBWriteResGroup102 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
   let Latency = 10;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SBWriteResGroup102], (instregex "VCVTSD2SI64rm",
-                                             "VCVTSD2SIrm",
-                                             "VCVTSS2SI64rm",
-                                             "VCVTSS2SIrm",
-                                             "VCVTTSD2SI64rm",
-                                             "VCVTTSD2SIrm",
-                                             "VCVTTSS2SI64rm",
-                                             "VCVTTSS2SIrm")>;
+def: InstRW<[SBWriteResGroup102], (instregex "VCVT(T?)SD2SI(64)?rm",
+                                             "VCVT(T?)SS2SI(64)?rm")>;
 
 def SBWriteResGroup103 : SchedWriteRes<[SBPort1,SBPort5,SBPort23]> {
   let Latency = 10;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SBWriteResGroup103], (instregex "MMX_CVTPD2PIirm",
-                                             "MMX_CVTPI2PDirm",
-                                             "MMX_CVTTPD2PIirm",
+def: InstRW<[SBWriteResGroup103], (instregex "MMX_CVTPI2PDirm",
+                                             "MMX_CVT(T?)PD2PIirm",
                                              "(V?)CVTDQ2PD(Y?)rm",
-                                             "(V?)CVTPD2DQrm",
                                              "(V?)CVTPD2PSrm",
                                              "(V?)CVTSD2SSrm",
-                                             "(V?)CVTSI642SSrm",
-                                             "(V?)CVTSI2SSrm",
-                                             "(V?)CVTTPD2DQrm")>;
+                                             "(V?)CVTSI(64)?2SSrm",
+                                             "(V?)CVT(T?)PD2DQrm")>;
 
 def SBWriteResGroup103_2 : SchedWriteRes<[SBPort4,SBPort23,SBPort05,SBPort015]> {
   let Latency = 10;
@@ -1319,19 +1288,16 @@ def SBWriteResGroup106 : SchedWriteRes<[SBPort1,SBPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SBWriteResGroup106], (instregex "FICOM16m",
-                                             "FICOM32m",
-                                             "FICOMP16m",
-                                             "FICOMP32m")>;
+def: InstRW<[SBWriteResGroup106], (instregex "FICOM(P?)16m",
+                                             "FICOM(P?)32m")>;
 
 def SBWriteResGroup107 : SchedWriteRes<[SBPort1,SBPort5,SBPort23]> {
   let Latency = 11;
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SBWriteResGroup107], (instregex "VCVTPD2DQYrm",
-                                             "VCVTPD2PSYrm",
-                                             "VCVTTPD2DQYrm")>;
+def: InstRW<[SBWriteResGroup107], (instregex "VCVTPD2PSYrm",
+                                             "VCVT(T?)PD2DQYrm")>;
 
 def SBWriteResGroup111 : SchedWriteRes<[SBPort0,SBPort23]> {
   let Latency = 12;

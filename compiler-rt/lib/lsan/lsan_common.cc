@@ -685,7 +685,7 @@ void LeakReport::ReportTopLeaks(uptr num_leaks_to_report) {
   uptr unsuppressed_count = UnsuppressedLeakCount();
   if (num_leaks_to_report > 0 && num_leaks_to_report < unsuppressed_count)
     Printf("The %zu top leak(s):\n", num_leaks_to_report);
-  InternalSort(&leaks_, leaks_.size(), LeakComparator);
+  Sort(leaks_.data(), leaks_.size(), &LeakComparator);
   uptr leaks_reported = 0;
   for (uptr i = 0; i < leaks_.size(); i++) {
     if (leaks_[i].is_suppressed) continue;
