@@ -10,7 +10,8 @@
 #
 # ------------------------------------------------------------------------------
 """
-Test Swift support of TSan.
+Test that the TSan support correctly reports Swift access races (races on
+mutating methods of a struct).
 """
 import lldb
 import lldbsuite.test.decorators as decorators
