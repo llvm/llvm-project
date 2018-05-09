@@ -746,14 +746,10 @@ ConnectionStatus ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
   return eConnectionStatusSuccess;
 }
 
-uint16_t ConnectionFileDescriptor::GetListeningPort(uint32_t timeout_sec) {
-  uint16_t bound_port = 0;
-  if (timeout_sec == UINT32_MAX)
-    m_port_predicate.WaitForValueNotEqualTo(0, bound_port);
-  else
-    m_port_predicate.WaitForValueNotEqualTo(0, bound_port,
-                                            std::chrono::seconds(timeout_sec));
-  return bound_port;
+uint16_t
+ConnectionFileDescriptor::GetListeningPort(const Timeout<std::micro> &timeout) {
+  auto Result = m_port_predicate.WaitForValueNotEqualTo(0, timeout);
+  return Result ? *Result : 0;
 }
 
 bool ConnectionFileDescriptor::GetChildProcessesInherit() const {

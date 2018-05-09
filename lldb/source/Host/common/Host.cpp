@@ -536,8 +536,11 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     error.SetErrorString("failed to get process ID");
 
   if (error.Success()) {
-    if (!shell_info_sp->process_reaped.WaitForValueEqualTo(
-            true, std::chrono::seconds(timeout_sec))) {
+    // TODO: Remove this and make the function take Timeout<> argument.
+    Timeout<std::micro> timeout(llvm::None);
+    if (timeout_sec != 0)
+      timeout = std::chrono::seconds(timeout_sec);
+    if (!shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout)) {
       error.SetErrorString("timed out waiting for shell command to complete");
 
       // Kill the process since it didn't complete within the timeout specified
