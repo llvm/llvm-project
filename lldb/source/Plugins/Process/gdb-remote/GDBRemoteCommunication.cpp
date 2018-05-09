@@ -1133,7 +1133,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
         ConnectionFileDescriptor *connection =
             (ConnectionFileDescriptor *)GetConnection();
         // Wait for 10 seconds to resolve the bound port
-        uint16_t port_ = connection->GetListeningPort(10);
+        uint16_t port_ = connection->GetListeningPort(std::chrono::seconds(10));
         if (port_ > 0) {
           char port_cstr[32];
           snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", port_);

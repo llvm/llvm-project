@@ -636,6 +636,11 @@ public:
     Contents.ImmVal = immVal;
   }
 
+  void setCImm(const ConstantInt *CI) {
+    assert(isCImm() && "Wrong MachineOperand mutator");
+    Contents.CI = CI;
+  }
+
   void setFPImm(const ConstantFP *CFP) {
     assert(isFPImm() && "Wrong MachineOperand mutator");
     Contents.CFP = CFP;

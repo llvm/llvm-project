@@ -1208,11 +1208,11 @@ def run_suite():
             configuration.lldb_platform_working_dir, 448)  # 448 = 0o700
         if error.Fail():
             raise Exception("making remote directory '%s': %s" % (
-                remote_test_dir, error))
+                configuration.lldb_platform_working_dir, error))
 
         if not lldb.remote_platform.SetWorkingDirectory(
                 configuration.lldb_platform_working_dir):
-            raise Exception("failed to set working directory '%s'" % remote_test_dir)
+            raise Exception("failed to set working directory '%s'" % configuration.lldb_platform_working_dir)
         lldb.DBG.SetSelectedPlatform(lldb.remote_platform)
     else:
         lldb.remote_platform = None

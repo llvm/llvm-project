@@ -750,7 +750,8 @@ public:
                           const clang::FileEntry *File,
                           llvm::StringRef SearchPath,
                           llvm::StringRef RelativePath,
-                          const clang::Module *Imported) override;
+                          const clang::Module *Imported,
+                          clang::SrcMgr::CharacteristicKind FileType) override;
   void FileChanged(clang::SourceLocation Loc,
                    clang::PPCallbacks::FileChangeReason Reason,
                    clang::SrcMgr::CharacteristicKind FileType,
@@ -1289,7 +1290,7 @@ void PreprocessorCallbacks::InclusionDirective(
     llvm::StringRef FileName, bool IsAngled,
     clang::CharSourceRange FilenameRange, const clang::FileEntry *File,
     llvm::StringRef SearchPath, llvm::StringRef RelativePath,
-    const clang::Module *Imported) {
+    const clang::Module *Imported, clang::SrcMgr::CharacteristicKind FileType) {
   int DirectiveLine, DirectiveColumn;
   std::string HeaderPath = getSourceLocationFile(PP, HashLoc);
   getSourceLocationLineAndColumn(PP, HashLoc, DirectiveLine, DirectiveColumn);

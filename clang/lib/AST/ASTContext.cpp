@@ -3621,6 +3621,12 @@ QualType ASTContext::getPipeType(QualType T, bool ReadOnly) const {
   return QualType(New, 0);
 }
 
+QualType ASTContext::adjustStringLiteralBaseType(QualType Ty) const {
+  // OpenCL v1.1 s6.5.3: a string literal is in the constant address space.
+  return LangOpts.OpenCL ? getAddrSpaceQualType(Ty, LangAS::opencl_constant)
+                         : Ty;
+}
+
 QualType ASTContext::getReadPipeType(QualType T) const {
   return getPipeType(T, true);
 }

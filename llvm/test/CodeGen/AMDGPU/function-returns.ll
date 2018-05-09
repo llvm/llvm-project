@@ -282,7 +282,7 @@ define <2 x i16> @v2i16_func_void() #0 {
 }
 
 ; GCN-LABEL: {{^}}v3i16_func_void:
-; GFX9: buffer_load_dwordx2 v[0:1], off
+; GFX9: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off
 ; GFX9: s_waitcnt vmcnt(0)
 ; GFX9: v_lshrrev_b32
 ; GFX9: s_setpc_b64
@@ -304,9 +304,8 @@ define <4 x i16> @v4i16_func_void() #0 {
 ; GCN-LABEL: {{^}}v5i16_func_void:
 ; GFX9: buffer_load_dwordx2 v[0:1]
 ; GFX9: buffer_load_ushort v4
+; GFX9: v_lshrrev_b32_e32 v5, 16, v0
 ; GFX9: v_lshrrev_b32_e32 v3, 16, v1
-; GFX9: v_mov_b32_e32 v2, v1
-; GFX9: v_lshrrev_b32_e32 v1, 16, v0
 ; GCN: s_setpc_b64
 define <5 x i16> @v5i16_func_void() #0 {
   %ptr = load volatile <5 x i16> addrspace(1)*, <5 x i16> addrspace(1)* addrspace(4)* undef

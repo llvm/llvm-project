@@ -1008,8 +1008,11 @@ Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
 
   // ID; it's 16-bit in DIALOG and 32-bit in DIALOGEX.
   if (!IsExtended) {
-    RETURN_IF_ERROR(checkNumberFits<uint16_t>(
-        Ctl.ID, "Control ID in simple DIALOG resource"));
+    // It's common to use -1, i.e. UINT32_MAX, for controls one doesn't
+    // want to refer to later.
+    if (Ctl.ID != static_cast<uint32_t>(-1))
+      RETURN_IF_ERROR(checkNumberFits<uint16_t>(
+          Ctl.ID, "Control ID in simple DIALOG resource"));
     writeInt<uint16_t>(Ctl.ID);
   } else {
     writeInt<uint32_t>(Ctl.ID);

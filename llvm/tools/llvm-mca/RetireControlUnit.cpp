@@ -1,5 +1,5 @@
-#include "Dispatch.h"
 #include "RetireControlUnit.h"
+#include "Dispatch.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Debug.h"
 

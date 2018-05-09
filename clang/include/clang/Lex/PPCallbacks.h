@@ -117,6 +117,10 @@ public:
   /// \param Imported The module, whenever an inclusion directive was
   /// automatically turned into a module import or null otherwise.
   ///
+  /// \param FileType The characteristic kind, indicates whether a file or
+  /// directory holds normal user code, system code, or system code which is
+  /// implicitly 'extern "C"' in C++ mode.
+  ///
   virtual void InclusionDirective(SourceLocation HashLoc,
                                   const Token &IncludeTok,
                                   StringRef FileName,
@@ -125,7 +129,8 @@ public:
                                   const FileEntry *File,
                                   StringRef SearchPath,
                                   StringRef RelativePath,
-                                  const Module *Imported) {
+                                  const Module *Imported,
+                                  SrcMgr::CharacteristicKind FileType) {
   }
 
   /// Callback invoked whenever there was an explicit module-import
@@ -367,13 +372,14 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported) override {
+                          const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override {
     First->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                               FilenameRange, File, SearchPath, RelativePath,
-                              Imported);
+                              Imported, FileType);
     Second->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                                FilenameRange, File, SearchPath, RelativePath,
-                               Imported);
+                               Imported, FileType);
   }
 
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,

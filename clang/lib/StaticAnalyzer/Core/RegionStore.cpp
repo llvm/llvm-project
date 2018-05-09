@@ -1711,13 +1711,15 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const auto *VR = dyn_cast<VarRegion>(superR)) {
     const VarDecl *VD = VR->getDecl();
     QualType RecordVarTy = VD->getType();
+    unsigned Index = FD->getFieldIndex();
     // Either the record variable or the field has to be const qualified.
     if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
       if (const Expr *Init = VD->getInit())
         if (const auto *InitList = dyn_cast<InitListExpr>(Init))
-          if (const Expr *FieldInit = InitList->getInit(FD->getFieldIndex()))
-            if (Optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
-              return *V;
+          if (Index < InitList->getNumInits())
+            if (const Expr *FieldInit = InitList->getInit(Index))
+              if (Optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
+                return *V;
   }
 
   return getBindingForFieldOrElementCommon(B, R, Ty);

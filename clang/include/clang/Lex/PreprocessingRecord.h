@@ -532,8 +532,8 @@ class Token;
                             StringRef FileName, bool IsAngled,
                             CharSourceRange FilenameRange,
                             const FileEntry *File, StringRef SearchPath,
-                            StringRef RelativePath,
-                            const Module *Imported) override;
+                            StringRef RelativePath, const Module *Imported,
+                            SrcMgr::CharacteristicKind FileType) override;
     void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
                const MacroDefinition &MD) override;
     void Ifndef(SourceLocation Loc, const Token &MacroNameTok,

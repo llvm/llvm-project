@@ -831,13 +831,13 @@ class ABS_FM_MM<bits<2> fmt, bits<7> funct> : MMArch {
 class CMov_F_F_FM_MM<bits<9> func, bits<2> fmt> : MMArch {
   bits<5> fd;
   bits<5> fs;
-
+  bits<3> fcc;
   bits<32> Inst;
 
   let Inst{31-26} = 0x15;
   let Inst{25-21} = fd;
   let Inst{20-16} = fs;
-  let Inst{15-13} = 0x0; //cc
+  let Inst{15-13} = fcc; //cc
   let Inst{12-11} = 0x0;
   let Inst{10-9}  = fmt;
   let Inst{8-0}   = func;

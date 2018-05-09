@@ -130,7 +130,7 @@ define i32 @test_str_wrong_size(i8* %buf) #0 {
 define i32 @test_str_ok_size(i8* %buf) #0 {
 ; CHECK-LABEL: @test_str_ok_size(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BUF:%.*]] to i32*
-; CHECK-NEXT:    store i32 29477, i32* [[TMP1]], align 1
+; CHECK-NEXT:    store i32 7500915, i32* [[TMP1]], align 1
 ; CHECK-NEXT:    ret i32 3
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2

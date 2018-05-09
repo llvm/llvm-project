@@ -57,13 +57,21 @@
 # CHECK-EL: mfhc1   $6, $f8             # encoding: [0xc8,0x54,0x3b,0x30]
 # CHECK-EL: mthc1   $6, $f8             # encoding: [0xc8,0x54,0x3b,0x38]
 # CHECK-EL: movz.s  $f4, $f6, $7        # encoding: [0xe6,0x54,0x78,0x20]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVZ_I_S_MM
 # CHECK-EL: movz.d  $f4, $f6, $7        # encoding: [0xe6,0x54,0x78,0x21]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVZ_I_D32_MM
 # CHECK-EL: movn.s  $f4, $f6, $7        # encoding: [0xe6,0x54,0x38,0x20]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVN_I_S_MM
 # CHECK-EL: movn.d  $f4, $f6, $7        # encoding: [0xe6,0x54,0x38,0x21]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVN_I_D32_MM
 # CHECK-EL: movt.s  $f4, $f6, $fcc0     # encoding: [0x86,0x54,0x60,0x00]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVT_S_MM
 # CHECK-EL: movt.d  $f4, $f6, $fcc0     # encoding: [0x86,0x54,0x60,0x02]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVT_D32_MM
 # CHECK-EL: movf.s  $f4, $f6, $fcc0     # encoding: [0x86,0x54,0x20,0x00]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVF_S_MM
 # CHECK-EL: movf.d  $f4, $f6, $fcc0     # encoding: [0x86,0x54,0x20,0x02]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} MOVF_D32_MM
 # CHECK-EL: madd.s  $f2, $f4, $f6, $f8  # encoding: [0x06,0x55,0x01,0x11]
 # CHECK-EL: madd.d  $f2, $f4, $f6, $f8  # encoding: [0x06,0x55,0x09,0x11]
 # CHECK-EL: msub.s  $f2, $f4, $f6, $f8  # encoding: [0x06,0x55,0x21,0x11]
@@ -123,13 +131,21 @@
 # CHECK-EB: mfhc1   $6, $f8             # encoding: [0x54,0xc8,0x30,0x3b]
 # CHECK-EB: mthc1   $6, $f8             # encoding: [0x54,0xc8,0x38,0x3b]
 # CHECK-EB: movz.s  $f4, $f6, $7        # encoding: [0x54,0xe6,0x20,0x78]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVZ_I_S_MM
 # CHECK-EB: movz.d  $f4, $f6, $7        # encoding: [0x54,0xe6,0x21,0x78]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVZ_I_D32_MM
 # CHECK-EB: movn.s  $f4, $f6, $7        # encoding: [0x54,0xe6,0x20,0x38]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVN_I_S_MM
 # CHECK-EB: movn.d  $f4, $f6, $7        # encoding: [0x54,0xe6,0x21,0x38]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVN_I_D32_MM
 # CHECK-EB: movt.s  $f4, $f6, $fcc0     # encoding: [0x54,0x86,0x00,0x60]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVT_S_MM
 # CHECK-EB: movt.d  $f4, $f6, $fcc0     # encoding: [0x54,0x86,0x02,0x60]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVT_D32_MM
 # CHECK-EB: movf.s  $f4, $f6, $fcc0     # encoding: [0x54,0x86,0x00,0x20]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVF_S_MM
 # CHECK-EB: movf.d  $f4, $f6, $fcc0     # encoding: [0x54,0x86,0x02,0x20]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVF_D32_MM
 # CHECK-EB: madd.s  $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x01]
 # CHECK-EB: madd.d  $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x09]
 # CHECK-EB: msub.s  $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x21]

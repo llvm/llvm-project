@@ -163,32 +163,34 @@ def CVT_S_W_MM : MMRel, ABSS_FT<"cvt.s.w", FGR32Opnd, FGR32Opnd, II_CVT>,
 defm FNEG : ABSS_MMM<"neg.d", II_NEG, fneg>, ABS_FM_MM<1, 0x2d>;
 defm FMOV : ABSS_MMM<"mov.d", II_MOV_D>, ABS_FM_MM<1, 0x1>;
 
-let isCodeGenOnly = 1 in {
-def MOVZ_I_S_MM : MMRel, CMov_I_F_FT<"movz.s", GPR32Opnd, FGR32Opnd,
-                                     II_MOVZ_S>, CMov_I_F_FM_MM<0x78, 0>,
-                  ISA_MICROMIPS32_NOT_MIPS32R6;
-def MOVN_I_S_MM : MMRel, CMov_I_F_FT<"movn.s", GPR32Opnd, FGR32Opnd,
+let DecoderNamespace = "MicroMips" in {
+  def MOVZ_I_S_MM : MMRel, CMov_I_F_FT<"movz.s", GPR32Opnd, FGR32Opnd,
+                                       II_MOVZ_S>, CMov_I_F_FM_MM<0x78, 0>,
+                    ISA_MICROMIPS32_NOT_MIPS32R6;
+  def MOVN_I_S_MM : MMRel, CMov_I_F_FT<"movn.s", GPR32Opnd, FGR32Opnd,
                                      II_MOVN_S>, CMov_I_F_FM_MM<0x38, 0>,
-                  ISA_MICROMIPS32_NOT_MIPS32R6;
-def MOVZ_I_D32_MM : MMRel, CMov_I_F_FT<"movz.d", GPR32Opnd, AFGR64Opnd,
-                                       II_MOVZ_D>, CMov_I_F_FM_MM<0x78, 1>,
-                    ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
-def MOVN_I_D32_MM : MMRel, CMov_I_F_FT<"movn.d", GPR32Opnd, AFGR64Opnd,
-                                       II_MOVN_D>, CMov_I_F_FM_MM<0x38, 1>,
-                    ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+                    ISA_MICROMIPS32_NOT_MIPS32R6;
+  def MOVZ_I_D32_MM : MMRel, CMov_I_F_FT<"movz.d", GPR32Opnd, AFGR64Opnd,
+                                         II_MOVZ_D>, CMov_I_F_FM_MM<0x78, 1>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+  def MOVN_I_D32_MM : MMRel, CMov_I_F_FT<"movn.d", GPR32Opnd, AFGR64Opnd,
+                                         II_MOVN_D>, CMov_I_F_FM_MM<0x38, 1>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
 
-def MOVT_S_MM : MMRel, CMov_F_F_FT<"movt.s", FGR32Opnd, II_MOVT_S,
-                                   MipsCMovFP_T>, CMov_F_F_FM_MM<0x60, 0>,
-                ISA_MICROMIPS32_NOT_MIPS32R6;
-def MOVF_S_MM : MMRel, CMov_F_F_FT<"movf.s", FGR32Opnd, II_MOVF_S,
-                                   MipsCMovFP_F>, CMov_F_F_FM_MM<0x20, 0>,
-                ISA_MICROMIPS32_NOT_MIPS32R6;
-def MOVT_D32_MM : MMRel, CMov_F_F_FT<"movt.d", AFGR64Opnd, II_MOVT_D,
+  def MOVT_S_MM : MMRel, CMov_F_F_FT<"movt.s", FGR32Opnd, II_MOVT_S,
+                                     MipsCMovFP_T>, CMov_F_F_FM_MM<0x60, 0>,
+                  ISA_MICROMIPS32_NOT_MIPS32R6;
+  def MOVF_S_MM : MMRel, CMov_F_F_FT<"movf.s", FGR32Opnd, II_MOVF_S,
+                                     MipsCMovFP_F>, CMov_F_F_FM_MM<0x20, 0>,
+                  ISA_MICROMIPS32_NOT_MIPS32R6;
+  def MOVT_D32_MM : MMRel, CMov_F_F_FT<"movt.d", AFGR64Opnd, II_MOVT_D,
                                      MipsCMovFP_T>, CMov_F_F_FM_MM<0x60, 1>,
-                ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
-def MOVF_D32_MM : MMRel, CMov_F_F_FT<"movf.d", AFGR64Opnd, II_MOVF_D,
-                                     MipsCMovFP_F>, CMov_F_F_FM_MM<0x20, 1>,
                   ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+  def MOVF_D32_MM : MMRel, CMov_F_F_FT<"movf.d", AFGR64Opnd, II_MOVF_D,
+                                       MipsCMovFP_F>, CMov_F_F_FM_MM<0x20, 1>,
+                    ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+}
+let isCodeGenOnly = 1 in {
 def MFC1_MM : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd,
                              II_MFC1, bitconvert>, MFC1_FM_MM<0x80>,
               ISA_MICROMIPS;
