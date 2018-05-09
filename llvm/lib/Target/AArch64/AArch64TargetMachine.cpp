@@ -158,7 +158,6 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
   initializeAArch64SIMDInstrOptPass(*PR);
-  initializeAArch64PreLegalizerCombinerPass(*PR);
   initializeAArch64PromoteConstantPass(*PR);
   initializeAArch64RedundantCopyEliminationPass(*PR);
   initializeAArch64StorePairSuppressPass(*PR);
@@ -339,7 +338,6 @@ public:
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
-  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
@@ -439,10 +437,6 @@ bool AArch64PassConfig::addInstSelector() {
 bool AArch64PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
-}
-
-void AArch64PassConfig::addPreLegalizeMachineIR() {
-  addPass(createAArch64PreLegalizeCombiner());
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {

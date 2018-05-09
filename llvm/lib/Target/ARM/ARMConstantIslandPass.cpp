@@ -701,7 +701,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
       WaterList.push_back(&MBB);
 
     for (MachineInstr &I : MBB) {
-      if (I.isDebugValue())
+      if (I.isDebugInstr())
         continue;
 
       unsigned Opc = I.getOpcode();

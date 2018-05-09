@@ -475,7 +475,7 @@ bool ThumbRegisterInfo::saveScavengerRegister(
   // before that instead and adjust the UseMI.
   bool done = false;
   for (MachineBasicBlock::iterator II = I; !done && II != UseMI ; ++II) {
-    if (II->isDebugValue())
+    if (II->isDebugInstr())
       continue;
     // If this instruction affects R12, adjust our restore point.
     for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {

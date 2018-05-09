@@ -356,7 +356,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     return false;
   };
   for (auto I = B.rbegin(), E = B.rend(); I != E; ++I) {
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
     // This isn't 100% accurate, but it's safe.
     // It won't detect (as a kill) a case like this

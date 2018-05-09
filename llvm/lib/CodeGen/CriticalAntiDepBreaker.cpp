@@ -113,7 +113,7 @@ void CriticalAntiDepBreaker::Observe(MachineInstr &MI, unsigned Count,
   // FIXME: It may be possible to remove the isKill() restriction once PR18663
   // has been properly fixed. There can be value in processing kills as seen in
   // the AggressiveAntiDepBreaker class.
-  if (MI.isDebugValue() || MI.isKill())
+  if (MI.isDebugInstr() || MI.isKill())
     return;
   assert(Count < InsertPosIndex && "Instruction index out of expected range!");
 
@@ -534,7 +534,7 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
     // FIXME: It may be possible to remove the isKill() restriction once PR18663
     // has been properly fixed. There can be value in processing kills as seen
     // in the AggressiveAntiDepBreaker class.
-    if (MI.isDebugValue() || MI.isKill())
+    if (MI.isDebugInstr() || MI.isKill())
       continue;
 
     // Check if this instruction has a dependence on the critical path that

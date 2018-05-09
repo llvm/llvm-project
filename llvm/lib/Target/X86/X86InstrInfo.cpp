@@ -4340,8 +4340,8 @@ bool X86InstrInfo::isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
       // This instruction defines EFLAGS, no need to look any further.
       return true;
     ++Iter;
-    // Skip over DBG_VALUE.
-    while (Iter != E && Iter->isDebugValue())
+    // Skip over debug instructions.
+    while (Iter != E && Iter->isDebugInstr())
       ++Iter;
   }
 
@@ -4363,8 +4363,8 @@ bool X86InstrInfo::isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
       return !MBB.isLiveIn(X86::EFLAGS);
 
     --Iter;
-    // Skip over DBG_VALUE.
-    while (Iter != B && Iter->isDebugValue())
+    // Skip over debug instructions.
+    while (Iter != B && Iter->isDebugInstr())
       --Iter;
 
     bool SawKill = false;
@@ -6254,7 +6254,7 @@ void X86InstrInfo::replaceBranchWithTailCall(
   MachineBasicBlock::iterator I = MBB.end();
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
     if (!I->isBranch())
       assert(0 && "Can't find the branch to replace!");
@@ -6322,7 +6322,7 @@ bool X86InstrInfo::AnalyzeBranchImpl(
   MachineBasicBlock::iterator UnCondBrIter = MBB.end();
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
 
     // Working from the bottom, when we see a non-terminator instruction, we're
@@ -6559,7 +6559,7 @@ unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB,
 
   while (I != MBB.begin()) {
     --I;
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
     if (I->getOpcode() != X86::JMP_1 &&
         X86::getCondFromBranchOpc(I->getOpcode()) == X86::COND_INVALID)
@@ -11172,7 +11172,7 @@ X86GenInstrInfo::MachineOutlinerInstrType
 X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
   MachineInstr &MI = *MIT;
   // Don't allow debug values to impact outlining type.
-  if (MI.isDebugValue() || MI.isIndirectDebugValue())
+  if (MI.isDebugInstr() || MI.isIndirectDebugValue())
     return MachineOutlinerInstrType::Invisible;
 
   // At this point, KILL instructions don't really tell us much so we can go

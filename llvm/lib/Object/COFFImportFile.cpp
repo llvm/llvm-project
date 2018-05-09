@@ -566,8 +566,7 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
-                         MachineTypes Machine, bool MakeWeakAliases,
-                         bool MinGW) {
+                         MachineTypes Machine, bool MinGW) {
 
   std::vector<NewArchiveMember> Members;
   ObjectFactory OF(llvm::sys::path::filename(ImportName), Machine);
@@ -585,12 +584,6 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
     if (E.Private)
       continue;
 
-    if (E.isWeak() && MakeWeakAliases) {
-      Members.push_back(OF.createWeakExternal(E.Name, E.ExtName, false));
-      Members.push_back(OF.createWeakExternal(E.Name, E.ExtName, true));
-      continue;
-    }
-
     ImportType ImportType = IMPORT_CODE;
     if (E.Data)
       ImportType = IMPORT_DATA;
@@ -605,6 +598,12 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
 
     if (!Name)
       return Name.takeError();
+
+    if (!E.AliasTarget.empty() && *Name != E.AliasTarget) {
+      Members.push_back(OF.createWeakExternal(E.AliasTarget, *Name, false));
+      Members.push_back(OF.createWeakExternal(E.AliasTarget, *Name, true));
+      continue;
+    }
 
     Members.push_back(
         OF.createShortImport(*Name, E.Ordinal, ImportType, NameType));

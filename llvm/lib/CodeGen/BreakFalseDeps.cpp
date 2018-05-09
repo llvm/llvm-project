@@ -176,7 +176,7 @@ bool BreakFalseDeps::shouldBreakDependence(MachineInstr *MI, unsigned OpIdx,
 }
 
 void BreakFalseDeps::processDefs(MachineInstr *MI) {
-  assert(!MI->isDebugValue() && "Won't process debug values");
+  assert(!MI->isDebugInstr() && "Won't process debug values");
 
   // Break dependence on undef uses. Do this before updating LiveRegs below.
   unsigned OpNum;
@@ -244,7 +244,7 @@ void BreakFalseDeps::processBasicBlock(MachineBasicBlock *MBB) {
   // and by then we'll have better information, so we can avoid doing the work
   // to try and break dependencies now.
   for (MachineInstr &MI : *MBB) {
-    if (!MI.isDebugValue())
+    if (!MI.isDebugInstr())
       processDefs(&MI);
   }
   processUndefReads(MBB);

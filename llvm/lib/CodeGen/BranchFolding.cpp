@@ -358,7 +358,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   // I1==MBB1->begin() work as expected.)
   if (I1 == MBB1->begin() && I2 != MBB2->begin()) {
     --I2;
-    while (I2->isDebugValue()) {
+    while (I2->isDebugInstr()) {
       if (I2 == MBB2->begin())
         return TailLen;
       --I2;
@@ -367,7 +367,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   }
   if (I2 == MBB2->begin() && I1 != MBB1->begin()) {
     --I1;
-    while (I1->isDebugValue()) {
+    while (I1->isDebugInstr()) {
       if (I1 == MBB1->begin())
         return TailLen;
       --I1;
@@ -1499,7 +1499,7 @@ ReoptimizeBlock:
         // Check if DBG_VALUE at the end of PrevBB is identical to the
         // DBG_VALUE at the beginning of MBB.
         while (PrevBBIter != PrevBB.begin() && MBBIter != MBB->end()
-               && PrevBBIter->isDebugValue() && MBBIter->isDebugValue()) {
+               && PrevBBIter->isDebugInstr() && MBBIter->isDebugInstr()) {
           if (!MBBIter->isIdenticalTo(*PrevBBIter))
             break;
           MachineInstr &DuplicateDbg = *MBBIter;

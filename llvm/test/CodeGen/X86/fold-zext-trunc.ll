@@ -39,7 +39,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !2 = !{}
 !3 = !{i32 6}
 !4 = !{i32 4}
-!5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, variables: !7)
+!5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !7)
 !6 = !DISubroutineType(types: !2)
 !7 = !{!8, !10, !12, !13}
 !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)

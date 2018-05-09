@@ -35,10 +35,6 @@ public:
   /// Returns true if MI changed.
   bool tryCombineCopy(MachineInstr &MI);
 
-  /// If \p MI is extend that consumes the result of a load, try to combine it.
-  /// Returns true if MI changed.
-  bool tryCombineExtendingLoads(MachineInstr &MI);
-
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);

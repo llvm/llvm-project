@@ -162,7 +162,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
   // realistically that's not a big deal at this stage of the game.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.isDebugValue() || MI.isPseudo() ||
+      if (MI.isDebugInstr() || MI.isPseudo() ||
           MI.getOpcode() == AArch64::ADDXri ||
           MI.getOpcode() == AArch64::ADDSXri)
         continue;

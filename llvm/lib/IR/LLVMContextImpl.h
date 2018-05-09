@@ -619,7 +619,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *Unit;
   Metadata *TemplateParams;
   Metadata *Declaration;
-  Metadata *Variables;
+  Metadata *RetainedNodes;
   Metadata *ThrownTypes;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
@@ -628,7 +628,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 Metadata *ContainingType, unsigned Virtuality,
                 unsigned VirtualIndex, int ThisAdjustment, unsigned Flags,
                 bool IsOptimized, Metadata *Unit, Metadata *TemplateParams,
-                Metadata *Declaration, Metadata *Variables,
+                Metadata *Declaration, Metadata *RetainedNodes,
                 Metadata *ThrownTypes)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
@@ -637,7 +637,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         VirtualIndex(VirtualIndex), ThisAdjustment(ThisAdjustment),
         Flags(Flags), IsOptimized(IsOptimized), Unit(Unit),
         TemplateParams(TemplateParams), Declaration(Declaration),
-        Variables(Variables), ThrownTypes(ThrownTypes) {}
+        RetainedNodes(RetainedNodes), ThrownTypes(ThrownTypes) {}
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
@@ -648,7 +648,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         ThisAdjustment(N->getThisAdjustment()), Flags(N->getFlags()),
         IsOptimized(N->isOptimized()), Unit(N->getRawUnit()),
         TemplateParams(N->getRawTemplateParams()),
-        Declaration(N->getRawDeclaration()), Variables(N->getRawVariables()),
+        Declaration(N->getRawDeclaration()), RetainedNodes(N->getRawRetainedNodes()),
         ThrownTypes(N->getRawThrownTypes()) {}
 
   bool isKeyOf(const DISubprogram *RHS) const {
@@ -666,7 +666,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            Unit == RHS->getUnit() &&
            TemplateParams == RHS->getRawTemplateParams() &&
            Declaration == RHS->getRawDeclaration() &&
-           Variables == RHS->getRawVariables() &&
+           RetainedNodes == RHS->getRawRetainedNodes() &&
            ThrownTypes == RHS->getRawThrownTypes();
   }
 
@@ -945,6 +945,29 @@ template <> struct MDNodeKeyImpl<DILocalVariable> {
     // generated IR is random for each run and test fails with Align included.
     // TODO: make hashing work fine with such situations
     return hash_combine(Scope, Name, File, Line, Type, Arg, Flags);
+  }
+};
+
+template <> struct MDNodeKeyImpl<DILabel> {
+  Metadata *Scope;
+  MDString *Name;
+  Metadata *File;
+  unsigned Line;
+
+  MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line)
+      : Scope(Scope), Name(Name), File(File), Line(Line) {}
+  MDNodeKeyImpl(const DILabel *N)
+      : Scope(N->getRawScope()), Name(N->getRawName()), File(N->getRawFile()),
+        Line(N->getLine()) {}
+
+  bool isKeyOf(const DILabel *RHS) const {
+    return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
+           File == RHS->getRawFile() && Line == RHS->getLine();
+  }
+
+  /// Using name and line to get hash value. It should already be mostly unique.
+  unsigned getHashValue() const {
+    return hash_combine(Scope, Name, Line);
   }
 };
 

@@ -25,7 +25,7 @@ declare i32 @callme(i32)
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.2 (trunk 164980) (llvm/trunk 164979)", isOptimized: false, emissionKind: FullDebug, file: !13, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "isel_line_test2", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !0, scopeLine: 4, file: !13, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "isel_line_test2", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !0, scopeLine: 4, file: !13, scope: !6, type: !7, retainedNodes: !1)
 !6 = !DIFile(filename: "bar.c", directory: "/usr/local/google/home/echristo/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}

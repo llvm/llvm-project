@@ -129,7 +129,7 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
              "Basic block should contain at least a RET but is empty");
       MachineBasicBlock::iterator ReturnLoc = --MBB->end();
 
-      while (ReturnLoc->isDebugValue())
+      while (ReturnLoc->isDebugInstr())
         --ReturnLoc;
       assert(ReturnLoc->isReturn() && !ReturnLoc->isCall() &&
              "Basic block does not end with RET");

@@ -68,13 +68,13 @@ attributes #1 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "a.cpp", directory: "/tmp/dbginfo/a")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcv", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcv", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "a.cpp", directory: "/tmp/dbginfo/a")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !9, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !9 = !DIFile(filename: "b.cpp", directory: "/tmp/dbginfo/b")
-!11 = distinct !DISubprogram(name: "main", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !8, scopeLine: 2, file: !9, scope: !12, type: !13, variables: !2)
+!11 = distinct !DISubprogram(name: "main", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !8, scopeLine: 2, file: !9, scope: !12, type: !13, retainedNodes: !2)
 !12 = !DIFile(filename: "b.cpp", directory: "/tmp/dbginfo/b")
 !13 = !DISubroutineType(types: !14)
 !14 = !{!15}

@@ -897,7 +897,7 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
   setForceEmitWaitcnt();
   bool IsForceEmitWaitcnt = isForceEmitWaitcnt();
 
-  if (MI.isDebugValue() &&
+  if (MI.isDebugInstr() &&
       // TODO: any other opcode?
       !NeedLineMapping) {
     return;

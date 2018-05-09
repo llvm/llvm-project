@@ -43,6 +43,9 @@ public:
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
+  void writePltHeader(uint8_t *Buf) const override;
+  void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
+                int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
@@ -67,13 +70,13 @@ PPC64::PPC64() {
   PltRel = R_PPC64_JMP_SLOT;
   RelativeRel = R_PPC64_RELATIVE;
   GotEntrySize = 8;
+  PltEntrySize = 4;
   GotPltEntrySize = 8;
-  PltEntrySize = 0;
-  PltHeaderSize = 0;
   GotBaseSymInGotPlt = false;
   GotBaseSymOff = 0x8000;
   GotHeaderEntriesNum = 1;
   GotPltHeaderEntriesNum = 2;
+  PltHeaderSize = 60;
   NeedsThunks = true;
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
@@ -168,6 +171,37 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
 
 void PPC64::writeGotHeader(uint8_t *Buf) const {
   write64(Buf, getPPC64TocBase());
+}
+
+void PPC64::writePltHeader(uint8_t *Buf) const {
+  // The generic resolver stub goes first.
+  write32(Buf +  0, 0x7c0802a6); // mflr r0
+  write32(Buf +  4, 0x429f0005); // bcl  20,4*cr7+so,8 <_glink+0x8>
+  write32(Buf +  8, 0x7d6802a6); // mflr r11
+  write32(Buf + 12, 0x7c0803a6); // mtlr r0
+  write32(Buf + 16, 0x7d8b6050); // subf r12, r11, r12
+  write32(Buf + 20, 0x380cffcc); // subi r0,r12,52
+  write32(Buf + 24, 0x7800f082); // srdi r0,r0,62,2
+  write32(Buf + 28, 0xe98b002c); // ld   r12,44(r11)
+  write32(Buf + 32, 0x7d6c5a14); // add  r11,r12,r11
+  write32(Buf + 36, 0xe98b0000); // ld   r12,0(r11)
+  write32(Buf + 40, 0xe96b0008); // ld   r11,8(r11)
+  write32(Buf + 44, 0x7d8903a6); // mtctr   r12
+  write32(Buf + 48, 0x4e800420); // bctr
+
+  // The 'bcl' instruction will set the link register to the address of the
+  // following instruction ('mflr r11'). Here we store the offset from that
+  // instruction  to the first entry in the GotPlt section.
+  int64_t GotPltOffset = InX::GotPlt->getVA() - (InX::Plt->getVA() + 8);
+  write64(Buf + 52, GotPltOffset);
+}
+
+void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
+                     uint64_t PltEntryAddr, int32_t Index,
+                     unsigned RelOff) const {
+ int32_t Offset = PltHeaderSize + Index * PltEntrySize;
+ // bl __glink_PLTresolve
+ write32(Buf, 0x48000000 | ((-Offset) & 0x03FFFFFc));
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {

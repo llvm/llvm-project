@@ -1037,7 +1037,7 @@ void HexagonPacketizerList::initPacketizerState() {
 // Ignore bundling of pseudo instructions.
 bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
                                                     const MachineBasicBlock *) {
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return true;
 
   if (MI.isCFIInstruction())

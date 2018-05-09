@@ -134,7 +134,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         }
 
         while (I != E) {
-          if (I->isDebugValue()) {
+          if (I->isDebugInstr()) {
             I = std::next(I);
             continue;
           }

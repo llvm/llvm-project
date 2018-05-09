@@ -12,7 +12,7 @@ define internal i32 @"__hidden#2878_"() #0 !dbg !12 {
 ; CHECK: ![[FNTY]] = !DISubroutineType(types: ![[VOID:[0-9]+]])
 ; CHECK: ![[VOID]] = !{}
 ; CHECK-NOT: DICompositeType
-!12 = distinct !DISubprogram(name: "f", scope: !16, file: !16, line: 133, type: !13, isLocal: true, isDefinition: true, scopeLine: 133, flags: DIFlagPrototyped, isOptimized: true, unit: !18, variables: !5)
+!12 = distinct !DISubprogram(name: "f", scope: !16, file: !16, line: 133, type: !13, isLocal: true, isDefinition: true, scopeLine: 133, flags: DIFlagPrototyped, isOptimized: true, unit: !18, retainedNodes: !5)
 !13 = !DISubroutineType(types: !14)
 !14 = !{!17}
 !16 = !DIFile(filename: "f.m", directory: "/")

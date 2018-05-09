@@ -233,7 +233,7 @@ bool ExecutionDomainFix::visitInstr(MachineInstr *MI) {
 }
 
 void ExecutionDomainFix::processDefs(MachineInstr *MI, bool Kill) {
-  assert(!MI->isDebugValue() && "Won't process debug values");
+  assert(!MI->isDebugInstr() && "Won't process debug values");
   const MCInstrDesc &MCID = MI->getDesc();
   for (unsigned i = 0,
                 e = MI->isVariadic() ? MI->getNumOperands() : MCID.getNumDefs();
@@ -401,7 +401,7 @@ void ExecutionDomainFix::processBasicBlock(
   // and by then we'll have better information, so we can avoid doing the work
   // to try and break dependencies now.
   for (MachineInstr &MI : *TraversedMBB.MBB) {
-    if (!MI.isDebugValue()) {
+    if (!MI.isDebugInstr()) {
       bool Kill = false;
       if (TraversedMBB.PrimaryPass)
         Kill = visitInstr(&MI);

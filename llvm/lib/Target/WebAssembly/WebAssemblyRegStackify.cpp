@@ -163,7 +163,7 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
   assert(!MI.isPosition());
   assert(!MI.isTerminator());
 
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return;
 
   // Check for loads.
@@ -871,7 +871,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<unsigned, 0> Stack;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.isDebugValue())
+      if (MI.isDebugInstr())
         continue;
       for (MachineOperand &MO : reverse(MI.explicit_operands())) {
         if (!MO.isReg())

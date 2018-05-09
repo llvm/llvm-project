@@ -1033,7 +1033,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
       BundleMI = MI;
       continue;
     }
-    if (MI->isDebugValue())
+    if (MI->isDebugInstr())
       continue;
 
     LiveCPSR = UpdateCPSRUse(*MI, LiveCPSR);

@@ -808,7 +808,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
        I != E; --Count) {
     MachineInstr &MI = *--I;
 
-    if (MI.isDebugValue())
+    if (MI.isDebugInstr())
       continue;
 
     DEBUG(dbgs() << "Anti: ");

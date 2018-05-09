@@ -42,7 +42,7 @@
   !16 = !DISubroutineType(types: !17)
   !17 = !{null}
   !18 = !DILocalVariable(name: "sp", arg: 1, scope: !19, file: !3, line: 7, type: !24)
-  !19 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 8, type: !20, isLocal: false, isDefinition: true, scopeLine: 8, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !22)
+  !19 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 8, type: !20, isLocal: false, isDefinition: true, scopeLine: 8, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !22)
   !20 = !DISubroutineType(types: !21)
   !21 = !{!13}
   !22 = !{!18, !23}

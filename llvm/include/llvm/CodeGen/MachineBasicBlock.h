@@ -700,7 +700,7 @@ public:
                             bool IsCond);
 
   /// Find the next valid DebugLoc starting at MBBI, skipping any DBG_VALUE
-  /// instructions.  Return UnknownLoc if there is none.
+  /// and DBG_LABEL instructions.  Return UnknownLoc if there is none.
   DebugLoc findDebugLoc(instr_iterator MBBI);
   DebugLoc findDebugLoc(iterator MBBI) {
     return findDebugLoc(MBBI.getInstrIterator());
@@ -897,7 +897,7 @@ public:
 /// const_instr_iterator} and the respective reverse iterators.
 template<typename IterT>
 inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
-  while (It != End && It->isDebugValue())
+  while (It != End && It->isDebugInstr())
     It++;
   return It;
 }
@@ -908,7 +908,7 @@ inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
 /// const_instr_iterator} and the respective reverse iterators.
 template<class IterT>
 inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
-  while (It != Begin && It->isDebugValue())
+  while (It != Begin && It->isDebugInstr())
     It--;
   return It;
 }

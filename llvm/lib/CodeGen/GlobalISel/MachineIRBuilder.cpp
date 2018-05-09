@@ -53,11 +53,6 @@ void MachineIRBuilderBase::setInsertPt(MachineBasicBlock &MBB,
   State.II = II;
 }
 
-void MachineIRBuilderBase::recordInsertion(MachineInstr *InsertedInstr) const {
-  if (State.InsertedInstr)
-    State.InsertedInstr(InsertedInstr);
-}
-
 void MachineIRBuilderBase::recordInsertions(
     std::function<void(MachineInstr *)> Inserted) {
   State.InsertedInstr = std::move(Inserted);
@@ -82,7 +77,8 @@ MachineInstrBuilder MachineIRBuilderBase::buildInstrNoInsert(unsigned Opcode) {
 
 MachineInstrBuilder MachineIRBuilderBase::insertInstr(MachineInstrBuilder MIB) {
   getMBB().insert(getInsertPt(), MIB);
-  recordInsertion(MIB);
+  if (State.InsertedInstr)
+    State.InsertedInstr(MIB);
   return MIB;
 }
 

@@ -911,6 +911,30 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   return true;
 }
 
+/// This method handles the target-independent form of DBG_LABEL, returning
+/// true if it was able to do so.  A false return means the target will need
+/// to handle MI in EmitInstruction.
+static bool emitDebugLabelComment(const MachineInstr *MI, AsmPrinter &AP) {
+  if (MI->getNumOperands() != 1)
+    return false;
+
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << "DEBUG_LABEL: ";
+
+  const DILabel *V = MI->getDebugLabel();
+  if (auto *SP = dyn_cast<DISubprogram>(V->getScope())) {
+    StringRef Name = SP->getName();
+    if (!Name.empty())
+      OS << Name << ":";
+  }
+  OS << V->getName();
+
+  // NOTE: Want this comment at start of line, don't emit with AddComment.
+  AP.OutStreamer->emitRawComment(OS.str());
+  return true;
+}
+
 AsmPrinter::CFIMoveType AsmPrinter::needsCFIMoves() const {
   if (MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI &&
       MF->getFunction().needsUnwindTableEntry())
@@ -1035,7 +1059,7 @@ void AsmPrinter::EmitFunctionBody() {
     for (auto &MI : MBB) {
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
-          !MI.isDebugValue()) {
+          !MI.isDebugInstr()) {
         HasAnyRealCode = true;
         ++NumInstsInFunction;
       }
@@ -1071,6 +1095,12 @@ void AsmPrinter::EmitFunctionBody() {
       case TargetOpcode::DBG_VALUE:
         if (isVerbose()) {
           if (!emitDebugValueComment(&MI, *this))
+            EmitInstruction(&MI);
+        }
+        break;
+      case TargetOpcode::DBG_LABEL:
+        if (isVerbose()) {
+          if (!emitDebugLabelComment(&MI, *this))
             EmitInstruction(&MI);
         }
         break;

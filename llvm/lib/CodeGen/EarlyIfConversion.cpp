@@ -195,7 +195,7 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
   // terminators never have side effects or define any used register values.
   for (MachineBasicBlock::iterator I = MBB->begin(),
        E = MBB->getFirstTerminator(); I != E; ++I) {
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
 
     if (++InstrCount > BlockInstrLimit && !Stress) {

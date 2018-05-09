@@ -82,7 +82,7 @@ Thumb2InstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
     MachineBasicBlock::iterator E = MBB->begin();
     unsigned Count = 4; // At most 4 instructions in an IT block.
     while (Count && MBBI != E) {
-      if (MBBI->isDebugValue()) {
+      if (MBBI->isDebugInstr()) {
         --MBBI;
         continue;
       }
@@ -109,7 +109,7 @@ Thumb2InstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
 bool
 Thumb2InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI) const {
-  while (MBBI->isDebugValue()) {
+  while (MBBI->isDebugInstr()) {
     ++MBBI;
     if (MBBI == MBB.end())
       return false;

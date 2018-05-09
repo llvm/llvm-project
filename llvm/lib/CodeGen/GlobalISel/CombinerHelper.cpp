@@ -36,38 +36,6 @@ bool CombinerHelper::tryCombineCopy(MachineInstr &MI) {
   return false;
 }
 
-bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
-  if (MI.getOpcode() != TargetOpcode::G_ANYEXT &&
-      MI.getOpcode() != TargetOpcode::G_SEXT &&
-      MI.getOpcode() != TargetOpcode::G_ZEXT)
-    return false;
-
-  unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned SrcReg = MI.getOperand(1).getReg();
-
-  LLT DstTy = MRI.getType(DstReg);
-  if (!DstTy.isScalar())
-    return false;
-
-  if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_LOAD, SrcReg, MRI)) {
-    unsigned PtrReg = DefMI->getOperand(1).getReg();
-    MachineMemOperand &MMO = **DefMI->memoperands_begin();
-    DEBUG(dbgs() << ".. Combine MI: " << MI;);
-    Builder.setInstr(MI);
-    Builder.buildLoadInstr(MI.getOpcode() == TargetOpcode::G_SEXT
-                               ? TargetOpcode::G_SEXTLOAD
-                               : MI.getOpcode() == TargetOpcode::G_ZEXT
-                                     ? TargetOpcode::G_ZEXTLOAD
-                                     : TargetOpcode::G_LOAD,
-                           DstReg, PtrReg, MMO);
-    MI.eraseFromParent();
-    return true;
-  }
-  return false;
-}
-
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
-  if (tryCombineCopy(MI))
-    return true;
-  return tryCombineExtendingLoads(MI);
+  return tryCombineCopy(MI);
 }

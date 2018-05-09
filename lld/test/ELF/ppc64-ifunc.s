@@ -5,30 +5,32 @@
 # RUN: ld.lld -shared %t2.o -o %t2.so
 # RUN: ld.lld %t.o %t2.so -o %t
 # RUN: llvm-objdump -D %t | FileCheck %s
+# RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
 # RUN: ld.lld -shared %t2.o -o %t2.so
 # RUN: ld.lld %t.o %t2.so -o %t
 # RUN: llvm-objdump -D %t | FileCheck %s
+# RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
 
 # CHECK: Disassembly of section .text:
 
-# Tocbase    + (-2 << 16) + 32576
-# 0x100380d0 + (-131072)  + 32576 = 0x10020010 (.got.plt[2])
+# Tocbase    + (0 << 16) + 32560
+# 0x100280e0 +  0        + 32560 = 0x10030010 (.plt[2])
 # CHECK: __plt_foo:
 # CHECK-NEXT:     std 2, 24(1)
-# CHECK-NEXT:     addis 12, 2, -2
-# CHECK-NEXT:     ld 12, 32576(12)
+# CHECK-NEXT:     addis 12, 2, 0
+# CHECK-NEXT:     ld 12, 32560(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 
-# Tocbase    + (-2 << 16) + 32584
-# 0x100380d0 + (-131072)  + 32584 = 0x10020018  (.got.plt[3])
+# Tocbase    + (0 << 16)  +  32568
+# 0x100280e0 +  0          + 32568 = 0x1003018 (.plt[3])
 # CHECK: __plt_ifunc:
 # CHECK-NEXT:     std 2, 24(1)
-# CHECK-NEXT:     addis 12, 2, -2
-# CHECK-NEXT:     ld 12, 32584(12)
+# CHECK-NEXT:     addis 12, 2, 0
+# CHECK-NEXT:     ld 12, 32568(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 
@@ -36,24 +38,21 @@
 # CHECK-NEXT: 10010028:  {{.*}} nop
 
 # CHECK: _start:
-# CHECK-NEXT:     addis 2, 12, 3
-# CHECK-NEXT:     addi 2, 2, -32604
+# CHECK-NEXT:     addis 2, 12, 2
+# CHECK-NEXT:     addi 2, 2, -32588
 # CHECK-NEXT:     bl .+67108812
 # CHECK-NEXT:     ld 2, 24(1)
 # CHECK-NEXT:     bl .+67108824
 # CHECK-NEXT:     ld 2, 24(1)
 
-# Address of .got.plt
-# CHECK:      Disassembly of section .got.plt:
-# CHECK-NEXT:   .got.plt:
-# CHECK-NEXT:   10020000:
-
-
 # Check tocbase
 # CHECK:       Disassembly of section .got:
 # CHECK-NEXT:    .got:
-# CHECK-NEXT:    100300d0:
+# CHECK-NEXT:    100200e0
 
+# Check .plt address
+# DT_PLTGOT should point to the start of the .plt section.
+# DT: 0x0000000000000003 PLTGOT 0x10030000
 
     .text
     .abiversion 2

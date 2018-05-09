@@ -897,13 +897,8 @@ void DWARFUnit::IndexPrivate(
           if (name && name != mangled_cstr &&
               ((mangled_cstr[0] == '_') ||
                (::strcmp(name, mangled_cstr) != 0))) {
-            Mangled mangled(ConstString(mangled_cstr), true);
-            func_fullnames.Insert(mangled.GetMangledName(),
+            func_fullnames.Insert(ConstString(mangled_cstr),
                                   DIERef(cu_offset, die.GetOffset()));
-            ConstString demangled = mangled.GetDemangledName(cu_language);
-            if (demangled)
-              func_fullnames.Insert(demangled,
-                                    DIERef(cu_offset, die.GetOffset()));
           }
         }
       }
@@ -922,13 +917,8 @@ void DWARFUnit::IndexPrivate(
           if (name && name != mangled_cstr &&
               ((mangled_cstr[0] == '_') ||
                (::strcmp(name, mangled_cstr) != 0))) {
-            Mangled mangled(ConstString(mangled_cstr), true);
-            func_fullnames.Insert(mangled.GetMangledName(),
+            func_fullnames.Insert(ConstString(mangled_cstr),
                                   DIERef(cu_offset, die.GetOffset()));
-            ConstString demangled = mangled.GetDemangledName(cu_language);
-            if (demangled)
-              func_fullnames.Insert(demangled,
-                                    DIERef(cu_offset, die.GetOffset()));
           }
         } else
           func_fullnames.Insert(ConstString(name),
