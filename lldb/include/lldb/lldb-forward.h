@@ -76,6 +76,7 @@ class ConnectionFileDescriptor;
 class ConstString;
 class CXXSyntheticChildren;
 class DWARFCallFrameInfo;
+class DWARFDataExtractor;
 class DWARFExpression;
 class DataBuffer;
 class DataEncoder;

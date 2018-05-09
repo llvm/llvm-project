@@ -44,28 +44,57 @@ public:
                            uint32_t depth = UINT32_MAX) const;
   bool Verify(lldb_private::Stream *s) const;
   virtual void Dump(lldb_private::Stream *s) const = 0;
+  //------------------------------------------------------------------
+  /// Get the data that contains the DIE information for this unit.
+  ///
+  /// This will return the correct bytes that contain the data for
+  /// this DWARFUnit. It could be .debug_info or .debug_types
+  /// depending on where the data for this unit originates.
+  ///
+  /// @return
+  ///   The correct data for the DIE information in this unit.
+  //------------------------------------------------------------------
+  virtual const lldb_private::DWARFDataExtractor &GetData() const = 0;
+  //------------------------------------------------------------------
+  /// Get the size in bytes of the compile unit header.
+  ///
+  /// @return
+  ///     Byte size of the compile unit header
+  //------------------------------------------------------------------
+  virtual uint32_t GetHeaderByteSize() const = 0;
   // Offset of the initial length field.
   dw_offset_t GetOffset() const { return m_offset; }
   lldb::user_id_t GetID() const;
-  // Size in bytes of the initial length + compile unit header.
-  uint32_t Size() const;
+  //------------------------------------------------------------------
+  /// Get the size in bytes of the length field in the header.
+  ///
+  /// In DWARF32 this is just 4 bytes, and DWARF64 it is 12 where 4
+  /// are 0xFFFFFFFF followed by the actual 64 bit length.
+  ///
+  /// @return
+  ///     Byte size of the compile unit header length field
+  //------------------------------------------------------------------
+  size_t GetLengthByteSize() const { return IsDWARF64() ? 12 : 4; }
+  
   bool ContainsDIEOffset(dw_offset_t die_offset) const {
     return die_offset >= GetFirstDIEOffset() &&
            die_offset < GetNextCompileUnitOffset();
   }
-  dw_offset_t GetFirstDIEOffset() const { return m_offset + Size(); }
+  dw_offset_t GetFirstDIEOffset() const {
+    return m_offset + GetHeaderByteSize();
+  }
   dw_offset_t GetNextCompileUnitOffset() const;
   // Size of the CU data (without initial length and without header).
   size_t GetDebugInfoSize() const;
   // Size of the CU data incl. header but without initial length.
-  uint32_t GetLength() const;
-  uint16_t GetVersion() const;
+  uint32_t GetLength() const { return m_length; }
+  uint16_t GetVersion() const { return m_version; }
   const DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
-  uint8_t GetAddressByteSize() const;
-  dw_addr_t GetBaseAddress() const;
-  dw_addr_t GetAddrBase() const;
-  dw_addr_t GetRangesBase() const;
+  uint8_t GetAddressByteSize() const { return m_addr_size; }
+  dw_addr_t GetBaseAddress() const { return m_base_addr; }
+  dw_addr_t GetAddrBase() const { return m_addr_base; }
+  dw_addr_t GetRangesBase() const { return m_ranges_base; }
   void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base,
                    dw_offset_t base_obj_offset);
   void ClearDIEs(bool keep_compile_unit_die);
@@ -125,7 +154,7 @@ public:
 
   lldb::LanguageType GetLanguageType();
 
-  bool IsDWARF64() const;
+  bool IsDWARF64() const { return m_is_dwarf64; }
 
   bool GetIsOptimized();
 
