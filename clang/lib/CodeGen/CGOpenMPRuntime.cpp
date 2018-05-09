@@ -6286,7 +6286,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     OutlinedFn->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
     OutlinedFn->setDSOLocal(false);
   } else {
-    std::string Name = getName({"omp_offload", "region_id"});
+    std::string Name = getName({EntryFnName, "region_id"});
     OutlinedFnID = new llvm::GlobalVariable(
         CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
         llvm::GlobalValue::WeakAnyLinkage,

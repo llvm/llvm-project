@@ -1905,10 +1905,9 @@ unsigned getOffsetAfterTokenSequence(
     StringRef FileName, StringRef Code, const FormatStyle &Style,
     llvm::function_ref<unsigned(const SourceManager &, Lexer &, Token &)>
         GetOffsetAfterSequence) {
-  std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Code, FileName, /*Ranges=*/{});
-  const SourceManager &SourceMgr = Env->getSourceManager();
-  Lexer Lex(Env->getFileID(), SourceMgr.getBuffer(Env->getFileID()), SourceMgr,
+  Environment Env(Code, FileName, /*Ranges=*/{});
+  const SourceManager &SourceMgr = Env.getSourceManager();
+  Lexer Lex(Env.getFileID(), SourceMgr.getBuffer(Env.getFileID()), SourceMgr,
             getFormattingLangOpts(Style));
   Token Tok;
   // Get the first token.
@@ -2361,9 +2360,9 @@ reformat(const FormatStyle &Style, StringRef Code,
     return Formatter(Env, Expanded, Status).process();
   });
 
-  std::unique_ptr<Environment> Env = Environment::CreateVirtualEnvironment(
-      Code, FileName, Ranges, FirstStartColumn, NextStartColumn,
-      LastStartColumn);
+  auto Env =
+      llvm::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
+                                     NextStartColumn, LastStartColumn);
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
   unsigned Penalty = 0;
@@ -2376,7 +2375,7 @@ reformat(const FormatStyle &Style, StringRef Code,
       Penalty += PassFixes.second;
       if (I + 1 < E) {
         CurrentCode = std::move(*NewCode);
-        Env = Environment::CreateVirtualEnvironment(
+        Env = llvm::make_unique<Environment>(
             *CurrentCode, FileName,
             tooling::calculateRangesAfterReplacements(Fixes, Ranges),
             FirstStartColumn, NextStartColumn, LastStartColumn);
@@ -2405,10 +2404,7 @@ tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
   // cleanups only apply to C++ (they mostly concern ctor commas etc.)
   if (Style.Language != FormatStyle::LK_Cpp)
     return tooling::Replacements();
-  std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
-  Cleaner Clean(*Env, Style);
-  return Clean.process().first;
+  return Cleaner(Environment(Code, FileName, Ranges), Style).process().first;
 }
 
 tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
@@ -2425,20 +2421,18 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               StringRef Code,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName) {
-  std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
-  NamespaceEndCommentsFixer Fix(*Env, Style);
-  return Fix.process().first;
+  return NamespaceEndCommentsFixer(Environment(Code, FileName, Ranges), Style)
+      .process()
+      .first;
 }
 
 tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
                                             StringRef Code,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName) {
-  std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
-  UsingDeclarationsSorter Sorter(*Env, Style);
-  return Sorter.process().first;
+  return UsingDeclarationsSorter(Environment(Code, FileName, Ranges), Style)
+      .process()
+      .first;
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
@@ -2498,9 +2492,8 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
     // of the code to see if it contains Objective-C.
     if (Extension.empty() || Extension == ".h") {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
-      std::unique_ptr<Environment> Env =
-          Environment::CreateVirtualEnvironment(Code, NonEmptyFileName, /*Ranges=*/{});
-      ObjCHeaderStyleGuesser Guesser(*Env, getLLVMStyle());
+      Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
+      ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());
       Guesser.process();
       if (Guesser.isObjC())
         return FormatStyle::LK_ObjC;
