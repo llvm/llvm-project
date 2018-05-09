@@ -273,7 +273,7 @@ public:
     IsUnparsedNoDirectives
   };
 
-  /// \brief Update lists of parsed and unparsed files.
+  /// Update lists of parsed and unparsed files.
   void UpdateParsedFileStatus(SourceManager &SM, FileID FID, ParsedStatus PS);
 
   bool HandleComment(Preprocessor &PP, SourceRange Comment) override;

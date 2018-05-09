@@ -684,7 +684,7 @@ static bool checkOpenCLPipePacketType(Sema &S, CallExpr *Call, unsigned Idx) {
   return false;
 }
 
-// \brief Performs semantic analysis for the read/write_pipe call.
+// Performs semantic analysis for the read/write_pipe call.
 // \param S Reference to the semantic analyzer.
 // \param Call A pointer to the builtin call.
 // \return True if a semantic error has been found, false otherwise.
@@ -738,7 +738,7 @@ static bool SemaBuiltinRWPipe(Sema &S, CallExpr *Call) {
   return false;
 }
 
-// \brief Performs a semantic analysis on the {work_group_/sub_group_
+// Performs a semantic analysis on the {work_group_/sub_group_
 //        /_}reserve_{read/write}_pipe
 // \param S Reference to the semantic analyzer.
 // \param Call The call to the builtin function to be analyzed.
@@ -767,7 +767,7 @@ static bool SemaBuiltinReserveRWPipe(Sema &S, CallExpr *Call) {
   return false;
 }
 
-// \brief Performs a semantic analysis on {work_group_/sub_group_
+// Performs a semantic analysis on {work_group_/sub_group_
 //        /_}commit_{read/write}_pipe
 // \param S Reference to the semantic analyzer.
 // \param Call The call to the builtin function to be analyzed.
@@ -790,7 +790,7 @@ static bool SemaBuiltinCommitRWPipe(Sema &S, CallExpr *Call) {
   return false;
 }
 
-// \brief Performs a semantic analysis on the call to built-in Pipe
+// Performs a semantic analysis on the call to built-in Pipe
 //        Query Functions.
 // \param S Reference to the semantic analyzer.
 // \param Call The call to the builtin function to be analyzed.
@@ -808,8 +808,8 @@ static bool SemaBuiltinPipePackets(Sema &S, CallExpr *Call) {
   return false;
 }
 
-// \brief OpenCL v2.0 s6.13.9 - Address space qualifier functions.
-// \brief Performs semantic analysis for the to_global/local/private call.
+// OpenCL v2.0 s6.13.9 - Address space qualifier functions.
+// Performs semantic analysis for the to_global/local/private call.
 // \param S Reference to the semantic analyzer.
 // \param BuiltinID ID of the builtin function.
 // \param Call A pointer to the builtin call.
@@ -2573,7 +2573,7 @@ bool Sema::getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
 
 /// Checks if a the given expression evaluates to null.
 ///
-/// \brief Returns true if the value evaluates to null.
+/// Returns true if the value evaluates to null.
 static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
   // If the expression has non-null type, it doesn't evaluate to null.
   if (auto nullability
@@ -2617,7 +2617,7 @@ bool Sema::GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx) {
   return false;
 }
 
-/// \brief Diagnose use of %s directive in an NSString which is being passed
+/// Diagnose use of %s directive in an NSString which is being passed
 /// as formatting string to formatting method.
 static void
 DiagnoseCStringFormatDirectiveInCFAPI(Sema &S,
@@ -5706,7 +5706,7 @@ void CheckFormatHandler::EmitFormatDiagnostic(PartialDiagnostic PDiag,
                        Loc, IsStringLocation, StringRange, FixIt);
 }
 
-/// \brief If the format string is not within the function call, emit a note
+/// If the format string is not within the function call, emit a note
 /// so that the function call and string are in diagnostic messages.
 ///
 /// \param InFunctionCall if true, the format string is within the function
@@ -7319,7 +7319,7 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
 
 //===--- CHECK: Standard memory functions ---------------------------------===//
 
-/// \brief Takes the expression passed to the size_t parameter of functions
+/// Takes the expression passed to the size_t parameter of functions
 /// such as memcmp, strncat, etc and warns if it's a comparison.
 ///
 /// This is to catch typos like `if (memcmp(&a, &b, sizeof(a) > 0))`.
@@ -7350,7 +7350,7 @@ static bool CheckMemorySizeofForComparison(Sema &S, const Expr *E,
   return true;
 }
 
-/// \brief Determine whether the given type is or contains a dynamic class type
+/// Determine whether the given type is or contains a dynamic class type
 /// (e.g., whether it has a vtable).
 static const CXXRecordDecl *getContainedDynamicClass(QualType T,
                                                      bool &IsContained) {
@@ -7381,7 +7381,7 @@ static const CXXRecordDecl *getContainedDynamicClass(QualType T,
   return nullptr;
 }
 
-/// \brief If E is a sizeof expression, returns its argument expression,
+/// If E is a sizeof expression, returns its argument expression,
 /// otherwise returns NULL.
 static const Expr *getSizeOfExprArg(const Expr *E) {
   if (const UnaryExprOrTypeTraitExpr *SizeOf =
@@ -7392,7 +7392,7 @@ static const Expr *getSizeOfExprArg(const Expr *E) {
   return nullptr;
 }
 
-/// \brief If E is a sizeof expression, returns its argument type.
+/// If E is a sizeof expression, returns its argument type.
 static QualType getSizeOfArgType(const Expr *E) {
   if (const UnaryExprOrTypeTraitExpr *SizeOf =
       dyn_cast<UnaryExprOrTypeTraitExpr>(E))
@@ -7494,7 +7494,7 @@ struct SearchNonTrivialToCopyField
 
 }
 
-/// \brief Check for dangerous or invalid arguments to memset().
+/// Check for dangerous or invalid arguments to memset().
 ///
 /// This issues warnings on known problematic, dangerous or unspecified
 /// arguments to the standard 'memset', 'memcpy', 'memmove', and 'memcmp'
@@ -9077,7 +9077,7 @@ static void AnalyzeImpConvsInComparison(Sema &S, BinaryOperator *E) {
   AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
 }
 
-/// \brief Implements -Wsign-compare.
+/// Implements -Wsign-compare.
 ///
 /// \param E the binary operator to check for warnings
 static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
@@ -10197,7 +10197,7 @@ static bool IsInAnyMacroBody(const SourceManager &SM, SourceLocation Loc) {
   return false;
 }
 
-/// \brief Diagnose pointers that are always non-null.
+/// Diagnose pointers that are always non-null.
 /// \param E the expression containing the pointer
 /// \param NullKind NPCK_NotNull if E is a cast to bool, otherwise, E is
 /// compared to a null pointer
@@ -10444,12 +10444,12 @@ void Sema::CheckForIntOverflow (Expr *E) {
 
 namespace {
 
-/// \brief Visitor for expressions which looks for unsequenced operations on the
+/// Visitor for expressions which looks for unsequenced operations on the
 /// same object.
 class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
   using Base = EvaluatedExprVisitor<SequenceChecker>;
 
-  /// \brief A tree of sequenced regions within an expression. Two regions are
+  /// A tree of sequenced regions within an expression. Two regions are
   /// unsequenced if one is an ancestor or a descendent of the other. When we
   /// finish processing an expression with sequencing, such as a comma
   /// expression, we fold its tree nodes into its parent, since they are
@@ -10463,7 +10463,7 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     SmallVector<Value, 8> Values;
 
   public:
-    /// \brief A region within an expression which may be sequenced with respect
+    /// A region within an expression which may be sequenced with respect
     /// to some other region.
     class Seq {
       friend class SequenceTree;
@@ -10479,7 +10479,7 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     SequenceTree() { Values.push_back(Value(0)); }
     Seq root() const { return Seq(0); }
 
-    /// \brief Create a new sequence of operations, which is an unsequenced
+    /// Create a new sequence of operations, which is an unsequenced
     /// subset of \p Parent. This sequence of operations is sequenced with
     /// respect to other children of \p Parent.
     Seq allocate(Seq Parent) {
@@ -10487,12 +10487,12 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
       return Seq(Values.size() - 1);
     }
 
-    /// \brief Merge a sequence of operations into its parent.
+    /// Merge a sequence of operations into its parent.
     void merge(Seq S) {
       Values[S.Index].Merged = true;
     }
 
-    /// \brief Determine whether two operations are unsequenced. This operation
+    /// Determine whether two operations are unsequenced. This operation
     /// is asymmetric: \p Cur should be the more recent sequence, and \p Old
     /// should have been merged into its parent as appropriate.
     bool isUnsequenced(Seq Cur, Seq Old) {
@@ -10507,7 +10507,7 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     }
 
   private:
-    /// \brief Pick a representative for a sequence.
+    /// Pick a representative for a sequence.
     unsigned representative(unsigned K) {
       if (Values[K].Merged)
         // Perform path compression as we go.
@@ -10628,7 +10628,7 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     bool EvalOK = true;
   } *EvalTracker = nullptr;
 
-  /// \brief Find the object which is produced by the specified expression,
+  /// Find the object which is produced by the specified expression,
   /// if any.
   Object getObject(Expr *E, bool Mod) const {
     E = E->IgnoreParenCasts();
@@ -10650,7 +10650,7 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     return nullptr;
   }
 
-  /// \brief Note that an object was modified or used by an expression.
+  /// Note that an object was modified or used by an expression.
   void addUsage(UsageInfo &UI, Object O, Expr *Ref, UsageKind UK) {
     Usage &U = UI.Uses[UK];
     if (!U.Use || !Tree.isUnsequenced(Region, U.Seq)) {
@@ -10661,7 +10661,7 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     }
   }
 
-  /// \brief Check whether a modification or use conflicts with a prior usage.
+  /// Check whether a modification or use conflicts with a prior usage.
   void checkUsage(Object O, UsageInfo &UI, Expr *Ref, UsageKind OtherKind,
                   bool IsModMod) {
     if (UI.Diagnosed)
@@ -11134,7 +11134,7 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
     << TRange << Op->getSourceRange();
 }
 
-/// \brief Check whether this array fits the idiom of a size-one tail padded
+/// Check whether this array fits the idiom of a size-one tail padded
 /// array member of a struct.
 ///
 /// We avoid emitting out-of-bounds access warnings for such arrays as they are
@@ -12150,7 +12150,7 @@ void Sema::DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
 
 static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2);
 
-/// \brief Check if two enumeration types are layout-compatible.
+/// Check if two enumeration types are layout-compatible.
 static bool isLayoutCompatible(ASTContext &C, EnumDecl *ED1, EnumDecl *ED2) {
   // C++11 [dcl.enum] p8:
   // Two enumeration types are layout-compatible if they have the same
@@ -12159,7 +12159,7 @@ static bool isLayoutCompatible(ASTContext &C, EnumDecl *ED1, EnumDecl *ED2) {
          C.hasSameType(ED1->getIntegerType(), ED2->getIntegerType());
 }
 
-/// \brief Check if two fields are layout-compatible.
+/// Check if two fields are layout-compatible.
 static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
                                FieldDecl *Field2) {
   if (!isLayoutCompatible(C, Field1->getType(), Field2->getType()))
@@ -12180,7 +12180,7 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
   return true;
 }
 
-/// \brief Check if two standard-layout structs are layout-compatible.
+/// Check if two standard-layout structs are layout-compatible.
 /// (C++11 [class.mem] p17)
 static bool isLayoutCompatibleStruct(ASTContext &C, RecordDecl *RD1,
                                      RecordDecl *RD2) {
@@ -12224,7 +12224,7 @@ static bool isLayoutCompatibleStruct(ASTContext &C, RecordDecl *RD1,
   return true;
 }
 
-/// \brief Check if two standard-layout unions are layout-compatible.
+/// Check if two standard-layout unions are layout-compatible.
 /// (C++11 [class.mem] p18)
 static bool isLayoutCompatibleUnion(ASTContext &C, RecordDecl *RD1,
                                     RecordDecl *RD2) {
@@ -12263,7 +12263,7 @@ static bool isLayoutCompatible(ASTContext &C, RecordDecl *RD1,
     return isLayoutCompatibleStruct(C, RD1, RD2);
 }
 
-/// \brief Check if two types are layout-compatible in C++11 sense.
+/// Check if two types are layout-compatible in C++11 sense.
 static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   if (T1.isNull() || T2.isNull())
     return false;
@@ -12301,7 +12301,7 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
 
 //===--- CHECK: pointer_with_type_tag attribute: datatypes should match ----//
 
-/// \brief Given a type tag expression find the type tag itself.
+/// Given a type tag expression find the type tag itself.
 ///
 /// \param TypeExpr Type tag expression, as it appears in user's code.
 ///
@@ -12372,7 +12372,7 @@ static bool FindTypeTagExpr(const Expr *TypeExpr, const ASTContext &Ctx,
   }
 }
 
-/// \brief Retrieve the C type corresponding to type tag TypeExpr.
+/// Retrieve the C type corresponding to type tag TypeExpr.
 ///
 /// \param TypeExpr Expression that specifies a type tag.
 ///

@@ -145,7 +145,7 @@ public:
     return ProgramStatePair(StInRange, StOutOfRange);
   }
 
-  /// \brief If a symbol is perfectly constrained to a constant, attempt
+  /// If a symbol is perfectly constrained to a constant, attempt
   /// to return the concrete value.
   ///
   /// Note that a ConstraintManager is not obligated to return a concretized

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the PrettyStackTraceEntry class, which is used to make
+/// Defines the PrettyStackTraceEntry class, which is used to make
 /// crashes give more contextual information about what the program was doing
 /// when it crashed.
 ///

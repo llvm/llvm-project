@@ -17,10 +17,13 @@
 // CHECK-DAG: @b = global i32 15,
 // CHECK-DAG: @d = global i32 0,
 // CHECK-DAG: @c = external global i32,
+// CHECK-DAG: @globals = global %struct.S zeroinitializer,
+// CHECK-DAG: @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @__omp_offloading__{{.+}}_globals_l[[@LINE+41]]_ctor to i8*)], section "llvm.metadata"
 
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()
 // CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(%class.TemplateClass* %{{.*}})
 // CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(%class.TemplateClass* %{{.*}})
+// CHECK-DAG: define {{.*}}void @__omp_offloading__{{.*}}_globals_l[[@LINE+36]]_ctor()
 
 #ifndef HEADER
 #define HEADER
@@ -56,6 +59,7 @@ struct S {
 int foo() { return 0; }
 int b = 15;
 int d;
+S globals(d);
 #pragma omp end declare target
 int c;
 

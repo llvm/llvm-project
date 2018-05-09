@@ -38,7 +38,7 @@ class CompilerInvocation;
 class DeclGroupRef;
 class PCHContainerOperations;
 
-/// \brief Runs lexer to compute suggested preamble bounds.
+/// Runs lexer to compute suggested preamble bounds.
 PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
                                      llvm::MemoryBuffer *Buffer,
                                      unsigned MaxLines);
@@ -53,7 +53,7 @@ class PrecompiledPreamble {
   struct PreambleFileHash;
 
 public:
-  /// \brief Try to build PrecompiledPreamble for \p Invocation. See
+  /// Try to build PrecompiledPreamble for \p Invocation. See
   /// BuildPreambleError for possible error codes.
   ///
   /// \param Invocation Original CompilerInvocation with options to compile the

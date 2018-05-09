@@ -124,7 +124,7 @@ public:
 
   const MemRegion *StripCasts(bool StripBaseCasts = true) const;
 
-  /// \brief If this is a symbolic region, returns the region. Otherwise,
+  /// If this is a symbolic region, returns the region. Otherwise,
   /// goes up the base chain looking for the first symbolic base region.
   const SymbolicRegion *getSymbolicBase() const;
 
@@ -139,24 +139,24 @@ public:
   /// Compute the offset within the top level memory object.
   RegionOffset getAsOffset() const;
 
-  /// \brief Get a string representation of a region for debug use.
+  /// Get a string representation of a region for debug use.
   std::string getString() const;
 
   virtual void dumpToStream(raw_ostream &os) const;
 
   void dump() const;
 
-  /// \brief Returns true if this region can be printed in a user-friendly way.
+  /// Returns true if this region can be printed in a user-friendly way.
   virtual bool canPrintPretty() const;
 
-  /// \brief Print the region for use in diagnostics.
+  /// Print the region for use in diagnostics.
   virtual void printPretty(raw_ostream &os) const;
 
-  /// \brief Returns true if this region's textual representation can be used
+  /// Returns true if this region's textual representation can be used
   /// as part of a larger expression.
   virtual bool canPrintPrettyAsExpr() const;
 
-  /// \brief Print the region as expression.
+  /// Print the region as expression.
   ///
   /// When this region represents a subexpression, the method is for printing
   /// an expression containing it.
@@ -244,7 +244,7 @@ public:
   }
 };
 
-/// \brief The region of the static variables within the current CodeTextRegion
+/// The region of the static variables within the current CodeTextRegion
 /// scope.
 ///
 /// Currently, only the static locals are placed there, so we know that these
@@ -271,7 +271,7 @@ public:
   }
 };
 
-/// \brief The region for all the non-static global variables.
+/// The region for all the non-static global variables.
 ///
 /// This class is further split into subclasses for efficient implementation of
 /// invalidating a set of related global values as is done in
@@ -294,7 +294,7 @@ public:
   }
 };
 
-/// \brief The region containing globals which are defined in system/external
+/// The region containing globals which are defined in system/external
 /// headers and are considered modifiable by system calls (ex: errno).
 class GlobalSystemSpaceRegion : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
@@ -310,7 +310,7 @@ public:
   }
 };
 
-/// \brief The region containing globals which are considered not to be modified
+/// The region containing globals which are considered not to be modified
 /// or point to data which could be modified as a result of a function call
 /// (system or internal). Ex: Const global scalars would be modeled as part of
 /// this region. This region also includes most system globals since they have
@@ -329,7 +329,7 @@ public:
   }
 };
 
-/// \brief The region containing globals which can be modified by calls to
+/// The region containing globals which can be modified by calls to
 /// "internally" defined functions - (for now just) functions other then system
 /// calls.
 class GlobalInternalSpaceRegion : public NonStaticGlobalSpaceRegion {
@@ -1072,7 +1072,7 @@ public:
   void dump() const;
 };
 
-/// \brief ElementRegin is used to represent both array elements and casts.
+/// ElementRegin is used to represent both array elements and casts.
 class ElementRegion : public TypedValueRegion {
   friend class MemRegionManager;
 
@@ -1257,10 +1257,10 @@ public:
   const CXXThisRegion *getCXXThisRegion(QualType thisPointerTy,
                                         const LocationContext *LC);
 
-  /// \brief Retrieve or create a "symbolic" memory region.
+  /// Retrieve or create a "symbolic" memory region.
   const SymbolicRegion* getSymbolicRegion(SymbolRef Sym);
 
-  /// \brief Return a unique symbolic region belonging to heap memory space.
+  /// Return a unique symbolic region belonging to heap memory space.
   const SymbolicRegion *getSymbolicHeapRegion(SymbolRef sym);
 
   const StringRegion *getStringRegion(const StringLiteral *Str);
@@ -1393,7 +1393,7 @@ class RegionAndSymbolInvalidationTraits {
       llvm::DenseMap<SymbolRef, StorageTypeForKinds>::const_iterator;
 
 public:
-  /// \brief Describes different invalidation traits.
+  /// Describes different invalidation traits.
   enum InvalidationKinds {
     /// Tells that a region's contents is not changed.
     TK_PreserveContents = 0x1,

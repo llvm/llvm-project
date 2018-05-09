@@ -68,7 +68,7 @@ public:
 
 } // namespace
 
-/// \brief Returns the alignment of the type source info data block.
+/// Returns the alignment of the type source info data block.
 unsigned TypeLoc::getLocalAlignmentForType(QualType Ty) {
   if (Ty.isNull()) return 1;
   return TypeAligner().Visit(TypeLoc(Ty, nullptr));
@@ -88,7 +88,7 @@ public:
 
 } // namespace
 
-/// \brief Returns the size of the type source info data block.
+/// Returns the size of the type source info data block.
 unsigned TypeLoc::getFullDataSizeForType(QualType Ty) {
   unsigned Total = 0;
   TypeLoc TyLoc(Ty, nullptr);
@@ -118,13 +118,13 @@ public:
 
 } // namespace
 
-/// \brief Get the next TypeLoc pointed by this TypeLoc, e.g for "int*" the
+/// Get the next TypeLoc pointed by this TypeLoc, e.g for "int*" the
 /// TypeLoc is a PointerLoc and next TypeLoc is for "int".
 TypeLoc TypeLoc::getNextTypeLocImpl(TypeLoc TL) {
   return NextLoc().Visit(TL);
 }
 
-/// \brief Initializes a type location, and all of its children
+/// Initializes a type location, and all of its children
 /// recursively, as if the entire tree had been written in the
 /// given location.
 void TypeLoc::initializeImpl(ASTContext &Context, TypeLoc TL, 
@@ -281,7 +281,7 @@ struct TSTChecker : public TypeLocVisitor<TSTChecker, bool> {
 
 } // namespace
 
-/// \brief Determines if the given type loc corresponds to a
+/// Determines if the given type loc corresponds to a
 /// TypeSpecTypeLoc.  Since there is not actually a TypeSpecType in
 /// the type hierarchy, this is made somewhat complicated.
 ///

@@ -95,7 +95,7 @@ struct CGRecordLowering {
   // The constructor.
   CGRecordLowering(CodeGenTypes &Types, const RecordDecl *D, bool Packed);
   // Short helper routines.
-  /// \brief Constructs a MemberInfo instance from an offset and llvm::Type *.
+  /// Constructs a MemberInfo instance from an offset and llvm::Type *.
   MemberInfo StorageInfo(CharUnits Offset, llvm::Type *Data) {
     return MemberInfo(Offset, MemberInfo::Field, Data);
   }
@@ -118,19 +118,19 @@ struct CGRecordLowering {
     return !Context.getTargetInfo().getCXXABI().isMicrosoft();
   }
 
-  /// \brief Wraps llvm::Type::getIntNTy with some implicit arguments.
+  /// Wraps llvm::Type::getIntNTy with some implicit arguments.
   llvm::Type *getIntNType(uint64_t NumBits) {
     return llvm::Type::getIntNTy(Types.getLLVMContext(),
                                  (unsigned)llvm::alignTo(NumBits, 8));
   }
-  /// \brief Gets an llvm type of size NumBytes and alignment 1.
+  /// Gets an llvm type of size NumBytes and alignment 1.
   llvm::Type *getByteArrayType(CharUnits NumBytes) {
     assert(!NumBytes.isZero() && "Empty byte arrays aren't allowed.");
     llvm::Type *Type = llvm::Type::getInt8Ty(Types.getLLVMContext());
     return NumBytes == CharUnits::One() ? Type :
         (llvm::Type *)llvm::ArrayType::get(Type, NumBytes.getQuantity());
   }
-  /// \brief Gets the storage type for a field decl and handles storage
+  /// Gets the storage type for a field decl and handles storage
   /// for itanium bitfields that are smaller than their declared type.
   llvm::Type *getStorageType(const FieldDecl *FD) {
     llvm::Type *Type = Types.ConvertTypeForMem(FD->getType());
@@ -139,7 +139,7 @@ struct CGRecordLowering {
     return getIntNType(std::min(FD->getBitWidthValue(Context),
                              (unsigned)Context.toBits(getSize(Type))));
   }
-  /// \brief Gets the llvm Basesubobject type from a CXXRecordDecl.
+  /// Gets the llvm Basesubobject type from a CXXRecordDecl.
   llvm::Type *getStorageType(const CXXRecordDecl *RD) {
     return Types.getCGRecordLayout(RD).getBaseSubobjectLLVMType();
   }
@@ -168,7 +168,7 @@ struct CGRecordLowering {
   // Layout routines.
   void setBitFieldInfo(const FieldDecl *FD, CharUnits StartOffset, 
                        llvm::Type *StorageType);
-  /// \brief Lowers an ASTRecordLayout to a llvm type.
+  /// Lowers an ASTRecordLayout to a llvm type.
   void lower(bool NonVirtualBaseType);
   void lowerUnion();
   void accumulateFields();
@@ -177,18 +177,18 @@ struct CGRecordLowering {
   void accumulateBases();
   void accumulateVPtrs();
   void accumulateVBases();
-  /// \brief Recursively searches all of the bases to find out if a vbase is
+  /// Recursively searches all of the bases to find out if a vbase is
   /// not the primary vbase of some base class.
   bool hasOwnStorage(const CXXRecordDecl *Decl, const CXXRecordDecl *Query);
   void calculateZeroInit();
-  /// \brief Lowers bitfield storage types to I8 arrays for bitfields with tail
+  /// Lowers bitfield storage types to I8 arrays for bitfields with tail
   /// padding that is or can potentially be used.
   void clipTailPadding();
-  /// \brief Determines if we need a packed llvm struct.
+  /// Determines if we need a packed llvm struct.
   void determinePacked(bool NVBaseType);
-  /// \brief Inserts padding everywhere it's needed.
+  /// Inserts padding everywhere it's needed.
   void insertPadding();
-  /// \brief Fills out the structures that are ultimately consumed.
+  /// Fills out the structures that are ultimately consumed.
   void fillOutputFields();
   // Input memoization fields.
   CodeGenTypes &Types;

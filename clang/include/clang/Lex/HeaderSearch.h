@@ -46,13 +46,13 @@ class Module;
 class Preprocessor;
 class TargetInfo;
 
-/// \brief The preprocessor keeps track of this information for each
+/// The preprocessor keeps track of this information for each
 /// file that is \#included.
 struct HeaderFileInfo {
-  /// \brief True if this is a \#import'd or \#pragma once file.
+  /// True if this is a \#import'd or \#pragma once file.
   unsigned isImport : 1;
 
-  /// \brief True if this is a \#pragma once file.
+  /// True if this is a \#pragma once file.
   unsigned isPragmaOnce : 1;
 
   /// DirInfo - Keep track of whether this is a system header, and if so,
@@ -61,21 +61,21 @@ struct HeaderFileInfo {
   /// SrcMgr::CharacteristicKind.
   unsigned DirInfo : 3;
 
-  /// \brief Whether this header file info was supplied by an external source,
+  /// Whether this header file info was supplied by an external source,
   /// and has not changed since.
   unsigned External : 1;
 
-  /// \brief Whether this header is part of a module.
+  /// Whether this header is part of a module.
   unsigned isModuleHeader : 1;
 
-  /// \brief Whether this header is part of the module that we are building.
+  /// Whether this header is part of the module that we are building.
   unsigned isCompilingModuleHeader : 1;
 
-  /// \brief Whether this structure is considered to already have been
+  /// Whether this structure is considered to already have been
   /// "resolved", meaning that it was loaded from the external source.
   unsigned Resolved : 1;
   
-  /// \brief Whether this is a header inside a framework that is currently
+  /// Whether this is a header inside a framework that is currently
   /// being built. 
   ///
   /// When a framework is being built, the headers have not yet been placed
@@ -84,13 +84,13 @@ struct HeaderFileInfo {
   /// those framework headers.
   unsigned IndexHeaderMapHeader : 1;
 
-  /// \brief Whether this file has been looked up as a header.
+  /// Whether this file has been looked up as a header.
   unsigned IsValid : 1;
   
-  /// \brief The number of times the file has been included already.
+  /// The number of times the file has been included already.
   unsigned short NumIncludes = 0;
 
-  /// \brief The ID number of the controlling macro.
+  /// The ID number of the controlling macro.
   ///
   /// This ID number will be non-zero when there is a controlling
   /// macro whose IdentifierInfo may not yet have been loaded from
@@ -107,7 +107,7 @@ struct HeaderFileInfo {
   /// external storage.
   const IdentifierInfo *ControllingMacro = nullptr;
 
-  /// \brief If this header came from a framework include, this is the name
+  /// If this header came from a framework include, this is the name
   /// of the framework.
   StringRef Framework;
   
@@ -116,12 +116,12 @@ struct HeaderFileInfo {
         External(false), isModuleHeader(false), isCompilingModuleHeader(false),
         Resolved(false), IndexHeaderMapHeader(false), IsValid(false)  {}
 
-  /// \brief Retrieve the controlling macro for this header file, if
+  /// Retrieve the controlling macro for this header file, if
   /// any.
   const IdentifierInfo *
   getControllingMacro(ExternalPreprocessorSource *External);
 
-  /// \brief Determine whether this is a non-default header file info, e.g.,
+  /// Determine whether this is a non-default header file info, e.g.,
   /// it corresponds to an actual header we've included or tried to include.
   bool isNonDefault() const {
     return isImport || isPragmaOnce || NumIncludes || ControllingMacro || 
@@ -129,13 +129,13 @@ struct HeaderFileInfo {
   }
 };
 
-/// \brief An external source of header file information, which may supply
+/// An external source of header file information, which may supply
 /// information about header files already included.
 class ExternalHeaderFileInfoSource {
 public:
   virtual ~ExternalHeaderFileInfoSource();
   
-  /// \brief Retrieve the header file information for the given file entry.
+  /// Retrieve the header file information for the given file entry.
   ///
   /// \returns Header file information for the given file entry, with the
   /// \c External bit set. If the file entry is not known, return a 
@@ -143,7 +143,7 @@ public:
   virtual HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) = 0;
 };
   
-/// \brief Encapsulates the information needed to find the file referenced
+/// Encapsulates the information needed to find the file referenced
 /// by a \#include or \#include_next, (sub-)framework lookup, etc.
 class HeaderSearch {
   friend class DirectoryLookup;
@@ -159,7 +159,7 @@ class HeaderSearch {
     bool IsUserSpecifiedSystemFramework;
   };
 
-  /// \brief Header-search options used to initialize this header search.
+  /// Header-search options used to initialize this header search.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
 
   DiagnosticsEngine &Diags;
@@ -176,7 +176,7 @@ class HeaderSearch {
   unsigned SystemDirIdx = 0;
   bool NoCurDirSearch = false;
 
-  /// \brief \#include prefixes for which the 'system header' property is
+  /// \#include prefixes for which the 'system header' property is
   /// overridden.
   ///
   /// For a \#include "x" or \#include \<x> directive, the last string in this
@@ -184,10 +184,10 @@ class HeaderSearch {
   /// a system header.
   std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
 
-  /// \brief The path to the module cache.
+  /// The path to the module cache.
   std::string ModuleCachePath;
   
-  /// \brief All of the preprocessor-specific data about files that are
+  /// All of the preprocessor-specific data about files that are
   /// included, indexed by the FileEntry's UID.
   mutable std::vector<HeaderFileInfo> FileInfo;
 
@@ -215,7 +215,7 @@ class HeaderSearch {
   };
   llvm::StringMap<LookupFileCacheInfo, llvm::BumpPtrAllocator> LookupFileCache;
 
-  /// \brief Collection mapping a framework or subframework
+  /// Collection mapping a framework or subframework
   /// name like "Carbon" to the Carbon.framework directory.
   llvm::StringMap<FrameworkCacheEntry, llvm::BumpPtrAllocator> FrameworkMap;
 
@@ -230,26 +230,26 @@ class HeaderSearch {
   /// headermaps.  This vector owns the headermap.
   std::vector<std::pair<const FileEntry *, const HeaderMap *>> HeaderMaps;
 
-  /// \brief The mapping between modules and headers.
+  /// The mapping between modules and headers.
   mutable ModuleMap ModMap;
   
-  /// \brief Describes whether a given directory has a module map in it.
+  /// Describes whether a given directory has a module map in it.
   llvm::DenseMap<const DirectoryEntry *, bool> DirectoryHasModuleMap;
 
-  /// \brief Set of module map files we've already loaded, and a flag indicating
+  /// Set of module map files we've already loaded, and a flag indicating
   /// whether they were valid or not.
   llvm::DenseMap<const FileEntry *, bool> LoadedModuleMaps;
 
-  /// \brief Uniqued set of framework names, which is used to track which 
+  /// Uniqued set of framework names, which is used to track which 
   /// headers were included as framework headers.
   llvm::StringSet<llvm::BumpPtrAllocator> FrameworkNames;
   
-  /// \brief Entity used to resolve the identifier IDs of controlling
+  /// Entity used to resolve the identifier IDs of controlling
   /// macros into IdentifierInfo pointers, and keep the identifire up to date,
   /// as needed.
   ExternalPreprocessorSource *ExternalLookup = nullptr;
 
-  /// \brief Entity used to look up stored header file information.
+  /// Entity used to look up stored header file information.
   ExternalHeaderFileInfoSource *ExternalSource = nullptr;
   
   // Various statistics we track for performance analysis.
@@ -266,13 +266,13 @@ public:
   HeaderSearch &operator=(const HeaderSearch &) = delete;
   ~HeaderSearch();
 
-  /// \brief Retrieve the header-search options with which this header search
+  /// Retrieve the header-search options with which this header search
   /// was initialized.
   HeaderSearchOptions &getHeaderSearchOpts() const { return *HSOpts; }
   
   FileManager &getFileMgr() const { return FileMgr; }
 
-  /// \brief Interface for setting the file search paths.
+  /// Interface for setting the file search paths.
   void SetSearchPaths(const std::vector<DirectoryLookup> &dirs,
                       unsigned angledDirIdx, unsigned systemDirIdx,
                       bool noCurDirSearch) {
@@ -285,7 +285,7 @@ public:
     //LookupFileCache.clear();
   }
 
-  /// \brief Add an additional search path.
+  /// Add an additional search path.
   void AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
     unsigned idx = isAngled ? SystemDirIdx : AngledDirIdx;
     SearchDirs.insert(SearchDirs.begin() + idx, dir);
@@ -294,15 +294,15 @@ public:
     SystemDirIdx++;
   }
 
-  /// \brief Set the list of system header prefixes.
+  /// Set the list of system header prefixes.
   void SetSystemHeaderPrefixes(ArrayRef<std::pair<std::string, bool>> P) {
     SystemHeaderPrefixes.assign(P.begin(), P.end());
   }
 
-  /// \brief Checks whether the map exists or not.
+  /// Checks whether the map exists or not.
   bool HasIncludeAliasMap() const { return (bool)IncludeAliases; }
 
-  /// \brief Map the source include name to the dest include name.
+  /// Map the source include name to the dest include name.
   ///
   /// The Source should include the angle brackets or quotes, the dest 
   /// should not.  This allows for distinction between <> and "" headers.
@@ -326,20 +326,20 @@ public:
     return {};
   }
 
-  /// \brief Set the path to the module cache.
+  /// Set the path to the module cache.
   void setModuleCachePath(StringRef CachePath) {
     ModuleCachePath = CachePath;
   }
   
-  /// \brief Retrieve the path to the module cache.
+  /// Retrieve the path to the module cache.
   StringRef getModuleCachePath() const { return ModuleCachePath; }
 
-  /// \brief Consider modules when including files from this directory.
+  /// Consider modules when including files from this directory.
   void setDirectoryHasModuleMap(const DirectoryEntry* Dir) {
     DirectoryHasModuleMap[Dir] = true;
   }
   
-  /// \brief Forget everything we know about headers so far.
+  /// Forget everything we know about headers so far.
   void ClearFileInfo() {
     FileInfo.clear();
   }
@@ -352,16 +352,16 @@ public:
     return ExternalLookup;
   }
   
-  /// \brief Set the external source of header information.
+  /// Set the external source of header information.
   void SetExternalSource(ExternalHeaderFileInfoSource *ES) {
     ExternalSource = ES;
   }
   
-  /// \brief Set the target information for the header search, if not
+  /// Set the target information for the header search, if not
   /// already known.
   void setTarget(const TargetInfo &Target);
   
-  /// \brief Given a "foo" or \<foo> reference, look up the indicated file,
+  /// Given a "foo" or \<foo> reference, look up the indicated file,
   /// return null on failure.
   ///
   /// \returns If successful, this returns 'UsedDir', the DirectoryLookup member
@@ -399,7 +399,7 @@ public:
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
       bool *IsMapped, bool SkipCache = false, bool BuildSystemModule = false);
 
-  /// \brief Look up a subframework for the specified \#include file.
+  /// Look up a subframework for the specified \#include file.
   ///
   /// For example, if \#include'ing <HIToolbox/HIToolbox.h> from
   /// within ".../Carbon.framework/Headers/Carbon.h", check to see if
@@ -410,13 +410,13 @@ public:
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule);
 
-  /// \brief Look up the specified framework name in our framework cache.
+  /// Look up the specified framework name in our framework cache.
   /// \returns The DirectoryEntry it is in if we know, null otherwise.
   FrameworkCacheEntry &LookupFrameworkCache(StringRef FWName) {
     return FrameworkMap[FWName];
   }
 
-  /// \brief Mark the specified file as a target of a \#include,
+  /// Mark the specified file as a target of a \#include,
   /// \#include_next, or \#import directive.
   ///
   /// \return false if \#including the file will have no effect or true
@@ -425,13 +425,13 @@ public:
                               bool isImport, bool ModulesEnabled,
                               Module *CorrespondingModule);
 
-  /// \brief Return whether the specified file is a normal header,
+  /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
   SrcMgr::CharacteristicKind getFileDirFlavor(const FileEntry *File) {
     return (SrcMgr::CharacteristicKind)getFileInfo(File).DirInfo;
   }
 
-  /// \brief Mark the specified file as a "once only" file, e.g. due to
+  /// Mark the specified file as a "once only" file, e.g. due to
   /// \#pragma once.
   void MarkFileIncludeOnce(const FileEntry *File) {
     HeaderFileInfo &FI = getFileInfo(File);
@@ -439,24 +439,24 @@ public:
     FI.isPragmaOnce = true;
   }
 
-  /// \brief Mark the specified file as a system header, e.g. due to
+  /// Mark the specified file as a system header, e.g. due to
   /// \#pragma GCC system_header.
   void MarkFileSystemHeader(const FileEntry *File) {
     getFileInfo(File).DirInfo = SrcMgr::C_System;
   }
 
-  /// \brief Mark the specified file as part of a module.
+  /// Mark the specified file as part of a module.
   void MarkFileModuleHeader(const FileEntry *File,
                             ModuleMap::ModuleHeaderRole Role,
                             bool IsCompiledModuleHeader);
 
-  /// \brief Increment the count for the number of times the specified
+  /// Increment the count for the number of times the specified
   /// FileEntry has been entered.
   void IncrementIncludeCount(const FileEntry *File) {
     ++getFileInfo(File).NumIncludes;
   }
 
-  /// \brief Mark the specified file as having a controlling macro.
+  /// Mark the specified file as having a controlling macro.
   ///
   /// This is used by the multiple-include optimization to eliminate
   /// no-op \#includes.
@@ -465,12 +465,12 @@ public:
     getFileInfo(File).ControllingMacro = ControllingMacro;
   }
 
-  /// \brief Return true if this is the first time encountering this header.
+  /// Return true if this is the first time encountering this header.
   bool FirstTimeLexingFile(const FileEntry *File) {
     return getFileInfo(File).NumIncludes == 1;
   }
 
-  /// \brief Determine whether this file is intended to be safe from
+  /// Determine whether this file is intended to be safe from
   /// multiple inclusions, e.g., it has \#pragma once or a controlling
   /// macro.
   ///
@@ -481,10 +481,10 @@ public:
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
   const HeaderMap *CreateHeaderMap(const FileEntry *FE);
 
-  /// \brief Get filenames for all registered header maps.
+  /// Get filenames for all registered header maps.
   void getHeaderMapFileNames(SmallVectorImpl<std::string> &Names) const;
 
-  /// \brief Retrieve the name of the cached module file that should be used
+  /// Retrieve the name of the cached module file that should be used
   /// to load the given module.
   ///
   /// \param Module The module whose module file name will be returned.
@@ -493,7 +493,7 @@ public:
   /// or an empty string if this module does not correspond to any module file.
   std::string getCachedModuleFileName(Module *Module);
 
-  /// \brief Retrieve the name of the prebuilt module file that should be used
+  /// Retrieve the name of the prebuilt module file that should be used
   /// to load a module with the given name.
   ///
   /// \param ModuleName The module whose module file name will be returned.
@@ -506,7 +506,7 @@ public:
   std::string getPrebuiltModuleFileName(StringRef ModuleName,
                                         bool FileMapOnly = false);
 
-  /// \brief Retrieve the name of the (to-be-)cached module file that should
+  /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
   ///
   /// \param ModuleName The module whose module file name will be returned.
@@ -519,7 +519,7 @@ public:
   std::string getCachedModuleFileName(StringRef ModuleName,
                                       StringRef ModuleMapPath);
 
-  /// \brief Lookup a module Search for a module with the given name.
+  /// Lookup a module Search for a module with the given name.
   ///
   /// \param ModuleName The name of the module we're looking for.
   ///
@@ -530,14 +530,14 @@ public:
   /// \returns The module with the given name.
   Module *lookupModule(StringRef ModuleName, bool AllowSearch = true);
 
-  /// \brief Try to find a module map file in the given directory, returning
+  /// Try to find a module map file in the given directory, returning
   /// \c nullptr if none is found.
   const FileEntry *lookupModuleMapFile(const DirectoryEntry *Dir,
                                        bool IsFramework);
   
   void IncrementFrameworkLookupCount() { ++NumFrameworkLookups; }
 
-  /// \brief Determine whether there is a module map that may map the header
+  /// Determine whether there is a module map that may map the header
   /// with the given file name to a (sub)module.
   /// Always returns false if modules are disabled.
   ///
@@ -551,14 +551,14 @@ public:
   bool hasModuleMap(StringRef Filename, const DirectoryEntry *Root,
                     bool IsSystem);
   
-  /// \brief Retrieve the module that corresponds to the given file, if any.
+  /// Retrieve the module that corresponds to the given file, if any.
   ///
   /// \param File The header that we wish to map to a module.
   /// \param AllowTextual Whether we want to find textual headers too.
   ModuleMap::KnownHeader findModuleForHeader(const FileEntry *File,
                                              bool AllowTextual = false) const;
 
-  /// \brief Read the contents of the given module map file.
+  /// Read the contents of the given module map file.
   ///
   /// \param File The module map file.
   /// \param IsSystem Whether this file is in a system header directory.
@@ -575,16 +575,16 @@ public:
                          FileID ID = FileID(), unsigned *Offset = nullptr,
                          StringRef OriginalModuleMapFile = StringRef());
 
-  /// \brief Collect the set of all known, top-level modules.
+  /// Collect the set of all known, top-level modules.
   ///
   /// \param Modules Will be filled with the set of known, top-level modules.
   void collectAllModules(SmallVectorImpl<Module *> &Modules);
 
-  /// \brief Load all known, top-level system modules.
+  /// Load all known, top-level system modules.
   void loadTopLevelSystemModules();
 
 private:
-  /// \brief Lookup a module with the given module name and search-name.
+  /// Lookup a module with the given module name and search-name.
   ///
   /// \param ModuleName The name of the module we're looking for.
   ///
@@ -596,7 +596,7 @@ private:
   /// \returns The module named ModuleName.
   Module *lookupModule(StringRef ModuleName, StringRef SearchName);
 
-  /// \brief Retrieve a module with the given name, which may be part of the
+  /// Retrieve a module with the given name, which may be part of the
   /// given framework.
   ///
   /// \param Name The name of the module to retrieve.
@@ -611,11 +611,11 @@ private:
                               const DirectoryEntry *Dir,
                               bool IsSystem);
 
-  /// \brief Load all of the module maps within the immediate subdirectories
+  /// Load all of the module maps within the immediate subdirectories
   /// of the given search directory.
   void loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir);
 
-  /// \brief Find and suggest a usable module for the given file.
+  /// Find and suggest a usable module for the given file.
   ///
   /// \return \c true if the file can be used, \c false if we are not permitted to
   ///         find this file due to requirements from \p RequestingModule.
@@ -625,7 +625,7 @@ private:
                                  ModuleMap::KnownHeader *SuggestedModule,
                                  bool IsSystemHeaderDir);
 
-  /// \brief Find and suggest a usable module for the given file, which is part of
+  /// Find and suggest a usable module for the given file, which is part of
   /// the specified framework.
   ///
   /// \return \c true if the file can be used, \c false if we are not permitted to
@@ -634,7 +634,7 @@ private:
       const FileEntry *File, StringRef FrameworkDir, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule, bool IsSystemFramework);
 
-  /// \brief Look up the file with the specified name and determine its owning
+  /// Look up the file with the specified name and determine its owning
   /// module.
   const FileEntry *
   getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
@@ -643,19 +643,19 @@ private:
                           ModuleMap::KnownHeader *SuggestedModule);
 
 public:
-  /// \brief Retrieve the module map.
+  /// Retrieve the module map.
   ModuleMap &getModuleMap() { return ModMap; }
   
-  /// \brief Retrieve the module map.
+  /// Retrieve the module map.
   const ModuleMap &getModuleMap() const { return ModMap; }
   
   unsigned header_file_size() const { return FileInfo.size(); }
 
-  /// \brief Return the HeaderFileInfo structure for the specified FileEntry,
+  /// Return the HeaderFileInfo structure for the specified FileEntry,
   /// in preparation for updating it in some way.
   HeaderFileInfo &getFileInfo(const FileEntry *FE);
 
-  /// \brief Return the HeaderFileInfo structure for the specified FileEntry,
+  /// Return the HeaderFileInfo structure for the specified FileEntry,
   /// if it has ever been filled in.
   /// \param WantExternal Whether the caller wants purely-external header file
   ///        info (where \p External is true).
@@ -691,10 +691,10 @@ public:
 
   search_dir_iterator system_dir_end() const { return SearchDirs.end(); }
 
-  /// \brief Retrieve a uniqued framework name.
+  /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
 
-  /// \brief Suggest a path by which the specified file could be found, for
+  /// Suggest a path by which the specified file could be found, for
   /// use in diagnostics to suggest a #include.
   ///
   /// \param IsSystem If non-null, filled in to indicate whether the suggested
@@ -702,7 +702,7 @@ public:
   std::string suggestPathToFileForDiagnostics(const FileEntry *File,
                                               bool *IsSystem = nullptr);
 
-  /// \brief Suggest a path by which the specified file could be found, for
+  /// Suggest a path by which the specified file could be found, for
   /// use in diagnostics to suggest a #include.
   ///
   /// \param WorkingDir If non-empty, this will be prepended to search directory
@@ -716,18 +716,18 @@ public:
   size_t getTotalMemory() const;
 
 private:
-  /// \brief Describes what happened when we tried to load a module map file.
+  /// Describes what happened when we tried to load a module map file.
   enum LoadModuleMapResult {
-    /// \brief The module map file had already been loaded.
+    /// The module map file had already been loaded.
     LMM_AlreadyLoaded,
 
-    /// \brief The module map file was loaded by this invocation.
+    /// The module map file was loaded by this invocation.
     LMM_NewlyLoaded,
 
-    /// \brief There is was directory with the given name.
+    /// There is was directory with the given name.
     LMM_NoDirectory,
 
-    /// \brief There was either no module map file or the module map file was
+    /// There was either no module map file or the module map file was
     /// invalid.
     LMM_InvalidModuleMap
   };
@@ -738,7 +738,7 @@ private:
                                             FileID ID = FileID(),
                                             unsigned *Offset = nullptr);
 
-  /// \brief Try to load the module map file in the given directory.
+  /// Try to load the module map file in the given directory.
   ///
   /// \param DirName The name of the directory where we will look for a module
   /// map file.
@@ -750,7 +750,7 @@ private:
   LoadModuleMapResult loadModuleMapFile(StringRef DirName, bool IsSystem,
                                         bool IsFramework);
 
-  /// \brief Try to load the module map file in the given directory.
+  /// Try to load the module map file in the given directory.
   ///
   /// \param Dir The directory where we will look for a module map file.
   /// \param IsSystem Whether this is a system header directory.

@@ -24,7 +24,7 @@ public:
   virtual void insert(SourceLocation loc, StringRef text) = 0;
   virtual void replace(CharSourceRange range, StringRef text) = 0;
 
-  /// \brief By default it calls replace with an empty string.
+  /// By default it calls replace with an empty string.
   virtual void remove(CharSourceRange range);
 };
 

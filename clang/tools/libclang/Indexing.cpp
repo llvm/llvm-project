@@ -45,7 +45,7 @@ namespace {
 // Skip Parsed Bodies
 //===----------------------------------------------------------------------===//
 
-/// \brief A "region" in source code identified by the file/offset of the
+/// A "region" in source code identified by the file/offset of the
 /// preprocessor conditional directive that it belongs to.
 /// Multiple, non-consecutive ranges can be parts of the same region.
 ///

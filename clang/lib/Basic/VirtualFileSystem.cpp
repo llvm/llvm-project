@@ -165,7 +165,7 @@ static bool pathHasTraversal(StringRef Path) {
 
 namespace {
 
-/// \brief Wrapper around a raw file descriptor.
+/// Wrapper around a raw file descriptor.
 class RealFile : public File {
   friend class RealFileSystem;
 
@@ -227,7 +227,7 @@ std::error_code RealFile::close() {
 
 namespace {
 
-/// \brief The file system according to your operating system.
+/// The file system according to your operating system.
 class RealFileSystem : public FileSystem {
 public:
   ErrorOr<Status> status(const Twine &Path) override;
@@ -780,7 +780,7 @@ enum EntryKind {
   EK_File
 };
 
-/// \brief A single file or directory in the VFS.
+/// A single file or directory in the VFS.
 class Entry {
   EntryKind Kind;
   std::string Name;
@@ -842,7 +842,7 @@ public:
 
   StringRef getExternalContentsPath() const { return ExternalContentsPath; }
 
-  /// \brief whether to use the external path as the name for this file.
+  /// whether to use the external path as the name for this file.
   bool useExternalName(bool GlobalUseExternalName) const {
     return UseName == NK_NotSet ? GlobalUseExternalName
                                 : (UseName == NK_External);
@@ -869,7 +869,7 @@ public:
   std::error_code increment() override;
 };
 
-/// \brief A virtual file system parsed from a YAML file.
+/// A virtual file system parsed from a YAML file.
 ///
 /// Currently, this class allows creating virtual directories and mapping
 /// virtual file paths to existing external files, available in \c ExternalFS.
@@ -930,7 +930,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
   /// The root(s) of the virtual file system.
   std::vector<std::unique_ptr<Entry>> Roots;
 
-  /// \brief The file system to use for external references.
+  /// The file system to use for external references.
   IntrusiveRefCntPtr<FileSystem> ExternalFS;
 
   /// If IsRelativeOverlay is set, this represents the directory
@@ -941,7 +941,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
   /// @name Configuration
   /// @{
 
-  /// \brief Whether to perform case-sensitive comparisons.
+  /// Whether to perform case-sensitive comparisons.
   ///
   /// Currently, case-insensitive matching only works correctly with ASCII.
   bool CaseSensitive = true;
@@ -950,11 +950,11 @@ class RedirectingFileSystem : public vfs::FileSystem {
   /// be prefixed in every 'external-contents' when reading from YAML files.
   bool IsRelativeOverlay = false;
 
-  /// \brief Whether to use to use the value of 'external-contents' for the
+  /// Whether to use to use the value of 'external-contents' for the
   /// names of files.  This global value is overridable on a per-file basis.
   bool UseExternalNames = true;
 
-  /// \brief Whether an invalid path obtained via 'external-contents' should
+  /// Whether an invalid path obtained via 'external-contents' should
   /// cause iteration on the VFS to stop. If 'true', the VFS should ignore
   /// the entry and continue with the next. Allows YAML files to be shared
   /// across multiple compiler invocations regardless of prior existent
@@ -977,19 +977,19 @@ private:
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS)
       : ExternalFS(std::move(ExternalFS)) {}
 
-  /// \brief Looks up the path <tt>[Start, End)</tt> in \p From, possibly
+  /// Looks up the path <tt>[Start, End)</tt> in \p From, possibly
   /// recursing into the contents of \p From if it is a directory.
   ErrorOr<Entry *> lookupPath(sys::path::const_iterator Start,
                               sys::path::const_iterator End, Entry *From);
 
-  /// \brief Get the status of a given an \c Entry.
+  /// Get the status of a given an \c Entry.
   ErrorOr<Status> status(const Twine &Path, Entry *E);
 
 public:
-  /// \brief Looks up \p Path in \c Roots.
+  /// Looks up \p Path in \c Roots.
   ErrorOr<Entry *> lookupPath(const Twine &Path);
 
-  /// \brief Parses \p Buffer, which is expected to be in YAML format and
+  /// Parses \p Buffer, which is expected to be in YAML format and
   /// returns a virtual file system representing its contents.
   static RedirectingFileSystem *
   create(std::unique_ptr<MemoryBuffer> Buffer,
@@ -1065,7 +1065,7 @@ LLVM_DUMP_METHOD void dumpEntry(Entry *E, int NumSpaces = 0) const {
 #endif
 };
 
-/// \brief A helper class to hold the common YAML parsing state.
+/// A helper class to hold the common YAML parsing state.
 class RedirectingFileSystemParser {
   yaml::Stream &Stream;
 

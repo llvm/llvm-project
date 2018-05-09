@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Provides definitions for the various language-specific address
+/// Provides definitions for the various language-specific address
 /// spaces.
 //
 //===----------------------------------------------------------------------===//
@@ -20,7 +20,7 @@
 
 namespace clang {
 
-/// \brief Defines the address space values used by the address space qualifier
+/// Defines the address space values used by the address space qualifier
 /// of QualType.
 ///
 enum class LangAS : unsigned {

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the clang::FileSystemOptions interface.
+/// Defines the clang::FileSystemOptions interface.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,10 +19,10 @@
 
 namespace clang {
 
-/// \brief Keeps track of options that affect how file operations are performed.
+/// Keeps track of options that affect how file operations are performed.
 class FileSystemOptions {
 public:
-  /// \brief If set, paths are resolved as if the working directory was
+  /// If set, paths are resolved as if the working directory was
   /// set to the value of WorkingDir.
   std::string WorkingDir;
 };

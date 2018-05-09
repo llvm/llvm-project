@@ -39,7 +39,7 @@ class MemberExpr;
 class NestedNameSpecifier;
 class Sema;
 
-/// @brief Simple class containing the result of Sema::CorrectTypo
+/// Simple class containing the result of Sema::CorrectTypo
 class TypoCorrection {
 public:
   // "Distance" for unusable corrections
@@ -81,14 +81,14 @@ public:
 
   TypoCorrection() = default;
 
-  /// \brief Gets the DeclarationName of the typo correction
+  /// Gets the DeclarationName of the typo correction
   DeclarationName getCorrection() const { return CorrectionName; }
 
   IdentifierInfo *getCorrectionAsIdentifierInfo() const {
     return CorrectionName.getAsIdentifierInfo();
   }
 
-  /// \brief Gets the NestedNameSpecifier needed to use the typo correction
+  /// Gets the NestedNameSpecifier needed to use the typo correction
   NestedNameSpecifier *getCorrectionSpecifier() const {
     return CorrectionNameSpec;
   }
@@ -123,7 +123,7 @@ public:
     return (ED + CharDistanceWeight / 2) / CharDistanceWeight;
   }
 
-  /// \brief Gets the "edit distance" of the typo correction from the typo.
+  /// Gets the "edit distance" of the typo correction from the typo.
   /// If Normalized is true, scale the distance down by the CharDistanceWeight
   /// to return the edit distance in terms of single-character edits.
   unsigned getEditDistance(bool Normalized = true) const {
@@ -142,13 +142,13 @@ public:
     return Normalized ? NormalizeEditDistance(ED) : ED;
   }
 
-  /// \brief Get the correction declaration found by name lookup (before we
+  /// Get the correction declaration found by name lookup (before we
   /// looked through using shadow declarations and the like).
   NamedDecl *getFoundDecl() const {
     return hasCorrectionDecl() ? *(CorrectionDecls.begin()) : nullptr;
   }
 
-  /// \brief Gets the pointer to the declaration of the typo correction
+  /// Gets the pointer to the declaration of the typo correction
   NamedDecl *getCorrectionDecl() const {
     auto *D = getFoundDecl();
     return D ? D->getUnderlyingDecl() : nullptr;
@@ -158,24 +158,24 @@ public:
     return dyn_cast_or_null<DeclClass>(getCorrectionDecl());
   }
 
-  /// \brief Clears the list of NamedDecls.
+  /// Clears the list of NamedDecls.
   void ClearCorrectionDecls() {
     CorrectionDecls.clear();
   }
 
-  /// \brief Clears the list of NamedDecls before adding the new one.
+  /// Clears the list of NamedDecls before adding the new one.
   void setCorrectionDecl(NamedDecl *CDecl) {
     CorrectionDecls.clear();
     addCorrectionDecl(CDecl);
   }
 
-  /// \brief Clears the list of NamedDecls and adds the given set.
+  /// Clears the list of NamedDecls and adds the given set.
   void setCorrectionDecls(ArrayRef<NamedDecl*> Decls) {
     CorrectionDecls.clear();
     CorrectionDecls.insert(CorrectionDecls.begin(), Decls.begin(), Decls.end());
   }
 
-  /// \brief Add the given NamedDecl to the list of NamedDecls that are the
+  /// Add the given NamedDecl to the list of NamedDecls that are the
   /// declarations associated with the DeclarationName of this TypoCorrection
   void addCorrectionDecl(NamedDecl *CDecl);
 
@@ -185,10 +185,10 @@ public:
     return "'" + getAsString(LO) + "'";
   }
 
-  /// \brief Returns whether this TypoCorrection has a non-empty DeclarationName
+  /// Returns whether this TypoCorrection has a non-empty DeclarationName
   explicit operator bool() const { return bool(CorrectionName); }
 
-  /// \brief Mark this TypoCorrection as being a keyword.
+  /// Mark this TypoCorrection as being a keyword.
   /// Since addCorrectionDeclsand setCorrectionDecl don't allow NULL to be
   /// added to the list of the correction's NamedDecl pointers, NULL is added
   /// as the only element in the list to mark this TypoCorrection as a keyword.
@@ -244,7 +244,7 @@ public:
 
   const_decl_iterator end() const { return CorrectionDecls.end(); }
 
-  /// \brief Returns whether this typo correction is correcting to a
+  /// Returns whether this typo correction is correcting to a
   /// declaration that was declared in a module that has not been imported.
   bool requiresImport() const { return RequiresImport; }
   void setRequiresImport(bool Req) { RequiresImport = Req; }
@@ -277,7 +277,7 @@ private:
   std::vector<PartialDiagnostic> ExtraDiagnostics;
 };
 
-/// @brief Base class for callback objects used by Sema::CorrectTypo to check
+/// Base class for callback objects used by Sema::CorrectTypo to check
 /// the validity of a potential typo correction.
 class CorrectionCandidateCallback {
 public:
@@ -289,7 +289,7 @@ public:
 
   virtual ~CorrectionCandidateCallback() = default;
 
-  /// \brief Simple predicate used by the default RankCandidate to
+  /// Simple predicate used by the default RankCandidate to
   /// determine whether to return an edit distance of 0 or InvalidDistance.
   /// This can be overridden by validators that only need to determine if a
   /// candidate is viable, without ranking potentially viable candidates.
@@ -301,7 +301,7 @@ public:
   /// WantCXXNamedCasts, WantRemainingKeywords, or WantObjCSuper is true.
   virtual bool ValidateCandidate(const TypoCorrection &candidate);
 
-  /// \brief Method used by Sema::CorrectTypo to assign an "edit distance" rank
+  /// Method used by Sema::CorrectTypo to assign an "edit distance" rank
   /// to a candidate (where a lower value represents a better candidate), or
   /// returning InvalidDistance if the candidate is not at all viable. For
   /// validation callbacks that only need to determine if a candidate is viable,
@@ -343,7 +343,7 @@ protected:
   NestedNameSpecifier *TypoNNS;
 };
 
-/// @brief Simple template class for restricting typo correction candidates
+/// Simple template class for restricting typo correction candidates
 /// to ones having a single Decl* of the given type.
 template <class C>
 class DeclFilterCCC : public CorrectionCandidateCallback {
@@ -353,7 +353,7 @@ public:
   }
 };
 
-// @brief Callback class to limit the allowed keywords and to only accept typo
+// Callback class to limit the allowed keywords and to only accept typo
 // corrections that are keywords or whose decls refer to functions (or template
 // functions) that accept the given number of arguments.
 class FunctionCallFilterCCC : public CorrectionCandidateCallback {
@@ -371,7 +371,7 @@ private:
   MemberExpr *MemberFn;
 };
 
-// @brief Callback class that effectively disabled typo correction
+// Callback class that effectively disabled typo correction
 class NoTypoCorrectionCCC : public CorrectionCandidateCallback {
 public:
   NoTypoCorrectionCCC() {

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements specific functions of \c FormatTokens and their
+/// This file implements specific functions of \c FormatTokens and their
 /// roles.
 ///
 //===----------------------------------------------------------------------===//

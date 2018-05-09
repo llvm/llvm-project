@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Defines the clang::TypeLoc interface and its subclasses.
+/// Defines the clang::TypeLoc interface and its subclasses.
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,7 +49,7 @@ class UnresolvedUsingTypenameDecl;
   class Class##TypeLoc;
 #include "clang/AST/TypeLocNodes.def"
 
-/// \brief Base wrapper for a particular "section" of type source info.
+/// Base wrapper for a particular "section" of type source info.
 ///
 /// A client should use the TypeLoc subclasses through castAs()/getAs()
 /// in order to get at the actual information.
@@ -67,7 +67,7 @@ public:
   TypeLoc(const Type *ty, void *opaqueData)
       : Ty(ty), Data(opaqueData) {}
 
-  /// \brief Convert to the specified TypeLoc type, asserting that this TypeLoc
+  /// Convert to the specified TypeLoc type, asserting that this TypeLoc
   /// is of the desired type.
   ///
   /// \pre T::isKind(*this)
@@ -80,7 +80,7 @@ public:
     return t;
   }
 
-  /// \brief Convert to the specified TypeLoc type, returning a null TypeLoc if
+  /// Convert to the specified TypeLoc type, returning a null TypeLoc if
   /// this TypeLoc is not of the desired type.
   template<typename T>
   T getAs() const {
@@ -92,7 +92,7 @@ public:
     return t;
   }
 
-  /// \brief Convert to the specified TypeLoc type, returning a null TypeLoc if
+  /// Convert to the specified TypeLoc type, returning a null TypeLoc if
   /// this TypeLock is not of the desired type. It will consider type
   /// adjustments from a type that wad written as a T to another type that is
   /// still canonically a T (ignores parens, attributes, elaborated types, etc).
@@ -118,14 +118,14 @@ public:
   bool isNull() const { return !Ty; }
   explicit operator bool() const { return Ty; }
 
-  /// \brief Returns the size of type source info data block for the given type.
+  /// Returns the size of type source info data block for the given type.
   static unsigned getFullDataSizeForType(QualType Ty);
 
-  /// \brief Returns the alignment of type source info data block for
+  /// Returns the alignment of type source info data block for
   /// the given type.
   static unsigned getLocalAlignmentForType(QualType Ty);
 
-  /// \brief Get the type for which this source info wrapper provides
+  /// Get the type for which this source info wrapper provides
   /// information.
   QualType getType() const {
     return QualType::getFromOpaquePtr(Ty);
@@ -135,18 +135,18 @@ public:
     return QualType::getFromOpaquePtr(Ty).getTypePtr();
   }
 
-  /// \brief Get the pointer where source information is stored.
+  /// Get the pointer where source information is stored.
   void *getOpaqueData() const {
     return Data;
   }
 
-  /// \brief Get the begin source location.
+  /// Get the begin source location.
   SourceLocation getBeginLoc() const;
 
-  /// \brief Get the end source location.
+  /// Get the end source location.
   SourceLocation getEndLoc() const;
 
-  /// \brief Get the full source range.
+  /// Get the full source range.
   SourceRange getSourceRange() const LLVM_READONLY {
     return SourceRange(getBeginLoc(), getEndLoc());
   }
@@ -154,28 +154,28 @@ public:
   SourceLocation getLocStart() const LLVM_READONLY { return getBeginLoc(); }
   SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
 
-  /// \brief Get the local source range.
+  /// Get the local source range.
   SourceRange getLocalSourceRange() const {
     return getLocalSourceRangeImpl(*this);
   }
 
-  /// \brief Returns the size of the type source info data block.
+  /// Returns the size of the type source info data block.
   unsigned getFullDataSize() const {
     return getFullDataSizeForType(getType());
   }
 
-  /// \brief Get the next TypeLoc pointed by this TypeLoc, e.g for "int*" the
+  /// Get the next TypeLoc pointed by this TypeLoc, e.g for "int*" the
   /// TypeLoc is a PointerLoc and next TypeLoc is for "int".
   TypeLoc getNextTypeLoc() const {
     return getNextTypeLocImpl(*this);
   }
 
-  /// \brief Skips past any qualifiers, if this is qualified.
+  /// Skips past any qualifiers, if this is qualified.
   UnqualTypeLoc getUnqualifiedLoc() const; // implemented in this header
 
   TypeLoc IgnoreParens() const;
 
-  /// \brief Find a type with the location of an explicit type qualifier.
+  /// Find a type with the location of an explicit type qualifier.
   ///
   /// The result, if non-null, will be one of:
   ///   QualifiedTypeLoc
@@ -183,7 +183,7 @@ public:
   ///   AttributedTypeLoc, for those type attributes that behave as qualifiers
   TypeLoc findExplicitQualifierLoc() const;
 
-  /// \brief Initializes this to state that every location in this
+  /// Initializes this to state that every location in this
   /// type is the given location.
   ///
   /// This method exists to provide a simple transition for code that
@@ -192,14 +192,14 @@ public:
     initializeImpl(Context, *this, Loc);
   }
 
-  /// \brief Initializes this by copying its information from another
+  /// Initializes this by copying its information from another
   /// TypeLoc of the same type.
   void initializeFullCopy(TypeLoc Other) {
     assert(getType() == Other.getType());
     copy(Other);
   }
 
-  /// \brief Initializes this by copying its information from another
+  /// Initializes this by copying its information from another
   /// TypeLoc of the same type.  The given size must be the full data
   /// size.
   void initializeFullCopy(TypeLoc Other, unsigned Size) {
@@ -235,13 +235,13 @@ private:
   static SourceRange getLocalSourceRangeImpl(TypeLoc TL);
 };
 
-/// \brief Return the TypeLoc for a type source info.
+/// Return the TypeLoc for a type source info.
 inline TypeLoc TypeSourceInfo::getTypeLoc() const {
   // TODO: is this alignment already sufficient?
   return TypeLoc(Ty, const_cast<void*>(static_cast<const void*>(this + 1)));
 }
 
-/// \brief Wrapper of type source information for a type with
+/// Wrapper of type source information for a type with
 /// no direct qualifiers.
 class UnqualTypeLoc : public TypeLoc {
 public:
@@ -264,7 +264,7 @@ private:
   }
 };
 
-/// \brief Wrapper of type source information for a type with
+/// Wrapper of type source information for a type with
 /// non-trivial direct qualifiers.
 ///
 /// Currently, we intentionally do not provide source location for
@@ -295,7 +295,7 @@ public:
     return getUnqualifiedLoc();
   }
 
-  /// \brief Returns the size of the type source info data block that is
+  /// Returns the size of the type source info data block that is
   /// specific to this type.
   unsigned getLocalDataSize() const {
     // In fact, we don't currently preserve any location information
@@ -303,7 +303,7 @@ public:
     return 0;
   }
 
-  /// \brief Returns the alignment of the type source info data block that is
+  /// Returns the alignment of the type source info data block that is
   /// specific to this type.
   unsigned getLocalDataAlignment() const {
     // We don't preserve any location information.
@@ -503,7 +503,7 @@ struct TypeSpecLocInfo {
   SourceLocation NameLoc;
 };
 
-/// \brief A reasonable base class for TypeLocs that correspond to
+/// A reasonable base class for TypeLocs that correspond to
 /// types that are written as a type-specifier.
 class TypeSpecTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                                TypeSpecTypeLoc,
@@ -541,7 +541,7 @@ struct BuiltinLocInfo {
   SourceRange BuiltinRange;
 };
 
-/// \brief Wrapper for source info for builtin types.
+/// Wrapper for source info for builtin types.
 class BuiltinTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                               BuiltinTypeLoc,
                                               BuiltinType,
@@ -661,7 +661,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for typedefs.
+/// Wrapper for source info for typedefs.
 class TypedefTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
                                                         TypedefTypeLoc,
                                                         TypedefType> {
@@ -671,7 +671,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for injected class names of class
+/// Wrapper for source info for injected class names of class
 /// templates.
 class InjectedClassNameTypeLoc :
     public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
@@ -683,7 +683,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for unresolved typename using decls.
+/// Wrapper for source info for unresolved typename using decls.
 class UnresolvedUsingTypeLoc :
     public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
                                      UnresolvedUsingTypeLoc,
@@ -694,7 +694,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for tag types.  Note that this only
+/// Wrapper for source info for tag types.  Note that this only
 /// records source info for the name itself; a type written 'struct foo'
 /// should be represented as an ElaboratedTypeLoc.  We currently
 /// only do that when C++ is enabled because of the expense of
@@ -705,7 +705,7 @@ class TagTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
 public:
   TagDecl *getDecl() const { return getTypePtr()->getDecl(); }
 
-  /// \brief True if the tag was defined in this type specifier.
+  /// True if the tag was defined in this type specifier.
   bool isDefinition() const {
     TagDecl *D = getDecl();
     return D->isCompleteDefinition() &&
@@ -713,7 +713,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for record types.
+/// Wrapper for source info for record types.
 class RecordTypeLoc : public InheritingConcreteTypeLoc<TagTypeLoc,
                                                        RecordTypeLoc,
                                                        RecordType> {
@@ -721,7 +721,7 @@ public:
   RecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
-/// \brief Wrapper for source info for enum types.
+/// Wrapper for source info for enum types.
 class EnumTypeLoc : public InheritingConcreteTypeLoc<TagTypeLoc,
                                                      EnumTypeLoc,
                                                      EnumType> {
@@ -729,7 +729,7 @@ public:
   EnumDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
-/// \brief Wrapper for template type parameters.
+/// Wrapper for template type parameters.
 class TemplateTypeParmTypeLoc :
     public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
                                      TemplateTypeParmTypeLoc,
@@ -828,14 +828,14 @@ public:
   }
 };
 
-/// \brief Wrapper for substituted template type parameters.
+/// Wrapper for substituted template type parameters.
 class SubstTemplateTypeParmTypeLoc :
     public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
                                      SubstTemplateTypeParmTypeLoc,
                                      SubstTemplateTypeParmType> {
 };
 
-  /// \brief Wrapper for substituted template type parameters.
+  /// Wrapper for substituted template type parameters.
 class SubstTemplateTypeParmPackTypeLoc :
     public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
                                      SubstTemplateTypeParmPackTypeLoc,
@@ -855,7 +855,7 @@ struct AttributedLocInfo {
   SourceLocation AttrLoc;
 };
 
-/// \brief Type source information for an attributed type.
+/// Type source information for an attributed type.
 class AttributedTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                                  AttributedTypeLoc,
                                                  AttributedType,
@@ -1114,7 +1114,7 @@ struct ObjCInterfaceLocInfo {
   SourceLocation NameEndLoc;
 };
 
-/// \brief Wrapper for source info for ObjC interfaces.
+/// Wrapper for source info for ObjC interfaces.
 class ObjCInterfaceTypeLoc : public ConcreteTypeLoc<ObjCObjectTypeLoc,
                                                     ObjCInterfaceTypeLoc,
                                                     ObjCInterfaceType,
@@ -1227,7 +1227,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for pointers decayed from arrays and
+/// Wrapper for source info for pointers decayed from arrays and
 /// functions.
 class DecayedTypeLoc : public InheritingConcreteTypeLoc<
                            AdjustedTypeLoc, DecayedTypeLoc, DecayedType> {
@@ -1267,7 +1267,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for pointers.
+/// Wrapper for source info for pointers.
 class PointerTypeLoc : public PointerLikeTypeLoc<PointerTypeLoc,
                                                  PointerType> {
 public:
@@ -1280,7 +1280,7 @@ public:
   }
 };
 
-/// \brief Wrapper for source info for block pointers.
+/// Wrapper for source info for block pointers.
 class BlockPointerTypeLoc : public PointerLikeTypeLoc<BlockPointerTypeLoc,
                                                       BlockPointerType> {
 public:
@@ -1297,7 +1297,7 @@ struct MemberPointerLocInfo : public PointerLikeLocInfo {
   TypeSourceInfo *ClassTInfo;
 };
 
-/// \brief Wrapper for source info for member pointers.
+/// Wrapper for source info for member pointers.
 class MemberPointerTypeLoc : public PointerLikeTypeLoc<MemberPointerTypeLoc,
                                                        MemberPointerType,
                                                        MemberPointerLocInfo> {
@@ -1392,7 +1392,7 @@ struct FunctionLocInfo {
   SourceLocation LocalRangeEnd;
 };
 
-/// \brief Wrapper for source info for functions.
+/// Wrapper for source info for functions.
 class FunctionTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                                FunctionTypeLoc,
                                                FunctionType,
@@ -1496,7 +1496,7 @@ public:
       setExceptionSpecRange(Loc);
   }
 
-  /// \brief Returns the size of the type source info data block that is
+  /// Returns the size of the type source info data block that is
   /// specific to this type.
   unsigned getExtraLocalDataSize() const {
     unsigned ExceptSpecSize = hasExceptionSpec() ? sizeof(SourceRange) : 0;
@@ -1525,7 +1525,7 @@ struct ArrayLocInfo {
   Expr *Size;
 };
 
-/// \brief Wrapper for source info for arrays.
+/// Wrapper for source info for arrays.
 class ArrayTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                             ArrayTypeLoc,
                                             ArrayType,
@@ -1670,7 +1670,7 @@ public:
     getLocalData()->NameLoc = Loc;
   }
 
-  /// \brief - Copy the location information from the given info.
+  /// - Copy the location information from the given info.
   void copy(TemplateSpecializationTypeLoc Loc) {
     unsigned size = getFullDataSize();
     assert(size == Loc.getFullDataSize());
@@ -1989,7 +1989,7 @@ public:
 struct ElaboratedLocInfo {
   SourceLocation ElaboratedKWLoc;
 
-  /// \brief Data associated with the nested-name-specifier location.
+  /// Data associated with the nested-name-specifier location.
   void *QualifierData;
 };
 

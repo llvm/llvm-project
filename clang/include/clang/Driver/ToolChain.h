@@ -201,7 +201,7 @@ public:
   StringRef getPlatform() const { return Triple.getVendorName(); }
   StringRef getOS() const { return Triple.getOSName(); }
 
-  /// \brief Provide the default architecture name (as expected by -arch) for
+  /// Provide the default architecture name (as expected by -arch) for
   /// this toolchain.
   StringRef getDefaultUniversalArchName() const;
 
@@ -233,7 +233,7 @@ public:
   // Returns the RTTIMode for the toolchain with the current arguments.
   RTTIMode getRTTIMode() const { return CachedRTTIMode; }
 
-  /// \brief Return any implicit target and/or mode flag for an invocation of
+  /// Return any implicit target and/or mode flag for an invocation of
   /// the compiler driver as `ProgName`.
   ///
   /// For example, when called with i686-linux-android-g++, the first element
@@ -287,7 +287,7 @@ public:
   /// the linker suffix or name.
   std::string GetLinkerPath() const;
 
-  /// \brief Dispatch to the specific toolchain for verbose printing.
+  /// Dispatch to the specific toolchain for verbose printing.
   ///
   /// This is used when handling the verbose option to print detailed,
   /// toolchain-specific information useful for understanding the behavior of
@@ -296,7 +296,7 @@ public:
 
   // Platform defaults information
 
-  /// \brief Returns true if the toolchain is targeting a non-native
+  /// Returns true if the toolchain is targeting a non-native
   /// architecture.
   virtual bool isCrossCompiling() const;
 
@@ -315,7 +315,7 @@ public:
   /// by default.
   virtual bool IsIntegratedAssemblerDefault() const { return false; }
 
-  /// \brief Check if the toolchain should use the integrated assembler.
+  /// Check if the toolchain should use the integrated assembler.
   virtual bool useIntegratedAs() const;
 
   /// IsMathErrnoDefault - Does this tool chain use -fmath-errno by default.
@@ -333,7 +333,7 @@ public:
   /// mixed dispatch method be used?
   virtual bool UseObjCMixedDispatch() const { return false; }
 
-  /// \brief Check whether to enable x86 relax relocations by default.
+  /// Check whether to enable x86 relax relocations by default.
   virtual bool useRelaxRelocations() const;
 
   /// GetDefaultStackProtectorLevel - Get the default stack protector level for
@@ -378,13 +378,13 @@ public:
   /// by default.
   virtual bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const;
 
-  /// \brief Test whether this toolchain defaults to PIC.
+  /// Test whether this toolchain defaults to PIC.
   virtual bool isPICDefault() const = 0;
 
-  /// \brief Test whether this toolchain defaults to PIE.
+  /// Test whether this toolchain defaults to PIE.
   virtual bool isPIEDefault() const = 0;
 
-  /// \brief Tests whether this toolchain forces its default for PIC, PIE or
+  /// Tests whether this toolchain forces its default for PIC, PIE or
   /// non-PIC.  If this returns true, any PIC related flags should be ignored
   /// and instead the results of \c isPICDefault() and \c isPIEDefault() are
   /// used exclusively.
@@ -456,7 +456,7 @@ public:
   /// FIXME: this really belongs on some sort of DeploymentTarget abstraction
   virtual bool hasBlocksRuntime() const { return true; }
 
-  /// \brief Add the clang cc1 arguments for system include paths.
+  /// Add the clang cc1 arguments for system include paths.
   ///
   /// This routine is responsible for adding the necessary cc1 arguments to
   /// include headers from standard system header directories.
@@ -464,12 +464,12 @@ public:
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const;
 
-  /// \brief Add options that need to be passed to cc1 for this target.
+  /// Add options that need to be passed to cc1 for this target.
   virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args,
                                      Action::OffloadKind DeviceOffloadKind) const;
 
-  /// \brief Add warning options that need to be passed to cc1 for this target.
+  /// Add warning options that need to be passed to cc1 for this target.
   virtual void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const;
 
   // GetRuntimeLibType - Determine the runtime library type to use with the
@@ -517,22 +517,22 @@ public:
   virtual void addProfileRTLibs(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
 
-  /// \brief Add arguments to use system-specific CUDA includes.
+  /// Add arguments to use system-specific CUDA includes.
   virtual void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const;
 
-  /// \brief Add arguments to use MCU GCC toolchain includes.
+  /// Add arguments to use MCU GCC toolchain includes.
   virtual void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const;
 
-  /// \brief On Windows, returns the MSVC compatibility version.
+  /// On Windows, returns the MSVC compatibility version.
   virtual VersionTuple computeMSVCVersion(const Driver *D,
                                           const llvm::opt::ArgList &Args) const;
 
-  /// \brief Return sanitizers which are available in this toolchain.
+  /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask getSupportedSanitizers() const;
 
-  /// \brief Return sanitizers which are enabled by default.
+  /// Return sanitizers which are enabled by default.
   virtual SanitizerMask getDefaultSanitizers() const { return 0; }
 };
 

@@ -49,30 +49,30 @@ public:
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const;
 
-  /// \brief Emit an error if Version does not support the given Arch.
+  /// Emit an error if Version does not support the given Arch.
   ///
   /// If either Version or Arch is unknown, does not emit an error.  Emits at
   /// most one error per Arch.
   void CheckCudaVersionSupportsArch(CudaArch Arch) const;
 
-  /// \brief Check whether we detected a valid Cuda install.
+  /// Check whether we detected a valid Cuda install.
   bool isValid() const { return IsValid; }
-  /// \brief Print information about the detected CUDA installation.
+  /// Print information about the detected CUDA installation.
   void print(raw_ostream &OS) const;
 
-  /// \brief Get the detected Cuda install's version.
+  /// Get the detected Cuda install's version.
   CudaVersion version() const { return Version; }
-  /// \brief Get the detected Cuda installation path.
+  /// Get the detected Cuda installation path.
   StringRef getInstallPath() const { return InstallPath; }
-  /// \brief Get the detected path to Cuda's bin directory.
+  /// Get the detected path to Cuda's bin directory.
   StringRef getBinPath() const { return BinPath; }
-  /// \brief Get the detected Cuda Include path.
+  /// Get the detected Cuda Include path.
   StringRef getIncludePath() const { return IncludePath; }
-  /// \brief Get the detected Cuda library path.
+  /// Get the detected Cuda library path.
   StringRef getLibPath() const { return LibPath; }
-  /// \brief Get the detected Cuda device library path.
+  /// Get the detected Cuda device library path.
   StringRef getLibDevicePath() const { return LibDevicePath; }
-  /// \brief Get libdevice file for given architecture
+  /// Get libdevice file for given architecture
   std::string getLibDeviceFile(StringRef Gpu) const {
     return LibDeviceMap.lookup(Gpu);
   }

@@ -24,7 +24,7 @@ namespace clang {
     };
   }  // end namespace diag
   
-  /// \brief DiagnosticsEngine argument formatting function for diagnostics that
+  /// DiagnosticsEngine argument formatting function for diagnostics that
   /// involve AST nodes.
   ///
   /// This function formats diagnostic arguments for various AST nodes, 

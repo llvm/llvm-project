@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Defines the clang::CommentOptions interface.
+/// Defines the clang::CommentOptions interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,15 +20,15 @@
 
 namespace clang {
 
-/// \brief Options for controlling comment parsing.
+/// Options for controlling comment parsing.
 struct CommentOptions {
   using BlockCommandNamesTy = std::vector<std::string>;
 
-  /// \brief Command names to treat as block commands in comments.
+  /// Command names to treat as block commands in comments.
   /// Should not include the leading backslash.
   BlockCommandNamesTy BlockCommandNames;
 
-  /// \brief Treat ordinary comments as documentation comments.
+  /// Treat ordinary comments as documentation comments.
   bool ParseAllComments = false;
 
   CommentOptions() = default;

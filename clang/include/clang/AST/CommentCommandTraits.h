@@ -26,7 +26,7 @@
 namespace clang {
 namespace comments {
 
-/// \brief Information about a single command.
+/// Information about a single command.
 ///
 /// When reordering, adding or removing members please update the corresponding
 /// TableGen backend.
@@ -57,7 +57,7 @@ struct CommandInfo {
   unsigned IsBlockCommand : 1;
 
   /// True if this command is introducing a brief documentation
-  /// paragraph (\\brief or an alias).
+  /// paragraph (\or an alias).
   unsigned IsBriefCommand : 1;
 
   /// True if this command is \\returns or an alias.
@@ -77,29 +77,29 @@ struct CommandInfo {
   /// True if this command is \\deprecated or an alias.
   unsigned IsDeprecatedCommand : 1;
 
-  /// \brief True if this is a \\headerfile-like command.
+  /// True if this is a \\headerfile-like command.
   unsigned IsHeaderfileCommand : 1;
 
   /// True if we don't want to warn about this command being passed an empty
   /// paragraph.  Meaningful only for block commands.
   unsigned IsEmptyParagraphAllowed : 1;
 
-  /// \brief True if this command is a verbatim-like block command.
+  /// True if this command is a verbatim-like block command.
   ///
   /// A verbatim-like block command eats every character (except line starting
   /// decorations) until matching end command is seen or comment end is hit.
   unsigned IsVerbatimBlockCommand : 1;
 
-  /// \brief True if this command is an end command for a verbatim-like block.
+  /// True if this command is an end command for a verbatim-like block.
   unsigned IsVerbatimBlockEndCommand : 1;
 
-  /// \brief True if this command is a verbatim line command.
+  /// True if this command is a verbatim line command.
   ///
   /// A verbatim-like line command eats everything until a newline is seen or
   /// comment end is hit.
   unsigned IsVerbatimLineCommand : 1;
 
-  /// \brief True if this command contains a declaration for the entity being
+  /// True if this command contains a declaration for the entity being
   /// documented.
   ///
   /// For example:
@@ -108,17 +108,17 @@ struct CommandInfo {
   /// \endcode
   unsigned IsDeclarationCommand : 1;
   
-  /// \brief True if verbatim-like line command is a function declaration.
+  /// True if verbatim-like line command is a function declaration.
   unsigned IsFunctionDeclarationCommand : 1;
 
-  /// \brief True if block command is further describing a container API; such
+  /// True if block command is further describing a container API; such
   /// as \@coclass, \@classdesign, etc.
   unsigned IsRecordLikeDetailCommand : 1;
   
-  /// \brief True if block command is a container API; such as \@interface.
+  /// True if block command is a container API; such as \@interface.
   unsigned IsRecordLikeDeclarationCommand : 1;
   
-  /// \brief True if this command is unknown.  This \c CommandInfo object was
+  /// True if this command is unknown.  This \c CommandInfo object was
   /// created during parsing.
   unsigned IsUnknownCommand : 1;
 };

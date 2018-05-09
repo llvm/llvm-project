@@ -228,7 +228,7 @@ private:
   bool IssueBetaWarnings = false;
 };
 
-/// \brief Check a function's CFG for thread-safety violations.
+/// Check a function's CFG for thread-safety violations.
 ///
 /// We traverse the blocks in the CFG, compute the set of mutexes that are held
 /// at the end of each block, and issue warnings for thread safety violations.
@@ -239,7 +239,7 @@ void runThreadSafetyAnalysis(AnalysisDeclContext &AC,
 
 void threadSafetyCleanup(BeforeSet *Cache);
 
-/// \brief Helper function that returns a LockKind required for the given level
+/// Helper function that returns a LockKind required for the given level
 /// of access.
 LockKind getLockKindFromAccessKind(AccessKind AK);
 

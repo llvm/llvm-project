@@ -260,7 +260,7 @@ public:
   }
   unsigned getNumAttrs() const { return (unsigned)CXAttrs.size(); }
 
-  /// \brief Retain/Release only useful when we allocate a AttrListInfo from the
+  /// Retain/Release only useful when we allocate a AttrListInfo from the
   /// BumpPtrAllocator, and not from the stack; so that we keep a pointer
   // in the EntityInfo
   void Retain() { ++ref_cnt; }

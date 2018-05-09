@@ -574,7 +574,7 @@ void TokenLexer::ExpandFunctionArguments() {
   }
 }
 
-/// \brief Checks if two tokens form wide string literal.
+/// Checks if two tokens form wide string literal.
 static bool isWideStringLiteralFromMacro(const Token &FirstTok,
                                          const Token &SecondTok) {
   return FirstTok.is(tok::identifier) &&
@@ -918,7 +918,7 @@ void TokenLexer::HandleMicrosoftCommentPaste(Token &Tok, SourceLocation OpLoc) {
   PP.HandleMicrosoftCommentPaste(Tok);
 }
 
-/// \brief If \arg loc is a file ID and points inside the current macro
+/// If \arg loc is a file ID and points inside the current macro
 /// definition, returns the appropriate source location pointing at the
 /// macro expansion source location entry, otherwise it returns an invalid
 /// SourceLocation.
@@ -937,7 +937,7 @@ TokenLexer::getExpansionLocForMacroDefLoc(SourceLocation loc) const {
   return MacroExpansionStart.getLocWithOffset(relativeOffset);
 }
 
-/// \brief Finds the tokens that are consecutive (from the same FileID)
+/// Finds the tokens that are consecutive (from the same FileID)
 /// creates a single SLocEntry, and assigns SourceLocations to each token that
 /// point to that SLocEntry. e.g for
 ///   assert(foo == bar);
@@ -1007,7 +1007,7 @@ static void updateConsecutiveMacroArgTokens(SourceManager &SM,
   }
 }
 
-/// \brief Creates SLocEntries and updates the locations of macro argument
+/// Creates SLocEntries and updates the locations of macro argument
 /// tokens to their new expanded locations.
 ///
 /// \param ArgIdSpellLoc the location of the macro argument id inside the macro

@@ -194,7 +194,7 @@ public:
            (reinterpret_cast<IdentifierInfo *>(Ptr & ~PtrMask));
   }
 
-  /// \brief Evaluates true when this declaration name is empty.
+  /// Evaluates true when this declaration name is empty.
   bool isEmpty() const {
     return !*this;
   }
@@ -211,7 +211,7 @@ public:
   /// getNameKind - Determine what kind of name this is.
   NameKind getNameKind() const;
 
-  /// \brief Determines whether the name itself is dependent, e.g., because it 
+  /// Determines whether the name itself is dependent, e.g., because it 
   /// involves a C++ type that is itself dependent.
   ///
   /// Note that this does not capture all of the notions of "dependent name",
@@ -541,10 +541,10 @@ public:
     LocInfo.CXXLiteralOperatorName.OpNameLoc = Loc.getRawEncoding();
   }
 
-  /// \brief Determine whether this name involves a template parameter.
+  /// Determine whether this name involves a template parameter.
   bool isInstantiationDependent() const;
   
-  /// \brief Determine whether this name contains an unexpanded
+  /// Determine whether this name contains an unexpanded
   /// parameter pack.
   bool containsUnexpandedParameterPack() const;
 

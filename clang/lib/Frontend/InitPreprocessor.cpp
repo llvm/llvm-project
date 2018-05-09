@@ -93,7 +93,7 @@ static void AddImplicitIncludePTH(MacroBuilder &Builder, Preprocessor &PP,
   AddImplicitInclude(Builder, OriginalFile);
 }
 
-/// \brief Add an implicit \#include using the original file used to generate
+/// Add an implicit \#include using the original file used to generate
 /// a PCH file.
 static void AddImplicitIncludePCH(MacroBuilder &Builder, Preprocessor &PP,
                                   const PCHContainerReader &PCHContainerRdr,
@@ -301,7 +301,7 @@ static const char *getLockFreeValue(unsigned TypeWidth, unsigned TypeAlign,
   return "1"; // "sometimes lock free"
 }
 
-/// \brief Add definitions required for a smooth interaction between
+/// Add definitions required for a smooth interaction between
 /// Objective-C++ automated reference counting and libstdc++ (4.2).
 static void AddObjCXXARCLibstdcxxDefines(const LangOptions &LangOpts,
                                          MacroBuilder &Builder) {

@@ -42,15 +42,15 @@ struct ProgramStateTrait<DynamicTypeMap>
   }
 };
 
-/// \brief Get dynamic type information for a region.
+/// Get dynamic type information for a region.
 DynamicTypeInfo getDynamicTypeInfo(ProgramStateRef State,
                                    const MemRegion *Reg);
 
-/// \brief Set dynamic type information of the region; return the new state.
+/// Set dynamic type information of the region; return the new state.
 ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *Reg,
                                    DynamicTypeInfo NewTy);
 
-/// \brief Set dynamic type information of the region; return the new state.
+/// Set dynamic type information of the region; return the new state.
 inline ProgramStateRef setDynamicTypeInfo(ProgramStateRef State,
                                           const MemRegion *Reg, QualType NewTy,
                                           bool CanBeSubClassed = true) {

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines enumerations for expression traits intrinsics.
+/// Defines enumerations for expression traits intrinsics.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -146,17 +146,17 @@ namespace clang {
 
     Optional<LambdaCapture> ImportLambdaCapture(const LambdaCapture &From);
                         
-    /// \brief What we should import from the definition.
+    /// What we should import from the definition.
     enum ImportDefinitionKind { 
-      /// \brief Import the default subset of the definition, which might be
+      /// Import the default subset of the definition, which might be
       /// nothing (if minimal import is set) or might be everything (if minimal
       /// import is not set).
       IDK_Default,
 
-      /// \brief Import everything.
+      /// Import everything.
       IDK_Everything,
 
-      /// \brief Import only the bare bones needed to establish a valid
+      /// Import only the bare bones needed to establish a valid
       /// DeclContext.
       IDK_Basic
     };

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares NamespaceEndCommentsFixer, a TokenAnalyzer that
+/// This file declares NamespaceEndCommentsFixer, a TokenAnalyzer that
 /// fixes namespace end comments.
 ///
 //===----------------------------------------------------------------------===//

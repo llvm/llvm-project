@@ -40,7 +40,7 @@ class CodeGenFunction;
 class CodeGenModule;
 struct CatchTypeInfo;
 
-/// \brief Implements C++ ABI-specific code generation functions.
+/// Implements C++ ABI-specific code generation functions.
 class CGCXXABI {
 protected:
   CodeGenModule &CGM;
@@ -222,7 +222,7 @@ protected:
   /// is required.
   llvm::Constant *getMemberPointerAdjustment(const CastExpr *E);
 
-  /// \brief Computes the non-virtual adjustment needed for a member pointer
+  /// Computes the non-virtual adjustment needed for a member pointer
   /// conversion along an inheritance path stored in an APValue.  Unlike
   /// getMemberPointerAdjustment(), the adjustment can be negative if the path
   /// is from a derived type to a base type.
@@ -237,7 +237,7 @@ public:
   virtual void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) = 0;
   virtual llvm::GlobalVariable *getThrowInfo(QualType T) { return nullptr; }
 
-  /// \brief Determine whether it's possible to emit a vtable for \p RD, even
+  /// Determine whether it's possible to emit a vtable for \p RD, even
   /// though we do not know that the vtable has been marked as used by semantic
   /// analysis.
   virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;

@@ -1078,6 +1078,8 @@ def err_opencl_logical_exclusive_or : Error<
 // OpenCL C++.
 def err_openclcxx_virtual_function : Error<
   "virtual functions are not supported in OpenCL C++">;
+def err_openclcxx_reserved : Error<
+  "'%0' is a reserved keyword in OpenCL C++">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<

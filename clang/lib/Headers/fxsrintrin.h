@@ -30,7 +30,7 @@
 
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__,  __target__("fxsr")))
 
-/// \brief Saves the XMM, MMX, MXCSR and x87 FPU registers into a 512-byte
+/// Saves the XMM, MMX, MXCSR and x87 FPU registers into a 512-byte
 ///    memory region pointed to by the input parameter \a __p.
 ///
 /// \headerfile <x86intrin.h>
@@ -46,7 +46,7 @@ _fxsave(void *__p)
   return __builtin_ia32_fxsave(__p);
 }
 
-/// \brief Restores the XMM, MMX, MXCSR and x87 FPU registers from the 512-byte
+/// Restores the XMM, MMX, MXCSR and x87 FPU registers from the 512-byte
 ///    memory region pointed to by the input parameter \a __p. The contents of
 ///    this memory region should have been written to by a previous \c _fxsave
 ///    or \c _fxsave64 intrinsic.
@@ -65,7 +65,7 @@ _fxrstor(void *__p)
 }
 
 #ifdef __x86_64__
-/// \brief Saves the XMM, MMX, MXCSR and x87 FPU registers into a 512-byte
+/// Saves the XMM, MMX, MXCSR and x87 FPU registers into a 512-byte
 ///    memory region pointed to by the input parameter \a __p.
 ///
 /// \headerfile <x86intrin.h>
@@ -81,7 +81,7 @@ _fxsave64(void *__p)
   return __builtin_ia32_fxsave64(__p);
 }
 
-/// \brief Restores the XMM, MMX, MXCSR and x87 FPU registers from the 512-byte
+/// Restores the XMM, MMX, MXCSR and x87 FPU registers from the 512-byte
 ///    memory region pointed to by the input parameter \a __p. The contents of
 ///    this memory region should have been written to by a previous \c _fxsave
 ///    or \c _fxsave64 intrinsic.

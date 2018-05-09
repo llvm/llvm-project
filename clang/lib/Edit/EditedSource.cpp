@@ -311,7 +311,7 @@ bool EditedSource::commit(const Commit &commit) {
   return true;
 }
 
-// \brief Returns true if it is ok to make the two given characters adjacent.
+// Returns true if it is ok to make the two given characters adjacent.
 static bool canBeJoined(char left, char right, const LangOptions &LangOpts) {
   // FIXME: Should use TokenConcatenation to make sure we don't allow stuff like
   // making two '<' adjacent.
@@ -319,7 +319,7 @@ static bool canBeJoined(char left, char right, const LangOptions &LangOpts) {
            Lexer::isIdentifierBodyChar(right, LangOpts));
 }
 
-/// \brief Returns true if it is ok to eliminate the trailing whitespace between
+/// Returns true if it is ok to eliminate the trailing whitespace between
 /// the given characters.
 static bool canRemoveWhitespace(char left, char beforeWSpace, char right,
                                 const LangOptions &LangOpts) {
@@ -332,7 +332,7 @@ static bool canRemoveWhitespace(char left, char beforeWSpace, char right,
   return true;
 }
 
-/// \brief Check the range that we are going to remove and:
+/// Check the range that we are going to remove and:
 /// -Remove any trailing whitespace if possible.
 /// -Insert a space if removing the range is going to mess up the source tokens.
 static void adjustRemoval(const SourceManager &SM, const LangOptions &LangOpts,

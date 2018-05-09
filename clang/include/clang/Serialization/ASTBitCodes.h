@@ -31,7 +31,7 @@
 namespace clang {
 namespace serialization {
 
-    /// \brief AST file major version number supported by this version of
+    /// AST file major version number supported by this version of
     /// Clang.
     ///
     /// Whenever the AST file format changes in a way that makes it
@@ -44,7 +44,7 @@ namespace serialization {
     /// AST files at this time.
     const unsigned VERSION_MAJOR = 6;
 
-    /// \brief AST file minor version number supported by this version of
+    /// AST file minor version number supported by this version of
     /// Clang.
     ///
     /// Whenever the AST format changes in a way that is still
@@ -54,13 +54,13 @@ namespace serialization {
     /// should be increased.
     const unsigned VERSION_MINOR = 0;
 
-    /// \brief An ID number that refers to an identifier in an AST file.
+    /// An ID number that refers to an identifier in an AST file.
     /// 
     /// The ID numbers of identifiers are consecutive (in order of discovery)
     /// and start at 1. 0 is reserved for NULL.
     using IdentifierID = uint32_t;
     
-    /// \brief An ID number that refers to a declaration in an AST file.
+    /// An ID number that refers to a declaration in an AST file.
     ///
     /// The ID numbers of declarations are consecutive (in order of
     /// discovery), with values below NUM_PREDEF_DECL_IDS being reserved. 
@@ -73,7 +73,7 @@ namespace serialization {
     using LocalDeclID = DeclID;
     using GlobalDeclID = DeclID;
 
-    /// \brief An ID number that refers to a type in an AST file.
+    /// An ID number that refers to a type in an AST file.
     ///
     /// The ID of a type is partitioned into two parts: the lower
     /// three bits are used to store the const/volatile/restrict
@@ -85,7 +85,7 @@ namespace serialization {
     /// other types that have serialized representations.
     using TypeID = uint32_t;
 
-    /// \brief A type index; the type ID with the qualifier bits removed.
+    /// A type index; the type ID with the qualifier bits removed.
     class TypeIdx {
       uint32_t Idx = 0;
 
@@ -131,58 +131,58 @@ namespace serialization {
       }
     };
 
-    /// \brief An ID number that refers to an identifier in an AST file.
+    /// An ID number that refers to an identifier in an AST file.
     using IdentID = uint32_t;
 
-    /// \brief The number of predefined identifier IDs.
+    /// The number of predefined identifier IDs.
     const unsigned int NUM_PREDEF_IDENT_IDS = 1;
 
-    /// \brief An ID number that refers to a macro in an AST file.
+    /// An ID number that refers to a macro in an AST file.
     using MacroID = uint32_t;
 
-    /// \brief A global ID number that refers to a macro in an AST file.
+    /// A global ID number that refers to a macro in an AST file.
     using GlobalMacroID = uint32_t;
 
-    /// \brief A local to a module ID number that refers to a macro in an
+    /// A local to a module ID number that refers to a macro in an
     /// AST file.
     using LocalMacroID = uint32_t;
 
-    /// \brief The number of predefined macro IDs.
+    /// The number of predefined macro IDs.
     const unsigned int NUM_PREDEF_MACRO_IDS = 1;
 
-    /// \brief An ID number that refers to an ObjC selector in an AST file.
+    /// An ID number that refers to an ObjC selector in an AST file.
     using SelectorID = uint32_t;
 
-    /// \brief The number of predefined selector IDs.
+    /// The number of predefined selector IDs.
     const unsigned int NUM_PREDEF_SELECTOR_IDS = 1;
     
-    /// \brief An ID number that refers to a set of CXXBaseSpecifiers in an 
+    /// An ID number that refers to a set of CXXBaseSpecifiers in an 
     /// AST file.
     using CXXBaseSpecifiersID = uint32_t;
 
-    /// \brief An ID number that refers to a list of CXXCtorInitializers in an
+    /// An ID number that refers to a list of CXXCtorInitializers in an
     /// AST file.
     using CXXCtorInitializersID = uint32_t;
 
-    /// \brief An ID number that refers to an entity in the detailed
+    /// An ID number that refers to an entity in the detailed
     /// preprocessing record.
     using PreprocessedEntityID = uint32_t;
 
-    /// \brief An ID number that refers to a submodule in a module file.
+    /// An ID number that refers to a submodule in a module file.
     using SubmoduleID = uint32_t;
     
-    /// \brief The number of predefined submodule IDs.
+    /// The number of predefined submodule IDs.
     const unsigned int NUM_PREDEF_SUBMODULE_IDS = 1;
 
-    /// \brief Source range/offset of a preprocessed entity.
+    /// Source range/offset of a preprocessed entity.
     struct PPEntityOffset {
-      /// \brief Raw source location of beginning of range.
+      /// Raw source location of beginning of range.
       unsigned Begin;
 
-      /// \brief Raw source location of end of range.
+      /// Raw source location of end of range.
       unsigned End;
 
-      /// \brief Offset in the AST file.
+      /// Offset in the AST file.
       uint32_t BitOffset;
 
       PPEntityOffset(SourceRange R, uint32_t BitOffset)
@@ -198,11 +198,11 @@ namespace serialization {
       }
     };
 
-    /// \brief Source range of a skipped preprocessor region
+    /// Source range of a skipped preprocessor region
     struct PPSkippedRange {
-      /// \brief Raw source location of beginning of range.
+      /// Raw source location of beginning of range.
       unsigned Begin;
-      /// \brief Raw source location of end of range.
+      /// Raw source location of end of range.
       unsigned End;
 
       PPSkippedRange(SourceRange R)
@@ -217,12 +217,12 @@ namespace serialization {
       }
     };
 
-    /// \brief Source range/offset of a preprocessed entity.
+    /// Source range/offset of a preprocessed entity.
     struct DeclOffset {
-      /// \brief Raw source location.
+      /// Raw source location.
       unsigned Loc = 0;
 
-      /// \brief Offset in the AST file.
+      /// Offset in the AST file.
       uint32_t BitOffset = 0;
 
       DeclOffset() = default;
@@ -238,56 +238,56 @@ namespace serialization {
       }
     };
 
-    /// \brief The number of predefined preprocessed entity IDs.
+    /// The number of predefined preprocessed entity IDs.
     const unsigned int NUM_PREDEF_PP_ENTITY_IDS = 1;
 
-    /// \brief Describes the various kinds of blocks that occur within
+    /// Describes the various kinds of blocks that occur within
     /// an AST file.
     enum BlockIDs {
-      /// \brief The AST block, which acts as a container around the
+      /// The AST block, which acts as a container around the
       /// full AST block.
       AST_BLOCK_ID = llvm::bitc::FIRST_APPLICATION_BLOCKID,
 
-      /// \brief The block containing information about the source
+      /// The block containing information about the source
       /// manager.
       SOURCE_MANAGER_BLOCK_ID,
 
-      /// \brief The block containing information about the
+      /// The block containing information about the
       /// preprocessor.
       PREPROCESSOR_BLOCK_ID,
 
-      /// \brief The block containing the definitions of all of the
+      /// The block containing the definitions of all of the
       /// types and decls used within the AST file.
       DECLTYPES_BLOCK_ID,
 
-      /// \brief The block containing the detailed preprocessing record.
+      /// The block containing the detailed preprocessing record.
       PREPROCESSOR_DETAIL_BLOCK_ID,
 
-      /// \brief The block containing the submodule structure.
+      /// The block containing the submodule structure.
       SUBMODULE_BLOCK_ID,
 
-      /// \brief The block containing comments.
+      /// The block containing comments.
       COMMENTS_BLOCK_ID,
 
-      /// \brief The control block, which contains all of the
+      /// The control block, which contains all of the
       /// information that needs to be validated prior to committing
       /// to loading the AST file.
       CONTROL_BLOCK_ID,
 
-      /// \brief The block of input files, which were used as inputs
+      /// The block of input files, which were used as inputs
       /// to create this AST file.
       ///
       /// This block is part of the control block.
       INPUT_FILES_BLOCK_ID,
 
-      /// \brief The block of configuration options, used to check that
+      /// The block of configuration options, used to check that
       /// a module is being used in a configuration compatible with the
       /// configuration in which it was built.
       ///
       /// This block is part of the control block.
       OPTIONS_BLOCK_ID,
 
-      /// \brief A block containing a module file extension.
+      /// A block containing a module file extension.
       EXTENSION_BLOCK_ID,
 
       /// A block with unhashed content.
@@ -297,47 +297,47 @@ namespace serialization {
       UNHASHED_CONTROL_BLOCK_ID,
     };
 
-    /// \brief Record types that occur within the control block.
+    /// Record types that occur within the control block.
     enum ControlRecordTypes {
-      /// \brief AST file metadata, including the AST file version number
+      /// AST file metadata, including the AST file version number
       /// and information about the compiler used to build this AST file.
       METADATA = 1,
 
-      /// \brief Record code for the list of other AST files imported by
+      /// Record code for the list of other AST files imported by
       /// this AST file.
       IMPORTS,
 
-      /// \brief Record code for the original file that was used to
+      /// Record code for the original file that was used to
       /// generate the AST file, including both its file ID and its
       /// name.
       ORIGINAL_FILE,
       
-      /// \brief The directory that the PCH was originally created in.
+      /// The directory that the PCH was originally created in.
       ORIGINAL_PCH_DIR,
 
-      /// \brief Record code for file ID of the file or buffer that was used to
+      /// Record code for file ID of the file or buffer that was used to
       /// generate the AST file.
       ORIGINAL_FILE_ID,
 
-      /// \brief Offsets into the input-files block where input files
+      /// Offsets into the input-files block where input files
       /// reside.
       INPUT_FILE_OFFSETS,
 
-      /// \brief Record code for the module name.
+      /// Record code for the module name.
       MODULE_NAME,
 
-      /// \brief Record code for the module map file that was used to build this
+      /// Record code for the module map file that was used to build this
       /// AST file.
       MODULE_MAP_FILE,
 
-      /// \brief Record code for the module build directory.
+      /// Record code for the module build directory.
       MODULE_DIRECTORY,
     };
 
-    /// \brief Record types that occur within the options block inside
+    /// Record types that occur within the options block inside
     /// the control block.
     enum OptionsRecordTypes {
-      /// \brief Record code for the language options table.
+      /// Record code for the language options table.
       ///
       /// The record with this code contains the contents of the
       /// LangOptions structure. We serialize the entire contents of
@@ -345,16 +345,16 @@ namespace serialization {
       /// actually important to check.
       LANGUAGE_OPTIONS = 1,
 
-      /// \brief Record code for the target options table.
+      /// Record code for the target options table.
       TARGET_OPTIONS,
 
-      /// \brief Record code for the filesystem options table.
+      /// Record code for the filesystem options table.
       FILE_SYSTEM_OPTIONS,
 
-      /// \brief Record code for the headers search options table.
+      /// Record code for the headers search options table.
       HEADER_SEARCH_OPTIONS,
 
-      /// \brief Record code for the preprocessor options table.
+      /// Record code for the preprocessor options table.
       PREPROCESSOR_OPTIONS,
     };
 
@@ -370,7 +370,7 @@ namespace serialization {
       DIAG_PRAGMA_MAPPINGS,
     };
 
-    /// \brief Record code for extension blocks.
+    /// Record code for extension blocks.
     enum ExtensionBlockRecordTypes {
       /// Metadata describing this particular extension.
       EXTENSION_METADATA = 1,
@@ -379,16 +379,16 @@ namespace serialization {
       FIRST_EXTENSION_RECORD_ID = 4
     };
 
-    /// \brief Record types that occur within the input-files block
+    /// Record types that occur within the input-files block
     /// inside the control block.
     enum InputFileRecordTypes {
-      /// \brief An input file.
+      /// An input file.
       INPUT_FILE = 1
     };
 
-    /// \brief Record types that occur within the AST block itself.
+    /// Record types that occur within the AST block itself.
     enum ASTRecordTypes {
-      /// \brief Record code for the offsets of each type.
+      /// Record code for the offsets of each type.
       ///
       /// The TYPE_OFFSET constant describes the record that occurs
       /// within the AST block. The record itself is an array of offsets that
@@ -402,7 +402,7 @@ namespace serialization {
       /// corresponding record within the DECLTYPES_BLOCK_ID block.
       TYPE_OFFSET = 1,
 
-      /// \brief Record code for the offsets of each decl.
+      /// Record code for the offsets of each decl.
       ///
       /// The DECL_OFFSET constant describes the record that occurs
       /// within the block identified by DECL_OFFSETS_BLOCK_ID within
@@ -414,7 +414,7 @@ namespace serialization {
       /// reserved for the translation unit declaration.
       DECL_OFFSET = 2,
 
-      /// \brief Record code for the table of offsets of each
+      /// Record code for the table of offsets of each
       /// identifier ID.
       ///
       /// The offset table contains offsets into the blob stored in
@@ -422,12 +422,12 @@ namespace serialization {
       /// NULL-terminated string that corresponds to that identifier.
       IDENTIFIER_OFFSET = 3,
 
-      /// \brief This is so that older clang versions, before the introduction
+      /// This is so that older clang versions, before the introduction
       /// of the control block, can read and reject the newer PCH format.
       /// *DON'T CHANGE THIS NUMBER*.
       METADATA_OLD_FORMAT = 4,
 
-      /// \brief Record code for the identifier table.
+      /// Record code for the identifier table.
       ///
       /// The identifier table is a simple blob that contains
       /// NULL-terminated strings for all of the identifiers
@@ -441,7 +441,7 @@ namespace serialization {
       /// IDs).
       IDENTIFIER_TABLE = 5,
 
-      /// \brief Record code for the array of eagerly deserialized decls.
+      /// Record code for the array of eagerly deserialized decls.
       ///
       /// The AST file contains a list of all of the declarations that should be
       /// eagerly deserialized present within the parsed headers, stored as an
@@ -451,7 +451,7 @@ namespace serialization {
       /// program (e.g., for code generation).
       EAGERLY_DESERIALIZED_DECLS = 6,
 
-      /// \brief Record code for the set of non-builtin, special
+      /// Record code for the set of non-builtin, special
       /// types.
       ///
       /// This record contains the type IDs for the various type nodes
@@ -460,31 +460,31 @@ namespace serialization {
       /// offsets into this record.
       SPECIAL_TYPES = 7,
 
-      /// \brief Record code for the extra statistics we gather while
+      /// Record code for the extra statistics we gather while
       /// generating an AST file.
       STATISTICS = 8,
 
-      /// \brief Record code for the array of tentative definitions.
+      /// Record code for the array of tentative definitions.
       TENTATIVE_DEFINITIONS = 9,
 
       // ID 10 used to be for a list of extern "C" declarations.
 
-      /// \brief Record code for the table of offsets into the
+      /// Record code for the table of offsets into the
       /// Objective-C method pool.
       SELECTOR_OFFSETS = 11,
 
-      /// \brief Record code for the Objective-C method pool,
+      /// Record code for the Objective-C method pool,
       METHOD_POOL = 12,
 
-      /// \brief The value of the next __COUNTER__ to dispense.
+      /// The value of the next __COUNTER__ to dispense.
       /// [PP_COUNTER_VALUE, Val]
       PP_COUNTER_VALUE = 13,
 
-      /// \brief Record code for the table of offsets into the block
+      /// Record code for the table of offsets into the block
       /// of source-location information.
       SOURCE_LOCATION_OFFSETS = 14,
 
-      /// \brief Record code for the set of source location entries
+      /// Record code for the set of source location entries
       /// that need to be preloaded by the AST reader.
       ///
       /// This set contains the source location entry for the
@@ -492,47 +492,47 @@ namespace serialization {
       /// preloaded.
       SOURCE_LOCATION_PRELOADS = 15,
 
-      /// \brief Record code for the set of ext_vector type names.
+      /// Record code for the set of ext_vector type names.
       EXT_VECTOR_DECLS = 16,
 
-      /// \brief Record code for the array of unused file scoped decls.
+      /// Record code for the array of unused file scoped decls.
       UNUSED_FILESCOPED_DECLS = 17,
 
-      /// \brief Record code for the table of offsets to entries in the
+      /// Record code for the table of offsets to entries in the
       /// preprocessing record.
       PPD_ENTITIES_OFFSETS = 18,
 
-      /// \brief Record code for the array of VTable uses.
+      /// Record code for the array of VTable uses.
       VTABLE_USES = 19,
 
       // ID 20 used to be for a list of dynamic classes.
 
-      /// \brief Record code for referenced selector pool.
+      /// Record code for referenced selector pool.
       REFERENCED_SELECTOR_POOL = 21,
 
-      /// \brief Record code for an update to the TU's lexically contained
+      /// Record code for an update to the TU's lexically contained
       /// declarations.
       TU_UPDATE_LEXICAL = 22,
 
       // ID 23 used to be for a list of local redeclarations.
 
-      /// \brief Record code for declarations that Sema keeps references of.
+      /// Record code for declarations that Sema keeps references of.
       SEMA_DECL_REFS = 24,
 
-      /// \brief Record code for weak undeclared identifiers.
+      /// Record code for weak undeclared identifiers.
       WEAK_UNDECLARED_IDENTIFIERS = 25,
 
-      /// \brief Record code for pending implicit instantiations.
+      /// Record code for pending implicit instantiations.
       PENDING_IMPLICIT_INSTANTIATIONS = 26,
 
       // ID 27 used to be for a list of replacement decls.
 
-      /// \brief Record code for an update to a decl context's lookup table.
+      /// Record code for an update to a decl context's lookup table.
       ///
       /// In practice, this should only be used for the TU and namespaces.
       UPDATE_VISIBLE = 28,
 
-      /// \brief Record for offsets of DECL_UPDATES records for declarations
+      /// Record for offsets of DECL_UPDATES records for declarations
       /// that were modified after being deserialized and need updates.
       DECL_UPDATE_OFFSETS = 29,
 
@@ -543,245 +543,245 @@ namespace serialization {
 
       // ID 32 used to be the code for \#pragma diagnostic mappings.
 
-      /// \brief Record code for special CUDA declarations.
+      /// Record code for special CUDA declarations.
       CUDA_SPECIAL_DECL_REFS = 33,
 
-      /// \brief Record code for header search information.
+      /// Record code for header search information.
       HEADER_SEARCH_TABLE = 34,
 
-      /// \brief Record code for floating point \#pragma options.
+      /// Record code for floating point \#pragma options.
       FP_PRAGMA_OPTIONS = 35,
 
-      /// \brief Record code for enabled OpenCL extensions.
+      /// Record code for enabled OpenCL extensions.
       OPENCL_EXTENSIONS = 36,
 
-      /// \brief The list of delegating constructor declarations.
+      /// The list of delegating constructor declarations.
       DELEGATING_CTORS = 37,
 
-      /// \brief Record code for the set of known namespaces, which are used
+      /// Record code for the set of known namespaces, which are used
       /// for typo correction.
       KNOWN_NAMESPACES = 38,
 
-      /// \brief Record code for the remapping information used to relate
+      /// Record code for the remapping information used to relate
       /// loaded modules to the various offsets and IDs(e.g., source location
       /// offests, declaration and type IDs) that are used in that module to
       /// refer to other modules.
       MODULE_OFFSET_MAP = 39,
 
-      /// \brief Record code for the source manager line table information,
+      /// Record code for the source manager line table information,
       /// which stores information about \#line directives.
       SOURCE_MANAGER_LINE_TABLE = 40,
 
-      /// \brief Record code for map of Objective-C class definition IDs to the
+      /// Record code for map of Objective-C class definition IDs to the
       /// ObjC categories in a module that are attached to that class.
       OBJC_CATEGORIES_MAP = 41,
 
-      /// \brief Record code for a file sorted array of DeclIDs in a module.
+      /// Record code for a file sorted array of DeclIDs in a module.
       FILE_SORTED_DECLS = 42,
 
-      /// \brief Record code for an array of all of the (sub)modules that were
+      /// Record code for an array of all of the (sub)modules that were
       /// imported by the AST file.
       IMPORTED_MODULES = 43,
 
       // ID 44 used to be a table of merged canonical declarations.
       // ID 45 used to be a list of declaration IDs of local redeclarations.
 
-      /// \brief Record code for the array of Objective-C categories (including
+      /// Record code for the array of Objective-C categories (including
       /// extensions).
       ///
       /// This array can only be interpreted properly using the Objective-C
       /// categories map.
       OBJC_CATEGORIES = 46,
 
-      /// \brief Record code for the table of offsets of each macro ID.
+      /// Record code for the table of offsets of each macro ID.
       ///
       /// The offset table contains offsets into the blob stored in
       /// the preprocessor block. Each offset points to the corresponding
       /// macro definition.
       MACRO_OFFSET = 47,
 
-      /// \brief A list of "interesting" identifiers. Only used in C++ (where we
+      /// A list of "interesting" identifiers. Only used in C++ (where we
       /// don't normally do lookups into the serialized identifier table). These
       /// are eagerly deserialized.
       INTERESTING_IDENTIFIERS = 48,
 
-      /// \brief Record code for undefined but used functions and variables that
+      /// Record code for undefined but used functions and variables that
       /// need a definition in this TU.
       UNDEFINED_BUT_USED = 49,
 
-      /// \brief Record code for late parsed template functions.
+      /// Record code for late parsed template functions.
       LATE_PARSED_TEMPLATE = 50,
 
-      /// \brief Record code for \#pragma optimize options.
+      /// Record code for \#pragma optimize options.
       OPTIMIZE_PRAGMA_OPTIONS = 51,
 
-      /// \brief Record code for potentially unused local typedef names.
+      /// Record code for potentially unused local typedef names.
       UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES = 52,
 
       // ID 53 used to be a table of constructor initializer records.
 
-      /// \brief Delete expressions that will be analyzed later.
+      /// Delete expressions that will be analyzed later.
       DELETE_EXPRS_TO_ANALYZE = 54,
 
-      /// \brief Record code for \#pragma ms_struct options.
+      /// Record code for \#pragma ms_struct options.
       MSSTRUCT_PRAGMA_OPTIONS = 55,
 
-      /// \brief Record code for \#pragma ms_struct options.
+      /// Record code for \#pragma ms_struct options.
       POINTERS_TO_MEMBERS_PRAGMA_OPTIONS = 56,
 
-      /// \brief Number of unmatched #pragma clang cuda_force_host_device begin
+      /// Number of unmatched #pragma clang cuda_force_host_device begin
       /// directives we've seen.
       CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH = 57,
 
-      /// \brief Record code for types associated with OpenCL extensions.
+      /// Record code for types associated with OpenCL extensions.
       OPENCL_EXTENSION_TYPES = 58,
 
-      /// \brief Record code for declarations associated with OpenCL extensions.
+      /// Record code for declarations associated with OpenCL extensions.
       OPENCL_EXTENSION_DECLS = 59,
 
       MODULAR_CODEGEN_DECLS = 60,
 
-      /// \brief Record code for \#pragma pack options.
+      /// Record code for \#pragma pack options.
       PACK_PRAGMA_OPTIONS = 61,
 
-      /// \brief The stack of open #ifs/#ifdefs recorded in a preamble.
+      /// The stack of open #ifs/#ifdefs recorded in a preamble.
       PP_CONDITIONAL_STACK = 62,
 
-      /// \brief A table of skipped ranges within the preprocessing record.
+      /// A table of skipped ranges within the preprocessing record.
       PPD_SKIPPED_RANGES = 63
     };
 
-    /// \brief Record types used within a source manager block.
+    /// Record types used within a source manager block.
     enum SourceManagerRecordTypes {
-      /// \brief Describes a source location entry (SLocEntry) for a
+      /// Describes a source location entry (SLocEntry) for a
       /// file.
       SM_SLOC_FILE_ENTRY = 1,
 
-      /// \brief Describes a source location entry (SLocEntry) for a
+      /// Describes a source location entry (SLocEntry) for a
       /// buffer.
       SM_SLOC_BUFFER_ENTRY = 2,
 
-      /// \brief Describes a blob that contains the data for a buffer
+      /// Describes a blob that contains the data for a buffer
       /// entry. This kind of record always directly follows a
       /// SM_SLOC_BUFFER_ENTRY record or a SM_SLOC_FILE_ENTRY with an
       /// overridden buffer.
       SM_SLOC_BUFFER_BLOB = 3,
 
-      /// \brief Describes a zlib-compressed blob that contains the data for
+      /// Describes a zlib-compressed blob that contains the data for
       /// a buffer entry.
       SM_SLOC_BUFFER_BLOB_COMPRESSED = 4,
 
-      /// \brief Describes a source location entry (SLocEntry) for a
+      /// Describes a source location entry (SLocEntry) for a
       /// macro expansion.
       SM_SLOC_EXPANSION_ENTRY = 5
     };
 
-    /// \brief Record types used within a preprocessor block.
+    /// Record types used within a preprocessor block.
     enum PreprocessorRecordTypes {
       // The macros in the PP section are a PP_MACRO_* instance followed by a
       // list of PP_TOKEN instances for each token in the definition.
 
-      /// \brief An object-like macro definition.
+      /// An object-like macro definition.
       /// [PP_MACRO_OBJECT_LIKE, IdentInfoID, SLoc, IsUsed]
       PP_MACRO_OBJECT_LIKE = 1,
 
-      /// \brief A function-like macro definition.
+      /// A function-like macro definition.
       /// [PP_MACRO_FUNCTION_LIKE, \<ObjectLikeStuff>, IsC99Varargs,
       /// IsGNUVarars, NumArgs, ArgIdentInfoID* ]
       PP_MACRO_FUNCTION_LIKE = 2,
 
-      /// \brief Describes one token.
+      /// Describes one token.
       /// [PP_TOKEN, SLoc, Length, IdentInfoID, Kind, Flags]
       PP_TOKEN = 3,
 
-      /// \brief The macro directives history for a particular identifier.
+      /// The macro directives history for a particular identifier.
       PP_MACRO_DIRECTIVE_HISTORY = 4,
 
-      /// \brief A macro directive exported by a module.
+      /// A macro directive exported by a module.
       /// [PP_MODULE_MACRO, SubmoduleID, MacroID, (Overridden SubmoduleID)*]
       PP_MODULE_MACRO = 5,
     };
 
-    /// \brief Record types used within a preprocessor detail block.
+    /// Record types used within a preprocessor detail block.
     enum PreprocessorDetailRecordTypes {
-      /// \brief Describes a macro expansion within the preprocessing record.
+      /// Describes a macro expansion within the preprocessing record.
       PPD_MACRO_EXPANSION = 0,
       
-      /// \brief Describes a macro definition within the preprocessing record.
+      /// Describes a macro definition within the preprocessing record.
       PPD_MACRO_DEFINITION = 1,
       
-      /// \brief Describes an inclusion directive within the preprocessing
+      /// Describes an inclusion directive within the preprocessing
       /// record.
       PPD_INCLUSION_DIRECTIVE = 2
     };
     
-    /// \brief Record types used within a submodule description block.
+    /// Record types used within a submodule description block.
     enum SubmoduleRecordTypes {
-      /// \brief Metadata for submodules as a whole.
+      /// Metadata for submodules as a whole.
       SUBMODULE_METADATA = 0,
 
-      /// \brief Defines the major attributes of a submodule, including its
+      /// Defines the major attributes of a submodule, including its
       /// name and parent.
       SUBMODULE_DEFINITION = 1,
 
-      /// \brief Specifies the umbrella header used to create this module,
+      /// Specifies the umbrella header used to create this module,
       /// if any.
       SUBMODULE_UMBRELLA_HEADER = 2,
 
-      /// \brief Specifies a header that falls into this (sub)module.
+      /// Specifies a header that falls into this (sub)module.
       SUBMODULE_HEADER = 3,
 
-      /// \brief Specifies a top-level header that falls into this (sub)module.
+      /// Specifies a top-level header that falls into this (sub)module.
       SUBMODULE_TOPHEADER = 4,
 
-      /// \brief Specifies an umbrella directory.
+      /// Specifies an umbrella directory.
       SUBMODULE_UMBRELLA_DIR = 5,
 
-      /// \brief Specifies the submodules that are imported by this 
+      /// Specifies the submodules that are imported by this 
       /// submodule.
       SUBMODULE_IMPORTS = 6,
 
-      /// \brief Specifies the submodules that are re-exported from this 
+      /// Specifies the submodules that are re-exported from this 
       /// submodule.
       SUBMODULE_EXPORTS = 7,
 
-      /// \brief Specifies a required feature.
+      /// Specifies a required feature.
       SUBMODULE_REQUIRES = 8,
 
-      /// \brief Specifies a header that has been explicitly excluded
+      /// Specifies a header that has been explicitly excluded
       /// from this submodule.
       SUBMODULE_EXCLUDED_HEADER = 9,
 
-      /// \brief Specifies a library or framework to link against.
+      /// Specifies a library or framework to link against.
       SUBMODULE_LINK_LIBRARY = 10,
 
-      /// \brief Specifies a configuration macro for this module.
+      /// Specifies a configuration macro for this module.
       SUBMODULE_CONFIG_MACRO = 11,
 
-      /// \brief Specifies a conflict with another module.
+      /// Specifies a conflict with another module.
       SUBMODULE_CONFLICT = 12,
 
-      /// \brief Specifies a header that is private to this submodule.
+      /// Specifies a header that is private to this submodule.
       SUBMODULE_PRIVATE_HEADER = 13,
 
-      /// \brief Specifies a header that is part of the module but must be
+      /// Specifies a header that is part of the module but must be
       /// textually included.
       SUBMODULE_TEXTUAL_HEADER = 14,
 
-      /// \brief Specifies a header that is private to this submodule but
+      /// Specifies a header that is private to this submodule but
       /// must be textually included.
       SUBMODULE_PRIVATE_TEXTUAL_HEADER = 15,
 
-      /// \brief Specifies some declarations with initializers that must be
+      /// Specifies some declarations with initializers that must be
       /// emitted to initialize the module.
       SUBMODULE_INITIALIZERS = 16,
 
-      /// \brief Specifies the name of the module that will eventually
+      /// Specifies the name of the module that will eventually
       /// re-export the entities in this module.
       SUBMODULE_EXPORT_AS = 17,
     };
 
-    /// \brief Record types used within a comments block.
+    /// Record types used within a comments block.
     enum CommentRecordTypes {
       COMMENTS_RAW_COMMENT = 0
     };
@@ -793,7 +793,7 @@ namespace serialization {
     ///
     /// @{
 
-    /// \brief Predefined type IDs.
+    /// Predefined type IDs.
     ///
     /// These type IDs correspond to predefined types in the AST
     /// context, such as built-in types (int) and special place-holder
@@ -801,499 +801,499 @@ namespace serialization {
     /// types are never actually serialized, since they will be built
     /// by the AST context when it is created.
     enum PredefinedTypeIDs {
-      /// \brief The NULL type.
+      /// The NULL type.
       PREDEF_TYPE_NULL_ID       = 0,
 
-      /// \brief The void type.
+      /// The void type.
       PREDEF_TYPE_VOID_ID       = 1,
 
-      /// \brief The 'bool' or '_Bool' type.
+      /// The 'bool' or '_Bool' type.
       PREDEF_TYPE_BOOL_ID       = 2,
 
-      /// \brief The 'char' type, when it is unsigned.
+      /// The 'char' type, when it is unsigned.
       PREDEF_TYPE_CHAR_U_ID     = 3,
 
-      /// \brief The 'unsigned char' type.
+      /// The 'unsigned char' type.
       PREDEF_TYPE_UCHAR_ID      = 4,
 
-      /// \brief The 'unsigned short' type.
+      /// The 'unsigned short' type.
       PREDEF_TYPE_USHORT_ID     = 5,
 
-      /// \brief The 'unsigned int' type.
+      /// The 'unsigned int' type.
       PREDEF_TYPE_UINT_ID       = 6,
 
-      /// \brief The 'unsigned long' type.
+      /// The 'unsigned long' type.
       PREDEF_TYPE_ULONG_ID      = 7,
 
-      /// \brief The 'unsigned long long' type.
+      /// The 'unsigned long long' type.
       PREDEF_TYPE_ULONGLONG_ID  = 8,
 
-      /// \brief The 'char' type, when it is signed.
+      /// The 'char' type, when it is signed.
       PREDEF_TYPE_CHAR_S_ID     = 9,
 
-      /// \brief The 'signed char' type.
+      /// The 'signed char' type.
       PREDEF_TYPE_SCHAR_ID      = 10,
 
-      /// \brief The C++ 'wchar_t' type.
+      /// The C++ 'wchar_t' type.
       PREDEF_TYPE_WCHAR_ID      = 11,
 
-      /// \brief The (signed) 'short' type.
+      /// The (signed) 'short' type.
       PREDEF_TYPE_SHORT_ID      = 12,
 
-      /// \brief The (signed) 'int' type.
+      /// The (signed) 'int' type.
       PREDEF_TYPE_INT_ID        = 13,
 
-      /// \brief The (signed) 'long' type.
+      /// The (signed) 'long' type.
       PREDEF_TYPE_LONG_ID       = 14,
 
-      /// \brief The (signed) 'long long' type.
+      /// The (signed) 'long long' type.
       PREDEF_TYPE_LONGLONG_ID   = 15,
 
-      /// \brief The 'float' type.
+      /// The 'float' type.
       PREDEF_TYPE_FLOAT_ID      = 16,
 
-      /// \brief The 'double' type.
+      /// The 'double' type.
       PREDEF_TYPE_DOUBLE_ID     = 17,
 
-      /// \brief The 'long double' type.
+      /// The 'long double' type.
       PREDEF_TYPE_LONGDOUBLE_ID = 18,
 
-      /// \brief The placeholder type for overloaded function sets.
+      /// The placeholder type for overloaded function sets.
       PREDEF_TYPE_OVERLOAD_ID   = 19,
 
-      /// \brief The placeholder type for dependent types.
+      /// The placeholder type for dependent types.
       PREDEF_TYPE_DEPENDENT_ID  = 20,
 
-      /// \brief The '__uint128_t' type.
+      /// The '__uint128_t' type.
       PREDEF_TYPE_UINT128_ID    = 21,
 
-      /// \brief The '__int128_t' type.
+      /// The '__int128_t' type.
       PREDEF_TYPE_INT128_ID     = 22,
 
-      /// \brief The type of 'nullptr'.
+      /// The type of 'nullptr'.
       PREDEF_TYPE_NULLPTR_ID    = 23,
 
-      /// \brief The C++ 'char16_t' type.
+      /// The C++ 'char16_t' type.
       PREDEF_TYPE_CHAR16_ID     = 24,
 
-      /// \brief The C++ 'char32_t' type.
+      /// The C++ 'char32_t' type.
       PREDEF_TYPE_CHAR32_ID     = 25,
 
-      /// \brief The ObjC 'id' type.
+      /// The ObjC 'id' type.
       PREDEF_TYPE_OBJC_ID       = 26,
 
-      /// \brief The ObjC 'Class' type.
+      /// The ObjC 'Class' type.
       PREDEF_TYPE_OBJC_CLASS    = 27,
 
-      /// \brief The ObjC 'SEL' type.
+      /// The ObjC 'SEL' type.
       PREDEF_TYPE_OBJC_SEL      = 28,
 
-      /// \brief The 'unknown any' placeholder type.
+      /// The 'unknown any' placeholder type.
       PREDEF_TYPE_UNKNOWN_ANY   = 29,
 
-      /// \brief The placeholder type for bound member functions.
+      /// The placeholder type for bound member functions.
       PREDEF_TYPE_BOUND_MEMBER  = 30,
 
-      /// \brief The "auto" deduction type.
+      /// The "auto" deduction type.
       PREDEF_TYPE_AUTO_DEDUCT   = 31,
 
-      /// \brief The "auto &&" deduction type.
+      /// The "auto &&" deduction type.
       PREDEF_TYPE_AUTO_RREF_DEDUCT = 32,
 
-      /// \brief The OpenCL 'half' / ARM NEON __fp16 type.
+      /// The OpenCL 'half' / ARM NEON __fp16 type.
       PREDEF_TYPE_HALF_ID       = 33,
 
-      /// \brief ARC's unbridged-cast placeholder type.
+      /// ARC's unbridged-cast placeholder type.
       PREDEF_TYPE_ARC_UNBRIDGED_CAST = 34,
 
-      /// \brief The pseudo-object placeholder type.
+      /// The pseudo-object placeholder type.
       PREDEF_TYPE_PSEUDO_OBJECT = 35,
 
-      /// \brief The placeholder type for builtin functions.
+      /// The placeholder type for builtin functions.
       PREDEF_TYPE_BUILTIN_FN = 36,
 
-      /// \brief OpenCL event type.
+      /// OpenCL event type.
       PREDEF_TYPE_EVENT_ID      = 37,
 
-      /// \brief OpenCL clk event type.
+      /// OpenCL clk event type.
       PREDEF_TYPE_CLK_EVENT_ID  = 38,
 
-      /// \brief OpenCL sampler type.
+      /// OpenCL sampler type.
       PREDEF_TYPE_SAMPLER_ID    = 39,
 
-      /// \brief OpenCL queue type.
+      /// OpenCL queue type.
       PREDEF_TYPE_QUEUE_ID      = 40,
 
-      /// \brief OpenCL reserve_id type.
+      /// OpenCL reserve_id type.
       PREDEF_TYPE_RESERVE_ID_ID = 41,
 
-      /// \brief The placeholder type for OpenMP array section.
+      /// The placeholder type for OpenMP array section.
       PREDEF_TYPE_OMP_ARRAY_SECTION = 42,
 
-      /// \brief The '__float128' type
+      /// The '__float128' type
       PREDEF_TYPE_FLOAT128_ID = 43,
 
-      /// \brief The '_Float16' type
+      /// The '_Float16' type
       PREDEF_TYPE_FLOAT16_ID = 44,
 
-      /// \brief The C++ 'char8_t' type.
+      /// The C++ 'char8_t' type.
       PREDEF_TYPE_CHAR8_ID = 45,
 
-      /// \brief OpenCL image types with auto numeration
+      /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
       PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/OpenCLImageTypes.def"
     };
 
-    /// \brief The number of predefined type IDs that are reserved for
+    /// The number of predefined type IDs that are reserved for
     /// the PREDEF_TYPE_* constants.
     ///
     /// Type IDs for non-predefined types will start at
     /// NUM_PREDEF_TYPE_IDs.
     const unsigned NUM_PREDEF_TYPE_IDS = 100;
 
-    /// \brief Record codes for each kind of type.
+    /// Record codes for each kind of type.
     ///
     /// These constants describe the type records that can occur within a
     /// block identified by DECLTYPES_BLOCK_ID in the AST file. Each
     /// constant describes a record for a specific type class in the
     /// AST. Note that DeclCode values share this code space.
     enum TypeCode {
-      /// \brief An ExtQualType record.
+      /// An ExtQualType record.
       TYPE_EXT_QUAL                 = 1,
 
-      /// \brief A ComplexType record.
+      /// A ComplexType record.
       TYPE_COMPLEX                  = 3,
 
-      /// \brief A PointerType record.
+      /// A PointerType record.
       TYPE_POINTER                  = 4,
 
-      /// \brief A BlockPointerType record.
+      /// A BlockPointerType record.
       TYPE_BLOCK_POINTER            = 5,
 
-      /// \brief An LValueReferenceType record.
+      /// An LValueReferenceType record.
       TYPE_LVALUE_REFERENCE         = 6,
 
-      /// \brief An RValueReferenceType record.
+      /// An RValueReferenceType record.
       TYPE_RVALUE_REFERENCE         = 7,
 
-      /// \brief A MemberPointerType record.
+      /// A MemberPointerType record.
       TYPE_MEMBER_POINTER           = 8,
 
-      /// \brief A ConstantArrayType record.
+      /// A ConstantArrayType record.
       TYPE_CONSTANT_ARRAY           = 9,
 
-      /// \brief An IncompleteArrayType record.
+      /// An IncompleteArrayType record.
       TYPE_INCOMPLETE_ARRAY         = 10,
 
-      /// \brief A VariableArrayType record.
+      /// A VariableArrayType record.
       TYPE_VARIABLE_ARRAY           = 11,
 
-      /// \brief A VectorType record.
+      /// A VectorType record.
       TYPE_VECTOR                   = 12,
 
-      /// \brief An ExtVectorType record.
+      /// An ExtVectorType record.
       TYPE_EXT_VECTOR               = 13,
 
-      /// \brief A FunctionNoProtoType record.
+      /// A FunctionNoProtoType record.
       TYPE_FUNCTION_NO_PROTO        = 14,
 
-      /// \brief A FunctionProtoType record.
+      /// A FunctionProtoType record.
       TYPE_FUNCTION_PROTO           = 15,
 
-      /// \brief A TypedefType record.
+      /// A TypedefType record.
       TYPE_TYPEDEF                  = 16,
 
-      /// \brief A TypeOfExprType record.
+      /// A TypeOfExprType record.
       TYPE_TYPEOF_EXPR              = 17,
 
-      /// \brief A TypeOfType record.
+      /// A TypeOfType record.
       TYPE_TYPEOF                   = 18,
 
-      /// \brief A RecordType record.
+      /// A RecordType record.
       TYPE_RECORD                   = 19,
 
-      /// \brief An EnumType record.
+      /// An EnumType record.
       TYPE_ENUM                     = 20,
 
-      /// \brief An ObjCInterfaceType record.
+      /// An ObjCInterfaceType record.
       TYPE_OBJC_INTERFACE           = 21,
 
-      /// \brief An ObjCObjectPointerType record.
+      /// An ObjCObjectPointerType record.
       TYPE_OBJC_OBJECT_POINTER      = 22,
 
-      /// \brief a DecltypeType record.
+      /// a DecltypeType record.
       TYPE_DECLTYPE                 = 23,
 
-      /// \brief An ElaboratedType record.
+      /// An ElaboratedType record.
       TYPE_ELABORATED               = 24,
 
-      /// \brief A SubstTemplateTypeParmType record.
+      /// A SubstTemplateTypeParmType record.
       TYPE_SUBST_TEMPLATE_TYPE_PARM = 25,
 
-      /// \brief An UnresolvedUsingType record.
+      /// An UnresolvedUsingType record.
       TYPE_UNRESOLVED_USING         = 26,
 
-      /// \brief An InjectedClassNameType record.
+      /// An InjectedClassNameType record.
       TYPE_INJECTED_CLASS_NAME      = 27,
 
-      /// \brief An ObjCObjectType record.
+      /// An ObjCObjectType record.
       TYPE_OBJC_OBJECT              = 28,
 
-      /// \brief An TemplateTypeParmType record.
+      /// An TemplateTypeParmType record.
       TYPE_TEMPLATE_TYPE_PARM       = 29,
 
-      /// \brief An TemplateSpecializationType record.
+      /// An TemplateSpecializationType record.
       TYPE_TEMPLATE_SPECIALIZATION  = 30,
 
-      /// \brief A DependentNameType record.
+      /// A DependentNameType record.
       TYPE_DEPENDENT_NAME           = 31,
 
-      /// \brief A DependentTemplateSpecializationType record.
+      /// A DependentTemplateSpecializationType record.
       TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION = 32,
 
-      /// \brief A DependentSizedArrayType record.
+      /// A DependentSizedArrayType record.
       TYPE_DEPENDENT_SIZED_ARRAY    = 33,
 
-      /// \brief A ParenType record.
+      /// A ParenType record.
       TYPE_PAREN                    = 34,
 
-      /// \brief A PackExpansionType record.
+      /// A PackExpansionType record.
       TYPE_PACK_EXPANSION           = 35,
 
-      /// \brief An AttributedType record.
+      /// An AttributedType record.
       TYPE_ATTRIBUTED               = 36,
 
-      /// \brief A SubstTemplateTypeParmPackType record.
+      /// A SubstTemplateTypeParmPackType record.
       TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK = 37,
 
-      /// \brief A AutoType record.
+      /// A AutoType record.
       TYPE_AUTO                  = 38,
 
-      /// \brief A UnaryTransformType record.
+      /// A UnaryTransformType record.
       TYPE_UNARY_TRANSFORM       = 39,
 
-      /// \brief An AtomicType record.
+      /// An AtomicType record.
       TYPE_ATOMIC                = 40,
 
-      /// \brief A DecayedType record.
+      /// A DecayedType record.
       TYPE_DECAYED               = 41,
 
-      /// \brief An AdjustedType record.
+      /// An AdjustedType record.
       TYPE_ADJUSTED              = 42,
 
-      /// \brief A PipeType record.
+      /// A PipeType record.
       TYPE_PIPE                  = 43,
 
-      /// \brief An ObjCTypeParamType record.
+      /// An ObjCTypeParamType record.
       TYPE_OBJC_TYPE_PARAM       = 44,
 
-      /// \brief A DeducedTemplateSpecializationType record.
+      /// A DeducedTemplateSpecializationType record.
       TYPE_DEDUCED_TEMPLATE_SPECIALIZATION = 45,
 
-      /// \brief A DependentSizedExtVectorType record.
+      /// A DependentSizedExtVectorType record.
       TYPE_DEPENDENT_SIZED_EXT_VECTOR = 46,
 
-      /// \brief A DependentAddressSpaceType record.
+      /// A DependentAddressSpaceType record.
       TYPE_DEPENDENT_ADDRESS_SPACE = 47
     };
 
-    /// \brief The type IDs for special types constructed by semantic
+    /// The type IDs for special types constructed by semantic
     /// analysis.
     ///
     /// The constants in this enumeration are indices into the
     /// SPECIAL_TYPES record.
     enum SpecialTypeIDs {
-      /// \brief CFConstantString type
+      /// CFConstantString type
       SPECIAL_TYPE_CF_CONSTANT_STRING          = 0,
 
-      /// \brief C FILE typedef type
+      /// C FILE typedef type
       SPECIAL_TYPE_FILE                        = 1,
 
-      /// \brief C jmp_buf typedef type
+      /// C jmp_buf typedef type
       SPECIAL_TYPE_JMP_BUF                     = 2,
 
-      /// \brief C sigjmp_buf typedef type
+      /// C sigjmp_buf typedef type
       SPECIAL_TYPE_SIGJMP_BUF                  = 3,
 
-      /// \brief Objective-C "id" redefinition type
+      /// Objective-C "id" redefinition type
       SPECIAL_TYPE_OBJC_ID_REDEFINITION        = 4,
 
-      /// \brief Objective-C "Class" redefinition type
+      /// Objective-C "Class" redefinition type
       SPECIAL_TYPE_OBJC_CLASS_REDEFINITION     = 5,
 
-      /// \brief Objective-C "SEL" redefinition type
+      /// Objective-C "SEL" redefinition type
       SPECIAL_TYPE_OBJC_SEL_REDEFINITION       = 6,
 
-      /// \brief C ucontext_t typedef type
+      /// C ucontext_t typedef type
       SPECIAL_TYPE_UCONTEXT_T                  = 7
     };
     
-    /// \brief The number of special type IDs.
+    /// The number of special type IDs.
     const unsigned NumSpecialTypeIDs = 8;
 
-    /// \brief Predefined declaration IDs.
+    /// Predefined declaration IDs.
     ///
     /// These declaration IDs correspond to predefined declarations in the AST
     /// context, such as the NULL declaration ID. Such declarations are never
     /// actually serialized, since they will be built by the AST context when 
     /// it is created.
     enum PredefinedDeclIDs {
-      /// \brief The NULL declaration.
+      /// The NULL declaration.
       PREDEF_DECL_NULL_ID = 0,
 
-      /// \brief The translation unit.
+      /// The translation unit.
       PREDEF_DECL_TRANSLATION_UNIT_ID = 1,
 
-      /// \brief The Objective-C 'id' type.
+      /// The Objective-C 'id' type.
       PREDEF_DECL_OBJC_ID_ID = 2,
 
-      /// \brief The Objective-C 'SEL' type.
+      /// The Objective-C 'SEL' type.
       PREDEF_DECL_OBJC_SEL_ID = 3,
 
-      /// \brief The Objective-C 'Class' type.
+      /// The Objective-C 'Class' type.
       PREDEF_DECL_OBJC_CLASS_ID = 4,
 
-      /// \brief The Objective-C 'Protocol' type.
+      /// The Objective-C 'Protocol' type.
       PREDEF_DECL_OBJC_PROTOCOL_ID = 5,
 
-      /// \brief The signed 128-bit integer type.
+      /// The signed 128-bit integer type.
       PREDEF_DECL_INT_128_ID = 6,
 
-      /// \brief The unsigned 128-bit integer type.
+      /// The unsigned 128-bit integer type.
       PREDEF_DECL_UNSIGNED_INT_128_ID = 7,
 
-      /// \brief The internal 'instancetype' typedef.
+      /// The internal 'instancetype' typedef.
       PREDEF_DECL_OBJC_INSTANCETYPE_ID = 8,
 
-      /// \brief The internal '__builtin_va_list' typedef.
+      /// The internal '__builtin_va_list' typedef.
       PREDEF_DECL_BUILTIN_VA_LIST_ID = 9,
 
-      /// \brief The internal '__va_list_tag' struct, if any.
+      /// The internal '__va_list_tag' struct, if any.
       PREDEF_DECL_VA_LIST_TAG = 10,
 
-      /// \brief The internal '__builtin_ms_va_list' typedef.
+      /// The internal '__builtin_ms_va_list' typedef.
       PREDEF_DECL_BUILTIN_MS_VA_LIST_ID = 11,
 
-      /// \brief The extern "C" context.
+      /// The extern "C" context.
       PREDEF_DECL_EXTERN_C_CONTEXT_ID = 12,
 
-      /// \brief The internal '__make_integer_seq' template.
+      /// The internal '__make_integer_seq' template.
       PREDEF_DECL_MAKE_INTEGER_SEQ_ID = 13,
 
-      /// \brief The internal '__NSConstantString' typedef.
+      /// The internal '__NSConstantString' typedef.
       PREDEF_DECL_CF_CONSTANT_STRING_ID = 14,
 
-      /// \brief The internal '__NSConstantString' tag type.
+      /// The internal '__NSConstantString' tag type.
       PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID = 15,
 
-      /// \brief The internal '__type_pack_element' template.
+      /// The internal '__type_pack_element' template.
       PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 16,
     };
 
-    /// \brief The number of declaration IDs that are predefined.
+    /// The number of declaration IDs that are predefined.
     ///
     /// For more information about predefined declarations, see the
     /// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
     const unsigned int NUM_PREDEF_DECL_IDS = 17;
 
-    /// \brief Record of updates for a declaration that was modified after
+    /// Record of updates for a declaration that was modified after
     /// being deserialized. This can occur within DECLTYPES_BLOCK_ID.
     const unsigned int DECL_UPDATES = 49;
 
-    /// \brief Record code for a list of local redeclarations of a declaration.
+    /// Record code for a list of local redeclarations of a declaration.
     /// This can occur within DECLTYPES_BLOCK_ID.
     const unsigned int LOCAL_REDECLARATIONS = 50;
     
-    /// \brief Record codes for each kind of declaration.
+    /// Record codes for each kind of declaration.
     ///
     /// These constants describe the declaration records that can occur within
     /// a declarations block (identified by DECLTYPES_BLOCK_ID). Each
     /// constant describes a record for a specific declaration class
     /// in the AST. Note that TypeCode values share this code space.
     enum DeclCode {
-      /// \brief A TypedefDecl record.
+      /// A TypedefDecl record.
       DECL_TYPEDEF = 51,
-      /// \brief A TypeAliasDecl record.
+      /// A TypeAliasDecl record.
 
       DECL_TYPEALIAS,
 
-      /// \brief An EnumDecl record.
+      /// An EnumDecl record.
       DECL_ENUM,
 
-      /// \brief A RecordDecl record.
+      /// A RecordDecl record.
       DECL_RECORD,
 
-      /// \brief An EnumConstantDecl record.
+      /// An EnumConstantDecl record.
       DECL_ENUM_CONSTANT,
 
-      /// \brief A FunctionDecl record.
+      /// A FunctionDecl record.
       DECL_FUNCTION,
 
-      /// \brief A ObjCMethodDecl record.
+      /// A ObjCMethodDecl record.
       DECL_OBJC_METHOD,
 
-      /// \brief A ObjCInterfaceDecl record.
+      /// A ObjCInterfaceDecl record.
       DECL_OBJC_INTERFACE,
 
-      /// \brief A ObjCProtocolDecl record.
+      /// A ObjCProtocolDecl record.
       DECL_OBJC_PROTOCOL,
 
-      /// \brief A ObjCIvarDecl record.
+      /// A ObjCIvarDecl record.
       DECL_OBJC_IVAR,
 
-      /// \brief A ObjCAtDefsFieldDecl record.
+      /// A ObjCAtDefsFieldDecl record.
       DECL_OBJC_AT_DEFS_FIELD,
 
-      /// \brief A ObjCCategoryDecl record.
+      /// A ObjCCategoryDecl record.
       DECL_OBJC_CATEGORY,
 
-      /// \brief A ObjCCategoryImplDecl record.
+      /// A ObjCCategoryImplDecl record.
       DECL_OBJC_CATEGORY_IMPL,
 
-      /// \brief A ObjCImplementationDecl record.
+      /// A ObjCImplementationDecl record.
       DECL_OBJC_IMPLEMENTATION,
 
-      /// \brief A ObjCCompatibleAliasDecl record.
+      /// A ObjCCompatibleAliasDecl record.
       DECL_OBJC_COMPATIBLE_ALIAS,
 
-      /// \brief A ObjCPropertyDecl record.
+      /// A ObjCPropertyDecl record.
       DECL_OBJC_PROPERTY,
 
-      /// \brief A ObjCPropertyImplDecl record.
+      /// A ObjCPropertyImplDecl record.
       DECL_OBJC_PROPERTY_IMPL,
 
-      /// \brief A FieldDecl record.
+      /// A FieldDecl record.
       DECL_FIELD,
 
-      /// \brief A MSPropertyDecl record.
+      /// A MSPropertyDecl record.
       DECL_MS_PROPERTY,
 
-      /// \brief A VarDecl record.
+      /// A VarDecl record.
       DECL_VAR,
 
-      /// \brief An ImplicitParamDecl record.
+      /// An ImplicitParamDecl record.
       DECL_IMPLICIT_PARAM,
 
-      /// \brief A ParmVarDecl record.
+      /// A ParmVarDecl record.
       DECL_PARM_VAR,
 
-      /// \brief A DecompositionDecl record.
+      /// A DecompositionDecl record.
       DECL_DECOMPOSITION,
 
-      /// \brief A BindingDecl record.
+      /// A BindingDecl record.
       DECL_BINDING,
 
-      /// \brief A FileScopeAsmDecl record.
+      /// A FileScopeAsmDecl record.
       DECL_FILE_SCOPE_ASM,
 
-      /// \brief A BlockDecl record.
+      /// A BlockDecl record.
       DECL_BLOCK,
 
-      /// \brief A CapturedDecl record.
+      /// A CapturedDecl record.
       DECL_CAPTURED,
 
-      /// \brief A record that stores the set of declarations that are
+      /// A record that stores the set of declarations that are
       /// lexically stored within a given DeclContext.
       ///
       /// The record itself is a blob that is an array of declaration IDs,
@@ -1303,7 +1303,7 @@ namespace serialization {
       /// DeclContext::decls_begin() and DeclContext::decls_end().
       DECL_CONTEXT_LEXICAL,
 
-      /// \brief A record that stores the set of declarations that are
+      /// A record that stores the set of declarations that are
       /// visible from a given DeclContext.
       ///
       /// The record itself stores a set of mappings, each of which
@@ -1312,155 +1312,155 @@ namespace serialization {
       /// into a DeclContext via DeclContext::lookup.
       DECL_CONTEXT_VISIBLE,
 
-      /// \brief A LabelDecl record.
+      /// A LabelDecl record.
       DECL_LABEL,
 
-      /// \brief A NamespaceDecl record.
+      /// A NamespaceDecl record.
       DECL_NAMESPACE,
 
-      /// \brief A NamespaceAliasDecl record.
+      /// A NamespaceAliasDecl record.
       DECL_NAMESPACE_ALIAS,
 
-      /// \brief A UsingDecl record.
+      /// A UsingDecl record.
       DECL_USING,
 
-      /// \brief A UsingPackDecl record.
+      /// A UsingPackDecl record.
       DECL_USING_PACK,
 
-      /// \brief A UsingShadowDecl record.
+      /// A UsingShadowDecl record.
       DECL_USING_SHADOW,
 
-      /// \brief A ConstructorUsingShadowDecl record.
+      /// A ConstructorUsingShadowDecl record.
       DECL_CONSTRUCTOR_USING_SHADOW,
 
-      /// \brief A UsingDirecitveDecl record.
+      /// A UsingDirecitveDecl record.
       DECL_USING_DIRECTIVE,
 
-      /// \brief An UnresolvedUsingValueDecl record.
+      /// An UnresolvedUsingValueDecl record.
       DECL_UNRESOLVED_USING_VALUE,
 
-      /// \brief An UnresolvedUsingTypenameDecl record.
+      /// An UnresolvedUsingTypenameDecl record.
       DECL_UNRESOLVED_USING_TYPENAME,
 
-      /// \brief A LinkageSpecDecl record.
+      /// A LinkageSpecDecl record.
       DECL_LINKAGE_SPEC,
 
-      /// \brief An ExportDecl record.
+      /// An ExportDecl record.
       DECL_EXPORT,
 
-      /// \brief A CXXRecordDecl record.
+      /// A CXXRecordDecl record.
       DECL_CXX_RECORD,
 
-      /// \brief A CXXDeductionGuideDecl record.
+      /// A CXXDeductionGuideDecl record.
       DECL_CXX_DEDUCTION_GUIDE,
 
-      /// \brief A CXXMethodDecl record.
+      /// A CXXMethodDecl record.
       DECL_CXX_METHOD,
 
-      /// \brief A CXXConstructorDecl record.
+      /// A CXXConstructorDecl record.
       DECL_CXX_CONSTRUCTOR,
 
-      /// \brief A CXXConstructorDecl record for an inherited constructor.
+      /// A CXXConstructorDecl record for an inherited constructor.
       DECL_CXX_INHERITED_CONSTRUCTOR,
 
-      /// \brief A CXXDestructorDecl record.
+      /// A CXXDestructorDecl record.
       DECL_CXX_DESTRUCTOR,
 
-      /// \brief A CXXConversionDecl record.
+      /// A CXXConversionDecl record.
       DECL_CXX_CONVERSION,
 
-      /// \brief An AccessSpecDecl record.
+      /// An AccessSpecDecl record.
       DECL_ACCESS_SPEC,
 
-      /// \brief A FriendDecl record.
+      /// A FriendDecl record.
       DECL_FRIEND,
 
-      /// \brief A FriendTemplateDecl record.
+      /// A FriendTemplateDecl record.
       DECL_FRIEND_TEMPLATE,
 
-      /// \brief A ClassTemplateDecl record.
+      /// A ClassTemplateDecl record.
       DECL_CLASS_TEMPLATE,
 
-      /// \brief A ClassTemplateSpecializationDecl record.
+      /// A ClassTemplateSpecializationDecl record.
       DECL_CLASS_TEMPLATE_SPECIALIZATION,
 
-      /// \brief A ClassTemplatePartialSpecializationDecl record.
+      /// A ClassTemplatePartialSpecializationDecl record.
       DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION,
 
-      /// \brief A VarTemplateDecl record.
+      /// A VarTemplateDecl record.
       DECL_VAR_TEMPLATE,
 
-      /// \brief A VarTemplateSpecializationDecl record.
+      /// A VarTemplateSpecializationDecl record.
       DECL_VAR_TEMPLATE_SPECIALIZATION,
 
-      /// \brief A VarTemplatePartialSpecializationDecl record.
+      /// A VarTemplatePartialSpecializationDecl record.
       DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION,
 
-      /// \brief A FunctionTemplateDecl record.
+      /// A FunctionTemplateDecl record.
       DECL_FUNCTION_TEMPLATE,
 
-      /// \brief A TemplateTypeParmDecl record.
+      /// A TemplateTypeParmDecl record.
       DECL_TEMPLATE_TYPE_PARM,
 
-      /// \brief A NonTypeTemplateParmDecl record.
+      /// A NonTypeTemplateParmDecl record.
       DECL_NON_TYPE_TEMPLATE_PARM,
 
-      /// \brief A TemplateTemplateParmDecl record.
+      /// A TemplateTemplateParmDecl record.
       DECL_TEMPLATE_TEMPLATE_PARM,
 
-      /// \brief A TypeAliasTemplateDecl record.
+      /// A TypeAliasTemplateDecl record.
       DECL_TYPE_ALIAS_TEMPLATE,
 
-      /// \brief A StaticAssertDecl record.
+      /// A StaticAssertDecl record.
       DECL_STATIC_ASSERT,
 
-      /// \brief A record containing CXXBaseSpecifiers.
+      /// A record containing CXXBaseSpecifiers.
       DECL_CXX_BASE_SPECIFIERS,
 
-      /// \brief A record containing CXXCtorInitializers.
+      /// A record containing CXXCtorInitializers.
       DECL_CXX_CTOR_INITIALIZERS,
 
-      /// \brief A IndirectFieldDecl record.
+      /// A IndirectFieldDecl record.
       DECL_INDIRECTFIELD,
 
-      /// \brief A NonTypeTemplateParmDecl record that stores an expanded
+      /// A NonTypeTemplateParmDecl record that stores an expanded
       /// non-type template parameter pack.
       DECL_EXPANDED_NON_TYPE_TEMPLATE_PARM_PACK,
 
-      /// \brief A TemplateTemplateParmDecl record that stores an expanded
+      /// A TemplateTemplateParmDecl record that stores an expanded
       /// template template parameter pack.
       DECL_EXPANDED_TEMPLATE_TEMPLATE_PARM_PACK,
 
-      /// \brief A ClassScopeFunctionSpecializationDecl record a class scope
+      /// A ClassScopeFunctionSpecializationDecl record a class scope
       /// function specialization. (Microsoft extension).
       DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION,
 
-      /// \brief An ImportDecl recording a module import.
+      /// An ImportDecl recording a module import.
       DECL_IMPORT,
 
-      /// \brief An OMPThreadPrivateDecl record.
+      /// An OMPThreadPrivateDecl record.
       DECL_OMP_THREADPRIVATE,
 
-      /// \brief An EmptyDecl record.
+      /// An EmptyDecl record.
       DECL_EMPTY,
 
-      /// \brief An ObjCTypeParamDecl record.
+      /// An ObjCTypeParamDecl record.
       DECL_OBJC_TYPE_PARAM,
 
-      /// \brief An OMPCapturedExprDecl record.
+      /// An OMPCapturedExprDecl record.
       DECL_OMP_CAPTUREDEXPR,
 
-      /// \brief A PragmaCommentDecl record.
+      /// A PragmaCommentDecl record.
       DECL_PRAGMA_COMMENT,
 
-      /// \brief A PragmaDetectMismatchDecl record.
+      /// A PragmaDetectMismatchDecl record.
       DECL_PRAGMA_DETECT_MISMATCH,
 
-      /// \brief An OMPDeclareReductionDecl record.
+      /// An OMPDeclareReductionDecl record.
       DECL_OMP_DECLARE_REDUCTION,
     };
 
-    /// \brief Record codes for each kind of statement or expression.
+    /// Record codes for each kind of statement or expression.
     ///
     /// These constants describe the records that describe statements
     /// or expressions. These records  occur within type and declarations
@@ -1468,310 +1468,310 @@ namespace serialization {
     /// describes a record for a specific statement or expression class in the
     /// AST.
     enum StmtCode {
-      /// \brief A marker record that indicates that we are at the end
+      /// A marker record that indicates that we are at the end
       /// of an expression.
       STMT_STOP = 128,
 
-      /// \brief A NULL expression.
+      /// A NULL expression.
       STMT_NULL_PTR,
 
-      /// \brief A reference to a previously [de]serialized Stmt record.
+      /// A reference to a previously [de]serialized Stmt record.
       STMT_REF_PTR,
 
-      /// \brief A NullStmt record.
+      /// A NullStmt record.
       STMT_NULL,
 
-      /// \brief A CompoundStmt record.
+      /// A CompoundStmt record.
       STMT_COMPOUND,
 
-      /// \brief A CaseStmt record.
+      /// A CaseStmt record.
       STMT_CASE,
 
-      /// \brief A DefaultStmt record.
+      /// A DefaultStmt record.
       STMT_DEFAULT,
 
-      /// \brief A LabelStmt record.
+      /// A LabelStmt record.
       STMT_LABEL,
 
-      /// \brief An AttributedStmt record.
+      /// An AttributedStmt record.
       STMT_ATTRIBUTED,
 
-      /// \brief An IfStmt record.
+      /// An IfStmt record.
       STMT_IF,
 
-      /// \brief A SwitchStmt record.
+      /// A SwitchStmt record.
       STMT_SWITCH,
 
-      /// \brief A WhileStmt record.
+      /// A WhileStmt record.
       STMT_WHILE,
 
-      /// \brief A DoStmt record.
+      /// A DoStmt record.
       STMT_DO,
 
-      /// \brief A ForStmt record.
+      /// A ForStmt record.
       STMT_FOR,
 
-      /// \brief A GotoStmt record.
+      /// A GotoStmt record.
       STMT_GOTO,
 
-      /// \brief An IndirectGotoStmt record.
+      /// An IndirectGotoStmt record.
       STMT_INDIRECT_GOTO,
 
-      /// \brief A ContinueStmt record.
+      /// A ContinueStmt record.
       STMT_CONTINUE,
 
-      /// \brief A BreakStmt record.
+      /// A BreakStmt record.
       STMT_BREAK,
 
-      /// \brief A ReturnStmt record.
+      /// A ReturnStmt record.
       STMT_RETURN,
 
-      /// \brief A DeclStmt record.
+      /// A DeclStmt record.
       STMT_DECL,
 
-      /// \brief A CapturedStmt record.
+      /// A CapturedStmt record.
       STMT_CAPTURED,
 
-      /// \brief A GCC-style AsmStmt record.
+      /// A GCC-style AsmStmt record.
       STMT_GCCASM,
 
-      /// \brief A MS-style AsmStmt record.
+      /// A MS-style AsmStmt record.
       STMT_MSASM,
 
-      /// \brief A PredefinedExpr record.
+      /// A PredefinedExpr record.
       EXPR_PREDEFINED,
 
-      /// \brief A DeclRefExpr record.
+      /// A DeclRefExpr record.
       EXPR_DECL_REF,
 
-      /// \brief An IntegerLiteral record.
+      /// An IntegerLiteral record.
       EXPR_INTEGER_LITERAL,
 
-      /// \brief A FloatingLiteral record.
+      /// A FloatingLiteral record.
       EXPR_FLOATING_LITERAL,
 
-      /// \brief An ImaginaryLiteral record.
+      /// An ImaginaryLiteral record.
       EXPR_IMAGINARY_LITERAL,
 
-      /// \brief A StringLiteral record.
+      /// A StringLiteral record.
       EXPR_STRING_LITERAL,
 
-      /// \brief A CharacterLiteral record.
+      /// A CharacterLiteral record.
       EXPR_CHARACTER_LITERAL,
 
-      /// \brief A ParenExpr record.
+      /// A ParenExpr record.
       EXPR_PAREN,
 
-      /// \brief A ParenListExpr record.
+      /// A ParenListExpr record.
       EXPR_PAREN_LIST,
 
-      /// \brief A UnaryOperator record.
+      /// A UnaryOperator record.
       EXPR_UNARY_OPERATOR,
 
-      /// \brief An OffsetOfExpr record.
+      /// An OffsetOfExpr record.
       EXPR_OFFSETOF,
 
-      /// \brief A SizefAlignOfExpr record.
+      /// A SizefAlignOfExpr record.
       EXPR_SIZEOF_ALIGN_OF,
 
-      /// \brief An ArraySubscriptExpr record.
+      /// An ArraySubscriptExpr record.
       EXPR_ARRAY_SUBSCRIPT,
 
-      /// \brief A CallExpr record.
+      /// A CallExpr record.
       EXPR_CALL,
 
-      /// \brief A MemberExpr record.
+      /// A MemberExpr record.
       EXPR_MEMBER,
 
-      /// \brief A BinaryOperator record.
+      /// A BinaryOperator record.
       EXPR_BINARY_OPERATOR,
 
-      /// \brief A CompoundAssignOperator record.
+      /// A CompoundAssignOperator record.
       EXPR_COMPOUND_ASSIGN_OPERATOR,
 
-      /// \brief A ConditionOperator record.
+      /// A ConditionOperator record.
       EXPR_CONDITIONAL_OPERATOR,
 
-      /// \brief An ImplicitCastExpr record.
+      /// An ImplicitCastExpr record.
       EXPR_IMPLICIT_CAST,
 
-      /// \brief A CStyleCastExpr record.
+      /// A CStyleCastExpr record.
       EXPR_CSTYLE_CAST,
 
-      /// \brief A CompoundLiteralExpr record.
+      /// A CompoundLiteralExpr record.
       EXPR_COMPOUND_LITERAL,
 
-      /// \brief An ExtVectorElementExpr record.
+      /// An ExtVectorElementExpr record.
       EXPR_EXT_VECTOR_ELEMENT,
 
-      /// \brief An InitListExpr record.
+      /// An InitListExpr record.
       EXPR_INIT_LIST,
 
-      /// \brief A DesignatedInitExpr record.
+      /// A DesignatedInitExpr record.
       EXPR_DESIGNATED_INIT,
 
-      /// \brief A DesignatedInitUpdateExpr record.
+      /// A DesignatedInitUpdateExpr record.
       EXPR_DESIGNATED_INIT_UPDATE,
 
-      /// \brief An NoInitExpr record.
+      /// An NoInitExpr record.
       EXPR_NO_INIT,
 
-      /// \brief An ArrayInitLoopExpr record.
+      /// An ArrayInitLoopExpr record.
       EXPR_ARRAY_INIT_LOOP,
 
-      /// \brief An ArrayInitIndexExpr record.
+      /// An ArrayInitIndexExpr record.
       EXPR_ARRAY_INIT_INDEX,
 
-      /// \brief An ImplicitValueInitExpr record.
+      /// An ImplicitValueInitExpr record.
       EXPR_IMPLICIT_VALUE_INIT,
 
-      /// \brief A VAArgExpr record.
+      /// A VAArgExpr record.
       EXPR_VA_ARG,
 
-      /// \brief An AddrLabelExpr record.
+      /// An AddrLabelExpr record.
       EXPR_ADDR_LABEL,
 
-      /// \brief A StmtExpr record.
+      /// A StmtExpr record.
       EXPR_STMT,
 
-      /// \brief A ChooseExpr record.
+      /// A ChooseExpr record.
       EXPR_CHOOSE,
 
-      /// \brief A GNUNullExpr record.
+      /// A GNUNullExpr record.
       EXPR_GNU_NULL,
 
-      /// \brief A ShuffleVectorExpr record.
+      /// A ShuffleVectorExpr record.
       EXPR_SHUFFLE_VECTOR,
 
-      /// \brief A ConvertVectorExpr record.
+      /// A ConvertVectorExpr record.
       EXPR_CONVERT_VECTOR,
 
-      /// \brief BlockExpr
+      /// BlockExpr
       EXPR_BLOCK,
 
-      /// \brief A GenericSelectionExpr record.
+      /// A GenericSelectionExpr record.
       EXPR_GENERIC_SELECTION,
 
-      /// \brief A PseudoObjectExpr record.
+      /// A PseudoObjectExpr record.
       EXPR_PSEUDO_OBJECT,
 
-      /// \brief An AtomicExpr record.
+      /// An AtomicExpr record.
       EXPR_ATOMIC,
 
       // Objective-C
 
-      /// \brief An ObjCStringLiteral record.
+      /// An ObjCStringLiteral record.
       EXPR_OBJC_STRING_LITERAL,
 
       EXPR_OBJC_BOXED_EXPRESSION,
       EXPR_OBJC_ARRAY_LITERAL,
       EXPR_OBJC_DICTIONARY_LITERAL,
    
-      /// \brief An ObjCEncodeExpr record.
+      /// An ObjCEncodeExpr record.
       EXPR_OBJC_ENCODE,
 
-      /// \brief An ObjCSelectorExpr record.
+      /// An ObjCSelectorExpr record.
       EXPR_OBJC_SELECTOR_EXPR,
 
-      /// \brief An ObjCProtocolExpr record.
+      /// An ObjCProtocolExpr record.
       EXPR_OBJC_PROTOCOL_EXPR,
 
-      /// \brief An ObjCIvarRefExpr record.
+      /// An ObjCIvarRefExpr record.
       EXPR_OBJC_IVAR_REF_EXPR,
 
-      /// \brief An ObjCPropertyRefExpr record.
+      /// An ObjCPropertyRefExpr record.
       EXPR_OBJC_PROPERTY_REF_EXPR,
 
-      /// \brief An ObjCSubscriptRefExpr record.
+      /// An ObjCSubscriptRefExpr record.
       EXPR_OBJC_SUBSCRIPT_REF_EXPR,
 
-      /// \brief UNUSED
+      /// UNUSED
       EXPR_OBJC_KVC_REF_EXPR,
 
-      /// \brief An ObjCMessageExpr record.
+      /// An ObjCMessageExpr record.
       EXPR_OBJC_MESSAGE_EXPR,
 
-      /// \brief An ObjCIsa Expr record.
+      /// An ObjCIsa Expr record.
       EXPR_OBJC_ISA,
 
-      /// \brief An ObjCIndirectCopyRestoreExpr record.
+      /// An ObjCIndirectCopyRestoreExpr record.
       EXPR_OBJC_INDIRECT_COPY_RESTORE,
 
-      /// \brief An ObjCForCollectionStmt record.
+      /// An ObjCForCollectionStmt record.
       STMT_OBJC_FOR_COLLECTION,
 
-      /// \brief An ObjCAtCatchStmt record.
+      /// An ObjCAtCatchStmt record.
       STMT_OBJC_CATCH,
 
-      /// \brief An ObjCAtFinallyStmt record.
+      /// An ObjCAtFinallyStmt record.
       STMT_OBJC_FINALLY,
 
-      /// \brief An ObjCAtTryStmt record.
+      /// An ObjCAtTryStmt record.
       STMT_OBJC_AT_TRY,
 
-      /// \brief An ObjCAtSynchronizedStmt record.
+      /// An ObjCAtSynchronizedStmt record.
       STMT_OBJC_AT_SYNCHRONIZED,
 
-      /// \brief An ObjCAtThrowStmt record.
+      /// An ObjCAtThrowStmt record.
       STMT_OBJC_AT_THROW,
 
-      /// \brief An ObjCAutoreleasePoolStmt record.
+      /// An ObjCAutoreleasePoolStmt record.
       STMT_OBJC_AUTORELEASE_POOL,
 
-      /// \brief An ObjCBoolLiteralExpr record.
+      /// An ObjCBoolLiteralExpr record.
       EXPR_OBJC_BOOL_LITERAL,
 
-      /// \brief An ObjCAvailabilityCheckExpr record.
+      /// An ObjCAvailabilityCheckExpr record.
       EXPR_OBJC_AVAILABILITY_CHECK,
 
       // C++
       
-      /// \brief A CXXCatchStmt record.
+      /// A CXXCatchStmt record.
       STMT_CXX_CATCH,
 
-      /// \brief A CXXTryStmt record.
+      /// A CXXTryStmt record.
       STMT_CXX_TRY,
-      /// \brief A CXXForRangeStmt record.
+      /// A CXXForRangeStmt record.
 
       STMT_CXX_FOR_RANGE,
 
-      /// \brief A CXXOperatorCallExpr record.
+      /// A CXXOperatorCallExpr record.
       EXPR_CXX_OPERATOR_CALL,
 
-      /// \brief A CXXMemberCallExpr record.
+      /// A CXXMemberCallExpr record.
       EXPR_CXX_MEMBER_CALL,
 
-      /// \brief A CXXConstructExpr record.
+      /// A CXXConstructExpr record.
       EXPR_CXX_CONSTRUCT,
 
-      /// \brief A CXXInheritedCtorInitExpr record.
+      /// A CXXInheritedCtorInitExpr record.
       EXPR_CXX_INHERITED_CTOR_INIT,
 
-      /// \brief A CXXTemporaryObjectExpr record.
+      /// A CXXTemporaryObjectExpr record.
       EXPR_CXX_TEMPORARY_OBJECT,
 
-      /// \brief A CXXStaticCastExpr record.
+      /// A CXXStaticCastExpr record.
       EXPR_CXX_STATIC_CAST,
 
-      /// \brief A CXXDynamicCastExpr record.
+      /// A CXXDynamicCastExpr record.
       EXPR_CXX_DYNAMIC_CAST,
 
-      /// \brief A CXXReinterpretCastExpr record.
+      /// A CXXReinterpretCastExpr record.
       EXPR_CXX_REINTERPRET_CAST,
 
-      /// \brief A CXXConstCastExpr record.
+      /// A CXXConstCastExpr record.
       EXPR_CXX_CONST_CAST,
 
-      /// \brief A CXXFunctionalCastExpr record.
+      /// A CXXFunctionalCastExpr record.
       EXPR_CXX_FUNCTIONAL_CAST,
 
-      /// \brief A UserDefinedLiteral record.
+      /// A UserDefinedLiteral record.
       EXPR_USER_DEFINED_LITERAL,
 
-      /// \brief A CXXStdInitializerListExpr record.
+      /// A CXXStdInitializerListExpr record.
       EXPR_CXX_STD_INITIALIZER_LIST,
 
-      /// \brief A CXXBoolLiteralExpr record.
+      /// A CXXBoolLiteralExpr record.
       EXPR_CXX_BOOL_LITERAL,
 
       EXPR_CXX_NULL_PTR_LITERAL,  // CXXNullPtrLiteralExpr
@@ -1890,24 +1890,24 @@ namespace serialization {
       EXPR_DEPENDENT_COAWAIT,
     };
 
-    /// \brief The kinds of designators that can occur in a
+    /// The kinds of designators that can occur in a
     /// DesignatedInitExpr.
     enum DesignatorTypes {
-      /// \brief Field designator where only the field name is known.
+      /// Field designator where only the field name is known.
       DESIG_FIELD_NAME  = 0,
 
-      /// \brief Field designator where the field has been resolved to
+      /// Field designator where the field has been resolved to
       /// a declaration.
       DESIG_FIELD_DECL  = 1,
 
-      /// \brief Array designator.
+      /// Array designator.
       DESIG_ARRAY       = 2,
 
-      /// \brief GNU array range designator.
+      /// GNU array range designator.
       DESIG_ARRAY_RANGE = 3
     };
 
-    /// \brief The different kinds of data that can occur in a
+    /// The different kinds of data that can occur in a
     /// CtorInitializer.
     enum CtorInitializerType {
       CTOR_INITIALIZER_BASE,
@@ -1916,7 +1916,7 @@ namespace serialization {
       CTOR_INITIALIZER_INDIRECT_MEMBER
     };
 
-    /// \brief Describes the redeclarations of a declaration.
+    /// Describes the redeclarations of a declaration.
     struct LocalRedeclarationsInfo {
       // The ID of the first declaration
       DeclID FirstID;
@@ -1945,7 +1945,7 @@ namespace serialization {
       }
     };
 
-    /// \brief Describes the categories of an Objective-C class.
+    /// Describes the categories of an Objective-C class.
     struct ObjCCategoriesInfo {
       // The ID of the definition
       DeclID DefinitionID;
@@ -1974,7 +1974,7 @@ namespace serialization {
       }
     };
 
-    /// \brief A key used when looking up entities by \ref DeclarationName.
+    /// A key used when looking up entities by \ref DeclarationName.
     ///
     /// Different \ref DeclarationNames are mapped to different keys, but the
     /// same key can occasionally represent multiple names (for names that

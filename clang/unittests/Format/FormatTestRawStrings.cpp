@@ -822,6 +822,41 @@ xxxxxxxaaaaax wwwwwww = _Verxrrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
 )test", Style));
 }
 
+TEST_F(FormatTestRawStrings, KeepsRBraceFolloedByMoreLBracesOnSameLine) {
+  FormatStyle Style = getRawStringPbStyleWithColumns(80);
+
+  expect_eq(
+                    R"test(
+int f() {
+  if (1) {
+    TTTTTTTTTTTTTTTTTTTTT s = PARSE_TEXT_PROTO(R"pb(
+      ttttttttt {
+        ppppppppppppp {
+          [cccccccccc.pppppppppppppp.TTTTTTTTTTTTTTTTTTTT] { field_1: "123_1" }
+          [cccccccccc.pppppppppppppp.TTTTTTTTTTTTTTTTTTTT] { field_2: "123_2" }
+        }
+      }
+    )pb");
+  }
+}
+)test",
+            format(
+                    R"test(
+int f() {
+  if (1) {
+   TTTTTTTTTTTTTTTTTTTTT s = PARSE_TEXT_PROTO(R"pb(
+   ttttttttt {
+   ppppppppppppp {
+   [cccccccccc.pppppppppppppp.TTTTTTTTTTTTTTTTTTTT] { field_1: "123_1" }
+   [cccccccccc.pppppppppppppp.TTTTTTTTTTTTTTTTTTTT] { field_2: "123_2" }}}
+   )pb");
+  }
+}
+)test",
+                    Style));
+}
+
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

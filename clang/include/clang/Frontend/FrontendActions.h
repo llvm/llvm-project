@@ -83,14 +83,14 @@ protected:
   bool shouldEraseOutputFiles() override;
 
 public:
-  /// \brief Compute the AST consumer arguments that will be used to
+  /// Compute the AST consumer arguments that will be used to
   /// create the PCHGenerator instance returned by CreateASTConsumer.
   ///
   /// \returns false if an error occurred, true otherwise.
   static bool ComputeASTConsumerArguments(CompilerInstance &CI,
                                           std::string &Sysroot);
 
-  /// \brief Creates file to write the PCH into and returns a stream to write it
+  /// Creates file to write the PCH into and returns a stream to write it
   /// into. On error, returns null.
   static std::unique_ptr<llvm::raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile,
@@ -140,7 +140,7 @@ public:
   bool hasCodeCompletionSupport() const override { return true; }
 };
 
-/// \brief Dump information about the given module file, to be used for
+/// Dump information about the given module file, to be used for
 /// basic debugging and discovery.
 class DumpModuleInfoAction : public ASTFrontendAction {
 protected:
@@ -176,7 +176,7 @@ protected:
 };
 
 /**
- * \brief Frontend action adaptor that merges ASTs together.
+ * Frontend action adaptor that merges ASTs together.
  *
  * This action takes an existing AST file and "merges" it into the AST
  * context, producing a merged context. This action is an action
@@ -184,10 +184,10 @@ protected:
  * will consume the merged context.
  */
 class ASTMergeAction : public FrontendAction {
-  /// \brief The action that the merge action adapts.
+  /// The action that the merge action adapts.
   std::unique_ptr<FrontendAction> AdaptedAction;
   
-  /// \brief The set of AST files to merge.
+  /// The set of AST files to merge.
   std::vector<std::string> ASTFiles;
 
 protected:
