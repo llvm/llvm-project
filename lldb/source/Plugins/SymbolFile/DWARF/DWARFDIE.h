@@ -87,6 +87,16 @@ public:
   GetContainingDWOModuleDIE() const;
 
   //----------------------------------------------------------------------
+  // Get the data that contains the attribute values for this DIE. Support
+  // for .debug_types means that any DIE can have its data either in the
+  // .debug_info or the .debug_types section; this method will return the
+  // correct section data.
+  //
+  // Clients must validate that this object is valid before calling this.
+  //----------------------------------------------------------------------
+  const lldb_private::DWARFDataExtractor &GetData() const;
+
+  //----------------------------------------------------------------------
   // Accessing information about a DIE
   //----------------------------------------------------------------------
   dw_tag_t Tag() const;

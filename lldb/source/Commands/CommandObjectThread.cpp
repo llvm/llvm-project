@@ -786,7 +786,7 @@ protected:
       // stack to the main command handler and show an (lldb) prompt before
       // HandlePrivateEvent (from PrivateStateThread) has a chance to call
       // PushProcessIOHandler().
-      process->SyncIOHandler(iohandler_id, 2000);
+      process->SyncIOHandler(iohandler_id, std::chrono::seconds(2));
 
       if (synchronous_execution) {
         // If any state changed events had anything to say, add that to the

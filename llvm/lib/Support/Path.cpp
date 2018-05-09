@@ -91,10 +91,9 @@ namespace {
     return path.substr(0, end);
   }
 
+  // Returns the first character of the filename in str. For paths ending in
+  // '/', it returns the position of the '/'.
   size_t filename_pos(StringRef str, Style style) {
-    if (str.size() == 2 && is_separator(str[0], style) && str[0] == str[1])
-      return 0;
-
     if (str.size() > 0 && is_separator(str[str.size() - 1], style))
       return str.size() - 1;
 
@@ -111,16 +110,14 @@ namespace {
     return pos + 1;
   }
 
+  // Returns the position of the root directory in str. If there is no root
+  // directory in str, it returns StringRef::npos.
   size_t root_dir_start(StringRef str, Style style) {
     // case "c:/"
     if (real_style(style) == Style::windows) {
       if (str.size() > 2 && str[1] == ':' && is_separator(str[2], style))
         return 2;
     }
-
-    // case "//"
-    if (str.size() == 2 && is_separator(str[0], style) && str[0] == str[1])
-      return StringRef::npos;
 
     // case "//net"
     if (str.size() > 3 && is_separator(str[0], style) && str[0] == str[1] &&
@@ -135,22 +132,29 @@ namespace {
     return StringRef::npos;
   }
 
+  // Returns the position past the end of the "parent path" of path. The parent
+  // path will not end in '/', unless the parent is the root directory. If the
+  // path has no parent, 0 is returned.
   size_t parent_path_end(StringRef path, Style style) {
     size_t end_pos = filename_pos(path, style);
 
     bool filename_was_sep =
         path.size() > 0 && is_separator(path[end_pos], style);
 
-    // Skip separators except for root dir.
-    size_t root_dir_pos = root_dir_start(path.substr(0, end_pos), style);
-
-    while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
+    // Skip separators until we reach root dir (or the start of the string).
+    size_t root_dir_pos = root_dir_start(path, style);
+    while (end_pos > 0 &&
+           (root_dir_pos == StringRef::npos || end_pos > root_dir_pos) &&
            is_separator(path[end_pos - 1], style))
       --end_pos;
 
-    if (end_pos == 1 && root_dir_pos == 0 && filename_was_sep)
-      return StringRef::npos;
+    if (end_pos == root_dir_pos && !filename_was_sep) {
+      // We've reached the root dir and the input path was *not* ending in a
+      // sequence of slashes. Include the root dir in the parent path.
+      return root_dir_pos + 1;
+    }
 
+    // Otherwise, just include before the last slash.
     return end_pos;
   }
 } // end unnamed namespace
@@ -282,8 +286,8 @@ const_iterator &const_iterator::operator++() {
       ++Position;
     }
 
-    // Treat trailing '/' as a '.'.
-    if (Position == Path.size()) {
+    // Treat trailing '/' as a '.', unless it is the root dir.
+    if (Position == Path.size() && Component != "/") {
       --Position;
       Component = ".";
       return *this;
@@ -322,22 +326,22 @@ reverse_iterator rend(StringRef Path) {
 }
 
 reverse_iterator &reverse_iterator::operator++() {
-  // If we're at the end and the previous char was a '/', return '.' unless
-  // we are the root path.
   size_t root_dir_pos = root_dir_start(Path, S);
-  if (Position == Path.size() && Path.size() > root_dir_pos + 1 &&
-      is_separator(Path[Position - 1], S)) {
+
+  // Skip separators unless it's the root directory.
+  size_t end_pos = Position;
+  while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
+         is_separator(Path[end_pos - 1], S))
+    --end_pos;
+
+  // Treat trailing '/' as a '.', unless it is the root dir.
+  if (Position == Path.size() && !Path.empty() &&
+      is_separator(Path.back(), S) &&
+      (root_dir_pos == StringRef::npos || end_pos - 1 > root_dir_pos)) {
     --Position;
     Component = ".";
     return *this;
   }
-
-  // Skip separators unless it's the root directory.
-  size_t end_pos = Position;
-
-  while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
-         is_separator(Path[end_pos - 1], S))
-    --end_pos;
 
   // Find next separator.
   size_t start_pos = filename_pos(Path.substr(0, end_pos), S);

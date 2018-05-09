@@ -80,6 +80,8 @@ RCParser::ParseType RCParser::parseSingleResource() {
     Result = parseIconResource();
   else if (TypeToken->equalsLower("MENU"))
     Result = parseMenuResource();
+  else if (TypeToken->equalsLower("RCDATA"))
+    Result = parseUserDefinedResource(RkRcData);
   else if (TypeToken->equalsLower("VERSIONINFO"))
     Result = parseVersionInfoResource();
   else

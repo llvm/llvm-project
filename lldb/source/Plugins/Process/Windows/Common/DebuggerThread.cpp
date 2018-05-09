@@ -363,8 +363,8 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
   m_exception_pred.SetValue(result, eBroadcastNever);
 
   LLDB_LOG(log, "waiting for ExceptionPred != BreakInDebugger");
-  m_exception_pred.WaitForValueNotEqualTo(ExceptionResult::BreakInDebugger,
-                                          result);
+  result = *m_exception_pred.WaitForValueNotEqualTo(
+      ExceptionResult::BreakInDebugger);
 
   LLDB_LOG(log, "got ExceptionPred = {0}", (int)m_exception_pred.GetValue());
   return result;

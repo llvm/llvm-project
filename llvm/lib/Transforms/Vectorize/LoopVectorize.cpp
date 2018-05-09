@@ -4937,8 +4937,8 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize,
   DEBUG(dbgs() << "LV: The Widest register safe to use is: " << WidestRegister
                << " bits.\n");
 
-  assert(MaxVectorSize <= 64 && "Did not expect to pack so many elements"
-                                " into one vector!");
+  assert(MaxVectorSize <= 256 && "Did not expect to pack so many elements"
+                                 " into one vector!");
   if (MaxVectorSize == 0) {
     DEBUG(dbgs() << "LV: The target has no vector registers.\n");
     MaxVectorSize = 1;

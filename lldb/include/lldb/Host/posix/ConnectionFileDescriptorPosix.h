@@ -72,7 +72,7 @@ public:
 
   lldb::IOObjectSP GetReadObject() override { return m_read_sp; }
 
-  uint16_t GetListeningPort(uint32_t timeout_sec);
+  uint16_t GetListeningPort(const Timeout<std::micro> &timeout);
 
   bool GetChildProcessesInherit() const;
   void SetChildProcessesInherit(bool child_processes_inherit);

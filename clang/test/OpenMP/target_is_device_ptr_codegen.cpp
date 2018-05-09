@@ -206,11 +206,17 @@ void bar(float *&a, int *&b) {
 
 // CK2: [[ST:%.+]] = type { double*, double** }
 
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l245.region_id = weak constant i8 0
+
 // CK2: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
 // CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
 
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l269.region_id = weak constant i8 0
+
 // CK2: [[SIZE01:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
 // CK2: [[MTYPE01:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 17]
+
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l301.region_id = weak constant i8 0
 
 // CK2: [[SIZE02:@.+]] = {{.+}}constant [3 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
 // CK2: [[MTYPE02:@.+]] = {{.+}}constant [3 x i64] [i64 33, i64 0, i64 17]

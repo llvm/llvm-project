@@ -52,8 +52,7 @@ bool DWARFAttributes::ExtractFormValueAtIndex(
   form_value.SetCompileUnit(cu);
   form_value.SetForm(FormAtIndex(i));
   lldb::offset_t offset = DIEOffsetAtIndex(i);
-  return form_value.ExtractValue(
-      cu->GetSymbolFileDWARF()->get_debug_info_data(), &offset);
+  return form_value.ExtractValue(cu->GetData(), &offset);
 }
 
 uint64_t DWARFAttributes::FormValueAsUnsigned(dw_attr_t attr,

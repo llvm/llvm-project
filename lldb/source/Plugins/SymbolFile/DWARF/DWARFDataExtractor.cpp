@@ -22,6 +22,6 @@ DWARFDataExtractor::GetDWARFInitialLength(lldb::offset_t *offset_ptr) const {
 
 dw_offset_t
 DWARFDataExtractor::GetDWARFOffset(lldb::offset_t *offset_ptr) const {
-  return GetMaxU64(offset_ptr, m_is_dwarf64 ? 8 : 4);
+  return GetMaxU64(offset_ptr, GetDWARFSizeOfOffset());
 }
 }

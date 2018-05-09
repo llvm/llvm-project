@@ -44,13 +44,6 @@ public:
   DWARFDIE GetDIEForDIEOffset(dw_offset_t die_offset);
   DWARFDIE GetDIE(const DIERef &die_ref);
 
-  void Dump(lldb_private::Stream *s, const uint32_t die_offset,
-            const uint32_t recurse_depth);
-  static void Parse(SymbolFileDWARF *parser, Callback callback, void *userData);
-  static void Verify(lldb_private::Stream *s, SymbolFileDWARF *dwarf2Data);
-  static void Dump(lldb_private::Stream *s, SymbolFileDWARF *dwarf2Data,
-                   const uint32_t die_offset, const uint32_t recurse_depth);
-
   enum {
     eDumpFlag_Verbose = (1 << 0),  // Verbose dumping
     eDumpFlag_ShowForm = (1 << 1), // Show the DW_form type

@@ -20,14 +20,10 @@ DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
     : DWARFUnit(dwarf2Data) {}
 
 DWARFUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
-    lldb::offset_t *offset_ptr) {
+                                      const DWARFDataExtractor &debug_info,
+                                      lldb::offset_t *offset_ptr) {
   // std::make_shared would require the ctor to be public.
   std::shared_ptr<DWARFCompileUnit> cu_sp(new DWARFCompileUnit(dwarf2Data));
-  // Out of memory?
-  if (cu_sp.get() == NULL)
-    return nullptr;
-
-  const DWARFDataExtractor &debug_info = dwarf2Data->get_debug_info_data();
 
   cu_sp->m_offset = *offset_ptr;
 
@@ -66,4 +62,9 @@ void DWARFCompileUnit::Dump(Stream *s) const {
             "{0x%8.8x})\n",
             m_offset, m_length, m_version, GetAbbrevOffset(), m_addr_size,
             GetNextCompileUnitOffset());
+}
+
+
+const lldb_private::DWARFDataExtractor &DWARFCompileUnit::GetData() const {
+  return m_dwarf->get_debug_info_data();
 }

@@ -237,7 +237,7 @@ protected:
         // stack to the main command handler and show an (lldb) prompt before
         // HandlePrivateEvent (from PrivateStateThread) has a chance to call
         // PushProcessIOHandler().
-        process_sp->SyncIOHandler(0, 2000);
+        process_sp->SyncIOHandler(0, std::chrono::seconds(2));
 
         llvm::StringRef data = stream.GetString();
         if (!data.empty())
@@ -691,7 +691,7 @@ protected:
         // stack to the main command handler and show an (lldb) prompt before
         // HandlePrivateEvent (from PrivateStateThread) has a chance to call
         // PushProcessIOHandler().
-        process->SyncIOHandler(iohandler_id, 2000);
+        process->SyncIOHandler(iohandler_id, std::chrono::seconds(2));
 
         result.AppendMessageWithFormat("Process %" PRIu64 " resuming\n",
                                        process->GetID());

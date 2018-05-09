@@ -2443,11 +2443,11 @@ public:
   /// The main purpose of this is to implement an interlock waiting for
   /// HandlePrivateEvent to push an IOHandler.
   ///
-  /// @param[in] timeout_msec
+  /// @param[in] timeout
   ///     The maximum time length to wait for the process to transition to the
-  ///     eStateRunning state, specified in milliseconds.
+  ///     eStateRunning state.
   //--------------------------------------------------------------------------------------
-  void SyncIOHandler(uint32_t iohandler_id, uint64_t timeout_msec);
+  void SyncIOHandler(uint32_t iohandler_id, const Timeout<std::micro> &timeout);
 
   lldb::StateType GetStateChangedEvents(
       lldb::EventSP &event_sp, const Timeout<std::micro> &timeout,

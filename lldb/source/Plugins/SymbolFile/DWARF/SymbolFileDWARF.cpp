@@ -3758,7 +3758,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               location_is_const_value_data = true;
               // The constant value will be either a block, a data value or a
               // string.
-              const DWARFDataExtractor &debug_info_data = get_debug_info_data();
+              auto debug_info_data = die.GetData();
               if (DWARFFormValue::IsBlockForm(form_value.Form())) {
                 // Retrieve the value as a block expression.
                 uint32_t block_offset =
@@ -3815,13 +3815,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             location_is_const_value_data = false;
             has_explicit_location = true;
             if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-              const DWARFDataExtractor &debug_info_data = get_debug_info_data();
+              auto data = die.GetData();
 
               uint32_t block_offset =
-                  form_value.BlockData() - debug_info_data.GetDataStart();
+                  form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              location.CopyOpcodeData(module, get_debug_info_data(),
-                                      block_offset, block_length);
+              location.CopyOpcodeData(module, data, block_offset, block_length);
             } else {
               const DWARFDataExtractor &debug_loc_data = get_debug_loc_data();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
