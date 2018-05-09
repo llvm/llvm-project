@@ -511,7 +511,7 @@ private:
     TimeBucketRegion() : Bucket(nullptr) {}
     ~TimeBucketRegion() { setBucket(nullptr); }
 
-    /// \brief Start timing for \p NewBucket.
+    /// Start timing for \p NewBucket.
     ///
     /// If there was a bucket already set, it will finish the timing for that
     /// other bucket.
@@ -534,7 +534,7 @@ private:
     llvm::TimeRecord *Bucket;
   };
 
-  /// \brief Runs all the \p Matchers on \p Node.
+  /// Runs all the \p Matchers on \p Node.
   ///
   /// Used by \c matchDispatch() below.
   template <typename T, typename MC>
@@ -590,7 +590,7 @@ private:
   }
 
   /// @{
-  /// \brief Overloads to pair the different node types to their matchers.
+  /// Overloads to pair the different node types to their matchers.
   void matchDispatch(const Decl *Node) {
     return matchWithFilter(ast_type_traits::DynTypedNode::create(*Node));
   }
@@ -752,14 +752,14 @@ private:
     return false;
   }
 
-  /// \brief Bucket to record map.
+  /// Bucket to record map.
   ///
   /// Used to get the appropriate bucket for each matcher.
   llvm::StringMap<llvm::TimeRecord> TimeByBucket;
 
   const MatchFinder::MatchersByType *Matchers;
 
-  /// \brief Filtered list of matcher indices for each matcher kind.
+  /// Filtered list of matcher indices for each matcher kind.
   ///
   /// \c Decl and \c Stmt toplevel matchers usually apply to a specific node
   /// kind (and derived kinds) so it is a waste to try every matcher on every

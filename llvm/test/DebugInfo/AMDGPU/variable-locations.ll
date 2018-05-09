@@ -90,7 +90,7 @@ entry:
 !10 = !{i32 2, !"Dwarf Version", i32 2}
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{!"clang version 5.0.0"}
-!13 = distinct !DISubprogram(name: "kernel1", scope: !3, file: !3, line: 4, type: !14, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!13 = distinct !DISubprogram(name: "kernel1", scope: !3, file: !3, line: 4, type: !14, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null, !16, !17, !17}
 !16 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)

@@ -38,7 +38,7 @@ class ExplodedNode;
 class MemRegion;
 class PathDiagnosticPiece;
 
-/// \brief BugReporterVisitors are used to add custom diagnostics along a path.
+/// BugReporterVisitors are used to add custom diagnostics along a path.
 ///
 /// Custom visitors should subclass the BugReporterVisitorImpl class for a
 /// default implementation of the clone() method.
@@ -52,7 +52,7 @@ public:
   BugReporterVisitor(BugReporterVisitor &&) {}
   virtual ~BugReporterVisitor();
 
-  /// \brief Returns a copy of this BugReporter.
+  /// Returns a copy of this BugReporter.
   ///
   /// Custom BugReporterVisitors should not override this method directly.
   /// Instead, they should inherit from BugReporterVisitorImpl and provide
@@ -63,7 +63,7 @@ public:
   /// will have to provide your own implementation.)
   virtual std::unique_ptr<BugReporterVisitor> clone() const = 0;
 
-  /// \brief Return a diagnostic piece which should be associated with the
+  /// Return a diagnostic piece which should be associated with the
   /// given node.
   ///
   /// The last parameter can be used to register a new visitor with the given
@@ -72,7 +72,7 @@ public:
   VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
             BugReporterContext &BRC, BugReport &BR) = 0;
 
-  /// \brief Provide custom definition for the final diagnostic piece on the
+  /// Provide custom definition for the final diagnostic piece on the
   /// path - the piece, which is displayed before the path is expanded.
   ///
   /// If returns NULL the default implementation will be used.
@@ -83,7 +83,7 @@ public:
 
   virtual void Profile(llvm::FoldingSetNodeID &ID) const = 0;
 
-  /// \brief Generates the default final diagnostic piece.
+  /// Generates the default final diagnostic piece.
   static std::unique_ptr<PathDiagnosticPiece>
   getDefaultEndPath(BugReporterContext &BRC, const ExplodedNode *N,
                     BugReport &BR);
@@ -165,7 +165,7 @@ private:
 };
 
 /// \class NilReceiverBRVisitor
-/// \brief Prints path notes when a message is sent to a nil receiver.
+/// Prints path notes when a message is sent to a nil receiver.
 class NilReceiverBRVisitor final
     : public BugReporterVisitorImpl<NilReceiverBRVisitor> {
 public:
@@ -245,7 +245,7 @@ public:
   static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
 };
 
-/// \brief Suppress reports that might lead to known false positives.
+/// Suppress reports that might lead to known false positives.
 ///
 /// Currently this suppresses reports based on locations of bugs.
 class LikelyFalsePositiveSuppressionBRVisitor final
@@ -272,7 +272,7 @@ public:
                                                   BugReport &BR) override;
 };
 
-/// \brief When a region containing undefined value or '0' value is passed 
+/// When a region containing undefined value or '0' value is passed 
 /// as an argument in a call, marks the call as interesting.
 ///
 /// As a result, BugReporter will not prune the path through the function even

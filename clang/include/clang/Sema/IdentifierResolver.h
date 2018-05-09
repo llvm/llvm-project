@@ -54,7 +54,7 @@ class IdentifierResolver {
     /// The decl must already be part of the decl chain.
     void RemoveDecl(NamedDecl *D);
 
-    /// \brief Insert the given declaration at the given position in the list.
+    /// Insert the given declaration at the given position in the list.
     void InsertDecl(DeclsTy::iterator Pos, NamedDecl *D) {
       Decls.insert(Pos, D);
     }
@@ -163,11 +163,11 @@ public:
   /// The decl must already be part of the decl chain.
   void RemoveDecl(NamedDecl *D);
 
-  /// \brief Insert the given declaration after the given iterator
+  /// Insert the given declaration after the given iterator
   /// position.
   void InsertDeclAfter(iterator Pos, NamedDecl *D);
 
-  /// \brief Try to add the given declaration to the top level scope, if it
+  /// Try to add the given declaration to the top level scope, if it
   /// (or a redeclaration of it) hasn't already been added.
   ///
   /// \param D The externally-produced declaration to add.

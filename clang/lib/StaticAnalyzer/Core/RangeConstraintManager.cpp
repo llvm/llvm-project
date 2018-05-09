@@ -474,7 +474,7 @@ static RangeSet assumeNonZero(
       --IntType.getZeroValue());
 }
 
-/// \brief Apply implicit constraints for bitwise OR- and AND-.
+/// Apply implicit constraints for bitwise OR- and AND-.
 /// For unsigned types, bitwise OR with a constant always returns
 /// a value greater-or-equal than the constant, and bitwise AND
 /// returns a value less-or-equal then the constant.

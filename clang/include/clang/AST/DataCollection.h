@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file declares helper methods for collecting data from AST nodes.
+/// This file declares helper methods for collecting data from AST nodes.
 ///
 /// To collect data from Stmt nodes, subclass ConstStmtVisitor and include
 /// StmtDataCollectors.inc after defining the macros that you need. This

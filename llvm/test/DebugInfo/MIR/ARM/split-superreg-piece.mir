@@ -47,7 +47,7 @@
   !6 = !{i32 1, !"min_enum_size", i32 4}
   !7 = !{i32 1, !"PIC Level", i32 2}
   !8 = !{!"clang version 4.0.0 (trunk 286322) (llvm/trunk 286305)"}
-  !9 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, variables: !13)
+  !9 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, retainedNodes: !13)
   !10 = !DISubroutineType(types: !11)
   !11 = !{!12}
   !12 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)

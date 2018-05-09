@@ -302,7 +302,7 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
   // and satisfy the following conditions.
   ++II;
   for (MachineBasicBlock::iterator localII = II; localII != end; ++localII) {
-    if (localII->isDebugValue())
+    if (localII->isDebugInstr())
       continue;
 
     // Check 1.
@@ -494,7 +494,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
     for (MachineBasicBlock::iterator MII = MBB->end(), E = MBB->begin();
          MII != E;) {
       MachineInstr &MI = *--MII;
-      if (MI.isDebugValue()) {
+      if (MI.isDebugInstr()) {
         continue;
       }
 

@@ -20,7 +20,7 @@
 namespace clang {
 namespace tooling {
 
-/// \brief A standalone executor that runs FrontendActions on a given set of
+/// A standalone executor that runs FrontendActions on a given set of
 /// TUs in sequence.
 ///
 /// By default, this executor uses the following arguments adjusters (as defined
@@ -32,7 +32,7 @@ class StandaloneToolExecutor : public ToolExecutor {
 public:
   static const char *ExecutorName;
 
-  /// \brief Init with \p CompilationDatabase and the paths of all files to be
+  /// Init with \p CompilationDatabase and the paths of all files to be
   /// proccessed.
   StandaloneToolExecutor(
       const CompilationDatabase &Compilations,
@@ -40,7 +40,7 @@ public:
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>());
 
-  /// \brief Init with \p CommonOptionsParser. This is expected to be used by
+  /// Init with \p CommonOptionsParser. This is expected to be used by
   /// `createExecutorFromCommandLineArgs` based on commandline options.
   ///
   /// The executor takes ownership of \p Options.
@@ -58,7 +58,7 @@ public:
           std::pair<std::unique_ptr<FrontendActionFactory>, ArgumentsAdjuster>>
               Actions) override;
 
-  /// \brief Set a \c DiagnosticConsumer to use during parsing.
+  /// Set a \c DiagnosticConsumer to use during parsing.
   void setDiagnosticConsumer(DiagnosticConsumer *DiagConsumer) {
     Tool.setDiagnosticConsumer(DiagConsumer);
   }
@@ -75,7 +75,7 @@ public:
     Tool.mapVirtualFile(FilePath, Content);
   }
 
-  /// \brief Returns the file manager used in the tool.
+  /// Returns the file manager used in the tool.
   ///
   /// The file manager is shared between all translation units.
   FileManager &getFiles() { return Tool.getFiles(); }

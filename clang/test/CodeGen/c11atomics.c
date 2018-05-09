@@ -474,3 +474,17 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
   // CHECK:   ret i1 [[RES]]
   return __c11_atomic_compare_exchange_strong(addr, desired, *new, 5, 5);
 }
+
+struct Empty {};
+
+struct Empty test_empty_struct_load(_Atomic(struct Empty)* empty) {
+  // CHECK-LABEL: @test_empty_struct_load(
+  // CHECK: call arm_aapcscc zeroext i8 @__atomic_load_1(i8* %{{.*}}, i32 5)
+  return __c11_atomic_load(empty, 5);
+}
+
+void test_empty_struct_store(_Atomic(struct Empty)* empty, struct Empty value) {
+  // CHECK-LABEL: @test_empty_struct_store(
+  // CHECK: call arm_aapcscc void @__atomic_store_1(i8* %{{.*}}, i8 zeroext %{{.*}}, i32 5)
+  __c11_atomic_store(empty, value, 5);
+}

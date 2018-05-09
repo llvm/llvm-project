@@ -200,7 +200,7 @@ break; \
   return QC.apply(Context, QT);
 }
 
-/// \brief Convert the given type to a string suitable for printing as part of 
+/// Convert the given type to a string suitable for printing as part of 
 /// a diagnostic.
 ///
 /// There are four main criteria when determining whether we should have an

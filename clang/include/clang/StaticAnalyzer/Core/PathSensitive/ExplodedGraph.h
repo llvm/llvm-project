@@ -305,7 +305,7 @@ public:
   ExplodedGraph();
   ~ExplodedGraph();
 
-  /// \brief Retrieve the node associated with a (Location,State) pair,
+  /// Retrieve the node associated with a (Location,State) pair,
   ///  where the 'Location' is a ProgramPoint in the CFG.  If no node for
   ///  this pair exists, it is created. IsNew is set to true if
   ///  the node was freshly created.
@@ -313,7 +313,7 @@ public:
                         bool IsSink = false,
                         bool* IsNew = nullptr);
 
-  /// \brief Create a node for a (Location, State) pair,
+  /// Create a node for a (Location, State) pair,
   ///  but don't store it for deduplication later.  This
   ///  is useful when copying an already completed
   ///  ExplodedGraph for further processing.
@@ -409,7 +409,7 @@ public:
   /// was called.
   void reclaimRecentlyAllocatedNodes();
 
-  /// \brief Returns true if nodes for the given expression kind are always
+  /// Returns true if nodes for the given expression kind are always
   ///        kept around.
   static bool isInterestingLValueExpr(const Expr *Ex);
 

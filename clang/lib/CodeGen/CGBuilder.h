@@ -20,7 +20,7 @@ namespace CodeGen {
 
 class CodeGenFunction;
 
-/// \brief This is an IRBuilder insertion helper that forwards to
+/// This is an IRBuilder insertion helper that forwards to
 /// CodeGenFunction::InsertHelper, which adds necessary metadata to
 /// instructions.
 class CGBuilderInserter : protected llvm::IRBuilderDefaultInserter {
@@ -29,7 +29,7 @@ public:
   explicit CGBuilderInserter(CodeGenFunction *CGF) : CGF(CGF) {}
 
 protected:
-  /// \brief This forwards to CodeGenFunction::InsertHelper.
+  /// This forwards to CodeGenFunction::InsertHelper.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const;

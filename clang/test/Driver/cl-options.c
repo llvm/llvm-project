@@ -28,7 +28,6 @@
 
 // RUN: %clang_cl /E -### -- %s 2>&1 | FileCheck -check-prefix=E %s
 // E: "-E"
-// E: "-fuse-line-directives"
 // E: "-o" "-"
 
 // RUN: %clang_cl /EP -### -- %s 2>&1 | FileCheck -check-prefix=EP %s

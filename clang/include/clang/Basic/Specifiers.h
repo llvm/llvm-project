@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines various enumerations that describe declaration and
+/// Defines various enumerations that describe declaration and
 /// type specifiers.
 ///
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
-  /// \brief Specifies the width of a type, e.g., short, long, or long long.
+  /// Specifies the width of a type, e.g., short, long, or long long.
   enum TypeSpecifierWidth {
     TSW_unspecified,
     TSW_short,
@@ -29,7 +29,7 @@ namespace clang {
     TSW_longlong
   };
   
-  /// \brief Specifies the signedness of a type, e.g., signed or unsigned.
+  /// Specifies the signedness of a type, e.g., signed or unsigned.
   enum TypeSpecifierSign {
     TSS_unspecified,
     TSS_signed,
@@ -41,7 +41,7 @@ namespace clang {
     TSP_pipe
   };
 
-  /// \brief Specifies the kind of type.
+  /// Specifies the kind of type.
   enum TypeSpecifierType {
     TST_unspecified,
     TST_void,
@@ -81,7 +81,7 @@ namespace clang {
     TST_error // erroneous type
   };
 
-  /// \brief Structure that packs information about the type specifiers that
+  /// Structure that packs information about the type specifiers that
   /// were written in a particular type specifier sequence.
   struct WrittenBuiltinSpecs {
     static_assert(TST_error < 1 << 6, "Type bitfield not wide enough for TST");
@@ -91,7 +91,7 @@ namespace clang {
     unsigned ModeAttr : 1;
   };
 
-  /// \brief A C++ access specifier (public, private, protected), plus the
+  /// A C++ access specifier (public, private, protected), plus the
   /// special value "none" which means different things in different contexts.
   enum AccessSpecifier {
     AS_public,
@@ -100,24 +100,24 @@ namespace clang {
     AS_none
   };
 
-  /// \brief The categorization of expression values, currently following the
+  /// The categorization of expression values, currently following the
   /// C++11 scheme.
   enum ExprValueKind {
-    /// \brief An r-value expression (a pr-value in the C++11 taxonomy)
+    /// An r-value expression (a pr-value in the C++11 taxonomy)
     /// produces a temporary value.
     VK_RValue,
 
-    /// \brief An l-value expression is a reference to an object with
+    /// An l-value expression is a reference to an object with
     /// independent storage.
     VK_LValue,
 
-    /// \brief An x-value expression is a reference to an object with
+    /// An x-value expression is a reference to an object with
     /// independent storage but which can be "moved", i.e.
     /// efficiently cannibalized for its resources.
     VK_XValue
   };
 
-  /// \brief A further classification of the kind of object referenced by an
+  /// A further classification of the kind of object referenced by an
   /// l-value or x-value.
   enum ExprObjectKind {
     /// An ordinary object is located at an address in memory.
@@ -139,7 +139,7 @@ namespace clang {
     OK_ObjCSubscript
   };
 
-  /// \brief Describes the kind of template specialization that a
+  /// Describes the kind of template specialization that a
   /// particular template specialization declaration represents.
   enum TemplateSpecializationKind {
     /// This template specialization was formed from a template-id but
@@ -162,14 +162,14 @@ namespace clang {
     TSK_ExplicitInstantiationDefinition
   };
 
-  /// \brief Determine whether this template specialization kind refers
+  /// Determine whether this template specialization kind refers
   /// to an instantiation of an entity (as opposed to a non-template or
   /// an explicit specialization).
   inline bool isTemplateInstantiation(TemplateSpecializationKind Kind) {
     return Kind != TSK_Undeclared && Kind != TSK_ExplicitSpecialization;
   }
 
-  /// \brief True if this template specialization kind is an explicit
+  /// True if this template specialization kind is an explicit
   /// specialization, explicit instantiation declaration, or explicit
   /// instantiation definition.
   inline bool isTemplateExplicitInstantiationOrSpecialization(
@@ -187,7 +187,7 @@ namespace clang {
     llvm_unreachable("bad template specialization kind");
   }
 
-  /// \brief Thread storage-class-specifier.
+  /// Thread storage-class-specifier.
   enum ThreadStorageClassSpecifier {
     TSCS_unspecified,
     /// GNU __thread.
@@ -200,7 +200,7 @@ namespace clang {
     TSCS__Thread_local
   };
 
-  /// \brief Storage classes.
+  /// Storage classes.
   enum StorageClass {
     // These are legal on both functions and variables.
     SC_None,
@@ -213,24 +213,24 @@ namespace clang {
     SC_Register
   };
 
-  /// \brief Checks whether the given storage class is legal for functions.
+  /// Checks whether the given storage class is legal for functions.
   inline bool isLegalForFunction(StorageClass SC) {
     return SC <= SC_PrivateExtern;
   }
 
-  /// \brief Checks whether the given storage class is legal for variables.
+  /// Checks whether the given storage class is legal for variables.
   inline bool isLegalForVariable(StorageClass SC) {
     return true;
   }
 
-  /// \brief In-class initialization styles for non-static data members.
+  /// In-class initialization styles for non-static data members.
   enum InClassInitStyle {
     ICIS_NoInit,   ///< No in-class initializer.
     ICIS_CopyInit, ///< Copy initialization.
     ICIS_ListInit  ///< Direct list-initialization.
   };
 
-  /// \brief CallingConv - Specifies the calling convention that a function uses.
+  /// CallingConv - Specifies the calling convention that a function uses.
   enum CallingConv {
     CC_C,           // __attribute__((cdecl))
     CC_X86StdCall,  // __attribute__((stdcall))
@@ -251,7 +251,7 @@ namespace clang {
     CC_PreserveAll,  // __attribute__((preserve_all))
   };
 
-  /// \brief Checks whether the given calling convention supports variadic
+  /// Checks whether the given calling convention supports variadic
   /// calls. Unprototyped calls also use the variadic call rules.
   inline bool supportsVariadicCall(CallingConv CC) {
     switch (CC) {
@@ -270,7 +270,7 @@ namespace clang {
     }
   }
 
-  /// \brief The storage duration for an object (per C++ [basic.stc]).
+  /// The storage duration for an object (per C++ [basic.stc]).
   enum StorageDuration {
     SD_FullExpression, ///< Full-expression storage duration (for temporaries).
     SD_Automatic,      ///< Automatic storage duration (most local variables).
@@ -296,7 +296,7 @@ namespace clang {
   llvm::StringRef getNullabilitySpelling(NullabilityKind kind,
                                          bool isContextSensitive = false);
 
-  /// \brief Kinds of parameter ABI.
+  /// Kinds of parameter ABI.
   enum class ParameterABI {
     /// This parameter uses ordinary ABI rules for its type.
     Ordinary,

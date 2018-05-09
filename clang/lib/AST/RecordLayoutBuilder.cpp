@@ -54,25 +54,25 @@ struct BaseSubobjectInfo {
   const BaseSubobjectInfo *Derived;
 };
 
-/// \brief Externally provided layout. Typically used when the AST source, such
+/// Externally provided layout. Typically used when the AST source, such
 /// as DWARF, lacks all the information that was available at compile time, such
 /// as alignment attributes on fields and pragmas in effect.
 struct ExternalLayout {
   ExternalLayout() : Size(0), Align(0) {}
 
-  /// \brief Overall record size in bits.
+  /// Overall record size in bits.
   uint64_t Size;
 
-  /// \brief Overall record alignment in bits.
+  /// Overall record alignment in bits.
   uint64_t Align;
 
-  /// \brief Record field offsets in bits.
+  /// Record field offsets in bits.
   llvm::DenseMap<const FieldDecl *, uint64_t> FieldOffsets;
 
-  /// \brief Direct, non-virtual base offsets.
+  /// Direct, non-virtual base offsets.
   llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsets;
 
-  /// \brief Virtual base offsets.
+  /// Virtual base offsets.
   llvm::DenseMap<const CXXRecordDecl *, CharUnits> VirtualBaseOffsets;
 
   /// Get the offset of the given field. The external source must provide
@@ -579,16 +579,16 @@ protected:
   /// Alignment - The current alignment of the record layout.
   CharUnits Alignment;
 
-  /// \brief The alignment if attribute packed is not used.
+  /// The alignment if attribute packed is not used.
   CharUnits UnpackedAlignment;
 
   SmallVector<uint64_t, 16> FieldOffsets;
 
-  /// \brief Whether the external AST source has provided a layout for this
+  /// Whether the external AST source has provided a layout for this
   /// record.
   unsigned UseExternalLayout : 1;
 
-  /// \brief Whether we need to infer alignment, even when we have an 
+  /// Whether we need to infer alignment, even when we have an 
   /// externally-provided layout.
   unsigned InferAlignment : 1;
   
@@ -632,7 +632,7 @@ protected:
   /// pointer, as opposed to inheriting one from a primary base class.
   bool HasOwnVFPtr;
 
-  /// \brief the flag of field offset changing due to packed attribute.
+  /// the flag of field offset changing due to packed attribute.
   bool HasPackedField;
 
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
@@ -749,7 +749,7 @@ protected:
     UpdateAlignment(NewAlignment, NewAlignment);
   }
 
-  /// \brief Retrieve the externally-supplied field offset for the given
+  /// Retrieve the externally-supplied field offset for the given
   /// field.
   ///
   /// \param Field The field whose offset is being queried.
@@ -1962,7 +1962,7 @@ ItaniumRecordLayoutBuilder::updateExternalFieldOffset(const FieldDecl *Field,
   return ExternalFieldOffset;
 }
 
-/// \brief Get diagnostic %select index for tag kind for
+/// Get diagnostic %select index for tag kind for
 /// field padding diagnostic message.
 /// WARNING: Indexes apply to particular diagnostics only!
 ///
@@ -2253,9 +2253,9 @@ private:
 public:
   void layout(const RecordDecl *RD);
   void cxxLayout(const CXXRecordDecl *RD);
-  /// \brief Initializes size and alignment and honors some flags.
+  /// Initializes size and alignment and honors some flags.
   void initializeLayout(const RecordDecl *RD);
-  /// \brief Initialized C++ layout, compute alignment and virtual alignment and
+  /// Initialized C++ layout, compute alignment and virtual alignment and
   /// existence of vfptrs and vbptrs.  Alignment is needed before the vfptr is
   /// laid out.
   void initializeCXXLayout(const CXXRecordDecl *RD);
@@ -2266,93 +2266,93 @@ public:
                             const ASTRecordLayout *&PreviousBaseLayout);
   void injectVFPtr(const CXXRecordDecl *RD);
   void injectVBPtr(const CXXRecordDecl *RD);
-  /// \brief Lays out the fields of the record.  Also rounds size up to
+  /// Lays out the fields of the record.  Also rounds size up to
   /// alignment.
   void layoutFields(const RecordDecl *RD);
   void layoutField(const FieldDecl *FD);
   void layoutBitField(const FieldDecl *FD);
-  /// \brief Lays out a single zero-width bit-field in the record and handles
+  /// Lays out a single zero-width bit-field in the record and handles
   /// special cases associated with zero-width bit-fields.
   void layoutZeroWidthBitField(const FieldDecl *FD);
   void layoutVirtualBases(const CXXRecordDecl *RD);
   void finalizeLayout(const RecordDecl *RD);
-  /// \brief Gets the size and alignment of a base taking pragma pack and
+  /// Gets the size and alignment of a base taking pragma pack and
   /// __declspec(align) into account.
   ElementInfo getAdjustedElementInfo(const ASTRecordLayout &Layout);
-  /// \brief Gets the size and alignment of a field taking pragma  pack and
+  /// Gets the size and alignment of a field taking pragma  pack and
   /// __declspec(align) into account.  It also updates RequiredAlignment as a
   /// side effect because it is most convenient to do so here.
   ElementInfo getAdjustedElementInfo(const FieldDecl *FD);
-  /// \brief Places a field at an offset in CharUnits.
+  /// Places a field at an offset in CharUnits.
   void placeFieldAtOffset(CharUnits FieldOffset) {
     FieldOffsets.push_back(Context.toBits(FieldOffset));
   }
-  /// \brief Places a bitfield at a bit offset.
+  /// Places a bitfield at a bit offset.
   void placeFieldAtBitOffset(uint64_t FieldOffset) {
     FieldOffsets.push_back(FieldOffset);
   }
-  /// \brief Compute the set of virtual bases for which vtordisps are required.
+  /// Compute the set of virtual bases for which vtordisps are required.
   void computeVtorDispSet(
       llvm::SmallPtrSetImpl<const CXXRecordDecl *> &HasVtorDispSet,
       const CXXRecordDecl *RD) const;
   const ASTContext &Context;
-  /// \brief The size of the record being laid out.
+  /// The size of the record being laid out.
   CharUnits Size;
-  /// \brief The non-virtual size of the record layout.
+  /// The non-virtual size of the record layout.
   CharUnits NonVirtualSize;
-  /// \brief The data size of the record layout.
+  /// The data size of the record layout.
   CharUnits DataSize;
-  /// \brief The current alignment of the record layout.
+  /// The current alignment of the record layout.
   CharUnits Alignment;
-  /// \brief The maximum allowed field alignment. This is set by #pragma pack.
+  /// The maximum allowed field alignment. This is set by #pragma pack.
   CharUnits MaxFieldAlignment;
-  /// \brief The alignment that this record must obey.  This is imposed by
+  /// The alignment that this record must obey.  This is imposed by
   /// __declspec(align()) on the record itself or one of its fields or bases.
   CharUnits RequiredAlignment;
-  /// \brief The size of the allocation of the currently active bitfield.
+  /// The size of the allocation of the currently active bitfield.
   /// This value isn't meaningful unless LastFieldIsNonZeroWidthBitfield
   /// is true.
   CharUnits CurrentBitfieldSize;
-  /// \brief Offset to the virtual base table pointer (if one exists).
+  /// Offset to the virtual base table pointer (if one exists).
   CharUnits VBPtrOffset;
-  /// \brief Minimum record size possible.
+  /// Minimum record size possible.
   CharUnits MinEmptyStructSize;
-  /// \brief The size and alignment info of a pointer.
+  /// The size and alignment info of a pointer.
   ElementInfo PointerInfo;
-  /// \brief The primary base class (if one exists).
+  /// The primary base class (if one exists).
   const CXXRecordDecl *PrimaryBase;
-  /// \brief The class we share our vb-pointer with.
+  /// The class we share our vb-pointer with.
   const CXXRecordDecl *SharedVBPtrBase;
-  /// \brief The collection of field offsets.
+  /// The collection of field offsets.
   SmallVector<uint64_t, 16> FieldOffsets;
-  /// \brief Base classes and their offsets in the record.
+  /// Base classes and their offsets in the record.
   BaseOffsetsMapTy Bases;
-  /// \brief virtual base classes and their offsets in the record.
+  /// virtual base classes and their offsets in the record.
   ASTRecordLayout::VBaseOffsetsMapTy VBases;
-  /// \brief The number of remaining bits in our last bitfield allocation.
+  /// The number of remaining bits in our last bitfield allocation.
   /// This value isn't meaningful unless LastFieldIsNonZeroWidthBitfield is
   /// true.
   unsigned RemainingBitsInField;
   bool IsUnion : 1;
-  /// \brief True if the last field laid out was a bitfield and was not 0
+  /// True if the last field laid out was a bitfield and was not 0
   /// width.
   bool LastFieldIsNonZeroWidthBitfield : 1;
-  /// \brief True if the class has its own vftable pointer.
+  /// True if the class has its own vftable pointer.
   bool HasOwnVFPtr : 1;
-  /// \brief True if the class has a vbtable pointer.
+  /// True if the class has a vbtable pointer.
   bool HasVBPtr : 1;
-  /// \brief True if the last sub-object within the type is zero sized or the
+  /// True if the last sub-object within the type is zero sized or the
   /// object itself is zero sized.  This *does not* count members that are not
   /// records.  Only used for MS-ABI.
   bool EndsWithZeroSizedObject : 1;
-  /// \brief True if this class is zero sized or first base is zero sized or
+  /// True if this class is zero sized or first base is zero sized or
   /// has this property.  Only used for MS-ABI.
   bool LeadsWithZeroSizedBase : 1;
 
-  /// \brief True if the external AST source provided a layout for this record.
+  /// True if the external AST source provided a layout for this record.
   bool UseExternalLayout : 1;
 
-  /// \brief The layout provided by the external AST source. Only active if
+  /// The layout provided by the external AST source. Only active if
   /// UseExternalLayout is true.
   ExternalLayout External;
 };

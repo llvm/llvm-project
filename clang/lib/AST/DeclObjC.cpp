@@ -109,7 +109,7 @@ ObjCContainerDecl::getMethod(Selector Sel, bool isInstance,
   return nullptr;
 }
 
-/// \brief This routine returns 'true' if a user declared setter method was
+/// This routine returns 'true' if a user declared setter method was
 /// found in the class, its protocols, its super classes or categories.
 /// It also returns 'true' if one of its categories has declared a 'readwrite'
 /// property.  This is because, user must provide a setter method for the
@@ -854,7 +854,7 @@ void ObjCMethodDecl::setMethodParams(ASTContext &C,
   setParamsAndSelLocs(C, Params, SelLocs);
 }
 
-/// \brief A definition will return its interface declaration.
+/// A definition will return its interface declaration.
 /// An interface declaration will return its definition.
 /// Otherwise it will return itself.
 ObjCMethodDecl *ObjCMethodDecl::getNextRedeclarationImpl() {

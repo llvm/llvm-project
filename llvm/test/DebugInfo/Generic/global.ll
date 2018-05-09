@@ -37,7 +37,7 @@ attributes #0 = { nounwind readnone uwtable "less-precise-fpmad"="false" "no-fra
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !{i32 2, !"Dwarf Version", i32 3}
 !8 = !{i32 1, !"Debug Info Version", i32 3}
-!9 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 2, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!9 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 2, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !11)
 !11 = !{!6}
 !12 = !DILocation(line: 4, scope: !9)

@@ -26,7 +26,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = distinct !DICompileUnit(language: DW_LANG_C, file: !6, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !7)
 !6 = !DIFile(filename: "/Users/vsk/Desktop/test.ll", directory: "/")
 !7 = !{}
-!8 = distinct !DISubprogram(name: "i", linkageName: "i", scope: null, file: !6, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !5, variables: !10)
+!8 = distinct !DISubprogram(name: "i", linkageName: "i", scope: null, file: !6, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !5, retainedNodes: !10)
 !9 = !DISubroutineType(types: !7)
 !10 = !{!11, !13}
 !11 = !DILocalVariable(name: "1", scope: !8, file: !6, line: 1, type: !12)

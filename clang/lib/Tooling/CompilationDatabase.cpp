@@ -220,7 +220,7 @@ private:
 
 } // namespace
 
-/// \brief Strips any positional args and possible argv[0] from a command-line
+/// Strips any positional args and possible argv[0] from a command-line
 /// provided by the user to construct a FixedCompilationDatabase.
 ///
 /// FixedCompilationDatabase requires a command line to be in this format as it

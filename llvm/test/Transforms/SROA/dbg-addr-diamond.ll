@@ -79,7 +79,7 @@ declare void @llvm.dbg.addr(metadata, metadata, metadata)
 !5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"clang version 6.0.0 "}
-!8 = distinct !DISubprogram(name: "if_else", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !16)
+!8 = distinct !DISubprogram(name: "if_else", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !16)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !14, !14, !14}
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Pair", file: !1, line: 1, size: 64, elements: !12)

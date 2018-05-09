@@ -1196,19 +1196,19 @@ int clang_Cursor_getNumTemplateArguments(CXCursor C) {
 }
 
 enum CXGetTemplateArgumentStatus {
-  /** \brief The operation completed successfully */
+  /** The operation completed successfully */
   CXGetTemplateArgumentStatus_Success = 0,
 
-  /** \brief The specified cursor did not represent a FunctionDecl. */
+  /** The specified cursor did not represent a FunctionDecl. */
   CXGetTemplateArgumentStatus_CursorNotFunctionDecl = -1,
 
-  /** \brief The specified cursor was not castable to a FunctionDecl. */
+  /** The specified cursor was not castable to a FunctionDecl. */
   CXGetTemplateArgumentStatus_BadFunctionDeclCast = -2,
 
-  /** \brief A NULL FunctionTemplateSpecializationInfo was retrieved. */
+  /** A NULL FunctionTemplateSpecializationInfo was retrieved. */
   CXGetTemplateArgumentStatus_NullTemplSpecInfo = -3,
 
-  /** \brief An invalid (OOB) argument index was specified */
+  /** An invalid (OOB) argument index was specified */
   CXGetTemplateArgumentStatus_InvalidIndex = -4
 };
 

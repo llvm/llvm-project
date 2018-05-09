@@ -36,20 +36,20 @@ class Expr;
 class IdentifierInfo;
 class LangOptions;
 
-/// \brief Represents information about a change in availability for
+/// Represents information about a change in availability for
 /// an entity, which is part of the encoding of the 'availability'
 /// attribute.
 struct AvailabilityChange {
-  /// \brief The location of the keyword indicating the kind of change.
+  /// The location of the keyword indicating the kind of change.
   SourceLocation KeywordLoc;
 
-  /// \brief The version number at which the change occurred.
+  /// The version number at which the change occurred.
   VersionTuple Version;
 
-  /// \brief The source range covering the version number.
+  /// The source range covering the version number.
   SourceRange VersionRange;
 
-  /// \brief Determine whether this availability change is valid.
+  /// Determine whether this availability change is valid.
   bool isValid() const { return !Version.empty(); }
 };
 
@@ -78,7 +78,7 @@ struct AvailabilityData {
 
 } // namespace
 
-/// \brief Wraps an identifier and optional source location for the identifier.
+/// Wraps an identifier and optional source location for the identifier.
 struct IdentifierLoc {
   SourceLocation Loc;
   IdentifierInfo *Ident;
@@ -87,7 +87,7 @@ struct IdentifierLoc {
                                IdentifierInfo *Ident);
 };
 
-/// \brief A union of the various pointer types that can be passed to an
+/// A union of the various pointer types that can be passed to an
 /// AttributeList as an argument.
 using ArgsUnion = llvm::PointerUnion<Expr *, IdentifierLoc *>;
 using ArgsVector = llvm::SmallVector<ArgsUnion, 12U>;
@@ -175,7 +175,7 @@ private:
   /// A cached value.
   mutable unsigned ProcessingCache : 8;
 
-  /// \brief The location of the 'unavailable' keyword in an
+  /// The location of the 'unavailable' keyword in an
   /// availability attribute.
   SourceLocation UnavailableLoc;
   
@@ -524,7 +524,7 @@ public:
     return getPropertyDataBuffer();
   }
 
-  /// \brief Get an index into the attribute spelling list
+  /// Get an index into the attribute spelling list
   /// defined in Attr.td. This index is used by an attribute
   /// to pretty print itself.
   unsigned getAttributeSpellingListIndex() const;
@@ -547,7 +547,7 @@ public:
   bool isKnownToGCC() const;
   bool isSupportedByPragmaAttribute() const;
 
-  /// \brief If the parsed attribute has a semantic equivalent, and it would
+  /// If the parsed attribute has a semantic equivalent, and it would
   /// have a semantic Spelling enumeration (due to having semantically-distinct
   /// spelling variations), return the value of that semantic spelling. If the
   /// parsed attribute does not have a semantic equivalent, or would not have

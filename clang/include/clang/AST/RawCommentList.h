@@ -132,7 +132,7 @@ private:
   bool IsTrailingComment : 1;
   bool IsAlmostTrailingComment : 1;
 
-  /// \brief Constructor for AST deserialization.
+  /// Constructor for AST deserialization.
   RawComment(SourceRange SR, CommentKind K, bool IsTrailingComment,
              bool IsAlmostTrailingComment) :
     Range(SR), RawTextValid(false), BriefTextValid(false), Kind(K),
@@ -147,7 +147,7 @@ private:
   friend class ASTReader;
 };
 
-/// \brief Compare comments' source locations.
+/// Compare comments' source locations.
 template<>
 class BeforeThanCompare<RawComment> {
   const SourceManager &SM;
@@ -164,7 +164,7 @@ public:
   }
 };
 
-/// \brief This class represents all comments included in the translation unit,
+/// This class represents all comments included in the translation unit,
 /// sorted in order of appearance in the translation unit.
 class RawCommentList {
 public:

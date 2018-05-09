@@ -76,7 +76,7 @@ enum AnalysisInliningMode {
 NumInliningModes
 };
 
-/// \brief Describes the different kinds of C++ member functions which can be
+/// Describes the different kinds of C++ member functions which can be
 /// considered for inlining by the analyzer.
 ///
 /// These options are cumulative; enabling one kind of member function will
@@ -100,7 +100,7 @@ enum CXXInlineableMemberKind {
   CIMK_Destructors
 };
 
-/// \brief Describes the different modes of inter-procedural analysis.
+/// Describes the different modes of inter-procedural analysis.
 enum IPAKind {
   IPAK_NotSet = 0,
 
@@ -128,10 +128,10 @@ public:
   static std::vector<StringRef>
   getRegisteredCheckers(bool IncludeExperimental = false);
 
-  /// \brief Pair of checker name and enable/disable.
+  /// Pair of checker name and enable/disable.
   std::vector<std::pair<std::string, bool>> CheckersControlList;
   
-  /// \brief A key-value table of use-specified configuration values.
+  /// A key-value table of use-specified configuration values.
   ConfigTable Config;
   AnalysisStores AnalysisStoreOpt = RegionStoreModel;
   AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
@@ -144,10 +144,10 @@ public:
   /// generated report.
   std::string FullCompilerInvocation;
   
-  /// \brief The maximum number of times the analyzer visits a block.
+  /// The maximum number of times the analyzer visits a block.
   unsigned maxBlockVisitOnPath;
   
-  /// \brief Disable all analyzer checks.
+  /// Disable all analyzer checks.
   ///
   /// This flag allows one to disable analyzer checks on the code processed by
   /// the given analysis consumer. Note, the code will get parsed and the
@@ -160,7 +160,7 @@ public:
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
 
-  /// \brief The flag regulates if we should eagerly assume evaluations of
+  /// The flag regulates if we should eagerly assume evaluations of
   /// conditionals, thus, bifurcating the path.
   ///
   /// This flag indicates how the engine should handle expressions such as: 'x =
@@ -177,15 +177,15 @@ public:
   unsigned UnoptimizedCFG : 1;
   unsigned PrintStats : 1;
   
-  /// \brief Do not re-analyze paths leading to exhausted nodes with a different
+  /// Do not re-analyze paths leading to exhausted nodes with a different
   /// strategy. We get better code coverage when retry is enabled.
   unsigned NoRetryExhausted : 1;
   
-  /// \brief The inlining stack depth limit.
+  /// The inlining stack depth limit.
   // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
   unsigned InlineMaxStackDepth = 5;
   
-  /// \brief The mode of function selection used during inlining.
+  /// The mode of function selection used during inlining.
   AnalysisInliningMode InliningMode = NoRedundancy;
 
   enum class ExplorationStrategyKind {
@@ -200,7 +200,7 @@ public:
 private:
   ExplorationStrategyKind ExplorationStrategy = ExplorationStrategyKind::NotSet;
 
-  /// \brief Describes the kinds for high-level analyzer mode.
+  /// Describes the kinds for high-level analyzer mode.
   enum UserModeKind {
     UMK_NotSet = 0,
 
@@ -431,14 +431,14 @@ public:
                               const ento::CheckerBase *C = nullptr,
                               bool SearchInParents = false);
 
-  /// \brief Retrieves and sets the UserMode. This is a high-level option,
+  /// Retrieves and sets the UserMode. This is a high-level option,
   /// which is used to set other low-level options. It is not accessible
   /// outside of AnalyzerOptions.
   UserModeKind getUserMode();
 
   ExplorationStrategyKind getExplorationStrategy();
 
-  /// \brief Returns the inter-procedural analysis mode.
+  /// Returns the inter-procedural analysis mode.
   IPAKind getIPAMode();
 
   /// Returns the option controlling which C++ member functions will be

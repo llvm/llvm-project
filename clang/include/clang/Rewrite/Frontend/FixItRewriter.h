@@ -36,7 +36,7 @@ public:
   FixItOptions() = default;
   virtual ~FixItOptions();
 
-  /// \brief This file is about to be rewritten. Return the name of the file
+  /// This file is about to be rewritten. Return the name of the file
   /// that is okay to write to.
   ///
   /// \param fd out parameter for file descriptor. After the call it may be set
@@ -48,52 +48,52 @@ public:
   /// if this is false.
   bool InPlace = false;
 
-  /// \brief Whether to abort fixing a file when not all errors could be fixed.
+  /// Whether to abort fixing a file when not all errors could be fixed.
   bool FixWhatYouCan = false;
 
-  /// \brief Whether to only fix warnings and not errors.
+  /// Whether to only fix warnings and not errors.
   bool FixOnlyWarnings = false;
 
-  /// \brief If true, only pass the diagnostic to the actual diagnostic consumer
+  /// If true, only pass the diagnostic to the actual diagnostic consumer
   /// if it is an error or a fixit was applied as part of the diagnostic.
   /// It basically silences warnings without accompanying fixits.
   bool Silent = false;
 };
 
 class FixItRewriter : public DiagnosticConsumer {
-  /// \brief The diagnostics machinery.
+  /// The diagnostics machinery.
   DiagnosticsEngine &Diags;
 
   edit::EditedSource Editor;
 
-  /// \brief The rewriter used to perform the various code
+  /// The rewriter used to perform the various code
   /// modifications.
   Rewriter Rewrite;
 
-  /// \brief The diagnostic client that performs the actual formatting
+  /// The diagnostic client that performs the actual formatting
   /// of error messages.
   DiagnosticConsumer *Client;
   std::unique_ptr<DiagnosticConsumer> Owner;
 
-  /// \brief Turn an input path into an output path. NULL implies overwriting
+  /// Turn an input path into an output path. NULL implies overwriting
   /// the original.
   FixItOptions *FixItOpts;
 
-  /// \brief The number of rewriter failures.
+  /// The number of rewriter failures.
   unsigned NumFailures = 0;
 
-  /// \brief Whether the previous diagnostic was not passed to the consumer.
+  /// Whether the previous diagnostic was not passed to the consumer.
   bool PrevDiagSilenced = false;
 
 public:
-  /// \brief Initialize a new fix-it rewriter.
+  /// Initialize a new fix-it rewriter.
   FixItRewriter(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                 const LangOptions &LangOpts, FixItOptions *FixItOpts);
 
-  /// \brief Destroy the fix-it rewriter.
+  /// Destroy the fix-it rewriter.
   ~FixItRewriter() override;
 
-  /// \brief Check whether there are modifications for a given file.
+  /// Check whether there are modifications for a given file.
   bool IsModified(FileID ID) const {
     return Rewrite.getRewriteBufferFor(ID) != nullptr;
   }
@@ -104,12 +104,12 @@ public:
   iterator buffer_begin() { return Rewrite.buffer_begin(); }
   iterator buffer_end() { return Rewrite.buffer_end(); }
 
-  /// \brief Write a single modified source file.
+  /// Write a single modified source file.
   ///
   /// \returns true if there was an error, false otherwise.
   bool WriteFixedFile(FileID ID, raw_ostream &OS);
 
-  /// \brief Write the modified source files.
+  /// Write the modified source files.
   ///
   /// \returns true if there was an error, false otherwise.
   bool WriteFixedFiles(
@@ -126,7 +126,7 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
 
-  /// \brief Emit a diagnostic via the adapted diagnostic client.
+  /// Emit a diagnostic via the adapted diagnostic client.
   void Diag(SourceLocation Loc, unsigned DiagID);
 };
 

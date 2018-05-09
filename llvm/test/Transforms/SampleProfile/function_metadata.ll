@@ -43,12 +43,12 @@ define void @test_liveness() !dbg !12 {
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}
 !6 = !DISubroutineType(types: !2)
-!7 = distinct !DISubprogram(name: "test", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, variables: !2)
+!7 = distinct !DISubprogram(name: "test", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, retainedNodes: !2)
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 1, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 3.5 "}
-!11 = distinct !DISubprogram(name: "foo_available", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, variables: !2)
-!12 = distinct !DISubprogram(name: "test_liveness", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, variables: !2)
+!11 = distinct !DISubprogram(name: "foo_available", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, retainedNodes: !2)
+!12 = distinct !DISubprogram(name: "test_liveness", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !1, type: !6, retainedNodes: !2)
 !15 = !DILexicalBlockFile(discriminator: 1, file: !1, scope: !7)
 !17 = distinct !DILexicalBlock(line: 10, column: 0, file: !1, scope: !7)
 !18 = !DILocation(line: 10, scope: !17)

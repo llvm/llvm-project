@@ -28,7 +28,7 @@ declare dereferenceable(1) %struct.S* @_Z3Getv()
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{i32 7, !"PIC Level", i32 2}
-!8 = distinct !DISubprogram(name: "~CFVS", linkageName: "_ZN4CFVSD2Ev", scope: !9, file: !1, line: 2, type: !28, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !27, variables: !2)
+!8 = distinct !DISubprogram(name: "~CFVS", linkageName: "_ZN4CFVSD2Ev", scope: !9, file: !1, line: 2, type: !28, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !27, retainedNodes: !2)
 !9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CFVS", file: !10, line: 7, size: 8, elements: !11, identifier: "_ZTS4CFVS")
 !10 = !DIFile(filename: "./bz188598.h", directory: "")
 !11 = !{!35}

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements the continuation indenter.
+/// This file implements the continuation indenter.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -35,12 +35,70 @@ static bool shouldIndentWrappedSelectorName(const FormatStyle &Style,
 
 // Returns the length of everything up to the first possible line break after
 // the ), ], } or > matching \c Tok.
-static unsigned getLengthToMatchingParen(const FormatToken &Tok) {
+static unsigned getLengthToMatchingParen(const FormatToken &Tok,
+                                         const std::vector<ParenState> &Stack) {
+  // Normally whether or not a break before T is possible is calculated and
+  // stored in T.CanBreakBefore. Braces, array initializers and text proto
+  // messages like `key: < ... >` are an exception: a break is possible
+  // before a closing brace R if a break was inserted after the corresponding
+  // opening brace. The information about whether or not a break is needed
+  // before a closing brace R is stored in the ParenState field
+  // S.BreakBeforeClosingBrace where S is the state that R closes.
+  //
+  // In order to decide whether there can be a break before encountered right
+  // braces, this implementation iterates over the sequence of tokens and over
+  // the paren stack in lockstep, keeping track of the stack level which visited
+  // right braces correspond to in MatchingStackIndex.
+  //
+  // For example, consider:
+  // L. <- line number
+  // 1. {
+  // 2. {1},
+  // 3. {2},
+  // 4. {{3}}}
+  //     ^ where we call this method with this token.
+  // The paren stack at this point contains 3 brace levels:
+  //  0. { at line 1, BreakBeforeClosingBrace: true
+  //  1. first { at line 4, BreakBeforeClosingBrace: false
+  //  2. second { at line 4, BreakBeforeClosingBrace: false,
+  //  where there might be fake parens levels in-between these levels.
+  // The algorithm will start at the first } on line 4, which is the matching
+  // brace of the initial left brace and at level 2 of the stack. Then,
+  // examining BreakBeforeClosingBrace: false at level 2, it will continue to
+  // the second } on line 4, and will traverse the stack downwards until it
+  // finds the matching { on level 1. Then, examining BreakBeforeClosingBrace:
+  // false at level 1, it will continue to the third } on line 4 and will
+  // traverse the stack downwards until it finds the matching { on level 0.
+  // Then, examining BreakBeforeClosingBrace: true at level 0, the algorithm
+  // will stop and will use the second } on line 4 to determine the length to
+  // return, as in this example the range will include the tokens: {3}}
+  //
+  // The algorithm will only traverse the stack if it encounters braces, array
+  // initializer squares or text proto angle brackets.
   if (!Tok.MatchingParen)
     return 0;
   FormatToken *End = Tok.MatchingParen;
-  while (End->Next && !End->Next->CanBreakBefore) {
-    End = End->Next;
+  // Maintains a stack level corresponding to the current End token.
+  int MatchingStackIndex = Stack.size() - 1;
+  // Traverses the stack downwards, looking for the level to which LBrace
+  // corresponds. Returns either a pointer to the matching level or nullptr if
+  // LParen is not found in the initial portion of the stack up to
+  // MatchingStackIndex.
+  auto FindParenState = [&](const FormatToken *LBrace) -> const ParenState * {
+    while (MatchingStackIndex >= 0 && Stack[MatchingStackIndex].Tok != LBrace)
+      --MatchingStackIndex;
+    return MatchingStackIndex >= 0 ? &Stack[MatchingStackIndex] : nullptr;
+  };
+  for (; End->Next; End = End->Next) {
+    if (End->Next->CanBreakBefore || !End->Next->closesScope())
+      break;
+    if (End->Next->MatchingParen->isOneOf(tok::l_brace,
+                                          TT_ArrayInitializerLSquare,
+                                          tok::less)) {
+      const ParenState *State = FindParenState(End->Next->MatchingParen);
+      if (State && State->BreakBeforeClosingBrace)
+        break;
+    }
   }
   return End->TotalLength - Tok.TotalLength + 1;
 }
@@ -192,7 +250,7 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
     State.Column = 0;
   State.Line = Line;
   State.NextToken = Line->First;
-  State.Stack.push_back(ParenState(FirstIndent, FirstIndent,
+  State.Stack.push_back(ParenState(/*Tok=*/nullptr, FirstIndent, FirstIndent,
                                    /*AvoidBinPacking=*/false,
                                    /*NoLineBreak=*/false));
   State.LineContainsContinuedForLoopSection = false;
@@ -299,7 +357,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         Previous.ParameterCount > 1) ||
        opensProtoMessageField(Previous, Style)) &&
       Style.ColumnLimit > 0 &&
-      getLengthToMatchingParen(Previous) + State.Column - 1 >
+      getLengthToMatchingParen(Previous, State.Stack) + State.Column - 1 >
           getColumnLimit(State))
     return true;
 
@@ -1122,6 +1180,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
            E = Current.FakeLParens.rend();
        I != E; ++I) {
     ParenState NewParenState = State.Stack.back();
+    NewParenState.Tok = nullptr;
     NewParenState.ContainsLineBreak = false;
     NewParenState.LastOperatorWrapped = true;
     NewParenState.NoLineBreak =
@@ -1265,7 +1324,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       if (Style.ColumnLimit) {
         // If this '[' opens an ObjC call, determine whether all parameters fit
         // into one line and put one per line if they don't.
-        if (getLengthToMatchingParen(Current) + State.Column >
+        if (getLengthToMatchingParen(Current, State.Stack) + State.Column >
             getColumnLimit(State))
           BreakBeforeParameter = true;
       } else {
@@ -1296,7 +1355,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
        (Current.is(TT_TemplateOpener) &&
         State.Stack.back().ContainsUnwrappedBuilder));
   State.Stack.push_back(
-      ParenState(NewIndent, LastSpace, AvoidBinPacking, NoLineBreak));
+      ParenState(&Current, NewIndent, LastSpace, AvoidBinPacking, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = BreakBeforeParameter;
   State.Stack.back().HasMultipleNestedBlocks = Current.BlockParameterCount > 1;
@@ -1334,7 +1393,8 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
       NestedBlockIndent + (State.NextToken->is(TT_ObjCBlockLBrace)
                                ? Style.ObjCBlockIndentWidth
                                : Style.IndentWidth);
-  State.Stack.push_back(ParenState(NewIndent, State.Stack.back().LastSpace,
+  State.Stack.push_back(ParenState(State.NextToken, NewIndent,
+                                   State.Stack.back().LastSpace,
                                    /*AvoidBinPacking=*/true,
                                    /*NoLineBreak=*/false));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;

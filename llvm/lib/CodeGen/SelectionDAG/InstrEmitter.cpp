@@ -753,6 +753,20 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   return &*MIB;
 }
 
+MachineInstr *
+InstrEmitter::EmitDbgLabel(SDDbgLabel *SD) {
+  MDNode *Label = SD->getLabel();
+  DebugLoc DL = SD->getDebugLoc();
+  assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+
+  const MCInstrDesc &II = TII->get(TargetOpcode::DBG_LABEL);
+  MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
+  MIB.addMetadata(Label);
+
+  return &*MIB;
+}
+
 /// EmitMachineNode - Generate machine code for a target-specific node and
 /// needed dependencies.
 ///

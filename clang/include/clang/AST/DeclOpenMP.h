@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines OpenMP nodes for declarative directives.
+/// This file defines OpenMP nodes for declarative directives.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,7 @@
 
 namespace clang {
 
-/// \brief This represents '#pragma omp threadprivate ...' directive.
+/// This represents '#pragma omp threadprivate ...' directive.
 /// For example, in the following, both 'a' and 'A::b' are threadprivate:
 ///
 /// \code
@@ -89,7 +89,7 @@ public:
   static bool classofKind(Kind K) { return K == OMPThreadPrivate; }
 };
 
-/// \brief This represents '#pragma omp declare reduction ...' directive.
+/// This represents '#pragma omp declare reduction ...' directive.
 /// For example, in the following, declared reduction 'foo' for types 'int' and
 /// 'float':
 ///
@@ -109,14 +109,14 @@ public:
 
 private:
   friend class ASTDeclReader;
-  /// \brief Combiner for declare reduction construct.
+  /// Combiner for declare reduction construct.
   Expr *Combiner;
-  /// \brief Initializer for declare reduction construct.
+  /// Initializer for declare reduction construct.
   Expr *Initializer;
   /// Kind of initializer - function call or omp_priv<init_expr> initializtion.
   InitKind InitializerKind = CallInit;
 
-  /// \brief Reference to the previous declare reduction construct in the same
+  /// Reference to the previous declare reduction construct in the same
   /// scope with the same name. Required for proper templates instantiation if
   /// the declare reduction construct is declared inside compound statement.
   LazyDeclPtr PrevDeclInScope;
@@ -135,33 +135,33 @@ private:
   }
 
 public:
-  /// \brief Create declare reduction node.
+  /// Create declare reduction node.
   static OMPDeclareReductionDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation L, DeclarationName Name,
          QualType T, OMPDeclareReductionDecl *PrevDeclInScope);
-  /// \brief Create deserialized declare reduction node.
+  /// Create deserialized declare reduction node.
   static OMPDeclareReductionDecl *CreateDeserialized(ASTContext &C,
                                                      unsigned ID);
 
-  /// \brief Get combiner expression of the declare reduction construct.
+  /// Get combiner expression of the declare reduction construct.
   Expr *getCombiner() { return Combiner; }
   const Expr *getCombiner() const { return Combiner; }
-  /// \brief Set combiner expression for the declare reduction construct.
+  /// Set combiner expression for the declare reduction construct.
   void setCombiner(Expr *E) { Combiner = E; }
 
-  /// \brief Get initializer expression (if specified) of the declare reduction
+  /// Get initializer expression (if specified) of the declare reduction
   /// construct.
   Expr *getInitializer() { return Initializer; }
   const Expr *getInitializer() const { return Initializer; }
   /// Get initializer kind.
   InitKind getInitializerKind() const { return InitializerKind; }
-  /// \brief Set initializer expression for the declare reduction construct.
+  /// Set initializer expression for the declare reduction construct.
   void setInitializer(Expr *E, InitKind IK) {
     Initializer = E;
     InitializerKind = IK;
   }
 
-  /// \brief Get reference to previous declare reduction construct in the same
+  /// Get reference to previous declare reduction construct in the same
   /// scope with the same name.
   OMPDeclareReductionDecl *getPrevDeclInScope();
   const OMPDeclareReductionDecl *getPrevDeclInScope() const;

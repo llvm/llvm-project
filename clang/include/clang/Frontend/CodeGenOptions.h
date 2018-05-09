@@ -27,7 +27,7 @@
 
 namespace clang {
 
-/// \brief Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
+/// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
 class CodeGenOptionsBase {
 public:
@@ -249,7 +249,7 @@ public:
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
-  /// \brief A list of all -fno-builtin-* function names (e.g., memset).
+  /// A list of all -fno-builtin-* function names (e.g., memset).
   std::vector<std::string> NoBuiltinFuncs;
 
   std::vector<std::string> Reciprocals;
@@ -272,7 +272,7 @@ public:
 
   CodeGenOptions();
 
-  /// \brief Is this a libc/libm function that is no longer recognized as a
+  /// Is this a libc/libm function that is no longer recognized as a
   /// builtin because a -fno-builtin-* option has been specified?
   bool isNoBuiltinFunc(const char *Name) const;
 
@@ -280,22 +280,22 @@ public:
     return NoBuiltinFuncs;
   }
 
-  /// \brief Check if Clang profile instrumenation is on.
+  /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
     return getProfileInstr() == ProfileClangInstr;
   }
 
-  /// \brief Check if IR level profile instrumentation is on.
+  /// Check if IR level profile instrumentation is on.
   bool hasProfileIRInstr() const {
     return getProfileInstr() == ProfileIRInstr;
   }
 
-  /// \brief Check if Clang profile use is on.
+  /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
     return getProfileUse() == ProfileClangInstr;
   }
 
-  /// \brief Check if IR level profile use is on.
+  /// Check if IR level profile use is on.
   bool hasProfileIRUse() const {
     return getProfileUse() == ProfileIRInstr;
   }

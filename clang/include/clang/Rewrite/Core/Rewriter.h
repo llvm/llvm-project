@@ -37,15 +37,15 @@ class Rewriter {
 
 public:
   struct RewriteOptions {
-    /// \brief Given a source range, true to include previous inserts at the
+    /// Given a source range, true to include previous inserts at the
     /// beginning of the range as part of the range itself (true by default).
     bool IncludeInsertsAtBeginOfRange = true;
 
-    /// \brief Given a source range, true to include previous inserts at the
+    /// Given a source range, true to include previous inserts at the
     /// end of the range as part of the range itself (true by default).
     bool IncludeInsertsAtEndOfRange = true;
 
-    /// \brief If true and removing some text leaves a blank line
+    /// If true and removing some text leaves a blank line
     /// also remove the empty line (false by default).
     bool RemoveLineIfEmpty = false;
 
@@ -105,7 +105,7 @@ public:
     return InsertText(Loc, Str);
   }
 
-  /// \brief Insert the specified string after the token in the
+  /// Insert the specified string after the token in the
   /// specified location.
   bool InsertTextAfterToken(SourceLocation Loc, StringRef Str);
 
@@ -122,13 +122,13 @@ public:
   bool RemoveText(SourceLocation Start, unsigned Length,
                   RewriteOptions opts = RewriteOptions());
 
-  /// \brief Remove the specified text region.
+  /// Remove the specified text region.
   bool RemoveText(CharSourceRange range,
                   RewriteOptions opts = RewriteOptions()) {
     return RemoveText(range.getBegin(), getRangeSize(range, opts), opts);
   }
 
-  /// \brief Remove the specified text region.
+  /// Remove the specified text region.
   bool RemoveText(SourceRange range, RewriteOptions opts = RewriteOptions()) {
     return RemoveText(range.getBegin(), getRangeSize(range, opts), opts);
   }
@@ -151,7 +151,7 @@ public:
   /// operation.
   bool ReplaceText(SourceRange range, SourceRange replacementRange);
 
-  /// \brief Increase indentation for the lines between the given source range.
+  /// Increase indentation for the lines between the given source range.
   /// To determine what the indentation should be, 'parentIndent' is used
   /// that should be at a source location with an indentation one degree
   /// lower than the given range.

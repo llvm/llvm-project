@@ -330,7 +330,7 @@ getHazardType(SUnit *SU, int Stalls) {
 
   MachineInstr *MI = SU->getInstr();
 
-  if (MI->isDebugValue())
+  if (MI->isDebugInstr())
     return NoHazard;
 
   unsigned Opcode = MI->getOpcode();
@@ -388,7 +388,7 @@ getHazardType(SUnit *SU, int Stalls) {
 void PPCHazardRecognizer970::EmitInstruction(SUnit *SU) {
   MachineInstr *MI = SU->getInstr();
 
-  if (MI->isDebugValue())
+  if (MI->isDebugInstr())
     return;
 
   unsigned Opcode = MI->getOpcode();

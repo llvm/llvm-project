@@ -401,7 +401,7 @@ public:
     return R;
   }
 
-  /// \brief Create a new object to represent a bit-field access.
+  /// Create a new object to represent a bit-field access.
   ///
   /// \param Addr - The base address of the bit-field sequence this
   /// bit-field refers to.

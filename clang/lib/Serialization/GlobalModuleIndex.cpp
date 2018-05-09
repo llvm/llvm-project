@@ -38,26 +38,26 @@ using namespace serialization;
 //----------------------------------------------------------------------------//
 namespace {
   enum {
-    /// \brief The block containing the index.
+    /// The block containing the index.
     GLOBAL_INDEX_BLOCK_ID = llvm::bitc::FIRST_APPLICATION_BLOCKID
   };
 
-  /// \brief Describes the record types in the index.
+  /// Describes the record types in the index.
   enum IndexRecordTypes {
-    /// \brief Contains version information and potentially other metadata,
+    /// Contains version information and potentially other metadata,
     /// used to determine if we can read this global index file.
     INDEX_METADATA,
-    /// \brief Describes a module, including its file name and dependencies.
+    /// Describes a module, including its file name and dependencies.
     MODULE,
-    /// \brief The index for identifiers.
+    /// The index for identifiers.
     IDENTIFIER_INDEX
   };
 }
 
-/// \brief The name of the global index file.
+/// The name of the global index file.
 static const char * const IndexFileName = "modules.idx";
 
-/// \brief The global index file version.
+/// The global index file version.
 static const unsigned CurrentVersion = 1;
 
 //----------------------------------------------------------------------------//
@@ -66,7 +66,7 @@ static const unsigned CurrentVersion = 1;
 
 namespace {
 
-/// \brief Trait used to read the identifier index from the on-disk hash
+/// Trait used to read the identifier index from the on-disk hash
 /// table.
 class IdentifierIndexReaderTrait {
 public:
@@ -245,7 +245,7 @@ GlobalModuleIndex::readIndex(StringRef Path) {
     return std::make_pair(nullptr, EC_NotFound);
   std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrErr.get());
 
-  /// \brief The main bitstream cursor for the main block.
+  /// The main bitstream cursor for the main block.
   llvm::BitstreamCursor Cursor(*Buffer);
 
   // Sniff for the signature.
@@ -368,12 +368,12 @@ LLVM_DUMP_METHOD void GlobalModuleIndex::dump() {
 //----------------------------------------------------------------------------//
 
 namespace {
-  /// \brief Provides information about a specific module file.
+  /// Provides information about a specific module file.
   struct ModuleFileInfo {
-    /// \brief The numberic ID for this module file.
+    /// The numberic ID for this module file.
     unsigned ID;
 
-    /// \brief The set of modules on which this module depends. Each entry is
+    /// The set of modules on which this module depends. Each entry is
     /// a module ID.
     SmallVector<unsigned, 4> Dependencies;
     ASTFileSignature Signature;
@@ -387,7 +387,7 @@ namespace {
         : StoredSize(Size), StoredModTime(ModTime), StoredSignature(Sig) {}
   };
 
-  /// \brief Builder that generates the global module index file.
+  /// Builder that generates the global module index file.
   class GlobalModuleIndexBuilder {
     FileManager &FileMgr;
     const PCHContainerReader &PCHContainerRdr;
@@ -398,26 +398,26 @@ namespace {
     /// Information about each of the known module files.
     ModuleFilesMap ModuleFiles;
 
-    /// \brief Mapping from the imported module file to the imported
+    /// Mapping from the imported module file to the imported
     /// information.
     typedef std::multimap<const FileEntry *, ImportedModuleFileInfo>
         ImportedModuleFilesMap;
 
-    /// \brief Information about each importing of a module file.
+    /// Information about each importing of a module file.
     ImportedModuleFilesMap ImportedModuleFiles;
 
-    /// \brief Mapping from identifiers to the list of module file IDs that
+    /// Mapping from identifiers to the list of module file IDs that
     /// consider this identifier to be interesting.
     typedef llvm::StringMap<SmallVector<unsigned, 2> > InterestingIdentifierMap;
 
-    /// \brief A mapping from all interesting identifiers to the set of module
+    /// A mapping from all interesting identifiers to the set of module
     /// files in which those identifiers are considered interesting.
     InterestingIdentifierMap InterestingIdentifiers;
 
-    /// \brief Write the block-info block for the global module index file.
+    /// Write the block-info block for the global module index file.
     void emitBlockInfoBlock(llvm::BitstreamWriter &Stream);
 
-    /// \brief Retrieve the module file information for the given file.
+    /// Retrieve the module file information for the given file.
     ModuleFileInfo &getModuleFileInfo(const FileEntry *File) {
       llvm::MapVector<const FileEntry *, ModuleFileInfo>::iterator Known
         = ModuleFiles.find(File);
@@ -435,12 +435,12 @@ namespace {
         FileManager &FileMgr, const PCHContainerReader &PCHContainerRdr)
         : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr) {}
 
-    /// \brief Load the contents of the given module file into the builder.
+    /// Load the contents of the given module file into the builder.
     ///
     /// \returns true if an error occurred, false otherwise.
     bool loadModuleFile(const FileEntry *File);
 
-    /// \brief Write the index to the given bitstream.
+    /// Write the index to the given bitstream.
     /// \returns true if an error occurred, false otherwise.
     bool writeIndex(llvm::BitstreamWriter &Stream);
   };
@@ -493,7 +493,7 @@ namespace {
     : public serialization::reader::ASTIdentifierLookupTraitBase {
 
   public:
-    /// \brief The identifier and whether it is "interesting".
+    /// The identifier and whether it is "interesting".
     typedef std::pair<StringRef, bool> data_type;
 
     data_type ReadData(const internal_key_type& k,
@@ -685,7 +685,7 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
 
 namespace {
 
-/// \brief Trait used to generate the identifier index as an on-disk hash
+/// Trait used to generate the identifier index as an on-disk hash
 /// table.
 class IdentifierIndexWriterTrait {
 public:
@@ -913,10 +913,10 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
 
 namespace {
   class GlobalIndexIdentifierIterator : public IdentifierIterator {
-    /// \brief The current position within the identifier lookup table.
+    /// The current position within the identifier lookup table.
     IdentifierIndexTable::key_iterator Current;
 
-    /// \brief The end position within the identifier lookup table.
+    /// The end position within the identifier lookup table.
     IdentifierIndexTable::key_iterator End;
 
   public:

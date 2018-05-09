@@ -3148,8 +3148,7 @@ def warn_impcast_float_integer : Warning<
   InGroup<FloatConversion>, DefaultIgnore;
 
 def warn_impcast_float_to_integer : Warning<
-  "implicit conversion of out of range value from %0 to %1 changes value "
-  "from %2 to %3">,
+  "implicit conversion from %0 to %1 changes value from %2 to %3">,
   InGroup<FloatOverflowConversion>, DefaultIgnore;
 def warn_impcast_float_to_integer_out_of_range : Warning<
   "implicit conversion of out of range value from %0 to %1 is undefined">,

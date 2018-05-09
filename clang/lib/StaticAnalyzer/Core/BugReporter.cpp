@@ -1636,7 +1636,7 @@ static bool GenerateExtensivePathDiagnostic(
   return PDB.getBugReport()->isValid();
 }
 
-/// \brief Adds a sanitized control-flow diagnostic edge to a path.
+/// Adds a sanitized control-flow diagnostic edge to a path.
 static void addEdgeToPath(PathPieces &path,
                           PathDiagnosticLocation &PrevLoc,
                           PathDiagnosticLocation NewLoc,
@@ -2095,7 +2095,7 @@ static void addContextEdges(PathPieces &pieces, SourceManager &SM,
   }
 }
 
-/// \brief Move edges from a branch condition to a branch target
+/// Move edges from a branch condition to a branch target
 ///        when the condition is simple.
 ///
 /// This restructures some of the work of addContextEdges.  That function
@@ -2281,7 +2281,7 @@ static void removeContextCycles(PathPieces &Path, SourceManager &SM,
   }
 }
 
-/// \brief Return true if X is contained by Y.
+/// Return true if X is contained by Y.
 static bool lexicalContains(ParentMap &PM, const Stmt *X, const Stmt *Y) {
   while (X) {
     if (X == Y)

@@ -43,7 +43,7 @@ define i32 @posix_relative_func() #0 !dbg !44 {
 !51 = !DIFile(filename: "win.c", directory: "E:\\absolute\\windows\\path")
 !52 = !{}
 !53 = !{!54}
-!54 = distinct !DISubprogram(name: "win_func", scope: !51, file: !51, line: 55, type: !55, unit: !50, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, variables: !52)
+!54 = distinct !DISubprogram(name: "win_func", scope: !51, file: !51, line: 55, type: !55, unit: !50, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, retainedNodes: !52)
 !55 = !DISubroutineType(types: !56)
 !56 = !{!57}
 !57 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -54,7 +54,7 @@ define i32 @posix_relative_func() #0 !dbg !44 {
 !31 = !DIFile(filename: "posix.c", directory: "/absolute/posix/path")
 !32 = !{}
 !33 = !{!34}
-!34 = distinct !DISubprogram(name: "posix_absolute_func", scope: !31, file: !31, line: 33, type: !35, unit: !30, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, variables: !32)
+!34 = distinct !DISubprogram(name: "posix_absolute_func", scope: !31, file: !31, line: 33, type: !35, unit: !30, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, retainedNodes: !32)
 !35 = !DISubroutineType(types: !36)
 !36 = !{!37}
 !37 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -65,7 +65,7 @@ define i32 @posix_relative_func() #0 !dbg !44 {
 !41 = !DIFile(filename: "posix2.c", directory: "relative/posix/path")
 !42 = !{}
 !43 = !{!44}
-!44 = distinct !DISubprogram(name: "posix_relative_func", scope: !41, file: !41, line: 44, type: !45, unit: !40, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, variables: !42)
+!44 = distinct !DISubprogram(name: "posix_relative_func", scope: !41, file: !41, line: 44, type: !45, unit: !40, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, retainedNodes: !42)
 !45 = !DISubroutineType(types: !46)
 !46 = !{!47}
 !47 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

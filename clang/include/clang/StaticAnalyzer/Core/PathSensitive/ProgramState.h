@@ -212,11 +212,11 @@ public:
   assumeInclusiveRange(DefinedOrUnknownSVal Val, const llvm::APSInt &From,
                        const llvm::APSInt &To) const;
 
-  /// \brief Check if the given SVal is not constrained to zero and is not
+  /// Check if the given SVal is not constrained to zero and is not
   ///        a zero constant.
   ConditionTruthVal isNonNull(SVal V) const;
 
-  /// \brief Check if the given SVal is constrained to zero or is a zero
+  /// Check if the given SVal is constrained to zero or is a zero
   ///        constant.
   ConditionTruthVal isNull(SVal V) const;
 
@@ -257,7 +257,7 @@ public:
 
   ProgramStateRef killBinding(Loc LV) const;
 
-  /// \brief Returns the state with bindings for the given regions
+  /// Returns the state with bindings for the given regions
   ///  cleared from the store.
   ///
   /// Optionally invalidates global regions as well.
@@ -317,24 +317,24 @@ public:
 
   SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
 
-  /// \brief Return the value bound to the specified location.
+  /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
   SVal getSVal(Loc LV, QualType T = QualType()) const;
 
   /// Returns the "raw" SVal bound to LV before any value simplfication.
   SVal getRawSVal(Loc LV, QualType T= QualType()) const;
 
-  /// \brief Return the value bound to the specified location.
+  /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
   SVal getSVal(const MemRegion* R, QualType T = QualType()) const;
 
-  /// \brief Return the value bound to the specified location, assuming
+  /// Return the value bound to the specified location, assuming
   /// that the value is a scalar integer or an enumeration or a pointer.
   /// Returns UnknownVal() if none found or the region is not known to hold
   /// a value of such type.
   SVal getSValAsScalarOrLoc(const MemRegion *R) const;
 
-  /// \brief Visits the symbols reachable from the given SVal using the provided
+  /// Visits the symbols reachable from the given SVal using the provided
   /// SymbolVisitor.
   ///
   /// This is a convenience API. Consider using ScanReachableSymbols class
@@ -343,12 +343,12 @@ public:
   /// \sa ScanReachableSymbols
   bool scanReachableSymbols(SVal val, SymbolVisitor& visitor) const;
 
-  /// \brief Visits the symbols reachable from the SVals in the given range
+  /// Visits the symbols reachable from the SVals in the given range
   /// using the provided SymbolVisitor.
   bool scanReachableSymbols(const SVal *I, const SVal *E,
                             SymbolVisitor &visitor) const;
 
-  /// \brief Visits the symbols reachable from the regions in the given
+  /// Visits the symbols reachable from the regions in the given
   /// MemRegions range using the provided SymbolVisitor.
   bool scanReachableSymbols(const MemRegion * const *I,
                             const MemRegion * const *E,

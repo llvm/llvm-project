@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file implements parsing of all OpenMP directives and clauses.
+/// This file implements parsing of all OpenMP directives and clauses.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -210,7 +210,7 @@ static DeclarationName parseOpenMPReductionId(Parser &P) {
                         : DeclNames.getCXXOperatorName(OOK);
 }
 
-/// \brief Parse 'omp declare reduction' construct.
+/// Parse 'omp declare reduction' construct.
 ///
 ///       declare-reduction-directive:
 ///        annot_pragma_openmp 'declare' 'reduction'
@@ -625,7 +625,7 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
       LinModifiers, Steps, SourceRange(Loc, EndLoc));
 }
 
-/// \brief Parsing of declarative OpenMP directives.
+/// Parsing of declarative OpenMP directives.
 ///
 ///       threadprivate-directive:
 ///         annot_pragma_openmp 'threadprivate' simple-variable-list
@@ -874,7 +874,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   return nullptr;
 }
 
-/// \brief Parsing of declarative or executable OpenMP directives.
+/// Parsing of declarative or executable OpenMP directives.
 ///
 ///       threadprivate-directive:
 ///         annot_pragma_openmp 'threadprivate' simple-variable-list
@@ -1197,7 +1197,7 @@ bool Parser::ParseOpenMPSimpleVarList(
   return !IsCorrect;
 }
 
-/// \brief Parsing of OpenMP clauses.
+/// Parsing of OpenMP clauses.
 ///
 ///    clause:
 ///       if-clause | final-clause | num_threads-clause | safelen-clause |
@@ -1384,7 +1384,7 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
   return Val;
 }
 
-/// \brief Parsing of OpenMP clauses with single expressions like 'final',
+/// Parsing of OpenMP clauses with single expressions like 'final',
 /// 'collapse', 'safelen', 'num_threads', 'simdlen', 'num_teams',
 /// 'thread_limit', 'simdlen', 'priority', 'grainsize', 'num_tasks' or 'hint'.
 ///
@@ -1431,7 +1431,7 @@ OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
   return Actions.ActOnOpenMPSingleExprClause(Kind, Val.get(), Loc, LLoc, RLoc);
 }
 
-/// \brief Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
+/// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
 ///
 ///    default-clause:
 ///         'default' '(' 'none' | 'shared' ')
@@ -1465,7 +1465,7 @@ OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
                                          Tok.getLocation());
 }
 
-/// \brief Parsing of OpenMP clauses like 'ordered'.
+/// Parsing of OpenMP clauses like 'ordered'.
 ///
 ///    ordered-clause:
 ///         'ordered'
@@ -1501,7 +1501,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPClauseKind Kind, bool ParseOnly) {
 }
 
 
-/// \brief Parsing of OpenMP clauses with single expressions and some additional
+/// Parsing of OpenMP clauses with single expressions and some additional
 /// argument like 'schedule' or 'dist_schedule'.
 ///
 ///    schedule-clause:
@@ -1921,7 +1921,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
          (MustHaveTail && !Data.TailExpr) || InvalidReductionId;
 }
 
-/// \brief Parsing of OpenMP clause 'private', 'firstprivate', 'lastprivate',
+/// Parsing of OpenMP clause 'private', 'firstprivate', 'lastprivate',
 /// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction', 'task_reduction' or
 /// 'in_reduction'.
 ///

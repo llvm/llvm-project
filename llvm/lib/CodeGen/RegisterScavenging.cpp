@@ -111,7 +111,7 @@ void RegScavenger::determineKillsAndDefs() {
   assert(Tracking && "Must be tracking to determine kills and defs");
 
   MachineInstr &MI = *MBBI;
-  assert(!MI.isDebugValue() && "Debug values have no kills or defs");
+  assert(!MI.isDebugInstr() && "Debug values have no kills or defs");
 
   // Find out which registers are early clobbered, killed, defined, and marked
   // def-dead in this instruction.
@@ -158,7 +158,7 @@ void RegScavenger::unprocess() {
   assert(Tracking && "Cannot unprocess because we're not tracking");
 
   MachineInstr &MI = *MBBI;
-  if (!MI.isDebugValue()) {
+  if (!MI.isDebugInstr()) {
     determineKillsAndDefs();
 
     // Commit the changes.
@@ -195,7 +195,7 @@ void RegScavenger::forward() {
     I->Restore = nullptr;
   }
 
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return;
 
   determineKillsAndDefs();
@@ -318,7 +318,7 @@ unsigned RegScavenger::findSurvivorReg(MachineBasicBlock::iterator StartMI,
 
   bool inVirtLiveRange = false;
   for (++MI; InstrLimit > 0 && MI != ME; ++MI, --InstrLimit) {
-    if (MI->isDebugValue()) {
+    if (MI->isDebugInstr()) {
       ++InstrLimit; // Don't count debug instructions
       continue;
     }

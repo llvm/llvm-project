@@ -104,7 +104,7 @@ static void checkPropertyDeclWithOwnership(Sema &S,
     << propertyLifetime;
 }
 
-/// \brief Check this Objective-C property against a property declared in the
+/// Check this Objective-C property against a property declared in the
 /// given protocol.
 static void
 CheckPropertyAgainstProtocol(Sema &S, ObjCPropertyDecl *Prop,
@@ -1829,7 +1829,7 @@ static bool SuperClassImplementsProperty(ObjCInterfaceDecl *IDecl,
   return false;
 }
 
-/// \brief Default synthesizes all properties which must be synthesized
+/// Default synthesizes all properties which must be synthesized
 /// in class's \@implementation.
 void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl *IMPDecl,
                                        ObjCInterfaceDecl *IDecl,

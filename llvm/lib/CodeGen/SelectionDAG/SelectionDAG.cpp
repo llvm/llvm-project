@@ -7420,6 +7420,14 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     AddDbgValue(Dbg, Dbg->getSDNode(), false);
 }
 
+/// Creates a SDDbgLabel node.
+SDDbgLabel *SelectionDAG::getDbgLabel(DILabel *Label,
+                                      const DebugLoc &DL, unsigned O) {
+  assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  return new (DbgInfo->getAlloc()) SDDbgLabel(Label, DL, O);
+}
+
 namespace {
 
 /// RAUWUpdateListener - Helper for ReplaceAllUsesWith - When the node
@@ -7903,6 +7911,10 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
     SD->setHasDebugValue(true);
   }
   DbgInfo->add(DB, SD, isParameter);
+}
+
+void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) {
+  DbgInfo->add(DB);
 }
 
 SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,

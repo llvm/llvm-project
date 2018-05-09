@@ -31,7 +31,7 @@ declare i32 @bar() nounwind readnone
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!17}
 
-!0 = distinct !DISubprogram(name: "foobar", linkageName: "foobar", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, file: !15, scope: !1, type: !3, variables: !14)
+!0 = distinct !DISubprogram(name: "foobar", linkageName: "foobar", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, file: !15, scope: !1, type: !3, retainedNodes: !14)
 !1 = !DIFile(filename: "mu.c", directory: "/private/tmp")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 114183)", isOptimized: true, emissionKind: FullDebug, file: !15, enums: !16, retainedTypes: !16, imports:  null)
 !3 = !DISubroutineType(types: !4)

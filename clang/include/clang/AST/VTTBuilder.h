@@ -68,48 +68,48 @@ struct VTTComponent {
      : VTableIndex(VTableIndex), VTableBase(VTableBase) {}
 };
 
-/// \brief Class for building VTT layout information.
+/// Class for building VTT layout information.
 class VTTBuilder {
   ASTContext &Ctx;
 
-  /// \brief The most derived class for which we're building this vtable.
+  /// The most derived class for which we're building this vtable.
   const CXXRecordDecl *MostDerivedClass;
 
   using VTTVTablesVectorTy = SmallVector<VTTVTable, 64>;
   
-  /// \brief The VTT vtables.
+  /// The VTT vtables.
   VTTVTablesVectorTy VTTVTables;
   
   using VTTComponentsVectorTy = SmallVector<VTTComponent, 64>;
   
-  /// \brief The VTT components.
+  /// The VTT components.
   VTTComponentsVectorTy VTTComponents;
   
-  /// \brief The AST record layout of the most derived class.
+  /// The AST record layout of the most derived class.
   const ASTRecordLayout &MostDerivedClassLayout;
 
   using VisitedVirtualBasesSetTy = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
   using AddressPointsMapTy = llvm::DenseMap<BaseSubobject, uint64_t>;
 
-  /// \brief The sub-VTT indices for the bases of the most derived class.
+  /// The sub-VTT indices for the bases of the most derived class.
   llvm::DenseMap<BaseSubobject, uint64_t> SubVTTIndicies;
 
-  /// \brief The secondary virtual pointer indices of all subobjects of
+  /// The secondary virtual pointer indices of all subobjects of
   /// the most derived class.
   llvm::DenseMap<BaseSubobject, uint64_t> SecondaryVirtualPointerIndices;
 
-  /// \brief Whether the VTT builder should generate LLVM IR for the VTT.
+  /// Whether the VTT builder should generate LLVM IR for the VTT.
   bool GenerateDefinition;
 
-  /// \brief Add a vtable pointer to the VTT currently being built.
+  /// Add a vtable pointer to the VTT currently being built.
   void AddVTablePointer(BaseSubobject Base, uint64_t VTableIndex,
                         const CXXRecordDecl *VTableClass);
                         
-  /// \brief Lay out the secondary VTTs of the given base subobject.
+  /// Lay out the secondary VTTs of the given base subobject.
   void LayoutSecondaryVTTs(BaseSubobject Base);
   
-  /// \brief Lay out the secondary virtual pointers for the given base
+  /// Lay out the secondary virtual pointers for the given base
   /// subobject.
   ///
   /// \param BaseIsMorallyVirtual whether the base subobject is a virtual base
@@ -120,17 +120,17 @@ class VTTBuilder {
                                       const CXXRecordDecl *VTableClass,
                                       VisitedVirtualBasesSetTy &VBases);
   
-  /// \brief Lay out the secondary virtual pointers for the given base
+  /// Lay out the secondary virtual pointers for the given base
   /// subobject.
   void LayoutSecondaryVirtualPointers(BaseSubobject Base, 
                                       uint64_t VTableIndex);
 
-  /// \brief Lay out the VTTs for the virtual base classes of the given
+  /// Lay out the VTTs for the virtual base classes of the given
   /// record declaration.
   void LayoutVirtualVTTs(const CXXRecordDecl *RD,
                          VisitedVirtualBasesSetTy &VBases);
   
-  /// \brief Lay out the VTT for the given subobject, including any
+  /// Lay out the VTT for the given subobject, including any
   /// secondary VTTs, secondary virtual pointers and virtual VTTs.
   void LayoutVTT(BaseSubobject Base, bool BaseIsVirtual);
   
@@ -138,22 +138,22 @@ public:
   VTTBuilder(ASTContext &Ctx, const CXXRecordDecl *MostDerivedClass,
              bool GenerateDefinition);
 
-  // \brief Returns a reference to the VTT components.
+  // Returns a reference to the VTT components.
   const VTTComponentsVectorTy &getVTTComponents() const {
     return VTTComponents;
   }
   
-  // \brief Returns a reference to the VTT vtables.
+  // Returns a reference to the VTT vtables.
   const VTTVTablesVectorTy &getVTTVTables() const {
     return VTTVTables;
   }
   
-  /// \brief Returns a reference to the sub-VTT indices.
+  /// Returns a reference to the sub-VTT indices.
   const llvm::DenseMap<BaseSubobject, uint64_t> &getSubVTTIndicies() const {
     return SubVTTIndicies;
   }
   
-  /// \brief Returns a reference to the secondary virtual pointer indices.
+  /// Returns a reference to the secondary virtual pointer indices.
   const llvm::DenseMap<BaseSubobject, uint64_t> &
   getSecondaryVirtualPointerIndices() const {
     return SecondaryVirtualPointerIndices;

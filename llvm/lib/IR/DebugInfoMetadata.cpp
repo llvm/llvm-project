@@ -489,7 +489,7 @@ DISubprogram *DISubprogram::getImpl(
     bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
     Metadata *ContainingType, unsigned Virtuality, unsigned VirtualIndex,
     int ThisAdjustment, DIFlags Flags, bool IsOptimized, Metadata *Unit,
-    Metadata *TemplateParams, Metadata *Declaration, Metadata *Variables,
+    Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
     Metadata *ThrownTypes, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
@@ -497,10 +497,10 @@ DISubprogram *DISubprogram::getImpl(
       DISubprogram, (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
                      IsDefinition, ScopeLine, ContainingType, Virtuality,
                      VirtualIndex, ThisAdjustment, Flags, IsOptimized, Unit,
-                     TemplateParams, Declaration, Variables, ThrownTypes));
+                     TemplateParams, Declaration, RetainedNodes, ThrownTypes));
   SmallVector<Metadata *, 11> Ops = {
-      File,        Scope,     Name,           LinkageName,    Type,       Unit,
-      Declaration, Variables, ContainingType, TemplateParams, ThrownTypes};
+      File,        Scope,         Name,           LinkageName,    Type,       Unit,
+      Declaration, RetainedNodes, ContainingType, TemplateParams, ThrownTypes};
   if (!ThrownTypes) {
     Ops.pop_back();
     if (!TemplateParams) {
@@ -651,6 +651,18 @@ Optional<uint64_t> DIVariable::getSizeInBits() const {
 
   // Fail gracefully.
   return None;
+}
+
+DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope,
+                          MDString *Name, Metadata *File, unsigned Line,
+                          StorageType Storage,
+                          bool ShouldCreate) {
+  assert(Scope && "Expected scope");
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DILabel,
+                        (Scope, Name, File, Line));
+  Metadata *Ops[] = {Scope, Name, File};
+  DEFINE_GETIMPL_STORE(DILabel, (Line), Ops);
 }
 
 DIExpression *DIExpression::getImpl(LLVMContext &Context,

@@ -617,7 +617,7 @@ void InlineSpiller::reMaterializeAll() {
       MachineInstr &MI = *RegI++;
 
       // Debug values are not allowed to affect codegen.
-      if (MI.isDebugValue())
+      if (MI.isDebugInstr())
         continue;
 
       anyRemat |= reMaterializeFor(LI, MI);
@@ -932,7 +932,7 @@ void InlineSpiller::spillAroundUses(unsigned Reg) {
     MachineInstr *MI = &*(RegI++);
 
     // Debug values are not allowed to affect codegen.
-    if (MI->isDebugValue()) {
+    if (MI->isDebugInstr()) {
       // Modify DBG_VALUE now that the value is in a spill slot.
       MachineBasicBlock *MBB = MI->getParent();
       DEBUG(dbgs() << "Modifying debug info due to spill:\t" << *MI);

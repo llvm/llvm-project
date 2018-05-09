@@ -38,10 +38,10 @@ define void @bar(%"class.llvm::SmallVectorImpl"* %this) comdat align 2 !dbg !8 {
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 1, !"Debug Info Version", i32 3}
 !2 = !{!"clang version 3.5 "}
-!3 = distinct !DISubprogram(name: "foo", scope: !4, file: !4, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !9, variables: !6)
+!3 = distinct !DISubprogram(name: "foo", scope: !4, file: !4, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !9, retainedNodes: !6)
 !4 = !DIFile(filename: "test.cc", directory: ".")
 !5 = !DISubroutineType(types: !6)
 !6 = !{}
 !7 = !DILocation(line: 4, scope: !3)
-!8 = distinct !DISubprogram(name: "bar", scope: !4, file: !4, line: 7, type: !5, isLocal: false, isDefinition: true, scopeLine: 7, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !9, variables: !6)
+!8 = distinct !DISubprogram(name: "bar", scope: !4, file: !4, line: 7, type: !5, isLocal: false, isDefinition: true, scopeLine: 7, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !9, retainedNodes: !6)
 !9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !4)

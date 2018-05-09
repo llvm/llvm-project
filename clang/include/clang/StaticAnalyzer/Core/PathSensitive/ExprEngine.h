@@ -228,7 +228,7 @@ public:
   ExplodedGraph &getGraph() { return G; }
   const ExplodedGraph &getGraph() const { return G; }
 
-  /// \brief Run the analyzer's garbage collection - remove dead symbols and
+  /// Run the analyzer's garbage collection - remove dead symbols and
   /// bindings from the state.
   ///
   /// Checkers can participate in this process with two callbacks:
@@ -642,7 +642,7 @@ public:
     return (*currBldrCtx->getBlock())[currStmtIdx];
   }
 
-  /// \brief Create a new state in which the call return value is binded to the
+  /// Create a new state in which the call return value is binded to the
   /// call origin expression.
   ProgramStateRef bindReturnValue(const CallEvent &Call,
                                   const LocationContext *LCtx,
@@ -653,7 +653,7 @@ public:
   void evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                 const CallEvent &Call);
 
-  /// \brief Default implementation of call evaluation.
+  /// Default implementation of call evaluation.
   void defaultEvalCall(NodeBuilder &B, ExplodedNode *Pred,
                        const CallEvent &Call,
                        const EvalCallOptions &CallOpts = {});
@@ -687,7 +687,7 @@ private:
     CIP_DisallowedAlways
   };
 
-  /// \brief See if a particular call should be inlined, by only looking
+  /// See if a particular call should be inlined, by only looking
   /// at the call event and the current state of analysis.
   CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
                                      const ExplodedNode *Pred,
@@ -702,12 +702,12 @@ private:
   bool inlineCall(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
                   ExplodedNode *Pred, ProgramStateRef State);
 
-  /// \brief Conservatively evaluate call by invalidating regions and binding
+  /// Conservatively evaluate call by invalidating regions and binding
   /// a conjured return value.
   void conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
                             ExplodedNode *Pred, ProgramStateRef State);
 
-  /// \brief Either inline or process the call conservatively (or both), based
+  /// Either inline or process the call conservatively (or both), based
   /// on DynamicDispatchBifurcation data.
   void BifurcateCall(const MemRegion *BifurReg,
                      const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,

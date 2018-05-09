@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains the declaration of the UnwrappedLineParser,
+/// This file contains the declaration of the UnwrappedLineParser,
 /// which turns a stream of tokens into UnwrappedLines.
 ///
 //===----------------------------------------------------------------------===//
@@ -28,7 +28,7 @@ namespace format {
 
 struct UnwrappedLineNode;
 
-/// \brief An unwrapped line is a sequence of \c Token, that we would like to
+/// An unwrapped line is a sequence of \c Token, that we would like to
 /// put on a single line if there was no column limit.
 ///
 /// This is used as a main interface between the \c UnwrappedLineParser and the
@@ -38,24 +38,24 @@ struct UnwrappedLine {
   UnwrappedLine();
 
   // FIXME: Don't use std::list here.
-  /// \brief The \c Tokens comprising this \c UnwrappedLine.
+  /// The \c Tokens comprising this \c UnwrappedLine.
   std::list<UnwrappedLineNode> Tokens;
 
-  /// \brief The indent level of the \c UnwrappedLine.
+  /// The indent level of the \c UnwrappedLine.
   unsigned Level;
 
-  /// \brief Whether this \c UnwrappedLine is part of a preprocessor directive.
+  /// Whether this \c UnwrappedLine is part of a preprocessor directive.
   bool InPPDirective;
 
   bool MustBeDeclaration;
 
-  /// \brief If this \c UnwrappedLine closes a block in a sequence of lines,
+  /// If this \c UnwrappedLine closes a block in a sequence of lines,
   /// \c MatchingOpeningBlockLineIndex stores the index of the corresponding
   /// opening line. Otherwise, \c MatchingOpeningBlockLineIndex must be
   /// \c kInvalidIndex.
   size_t MatchingOpeningBlockLineIndex = kInvalidIndex;
 
-  /// \brief If this \c UnwrappedLine opens a block, stores the index of the
+  /// If this \c UnwrappedLine opens a block, stores the index of the
   /// line with the corresponding closing brace.
   size_t MatchingClosingBlockLineIndex = kInvalidIndex;
 

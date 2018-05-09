@@ -180,18 +180,18 @@ public:
     return blocksAborted.end();
   }
 
-  /// \brief Enqueue the given set of nodes onto the work list.
+  /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
-  /// \brief Enqueue nodes that were created as a result of processing
+  /// Enqueue nodes that were created as a result of processing
   /// a statement onto the work list.
   void enqueue(ExplodedNodeSet &Set, const CFGBlock *Block, unsigned Idx);
 
-  /// \brief enqueue the nodes corresponding to the end of function onto the
+  /// enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.
   void enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS);
 
-  /// \brief Enqueue a single node created as a result of statement processing.
+  /// Enqueue a single node created as a result of statement processing.
   void enqueueStmtNode(ExplodedNode *N, const CFGBlock *Block, unsigned Idx);
 };
 
@@ -204,10 +204,10 @@ struct NodeBuilderContext {
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
       : Eng(E), Block(B), LC(N->getLocationContext()) { assert(B); }
 
-  /// \brief Return the CFGBlock associated with this builder.
+  /// Return the CFGBlock associated with this builder.
   const CFGBlock *getBlock() const { return Block; }
 
-  /// \brief Returns the number of times the current basic block has been
+  /// Returns the number of times the current basic block has been
   /// visited on the exploded graph path.
   unsigned blockCount() const {
     return Eng.WList->getBlockCounter().getNumVisited(
@@ -217,7 +217,7 @@ struct NodeBuilderContext {
 };
 
 /// \class NodeBuilder
-/// \brief This is the simplest builder which generates nodes in the
+/// This is the simplest builder which generates nodes in the
 /// ExplodedGraph.
 ///
 /// The main benefit of the builder is that it automatically tracks the
@@ -237,7 +237,7 @@ protected:
 
   bool HasGeneratedNodes = false;
 
-  /// \brief The frontier set - a set of nodes which need to be propagated after
+  /// The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
 
@@ -277,14 +277,14 @@ public:
 
   virtual ~NodeBuilder() = default;
 
-  /// \brief Generates a node in the ExplodedGraph.
+  /// Generates a node in the ExplodedGraph.
   ExplodedNode *generateNode(const ProgramPoint &PP,
                              ProgramStateRef State,
                              ExplodedNode *Pred) {
     return generateNodeImpl(PP, State, Pred, false);
   }
 
-  /// \brief Generates a sink in the ExplodedGraph.
+  /// Generates a sink in the ExplodedGraph.
   ///
   /// When a node is marked as sink, the exploration from the node is stopped -
   /// the node becomes the last node on the path and certain kinds of bugs are
@@ -303,7 +303,7 @@ public:
 
   using iterator = ExplodedNodeSet::iterator;
 
-  /// \brief Iterators through the results frontier.
+  /// Iterators through the results frontier.
   iterator begin() {
     finalizeResults();
     assert(checkResults());
@@ -329,7 +329,7 @@ public:
 };
 
 /// \class NodeBuilderWithSinks
-/// \brief This node builder keeps track of the generated sink nodes.
+/// This node builder keeps track of the generated sink nodes.
 class NodeBuilderWithSinks: public NodeBuilder {
   void anchor() override;
 
@@ -364,14 +364,14 @@ public:
 };
 
 /// \class StmtNodeBuilder
-/// \brief This builder class is useful for generating nodes that resulted from
+/// This builder class is useful for generating nodes that resulted from
 /// visiting a statement. The main difference from its parent NodeBuilder is
 /// that it creates a statement specific ProgramPoint.
 class StmtNodeBuilder: public NodeBuilder {
   NodeBuilder *EnclosingBldr;
 
 public:
-  /// \brief Constructs a StmtNodeBuilder. If the builder is going to process
+  /// Constructs a StmtNodeBuilder. If the builder is going to process
   /// nodes currently owned by another builder(with larger scope), use
   /// Enclosing builder to transfer ownership.
   StmtNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
@@ -417,7 +417,7 @@ public:
   }
 };
 
-/// \brief BranchNodeBuilder is responsible for constructing the nodes
+/// BranchNodeBuilder is responsible for constructing the nodes
 /// corresponding to the two branches of the if statement - true and false.
 class BranchNodeBuilder: public NodeBuilder {
   const CFGBlock *DstT;

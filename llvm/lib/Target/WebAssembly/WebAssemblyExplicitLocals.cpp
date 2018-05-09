@@ -231,7 +231,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr &MI = *I++;
       assert(!WebAssembly::isArgument(MI));
 
-      if (MI.isDebugValue() || MI.isLabel())
+      if (MI.isDebugInstr() || MI.isLabel())
         continue;
 
       // Replace tee instructions with tee_local. The difference is that tee
@@ -375,7 +375,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   // Assert that all registers have been stackified at this point.
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      if (MI.isDebugValue() || MI.isLabel())
+      if (MI.isDebugInstr() || MI.isLabel())
         continue;
       for (const MachineOperand &MO : MI.explicit_operands()) {
         assert(

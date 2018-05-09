@@ -128,7 +128,7 @@ Stmt *Stmt::IgnoreImplicit() {
   return s;
 }
 
-/// \brief Skip no-op (attributed, compound) container stmts and skip captured
+/// Skip no-op (attributed, compound) container stmts and skip captured
 /// stmt at the top, if \a IgnoreCaptured is true.
 Stmt *Stmt::IgnoreContainers(bool IgnoreCaptured) {
   Stmt *S = this;
@@ -148,7 +148,7 @@ Stmt *Stmt::IgnoreContainers(bool IgnoreCaptured) {
   return S;
 }
 
-/// \brief Strip off all label-like statements.
+/// Strip off all label-like statements.
 ///
 /// This will strip off label statements, case statements, attributed
 /// statements and default statements recursively.
@@ -1105,18 +1105,18 @@ const CapturedDecl *CapturedStmt::getCapturedDecl() const {
   return CapDeclAndKind.getPointer();
 }
 
-/// \brief Set the outlined function declaration.
+/// Set the outlined function declaration.
 void CapturedStmt::setCapturedDecl(CapturedDecl *D) {
   assert(D && "null CapturedDecl");
   CapDeclAndKind.setPointer(D);
 }
 
-/// \brief Retrieve the captured region kind.
+/// Retrieve the captured region kind.
 CapturedRegionKind CapturedStmt::getCapturedRegionKind() const {
   return CapDeclAndKind.getInt();
 }
 
-/// \brief Set the captured region kind.
+/// Set the captured region kind.
 void CapturedStmt::setCapturedRegionKind(CapturedRegionKind Kind) {
   CapDeclAndKind.setInt(Kind);
 }

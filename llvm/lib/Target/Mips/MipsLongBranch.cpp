@@ -125,7 +125,7 @@ static MachineBasicBlock *getTargetMBB(const MachineInstr &Br) {
 // found or it reaches E.
 static ReverseIter getNonDebugInstr(ReverseIter B, const ReverseIter &E) {
   for (; B != E; ++B)
-    if (!B->isDebugValue())
+    if (!B->isDebugInstr())
       return B;
 
   return E;

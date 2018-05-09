@@ -24,7 +24,7 @@
 
 namespace clang {
 
-/// \brief A map from continuous integer ranges to some value, with a very
+/// A map from continuous integer ranges to some value, with a very
 /// specialized interface.
 ///
 /// CRM maps from integer ranges to values. The ranges are continuous, i.e.
@@ -107,7 +107,7 @@ public:
   reference back() { return Rep.back(); }
   const_reference back() const { return Rep.back(); }
   
-  /// \brief An object that helps properly build a continuous range map
+  /// An object that helps properly build a continuous range map
   /// from a set of values.
   class Builder {
     ContinuousRangeMap &Self;

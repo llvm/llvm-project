@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief AffectedRangeManager class manages affected ranges in the code.
+/// AffectedRangeManager class manages affected ranges in the code.
 ///
 //===----------------------------------------------------------------------===//
 

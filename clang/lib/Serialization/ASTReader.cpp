@@ -256,7 +256,7 @@ void ChainedASTReaderListener::readModuleFileExtension(
 
 ASTReaderListener::~ASTReaderListener() = default;
 
-/// \brief Compare the given set of language options against an existing set of
+/// Compare the given set of language options against an existing set of
 /// language options.
 ///
 /// \param Diags If non-NULL, diagnostics will be emitted via this engine.
@@ -360,7 +360,7 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
   return false;
 }
 
-/// \brief Compare the given set of target options against an existing set of
+/// Compare the given set of target options against an existing set of
 /// target options.
 ///
 /// \param Diags If non-NULL, diagnostics will be emitted via this engine.
@@ -575,7 +575,7 @@ bool PCHValidator::ReadDiagnosticOptions(
                                  Complain);
 }
 
-/// \brief Collect the macro definitions provided by the given preprocessor
+/// Collect the macro definitions provided by the given preprocessor
 /// options.
 static void
 collectMacroDefinitions(const PreprocessorOptions &PPOpts,
@@ -613,7 +613,7 @@ collectMacroDefinitions(const PreprocessorOptions &PPOpts,
   }
 }
 
-/// \brief Check the preprocessor options deserialized from the control block
+/// Check the preprocessor options deserialized from the control block
 /// against the preprocessor options in an existing preprocessor.
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
@@ -889,7 +889,7 @@ ASTIdentifierLookupTraitBase::ReadKey(const unsigned char* d, unsigned n) {
   return StringRef((const char*) d, n-1);
 }
 
-/// \brief Whether the given identifier is "interesting".
+/// Whether the given identifier is "interesting".
 static bool isInterestingIdentifier(ASTReader &Reader, IdentifierInfo &II,
                                     bool IsModule) {
   return II.hadMacroDefinition() ||
@@ -1212,7 +1212,7 @@ void ASTReader::Error(unsigned DiagID,
 // Source Manager Deserialization
 //===----------------------------------------------------------------------===//
 
-/// \brief Read the line table in the source manager block.
+/// Read the line table in the source manager block.
 /// \returns true if there was an error.
 bool ASTReader::ParseLineTable(ModuleFile &F,
                                const RecordData &Record) {
@@ -1258,7 +1258,7 @@ bool ASTReader::ParseLineTable(ModuleFile &F,
   return false;
 }
 
-/// \brief Read a source manager block
+/// Read a source manager block
 bool ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   using namespace SrcMgr;
 
@@ -1314,7 +1314,7 @@ bool ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   }
 }
 
-/// \brief If a header file is not found at the path that we expect it to be
+/// If a header file is not found at the path that we expect it to be
 /// and the PCH file was moved from its original location, try to resolve the
 /// file by assuming that header+PCH were moved together and the header is in
 /// the same place relative to the PCH.
@@ -1512,7 +1512,7 @@ std::pair<SourceLocation, StringRef> ASTReader::getModuleImportLoc(int ID) {
   return std::make_pair(M->ImportLoc, StringRef(M->ModuleName));
 }
 
-/// \brief Find the location where the module F is imported.
+/// Find the location where the module F is imported.
 SourceLocation ASTReader::getImportLocation(ModuleFile *F) {
   if (F->ImportLoc.isValid())
     return F->ImportLoc;
@@ -1858,7 +1858,7 @@ void ASTReader::ReadDefinedMacros() {
 
 namespace {
 
-  /// \brief Visitor class used to look up identifirs in an AST file.
+  /// Visitor class used to look up identifirs in an AST file.
   class IdentifierLookupVisitor {
     StringRef Name;
     unsigned NameHash;
@@ -1902,7 +1902,7 @@ namespace {
       return true;
     }
 
-    // \brief Retrieve the identifier info found within the module
+    // Retrieve the identifier info found within the module
     // files.
     IdentifierInfo *getIdentifierInfo() const { return Found; }
   };
@@ -2210,7 +2210,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   return IF;
 }
 
-/// \brief If we are loading a relocatable PCH or module file, and the filename
+/// If we are loading a relocatable PCH or module file, and the filename
 /// is not an absolute path, add the system or module root to the beginning of
 /// the file name.
 void ASTReader::ResolveImportedPath(ModuleFile &M, std::string &Filename) {
@@ -3668,7 +3668,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   return Success;
 }
 
-/// \brief Move the given method to the back of the global list of methods.
+/// Move the given method to the back of the global list of methods.
 static void moveMethodToBackOfGlobalList(Sema &S, ObjCMethodDecl *Method) {
   // Find the entry for this selector in the method pool.
   Sema::GlobalMethodPool::iterator Known
@@ -3821,7 +3821,7 @@ static void updateModuleTimestamp(ModuleFile &MF) {
   OS.clear_error(); // Avoid triggering a fatal error.
 }
 
-/// \brief Given a cursor at the start of an AST file, scan ahead and drop the
+/// Given a cursor at the start of an AST file, scan ahead and drop the
 /// cursor into the start of the given block ID, returning false on success and
 /// true on failure.
 static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
@@ -4088,7 +4088,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
 static ASTFileSignature readASTFileSignature(StringRef PCH);
 
-/// \brief Whether \p Stream starts with the AST/PCH file magic number 'CPCH'.
+/// Whether \p Stream starts with the AST/PCH file magic number 'CPCH'.
 static bool startsWithASTFileMagic(BitstreamCursor &Stream) {
   return Stream.canSkipToPos(4) &&
          Stream.Read(8) == 'C' &&
@@ -4579,7 +4579,7 @@ void ASTReader::finalizeForWriting() {
   // Nothing to do for now.
 }
 
-/// \brief Reads and return the signature record from \p PCH's control block, or
+/// Reads and return the signature record from \p PCH's control block, or
 /// else returns 0.
 static ASTFileSignature readASTFileSignature(StringRef PCH) {
   BitstreamCursor Stream(PCH);
@@ -4605,7 +4605,7 @@ static ASTFileSignature readASTFileSignature(StringRef PCH) {
   }
 }
 
-/// \brief Retrieve the name of the original source file name
+/// Retrieve the name of the original source file name
 /// directly from the AST file, without actually loading the AST
 /// file.
 std::string ASTReader::getOriginalSourceFile(
@@ -5213,7 +5213,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
   }
 }
 
-/// \brief Parse the record that corresponds to a LangOptions data
+/// Parse the record that corresponds to a LangOptions data
 /// structure.
 ///
 /// This routine parses the language options from the AST file and then gives
@@ -5512,7 +5512,7 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
   llvm_unreachable("Invalid PreprocessorDetailRecordTypes");
 }
 
-/// \brief Find the next module that contains entities and return the ID
+/// Find the next module that contains entities and return the ID
 /// of the first entry.
 ///
 /// \param SLocMapI points at a chunk of a module that contains no
@@ -5615,7 +5615,7 @@ PreprocessedEntityID ASTReader::findPreprocessedEntity(SourceLocation Loc,
   return M.BasePreprocessedEntityID + (PPI - pp_begin);
 }
 
-/// \brief Returns a pair of [Begin, End) indices of preallocated
+/// Returns a pair of [Begin, End) indices of preallocated
 /// preprocessed entities that \arg Range encompasses.
 std::pair<unsigned, unsigned>
     ASTReader::findPreprocessedEntitiesInRange(SourceRange Range) {
@@ -5629,7 +5629,7 @@ std::pair<unsigned, unsigned>
   return std::make_pair(BeginID, EndID);
 }
 
-/// \brief Optionally returns true or false if the preallocated preprocessed
+/// Optionally returns true or false if the preallocated preprocessed
 /// entity with index \arg Index came from file \arg FID.
 Optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
                                                              FileID FID) {
@@ -5653,7 +5653,7 @@ Optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
 
 namespace {
 
-  /// \brief Visitor used to search for information about a header file.
+  /// Visitor used to search for information about a header file.
   class HeaderFileInfoVisitor {
     const FileEntry *FE;
     Optional<HeaderFileInfo> HFI;
@@ -5833,7 +5833,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
   }
 }
 
-/// \brief Get the correct cursor and offset for loading a type.
+/// Get the correct cursor and offset for loading a type.
 ASTReader::RecordLocation ASTReader::TypeCursorForIndex(unsigned Index) {
   GlobalTypeMapType::iterator I = GlobalTypeMap.find(Index);
   assert(I != GlobalTypeMap.end() && "Corrupted global type map");
@@ -5841,7 +5841,7 @@ ASTReader::RecordLocation ASTReader::TypeCursorForIndex(unsigned Index) {
   return RecordLocation(M, M->TypeOffsets[Index - M->BaseTypeIndex]);
 }
 
-/// \brief Read and return the type with the given index..
+/// Read and return the type with the given index..
 ///
 /// The index is the type ID, shifted and minus the number of predefs. This
 /// routine actually reads the record corresponding to the type at the given
@@ -7285,7 +7285,7 @@ serialization::DeclID ASTReader::ReadDeclID(ModuleFile &F,
   return getGlobalDeclID(F, Record[Idx++]);
 }
 
-/// \brief Resolve the offset of a statement into a statement.
+/// Resolve the offset of a statement into a statement.
 ///
 /// This operation will read a new statement from the external
 /// source each time it is called, and is meant to be used via a
@@ -7478,7 +7478,7 @@ ASTReader::getLoadedLookupTables(DeclContext *Primary) const {
   return I == Lookups.end() ? nullptr : &I->second;
 }
 
-/// \brief Under non-PCH compilation the consumer receives the objc methods
+/// Under non-PCH compilation the consumer receives the objc methods
 /// before receiving the implementation, and codegen depends on this.
 /// We simulate this by deserializing and passing to consumer the methods of the
 /// implementation before passing the deserialized implementation decl.
@@ -7781,25 +7781,25 @@ IdentifierInfo *ASTReader::get(StringRef Name) {
 
 namespace clang {
 
-  /// \brief An identifier-lookup iterator that enumerates all of the
+  /// An identifier-lookup iterator that enumerates all of the
   /// identifiers stored within a set of AST files.
   class ASTIdentifierIterator : public IdentifierIterator {
-    /// \brief The AST reader whose identifiers are being enumerated.
+    /// The AST reader whose identifiers are being enumerated.
     const ASTReader &Reader;
 
-    /// \brief The current index into the chain of AST files stored in
+    /// The current index into the chain of AST files stored in
     /// the AST reader.
     unsigned Index;
 
-    /// \brief The current position within the identifier lookup table
+    /// The current position within the identifier lookup table
     /// of the current AST file.
     ASTIdentifierLookupTable::key_iterator Current;
 
-    /// \brief The end position within the identifier lookup table of
+    /// The end position within the identifier lookup table of
     /// the current AST file.
     ASTIdentifierLookupTable::key_iterator End;
 
-    /// \brief Whether to skip any modules in the ASTReader.
+    /// Whether to skip any modules in the ASTReader.
     bool SkipModules;
 
   public:
@@ -7935,12 +7935,12 @@ namespace serialization {
       return true;
     }
 
-    /// \brief Retrieve the instance methods found by this visitor.
+    /// Retrieve the instance methods found by this visitor.
     ArrayRef<ObjCMethodDecl *> getInstanceMethods() const {
       return InstanceMethods;
     }
 
-    /// \brief Retrieve the instance methods found by this visitor.
+    /// Retrieve the instance methods found by this visitor.
     ArrayRef<ObjCMethodDecl *> getFactoryMethods() const {
       return FactoryMethods;
     }
@@ -7958,7 +7958,7 @@ namespace serialization {
 } // namespace serialization
 } // namespace clang
 
-/// \brief Add the given set of methods to the method list.
+/// Add the given set of methods to the method list.
 static void addMethodsToPool(Sema &S, ArrayRef<ObjCMethodDecl *> Methods,
                              ObjCMethodList &List) {
   for (unsigned I = 0, N = Methods.size(); I != N; ++I) {
@@ -8197,7 +8197,7 @@ void ASTReader::SetIdentifierInfo(IdentifierID ID, IdentifierInfo *II) {
     DeserializationListener->IdentifierRead(ID, II);
 }
 
-/// \brief Set the globally-visible declarations associated with the given
+/// Set the globally-visible declarations associated with the given
 /// identifier.
 ///
 /// If the AST reader is currently in a state where the given declaration IDs
@@ -8728,7 +8728,7 @@ ReadTemplateArgumentList(SmallVectorImpl<TemplateArgument> &TemplArgs,
     TemplArgs.push_back(ReadTemplateArgument(F, Record, Idx, Canonicalize));
 }
 
-/// \brief Read a UnresolvedSet structure.
+/// Read a UnresolvedSet structure.
 void ASTReader::ReadUnresolvedSet(ModuleFile &F, LazyASTUnresolvedSet &Set,
                                   const RecordData &Record, unsigned &Idx) {
   unsigned NumDecls = Record[Idx++];
@@ -8949,7 +8949,7 @@ ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
   return SourceRange(beg, end);
 }
 
-/// \brief Read an integral value
+/// Read an integral value
 llvm::APInt ASTReader::ReadAPInt(const RecordData &Record, unsigned &Idx) {
   unsigned BitWidth = Record[Idx++];
   unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
@@ -8958,20 +8958,20 @@ llvm::APInt ASTReader::ReadAPInt(const RecordData &Record, unsigned &Idx) {
   return Result;
 }
 
-/// \brief Read a signed integral value
+/// Read a signed integral value
 llvm::APSInt ASTReader::ReadAPSInt(const RecordData &Record, unsigned &Idx) {
   bool isUnsigned = Record[Idx++];
   return llvm::APSInt(ReadAPInt(Record, Idx), isUnsigned);
 }
 
-/// \brief Read a floating-point value
+/// Read a floating-point value
 llvm::APFloat ASTReader::ReadAPFloat(const RecordData &Record,
                                      const llvm::fltSemantics &Sem,
                                      unsigned &Idx) {
   return llvm::APFloat(Sem, ReadAPInt(Record, Idx));
 }
 
-// \brief Read a string
+// Read a string
 std::string ASTReader::ReadString(const RecordData &Record, unsigned &Idx) {
   unsigned Len = Record[Idx++];
   std::string Result(Record.data() + Idx, Record.data() + Idx + Len);
@@ -9013,13 +9013,13 @@ DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
   return Diags.Report(Loc, DiagID);
 }
 
-/// \brief Retrieve the identifier table associated with the
+/// Retrieve the identifier table associated with the
 /// preprocessor.
 IdentifierTable &ASTReader::getIdentifierTable() {
   return PP.getIdentifierTable();
 }
 
-/// \brief Record that the given ID maps to the given switch-case
+/// Record that the given ID maps to the given switch-case
 /// statement.
 void ASTReader::RecordSwitchCaseID(SwitchCase *SC, unsigned ID) {
   assert((*CurrSwitchCaseStmts)[ID] == nullptr &&
@@ -9027,7 +9027,7 @@ void ASTReader::RecordSwitchCaseID(SwitchCase *SC, unsigned ID) {
   (*CurrSwitchCaseStmts)[ID] = SC;
 }
 
-/// \brief Retrieve the switch-case statement with the given ID.
+/// Retrieve the switch-case statement with the given ID.
 SwitchCase *ASTReader::getSwitchCaseWithID(unsigned ID) {
   assert((*CurrSwitchCaseStmts)[ID] != nullptr && "No SwitchCase with this ID");
   return (*CurrSwitchCaseStmts)[ID];

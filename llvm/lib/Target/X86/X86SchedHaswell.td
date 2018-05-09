@@ -155,7 +155,7 @@ defm : HWWriteResPair<WriteIDiv64, [HWPort0, HWDivider], 25, [1,10], 1, 4>;
 defm : X86WriteRes<WriteFLoad,         [HWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [HWPort23,HWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [HWPort23,HWPort5], 9, [1,2], 3>;
-defm : X86WriteRes<WriteFStore,        [HWPort237,HWPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStore,        [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMove,         [HWPort5], 1, [1], 1>;
@@ -250,7 +250,7 @@ def  : WriteRes<WriteCvtF2FSt, [HWPort1,HWPort4,HWPort5,HWPort237]> {
 defm : X86WriteRes<WriteVecLoad,         [HWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [HWPort23,HWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [HWPort23,HWPort5], 9, [1,2], 3>;
-defm : X86WriteRes<WriteVecStore,        [HWPort237,HWPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStore,        [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [HWPort015], 1, [1], 1>;
@@ -759,26 +759,15 @@ def: InstRW<[HWWriteResGroup1], (instregex "FBSTPm",
                                            "MOVNTI_64mr",
                                            "MOVNTImr",
                                            "ST_FP(32|64|80)m",
-                                           "VEXTRACTF128mr",
-                                           "VEXTRACTI128mr",
-                                           "(V?)MOVAPD(Y?)mr",
-                                           "(V?)MOVAPS(V?)mr",
-                                           "(V?)MOVDQA(Y?)mr",
-                                           "(V?)MOVDQU(Y?)mr",
                                            "(V?)MOVHPDmr",
                                            "(V?)MOVHPSmr",
                                            "(V?)MOVLPDmr",
                                            "(V?)MOVLPSmr",
-                                           "(V?)MOVNTDQ(Y?)mr",
-                                           "(V?)MOVNTPD(Y?)mr",
-                                           "(V?)MOVNTPS(Y?)mr",
                                            "(V?)MOVPDI2DImr",
                                            "(V?)MOVPQI2QImr",
                                            "(V?)MOVPQIto64mr",
                                            "(V?)MOVSDmr",
                                            "(V?)MOVSSmr",
-                                           "(V?)MOVUPD(Y?)mr",
-                                           "(V?)MOVUPS(Y?)mr",
                                            "VMPTRSTm")>;
 
 def HWWriteResGroup2 : SchedWriteRes<[HWPort0]> {

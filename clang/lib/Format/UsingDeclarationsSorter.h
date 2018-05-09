@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares UsingDeclarationsSorter, a TokenAnalyzer that
+/// This file declares UsingDeclarationsSorter, a TokenAnalyzer that
 /// sorts consecutive using declarations.
 ///
 //===----------------------------------------------------------------------===//

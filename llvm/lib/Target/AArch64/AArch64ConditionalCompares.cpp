@@ -392,7 +392,7 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
   // Check all instructions, except the terminators. It is assumed that
   // terminators never have side effects or define any used register values.
   for (auto &I : make_range(MBB->begin(), MBB->getFirstTerminator())) {
-    if (I.isDebugValue())
+    if (I.isDebugInstr())
       continue;
 
     if (++InstrCount > BlockInstrLimit && !Stress) {

@@ -458,7 +458,7 @@ void Parser::resetPragmaHandlers() {
   AttributePragmaHandler.reset();
 }
 
-/// \brief Handle the annotation token produced for #pragma unused(...)
+/// Handle the annotation token produced for #pragma unused(...)
 ///
 /// Each annot_pragma_unused is followed by the argument token so e.g.
 /// "#pragma unused(x,y)" becomes:
@@ -2100,7 +2100,7 @@ PragmaOpenCLExtensionHandler::HandlePragma(Preprocessor &PP,
                                                StateLoc, State);
 }
 
-/// \brief Handle '#pragma omp ...' when OpenMP is disabled.
+/// Handle '#pragma omp ...' when OpenMP is disabled.
 ///
 void
 PragmaNoOpenMPHandler::HandlePragma(Preprocessor &PP,
@@ -2115,7 +2115,7 @@ PragmaNoOpenMPHandler::HandlePragma(Preprocessor &PP,
   PP.DiscardUntilEndOfDirective();
 }
 
-/// \brief Handle '#pragma omp ...' when OpenMP is enabled.
+/// Handle '#pragma omp ...' when OpenMP is enabled.
 ///
 void
 PragmaOpenMPHandler::HandlePragma(Preprocessor &PP,
@@ -2155,7 +2155,7 @@ PragmaOpenMPHandler::HandlePragma(Preprocessor &PP,
                       /*DisableMacroExpansion=*/false);
 }
 
-/// \brief Handle '#pragma pointers_to_members'
+/// Handle '#pragma pointers_to_members'
 // The grammar for this pragma is as follows:
 //
 // <inheritance model> ::= ('single' | 'multiple' | 'virtual') '_inheritance'
@@ -2253,7 +2253,7 @@ void PragmaMSPointersToMembers::HandlePragma(Preprocessor &PP,
   PP.EnterToken(AnnotTok);
 }
 
-/// \brief Handle '#pragma vtordisp'
+/// Handle '#pragma vtordisp'
 // The grammar for this pragma is as follows:
 //
 // <vtordisp-mode> ::= ('off' | 'on' | '0' | '1' | '2' )
@@ -2346,7 +2346,7 @@ void PragmaMSVtorDisp::HandlePragma(Preprocessor &PP,
   PP.EnterToken(AnnotTok);
 }
 
-/// \brief Handle all MS pragmas.  Simply forwards the tokens after inserting
+/// Handle all MS pragmas.  Simply forwards the tokens after inserting
 /// an annotation token.
 void PragmaMSPragma::HandlePragma(Preprocessor &PP,
                                   PragmaIntroducerKind Introducer,
@@ -2377,7 +2377,7 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
   PP.EnterToken(AnnotTok);
 }
 
-/// \brief Handle the Microsoft \#pragma detect_mismatch extension.
+/// Handle the Microsoft \#pragma detect_mismatch extension.
 ///
 /// The syntax is:
 /// \code
@@ -2434,7 +2434,7 @@ void PragmaDetectMismatchHandler::HandlePragma(Preprocessor &PP,
   Actions.ActOnPragmaDetectMismatch(DetectMismatchLoc, NameString, ValueString);
 }
 
-/// \brief Handle the microsoft \#pragma comment extension.
+/// Handle the microsoft \#pragma comment extension.
 ///
 /// The syntax is:
 /// \code
@@ -2683,7 +2683,7 @@ void Parser::HandlePragmaFP() {
   ConsumeAnnotationToken();
 }
 
-/// \brief Parses loop or unroll pragma hint value and fills in Info.
+/// Parses loop or unroll pragma hint value and fills in Info.
 static bool ParseLoopHintValue(Preprocessor &PP, Token &Tok, Token PragmaName,
                                Token Option, bool ValueInParens,
                                PragmaLoopHintInfo &Info) {
@@ -2725,7 +2725,7 @@ static bool ParseLoopHintValue(Preprocessor &PP, Token &Tok, Token PragmaName,
   return false;
 }
 
-/// \brief Handle the \#pragma clang loop directive.
+/// Handle the \#pragma clang loop directive.
 ///  #pragma clang 'loop' loop-hints
 ///
 ///  loop-hints:
@@ -2840,7 +2840,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                       /*DisableMacroExpansion=*/false);
 }
 
-/// \brief Handle the loop unroll optimization pragmas.
+/// Handle the loop unroll optimization pragmas.
 ///  #pragma unroll
 ///  #pragma unroll unroll-hint-value
 ///  #pragma unroll '(' unroll-hint-value ')'
@@ -2910,7 +2910,7 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
                       /*DisableMacroExpansion=*/false);
 }
 
-/// \brief Handle the Microsoft \#pragma intrinsic extension.
+/// Handle the Microsoft \#pragma intrinsic extension.
 ///
 /// The syntax is:
 /// \code
@@ -3038,7 +3038,7 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
             diag::warn_pragma_force_cuda_host_device_bad_arg);
 }
 
-/// \brief Handle the #pragma clang attribute directive.
+/// Handle the #pragma clang attribute directive.
 ///
 /// The syntax is:
 /// \code

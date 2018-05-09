@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Forward-declares and imports various common LLVM datatypes that
+/// Forward-declares and imports various common LLVM datatypes that
 /// clang wants to use unqualified.
 ///
 //===----------------------------------------------------------------------===//

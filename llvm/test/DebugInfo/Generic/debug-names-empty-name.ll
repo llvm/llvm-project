@@ -34,5 +34,5 @@ entry:
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{!"clang version 7.0.0 (trunk 329378) (llvm/trunk 329379)"}
-!7 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I__", scope: !1, file: !1, type: !8, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I__", scope: !1, file: !1, type: !8, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)

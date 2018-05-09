@@ -653,7 +653,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
                         SmallVectorImpl<DataDep> &Deps,
                         const MachineRegisterInfo *MRI) {
   // Debug values should not be included in any calculations.
-  if (UseMI.isDebugValue())
+  if (UseMI.isDebugInstr())
     return false;
   
   bool HasPhysRegs = false;

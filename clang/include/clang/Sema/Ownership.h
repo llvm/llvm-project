@@ -39,7 +39,7 @@ class Stmt;
 class TemplateName;
 class TemplateParameterList;
 
-  /// \brief Wrapper for void* pointer.
+  /// Wrapper for void* pointer.
   /// \tparam PtrTy Either a pointer type like 'T*' or a type that behaves like
   ///               a pointer.
   ///
@@ -60,7 +60,7 @@ class TemplateParameterList;
 
     static OpaquePtr make(PtrTy P) { OpaquePtr OP; OP.set(P); return OP; }
 
-    /// \brief Returns plain pointer to the entity pointed by this wrapper.
+    /// Returns plain pointer to the entity pointed by this wrapper.
     /// \tparam PointeeT Type of pointed entity.
     ///
     /// It is identical to getPtrAs<PointeeT*>.
@@ -68,7 +68,7 @@ class TemplateParameterList;
       return get();
     }
 
-    /// \brief Returns pointer converted to the specified type.
+    /// Returns pointer converted to the specified type.
     /// \tparam PtrT Result pointer type.  There must be implicit conversion
     ///              from PtrTy to PtrT.
     ///

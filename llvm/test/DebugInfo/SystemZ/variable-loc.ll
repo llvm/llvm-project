@@ -53,16 +53,16 @@ declare i32 @printf(i8*, ...)
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.2 ", isOptimized: false, emissionKind: FullDebug, file: !29, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!5 = distinct !DISubprogram(name: "populate_array", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !29, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "populate_array", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !29, scope: !6, type: !7, retainedNodes: !1)
 !6 = !DIFile(filename: "simple.c", directory: "/home/timnor01/a64-trunk/build")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9, !10}
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !10)
 !10 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!11 = distinct !DISubprogram(name: "sum_array", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 9, file: !29, scope: !6, type: !12, variables: !1)
+!11 = distinct !DISubprogram(name: "sum_array", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 9, file: !29, scope: !6, type: !12, retainedNodes: !1)
 !12 = !DISubroutineType(types: !13)
 !13 = !{!10, !9, !10}
-!14 = distinct !DISubprogram(name: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 18, file: !29, scope: !6, type: !15, variables: !1)
+!14 = distinct !DISubprogram(name: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 18, file: !29, scope: !6, type: !15, retainedNodes: !1)
 !15 = !DISubroutineType(types: !16)
 !16 = !{!10}
 !17 = !DILocalVariable(name: "main_arr", line: 19, scope: !18, file: !6, type: !19)

@@ -3020,7 +3020,7 @@ def VMOVNTDQYmr : VPDI<0xE7, MRMDestMem, (outs),
 } // ExeDomain, SchedRW
 } // Predicates
 
-let SchedRW = [WriteVecStore] in {
+let SchedRW = [WriteFStore] in {
 def MOVNTPSmr : PSI<0x2B, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                     "movntps\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore (v4f32 VR128:$src), addr:$dst)]>;

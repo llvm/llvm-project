@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a token annotator, i.e. creates
+/// This file implements a token annotator, i.e. creates
 /// \c AnnotatedTokens out of \c FormatTokens with required extra information.
 ///
 //===----------------------------------------------------------------------===//
@@ -25,7 +25,7 @@ namespace format {
 
 namespace {
 
-/// \brief Returns \c true if the token can be used as an identifier in
+/// Returns \c true if the token can be used as an identifier in
 /// an Objective-C \c @selector, \c false otherwise.
 ///
 /// Because getFormattingLangOpts() always lexes source code as
@@ -40,7 +40,7 @@ static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
   return Tok.Tok.getIdentifierInfo() != nullptr;
 }
 
-/// \brief A parser that gathers additional information about tokens.
+/// A parser that gathers additional information about tokens.
 ///
 /// The \c TokenAnnotator tries to match parenthesis and square brakets and
 /// store a parenthesis levels. It also tries to resolve matching "<" and ">"
@@ -1132,7 +1132,7 @@ private:
     resetTokenMetadata(CurrentToken);
   }
 
-  /// \brief A struct to hold information valid in a specific context, e.g.
+  /// A struct to hold information valid in a specific context, e.g.
   /// a pair of parenthesis.
   struct Context {
     Context(tok::TokenKind ContextKind, unsigned BindingStrength,
@@ -1158,7 +1158,7 @@ private:
     bool InCpp11AttributeSpecifier = false;
   };
 
-  /// \brief Puts a new \c Context onto the stack \c Contexts for the lifetime
+  /// Puts a new \c Context onto the stack \c Contexts for the lifetime
   /// of each instance.
   struct ScopedContextCreator {
     AnnotatingParser &P;
@@ -1399,7 +1399,7 @@ private:
     }
   }
 
-  /// \brief Take a guess at whether \p Tok starts a name of a function or
+  /// Take a guess at whether \p Tok starts a name of a function or
   /// variable declaration.
   ///
   /// This is a heuristic based on whether \p Tok is an identifier following
@@ -1444,7 +1444,7 @@ private:
            PreviousNotConst->isSimpleTypeSpecifier();
   }
 
-  /// \brief Determine whether ')' is ending a cast.
+  /// Determine whether ')' is ending a cast.
   bool rParenEndsCast(const FormatToken &Tok) {
     // C-style casts are only used in C++ and Java.
     if (!Style.isCpp() && Style.Language != FormatStyle::LK_Java)
@@ -1541,7 +1541,7 @@ private:
     return true;
   }
 
-  /// \brief Return the type of the given token assuming it is * or &.
+  /// Return the type of the given token assuming it is * or &.
   TokenType determineStarAmpUsage(const FormatToken &Tok, bool IsExpression,
                                   bool InTemplateArgument) {
     if (Style.Language == FormatStyle::LK_JavaScript)
@@ -1636,7 +1636,7 @@ private:
     return TT_BinaryOperator;
   }
 
-  /// \brief Determine whether ++/-- are pre- or post-increments/-decrements.
+  /// Determine whether ++/-- are pre- or post-increments/-decrements.
   TokenType determineIncrementUsage(const FormatToken &Tok) {
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken || PrevToken->is(TT_CastRParen))
@@ -1665,7 +1665,7 @@ private:
 static const int PrecedenceUnaryOperator = prec::PointerToMember + 1;
 static const int PrecedenceArrowAndPeriod = prec::PointerToMember + 2;
 
-/// \brief Parses binary expressions by inserting fake parenthesis based on
+/// Parses binary expressions by inserting fake parenthesis based on
 /// operator precedence.
 class ExpressionParser {
 public:
@@ -1673,7 +1673,7 @@ public:
                    AnnotatedLine &Line)
       : Style(Style), Keywords(Keywords), Current(Line.First) {}
 
-  /// \brief Parse expressions with the given operator precedence.
+  /// Parse expressions with the given operator precedence.
   void parse(int Precedence = 0) {
     // Skip 'return' and ObjC selector colons as they are not part of a binary
     // expression.
@@ -1760,7 +1760,7 @@ public:
   }
 
 private:
-  /// \brief Gets the precedence (+1) of the given token for binary operators
+  /// Gets the precedence (+1) of the given token for binary operators
   /// and other tokens that we treat like binary operators.
   int getCurrentPrecedence() {
     if (Current) {
@@ -1819,7 +1819,7 @@ private:
     }
   }
 
-  /// \brief Parse unary operator expressions and surround them with fake
+  /// Parse unary operator expressions and surround them with fake
   /// parentheses if appropriate.
   void parseUnaryOperator() {
     llvm::SmallVector<FormatToken *, 2> Tokens;

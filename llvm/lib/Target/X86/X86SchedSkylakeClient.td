@@ -160,7 +160,7 @@ defm : SKLWriteResPair<WriteJump,  [SKLPort06],   1>;
 defm : X86WriteRes<WriteFLoad,         [SKLPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [SKLPort23,SKLPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [SKLPort23,SKLPort015], 8, [1,1], 2>;
-defm : X86WriteRes<WriteFStore,        [SKLPort237,SKLPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStore,        [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStoreY, [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMove,         [SKLPort015], 1, [1], 1>;
@@ -251,7 +251,7 @@ def  : WriteRes<WriteCvtF2FSt, [SKLPort4,SKLPort5,SKLPort237,SKLPort01]> {
 defm : X86WriteRes<WriteVecLoad,         [SKLPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [SKLPort23,SKLPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [SKLPort23,SKLPort015], 8, [1,1], 2>;
-defm : X86WriteRes<WriteVecStore,        [SKLPort237,SKLPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStore,        [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMove,         [SKLPort015], 1, [1], 1>;
@@ -596,26 +596,15 @@ def: InstRW<[SKLWriteResGroup11], (instregex "FBSTPm",
                                              "MOVNTI_64mr",
                                              "MOVNTImr",
                                              "ST_FP(32|64|80)m",
-                                             "VEXTRACTF128mr",
-                                             "VEXTRACTI128mr",
-                                             "(V?)MOVAPDYmr",
-                                             "(V?)MOVAPS(Y?)mr",
-                                             "(V?)MOVDQA(Y?)mr",
-                                             "(V?)MOVDQU(Y?)mr",
                                              "(V?)MOVHPDmr",
                                              "(V?)MOVHPSmr",
                                              "(V?)MOVLPDmr",
                                              "(V?)MOVLPSmr",
-                                             "(V?)MOVNTDQ(Y?)mr",
-                                             "(V?)MOVNTPD(Y?)mr",
-                                             "(V?)MOVNTPS(Y?)mr",
                                              "(V?)MOVPDI2DImr",
                                              "(V?)MOVPQI2QImr",
                                              "(V?)MOVPQIto64mr",
                                              "(V?)MOVSDmr",
                                              "(V?)MOVSSmr",
-                                             "(V?)MOVUPD(Y?)mr",
-                                             "(V?)MOVUPS(Y?)mr",
                                              "VMPTRSTm")>;
 
 def SKLWriteResGroup12 : SchedWriteRes<[SKLPort0]> {

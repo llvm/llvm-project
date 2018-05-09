@@ -301,7 +301,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 
   LastTrackedMI = &MI;
 
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return;
 
   auto const RegUses = collectVirtualRegUses(MI, LIS, *MRI);

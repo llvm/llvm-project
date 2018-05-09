@@ -43,7 +43,7 @@
 
 using namespace clang;
 
-/// \brief Print a template integral argument value.
+/// Print a template integral argument value.
 ///
 /// \param TemplArg the TemplateArgument instance to print.
 ///

@@ -82,7 +82,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{!"clang version 7.0.0"}
-!7 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 31, type: !8, isLocal: false, isDefinition: true, scopeLine: 32, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
+!7 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 31, type: !8, isLocal: false, isDefinition: true, scopeLine: 32, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !11)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10, !10}
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -109,7 +109,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 !31 = !DILocation(line: 39, column: 6, scope: !7)
 !32 = !DILocation(line: 40, column: 3, scope: !30)
 !33 = !DILocation(line: 41, column: 1, scope: !7)
-!34 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 12, type: !35, isLocal: true, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !38)
+!34 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 12, type: !35, isLocal: true, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !38)
 !35 = !DISubroutineType(types: !36)
 !36 = !{!37, !37, !15}
 !37 = !DIBasicType(name: "_Bool", size: 8, encoding: DW_ATE_boolean)

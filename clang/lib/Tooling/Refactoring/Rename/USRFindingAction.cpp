@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Provides an action to find USR for the symbol at <offset>, as well as
+/// Provides an action to find USR for the symbol at <offset>, as well as
 /// all additional USRs.
 ///
 //===----------------------------------------------------------------------===//
@@ -55,7 +55,7 @@ const NamedDecl *getCanonicalSymbolDeclaration(const NamedDecl *FoundDecl) {
 }
 
 namespace {
-// \brief NamedDeclFindingConsumer should delegate finding USRs of given Decl to
+// NamedDeclFindingConsumer should delegate finding USRs of given Decl to
 // AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
 // Decl refers to class and adds USRs of all overridden methods if Decl refers
 // to virtual method.

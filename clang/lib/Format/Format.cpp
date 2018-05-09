@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements functions declared in Format.h. This will be
+/// This file implements functions declared in Format.h. This will be
 /// split into separate files as we go.
 ///
 //===----------------------------------------------------------------------===//

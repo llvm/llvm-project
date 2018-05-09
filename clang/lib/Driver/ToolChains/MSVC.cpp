@@ -868,7 +868,7 @@ static bool readFullStringValue(HKEY hkey, const char *valueName,
 }
 #endif
 
-/// \brief Read registry string.
+/// Read registry string.
 /// This also supports a means to look for high-versioned keys by use
 /// of a $VERSION placeholder in the key path.
 /// $VERSION in the key path is a placeholder for the version number,
@@ -991,7 +991,7 @@ static bool getWindows10SDKVersionFromPath(const std::string &SDKPath,
   return !SDKVersion.empty();
 }
 
-/// \brief Get Windows SDK installation directory.
+/// Get Windows SDK installation directory.
 static bool getWindowsSDKDir(std::string &Path, int &Major,
                              std::string &WindowsSDKIncludeVersion,
                              std::string &WindowsSDKLibVersion) {

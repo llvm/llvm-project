@@ -77,6 +77,9 @@ HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
 /// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic
 HANDLE_TARGET_OPCODE(DBG_VALUE)
 
+/// DBG_LABEL - a mapping of the llvm.dbg.label intrinsic
+HANDLE_TARGET_OPCODE(DBG_LABEL)
+
 /// REG_SEQUENCE - This variadic instruction is used to form a register that
 /// represents a consecutive sequence of sub-registers. It's used as a
 /// register coalescing / allocation aid and must be eliminated before code

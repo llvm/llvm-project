@@ -70,12 +70,12 @@ entry:
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "t.c", directory: "/path/to/test/Transforms/ADCE")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "variable_in_unused_subscope", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!4 = distinct !DISubprogram(name: "variable_in_unused_subscope", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
-!7 = distinct !DISubprogram(name: "variable_in_parent_scope", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
-!8 = distinct !DISubprogram(name: "calls_empty_function_with_unused_variable_in_unused_subscope", scope: !1, file: !1, line: 18, type: !5, isLocal: false, isDefinition: true, scopeLine: 18, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
-!10 = distinct !DISubprogram(name: "empty_function_with_unused_variable", scope: !1, file: !1, line: 13, type: !11, isLocal: true, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "variable_in_parent_scope", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!8 = distinct !DISubprogram(name: "calls_empty_function_with_unused_variable_in_unused_subscope", scope: !1, file: !1, line: 18, type: !5, isLocal: false, isDefinition: true, scopeLine: 18, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!10 = distinct !DISubprogram(name: "empty_function_with_unused_variable", scope: !1, file: !1, line: 13, type: !11, isLocal: true, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
 !13 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

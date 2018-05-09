@@ -257,7 +257,7 @@ enum DeclMatchKind {
 
 } // namespace
 
-/// \brief Compare two declarations to see whether they are different or,
+/// Compare two declarations to see whether they are different or,
 /// if they are the same, whether the new declaration should replace the 
 /// existing declaration.
 static DeclMatchKind compareDeclarations(NamedDecl *Existing, NamedDecl *New) {

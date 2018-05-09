@@ -215,7 +215,7 @@ void Sema::checkContainerDecl(const BlockCommandComment *Comment) {
     << Comment->getSourceRange();
 }
 
-/// \brief Turn a string into the corresponding PassDirection or -1 if it's not
+/// Turn a string into the corresponding PassDirection or -1 if it's not
 /// valid.
 static int getParamPassDirection(StringRef Arg) {
   return llvm::StringSwitch<int>(Arg)
