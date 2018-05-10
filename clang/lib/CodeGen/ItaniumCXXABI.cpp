@@ -3008,8 +3008,46 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
 
 /// Return the linkage that the type info and type info name constants
 /// should have for the given type.
-static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
-                                                             QualType Ty) {
+static std::pair<llvm::GlobalVariable::LinkageTypes,
+                 llvm::GlobalVariable::LinkageTypes>
+getTypeInfoLinkage(CodeGenModule &CGM, QualType Ty) {
+  llvm::GlobalValue::LinkageTypes TypeLinkage = [&]() {
+    switch (Ty->getLinkage()) {
+    case NoLinkage:
+    case InternalLinkage:
+    case UniqueExternalLinkage:
+      return llvm::GlobalValue::InternalLinkage;
+
+    case VisibleNoLinkage:
+    case ModuleInternalLinkage:
+    case ModuleLinkage:
+    case ExternalLinkage:
+      // RTTI is not enabled, which means that this type info struct is going
+      // to be used for exception handling. Give it linkonce_odr linkage.
+      if (!CGM.getLangOpts().RTTI)
+        return llvm::GlobalValue::LinkOnceODRLinkage;
+
+      if (const RecordType *Record = dyn_cast<RecordType>(Ty)) {
+        const CXXRecordDecl *RD = cast<CXXRecordDecl>(Record->getDecl());
+        if (RD->hasAttr<WeakAttr>())
+          return llvm::GlobalValue::WeakODRLinkage;
+        if (CGM.getTriple().isWindowsItaniumEnvironment())
+          if (RD->hasAttr<DLLImportAttr>() &&
+              ShouldUseExternalRTTIDescriptor(CGM, Ty))
+            return llvm::GlobalValue::ExternalLinkage;
+        // MinGW always uses LinkOnceODRLinkage for type info.
+        if (RD->isCompleteDefinition() && RD->isDynamicClass() &&
+            !CGM.getContext()
+                 .getTargetInfo()
+                 .getTriple()
+                 .isWindowsGNUEnvironment())
+          return CGM.getVTableLinkage(RD);
+      }
+
+      return llvm::GlobalValue::LinkOnceODRLinkage;
+    }
+    llvm_unreachable("Invalid linkage!");
+  }();
   // Itanium C++ ABI 2.9.5p7:
   //   In addition, it and all of the intermediate abi::__pointer_type_info
   //   structs in the chain down to the abi::__class_type_info for the
@@ -3020,44 +3058,8 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   //   complete class RTTI (because the latter need not exist), possibly by
   //   making it a local static object.
   if (ContainsIncompleteClassType(Ty))
-    return llvm::GlobalValue::InternalLinkage;
-
-  switch (Ty->getLinkage()) {
-  case NoLinkage:
-  case InternalLinkage:
-  case UniqueExternalLinkage:
-    return llvm::GlobalValue::InternalLinkage;
-
-  case VisibleNoLinkage:
-  case ModuleInternalLinkage:
-  case ModuleLinkage:
-  case ExternalLinkage:
-    // RTTI is not enabled, which means that this type info struct is going
-    // to be used for exception handling. Give it linkonce_odr linkage.
-    if (!CGM.getLangOpts().RTTI)
-      return llvm::GlobalValue::LinkOnceODRLinkage;
-
-    if (const RecordType *Record = dyn_cast<RecordType>(Ty)) {
-      const CXXRecordDecl *RD = cast<CXXRecordDecl>(Record->getDecl());
-      if (RD->hasAttr<WeakAttr>())
-        return llvm::GlobalValue::WeakODRLinkage;
-      if (CGM.getTriple().isWindowsItaniumEnvironment())
-        if (RD->hasAttr<DLLImportAttr>() &&
-            ShouldUseExternalRTTIDescriptor(CGM, Ty))
-          return llvm::GlobalValue::ExternalLinkage;
-      // MinGW always uses LinkOnceODRLinkage for type info.
-      if (RD->isDynamicClass() &&
-          !CGM.getContext()
-               .getTargetInfo()
-               .getTriple()
-               .isWindowsGNUEnvironment())
-        return CGM.getVTableLinkage(RD);
-    }
-
-    return llvm::GlobalValue::LinkOnceODRLinkage;
-  }
-
-  llvm_unreachable("Invalid linkage!");
+    return {llvm::GlobalValue::InternalLinkage, TypeLinkage};
+  return {TypeLinkage, TypeLinkage};
 }
 
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
@@ -3084,23 +3086,25 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     return GetAddrOfExternalRTTIDescriptor(Ty);
 
   // Emit the standard library with external linkage.
-  llvm::GlobalVariable::LinkageTypes Linkage;
+  llvm::GlobalVariable::LinkageTypes InfoLinkage, NameLinkage;
   if (IsStdLib)
-    Linkage = llvm::GlobalValue::ExternalLinkage;
-  else
-    Linkage = getTypeInfoLinkage(CGM, Ty);
-
+    InfoLinkage = NameLinkage = llvm::GlobalValue::ExternalLinkage;
+  else {
+    auto LinkagePair = getTypeInfoLinkage(CGM, Ty);
+    InfoLinkage = LinkagePair.first;
+    NameLinkage = LinkagePair.second;
+  }
   // Add the vtable pointer.
   BuildVTablePointer(cast<Type>(Ty));
 
   // And the name.
-  llvm::GlobalVariable *TypeName = GetAddrOfTypeName(Ty, Linkage);
+  llvm::GlobalVariable *TypeName = GetAddrOfTypeName(Ty, NameLinkage);
   llvm::Constant *TypeNameField;
 
   // If we're supposed to demote the visibility, be sure to set a flag
   // to use a string comparison for type_info comparisons.
   ItaniumCXXABI::RTTIUniquenessKind RTTIUniqueness =
-      CXXABI.classifyRTTIUniqueness(Ty, Linkage);
+      CXXABI.classifyRTTIUniqueness(Ty, NameLinkage);
   if (RTTIUniqueness != ItaniumCXXABI::RUK_Unique) {
     // The flag is the sign bit, which on ARM64 is defined to be clear
     // for global pointers.  This is very ARM64-specific.
@@ -3206,7 +3210,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
   llvm::Module &M = CGM.getModule();
   llvm::GlobalVariable *GV =
       new llvm::GlobalVariable(M, Init->getType(),
-                               /*Constant=*/true, Linkage, Init, Name);
+                               /*Constant=*/true, InfoLinkage, Init, Name);
 
   // If there's already an old global variable, replace it with the new one.
   if (OldGV) {
@@ -3237,19 +3241,20 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
 
   // Give the type_info object and name the formal visibility of the
   // type itself.
-  llvm::GlobalValue::VisibilityTypes llvmVisibility;
-  if (llvm::GlobalValue::isLocalLinkage(Linkage))
-    // If the linkage is local, only default visibility makes sense.
-    llvmVisibility = llvm::GlobalValue::DefaultVisibility;
-  else if (RTTIUniqueness == ItaniumCXXABI::RUK_NonUniqueHidden)
-    llvmVisibility = llvm::GlobalValue::HiddenVisibility;
-  else
-    llvmVisibility = CodeGenModule::GetLLVMVisibility(Ty->getVisibility());
+  auto computeVisibility = [&](llvm::GlobalValue::LinkageTypes Linkage) {
+    if (llvm::GlobalValue::isLocalLinkage(Linkage))
+      // If the linkage is local, only default visibility makes sense.
+      return llvm::GlobalValue::DefaultVisibility;
+    else if (RTTIUniqueness == ItaniumCXXABI::RUK_NonUniqueHidden)
+      return llvm::GlobalValue::HiddenVisibility;
+    else
+      return CodeGenModule::GetLLVMVisibility(Ty->getVisibility());
+  };
 
-  TypeName->setVisibility(llvmVisibility);
+  TypeName->setVisibility(computeVisibility(NameLinkage));
   CGM.setDSOLocal(TypeName);
 
-  GV->setVisibility(llvmVisibility);
+  GV->setVisibility(computeVisibility(InfoLinkage));
   CGM.setDSOLocal(GV);
 
   if (CGM.getTriple().isWindowsItaniumEnvironment()) {

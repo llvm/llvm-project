@@ -58,6 +58,7 @@ tx ftemplate(int n) {
     #pragma omp critical
     ++a;
     }
+    ++a;
   }
   return a;
 }

@@ -5407,10 +5407,11 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
+  Expr::ConstExprUsage Usage = CCE == Sema::CCEK_TemplateArg
+                                   ? Expr::EvaluateForMangling
+                                   : Expr::EvaluateForCodeGen;
 
-  if ((T->isReferenceType()
-           ? !Result.get()->EvaluateAsLValue(Eval, S.Context)
-           : !Result.get()->EvaluateAsRValue(Eval, S.Context)) ||
+  if (!Result.get()->EvaluateAsConstantExpr(Eval, Usage, S.Context) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.
