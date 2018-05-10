@@ -154,6 +154,7 @@ public:
   /// \name Control where instructions we create are recorded (typically for
   /// visiting again later during legalization).
   /// @{
+  void recordInsertion(MachineInstr *InsertedInstr) const;
   void recordInsertions(std::function<void(MachineInstr *)> InsertedInstr);
   void stopRecordingInsertions();
   /// @}

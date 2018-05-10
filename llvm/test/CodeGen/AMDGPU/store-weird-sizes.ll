@@ -3,18 +3,28 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}local_store_i56:
-; GCN-DAG: ds_write_b8 v0, v{{[0-9]+}} offset:6
-; GCN-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4
-; GCN-DAG: ds_write_b32 v0, v{{[0-9]+$}}
+; CIVI-DAG: ds_write_b8 v0, v{{[0-9]+}} offset:6
+; CIVI-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4
+; CIVI-DAG: ds_write_b32 v0, v{{[0-9]+$}}
+
+; GFX9-DAG: ds_write_b8_d16_hi v0, v{{[0-9]+}} offset:6
+; GFX9-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4
+; GFX9-DAG: ds_write_b32 v0, v{{[0-9]+$}}
+
+
 define void @local_store_i56(i56 addrspace(3)* %ptr, i56 %arg) #0 {
   store i56 %arg, i56 addrspace(3)* %ptr, align 8
   ret void
 }
 
 ; GCN-LABEL: {{^}}local_store_i55:
-; GCN-DAG: ds_write_b8 v0, v{{[0-9]+}} offset:6
-; GCN-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4
-; GCN-DAG: ds_write_b32 v0, v{{[0-9]+$}}
+; CIVI-DAG: ds_write_b8 v0, v{{[0-9]+}} offset:6
+; CIVI-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4
+; CIVI-DAG: ds_write_b32 v0, v{{[0-9]+$}}
+
+; GFX9-DAG: ds_write_b8_d16_hi v0, v{{[0-9]+}} offset:6
+; GFX9-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4
+; GFX9-DAG: ds_write_b32 v0, v{{[0-9]+$}}
 define amdgpu_kernel void @local_store_i55(i55 addrspace(3)* %ptr, i55 %arg) #0 {
   store i55 %arg, i55 addrspace(3)* %ptr, align 8
   ret void

@@ -127,7 +127,7 @@ let isCodeGenOnly = 1 in {
   def MOVN_I64_I64 : CMov_I_I_FT<"movn", GPR64Opnd, GPR64Opnd, II_MOVN>,
                      ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6;
 }
-
+let AdditionalPredicates = [NotInMicroMips] in {
 def MOVZ_I_S : MMRel, CMov_I_F_FT<"movz.s", GPR32Opnd, FGR32Opnd, II_MOVZ_S>,
                CMov_I_F_FM<18, 16>, INSN_MIPS4_32_NOT_32R6_64R6;
 
@@ -148,7 +148,7 @@ def MOVZ_I_D32 : MMRel, CMov_I_F_FT<"movz.d", GPR32Opnd, AFGR64Opnd,
 def MOVN_I_D32 : MMRel, CMov_I_F_FT<"movn.d", GPR32Opnd, AFGR64Opnd,
                                     II_MOVN_D>, CMov_I_F_FM<19, 17>,
                  INSN_MIPS4_32_NOT_32R6_64R6, FGR_32;
-
+}
 let DecoderNamespace = "MipsFP64" in {
   def MOVZ_I_D64 : CMov_I_F_FT<"movz.d", GPR32Opnd, FGR64Opnd, II_MOVZ_D>,
                    CMov_I_F_FM<18, 17>, INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
@@ -175,7 +175,7 @@ def MOVF_I : MMRel, CMov_F_I_FT<"movf", GPR32Opnd, II_MOVF, MipsCMovFP_F>,
 let isCodeGenOnly = 1 in
 def MOVF_I64 : CMov_F_I_FT<"movf", GPR64Opnd, II_MOVF, MipsCMovFP_F>,
                CMov_F_I_FM<0>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
-
+let AdditionalPredicates = [NotInMicroMips] in {
 def MOVT_S : MMRel, CMov_F_F_FT<"movt.s", FGR32Opnd, II_MOVT_S, MipsCMovFP_T>,
              CMov_F_F_FM<16, 1>, INSN_MIPS4_32_NOT_32R6_64R6;
 def MOVF_S : MMRel, CMov_F_F_FT<"movf.s", FGR32Opnd, II_MOVF_S, MipsCMovFP_F>,
@@ -187,7 +187,7 @@ def MOVT_D32 : MMRel, CMov_F_F_FT<"movt.d", AFGR64Opnd, II_MOVT_D,
 def MOVF_D32 : MMRel, CMov_F_F_FT<"movf.d", AFGR64Opnd, II_MOVF_D,
                                   MipsCMovFP_F>, CMov_F_F_FM<17, 0>,
                INSN_MIPS4_32_NOT_32R6_64R6, FGR_32;
-
+}
 let DecoderNamespace = "MipsFP64" in {
   def MOVT_D64 : CMov_F_F_FT<"movt.d", FGR64Opnd, II_MOVT_D, MipsCMovFP_T>,
                  CMov_F_F_FM<17, 1>, INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;

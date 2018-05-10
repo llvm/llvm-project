@@ -15,6 +15,10 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_RETIRE_CONTROL_UNIT_H
 #define LLVM_TOOLS_LLVM_MCA_RETIRE_CONTROL_UNIT_H
 
+#include <algorithm>
+#include <vector>
+
+#include "Instruction.h"
 #include "llvm/MC/MCSchedule.h"
 
 namespace mca {

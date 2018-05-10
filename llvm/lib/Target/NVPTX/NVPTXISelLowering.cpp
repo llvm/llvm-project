@@ -1233,9 +1233,9 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
 SDValue
 NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
-  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
-  Op = DAG.getTargetGlobalAddress(GV, dl, PtrVT);
+  const GlobalAddressSDNode *GAN = cast<GlobalAddressSDNode>(Op);
+  auto PtrVT = getPointerTy(DAG.getDataLayout(), GAN->getAddressSpace());
+  Op = DAG.getTargetGlobalAddress(GAN->getGlobal(), dl, PtrVT);
   return DAG.getNode(NVPTXISD::Wrapper, dl, PtrVT, Op);
 }
 

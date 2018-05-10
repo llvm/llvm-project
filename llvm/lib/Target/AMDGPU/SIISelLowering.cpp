@@ -4201,21 +4201,6 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
 
-  if (const ConstantSDNode *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
-    SDValue Result = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Vec);
-
-    if (CIdx->getZExtValue() == 1) {
-      Result = DAG.getNode(ISD::SRL, SL, MVT::i32, Result,
-                           DAG.getConstant(16, SL, MVT::i32));
-    } else {
-      assert(CIdx->getZExtValue() == 0);
-    }
-
-    if (ResultVT.bitsLT(MVT::i32))
-      Result = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, Result);
-    return DAG.getNode(ISD::BITCAST, SL, ResultVT, Result);
-  }
-
   SDValue Four = DAG.getConstant(4, SL, MVT::i32);
 
   // Convert vector index to bit-index (* 16)
@@ -6620,7 +6605,7 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
   // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
   // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
-  if (Vec.hasOneUse()) {
+  if (Vec.hasOneUse() && DCI.isBeforeLegalize()) {
     SDLoc SL(N);
     EVT EltVT = N->getValueType(0);
     SDValue Idx = N->getOperand(1);
@@ -6632,6 +6617,12 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
       // TODO: Support other binary operations.
     case ISD::FADD:
     case ISD::ADD:
+    case ISD::UMIN:
+    case ISD::UMAX:
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::FMAXNUM:
+    case ISD::FMINNUM:
       return DAG.getNode(Opc, SL, EltVT,
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
                                      Vec.getOperand(0), Idx),

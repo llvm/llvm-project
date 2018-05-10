@@ -50,7 +50,7 @@ EmptyOld DIALOG 1, 2, 3, 4 {}
 ArgsOld DIALOG 1, 2, 3, 4 {
   LTEXT "L", 1, 2, 3, 4, 5
   LTEXT "L2", 6, 7, 8, 9, 10, 11
-  LTEXT "L3", 12, 13, 14, 15, 16, 17, 18
+  LTEXT "L3", -1, 13, 14, 15, 16, 17, 18
 
   EDITTEXT 19, 20, 21, 22, 23
   EDITTEXT 24, 25, 26, 27, 28, 29

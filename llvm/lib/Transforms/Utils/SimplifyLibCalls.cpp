@@ -1982,7 +1982,7 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI, IRBuilder<> &B) {
       else if (N < Str.size() + 1)
         return nullptr;
 
-      B.CreateMemCpy(CI->getArgOperand(0), 1, CI->getArgOperand(2), 1,
+      B.CreateMemCpy(CI->getArgOperand(0), 1, CI->getArgOperand(3), 1,
                      ConstantInt::get(CI->getType(), Str.size() + 1));
 
       // The snprintf result is the unincremented number of bytes in the string.

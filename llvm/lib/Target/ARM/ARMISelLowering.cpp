@@ -1066,7 +1066,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
   // Thumb-1 cannot currently select ARMISD::SUBE.
   if (!Subtarget->isThumb1Only())
-    setOperationAction(ISD::SETCCE, MVT::i32, Custom);
+    setOperationAction(ISD::SETCCCARRY, MVT::i32, Custom);
 
   setOperationAction(ISD::BRCOND,    MVT::Other, Custom);
   setOperationAction(ISD::BR_CC,     MVT::i32,   Custom);
@@ -5792,16 +5792,22 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
   return Result;
 }
 
-static SDValue LowerSETCCE(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   SDValue Carry = Op.getOperand(2);
   SDValue Cond = Op.getOperand(3);
   SDLoc DL(Op);
 
-  assert(LHS.getSimpleValueType().isInteger() && "SETCCE is integer only.");
+  assert(LHS.getSimpleValueType().isInteger() && "SETCCCARRY is integer only.");
 
-  assert(Carry.getOpcode() != ISD::CARRY_FALSE);
+  // ARMISD::SUBE expects a carry not a borrow like ISD::SUBCARRY so we
+  // have to invert the carry first.
+  Carry = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                      DAG.getConstant(1, DL, MVT::i32), Carry);
+  // This converts the boolean value carry into the carry flag.
+  Carry = ConvertBooleanCarryToCarryFlag(Carry, DAG);
+
   SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
   SDValue Cmp = DAG.getNode(ARMISD::SUBE, DL, VTs, LHS, RHS, Carry);
 
@@ -8126,7 +8132,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG);
-  case ISD::SETCCE:        return LowerSETCCE(Op, DAG);
+  case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
   case ISD::ConstantFP:    return LowerConstantFP(Op, DAG, Subtarget);
   case ISD::BUILD_VECTOR:  return LowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::VECTOR_SHUFFLE: return LowerVECTOR_SHUFFLE(Op, DAG);
@@ -10364,6 +10370,7 @@ static SDValue PerformAddcSubcCombine(SDNode *N,
       }
     }
   }
+
   return SDValue();
 }
 
