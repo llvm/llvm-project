@@ -8,7 +8,7 @@
 ; 128 function and so the final output requires a 2-byte LEB in
 ; the CODE section header to store the function count.
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define i32 @func() {
 entry:

@@ -13,7 +13,7 @@
 ; Succeeds even if a missing symbol is added via --export
 ; RUN: wasm-ld --allow-undefined --export=xxx -o %t.wasm %t.o
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; Takes the address of the external foo() resulting in undefined external
 @bar = hidden local_unnamed_addr global i8* bitcast (i32 ()* @foo to i8*), align 4

@@ -53,8 +53,7 @@ struct PlatformConnectOptions {
 //----------------------------------------------------------------------
 struct PlatformShellCommand {
   PlatformShellCommand(const char *shell_command = NULL)
-      : m_command(), m_working_dir(), m_status(0), m_signo(0),
-        m_timeout_sec(UINT32_MAX) {
+      : m_command(), m_working_dir(), m_status(0), m_signo(0) {
     if (shell_command && shell_command[0])
       m_command = shell_command;
   }
@@ -66,7 +65,7 @@ struct PlatformShellCommand {
   std::string m_output;
   int m_status;
   int m_signo;
-  uint32_t m_timeout_sec;
+  Timeout<std::ratio<1>> m_timeout = llvm::None;
 };
 //----------------------------------------------------------------------
 // SBPlatformConnectOptions
@@ -182,11 +181,16 @@ void SBPlatformShellCommand::SetWorkingDirectory(const char *path) {
 }
 
 uint32_t SBPlatformShellCommand::GetTimeoutSeconds() {
-  return m_opaque_ptr->m_timeout_sec;
+  if (m_opaque_ptr->m_timeout)
+    return m_opaque_ptr->m_timeout->count();
+  return UINT32_MAX;
 }
 
 void SBPlatformShellCommand::SetTimeoutSeconds(uint32_t sec) {
-  m_opaque_ptr->m_timeout_sec = sec;
+  if (sec == UINT32_MAX)
+    m_opaque_ptr->m_timeout = llvm::None;
+  else
+    m_opaque_ptr->m_timeout = std::chrono::seconds(sec);
 }
 
 int SBPlatformShellCommand::GetSignal() { return m_opaque_ptr->m_signo; }
@@ -405,12 +409,11 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
       if (working_dir)
         shell_command.SetWorkingDirectory(working_dir);
     }
-    return platform_sp->RunShellCommand(
-        command, FileSpec{working_dir, false},
-        &shell_command.m_opaque_ptr->m_status,
-        &shell_command.m_opaque_ptr->m_signo,
-        &shell_command.m_opaque_ptr->m_output,
-        shell_command.m_opaque_ptr->m_timeout_sec);
+    return platform_sp->RunShellCommand(command, FileSpec{working_dir, false},
+                                        &shell_command.m_opaque_ptr->m_status,
+                                        &shell_command.m_opaque_ptr->m_signo,
+                                        &shell_command.m_opaque_ptr->m_output,
+                                        shell_command.m_opaque_ptr->m_timeout);
   });
 }
 

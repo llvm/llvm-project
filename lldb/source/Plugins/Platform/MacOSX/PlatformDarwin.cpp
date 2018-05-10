@@ -1193,7 +1193,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
             Host::RunShellCommand("/usr/bin/xcode-select --print-path",
                                   NULL, // current working directory
                                   &exit_status, &signo, &command_output,
-                                  2,      // short timeout
+                                  std::chrono::seconds(2), // short timeout
                                   false); // don't run in a shell
         if (error.Success() && exit_status == 0 && !command_output.empty()) {
           const char *cmd_output_ptr = command_output.c_str();
@@ -1301,7 +1301,7 @@ static const char *const sdk_strings[] = {
 
 static FileSpec CheckPathForXcode(const FileSpec &fspec) {
   if (fspec.Exists()) {
-    const char substr[] = ".app/Contents/";
+    const char substr[] = ".app/Contents";
 
     std::string path_to_shlib = fspec.GetPath();
     size_t pos = path_to_shlib.rfind(substr);
@@ -1365,7 +1365,7 @@ static FileSpec GetXcodeContentsPath() {
             &signo,  // Put the signal that caused the process to exit in here
             &output, // Get the output from the command and place it in this
                      // string
-            3);      // Timeout in seconds to wait for shell program to finish
+            std::chrono::seconds(3));
         if (status == 0 && !output.empty()) {
           size_t first_non_newline = output.find_last_not_of("\r\n");
           if (first_non_newline != std::string::npos) {

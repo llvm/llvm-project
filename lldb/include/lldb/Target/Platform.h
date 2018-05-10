@@ -27,6 +27,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
@@ -676,8 +677,7 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
-      uint32_t timeout_sec); // Timeout in seconds to wait for shell program to
-                             // finish
+      const Timeout<std::micro> &timeout);
 
   virtual void SetLocalCacheDirectory(const char *local);
 

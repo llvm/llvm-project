@@ -571,8 +571,9 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
             &exit_status,    // Exit status
             &signo,          // Signal int *
             &command_output, // Command output
-            30,     // Large timeout to allow for long dsym download times
-            false); // Don't run in a shell (we don't need shell expansion)
+            std::chrono::seconds(
+                30), // Large timeout to allow for long dsym download times
+            false);  // Don't run in a shell (we don't need shell expansion)
         if (error.Success() && exit_status == 0 && !command_output.empty()) {
           CFCData data(CFDataCreateWithBytesNoCopy(
               NULL, (const UInt8 *)command_output.data(), command_output.size(),

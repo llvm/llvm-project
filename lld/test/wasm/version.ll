@@ -2,7 +2,7 @@
 ; RUN: wasm-ld -o %t.wasm %t.o
 ; RUN: llvm-readobj -file-headers %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define hidden void @_start() local_unnamed_addr #0 {
 entry:

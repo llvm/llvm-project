@@ -6,7 +6,7 @@
 ; Test that the strongly defined alias_fn from this file is used both here
 ; and in call_alias.
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define i32 @alias_fn() local_unnamed_addr #1 {
   ret i32 1

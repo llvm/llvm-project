@@ -5,7 +5,7 @@
 
 ; Test that weak aliases (alias_fn is a weak alias of direct_fn) are linked correctly
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare i32 @alias_fn() local_unnamed_addr #1
 
