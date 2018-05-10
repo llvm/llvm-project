@@ -6425,3 +6425,13 @@ let TargetPrefix = "x86" in {
   def int_x86_movdir64b : GCCBuiltin<"__builtin_ia32_movdir64b">,
       Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], []>;
 }
+
+//===----------------------------------------------------------------------===//
+// PTWrite - Write data to processor trace pocket
+
+let TargetPrefix = "x86" in {
+  def int_x86_ptwrite32 : GCCBuiltin<"__builtin_ia32_ptwrite32">,
+              Intrinsic<[], [llvm_i32_ty], []>;
+  def int_x86_ptwrite64 : GCCBuiltin<"__builtin_ia32_ptwrite64">,
+              Intrinsic<[], [llvm_i64_ty], []>;
+}

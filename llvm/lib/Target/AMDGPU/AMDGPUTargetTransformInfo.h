@@ -176,6 +176,9 @@ public:
   int getArithmeticReductionCost(unsigned Opcode,
                                  Type *Ty,
                                  bool IsPairwise);
+  int getMinMaxReductionCost(Type *Ty, Type *CondTy,
+                             bool IsPairwiseForm,
+                             bool IsUnsigned);
 };
 
 } // end namespace llvm

@@ -278,6 +278,12 @@ else()
   set(SANITIZER_LIMIT_FRAME_SIZE FALSE)
 endif()
 
+if(FUCHSIA OR UNIX)
+  set(SANITIZER_USE_SYMBOLS TRUE)
+else()
+  set(SANITIZER_USE_SYMBOLS FALSE)
+endif()
+
 # Build sanitizer runtimes with debug info.
 if(MSVC)
   # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099

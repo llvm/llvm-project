@@ -39,37 +39,37 @@ TEST(SanitizerCommon, SortTest) {
   for (uptr i = 0; i < n; i++) {
     array[i] = i;
   }
-  SortArray(array, n);
+  Sort(array, n);
   EXPECT_TRUE(IsSorted(array, n));
   // Reverse order.
   for (uptr i = 0; i < n; i++) {
     array[i] = n - 1 - i;
   }
-  SortArray(array, n);
+  Sort(array, n);
   EXPECT_TRUE(IsSorted(array, n));
   // Mixed order.
   for (uptr i = 0; i < n; i++) {
     array[i] = (i % 2 == 0) ? i : n - 1 - i;
   }
-  SortArray(array, n);
+  Sort(array, n);
   EXPECT_TRUE(IsSorted(array, n));
   // All equal.
   for (uptr i = 0; i < n; i++) {
     array[i] = 42;
   }
-  SortArray(array, n);
+  Sort(array, n);
   EXPECT_TRUE(IsSorted(array, n));
   // All but one sorted.
   for (uptr i = 0; i < n - 1; i++) {
     array[i] = i;
   }
   array[n - 1] = 42;
-  SortArray(array, n);
+  Sort(array, n);
   EXPECT_TRUE(IsSorted(array, n));
   // Minimal case - sort three elements.
   array[0] = 1;
   array[1] = 0;
-  SortArray(array, 2);
+  Sort(array, 2);
   EXPECT_TRUE(IsSorted(array, 2));
 }
 
@@ -86,6 +86,12 @@ TEST(SanitizerCommon, MmapAlignedOrDieOnFatalError) {
       }
     }
   }
+}
+
+TEST(SanitizerCommon, InternalMmapVectorRoundUpCapacity) {
+  InternalMmapVector<uptr> v;
+  v.reserve(1);
+  CHECK_EQ(v.capacity(), GetPageSizeCached() / sizeof(uptr));
 }
 
 TEST(SanitizerCommon, InternalMmapVectorReize) {

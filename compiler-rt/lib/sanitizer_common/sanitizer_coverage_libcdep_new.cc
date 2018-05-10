@@ -63,7 +63,7 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
   uptr* pcs = static_cast<uptr*>(InternalAlloc(len * sizeof(uptr)));
 
   internal_memcpy(pcs, unsorted_pcs, len * sizeof(uptr));
-  SortArray(pcs, len);
+  Sort(pcs, len);
 
   bool module_found = false;
   uptr last_base = 0;

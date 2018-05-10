@@ -6605,7 +6605,7 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
   // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
   // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
-  if (Vec.hasOneUse()) {
+  if (Vec.hasOneUse() && DCI.isBeforeLegalize()) {
     SDLoc SL(N);
     EVT EltVT = N->getValueType(0);
     SDValue Idx = N->getOperand(1);
@@ -6617,6 +6617,12 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
       // TODO: Support other binary operations.
     case ISD::FADD:
     case ISD::ADD:
+    case ISD::UMIN:
+    case ISD::UMAX:
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::FMAXNUM:
+    case ISD::FMINNUM:
       return DAG.getNode(Opc, SL, EltVT,
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
                                      Vec.getOperand(0), Idx),

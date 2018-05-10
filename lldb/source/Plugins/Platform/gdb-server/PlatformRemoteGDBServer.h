@@ -155,8 +155,7 @@ public:
                        // process to exit
       std::string
           *command_output, // Pass NULL if you don't want the command output
-      uint32_t timeout_sec)
-      override; // Timeout in seconds to wait for shell program to finish
+      const lldb_private::Timeout<std::micro> &timeout) override;
 
   void CalculateTrapHandlerSymbolNames() override;
 

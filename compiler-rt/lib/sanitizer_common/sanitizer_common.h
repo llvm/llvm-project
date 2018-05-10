@@ -243,8 +243,6 @@ void SleepForMillis(int millis);
 u64 NanoTime();
 u64 MonotonicNanoTime();
 int Atexit(void (*function)(void));
-void SortArray(uptr *array, uptr size);
-void SortArray(u32 *array, uptr size);
 bool TemplateMatch(const char *templ, const char *str);
 
 // Exit
@@ -430,13 +428,12 @@ template<typename T>
 class InternalMmapVectorNoCtor {
  public:
   void Initialize(uptr initial_capacity) {
-    capacity_ = Max(initial_capacity, (uptr)1);
+    capacity_bytes_ = 0;
     size_ = 0;
-    data_ = (T *)MmapOrDie(capacity_ * sizeof(T), "InternalMmapVectorNoCtor");
+    data_ = 0;
+    reserve(initial_capacity);
   }
-  void Destroy() {
-    UnmapOrDie(data_, capacity_ * sizeof(T));
-  }
+  void Destroy() { UnmapOrDie(data_, capacity_bytes_); }
   T &operator[](uptr i) {
     CHECK_LT(i, size_);
     return data_[i];
@@ -446,8 +443,8 @@ class InternalMmapVectorNoCtor {
     return data_[i];
   }
   void push_back(const T &element) {
-    CHECK_LE(size_, capacity_);
-    if (size_ == capacity_) {
+    CHECK_LE(size_, capacity());
+    if (size_ == capacity()) {
       uptr new_capacity = RoundUpToPowerOfTwo(size_ + 1);
       Realloc(new_capacity);
     }
@@ -470,9 +467,7 @@ class InternalMmapVectorNoCtor {
   T *data() {
     return data_;
   }
-  uptr capacity() const {
-    return capacity_;
-  }
+  uptr capacity() const { return capacity_bytes_ / sizeof(T); }
   void reserve(uptr new_size) {
     // Never downsize internal buffer.
     if (new_size > capacity())
@@ -504,7 +499,7 @@ class InternalMmapVectorNoCtor {
 
   void swap(InternalMmapVectorNoCtor &other) {
     Swap(data_, other.data_);
-    Swap(capacity_, other.capacity_);
+    Swap(capacity_bytes_, other.capacity_bytes_);
     Swap(size_, other.size_);
   }
 
@@ -512,17 +507,17 @@ class InternalMmapVectorNoCtor {
   void Realloc(uptr new_capacity) {
     CHECK_GT(new_capacity, 0);
     CHECK_LE(size_, new_capacity);
-    T *new_data = (T *)MmapOrDie(new_capacity * sizeof(T),
-                                 "InternalMmapVector");
+    uptr new_capacity_bytes =
+        RoundUpTo(new_capacity * sizeof(T), GetPageSizeCached());
+    T *new_data = (T *)MmapOrDie(new_capacity_bytes, "InternalMmapVector");
     internal_memcpy(new_data, data_, size_ * sizeof(T));
-    T *old_data = data_;
+    UnmapOrDie(data_, capacity_bytes_);
     data_ = new_data;
-    UnmapOrDie(old_data, capacity_ * sizeof(T));
-    capacity_ = new_capacity;
+    capacity_bytes_ = new_capacity_bytes;
   }
 
   T *data_;
-  uptr capacity_;
+  uptr capacity_bytes_;
   uptr size_;
 };
 
@@ -572,9 +567,14 @@ class InternalScopedString : public InternalMmapVector<char> {
   uptr length_;
 };
 
+template <class T>
+struct CompareLess {
+  bool operator()(const T &a, const T &b) const { return a < b; }
+};
+
 // HeapSort for arrays and InternalMmapVector.
-template<class Container, class Compare>
-void InternalSort(Container *v, uptr size, Compare comp) {
+template <class T, class Compare = CompareLess<T>>
+void Sort(T *v, uptr size, Compare comp = {}) {
   if (size < 2)
     return;
   // Stage 1: insert elements to the heap.
@@ -582,8 +582,8 @@ void InternalSort(Container *v, uptr size, Compare comp) {
     uptr j, p;
     for (j = i; j > 0; j = p) {
       p = (j - 1) / 2;
-      if (comp((*v)[p], (*v)[j]))
-        Swap((*v)[j], (*v)[p]);
+      if (comp(v[p], v[j]))
+        Swap(v[j], v[p]);
       else
         break;
     }
@@ -591,18 +591,18 @@ void InternalSort(Container *v, uptr size, Compare comp) {
   // Stage 2: swap largest element with the last one,
   // and sink the new top.
   for (uptr i = size - 1; i > 0; i--) {
-    Swap((*v)[0], (*v)[i]);
+    Swap(v[0], v[i]);
     uptr j, max_ind;
     for (j = 0; j < i; j = max_ind) {
       uptr left = 2 * j + 1;
       uptr right = 2 * j + 2;
       max_ind = j;
-      if (left < i && comp((*v)[max_ind], (*v)[left]))
+      if (left < i && comp(v[max_ind], v[left]))
         max_ind = left;
-      if (right < i && comp((*v)[max_ind], (*v)[right]))
+      if (right < i && comp(v[max_ind], v[right]))
         max_ind = right;
       if (max_ind != j)
-        Swap((*v)[j], (*v)[max_ind]);
+        Swap(v[j], v[max_ind]);
       else
         break;
     }

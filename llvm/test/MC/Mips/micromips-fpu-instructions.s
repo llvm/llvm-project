@@ -46,10 +46,13 @@
 # CHECK-EL: neg.s      $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x0b]
 # CHECK-EL: neg.d      $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x2b]
 # CHECK-EL: cvt.d.s    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x13]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} CVT_D32_S_MM
 # CHECK-EL: cvt.d.w    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x33]
-# CHECK-EL:                             # <MCInst #{{.*}} CVT_D32_W_MM
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} CVT_D32_W_MM
 # CHECK-EL: cvt.s.d    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x1b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} CVT_S_D32_MM
 # CHECK-EL: cvt.s.w    $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x3b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} CVT_S_W_MM
 # CHECK-EL: cfc1    $6, $0              # encoding: [0xc0,0x54,0x3b,0x10]
 # CHECK-EL: ctc1    $6, $0              # encoding: [0xc0,0x54,0x3b,0x18]
 # CHECK-EL: mfc1    $6, $f8             # encoding: [0xc8,0x54,0x3b,0x20]
@@ -120,10 +123,13 @@
 # CHECK-EB: neg.s $f6, $f8              # encoding: [0x54,0xc8,0x0b,0x7b]
 # CHECK-EB: neg.d $f6, $f8              # encoding: [0x54,0xc8,0x2b,0x7b]
 # CHECK-EB: cvt.d.s $f6, $f8            # encoding: [0x54,0xc8,0x13,0x7b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} CVT_D32_S_MM
 # CHECK-EB: cvt.d.w $f6, $f8            # encoding: [0x54,0xc8,0x33,0x7b]
-# CHECK-EB:                             # <MCInst #{{.*}} CVT_D32_W_MM
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} CVT_D32_W_MM
 # CHECK-EB: cvt.s.d $f6, $f8            # encoding: [0x54,0xc8,0x1b,0x7b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} CVT_S_D32_MM
 # CHECK-EB: cvt.s.w $f6, $f8            # encoding: [0x54,0xc8,0x3b,0x7b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} CVT_S_W_MM
 # CHECK-EB: cfc1    $6, $0              # encoding: [0x54,0xc0,0x10,0x3b]
 # CHECK-EB: ctc1    $6, $0              # encoding: [0x54,0xc0,0x18,0x3b]
 # CHECK-EB: mfc1    $6, $f8             # encoding: [0x54,0xc8,0x20,0x3b]

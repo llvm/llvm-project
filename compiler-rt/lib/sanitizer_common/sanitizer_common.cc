@@ -58,19 +58,6 @@ void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
 typedef bool UptrComparisonFunction(const uptr &a, const uptr &b);
 typedef bool U32ComparisonFunction(const u32 &a, const u32 &b);
 
-template<class T>
-static inline bool CompareLess(const T &a, const T &b) {
-  return a < b;
-}
-
-void SortArray(uptr *array, uptr size) {
-  InternalSort<uptr*, UptrComparisonFunction>(&array, size, CompareLess);
-}
-
-void SortArray(u32 *array, uptr size) {
-  InternalSort<u32*, U32ComparisonFunction>(&array, size, CompareLess);
-}
-
 const char *StripPathPrefix(const char *filepath,
                             const char *strip_path_prefix) {
   if (!filepath) return nullptr;

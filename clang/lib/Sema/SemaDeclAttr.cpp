@@ -6230,6 +6230,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_NoInstrumentFunction: // Interacts with -pg.
     handleSimpleAttribute<NoInstrumentFunctionAttr>(S, D, AL);
     break;
+  case AttributeList::AT_NoStackProtector:
+    // Interacts with -fstack-protector options.
+    handleSimpleAttribute<NoStackProtectorAttr>(S, D, AL);
+    break;
   case AttributeList::AT_StdCall:
   case AttributeList::AT_CDecl:
   case AttributeList::AT_FastCall:

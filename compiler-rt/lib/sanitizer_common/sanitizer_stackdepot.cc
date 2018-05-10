@@ -146,7 +146,7 @@ StackDepotReverseMap::StackDepotReverseMap() {
       map_.push_back(pair);
     }
   }
-  InternalSort(&map_, map_.size(), IdDescPair::IdComparator);
+  Sort(map_.data(), map_.size(), &IdDescPair::IdComparator);
 }
 
 StackTrace StackDepotReverseMap::Get(u32 id) {

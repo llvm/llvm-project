@@ -463,15 +463,17 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
 Status Host::RunShellCommand(const char *command, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
-                             uint32_t timeout_sec, bool run_in_default_shell) {
+                             const Timeout<std::micro> &timeout,
+                             bool run_in_default_shell) {
   return RunShellCommand(Args(command), working_dir, status_ptr, signo_ptr,
-                         command_output_ptr, timeout_sec, run_in_default_shell);
+                         command_output_ptr, timeout, run_in_default_shell);
 }
 
 Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
-                             uint32_t timeout_sec, bool run_in_default_shell) {
+                             const Timeout<std::micro> &timeout,
+                             bool run_in_default_shell) {
   Status error;
   ProcessLaunchInfo launch_info;
   launch_info.SetArchitecture(HostInfo::GetArchitecture());
@@ -536,10 +538,6 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     error.SetErrorString("failed to get process ID");
 
   if (error.Success()) {
-    // TODO: Remove this and make the function take Timeout<> argument.
-    Timeout<std::micro> timeout(llvm::None);
-    if (timeout_sec != 0)
-      timeout = std::chrono::seconds(timeout_sec);
     if (!shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout)) {
       error.SetErrorString("timed out waiting for shell command to complete");
 

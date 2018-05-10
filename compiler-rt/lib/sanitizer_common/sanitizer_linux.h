@@ -74,12 +74,19 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 // This class reads thread IDs from /proc/<pid>/task using only syscalls.
 class ThreadLister {
  public:
-  explicit ThreadLister(int pid);
+  explicit ThreadLister(pid_t pid);
   ~ThreadLister();
-  bool ListThreads(InternalMmapVector<int> *threads);
+  enum Result {
+    Error,
+    Incomplete,
+    Ok,
+  };
+  Result ListThreads(InternalMmapVector<tid_t> *threads);
 
  private:
-  int pid_;
+  bool IsAlive(int tid);
+
+  pid_t pid_;
   int descriptor_ = -1;
   InternalMmapVector<char> buffer_;
 };
