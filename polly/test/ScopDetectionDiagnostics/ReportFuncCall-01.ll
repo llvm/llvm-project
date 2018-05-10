@@ -48,7 +48,7 @@ declare double @invalidCall(double*) #1
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: 2, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "ReportFuncCall.c", directory: "/home/simbuerg/Projekte/llvm/tools/polly/test/ScopDetectionDiagnostics")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "a", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "a", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "ReportFuncCall.c", directory: "/home/simbuerg/Projekte/llvm/tools/polly/test/ScopDetectionDiagnostics")
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 4}

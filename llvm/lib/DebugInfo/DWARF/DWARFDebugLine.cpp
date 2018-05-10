@@ -273,10 +273,24 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
   return true;
 }
 
-bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
-                                     uint32_t *OffsetPtr,
-                                     const DWARFContext &Ctx,
-                                     const DWARFUnit *U) {
+template <typename... Ts>
+static std::string formatErrorString(char const *Fmt, const Ts &... Vals) {
+  std::string Buffer;
+  raw_string_ostream Stream(Buffer);
+  Stream << format(Fmt, Vals...);
+  return Stream.str();
+}
+
+template <typename... Ts>
+static Error createError(char const *Fmt, const Ts &... Vals) {
+  return make_error<StringError>(formatErrorString(Fmt, Vals...),
+                                 inconvertibleErrorCode());
+}
+
+Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
+                                      uint32_t *OffsetPtr,
+                                      const DWARFContext &Ctx,
+                                      const DWARFUnit *U) {
   const uint64_t PrologueOffset = *OffsetPtr;
 
   clear();
@@ -285,11 +299,16 @@ bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
     FormParams.Format = dwarf::DWARF64;
     TotalLength = DebugLineData.getU64(OffsetPtr);
   } else if (TotalLength >= 0xffffff00) {
-    return false;
+    return createError(
+        "parsing line table prologue at offset 0x%8.8" PRIx64
+        " unsupported reserved unit length found of value 0x%8.8" PRIx64,
+        PrologueOffset, TotalLength);
   }
   FormParams.Version = DebugLineData.getU16(OffsetPtr);
   if (getVersion() < 2)
-    return false;
+    return createError("parsing line table prologue at offset 0x%8.8" PRIx64
+                       " found unsupported version 0x%2.2" PRIx16,
+                       PrologueOffset, getVersion());
 
   if (getVersion() >= 5) {
     FormParams.AddrSize = DebugLineData.getU8(OffsetPtr);
@@ -319,26 +338,22 @@ bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
     if (!parseV5DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
                               FormParams, Ctx, U, ContentTypes,
                               IncludeDirectories, FileNames)) {
-      WithColor::warning() << format(
+      return createError(
           "parsing line table prologue at 0x%8.8" PRIx64
           " found an invalid directory or file table description at"
-          " 0x%8.8" PRIx64 "\n",
+          " 0x%8.8" PRIx64,
           PrologueOffset, (uint64_t)*OffsetPtr);
-      return false;
     }
   } else
     parseV2DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
                          ContentTypes, IncludeDirectories, FileNames);
 
-  if (*OffsetPtr != EndPrologueOffset) {
-    WithColor::warning() << format(
-        "parsing line table prologue at 0x%8.8" PRIx64
-        " should have ended at 0x%8.8" PRIx64 " but it ended at 0x%8.8" PRIx64
-        "\n",
-        PrologueOffset, EndPrologueOffset, (uint64_t)*OffsetPtr);
-    return false;
-  }
-  return true;
+  if (*OffsetPtr != EndPrologueOffset)
+    return createError("parsing line table prologue at 0x%8.8" PRIx64
+                       " should have ended at 0x%8.8" PRIx64
+                       " but it ended at 0x%8.8" PRIx64,
+                       PrologueOffset, EndPrologueOffset, (uint64_t)*OffsetPtr);
+  return Error::success();
 }
 
 DWARFDebugLine::Row::Row(bool DefaultIsStmt) { reset(DefaultIsStmt); }
@@ -447,36 +462,34 @@ DWARFDebugLine::getLineTable(uint32_t Offset) const {
   return nullptr;
 }
 
-const DWARFDebugLine::LineTable *
-DWARFDebugLine::getOrParseLineTable(DWARFDataExtractor &DebugLineData,
-                                    uint32_t Offset, const DWARFContext &Ctx,
-                                    const DWARFUnit *U) {
+Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
+    DWARFDataExtractor &DebugLineData, uint32_t Offset, const DWARFContext &Ctx,
+    const DWARFUnit *U, std::function<void(StringRef)> WarnCallback) {
   if (!DebugLineData.isValidOffset(Offset))
-    return nullptr;
+    return createError("offset 0x%8.8" PRIx32
+                       " is not a valid debug line section offset",
+                       Offset);
 
   std::pair<LineTableIter, bool> Pos =
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
   LineTable *LT = &Pos.first->second;
   if (Pos.second) {
-    if (!LT->parse(DebugLineData, &Offset, Ctx, U))
-      return nullptr;
+    if (Error Err = LT->parse(DebugLineData, &Offset, Ctx, U, WarnCallback))
+      return std::move(Err);
+    return LT;
   }
   return LT;
 }
 
-bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
-                                      uint32_t *OffsetPtr,
-                                      const DWARFContext &Ctx,
-                                      const DWARFUnit *U, raw_ostream *OS) {
+Error DWARFDebugLine::LineTable::parse(
+    DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+    const DWARFContext &Ctx, const DWARFUnit *U,
+    std::function<void(StringRef)> WarnCallback, raw_ostream *OS) {
   const uint32_t DebugLineOffset = *OffsetPtr;
 
   clear();
 
-  if (!Prologue.parse(DebugLineData, OffsetPtr, Ctx, U)) {
-    // Restore our offset and return false to indicate failure!
-    *OffsetPtr = DebugLineOffset;
-    return false;
-  }
+  Error PrologueErr = Prologue.parse(DebugLineData, OffsetPtr, Ctx, U);
 
   if (OS) {
     // The presence of OS signals verbose dumping.
@@ -484,6 +497,9 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
     DumpOptions.Verbose = true;
     Prologue.dump(*OS, DumpOptions);
   }
+
+  if (PrologueErr)
+    return PrologueErr;
 
   const uint32_t EndOffset =
       DebugLineOffset + Prologue.TotalLength + Prologue.sizeofTotalLength();
@@ -554,13 +570,10 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
         if (DebugLineData.getAddressSize() == 0)
           DebugLineData.setAddressSize(Len - 1);
         else if (DebugLineData.getAddressSize() != Len - 1) {
-          WithColor::warning()
-              << format("mismatching address size at offset 0x%8.8" PRIx32
-                        " expected 0x%2.2" PRIx8 " found 0x%2.2" PRIx64 "\n",
-                        ExtOffset, DebugLineData.getAddressSize(), Len - 1);
-          // Skip the rest of the line-number program.
-          *OffsetPtr = EndOffset;
-          return false;
+          return createError("mismatching address size at offset 0x%8.8" PRIx32
+                             " expected 0x%2.2" PRIx8 " found 0x%2.2" PRIx64,
+                             ExtOffset, DebugLineData.getAddressSize(),
+                             Len - 1);
         }
         State.Row.Address = DebugLineData.getRelocatedAddress(OffsetPtr);
         if (OS)
@@ -621,15 +634,10 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
       }
       // Make sure the stated and parsed lengths are the same.
       // Otherwise we have an unparseable line-number program.
-      if (*OffsetPtr - ExtOffset != Len) {
-        WithColor::warning()
-            << format("unexpected line op length at offset 0x%8.8" PRIx32
-                      " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx32 "\n",
-                      ExtOffset, Len, *OffsetPtr - ExtOffset);
-        // Skip the rest of the line-number program.
-        *OffsetPtr = EndOffset;
-        return false;
-      }
+      if (*OffsetPtr - ExtOffset != Len)
+        return createError("unexpected line op length at offset 0x%8.8" PRIx32
+                           " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx32,
+                           ExtOffset, Len, *OffsetPtr - ExtOffset);
     } else if (Opcode < Prologue.OpcodeBase) {
       if (OS)
         *OS << LNStandardString(Opcode);
@@ -833,8 +841,7 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
   }
 
   if (!State.Sequence.Empty)
-    WithColor::warning() << "last sequence in debug line table is not"
-                            "terminated!\n";
+    WarnCallback("last sequence in debug line table is not terminated!");
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
@@ -847,7 +854,7 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
     // rudimentary sequences for address ranges [0x0, 0xsomething).
   }
 
-  return EndOffset;
+  return Error::success();
 }
 
 uint32_t
@@ -1026,4 +1033,97 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
   Result.Discriminator = Row.Discriminator;
   Result.Source = getSourceByIndex(Row.File, Kind);
   return true;
+}
+
+// We want to supply the Unit associated with a .debug_line[.dwo] table when
+// we dump it, if possible, but still dump the table even if there isn't a Unit.
+// Therefore, collect up handles on all the Units that point into the
+// line-table section.
+static DWARFDebugLine::SectionParser::LineToUnitMap
+buildLineToUnitMap(DWARFDebugLine::SectionParser::cu_range CUs,
+                   DWARFDebugLine::SectionParser::tu_range TUSections) {
+  DWARFDebugLine::SectionParser::LineToUnitMap LineToUnit;
+  for (const auto &CU : CUs)
+    if (auto CUDIE = CU->getUnitDIE())
+      if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list)))
+        LineToUnit.insert(std::make_pair(*StmtOffset, &*CU));
+  for (const auto &TUS : TUSections)
+    for (const auto &TU : TUS)
+      if (auto TUDIE = TU->getUnitDIE())
+        if (auto StmtOffset = toSectionOffset(TUDIE.find(DW_AT_stmt_list)))
+          LineToUnit.insert(std::make_pair(*StmtOffset, &*TU));
+  return LineToUnit;
+}
+
+DWARFDebugLine::SectionParser::SectionParser(DWARFDataExtractor &Data,
+                                             const DWARFContext &C,
+                                             cu_range CUs, tu_range TUs)
+    : DebugLineData(Data), Context(C) {
+  LineToUnit = buildLineToUnitMap(CUs, TUs);
+  if (!DebugLineData.isValidOffset(Offset))
+    Done = true;
+}
+
+bool DWARFDebugLine::Prologue::totalLengthIsValid() const {
+  return TotalLength == 0xffffffff || TotalLength < 0xffffff00;
+}
+
+DWARFDebugLine::LineTable DWARFDebugLine::SectionParser::parseNext(
+    function_ref<void(StringRef)> StringCallback,
+    function_ref<void(Error)> ErrorCallback, raw_ostream *OS) {
+  assert(DebugLineData.isValidOffset(Offset) &&
+         "parsing should have terminated");
+  DWARFUnit *U = prepareToParse(Offset);
+  uint32_t OldOffset = Offset;
+  LineTable LT;
+  Error Err = LT.parse(DebugLineData, &Offset, Context, U, StringCallback, OS);
+  ErrorCallback(std::move(Err));
+  moveToNextTable(OldOffset, LT.Prologue);
+  return LT;
+}
+
+void DWARFDebugLine::SectionParser::skip(
+    function_ref<void(Error)> ErrorCallback) {
+  assert(DebugLineData.isValidOffset(Offset) &&
+         "parsing should have terminated");
+  DWARFUnit *U = prepareToParse(Offset);
+  uint32_t OldOffset = Offset;
+  LineTable LT;
+  Error Err = LT.Prologue.parse(DebugLineData, &Offset, Context, U);
+  ErrorCallback(std::move(Err));
+  moveToNextTable(OldOffset, LT.Prologue);
+}
+
+DWARFUnit *DWARFDebugLine::SectionParser::prepareToParse(uint32_t Offset) {
+  DWARFUnit *U = nullptr;
+  auto It = LineToUnit.find(Offset);
+  if (It != LineToUnit.end())
+    U = It->second;
+  DebugLineData.setAddressSize(U ? U->getAddressByteSize() : 0);
+  return U;
+}
+
+void DWARFDebugLine::SectionParser::moveToNextTable(uint32_t OldOffset,
+                                                    const Prologue &P) {
+  // If the length field is not valid, we don't know where the next table is, so
+  // cannot continue to parse. Mark the parser as done, and leave the Offset
+  // value as it currently is. This will be the end of the bad length field.
+  if (!P.totalLengthIsValid()) {
+    Done = true;
+    return;
+  }
+
+  Offset = OldOffset + P.TotalLength + P.sizeofTotalLength();
+  if (!DebugLineData.isValidOffset(Offset)) {
+    Done = true;
+  }
+}
+
+void DWARFDebugLine::warn(StringRef Message) {
+  WithColor::warning() << Message << '\n';
+}
+
+void DWARFDebugLine::warnForError(Error Err) {
+  handleAllErrors(std::move(Err),
+                  [](ErrorInfoBase &Info) { warn(Info.message()); });
 }
