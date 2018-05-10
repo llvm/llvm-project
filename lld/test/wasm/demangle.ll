@@ -9,7 +9,7 @@
 
 ; CHECK-NODEMANGLE: error: undefined symbol: _Z3fooi
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define hidden void @_start() local_unnamed_addr {
 entry:

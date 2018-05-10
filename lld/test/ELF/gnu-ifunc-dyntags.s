@@ -8,7 +8,7 @@
 ## when there are no other relocations except R_*_IRELATIVE.
 
 # CHECK:  Name          Size      Address
-# CHECK:  .rela.plt   00000030 0000000000000210
+# CHECK:  .rela.plt   00000030 0000000000000218
 # CHECK:  .got.plt    00000010 0000000000002000
 
 # TAGS:      Relocations [
@@ -19,7 +19,7 @@
 # TAGS-NEXT: ]
 
 # TAGS:   Tag                Type                 Name/Value
-# TAGS:   0x0000000000000017 JMPREL               0x210
+# TAGS:   0x0000000000000017 JMPREL               0x218
 # TAGS:   0x0000000000000002 PLTRELSZ             48
 # TAGS:   0x0000000000000003 PLTGOT               0x2000
 # TAGS:   0x0000000000000014 PLTREL               RELA

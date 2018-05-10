@@ -111,19 +111,18 @@ static void handleColorDiagnostics(opt::InputArgList &Args) {
                               OPT_no_color_diagnostics);
   if (!Arg)
     return;
-
-  if (Arg->getOption().getID() == OPT_color_diagnostics)
+  if (Arg->getOption().getID() == OPT_color_diagnostics) {
     errorHandler().ColorDiagnostics = true;
-  else if (Arg->getOption().getID() == OPT_no_color_diagnostics)
+  } else if (Arg->getOption().getID() == OPT_no_color_diagnostics) {
     errorHandler().ColorDiagnostics = false;
-  else {
+  } else {
     StringRef S = Arg->getValue();
     if (S == "always")
       errorHandler().ColorDiagnostics = true;
-    if (S == "never")
+    else if (S == "never")
       errorHandler().ColorDiagnostics = false;
-    if (S != "auto")
-      error("unknown option: -color-diagnostics=" + S);
+    else if (S != "auto")
+      error("unknown option: --color-diagnostics=" + S);
   }
 }
 
@@ -293,6 +292,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->GcSections =
       Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !Config->Relocatable);
+  Config->MergeDataSegments =
+      Args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
+                   !Config->Relocatable);
   Config->PrintGcSections =
       Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   Config->SearchPaths = args::getStrings(Args, OPT_L);

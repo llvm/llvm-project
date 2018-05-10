@@ -3,7 +3,7 @@
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld -o %t.wasm %t.o %t.strong.o %t.weak.o 2>&1 | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare i32 @weakFn() local_unnamed_addr
 

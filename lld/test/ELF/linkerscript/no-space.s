@@ -1,11 +1,11 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
-# RUN: echo "SECTIONS {foo 0 : {*(foo*)} }" > %t.script
+# RUN: echo "SECTIONS {foo 0 : {*(foo*)} .dynsym : {*(.dynsym)} .dynstr : {*(.dynstr)} }" > %t.script
 # RUN: ld.lld --hash-style=sysv -o %t --script %t.script %t.o -shared
 # RUN: llvm-readobj -elf-output-style=GNU -l %t | FileCheck %s
 
-# RUN: echo "SECTIONS {foo : {*(foo*)} }" > %t.script
+# RUN: echo "SECTIONS {foo : {*(foo*)} .dynsym : { *(.dynsym) } .dynstr : { *(.dynstr) } }" > %t.script
 # RUN: ld.lld --hash-style=sysv -o %t --script %t.script %t.o -shared
 # RUN: llvm-readobj -elf-output-style=GNU -l %t | FileCheck %s
 
@@ -18,7 +18,7 @@
 
 # CHECK:      Section to Segment mapping:
 # CHECK-NEXT:  Segment Sections...
-# CHECK-NEXT:   00     foo .text .dynsym .hash .dynstr
+# CHECK-NEXT:   00     foo .text .hash .dynsym .dynstr
 
 .section foo, "a"
 .quad 0
