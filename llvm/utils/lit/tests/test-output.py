@@ -12,8 +12,8 @@
 # CHECK-NEXT:       "value0": 1,
 # CHECK-NEXT:       "value1": 2.3456
 # CHECK-NEXT:     }
-# CHECK-NEXT:     "name": "test-data :: metrics.ini",
-# CHECK-NEXT:     "output": "Test passed."
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
+# CHECK:     "name": "test-data :: bad&name.ini",
+# CHECK:     "output": "& < > \""
+
+# CHECK: ]
 # CHECK-NEXT: }

@@ -50,8 +50,7 @@ struct ModuleDependencyPPCallbacks : public PPCallbacks {
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override {
+                          const Module *Imported) override {
     if (!File)
       return;
     Collector.addFile(File->getName());

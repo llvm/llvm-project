@@ -15,14 +15,15 @@
 #include "lsan_common.h"
 
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
+#include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_suppressions.h"
-#include "sanitizer_common/sanitizer_report_decorator.h"
+#include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 #if CAN_SANITIZE_LEAKS
@@ -526,11 +527,36 @@ struct CheckForLeaksParam {
   LeakReport leak_report;
 };
 
+static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
+  const InternalMmapVector<tid_t> &suspended_threads =
+      *(const InternalMmapVector<tid_t> *)arg;
+  if (tctx->status == ThreadStatusRunning) {
+    uptr i = InternalLowerBound(suspended_threads, 0, suspended_threads.size(),
+                                tctx->os_id, CompareLess<int>());
+    if (i >= suspended_threads.size() || suspended_threads[i] != tctx->os_id)
+      Report("Running thread %d was not suspended. False leaks are possible.\n",
+             tctx->os_id);
+  };
+}
+
+static void ReportUnsuspendedThreads(
+    const SuspendedThreadsList &suspended_threads) {
+  InternalMmapVector<tid_t> threads(suspended_threads.ThreadCount());
+  for (uptr i = 0; i < suspended_threads.ThreadCount(); ++i)
+    threads[i] = suspended_threads.GetThreadID(i);
+
+  Sort(threads.data(), threads.size());
+
+  GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+      &ReportIfNotSuspended, &threads);
+}
+
 static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
                                   void *arg) {
   CheckForLeaksParam *param = reinterpret_cast<CheckForLeaksParam *>(arg);
   CHECK(param);
   CHECK(!param->success);
+  ReportUnsuspendedThreads(suspended_threads);
   ClassifyAllChunks(suspended_threads);
   ForEachChunk(CollectLeaksCb, &param->leak_report);
   // Clean up for subsequent leak checks. This assumes we did not overwrite any

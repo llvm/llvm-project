@@ -131,8 +131,7 @@ public:
                           clang::CharSourceRange FilenameRange,
                           const clang::FileEntry * /*File*/,
                           StringRef SearchPath, StringRef /*RelativePath*/,
-                          const clang::Module * /*Imported*/,
-                          SrcMgr::CharacteristicKind /*FileType*/) override {
+                          const clang::Module * /*Imported*/) override {
     if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc)))
       MoveTool->addIncludes(FileName, IsAngled, SearchPath,
                             FileEntry->getName(), FilenameRange, SM);

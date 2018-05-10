@@ -621,7 +621,6 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_SUB:
-  case TargetOpcode::G_SHL:
     // Perform operation at larger width (any extension is fine here, high bits
     // don't affect the result) and then truncate the result back to the
     // original type.
@@ -631,11 +630,28 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MIRBuilder.recordInsertion(&MI);
     return Legalized;
 
+  case TargetOpcode::G_SHL:
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    // The "number of bits to shift" operand must preserve its value as an
+    // unsigned integer:
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
+
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_SREM:
-  case TargetOpcode::G_ASHR:
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
+    widenScalarDst(MI, WideTy);
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
+
+  case TargetOpcode::G_ASHR:
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+    // The "number of bits to shift" operand must preserve its value as an
+    // unsigned integer:
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
     widenScalarDst(MI, WideTy);
     MIRBuilder.recordInsertion(&MI);
     return Legalized;

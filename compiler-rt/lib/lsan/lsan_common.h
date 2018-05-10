@@ -47,6 +47,7 @@
 
 namespace __sanitizer {
 class FlagParser;
+class ThreadRegistry;
 struct DTLS;
 }
 
@@ -204,6 +205,7 @@ bool WordIsPoisoned(uptr addr);
 // Wrappers for ThreadRegistry access.
 void LockThreadRegistry();
 void UnlockThreadRegistry();
+ThreadRegistry *GetThreadRegistryLocked();
 bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls);

@@ -211,7 +211,7 @@ bool ThreadSuspender::SuspendAllThreads() {
   ThreadLister thread_lister(pid_);
   bool added_threads;
   bool first_iteration = true;
-  InternalMmapVector<int> threads;
+  InternalMmapVector<tid_t> threads;
   threads.reserve(128);
   do {
     // Run through the directory entries once.
@@ -220,7 +220,7 @@ bool ThreadSuspender::SuspendAllThreads() {
       ResumeAllThreads();
       return false;
     }
-    for (int tid : threads)
+    for (tid_t tid : threads)
       if (SuspendThread(tid))
         added_threads = true;
     if (first_iteration && !added_threads) {

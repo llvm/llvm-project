@@ -139,7 +139,7 @@ void PPCallbacksTracker::InclusionDirective(
     llvm::StringRef FileName, bool IsAngled,
     clang::CharSourceRange FilenameRange, const clang::FileEntry *File,
     llvm::StringRef SearchPath, llvm::StringRef RelativePath,
-    const clang::Module *Imported, clang::SrcMgr::CharacteristicKind FileType) {
+    const clang::Module *Imported) {
   beginCallback("InclusionDirective");
   appendArgument("IncludeTok", IncludeTok);
   appendFilePathArgument("FileName", FileName);

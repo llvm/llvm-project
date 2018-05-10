@@ -131,7 +131,7 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
     DEFS ${ASAN_DYNAMIC_DEFINITIONS}
     PARENT_TARGET hwasan)
 
-  if(UNIX)
+  if(SANITIZER_USE_SYMBOLS)
     add_sanitizer_rt_symbols(clang_rt.hwasan
       ARCHS ${arch}
       EXTRA hwasan.syms.extra)

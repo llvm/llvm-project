@@ -130,8 +130,7 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override;
+                          const Module *Imported) override;
   void Ident(SourceLocation Loc, StringRef str) override;
   void PragmaMessage(SourceLocation Loc, StringRef Namespace,
                      PragmaMessageKind Kind, StringRef Str) override;
@@ -321,17 +320,15 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
   }
 }
 
-void PrintPPOutputPPCallbacks::InclusionDirective(
-    SourceLocation HashLoc,
-    const Token &IncludeTok,
-    StringRef FileName,
-    bool IsAngled,
-    CharSourceRange FilenameRange,
-    const FileEntry *File,
-    StringRef SearchPath,
-    StringRef RelativePath,
-    const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
+                                                  const Token &IncludeTok,
+                                                  StringRef FileName,
+                                                  bool IsAngled,
+                                                  CharSourceRange FilenameRange,
+                                                  const FileEntry *File,
+                                                  StringRef SearchPath,
+                                                  StringRef RelativePath,
+                                                  const Module *Imported) {
   // In -dI mode, dump #include directives prior to dumping their content or
   // interpretation.
   if (DumpIncludeDirectives) {
