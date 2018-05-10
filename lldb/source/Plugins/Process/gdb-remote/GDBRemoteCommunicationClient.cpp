@@ -2796,13 +2796,16 @@ lldb_private::Status GDBRemoteCommunicationClient::RunShellCommand(
                      // process to exit
     std::string
         *command_output, // Pass NULL if you don't want the command output
-    uint32_t
-        timeout_sec) // Timeout in seconds to wait for shell program to finish
-{
+    const Timeout<std::micro> &timeout) {
   lldb_private::StreamString stream;
   stream.PutCString("qPlatform_shell:");
   stream.PutBytesAsRawHex8(command, strlen(command));
   stream.PutChar(',');
+  uint32_t timeout_sec = UINT32_MAX;
+  if (timeout) {
+    // TODO: Use chrono version of std::ceil once c++17 is available.
+    timeout_sec = std::ceil(std::chrono::duration<double>(*timeout).count());
+  }
   stream.PutHex32(timeout_sec);
   if (working_dir) {
     std::string path{working_dir.GetPath(false)};

@@ -1692,7 +1692,7 @@ class CommandObjectPlatformShell : public CommandObjectRaw {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), timeout(10) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -1708,11 +1708,13 @@ public:
 
       switch (short_option) {
       case 't':
-        timeout = 10;
-        if (option_arg.getAsInteger(10, timeout))
+        uint32_t timeout_sec;
+        if (option_arg.getAsInteger(10, timeout_sec))
           error.SetErrorStringWithFormat(
               "could not convert \"%s\" to a numeric value.",
               option_arg.str().c_str());
+        else
+          timeout = std::chrono::seconds(timeout_sec);
         break;
       default:
         error.SetErrorStringWithFormat("invalid short option character '%c'",
@@ -1725,7 +1727,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {}
 
-    uint32_t timeout;
+    Timeout<std::micro> timeout = std::chrono::seconds(10);
   };
 
   CommandObjectPlatformShell(CommandInterpreter &interpreter)

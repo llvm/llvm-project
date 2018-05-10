@@ -404,8 +404,7 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
-      uint32_t timeout_sec); // Timeout in seconds to wait for shell program to
-                             // finish
+      const Timeout<std::micro> &timeout);
 
   bool CalculateMD5(const FileSpec &file_spec, uint64_t &high, uint64_t &low);
 

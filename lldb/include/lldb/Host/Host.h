@@ -14,6 +14,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
 #include <cerrno>
@@ -219,8 +220,7 @@ public:
                        // process to exit
       std::string
           *command_output, // Pass NULL if you don't want the command output
-      uint32_t timeout_sec,
-      bool run_in_default_shell = true);
+      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
 
   static Status RunShellCommand(
       const Args &args,
@@ -231,8 +231,7 @@ public:
                        // process to exit
       std::string
           *command_output, // Pass NULL if you don't want the command output
-      uint32_t timeout_sec,
-      bool run_in_default_shell = true);
+      const Timeout<std::micro> &timeout, bool run_in_default_shell = true);
 
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);
