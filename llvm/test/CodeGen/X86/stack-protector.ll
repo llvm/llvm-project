@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -o - | FileCheck --check-prefix=DARWIN-X64 %s
 ; RUN: llc -mtriple=amd64-pc-openbsd < %s -o - | FileCheck --check-prefix=OPENBSD-AMD64 %s
 ; RUN: llc -mtriple=i386-pc-windows-msvc < %s -o - | FileCheck -check-prefix=MSVC-I386 %s
-; RUN: llc -mtriple=x86_64-w64-mingw32 < %s -o - | FileCheck --check-prefix=MINGW-X64 %s
 
 %struct.foo = type { [16 x i8] }
 %struct.foo.0 = type { [4 x i8] }
@@ -46,11 +45,6 @@ entry:
 ; MSVC-I386-LABEL: test1a:
 ; MSVC-I386-NOT: calll  @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test1a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [16 x i8], align 16
   store i8* %a, i8** %a.addr, align 8
@@ -91,11 +85,6 @@ entry:
 ; MSVC-I386-LABEL: test1b:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test1b:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [16 x i8], align 16
   store i8* %a, i8** %a.addr, align 8
@@ -132,11 +121,6 @@ entry:
 ; MSVC-I386-LABEL: test1c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test1c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [16 x i8], align 16
   store i8* %a, i8** %a.addr, align 8
@@ -173,11 +157,6 @@ entry:
 ; MSVC-I386-LABEL: test1d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test1d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [16 x i8], align 16
   store i8* %a, i8** %a.addr, align 8
@@ -213,11 +192,6 @@ entry:
 ; MSVC-I386-LABEL: test2a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test2a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -252,11 +226,6 @@ entry:
 ; DARWIN-X64-LABEL: test2b:
 ; DARWIN-X64: mov{{l|q}} ___stack_chk_guard
 ; DARWIN-X64: callq ___stack_chk_fail
-
-; MINGW-X64-LABEL: test2b:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -295,11 +264,6 @@ entry:
 ; MSVC-I386-LABEL: test2c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test2c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -338,11 +302,6 @@ entry:
 ; MSVC-I386-LABEL: test2d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test2d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -380,11 +339,6 @@ entry:
 ; MSVC-I386-LABEL: test3a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test3a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [4 x i8], align 1
   store i8* %a, i8** %a.addr, align 8
@@ -421,11 +375,6 @@ entry:
 ; MSVC-I386-LABEL: test3b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test3b:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [4 x i8], align 1
   store i8* %a, i8** %a.addr, align 8
@@ -462,11 +411,6 @@ entry:
 ; MSVC-I386-LABEL: test3c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test3c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [4 x i8], align 1
   store i8* %a, i8** %a.addr, align 8
@@ -503,11 +447,6 @@ entry:
 ; MSVC-I386-LABEL: test3d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test3d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %buf = alloca [4 x i8], align 1
   store i8* %a, i8** %a.addr, align 8
@@ -543,11 +482,6 @@ entry:
 ; MSVC-I386-LABEL: test4a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test4a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo.0, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -586,11 +520,6 @@ entry:
 ; MSVC-I386-LABEL: test4b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test4b:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo.0, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -629,11 +558,6 @@ entry:
 ; MSVC-I386-LABEL: test4c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test4c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo.0, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -672,11 +596,6 @@ entry:
 ; MSVC-I386-LABEL: test4d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test4d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   %b = alloca %struct.foo.0, align 1
   store i8* %a, i8** %a.addr, align 8
@@ -714,11 +633,6 @@ entry:
 ; MSVC-I386-LABEL: test5a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test5a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   store i8* %a, i8** %a.addr, align 8
   %0 = load i8*, i8** %a.addr, align 8
@@ -751,11 +665,6 @@ entry:
 ; MSVC-I386-LABEL: test5b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test5b:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   store i8* %a, i8** %a.addr, align 8
   %0 = load i8*, i8** %a.addr, align 8
@@ -788,11 +697,6 @@ entry:
 ; MSVC-I386-LABEL: test5c:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test5c:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a.addr = alloca i8*, align 8
   store i8* %a, i8** %a.addr, align 8
   %0 = load i8*, i8** %a.addr, align 8
@@ -825,11 +729,6 @@ entry:
 ; MSVC-I386-LABEL: test5d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test5d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a.addr = alloca i8*, align 8
   store i8* %a, i8** %a.addr, align 8
   %0 = load i8*, i8** %a.addr, align 8
@@ -861,11 +760,6 @@ entry:
 ; MSVC-I386-LABEL: test6a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test6a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
   %j = alloca i32*, align 8
@@ -899,14 +793,10 @@ entry:
 ; DARWIN-X64-NOT: callq ___stack_chk_fail
 ; DARWIN-X64: .cfi_endproc
 
+
 ; MSVC-I386-LABEL: test6b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test6b:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
   %j = alloca i32*, align 8
@@ -943,11 +833,6 @@ entry:
 ; MSVC-I386-LABEL: test6c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test6c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
   %j = alloca i32*, align 8
@@ -984,11 +869,6 @@ entry:
 ; MSVC-I386-LABEL: test6d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test6d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
   %j = alloca i32*, align 8
@@ -1024,11 +904,6 @@ entry:
 ; MSVC-I386-LABEL: test7a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test7a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a = alloca i32, align 4
   %0 = ptrtoint i32* %a to i64
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
@@ -1060,11 +935,6 @@ entry:
 ; MSVC-I386-LABEL: test7b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test7b:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a = alloca i32, align 4
   %0 = ptrtoint i32* %a to i64
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
@@ -1096,11 +966,6 @@ entry:
 ; MSVC-I386-LABEL: test7c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test7c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: .seh_endproc
-
   %a = alloca i32, align 4
   %0 = ptrtoint i32* %a to i64
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
@@ -1132,11 +997,6 @@ entry:
 ; MSVC-I386-LABEL: test7d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test7d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %a = alloca i32, align 4
   %0 = ptrtoint i32* %a to i64
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
@@ -1167,11 +1027,6 @@ entry:
 ; MSVC-I386-LABEL: test8a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test8a:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %b = alloca i32, align 4
   call void @funcall(i32* %b)
   ret void
@@ -1202,11 +1057,6 @@ entry:
 ; MSVC-I386-LABEL: test8b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test8b:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %b = alloca i32, align 4
   call void @funcall(i32* %b)
   ret void
@@ -1237,11 +1087,6 @@ entry:
 ; MSVC-I386-LABEL: test8c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test8c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %b = alloca i32, align 4
   call void @funcall(i32* %b)
   ret void
@@ -1272,11 +1117,6 @@ entry:
 ; MSVC-I386-LABEL: test8d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test8d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %b = alloca i32, align 4
   call void @funcall(i32* %b)
   ret void
@@ -2847,11 +2687,6 @@ entry:
 ; MSVC-I386-LABEL: test19d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-
-; MINGW-X64-LABEL: test19d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
-; MINGW-X64: callq __stack_chk_fail
-
   %c = alloca %struct.pair, align 4
   %exn.slot = alloca i8*
   %ehselector.slot = alloca i32
@@ -3620,11 +3455,6 @@ entry:
 ; MSVC-I386-LABEL: test25b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-
-; MINGW-X64-LABEL: test25b:
-; MINGW-X64-NOT: callq __stack_chk_fail
-; MINGW-X64: .seh_endproc
-
   %a = alloca [4 x i32], align 16
   %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i64 0
   %0 = load i32, i32* %arrayidx, align 4
