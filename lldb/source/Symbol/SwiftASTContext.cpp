@@ -2831,8 +2831,8 @@ private:
 swift::ASTContext *SwiftASTContext::GetASTContext() {
   if (m_ast_context_ap.get() == NULL) {
     m_ast_context_ap.reset(
-        new swift::ASTContext(GetLanguageOptions(), GetSearchPathOptions(),
-                              GetSourceManager(), GetDiagnosticEngine()));
+        swift::ASTContext::get(GetLanguageOptions(), GetSearchPathOptions(),
+                               GetSourceManager(), GetDiagnosticEngine()));
     m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 
     if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
