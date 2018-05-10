@@ -1,6 +1,6 @@
 ; RUN: llc -O2 -filetype=obj %s -o - | llvm-readobj -r -s -expand-relocs | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare i32 @import1()
 declare i32 @import2()

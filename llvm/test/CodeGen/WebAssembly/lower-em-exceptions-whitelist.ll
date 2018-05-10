@@ -1,7 +1,7 @@
 ; RUN: opt < %s -wasm-lower-em-ehsjlj -emscripten-cxx-exceptions-whitelist=do_catch -S | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define void @dont_catch() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @dont_catch(

@@ -3,7 +3,7 @@
 ; RUN: wasm-ld -r -o %t.wasm %t.hello.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; Function Attrs: nounwind
 define hidden i32 @my_func() local_unnamed_addr {

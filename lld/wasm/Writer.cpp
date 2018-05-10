@@ -106,7 +106,7 @@ private:
   std::vector<const Symbol *> ImportedSymbols;
   unsigned NumImportedFunctions = 0;
   unsigned NumImportedGlobals = 0;
-  std::vector<Symbol *> ExportedSymbols;
+  std::vector<WasmExport> Exports;
   std::vector<const DefinedData *> DefinedFakeGlobals;
   std::vector<InputGlobal *> InputGlobals;
   std::vector<InputFunction *> InputFunctions;
@@ -264,41 +264,15 @@ void Writer::createTableSection() {
 }
 
 void Writer::createExportSection() {
-  bool ExportMemory = !Config->Relocatable && !Config->ImportMemory;
-  bool ExportTable = !Config->Relocatable && Config->ExportTable;
-
-  uint32_t NumExports =
-      (ExportMemory ? 1 : 0) + (ExportTable ? 1 : 0) + ExportedSymbols.size();
-  if (!NumExports)
+  if (!Exports.size())
     return;
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_EXPORT);
   raw_ostream &OS = Section->getStream();
 
-  writeUleb128(OS, NumExports, "export count");
-
-  if (ExportMemory)
-    writeExport(OS, {"memory", WASM_EXTERNAL_MEMORY, 0});
-  if (ExportTable)
-    writeExport(OS, {kFunctionTableName, WASM_EXTERNAL_TABLE, 0});
-
-  unsigned FakeGlobalIndex = NumImportedGlobals + InputGlobals.size();
-
-  for (const Symbol *Sym : ExportedSymbols) {
-    StringRef Name = Sym->getName();
-    WasmExport Export;
-    DEBUG(dbgs() << "Export: " << Name << "\n");
-
-    if (auto *F = dyn_cast<DefinedFunction>(Sym))
-      Export = {Name, WASM_EXTERNAL_FUNCTION, F->getFunctionIndex()};
-    else if (auto *G = dyn_cast<DefinedGlobal>(Sym))
-      Export = {Name, WASM_EXTERNAL_GLOBAL, G->getGlobalIndex()};
-    else if (isa<DefinedData>(Sym))
-      Export = {Name, WASM_EXTERNAL_GLOBAL, FakeGlobalIndex++};
-    else
-      llvm_unreachable("unexpected symbol type");
+  writeUleb128(OS, Exports.size(), "export count");
+  for (const WasmExport &Export : Exports)
     writeExport(OS, Export);
-  }
 }
 
 void Writer::calculateCustomSections() {
@@ -755,6 +729,14 @@ void Writer::calculateExports() {
   if (Config->Relocatable)
     return;
 
+  if (!Config->Relocatable && !Config->ImportMemory)
+    Exports.push_back(WasmExport{"memory", WASM_EXTERNAL_MEMORY, 0});
+
+  if (!Config->Relocatable && Config->ExportTable)
+    Exports.push_back(WasmExport{kFunctionTableName, WASM_EXTERNAL_TABLE, 0});
+
+  unsigned FakeGlobalIndex = NumImportedGlobals + InputGlobals.size();
+
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isDefined())
       continue;
@@ -763,11 +745,20 @@ void Writer::calculateExports() {
     if (!Sym->isLive())
       continue;
 
-    DEBUG(dbgs() << "exporting sym: " << Sym->getName() << "\n");
-
-    if (auto *D = dyn_cast<DefinedData>(Sym))
+    StringRef Name = Sym->getName();
+    WasmExport Export;
+    if (auto *F = dyn_cast<DefinedFunction>(Sym)) {
+      Export = {Name, WASM_EXTERNAL_FUNCTION, F->getFunctionIndex()};
+    } else if (auto *G = dyn_cast<DefinedGlobal>(Sym)) {
+      Export = {Name, WASM_EXTERNAL_GLOBAL, G->getGlobalIndex()};
+    } else {
+      auto *D = cast<DefinedData>(Sym);
       DefinedFakeGlobals.emplace_back(D);
-    ExportedSymbols.emplace_back(Sym);
+      Export = {Name, WASM_EXTERNAL_GLOBAL, FakeGlobalIndex++};
+    }
+
+    DEBUG(dbgs() << "Export: " << Name << "\n");
+    Exports.push_back(Export);
   }
 }
 
@@ -923,7 +914,7 @@ void Writer::assignIndexes() {
 }
 
 static StringRef getOutputDataSegmentName(StringRef Name) {
-  if (Config->Relocatable)
+  if (!Config->MergeDataSegments)
     return Name;
   if (Name.startswith(".text."))
     return ".text";

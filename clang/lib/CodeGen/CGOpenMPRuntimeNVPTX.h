@@ -24,6 +24,16 @@ namespace clang {
 namespace CodeGen {
 
 class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
+public:
+  /// Defines the execution mode.
+  enum ExecutionMode {
+    /// SPMD execution mode (all threads are worker threads).
+    EM_SPMD,
+    /// Non-SPMD execution mode (1 master thread, others are workers).
+    EM_NonSPMD,
+    /// Unknown execution mode (orphaned directive).
+    EM_Unknown,
+  };
 private:
   /// Parallel outlined function work for workers to execute.
   llvm::SmallVector<llvm::Function *, 16> Work;
@@ -44,7 +54,7 @@ private:
     void createWorkerFunction(CodeGenModule &CGM);
   };
 
-  bool isInSpmdExecutionMode() const;
+  ExecutionMode getExecutionMode() const;
 
   /// Emit the worker function for the current target region.
   void emitWorkerFunction(WorkerFunctionState &WST);
@@ -334,7 +344,7 @@ private:
   /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the
   /// target region and used by containing directives such as 'parallel'
   /// to emit optimized code.
-  bool IsInSPMDExecutionMode = false;
+  ExecutionMode CurrentExecutionMode = EM_Unknown;
 
   /// true if we're emitting the code for the target region and next parallel
   /// region is L0 for sure.

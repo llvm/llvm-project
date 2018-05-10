@@ -48,7 +48,8 @@ struct CommonFixture {
     Context = createContext();
     assert(Context != nullptr && "test state is not valid");
     const DWARFObject &Obj = Context->getDWARFObj();
-    LineData = DWARFDataExtractor(Obj, Obj.getLineSection(), true, 8);
+    LineData = DWARFDataExtractor(Obj, Obj.getLineSection(),
+                                  sys::IsLittleEndianHost, 8);
   }
 
   std::unique_ptr<DWARFContext> createContext() {
@@ -245,7 +246,7 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
   EXPECT_TRUE(IssueMessage.empty());
   const DWARFDebugLine::LineTable *Expected = *ExpectedLineTable;
   checkDefaultPrologue(Version, Format, Expected->Prologue, 16);
-  EXPECT_EQ(Expected->Sequences.size(), 1);
+  EXPECT_EQ(Expected->Sequences.size(), 1u);
 
   uint64_t SecondOffset =
       Expected->Prologue.sizeofTotalLength() + Expected->Prologue.TotalLength;
@@ -459,9 +460,9 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
   EXPECT_EQ(IssueMessage,
             "last sequence in debug line table is not terminated!");
   ASSERT_TRUE(ExpectedLineTable.operator bool());
-  EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 6);
+  EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 6u);
   // The unterminated sequence is not added to the sequence list.
-  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
 }
 
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {

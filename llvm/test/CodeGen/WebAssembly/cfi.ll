@@ -3,7 +3,7 @@
 ; Tests that we correctly assign indexes for control flow integrity.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @0 = private unnamed_addr constant [2 x void (...)*] [void (...)* bitcast (void ()* @f to void (...)*), void (...)* bitcast (void ()* @g to void (...)*)], align 16
 

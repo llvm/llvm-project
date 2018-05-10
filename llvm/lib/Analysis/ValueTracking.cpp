@@ -3704,6 +3704,48 @@ OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
   return OverflowResult::MayOverflow;
 }
 
+OverflowResult llvm::computeOverflowForSignedMul(const Value *LHS,
+                                                 const Value *RHS,
+                                                 const DataLayout &DL,
+                                                 AssumptionCache *AC,
+                                                 const Instruction *CxtI,
+                                                 const DominatorTree *DT) {
+  // Multiplying n * m significant bits yields a result of n + m significant
+  // bits. If the total number of significant bits does not exceed the
+  // result bit width (minus 1), there is no overflow.
+  // This means if we have enough leading sign bits in the operands
+  // we can guarantee that the result does not overflow.
+  // Ref: "Hacker's Delight" by Henry Warren
+  unsigned BitWidth = LHS->getType()->getScalarSizeInBits();
+
+  // Note that underestimating the number of sign bits gives a more
+  // conservative answer.
+  unsigned SignBits = ComputeNumSignBits(LHS, DL, 0, AC, CxtI, DT) +
+                      ComputeNumSignBits(RHS, DL, 0, AC, CxtI, DT);
+
+  // First handle the easy case: if we have enough sign bits there's
+  // definitely no overflow.
+  if (SignBits > BitWidth + 1)
+    return OverflowResult::NeverOverflows;
+
+  // There are two ambiguous cases where there can be no overflow:
+  //   SignBits == BitWidth + 1    and
+  //   SignBits == BitWidth
+  // The second case is difficult to check, therefore we only handle the
+  // first case.
+  if (SignBits == BitWidth + 1) {
+    // It overflows only when both arguments are negative and the true
+    // product is exactly the minimum negative number.
+    // E.g. mul i16 with 17 sign bits: 0xff00 * 0xff80 = 0x8000
+    // For simplicity we just check if at least one side is not negative.
+    KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
+    KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
+    if (LHSKnown.isNonNegative() || RHSKnown.isNonNegative())
+      return OverflowResult::NeverOverflows;
+  }
+  return OverflowResult::MayOverflow;
+}
+
 OverflowResult llvm::computeOverflowForUnsignedAdd(const Value *LHS,
                                                    const Value *RHS,
                                                    const DataLayout &DL,
@@ -3830,6 +3872,47 @@ static OverflowResult computeOverflowForSignedAdd(const Value *LHS,
     }
   }
 
+  return OverflowResult::MayOverflow;
+}
+
+OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
+                                                   const Value *RHS,
+                                                   const DataLayout &DL,
+                                                   AssumptionCache *AC,
+                                                   const Instruction *CxtI,
+                                                   const DominatorTree *DT) {
+  // If the LHS is negative and the RHS is non-negative, no unsigned wrap.
+  KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
+  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
+  if (LHSKnown.isNegative() && RHSKnown.isNonNegative())
+    return OverflowResult::NeverOverflows;
+
+  return OverflowResult::MayOverflow;
+}
+
+OverflowResult llvm::computeOverflowForSignedSub(const Value *LHS,
+                                                 const Value *RHS,
+                                                 const DataLayout &DL,
+                                                 AssumptionCache *AC,
+                                                 const Instruction *CxtI,
+                                                 const DominatorTree *DT) {
+  // If LHS and RHS each have at least two sign bits, the subtraction
+  // cannot overflow.
+  if (ComputeNumSignBits(LHS, DL, 0, AC, CxtI, DT) > 1 &&
+      ComputeNumSignBits(RHS, DL, 0, AC, CxtI, DT) > 1)
+    return OverflowResult::NeverOverflows;
+
+  KnownBits LHSKnown = computeKnownBits(LHS, DL, 0, AC, CxtI, DT);
+
+  KnownBits RHSKnown = computeKnownBits(RHS, DL, 0, AC, CxtI, DT);
+
+  // Subtraction of two 2's complement numbers having identical signs will
+  // never overflow.
+  if ((LHSKnown.isNegative() && RHSKnown.isNegative()) ||
+      (LHSKnown.isNonNegative() && RHSKnown.isNonNegative()))
+    return OverflowResult::NeverOverflows;
+
+  // TODO: implement logic similar to checkRippleForAdd
   return OverflowResult::MayOverflow;
 }
 

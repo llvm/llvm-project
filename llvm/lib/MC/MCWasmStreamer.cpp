@@ -66,6 +66,7 @@ void MCWasmStreamer::ChangeSection(MCSection *Section,
     Asm.registerSymbol(*Grp);
 
   this->MCObjectStreamer::ChangeSection(Section, Subsection);
+  Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
 void MCWasmStreamer::EmitWeakReference(MCSymbol *Alias,

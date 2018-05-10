@@ -319,6 +319,7 @@ void X86Subtarget::initializeEnvironment() {
   HasCLDEMOTE = false;
   HasMOVDIRI = false;
   HasMOVDIR64B = false;
+  HasPTWRITE = false;
   HasMPX = false;
   HasSHSTK = false;
   HasIBT = false;

@@ -1,4 +1,4 @@
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @g0 = global i32 1, align 4
 @foo = global i32 1, align 4

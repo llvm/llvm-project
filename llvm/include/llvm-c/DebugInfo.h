@@ -385,6 +385,30 @@ LLVMDIBuilderCreateDebugLocation(LLVMContextRef Ctx, unsigned Line,
                                  LLVMMetadataRef InlinedAt);
 
 /**
+ * Get the line number of this debug location.
+ * \param Location     The debug location.
+ *
+ * @see DILocation::getLine()
+ */
+unsigned LLVMDILocationGetLine(LLVMMetadataRef Location);
+
+/**
+ * Get the column number of this debug location.
+ * \param Location     The debug location.
+ *
+ * @see DILocation::getColumn()
+ */
+unsigned LLVMDILocationGetColumn(LLVMMetadataRef Location);
+
+/**
+ * Get the local scope associated with this debug location.
+ * \param Location     The debug location.
+ *
+ * @see DILocation::getScope()
+ */
+LLVMMetadataRef LLVMDILocationGetScope(LLVMMetadataRef Location);
+
+/**
  * Create a type array.
  * \param Builder        The DIBuilder.
  * \param Data           The type elements.
@@ -761,6 +785,55 @@ LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
                                   LLVMMetadataRef Type);
 
 /**
+ * Get the name of this DIType.
+ * \param DType     The DIType.
+ * \param Length    The length of the returned string.
+ *
+ * @see DIType::getName()
+ */
+const char *LLVMDITypeGetName(LLVMMetadataRef DType, size_t *Length);
+
+/**
+ * Get the size of this DIType in bits.
+ * \param DType     The DIType.
+ *
+ * @see DIType::getSizeInBits()
+ */
+uint64_t LLVMDITypeGetSizeInBits(LLVMMetadataRef DType);
+
+/**
+ * Get the offset of this DIType in bits.
+ * \param DType     The DIType.
+ *
+ * @see DIType::getOffsetInBits()
+ */
+uint64_t LLVMDITypeGetOffsetInBits(LLVMMetadataRef DType);
+
+/**
+ * Get the alignment of this DIType in bits.
+ * \param DType     The DIType.
+ *
+ * @see DIType::getAlignInBits()
+ */
+uint32_t LLVMDITypeGetAlignInBits(LLVMMetadataRef DType);
+
+/**
+ * Get the source line where this DIType is declared.
+ * \param DType     The DIType.
+ *
+ * @see DIType::getLine()
+ */
+unsigned LLVMDITypeGetLine(LLVMMetadataRef DType);
+
+/**
+ * Get the flags associated with this DIType.
+ * \param DType     The DIType.
+ *
+ * @see DIType::getFlags()
+ */
+LLVMDIFlags LLVMDITypeGetFlags(LLVMMetadataRef DType);
+
+/**
  * Create a descriptor for a value range.
  * \param Builder    The DIBuilder.
  * \param LowerBound Lower bound of the subrange, e.g. 0 for C, 1 for Fortran.
@@ -830,6 +903,33 @@ LLVMDIBuilderCreateGlobalVariableExpression(LLVMDIBuilderRef Builder,
                                             LLVMMetadataRef Expr,
                                             LLVMMetadataRef Decl,
                                             uint32_t AlignInBits);
+/**
+ * Create a new temporary \c MDNode.  Suitable for use in constructing cyclic
+ * \c MDNode structures. A temporary \c MDNode is not uniqued, may be RAUW'd,
+ * and must be manually deleted with \c LLVMDisposeTemporaryMDNode.
+ * \param Ctx            The context in which to construct the temporary node.
+ * \param Data           The metadata elements.
+ * \param NumElements    Number of metadata elements.
+ */
+LLVMMetadataRef LLVMTemporaryMDNode(LLVMContextRef Ctx, LLVMMetadataRef *Data,
+                                    size_t NumElements);
+
+/**
+ * Deallocate a temporary node.
+ *
+ * Calls \c replaceAllUsesWith(nullptr) before deleting, so any remaining
+ * references will be reset.
+ * \param TempNode    The temporary metadata node.
+ */
+void LLVMDisposeTemporaryMDNode(LLVMMetadataRef TempNode);
+
+/**
+ * Replace all uses of temporary metadata.
+ * \param TempTargetMetadata    The temporary metadata node.
+ * \param Replacement           The replacement metadata node.
+ */
+void LLVMMetadataReplaceAllUsesWith(LLVMMetadataRef TempTargetMetadata,
+                                    LLVMMetadataRef Replacement);
 
 /**
  * Create a new descriptor for the specified global variable that is temporary

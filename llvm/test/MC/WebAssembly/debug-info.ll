@@ -204,7 +204,7 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 source_filename = "test.c"
 

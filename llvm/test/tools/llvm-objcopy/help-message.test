@@ -1,8 +1,15 @@
-# RUN: llvm-objcopy --help | FileCheck --check-prefix=CHECK-OBJCOPY %s
-# RUN: not llvm-objcopy 2>&1 | FileCheck --check-prefix=CHECK-OBJCOPY %s
+# RUN: llvm-objcopy --help | FileCheck --check-prefix=OBJCOPY-USAGE %s
+# RUN: not llvm-objcopy 2>&1 | FileCheck --check-prefix=OBJCOPY-USAGE %s
+# RUN: not llvm-objcopy -abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
+# RUN: not llvm-objcopy -strip-debug 2>&1 | FileCheck %s --check-prefix=NO-INPUT-FILES
 
-# RUN: llvm-strip --help | FileCheck --check-prefix=CHECK-STRIP %s
-# RUN: not llvm-strip 2>&1 | FileCheck --check-prefix=CHECK-STRIP %s
+# RUN: llvm-strip --help | FileCheck --check-prefix=STRIP-USAGE %s
+# RUN: not llvm-strip 2>&1 | FileCheck --check-prefix=STRIP-USAGE %s
+# RUN: not llvm-strip -abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
+# RUN: not llvm-strip -strip-debug 2>&1 | FileCheck %s --check-prefix=NO-INPUT-FILES
 
-# CHECK-OBJCOPY: USAGE: llvm-objcopy
-# CHECK-STRIP:   USAGE: llvm-strip
+
+# OBJCOPY-USAGE:  USAGE: llvm-objcopy
+# STRIP-USAGE:    USAGE: llvm-strip
+# UNKNOWN-ARG:    unknown argument '-abcabc'
+# NO-INPUT-FILES: No input file specified

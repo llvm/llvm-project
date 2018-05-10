@@ -1,22 +1,38 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-freebsd %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t -shared
 // RUN: llvm-readobj -program-headers -sections %t | FileCheck %s
 
-// PR37361: A note without SHF_ALLOC should not create a PT_NOTE program
-// header (but should have a SHT_NOTE section).
+// PR37361: A note without SHF_ALLOC should not be included into a PT_NOTE program header.
 
-// CHECK: Name: .note.tag
-// CHECK: Type: SHT_NOTE
-// CHECK: Name: .debug.ghc-link-info
-// CHECK: Type: SHT_NOTE
-// CHECK-NOT: Type: SHT_NOTE
+// CHECK:      Section {
+// CHECK:        Index:
+// CHECK:        Name: .note.a
+// CHECK-NEXT:   Type: SHT_NOTE
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Address: 0x[[ADDR:.*]]
 
-// CHECK: Type: PT_NOTE
-// CHECK-NOT: Type: PT_NOTE
+// Check we still emit the non-alloc SHT_NOTE section and keep its type.
 
-        .section        .note.tag,"a",@note
-        .quad 1234
+// CHECK:        Name: .note.b
+// CHECK-NEXT:   Type: SHT_NOTE
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:   ]
 
-        .section        .debug.ghc-link-info,"",@note
-        .quad 5678
+// CHECK:      ProgramHeader {
+// CHECK:        Type: PT_NOTE
+// CHECK-NEXT:   Offset:
+// CHECK-NEXT:   VirtualAddress: 0x[[ADDR]]
+// CHECK-NEXT:   PhysicalAddress: 0x245
+// CHECK-NEXT:   FileSize: 16
+// CHECK-NEXT:   MemSize: 16
+// CHECK-NOT:  PT_NOTE
+
+.section        .note.a,"a",@note
+.quad 1
+.quad 2
+
+.section        .note.b,"",@note
+.quad 3

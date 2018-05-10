@@ -515,15 +515,18 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 
   StringRef CachedName = Entry.first.SectionName;
 
-  MCSymbol *Begin = nullptr;
-  if (BeginSymName) {
-    Begin = createSymbol(BeginSymName, false, false);
-    cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
-  }
+  MCSymbol *Begin = createSymbol(CachedName, false, false);
+  cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
       MCSectionWasm(CachedName, Kind, GroupSym, UniqueID, Begin);
   Entry.second = Result;
+
+  auto *F = new MCDataFragment();
+  Result->getFragmentList().insert(Result->begin(), F);
+  F->setParent(Result);
+  Begin->setFragment(F);
+
   return Result;
 }
 

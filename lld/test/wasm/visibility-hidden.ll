@@ -7,7 +7,7 @@
 ; Test that hidden symbols are not exported, whether pulled in from an archive
 ; or directly.
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define hidden i32 @objectHidden() {
 entry:

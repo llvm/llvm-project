@@ -4,7 +4,7 @@
 ; RUN: wasm-ld -no-gc-sections -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare i32 @weakFn() local_unnamed_addr
 @weakGlobal = external global i32

@@ -585,3 +585,17 @@ func boolToCInt(v bool) C.int {
 	}
 	return 0
 }
+
+//-------------------------------------------------------------------------
+// llvm.Metadata
+//-------------------------------------------------------------------------
+
+func (c Context) TemporaryMDNode(mds []Metadata) (md Metadata) {
+	ptr, nvals := llvmMetadataRefs(mds)
+	md.C = C.LLVMTemporaryMDNode(c.C, ptr, C.size_t(nvals))
+	return
+}
+
+func (md Metadata) ReplaceAllUsesWith(new Metadata) {
+	C.LLVMMetadataReplaceAllUsesWith(md.C, new.C)
+}

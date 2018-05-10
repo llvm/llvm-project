@@ -442,11 +442,22 @@ private:
   }
 
   bool willNotOverflowSignedSub(const Value *LHS, const Value *RHS,
-                                const Instruction &CxtI) const;
+                                const Instruction &CxtI) const {
+    return computeOverflowForSignedSub(LHS, RHS, &CxtI) ==
+           OverflowResult::NeverOverflows;
+  }
+
   bool willNotOverflowUnsignedSub(const Value *LHS, const Value *RHS,
-                                  const Instruction &CxtI) const;
+                                  const Instruction &CxtI) const {
+    return computeOverflowForUnsignedSub(LHS, RHS, &CxtI) ==
+           OverflowResult::NeverOverflows;
+  }
+
   bool willNotOverflowSignedMul(const Value *LHS, const Value *RHS,
-                                const Instruction &CxtI) const;
+                                const Instruction &CxtI) const {
+    return computeOverflowForSignedMul(LHS, RHS, &CxtI) ==
+           OverflowResult::NeverOverflows;
+  }
 
   bool willNotOverflowUnsignedMul(const Value *LHS, const Value *RHS,
                                   const Instruction &CxtI) const {
@@ -597,6 +608,12 @@ public:
     return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
   }
 
+  OverflowResult computeOverflowForSignedMul(const Value *LHS,
+	                                         const Value *RHS,
+                                             const Instruction *CxtI) const {
+    return llvm::computeOverflowForSignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
+  }
+
   OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
@@ -607,6 +624,17 @@ public:
                                              const Value *RHS,
                                              const Instruction *CxtI) const {
     return llvm::computeOverflowForSignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+  }
+
+  OverflowResult computeOverflowForUnsignedSub(const Value *LHS,
+                                               const Value *RHS,
+                                               const Instruction *CxtI) const {
+    return llvm::computeOverflowForUnsignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
+  }
+
+  OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
+                                             const Instruction *CxtI) const {
+    return llvm::computeOverflowForSignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
   }
 
   /// Maximum size of array considered when transforming.

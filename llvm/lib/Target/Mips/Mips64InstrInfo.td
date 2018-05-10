@@ -189,9 +189,9 @@ def SW64  : Store<"sw", GPR64Opnd, truncstorei32, II_SW>, LW_FM<0x2b>;
 let AdditionalPredicates = [NotInMicroMips] in {
   def LWu : MMRel, Load<"lwu", GPR64Opnd, zextloadi32, II_LWU>,
             LW_FM<0x27>, ISA_MIPS3;
-  def LD  : LoadMemory<"ld", GPR64Opnd, mem_simm16, load, II_LD>,
+  def LD  : LoadMemory<"ld", GPR64Opnd, mem_simmptr, load, II_LD>,
             LW_FM<0x37>, ISA_MIPS3;
-  def SD  : StoreMemory<"sd", GPR64Opnd, mem_simm16, store, II_SD>,
+  def SD  : StoreMemory<"sd", GPR64Opnd, mem_simmptr, store, II_SD>,
             LW_FM<0x3f>, ISA_MIPS3;
 }
 
@@ -216,7 +216,7 @@ def SDR   : StoreLeftRight<"sdr", MipsSDR, GPR64Opnd, II_SDR>, LW_FM<0x2d>,
 
 /// Load-linked, Store-conditional
 let AdditionalPredicates = [NotInMicroMips] in {
-  def LLD : LLBase<"lld", GPR64Opnd, mem_simm16>, LW_FM<0x34>,
+  def LLD : LLBase<"lld", GPR64Opnd, mem_simmptr>, LW_FM<0x34>,
             ISA_MIPS3_NOT_32R6_64R6;
 }
 def SCD : SCBase<"scd", GPR64Opnd>, LW_FM<0x3c>, ISA_MIPS3_NOT_32R6_64R6;

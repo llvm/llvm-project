@@ -60,12 +60,12 @@ local_label:
         lhe $4, 8($33)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
         lhu $4, 8($35)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
         lhue $4, 8($37)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
-        lh  $2, -65536($4) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lh  $2, 65536($4)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+        lh  $2, -2147483649($4) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
+        lh  $2, 2147483648($4)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
         lhe $4, -512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhe $4, 512($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-        lhu $4, -65536($2) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhu $4, 65536($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+        lhu $4, -2147483649($2) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
+        lhu $4, 2147483648($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
         lhue $4, -512($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhue $4, 512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         // FIXME: Following tests are temporarily disabled, until "PredicateControl not in hierarchy" problem is resolved
@@ -178,14 +178,14 @@ local_label:
         dmtc0  $4, $3, 8     # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
         dmfc0  $4, $3, -1    # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
         dmfc0  $4, $3, 8     # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
-        ld $2, 65536($4)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        ld  $2, -65536($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+        ld $2, 2147483648($4)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
+        ld  $2, -2147483649($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
         ld $32, 65536($32)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
-        lld  $2, -65536($4)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lld  $2, 65536($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        sd  $2, -65536($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+        lld  $2, -2147483649($4)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
+        lld  $2, 2147483648($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
+        sd  $2, -2147483649($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
         lld $32, 4096($32)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
-        sd  $2, 65536($4)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+        sd  $2, 2147483648($4)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 32-bit signed offset
         sd $32, 65536($32)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
         dsrl $2, $4, 64      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
         dsrl $2, $4, -2      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
