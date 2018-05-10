@@ -76,7 +76,7 @@ def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
 
 def color_diagnostics_eq: J<"color-diagnostics=">,
-  HelpText<"Use colors in diagnostics">;
+  HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
 
 defm cref: B<"cref",
     "Output cross reference table",

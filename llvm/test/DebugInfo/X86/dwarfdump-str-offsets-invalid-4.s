@@ -42,7 +42,7 @@ CU1_5_end:
 # CU1's contribution
 # The length is not a multiple of 4. Check that we don't read off the
 # end.
-        .long .debug_str_offsets_segment0_end-.debug_str_offsets_base0
+        .long .debug_str_offsets_segment0_end-.debug_str_offsets_base0+4
         .short 5    # DWARF version
         .short 0    # Padding
 .debug_str_offsets_base0:

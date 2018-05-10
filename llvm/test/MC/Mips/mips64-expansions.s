@@ -269,3 +269,35 @@ sym:
 # CHECK: daddu $1, $1, $9     # encoding: [0x2d,0x08,0x29,0x00]
 # CHECK: lwl   $8, 3($1)      # encoding: [0x03,0x00,0x28,0x88]
 # CHECK: lwr   $8, 0($1)      # encoding: [0x00,0x00,0x28,0x98]
+
+# Test ld/sd/lld with offsets exceed 16-bit size.
+
+    ld  $4, 0x8000
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: addu    $4, $4, $zero
+# CHECK-NEXT: ld      $4, -32768($4)
+
+    ld  $4, 0x20008($3)
+# CHECK:      lui     $4, 2
+# CHECK-NEXT: addu    $4, $4, $3
+# CHECK-NEXT: ld      $4, 8($4)
+
+    sd  $4, 0x8000
+# CHECK:      lui     $1, 1
+# CHECK-NEXT: addu    $1, $1, $zero
+# CHECK-NEXT: sd      $4, -32768($1)
+
+    sd  $4, 0x20008($3)
+# CHECK:      lui     $1, 2
+# CHECK-NEXT: addu    $1, $1, $3
+# CHECK-NEXT: sd      $4, 8($1)
+
+    lld $4, 0x8000
+# CHECK:      lui     $4, 1
+# CHECK-NEXT: addu    $4, $4, $zero
+# CHECK-NEXT: lld     $4, -32768($4)
+
+    lld $4, 0x20008($3)
+# CHECK:      lui     $4, 2
+# CHECK-NEXT: addu    $4, $4, $3
+# CHECK-NEXT: lld     $4, 8($4)

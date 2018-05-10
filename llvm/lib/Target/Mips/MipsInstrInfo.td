@@ -2040,9 +2040,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
             LW_FM<0x20>;
   def LBu : LoadMemory<"lbu", GPR32Opnd, mem_simmptr, zextloadi8, II_LBU,
                        addrDefault>, MMRel, LW_FM<0x24>;
-  def LH  : LoadMemory<"lh", GPR32Opnd, mem_simm16, sextloadi16, II_LH,
+  def LH  : LoadMemory<"lh", GPR32Opnd, mem_simmptr, sextloadi16, II_LH,
                        addrDefault>, MMRel, LW_FM<0x21>;
-  def LHu : LoadMemory<"lhu", GPR32Opnd, mem_simm16, zextloadi16, II_LHU>,
+  def LHu : LoadMemory<"lhu", GPR32Opnd, mem_simmptr, zextloadi16, II_LHU>,
             MMRel, LW_FM<0x25>;
   def LW  : StdMMR6Rel, Load<"lw", GPR32Opnd, load, II_LW, addrDefault>, MMRel,
             LW_FM<0x23>;

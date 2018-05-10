@@ -721,6 +721,10 @@ static DINode::DIFlags map_from_llvmDIFlags(LLVMDIFlags Flags) {
   return static_cast<DINode::DIFlags>(Flags);
 }
 
+static LLVMDIFlags map_to_llvmDIFlags(DINode::DIFlags Flags) {
+  return static_cast<LLVMDIFlags>(Flags);
+}
+
 unsigned LLVMDebugMetadataVersion() {
   return DEBUG_METADATA_VERSION;
 }
@@ -885,6 +889,18 @@ LLVMDIBuilderCreateDebugLocation(LLVMContextRef Ctx, unsigned Line,
                               unwrap(InlinedAt)));
 }
 
+unsigned LLVMDILocationGetLine(LLVMMetadataRef Location) {
+  return unwrapDI<DILocation>(Location)->getLine();
+}
+
+unsigned LLVMDILocationGetColumn(LLVMMetadataRef Location) {
+  return unwrapDI<DILocation>(Location)->getColumn();
+}
+
+LLVMMetadataRef LLVMDILocationGetScope(LLVMMetadataRef Location) {
+  return wrap(unwrapDI<DILocation>(Location)->getScope());
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(
   LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
   size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
@@ -1003,6 +1019,17 @@ LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
 }
 
 LLVMMetadataRef
+LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef Builder, LLVMMetadataRef Type,
+                           const char *Name, size_t NameLen,
+                           LLVMMetadataRef File, unsigned LineNo,
+                           LLVMMetadataRef Scope) {
+  return wrap(unwrap(Builder)->createTypedef(
+                  unwrapDI<DIType>(Type), {Name, NameLen},
+                  unwrapDI<DIFile>(File), LineNo,
+                  unwrapDI<DIScope>(Scope)));
+}
+
+LLVMMetadataRef
 LLVMDIBuilderCreateForwardDecl(
     LLVMDIBuilderRef Builder, unsigned Tag, const char *Name,
     size_t NameLen, LLVMMetadataRef Scope, LLVMMetadataRef File, unsigned Line,
@@ -1102,6 +1129,32 @@ LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
   return wrap(unwrap(Builder)->createArtificialType(unwrapDI<DIType>(Type)));
 }
 
+const char *LLVMDITypeGetName(LLVMMetadataRef DType, size_t *Length) {
+  StringRef Str = unwrap<DIType>(DType)->getName();
+  *Length = Str.size();
+  return Str.data();
+}
+
+uint64_t LLVMDITypeGetSizeInBits(LLVMMetadataRef DType) {
+  return unwrapDI<DIType>(DType)->getSizeInBits();
+}
+
+uint64_t LLVMDITypeGetOffsetInBits(LLVMMetadataRef DType) {
+  return unwrapDI<DIType>(DType)->getOffsetInBits();
+}
+
+uint32_t LLVMDITypeGetAlignInBits(LLVMMetadataRef DType) {
+  return unwrapDI<DIType>(DType)->getAlignInBits();
+}
+
+unsigned LLVMDITypeGetLine(LLVMMetadataRef DType) {
+  return unwrapDI<DIType>(DType)->getLine();
+}
+
+LLVMDIFlags LLVMDITypeGetFlags(LLVMMetadataRef DType) {
+  return map_to_llvmDIFlags(unwrapDI<DIType>(DType)->getFlags());
+}
+
 LLVMMetadataRef LLVMDIBuilderGetOrCreateTypeArray(LLVMDIBuilderRef Builder,
                                                   LLVMMetadataRef *Types,
                                                   size_t Length) {
@@ -1150,6 +1203,23 @@ LLVMDIBuilderCreateGlobalVariableExpression(LLVMDIBuilderRef Builder,
                   unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty),
                   LocalToUnit, unwrap<DIExpression>(Expr),
                   unwrapDI<MDNode>(Decl), AlignInBits));
+}
+
+LLVMMetadataRef LLVMTemporaryMDNode(LLVMContextRef Ctx, LLVMMetadataRef *Data,
+                                    size_t Count) {
+  return wrap(
+      MDTuple::getTemporary(*unwrap(Ctx), {unwrap(Data), Count}).release());
+}
+
+void LLVMDisposeTemporaryMDNode(LLVMMetadataRef TempNode) {
+  MDNode::deleteTemporary(unwrapDI<MDNode>(TempNode));
+}
+
+void LLVMMetadataReplaceAllUsesWith(LLVMMetadataRef TargetMetadata,
+                                    LLVMMetadataRef Replacement) {
+  auto *Node = unwrapDI<MDNode>(TargetMetadata);
+  Node->replaceAllUsesWith(unwrap<Metadata>(Replacement));
+  MDNode::deleteTemporary(Node);
 }
 
 LLVMMetadataRef

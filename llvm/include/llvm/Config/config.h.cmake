@@ -289,54 +289,21 @@
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
 
-/* Define if we link Polly to the tools */
-#cmakedefine LINK_POLLY_INTO_TOOLS
-
 /* Target triple LLVM will generate code for by default */
 /* Doesn't use `cmakedefine` because it is allowed to be empty. */
 #define LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
 
-/* Define if threads enabled */
-#cmakedefine01 LLVM_ENABLE_THREADS
-
 /* Define if zlib compression is available */
 #cmakedefine01 LLVM_ENABLE_ZLIB
 
-/* Has gcc/MSVC atomic intrinsics */
-#cmakedefine01 LLVM_HAS_ATOMICS
-
-/* Host triple LLVM will be executed on */
-#cmakedefine LLVM_HOST_TRIPLE "${LLVM_HOST_TRIPLE}"
-
-/* Define if this is Unixish platform */
-#cmakedefine LLVM_ON_UNIX ${LLVM_ON_UNIX}
-
 /* Define if overriding target triple is enabled */
 #cmakedefine LLVM_TARGET_TRIPLE_ENV "${LLVM_TARGET_TRIPLE_ENV}"
-
-/* Define if we have the Intel JIT API runtime support library */
-#cmakedefine01 LLVM_USE_INTEL_JITEVENTS
-
-/* Define if we have the oprofile JIT-support library */
-#cmakedefine01 LLVM_USE_OPROFILE
 
 /* LLVM version information */
 #cmakedefine LLVM_VERSION_INFO "${LLVM_VERSION_INFO}"
 
 /* Whether tools show host and target info when invoked with --version */
 #cmakedefine01 LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
-
-/* Major version of the LLVM API */
-#define LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
-
-/* Minor version of the LLVM API */
-#define LLVM_VERSION_MINOR ${LLVM_VERSION_MINOR}
-
-/* Patch version of the LLVM API */
-#define LLVM_VERSION_PATCH ${LLVM_VERSION_PATCH}
-
-/* LLVM version string */
-#define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
 
 /* Define if libxml2 is supported on this platform. */
 #cmakedefine LLVM_LIBXML2_ENABLED ${LLVM_LIBXML2_ENABLED}

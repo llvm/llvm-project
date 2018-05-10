@@ -2,7 +2,7 @@
 
 ; Test the mechanism for defining user custom sections.
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 !0 = !{ !"red", !"foo" }
 !1 = !{ !"green", !"bar" }

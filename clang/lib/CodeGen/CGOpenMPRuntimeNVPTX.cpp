@@ -140,13 +140,15 @@ public:
 /// to emit optimized code.
 class ExecutionModeRAII {
 private:
-  bool SavedMode;
-  bool &Mode;
+  CGOpenMPRuntimeNVPTX::ExecutionMode SavedMode;
+  CGOpenMPRuntimeNVPTX::ExecutionMode &Mode;
 
 public:
-  ExecutionModeRAII(bool &Mode, bool NewMode) : Mode(Mode) {
+  ExecutionModeRAII(CGOpenMPRuntimeNVPTX::ExecutionMode &Mode, bool IsSPMD)
+      : Mode(Mode) {
     SavedMode = Mode;
-    Mode = NewMode;
+    Mode = IsSPMD ? CGOpenMPRuntimeNVPTX::EM_SPMD
+                  : CGOpenMPRuntimeNVPTX::EM_NonSPMD;
   }
   ~ExecutionModeRAII() { Mode = SavedMode; }
 };
@@ -579,8 +581,9 @@ void CGOpenMPRuntimeNVPTX::WorkerFunctionState::createWorkerFunction(
   WorkerFn->setDoesNotRecurse();
 }
 
-bool CGOpenMPRuntimeNVPTX::isInSpmdExecutionMode() const {
-  return IsInSPMDExecutionMode;
+CGOpenMPRuntimeNVPTX::ExecutionMode
+CGOpenMPRuntimeNVPTX::getExecutionMode() const {
+  return CurrentExecutionMode;
 }
 
 static CGOpenMPRuntimeNVPTX::DataSharingMode
@@ -589,34 +592,96 @@ getDataSharingMode(CodeGenModule &CGM) {
                                           : CGOpenMPRuntimeNVPTX::Generic;
 }
 
-/// Check for inner (nested) SPMD construct, if any
-static bool hasNestedSPMDDirective(const OMPExecutableDirective &D) {
-  const auto *CS = D.getCapturedStmt(OMPD_target);
-  const auto *Body = CS->getCapturedStmt()->IgnoreContainers();
-  const Stmt *ChildStmt = nullptr;
+/// Checks if the \p Body is the \a CompoundStmt and returns its child statement
+/// iff there is only one.
+static const Stmt *getSingleCompoundChild(const Stmt *Body) {
   if (const auto *C = dyn_cast<CompoundStmt>(Body))
     if (C->size() == 1)
-      ChildStmt = C->body_front();
-  if (!ChildStmt)
-    return false;
+      return C->body_front();
+  return Body;
+}
+
+/// Check if the parallel directive has an 'if' clause with non-constant or
+/// false condition.
+static bool hasParallelIfClause(ASTContext &Ctx,
+                                const OMPExecutableDirective &D) {
+  for (const auto *C : D.getClausesOfKind<OMPIfClause>()) {
+    OpenMPDirectiveKind NameModifier = C->getNameModifier();
+    if (NameModifier != OMPD_parallel && NameModifier != OMPD_unknown)
+      continue;
+    const Expr *Cond = C->getCondition();
+    bool Result;
+    if (!Cond->EvaluateAsBooleanCondition(Result, Ctx) || !Result)
+      return true;
+  }
+  return false;
+}
+
+/// Check for inner (nested) SPMD construct, if any
+static bool hasNestedSPMDDirective(ASTContext &Ctx,
+                                   const OMPExecutableDirective &D) {
+  const auto *CS = D.getInnermostCapturedStmt();
+  const auto *Body = CS->getCapturedStmt()->IgnoreContainers();
+  const Stmt *ChildStmt = getSingleCompoundChild(Body);
 
   if (const auto *NestedDir = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
     OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
-    // TODO: add further analysis for inner teams|distribute directives, if any.
     switch (D.getDirectiveKind()) {
     case OMPD_target:
-      return (isOpenMPParallelDirective(DKind) &&
-              !isOpenMPTeamsDirective(DKind) &&
-              !isOpenMPDistributeDirective(DKind)) ||
-             isOpenMPSimdDirective(DKind) ||
-             DKind == OMPD_teams_distribute_parallel_for;
+      if ((isOpenMPParallelDirective(DKind) &&
+           !hasParallelIfClause(Ctx, *NestedDir)) ||
+          isOpenMPSimdDirective(DKind))
+        return true;
+      if (DKind == OMPD_teams || DKind == OMPD_teams_distribute) {
+        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
+        if (!Body)
+          return false;
+        ChildStmt = getSingleCompoundChild(Body);
+        if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+          DKind = NND->getDirectiveKind();
+          if ((isOpenMPParallelDirective(DKind) &&
+               !hasParallelIfClause(Ctx, *NND)) ||
+              isOpenMPSimdDirective(DKind))
+            return true;
+          if (DKind == OMPD_distribute) {
+            Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
+            if (!Body)
+              return false;
+            ChildStmt = getSingleCompoundChild(Body);
+            if (!ChildStmt)
+              return false;
+            if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+              DKind = NND->getDirectiveKind();
+              return (isOpenMPParallelDirective(DKind) &&
+                      !hasParallelIfClause(Ctx, *NND)) ||
+                     isOpenMPSimdDirective(DKind);
+            }
+          }
+        }
+      }
+      return false;
     case OMPD_target_teams:
-      return (isOpenMPParallelDirective(DKind) &&
-              !isOpenMPDistributeDirective(DKind)) ||
-             isOpenMPSimdDirective(DKind) ||
-             DKind == OMPD_distribute_parallel_for;
+      if ((isOpenMPParallelDirective(DKind) &&
+           !hasParallelIfClause(Ctx, *NestedDir)) ||
+          isOpenMPSimdDirective(DKind))
+        return true;
+      if (DKind == OMPD_distribute) {
+        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
+        if (!Body)
+          return false;
+        ChildStmt = getSingleCompoundChild(Body);
+        if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+          DKind = NND->getDirectiveKind();
+          return (isOpenMPParallelDirective(DKind) &&
+                  !hasParallelIfClause(Ctx, *NND)) ||
+                 isOpenMPSimdDirective(DKind);
+        }
+      }
+      return false;
     case OMPD_target_teams_distribute:
-      return isOpenMPParallelDirective(DKind) || isOpenMPSimdDirective(DKind);
+      return (isOpenMPParallelDirective(DKind) &&
+              !hasParallelIfClause(Ctx, *NestedDir)) ||
+             isOpenMPSimdDirective(DKind);
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
@@ -674,20 +739,22 @@ static bool hasNestedSPMDDirective(const OMPExecutableDirective &D) {
   return false;
 }
 
-static bool supportsSPMDExecutionMode(const OMPExecutableDirective &D) {
+static bool supportsSPMDExecutionMode(ASTContext &Ctx,
+                                      const OMPExecutableDirective &D) {
   OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
   switch (DirectiveKind) {
   case OMPD_target:
   case OMPD_target_teams:
   case OMPD_target_teams_distribute:
-    return hasNestedSPMDDirective(D);
-  case OMPD_target_simd:
+    return hasNestedSPMDDirective(Ctx, D);
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
-  case OMPD_target_teams_distribute_simd:
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
+    return !hasParallelIfClause(Ctx, D);
+  case OMPD_target_simd:
+  case OMPD_target_teams_distribute_simd:
     return true;
   case OMPD_parallel:
   case OMPD_for:
@@ -744,7 +811,7 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              llvm::Constant *&OutlinedFnID,
                                              bool IsOffloadEntry,
                                              const RegionCodeGenTy &CodeGen) {
-  ExecutionModeRAII ModeRAII(IsInSPMDExecutionMode, /*NewMode=*/false);
+  ExecutionModeRAII ModeRAII(CurrentExecutionMode, /*IsSPMD=*/false);
   EntryFunctionState EST;
   WorkerFunctionState WST(CGM, D.getLocStart());
   Work.clear();
@@ -858,7 +925,7 @@ void CGOpenMPRuntimeNVPTX::emitSpmdKernel(const OMPExecutableDirective &D,
                                           llvm::Constant *&OutlinedFnID,
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen) {
-  ExecutionModeRAII ModeRAII(IsInSPMDExecutionMode, /*NewMode=*/true);
+  ExecutionModeRAII ModeRAII(CurrentExecutionMode, /*IsSPMD=*/true);
   EntryFunctionState EST;
 
   // Emit target region as a standalone region.
@@ -905,11 +972,13 @@ void CGOpenMPRuntimeNVPTX::emitSpmdEntryHeader(
 
   CGF.EmitBlock(ExecuteBB);
 
+  IsInTargetMasterThreadRegion = true;
   emitGenericVarsProlog(CGF, D.getLocStart());
 }
 
 void CGOpenMPRuntimeNVPTX::emitSpmdEntryFooter(CodeGenFunction &CGF,
                                                EntryFunctionState &EST) {
+  IsInTargetMasterThreadRegion = false;
   if (!CGF.HaveInsertPoint())
     return;
 
@@ -1380,7 +1449,7 @@ void CGOpenMPRuntimeNVPTX::emitTargetOutlinedFunction(
 
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
-  bool Mode = supportsSPMDExecutionMode(D);
+  bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
   if (Mode)
     emitSpmdKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
@@ -1401,8 +1470,8 @@ void CGOpenMPRuntimeNVPTX::emitProcBindClause(CodeGenFunction &CGF,
                                               OpenMPProcBindClauseKind ProcBind,
                                               SourceLocation Loc) {
   // Do nothing in case of Spmd mode and L0 parallel.
-  // TODO: If in Spmd mode and L1 parallel emit the clause.
-  if (isInSpmdExecutionMode())
+  if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD &&
+      IsInTargetMasterThreadRegion)
     return;
 
   CGOpenMPRuntime::emitProcBindClause(CGF, ProcBind, Loc);
@@ -1412,8 +1481,8 @@ void CGOpenMPRuntimeNVPTX::emitNumThreadsClause(CodeGenFunction &CGF,
                                                 llvm::Value *NumThreads,
                                                 SourceLocation Loc) {
   // Do nothing in case of Spmd mode and L0 parallel.
-  // TODO: If in Spmd mode and L1 parallel emit the clause.
-  if (isInSpmdExecutionMode())
+  if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD &&
+      IsInTargetMasterThreadRegion)
     return;
 
   CGOpenMPRuntime::emitNumThreadsClause(CGF, NumThreads, Loc);
@@ -1457,7 +1526,8 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
       cast<llvm::Function>(CGOpenMPRuntime::emitParallelOutlinedFunction(
           D, ThreadIDVar, InnermostKind, CodeGen));
   IsInTargetMasterThreadRegion = PrevIsInTargetMasterThreadRegion;
-  if (!isInSpmdExecutionMode() && !IsInParallelRegion) {
+  if (getExecutionMode() != CGOpenMPRuntimeNVPTX::EM_SPMD &&
+      !IsInParallelRegion) {
     llvm::Function *WrapperFun =
         createParallelDataSharingWrapper(OutlinedFun, D);
     WrapperFunctionsMap[OutlinedFun] = WrapperFun;
@@ -1635,7 +1705,7 @@ void CGOpenMPRuntimeNVPTX::emitParallelCall(
   if (!CGF.HaveInsertPoint())
     return;
 
-  if (isInSpmdExecutionMode())
+  if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD)
     emitSpmdParallelCall(CGF, Loc, OutlinedFn, CapturedVars, IfCond);
   else
     emitNonSPMDParallelCall(CGF, Loc, OutlinedFn, CapturedVars, IfCond);
@@ -1759,6 +1829,8 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
       SeqGen(CGF, Action);
     } else if (IsInTargetMasterThreadRegion) {
       L0ParallelGen(CGF, Action);
+    } else if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_NonSPMD) {
+      RCG(CGF);
     } else {
       // Check for master and then parallelism:
       // if (is_master) {
@@ -1770,20 +1842,18 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
       // }
       CGBuilderTy &Bld = CGF.Builder;
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
-      if (!isInSpmdExecutionMode()) {
-        llvm::BasicBlock *MasterCheckBB = CGF.createBasicBlock(".mastercheck");
-        llvm::BasicBlock *ParallelCheckBB =
-            CGF.createBasicBlock(".parallelcheck");
-        llvm::Value *IsMaster =
-            Bld.CreateICmpEQ(getNVPTXThreadID(CGF), getMasterThreadID(CGF));
-        Bld.CreateCondBr(IsMaster, MasterCheckBB, ParallelCheckBB);
-        CGF.EmitBlock(MasterCheckBB);
-        L0ParallelGen(CGF, Action);
-        CGF.EmitBranch(ExitBB);
-        // There is no need to emit line number for unconditional branch.
-        (void)ApplyDebugLocation::CreateEmpty(CGF);
-        CGF.EmitBlock(ParallelCheckBB);
-      }
+      llvm::BasicBlock *MasterCheckBB = CGF.createBasicBlock(".mastercheck");
+      llvm::BasicBlock *ParallelCheckBB =
+          CGF.createBasicBlock(".parallelcheck");
+      llvm::Value *IsMaster =
+          Bld.CreateICmpEQ(getNVPTXThreadID(CGF), getMasterThreadID(CGF));
+      Bld.CreateCondBr(IsMaster, MasterCheckBB, ParallelCheckBB);
+      CGF.EmitBlock(MasterCheckBB);
+      L0ParallelGen(CGF, Action);
+      CGF.EmitBranch(ExitBB);
+      // There is no need to emit line number for unconditional branch.
+      (void)ApplyDebugLocation::CreateEmpty(CGF);
+      CGF.EmitBlock(ParallelCheckBB);
       llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
       llvm::Value *ThreadID = getThreadID(CGF, Loc);
       llvm::Value *PL = CGF.EmitRuntimeCall(
@@ -1827,14 +1897,49 @@ void CGOpenMPRuntimeNVPTX::emitSpmdParallelCall(
   // is added on Spmd target directives.
   llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
 
-  Address ZeroAddr = CGF.CreateMemTemp(
-      CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1),
-      ".zero.addr");
+  Address ZeroAddr = CGF.CreateMemTemp(CGF.getContext().getIntTypeForBitwidth(
+                                           /*DestWidth=*/32, /*Signed=*/1),
+                                       ".zero.addr");
   CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
-  OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).getPointer());
-  OutlinedFnArgs.push_back(ZeroAddr.getPointer());
-  OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-  emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
+  Address ThreadIDAddr = emitThreadIDAddress(CGF, Loc);
+  auto &&CodeGen = [this, OutlinedFn, CapturedVars, Loc, ZeroAddr,
+                    ThreadIDAddr](CodeGenFunction &CGF,
+                                  PrePostActionTy &Action) {
+    Action.Enter(CGF);
+
+    llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
+    OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
+    OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+    OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
+    emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
+  };
+  auto &&SeqGen = [this, &CodeGen, Loc](CodeGenFunction &CGF,
+                                        PrePostActionTy &) {
+
+    RegionCodeGenTy RCG(CodeGen);
+    llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
+    llvm::Value *ThreadID = getThreadID(CGF, Loc);
+    llvm::Value *Args[] = {RTLoc, ThreadID};
+
+    NVPTXActionTy Action(
+        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_serialized_parallel),
+        Args,
+        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_end_serialized_parallel),
+        Args);
+    RCG.setAction(Action);
+    RCG(CGF);
+  };
+
+  if (IsInTargetMasterThreadRegion) {
+    RegionCodeGenTy RCG(CodeGen);
+    RCG(CGF);
+  } else {
+    // If we are not in the target region, it is definitely L2 parallelism or
+    // more, because for SPMD mode we always has L1 parallel level, sowe don't
+    // need to check for orphaned directives.
+    RegionCodeGenTy RCG(SeqGen);
+    RCG(CGF);
+  }
 }
 
 void CGOpenMPRuntimeNVPTX::emitCriticalRegion(

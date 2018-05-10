@@ -3,7 +3,7 @@
 ; RUN: wasm-ld --export=hidden_function -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define hidden i32 @hidden_function() local_unnamed_addr {
 entry:

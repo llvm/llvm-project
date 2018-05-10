@@ -14,7 +14,7 @@
 package llvm
 
 /*
-#include "DIBuilderBindings.h"
+#include "IRBindings.h"
 #include <stdlib.h>
 */
 import "C"
@@ -514,6 +514,7 @@ func (d *DIBuilder) CreateTypedef(t DITypedef) Metadata {
 		d.ref,
 		t.Type.C,
 		name,
+		C.size_t(len(t.Name)),
 		t.File.C,
 		C.unsigned(t.Line),
 		t.Context.C,
@@ -584,4 +585,18 @@ func boolToCInt(v bool) C.int {
 		return 1
 	}
 	return 0
+}
+
+//-------------------------------------------------------------------------
+// llvm.Metadata
+//-------------------------------------------------------------------------
+
+func (c Context) TemporaryMDNode(mds []Metadata) (md Metadata) {
+	ptr, nvals := llvmMetadataRefs(mds)
+	md.C = C.LLVMTemporaryMDNode(c.C, ptr, C.size_t(nvals))
+	return
+}
+
+func (md Metadata) ReplaceAllUsesWith(new Metadata) {
+	C.LLVMMetadataReplaceAllUsesWith(md.C, new.C)
 }

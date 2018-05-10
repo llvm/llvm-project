@@ -3,7 +3,7 @@
 ; RUN: wasm-ld --relocatable -o %t.wasm %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define i32 @_start() local_unnamed_addr {
 entry:

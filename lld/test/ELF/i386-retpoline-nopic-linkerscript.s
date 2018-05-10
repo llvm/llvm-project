@@ -14,9 +14,9 @@
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-NEXT: .plt:
-// CHECK-NEXT: 10:       ff 35 fc 00 00 00       pushl   252
+// CHECK-NEXT: 10:       ff 35 cc 00 00 00       pushl   204
 // CHECK-NEXT: 16:       50      pushl   %eax
-// CHECK-NEXT: 17:       a1 00 01 00 00  movl    256, %eax
+// CHECK-NEXT: 17:       a1 d0 00 00 00 movl    208, %eax
 // CHECK-NEXT: 1c:       e8 0f 00 00 00  calll   15 <.plt+0x20>
 // CHECK-NEXT: 21:       f3 90   pause
 // CHECK-NEXT: 23:       0f ae e8        lfence
@@ -37,7 +37,7 @@
 // CHECK-NEXT: 3e:       c3      retl
 // CHECK-NEXT: 3f:       cc      int3
 // CHECK-NEXT: 40:       50      pushl   %eax
-// CHECK-NEXT: 41:       a1 04 01 00 00  movl    260, %eax
+// CHECK-NEXT: 41:       a1 d4 00 00 00  movl    212, %eax
 // CHECK-NEXT: 46:       e8 e5 ff ff ff  calll   -27 <.plt+0x20>
 // CHECK-NEXT: 4b:       e9 d1 ff ff ff  jmp     -47 <.plt+0x11>
 // CHECK-NEXT: 50:       68 00 00 00 00  pushl   $0
@@ -49,7 +49,7 @@
 // CHECK-NEXT: 5e:       cc      int3
 // CHECK-NEXT: 5f:       cc      int3
 // CHECK-NEXT: 60:       50      pushl   %eax
-// CHECK-NEXT: 61:       a1 08 01 00 00  movl    264, %eax
+// CHECK-NEXT: 61:       a1 d8 00 00 00  movl    216, %eax
 // CHECK-NEXT: 66:       e8 c5 ff ff ff  calll   -59 <.plt+0x20>
 // CHECK-NEXT: 6b:       e9 b1 ff ff ff  jmp     -79 <.plt+0x11>
 // CHECK-NEXT: 70:       68 08 00 00 00  pushl   $8

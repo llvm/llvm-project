@@ -1720,7 +1720,8 @@ static void NoteLValueLocation(EvalInfo &Info, APValue::LValueBase Base) {
 /// value for an address or reference constant expression. Return true if we
 /// can fold this expression, whether or not it's a constant expression.
 static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
-                                          QualType Type, const LValue &LVal) {
+                                          QualType Type, const LValue &LVal,
+                                          Expr::ConstExprUsage Usage) {
   bool IsReferenceType = Type->isReferenceType();
 
   APValue::LValueBase Base = LVal.getLValueBase();
@@ -1753,7 +1754,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         return false;
 
       // A dllimport variable never acts like a constant.
-      if (Var->hasAttr<DLLImportAttr>())
+      if (Usage == Expr::EvaluateForCodeGen && Var->hasAttr<DLLImportAttr>())
         return false;
     }
     if (const auto *FD = dyn_cast<const FunctionDecl>(VD)) {
@@ -1767,7 +1768,8 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       // The C language has no notion of ODR; furthermore, it has no notion of
       // dynamic initialization.  This means that we are permitted to
       // perform initialization with the address of the thunk.
-      if (Info.getLangOpts().CPlusPlus && FD->hasAttr<DLLImportAttr>())
+      if (Info.getLangOpts().CPlusPlus && Usage == Expr::EvaluateForCodeGen &&
+          FD->hasAttr<DLLImportAttr>())
         return false;
     }
   }
@@ -1800,12 +1802,14 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
 static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
                                                  SourceLocation Loc,
                                                  QualType Type,
-                                                 const APValue &Value) {
+                                                 const APValue &Value,
+                                                 Expr::ConstExprUsage Usage) {
   const ValueDecl *Member = Value.getMemberPointerDecl();
   const auto *FD = dyn_cast_or_null<CXXMethodDecl>(Member);
   if (!FD)
     return true;
-  return FD->isVirtual() || !FD->hasAttr<DLLImportAttr>();
+  return Usage == Expr::EvaluateForMangling || FD->isVirtual() ||
+         !FD->hasAttr<DLLImportAttr>();
 }
 
 /// Check that this core constant expression is of literal type, and if not,
@@ -1843,8 +1847,10 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
 /// Check that this core constant expression value is a valid value for a
 /// constant expression. If not, report an appropriate diagnostic. Does not
 /// check that the expression is of literal type.
-static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
-                                    QualType Type, const APValue &Value) {
+static bool
+CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
+                        const APValue &Value,
+                        Expr::ConstExprUsage Usage = Expr::EvaluateForCodeGen) {
   if (Value.isUninit()) {
     Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
       << true << Type;
@@ -1863,28 +1869,28 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
     QualType EltTy = Type->castAsArrayTypeUnsafe()->getElementType();
     for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I) {
       if (!CheckConstantExpression(Info, DiagLoc, EltTy,
-                                   Value.getArrayInitializedElt(I)))
+                                   Value.getArrayInitializedElt(I), Usage))
         return false;
     }
     if (!Value.hasArrayFiller())
       return true;
-    return CheckConstantExpression(Info, DiagLoc, EltTy,
-                                   Value.getArrayFiller());
+    return CheckConstantExpression(Info, DiagLoc, EltTy, Value.getArrayFiller(),
+                                   Usage);
   }
   if (Value.isUnion() && Value.getUnionField()) {
     return CheckConstantExpression(Info, DiagLoc,
                                    Value.getUnionField()->getType(),
-                                   Value.getUnionValue());
+                                   Value.getUnionValue(), Usage);
   }
   if (Value.isStruct()) {
     RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
-      for (CXXRecordDecl::base_class_const_iterator I = CD->bases_begin(),
-             End = CD->bases_end(); I != End; ++I, ++BaseIndex) {
-        if (!CheckConstantExpression(Info, DiagLoc, I->getType(),
-                                     Value.getStructBase(BaseIndex)))
+      for (const CXXBaseSpecifier &BS : CD->bases()) {
+        if (!CheckConstantExpression(Info, DiagLoc, BS.getType(),
+                                     Value.getStructBase(BaseIndex), Usage))
           return false;
+        ++BaseIndex;
       }
     }
     for (const auto *I : RD->fields()) {
@@ -1892,7 +1898,8 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
         continue;
 
       if (!CheckConstantExpression(Info, DiagLoc, I->getType(),
-                                   Value.getStructField(I->getFieldIndex())))
+                                   Value.getStructField(I->getFieldIndex()),
+                                   Usage))
         return false;
     }
   }
@@ -1900,11 +1907,11 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
   if (Value.isLValue()) {
     LValue LVal;
     LVal.setFrom(Info.Ctx, Value);
-    return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal);
+    return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal, Usage);
   }
 
   if (Value.isMemberPointer())
-    return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value);
+    return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value, Usage);
 
   // Everything else is fine.
   return true;
@@ -10345,11 +10352,23 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx) const {
   LValue LV;
   if (!EvaluateLValue(this, LV, Info) || Result.HasSideEffects ||
       !CheckLValueConstantExpression(Info, getExprLoc(),
-                                     Ctx.getLValueReferenceType(getType()), LV))
+                                     Ctx.getLValueReferenceType(getType()), LV,
+                                     Expr::EvaluateForCodeGen))
     return false;
 
   LV.moveInto(Result.Val);
   return true;
+}
+
+bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
+                                  const ASTContext &Ctx) const {
+  EvalInfo::EvaluationMode EM = EvalInfo::EM_ConstantExpression;
+  EvalInfo Info(Ctx, Result, EM);
+  if (!::Evaluate(Result.Val, Info, this))
+    return false;
+
+  return CheckConstantExpression(Info, getExprLoc(), getType(), Result.Val,
+                                 Usage);
 }
 
 bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,

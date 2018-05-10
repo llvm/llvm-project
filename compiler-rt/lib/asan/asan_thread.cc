@@ -221,13 +221,15 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
 void AsanThread::Init(const InitOptions *options) {
   next_stack_top_ = next_stack_bottom_ = 0;
   atomic_store(&stack_switching_, false, memory_order_release);
-  fake_stack_ = nullptr;  // Will be initialized lazily if needed.
   CHECK_EQ(this->stack_size(), 0U);
   SetThreadStackAndTls(options);
   CHECK_GT(this->stack_size(), 0U);
   CHECK(AddrIsInMem(stack_bottom_));
   CHECK(AddrIsInMem(stack_top_ - 1));
   ClearShadowForThreadStackAndTLS();
+  fake_stack_ = nullptr;
+  if (__asan_option_detect_stack_use_after_return)
+    AsyncSignalSafeLazyInitFakeStack();
   int local = 0;
   VReport(1, "T%d: stack [%p,%p) size 0x%zx; local=%p\n", tid(),
           (void *)stack_bottom_, (void *)stack_top_, stack_top_ - stack_bottom_,

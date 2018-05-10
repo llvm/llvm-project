@@ -797,9 +797,9 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                  MMRel, LW_FM_MM<0x7>, ISA_MICROMIPS;
     def LBu_MM : LoadMemory<"lbu", GPR32Opnd, mem_mm_16, zextloadi8, II_LBU>,
                  MMRel, LW_FM_MM<0x5>, ISA_MICROMIPS;
-    def LH_MM  : LoadMemory<"lh", GPR32Opnd, mem_simm16, sextloadi16, II_LH,
+    def LH_MM  : LoadMemory<"lh", GPR32Opnd, mem_simmptr, sextloadi16, II_LH,
                             addrDefault>, MMRel, LW_FM_MM<0xf>, ISA_MICROMIPS;
-    def LHu_MM : LoadMemory<"lhu", GPR32Opnd, mem_simm16, zextloadi16, II_LHU>,
+    def LHu_MM : LoadMemory<"lhu", GPR32Opnd, mem_simmptr, zextloadi16, II_LHU>,
                  MMRel, LW_FM_MM<0xd>, ISA_MICROMIPS;
     def LW_MM  : Load<"lw", GPR32Opnd, null_frag, II_LW>, MMRel, LW_FM_MM<0x3f>,
                  ISA_MICROMIPS;

@@ -3,7 +3,7 @@
 ; Test that constant offsets can be folded into global addresses.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @x = external global [0 x i32]
 @y = global [50 x i32] zeroinitializer
