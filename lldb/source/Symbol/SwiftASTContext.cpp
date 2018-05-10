@@ -62,6 +62,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -1334,6 +1335,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     std::string platform_sdk_path(target_sdk_spec.GetPath());
     swift_ast_sp->SetPlatformSDKPath(std::move(platform_sdk_path));
     handled_sdk_path = true;
+  }
+
+  if (target.GetSwiftCreateModuleContextsInParallel()) {
+    llvm::ThreadPool pool;
+    for (size_t mi = 0; mi != num_images; ++mi) {
+      auto module_sp = target.GetImages().GetModuleAtIndex(mi);
+      pool.async([=] {
+	  module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+	});
+    }
+    pool.wait();
   }
 
   Status module_error;

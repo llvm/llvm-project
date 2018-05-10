@@ -3635,6 +3635,8 @@ static PropertyDefinition g_properties[] = {
     {"swift-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, nullptr,
      "List of directories to be searched when locating modules for Swift."},
+    {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean, false, true,
+     nullptr, nullptr, "Create modules AST context in parallel."},
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, nullptr,
      "Automatically load Clang modules referred to by the program."},
@@ -3774,6 +3776,7 @@ enum {
   ePropertyClangModuleSearchPaths,
   ePropertySwiftFrameworkSearchPaths,
   ePropertySwiftModuleSearchPaths,
+  ePropertySwiftCreateModuleContextsInParallel,
   ePropertyAutoImportClangModules,
   ePropertyUseAllCompilerFlags,
   ePropertyAutoApplyFixIts,
@@ -4222,6 +4225,12 @@ FileSpecList &TargetProperties::GetSwiftModuleSearchPaths() {
                                                                    idx);
   assert(option_value);
   return option_value->GetCurrentValue();
+}
+
+bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
+  const uint32_t idx = ePropertySwiftCreateModuleContextsInParallel;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
 FileSpecList &TargetProperties::GetClangModuleSearchPaths() {
