@@ -1866,7 +1866,7 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   // Create one PT_NOTE per a group of contiguous .note sections.
   PhdrEntry *Note = nullptr;
   for (OutputSection *Sec : OutputSections) {
-    if (Sec->Type == SHT_NOTE) {
+    if (Sec->Type == SHT_NOTE && (Sec->Flags & SHF_ALLOC)) {
       if (!Note || Sec->LMAExpr)
         Note = AddHdr(PT_NOTE, PF_R);
       Note->add(Sec);

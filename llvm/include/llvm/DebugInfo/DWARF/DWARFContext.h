@@ -259,7 +259,14 @@ public:
   const AppleAcceleratorTable &getAppleObjC();
 
   /// Get a pointer to a parsed line table corresponding to a compile unit.
-  const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *cu);
+  /// Report any parsing issues as warnings on stderr.
+  const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *U);
+
+  /// Get a pointer to a parsed line table corresponding to a compile unit.
+  /// Report any parsing warnings using the callback.
+  Expected<const DWARFDebugLine::LineTable *>
+  getLineTableForUnit(DWARFUnit *U,
+                      std::function<void(StringRef)> WarnCallback);
 
   DataExtractor getStringExtractor() const {
     return DataExtractor(DObj->getStringSection(), false, 0);

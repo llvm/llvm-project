@@ -720,11 +720,9 @@ Status PlatformRemoteGDBServer::RunShellCommand(
                      // process to exit
     std::string
         *command_output, // Pass NULL if you don't want the command output
-    uint32_t
-        timeout_sec) // Timeout in seconds to wait for shell program to finish
-{
+    const Timeout<std::micro> &timeout) {
   return m_gdb_client.RunShellCommand(command, working_dir, status_ptr,
-                                      signo_ptr, command_output, timeout_sec);
+                                      signo_ptr, command_output, timeout);
 }
 
 void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {

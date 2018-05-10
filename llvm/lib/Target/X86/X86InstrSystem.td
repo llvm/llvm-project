@@ -688,18 +688,21 @@ let Predicates = [In64BitMode, HasRDPID] in {
 
 
 //===----------------------------------------------------------------------===//
-// PTWRITE Instruction
+// PTWRITE Instruction - Write Data to a Processor Trace Packet
 let SchedRW = [WriteSystem] in {
-
 def PTWRITEm: I<0xAE, MRM4m, (outs), (ins i32mem:$dst),
-                "ptwrite{l}\t$dst", []>, XS;
+                "ptwrite{l}\t$dst", [(int_x86_ptwrite32 (loadi32 addr:$dst))]>, XS,
+                Requires<[HasPTWRITE]>;
 def PTWRITE64m : RI<0xAE, MRM4m, (outs), (ins i64mem:$dst),
-                    "ptwrite{q}\t$dst", []>, XS, Requires<[In64BitMode]>;
+                    "ptwrite{q}\t$dst", [(int_x86_ptwrite64 (loadi64 addr:$dst))]>, XS,
+                    Requires<[In64BitMode, HasPTWRITE]>;
 
 def PTWRITEr : I<0xAE, MRM4r, (outs), (ins GR32:$dst),
-                 "ptwrite{l}\t$dst", []>, XS;
+                 "ptwrite{l}\t$dst", [(int_x86_ptwrite32 GR32:$dst)]>, XS,
+                    Requires<[HasPTWRITE]>;
 def PTWRITE64r : RI<0xAE, MRM4r, (outs), (ins GR64:$dst),
-                    "ptwrite{q}\t$dst", []>, XS, Requires<[In64BitMode]>;
+                    "ptwrite{q}\t$dst", [(int_x86_ptwrite64 GR64:$dst)]>, XS,
+                    Requires<[In64BitMode, HasPTWRITE]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//

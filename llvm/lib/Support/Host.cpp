@@ -1286,6 +1286,11 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["xsavec"]   = HasLeafD && ((EAX >> 1) & 1) && HasAVXSave;
   Features["xsaves"]   = HasLeafD && ((EAX >> 3) & 1) && HasAVXSave;
 
+  bool HasLeaf14 = MaxLevel >= 0x14 &&
+                  !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
+
+  Features["ptwrite"] = HasLeaf14 && ((EBX >> 4) & 1);
+
   return true;
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))

@@ -554,10 +554,15 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         break;
 
       // FIXME: Take the demanded mask of the result into account.
+      unsigned RHSTrailingZeros = SA->countTrailingZeros();
       APInt DemandedMaskIn =
-          APInt::getHighBitsSet(BitWidth, BitWidth - SA->countTrailingZeros());
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
+          APInt::getHighBitsSet(BitWidth, BitWidth - RHSTrailingZeros);
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, LHSKnown, Depth + 1))
         return I;
+
+      // Propagate zero bits from the input.
+      Known.Zero.setHighBits(std::min(
+          BitWidth, LHSKnown.Zero.countLeadingOnes() + RHSTrailingZeros));
     }
     break;
   }

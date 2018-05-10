@@ -76,9 +76,16 @@ class ThreadLister {
  public:
   explicit ThreadLister(pid_t pid);
   ~ThreadLister();
-  bool ListThreads(InternalMmapVector<tid_t> *threads);
+  enum Result {
+    Error,
+    Incomplete,
+    Ok,
+  };
+  Result ListThreads(InternalMmapVector<tid_t> *threads);
 
  private:
+  bool IsAlive(int tid);
+
   pid_t pid_;
   int descriptor_ = -1;
   InternalMmapVector<char> buffer_;

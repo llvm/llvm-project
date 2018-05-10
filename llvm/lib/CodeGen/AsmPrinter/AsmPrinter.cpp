@@ -1967,6 +1967,11 @@ void AsmPrinter::emitInt32(int Value) const {
   OutStreamer->EmitIntValue(Value, 4);
 }
 
+/// Emit a long long directive and value.
+void AsmPrinter::emitInt64(uint64_t Value) const {
+  OutStreamer->EmitIntValue(Value, 8);
+}
+
 /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
 /// is specified by Size and Hi/Lo specify the labels. This implicitly uses
 /// .set if it avoids relocations.

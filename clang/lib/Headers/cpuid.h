@@ -202,6 +202,9 @@
 #define bit_XSAVEC      0x00000002
 #define bit_XSAVES      0x00000008
 
+/* Features in %eax for leaf 0x14 sub-leaf 0 */
+#define bit_PTWRITE     0x00000010
+
 /* Features in %ecx for leaf 0x80000001 */
 #define bit_LAHF_LM     0x00000001
 #define bit_ABM         0x00000020

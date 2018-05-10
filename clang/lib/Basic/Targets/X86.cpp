@@ -253,6 +253,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "waitpkg", true);
     LLVM_FALLTHROUGH;
   case CK_GoldmontPlus:
+    setFeatureEnabledImpl(Features, "ptwrite", true);
     setFeatureEnabledImpl(Features, "rdpid", true);
     setFeatureEnabledImpl(Features, "sgx", true);
     LLVM_FALLTHROUGH;
@@ -830,6 +831,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMOVDIR64B = true;
     } else if (Feature == "+pconfig") {
       HasPCONFIG = true;
+    } else if (Feature == "+ptwrite") {
+      HasPTWRITE = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -1192,6 +1195,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MOVDIR64B__");
   if (HasPCONFIG)
     Builder.defineMacro("__PCONFIG__");
+  if (HasPTWRITE)
+    Builder.defineMacro("__PTWRITE__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1326,6 +1331,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("popcnt", true)
       .Case("prefetchwt1", true)
       .Case("prfchw", true)
+      .Case("ptwrite", true)
       .Case("rdpid", true)
       .Case("rdrnd", true)
       .Case("rdseed", true)
@@ -1405,6 +1411,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("popcnt", HasPOPCNT)
       .Case("prefetchwt1", HasPREFETCHWT1)
       .Case("prfchw", HasPRFCHW)
+      .Case("ptwrite", HasPTWRITE)
       .Case("rdpid", HasRDPID)
       .Case("rdrnd", HasRDRND)
       .Case("rdseed", HasRDSEED)

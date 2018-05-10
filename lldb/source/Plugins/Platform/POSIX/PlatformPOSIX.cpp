@@ -102,17 +102,14 @@ lldb_private::Status PlatformPOSIX::RunShellCommand(
                      // process to exit
     std::string
         *command_output, // Pass NULL if you don't want the command output
-    uint32_t
-        timeout_sec) // Timeout in seconds to wait for shell program to finish
-{
+    const Timeout<std::micro> &timeout) {
   if (IsHost())
     return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout_sec);
+                                 command_output, timeout);
   else {
     if (m_remote_platform_sp)
-      return m_remote_platform_sp->RunShellCommand(command, working_dir,
-                                                   status_ptr, signo_ptr,
-                                                   command_output, timeout_sec);
+      return m_remote_platform_sp->RunShellCommand(
+          command, working_dir, status_ptr, signo_ptr, command_output, timeout);
     else
       return Status("unable to run a remote command without a platform");
   }
@@ -372,7 +369,8 @@ static uint32_t chown_file(Platform *platform, const char *path,
     command.Printf(":%d", gid);
   command.Printf("%s", path);
   int status;
-  platform->RunShellCommand(command.GetData(), NULL, &status, NULL, NULL, 10);
+  platform->RunShellCommand(command.GetData(), NULL, &status, NULL, NULL,
+                            std::chrono::seconds(10));
   return status;
 }
 
@@ -396,7 +394,8 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
     StreamString command;
     command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
-    RunShellCommand(command.GetData(), NULL, &status, NULL, NULL, 10);
+    RunShellCommand(command.GetData(), NULL, &status, NULL, NULL,
+                    std::chrono::seconds(10));
     if (status != 0)
       return Status("unable to perform copy");
     if (uid == UINT32_MAX && gid == UINT32_MAX)
@@ -426,7 +425,8 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
       if (log)
         log->Printf("[PutFile] Running command: %s\n", command.GetData());
       int retcode;
-      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL, 60);
+      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL,
+                            std::chrono::minutes(1));
       if (retcode == 0) {
         // Don't chown a local file for a remote system
         //                if (chown_file(this,dst_path.c_str(),uid,gid) != 0)
@@ -500,7 +500,8 @@ lldb_private::Status PlatformPOSIX::GetFile(
     StreamString cp_command;
     cp_command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
-    RunShellCommand(cp_command.GetData(), NULL, &status, NULL, NULL, 10);
+    RunShellCommand(cp_command.GetData(), NULL, &status, NULL, NULL,
+                    std::chrono::seconds(10));
     if (status != 0)
       return Status("unable to perform copy");
     return Status();
@@ -521,7 +522,8 @@ lldb_private::Status PlatformPOSIX::GetFile(
       if (log)
         log->Printf("[GetFile] Running command: %s\n", command.GetData());
       int retcode;
-      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL, 60);
+      Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL,
+                            std::chrono::minutes(1));
       if (retcode == 0)
         return Status();
       // If we are here, rsync has failed - let's try the slow way before

@@ -3635,7 +3635,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
     Instruction *NextInst = II->getNextNode();
-    for (int i = 0; i < GuardWideningWindow; i++) {
+    for (unsigned i = 0; i < GuardWideningWindow; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;

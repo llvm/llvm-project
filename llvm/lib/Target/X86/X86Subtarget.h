@@ -215,6 +215,9 @@ protected:
   /// Processor has MOVDIR64B instruction (direct store 64 bytes).
   bool HasMOVDIR64B;
 
+  /// Processor has ptwrite instruction.
+  bool HasPTWRITE;
+
   /// Processor has Prefetch with intent to Write instruction
   bool HasPREFETCHWT1;
 
@@ -593,6 +596,7 @@ public:
   bool hasCLDEMOTE() const { return HasCLDEMOTE; }
   bool hasMOVDIRI() const { return HasMOVDIRI; }
   bool hasMOVDIR64B() const { return HasMOVDIR64B; }
+  bool hasPTWRITE() const { return HasPTWRITE; }
   bool isSHLDSlow() const { return IsSHLDSlow; }
   bool isPMULLDSlow() const { return IsPMULLDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }

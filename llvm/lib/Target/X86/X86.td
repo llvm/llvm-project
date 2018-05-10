@@ -232,6 +232,8 @@ def FeatureCLZERO  : SubtargetFeature<"clzero", "HasCLZERO", "true",
                                       "Enable Cache Line Zero">;
 def FeatureCLDEMOTE  : SubtargetFeature<"cldemote", "HasCLDEMOTE", "true",
                                       "Enable Cache Demote">;
+def FeaturePTWRITE  : SubtargetFeature<"ptwrite", "HasPTWRITE", "true",
+                                      "Support ptwrite instruction">;
 def FeatureMPX     : SubtargetFeature<"mpx", "HasMPX", "true",
                                       "Support MPX instructions">;
 def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
@@ -624,23 +626,25 @@ class GoldmontProc<string Name> : ProcModel<Name, SLMModel,
 ]>;
 def : GoldmontProc<"goldmont">;
 
-class GoldmontPlusProc<string Name> : ProcModel<Name, SLMModel,
-      GLMFeatures.Value, [
-  ProcIntelGLP,
+def GLPFeatures : ProcessorFeatures<GLMFeatures.Value, [
+  FeaturePTWRITE,
   FeatureRDPID,
   FeatureSGX
+]>;
+
+class GoldmontPlusProc<string Name> : ProcModel<Name, SLMModel,
+      GLPFeatures.Value, [
+  ProcIntelGLP
 ]>;
 def : GoldmontPlusProc<"goldmont-plus">;
 
 class TremontProc<string Name> : ProcModel<Name, SLMModel,
-      GLMFeatures.Value, [
+      GLPFeatures.Value, [
   ProcIntelTRM,
   FeatureCLDEMOTE,
   FeatureGFNI,
   FeatureMOVDIRI,
   FeatureMOVDIR64B,
-  FeatureRDPID,
-  FeatureSGX,
   FeatureWAITPKG
 ]>;
 def : TremontProc<"tremont">;
