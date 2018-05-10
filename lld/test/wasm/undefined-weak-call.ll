@@ -6,7 +6,7 @@
 ; Check that calling an undefined weak function generates an appropriate stub
 ; that will fail at runtime with "unreachable".
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare extern_weak void @weakFunc1()
 declare extern_weak void @weakFunc2()         ; same signature

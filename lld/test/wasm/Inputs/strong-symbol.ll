@@ -1,4 +1,4 @@
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define i64 @weakFn() #0 {
 entry:

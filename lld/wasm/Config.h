@@ -24,6 +24,7 @@ struct Configuration {
   bool GcSections;
   bool ImportMemory;
   bool ImportTable;
+  bool MergeDataSegments;
   bool PrintGcSections;
   bool Relocatable;
   bool StripAll;
