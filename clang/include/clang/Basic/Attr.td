@@ -1495,6 +1495,12 @@ def NotTailCalled : InheritableAttr {
   let Documentation = [NotTailCalledDocs];
 }
 
+def NoStackProtector : InheritableAttr {
+  let Spellings = [Clang<"no_stack_protector">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [NoStackProtectorDocs];
+}
+
 def NoThrow : InheritableAttr {
   let Spellings = [GCC<"nothrow">, Declspec<"nothrow">];
   let Subjects = SubjectList<[Function]>;

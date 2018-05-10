@@ -1140,7 +1140,9 @@ bool operator>=(const path& __lhs, const path& __rhs) _NOEXCEPT
 
 inline _LIBCPP_INLINE_VISIBILITY
 path operator/(const path& __lhs, const path& __rhs) {
-    return path(__lhs) /= __rhs;
+    path __result(__lhs);
+    __result /= __rhs;
+    return __result;
 }
 
 template <class _Source>

@@ -4714,6 +4714,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (Args.hasFlag(options::OPT_fcuda_rdc, options::OPT_fno_cuda_rdc, false))
       CmdArgs.push_back("-fcuda-rdc");
+    if (Args.hasFlag(options::OPT_fcuda_short_ptr,
+                     options::OPT_fno_cuda_short_ptr, false))
+      CmdArgs.push_back("-fcuda-short-ptr");
   }
 
   // OpenMP offloading device jobs take the argument -fopenmp-host-ir-file-path

@@ -445,10 +445,9 @@ tooling::Replacements sortJavaScriptImports(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName) {
   // FIXME: Cursor support.
-  std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
-  JavaScriptImportSorter Sorter(*Env, Style);
-  return Sorter.process().first;
+  return JavaScriptImportSorter(Environment(Code, FileName, Ranges), Style)
+      .process()
+      .first;
 }
 
 } // end namespace format

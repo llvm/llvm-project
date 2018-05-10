@@ -537,8 +537,6 @@ Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
     { MCSymbolRefExpr::VK_None,           fixup_Hexagon_HI16 },
   };
 
-  std::map<unsigned, unsigned>::const_iterator FindIt;
-
   switch (MCID.getOpcode()) {
     case Hexagon::LO:
     case Hexagon::A2_tfril: {
@@ -550,7 +548,7 @@ Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
     case Hexagon::HI:
     case Hexagon::A2_tfrih: {
       auto F = RelocsHi.find(VarKind);
-      if (F != RelocsLo.end())
+      if (F != RelocsHi.end())
         return Hexagon::Fixups(F->second);
       break;
     }

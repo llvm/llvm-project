@@ -173,7 +173,7 @@ else()
       CFLAGS ${UBSAN_CXXFLAGS}
       PARENT_TARGET ubsan)
 
-    if (UNIX)
+    if (FUCHSIA OR UNIX)
       add_compiler_rt_runtime(clang_rt.ubsan_standalone
         SHARED
         ARCHS ${UBSAN_SUPPORTED_ARCH}

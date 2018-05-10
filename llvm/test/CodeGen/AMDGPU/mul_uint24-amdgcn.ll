@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
@@ -18,10 +18,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umul24_i16_sext:
-; SI: v_mul_u32_u24_e{{(32|64)}} [[VI_MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; SI: v_bfe_i32 v{{[0-9]}}, [[VI_MUL]], 0, 16
-; VI: s_mul_i32 [[SI_MUL:s[0-9]]], s{{[0-9]}}, s{{[0-9]}}
-; VI: s_sext_i32_i16 s{{[0-9]}}, [[SI_MUL]]
+; GCN: v_mul_u32_u24_e{{(32|64)}} [[VI_MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN: v_bfe_i32 v{{[0-9]}}, [[VI_MUL]], 0, 16
 define amdgpu_kernel void @test_umul24_i16_sext(i32 addrspace(1)* %out, i16 %a, i16 %b) {
 entry:
   %mul = mul i16 %a, %b
@@ -48,12 +46,9 @@ define amdgpu_kernel void @test_umul24_i16_vgpr_sext(i32 addrspace(1)* %out, i16
 }
 
 ; FUNC-LABEL: {{^}}test_umul24_i16:
-; SI: s_and_b32
-; SI: v_mul_u32_u24_e32
-; SI: v_and_b32_e32
-; VI: s_mul_i32
-; VI: s_and_b32
-; VI: v_mov_b32_e32
+; GCN: s_and_b32
+; GCN: v_mul_u32_u24_e32
+; GCN: v_and_b32_e32
 define amdgpu_kernel void @test_umul24_i16(i32 addrspace(1)* %out, i16 %a, i16 %b) {
 entry:
   %mul = mul i16 %a, %b
@@ -217,4 +212,51 @@ entry:
   %trunc = trunc i33 %hi to i32
   store i32 %trunc, i32 addrspace(1)* %out
   ret void
+}
+
+
+; Make sure the created any_extend is ignored to use the real bits
+; being multiplied.
+
+; GCN-LABEL: {{^}}test_umul24_anyextend_i24_src0_src1:
+; GCN-DAG: v_mul_u32_u24_e32 v0, 0xea, v0
+; GCN-DAG: v_mul_u32_u24_e32 v1, 0x39b, v1
+; GCN: v_mul_u32_u24_e32 v0, v0, v1
+; GCN: v_and_b32_e32 v0, 0x1fffe, v0
+; GCN: v_mul_u32_u24_e32 v0, 0x63, v0
+; GCN: s_setpc_b64
+define i17 @test_umul24_anyextend_i24_src0_src1(i24 %a, i24 %b) {
+entry:
+  %aa = mul i24 %a, 234
+  %bb = mul i24 %b, 923
+  %a_32 = zext i24 %aa to i32
+  %b_32 = zext i24 %bb to i32
+  %mul = mul i32 %a_32, %b_32
+  %trunc = trunc i32 %mul to i17
+  %arst = mul i17 %trunc, 99
+  ret i17 %arst
+}
+
+; GCN-LABEL: {{^}}test_umul24_anyextend_i23_src0_src1:
+; GCN: s_mov_b32 [[U23_MASK:s[0-9]+]], 0x7fffff
+; GCN-DAG: v_and_b32_e32 v0, [[U23_MASK]], v0
+; GCN-DAG: v_and_b32_e32 v1, [[U23_MASK]], v1
+; GCN-DAG: v_mul_u32_u24_e32 v0, 0xea, v0
+; GCN-DAG: v_mul_u32_u24_e32 v1, 0x39b, v1
+; GCN: v_and_b32_e32 v1, s6, v1
+; GCN: v_and_b32_e32 v0, 0x7ffffe, v0
+; GCN: v_mul_u32_u24_e32 v0, v0, v1
+; GCN: v_and_b32_e32 v0, 0x1fffe, v0
+; GCN: v_mul_u32_u24_e32 v0, 0x63, v0
+; GCN: s_setpc_b64
+define i17 @test_umul24_anyextend_i23_src0_src1(i23 %a, i23 %b) {
+entry:
+  %aa = mul i23 %a, 234
+  %bb = mul i23 %b, 923
+  %a_32 = zext i23 %aa to i32
+  %b_32 = zext i23 %bb to i32
+  %mul = mul i32 %a_32, %b_32
+  %trunc = trunc i32 %mul to i17
+  %arst = mul i17 %trunc, 99
+  ret i17 %arst
 }

@@ -1409,20 +1409,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
 
     llvm::Type *ArgType = Val->getType();
     Shift = Builder.CreateIntCast(Shift, ArgType, false);
-    unsigned ArgWidth = cast<llvm::IntegerType>(ArgType)->getBitWidth();
-    Value *ArgTypeSize = llvm::ConstantInt::get(ArgType, ArgWidth);
-    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
-
+    unsigned ArgWidth = ArgType->getIntegerBitWidth();
     Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
-    Shift = Builder.CreateAnd(Shift, Mask);
-    Value *LeftShift = Builder.CreateSub(ArgTypeSize, Shift);
 
-    Value *RightShifted = Builder.CreateLShr(Val, Shift);
-    Value *LeftShifted = Builder.CreateShl(Val, LeftShift);
-    Value *Rotated = Builder.CreateOr(LeftShifted, RightShifted);
-
-    Value *ShiftIsZero = Builder.CreateICmpEQ(Shift, ArgZero);
-    Value *Result = Builder.CreateSelect(ShiftIsZero, Val, Rotated);
+    Value *RightShiftAmt = Builder.CreateAnd(Shift, Mask);
+    Value *RightShifted = Builder.CreateLShr(Val, RightShiftAmt);
+    Value *LeftShiftAmt = Builder.CreateAnd(Builder.CreateNeg(Shift), Mask);
+    Value *LeftShifted = Builder.CreateShl(Val, LeftShiftAmt);
+    Value *Result = Builder.CreateOr(LeftShifted, RightShifted);
     return RValue::get(Result);
   }
   case Builtin::BI_rotl8:
@@ -1435,20 +1429,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
 
     llvm::Type *ArgType = Val->getType();
     Shift = Builder.CreateIntCast(Shift, ArgType, false);
-    unsigned ArgWidth = cast<llvm::IntegerType>(ArgType)->getBitWidth();
-    Value *ArgTypeSize = llvm::ConstantInt::get(ArgType, ArgWidth);
-    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
-
+    unsigned ArgWidth = ArgType->getIntegerBitWidth();
     Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
-    Shift = Builder.CreateAnd(Shift, Mask);
-    Value *RightShift = Builder.CreateSub(ArgTypeSize, Shift);
 
-    Value *LeftShifted = Builder.CreateShl(Val, Shift);
-    Value *RightShifted = Builder.CreateLShr(Val, RightShift);
-    Value *Rotated = Builder.CreateOr(LeftShifted, RightShifted);
-
-    Value *ShiftIsZero = Builder.CreateICmpEQ(Shift, ArgZero);
-    Value *Result = Builder.CreateSelect(ShiftIsZero, Val, Rotated);
+    Value *LeftShiftAmt = Builder.CreateAnd(Shift, Mask);
+    Value *LeftShifted = Builder.CreateShl(Val, LeftShiftAmt);
+    Value *RightShiftAmt = Builder.CreateAnd(Builder.CreateNeg(Shift), Mask);
+    Value *RightShifted = Builder.CreateLShr(Val, RightShiftAmt);
+    Value *Result = Builder.CreateOr(LeftShifted, RightShifted);
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_unpredictable: {

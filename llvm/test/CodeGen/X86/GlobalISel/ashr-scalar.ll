@@ -153,8 +153,7 @@ define i1 @test_ashr_i1(i32 %arg1, i32 %arg2) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    shlb $7, %dil
 ; X64-NEXT:    sarb $7, %dil
-; X64-NEXT:    shlb $7, %sil
-; X64-NEXT:    sarb $7, %sil
+; X64-NEXT:    andb $1, %sil
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    sarb %cl, %dil
 ; X64-NEXT:    movl %edi, %eax
@@ -171,8 +170,7 @@ define i1 @test_ashr_i1_imm1(i32 %arg1) {
 ; X64-NEXT:    movb $-1, %cl
 ; X64-NEXT:    shlb $7, %dil
 ; X64-NEXT:    sarb $7, %dil
-; X64-NEXT:    shlb $7, %cl
-; X64-NEXT:    sarb $7, %cl
+; X64-NEXT:    andb $1, %cl
 ; X64-NEXT:    sarb %cl, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq

@@ -50,8 +50,7 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override;
+                          const Module *Imported) override;
 
   void EndOfMainFile() override {
     OutputGraphFile();
@@ -66,17 +65,15 @@ void clang::AttachDependencyGraphGen(Preprocessor &PP, StringRef OutputFile,
                                                                SysRoot));
 }
 
-void DependencyGraphCallback::InclusionDirective(
-    SourceLocation HashLoc,
-    const Token &IncludeTok,
-    StringRef FileName,
-    bool IsAngled,
-    CharSourceRange FilenameRange,
-    const FileEntry *File,
-    StringRef SearchPath,
-    StringRef RelativePath,
-    const Module *Imported, 
-    SrcMgr::CharacteristicKind FileType) {
+void DependencyGraphCallback::InclusionDirective(SourceLocation HashLoc,
+                                                 const Token &IncludeTok,
+                                                 StringRef FileName,
+                                                 bool IsAngled,
+                                                 CharSourceRange FilenameRange,
+                                                 const FileEntry *File,
+                                                 StringRef SearchPath,
+                                                 StringRef RelativePath,
+                                                 const Module *Imported) {
   if (!File)
     return;
   

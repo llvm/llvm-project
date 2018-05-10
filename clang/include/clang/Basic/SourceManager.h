@@ -35,6 +35,7 @@
 #ifndef LLVM_CLANG_BASIC_SOURCEMANAGER_H
 #define LLVM_CLANG_BASIC_SOURCEMANAGER_H
 
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -60,7 +61,6 @@ namespace clang {
 
 class ASTReader;
 class ASTWriter;
-class DiagnosticsEngine;
 class LineTableInfo;
 class SourceManager;
 
@@ -1813,6 +1813,28 @@ public:
   bool operator()(SourceRange LHS, SourceRange RHS) const {
     return SM.isBeforeInTranslationUnit(LHS.getBegin(), RHS.getBegin());
   }
+};
+
+/// SourceManager and necessary depdencies (e.g. VFS, FileManager) for a single
+/// in-memorty file.
+class SourceManagerForFile {
+public:
+  /// Creates SourceManager and necessary depdencies (e.g. VFS, FileManager).
+  /// The main file in the SourceManager will be \p FileName with \p Content.
+  SourceManagerForFile(StringRef FileName, StringRef Content);
+
+  SourceManager &get() {
+    assert(SourceMgr);
+    return *SourceMgr;
+  }
+
+private:
+  // The order of these fields are important - they should be in the same order
+  // as they are created in `createSourceManagerForFile` so that they can be
+  // deleted in the reverse order as they are created.
+  std::unique_ptr<FileManager> FileMgr;
+  std::unique_ptr<DiagnosticsEngine> Diagnostics;
+  std::unique_ptr<SourceManager> SourceMgr;
 };
 
 } // namespace clang
