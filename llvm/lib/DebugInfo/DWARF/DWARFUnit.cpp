@@ -517,7 +517,9 @@ parseDWARF64StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
   uint64_t Size = DA.getU64(&Offset);
   uint8_t Version = DA.getU16(&Offset);
   (void)DA.getU16(&Offset); // padding
-  return StrOffsetsContributionDescriptor(Offset, Size, Version, DWARF64);
+  // The encoded length includes the 2-byte version field and the 2-byte
+  // padding, so we need to subtract them out when we populate the descriptor.
+  return StrOffsetsContributionDescriptor(Offset, Size - 4, Version, DWARF64);
   //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
 }
 
@@ -532,7 +534,10 @@ parseDWARF32StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
     return Optional<StrOffsetsContributionDescriptor>();
   uint8_t Version = DA.getU16(&Offset);
   (void)DA.getU16(&Offset); // padding
-  return StrOffsetsContributionDescriptor(Offset, ContributionSize, Version, DWARF32);
+  // The encoded length includes the 2-byte version field and the 2-byte
+  // padding, so we need to subtract them out when we populate the descriptor.
+  return StrOffsetsContributionDescriptor(Offset, ContributionSize - 4, Version,
+                                          DWARF32);
   //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
 }
 

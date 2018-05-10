@@ -2,7 +2,7 @@
 ; in wasm relocations.
 ; RUN: not llc -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @foo = internal global i8* blockaddress(@bar, %addr), align 4
 

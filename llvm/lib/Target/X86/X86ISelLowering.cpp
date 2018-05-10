@@ -36364,8 +36364,6 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.useSoftFloat())
     return SDValue();
 
-  // TODO: Check for global or instruction-level "nnan". In that case, we
-  //       should be able to lower to FMAX/FMIN alone.
   // TODO: If an operand is already known to be a NaN or not a NaN, this
   //       should be an optional swap and FMAX/FMIN.
 
@@ -36375,14 +36373,21 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
         (Subtarget.hasAVX() && (VT == MVT::v8f32 || VT == MVT::v4f64))))
     return SDValue();
 
-  // This takes at least 3 instructions, so favor a library call when operating
-  // on a scalar and minimizing code size.
-  if (!VT.isVector() && DAG.getMachineFunction().getFunction().optForMinSize())
-    return SDValue();
-
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
+  auto MinMaxOp = N->getOpcode() == ISD::FMAXNUM ? X86ISD::FMAX : X86ISD::FMIN;
+
+  // If we don't have to respect NaN inputs, this is a direct translation to x86
+  // min/max instructions.
+  if (DAG.getTarget().Options.NoNaNsFPMath || N->getFlags().hasNoNaNs())
+    return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
+
+  // If we have to respect NaN inputs, this takes at least 3 instructions.
+  // Favor a library call when operating on a scalar and minimizing code size.
+  if (!VT.isVector() && DAG.getMachineFunction().getFunction().optForMinSize())
+    return SDValue();
+
   EVT SetCCType = DAG.getTargetLoweringInfo().getSetCCResultType(
       DAG.getDataLayout(), *DAG.getContext(), VT);
 
@@ -36405,9 +36410,8 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   // use those instructions for fmaxnum by selecting away a NaN input.
 
   // If either operand is NaN, the 2nd source operand (Op0) is passed through.
-  auto MinMaxOp = N->getOpcode() == ISD::FMAXNUM ? X86ISD::FMAX : X86ISD::FMIN;
   SDValue MinOrMax = DAG.getNode(MinMaxOp, DL, VT, Op1, Op0);
-  SDValue IsOp0Nan = DAG.getSetCC(DL, SetCCType , Op0, Op0, ISD::SETUO);
+  SDValue IsOp0Nan = DAG.getSetCC(DL, SetCCType, Op0, Op0, ISD::SETUO);
 
   // If Op0 is a NaN, select Op1. Otherwise, select the max. If both operands
   // are NaN, the NaN value of Op1 is the result.

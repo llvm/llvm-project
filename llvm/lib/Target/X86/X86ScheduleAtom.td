@@ -281,8 +281,10 @@ def  : WriteRes<WriteVecMaskedStoreY, [AtomPort0]>;
 def  : WriteRes<WriteVecMove,  [AtomPort01]>;
 
 defm : AtomWriteResPair<WriteVecALU,       [AtomPort01],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WriteVecALUX,      [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecALUY,      [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecLogic,     [AtomPort01],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WriteVecLogicX,    [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecLogicY,    [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecTest,      [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecTestY,     [AtomPort01],  [AtomPort0], 1, 1>;
@@ -300,11 +302,14 @@ defm : AtomWriteResPair<WritePMULLDY,      [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WritePHMINPOS,      [AtomPort0],  [AtomPort0], 5, 5, [5], [5]>;
 defm : AtomWriteResPair<WriteMPSAD,        [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteMPSADY,       [AtomPort01],  [AtomPort0], 1, 1>;
-defm : AtomWriteResPair<WritePSADBW,        [AtomPort0],  [AtomPort0], 5, 5, [5], [5]>;
+defm : AtomWriteResPair<WritePSADBW,       [AtomPort01], [AtomPort01], 4, 4, [4], [4]>;
+defm : AtomWriteResPair<WritePSADBWX,       [AtomPort0],  [AtomPort0], 5, 5, [5], [5]>;
 defm : AtomWriteResPair<WritePSADBWY,       [AtomPort0],  [AtomPort0], 5, 5, [5], [5]>;
 defm : AtomWriteResPair<WriteShuffle,       [AtomPort0],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WriteShuffleX,      [AtomPort0],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteShuffleY,      [AtomPort0],  [AtomPort0], 1, 1>;
-defm : AtomWriteResPair<WriteVarShuffle,   [AtomPort01], [AtomPort01], 4, 5, [4], [5]>;
+defm : AtomWriteResPair<WriteVarShuffle,    [AtomPort0],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WriteVarShuffleX,  [AtomPort01], [AtomPort01], 4, 5, [4], [5]>;
 defm : AtomWriteResPair<WriteVarShuffleY,  [AtomPort01], [AtomPort01], 4, 5, [4], [5]>;
 defm : AtomWriteResPair<WriteBlend,         [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 defm : AtomWriteResPair<WriteBlendY,        [AtomPort0],  [AtomPort0]>; // NOTE: Doesn't exist on Atom.
@@ -355,7 +360,8 @@ defm : AtomWriteResPair<WriteAESDecEnc, [AtomPort01], [AtomPort01]>; // NOTE: Do
 
 defm : AtomWriteResPair<WriteFHAdd,  [AtomPort01], [AtomPort01], 8, 9, [8], [9]>;
 defm : AtomWriteResPair<WriteFHAddY, [AtomPort01], [AtomPort01], 8, 9, [8], [9]>;
-defm : AtomWriteResPair<WritePHAdd,  [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
+defm : AtomWriteResPair<WritePHAdd,  [AtomPort01], [AtomPort01], 3, 4, [3], [4]>;
+defm : AtomWriteResPair<WritePHAddX, [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
 defm : AtomWriteResPair<WritePHAddY, [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -387,7 +393,6 @@ def : InstRW<[AtomWrite0_1], (instrs FXAM, LD_Frr,
                                      MOVSX64rr32,
                                      MMX_MOVD64rr,
                                      MMX_MOVD64to64rr,
-                                     MMX_PSHUFBrr, MMX_PSHUFBrm,
                                      MOVDI2PDIrr,
                                      MOVDI2SSrr,
                                      MOV64toPQIrr,
@@ -492,7 +497,7 @@ def : InstRW<[AtomWrite01_3], (instrs CLD, LDDQUrm,
                                       POP16rmm, POP32rmm, POP64rmm)>;
 def : InstRW<[AtomWrite01_3], (instregex "XADD(8|16|32|64)rm",
                                          "XCHG(8|16|32|64)rm",
-                                         "(MMX_)?PH(ADD|SUB)Drr",
+                                         "PH(ADD|SUB)Drr",
                                          "MOV(S|Z)X16rm8",
                                          "MMX_P(ADD|SUB)Qirm",
                                          "MOV(UPS|UPD|DQU)rm",
@@ -506,9 +511,8 @@ def : InstRW<[AtomWrite01_4], (instrs CBW, CWD, CWDE, CDQ, CDQE, CQO,
                                       JCXZ, JECXZ, JRCXZ,
                                       SHLD32mrCL, SHRD32mrCL,
                                       SHLD32mri8, SHRD32mri8,
-                                      LD_F80m,
-                                      MMX_PSADBWirr, MMX_PSADBWirm)>;
-def : InstRW<[AtomWrite01_4], (instregex "(MMX_)?PH(ADD|SUB)Drm",
+                                      LD_F80m)>;
+def : InstRW<[AtomWrite01_4], (instregex "PH(ADD|SUB)Drm",
                                          "(MMX_)?PEXTRWrr(_REV)?")>;
 
 def AtomWrite01_5 : SchedWriteRes<[AtomPort01]> {

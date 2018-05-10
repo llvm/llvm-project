@@ -36,13 +36,6 @@ LLVMMetadataRef LLVMMDNode2(LLVMContextRef C, LLVMMetadataRef *MDs,
       MDNode::get(*unwrap(C), ArrayRef<Metadata *>(unwrap(MDs), Count)));
 }
 
-LLVMMetadataRef LLVMTemporaryMDNode(LLVMContextRef C, LLVMMetadataRef *MDs,
-                                    unsigned Count) {
-  return wrap(MDTuple::getTemporary(*unwrap(C),
-                                    ArrayRef<Metadata *>(unwrap(MDs), Count))
-                  .release());
-}
-
 void LLVMAddNamedMetadataOperand2(LLVMModuleRef M, const char *name,
                                   LLVMMetadataRef Val) {
   NamedMDNode *N = unwrap(M)->getOrInsertNamedMetadata(name);
@@ -56,12 +49,6 @@ void LLVMAddNamedMetadataOperand2(LLVMModuleRef M, const char *name,
 void LLVMSetMetadata2(LLVMValueRef Inst, unsigned KindID, LLVMMetadataRef MD) {
   MDNode *N = MD ? unwrap<MDNode>(MD) : nullptr;
   unwrap<Instruction>(Inst)->setMetadata(KindID, N);
-}
-
-void LLVMMetadataReplaceAllUsesWith(LLVMMetadataRef MD, LLVMMetadataRef New) {
-  auto *Node = unwrap<MDNode>(MD);
-  Node->replaceAllUsesWith(unwrap<Metadata>(New));
-  MDNode::deleteTemporary(Node);
 }
 
 void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Bref, unsigned Line,

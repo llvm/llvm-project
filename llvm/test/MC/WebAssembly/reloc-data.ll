@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -filetype=obj %s -o - | llvm-readobj -r -expand-relocs | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; foo and bar are external and internal symbols.  a and b are pointers
 ; initialized to these locations offset by 2 and -2 elements respecitively.

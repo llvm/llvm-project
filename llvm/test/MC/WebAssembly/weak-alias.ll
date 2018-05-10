@@ -2,7 +2,7 @@
 ; RUN: obj2yaml %t.o | FileCheck %s
 ; RUN: llvm-objdump -t %t.o | FileCheck --check-prefix=CHECK-SYMS %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; 'foo_alias()' is weak alias of function 'foo()'
 ; 'bar_alias' is weak alias of global variable 'bar'

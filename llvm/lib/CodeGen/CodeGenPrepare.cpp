@@ -216,6 +216,11 @@ static cl::opt<bool> AddrSinkCombineScaledReg(
     "addr-sink-combine-scaled-reg", cl::Hidden, cl::init(true),
     cl::desc("Allow combining of ScaledReg field in Address sinking."));
 
+static cl::opt<bool>
+    EnableGEPOffsetSplit("cgp-split-large-offset-gep", cl::Hidden,
+                         cl::init(true),
+                         cl::desc("Enable splitting large offset of GEP."));
+
 namespace {
 
 using SetOfInstrs = SmallPtrSet<Instruction *, 16>;
@@ -260,6 +265,20 @@ class TypePromotionTransaction;
 
     /// Keep track of sext chains based on their initial value.
     DenseMap<Value *, Instruction *> SeenChainsForSExt;
+
+    /// Keep track of GEPs accessing the same data structures such as structs or
+    /// arrays that are candidates to be split later because of their large
+    /// size.
+    DenseMap<
+        AssertingVH<Value>,
+        SmallVector<std::pair<AssertingVH<GetElementPtrInst>, int64_t>, 32>>
+        LargeOffsetGEPMap;
+
+    /// Keep track of new GEP base after splitting the GEPs having large offset.
+    SmallSet<AssertingVH<Value>, 2> NewGEPBases;
+
+    /// Map serial numbers to Large offset GEPs.
+    DenseMap<AssertingVH<GetElementPtrInst>, int> LargeOffsetGEPID;
 
     /// Keep track of SExt promoted.
     ValueToSExts ValToSExtendedUses;
@@ -322,6 +341,7 @@ class TypePromotionTransaction;
                           SmallVectorImpl<Instruction *> &ProfitablyMovedExts,
                           unsigned CreatedInstsCost = 0);
     bool mergeSExts(Function &F);
+    bool splitLargeGEPOffsets();
     bool performAddressTypePromotion(
         Instruction *&Inst,
         bool AllowPromotionWithoutCommonHeader,
@@ -415,6 +435,8 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     SeenChainsForSExt.clear();
     ValToSExtendedUses.clear();
     RemovedInsts.clear();
+    LargeOffsetGEPMap.clear();
+    LargeOffsetGEPID.clear();
     for (Function::iterator I = F.begin(); I != F.end(); ) {
       BasicBlock *BB = &*I++;
       bool ModifiedDTOnIteration = false;
@@ -426,6 +448,8 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     }
     if (EnableTypePromotionMerge && !ValToSExtendedUses.empty())
       MadeChange |= mergeSExts(F);
+    if (!LargeOffsetGEPMap.empty())
+      MadeChange |= splitLargeGEPOffsets();
 
     // Really free removed instructions during promotion.
     for (Instruction *I : RemovedInsts)
@@ -2528,22 +2552,23 @@ class AddressingModeMatcher {
   /// The ongoing transaction where every action should be registered.
   TypePromotionTransaction &TPT;
 
+  // A GEP which has too large offset to be folded into the addressing mode.
+  std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP;
+
   /// This is set to true when we should not do profitability checks.
   /// When true, IsProfitableToFoldIntoAddressingMode always returns true.
   bool IgnoreProfitability;
 
-  AddressingModeMatcher(SmallVectorImpl<Instruction *> &AMI,
-                        const TargetLowering &TLI,
-                        const TargetRegisterInfo &TRI,
-                        Type *AT, unsigned AS,
-                        Instruction *MI, ExtAddrMode &AM,
-                        const SetOfInstrs &InsertedInsts,
-                        InstrToOrigTy &PromotedInsts,
-                        TypePromotionTransaction &TPT)
+  AddressingModeMatcher(
+      SmallVectorImpl<Instruction *> &AMI, const TargetLowering &TLI,
+      const TargetRegisterInfo &TRI, Type *AT, unsigned AS, Instruction *MI,
+      ExtAddrMode &AM, const SetOfInstrs &InsertedInsts,
+      InstrToOrigTy &PromotedInsts, TypePromotionTransaction &TPT,
+      std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP)
       : AddrModeInsts(AMI), TLI(TLI), TRI(TRI),
         DL(MI->getModule()->getDataLayout()), AccessTy(AT), AddrSpace(AS),
         MemoryInst(MI), AddrMode(AM), InsertedInsts(InsertedInsts),
-        PromotedInsts(PromotedInsts), TPT(TPT) {
+        PromotedInsts(PromotedInsts), TPT(TPT), LargeOffsetGEP(LargeOffsetGEP) {
     IgnoreProfitability = false;
   }
 
@@ -2555,20 +2580,19 @@ public:
   /// optimizations.
   /// \p PromotedInsts maps the instructions to their type before promotion.
   /// \p The ongoing transaction where every action should be registered.
-  static ExtAddrMode Match(Value *V, Type *AccessTy, unsigned AS,
-                           Instruction *MemoryInst,
-                           SmallVectorImpl<Instruction*> &AddrModeInsts,
-                           const TargetLowering &TLI,
-                           const TargetRegisterInfo &TRI,
-                           const SetOfInstrs &InsertedInsts,
-                           InstrToOrigTy &PromotedInsts,
-                           TypePromotionTransaction &TPT) {
+  static ExtAddrMode
+  Match(Value *V, Type *AccessTy, unsigned AS, Instruction *MemoryInst,
+        SmallVectorImpl<Instruction *> &AddrModeInsts,
+        const TargetLowering &TLI, const TargetRegisterInfo &TRI,
+        const SetOfInstrs &InsertedInsts, InstrToOrigTy &PromotedInsts,
+        TypePromotionTransaction &TPT,
+        std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP) {
     ExtAddrMode Result;
 
-    bool Success = AddressingModeMatcher(AddrModeInsts, TLI, TRI,
-                                         AccessTy, AS,
+    bool Success = AddressingModeMatcher(AddrModeInsts, TLI, TRI, AccessTy, AS,
                                          MemoryInst, Result, InsertedInsts,
-                                         PromotedInsts, TPT).matchAddr(V, 0);
+                                         PromotedInsts, TPT, LargeOffsetGEP)
+                       .matchAddr(V, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
     return Result;
   }
@@ -3787,6 +3811,30 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
         // Check to see if we can fold the base pointer in too.
         if (matchAddr(AddrInst->getOperand(0), Depth+1))
           return true;
+      } else if (EnableGEPOffsetSplit && isa<GetElementPtrInst>(AddrInst) &&
+                 TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
+                 ConstantOffset > 0) {
+        // Record GEPs with non-zero offsets as candidates for splitting in the
+        // event that the offset cannot fit into the r+i addressing mode.
+        // Simple and common case that only one GEP is used in calculating the
+        // address for the memory access.
+        Value *Base = AddrInst->getOperand(0);
+        auto *BaseI = dyn_cast<Instruction>(Base);
+        auto *GEP = cast<GetElementPtrInst>(AddrInst);
+        if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
+            (BaseI && !isa<CastInst>(BaseI) &&
+             !isa<GetElementPtrInst>(BaseI))) {
+          // If the base is an instruction, make sure the GEP is not in the same
+          // basic block as the base. If the base is an argument or global
+          // value, make sure the GEP is not in the entry block.  Otherwise,
+          // instruction selection can undo the split.  Also make sure the
+          // parent block allows inserting non-PHI instructions before the
+          // terminator.
+          BasicBlock *Parent =
+              BaseI ? BaseI->getParent() : &GEP->getFunction()->getEntryBlock();
+          if (GEP->getParent() != Parent && !Parent->getTerminator()->isEHPad())
+            LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
+        }
       }
       AddrMode.BaseOffs -= ConstantOffset;
       return false;
@@ -4197,12 +4245,13 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
     // will tell us if the addressing mode for the memory operation will
     // *actually* cover the shared instruction.
     ExtAddrMode Result;
+    std::pair<AssertingVH<GetElementPtrInst>, int64_t> LargeOffsetGEP(nullptr,
+                                                                      0);
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
-    AddressingModeMatcher Matcher(MatchedAddrModeInsts, TLI, TRI,
-                                  AddressAccessTy, AS,
-                                  MemoryInst, Result, InsertedInsts,
-                                  PromotedInsts, TPT);
+    AddressingModeMatcher Matcher(
+        MatchedAddrModeInsts, TLI, TRI, AddressAccessTy, AS, MemoryInst, Result,
+        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP);
     Matcher.IgnoreProfitability = true;
     bool Success = Matcher.matchAddr(Address, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
@@ -4304,11 +4353,24 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // the result may differ depending on what other uses our candidate
     // addressing instructions might have.
     AddrModeInsts.clear();
+    std::pair<AssertingVH<GetElementPtrInst>, int64_t> LargeOffsetGEP(nullptr,
+                                                                      0);
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
         V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *TRI,
-        InsertedInsts, PromotedInsts, TPT);
-    NewAddrMode.OriginalValue = V;
+        InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP);
 
+    GetElementPtrInst *GEP = LargeOffsetGEP.first;
+    if (GEP && GEP->getParent() != MemoryInst->getParent() &&
+        !NewGEPBases.count(GEP)) {
+      // If splitting the underlying data structure can reduce the offset of a
+      // GEP, collect the GEP.  Skip the GEPs that are the new bases of
+      // previously split data structures.
+      LargeOffsetGEPMap[GEP->getPointerOperand()].push_back(LargeOffsetGEP);
+      if (LargeOffsetGEPID.find(GEP) == LargeOffsetGEPID.end())
+        LargeOffsetGEPID[GEP] = LargeOffsetGEPID.size();
+    }
+
+    NewAddrMode.OriginalValue = V;
     if (!AddrModes.addNewAddrMode(NewAddrMode))
       break;
   }
@@ -4811,6 +4873,154 @@ bool CodeGenPrepare::mergeSExts(Function &F) {
       }
       if (!inserted)
         CurPts.push_back(Inst);
+    }
+  }
+  return Changed;
+}
+
+// Spliting large data structures so that the GEPs accessing them can have
+// smaller offsets so that they can be sunk to the same blocks as their users.
+// For example, a large struct starting from %base is splitted into two parts
+// where the second part starts from %new_base.
+//
+// Before:
+// BB0:
+//   %base     =
+//
+// BB1:
+//   %gep0     = gep %base, off0
+//   %gep1     = gep %base, off1
+//   %gep2     = gep %base, off2
+//
+// BB2:
+//   %load1    = load %gep0
+//   %load2    = load %gep1
+//   %load3    = load %gep2
+//
+// After:
+// BB0:
+//   %base     =
+//   %new_base = gep %base, off0
+//
+// BB1:
+//   %new_gep0 = %new_base
+//   %new_gep1 = gep %new_base, off1 - off0
+//   %new_gep2 = gep %new_base, off2 - off0
+//
+// BB2:
+//   %load1    = load i32, i32* %new_gep0
+//   %load2    = load i32, i32* %new_gep1
+//   %load3    = load i32, i32* %new_gep2
+//
+// %new_gep1 and %new_gep2 can be sunk to BB2 now after the splitting because
+// their offsets are smaller enough to fit into the addressing mode.
+bool CodeGenPrepare::splitLargeGEPOffsets() {
+  bool Changed = false;
+  for (auto &Entry : LargeOffsetGEPMap) {
+    Value *OldBase = Entry.first;
+    SmallVectorImpl<std::pair<AssertingVH<GetElementPtrInst>, int64_t>>
+        &LargeOffsetGEPs = Entry.second;
+    auto compareGEPOffset =
+        [&](const std::pair<GetElementPtrInst *, int64_t> &LHS,
+            const std::pair<GetElementPtrInst *, int64_t> &RHS) {
+          if (LHS.first == RHS.first)
+            return false;
+          if (LHS.second != RHS.second)
+            return LHS.second < RHS.second;
+          return LargeOffsetGEPID[LHS.first] < LargeOffsetGEPID[RHS.first];
+        };
+    // Sorting all the GEPs of the same data structures based on the offsets.
+    llvm::sort(LargeOffsetGEPs.begin(), LargeOffsetGEPs.end(),
+               compareGEPOffset);
+    LargeOffsetGEPs.erase(
+        std::unique(LargeOffsetGEPs.begin(), LargeOffsetGEPs.end()),
+        LargeOffsetGEPs.end());
+    // Skip if all the GEPs have the same offsets.
+    if (LargeOffsetGEPs.front().second == LargeOffsetGEPs.back().second)
+      continue;
+    GetElementPtrInst *BaseGEP = LargeOffsetGEPs.begin()->first;
+    int64_t BaseOffset = LargeOffsetGEPs.begin()->second;
+    Value *NewBaseGEP = nullptr;
+
+    auto LargeOffsetGEP = LargeOffsetGEPs.begin();
+    while (LargeOffsetGEP != LargeOffsetGEPs.end()) {
+      GetElementPtrInst *GEP = LargeOffsetGEP->first;
+      int64_t Offset = LargeOffsetGEP->second;
+      if (Offset != BaseOffset) {
+        TargetLowering::AddrMode AddrMode;
+        AddrMode.BaseOffs = Offset - BaseOffset;
+        // The result type of the GEP might not be the type of the memory
+        // access.
+        if (!TLI->isLegalAddressingMode(*DL, AddrMode,
+                                        GEP->getResultElementType(),
+                                        GEP->getAddressSpace())) {
+          // We need to create a new base if the offset to the current base is
+          // too large to fit into the addressing mode. So, a very large struct
+          // may be splitted into several parts.
+          BaseGEP = GEP;
+          BaseOffset = Offset;
+          NewBaseGEP = nullptr;
+        }
+      }
+
+      // Generate a new GEP to replace the current one.
+      IRBuilder<> Builder(GEP);
+      Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
+      Type *I8PtrTy =
+          Builder.getInt8PtrTy(GEP->getType()->getPointerAddressSpace());
+      Type *I8Ty = Builder.getInt8Ty();
+
+      if (!NewBaseGEP) {
+        // Create a new base if we don't have one yet.  Find the insertion
+        // pointer for the new base first.
+        BasicBlock::iterator NewBaseInsertPt;
+        BasicBlock *NewBaseInsertBB;
+        if (auto *BaseI = dyn_cast<Instruction>(OldBase)) {
+          // If the base of the struct is an instruction, the new base will be
+          // inserted close to it.
+          NewBaseInsertBB = BaseI->getParent();
+          if (isa<PHINode>(BaseI))
+            NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
+          else if (InvokeInst *Invoke = dyn_cast<InvokeInst>(BaseI)) {
+            NewBaseInsertBB =
+                SplitEdge(NewBaseInsertBB, Invoke->getNormalDest());
+            NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
+          } else
+            NewBaseInsertPt = std::next(BaseI->getIterator());
+        } else {
+          // If the current base is an argument or global value, the new base
+          // will be inserted to the entry block.
+          NewBaseInsertBB = &BaseGEP->getFunction()->getEntryBlock();
+          NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
+        }
+        IRBuilder<> NewBaseBuilder(NewBaseInsertBB, NewBaseInsertPt);
+        // Create a new base.
+        Value *BaseIndex = ConstantInt::get(IntPtrTy, BaseOffset);
+        NewBaseGEP = OldBase;
+        if (NewBaseGEP->getType() != I8PtrTy)
+          NewBaseGEP = NewBaseBuilder.CreatePointerCast(NewBaseGEP, I8PtrTy);
+        NewBaseGEP =
+            NewBaseBuilder.CreateGEP(I8Ty, NewBaseGEP, BaseIndex, "splitgep");
+        NewGEPBases.insert(NewBaseGEP);
+      }
+
+      Value *NewGEP = NewBaseGEP;
+      if (Offset == BaseOffset) {
+        if (GEP->getType() != I8PtrTy)
+          NewGEP = Builder.CreatePointerCast(NewGEP, GEP->getType());
+      } else {
+        // Calculate the new offset for the new GEP.
+        Value *Index = ConstantInt::get(IntPtrTy, Offset - BaseOffset);
+        NewGEP = Builder.CreateGEP(I8Ty, NewBaseGEP, Index);
+
+        if (GEP->getType() != I8PtrTy)
+          NewGEP = Builder.CreatePointerCast(NewGEP, GEP->getType());
+      }
+      GEP->replaceAllUsesWith(NewGEP);
+      LargeOffsetGEPID.erase(GEP);
+      LargeOffsetGEP = LargeOffsetGEPs.erase(LargeOffsetGEP);
+      GEP->eraseFromParent();
+      Changed = true;
     }
   }
   return Changed;

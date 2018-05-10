@@ -2236,6 +2236,11 @@ public:
     return false;
   }
 
+  // Return true if CodeGenPrepare should consider splitting large offset of a
+  // GEP to make the GEP fit into the addressing mode and can be sunk into the
+  // same blocks of its users.
+  virtual bool shouldConsiderGEPOffsetSplit() const { return false; }
+
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
   //

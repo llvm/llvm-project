@@ -169,6 +169,7 @@ struct BaseAddress {
 /// Represents a unit's contribution to the string offsets table.
 struct StrOffsetsContributionDescriptor {
   uint64_t Base = 0;
+  /// The contribution size not including the header.
   uint64_t Size = 0;
   /// Format and version.
   dwarf::FormParams FormParams = {0, 0, dwarf::DwarfFormat::DWARF32};

@@ -784,11 +784,6 @@ func (c Context) MDNode(mds []Metadata) (md Metadata) {
 	md.C = C.LLVMMDNode2(c.C, ptr, nvals)
 	return
 }
-func (c Context) TemporaryMDNode(mds []Metadata) (md Metadata) {
-	ptr, nvals := llvmMetadataRefs(mds)
-	md.C = C.LLVMTemporaryMDNode(c.C, ptr, nvals)
-	return
-}
 func (v Value) ConstantAsMetadata() (md Metadata) {
 	md.C = C.LLVMConstantAsMetadata(v.C)
 	return
@@ -1916,11 +1911,3 @@ func (pm PassManager) FinalizeFunc() bool { return C.LLVMFinalizeFunctionPassMan
 // the module provider.
 // See llvm::PassManagerBase::~PassManagerBase.
 func (pm PassManager) Dispose() { C.LLVMDisposePassManager(pm.C) }
-
-//-------------------------------------------------------------------------
-// llvm.Metadata
-//-------------------------------------------------------------------------
-
-func (md Metadata) ReplaceAllUsesWith(new Metadata) {
-	C.LLVMMetadataReplaceAllUsesWith(md.C, new.C)
-}

@@ -278,9 +278,10 @@ static bool isShortenableAtTheEnd(Instruction *I) {
       default: return false;
       case Intrinsic::memset:
       case Intrinsic::memcpy:
+      case Intrinsic::memcpy_element_unordered_atomic:
+      case Intrinsic::memset_element_unordered_atomic:
         // Do shorten memory intrinsics.
         // FIXME: Add memmove if it's also safe to transform.
-        // TODO: Add atomic memcpy/memset
         return true;
     }
   }
@@ -295,9 +296,7 @@ static bool isShortenableAtTheEnd(Instruction *I) {
 static bool isShortenableAtTheBeginning(Instruction *I) {
   // FIXME: Handle only memset for now. Supporting memcpy/memmove should be
   // easily done by offsetting the source address.
-  // TODO: Handle atomic memory intrinsics
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
-  return II && II->getIntrinsicID() == Intrinsic::memset;
+  return isa<AnyMemSetInst>(I);
 }
 
 /// Return the pointer that is being written to.
@@ -897,7 +896,7 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
   // Power of 2 vector writes are probably always a bad idea to optimize
   // as any store/memset/memcpy is likely using vector instructions so
   // shortening it to not vector size is likely to be slower
-  MemIntrinsic *EarlierIntrinsic = cast<MemIntrinsic>(EarlierWrite);
+  auto *EarlierIntrinsic = cast<AnyMemIntrinsic>(EarlierWrite);
   unsigned EarlierWriteAlign = EarlierIntrinsic->getDestAlignment();
   if (!IsOverwriteEnd)
     LaterOffset = int64_t(LaterOffset + LaterSize);
@@ -906,14 +905,22 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
       !((EarlierWriteAlign != 0) && LaterOffset % EarlierWriteAlign == 0))
     return false;
 
+  int64_t NewLength = IsOverwriteEnd
+                          ? LaterOffset - EarlierOffset
+                          : EarlierSize - (LaterOffset - EarlierOffset);
+
+  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(EarlierWrite)) {
+    // When shortening an atomic memory intrinsic, the newly shortened
+    // length must remain an integer multiple of the element size.
+    const uint32_t ElementSize = AMI->getElementSizeInBytes();
+    if (0 != NewLength % ElementSize)
+      return false;
+  }
+
   DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW "
                << (IsOverwriteEnd ? "END" : "BEGIN") << ": " << *EarlierWrite
                << "\n  KILLER (offset " << LaterOffset << ", " << EarlierSize
                << ")\n");
-
-  int64_t NewLength = IsOverwriteEnd
-                          ? LaterOffset - EarlierOffset
-                          : EarlierSize - (LaterOffset - EarlierOffset);
 
   Value *EarlierWriteLength = EarlierIntrinsic->getLength();
   Value *TrimmedLength =

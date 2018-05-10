@@ -77,11 +77,11 @@ let DecoderNamespace = "MicroMips" in {
                 BC1F_FM_MM<0x1c>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BC1T_MM : MMRel, BC1F_FT<"bc1t", brtarget_mm, II_BC1T, MIPS_BRANCH_T>,
                 BC1F_FM_MM<0x1d>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def CVT_W_S_MM   : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
+                     ROUND_W_FM_MM<0, 0x24>, ISA_MICROMIPS;
 }
 
 let isCodeGenOnly = 1 in {
-def CVT_W_S_MM   : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
-                   ROUND_W_FM_MM<0, 0x24>, ISA_MICROMIPS;
 def ROUND_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd,
                                               II_ROUND>, ROUND_W_FM_MM<0, 0xec>,
                    ISA_MICROMIPS;
@@ -95,13 +95,13 @@ def ROUND_W_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.d", FGR32Opnd, AFGR64Opnd,
                  ISA_MICROMIPS, FGR_32;
 def TRUNC_W_MM : MMRel, ABSS_FT<"trunc.w.d", FGR32Opnd, AFGR64Opnd, II_TRUNC>,
                  ROUND_W_FM_MM<1, 0xac>, ISA_MICROMIPS, FGR_32;
-def CVT_L_S_MM   : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
-                   ROUND_W_FM_MM<0, 0x4>, ISA_MICROMIPS, FGR_64;
-def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
-                   ROUND_W_FM_MM<1, 0x4>, ISA_MICROMIPS, FGR_64;
-
 }
 let DecoderNamespace = "MicroMips" in {
+  def CVT_L_S_MM   : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
+                     ROUND_W_FM_MM<0, 0x4>, ISA_MICROMIPS, FGR_64;
+  def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
+                     ROUND_W_FM_MM<1, 0x4>, ISA_MICROMIPS, FGR_64;
+
   def CVT_W_D32_MM : MMRel, ABSS_FT<"cvt.w.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
                      ROUND_W_FM_MM<1, 0x24>, ISA_MICROMIPS, FGR_32;
 }
@@ -155,10 +155,10 @@ let DecoderNamespace = "MicroMipsFP64" in {
 let DecoderNamespace = "MicroMips" in {
   def CVT_S_D32_MM : MMRel, ABSS_FT<"cvt.s.d", FGR32Opnd, AFGR64Opnd, II_CVT>,
                      ABS_FM_MM<0, 0x6d>, ISA_MICROMIPS, FGR_32;
+  def CVT_S_W_MM : MMRel, ABSS_FT<"cvt.s.w", FGR32Opnd, FGR32Opnd, II_CVT>,
+                   ABS_FM_MM<1, 0x6d>, ISA_MICROMIPS;
 }
 
-def CVT_S_W_MM : MMRel, ABSS_FT<"cvt.s.w", FGR32Opnd, FGR32Opnd, II_CVT>,
-                 ABS_FM_MM<1, 0x6d>, ISA_MICROMIPS;
 
 defm FNEG : ABSS_MMM<"neg.d", II_NEG, fneg>, ABS_FM_MM<1, 0x2d>;
 defm FMOV : ABSS_MMM<"mov.d", II_MOV_D>, ABS_FM_MM<1, 0x1>;

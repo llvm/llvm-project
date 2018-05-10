@@ -407,6 +407,7 @@ defm : X86WriteRes<WriteVecMaskedStoreY,  [JSAGU, JFPU01, JVALU], 6, [2, 2, 4], 
 def  : WriteRes<WriteVecMove,             [JFPU01, JVALU]>;
 
 defm : JWriteResFpuPair<WriteVecALU,      [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteVecALUX,     [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecALUY,     [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecShift,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecShiftX,   [JFPU01, JVALU], 1>;
@@ -422,17 +423,21 @@ defm : JWriteResFpuPair<WritePMULLDY,     [JFPU0, JFPU01, JVIMUL, JVALU], 4, [2,
 defm : JWriteResFpuPair<WriteMPSAD,       [JFPU0, JVIMUL], 3, [1, 2]>;
 defm : JWriteResFpuPair<WriteMPSADY,      [JFPU0, JVIMUL], 3, [1, 2]>;
 defm : JWriteResFpuPair<WritePSADBW,      [JFPU01, JVALU], 2>;
+defm : JWriteResFpuPair<WritePSADBWX,     [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WritePSADBWY,     [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU0,  JVALU], 2>;
 defm : JWriteResFpuPair<WriteShuffle,     [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteShuffleX,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteShuffleY,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarShuffle,  [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : JWriteResFpuPair<WriteVarShuffleX, [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVarShuffleY, [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteBlend,       [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteBlendY,      [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVarBlendY,   [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteVecLogicX,   [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecLogicY,   [JFPU01, JVALU], 1>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteVecTest,     [JFPU0, JFPA, JALU0], 3>;
 defm : JWriteResYMMPair<WriteVecTestY ,   [JFPU01, JFPX, JFPA, JALU0], 4, [2, 2, 2, 1], 3>;
@@ -482,6 +487,7 @@ defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU0, JVIMUL], 3, [1, 1], 2>;
 defm : JWriteResFpuPair<WriteFHAdd,         [JFPU0, JFPA], 3>;
 defm : JWriteResYMMPair<WriteFHAddY,        [JFPU0, JFPA], 3, [2,2], 2>;
 defm : JWriteResFpuPair<WritePHAdd,       [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WritePHAddX,      [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WritePHAddY,      [JFPU01, JVALU], 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
