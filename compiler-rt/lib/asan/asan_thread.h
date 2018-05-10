@@ -117,8 +117,6 @@ class AsanThread {
       return nullptr;
     if (atomic_load(&stack_switching_, memory_order_relaxed))
       return nullptr;
-    if (!has_fake_stack())
-      return AsyncSignalSafeLazyInitFakeStack();
     return fake_stack_;
   }
 

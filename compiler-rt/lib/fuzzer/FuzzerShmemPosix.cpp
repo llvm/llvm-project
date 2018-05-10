@@ -32,6 +32,11 @@ std::string SharedMemoryRegion::Path(const char *Name) {
 
 std::string SharedMemoryRegion::SemName(const char *Name, int Idx) {
   std::string Res(Name);
+  // When passing a name without a leading <slash> character to
+  // sem_open, the behaviour is unspecified in POSIX. Add a leading
+  // <slash> character for the name if there is no such one.
+  if (!Res.empty() && Res[0] != '/')
+    Res.insert(Res.begin(), '/');
   return Res + (char)('0' + Idx);
 }
 
@@ -52,7 +57,7 @@ bool SharedMemoryRegion::Create(const char *Name) {
   for (int i = 0; i < 2; i++) {
     sem_unlink(SemName(Name, i).c_str());
     Semaphore[i] = sem_open(SemName(Name, i).c_str(), O_CREAT, 0644, 0);
-    if (Semaphore[i] == (void *)-1)
+    if (Semaphore[i] == SEM_FAILED)
       return false;
   }
   IAmServer = true;
@@ -70,7 +75,7 @@ bool SharedMemoryRegion::Open(const char *Name) {
     return false;
   for (int i = 0; i < 2; i++) {
     Semaphore[i] = sem_open(SemName(Name, i).c_str(), 0);
-    if (Semaphore[i] == (void *)-1)
+    if (Semaphore[i] == SEM_FAILED)
       return false;
   }
   IAmServer = false;

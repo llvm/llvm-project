@@ -13,7 +13,7 @@ int a;
 int foo(int *a);
 
 int main(int argc, char **argv) {
-#pragma omp target teams distribute parallel for map(tofrom:a) if(parallel:argc)
+#pragma omp target teams distribute parallel for map(tofrom:a) if(target:argc) schedule(static, a)
   for (int i= 0; i < argc; ++i)
     a = foo(&i) + foo(&a) + foo(&argc);
   return 0;

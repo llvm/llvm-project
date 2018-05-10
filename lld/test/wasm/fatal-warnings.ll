@@ -5,7 +5,7 @@
 ; CHECK-WARN: warning: Function type mismatch: _start
 ; CHECK-FATAL: error: Function type mismatch: _start
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 define hidden i32 @_start(i32 %arg) local_unnamed_addr {
 entry:

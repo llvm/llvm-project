@@ -856,48 +856,6 @@ Value *FAddCombine::createAddendVal(const FAddend &Opnd, bool &NeedNeg) {
   return createFMul(OpndVal, Coeff.getValue(Instr->getType()));
 }
 
-/// Return true if we can prove that:
-///    (sub LHS, RHS)  === (sub nsw LHS, RHS)
-/// This basically requires proving that the add in the original type would not
-/// overflow to change the sign bit or have a carry out.
-/// TODO: Handle this for Vectors.
-bool InstCombiner::willNotOverflowSignedSub(const Value *LHS,
-                                            const Value *RHS,
-                                            const Instruction &CxtI) const {
-  // If LHS and RHS each have at least two sign bits, the subtraction
-  // cannot overflow.
-  if (ComputeNumSignBits(LHS, 0, &CxtI) > 1 &&
-      ComputeNumSignBits(RHS, 0, &CxtI) > 1)
-    return true;
-
-  KnownBits LHSKnown = computeKnownBits(LHS, 0, &CxtI);
-
-  KnownBits RHSKnown = computeKnownBits(RHS, 0, &CxtI);
-
-  // Subtraction of two 2's complement numbers having identical signs will
-  // never overflow.
-  if ((LHSKnown.isNegative() && RHSKnown.isNegative()) ||
-      (LHSKnown.isNonNegative() && RHSKnown.isNonNegative()))
-    return true;
-
-  // TODO: implement logic similar to checkRippleForAdd
-  return false;
-}
-
-/// Return true if we can prove that:
-///    (sub LHS, RHS)  === (sub nuw LHS, RHS)
-bool InstCombiner::willNotOverflowUnsignedSub(const Value *LHS,
-                                              const Value *RHS,
-                                              const Instruction &CxtI) const {
-  // If the LHS is negative and the RHS is non-negative, no unsigned wrap.
-  KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, &CxtI);
-  KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, &CxtI);
-  if (LHSKnown.isNegative() && RHSKnown.isNonNegative())
-    return true;
-
-  return false;
-}
-
 // Checks if any operand is negative and we can convert add to sub.
 // This function checks for following negative patterns
 //   ADD(XOR(OR(Z, NOT(C)), C)), 1) == NEG(AND(Z, C))

@@ -8,7 +8,7 @@
 ; int (*indirect_func)(void) = &foo;
 ; void _start(void) { indirect_func(); }
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 

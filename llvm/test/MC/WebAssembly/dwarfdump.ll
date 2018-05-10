@@ -54,7 +54,7 @@
 
 ; CHECK: 0x00000069:   NULL
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 source_filename = "test.c"
 

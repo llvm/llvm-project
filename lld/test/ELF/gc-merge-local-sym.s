@@ -9,7 +9,7 @@
 // CHECK-NEXT:   SHF_MERGE
 // CHECK-NEXT:   SHF_STRINGS
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x1C8
+// CHECK-NEXT: Address: 0x1FD
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 4
 // CHECK-NEXT: Link: 0

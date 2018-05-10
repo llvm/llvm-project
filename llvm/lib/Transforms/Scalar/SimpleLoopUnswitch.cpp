@@ -192,12 +192,6 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   if (!L.isLoopInvariant(LoopCond))
     return false;
 
-  // FIXME: We should compute this once at the start and update it!
-  SmallVector<BasicBlock *, 16> ExitBlocks;
-  L.getExitBlocks(ExitBlocks);
-  SmallPtrSet<BasicBlock *, 16> ExitBlockSet(ExitBlocks.begin(),
-                                             ExitBlocks.end());
-
   // Check to see if a successor of the branch is guaranteed to
   // exit through a unique exit block without having any
   // side-effects.  If so, determine the value of Cond that causes
@@ -206,17 +200,14 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   ConstantInt *Replacement = ConstantInt::getFalse(BI.getContext());
   int LoopExitSuccIdx = 0;
   auto *LoopExitBB = BI.getSuccessor(0);
-  if (!ExitBlockSet.count(LoopExitBB)) {
+  if (L.contains(LoopExitBB)) {
     std::swap(CondVal, Replacement);
     LoopExitSuccIdx = 1;
     LoopExitBB = BI.getSuccessor(1);
-    if (!ExitBlockSet.count(LoopExitBB))
+    if (L.contains(LoopExitBB))
       return false;
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
-  assert(L.contains(ContinueBB) &&
-         "Cannot have both successors exit and still be in the loop!");
-
   auto *ParentBB = BI.getParent();
   if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB))
     return false;
@@ -310,21 +301,15 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
 
   auto *ParentBB = SI.getParent();
 
-  // FIXME: We should compute this once at the start and update it!
-  SmallVector<BasicBlock *, 16> ExitBlocks;
-  L.getExitBlocks(ExitBlocks);
-  SmallPtrSet<BasicBlock *, 16> ExitBlockSet(ExitBlocks.begin(),
-                                             ExitBlocks.end());
-
   SmallVector<int, 4> ExitCaseIndices;
   for (auto Case : SI.cases()) {
     auto *SuccBB = Case.getCaseSuccessor();
-    if (ExitBlockSet.count(SuccBB) &&
+    if (!L.contains(SuccBB) &&
         areLoopExitPHIsLoopInvariant(L, *ParentBB, *SuccBB))
       ExitCaseIndices.push_back(Case.getCaseIndex());
   }
   BasicBlock *DefaultExitBB = nullptr;
-  if (ExitBlockSet.count(SI.getDefaultDest()) &&
+  if (!L.contains(SI.getDefaultDest()) &&
       areLoopExitPHIsLoopInvariant(L, *ParentBB, *SI.getDefaultDest()) &&
       !isa<UnreachableInst>(SI.getDefaultDest()->getTerminator()))
     DefaultExitBB = SI.getDefaultDest();

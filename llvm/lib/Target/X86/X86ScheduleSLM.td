@@ -219,10 +219,12 @@ defm : SLMWriteResPair<WriteVecShiftImm, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecShiftImmX,[SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecShiftImmY,[SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecLogic, [SLM_FPC_RSV01], 1>;
+defm : SLMWriteResPair<WriteVecLogicX,[SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecLogicY,[SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecTest,  [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecTestY, [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecALU,   [SLM_FPC_RSV01],  1>;
+defm : SLMWriteResPair<WriteVecALUX,  [SLM_FPC_RSV01],  1>;
 defm : SLMWriteResPair<WriteVecALUY,  [SLM_FPC_RSV01],  1>;
 defm : SLMWriteResPair<WriteVecIMul,  [SLM_FPC_RSV0],   4>;
 defm : SLMWriteResPair<WriteVecIMulX, [SLM_FPC_RSV0],   4>;
@@ -233,13 +235,16 @@ defm : SLMWriteResPair<WritePMULLD,  [SLM_FPC_RSV0],   4>;
 defm : SLMWriteResPair<WritePMULLDY, [SLM_FPC_RSV0],   4>;
 defm : SLMWriteResPair<WriteShuffle,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteShuffleY, [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShuffleX, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVarShuffleX, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffleY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlendY, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
 defm : SLMWriteResPair<WriteMPSADY, [SLM_FPC_RSV0],  7>;
 defm : SLMWriteResPair<WritePSADBW,  [SLM_FPC_RSV0],  4>;
+defm : SLMWriteResPair<WritePSADBWX, [SLM_FPC_RSV0],  4>;
 defm : SLMWriteResPair<WritePSADBWY, [SLM_FPC_RSV0],  4>;
 defm : SLMWriteResPair<WritePHMINPOS,  [SLM_FPC_RSV0],   4>;
 
@@ -260,6 +265,7 @@ def  : WriteRes<WriteVecExtractSt, [SLM_FPC_RSV0, SLM_MEC_RSV]> {
 defm : SLMWriteResPair<WriteFHAdd,   [SLM_FPC_RSV01], 3, [2]>;
 defm : SLMWriteResPair<WriteFHAddY,  [SLM_FPC_RSV01], 3, [2]>;
 defm : SLMWriteResPair<WritePHAdd,   [SLM_FPC_RSV01], 1>;
+defm : SLMWriteResPair<WritePHAddX,  [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WritePHAddY,  [SLM_FPC_RSV01], 1>;
 
 // String instructions.

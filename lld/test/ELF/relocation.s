@@ -113,7 +113,7 @@ R_X86_64_64:
  .quad R_X86_64_64
 
 // CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   2001c8 c8012000 00000000
+// CHECK-NEXT:   2002b0 b0022000 00000000
 
 .section .R_X86_64_GOTPCREL,"a",@progbits
 .global R_X86_64_GOTPCREL
@@ -123,7 +123,7 @@ R_X86_64_GOTPCREL:
 // 0x2020F8 - 0x2001D8 = 7952
 // 7952 = 0x101f0000 in little endian
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   2001d0 202f0000
+// CHECK-NEXT:   2002b8 382e0000
 
 .section .R_X86_64_GOT32,"a",@progbits
 .global R_X86_64_GOT32

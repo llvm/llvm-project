@@ -70,7 +70,7 @@ CU2_5_end:
 
         .section .debug_str_offsets,"",@progbits
 # CU1's contribution
-        .long .debug_str_offsets_segment1_end-.debug_str_offsets_base0
+        .long .debug_str_offsets_segment1_end-.debug_str_offsets_base0+4
         .short 5    # DWARF version
         .short 0    # Padding
 .debug_str_offsets_base0:
@@ -80,7 +80,7 @@ CU2_5_end:
 .debug_str_offsets_segment0_end:
 # CU2's contribution
 # Overlapping with CU1's contribution
-        .long .debug_str_offsets_segment1_end-.debug_str_offsets_base1
+        .long .debug_str_offsets_segment1_end-.debug_str_offsets_base1+4
         .short 5    # DWARF version
         .short 0    # Padding
 .debug_str_offsets_base1:

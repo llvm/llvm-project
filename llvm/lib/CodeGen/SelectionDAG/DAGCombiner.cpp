@@ -11524,16 +11524,29 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
   // Transform br(xor(x, y)) -> br(x != y)
   // Transform br(xor(xor(x,y), 1)) -> br (x == y)
   if (N.getOpcode() == ISD::XOR) {
-    SDNode *TheXor = N.getNode();
-
-    // Avoid missing important xor optimizations.
-    while (SDValue Tmp = visitXOR(TheXor)) {
-      // We don't have a XOR anymore, bail.
-      if (Tmp.getOpcode() != ISD::XOR)
-        return Tmp;
-
-      TheXor = Tmp.getNode();
+    // Because we may call this on a speculatively constructed
+    // SimplifiedSetCC Node, we need to simplify this node first.
+    // Ideally this should be folded into SimplifySetCC and not
+    // here. For now, grab a handle to N so we don't lose it from
+    // replacements interal to the visit.
+    HandleSDNode XORHandle(N);
+    while (N.getOpcode() == ISD::XOR) {
+      SDValue Tmp = visitXOR(N.getNode());
+      // No simplification done.
+      if (!Tmp.getNode())
+        break;
+      // Returning N is form in-visit replacement that may invalidated
+      // N. Grab value from Handle.
+      if (Tmp.getNode() == N.getNode())
+        N = XORHandle.getValue();
+      else // Node simplified. Try simplifying again.
+        N = Tmp;
     }
+
+    if (N.getOpcode() != ISD::XOR)
+      return N;
+
+    SDNode *TheXor = N.getNode();
 
     SDValue Op0 = TheXor->getOperand(0);
     SDValue Op1 = TheXor->getOperand(1);

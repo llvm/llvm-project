@@ -1,4 +1,4 @@
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; Will collide: local (internal linkage) with global (external) linkage
 @colliding_global1 = internal default global i32 0, align 4

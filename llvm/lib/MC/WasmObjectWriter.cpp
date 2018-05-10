@@ -1204,9 +1204,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       MCSymbol* Begin = Sec.getBeginSymbol();
       if (Begin) {
         WasmIndices[cast<MCSymbolWasm>(Begin)] = CustomSections.size();
-        if (Name != Begin->getName())
+        if (SectionName != Begin->getName())
           report_fatal_error("section name and begin symbol should match: " +
-                             Twine(Name));
+                             Twine(SectionName));
       }
       CustomSections.emplace_back(Name, &Section);
     }
@@ -1405,16 +1405,27 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       continue;
     if (WS.getFragmentList().empty())
       continue;
-    if (WS.getFragmentList().size() != 2)
+
+    // init_array is expected to contain a single non-empty data fragment
+    if (WS.getFragmentList().size() != 3)
       report_fatal_error("only one .init_array section fragment supported");
-    const MCFragment &AlignFrag = *WS.begin();
+
+    auto IT = WS.begin();
+    const MCFragment &EmptyFrag = *IT;
+    if (EmptyFrag.getKind() != MCFragment::FT_Data)
+      report_fatal_error(".init_array section should be aligned");
+
+    IT = std::next(IT);
+    const MCFragment &AlignFrag = *IT;
     if (AlignFrag.getKind() != MCFragment::FT_Align)
       report_fatal_error(".init_array section should be aligned");
     if (cast<MCAlignFragment>(AlignFrag).getAlignment() != (is64Bit() ? 8 : 4))
       report_fatal_error(".init_array section should be aligned for pointers");
-    const MCFragment &Frag = *std::next(WS.begin());
+
+    const MCFragment &Frag = *std::next(IT);
     if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
       report_fatal_error("only data supported in .init_array section");
+
     uint16_t Priority = UINT16_MAX;
     unsigned PrefixLength = strlen(".init_array");
     if (WS.getSectionName().size() > PrefixLength) {

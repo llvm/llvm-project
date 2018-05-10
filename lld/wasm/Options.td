@@ -21,7 +21,7 @@ def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
 
 def color_diagnostics_eq: J<"color-diagnostics=">,
-  HelpText<"Use colors in diagnostics">;
+  HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
 
 defm demangle: B<"demangle",
     "Demangle symbol names",
@@ -39,6 +39,10 @@ def fatal_warnings: F<"fatal-warnings">,
 defm gc_sections: B<"gc-sections",
     "Enable garbage collection of unused sections",
     "Disable garbage collection of unused sections">;
+
+defm merge_data_segments: B<"merge-data-segments",
+    "Enable merging data segments",
+    "Disable merging data segments">;
 
 def help: F<"help">, HelpText<"Print option help">;
 

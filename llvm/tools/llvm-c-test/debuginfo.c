@@ -93,14 +93,23 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef ParamTypes[] = {Int64Ty, Int64Ty, VectorTy};
   LLVMMetadataRef FunctionTy =
     LLVMDIBuilderCreateSubroutineType(DIB, File, ParamTypes, 3, 0);
+
+  LLVMMetadataRef ReplaceableFunctionMetadata =
+    LLVMDIBuilderCreateReplaceableCompositeType(DIB, 0x15, "foo", 3,
+                                                File, File, 42,
+                                                0, 0, 0,
+                                                LLVMDIFlagFwdDecl,
+                                                "", 0);
+
+  LLVMMetadataRef FooParamLocation =
+    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 42, 0,
+                                     ReplaceableFunctionMetadata, NULL);
   LLVMMetadataRef FunctionMetadata =
     LLVMDIBuilderCreateFunction(DIB, File, "foo", 3, "foo", 3,
                                 File, 42, FunctionTy, true, true,
                                 42, 0, false);
+  LLVMMetadataReplaceAllUsesWith(ReplaceableFunctionMetadata, FunctionMetadata);
 
-  LLVMMetadataRef FooParamLocation =
-    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 42, 0,
-                                     FunctionMetadata, NULL);
   LLVMMetadataRef FooParamExpression =
     LLVMDIBuilderCreateExpression(DIB, NULL, 0);
   LLVMMetadataRef FooParamVar1 =

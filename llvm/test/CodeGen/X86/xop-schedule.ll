@@ -101,9 +101,9 @@ define void @test_vpcmov_128(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, <2 x i
 ; GENERIC-LABEL: test_vpcmov_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpcmov (%rdi), %xmm1, %xmm0, %xmm0 # sched: [6:1.00]
-; GENERIC-NEXT:    vpcmov %xmm2, (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
+; GENERIC-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vpcmov (%rdi), %xmm1, %xmm0, %xmm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vpcmov %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

@@ -33,13 +33,13 @@ low_target2:
 // Expect range extension thunks for .text_low
 // adrp calculation is (PC + signed immediate) & (!0xfff)
 // CHECK: __AArch64ADRPThunk_high_target:
-// CHECK-NEXT:       10:       10 00 08 90     adrp    x16, #268435456
-// CHECK-NEXT:       14:       10 82 04 91     add     x16, x16, #288
-// CHECK-NEXT:       18:       00 02 1f d6     br      x16
+// CHECK-NEXT:       70:       10 00 08 90     adrp    x16, #268435456
+// CHECK-NEXT:       74:       10 02 03 91     add     x16, x16, #192
+// CHECK-NEXT:       78:       00 02 1f d6     br      x16
 // CHECK: __AArch64ADRPThunk_high_target2:
-// CHECK-NEXT:       1c:       10 00 08 90     adrp    x16, #268435456
-// CHECK-NEXT:       20:       10 22 00 91     add     x16, x16, #8
-// CHECK-NEXT:       24:       00 02 1f d6     br      x16
+// CHECK-NEXT:       7c:       10 00 08 90     adrp    x16, #268435456
+// CHECK-NEXT:       80:       10 22 00 91     add     x16, x16, #8
+// CHECK-NEXT:       84:       00 02 1f d6     br      x16
 
 
  .section .text_high, "ax", %progbits
@@ -50,7 +50,7 @@ high_target:
  bl low_target
  ret
 // CHECK: high_target:
-// CHECK-NEXT: 10000000:        4c 00 00 94     bl      #304
+// CHECK-NEXT: 10000000:        34 00 00 94     bl      #208
 // CHECK-NEXT: 10000004:        c0 03 5f d6     ret
 
  .hidden high_target2
@@ -68,24 +68,24 @@ high_target2:
 
 // CHECK: __AArch64ADRPThunk_low_target2:
 // CHECK-NEXT: 10000010:	10 00 f8 90 	adrp	x16, #-268435456
-// CHECK-NEXT: 10000014:	10 22 00 91 	add	x16, x16, #8
+// CHECK-NEXT: 10000014:	10 a2 01 91 	add	x16, x16, #104
 // CHECK-NEXT: 10000018:	00 02 1f d6 	br	x16
 
 // CHECK: Disassembly of section .plt:
 // CHECK-NEXT: .plt:
-// CHECK-NEXT: 10000100:        f0 7b bf a9     stp     x16, x30, [sp, #-16]!
-// CHECK-NEXT: 10000104:        10 00 00 90     adrp    x16, #0
-// CHECK-NEXT: 10000108:        11 aa 40 f9     ldr     x17, [x16, #336]
-// CHECK-NEXT: 1000010c:        10 42 05 91     add     x16, x16, #336
-// CHECK-NEXT: 10000110:        20 02 1f d6     br      x17
-// CHECK-NEXT: 10000114:        1f 20 03 d5     nop
-// CHECK-NEXT: 10000118:        1f 20 03 d5     nop
-// CHECK-NEXT: 1000011c:        1f 20 03 d5     nop
-// CHECK-NEXT: 10000120:        10 00 00 90     adrp    x16, #0
-// CHECK-NEXT: 10000124:        11 ae 40 f9     ldr     x17, [x16, #344]
-// CHECK-NEXT: 10000128:        10 62 05 91     add     x16, x16, #344
-// CHECK-NEXT: 1000012c:        20 02 1f d6     br      x17
-// CHECK-NEXT: 10000130:        10 00 00 90     adrp    x16, #0
-// CHECK-NEXT: 10000134:        11 b2 40 f9     ldr     x17, [x16, #352]
-// CHECK-NEXT: 10000138:        10 82 05 91     add     x16, x16, #352
-// CHECK-NEXT: 1000013c:        20 02 1f d6     br      x17
+// CHECK-NEXT: 100000a0:       f0 7b bf a9     stp     x16, x30, [sp, #-16]!
+// CHECK-NEXT: 100000a4:       10 00 00 90     adrp    x16, #0
+// CHECK-NEXT: 100000a8:       11 7a 40 f9     ldr     x17, [x16, #240]
+// CHECK-NEXT: 100000ac:       10 c2 03 91     add     x16, x16, #240
+// CHECK-NEXT: 100000b0:       20 02 1f d6     br      x17
+// CHECK-NEXT: 100000b4:       1f 20 03 d5     nop
+// CHECK-NEXT: 100000b8:       1f 20 03 d5     nop
+// CHECK-NEXT: 100000bc:       1f 20 03 d5     nop
+// CHECK-NEXT: 100000c0:       10 00 00 90     adrp    x16, #0
+// CHECK-NEXT: 100000c4:       11 7e 40 f9     ldr     x17, [x16, #248]
+// CHECK-NEXT: 100000c8:       10 e2 03 91     add     x16, x16, #248
+// CHECK-NEXT: 100000cc:       20 02 1f d6     br      x17
+// CHECK-NEXT: 100000d0:       10 00 00 90     adrp    x16, #0
+// CHECK-NEXT: 100000d4:       11 82 40 f9     ldr     x17, [x16, #256]
+// CHECK-NEXT: 100000d8:       10 02 04 91     add     x16, x16, #256
+// CHECK-NEXT: 100000dc:       20 02 1f d6     br      x17

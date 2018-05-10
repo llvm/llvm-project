@@ -125,47 +125,6 @@ static Constant *getLogBase2(Type *Ty, Constant *C) {
   return ConstantVector::get(Elts);
 }
 
-/// Return true if we can prove that:
-///    (mul LHS, RHS)  === (mul nsw LHS, RHS)
-bool InstCombiner::willNotOverflowSignedMul(const Value *LHS,
-                                            const Value *RHS,
-                                            const Instruction &CxtI) const {
-  // Multiplying n * m significant bits yields a result of n + m significant
-  // bits. If the total number of significant bits does not exceed the
-  // result bit width (minus 1), there is no overflow.
-  // This means if we have enough leading sign bits in the operands
-  // we can guarantee that the result does not overflow.
-  // Ref: "Hacker's Delight" by Henry Warren
-  unsigned BitWidth = LHS->getType()->getScalarSizeInBits();
-
-  // Note that underestimating the number of sign bits gives a more
-  // conservative answer.
-  unsigned SignBits =
-      ComputeNumSignBits(LHS, 0, &CxtI) + ComputeNumSignBits(RHS, 0, &CxtI);
-
-  // First handle the easy case: if we have enough sign bits there's
-  // definitely no overflow.
-  if (SignBits > BitWidth + 1)
-    return true;
-
-  // There are two ambiguous cases where there can be no overflow:
-  //   SignBits == BitWidth + 1    and
-  //   SignBits == BitWidth
-  // The second case is difficult to check, therefore we only handle the
-  // first case.
-  if (SignBits == BitWidth + 1) {
-    // It overflows only when both arguments are negative and the true
-    // product is exactly the minimum negative number.
-    // E.g. mul i16 with 17 sign bits: 0xff00 * 0xff80 = 0x8000
-    // For simplicity we just check if at least one side is not negative.
-    KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, &CxtI);
-    KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, &CxtI);
-    if (LHSKnown.isNonNegative() || RHSKnown.isNonNegative())
-      return true;
-  }
-  return false;
-}
-
 Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);

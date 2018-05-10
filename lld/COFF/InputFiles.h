@@ -201,8 +201,7 @@ private:
 // for details about the format.
 class ImportFile : public InputFile {
 public:
-  explicit ImportFile(MemoryBufferRef M)
-      : InputFile(ImportKind, M), Live(!Config->DoGC) {}
+  explicit ImportFile(MemoryBufferRef M) : InputFile(ImportKind, M) {}
 
   static bool classof(const InputFile *F) { return F->kind() == ImportKind; }
 
@@ -221,12 +220,15 @@ public:
   Chunk *Location = nullptr;
 
   // We want to eliminate dllimported symbols if no one actually refers them.
-  // This "Live" bit is used to keep track of which import library members
+  // These "Live" bits are used to keep track of which import library members
   // are actually in use.
   //
   // If the Live bit is turned off by MarkLive, Writer will ignore dllimported
-  // symbols provided by this import library member.
-  bool Live;
+  // symbols provided by this import library member. We also track whether the
+  // imported symbol is used separately from whether the thunk is used in order
+  // to avoid creating unnecessary thunks.
+  bool Live = !Config->DoGC;
+  bool ThunkLive = !Config->DoGC;
 };
 
 // Used for LTO.

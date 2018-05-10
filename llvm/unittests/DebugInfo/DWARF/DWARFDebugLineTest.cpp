@@ -48,7 +48,8 @@ struct CommonFixture {
     Context = createContext();
     assert(Context != nullptr && "test state is not valid");
     const DWARFObject &Obj = Context->getDWARFObj();
-    LineData = DWARFDataExtractor(Obj, Obj.getLineSection(), true, 8);
+    LineData = DWARFDataExtractor(Obj, Obj.getLineSection(),
+                                  sys::IsLittleEndianHost, 8);
   }
 
   std::unique_ptr<DWARFContext> createContext() {
@@ -151,7 +152,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   case 4:
     PrologueLength = 36;
     UnitLength = PrologueLength + 2;
-    EXPECT_EQ(Prologue.MaxOpsPerInst, 1);
+    EXPECT_EQ(Prologue.MaxOpsPerInst, 1u);
     break;
   case 2:
   case 3:
@@ -161,8 +162,8 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   case 5:
     PrologueLength = 39;
     UnitLength = PrologueLength + 4;
-    EXPECT_EQ(Prologue.getAddressSize(), 8);
-    EXPECT_EQ(Prologue.SegSelectorSize, 0);
+    EXPECT_EQ(Prologue.getAddressSize(), 8u);
+    EXPECT_EQ(Prologue.SegSelectorSize, 0u);
     break;
   default:
     llvm_unreachable("unsupported DWARF version");
@@ -171,17 +172,17 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
 
   EXPECT_EQ(Prologue.TotalLength, UnitLength);
   EXPECT_EQ(Prologue.PrologueLength, PrologueLength);
-  EXPECT_EQ(Prologue.MinInstLength, 1);
-  EXPECT_EQ(Prologue.DefaultIsStmt, 1);
+  EXPECT_EQ(Prologue.MinInstLength, 1u);
+  EXPECT_EQ(Prologue.DefaultIsStmt, 1u);
   EXPECT_EQ(Prologue.LineBase, -5);
-  EXPECT_EQ(Prologue.LineRange, 14);
-  EXPECT_EQ(Prologue.OpcodeBase, 13);
+  EXPECT_EQ(Prologue.LineRange, 14u);
+  EXPECT_EQ(Prologue.OpcodeBase, 13u);
   std::vector<uint8_t> ExpectedLengths = {0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1};
   EXPECT_EQ(Prologue.StandardOpcodeLengths, ExpectedLengths);
-  ASSERT_EQ(Prologue.IncludeDirectories.size(), 1);
+  ASSERT_EQ(Prologue.IncludeDirectories.size(), 1u);
   ASSERT_EQ(Prologue.IncludeDirectories[0].getForm(), DW_FORM_string);
   EXPECT_STREQ(*Prologue.IncludeDirectories[0].getAsCString(), "a dir");
-  ASSERT_EQ(Prologue.FileNames.size(), 1);
+  ASSERT_EQ(Prologue.FileNames.size(), 1u);
   ASSERT_EQ(Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
   EXPECT_STREQ(*Prologue.FileNames[0].Name.getAsCString(), "a file");
 }
@@ -245,7 +246,7 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
   EXPECT_TRUE(IssueMessage.empty());
   const DWARFDebugLine::LineTable *Expected = *ExpectedLineTable;
   checkDefaultPrologue(Version, Format, Expected->Prologue, 16);
-  EXPECT_EQ(Expected->Sequences.size(), 1);
+  EXPECT_EQ(Expected->Sequences.size(), 1u);
 
   uint64_t SecondOffset =
       Expected->Prologue.sizeofTotalLength() + Expected->Prologue.TotalLength;
@@ -256,7 +257,7 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
   EXPECT_TRUE(IssueMessage.empty());
   const DWARFDebugLine::LineTable *Expected2 = *ExpectedLineTable2;
   checkDefaultPrologue(Version, Format, Expected2->Prologue, 32);
-  EXPECT_EQ(Expected2->Sequences.size(), 2);
+  EXPECT_EQ(Expected2->Sequences.size(), 2u);
 
   EXPECT_NE(Expected, Expected2);
 
@@ -459,9 +460,9 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
   EXPECT_EQ(IssueMessage,
             "last sequence in debug line table is not terminated!");
   ASSERT_TRUE(ExpectedLineTable.operator bool());
-  EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 6);
+  EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 6u);
   // The unterminated sequence is not added to the sequence list.
-  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
 }
 
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
@@ -470,20 +471,20 @@ TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
 
   DWARFDebugLine::SectionParser Parser = setupParser();
 
-  EXPECT_EQ(Parser.getOffset(), 0);
+  EXPECT_EQ(Parser.getOffset(), 0u);
   ASSERT_FALSE(Parser.done());
 
   DWARFDebugLine::LineTable Parsed = Parser.parseNext(RecordIssue, RecordError);
   checkDefaultPrologue(4, DWARF32, Parsed.Prologue, 16);
-  EXPECT_EQ(Parsed.Sequences.size(), 1);
-  EXPECT_EQ(Parser.getOffset(), 62);
+  EXPECT_EQ(Parsed.Sequences.size(), 1u);
+  EXPECT_EQ(Parser.getOffset(), 62u);
   ASSERT_FALSE(Parser.done());
 
   DWARFDebugLine::LineTable Parsed2 =
       Parser.parseNext(RecordIssue, RecordError);
   checkDefaultPrologue(4, DWARF64, Parsed2.Prologue, 16);
-  EXPECT_EQ(Parsed2.Sequences.size(), 1);
-  EXPECT_EQ(Parser.getOffset(), 136);
+  EXPECT_EQ(Parsed2.Sequences.size(), 1u);
+  EXPECT_EQ(Parser.getOffset(), 136u);
   EXPECT_TRUE(Parser.done());
 
   EXPECT_TRUE(IssueMessage.empty());
@@ -496,15 +497,15 @@ TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
 
   DWARFDebugLine::SectionParser Parser = setupParser();
 
-  EXPECT_EQ(Parser.getOffset(), 0);
+  EXPECT_EQ(Parser.getOffset(), 0u);
   ASSERT_FALSE(Parser.done());
 
   Parser.skip(RecordError);
-  EXPECT_EQ(Parser.getOffset(), 62);
+  EXPECT_EQ(Parser.getOffset(), 62u);
   ASSERT_FALSE(Parser.done());
 
   Parser.skip(RecordError);
-  EXPECT_EQ(Parser.getOffset(), 136);
+  EXPECT_EQ(Parser.getOffset(), 136u);
   EXPECT_TRUE(Parser.done());
 
   EXPECT_FALSE(FoundError);
@@ -532,7 +533,7 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenParsing) {
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
   Parser.parseNext(RecordIssue, RecordError);
 
-  EXPECT_EQ(Parser.getOffset(), 4);
+  EXPECT_EQ(Parser.getOffset(), 4u);
   EXPECT_TRUE(Parser.done());
   EXPECT_TRUE(IssueMessage.empty());
 
@@ -553,7 +554,7 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
   Parser.skip(RecordError);
 
-  EXPECT_EQ(Parser.getOffset(), 4);
+  EXPECT_EQ(Parser.getOffset(), 4u);
   EXPECT_TRUE(Parser.done());
 
   checkError("parsing line table prologue at offset 0x00000000 unsupported "

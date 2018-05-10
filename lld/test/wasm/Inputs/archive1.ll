@@ -1,4 +1,4 @@
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare i32 @bar() local_unnamed_addr #1
 

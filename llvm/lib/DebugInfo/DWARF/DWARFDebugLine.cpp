@@ -466,7 +466,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
     DWARFDataExtractor &DebugLineData, uint32_t Offset, const DWARFContext &Ctx,
     const DWARFUnit *U, std::function<void(StringRef)> WarnCallback) {
   if (!DebugLineData.isValidOffset(Offset))
-    return createError("offset 0x%8.8" PRIx64
+    return createError("offset 0x%8.8" PRIx32
                        " is not a valid debug line section offset",
                        Offset);
 

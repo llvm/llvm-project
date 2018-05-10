@@ -1156,7 +1156,7 @@ def fxray_instrumentation_bundle :
 
 def ffine_grained_bitfield_accesses : Flag<["-"],
   "ffine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
-  HelpText<"Use separate accesses for bitfields with legal widths and alignments.">;
+  HelpText<"Use separate accesses for consecutive bitfield runs with legal widths and alignments.">;
 def fno_fine_grained_bitfield_accesses : Flag<["-"],
   "fno-fine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Use large-integer access for consecutive bitfield runs.">;

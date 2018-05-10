@@ -1333,7 +1333,7 @@ multiclass avx512_int_broadcast_rm_vl<bits<8> opc, string OpcodeStr,
                 avx512_int_broadcast_rm_lowering<_.info256, _.info256>,
                                  EVEX_V256;
     defm Z128 : avx512_broadcast_rm<opc, OpcodeStr, WriteShuffle,
-                                    WriteShuffleLd, _.info128, _.info128>,
+                                    WriteShuffleXLd, _.info128, _.info128>,
                                  EVEX_V128;
   }
 }
@@ -1353,7 +1353,8 @@ multiclass avx512_subvec_broadcast_rm<bits<8> opc, string OpcodeStr,
                            (ins _Src.MemOp:$src), OpcodeStr, "$src", "$src",
                            (_Dst.VT (X86SubVBroadcast
                              (_Src.VT (bitconvert (_Src.LdFrag addr:$src)))))>,
-                           AVX5128IBase, EVEX, Sched<[WriteShuffleLd]>;
+                           Sched<[SchedWriteShuffle.YMM.Folded]>,
+                           AVX5128IBase, EVEX;
 }
 
 // This should be used for the AVX512DQ broadcast instructions. It disables
@@ -1367,7 +1368,8 @@ multiclass avx512_subvec_broadcast_rm_dq<bits<8> opc, string OpcodeStr,
                            (null_frag),
                            (_Dst.VT (X86SubVBroadcast
                              (_Src.VT (bitconvert (_Src.LdFrag addr:$src)))))>,
-                            AVX5128IBase, EVEX, Sched<[WriteShuffleLd]>;
+                           Sched<[SchedWriteShuffle.YMM.Folded]>,
+                           AVX5128IBase, EVEX;
 }
 
 let Predicates = [HasAVX512] in {
@@ -1646,7 +1648,7 @@ multiclass avx512_common_broadcast_i32x2<bits<8> opc, string OpcodeStr,
 
   let Predicates = [HasDQI, HasVLX] in
     defm Z128 : avx512_broadcast_rm_split<opc, OpcodeStr, WriteShuffle,
-                                          WriteShuffleLd, _Dst.info128,
+                                          WriteShuffleXLd, _Dst.info128,
                                           _Src.info128, _Src.info128, null_frag>,
                                           EVEX_V128;
 }
