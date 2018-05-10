@@ -543,14 +543,10 @@ void Writer::createImportTables() {
     std::string DLL = StringRef(File->DLLName).lower();
     if (Config->DLLOrder.count(DLL) == 0)
       Config->DLLOrder[DLL] = Config->DLLOrder.size();
-  }
-
-  for (ImportFile *File : ImportFile::Instances) {
-    if (!File->Live)
-      continue;
 
     if (DefinedImportThunk *Thunk = File->ThunkSym)
-      TextSec->addChunk(Thunk->getChunk());
+      if (File->ThunkLive)
+        TextSec->addChunk(Thunk->getChunk());
 
     if (Config->DelayLoads.count(StringRef(File->DLLName).lower())) {
       if (!File->ThunkSym)

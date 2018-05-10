@@ -1,4 +1,4 @@
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 $inlineFn = comdat any
 @constantData = weak_odr constant [3 x i8] c"abc", comdat($inlineFn)

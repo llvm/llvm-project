@@ -2,7 +2,7 @@
 ; RUN: yaml2obj %S/Inputs/undefined-globals.yaml -o %t_globals.o
 ; RUN: wasm-ld -print-gc-sections --allow-undefined -o %t1.wasm %t.o %t_globals.o
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare hidden i64 @unused_undef_function(i64 %arg)
 

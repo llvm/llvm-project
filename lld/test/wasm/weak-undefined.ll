@@ -5,7 +5,7 @@
 ; Test that undefined weak externals (global_var) and (foo) don't cause
 ; link failures and resolve to zero.
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @global_var = extern_weak global i32, align 4
 
