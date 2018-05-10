@@ -8456,42 +8456,42 @@ __m128d test_mm_maskz_move_sd (__mmask8 __U, __m128d __A, __m128d __B)
 void test_mm_mask_store_ss(float * __P, __mmask8 __U, __m128 __A)
 {
   // CHECK-LABEL: @test_mm_mask_store_ss
-  // CHECK: call void @llvm.masked.store.v16f32.p0v16f32(
+  // CHECK: call void @llvm.masked.store.v4f32.p0v4f32(
   _mm_mask_store_ss(__P, __U, __A);
 }
 
 void test_mm_mask_store_sd(double * __P, __mmask8 __U, __m128d __A)
 {
   // CHECK-LABEL: @test_mm_mask_store_sd
-  // CHECK: call void @llvm.masked.store.v8f64.p0v8f64(
+  // CHECK: call void @llvm.masked.store.v2f64.p0v2f64(
   _mm_mask_store_sd(__P, __U, __A);
 }
 
 __m128 test_mm_mask_load_ss(__m128 __A, __mmask8 __U, const float* __W)
 {
   // CHECK-LABEL: @test_mm_mask_load_ss
-  // CHECK: call <16 x float> @llvm.masked.load.v16f32.p0v16f32(
+  // CHECK: call <4 x float> @llvm.masked.load.v4f32.p0v4f32(
   return _mm_mask_load_ss(__A, __U, __W);
 }
 
 __m128 test_mm_maskz_load_ss (__mmask8 __U, const float * __W)
 {
   // CHECK-LABEL: @test_mm_maskz_load_ss
-  // CHECK: call <16 x float> @llvm.masked.load.v16f32.p0v16f32(
+  // CHECK: call <4 x float> @llvm.masked.load.v4f32.p0v4f32(
   return _mm_maskz_load_ss (__U, __W);
 }
 
 __m128d test_mm_mask_load_sd (__m128d __A, __mmask8 __U, const double * __W)
 {
   // CHECK-LABEL: @test_mm_mask_load_sd
-  // CHECK: call <8 x double> @llvm.masked.load.v8f64.p0v8f64(
+  // CHECK: call <2 x double> @llvm.masked.load.v2f64.p0v2f64(
   return _mm_mask_load_sd (__A, __U, __W);
 }
 
 __m128d test_mm_maskz_load_sd (__mmask8 __U, const double * __W)
 {
   // CHECK-LABEL: @test_mm_maskz_load_sd
-  // CHECK: call <8 x double> @llvm.masked.load.v8f64.p0v8f64(
+  // CHECK: call <2 x double> @llvm.masked.load.v2f64.p0v2f64(
   return _mm_maskz_load_sd (__U, __W);
 }
 

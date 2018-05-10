@@ -635,8 +635,10 @@ void CudaToolChain::addClangTargetOptions(
     // CUDA-9.0 uses new instructions that are only available in PTX6.0+
     PtxFeature = "+ptx60";
   }
-  CC1Args.push_back("-target-feature");
-  CC1Args.push_back(PtxFeature);
+  CC1Args.append({"-target-feature", PtxFeature});
+  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
+                         options::OPT_fno_cuda_short_ptr, false))
+    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
     SmallVector<StringRef, 8> LibraryPaths;
