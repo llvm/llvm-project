@@ -68,6 +68,9 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
 
   if (TargetPointerWidth == 32)
     resetDataLayout("e-p:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+  else if (Opts.NVPTXUseShortPointers)
+    resetDataLayout(
+        "e-p3:32:32-p4:32:32-p5:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
   else
     resetDataLayout("e-i64:64-i128:128-v16:16-v32:32-n16:32:64");
 

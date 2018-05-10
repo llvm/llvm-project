@@ -2258,3 +2258,29 @@ size_t SourceManager::getDataStructureSizes() const {
 
   return size;
 }
+
+SourceManagerForFile::SourceManagerForFile(StringRef FileName,
+                                           StringRef Content) {
+  // This is referenced by `FileMgr` and will be released by `FileMgr` when it
+  // is deleted.
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new vfs::InMemoryFileSystem);
+  InMemoryFileSystem->addFile(
+      FileName, 0,
+      llvm::MemoryBuffer::getMemBuffer(Content, FileName,
+                                       /*RequiresNullTerminator=*/false));
+  // This is passed to `SM` as reference, so the pointer has to be referenced
+  // in `Environment` so that `FileMgr` can out-live this function scope.
+  FileMgr =
+      llvm::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  // This is passed to `SM` as reference, so the pointer has to be referenced
+  // by `Environment` due to the same reason above.
+  Diagnostics = llvm::make_unique<DiagnosticsEngine>(
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
+      new DiagnosticOptions);
+  SourceMgr = llvm::make_unique<SourceManager>(*Diagnostics, *FileMgr);
+  FileID ID = SourceMgr->createFileID(FileMgr->getFile(FileName),
+                                      SourceLocation(), clang::SrcMgr::C_User);
+  assert(ID.isValid());
+  SourceMgr->setMainFileID(ID);
+}

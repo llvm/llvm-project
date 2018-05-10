@@ -72,18 +72,12 @@ define i32 @anyset(i32 %a) {
   ret i32 %conv
 }
 
-; FIXME: aggressive-instcombine does not match this yet.
-
 define i32 @allset(i32 %a) {
 ; CHECK-LABEL: @allset(
-; CHECK-NEXT:    [[BF_LSHR:%.*]] = lshr i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[BF_LSHR5:%.*]] = lshr i32 [[A]], 2
-; CHECK-NEXT:    [[BF_LSHR10:%.*]] = lshr i32 [[A]], 3
-; CHECK-NEXT:    [[BF_CLEAR2:%.*]] = and i32 [[A]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BF_CLEAR2]], [[BF_LSHR]]
-; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[AND]], [[BF_LSHR5]]
-; CHECK-NEXT:    [[AND13:%.*]] = and i32 [[AND8]], [[BF_LSHR10]]
-; CHECK-NEXT:    ret i32 [[AND13]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %a.sroa.0.0.trunc = trunc i32 %a to i8
   %a.sroa.5.0.shift = lshr i32 %a, 8
@@ -106,19 +100,12 @@ define i32 @allset(i32 %a) {
   ret i32 %conv
 }
 
-; FIXME: aggressive-instcombine does not match this yet.
-
 define i32 @anyclear(i32 %a) {
 ; CHECK-LABEL: @anyclear(
-; CHECK-NEXT:    [[BF_LSHR:%.*]] = lshr i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[BF_LSHR5:%.*]] = lshr i32 [[A]], 2
-; CHECK-NEXT:    [[BF_LSHR10:%.*]] = lshr i32 [[A]], 3
-; CHECK-NEXT:    [[BF_CLEAR2:%.*]] = and i32 [[A]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BF_CLEAR2]], [[BF_LSHR]]
-; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[AND]], [[BF_LSHR5]]
-; CHECK-NEXT:    [[AND13:%.*]] = and i32 [[AND8]], [[BF_LSHR10]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND13]], 1
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %a.sroa.0.0.trunc = trunc i32 %a to i8
   %a.sroa.5.0.shift = lshr i32 %a, 8

@@ -428,13 +428,12 @@ template<typename T>
 class InternalMmapVectorNoCtor {
  public:
   void Initialize(uptr initial_capacity) {
-    capacity_ = Max(initial_capacity, (uptr)1);
+    capacity_bytes_ = 0;
     size_ = 0;
-    data_ = (T *)MmapOrDie(capacity_ * sizeof(T), "InternalMmapVectorNoCtor");
+    data_ = 0;
+    reserve(initial_capacity);
   }
-  void Destroy() {
-    UnmapOrDie(data_, capacity_ * sizeof(T));
-  }
+  void Destroy() { UnmapOrDie(data_, capacity_bytes_); }
   T &operator[](uptr i) {
     CHECK_LT(i, size_);
     return data_[i];
@@ -444,8 +443,8 @@ class InternalMmapVectorNoCtor {
     return data_[i];
   }
   void push_back(const T &element) {
-    CHECK_LE(size_, capacity_);
-    if (size_ == capacity_) {
+    CHECK_LE(size_, capacity());
+    if (size_ == capacity()) {
       uptr new_capacity = RoundUpToPowerOfTwo(size_ + 1);
       Realloc(new_capacity);
     }
@@ -468,9 +467,7 @@ class InternalMmapVectorNoCtor {
   T *data() {
     return data_;
   }
-  uptr capacity() const {
-    return capacity_;
-  }
+  uptr capacity() const { return capacity_bytes_ / sizeof(T); }
   void reserve(uptr new_size) {
     // Never downsize internal buffer.
     if (new_size > capacity())
@@ -502,7 +499,7 @@ class InternalMmapVectorNoCtor {
 
   void swap(InternalMmapVectorNoCtor &other) {
     Swap(data_, other.data_);
-    Swap(capacity_, other.capacity_);
+    Swap(capacity_bytes_, other.capacity_bytes_);
     Swap(size_, other.size_);
   }
 
@@ -510,17 +507,17 @@ class InternalMmapVectorNoCtor {
   void Realloc(uptr new_capacity) {
     CHECK_GT(new_capacity, 0);
     CHECK_LE(size_, new_capacity);
-    T *new_data = (T *)MmapOrDie(new_capacity * sizeof(T),
-                                 "InternalMmapVector");
+    uptr new_capacity_bytes =
+        RoundUpTo(new_capacity * sizeof(T), GetPageSizeCached());
+    T *new_data = (T *)MmapOrDie(new_capacity_bytes, "InternalMmapVector");
     internal_memcpy(new_data, data_, size_ * sizeof(T));
-    T *old_data = data_;
+    UnmapOrDie(data_, capacity_bytes_);
     data_ = new_data;
-    UnmapOrDie(old_data, capacity_ * sizeof(T));
-    capacity_ = new_capacity;
+    capacity_bytes_ = new_capacity_bytes;
   }
 
   T *data_;
-  uptr capacity_;
+  uptr capacity_bytes_;
   uptr size_;
 };
 

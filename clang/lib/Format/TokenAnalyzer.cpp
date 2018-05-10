@@ -34,48 +34,19 @@
 namespace clang {
 namespace format {
 
-// This sets up an virtual file system with file \p FileName containing \p
-// Code.
-std::unique_ptr<Environment>
-Environment::CreateVirtualEnvironment(StringRef Code, StringRef FileName,
-                                      ArrayRef<tooling::Range> Ranges,
-                                      unsigned FirstStartColumn,
-                                      unsigned NextStartColumn,
-                                      unsigned LastStartColumn) {
-  // This is referenced by `FileMgr` and will be released by `FileMgr` when it
-  // is deleted.
-  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
-  // This is passed to `SM` as reference, so the pointer has to be referenced
-  // in `Environment` so that `FileMgr` can out-live this function scope.
-  std::unique_ptr<FileManager> FileMgr(
-      new FileManager(FileSystemOptions(), InMemoryFileSystem));
-  // This is passed to `SM` as reference, so the pointer has to be referenced
-  // by `Environment` due to the same reason above.
-  std::unique_ptr<DiagnosticsEngine> Diagnostics(new DiagnosticsEngine(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions));
-  // This will be stored as reference, so the pointer has to be stored in
-  // due to the same reason above.
-  std::unique_ptr<SourceManager> VirtualSM(
-      new SourceManager(*Diagnostics, *FileMgr));
-  InMemoryFileSystem->addFile(
-      FileName, 0,
-      llvm::MemoryBuffer::getMemBuffer(Code, FileName,
-                                       /*RequiresNullTerminator=*/false));
-  FileID ID = VirtualSM->createFileID(FileMgr->getFile(FileName),
-                                      SourceLocation(), clang::SrcMgr::C_User);
-  assert(ID.isValid());
-  SourceLocation StartOfFile = VirtualSM->getLocForStartOfFile(ID);
-  std::vector<CharSourceRange> CharRanges;
+Environment::Environment(StringRef Code, StringRef FileName,
+                         ArrayRef<tooling::Range> Ranges,
+                         unsigned FirstStartColumn, unsigned NextStartColumn,
+                         unsigned LastStartColumn)
+    : VirtualSM(new SourceManagerForFile(FileName, Code)), SM(VirtualSM->get()),
+      ID(VirtualSM->get().getMainFileID()), FirstStartColumn(FirstStartColumn),
+      NextStartColumn(NextStartColumn), LastStartColumn(LastStartColumn) {
+  SourceLocation StartOfFile = SM.getLocForStartOfFile(ID);
   for (const tooling::Range &Range : Ranges) {
     SourceLocation Start = StartOfFile.getLocWithOffset(Range.getOffset());
     SourceLocation End = Start.getLocWithOffset(Range.getLength());
     CharRanges.push_back(CharSourceRange::getCharRange(Start, End));
   }
-  return llvm::make_unique<Environment>(
-      ID, std::move(FileMgr), std::move(VirtualSM), std::move(Diagnostics),
-      CharRanges, FirstStartColumn, NextStartColumn, LastStartColumn);
 }
 
 TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)

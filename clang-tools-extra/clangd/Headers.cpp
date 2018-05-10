@@ -34,8 +34,7 @@ public:
                           CharSourceRange /*FilenameRange*/,
                           const FileEntry *File, llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
-                          const Module * /*Imported*/,
-                          SrcMgr::CharacteristicKind /*FileType*/) override {
+                          const Module * /*Imported*/) override {
     WrittenHeaders.insert(
         (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str());
     if (File != nullptr && !File->tryGetRealPathName().empty())

@@ -2,7 +2,7 @@
 
 // The number of supported attributes should never go down!
 
-// CHECK: #pragma clang attribute supports 68 attributes:
+// CHECK: #pragma clang attribute supports 69 attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
@@ -41,6 +41,7 @@
 // CHECK-NEXT: NoSanitize (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: NoSanitizeSpecific (SubjectMatchRule_function, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: NoSplitStack (SubjectMatchRule_function)
+// CHECK-NEXT: NoStackProtector (SubjectMatchRule_function)
 // CHECK-NEXT: NoThrow (SubjectMatchRule_function)
 // CHECK-NEXT: NotTailCalled (SubjectMatchRule_function)
 // CHECK-NEXT: ObjCBoxable (SubjectMatchRule_record)

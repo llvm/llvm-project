@@ -88,6 +88,12 @@ TEST(SanitizerCommon, MmapAlignedOrDieOnFatalError) {
   }
 }
 
+TEST(SanitizerCommon, InternalMmapVectorRoundUpCapacity) {
+  InternalMmapVector<uptr> v;
+  v.reserve(1);
+  CHECK_EQ(v.capacity(), GetPageSizeCached() / sizeof(uptr));
+}
+
 TEST(SanitizerCommon, InternalMmapVectorReize) {
   InternalMmapVector<uptr> v;
   CHECK_EQ(0U, v.size());

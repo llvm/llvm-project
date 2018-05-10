@@ -477,6 +477,11 @@ void UnlockThreadRegistry() {
   __asan::asanThreadRegistry().Unlock();
 }
 
+ThreadRegistry *GetThreadRegistryLocked() {
+  __asan::asanThreadRegistry().CheckLocked();
+  return &__asan::asanThreadRegistry();
+}
+
 void EnsureMainThreadIDIsCorrect() {
   __asan::EnsureMainThreadIDIsCorrect();
 }

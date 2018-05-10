@@ -3517,12 +3517,13 @@ ScalarEvolution::getUMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
   for (unsigned i = 0, e = Ops.size()-1; i != e; ++i)
     //  X umax Y umax Y  -->  X umax Y
     //  X umax Y         -->  X, if X is always greater than Y
-    if (Ops[i] == Ops[i+1] ||
-        isKnownPredicate(ICmpInst::ICMP_UGE, Ops[i], Ops[i+1])) {
-      Ops.erase(Ops.begin()+i+1, Ops.begin()+i+2);
+    if (Ops[i] == Ops[i + 1] || isKnownViaNonRecursiveReasoning(
+                                    ICmpInst::ICMP_UGE, Ops[i], Ops[i + 1])) {
+      Ops.erase(Ops.begin() + i + 1, Ops.begin() + i + 2);
       --i; --e;
-    } else if (isKnownPredicate(ICmpInst::ICMP_ULE, Ops[i], Ops[i+1])) {
-      Ops.erase(Ops.begin()+i, Ops.begin()+i+1);
+    } else if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, Ops[i],
+                                               Ops[i + 1])) {
+      Ops.erase(Ops.begin() + i, Ops.begin() + i + 1);
       --i; --e;
     }
 

@@ -78,3 +78,8 @@ def discard_all : Flag<["-", "--"], "discard-all">,
                       HelpText<"Remove all local symbols except file and section symbols">;
 def x : Flag<["-"], "x">,
         Alias<discard_all>;
+defm strip_symbol : Eq<"strip-symbol">,
+                       MetaVarName<"symbol">,
+                       HelpText<"Remove symbol <symbol>">;
+def N : JoinedOrSeparate<["-"], "N">,
+        Alias<strip_symbol>;

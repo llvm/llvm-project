@@ -147,6 +147,7 @@ struct CopyConfig {
   std::vector<StringRef> SymbolsToLocalize;
   std::vector<StringRef> SymbolsToGlobalize;
   std::vector<StringRef> SymbolsToWeaken;
+  std::vector<StringRef> SymbolsToRemove;
   StringMap<StringRef> SymbolsToRename;
   bool StripAll = false;
   bool StripAllGNU = false;
@@ -371,11 +372,17 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
         Sym.Name = I->getValue();
     });
 
-    Obj.SymbolTable->removeSymbols([&](const Symbol &Sym) {
+    Obj.removeSymbols([&](const Symbol &Sym) {
       if (Config.DiscardAll && Sym.Binding == STB_LOCAL &&
           Sym.getShndx() != SHN_UNDEF && Sym.Type != STT_FILE &&
           Sym.Type != STT_SECTION)
         return true;
+
+      if (!Config.SymbolsToRemove.empty() &&
+          is_contained(Config.SymbolsToRemove, Sym.Name)) {
+        return true;
+      }
+
       return false;
     });
   }
@@ -476,6 +483,8 @@ CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Config.SymbolsToGlobalize.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
     Config.SymbolsToWeaken.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbol))
+    Config.SymbolsToRemove.push_back(Arg->getValue());
 
   return Config;
 }

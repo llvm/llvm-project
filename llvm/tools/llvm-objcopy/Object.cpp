@@ -47,6 +47,7 @@ template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
 }
 
 void SectionBase::removeSectionReferences(const SectionBase *Sec) {}
+void SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {}
 void SectionBase::initialize(SectionTableRef SecTable) {}
 void SectionBase::finalize() {}
 
@@ -206,7 +207,8 @@ void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
   assignIndices();
 }
 
-void SymbolTableSection::removeSymbols(function_ref<bool(Symbol &)> ToRemove) {
+void SymbolTableSection::removeSymbols(
+    function_ref<bool(const Symbol &)> ToRemove) {
   Symbols.erase(
       std::remove_if(std::begin(Symbols), std::end(Symbols),
                      [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
@@ -342,6 +344,14 @@ void RelocationSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
+void RelocationSection::removeSymbols(
+    function_ref<bool(const Symbol &)> ToRemove) {
+  for (const Relocation &Reloc : Relocations)
+    if (ToRemove(*Reloc.RelocSymbol))
+      error("not stripping symbol `" + Reloc.RelocSymbol->Name +
+            "' because it is named in a relocation");
+}
+
 void SectionWriter::visit(const DynamicRelocationSection &Sec) {
   std::copy(std::begin(Sec.Contents), std::end(Sec.Contents),
             Out.getBufferStart() + Sec.Offset);
@@ -363,6 +373,15 @@ void Section::removeSectionReferences(const SectionBase *Sec) {
 void GroupSection::finalize() {
   this->Info = Sym->Index;
   this->Link = SymTab->Index;
+}
+
+void GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  if (ToRemove(*Sym)) {
+    error("Symbol " + Sym->Name +
+          " cannot be removed because it is "
+          "referenced by the section " +
+          this->Name + "[" + Twine(this->Index) + "]");
+  }
 }
 
 void Section::initialize(SectionTableRef SecTable) {
@@ -902,6 +921,14 @@ void Object::removeSections(std::function<bool(const SectionBase &)> ToRemove) {
   }
   // Now finally get rid of them all togethor.
   Sections.erase(Iter, std::end(Sections));
+}
+
+void Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  if (!SymbolTable)
+    return;
+
+  for (const SecPtr &Sec : Sections)
+    Sec->removeSymbols(ToRemove);
 }
 
 void Object::sortSections() {

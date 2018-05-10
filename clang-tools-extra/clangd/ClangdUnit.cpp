@@ -93,8 +93,7 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override {
+                          const Module *Imported) override {
     auto SR = FilenameRange.getAsRange();
     if (SR.isInvalid() || !File || File->tryGetRealPathName().empty())
       return;

@@ -63,8 +63,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override {
+                          const Module *Imported) override {
     if (!File)
       DepCollector.maybeAddDependency(FileName, /*FromModule*/false,
                                      /*IsSystem*/false, /*IsModuleFile*/false,
@@ -194,8 +193,7 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override;
+                          const Module *Imported) override;
 
   void EndOfMainFile() override {
     OutputDependencyFile();
@@ -315,8 +313,7 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
                                  const FileEntry *File,
                                  StringRef SearchPath,
                                  StringRef RelativePath,
-                                 const Module *Imported, 
-                                 SrcMgr::CharacteristicKind FileType) {
+                                 const Module *Imported) {
   if (!File) {
     if (AddMissingHeaderDeps)
       AddFilename(FileName);
