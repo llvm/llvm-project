@@ -3635,8 +3635,6 @@ static PropertyDefinition g_properties[] = {
     {"swift-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, nullptr,
      "List of directories to be searched when locating modules for Swift."},
-    {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean, false, true,
-     nullptr, nullptr, "Create modules AST context in parallel."},
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, nullptr,
      "Automatically load Clang modules referred to by the program."},
@@ -3776,7 +3774,6 @@ enum {
   ePropertyClangModuleSearchPaths,
   ePropertySwiftFrameworkSearchPaths,
   ePropertySwiftModuleSearchPaths,
-  ePropertySwiftCreateModuleContextsInParallel,
   ePropertyAutoImportClangModules,
   ePropertyUseAllCompilerFlags,
   ePropertyAutoApplyFixIts,
@@ -3914,9 +3911,15 @@ static PropertyDefinition g_experimental_properties[]{
      "But it can make expressions run much more slowly."},
     {"use-modern-type-lookup", OptionValue::eTypeBoolean, true, false, nullptr,
      nullptr, "If true, use Clang's modern type lookup infrastructure."},
+    {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean, false, true,
+     nullptr, nullptr, "Create the per-module Swift AST contexts in parallel."},
     {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, nullptr, nullptr}};
 
-enum { ePropertyInjectLocalVars = 0, ePropertyUseModernTypeLookup };
+enum {
+  ePropertyInjectLocalVars = 0,
+  ePropertyUseModernTypeLookup,
+  ePropertySwiftCreateModuleContextsInParallel,
+};
 
 class TargetExperimentalOptionValueProperties : public OptionValueProperties {
 public:
@@ -4035,6 +4038,18 @@ bool TargetProperties::GetUseModernTypeLookup() const {
   if (exp_values)
     return exp_values->GetPropertyAtIndexAsBoolean(
         nullptr, ePropertyUseModernTypeLookup, true);
+  else
+    return true;
+}
+
+bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
+  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
+      nullptr, false, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertySwiftCreateModuleContextsInParallel, true);
   else
     return true;
 }
@@ -4225,12 +4240,6 @@ FileSpecList &TargetProperties::GetSwiftModuleSearchPaths() {
                                                                    idx);
   assert(option_value);
   return option_value->GetCurrentValue();
-}
-
-bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
-  const uint32_t idx = ePropertySwiftCreateModuleContextsInParallel;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
 FileSpecList &TargetProperties::GetClangModuleSearchPaths() {

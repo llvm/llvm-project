@@ -1338,6 +1338,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   if (target.GetSwiftCreateModuleContextsInParallel()) {
+    // The first call to GetTypeSystemForLanguage() on a module will
+    // trigger the import (and thus most likely the rebuild) of all
+    // the Clang modules that were imported in this module. This can
+    // be a lot of work (potentially ten seconds per module), but it
+    // can be performed in parallel.
     llvm::ThreadPool pool;
     for (size_t mi = 0; mi != num_images; ++mi) {
       auto module_sp = target.GetImages().GetModuleAtIndex(mi);
