@@ -209,28 +209,26 @@ void ThreadSuspender::KillAllThreads() {
 
 bool ThreadSuspender::SuspendAllThreads() {
   ThreadLister thread_lister(pid_);
-  bool added_threads;
-  bool first_iteration = true;
-  InternalMmapVector<int> threads;
+  bool retry;
+  InternalMmapVector<tid_t> threads;
   threads.reserve(128);
   do {
-    // Run through the directory entries once.
-    added_threads = false;
-    if (!thread_lister.ListThreads(&threads)) {
-      ResumeAllThreads();
-      return false;
+    retry = false;
+    switch (thread_lister.ListThreads(&threads)) {
+      case ThreadLister::Error:
+        ResumeAllThreads();
+        return false;
+      case ThreadLister::Incomplete:
+        retry = true;
+        break;
+      case ThreadLister::Ok:
+        break;
     }
-    for (int tid : threads)
+    for (tid_t tid : threads)
       if (SuspendThread(tid))
-        added_threads = true;
-    if (first_iteration && !added_threads) {
-      // Detach threads and fail.
-      ResumeAllThreads();
-      return false;
-    }
-    first_iteration = false;
-  } while (added_threads);
-  return true;
+        retry = true;
+  } while (retry);
+  return suspended_threads_list_.ThreadCount();
 }
 
 // Pointer to the ThreadSuspender instance for use in signal handler.

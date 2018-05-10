@@ -45,7 +45,7 @@ struct TidReporterArgument {
     pthread_cond_destroy(&tid_reported_cond);
   }
 
-  pid_t reported_tid;
+  tid_t reported_tid;
   // For signaling to spawned threads that they should terminate.
   pthread_cond_t terminate_thread_cond;
   pthread_mutex_t terminate_thread_mutex;
@@ -64,7 +64,7 @@ class ThreadListerTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     pthread_t pthread_id;
-    pid_t tid;
+    tid_t tid;
     for (uptr i = 0; i < kThreadCount; i++) {
       SpawnTidReporter(&pthread_id, &tid);
       pthread_ids_.push_back(pthread_id);
@@ -81,12 +81,12 @@ class ThreadListerTest : public ::testing::Test {
       pthread_join(pthread_ids_[i], NULL);
   }
 
-  void SpawnTidReporter(pthread_t *pthread_id, pid_t *tid);
+  void SpawnTidReporter(pthread_t *pthread_id, tid_t *tid);
 
   static const uptr kThreadCount = 20;
 
   std::vector<pthread_t> pthread_ids_;
-  std::vector<pid_t> tids_;
+  std::vector<tid_t> tids_;
 
   TidReporterArgument thread_arg;
 };
@@ -107,44 +107,43 @@ void *TidReporterThread(void *argument) {
   return NULL;
 }
 
-void ThreadListerTest::SpawnTidReporter(pthread_t *pthread_id,
-                                        pid_t *tid) {
+void ThreadListerTest::SpawnTidReporter(pthread_t *pthread_id, tid_t *tid) {
   pthread_mutex_lock(&thread_arg.tid_reported_mutex);
   thread_arg.reported_tid = -1;
   ASSERT_EQ(0, pthread_create(pthread_id, NULL,
                               TidReporterThread,
                               &thread_arg));
-  while (thread_arg.reported_tid == -1)
+  while (thread_arg.reported_tid == (tid_t)(-1))
     pthread_cond_wait(&thread_arg.tid_reported_cond,
                       &thread_arg.tid_reported_mutex);
   pthread_mutex_unlock(&thread_arg.tid_reported_mutex);
   *tid = thread_arg.reported_tid;
 }
 
-static std::vector<pid_t> ReadTidsToVector(ThreadLister *thread_lister) {
-  std::vector<pid_t> listed_tids;
-  InternalMmapVector<int> threads(128);
+static std::vector<tid_t> ReadTidsToVector(ThreadLister *thread_lister) {
+  std::vector<tid_t> listed_tids;
+  InternalMmapVector<tid_t> threads(128);
   EXPECT_TRUE(thread_lister->ListThreads(&threads));
-  return std::vector<pid_t>(threads.begin(), threads.end());
+  return std::vector<tid_t>(threads.begin(), threads.end());
 }
 
-static bool Includes(std::vector<pid_t> first, std::vector<pid_t> second) {
+static bool Includes(std::vector<tid_t> first, std::vector<tid_t> second) {
   std::sort(first.begin(), first.end());
   std::sort(second.begin(), second.end());
   return std::includes(first.begin(), first.end(),
                        second.begin(), second.end());
 }
 
-static bool HasElement(std::vector<pid_t> vector, pid_t element) {
+static bool HasElement(const std::vector<tid_t> &vector, tid_t element) {
   return std::find(vector.begin(), vector.end(), element) != vector.end();
 }
 
 // ThreadLister's output should include the current thread's TID and the TID of
 // every thread we spawned.
 TEST_F(ThreadListerTest, ThreadListerSeesAllSpawnedThreads) {
-  pid_t self_tid = GetTid();
+  tid_t self_tid = GetTid();
   ThreadLister thread_lister(getpid());
-  std::vector<pid_t> listed_tids = ReadTidsToVector(&thread_lister);
+  std::vector<tid_t> listed_tids = ReadTidsToVector(&thread_lister);
   ASSERT_TRUE(HasElement(listed_tids, self_tid));
   ASSERT_TRUE(Includes(listed_tids, tids_));
 }
@@ -155,7 +154,7 @@ TEST_F(ThreadListerTest, DoNotForgetThreads) {
   // Run the loop body twice, because ThreadLister might behave differently if
   // called on a freshly created object.
   for (uptr i = 0; i < 2; i++) {
-    std::vector<pid_t> listed_tids = ReadTidsToVector(&thread_lister);
+    std::vector<tid_t> listed_tids = ReadTidsToVector(&thread_lister);
     ASSERT_TRUE(Includes(listed_tids, tids_));
   }
 }
@@ -164,10 +163,10 @@ TEST_F(ThreadListerTest, DoNotForgetThreads) {
 // relisting should cause ThreadLister to recognize their existence.
 TEST_F(ThreadListerTest, NewThreads) {
   ThreadLister thread_lister(getpid());
-  std::vector<pid_t> threads_before_extra = ReadTidsToVector(&thread_lister);
+  std::vector<tid_t> threads_before_extra = ReadTidsToVector(&thread_lister);
 
   pthread_t extra_pthread_id;
-  pid_t extra_tid;
+  tid_t extra_tid;
   SpawnTidReporter(&extra_pthread_id, &extra_tid);
   // Register the new thread so it gets terminated in TearDown().
   pthread_ids_.push_back(extra_pthread_id);
@@ -177,7 +176,7 @@ TEST_F(ThreadListerTest, NewThreads) {
   // so better check for that.
   ASSERT_FALSE(HasElement(threads_before_extra, extra_tid));
 
-  std::vector<pid_t> threads_after_extra = ReadTidsToVector(&thread_lister);
+  std::vector<tid_t> threads_after_extra = ReadTidsToVector(&thread_lister);
   ASSERT_TRUE(HasElement(threads_after_extra, extra_tid));
 }
 

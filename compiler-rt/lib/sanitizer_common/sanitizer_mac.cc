@@ -1035,7 +1035,7 @@ void PrintModuleMap() {
   InternalMmapVector<LoadedModule> modules;
   modules.reserve(128);
   memory_mapping.DumpListOfModules(&modules);
-  InternalSort(&modules, modules.size(), CompareBaseAddress);
+  Sort(modules.data(), modules.size(), CompareBaseAddress);
   for (uptr i = 0; i < modules.size(); ++i) {
     char uuid_str[128];
     FormatUUID(uuid_str, sizeof(uuid_str), modules[i].uuid());

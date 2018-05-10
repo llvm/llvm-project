@@ -202,7 +202,7 @@ class LargeMmapAllocator {
 
   void EnsureSortedChunks() {
     if (chunks_sorted_) return;
-    SortArray(reinterpret_cast<uptr*>(chunks_), n_chunks_);
+    Sort(reinterpret_cast<uptr *>(chunks_), n_chunks_);
     for (uptr i = 0; i < n_chunks_; i++)
       chunks_[i]->chunk_idx = i;
     chunks_sorted_ = true;

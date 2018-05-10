@@ -1,3 +1,4 @@
+UNSUPPORTED: darwin
 RUN: %cpp_compiler %S/PrintFuncTest.cpp -o %t
 RUN: %t -seed=1 -runs=100000 2>&1 | FileCheck %s
 RUN: %t -seed=1 -runs=100000 -print_funcs=0 2>&1 | FileCheck %s --check-prefix=NO

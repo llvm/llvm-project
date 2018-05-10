@@ -457,7 +457,7 @@ END {
   pcmd("")
   pcmd("static void ioctl_init() {")
   pcmd("  ioctl_table_fill();")
-  pcmd("  InternalSort(&ioctl_table, ioctl_table_size, ioctl_desc_compare());")
+  pcmd("  Sort(ioctl_table, ioctl_table_size, ioctl_desc_compare());")
   pcmd("")
   pcmd("  bool bad = false;")
   pcmd("  for (unsigned i = 0; i < ioctl_table_size - 1; ++i) {")
