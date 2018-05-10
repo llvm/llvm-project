@@ -146,6 +146,8 @@ public:
 
   FileSpecList &GetSwiftModuleSearchPaths();
 
+  bool GetSwiftCreateModuleContextsInParallel() const;
+
   bool GetEnableAutoImportClangModules() const;
 
   bool GetUseAllCompilerFlags() const;
