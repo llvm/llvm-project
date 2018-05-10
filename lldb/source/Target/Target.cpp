@@ -3911,9 +3911,15 @@ static PropertyDefinition g_experimental_properties[]{
      "But it can make expressions run much more slowly."},
     {"use-modern-type-lookup", OptionValue::eTypeBoolean, true, false, nullptr,
      nullptr, "If true, use Clang's modern type lookup infrastructure."},
+    {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean, false, true,
+     nullptr, nullptr, "Create the per-module Swift AST contexts in parallel."},
     {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, nullptr, nullptr}};
 
-enum { ePropertyInjectLocalVars = 0, ePropertyUseModernTypeLookup };
+enum {
+  ePropertyInjectLocalVars = 0,
+  ePropertyUseModernTypeLookup,
+  ePropertySwiftCreateModuleContextsInParallel,
+};
 
 class TargetExperimentalOptionValueProperties : public OptionValueProperties {
 public:
@@ -4032,6 +4038,18 @@ bool TargetProperties::GetUseModernTypeLookup() const {
   if (exp_values)
     return exp_values->GetPropertyAtIndexAsBoolean(
         nullptr, ePropertyUseModernTypeLookup, true);
+  else
+    return true;
+}
+
+bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
+  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
+      nullptr, false, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertySwiftCreateModuleContextsInParallel, true);
   else
     return true;
 }
