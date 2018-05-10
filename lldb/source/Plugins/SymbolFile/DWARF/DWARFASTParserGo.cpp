@@ -655,8 +655,7 @@ size_t DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc,
               if (form_value.BlockData()) {
                 Value initialValue(0);
                 Value memberOffset(0);
-                const DWARFDataExtractor &debug_info_data =
-                    die.GetDWARF()->get_debug_info_data();
+                const DWARFDataExtractor &debug_info_data = die.GetData();
                 uint32_t block_length = form_value.Unsigned();
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();

@@ -559,7 +559,7 @@ static void createImportLibrary(bool AsLib) {
 
   if (!Config->Incremental) {
     HandleError(writeImportLibrary(LibName, Path, Exports, Config->Machine,
-                                   false, Config->MinGW));
+                                   Config->MinGW));
     return;
   }
 
@@ -569,7 +569,7 @@ static void createImportLibrary(bool AsLib) {
       Path, /*FileSize*/ -1, /*RequiresNullTerminator*/ false);
   if (!OldBuf) {
     HandleError(writeImportLibrary(LibName, Path, Exports, Config->Machine,
-                                   false, Config->MinGW));
+                                   Config->MinGW));
     return;
   }
 
@@ -580,7 +580,7 @@ static void createImportLibrary(bool AsLib) {
           EC.message());
 
   if (Error E = writeImportLibrary(LibName, TmpName, Exports, Config->Machine,
-                                   false, Config->MinGW)) {
+                                   Config->MinGW)) {
     HandleError(std::move(E));
     return;
   }
@@ -625,9 +625,18 @@ static void parseModuleDefs(StringRef Path) {
 
   for (COFFShortExport E1 : M.Exports) {
     Export E2;
+    // In simple cases, only Name is set. Renamed exports are parsed
+    // and set as "ExtName = Name". If Name has the form "OtherDll.Func",
+    // it shouldn't be a normal exported function but a forward to another
+    // DLL instead. This is supported by both MS and GNU linkers.
+    if (E1.ExtName != E1.Name && StringRef(E1.Name).contains('.')) {
+      E2.Name = Saver.save(E1.ExtName);
+      E2.ForwardTo = Saver.save(E1.Name);
+      Config->Exports.push_back(E2);
+      continue;
+    }
     E2.Name = Saver.save(E1.Name);
-    if (E1.isWeak())
-      E2.ExtName = Saver.save(E1.ExtName);
+    E2.ExtName = Saver.save(E1.ExtName);
     E2.Ordinal = E1.Ordinal;
     E2.Noname = E1.Noname;
     E2.Data = E1.Data;

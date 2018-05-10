@@ -46,7 +46,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "ReportAlias-01.c", directory: "test/ScopDetectionDiagnostic/")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "f", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "f", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "ReportAlias-01.c", directory: "test/ScopDetectionDiagnostic/")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null, !8, !8}
