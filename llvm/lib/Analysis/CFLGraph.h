@@ -541,6 +541,12 @@ template <typename CFLAA> class CFLGraphBuilder {
         break;
       }
 
+      case Instruction::Select: {
+        addAssignEdge(CE->getOperand(1), CE);
+        addAssignEdge(CE->getOperand(2), CE);
+        break;
+      }
+
       case Instruction::InsertElement:
       case Instruction::InsertValue: {
         addAssignEdge(CE->getOperand(0), CE);
@@ -573,7 +579,6 @@ template <typename CFLAA> class CFLGraphBuilder {
       case Instruction::AShr:
       case Instruction::ICmp:
       case Instruction::FCmp:
-      case Instruction::Select:
       case Instruction::ShuffleVector: {
         addAssignEdge(CE->getOperand(0), CE);
         addAssignEdge(CE->getOperand(1), CE);

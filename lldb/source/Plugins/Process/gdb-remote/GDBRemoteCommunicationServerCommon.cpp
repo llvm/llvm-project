@@ -735,14 +735,13 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
     if (packet.GetChar() == ',') {
       // FIXME: add timeout to qPlatform_shell packet
       // uint32_t timeout = packet.GetHexMaxU32(false, 32);
-      uint32_t timeout = 10;
       if (packet.GetChar() == ',')
         packet.GetHexByteString(working_dir);
       int status, signo;
       std::string output;
-      Status err =
-          Host::RunShellCommand(path.c_str(), FileSpec{working_dir, true},
-                                &status, &signo, &output, timeout);
+      Status err = Host::RunShellCommand(
+          path.c_str(), FileSpec{working_dir, true}, &status, &signo, &output,
+          std::chrono::seconds(10));
       StreamGDBRemote response;
       if (err.Fail()) {
         response.PutCString("F,");

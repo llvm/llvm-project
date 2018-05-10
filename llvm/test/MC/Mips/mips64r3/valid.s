@@ -81,16 +81,26 @@ a:
         clo       $11,$a1              # CHECK: clo $11, $5   # encoding: [0x70,0xab,0x58,0x21]
         clz       $sp,$gp              # CHECK: clz $sp, $gp  # encoding: [0x73,0x9d,0xe8,0x20]
         ctc1      $a2,$26
-        cvt.d.l   $f4,$f16
-        cvt.d.s   $f22,$f28
-        cvt.d.w   $f26,$f11
-        cvt.l.d   $f24,$f15
-        cvt.l.s   $f11,$f29
-        cvt.s.d   $f26,$f8
-        cvt.s.l   $f15,$f30
-        cvt.s.w   $f22,$f15
-        cvt.w.d   $f20,$f14
-        cvt.w.s   $f20,$f24
+        cvt.d.l   $f4,$f16             # CHECK: cvt.d.l $f4, $f16   # encoding: [0x46,0xa0,0x81,0x21]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_D64_L
+        cvt.d.s   $f22,$f28            # CHECK: cvt.d.s $f22, $f28  # encoding: [0x46,0x00,0xe5,0xa1]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_D64_S
+        cvt.d.w   $f26,$f11            # CHECK: cvt.d.w $f26, $f11  # encoding: [0x46,0x80,0x5e,0xa1]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_D64_W
+        cvt.l.d   $f24,$f15            # CHECK: cvt.l.d $f24, $f15  # encoding: [0x46,0x20,0x7e,0x25]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_L_D64
+        cvt.l.s   $f11,$f29            # CHECK: cvt.l.s $f11, $f29  # encoding: [0x46,0x00,0xea,0xe5]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_L_S
+        cvt.s.d   $f26,$f8             # CHECK: cvt.s.d $f26, $f8   # encoding: [0x46,0x20,0x46,0xa0]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_S_D64
+        cvt.s.l   $f15,$f30            # CHECK: cvt.s.l $f15, $f30  # encoding: [0x46,0xa0,0xf3,0xe0]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_S_L
+        cvt.s.w   $f22,$f15            # CHECK: cvt.s.w $f22, $f15  # encoding: [0x46,0x80,0x7d,0xa0]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_S_W
+        cvt.w.d   $f20,$f14            # CHECK: cvt.w.d $f20, $f14  # encoding: [0x46,0x20,0x75,0x24]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_W_D64
+        cvt.w.s   $f20,$f24            # CHECK: cvt.w.s $f20, $f24  # encoding: [0x46,0x00,0xc5,0x24]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_W_S
         dadd      $s3,$at,$ra
         dadd      $sp,$s4,-27705       # CHECK: daddi $sp, $20, -27705 # encoding: [0x62,0x9d,0x93,0xc7]
         dadd      $sp,-27705           # CHECK: daddi $sp, $sp, -27705 # encoding: [0x63,0xbd,0x93,0xc7]

@@ -1523,10 +1523,10 @@ TARGET_BUILTIN(__builtin_ia32_fixupimmps128_maskz, "V4fV4fV4fV4iIiUc", "nc", "av
 TARGET_BUILTIN(__builtin_ia32_fixupimmps256_mask, "V8fV8fV8fV8iIiUc", "nc", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_fixupimmps256_maskz, "V8fV8fV8fV8iIiUc", "nc", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_loadapd128_mask, "V2dV2d*V2dUc", "n", "avx512vl")
-TARGET_BUILTIN(__builtin_ia32_loadsd128_mask, "V8dV8d*V8dUc", "n", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_loadsd128_mask, "V2dV2d*V2dUc", "n", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_loadapd256_mask, "V4dV4d*V4dUc", "n", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_loadaps128_mask, "V4fV4f*V4fUc", "n", "avx512vl")
-TARGET_BUILTIN(__builtin_ia32_loadss128_mask, "V16fV16f*V16fUs", "n", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_loadss128_mask, "V4fV4f*V4fUc", "n", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_loadaps256_mask, "V8fV8f*V8fUc", "n", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_loaddqudi128_mask, "V2LLiV2LLi*V2LLiUc", "n", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_loaddqudi256_mask, "V4LLiV4LLi*V4LLiUc", "n", "avx512vl")
@@ -1543,10 +1543,10 @@ TARGET_BUILTIN(__builtin_ia32_storedquhi256_mask, "vV16s*V16sUs", "n", "avx512vl
 TARGET_BUILTIN(__builtin_ia32_storedquqi128_mask, "vV16c*V16cUs", "n", "avx512vl,avx512bw")
 TARGET_BUILTIN(__builtin_ia32_storedquqi256_mask, "vV32c*V32cUi", "n", "avx512vl,avx512bw")
 TARGET_BUILTIN(__builtin_ia32_storeapd128_mask, "vV2d*V2dUc", "n", "avx512vl")
-TARGET_BUILTIN(__builtin_ia32_storesd128_mask, "vV8d*V8dUc", "n", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_storesd128_mask, "vV2d*V2dUc", "n", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_storeapd256_mask, "vV4d*V4dUc", "n", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_storeaps128_mask, "vV4f*V4fUc", "n", "avx512vl")
-TARGET_BUILTIN(__builtin_ia32_storess128_mask, "vV16f*V16fUs", "n", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_storess128_mask, "vV4f*V4fUc", "n", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_storeaps256_mask, "vV8f*V8fUc", "n", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_storedqudi128_mask, "vV2LLi*V2LLiUc", "n", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_storedqudi256_mask, "vV4LLi*V4LLiUc", "n", "avx512vl")
@@ -1884,6 +1884,9 @@ TARGET_BUILTIN(__builtin_ia32_cldemote, "vvC*", "n", "cldemote")
 // Direct Move
 TARGET_BUILTIN(__builtin_ia32_directstore_u32, "vUi*Ui", "n", "movdiri")
 TARGET_BUILTIN(__builtin_ia32_movdir64b, "vv*vC*", "n", "movdir64b")
+
+// PTWRITE
+TARGET_BUILTIN(__builtin_ia32_ptwrite32, "vUi", "n", "ptwrite")
 
 // MSVC
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")

@@ -13,9 +13,11 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/Support/MD5.h"
 #include <cstdint>
 #include <map>
@@ -103,6 +105,8 @@ public:
 
     uint32_t sizeofPrologueLength() const { return isDWARF64() ? 8 : 4; }
 
+    bool totalLengthIsValid() const;
+
     /// Length of the prologue in bytes.
     uint32_t getLength() const {
       return PrologueLength + sizeofTotalLength() + sizeof(getVersion()) +
@@ -120,8 +124,8 @@ public:
 
     void clear();
     void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
-    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-               const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
+    Error parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+                const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
 
   /// Standard .debug_line state machine structure.
@@ -243,9 +247,10 @@ public:
     void clear();
 
     /// Parse prologue and all rows.
-    bool parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-               const DWARFContext &Ctx, const DWARFUnit *U,
-               raw_ostream *OS = nullptr);
+    Error parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+                const DWARFContext &Ctx, const DWARFUnit *U,
+                std::function<void(StringRef)> WarnCallback = warn,
+                raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -259,14 +264,81 @@ public:
   private:
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           uint64_t Address) const;
-    Optional<StringRef> getSourceByIndex(uint64_t FileIndex,
-                                         DILineInfoSpecifier::FileLineInfoKind Kind) const;
+    Optional<StringRef>
+    getSourceByIndex(uint64_t FileIndex,
+                     DILineInfoSpecifier::FileLineInfoKind Kind) const;
   };
 
   const LineTable *getLineTable(uint32_t Offset) const;
-  const LineTable *getOrParseLineTable(DWARFDataExtractor &DebugLineData,
-                                       uint32_t Offset, const DWARFContext &C,
-                                       const DWARFUnit *U);
+  Expected<const LineTable *>
+  getOrParseLineTable(DWARFDataExtractor &DebugLineData, uint32_t Offset,
+                      const DWARFContext &Ctx, const DWARFUnit *U,
+                      std::function<void(StringRef)> WarnCallback = warn);
+
+  /// Helper to allow for parsing of an entire .debug_line section in sequence.
+  class SectionParser {
+  public:
+    using cu_range = DWARFUnitSection<DWARFCompileUnit>::iterator_range;
+    using tu_range =
+        iterator_range<std::deque<DWARFUnitSection<DWARFTypeUnit>>::iterator>;
+    using LineToUnitMap = std::map<uint64_t, DWARFUnit *>;
+
+    SectionParser(DWARFDataExtractor &Data, const DWARFContext &C, cu_range CUs,
+                  tu_range TUs);
+
+    /// Get the next line table from the section. Report any issues via the
+    /// callbacks.
+    ///
+    /// \param StringCallback - any issues that don't indicate that the line
+    /// table is invalid are reported using this function.
+    /// \param ErrorCallback - any issues that mean that the line table is
+    /// invalid are reported using this callback.
+    /// \param OS - if not null, the parser will print information about the
+    /// table as it parses it.
+    LineTable parseNext(
+        function_ref<void(StringRef)> StringCallback = warn,
+        function_ref<void(Error)> ErrorCallback = warnForError,
+        raw_ostream *OS = nullptr);
+
+    /// Skip the current line table and go to the following line table (if
+    /// present) immediately.
+    ///
+    /// \param ErrorCallback - report any prologue parsing issues via this
+    /// callback.
+    void skip(function_ref<void(Error)> ErrorCallback = warnForError);
+
+    /// Indicates if the parser has parsed as much as possible.
+    ///
+    /// \note Certain problems with the line table structure might mean that
+    /// parsing stops before the end of the section is reached.
+    bool done() const { return Done; }
+
+    /// Get the offset the parser has reached.
+    uint32_t getOffset() const { return Offset; }
+
+  private:
+    DWARFUnit *prepareToParse(uint32_t Offset);
+    void moveToNextTable(uint32_t OldOffset, const Prologue &P);
+
+    LineToUnitMap LineToUnit;
+
+    DWARFDataExtractor &DebugLineData;
+    const DWARFContext &Context;
+    uint32_t Offset = 0;
+    bool Done = false;
+  };
+
+  /// Helper function for DWARFDebugLine parse functions, to report issues that
+  /// don't prevent parsing the remainder of the table as warnings.
+  ///
+  /// \param Message The message to report.
+  static void warn(StringRef Message);
+  
+  /// Helper function for DWARFDebugLine parse functions, to report issues that
+  /// prevent parsing the remainder of the table as warnings.
+  ///
+  /// \param Error The Error to report.
+  static void warnForError(Error Err);
 
 private:
   struct ParsingState {

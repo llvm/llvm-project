@@ -69,6 +69,7 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "movdirintrin.h"
     textual header "pconfigintrin.h"
     textual header "sgxintrin.h"
+    textual header "ptwriteintrin.h"
 
     explicit module mm_malloc {
       requires !freestanding
