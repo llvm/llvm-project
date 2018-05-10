@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=obj %p/Inputs/hello.ll -o %t.hello.o
 ; RUN: llc -filetype=obj %s -o %t.o
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @foo = hidden global i32 1, align 4
 @aligned_bar = hidden global i32 3, align 16

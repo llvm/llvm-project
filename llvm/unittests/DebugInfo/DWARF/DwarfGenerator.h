@@ -165,10 +165,9 @@ public:
     ValueLength Length;
   };
 
-  LineTable(Generator &DG, uint16_t Version, dwarf::DwarfFormat Format,
-            uint8_t AddrSize, uint8_t SegSize = 0)
-      : DG(DG), Version(Version), Format(Format), AddrSize(AddrSize),
-        SegSize(SegSize) {
+  LineTable(uint16_t Version, dwarf::DwarfFormat Format, uint8_t AddrSize,
+            uint8_t SegSize = 0)
+      : Version(Version), Format(Format), AddrSize(AddrSize), SegSize(SegSize) {
     assert(Version >= 2 && Version <= 5 && "unsupported version");
   }
 
@@ -205,7 +204,6 @@ private:
   void writeProloguePayload(const DWARFDebugLine::Prologue &Prologue,
                             AsmPrinter &Asm) const;
 
-  Generator &DG;
   llvm::Optional<DWARFDebugLine::Prologue> Prologue;
   std::vector<ValueAndLength> CustomPrologue;
   std::vector<ValueAndLength> Contents;

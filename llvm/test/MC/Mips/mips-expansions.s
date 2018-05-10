@@ -31,6 +31,24 @@
 # CHECK-LE: addu    $4, $4, $3              # encoding: [0x21,0x20,0x83,0x00]
 # CHECK-LE: lbu     $4, 4($4)               # encoding: [0x04,0x00,0x84,0x90]
 
+  lh   $4, 0x8000
+# CHECK-LE: lui     $4, 1
+# CHECK-LE: lh      $4, -32768($4)
+
+  lh   $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2
+# CHECK-LE: addu    $4, $4, $3
+# CHECK-LE: lh      $4, 4($4)
+
+  lhu  $4, 0x8000
+# CHECK-LE: lui     $4, 1
+# CHECK-LE: lhu     $4, -32768($4)
+
+  lhu  $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2
+# CHECK-LE: addu    $4, $4, $3
+# CHECK-LE: lhu     $4, 4($4)
+
 # LW/SW and LDC1/SDC1 of symbol address, done by MipsAsmParser::expandMemInst():
   .set noat
   lw $10, symbol($4)

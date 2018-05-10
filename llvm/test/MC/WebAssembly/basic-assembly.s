@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown-elf < %s | FileCheck %s
-# RUN: llvm-mc -triple=wasm32-unknown-unknown-wasm < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown < %s | FileCheck %s
 
     .text
     .type    test0,@function

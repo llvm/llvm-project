@@ -1,29 +1,31 @@
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-BOTH
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -fvisibility hidden -emit-llvm -o - | FileCheck -check-prefix=CHECK-WITH-HIDDEN -check-prefix=CHECK-BOTH %s
+// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -o - | \
+// RUN:    FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-BOTH \
+// RUN:   -DLINKONCE_VIS_CONSTANT='linkonce_odr constant'
+// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -fvisibility hidden -emit-llvm -o - | \
+// RUN:    FileCheck %s -check-prefix=CHECK-WITH-HIDDEN -check-prefix=CHECK-BOTH \
+// RUN:   -DLINKONCE_VIS_CONSTANT='linkonce_odr hidden constant'
 
 #include <typeinfo>
 
-// CHECK-BOTH: _ZTSP1C = internal constant
-// CHECK-BOTH: _ZTS1C = internal constant
+// CHECK-BOTH: _ZTSP1C = [[LINKONCE_VIS_CONSTANT]]
+// CHECK-BOTH: _ZTS1C = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTI1C = internal constant
 // CHECK-BOTH: _ZTIP1C = internal constant
-// CHECK-BOTH: _ZTSPP1C = internal constant
+// CHECK-BOTH: _ZTSPP1C = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTIPP1C = internal constant
-// CHECK-BOTH: _ZTSM1Ci = internal constant
+// CHECK-BOTH: _ZTSM1Ci = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTIM1Ci = internal constant
-// CHECK-BOTH: _ZTSPM1Ci = internal constant
+// CHECK-BOTH: _ZTSPM1Ci = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTIPM1Ci = internal constant
-// CHECK-BOTH: _ZTSM1CS_ = internal constant
+// CHECK-BOTH: _ZTSM1CS_ = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTIM1CS_ = internal constant
-// CHECK-BOTH: _ZTSM1CPS_ = internal constant
+// CHECK-BOTH: _ZTSM1CPS_ = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTIM1CPS_ = internal constant
-// CHECK-BOTH: _ZTSM1A1C = internal constant
-// CHECK: _ZTS1A = linkonce_odr constant
-// CHECK-WITH-HIDDEN: _ZTS1A = linkonce_odr hidden constant
-// CHECK: _ZTI1A = linkonce_odr constant
-// CHECK-WITH-HIDDEN: _ZTI1A = linkonce_odr hidden constant
+// CHECK-BOTH: _ZTSM1A1C = [[LINKONCE_VIS_CONSTANT]]
+// CHECK-BOTH: _ZTS1A = [[LINKONCE_VIS_CONSTANT]]
+// CHECK-BOTH: _ZTI1A = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTIM1A1C = internal constant
-// CHECK-BOTH: _ZTSM1AP1C = internal constant
+// CHECK-BOTH: _ZTSM1AP1C = [[LINKONCE_VIS_CONSTANT]]
 // CHECK-BOTH: _ZTIM1AP1C = internal constant
 
 // CHECK-WITH-HIDDEN: _ZTSFN12_GLOBAL__N_11DEvE = internal constant
@@ -52,6 +54,12 @@
 // CHECK: _ZTSFvvE = linkonce_odr constant
 // CHECK: _ZTIFvvE = linkonce_odr constant
 // CHECK: _ZTIPFvvE = linkonce_odr constant
+// CHECK: _ZTSPN12_GLOBAL__N_12DIE = internal constant
+// CHECK: _ZTSN12_GLOBAL__N_12DIE = internal constant
+// CHECK: _ZTIN12_GLOBAL__N_12DIE = internal constant
+// CHECK: _ZTIPN12_GLOBAL__N_12DIE = internal constant
+// CHECK: _ZTSMN12_GLOBAL__N_12DIEFvvE = internal constant
+// CHECK: _ZTIMN12_GLOBAL__N_12DIEFvvE = internal constant
 // CHECK: _ZTSN12_GLOBAL__N_11EE = internal constant
 // CHECK: _ZTIN12_GLOBAL__N_11EE = internal constant
 // CHECK: _ZTSA10_i = linkonce_odr constant
@@ -99,12 +107,13 @@ void t1() {
 }
 
 namespace {
-  // D is inside an anonymous namespace, so all type information related to D should have
-  // internal linkage.
-  struct D { };
-  
-  // E is also inside an anonymous namespace.
-  enum E { };
+// D and DI are inside an anonymous namespace, so all type information related
+// to both should have internal linkage.
+struct D {};
+struct DI;
+
+// E is also inside an anonymous namespace.
+enum E {};
   
 };
 
@@ -126,7 +135,10 @@ const std::type_info &t2() {
   // The exception specification is not part of the RTTI descriptor, so it should not have
   // internal linkage.
   (void)typeid(void (*)() throw (D));
-  
+
+  (void)typeid(DI *);
+  (void)typeid(void (DI::*)());
+
   (void)typeid(E);
   
   return typeid(getD());  

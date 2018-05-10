@@ -9,7 +9,7 @@
 ; PRINT-GC: removing unused section {{.*}}:(unused_global)
 ; PRINT-GC-NOT: removing unused section {{.*}}:(used_global)
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @unused_data = hidden global i64 1, align 4
 @used_data = hidden global i32 2, align 4

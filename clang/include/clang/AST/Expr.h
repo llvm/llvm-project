@@ -658,6 +658,13 @@ public:
                                 ArrayRef<const Expr*> Args,
                                 const Expr *This = nullptr) const;
 
+  /// Indicates how the constant expression will be used.
+  enum ConstExprUsage { EvaluateForCodeGen, EvaluateForMangling };
+
+  /// Evaluate an expression that is required to be a constant expression.
+  bool EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
+                              const ASTContext &Ctx) const;
+
   /// If the current Expr is a pointer, this will try to statically
   /// determine the number of bytes available where the pointer is pointing.
   /// Returns true if all of the above holds and we were able to figure out the

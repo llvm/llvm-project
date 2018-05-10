@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o - | llvm-readobj -r -expand-relocs | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; Pointers to functions of two different types
 @a = global i64 ()* inttoptr (i64 5 to i64 ()*), align 8

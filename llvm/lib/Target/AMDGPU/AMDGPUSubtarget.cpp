@@ -381,7 +381,7 @@ SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
   InstSelector.reset(new AMDGPUInstructionSelector(
-      *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get())));
+      *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
 }
 
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,

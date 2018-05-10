@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIRegisterInfo.h"
+#include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -1561,4 +1562,24 @@ const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
   if (hasRegUnit(AMDGPU::M0, RegUnit))
     return Empty;
   return AMDGPURegisterInfo::getRegUnitPressureSets(RegUnit);
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
+                                         const MachineRegisterInfo &MRI) const {
+  unsigned Size = getRegSizeInBits(MO.getReg(), MRI);
+  const RegisterBank *RB = MRI.getRegBankOrNull(MO.getReg());
+  if (!RB)
+    return nullptr;
+
+  switch (Size) {
+  case 32:
+    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
+                                                  &AMDGPU::SReg_32_XM0RegClass;
+  case 64:
+    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_64RegClass :
+                                                   &AMDGPU::SReg_64_XEXECRegClass;
+  default:
+    llvm_unreachable("not implemented");
+  }
 }

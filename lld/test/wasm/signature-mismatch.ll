@@ -6,7 +6,7 @@
 ; one.
 ; RUN: not wasm-ld --fatal-warnings -o %t.wasm %t.ret32.o %t.main.o 2>&1 | FileCheck %s -check-prefix=REVERSE
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; Function Attrs: nounwind
 define hidden void @_start() local_unnamed_addr #0 {

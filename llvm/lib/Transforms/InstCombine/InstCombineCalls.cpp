@@ -1952,8 +1952,24 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       II->setArgOperand(1, Arg0);
       return II;
     }
+
+    // FIXME: Simplifications should be in instsimplify.
     if (Value *V = simplifyMinnumMaxnum(*II))
       return replaceInstUsesWith(*II, V);
+
+    Value *X, *Y;
+    if (match(Arg0, m_FNeg(m_Value(X))) && match(Arg1, m_FNeg(m_Value(Y))) &&
+        (Arg0->hasOneUse() || Arg1->hasOneUse())) {
+      // If both operands are negated, invert the call and negate the result:
+      // minnum(-X, -Y) --> -(maxnum(X, Y))
+      // maxnum(-X, -Y) --> -(minnum(X, Y))
+      Intrinsic::ID NewIID = II->getIntrinsicID() == Intrinsic::maxnum ?
+          Intrinsic::minnum : Intrinsic::maxnum;
+      Value *NewCall = Builder.CreateIntrinsic(NewIID, { X, Y }, II);
+      Instruction *FNeg = BinaryOperator::CreateFNeg(NewCall);
+      FNeg->copyIRFlags(II);
+      return FNeg;
+    }
     break;
   }
   case Intrinsic::fmuladd: {

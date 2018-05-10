@@ -4,7 +4,7 @@
 ; RUN: wasm-ld --no-demangle -o %t_nodemangle.wasm %t.o
 ; RUN: obj2yaml %t_nodemangle.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; Check that the EXPORT name is still mangled, but that the "name" custom
 ; section contains the unmangled name.

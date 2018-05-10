@@ -172,7 +172,11 @@ static void dumpDWARFv5StringOffsetsSection(
       OS << (ContributionHeader - Offset) << "\n";
     }
     OS << format("0x%8.8x: ", (uint32_t)ContributionHeader);
-    OS << "Contribution size = " << Contribution->Size
+    // In DWARF v5 the contribution size in the descriptor does not equal
+    // the originally encoded length (it does not contain the length of the
+    // version field and the padding, a total of 4 bytes). Add them back in
+    // for reporting.
+    OS << "Contribution size = " << (Contribution->Size + (Version < 5 ? 0 : 4))
        << ", Format = " << (Format == DWARF32 ? "DWARF32" : "DWARF64")
        << ", Version = " << Version << "\n";
 

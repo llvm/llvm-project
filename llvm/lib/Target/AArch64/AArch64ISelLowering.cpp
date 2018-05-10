@@ -8285,6 +8285,11 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return AM.Scale == 1 || (AM.Scale > 0 && (uint64_t)AM.Scale == NumBytes);
 }
 
+bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
+  // Consider splitting large offset of struct or array.
+  return true;
+}
+
 int AArch64TargetLowering::getScalingFactorCost(const DataLayout &DL,
                                                 const AddrMode &AM, Type *Ty,
                                                 unsigned AS) const {

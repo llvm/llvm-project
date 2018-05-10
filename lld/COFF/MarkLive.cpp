@@ -48,7 +48,7 @@ void markLive(ArrayRef<Chunk *> Chunks) {
     else if (auto *Sym = dyn_cast<DefinedImportData>(B))
       Sym->File->Live = true;
     else if (auto *Sym = dyn_cast<DefinedImportThunk>(B))
-      Sym->WrappedSym->File->Live = true;
+      Sym->WrappedSym->File->Live = Sym->WrappedSym->File->ThunkLive = true;
   };
 
   // Add GC root chunks.

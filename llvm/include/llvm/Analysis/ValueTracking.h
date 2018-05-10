@@ -384,6 +384,11 @@ class Value;
                                                AssumptionCache *AC,
                                                const Instruction *CxtI,
                                                const DominatorTree *DT);
+  OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
+                                             const DataLayout &DL,
+                                             AssumptionCache *AC,
+                                             const Instruction *CxtI,
+                                             const DominatorTree *DT);
   OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
                                                const Value *RHS,
                                                const DataLayout &DL,
@@ -401,6 +406,16 @@ class Value;
                                              AssumptionCache *AC = nullptr,
                                              const Instruction *CxtI = nullptr,
                                              const DominatorTree *DT = nullptr);
+  OverflowResult computeOverflowForUnsignedSub(const Value *LHS, const Value *RHS,
+                                               const DataLayout &DL,
+                                               AssumptionCache *AC,
+                                               const Instruction *CxtI,
+                                               const DominatorTree *DT);
+  OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
+                                             const DataLayout &DL,
+                                             AssumptionCache *AC,
+                                             const Instruction *CxtI,
+                                             const DominatorTree *DT);
 
   /// Returns true if the arithmetic part of the \p II 's result is
   /// used only along the paths control dependent on the computation

@@ -13,7 +13,7 @@
 
 ; RUN: llvm-nm -a %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare i32 @foo() local_unnamed_addr #1
 declare i32 @missing_func() local_unnamed_addr #1

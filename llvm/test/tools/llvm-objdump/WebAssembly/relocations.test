@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj %s -o - | llvm-objdump -r - | FileCheck %s
+; RUN: llc -mtriple=wasm32-unknown-unknown -filetype=obj %s -o - | llvm-objdump -r - | FileCheck %s
 
 @foo = external global i32, align 4
 @bar = global i32* @foo, align 4

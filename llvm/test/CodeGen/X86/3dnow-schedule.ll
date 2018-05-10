@@ -14,8 +14,8 @@ declare void @llvm.x86.mmx.femms() nounwind readnone
 define i64 @test_pavgusb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; CHECK-LABEL: test_pavgusb:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pavgusb %mm1, %mm0 # sched: [1:0.50]
-; CHECK-NEXT:    pavgusb (%rdi), %mm0 # sched: [7:0.50]
+; CHECK-NEXT:    pavgusb %mm1, %mm0 # sched: [3:1.00]
+; CHECK-NEXT:    pavgusb (%rdi), %mm0 # sched: [8:1.00]
 ; CHECK-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [1:1.00]
   %1 = call x86_mmx @llvm.x86.3dnow.pavgusb(x86_mmx %a0, x86_mmx %a1)

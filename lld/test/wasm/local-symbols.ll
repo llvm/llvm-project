@@ -2,7 +2,7 @@
 ; RUN: wasm-ld -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 @foo = default global i32 1, align 4
 @bar = internal default global i32 3, align 4
