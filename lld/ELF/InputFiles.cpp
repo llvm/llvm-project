@@ -131,7 +131,14 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
                               Config->Wordsize);
 
   for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units()) {
-    const DWARFDebugLine::LineTable *LT = Dwarf->getLineTableForUnit(CU.get());
+    Expected<const DWARFDebugLine::LineTable *> ExpectedLT =
+        Dwarf->getLineTableForUnit(CU.get(), warn);
+    const DWARFDebugLine::LineTable *LT = nullptr;
+    if (ExpectedLT)
+      LT = *ExpectedLT;
+    else
+      handleAllErrors(ExpectedLT.takeError(),
+                      [](ErrorInfoBase &Err) { warn(Err.message()); });
     if (!LT)
       continue;
     LineTables.push_back(LT);
