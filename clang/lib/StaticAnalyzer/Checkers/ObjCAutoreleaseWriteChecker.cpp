@@ -160,8 +160,8 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
   ));
 
   auto DoublePointerParamM =
-      parmVarDecl(hasType(pointerType(
-                      pointee(hasCanonicalType(objcObjectPointerType())))))
+      parmVarDecl(hasType(hasCanonicalType(pointerType(
+                      pointee(hasCanonicalType(objcObjectPointerType()))))))
           .bind(ParamBind);
 
   auto HasParamAndWritesAsyncM = allOf(
